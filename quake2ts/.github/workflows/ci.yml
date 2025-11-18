@@ -1,0 +1,32 @@
+name: quake2ts CI
+
+on:
+  push:
+    paths:
+      - 'quake2ts/**'
+  pull_request:
+    paths:
+      - 'quake2ts/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quake2ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build packages
+        run: pnpm run build
+      - name: Run tests
+        run: pnpm run test

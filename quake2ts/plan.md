@@ -2,6 +2,8 @@ High-level plan for quake2ts (single-player, WebGL/TypeScript)
 1) Orient on existing codebase
 Map the rerelease modules (combined baseq2/ctf/rogue/xatrix game code and thin client-game layer) to understand server vs. client responsibilities, movement exports, and protocol changes.
 
+Bootstrap status: pnpm workspace with `packages/{engine,game,client,shared,tools}` and `apps/viewer` is wired to `tsc -b` builds and Vitest tests, giving CI a baseline to exercise.
+
 Inventory core systems needed for offline single-player: rendering, input, physics/pmove, AI, scripting/spawns, sound, save/load, and resource formats.
 
 2) Define the TypeScript/WebGL architecture

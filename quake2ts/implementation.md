@@ -53,13 +53,13 @@ This document outlines the concrete architecture, repository layout, and step-by
 5. Save/load uses deterministic identifiers so cached assets can be revalidated between sessions without diverging configstring order.
 
 ## Build/test/tooling pipeline
-- **Package manager/build:** pnpm monorepo with `tsconfig` project references; Vite-based dev server for `apps/viewer`; Rollup/ESBuild for library bundles.
+- **Package manager/build:** pnpm monorepo with `tsconfig` project references; Vite-based dev server for `apps/viewer`; Rollup/ESBuild for library bundles. A workspace skeleton now exists with `packages/{engine,game,client,shared,tools}` and `apps/viewer` wired to `tsc -b`.
 - **Linting/formatting:** ESLint + Prettier + TypeScript strict mode; Husky/lint-staged for pre-commit checks.
-- **Testing:** Vitest unit tests for math/serialization/pmove; Playwright smoke tests for render loop + input capture; snapshot tests for save/load determinism.
-- **CI:** GitHub Actions (node + headless WebGL) running lint/test/build; artifacts publish static preview of viewer app.
+- **Testing:** Vitest unit tests for math/serialization/pmove; Playwright smoke tests for render loop + input capture; snapshot tests for save/load determinism. Initial unit coverage is seeded in the shared math helpers to prove the test harness.
+- **CI:** GitHub Actions (node + headless WebGL) running lint/test/build; artifacts publish static preview of viewer app. A bootstrap workflow runs pnpm install/build/test on pushes/PRs touching `quake2ts/**`.
 
 ## Implementation steps
-1. **Bootstrap repo tooling**: pnpm workspace, base tsconfig, ESLint/Prettier, Vitest, CI workflow skeleton.
+1. **Bootstrap repo tooling**: pnpm workspace, base tsconfig, ESLint/Prettier, Vitest, CI workflow skeleton. _Status:_ pnpm workspace + TypeScript project references + Vitest harness and CI workflow are in place.
 2. **Shared math/types**: Implement vector/matrix math, deterministic RNG, protocol-like TypeScript types for entity/player state and pmove structs.
 3. **Filesystem & asset intake**: PAK reader and VFS; loaders for BSP (geometry + lightmaps + visibility), MD2/MD3 models, textures (WAL/PCX), and WAV/OGG audio; caching/index registry APIs.
 4. **Render MVP**: WebGL2 context wrapper, shader setup, vertex/index buffer utilities, texture upload, basic BSP traversal + lightmap drawing, model rendering, and particle billboards. Ship `apps/viewer` to display a map with free-fly camera.

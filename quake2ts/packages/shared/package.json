@@ -1,0 +1,12 @@
+{
+  "name": "@quake2ts/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}
