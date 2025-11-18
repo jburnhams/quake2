@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   ZERO_VEC3,
+  STOP_EPSILON,
   addVec3,
+  clipVelocityVec3,
   closestPointToBox,
   crossVec3,
   distanceBetweenBoxesSquared,
@@ -13,7 +15,11 @@ import {
   normalizeVec3,
   perpendicularVec3,
   projectPointOnPlane,
+  projectSourceVec3,
+  projectSourceVec3WithUp,
   scaleVec3,
+  slerpVec3,
+  slideClipVelocityVec3,
   subtractVec3,
 } from '../src/index.js';
 
@@ -82,5 +88,77 @@ describe('vec3 helpers', () => {
 
     // Overlapping boxes have zero separation
     expect(distanceBetweenBoxesSquared(aMins, aMaxs, { x: 0, y: 0, z: 0 }, { x: 2, y: 2, z: 2 })).toBe(0);
+  });
+
+  it('clips velocity against planes like q_vec3::ClipVelocity', () => {
+    const inVel = { x: 0, y: 0, z: -10 };
+    const normal = { x: 0, y: 0, z: 1 };
+
+    // Perfect bounce with overbounce 2 should invert and preserve magnitude
+    const bounced = clipVelocityVec3(inVel, normal, 2);
+    expect(bounced).toEqual({ x: 0, y: 0, z: 10 });
+
+    // Very small velocities get zeroed using STOP_EPSILON
+    const tinyVel = { x: 0, y: 0, z: STOP_EPSILON * 0.2 };
+    const clippedTiny = clipVelocityVec3(tinyVel, normal, 1);
+    expect(clippedTiny).toBe(ZERO_VEC3);
+  });
+
+  it('slides velocity along planes like q_vec3::SlideClipVelocity', () => {
+    const inVel = { x: 5, y: 0, z: -5 };
+    const normal = { x: 0, y: 0, z: 1 };
+
+    const slid = slideClipVelocityVec3(inVel, normal, 1);
+    // Z component should be removed, X component preserved
+    expect(slid.x).toBeCloseTo(5);
+    expect(slid.y).toBeCloseTo(0);
+    expect(slid.z).toBe(0);
+
+    // Components that end up within +/- STOP_EPSILON should clamp to zero
+    const nearlyZero = slideClipVelocityVec3({ x: STOP_EPSILON * 0.5, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 1);
+    expect(nearlyZero.x).toBe(0);
+  });
+
+  it('projects weapon offsets like G_ProjectSource and G_ProjectSource2', () => {
+    const point = { x: 10, y: 20, z: 30 };
+    const distance = { x: 5, y: 2, z: 3 };
+    const forward = { x: 1, y: 0, z: 0 };
+    const right = { x: 0, y: 1, z: 0 };
+    const up = { x: 0, y: 0, z: 1 };
+
+    const projected = projectSourceVec3(point, distance, forward, right);
+    expect(projected).toEqual({ x: 15, y: 22, z: 33 });
+
+    const projectedWithUp = projectSourceVec3WithUp(point, distance, forward, right, up);
+    expect(projectedWithUp).toEqual({ x: 15, y: 22, z: 33 });
+
+    // Non-orthogonal basis should still behave linearly
+    const diagonalForward = normalizeVec3({ x: 1, y: 1, z: 0 });
+    const diagonalRight = normalizeVec3({ x: -1, y: 1, z: 0 });
+    const basisProjected = projectSourceVec3(point, distance, diagonalForward, diagonalRight);
+    // The distance.x term moves along diagonalForward, distance.y along diagonalRight
+    expect(lengthVec3(subtractVec3(basisProjected, point))).toBeCloseTo(
+      lengthVec3({
+        x: diagonalForward.x * distance.x + diagonalRight.x * distance.y,
+        y: diagonalForward.y * distance.x + diagonalRight.y * distance.y,
+        z: distance.z,
+      }),
+    );
+  });
+
+  it('slerps direction vectors like q_vec3::slerp', () => {
+    const from = normalizeVec3({ x: 1, y: 0, z: 0 });
+    const to = normalizeVec3({ x: 0, y: 1, z: 0 });
+
+    const halfway = slerpVec3(from, to, 0.5);
+    // The halfway direction between X+ and Y+ is the 45-degree diagonal
+    const expected = normalizeVec3({ x: 1, y: 1, z: 0 });
+    expect(halfway.x).toBeCloseTo(expected.x, 4);
+    expect(halfway.y).toBeCloseTo(expected.y, 4);
+    expect(halfway.z).toBeCloseTo(expected.z, 4);
+
+    // For nearly-parallel vectors, slerp should reduce to nlerp
+    const almost = slerpVec3(from, normalizeVec3({ x: 1, y: 0.001, z: 0 }), 0.5);
+    expect(lengthVec3(almost)).toBeCloseTo(1, 4);
   });
 });

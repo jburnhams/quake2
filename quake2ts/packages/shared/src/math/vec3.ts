@@ -7,6 +7,9 @@ export interface Vec3 {
 
 export const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
+// Matches STOP_EPSILON from rerelease q_vec3.h
+export const STOP_EPSILON = 0.1;
+
 export function addVec3(a: Vec3, b: Vec3): Vec3 {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
@@ -124,4 +127,101 @@ export function distanceBetweenBoxesSquared(aMins: Vec3, aMaxs: Vec3, bMins: Vec
   }
 
   return lengthSq;
+}
+
+/**
+ * ClipVelocity and SlideClipVelocity mirror the movement helpers in the rerelease q_vec3:
+ *
+ * - ClipVelocity: reflect the incoming velocity against a plane and apply an overbounce factor,
+ *   zeroing out very small results.
+ * - SlideClipVelocity: remove the component of the velocity into the plane normal and clamp very
+ *   small components to zero.
+ */
+export function clipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
+  const dot = dotVec3(inVel, normal);
+
+  // out = in + normal * (-2 * dot)
+  const reflected: Vec3 = {
+    x: inVel.x + normal.x * -2 * dot,
+    y: inVel.y + normal.y * -2 * dot,
+    z: inVel.z + normal.z * -2 * dot,
+  };
+
+  const scaled = scaleVec3(reflected, overbounce - 1);
+
+  if (lengthSquaredVec3(scaled) < STOP_EPSILON * STOP_EPSILON) {
+    return ZERO_VEC3;
+  }
+
+  return scaled;
+}
+
+export function slideClipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
+  const backoff = dotVec3(inVel, normal) * overbounce;
+
+  let outX = inVel.x - normal.x * backoff;
+  let outY = inVel.y - normal.y * backoff;
+  let outZ = inVel.z - normal.z * backoff;
+
+  if (outX > -STOP_EPSILON && outX < STOP_EPSILON) {
+    outX = 0;
+  }
+
+  if (outY > -STOP_EPSILON && outY < STOP_EPSILON) {
+    outY = 0;
+  }
+
+  if (outZ > -STOP_EPSILON && outZ < STOP_EPSILON) {
+    outZ = 0;
+  }
+
+  return { x: outX, y: outY, z: outZ };
+}
+
+/**
+ * Project an offset from a point in forward/right(/up) space into world space.
+ * Mirrors G_ProjectSource and G_ProjectSource2 in rerelease q_vec3.
+ */
+export function projectSourceVec3(point: Vec3, distance: Vec3, forward: Vec3, right: Vec3): Vec3 {
+  return {
+    x: point.x + forward.x * distance.x + right.x * distance.y,
+    y: point.y + forward.y * distance.x + right.y * distance.y,
+    z: point.z + forward.z * distance.x + right.z * distance.y + distance.z,
+  };
+}
+
+export function projectSourceVec3WithUp(point: Vec3, distance: Vec3, forward: Vec3, right: Vec3, up: Vec3): Vec3 {
+  return {
+    x: point.x + forward.x * distance.x + right.x * distance.y + up.x * distance.z,
+    y: point.y + forward.y * distance.x + right.y * distance.y + up.y * distance.z,
+    z: point.z + forward.z * distance.x + right.z * distance.y + up.z * distance.z,
+  };
+}
+
+/**
+ * Spherical linear interpolation between two vectors, mirroring q_vec3::slerp.
+ * This is intended for direction vectors; callers should pre-normalize if needed.
+ */
+export function slerpVec3(from: Vec3, to: Vec3, t: number): Vec3 {
+  const dot = dotVec3(from, to);
+  let aFactor: number;
+  let bFactor: number;
+
+  if (Math.abs(dot) > 0.9995) {
+    aFactor = 1 - t;
+    bFactor = t;
+  } else {
+    const ang = Math.acos(dot);
+    const sinOmega = Math.sin(ang);
+    const sinAOmega = Math.sin((1 - t) * ang);
+    const sinBOmega = Math.sin(t * ang);
+    aFactor = sinAOmega / sinOmega;
+    bFactor = sinBOmega / sinOmega;
+  }
+
+  return {
+    x: from.x * aFactor + to.x * bFactor,
+    y: from.y * aFactor + to.y * bFactor,
+    z: from.z * aFactor + to.z * bFactor,
+  };
 }
