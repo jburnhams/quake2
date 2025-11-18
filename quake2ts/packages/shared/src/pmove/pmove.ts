@@ -1,6 +1,12 @@
 import type { Vec3 } from '../math/vec3.js';
-import { lengthVec3, scaleVec3, dotVec3 } from '../math/vec3.js';
-import type { PmoveAccelerateParams, PmoveFrictionParams } from './types.js';
+import { addVec3, dotVec3, lengthVec3, normalizeVec3, scaleVec3 } from '../math/vec3.js';
+import type {
+  PmoveAccelerateParams,
+  PmoveCmd,
+  PmoveFrictionParams,
+  PmoveWishParams,
+  PmoveWishResult,
+} from './types.js';
 
 /**
  * Pure version of PM_Friction from rerelease p_move.cpp.
@@ -103,5 +109,88 @@ export function applyPmoveAirAccelerate(params: PmoveAccelerateParams): Vec3 {
     x: velocity.x + wishdir.x * accelSpeed,
     y: velocity.y + wishdir.y * accelSpeed,
     z: velocity.z + wishdir.z * accelSpeed,
+  };
+}
+
+/**
+ * Pure mirror of PM_CmdScale from rerelease `p_move.cpp`. Computes the scalar applied to
+ * the command directional inputs so that the resulting wish velocity caps at `maxSpeed`
+ * regardless of the directional mix.
+ */
+export function pmoveCmdScale(cmd: PmoveCmd, maxSpeed: number): number {
+  const forward = Math.abs(cmd.forwardmove);
+  const side = Math.abs(cmd.sidemove);
+  const up = Math.abs(cmd.upmove);
+
+  const max = Math.max(forward, side, up);
+  if (max === 0) {
+    return 0;
+  }
+
+  const total = Math.sqrt(cmd.forwardmove * cmd.forwardmove + cmd.sidemove * cmd.sidemove + cmd.upmove * cmd.upmove);
+  return (maxSpeed * max) / (127 * total);
+}
+
+/**
+ * Computes wishdir/wishspeed for ground/air movement as done in PM_AirMove and
+ * PM_GroundMove. Z is forced to zero and wishspeed is clamped to maxSpeed, matching
+ * the rerelease p_move.cpp helpers before they call PM_Accelerate/PM_AirAccelerate.
+ */
+export function buildAirGroundWish(params: PmoveWishParams): PmoveWishResult {
+  const { forward, right, cmd, maxSpeed } = params;
+
+  let wishvel = {
+    x: forward.x * cmd.forwardmove + right.x * cmd.sidemove,
+    y: forward.y * cmd.forwardmove + right.y * cmd.sidemove,
+    z: 0,
+  } satisfies Vec3;
+
+  let wishspeed = lengthVec3(wishvel);
+  if (wishspeed > maxSpeed) {
+    const scale = maxSpeed / wishspeed;
+    wishvel = scaleVec3(wishvel, scale);
+    wishspeed = maxSpeed;
+  }
+
+  return {
+    wishdir: wishspeed === 0 ? wishvel : normalizeVec3(wishvel),
+    wishspeed,
+  };
+}
+
+/**
+ * Computes the wishdir/wishspeed mix for water movement, matching PM_WaterMove in
+ * rerelease p_move.cpp: includes the upward bias when no strong upmove is requested,
+ * clamps wishspeed to maxSpeed, and halves the returned wishspeed before acceleration.
+ */
+export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
+  const { forward, right, cmd, maxSpeed } = params;
+
+  let wishvel = {
+    x: forward.x * cmd.forwardmove + right.x * cmd.sidemove,
+    y: forward.y * cmd.forwardmove + right.y * cmd.sidemove,
+    z: 0,
+  } satisfies Vec3;
+
+  if (cmd.upmove > 10) {
+    wishvel = addVec3(wishvel, { x: 0, y: 0, z: cmd.upmove });
+  } else if (cmd.upmove < -10) {
+    wishvel = addVec3(wishvel, { x: 0, y: 0, z: cmd.upmove });
+  } else {
+    wishvel = addVec3(wishvel, { x: 0, y: 0, z: 10 });
+  }
+
+  let wishspeed = lengthVec3(wishvel);
+  if (wishspeed > maxSpeed) {
+    const scale = maxSpeed / wishspeed;
+    wishvel = scaleVec3(wishvel, scale);
+    wishspeed = maxSpeed;
+  }
+
+  wishspeed *= 0.5;
+
+  return {
+    wishdir: wishspeed === 0 ? wishvel : normalizeVec3(wishvel),
+    wishspeed,
   };
 }
