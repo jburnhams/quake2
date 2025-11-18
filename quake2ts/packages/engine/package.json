@@ -1,0 +1,14 @@
+{
+  "name": "@quake2ts/engine",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@quake2ts/shared": "workspace:*"
+  }
+}

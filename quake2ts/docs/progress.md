@@ -1,10 +1,12 @@
 # Progress
 
 ## Current focus
-- Lock the implementation plan to the rerelease import/export surfaces and configstring behavior so engine/game/client package scaffolding can begin.
+- Stand up the TypeScript workspace skeleton (pnpm + project references) with placeholder packages and a CI loop that exercises builds/tests.
 
 ## Recent additions
-- Expanded `implementation.md` to mirror rerelease import/export tables, configstring/index flows, HUD renderer helpers, and readiness checkpoints tied to `docs/rerelease-mapping.md` and `docs/questions.md`.
+- Added pnpm workspace scaffolding (`packages/{engine,game,client,shared,tools}` and `apps/viewer`) with `tsc -b` wiring for project references.
+- Seeded Vitest with an initial shared math test to validate the harness and strict TypeScript settings.
+- Introduced a GitHub Actions workflow that installs dependencies and runs the workspace build/test steps on pushes/PRs touching `quake2ts/**`.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
@@ -12,6 +14,6 @@
 - `implementation.md`: end-to-end implementation plan and milestones for the quake2ts port.
 
 ## Next up
-- Draft TypeScript interface stubs for engine→game/client imports/exports and land pnpm workspace/tooling skeleton to host them.
+- Expand the engine→game/client interface stubs beyond the placeholder lifecycle/hooks now in the scaffolding packages.
 - Sketch the browser asset-ingestion UX (file drop/selector, caching/error UX) aligned with the configstring/index pipeline documented in the plan.
 - Enumerate renderer/input abstractions the HUD/client module needs from the engine (pic/font helpers, text metrics, cvars) to keep the UI sandboxed.
