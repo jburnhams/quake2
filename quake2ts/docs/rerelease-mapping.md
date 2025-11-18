@@ -48,10 +48,21 @@
 - Preserve **save/load determinism** by designing structured state serialization compatible with JSON-based saves exposed in the rerelease exports.【F:rerelease/g_main.cpp†L421-L427】
 - Model **game-mode extensions** as pluggable feature modules so CTF/Rogue/Xatrix behaviors can be layered without forking the core simulation.【F:rerelease/ctf/g_ctf.cpp†L25-L98】
 - Map the **asset/renderer bridge** explicitly: server-side imports handle model/sound/image registration (`modelindex`, `soundindex`, `imageindex`) and apply models to entities via `setmodel`, so the TS engine must expose equivalent precache/index bookkeeping to feed WebGL/WebAudio loaders.【F:rerelease/game.h†L1909-L1919】
-- Mirror **client-render hooks**: the client import table offers HUD drawing and asset lookup utilities (`Draw_RegisterPic`, `Draw_GetPicSize`, `SCR_DrawPic/ColorPic`, font metrics) that the TS renderer layer should surface for the HUD module, matching the `cgame_export_t` expectations for `DrawHUD`, `TouchPics`, and layout flag queries.【F:rerelease/game.h†L2228-L2275】
+- Mirror **client-render hooks**: the client import table offers HUD drawing and asset lookup utilities (`Draw_RegisterPic`, `Draw_GetPicSize`, `SCR_DrawPic/ColorPic`, font metrics) that the TS renderer layer should surface for the HUD module, matching the `cgame_export_t` expectations for `DrawHUD`, `TouchPics`, and layout flag queries.【F:rerelease/game.h†L2188-L2233】【F:rerelease/game.h†L2260-L2314】
 - Track **protocol/compatibility constants** like `PROTOCOL_VERSION` and `PROTOCOL_VERSION_DEMOS` to keep any browser-side networking/demo playback aligned with rerelease expectations, even if initial scope remains offline.【F:rerelease/game.h†L2172-L2174】
 
+## Game/client interfaces to mirror in TypeScript
+- **Engine→game imports (`game_import_t`):** Message dispatch (`Broadcast_Print`, `Client_Print`, centerprint), asset indexers (`modelindex`, `soundindex`, `imageindex`) plus `setmodel`, and collision queries (`trace`, `clip`, `pointcontents`) define the minimal services the TS engine must expose to the game simulation.【F:rerelease/game.h†L1882-L1925】
+- **Game exports (`game_export_t`):** Lifecycle (`PreInit`, `Init`, `Shutdown`), level spawning, JSON save/read pairs for game/level, and client lifecycle/command hooks form the authoritative surface the engine calls into; TS should keep parity so save serialization stays deterministic.【F:rerelease/game.h†L2063-L2104】
+- **Engine→client imports (`cgame_import_t`):** Configstring access, cvar plumbing, renderer/HUD drawing helpers, and client timing/protocol accessors bound the HUD/prediction module to engine services the TS runtime must provide.【F:rerelease/game.h†L2180-L2255】
+- **Client exports (`cgame_export_t`):** HUD lifecycle (`Init`/`Shutdown`), draw entry points (`DrawHUD`, `TouchPics`), layout flags, weapon/powerup wheel helpers, pmove export, and configstring/centerprint parsing callbacks capture the TS HUD module responsibilities.【F:rerelease/game.h†L2260-L2314】
+
+### Asset ingestion notes for the browser pipeline
+- Use the rerelease **configstring/index pattern** as the contract: TS engine should accept user-provided PAKs, register models/sounds/images via indexers, and feed hashed/configstring identifiers to the client module for HUD/level use.【F:rerelease/game.h†L1909-L1919】【F:rerelease/game.h†L2188-L2233】
+- Mirror **save-call expectations** by keeping JSON-friendly, deterministic structures so rerelease saves can be mapped even if internal TS schemas differ.【F:rerelease/game.h†L2078-L2088】
+- Keep **pmove callable from both game and client** as shared logic compiled twice (or imported as a pure module) to maintain prediction parity without duplicating behavior.【F:rerelease/game.h†L2132-L2149】【F:rerelease/game.h†L2292-L2299】
+
 ## Immediate follow-ups
-- Map renderer/asset pipeline expectations (models, sounds, HUD art) to WebGL/WebAudio delivery to uncover browser-era constraints.
-- Extract a draft TypeScript package surface (interfaces/classes) that correspond to the `game_export_t` and `cgame_export_t` expectations.
-- Note any engine-side protocol or asset differences required to support WebGL/WebAudio equivalents.
+- Compile a TS-facing interface draft (types/packages) directly from the import/export lists to guide scaffolding.
+- Outline asset ingestion UX for the browser (drop/selector, cache policies, error handling) tied to the index/configstring flow.
+- Identify renderer/input abstractions required for the HUD/client module to stay sandboxed from engine details.
