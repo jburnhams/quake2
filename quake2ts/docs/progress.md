@@ -1,13 +1,17 @@
 # Progress
 
 ## Current focus
-- Capture the import/export surfaces for game and client modules (renderer/HUD hooks, pmove sharing, save calls) and translate them into TypeScript-facing plans under the constrained scope (base campaign only, classic physics, user-supplied assets, TS-native saves, no bots).
+- Lock the implementation plan to the rerelease import/export surfaces and configstring behavior so engine/game/client package scaffolding can begin.
+
+## Recent additions
+- Expanded `implementation.md` to mirror rerelease import/export tables, configstring/index flows, HUD renderer helpers, and readiness checkpoints tied to `docs/rerelease-mapping.md` and `docs/questions.md`.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
 - `docs/questions.md`: open questions to resolve before committing to the porting approach.
+- `implementation.md`: end-to-end implementation plan and milestones for the quake2ts port.
 
 ## Next up
-- Draft concrete TS interface stubs for engine→game/client imports/exports to guide scaffolding.
-- Outline the browser asset-ingestion UX (file drop/selector, caching/error UX) mapped to configstring/index flows.
-- Log renderer/input abstractions the HUD/client module expects so the engine layer stays cleanly separated.
+- Draft TypeScript interface stubs for engine→game/client imports/exports and land pnpm workspace/tooling skeleton to host them.
+- Sketch the browser asset-ingestion UX (file drop/selector, caching/error UX) aligned with the configstring/index pipeline documented in the plan.
+- Enumerate renderer/input abstractions the HUD/client module needs from the engine (pic/font helpers, text metrics, cvars) to keep the UI sandboxed.
