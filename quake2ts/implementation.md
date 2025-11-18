@@ -9,16 +9,22 @@ This document outlines the concrete architecture, repository layout, and step-by
 - **Modular packages** to mirror rerelease boundaries: engine (platform/render/audio), game (authoritative simulation), client (HUD + prediction), shared (math/protocol), tools (asset prep/build scripts).
 
 ## Repository/package layout
-- `packages/engine`: Platform services (WebGL renderer, WebAudio, input, timing/loop, filesystem/asset ingestion, config/cvars). Exposes import tables analogous to `game_import_t`/`cgame_import_t` for game/client modules.
-- `packages/game`: Authoritative simulation layer with entity system, physics/pmove wrapper, AI, combat, items, triggers, and deterministic save/load. Exports a surface mirroring `GetGameAPI` entry points (init, shutdown, spawn, client connect/think, save/read).
-- `packages/client`: HUD + presentation + client prediction. Wraps shared movement for prediction, parses configstrings, draws HUD/menus, and owns local player-facing UI state. Exports a surface mirroring `GetCGameAPI` (init/shutdown, DrawHUD/TouchPics/layout flags, centerprint/notify handlers, pmove callback).
+- `packages/engine`: Platform services (WebGL renderer, WebAudio, input, timing/loop, filesystem/asset ingestion, config/cvars). Exposes import tables analogous to `game_import_t`/`cgame_import_t` for game/client modules. Provides the configstring/index registry the rerelease expects so the game/client layers can resolve assets deterministically.
+- `packages/game`: Authoritative simulation layer with entity system, physics/pmove wrapper, AI, combat, items, triggers, and deterministic save/load. Exports a surface mirroring `GetGameAPI` entry points (init, shutdown, spawn, client connect/think, save/read). Owns authoritative configstring publication and asset precache calls into the engine registries.
+- `packages/client`: HUD + presentation + client prediction. Wraps shared movement for prediction, parses configstrings, draws HUD/menus, and owns local player-facing UI state. Exports a surface mirroring `GetCGameAPI` (init/shutdown, DrawHUD/TouchPics/layout flags, centerprint/notify handlers, pmove callback). Consumes engine-provided renderer helpers for HUD pic/font metrics.
 - `packages/shared`: Math primitives (vec3/quat/mat), protocol-like types (entity states, player state, pmove cmd/results), deterministic random helpers, and serialization utilities. No browser APIs.
 - `packages/tools`: Asset converters (PAK/VFS reader, BSP/MD2/MD3/lightmap importers, sound re-encoders), build-time validation, and optional save-compat mappers for rerelease JSON.
 - `apps/viewer` (optional bootstrap): Minimal BSP viewer harness that wires engine + client for early rendering/prediction smoke tests.
 
 ## Core architecture
+### Interfaces to mirror from the rerelease
+- **Engine → game (`game_import_t` analog):** Message dispatch (print/centerprint), asset indexers (`modelindex`, `soundindex`, `imageindex`), collision queries (`trace`, `clip`, `pointcontents`), and model binding (`setmodel`). The engine package must expose these as typed callbacks and record configstring mutations for the client package.
+- **Game → engine (`game_export_t` analog):** Lifecycle (PreInit/Init/Shutdown), level spawning, frame tick, client connect/think, and save/load entrypoints. The game package emits configstrings and uses engine registries to precache assets, keeping authoritative ownership over gameplay state.
+- **Engine → client (`cgame_import_t` analog):** Configstring accessors, cvar plumbing, renderer HUD helpers (pic registration/size queries, text metrics), and timing/protocol constants surfaced through typed imports.
+- **Client → engine (`cgame_export_t` analog):** HUD lifecycle and draw entrypoints (DrawHUD, TouchPics), layout flags, prediction pmove callback, and centerprint/notify parsing hooks. The client package uses the engine renderer but stays UI-only.
+
 ### Engine layer (Web APIs & services)
-- **Render subsystem:** WebGL2 abstraction with resource registries (models, textures, lightmaps) keyed by the same numeric indices/configstrings the game expects; material system supporting vertex-lit + lightmap passes and particle billboards. Scene graph organizes BSP nodes, static props, and animated models with frustum/PVS culling.
+- **Render subsystem:** WebGL2 abstraction with resource registries (models, textures, lightmaps) keyed by the same numeric indices/configstrings the game expects; material system supporting vertex-lit + lightmap passes and particle billboards. Scene graph organizes BSP nodes, static props, and animated models with frustum/PVS culling. HUD helpers expose `Draw_RegisterPic`, `Draw_GetPicSize`, and text metrics equivalents for the client module.
 - **Audio subsystem:** WebAudio manager for spatialized playback, stream buffers for looping ambient sounds, and per-entity channel routing matching rerelease positioning rules.
 - **Input subsystem:** Pointer lock + keyboard/gamepad mapping to pmove command buffers; configurable bindings stored in cvars/local storage.
 - **Filesystem/asset ingestion:** Virtual file system backed by in-memory PAKs; async loaders for BSP/MD2/MD3/WAL/PCX/WAV/OGG; prefetch/cache with checksum validation; exposes `modelindex/soundindex/imageindex` style registries to the game layer.
@@ -26,11 +32,11 @@ This document outlines the concrete architecture, repository layout, and step-by
 - **Config/cvars:** Typed cvar registry with change callbacks, persistence, and sandbox-safe console exposure.
 
 ### Game layer (authoritative simulation)
-- **Entity system:** Data-oriented entities with typed components for transform, physics body, render model refs, AI controller, inventory, and triggers. Spawn registry mirrors `g_spawn.cpp` classnames. Deterministic random seed per level.
+- **Entity system:** Data-oriented entities with typed components for transform, physics body, render model refs, AI controller, inventory, and triggers. Spawn registry mirrors `g_spawn.cpp` classnames. Deterministic random seed per level. Configstrings (models/sounds/images/csbcs) are emitted here to drive renderer/HUD asset binding.
 - **Physics/movement:** Shared pmove module (from `packages/shared`) wrapping collision queries from the engine; brush/hull traces, step/climb, water physics, and legacy quirks preserved. Handles platform movers, doors, pushes, and damage triggers.
 - **Combat/items:** Weapon firing logic, damage/knockback, powerups, ammo/health/armor items, respawn rules, and projectile tracking consistent with base campaign.
 - **AI/monsters:** State machines for perception, pathing helpers (node graph stub), and attack behaviors per monster archetype; uses deterministic tick hooks to align with server frame rate.
-- **Rules/scripting:** Level rules (deathmatch off for SP), intermission sequencing, trigger targets, and cinematic cues. Worldspawn seeds fog/sky/light settings for renderer handoff.
+- **Rules/scripting:** Level rules (deathmatch off for SP), intermission sequencing, trigger targets, and cinematic cues. Worldspawn seeds fog/sky/light settings for renderer handoff. Campaign progression hooks for cinematics/intermissions preserved for parity with rerelease entrypoints.
 - **Save/load:** Structured state graph serialized to JSON-compatible objects; registration of serializable structures to mirror rerelease determinism. Optional mapper to rerelease JSON schema for compatibility.
 
 ### Client layer (HUD & prediction)
@@ -38,6 +44,13 @@ This document outlines the concrete architecture, repository layout, and step-by
 - **HUD/UI:** Centerprint/notification buffers, status bar, weapon/powerup wheels, inventory display, damage indicators, and menu scaffolding. Uses engine renderer helpers for fonts/pics and layout metrics.
 - **Configstring parsing:** Consumes asset/config strings from the engine to align prediction physics toggles and HUD resources with game state.
 - **Demo/replay hooks:** Stub support for future demo playback using shared protocol types; not required for first milestone but shaped by `PROTOCOL_VERSION` constants.
+
+### Asset/configstring ingestion flow (browser)
+1. User drops/selects PAKs; engine VFS indexes them and surfaces a list of available BSPs/maps.
+2. Game package requests precaches during level load, invoking engine `modelindex/soundindex/imageindex` and emitting configstrings; engine records these for the client package.
+3. Engine asynchronously loads resources (BSP geometry/lightmaps, MD2/MD3 meshes, WAL/PCX textures, WAV/OGG audio) and resolves indices to GPU/Audio handles.
+4. Client package receives configstrings, registers HUD pics/fonts through renderer helpers, and uses the same indices to request HUD assets.
+5. Save/load uses deterministic identifiers so cached assets can be revalidated between sessions without diverging configstring order.
 
 ## Build/test/tooling pipeline
 - **Package manager/build:** pnpm monorepo with `tsconfig` project references; Vite-based dev server for `apps/viewer`; Rollup/ESBuild for library bundles.
@@ -59,6 +72,11 @@ This document outlines the concrete architecture, repository layout, and step-by
 11. **Browser asset UX**: File selector/drag-drop UI; progress/error reporting; caching policy (indexedDB-backed optional); validation against expected PAK structure.
 12. **Performance/stability pass**: Profiling hooks, culling refinements, shader variants for low-end GPUs, audio channel management, and input latency checks.
 13. **Polish milestone**: Complete HUD, menus, accessibility toggles (FOV, subtitles), configurable bindings, and documented mod/expansion extension points.
+
+## Readiness notes
+- The rerelease mapping (`docs/rerelease-mapping.md`) provides the authoritative import/export and configstring behavior; the TS plan now mirrors those boundaries directly.
+- All open questions in `docs/questions.md` are answered for the base-campaign scope; no further research is blocking bootstrap.
+- Next concrete action: draft TypeScript interface stubs for the engine↔game↔client tables and scaffold the pnpm workspace/tooling to host them.
 
 ## Extension hooks for later
 - Expansion modules (CTF/Rogue/Xatrix) as opt-in packages that register additional spawn tables, assets, and rules via the same API surfaces.
