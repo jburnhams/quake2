@@ -4,6 +4,7 @@ import {
   STOP_EPSILON,
   addVec3,
   clipVelocityVec3,
+  clipVelocityAgainstPlanes,
   closestPointToBox,
   crossVec3,
   distanceBetweenBoxesSquared,
@@ -101,7 +102,28 @@ describe('vec3 helpers', () => {
     // Very small velocities get zeroed using STOP_EPSILON
     const tinyVel = { x: 0, y: 0, z: STOP_EPSILON * 0.2 };
     const clippedTiny = clipVelocityVec3(tinyVel, normal, 1);
-    expect(clippedTiny).toBe(ZERO_VEC3);
+    expect(clippedTiny).toEqual(ZERO_VEC3);
+  });
+
+  it('resolves velocity against multiple clip planes like PM_StepSlideMove_Generic', () => {
+    const velocity = { x: 10, y: -5, z: 0 };
+    const floor = { x: 0, y: 0, z: 1 };
+    const wall = { x: 0, y: 1, z: 0 };
+
+    // With two planes, the result should travel along their shared crease (X axis here).
+    const crease = clipVelocityAgainstPlanes(velocity, [floor, wall], 1.01, velocity);
+    expect(crease.y).toBe(0);
+    expect(crease.z).toBe(0);
+    expect(crease.x).not.toBe(0);
+
+    // If the crease velocity points against the primal direction, it should be clamped to zero.
+    const backwards = clipVelocityAgainstPlanes(
+      { x: -5, y: -5, z: 0 },
+      [floor, wall],
+      1.01,
+      velocity,
+    );
+    expect(backwards).toEqual(ZERO_VEC3);
   });
 
   it('slides velocity along planes like q_vec3::SlideClipVelocity', () => {

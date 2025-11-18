@@ -130,33 +130,11 @@ export function distanceBetweenBoxesSquared(aMins: Vec3, aMaxs: Vec3, bMins: Vec
 }
 
 /**
- * ClipVelocity and SlideClipVelocity mirror the movement helpers in the rerelease q_vec3:
- *
- * - ClipVelocity: reflect the incoming velocity against a plane and apply an overbounce factor,
- *   zeroing out very small results.
- * - SlideClipVelocity: remove the component of the velocity into the plane normal and clamp very
- *   small components to zero.
+ * Mirrors PM_ClipVelocity from `rerelease/p_move.cpp`: slide the incoming velocity off
+ * a plane normal, applying an overbounce scale and zeroing tiny components so callers can
+ * detect blocked axes using STOP_EPSILON.
  */
 export function clipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
-  const dot = dotVec3(inVel, normal);
-
-  // out = in + normal * (-2 * dot)
-  const reflected: Vec3 = {
-    x: inVel.x + normal.x * -2 * dot,
-    y: inVel.y + normal.y * -2 * dot,
-    z: inVel.z + normal.z * -2 * dot,
-  };
-
-  const scaled = scaleVec3(reflected, overbounce - 1);
-
-  if (lengthSquaredVec3(scaled) < STOP_EPSILON * STOP_EPSILON) {
-    return ZERO_VEC3;
-  }
-
-  return scaled;
-}
-
-export function slideClipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
   const backoff = dotVec3(inVel, normal) * overbounce;
 
   let outX = inVel.x - normal.x * backoff;
@@ -176,6 +154,74 @@ export function slideClipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: num
   }
 
   return { x: outX, y: outY, z: outZ };
+}
+
+/**
+ * Slide a velocity across one or more clip planes using the same plane set resolution logic
+ * seen in the inner loop of `PM_StepSlideMove_Generic` (rerelease `p_move.cpp`). When a single
+ * plane is provided this devolves to PM_ClipVelocity; with two planes it projects onto the
+ * crease defined by their cross product; with more planes it zeroes the velocity to avoid
+ * oscillations.
+ */
+export function clipVelocityAgainstPlanes(
+  velocity: Vec3,
+  planes: readonly Vec3[],
+  overbounce: number,
+  primalVelocity?: Vec3,
+): Vec3 {
+  if (planes.length === 0) {
+    return velocity;
+  }
+
+  let working = velocity;
+
+  for (let i = 0; i < planes.length; i++) {
+    working = clipVelocityVec3(working, planes[i], overbounce);
+
+    let j = 0;
+    for (; j < planes.length; j++) {
+      if (j === i) {
+        continue;
+      }
+
+      if (dotVec3(working, planes[j]) < 0) {
+        break;
+      }
+    }
+
+    if (j === planes.length) {
+      if (primalVelocity && dotVec3(working, primalVelocity) <= 0) {
+        return ZERO_VEC3;
+      }
+
+      return working;
+    }
+  }
+
+  if (planes.length === 2) {
+    const dir = crossVec3(planes[0], planes[1]);
+    const d = dotVec3(dir, velocity);
+    const creaseVelocity = scaleVec3(dir, d);
+
+    if (primalVelocity && dotVec3(creaseVelocity, primalVelocity) <= 0) {
+      return ZERO_VEC3;
+    }
+
+    return creaseVelocity;
+  }
+
+  if (primalVelocity && dotVec3(working, primalVelocity) <= 0) {
+    return ZERO_VEC3;
+  }
+
+  return ZERO_VEC3;
+}
+
+/**
+ * Alias retained for ergonomics; mirrors PM_ClipVelocity semantics.
+ */
+export function slideClipVelocityVec3(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
+  return clipVelocityVec3(inVel, normal, overbounce);
 }
 
 /**

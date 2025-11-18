@@ -8,8 +8,14 @@ import {
   normalizeVec3,
   scaleVec3,
 } from '../src/index.js';
-import { applyPmoveAccelerate, applyPmoveFriction } from '../src/pmove/pmove.js';
-import { applyPmoveAirAccelerate } from '../src/pmove/pmove.js';
+import {
+  applyPmoveAccelerate,
+  applyPmoveAirAccelerate,
+  applyPmoveFriction,
+  buildAirGroundWish,
+  buildWaterWish,
+  pmoveCmdScale,
+} from '../src/pmove/pmove.js';
 
 describe('pmove helpers (friction/accelerate)', () => {
   it('applies ground friction matching PM_Friction semantics', () => {
@@ -269,5 +275,103 @@ describe('pmove helpers (air acceleration)', () => {
     const expectedDelta = 0.2 * 0.1 * 80; // uses raw wishspeed even though clamp would be 30
     const delta = dotVec3(result, wishdir) - dotVec3(startingVelocity, wishdir);
     expect(delta).toBeCloseTo(expectedDelta, 4);
+  });
+});
+
+describe('pmove helpers (wishdir/wishspeed builders)', () => {
+  const forward = normalizeVec3({ x: 1, y: 0, z: 0 });
+  const right = normalizeVec3({ x: 0, y: 1, z: 0 });
+  const maxSpeed = 320;
+
+  it('computes air/ground wishdir with z forced to zero and clamps to max speed', () => {
+    const result = buildAirGroundWish({
+      forward,
+      right,
+      cmd: { forwardmove: 400, sidemove: 0, upmove: 0 },
+      maxSpeed,
+    });
+
+    expect(result.wishdir).toEqual({ x: 1, y: 0, z: 0 });
+    expect(result.wishspeed).toBeCloseTo(320, 4); // clamped to maxSpeed
+  });
+
+  it('returns the unclamped wishspeed when under the cap', () => {
+    const result = buildAirGroundWish({
+      forward,
+      right,
+      cmd: { forwardmove: 50, sidemove: -50, upmove: 0 },
+      maxSpeed,
+    });
+
+    expect(result.wishdir.x).toBeCloseTo(0.707106, 4);
+    expect(result.wishdir.y).toBeCloseTo(-0.707106, 4);
+    expect(result.wishdir.z).toBe(0);
+    expect(result.wishspeed).toBeCloseTo(Math.sqrt(50 * 50 + 50 * 50), 4);
+  });
+
+  it('matches PM_WaterMove z bias and wishspeed halving', () => {
+    const result = buildWaterWish({
+      forward,
+      right,
+      cmd: { forwardmove: 200, sidemove: 0, upmove: 0 },
+      maxSpeed,
+    });
+
+    // Should bias upward by 10 since upmove is between -10 and 10.
+    expect(result.wishdir.z).toBeGreaterThan(0);
+    const expectedWishvel = {
+      x: forward.x * 200,
+      y: forward.y * 200,
+      z: 10,
+    };
+    // Base wishspeed is length of the wishvel before halving.
+    const expectedLength = lengthVec3(expectedWishvel);
+    expect(result.wishspeed).toBeCloseTo(expectedLength * 0.5, 4);
+  });
+
+  it('honors explicit upmove values instead of the upward bias', () => {
+    const upward = buildWaterWish({
+      forward,
+      right,
+      cmd: { forwardmove: 0, sidemove: 0, upmove: 20 },
+      maxSpeed,
+    });
+
+    expect(upward.wishdir.z).toBeCloseTo(1, 4);
+
+    const downward = buildWaterWish({
+      forward,
+      right,
+      cmd: { forwardmove: 0, sidemove: 0, upmove: -20 },
+      maxSpeed,
+    });
+
+    expect(downward.wishdir.z).toBeCloseTo(-1, 4);
+  });
+});
+
+describe('pmove helpers (command scaling)', () => {
+  it('returns zero scale when there is no input', () => {
+    expect(pmoveCmdScale({ forwardmove: 0, sidemove: 0, upmove: 0 }, 320)).toBe(0);
+  });
+
+  it('matches PM_CmdScale for cardinal movement', () => {
+    const maxSpeed = 320;
+    const scale = pmoveCmdScale({ forwardmove: 127, sidemove: 0, upmove: 0 }, maxSpeed);
+    const wishspeed = 127 * scale;
+
+    expect(wishspeed).toBeCloseTo(maxSpeed, 4);
+  });
+
+  it('preserves max speed on diagonals and vertical mixes', () => {
+    const maxSpeed = 320;
+
+    const diagonalScale = pmoveCmdScale({ forwardmove: 127, sidemove: 127, upmove: 0 }, maxSpeed);
+    const diagonalTotal = Math.sqrt(127 * 127 + 127 * 127);
+    expect(diagonalTotal * diagonalScale).toBeCloseTo(maxSpeed, 4);
+
+    const verticalScale = pmoveCmdScale({ forwardmove: 64, sidemove: 32, upmove: 96 }, maxSpeed);
+    const verticalTotal = Math.sqrt(64 * 64 + 32 * 32 + 96 * 96);
+    expect(verticalTotal * verticalScale).toBeCloseTo(maxSpeed * (96 / 127), 4);
   });
 });

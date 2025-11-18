@@ -20,3 +20,21 @@ export interface PmoveAccelerateParams {
   readonly frametime: number;
 }
 
+export interface PmoveCmd {
+  readonly forwardmove: number;
+  readonly sidemove: number;
+  readonly upmove: number;
+}
+
+export interface PmoveWishResult {
+  readonly wishdir: Vec3;
+  readonly wishspeed: number;
+}
+
+export interface PmoveWishParams {
+  readonly forward: Vec3;
+  readonly right: Vec3;
+  readonly cmd: PmoveCmd;
+  readonly maxSpeed: number;
+}
+
