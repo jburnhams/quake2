@@ -10,6 +10,16 @@ export const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 // Matches STOP_EPSILON from rerelease q_vec3.h
 export const STOP_EPSILON = 0.1;
 
+const DEG_TO_RAD = Math.PI / 180;
+
+export interface Bounds3 {
+  readonly mins: Vec3;
+  readonly maxs: Vec3;
+}
+
+export type Mat3Row = readonly [number, number, number];
+export type Mat3 = readonly [Mat3Row, Mat3Row, Mat3Row];
+
 export function addVec3(a: Vec3, b: Vec3): Vec3 {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
@@ -127,6 +137,39 @@ export function distanceBetweenBoxesSquared(aMins: Vec3, aMaxs: Vec3, bMins: Vec
   }
 
   return lengthSq;
+}
+
+export function createEmptyBounds3(): Bounds3 {
+  return {
+    mins: { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY, z: Number.POSITIVE_INFINITY },
+    maxs: { x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY, z: Number.NEGATIVE_INFINITY },
+  };
+}
+
+export function addPointToBounds(point: Vec3, bounds: Bounds3): Bounds3 {
+  return {
+    mins: {
+      x: Math.min(bounds.mins.x, point.x),
+      y: Math.min(bounds.mins.y, point.y),
+      z: Math.min(bounds.mins.z, point.z),
+    },
+    maxs: {
+      x: Math.max(bounds.maxs.x, point.x),
+      y: Math.max(bounds.maxs.y, point.y),
+      z: Math.max(bounds.maxs.z, point.z),
+    },
+  };
+}
+
+export function boxesIntersect(a: Bounds3, b: Bounds3): boolean {
+  return (
+    a.mins.x <= b.maxs.x &&
+    a.maxs.x >= b.mins.x &&
+    a.mins.y <= b.maxs.y &&
+    a.maxs.y >= b.mins.y &&
+    a.mins.z <= b.maxs.z &&
+    a.maxs.z >= b.mins.z
+  );
 }
 
 /**
@@ -269,5 +312,56 @@ export function slerpVec3(from: Vec3, to: Vec3, t: number): Vec3 {
     x: from.x * aFactor + to.x * bFactor,
     y: from.y * aFactor + to.y * bFactor,
     z: from.z * aFactor + to.z * bFactor,
+  };
+}
+
+export function concatRotationMatrices(a: Mat3, b: Mat3): Mat3 {
+  const row = (rowIndex: number): Mat3Row => [
+    a[rowIndex][0] * b[0][0] + a[rowIndex][1] * b[1][0] + a[rowIndex][2] * b[2][0],
+    a[rowIndex][0] * b[0][1] + a[rowIndex][1] * b[1][1] + a[rowIndex][2] * b[2][1],
+    a[rowIndex][0] * b[0][2] + a[rowIndex][1] * b[1][2] + a[rowIndex][2] * b[2][2],
+  ];
+
+  const result = [row(0), row(1), row(2)] as Mat3;
+  return result;
+}
+
+export function rotatePointAroundVector(dir: Vec3, point: Vec3, degrees: number): Vec3 {
+  const axisLength = lengthVec3(dir);
+  if (axisLength === 0) {
+    return point;
+  }
+
+  const vf = normalizeVec3(dir);
+  const vr = perpendicularVec3(vf);
+  const vup = crossVec3(vr, vf);
+
+  const m: Mat3 = [
+    [vr.x, vup.x, vf.x],
+    [vr.y, vup.y, vf.y],
+    [vr.z, vup.z, vf.z],
+  ];
+
+  const im: Mat3 = [
+    [m[0][0], m[1][0], m[2][0]],
+    [m[0][1], m[1][1], m[2][1]],
+    [m[0][2], m[1][2], m[2][2]],
+  ];
+
+  const radians = degrees * DEG_TO_RAD;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const zrot: Mat3 = [
+    [cos, sin, 0],
+    [-sin, cos, 0],
+    [0, 0, 1],
+  ];
+
+  const rot = concatRotationMatrices(concatRotationMatrices(m, zrot), im);
+
+  return {
+    x: rot[0][0] * point.x + rot[0][1] * point.y + rot[0][2] * point.z,
+    y: rot[1][0] * point.x + rot[1][1] * point.y + rot[1][2] * point.z,
+    z: rot[2][0] * point.x + rot[2][1] * point.y + rot[2][2] * point.z,
   };
 }

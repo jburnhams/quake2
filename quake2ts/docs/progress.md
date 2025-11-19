@@ -26,6 +26,7 @@
 - Mirrored the rerelease `game.h` collision bitfields (`CONTENTS_*`, `SURF_*`, and the `MASK_*` helpers) in a shared `bsp/contents` module so both the game and client can share the same numeric masks, with exhaustive Vitest coverage keeping every bit position honest.
 - Expanded the root build to run the TypeScript project references and every workspace package/app's own `build` script so the entire `quake2ts` tree (engine, game, client, tools, shared, and viewer) is exercised consistently.
 - Prepped `@quake2ts/shared` for publication by emitting dual CJS/ESM bundles plus a browser-friendly IIFE build via tsup, while the TypeScript project reference now produces declaration-only output so workspace builds keep `.d.ts` artifacts separate from runtime bundles.
+- Rounded out the shared vec3 toolkit with the rerelease `q_vec3.h` bounds and rotation helpers (`ClearBounds`, `AddPointToBounds`, `boxes_intersect`, `R_ConcatRotations`, `RotatePointAroundVector`) so weapon offsets, collision checks, and camera math can reuse the same primitives as the C++ code, complete with Vitest coverage verifying matrix concatenation and arbitrary-axis rotations.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.

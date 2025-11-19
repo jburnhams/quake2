@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   ZERO_VEC3,
   STOP_EPSILON,
+  addPointToBounds,
   addVec3,
+  boxesIntersect,
   clipVelocityVec3,
   clipVelocityAgainstPlanes,
   closestPointToBox,
+  concatRotationMatrices,
+  createEmptyBounds3,
   crossVec3,
   distanceBetweenBoxesSquared,
   dotVec3,
@@ -18,11 +22,13 @@ import {
   projectPointOnPlane,
   projectSourceVec3,
   projectSourceVec3WithUp,
+  rotatePointAroundVector,
   scaleVec3,
   slerpVec3,
   slideClipVelocityVec3,
   subtractVec3,
 } from '../src/index.js';
+import type { Mat3, Vec3 } from '../src/index.js';
 
 describe('vec3 helpers', () => {
   it('adds and subtracts vectors component-wise', () => {
@@ -89,6 +95,31 @@ describe('vec3 helpers', () => {
 
     // Overlapping boxes have zero separation
     expect(distanceBetweenBoxesSquared(aMins, aMaxs, { x: 0, y: 0, z: 0 }, { x: 2, y: 2, z: 2 })).toBe(0);
+  });
+
+  it('clears bounds and expands them like q_vec3::ClearBounds/AddPointToBounds', () => {
+    let bounds = createEmptyBounds3();
+    expect(bounds.mins.x).toBe(Number.POSITIVE_INFINITY);
+    expect(bounds.maxs.z).toBe(Number.NEGATIVE_INFINITY);
+
+    bounds = addPointToBounds({ x: 5, y: -2, z: 3 }, bounds);
+    expect(bounds).toEqual({ mins: { x: 5, y: -2, z: 3 }, maxs: { x: 5, y: -2, z: 3 } });
+
+    bounds = addPointToBounds({ x: -4, y: 10, z: -8 }, bounds);
+    expect(bounds).toEqual({ mins: { x: -4, y: -2, z: -8 }, maxs: { x: 5, y: 10, z: 3 } });
+
+    const other = {
+      mins: { x: 5, y: 10, z: 3 },
+      maxs: { x: 6, y: 12, z: 5 },
+    } satisfies { mins: Vec3; maxs: Vec3 };
+
+    expect(boxesIntersect(bounds, other)).toBe(true);
+    expect(
+      boxesIntersect(bounds, {
+        mins: { x: 6.01, y: 10, z: 3 },
+        maxs: { x: 8, y: 12, z: 5 },
+      }),
+    ).toBe(false);
   });
 
   it('clips velocity against planes like q_vec3::ClipVelocity', () => {
@@ -182,5 +213,47 @@ describe('vec3 helpers', () => {
     // For nearly-parallel vectors, slerp should reduce to nlerp
     const almost = slerpVec3(from, normalizeVec3({ x: 1, y: 0.001, z: 0 }), 0.5);
     expect(lengthVec3(almost)).toBeCloseTo(1, 4);
+  });
+
+  it('concatenates rotation matrices like q_vec3::R_ConcatRotations', () => {
+    const identity: Mat3 = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ];
+    const rotZ90: Mat3 = [
+      [0, 1, 0],
+      [-1, 0, 0],
+      [0, 0, 1],
+    ];
+
+    const applied = concatRotationMatrices(identity, rotZ90);
+    expect(applied).toEqual(rotZ90);
+
+    const rotZ180 = concatRotationMatrices(rotZ90, rotZ90);
+    expect(rotZ180[0][0]).toBeCloseTo(-1, 4);
+    expect(rotZ180[1][1]).toBeCloseTo(-1, 4);
+    expect(rotZ180[2][2]).toBeCloseTo(1, 4);
+  });
+
+  it('rotates points around vectors like q_vec3::RotatePointAroundVector', () => {
+    const axis = normalizeVec3({ x: 0, y: 0, z: 1 });
+    const point = { x: 1, y: 0, z: 0 };
+    const rotated = rotatePointAroundVector(axis, point, 90);
+    expect(rotated.x).toBeCloseTo(0, 4);
+    expect(rotated.y).toBeCloseTo(1, 4);
+    expect(rotated.z).toBeCloseTo(0, 4);
+
+    const diagonalAxis = normalizeVec3({ x: 1, y: 1, z: 0 });
+    const up = { x: 0, y: 0, z: 1 };
+    const flipped = rotatePointAroundVector(diagonalAxis, up, 180);
+    expect(lengthVec3(flipped)).toBeCloseTo(1, 4);
+    const restored = rotatePointAroundVector(diagonalAxis, flipped, -180);
+    expect(restored.x).toBeCloseTo(up.x, 4);
+    expect(restored.y).toBeCloseTo(up.y, 4);
+    expect(restored.z).toBeCloseTo(up.z, 4);
+
+    const unchanged = rotatePointAroundVector(ZERO_VEC3, point, 45);
+    expect(unchanged).toEqual(point);
   });
 });
