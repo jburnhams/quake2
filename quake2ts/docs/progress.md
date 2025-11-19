@@ -9,6 +9,7 @@
 - Ported `PM_AirAccelerate` semantics into the shared pmove helpers with Vitest coverage that verifies the 30-unit clamp and wishspeed-driven acceleration (see `rerelease/p_move.cpp` lines 612-636).
 - Tightened the shared `G_AddBlend` expectations to mirror `rerelease/q_std.h` line 151 so fully opaque blends accumulate based on the stored alpha fraction before hitting 1.0.
 - Added pnpm workspace scaffolding (`packages/{engine,game,client,shared,tools}` and `apps/viewer`) with `tsc -b` wiring for project references.
+- Introduced a shared deterministic RNG built on a TypeScript MT19937 port plus `frandom`/`crandom`/`irandom`/`random_time` helpers that mirror `rerelease/g_local.h`, complete with Vitest sequences that match the canonical std::mt19937 outputs for multiple seeds.
 - Seeded Vitest with an initial shared math test to validate the harness and strict TypeScript settings.
 - Introduced a GitHub Actions workflow that installs dependencies and runs the workspace build/test steps on pushes/PRs touching `quake2ts/**`.
 - Implemented `clipVelocityVec3`/`clipVelocityAgainstPlanes` to mirror `PM_ClipVelocity` and the plane resolution loop in `PM_StepSlideMove_Generic`, with unit tests covering crease projection and STOP_EPSILON zeroing.
