@@ -31,20 +31,20 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
   - **Helpers added**: programmatic `ingestPaks` pipeline with progress callbacks for File/Blob/ArrayBuffer sources and `ingestPakFiles` wrapper for browser `File` objects
 
 ### BSP Loader
-- [ ] Parse BSP header and lumps (entities, planes, vertices, nodes, texinfo, faces, lighting, leafs, leaffaces, edges, surfedges, models, brushes, brushsides, visibility)
-- [ ] Build spatial data structures
+- [x] Parse BSP header and lumps (entities, planes, vertices, nodes, texinfo, faces, lighting, leafs, leaffaces, edges, surfedges, models, brushes, brushsides, visibility)
+- [x] Build spatial data structures
   - Node/leaf BSP tree for traversal
   - Face index lists per leaf
   - PVS (Potentially Visible Set) decompression
-- [ ] Extract and structure lightmap data
+- [x] Extract and structure lightmap data
   - Per-face lightmap offsets and dimensions
   - Multi-style lightmaps for animated lighting
   - Store in format ready for GPU upload
-- [ ] Parse worldspawn entity for renderer settings (sky, fog, ambient light)
-- [ ] Build brush/hull geometry for collision system (see Section 3 dependency)
+- [x] Parse worldspawn entity for renderer settings (sky, fog, ambient light)
+- [x] Build brush/hull geometry for collision system (see Section 3 dependency)
 
 ### Model Loaders (MD2/MD3)
-- [ ] MD2 loader
+- [x] MD2 loader
   - Parse header, frames, triangles, texture coordinates, GL commands
   - Build per-frame vertex/normal buffers
   - Support animation frame sequences

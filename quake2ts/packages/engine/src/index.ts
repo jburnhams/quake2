@@ -59,6 +59,16 @@ export {
 export { LruCache } from './assets/cache.js';
 export { filesToPakSources, ingestPakFiles, wireDropTarget, wireFileInput } from './assets/browserIngestion.js';
 export {
+  Md2Loader,
+  Md2ParseError,
+  groupMd2Animations,
+  parseMd2,
+  type Md2Animation,
+  type Md2Frame,
+  type Md2GlCommand,
+  type Md2Model,
+} from './assets/md2.js';
+export {
   EngineHost,
   type ClientRenderer,
   type EngineHostOptions,
