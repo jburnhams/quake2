@@ -44,10 +44,8 @@ function initTrigger(entity: Entity): void {
   entity.movetype = MoveType.None;
   entity.solid = Solid.Trigger;
   entity.svflags |= ServerFlags.NoClient;
-  if (!isZeroVector(entity.angles)) {
-    entity.movedir = setMovedir(entity.angles);
-    entity.angles = { x: 0, y: 0, z: 0 };
-  }
+  entity.movedir = setMovedir(entity.angles);
+  entity.angles = { x: 0, y: 0, z: 0 };
 }
 
 function multiWait(self: Entity): void {

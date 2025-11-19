@@ -68,6 +68,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 - [ ] Trigger spawns (trigger_* entities)
   - [x] `SP_trigger_multiple`, `SP_trigger_once`, `SP_trigger_relay`, `trigger_always`
   - [x] `SP_trigger_push`: Jump pads, wind tunnels
+    - Default movedir now derived even when `angles` are omitted (mirrors `G_SetMovedir`).
   - [x] `SP_trigger_hurt`: Damage zones (lava, slime)
   - [ ] `SP_trigger_teleport`: Teleport destinations
   - [ ] `SP_trigger_gravity`: Gravity modifiers

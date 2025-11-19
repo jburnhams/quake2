@@ -473,6 +473,32 @@ describe('Trigger spawns', () => {
     expect(system.findByClassname('trigger_push')).toHaveLength(0);
   });
 
+  it('trigger_push uses default movedir when angles are omitted', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_push',
+        mins: '-16 -16 -16',
+        maxs: '16 16 16',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('push failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.velocity = { x: 0, y: 0, z: 0 };
+
+    system.beginFrame(0);
+    system.runFrame();
+
+    expect(player.velocity.x).toBeCloseTo(10000);
+    expect(player.velocity.y).toBeCloseTo(0, 6);
+    expect(player.velocity.z).toBeCloseTo(0, 6);
+  });
+
   it('trigger_push respects START_OFF toggling and push_plus timing', () => {
     const system = new EntitySystem();
     const registry = createDefaultSpawnRegistry();
