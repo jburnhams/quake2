@@ -1,6 +1,7 @@
 import { angleMod, degToRad, vectorToYaw } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
+import { AIFlags } from './constants.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
 
@@ -59,8 +60,43 @@ export function changeYaw(self: Entity, deltaSeconds: number): void {
   (self.angles as MutableVec3).y = angleMod(current + move);
 }
 
+export function facingIdeal(self: Entity): boolean {
+  const delta = angleMod(self.angles.y - self.ideal_yaw);
+  const hasPathing = (self.monsterinfo.aiflags & AIFlags.Pathing) !== 0;
+
+  if (hasPathing) {
+    return !(delta > 5 && delta < 355);
+  }
+
+  return !(delta > 45 && delta < 315);
+}
+
 export function ai_move(self: Entity, distance: number): void {
   walkMove(self, self.angles.y, distance);
+}
+
+function setIdealYawTowards(self: Entity, target: Entity | null): void {
+  if (!target) return;
+
+  const toTarget: Vec3 = {
+    x: target.origin.x - self.origin.x,
+    y: target.origin.y - self.origin.y,
+    z: target.origin.z - self.origin.z,
+  };
+  self.ideal_yaw = vectorToYaw(toTarget);
+}
+
+export function ai_stand(self: Entity, deltaSeconds: number): void {
+  changeYaw(self, deltaSeconds);
+}
+
+export function ai_walk(self: Entity, distance: number, deltaSeconds: number): void {
+  setIdealYawTowards(self, self.goalentity);
+  changeYaw(self, deltaSeconds);
+
+  if (distance !== 0) {
+    walkMove(self, self.angles.y, distance);
+  }
 }
 
 export function ai_turn(self: Entity, distance: number, deltaSeconds: number): void {
@@ -70,6 +106,15 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
   changeYaw(self, deltaSeconds);
 }
 
+export function ai_run(self: Entity, distance: number, deltaSeconds: number): void {
+  setIdealYawTowards(self, self.enemy ?? self.goalentity);
+  changeYaw(self, deltaSeconds);
+
+  if (distance !== 0) {
+    walkMove(self, self.angles.y, distance);
+  }
+}
+
 export function ai_face(
   self: Entity,
   enemy: Entity | null,
@@ -77,14 +122,18 @@ export function ai_face(
   deltaSeconds: number,
 ): void {
   if (enemy) {
-    const toEnemy: Vec3 = {
-      x: enemy.origin.x - self.origin.x,
-      y: enemy.origin.y - self.origin.y,
-      z: enemy.origin.z - self.origin.z,
-    };
-    self.ideal_yaw = vectorToYaw(toEnemy);
+    setIdealYawTowards(self, enemy);
   }
 
+  changeYaw(self, deltaSeconds);
+
+  if (distance !== 0) {
+    walkMove(self, self.angles.y, distance);
+  }
+}
+
+export function ai_charge(self: Entity, distance: number, deltaSeconds: number): void {
+  setIdealYawTowards(self, self.enemy);
   changeYaw(self, deltaSeconds);
 
   if (distance !== 0) {
