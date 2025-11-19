@@ -34,11 +34,18 @@ export function advanceAnimation(state: AnimationState, deltaSeconds: number): A
 export function computeFrameBlend(state: AnimationState): FrameBlend {
   const totalFrames = state.sequence.end - state.sequence.start + 1;
   const frameDuration = 1 / state.sequence.fps;
+  const loop = state.sequence.loop !== false;
   const framePosition = state.time / frameDuration;
-  const baseFrame = Math.floor(framePosition);
-  const lerp = framePosition - baseFrame;
+
+  if (!loop && framePosition >= totalFrames) {
+    return { frame: state.sequence.end, nextFrame: state.sequence.end, lerp: 0 };
+  }
+
+  const normalizedPosition = loop ? framePosition % totalFrames : Math.min(framePosition, totalFrames - 1);
+  const baseFrame = Math.floor(normalizedPosition);
   const frame = state.sequence.start + baseFrame;
-  const nextFrame = baseFrame + 1 >= totalFrames ? state.sequence.start : frame + 1;
+  const nextFrame = baseFrame + 1 >= totalFrames ? (loop ? state.sequence.start : state.sequence.end) : frame + 1;
+  const lerp = !loop && baseFrame >= totalFrames - 1 ? 0 : normalizedPosition - baseFrame;
   return { frame, nextFrame, lerp };
 }
 

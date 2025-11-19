@@ -21,6 +21,21 @@ describe('Model animation helpers', () => {
     expect(blend.lerp).toBeCloseTo(0.75);
   });
 
+  it('holds the final frame for non-looping sequences', () => {
+    const once = createAnimationState({ name: 'pain', start: 2, end: 4, fps: 10, loop: false });
+    const nearingEnd = advanceAnimation(once, 0.25);
+    const nearingBlend = computeFrameBlend(nearingEnd);
+    expect(nearingBlend.frame).toBe(4);
+    expect(nearingBlend.nextFrame).toBe(4);
+    expect(nearingBlend.lerp).toBe(0);
+
+    const finished = advanceAnimation(once, 0.5);
+    const finishedBlend = computeFrameBlend(finished);
+    expect(finishedBlend.frame).toBe(4);
+    expect(finishedBlend.nextFrame).toBe(4);
+    expect(finishedBlend.lerp).toBe(0);
+  });
+
   it('interpolates vectors for keyframe blending', () => {
     const a = { x: 0, y: 0, z: 0 };
     const b = { x: 2, y: -2, z: 4 };
