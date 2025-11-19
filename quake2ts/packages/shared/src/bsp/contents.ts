@@ -15,6 +15,7 @@ export const CONTENTS_LAVA: ContentsFlag = 1 << 3;
 export const CONTENTS_SLIME: ContentsFlag = 1 << 4;
 export const CONTENTS_WATER: ContentsFlag = 1 << 5;
 export const CONTENTS_MIST: ContentsFlag = 1 << 6;
+export const CONTENTS_TRIGGER: ContentsFlag = 1 << 7;
 export const CONTENTS_NO_WATERJUMP: ContentsFlag = 1 << 13;
 export const CONTENTS_PROJECTILECLIP: ContentsFlag = 1 << 14;
 export const CONTENTS_AREAPORTAL: ContentsFlag = 1 << 15;
