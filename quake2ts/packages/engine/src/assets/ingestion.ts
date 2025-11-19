@@ -78,7 +78,7 @@ async function readBlobWithProgress(source: Blob, onProgress?: (progress: PakIng
   }
 
   if (typeof source.stream === 'function') {
-    const reader = source.stream().getReader();
+    const reader = (source.stream() as ReadableStream<Uint8Array>).getReader();
     const chunks: Uint8Array[] = [];
     let loaded = 0;
     while (true) {
@@ -86,22 +86,15 @@ async function readBlobWithProgress(source: Blob, onProgress?: (progress: PakIng
       if (done) {
         break;
       }
-      if (value) {
-        const chunk =
-          value instanceof Uint8Array
-            ? value
-            : ArrayBuffer.isView(value)
-            ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
-            : value instanceof ArrayBuffer
-            ? new Uint8Array(value)
-            : typeof value === 'string'
-            ? new TextEncoder().encode(value)
-            : new Uint8Array();
-
-        chunks.push(chunk);
-        loaded += chunk.byteLength;
-        onProgress?.({ file: 'blob', loadedBytes: loaded, totalBytes: source.size, state: 'reading' });
+      if (!value) {
+        continue;
       }
+
+      const chunk = value as Uint8Array;
+
+      chunks.push(chunk);
+      loaded += chunk.byteLength;
+      onProgress?.({ file: 'blob', loadedBytes: loaded, totalBytes: source.size, state: 'reading' });
     }
 
     const result = new Uint8Array(loaded);
@@ -122,12 +115,13 @@ async function toArrayBuffer(source: PakSource, onProgress?: (progress: PakInges
     return source.data;
   }
   if (source.data instanceof Blob) {
+    const totalBytes = source.data.size;
     return readBlobWithProgress(source.data, (progress) =>
-      onProgress?.({ ...progress, file: source.name, totalBytes: source.data.size }),
+      onProgress?.({ ...progress, file: source.name, totalBytes }),
     );
   }
 
-  const buffer = source.data.buffer.slice(source.data.byteOffset, source.data.byteOffset + source.data.byteLength);
+  const buffer = source.data.buffer.slice(source.data.byteOffset, source.data.byteOffset + source.data.byteLength) as ArrayBuffer;
   onProgress?.({ file: source.name, loadedBytes: buffer.byteLength, totalBytes: buffer.byteLength, state: 'reading' });
   return buffer;
 }
