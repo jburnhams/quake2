@@ -11,14 +11,18 @@ import {
   pointContents,
   pointInsideBrush,
   pointOnPlaneSide,
+  pointContentsMany,
   traceBox,
   testBoxInBrush,
+  inPHS,
+  inPVS,
   type CollisionBrush,
   type CollisionLumpData,
+  type CollisionLeaf,
   type CollisionModel,
   type CollisionPlane,
 } from '../src/bsp/collision.js';
-import { CONTENTS_SOLID } from '../src/bsp/contents.js';
+import { CONTENTS_SOLID, CONTENTS_WATER } from '../src/bsp/contents.js';
 import type { Vec3 } from '../src/math/vec3.js';
 
 function makePlane(normal: Vec3, dist: number): CollisionPlane {
@@ -278,6 +282,62 @@ describe('trace and contents queries', () => {
     expect(boxContents({ x: 48, y: 0, z: 0 }, mins, maxs, model, -1)).toBe(0);
   });
 
+  it('aggregates leaf contents for boxes that span multiple BSP children', () => {
+    const partitionPlane = makePlane({ x: 1, y: 0, z: 0 }, 0);
+    const nodes = [{ plane: partitionPlane, children: [-1, -2] }];
+
+    const frontLeaf = makeLeaf(CONTENTS_WATER, 0, 0);
+    const backLeaf = makeLeaf(CONTENTS_SOLID, 0, 0);
+
+    const model: CollisionModel = {
+      planes: [partitionPlane],
+      nodes,
+      leaves: [frontLeaf, backLeaf],
+      brushes: [],
+      leafBrushes: [],
+      bmodels: [],
+    };
+
+    const mins = { x: -16, y: -16, z: -16 } satisfies Vec3;
+    const maxs = { x: 16, y: 16, z: 16 } satisfies Vec3;
+
+    expect(boxContents({ x: 0, y: 0, z: 0 }, mins, maxs, model, 0)).toBe(CONTENTS_WATER | CONTENTS_SOLID);
+    expect(boxContents({ x: 64, y: 0, z: 0 }, mins, maxs, model, 0)).toBe(CONTENTS_WATER);
+    expect(boxContents({ x: -64, y: 0, z: 0 }, mins, maxs, model, 0)).toBe(CONTENTS_SOLID);
+  });
+
+  it('computes contents per point while sharing trivial brushless leaves', () => {
+    const brush = makeAxisBrush(32);
+    const partitionPlane = makePlane({ x: 1, y: 0, z: 0 }, 0);
+    const planes = [partitionPlane, ...brush.sides.map((side) => side.plane)];
+
+    const nodes = [{ plane: partitionPlane, children: [-1, -2] }];
+    const leafFront = makeLeaf(CONTENTS_WATER, 0, 0);
+    const leafBack = makeLeaf(0, 0, 1);
+
+    const model: CollisionModel = {
+      planes,
+      nodes,
+      leaves: [leafFront, leafBack],
+      brushes: [brush],
+      leafBrushes: [0],
+      bmodels: [],
+    };
+
+    const points: Vec3[] = [
+      { x: 64, y: 0, z: 0 }, // water leaf with no brushes
+      { x: 96, y: 0, z: 0 }, // same water leaf, hits cache
+      { x: -8, y: 0, z: 0 }, // solid brush leaf
+      { x: -40, y: 0, z: 0 }, // same leaf but outside brush
+    ];
+
+    const [waterA, waterB, inside, outside] = pointContentsMany(points, model, 0);
+    expect(waterA).toBe(CONTENTS_WATER);
+    expect(waterB).toBe(CONTENTS_WATER);
+    expect(inside).toBe(CONTENTS_SOLID);
+    expect(outside).toBe(0);
+  });
+
   it('propagates leaf contents even when no brushes are present', () => {
     const model: CollisionModel = {
       planes: [],
@@ -308,5 +368,45 @@ describe('trace and contents queries', () => {
     expect(trace.allsolid).toBe(true);
     expect(trace.fraction).toBe(0);
     expect(trace.endpos).toEqual(start);
+  });
+
+  it('checks PVS and PHS membership using BSP clusters', () => {
+    const plane = makePlane({ x: 1, y: 0, z: 0 }, 0);
+    const nodes = [{ plane, children: [-1, -2] }];
+
+    const leafFront = { ...makeLeaf(0, 0, 0), cluster: 0 } satisfies CollisionLeaf;
+    const leafBack = { ...makeLeaf(0, 0, 0), cluster: 1 } satisfies CollisionLeaf;
+
+    const visibility = {
+      numClusters: 2,
+      clusters: [
+        { pvs: Uint8Array.from([0b00000011]), phs: Uint8Array.from([0b00000011]) },
+        { pvs: Uint8Array.from([0b00000010]), phs: Uint8Array.from([0b00000011]) },
+      ],
+    };
+
+    const model: CollisionModel = {
+      planes: [plane],
+      nodes,
+      leaves: [leafFront, leafBack],
+      brushes: [],
+      leafBrushes: [],
+      bmodels: [],
+      visibility,
+    };
+
+    expect(inPVS({ x: 64, y: 0, z: 0 }, { x: -64, y: 0, z: 0 }, model, 0)).toBe(true);
+    expect(inPVS({ x: -64, y: 0, z: 0 }, { x: 64, y: 0, z: 0 }, model, 0)).toBe(false);
+
+    expect(inPHS({ x: -64, y: 0, z: 0 }, { x: 64, y: 0, z: 0 }, model, 0)).toBe(true);
+
+    const disconnected: CollisionModel = { ...model, visibility: undefined };
+    expect(inPVS({ x: 0, y: 0, z: 0 }, { x: 128, y: 0, z: 0 }, disconnected, 0)).toBe(true);
+
+    const solidLeaf: CollisionModel = {
+      ...model,
+      leaves: [{ ...leafFront, cluster: -1 }, leafBack],
+    };
+    expect(inPVS({ x: 64, y: 0, z: 0 }, { x: -64, y: 0, z: 0 }, solidLeaf, 0)).toBe(false);
   });
 });

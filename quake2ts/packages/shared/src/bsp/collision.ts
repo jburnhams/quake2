@@ -46,6 +46,17 @@ export interface CollisionModel {
   brushes: CollisionBrush[];
   leafBrushes: number[];
   bmodels: CollisionBmodel[];
+  visibility?: CollisionVisibility;
+}
+
+export interface CollisionVisibilityCluster {
+  pvs: Uint8Array;
+  phs: Uint8Array;
+}
+
+export interface CollisionVisibility {
+  numClusters: number;
+  clusters: readonly CollisionVisibilityCluster[];
 }
 
 export interface CollisionLumpData {
@@ -56,6 +67,7 @@ export interface CollisionLumpData {
   brushSides: Array<{ planenum: number; surfaceFlags: number }>;
   leafBrushes: number[];
   bmodels: Array<{ mins: Vec3; maxs: Vec3; origin: Vec3; headnode: number }>;
+  visibility?: CollisionVisibility;
 }
 
 export interface TraceResult {
@@ -135,6 +147,7 @@ export function buildCollisionModel(lumps: CollisionLumpData): CollisionModel {
     brushes,
     leafBrushes: lumps.leafBrushes,
     bmodels,
+    visibility: lumps.visibility,
   };
 }
 
@@ -323,6 +336,42 @@ export function createDefaultTrace(): TraceResult {
   };
 }
 
+function findLeafIndex(point: Vec3, model: CollisionModel, headnode: number): number {
+  let nodeIndex = headnode;
+
+  while (nodeIndex >= 0) {
+    const node = model.nodes[nodeIndex];
+    const dist = planeDistanceToPoint(node.plane, point);
+    nodeIndex = dist >= 0 ? node.children[0] : node.children[1];
+  }
+
+  return -1 - nodeIndex;
+}
+
+function computeLeafContents(model: CollisionModel, leafIndex: number, point: Vec3): number {
+  const leaf = model.leaves[leafIndex];
+  let contents = leaf.contents;
+
+  const brushCheckCount = nextBrushCheckCount();
+  const start = leaf.firstLeafBrush;
+  const end = start + leaf.numLeafBrushes;
+
+  for (let i = start; i < end; i += 1) {
+    const brushIndex = model.leafBrushes[i];
+    const brush = model.brushes[brushIndex];
+
+    if (brush.checkcount === brushCheckCount) continue;
+    brush.checkcount = brushCheckCount;
+
+    if (brush.sides.length === 0) continue;
+    if (pointInsideBrush(point, brush)) {
+      contents |= brush.contents;
+    }
+  }
+
+  return contents;
+}
+
 function nextBrushCheckCount(): number {
   const count = globalBrushCheckCount;
   globalBrushCheckCount += 1;
@@ -344,11 +393,34 @@ function planeOffsetForBounds(plane: CollisionPlane, mins: Vec3, maxs: Vec3): nu
     plane.normal.y * (plane.normal.y < 0 ? maxs.y : mins.y) +
     plane.normal.z * (plane.normal.z < 0 ? maxs.z : mins.z);
 
-  return offset;
+  return Math.abs(offset);
 }
 
 function lerpPoint(start: Vec3, end: Vec3, t: number): Vec3 {
   return addVec3(start, scaleVec3(subtractVec3(end, start), t));
+}
+
+function clusterForPoint(point: Vec3, model: CollisionModel, headnode: number): number {
+  const leafIndex = findLeafIndex(point, model, headnode);
+  return model.leaves[leafIndex]?.cluster ?? -1;
+}
+
+function clusterVisible(
+  visibility: CollisionVisibility,
+  from: number,
+  to: number,
+  usePhs: boolean,
+): boolean {
+  if (!visibility || visibility.numClusters === 0) return true;
+  if (from < 0 || to < 0) return false;
+  if (from >= visibility.clusters.length || to >= visibility.numClusters) return false;
+
+  const cluster = visibility.clusters[from];
+  const set = usePhs ? cluster.phs : cluster.pvs;
+  const byte = set[to >> 3];
+  if (byte === undefined) return false;
+
+  return (byte & (1 << (to & 7))) !== 0;
 }
 
 function recursiveHullCheck(params: {
@@ -570,66 +642,107 @@ export function traceBox(params: CollisionTraceParams): CollisionTraceResult {
 }
 
 export function pointContents(point: Vec3, model: CollisionModel, headnode = 0): number {
-  let nodeIndex = headnode;
+  const leafIndex = findLeafIndex(point, model, headnode);
+  return computeLeafContents(model, leafIndex, point);
+}
 
-  while (nodeIndex >= 0) {
-    const node = model.nodes[nodeIndex];
-    const dist = planeDistanceToPoint(node.plane, point);
-    nodeIndex = dist >= 0 ? node.children[0] : node.children[1];
-  }
+export function pointContentsMany(points: readonly Vec3[], model: CollisionModel, headnode = 0): number[] {
+  const leafCache = new Map<number, number>();
 
-  const leaf = model.leaves[-1 - nodeIndex];
-  let contents = leaf.contents;
+  return points.map((point) => {
+    const leafIndex = findLeafIndex(point, model, headnode);
+    const leaf = model.leaves[leafIndex];
 
-  const brushCheckCount = nextBrushCheckCount();
-  const start = leaf.firstLeafBrush;
-  const end = start + leaf.numLeafBrushes;
+    if (leaf.numLeafBrushes === 0) {
+      const cached = leafCache.get(leafIndex);
+      if (cached !== undefined) {
+        return cached;
+      }
 
-  for (let i = start; i < end; i += 1) {
-    const brushIndex = model.leafBrushes[i];
-    const brush = model.brushes[brushIndex];
-
-    if (brush.checkcount === brushCheckCount) continue;
-    brush.checkcount = brushCheckCount;
-
-    if (brush.sides.length === 0) continue;
-    if (pointInsideBrush(point, brush)) {
-      contents |= brush.contents;
+      leafCache.set(leafIndex, leaf.contents);
+      return leaf.contents;
     }
+
+    return computeLeafContents(model, leafIndex, point);
+  });
+}
+
+export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: CollisionModel, headnode = 0): number {
+  const brushCheckCount = nextBrushCheckCount();
+  let contents = 0;
+
+  function traverse(nodeIndex: number) {
+    if (nodeIndex < 0) {
+      const leafIndex = -1 - nodeIndex;
+      const leaf = model.leaves[leafIndex];
+
+      contents |= leaf.contents;
+
+      const brushStart = leaf.firstLeafBrush;
+      const brushEnd = brushStart + leaf.numLeafBrushes;
+
+      for (let i = brushStart; i < brushEnd; i += 1) {
+        const brushIndex = model.leafBrushes[i];
+        const brush = model.brushes[brushIndex];
+
+        if (brush.checkcount === brushCheckCount) continue;
+        brush.checkcount = brushCheckCount;
+
+        if (brush.sides.length === 0) continue;
+
+        const result = testBoxInBrush(origin, mins, maxs, brush);
+        if (result.startsolid) {
+          contents |= result.contents;
+        }
+      }
+      return;
+    }
+
+    const node = model.nodes[nodeIndex];
+    const plane = node.plane;
+    const offset = planeOffsetForBounds(plane, mins, maxs);
+    const dist = planeDistanceToPoint(plane, origin);
+
+    if (offset === 0) {
+      traverse(dist >= 0 ? node.children[0] : node.children[1]);
+      return;
+    }
+
+    if (dist > offset) {
+      traverse(node.children[0]);
+      return;
+    }
+
+    if (dist < -offset) {
+      traverse(node.children[1]);
+      return;
+    }
+
+    traverse(node.children[0]);
+    traverse(node.children[1]);
   }
+
+  traverse(headnode);
 
   return contents;
 }
 
-export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: CollisionModel, headnode = 0): number {
-  let nodeIndex = headnode;
+export function inPVS(p1: Vec3, p2: Vec3, model: CollisionModel, headnode = 0): boolean {
+  const { visibility } = model;
+  if (!visibility) return true;
 
-  while (nodeIndex >= 0) {
-    const node = model.nodes[nodeIndex];
-    const dist = planeDistanceToPoint(node.plane, origin);
-    nodeIndex = dist >= 0 ? node.children[0] : node.children[1];
-  }
+  const cluster1 = clusterForPoint(p1, model, headnode);
+  const cluster2 = clusterForPoint(p2, model, headnode);
 
-  const leaf = model.leaves[-1 - nodeIndex];
-  let contents = leaf.contents;
-  const brushCheckCount = nextBrushCheckCount();
-  const start = leaf.firstLeafBrush;
-  const end = start + leaf.numLeafBrushes;
+  return clusterVisible(visibility, cluster1, cluster2, false);
+}
 
-  for (let i = start; i < end; i += 1) {
-    const brushIndex = model.leafBrushes[i];
-    const brush = model.brushes[brushIndex];
+export function inPHS(p1: Vec3, p2: Vec3, model: CollisionModel, headnode = 0): boolean {
+  const { visibility } = model;
+  if (!visibility) return true;
 
-    if (brush.checkcount === brushCheckCount) continue;
-    brush.checkcount = brushCheckCount;
+  const cluster1 = clusterForPoint(p1, model, headnode);
+  const cluster2 = clusterForPoint(p2, model, headnode);
 
-    if (brush.sides.length === 0) continue;
-
-    const result = testBoxInBrush(origin, mins, maxs, brush);
-    if (result.startsolid) {
-      contents |= result.contents;
-    }
-  }
-
-  return contents;
+  return clusterVisible(visibility, cluster1, cluster2, true);
 }
