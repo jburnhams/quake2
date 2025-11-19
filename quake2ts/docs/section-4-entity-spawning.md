@@ -18,7 +18,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 ## Tasks Remaining
 
 ### Entity Data Structure
-- [ ] Define core Entity type/class
+- [x] Define core Entity type/class
   - **Transform**: origin, angles, velocity, avelocity
   - **Physics**: mins, maxs, mass, gravity, movetype (MOVETYPE_NONE, STEP, PUSH, STOP, WALK, TOSS, BOUNCE, FLY, FLYMISSILE)
   - **Render**: modelindex, frame, skin, effects, renderfx
@@ -29,30 +29,29 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - **Timing**: nextthink, thinkfunc, touch, use, pain, die callbacks
   - **Flags**: solid (SOLID_NOT, TRIGGER, BBOX, BSP), flags, svflags, spawnflags
   - **Entity linking**: linked list for entity iteration, area links for spatial queries
-- [ ] Entity field serialization metadata
+- [x] Entity field serialization metadata
   - Mark which fields save/load (see Section 9)
   - Field types for JSON serialization
-- [ ] Entity memory pool/allocator
+- [x] Entity memory pool/allocator
   - Fixed-size array (2048 max entities, matching rerelease MAX_EDICTS)
   - Free list for efficient alloc/dealloc
   - Entity slot recycling
 
-### Entity Lifecycle
-- [ ] Spawn entity (`G_Spawn`)
+- [x] Spawn entity (`G_Spawn`)
   - Allocate from entity pool
   - Initialize default values
   - Return entity reference
-- [ ] Free entity (`G_FreeEntity`)
+- [x] Free entity (`G_FreeEntity`)
   - Unlink from world
   - Clear callbacks
   - Return to free list
   - Delay actual free until end of frame (prevent use-after-free)
-- [ ] Think scheduling
+- [x] Think scheduling
   - Set `nextthink` timestamp
   - Register entity in think queue
   - Execute think callbacks at scheduled time
   - Sort by nextthink for efficient processing
-- [ ] Touch detection
+- [x] Touch detection
   - When entities overlap (via trace), call touch callbacks
   - Handle trigger volumes
   - Pickup items, teleporters, hurt triggers
@@ -129,11 +128,10 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - For solid entities, link into BSP spatial areas
   - Build target->entity lookup table for scripting
 
-### Entity Thinking & Update Loop
-- [ ] Integrate with GameFrameLoop
+- [x] Integrate with GameFrameLoop
   - Register think/touch systems with sim stage
   - Process entities every frame (40Hz)
-- [ ] Think system
+- [x] Think system
   - Maintain think queue (priority queue by nextthink time)
   - Execute think functions for entities whose time has come
   - Reschedule if nextthink updated
