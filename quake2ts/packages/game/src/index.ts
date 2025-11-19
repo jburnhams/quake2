@@ -24,6 +24,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
 }
 
+export * from './combat/index.js';
+
 export function createGame(
   engine: { trace(start: Vec3, end: Vec3): unknown },
   options: GameCreateOptions,
