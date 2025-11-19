@@ -44,7 +44,15 @@ function boundsIntersect(a: Bounds, b: Bounds): boolean {
 
 type SerializableVec3 = readonly [number, number, number];
 
-type SerializableEntityFieldValue = number | string | boolean | null | SerializableVec3;
+type SerializableInventory = Record<string, number>;
+
+type SerializableEntityFieldValue =
+  | number
+  | string
+  | boolean
+  | null
+  | SerializableVec3
+  | SerializableInventory;
 
 type SerializableFieldName = Exclude<
   (typeof ENTITY_FIELD_METADATA)[number]['name'],
@@ -83,12 +91,24 @@ function deserializeVec3(value: SerializableEntityFieldValue): Vec3 {
   return { x, y, z };
 }
 
-function assignField(
-  entity: Entity,
-  name: SerializableFieldName,
-  value: Entity[SerializableFieldName],
-): void {
+function assignField(entity: Entity, name: SerializableFieldName, value: Entity[SerializableFieldName]): void {
   (entity as Record<SerializableFieldName, Entity[SerializableFieldName]>)[name] = value;
+}
+
+function serializeInventory(inventory: Record<string, number>): SerializableInventory {
+  return { ...inventory };
+}
+
+function deserializeInventory(value: SerializableEntityFieldValue): Record<string, number> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid inventory serialization');
+  }
+
+  const parsed: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    parsed[key] = Number(entry);
+  }
+  return parsed;
 }
 
 export class EntitySystem {
@@ -240,6 +260,9 @@ export class EntitySystem {
           case 'entity':
             fields[descriptor.name] = (value as Entity | null)?.index ?? null;
             break;
+          case 'inventory':
+            fields[descriptor.name] = serializeInventory(value as Record<string, number>);
+            break;
           default:
             fields[descriptor.name] = (value as SerializableEntityFieldValue) ?? null;
             break;
@@ -296,6 +319,9 @@ export class EntitySystem {
               name: descriptor.name,
               targetIndex: value as number | null,
             });
+            break;
+          case 'inventory':
+            assignField(entity, name, deserializeInventory(value) as Entity[typeof name]);
             break;
           case 'boolean':
             assignField(entity, name, Boolean(value) as Entity[typeof name]);

@@ -137,6 +137,15 @@ function parseEntityFields(raw: unknown): SerializedEntityState['fields'] {
         parsed[name as keyof SerializedEntityState['fields']] = value;
         break;
       default: {
+        if (!Array.isArray(value)) {
+          const object = ensureObject(value, name);
+          const inventory: Record<string, number> = {};
+          for (const [entryName, entryValue] of Object.entries(object)) {
+            inventory[entryName] = ensureNumber(entryValue, `${name}.${entryName}`);
+          }
+          parsed[name as keyof SerializedEntityState['fields']] = inventory;
+          break;
+        }
         if (Array.isArray(value) && value.length === 3) {
           const [x, y, z] = value;
           parsed[name as keyof SerializedEntityState['fields']] = [

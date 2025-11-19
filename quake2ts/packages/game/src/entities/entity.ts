@@ -67,6 +67,7 @@ export type EntityFieldType =
   | 'vec3'
   | 'boolean'
   | 'entity'
+  | 'inventory'
   | 'callback';
 
 export interface EntityFieldDescriptor<K extends keyof Entity = keyof Entity> {
@@ -260,6 +261,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'message', type: 'string', save: true },
   { name: 'model', type: 'string', save: true },
   { name: 'item', type: 'string', save: true },
+  { name: 'inventory', type: 'inventory', save: true },
   { name: 'origin', type: 'vec3', save: true },
   { name: 'old_origin', type: 'vec3', save: true },
   { name: 'velocity', type: 'vec3', save: true },
