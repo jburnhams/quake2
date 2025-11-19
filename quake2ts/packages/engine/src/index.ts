@@ -99,3 +99,15 @@ export {
   type LightmapAtlas,
   type LightmapPlacement,
 } from './render/bsp.js';
+export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
+export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
+export {
+  applySurfaceState,
+  BspSurfacePipeline,
+  BSP_SURFACE_FRAGMENT_SOURCE,
+  BSP_SURFACE_VERTEX_SOURCE,
+  deriveSurfaceRenderState,
+  resolveLightStyles,
+  type BspSurfaceBindOptions,
+  type SurfaceRenderState,
+} from './render/bspPipeline.js';

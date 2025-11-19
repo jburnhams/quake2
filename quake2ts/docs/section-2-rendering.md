@@ -36,11 +36,11 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Convert BSP faces to GPU vertex/index buffers
   - Upload lightmap atlas to texture array or large texture
   - Create face-to-texture mapping
-- [ ] Implement BSP traversal and culling
+- [x] Implement BSP traversal and culling (frustum extraction helpers, PVS-aware leaf selection, front-to-back ordering)
   - Camera frustum culling
   - PVS (Potentially Visible Set) query from current leaf
   - Front-to-back face sorting for optimal fill rate
-- [ ] Shader pipeline for BSP surfaces
+- [x] Shader pipeline for BSP surfaces
   - Vertex shader: world transform, texture/lightmap UVs
   - Fragment shader: multi-texture (diffuse + lightmap)
   - Support for multiple lightmap styles (animated lighting)
