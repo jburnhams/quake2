@@ -25,6 +25,7 @@ export interface PmoveCmd {
   readonly forwardmove: number;
   readonly sidemove: number;
   readonly upmove: number;
+  readonly buttons?: number;
 }
 
 export interface PmoveWishResult {
