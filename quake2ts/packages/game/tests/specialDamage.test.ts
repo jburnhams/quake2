@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DamageMod,
+  ArmorType,
   applyEnvironmentalDamage,
   applyFallingDamage,
   calculateFallingDamage,
@@ -131,6 +132,26 @@ describe('applyFallingDamage', () => {
 
     expect(result.damage).toBeGreaterThan(0);
     expect(target.health).toBeCloseTo(83);
+  });
+
+  it('bypasses armor so fall damage cannot be absorbed', () => {
+    const target = makeTarget({
+      regularArmor: { armorType: ArmorType.BODY, armorCount: 100 },
+      powerArmor: {
+        type: 'shield',
+        cellCount: 5,
+        angles: { x: 0, y: 0, z: 0 },
+        origin: { x: 0, y: 0, z: 0 },
+        health: 100,
+      },
+    });
+
+    const result = applyFallingDamage(target, { impactDelta: 800, waterLevel: WaterLevel.None });
+
+    expect(result.damage).toBeGreaterThan(0);
+    expect(target.health).toBeCloseTo(83);
+    expect(target.regularArmor?.armorCount).toBe(100);
+    expect(target.powerArmor?.cellCount).toBe(5);
   });
 
   it('keeps minor landings to footstep events without harming health', () => {

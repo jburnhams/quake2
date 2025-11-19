@@ -46,7 +46,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Used for obituary messages ("Player was blasted by Monster")
   - Some entities immune to certain damage types
 - [ ] Special damage types
-  - [x] Falling damage (based on fall velocity)
+- [x] Falling damage (based on fall velocity and bypasses armor like rerelease)
   - [x] Drowning (when underwater too long, no air)
   - [x] Slime/lava damage (periodic damage in liquid)
   - [x] Crush damage (from doors, platforms)

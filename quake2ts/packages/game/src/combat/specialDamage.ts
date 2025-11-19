@@ -185,7 +185,18 @@ export function applyFallingDamage(
   const result = calculateFallingDamage(context);
 
   if (result.damage > 0 && !context.skipDamage) {
-    T_Damage(target, null, null, { x: 0, y: 0, z: 1 }, target.origin, ZERO, result.damage, 0, DamageFlags.NONE, DamageMod.FALLING);
+    T_Damage(
+      target,
+      null,
+      null,
+      { x: 0, y: 0, z: 1 },
+      target.origin,
+      ZERO,
+      result.damage,
+      0,
+      DamageFlags.NO_ARMOR,
+      DamageMod.FALLING,
+    );
   }
 
   return result;
