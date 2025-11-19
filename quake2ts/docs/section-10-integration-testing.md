@@ -72,7 +72,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - Test subsystem interdependencies
 
 ### API Contract Validation System
-- [ ] Create import/export table validators
+- [x] Create import/export table validators
   - **game_import_t contract**: Automated validation that engine exports all required functions
     - `trace(start, end, mins, maxs, passent, contentmask) -> TraceResult`
     - `pointcontents(point) -> number`
@@ -97,17 +97,20 @@ This section covers the critical integration layer that ensures all subsystems w
     - Prediction functions
     - HUD rendering
     - View calculations
-- [ ] Type-level contract enforcement
+  - Shared `contracts.ts` module now exposes rerelease key lists for all four tables and reusable validation helpers.
+- [x] Type-level contract enforcement
   - Create TypeScript interfaces matching rerelease C++ signatures
   - Use strict typing to prevent signature drift
   - Add compile-time checks for required exports
   - Document any intentional deviations from rerelease
-- [ ] Runtime contract verification
+  - Contract assertions now narrow validated tables to the expected function maps at compile time.
+- [x] Runtime contract verification
   - Build test harness that validates all import tables are fully implemented
   - Check function signatures at runtime (parameter counts, types)
   - Verify return value types match contracts
   - Test error handling for invalid inputs
   - Run contract validation in CI on every commit
+  - Vitest coverage exercises game/cgame import and export tables, catching missing or non-function entries with rerelease naming.
 
 ### Node.js Browser Substitute Integration
 - [ ] WebGL2 substitute using @napi-rs/canvas or node-canvas-webgl
@@ -248,15 +251,17 @@ This section covers the critical integration layer that ensures all subsystems w
     - Verify completion time matches
 
 ### Determinism Validation Framework
-- [ ] Game state serialization for comparison
+- [x] Game state serialization for comparison
   - Serialize complete game state (entities, player state, world state)
   - Create deterministic hash/checksum of state
   - Store state snapshots at key frames
+  - Added `hashGameState` FNV-1a helper and baseline hashes for the gravity loop to detect rerelease deviations.
 - [ ] Replay and comparison system
   - Record input sequence for gameplay session
   - Replay inputs and compare state checksums
   - Verify identical results across runs
   - Test on different platforms (Linux, macOS, Windows via CI)
+  - Baseline hash regression tests now fail fast on divergent physics; input recording still needed.
 - [ ] Floating point consistency tests
   - Test math operations for deterministic results
   - Verify vec3/angle operations produce identical results

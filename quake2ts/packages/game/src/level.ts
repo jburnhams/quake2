@@ -41,4 +41,8 @@ export class LevelClock {
   get current(): LevelFrameState {
     return this.state;
   }
+
+  restore(state: LevelFrameState): void {
+    this.state = { ...state };
+  }
 }

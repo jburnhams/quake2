@@ -32,7 +32,7 @@ This section covers the physics simulation and collision detection system that f
   - Ray intersects brush test
 
 ### Trace System (Core)
-- [ ] Implement `trace` function (main collision query)
+- [x] Implement `trace` function (main collision query)
   - **Signature**: `trace(start: vec3, end: vec3, mins: vec3, maxs: vec3, passent: Entity | null, contentmask: number) -> TraceResult`
   - **Returns**: `{ fraction, endpos, plane, surface, contents, ent, allsolid, startsolid }`
   - Sweep bounding box from start to end
@@ -45,24 +45,23 @@ This section covers the physics simulation and collision detection system that f
   - Early-out when trace is blocked
   - Trace cache for repeated queries (optional)
 - [ ] Handle edge cases
-  - Zero-length traces (point tests)
-  - Trace starting in solid (set startsolid, allsolid flags)
-  - Epsilon handling for surface snapping
+  - [x] Zero-length traces (point tests)
+  - [x] Trace starting in solid (set startsolid, allsolid flags)
+  - [ ] Epsilon handling for surface snapping
 
 ### Point Queries
-- [ ] Implement `pointcontents` function
+- [x] Implement `pointcontents` function
   - **Signature**: `pointcontents(point: vec3) -> number` (returns CONTENTS_* bitmask)
   - Test point against BSP leafs and brushes
   - Return combined contents flags
   - Used for water level detection, trigger volumes, death zones
-- [ ] Optimize with BSP leaf lookup
+- [x] Optimize with BSP leaf lookup
   - Traverse BSP nodes to find containing leaf
   - Test only brushes in that leaf
 - [ ] Multi-point queries for efficiency
   - Query multiple points in batch (for water level probing)
 
-### Box Queries
-- [ ] Implement `boxcontents` helper (used internally)
+- [x] Implement `boxcontents` helper (used internally)
   - Test if a bounding box intersects specific contents
   - Used to check if player is in water, lava, slime
 - [ ] Implement `inPVS` check (for entity visibility)

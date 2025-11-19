@@ -69,6 +69,62 @@ export {
   type Md2Model,
 } from './assets/md2.js';
 export {
+  Md3Loader,
+  Md3ParseError,
+  parseMd3,
+  type Md3Frame,
+  type Md3Model,
+  type Md3Surface,
+} from './assets/md3.js';
+export {
+  advanceAnimation,
+  computeFrameBlend,
+  createAnimationState,
+  interpolateVec3,
+  type AnimationSequence,
+  type AnimationState,
+  type FrameBlend,
+} from './assets/animation.js';
+export { parseWal, type WalTexture } from './assets/wal.js';
+export { parsePcx, pcxToRgba, type PcxImage } from './assets/pcx.js';
+export {
+  parseWalTexture,
+  preparePcxTexture,
+  TextureCache,
+  walToRgba,
+  type PreparedTexture,
+  type TextureLevel,
+} from './assets/texture.js';
+export { parseWav, type WavData } from './assets/wav.js';
+export { decodeOgg, type OggAudio } from './assets/ogg.js';
+export { AudioRegistry, AudioRegistryError, type DecodedAudio } from './assets/audio.js';
+  ATTN_IDLE,
+  ATTN_LOOP_NONE,
+  ATTN_NONE,
+  ATTN_NORM,
+  ATTN_STATIC,
+  MAX_SOUND_CHANNELS as MAX_SOUND_CHANNELS,
+  SOUND_FULLVOLUME,
+  SOUND_LOOP_ATTENUATE,
+  SoundChannel,
+  attenuationToDistanceMultiplier,
+  calculateMaxAudibleDistance,
+} from './audio/constants.js';
+export {
+  AudioContextController,
+  createAudioGraph,
+  type AudioBufferLike,
+  type AudioContextLike,
+  type AudioGraph,
+  type AudioNodeLike,
+  type GainNodeLike,
+  type PannerNodeLike,
+} from './audio/context.js';
+export { SoundRegistry } from './audio/registry.js';
+export { AudioSystem, type AudioSystemOptions, type SoundRequest } from './audio/system.js';
+export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
+export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
+export {
   EngineHost,
   type ClientRenderer,
   type EngineHostOptions,
@@ -99,3 +155,15 @@ export {
   type LightmapAtlas,
   type LightmapPlacement,
 } from './render/bsp.js';
+export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
+export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
+export {
+  applySurfaceState,
+  BspSurfacePipeline,
+  BSP_SURFACE_FRAGMENT_SOURCE,
+  BSP_SURFACE_VERTEX_SOURCE,
+  deriveSurfaceRenderState,
+  resolveLightStyles,
+  type BspSurfaceBindOptions,
+  type SurfaceRenderState,
+} from './render/bspPipeline.js';
