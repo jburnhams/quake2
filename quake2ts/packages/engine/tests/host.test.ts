@@ -50,6 +50,31 @@ describe('EngineHost', () => {
     expect(game.init).toHaveBeenCalledWith(123);
   });
 
+  it('uses the provided start time for both game init and loop timestamps', () => {
+    const frames: GameFrameResult[] = [];
+
+    const game = {
+      init: vi.fn((timeMs: number) => ({ frame: 0, timeMs } satisfies GameFrameResult)),
+      frame: vi.fn(({ frame, nowMs }) => {
+        const result = { frame, timeMs: nowMs } satisfies GameFrameResult;
+        frames.push(result);
+        return result;
+      }),
+      shutdown: vi.fn(),
+    };
+
+    const host = new EngineHost(game, undefined, {
+      startTimeMs: 500,
+      loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25, startTimeMs: 2_000 },
+    });
+
+    host.start();
+    host.pump(25);
+
+    expect(game.init).toHaveBeenCalledWith(500);
+    expect(frames.at(0)?.timeMs).toBe(525);
+  });
+
   it('steps simulation with fixed deltas and passes previous/latest frames to the client', () => {
     const renderSamples: Array<{
       previous?: GameFrameResult<StubState>;

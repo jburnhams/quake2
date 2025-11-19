@@ -46,13 +46,13 @@ export class EngineHost<FrameState = unknown> {
     options: EngineHostOptions = {},
   ) {
     const now = options.loop?.now?.() ?? Date.now();
-    this.startTimeMs = options.startTimeMs ?? now;
+    this.startTimeMs = options.startTimeMs ?? options.loop?.startTimeMs ?? now;
     this.loop = new FixedTimestepLoop(
       {
         simulate: this.stepSimulation,
         render: this.renderClient,
       },
-      options.loop,
+      { ...options.loop, startTimeMs: this.startTimeMs },
     );
   }
 
