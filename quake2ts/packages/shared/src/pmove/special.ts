@@ -140,7 +140,7 @@ export function checkSpecialMovement(params: SpecialMovementParams): SpecialMove
   const stepCount = computeWaterJumpSteps(gravity);
 
   for (let i = 0; i < stepCount; i++) {
-    simVelocity.z -= gravity * WATERJUMP_SIM_STEP;
+    simVelocity = { x: simVelocity.x, y: simVelocity.y, z: simVelocity.z - gravity * WATERJUMP_SIM_STEP };
     if (simVelocity.z < 0) {
       hasTime = false;
     }

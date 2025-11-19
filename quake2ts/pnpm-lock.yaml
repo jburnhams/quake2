@@ -29,6 +29,10 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(typescript@5.9.3)
 
   packages/client:
     dependencies:
@@ -38,12 +42,20 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(typescript@5.9.3)
 
   packages/engine:
     dependencies:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(typescript@5.9.3)
 
   packages/game:
     dependencies:
@@ -53,6 +65,10 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(typescript@5.9.3)
 
   packages/shared:
     devDependencies:
@@ -65,6 +81,10 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(typescript@5.9.3)
 
 packages:
 

@@ -1,13 +1,104 @@
 {
   "name": "quake2ts",
   "version": "0.0.1",
-  "private": true,
+  "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
+  "type": "module",
   "packageManager": "pnpm@8.15.7",
+  "keywords": [
+    "quake",
+    "quake2",
+    "game-engine",
+    "webgl",
+    "typescript",
+    "bsp",
+    "physics",
+    "3d"
+  ],
+  "author": "Your Name",
+  "license": "GPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/quake2ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/quake2ts/issues"
+  },
+  "homepage": "https://github.com/yourusername/quake2ts#readme",
+  "exports": {
+    "./shared": {
+      "types": "./packages/shared/dist/types/index.d.ts",
+      "import": "./packages/shared/dist/esm/index.js",
+      "require": "./packages/shared/dist/cjs/index.cjs",
+      "default": "./packages/shared/dist/esm/index.js"
+    },
+    "./shared/browser": {
+      "types": "./packages/shared/dist/types/index.d.ts",
+      "default": "./packages/shared/dist/browser/index.js"
+    },
+    "./engine": {
+      "types": "./packages/engine/dist/types/index.d.ts",
+      "import": "./packages/engine/dist/esm/index.js",
+      "require": "./packages/engine/dist/cjs/index.cjs",
+      "default": "./packages/engine/dist/esm/index.js"
+    },
+    "./engine/browser": {
+      "types": "./packages/engine/dist/types/index.d.ts",
+      "default": "./packages/engine/dist/browser/index.js"
+    },
+    "./game": {
+      "types": "./packages/game/dist/types/index.d.ts",
+      "import": "./packages/game/dist/esm/index.js",
+      "require": "./packages/game/dist/cjs/index.cjs",
+      "default": "./packages/game/dist/esm/index.js"
+    },
+    "./game/browser": {
+      "types": "./packages/game/dist/types/index.d.ts",
+      "default": "./packages/game/dist/browser/index.js"
+    },
+    "./client": {
+      "types": "./packages/client/dist/types/index.d.ts",
+      "import": "./packages/client/dist/esm/index.js",
+      "require": "./packages/client/dist/cjs/index.cjs",
+      "default": "./packages/client/dist/esm/index.js"
+    },
+    "./client/browser": {
+      "types": "./packages/client/dist/types/index.d.ts",
+      "default": "./packages/client/dist/browser/index.js"
+    },
+    "./tools": {
+      "types": "./packages/tools/dist/types/index.d.ts",
+      "import": "./packages/tools/dist/esm/index.js",
+      "require": "./packages/tools/dist/cjs/index.cjs",
+      "default": "./packages/tools/dist/esm/index.js"
+    },
+    "./tools/browser": {
+      "types": "./packages/tools/dist/types/index.d.ts",
+      "default": "./packages/tools/dist/browser/index.js"
+    },
+    "./viewer": {
+      "types": "./apps/viewer/dist/types/index.d.ts",
+      "import": "./apps/viewer/dist/esm/index.js",
+      "require": "./apps/viewer/dist/cjs/index.cjs",
+      "default": "./apps/viewer/dist/esm/index.js"
+    },
+    "./viewer/browser": {
+      "types": "./apps/viewer/dist/types/index.d.ts",
+      "default": "./apps/viewer/dist/browser/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "packages/*/dist",
+    "apps/*/dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:workspace",
     "build:types": "tsc -b tsconfig.build.json",
     "build:workspace": "pnpm -r --filter=!#workspace-root --if-present run build",
-    "test": "pnpm -r --if-present test"
+    "test": "pnpm -r --if-present test",
+    "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

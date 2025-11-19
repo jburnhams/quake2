@@ -382,7 +382,7 @@ interface StepParams extends BaseMoveParams {
 }
 
 function runStepSlideMove(params: StepParams): StepSlideMoveOutcome {
-  const { origin, velocity, frametime, mins, maxs, trace, overbounce, stepSize, maxBumps, maxClipPlanes, hasTime } = params;
+  const { origin, velocity, frametime, mins, maxs, trace, overbounce = DEFAULT_STEP_OVERBOUNCE, stepSize, maxBumps, maxClipPlanes, hasTime } = params;
   return stepSlideMove({
     origin,
     velocity,
