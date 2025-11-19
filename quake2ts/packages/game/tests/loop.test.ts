@@ -68,6 +68,36 @@ describe('GameFrameLoop', () => {
     expect(order).toEqual(['prep-a', 'sim-b']);
   });
 
+  it('survives handlers removing themselves mid-stage without skipping others', () => {
+    const loop = new GameFrameLoop();
+    const order: string[] = [];
+
+    const disposePrep = loop.addStage('prep', () => {
+      order.push('prep-a');
+      disposePrep();
+    });
+
+    loop.addStage('prep', () => order.push('prep-b'));
+
+    const disposeSim = loop.addStage('simulate', () => {
+      order.push('sim-a');
+      disposeSim();
+    });
+
+    loop.addStage('simulate', () => order.push('sim-b'));
+
+    loop.addStage('finish', () => order.push('finish-a'));
+
+    loop.reset(0);
+    loop.advance({ frame: 1, deltaMs: 25, nowMs: 25 });
+
+    expect(order).toEqual(['prep-a', 'prep-b', 'sim-a', 'sim-b', 'finish-a']);
+
+    order.length = 0;
+    loop.advance({ frame: 2, deltaMs: 25, nowMs: 50 });
+    expect(order).toEqual(['prep-b', 'sim-b', 'finish-a']);
+  });
+
   it('throws if no simulate stages are registered', () => {
     const loop = new GameFrameLoop();
     loop.addStage('prep', () => {});

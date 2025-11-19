@@ -21,13 +21,27 @@ const orderedStageNames: readonly GameFrameStageName[] = [
   'finish',
 ];
 
+type StageBuckets = Record<GameFrameStageName, (GameFrameStage | undefined)[]>;
+type StageCounts = Record<GameFrameStageName, number>;
+type StageCompactionFlags = Record<GameFrameStageName, boolean>;
+
 export class GameFrameLoop {
   private timeMs = 0;
   private frame = 0;
-  private readonly stageHandlers: Record<GameFrameStageName, GameFrameStage[]> = {
+  private readonly stageHandlers: StageBuckets = {
     prep: [],
     simulate: [],
     finish: [],
+  };
+  private readonly stageCounts: StageCounts = {
+    prep: 0,
+    simulate: 0,
+    finish: 0,
+  };
+  private readonly stageCompactionNeeded: StageCompactionFlags = {
+    prep: false,
+    simulate: false,
+    finish: false,
   };
 
   constructor(initialStages?: GameFrameStages) {
@@ -44,10 +58,14 @@ export class GameFrameLoop {
   addStage(stage: GameFrameStageName, handler: GameFrameStage): () => void {
     const handlers = this.stageHandlers[stage];
     handlers.push(handler);
+    this.stageCounts[stage] += 1;
+
     return () => {
       const index = handlers.indexOf(handler);
-      if (index >= 0) {
-        handlers.splice(index, 1);
+      if (index >= 0 && handlers[index]) {
+        handlers[index] = undefined;
+        this.stageCounts[stage] -= 1;
+        this.stageCompactionNeeded[stage] = true;
       }
     };
   }
@@ -71,7 +89,7 @@ export class GameFrameLoop {
 
     this.runStage('prep', context);
 
-    if (this.stageHandlers.simulate.length === 0) {
+    if (this.stageCounts.simulate === 0) {
       throw new Error('GameFrameLoop requires at least one simulate stage');
     }
 
@@ -83,9 +101,31 @@ export class GameFrameLoop {
 
   private runStage(stage: GameFrameStageName, context: GameFrameContext): void {
     const handlers = this.stageHandlers[stage];
-    for (const handler of handlers) {
+    for (let i = 0; i < handlers.length; i += 1) {
+      const handler = handlers[i];
+      if (!handler) {
+        continue;
+      }
       handler(context);
     }
+
+    if (this.stageCompactionNeeded[stage]) {
+      this.compactStageHandlers(stage);
+    }
+  }
+
+  private compactStageHandlers(stage: GameFrameStageName): void {
+    const handlers = this.stageHandlers[stage];
+    let writeIndex = 0;
+    for (let readIndex = 0; readIndex < handlers.length; readIndex += 1) {
+      const handler = handlers[readIndex];
+      if (handler) {
+        handlers[writeIndex] = handler;
+        writeIndex += 1;
+      }
+    }
+    handlers.length = writeIndex;
+    this.stageCompactionNeeded[stage] = false;
   }
 
   get time(): number {
