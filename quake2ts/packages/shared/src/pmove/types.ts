@@ -1,3 +1,4 @@
+import type { ContentsFlag } from '../bsp/contents.js';
 import type { Vec3 } from '../math/vec3.js';
 
 export interface PmoveFrictionParams {
@@ -47,4 +48,6 @@ export interface PmoveTraceResult {
 }
 
 export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => PmoveTraceResult;
+
+export type PmovePointContentsFn = (point: Vec3) => ContentsFlag;
 
