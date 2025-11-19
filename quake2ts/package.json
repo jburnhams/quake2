@@ -4,7 +4,9 @@
   "private": true,
   "packageManager": "pnpm@8.15.7",
   "scripts": {
-    "build": "tsc -b tsconfig.build.json",
+    "build": "pnpm run build:types && pnpm run build:workspace",
+    "build:types": "tsc -b tsconfig.build.json",
+    "build:workspace": "pnpm -r --filter=!#workspace-root --if-present run build",
     "test": "pnpm -r --if-present test"
   },
   "devDependencies": {

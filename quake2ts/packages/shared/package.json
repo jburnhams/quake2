@@ -1,12 +1,36 @@
 {
   "name": "@quake2ts/shared",
   "version": "0.0.1",
+  "description": "Shared math, physics, and protocol helpers for the Quake II TypeScript port.",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
+    },
+    "./browser": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/browser/index.js"
+    }
+  },
+  "unpkg": "./dist/browser/index.js",
+  "jsdelivr": "./dist/browser/index.js",
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -b",
+    "build": "pnpm run build:types && pnpm run build:bundles",
+    "build:types": "tsc -b",
+    "build:bundles": "tsup",
     "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsup": "^8.1.0"
   }
 }
