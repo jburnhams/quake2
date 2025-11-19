@@ -10,3 +10,4 @@ export * from './pmove/slide.js';
 export * from './pmove/stuck.js';
 export * from './pmove/currents.js';
 export * from './pmove/water.js';
+export * from './pmove/categorize.js';

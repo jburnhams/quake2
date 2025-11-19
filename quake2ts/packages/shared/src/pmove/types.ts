@@ -45,6 +45,9 @@ export interface PmoveTraceResult {
   readonly planeNormal?: Vec3;
   readonly allsolid: boolean;
   readonly startsolid: boolean;
+  readonly contents?: ContentsFlag;
+  readonly surfaceFlags?: number;
+  readonly entityNum?: number;
 }
 
 export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => PmoveTraceResult;
