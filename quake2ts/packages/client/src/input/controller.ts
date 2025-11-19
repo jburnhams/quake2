@@ -196,11 +196,13 @@ export class InputController {
   }
 
   handleMouseButtonDown(button: number, eventTimeMs: number = nowMs()): void {
-    this.applyCommand(this.mouseButtonToCommand(button), true, `Mouse${button + 1}`, eventTimeMs);
+    const code = this.mouseButtonToCode(button);
+    this.applyCommand(this.mouseButtonToCommand(code), true, code, eventTimeMs);
   }
 
   handleMouseButtonUp(button: number, eventTimeMs: number = nowMs()): void {
-    this.applyCommand(this.mouseButtonToCommand(button), false, `Mouse${button + 1}`, eventTimeMs);
+    const code = this.mouseButtonToCode(button);
+    this.applyCommand(this.mouseButtonToCommand(code), false, code, eventTimeMs);
   }
 
   handleMouseMove(deltaX: number, deltaY: number): void {
@@ -372,8 +374,15 @@ export class InputController {
     return button;
   }
 
-  private mouseButtonToCommand(button: number): string | undefined {
-    return this.bindings.getBinding(`Mouse${button + 1}`);
+  private mouseButtonToCode(button: number): InputCode {
+    if (button === 0) return 'Mouse1';
+    if (button === 1) return 'Mouse3';
+    if (button === 2) return 'Mouse2';
+    return `Mouse${button + 1}`;
+  }
+
+  private mouseButtonToCommand(code: InputCode): string | undefined {
+    return this.bindings.getBinding(code);
   }
 
   private sample(action: InputAction, frameMsec: number, now: number): ButtonState {

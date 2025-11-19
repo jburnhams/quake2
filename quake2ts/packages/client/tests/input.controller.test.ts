@@ -96,6 +96,20 @@ describe('InputController', () => {
     expect(cmdCleared.buttons & PlayerButton.Attack).toBe(PlayerButton.None);
   });
 
+  it('maps DOM mouse buttons to default Quake bindings', () => {
+    const controller = createController();
+
+    controller.handleMouseButtonDown(2, 0);
+    controller.handleMouseButtonDown(1, 0);
+
+    expect(controller.consumeConsoleCommands()).toEqual(['+use', '+zoom']);
+
+    controller.handleMouseButtonUp(2, 16);
+    controller.handleMouseButtonUp(1, 16);
+
+    expect(controller.consumeConsoleCommands()).toEqual(['-use', '-zoom']);
+  });
+
   it('converts mouse deltas into view angle changes with Quake pitch clamping', () => {
     const controller = createController();
     controller.setPointerLocked(true);
