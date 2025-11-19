@@ -64,6 +64,34 @@ describe('AudioSystem', () => {
     expect(channel.endTimeMs).toBeGreaterThan(channel.entnum);
   });
 
+  it('clears stale onended handlers when reusing a channel', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+
+    const system = new AudioSystem({ context: controller, registry, playerEntity: 7 });
+
+    system.play({ entity: 7, channel: SoundChannel.Weapon, soundIndex, volume: 255, attenuation: 1 });
+    const firstSource = fakeContext.sources.at(-1)!;
+    firstSource.onended = () => {
+      throw new Error('stale onended should have been cleared');
+    };
+
+    const second = system.play({ entity: 7, channel: SoundChannel.Weapon, soundIndex, volume: 255, attenuation: 1 });
+    expect(second).toBeTruthy();
+
+    // Manually trigger the stale callback and ensure the active sound remains tracked.
+    firstSource.onended?.();
+
+    const panner = second!.panner;
+    system.updateEntityPosition(7, { x: 3, y: 2, z: 1 });
+
+    expect(panner.positionX.value).toBe(3);
+    expect(panner.positionY.value).toBe(2);
+    expect(panner.positionZ.value).toBe(1);
+  });
+
   it('treats channel flags as non-overriding bits', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);

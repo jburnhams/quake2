@@ -10,6 +10,7 @@ import {
   AudioContextController,
   createAudioGraph,
   type AudioContextLike,
+  type AudioBufferSourceNodeLike,
   type AudioGraph,
   type PannerNodeLike,
 } from './context.js';
@@ -42,7 +43,7 @@ interface ActiveSound {
   entnum: number;
   entchannel: number;
   endTimeMs: number;
-  source: { stop(): void };
+  source: AudioBufferSourceNodeLike;
   panner: PannerNodeLike;
 }
 
@@ -100,6 +101,7 @@ export class AudioSystem {
 
     const existing = this.activeSources.get(channelIndex);
     if (existing) {
+      existing.source.onended = null;
       existing.source.stop();
       this.activeSources.delete(channelIndex);
     }
@@ -138,7 +140,7 @@ export class AudioSystem {
       entnum: request.entity,
       entchannel: baseChannel(request.channel),
       endTimeMs,
-      source: { stop: () => source.stop() },
+      source,
       panner,
     };
 
