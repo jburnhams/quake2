@@ -9,4 +9,7 @@ export default defineConfig({
       '@quake2ts/shared': sharedSrc,
     },
   },
+  test: {
+    environment: 'jsdom',
+  },
 });

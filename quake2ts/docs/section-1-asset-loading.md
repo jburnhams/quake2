@@ -15,19 +15,20 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
 ## Tasks Remaining
 
 ### PAK & Virtual Filesystem
-- [ ] Implement PAK file format reader
+- [x] Implement PAK file format reader
   - Parse PAK header and directory entries
   - Support browser File/ArrayBuffer inputs
   - Validate checksums
-- [ ] Build VFS abstraction layer
+- [x] Build VFS abstraction layer
   - Path-based file lookup (case-insensitive)
   - Directory enumeration for map/asset lists
   - Async read interface returning ArrayBuffer/typed arrays
-- [ ] Add browser file ingestion UX
-  - File selector/drag-drop handlers
+- [x] Add browser file ingestion UX
+  - File selector/drag-drop handlers via `wireFileInput`/`wireDropTarget`
   - Multi-PAK support (baseq2 + mods)
-  - Progress reporting for large files
-  - Error handling for corrupted/invalid PAKs
+  - Progress reporting for large files (per-file callbacks)
+  - Error handling for corrupted/invalid PAKs (non-fatal by default, optional abort)
+  - **Helpers added**: programmatic `ingestPaks` pipeline with progress callbacks for File/Blob/ArrayBuffer sources and `ingestPakFiles` wrapper for browser `File` objects
 
 ### BSP Loader
 - [ ] Parse BSP header and lumps (entities, planes, vertices, nodes, texinfo, faces, lighting, leafs, leaffaces, edges, surfedges, models, brushes, brushsides, visibility)
@@ -84,7 +85,7 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
   - Reference counting for memory management
 
 ### Asset Caching & Management
-- [ ] Implement LRU cache for loaded assets
+- [x] Implement LRU cache for loaded assets
 - [ ] Optional IndexedDB persistence for PAK indexes
 - [ ] Asset validation (checksum verification against known PAK files)
 - [ ] Memory management and cleanup on level changes
