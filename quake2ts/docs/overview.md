@@ -2,6 +2,20 @@
 
 This repo is a browser-first TypeScript/WebGL port of the Quake II rerelease, scoped to the single-player base campaign with deterministic simulation and user-provided PAK assets. The goal is a faithful, testable recreation that mirrors the rerelease import/export surfaces while remaining modular and browser-safe.
 
+## Development Sections
+
+The remaining work has been divided into developer-friendly sections that can be worked on in parallel. Each section document contains an overview, work already completed, dependencies, detailed task lists, and testing requirements.
+
+1. **[Asset Loading & Virtual Filesystem](section-1-asset-loading.md)** - PAK reader, VFS, loaders for all formats (BSP, MD2, MD3, textures, audio)
+2. **[Rendering System (WebGL2)](section-2-rendering.md)** - Complete WebGL2 pipeline: shaders, BSP rendering, models, particles, HUD
+3. **[Physics, Collision & Trace System](section-3-physics-collision.md)** - BSP collision, traces, integrate pmove with real geometry
+4. **[Entity System & Spawning](section-4-entity-spawning.md)** - Entity structure, spawn registry, lifecycle, triggers, func entities
+5. **[Combat, Weapons & Items](section-5-combat-items.md)** - Damage system, all weapons, items, inventory, powerups
+6. **[AI & Monster Behaviors](section-6-ai-monsters.md)** - AI state machines, perception, pathfinding, all base campaign monsters
+7. **[Audio System (WebAudio)](section-7-audio.md)** - WebAudio integration, 3D positional audio, music, sound effects
+8. **[Input, UI & Client Systems](section-8-input-ui-client.md)** - Input capture, HUD, menus, client prediction, browser integration
+9. **[Save/Load & Persistence](section-9-save-load.md)** - Serialization, save file management, deterministic saves
+
 ## What we are building
 - **Engine package (`packages/engine`)**: Web-facing services (WebGL2 renderer, WebAudio, input, VFS/PAK ingestion, config/cvars) plus the fixed 40 Hz loop, configstring/asset registries, and import tables that mirror `game_import_t`/`cgame_import_t` expectations.
 - **Game package (`packages/game`)**: Authoritative simulation and entity system that owns configstring emission and uses engine callbacks for tracing, asset indexing, and model binding. Exports entrypoints analogous to `GetGameAPI`.
