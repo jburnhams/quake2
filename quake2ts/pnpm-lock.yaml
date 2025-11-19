@@ -8,12 +8,15 @@ importers:
 
   .:
     devDependencies:
+      jsdom:
+        specifier: ^27.2.0
+        version: 27.2.0
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
       vitest:
         specifier: ^1.5.3
-        version: 1.6.1
+        version: 1.6.1(jsdom@27.2.0)
 
   apps/viewer:
     dependencies:
@@ -1927,7 +1930,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitest@1.6.1:
+  /vitest@1.6.1(jsdom@27.2.0):
     resolution: {integrity: sha512-Ljb1cnSJSivGN0LqXd/zmDbWEM0RNNg2t1QW/XUhYl/qPqyu7CsqeWtqQXHVaJsecLPuDoak2oJcZN2QoRIOag==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -1961,6 +1964,7 @@ packages:
       chai: 4.5.0
       debug: 4.4.3
       execa: 8.0.1
+      jsdom: 27.2.0
       local-pkg: 0.5.1
       magic-string: 0.30.21
       pathe: 1.1.2
