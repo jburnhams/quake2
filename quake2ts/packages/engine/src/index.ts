@@ -98,12 +98,13 @@ export {
 export { parseWav, type WavData } from './assets/wav.js';
 export { decodeOgg, type OggAudio } from './assets/ogg.js';
 export { AudioRegistry, AudioRegistryError, type DecodedAudio } from './assets/audio.js';
+export {
   ATTN_IDLE,
   ATTN_LOOP_NONE,
   ATTN_NONE,
   ATTN_NORM,
   ATTN_STATIC,
-  MAX_SOUND_CHANNELS as MAX_SOUND_CHANNELS,
+  MAX_SOUND_CHANNELS,
   SOUND_FULLVOLUME,
   SOUND_LOOP_ATTENUATE,
   SoundChannel,
