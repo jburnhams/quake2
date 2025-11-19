@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BspLoader,
+  BspLump,
   BspParseError,
   createFaceLightmap,
   parseBsp,
@@ -146,6 +147,14 @@ describe('BSP parsing', () => {
     const view = new DataView(buffer);
     // Corrupt plane lump length to trigger safety
     view.setInt32(8 + 1 * 8 + 4, 1, true);
+    expect(() => parseBsp(buffer)).toThrow(BspParseError);
+  });
+
+  it('rejects model lumps that are not 48-byte aligned', () => {
+    const buffer = sampleBspBuffer();
+    const view = new DataView(buffer);
+    // Set the model lump length to a non-multiple of 48 bytes
+    view.setInt32(8 + BspLump.Models * 8 + 4, 40, true);
     expect(() => parseBsp(buffer)).toThrow(BspParseError);
   });
 

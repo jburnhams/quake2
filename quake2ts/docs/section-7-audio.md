@@ -16,35 +16,27 @@ This section covers the complete audio system for Quake II using the Web Audio A
 ## Tasks Remaining
 
 ### WebAudio Context Setup
-- [ ] Initialize AudioContext
-  - Handle browser autoplay policies (require user interaction)
-  - Resume context on user input (click, keypress)
-  - Handle context state changes (suspended, running)
-- [ ] Create master audio graph
-  - Master gain node (volume control)
-  - Optional compressor/limiter (prevent clipping)
-  - Route to destination (speakers)
-- [ ] Audio channel management
-  - Fixed number of channels (e.g., 32 simultaneous sounds)
-  - Channel allocation: find free channel or steal lowest-priority
-  - Track active sounds per channel
+- [x] Initialize AudioContext
+  - `AudioContextController` lazily creates contexts and resumes them on demand to satisfy autoplay policies.
+  - Helper exposes current state for diagnostics.
+- [x] Create master audio graph
+  - Master gain node (volume control) and compressor built in `createAudioGraph`, connected to the destination.
+- [x] Audio channel management
+  - Fixed pool of channels mirrors rerelease limits.
+  - `pickChannel` matches `S_PickChannel` rules (channel 0 never prefers overrides, skips player sounds, steals the least remaining life).
+  - Channel state tracked and cleared on `onended`.
 
 ### Sound Registration & Precaching
-- [ ] Sound index registry
-  - Map sound name -> sound index (via ConfigString registry)
-  - Called during level load by game layer (`soundindex("weapons/blastf1a.wav")`)
-  - Return unique index for each sound
-- [ ] Sound loading
-  - Load audio buffer from VFS/PAK
-  - Decode (WAV, OGG) to PCM buffer
-  - Store in cache keyed by index
-  - Async loading with loading state tracking
+- [x] Sound index registry
+  - `SoundRegistry` wraps the ConfigString registry and caches decoded buffers per index.
+- [x] Sound loading
+  - Accepts decoded buffers and retains them for playback (VFS decode hook still TODO).
 - [ ] Sound precaching
   - Preload all sounds used in level during load screen
   - Reduce latency during gameplay
 
 ### Sound Playback (One-Shot Sounds)
-- [ ] Play positioned sound
+- [x] Play positioned sound
   - **Signature**: `sound(entity: Entity, channel: number, soundindex: number, volume: number, attenuation: number, timeofs: number)`
   - Create AudioBufferSourceNode from cached buffer
   - Connect to PannerNode for 3D positioning
@@ -53,12 +45,12 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Set timeofs (delayed start, for timing effects)
   - Start playback
   - Auto-cleanup when sound finishes
-- [ ] Play ambient sound (no attenuation)
+- [x] Play ambient sound (no attenuation)
   - **Signature**: `ambient_sound(origin: vec3, soundindex: number, volume: number)`
   - Used for environmental sounds (water, wind, machines)
   - Positioned but no distance falloff
   - Often looping
-- [ ] Channel assignment
+- [x] Channel assignment
   - Channels 0-7: entity sounds (weapon fire, pain, etc.)
   - Channel 0 (CHAN_AUTO): auto-assign free channel
   - Channel 1 (CHAN_WEAPON): weapon sounds (override previous weapon sound)
@@ -66,37 +58,37 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Stop previous sound on same entity+channel before starting new one
 
 ### 3D Positional Audio (Spatialization)
-- [ ] Create PannerNode for each sound
+- [x] Create PannerNode for each sound
   - Set position from entity or origin
   - Set velocity (for Doppler effect, optional)
   - Set distance model (linear, inverse, exponential)
   - Set max distance, reference distance, rolloff factor
-- [ ] Listener (player) position
+- [x] Listener (player) position
   - Update listener position every frame from player entity
   - Update listener orientation (forward, up vectors)
   - Affects all spatialized sounds
-- [ ] Attenuation modes
+- [x] Attenuation modes
   - `ATTN_NONE (0)`: No attenuation, heard everywhere (announcements)
   - `ATTN_NORM (1)`: Normal attenuation (most sounds)
   - `ATTN_IDLE (2)`: Idle attenuation (ambient loops)
   - `ATTN_STATIC (3)`: Static attenuation (close range only)
   - Map to Web Audio distance parameters
-- [ ] Distance falloff
+- [x] Distance falloff
   - Linear or inverse distance falloff
   - Clamp at max distance (silent beyond range)
   - Adjust rolloff factor based on attenuation mode
 
 ### Looping Sounds
-- [ ] Start looping sound
+- [x] Start looping sound
   - Create AudioBufferSourceNode with `loop = true`
   - Store reference for later stopping
   - Used for ambient sounds (water, lava, machines)
   - Used for continuous entity sounds (jetpack, teleporter)
-- [ ] Stop looping sound
+- [x] Stop looping sound
   - Find active source for entity+channel
   - Call `stop()` on source node
   - Remove from active sound list
-- [ ] Update looping sound position
+- [x] Update looping sound position
   - Each frame, update PannerNode position for moving entities
   - Used for moving platforms with sound, flying monsters
 
@@ -119,42 +111,43 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Change music on events (boss spawn, etc.)
 
 ### Volume & Mixing
-- [ ] Master volume
+- [x] Master volume
   - User-configurable (0.0 - 1.0)
   - Affects all sounds
   - Connected to master gain node
-- [ ] Sound effect volume
+- [x] Sound effect volume
   - Separate slider for SFX
   - Multiplied with master volume
 - [ ] Music volume
   - Separate slider for music
   - Independent from SFX volume
-- [ ] Per-sound volume
+- [x] Per-sound volume
   - Each sound call specifies volume (0-255 in Quake II)
   - Normalize to 0.0-1.0 for Web Audio
   - Multiply per-sound * SFX volume * master volume
 
 ### Sound Channels & Prioritization
-- [ ] Channel allocation
+- [x] Channel allocation
   - Limited number of simultaneous sounds (e.g., 32)
   - Allocate channel when sound plays
   - Free channel when sound ends
-- [ ] Channel stealing
+- [x] Channel stealing
   - If all channels busy, steal lowest-priority sound
   - Priority: player sounds > nearby entities > distant entities
   - Never steal looping sounds if possible
-- [ ] Channel groups
+- [x] Channel groups
   - CHAN_AUTO, CHAN_WEAPON, CHAN_VOICE, CHAN_ITEM, CHAN_BODY
   - Some channels override previous sound (weapon fire)
   - Others stack (multiple body sounds)
 
 ### Special Sound Features
-- [ ] Time offset (`timeofs`)
+- [x] Time offset (`timeofs`)
   - Delay sound start by N milliseconds
   - Used for synchronized effects (e.g., grenade lands, then explodes)
 - [ ] Sound entity tracking
   - When entity moves, update sound position
   - When entity dies/removed, stop entity sounds
+  - Helpers now update panners for moved entities; automatic cleanup still TODO
 - [ ] Underwater sound filtering (optional)
   - Apply lowpass filter when player underwater
   - Muffled, distant sound effect

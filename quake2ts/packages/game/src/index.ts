@@ -8,6 +8,7 @@ import { EntitySystem } from './entities/index.js';
 import { GameFrameLoop } from './loop.js';
 import { LevelClock, type LevelFrameState } from './level.js';
 export * from './entities/index.js';
+export * from './ai/index.js';
 
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 
@@ -32,6 +33,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
 }
 
 export { hashGameState } from './checksum.js';
+export * from './save/index.js';
+export * from './combat/index.js';
 
 export function createGame(
   engine: { trace(start: Vec3, end: Vec3): unknown },

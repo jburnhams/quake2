@@ -5,6 +5,11 @@ interface ScheduledThink {
   readonly entity: Entity;
 }
 
+export interface ThinkScheduleEntry {
+  readonly time: number;
+  readonly entityIndex: number;
+}
+
 export class ThinkScheduler {
   private readonly queue: ScheduledThink[] = [];
 
@@ -22,6 +27,21 @@ export class ThinkScheduler {
       if (this.queue[i].entity === entity) {
         this.queue.splice(i, 1);
       }
+    }
+  }
+
+  snapshot(): ThinkScheduleEntry[] {
+    return this.queue.map(({ time, entity }) => ({ time, entityIndex: entity.index }));
+  }
+
+  restore(entries: ThinkScheduleEntry[], resolver: (index: number) => Entity | undefined): void {
+    this.queue.length = 0;
+    for (const entry of entries) {
+      const entity = resolver(entry.entityIndex);
+      if (!entity) {
+        continue;
+      }
+      this.schedule(entity, entry.time);
     }
   }
 

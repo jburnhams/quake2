@@ -15,6 +15,8 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Trace/line-of-sight API (Section 3)
 - ✅ Damage system (Section 5)
 - ✅ Deterministic RNG for AI decisions
+- ✅ Perception utility layer (range classification, visibility, FOV tests) aligned with rerelease constants
+- ✅ Monster entity timing fields (search, attack, pain) exposed on base entity and saved
 
 ## Tasks Remaining
 
@@ -28,7 +30,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - Update current state
   - Execute state-specific behavior
   - Schedule next think
-- [ ] AI entity fields (extend base entity)
+- [x] AI entity fields (extend base entity)
   - `enemy`: Current target entity
   - `movetarget`: Waypoint for scripted movement
   - `goalentity`: Long-term goal (item, player, etc.)
@@ -237,9 +239,9 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [ ] `FindTarget`: Scan for enemy
 - [ ] `FoundTarget`: React to spotting enemy (sound, alert)
 - [ ] `HuntTarget`: Move toward last known enemy position
-- [ ] `visible`: Check if entity is visible
-- [ ] `infront`: Check if entity is in front hemisphere
-- [ ] `range`: Check distance to entity (melee, short, medium, long)
+- [x] `visible`: Check if entity is visible
+- [x] `infront`: Check if entity is in front hemisphere
+- [x] `range`: Check distance to entity (melee, short, medium, long)
 
 ### Pain/Death Callbacks
 - [ ] Pain callback

@@ -435,11 +435,11 @@ function parseSurfEdges(buffer: ArrayBuffer, info: BspLumpInfo): Int32Array {
 
 function parseModels(buffer: ArrayBuffer, info: BspLumpInfo): BspModel[] {
   const view = new DataView(buffer, info.offset, info.length);
-  const entrySize = 64;
-  const count = info.length / entrySize;
-  if (count % 1 !== 0) {
+  const entrySize = 48;
+  if (info.length % entrySize !== 0) {
     throw new BspParseError('Model lump has invalid length');
   }
+  const count = info.length / entrySize;
   const models: BspModel[] = [];
   for (let i = 0; i < count; i += 1) {
     const base = i * entrySize;

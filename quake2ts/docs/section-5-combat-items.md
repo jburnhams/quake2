@@ -19,7 +19,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
 ## Tasks Remaining
 
 ### Damage System
-- [ ] Core damage function (`T_Damage`)
+- [x] Core damage function (`T_Damage`)
   - **Signature**: `T_Damage(target: Entity, inflictor: Entity, attacker: Entity, dir: vec3, point: vec3, normal: vec3, damage: number, knockback: number, dflags: number, mod: number)`
   - Check if target can take damage (`takedamage` field)
   - Apply damage to health
@@ -28,17 +28,19 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Trigger die callback if health <= 0 (`target.die()`)
   - Record attacker for kill tracking
   - Handle damage flags (no protection, no knockback, bullet, etc.)
-- [ ] Radius damage (`T_RadiusDamage`)
+- [x] Radius damage (`T_RadiusDamage`)
   - For explosions (rockets, grenades, barrels)
   - Find all entities within radius
   - Trace line-of-sight to each (blocked by walls = reduced damage)
   - Calculate damage falloff by distance
   - Apply damage with outward knockback direction
-- [ ] Armor system
+  - Verified radius limits and bounding-box-aware distance checks against rerelease behavior with regression tests
+- [x] Armor system
   - Reduce damage based on armor value and type
   - Different armor types: jacket (light), combat (medium), body (heavy)
   - Armor absorbs percentage of damage, remainder goes to health
   - Deplete armor based on damage absorbed
+  - Implemented parity-checked armor absorption helpers (`applyRegularArmor`, `applyPowerArmor`) with Vitest coverage mirroring rerelease `CheckArmor`/`CheckPowerArmor` rules.
 - [ ] Damage modifiers
   - Means of death (MOD_*): blaster, shotgun, rocket, falling, lava, etc.
   - Used for obituary messages ("Player was blasted by Monster")
