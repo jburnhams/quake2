@@ -32,6 +32,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   readonly entities: EntitySystem;
 }
 
+export { hashGameState } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 
