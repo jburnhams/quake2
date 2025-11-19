@@ -17,3 +17,4 @@ export * from './pmove/duck.js';
 export * from './pmove/categorize.js';
 export * from './pmove/move.js';
 export * from './pmove/special.js';
+export * from './pmove/snap.js';
