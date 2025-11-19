@@ -8,6 +8,7 @@ import { EntitySystem } from './entities/index.js';
 import { GameFrameLoop } from './loop.js';
 import { LevelClock, type LevelFrameState } from './level.js';
 export * from './entities/index.js';
+export * from './ai/index.js';
 
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 
