@@ -267,12 +267,11 @@ This section covers the critical integration layer that ensures all subsystems w
   - Verify vec3/angle operations produce identical results
   - Test edge cases (near-zero, very large values, NaN/Inf handling)
   - Document any platform-specific floating point quirks
-- [x] RNG determinism tests
+- [ ] RNG determinism tests
   - Seed random number generator with known value
   - Run simulation and record RNG sequence
   - Replay and verify identical sequence
   - Test that shared RNG state is serialized correctly
-  - MT19937 snapshot/restore helpers now round-trip through JSON and reproduce sequences across twists for replayable tests.
 - [ ] Physics determinism stress tests
   - Run 10,000+ frame simulations
   - Compare state at end vs reference
