@@ -10,7 +10,8 @@ export default defineConfig([
     splitting: false,
     dts: false,
     outDir: 'dist/esm',
-    external: ['@quake2ts/shared', '@quake2ts/engine']
+    // Bundle all workspace dependencies for self-contained subpath exports
+    noExternal: ['@quake2ts/shared', '@quake2ts/engine']
   },
   {
     entry: ['src/index.ts'],
@@ -21,7 +22,8 @@ export default defineConfig([
     splitting: false,
     dts: false,
     outDir: 'dist/cjs',
-    external: ['@quake2ts/shared', '@quake2ts/engine'],
+    // Bundle all workspace dependencies for self-contained subpath exports
+    noExternal: ['@quake2ts/shared', '@quake2ts/engine'],
     outExtension() {
       return { js: '.cjs' };
     }
@@ -38,7 +40,7 @@ export default defineConfig([
     globalName: 'Quake2Game',
     minify: true,
     platform: 'browser',
-    // Bundle all dependencies for browser usage
+    // Bundle all workspace dependencies for browser usage
     noExternal: ['@quake2ts/shared', '@quake2ts/engine']
   }
 ]);
