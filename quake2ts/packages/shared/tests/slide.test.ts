@@ -181,6 +181,51 @@ describe('slideMove', () => {
     expect(result.stopped).toBe(true);
   });
 
+  it('stops immediately when starting in solid geometry', () => {
+    const { trace } = scriptedTrace([
+      {
+        fraction: 0,
+        endpos: { x: 0, y: 0, z: 0 },
+        planeNormal: { x: 1, y: 0, z: 0 },
+        allsolid: false,
+        startsolid: true,
+      },
+    ]);
+
+    const result = slideMove({
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 100, y: 0, z: 0 },
+      frametime: 0.1,
+      overbounce: OVERBOUNCE,
+      trace,
+    });
+
+    expect(result.velocity).toEqual(ZERO_VEC3);
+    expect(result.stopped).toBe(true);
+  });
+
+  it('prevents velocity from flipping downward when the primal velocity was rising', () => {
+    const { trace } = scriptedTrace([
+      {
+        fraction: 0.5,
+        endpos: { x: 0, y: 0, z: 0.5 },
+        planeNormal: { x: 0, y: 0, z: -1 },
+        allsolid: false,
+        startsolid: false,
+      },
+    ]);
+
+    const result = slideMove({
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 10 },
+      frametime: 0.1,
+      overbounce: OVERBOUNCE,
+      trace,
+    });
+
+    expect(result.velocity.z).toBe(0);
+  });
+
   it('restores the primal velocity when hasTime is set', () => {
     const { trace } = scriptedTrace([
       {

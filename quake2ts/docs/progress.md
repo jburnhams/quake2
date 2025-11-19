@@ -20,6 +20,7 @@
 - Added `resolveSlideMove`, a pure clip-plane accumulator mirroring the inner loop of `PM_StepSlideMove_Generic` so slide/crease resolution can be unit-tested outside of the full pmove trace path.
 - Added a trace-driven `slideMove` helper that mirrors `PM_SlideMoveGeneric` (minus gravity/stepping) and scripts collision planes through unit tests to verify multi-bump handling.
 - Added a pmove-style `stepSlideMove` that mirrors `PM_StepSlideMove`, including the pm_time velocity preservation flag and bounding-box-aware traces, with tests that step onto a 16u ledge and fall back to the flat slide path when stepping is blocked.
+- Hardened slide movement to bail when starting in solid geometry and to prevent upward motion from converting into a downward bounce when clipping against ceilings, matching the rerelease guardrails.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.

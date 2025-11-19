@@ -163,6 +163,11 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
       return { origin: tr.endpos, velocity, planes, stopped: true, blocked };
     }
 
+    if (tr.startsolid) {
+      const velocity = hasTime ? primalVelocity : ZERO_VEC3;
+      return { origin: tr.endpos, velocity, planes, stopped: true, blocked };
+    }
+
     if (tr.fraction > 0) {
       origin = tr.endpos;
     }
@@ -189,6 +194,10 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     const resolved = resolveSlideMove(velocity, planes, overbounce, maxClipPlanes, primalVelocity);
     velocity = resolved.velocity;
     planes.splice(0, planes.length, ...resolved.planes);
+
+    if (primalVelocity.z > 0 && velocity.z < 0) {
+      velocity = { ...velocity, z: 0 };
+    }
 
     if (resolved.stopped) {
       const velocityOut = hasTime ? primalVelocity : velocity;
