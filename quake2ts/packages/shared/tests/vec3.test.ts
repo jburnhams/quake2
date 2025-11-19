@@ -70,7 +70,7 @@ describe('vec3 helpers', () => {
   });
 
   it('projects points onto planes and finds perpendicular vectors', () => {
-    expect(projectPointOnPlane({ x: 3, y: 4, z: 5 }, { x: 0, y: 0, z: 2 })).toEqual({ x: 3, y: 4, z: 3.75 });
+    expect(projectPointOnPlane({ x: 3, y: 4, z: 5 }, { x: 0, y: 0, z: 2 })).toEqual({ x: 3, y: 4, z: 0 });
 
     const normal = normalizeVec3({ x: 1, y: 1, z: 1 });
     const perpendicular = perpendicularVec3(normal);
