@@ -1,5 +1,5 @@
 import { angleVectors } from '@quake2ts/shared';
-import { ServerFlags, Solid, MoveType, type Entity, type TouchCallback } from './entity.js';
+import { EntityFlags, MoveType, ServerFlags, Solid, type Entity, type TouchCallback } from './entity.js';
 import type { SpawnRegistry } from './spawn.js';
 import { isZeroVector, setMovedir } from './utils.js';
 import type { EntitySystem } from './system.js';
@@ -21,6 +21,10 @@ const RELAY_SPAWNFLAGS = {
   NoSound: 1 << 0,
 } as const;
 
+const COUNTER_SPAWNFLAGS = {
+  NoMessage: 1 << 0,
+} as const;
+
 const PUSH_SPAWNFLAGS = {
   Once: 1 << 0,
   Plus: 1 << 1,
@@ -38,6 +42,22 @@ const HURT_SPAWNFLAGS = {
   NoPlayers: 1 << 5,
   NoMonsters: 1 << 6,
   Clip: 1 << 7,
+} as const;
+
+const TELEPORT_SPAWNFLAGS = {
+  StartOn: 1 << 3,
+} as const;
+
+const GRAVITY_SPAWNFLAGS = {
+  Toggle: 1 << 0,
+  StartOff: 1 << 1,
+  Clip: 1 << 2,
+} as const;
+
+const MONSTERJUMP_SPAWNFLAGS = {
+  Toggle: 1 << 0,
+  StartOff: 1 << 1,
+  Clip: 1 << 2,
 } as const;
 
 function initTrigger(entity: Entity): void {
@@ -159,10 +179,11 @@ function registerTriggerOnce(registry: SpawnRegistry): void {
 
 function registerTriggerRelay(registry: SpawnRegistry): void {
   registry.register('trigger_relay', (entity, context) => {
+    if (entity.spawnflags & RELAY_SPAWNFLAGS.NoSound) {
+      entity.noise_index = -1;
+    }
+
     entity.use = (self, _other, activator) => {
-      if (self.sounds === RELAY_SPAWNFLAGS.NoSound) {
-        self.noise_index = -1;
-      }
       context.entities.useTargets(self, activator ?? self);
     };
   });
@@ -175,6 +196,73 @@ function registerTriggerAlways(registry: SpawnRegistry): void {
     }
 
     context.entities.useTargets(entity, entity);
+  });
+}
+
+function counterUse(self: Entity, _other: Entity | null, activator: Entity | null, entities: EntitySystem): void {
+  if (self.count === 0) {
+    return;
+  }
+
+  self.count -= 1;
+
+  if (self.count > 0) {
+    return;
+  }
+
+  self.activator = activator;
+  multiTrigger(self, entities);
+}
+
+function registerTriggerCounter(registry: SpawnRegistry): void {
+  registry.register('trigger_counter', (entity, context) => {
+    entity.wait = -1;
+    if (entity.count === 0) {
+      entity.count = 2;
+    }
+
+    entity.use = (self, other, activator) => counterUse(self, other, activator ?? other, context.entities);
+    if (!(entity.spawnflags & COUNTER_SPAWNFLAGS.NoMessage)) {
+      entity.message = entity.message ?? 'sequence complete';
+    }
+  });
+}
+
+function triggerKeyUse(self: Entity, activator: Entity | null, entities: EntitySystem, warn: (message: string) => void): void {
+  if (!self.item || !activator) {
+    return;
+  }
+
+  const available = activator.inventory[self.item] ?? 0;
+  if (available <= 0) {
+    if (self.timestamp > entities.timeSeconds) {
+      return;
+    }
+    self.timestamp = entities.timeSeconds + 5;
+    warn(`Missing required key item: ${self.item}`);
+    return;
+  }
+
+  activator.inventory[self.item] = available - 1;
+  if (activator.inventory[self.item] <= 0) {
+    delete activator.inventory[self.item];
+  }
+
+  entities.useTargets(self, activator);
+  self.use = undefined;
+}
+
+function registerTriggerKey(registry: SpawnRegistry): void {
+  registry.register('trigger_key', (entity, context) => {
+    const requiredItem = context.keyValues.item;
+    if (!requiredItem) {
+      context.warn('trigger_key requires an item');
+      context.free(entity);
+      return;
+    }
+
+    entity.item = requiredItem;
+    entity.use = (self, other, activator) => triggerKeyUse(self, activator ?? other, context.entities, context.warn);
   });
 }
 
@@ -309,11 +397,172 @@ function registerTriggerHurt(registry: SpawnRegistry): void {
   });
 }
 
+function teleportTouch(
+  self: Entity,
+  other: Entity | null,
+  entities: EntitySystem,
+  warn: (message: string) => void,
+): void {
+  if (!other) {
+    return;
+  }
+  if (self.delay > 0) {
+    return;
+  }
+
+  const destination = entities.pickTarget(self.target);
+  if (!destination) {
+    warn('trigger_teleport target not found');
+    return;
+  }
+
+  const destOrigin = {
+    x: destination.origin.x,
+    y: destination.origin.y,
+    z: destination.origin.z + 10,
+  } as const;
+
+  other.origin = { ...destOrigin };
+  other.old_origin = { ...destOrigin };
+  other.velocity = { x: 0, y: 0, z: 0 };
+  other.groundentity = null;
+  other.angles = { ...destination.angles };
+
+  entities.killBox(other);
+}
+
+function registerTriggerTeleport(registry: SpawnRegistry): void {
+  registry.register('trigger_teleport', (entity, context) => {
+    if (!entity.wait) {
+      entity.wait = 0.2;
+    }
+
+    initTrigger(entity);
+
+    if (entity.targetname) {
+      entity.use = (self) => {
+        self.delay = self.delay > 0 ? 0 : 1;
+      };
+      if ((entity.spawnflags & TELEPORT_SPAWNFLAGS.StartOn) === 0) {
+        entity.delay = 1;
+      }
+    }
+
+    entity.touch = (self, other) => teleportTouch(self, other, context.entities, context.warn);
+  });
+}
+
+function gravityTouch(self: Entity, other: Entity | null): void {
+  if (!other) {
+    return;
+  }
+
+  if (self.spawnflags & GRAVITY_SPAWNFLAGS.Clip) {
+    // Clipping requires a trace against world geometry, which is not yet available.
+    // Fall back to bounding-box overlap behaviour.
+  }
+
+  other.gravity = self.gravity;
+}
+
+function registerTriggerGravity(registry: SpawnRegistry): void {
+  registry.register('trigger_gravity', (entity, context) => {
+    const gravityText = context.keyValues.gravity;
+    if (!gravityText) {
+      context.warn('trigger_gravity requires a gravity value');
+      context.free(entity);
+      return;
+    }
+
+    initTrigger(entity);
+    entity.gravity = Number.parseFloat(gravityText) || 0;
+
+    const touchHandler: TouchCallback = (self, other) => gravityTouch(self, other);
+    entity.touch = touchHandler;
+
+    if (entity.spawnflags & GRAVITY_SPAWNFLAGS.StartOff) {
+      entity.solid = Solid.Not;
+      entity.touch = undefined;
+    }
+
+    if (entity.spawnflags & GRAVITY_SPAWNFLAGS.Toggle) {
+      entity.use = (self) => {
+        toggleSolid(self);
+        self.touch = self.solid === Solid.Trigger ? touchHandler : undefined;
+      };
+    }
+  });
+}
+
+function monsterJumpTouch(self: Entity, other: Entity | null): void {
+  if (!other) {
+    return;
+  }
+
+  if ((other.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0) {
+    return;
+  }
+  if (other.svflags & ServerFlags.DeadMonster) {
+    return;
+  }
+  if ((other.svflags & ServerFlags.Monster) === 0) {
+    return;
+  }
+
+  other.velocity = {
+    x: self.movedir.x * self.speed,
+    y: self.movedir.y * self.speed,
+    z: other.velocity.z,
+  };
+
+  if (!other.groundentity) {
+    return;
+  }
+
+  other.groundentity = null;
+  other.velocity = { x: other.velocity.x, y: other.velocity.y, z: self.movedir.z };
+}
+
+function registerTriggerMonsterJump(registry: SpawnRegistry): void {
+  registry.register('trigger_monsterjump', (entity, context) => {
+    const heightText = context.keyValues.height;
+    const height = heightText ? Number.parseFloat(heightText) || 0 : 200;
+    if (entity.angles.y === 0) {
+      entity.angles = { ...entity.angles, y: 360 };
+    }
+    if (!entity.speed) {
+      entity.speed = 200;
+    }
+
+    initTrigger(entity);
+    entity.movedir = { ...entity.movedir, z: height };
+    const touchHandler: TouchCallback = (self, other) => monsterJumpTouch(self, other);
+    entity.touch = touchHandler;
+
+    if (entity.spawnflags & MONSTERJUMP_SPAWNFLAGS.StartOff) {
+      entity.solid = Solid.Not;
+      entity.touch = undefined;
+    }
+
+    if (entity.spawnflags & MONSTERJUMP_SPAWNFLAGS.Toggle) {
+      entity.use = (self) => {
+        toggleSolid(self);
+        self.touch = self.solid === Solid.Trigger ? touchHandler : undefined;
+      };
+    }
+  });
+}
+
 export function registerTriggerSpawns(registry: SpawnRegistry): void {
   registerTriggerMultiple(registry);
   registerTriggerOnce(registry);
   registerTriggerRelay(registry);
   registerTriggerAlways(registry);
+  registerTriggerCounter(registry);
+  registerTriggerKey(registry);
   registerTriggerPush(registry);
   registerTriggerHurt(registry);
+  registerTriggerTeleport(registry);
+  registerTriggerGravity(registry);
+  registerTriggerMonsterJump(registry);
 }
