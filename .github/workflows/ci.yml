@@ -2,12 +2,10 @@ name: quake2ts CI
 
 on:
   push:
-    paths:
-      - 'quake2ts/**'
+    branches: [ main ]
   pull_request:
-    paths:
-      - 'quake2ts/**'
-
+    branches: [ main ]
+    
 jobs:
   unit-tests:
     name: Unit Tests (Node ${{ matrix.node-version }})
