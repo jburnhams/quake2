@@ -19,17 +19,18 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 ## Tasks Remaining
 
 ### Input Capture System
-- [ ] Keyboard input
-  - Listen for keydown/keyup events
-  - Build key state map (is key currently pressed?)
-  - Handle key repeat (optional, for menus)
-  - Key bindings: map keys to actions/commands
-- [ ] Mouse input
-  - Pointer lock API for FPS camera control
-  - Track mouse movement (delta X, delta Y)
-  - Sensitivity setting (pixels to view angle conversion)
-  - Mouse buttons (fire, alt fire, etc.)
-  - Handle pointer lock request/exit
+- [x] Keyboard input
+  - InputController listens for keydown/keyup, tracks multiple simultaneous bindings per action, and mirrors the rerelease key
+    state accumulation semantics with per-frame fractions.
+  - Key repeat is coalesced by code to avoid double-pressing a held key.
+  - Key bindings: map keys to actions/commands via the InputBindings map with default Quake II style bindings plus
+    rebinding support.
+- [x] Mouse input
+  - Pointer lock aware mouse delta capture; relative motion is accumulated when `setPointerLocked(true)` has been invoked by the
+    host UI (UI wiring for requesting lock is still pending).
+  - Sensitivity setting (pixels to view angle conversion) and optional invert-Y handling for mouse look.
+  - Mouse buttons (fire, alt fire, etc.) participate in the same binding map so button presses feed into action bits.
+  - Pointer lock request/exit UI still to be connected, but the controller accepts lock state updates.
 - [ ] Gamepad input (optional, but nice to have)
   - Gamepad API detection
   - Map gamepad buttons/axes to actions
@@ -43,25 +44,30 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - May defer for initial desktop-focused release
 
 ### Input Bindings & Commands
-- [ ] Key binding system
-  - Map key codes to console commands (e.g., "W" -> "+forward")
-  - +/- commands: +forward (key down), -forward (key up)
-  - Allow rebinding via config/menu
-  - Default bindings matching Quake II
-- [ ] Action commands
+- [x] Key binding system
+  - Map key codes to console commands (e.g., "W" -> "+forward"), including defaults for WASD/arrow keys, mouse buttons,
+    and weapon number slots.
+  - +/- commands: +forward (key down), -forward (key up) handled through InputAction button state tracking.
+  - Allow rebinding via config/menu through the InputBindings helper (per-frame resolution covered by tests).
+  - Default bindings matching Quake II run/walk/mouse-look expectations with sensitivity and run modifier constants from the
+    rerelease.
+- [x] Action commands
   - Movement: +forward, +back, +moveleft, +moveright, +moveup, +movedown
   - Look: +lookup, +lookdown, +left, +right
   - Actions: +attack, +use, +jump, +crouch, +walk (toggle run/walk)
   - Weapon switching: weapon 1-10, nextweapon, prevweapon
   - Other: centerview, +zoom, showscores, screenshot
-- [ ] Command buffer
+  - Transition-aware queue mirrors rerelease input so +action emits once per activation and -action once upon full release.
+- [x] Command buffer
   - Queue input commands each frame
   - Convert to pmove command structure (forward, side, up, angles)
   - Send to game simulation
-- [ ] Mouse look
+  - InputCommandBuffer now batches per-frame UserCommands with the console/action command queue for engine consumption.
+- [x] Mouse look
   - Invert Y axis option
   - Mouse sensitivity (X and Y separate)
   - Mouse smoothing/acceleration (optional)
+  - Per-axis sensitivity and optional m_filter-style smoothing implemented; acceleration remains optional for later tuning.
 
 ### Client Prediction
 - [ ] Implement client-side prediction

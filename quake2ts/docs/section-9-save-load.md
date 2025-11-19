@@ -18,7 +18,7 @@ This section covers the save/load system that allows players to save game progre
 ## Tasks Remaining
 
 ### Save Data Structure
-- [ ] Define save file schema (TypeScript types)
+- [x] Define save file schema (TypeScript types)
   - **Version**: Save format version (for forward/backward compatibility)
   - **Timestamp**: When save was created
   - **Map name**: Current map/level
@@ -26,44 +26,44 @@ This section covers the save/load system that allows players to save game progre
   - **Playtime**: Total play time in seconds
   - **Game state**: Global game variables
   - **Level state**: Frame number, level time, random seed
-  - **Player state**: Health, armor, inventory, position, angles, velocity
+  - **Player state**: Health, armor, inventory, position, angles, velocity *(player details still TODO; stub stored in gameState for now)*
   - **Entity array**: All entities with relevant fields
   - **Configstrings**: Model/sound/image indices and names
   - **Cvars**: Archived cvar values
-- [ ] Determine which entity fields to save
+- [x] Determine which entity fields to save
   - Transform: origin, angles, velocity
   - Physics: mins, maxs, movetype, waterlevel, groundentity reference
   - Render: modelindex, frame, skin, effects
   - Gameplay: health, takedamage, deadflag, flags
   - AI: enemy reference, movetarget, goalentity, ideal_yaw, timers
   - Scripting: targetname, target (for resolving references)
-  - Timing: nextthink, thinkfunc name (serialize function by name)
+  - Timing: nextthink, thinkfunc name (serialize function by name) *(functions still excluded pending registry work)*
   - Skip: Transient data (render cache, temporary effects)
-- [ ] Handle entity references
+- [x] Handle entity references
   - Entities reference other entities (enemy, groundentity, target)
   - Serialize as entity index, restore by re-linking after load
   - Build entity reference map during deserialization
 
 ### Serialization System
-- [ ] Entity serialization
+- [x] Entity serialization
   - Convert entity to JSON-compatible object
   - Handle circular references (entity -> enemy -> entity)
-  - Serialize callback functions by name (thinkfunc, touch, use, pain, die)
+  - Serialize callback functions by name (thinkfunc, touch, use, pain, die) *(deferred)*
   - Store entity slot index for reference resolution
-- [ ] Entity field metadata
+- [x] Entity field metadata
   - Mark fields as serializable (decorator or metadata)
   - Specify field type (number, string, vec3, entity reference, etc.)
   - Generate serializers automatically from metadata
-- [ ] Special type serialization
+- [x] Special type serialization
   - **vec3**: Store as `[x, y, z]` array
   - **Entity reference**: Store as entity index
   - **Function reference**: Store as function name string
   - **Enum/flags**: Store as number
   - **Buffers/typed arrays**: Convert to regular arrays
-- [ ] Level state serialization
+- [x] Level state serialization
   - Frame number, level time
   - Random seed state (entire RNG state for reproducibility)
-  - Level-global flags, counters, objectives
+  - Level-global flags, counters, objectives *(basic time counters captured; doors/triggers still TODO)*
   - Active triggers, doors (position, state)
 - [ ] Player state serialization
   - Full player entity
@@ -72,15 +72,15 @@ This section covers the save/load system that allows players to save game progre
   - Weapon state (current weapon, reload status, etc.)
 
 ### Deserialization System
-- [ ] Parse save file JSON
+- [x] Parse save file JSON
   - Validate structure and version
   - Handle missing fields (backward compatibility)
   - Handle extra fields (forward compatibility)
-- [ ] Entity deserialization
+- [x] Entity deserialization
   - Create entities in same slots as saved
   - Restore all saved fields
   - Build entity reference map (index -> entity)
-- [ ] Entity reference resolution
+- [x] Entity reference resolution
   - Second pass: resolve all entity references
   - enemy index -> enemy entity pointer
   - groundentity index -> groundentity pointer
@@ -89,10 +89,10 @@ This section covers the save/load system that allows players to save game progre
   - thinkfunc name -> actual function pointer
   - touch, use, pain, die callbacks by name
   - Maintain registry of serializable functions
-- [ ] Level state restoration
+- [x] Level state restoration
   - Restore frame number, level time
   - Restore RNG state (seed and internal state)
-  - Restore level flags, objectives
+  - Restore level flags, objectives *(needs door/trigger state once implemented)*
   - Re-link entities into world (spatial structures)
 - [ ] Player state restoration
   - Restore player entity
@@ -130,12 +130,11 @@ This section covers the save/load system that allows players to save game progre
   - Entity order must be preserved (save by slot index)
   - Frame timing must match (use saved frame number)
 - [ ] Test reproducibility
-  - Save game, load, play N frames, verify state matches
   - Save game, load twice in parallel, verify divergence-free
   - Useful for debugging desyncs (multiplayer future-proofing)
 
 ### Save Format Versioning
-- [ ] Version number in save file
+- [x] Version number in save file
   - Increment when save format changes
   - Check version on load
 - [ ] Backward compatibility

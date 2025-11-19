@@ -18,7 +18,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 ## Tasks Remaining
 
 ### Entity Data Structure
-- [ ] Define core Entity type/class
+- [x] Define core Entity type/class
   - **Transform**: origin, angles, velocity, avelocity
   - **Physics**: mins, maxs, mass, gravity, movetype (MOVETYPE_NONE, STEP, PUSH, STOP, WALK, TOSS, BOUNCE, FLY, FLYMISSILE)
   - **Render**: modelindex, frame, skin, effects, renderfx
@@ -29,39 +29,38 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - **Timing**: nextthink, thinkfunc, touch, use, pain, die callbacks
   - **Flags**: solid (SOLID_NOT, TRIGGER, BBOX, BSP), flags, svflags, spawnflags
   - **Entity linking**: linked list for entity iteration, area links for spatial queries
-- [ ] Entity field serialization metadata
+- [x] Entity field serialization metadata
   - Mark which fields save/load (see Section 9)
   - Field types for JSON serialization
-- [ ] Entity memory pool/allocator
+- [x] Entity memory pool/allocator
   - Fixed-size array (2048 max entities, matching rerelease MAX_EDICTS)
   - Free list for efficient alloc/dealloc
   - Entity slot recycling
 
-### Entity Lifecycle
-- [ ] Spawn entity (`G_Spawn`)
+- [x] Spawn entity (`G_Spawn`)
   - Allocate from entity pool
   - Initialize default values
   - Return entity reference
-- [ ] Free entity (`G_FreeEntity`)
+- [x] Free entity (`G_FreeEntity`)
   - Unlink from world
   - Clear callbacks
   - Return to free list
   - Delay actual free until end of frame (prevent use-after-free)
-- [ ] Think scheduling
+- [x] Think scheduling
   - Set `nextthink` timestamp
   - Register entity in think queue
   - Execute think callbacks at scheduled time
   - Sort by nextthink for efficient processing
-- [ ] Touch detection
+- [x] Touch detection
   - When entities overlap (via trace), call touch callbacks
   - Handle trigger volumes
   - Pickup items, teleporters, hurt triggers
 
 ### Spawn Registry
-- [ ] Build spawn function registry (mirrors `g_spawn.cpp`)
+- [x] Build spawn function registry (mirrors `g_spawn.cpp`)
   - Map classname string -> spawn function
   - ~200 spawn functions for all entity types
-- [ ] Core spawns (worldspawn, info_* entities)
+- [x] Core spawns (worldspawn, info_* entities)
   - `SP_worldspawn`: Parse world settings, set cvars, precache assets
   - `SP_info_player_start`, `SP_info_player_deathmatch`: Player spawn points
   - `SP_info_player_coop`: Coop spawn points (defer for base SP)
@@ -111,16 +110,16 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Link together by targetname
 
 ### BSP Entity Parsing & Level Spawn
-- [ ] Parse BSP entity lump
+- [x] Parse BSP entity lump
   - Extract entity string from BSP (text format, Quake key-value pairs)
   - Tokenize into entity dictionaries
   - First entity is always worldspawn
-- [ ] Spawn entities from BSP (`G_SpawnEntities`)
+- [x] Spawn entities from BSP (`G_SpawnEntities`)
   - Iterate entity dictionaries
   - Look up spawn function by classname
   - Call spawn function with key-value pairs
   - Handle unknown classnames gracefully (warn, skip)
-- [ ] Apply entity key-values
+- [x] Apply entity key-values
   - Set origin, angles, model, target, targetname, etc.
   - Parse spawnflags (bitfield)
   - Convert string values to appropriate types (int, float, vec3)
@@ -128,12 +127,12 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Add to entity list
   - For solid entities, link into BSP spatial areas
   - Build target->entity lookup table for scripting
+  - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking still pending
 
-### Entity Thinking & Update Loop
-- [ ] Integrate with GameFrameLoop
+- [x] Integrate with GameFrameLoop
   - Register think/touch systems with sim stage
   - Process entities every frame (40Hz)
-- [ ] Think system
+- [x] Think system
   - Maintain think queue (priority queue by nextthink time)
   - Execute think functions for entities whose time has come
   - Reschedule if nextthink updated
@@ -155,15 +154,15 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Handle pickup, trigger, damage logic
 
 ### Entity Scripting & Targeting
-- [ ] Target resolution
+- [x] Target resolution
   - Build targetname -> entity map during spawn
   - `G_Find` functions: find by classname, targetname, etc.
-- [ ] Use activation (`G_UseTargets`)
+- [x] Use activation (`G_UseTargets`)
   - When entity is triggered, activate all entities with matching targetname
   - Call their `use` callback
   - Handle killtarget (remove target entity)
   - Delay support (trigger after N seconds)
-- [ ] Multi-target support
+- [x] Multi-target support
   - One entity can target multiple others (comma-separated or repeated triggers)
 - [ ] Trigger conditions
   - Some triggers require keys, specific conditions

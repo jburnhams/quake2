@@ -113,9 +113,10 @@ function encodeEdges(edges: Array<[number, number]>): Uint8Array {
 }
 
 function encodeModels(models: BspModel[]): Uint8Array {
-  const view = allocBuffer(models.length * 64);
+  const entrySize = 48;
+  const view = allocBuffer(models.length * entrySize);
   models.forEach((model, index) => {
-    const base = index * 64;
+    const base = index * entrySize;
     writeVec3(view, base, model.mins);
     writeVec3(view, base + 12, model.maxs);
     writeVec3(view, base + 24, model.origin);

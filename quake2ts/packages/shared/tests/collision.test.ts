@@ -4,14 +4,18 @@ import {
   PlaneSide,
   buildCollisionModel,
   boxOnPlaneSide,
+  boxContents,
   clipBoxToBrush,
   computePlaneSignBits,
   createDefaultTrace,
+  pointContents,
   pointInsideBrush,
   pointOnPlaneSide,
+  traceBox,
   testBoxInBrush,
   type CollisionBrush,
   type CollisionLumpData,
+  type CollisionModel,
   type CollisionPlane,
 } from '../src/bsp/collision.js';
 import { CONTENTS_SOLID } from '../src/bsp/contents.js';
@@ -40,6 +44,23 @@ function makeAxisBrush(size: number, contents = CONTENTS_SOLID): CollisionBrush 
   return {
     contents,
     sides: planes.map((plane) => ({ plane, surfaceFlags: 0 })),
+  };
+}
+
+function makeLeaf(contents: number, firstLeafBrush: number, numLeafBrushes: number) {
+  return { contents, cluster: 0, area: 0, firstLeafBrush, numLeafBrushes };
+}
+
+function makeLeafModel(brushes: CollisionBrush[]): CollisionModel {
+  const planes = brushes.flatMap((brush) => brush.sides.map((side) => side.plane));
+
+  return {
+    planes,
+    nodes: [],
+    leaves: [makeLeaf(0, 0, brushes.length)],
+    brushes,
+    leafBrushes: brushes.map((_, i) => i),
+    bmodels: [],
   };
 }
 
@@ -158,5 +179,134 @@ describe('BSP collision model construction', () => {
     expect(model.leaves[0].firstLeafBrush).toBe(0);
     expect(model.leafBrushes).toEqual([0]);
     expect(model.bmodels[0].headnode).toBe(-1);
+  });
+});
+
+describe('trace and contents queries', () => {
+  it('matches CM_ClipBoxToBrush results when tracing a single-brush leaf', () => {
+    const brush = makeAxisBrush(64);
+    const model = makeLeafModel([brush]);
+
+    const start = { x: -64, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 64, y: 0, z: 0 } satisfies Vec3;
+
+    const referenceTrace = createDefaultTrace();
+    clipBoxToBrush({ start, end, mins: { x: 0, y: 0, z: 0 }, maxs: { x: 0, y: 0, z: 0 }, brush, trace: referenceTrace });
+
+    const result = traceBox({ model, start, end, headnode: -1 });
+
+    expect(result.fraction).toBeCloseTo(referenceTrace.fraction, 6);
+    expect(result.startsolid).toBe(referenceTrace.startsolid);
+    expect(result.allsolid).toBe(referenceTrace.allsolid);
+    expect(result.contents).toBe(referenceTrace.contents);
+    expect(result.surfaceFlags).toBe(referenceTrace.surfaceFlags);
+    expect(result.endpos.x).toBeCloseTo(start.x + (end.x - start.x) * referenceTrace.fraction, 6);
+  });
+
+  it('sets startsolid when beginning inside a brush and resolves to the exit plane', () => {
+    const brush = makeAxisBrush(64);
+    const model = makeLeafModel([brush]);
+
+    const start = { x: 0, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 64, y: 0, z: 0 } satisfies Vec3;
+
+    const trace = traceBox({ model, start, end, headnode: -1 });
+
+    expect(trace.startsolid).toBe(true);
+    expect(trace.allsolid).toBe(false);
+    expect(trace.fraction).toBe(1);
+    expect(trace.endpos).toEqual(end);
+  });
+
+  it('handles bounding boxes by expanding the plane offsets during traversal', () => {
+    const brush = makeAxisBrush(64);
+    const model = makeLeafModel([brush]);
+
+    const start = { x: -96, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 32, y: 0, z: 0 } satisfies Vec3;
+    const mins = { x: -16, y: -16, z: -16 } satisfies Vec3;
+    const maxs = { x: 16, y: 16, z: 16 } satisfies Vec3;
+
+    const reference = createDefaultTrace();
+    clipBoxToBrush({ start, end, mins, maxs, brush, trace: reference });
+
+    const trace = traceBox({ model, start, end, mins, maxs, headnode: -1 });
+
+    expect(trace.fraction).toBeCloseTo(reference.fraction, 6);
+    expect(trace.plane?.normal).toEqual({ x: -1, y: 0, z: 0 });
+  });
+
+  it('traverses BSP children to find the first blocking plane', () => {
+    const brush = makeAxisBrush(64);
+    const planes = brush.sides.map((side) => side.plane);
+
+    const nodes = [{ plane: planes[0], children: [-1, -2] }];
+
+    const leafFront = makeLeaf(0, 0, 1);
+    const leafBack = makeLeaf(0, 1, 1);
+
+    const model: CollisionModel = {
+      planes,
+      nodes,
+      leaves: [leafFront, leafBack],
+      brushes: [brush],
+      leafBrushes: [0, 0],
+      bmodels: [],
+    };
+
+    const start = { x: 64, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 0, y: 0, z: 0 } satisfies Vec3;
+
+    const trace = traceBox({ model, start, end, headnode: 0 });
+
+    expect(trace.fraction).toBeLessThan(1);
+    expect(trace.endpos.x).toBeCloseTo(32 + DIST_EPSILON, 5);
+    expect(trace.plane?.normal).toEqual({ x: 1, y: 0, z: 0 });
+  });
+
+  it('accumulates contents queries against brush planes for points and boxes', () => {
+    const brush = makeAxisBrush(32);
+    const model = makeLeafModel([brush]);
+
+    expect(pointContents({ x: 0, y: 0, z: 0 }, model, -1)).toBe(CONTENTS_SOLID);
+    expect(pointContents({ x: 40, y: 0, z: 0 }, model, -1)).toBe(0);
+
+    const mins = { x: -8, y: -8, z: -8 } satisfies Vec3;
+    const maxs = { x: 8, y: 8, z: 8 } satisfies Vec3;
+
+    expect(boxContents({ x: 0, y: 0, z: 0 }, mins, maxs, model, -1)).toBe(CONTENTS_SOLID);
+    expect(boxContents({ x: 48, y: 0, z: 0 }, mins, maxs, model, -1)).toBe(0);
+  });
+
+  it('propagates leaf contents even when no brushes are present', () => {
+    const model: CollisionModel = {
+      planes: [],
+      nodes: [],
+      leaves: [makeLeaf(CONTENTS_SOLID, 0, 0)],
+      brushes: [],
+      leafBrushes: [],
+      bmodels: [],
+    };
+
+    const mins = { x: -8, y: -8, z: -8 } satisfies Vec3;
+    const maxs = { x: 8, y: 8, z: 8 } satisfies Vec3;
+
+    expect(pointContents({ x: 0, y: 0, z: 0 }, model, -1)).toBe(CONTENTS_SOLID);
+    expect(boxContents({ x: 0, y: 0, z: 0 }, mins, maxs, model, -1)).toBe(CONTENTS_SOLID);
+  });
+
+  it('handles zero-length traces without losing start/end invariants', () => {
+    const brush = makeAxisBrush(64);
+    const model = makeLeafModel([brush]);
+
+    const start = { x: 0, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 0, y: 0, z: 0 } satisfies Vec3;
+
+    const trace = traceBox({ model, start, end, headnode: -1 });
+
+    expect(trace.startsolid).toBe(true);
+    expect(trace.allsolid).toBe(true);
+    expect(trace.fraction).toBe(0);
+    expect(trace.endpos).toEqual(start);
   });
 });

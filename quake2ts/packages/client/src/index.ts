@@ -5,6 +5,12 @@ import type {
   GameRenderSample,
 } from '@quake2ts/engine';
 import type { Vec3 } from '@quake2ts/shared';
+export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
+export { InputAction, InputController, type InputControllerOptions } from './input/controller.js';
+export {
+  InputCommandBuffer,
+  type QueuedFrameCommands,
+} from './input/command-buffer.js';
 
 export interface ClientImports {
   readonly engine: EngineImports;
