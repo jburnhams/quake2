@@ -5,6 +5,11 @@ const UPPER_MASK = 0x80000000;
 const LOWER_MASK = 0x7fffffff;
 const TWO_POW_32 = 0x100000000;
 
+export interface MersenneTwister19937State {
+  readonly state: readonly number[];
+  readonly index: number;
+}
+
 /**
  * Minimal MT19937 implementation mirroring the rerelease's std::mt19937 usage in g_local.h.
  * The generator outputs deterministic unsigned 32-bit integers which drive the
@@ -51,6 +56,25 @@ export class MersenneTwister19937 {
       this.state[i] = next >>> 0;
     }
     this.index = 0;
+  }
+
+  getState(): MersenneTwister19937State {
+    return { state: Array.from(this.state), index: this.index };
+  }
+
+  restoreState(snapshot: MersenneTwister19937State): void {
+    if (snapshot.state.length !== STATE_SIZE) {
+      throw new Error(`Expected state length ${STATE_SIZE}, received ${snapshot.state.length}`);
+    }
+
+    if (snapshot.index < 0 || snapshot.index > STATE_SIZE) {
+      throw new Error(`Index ${snapshot.index} is out of bounds for state size ${STATE_SIZE}`);
+    }
+
+    for (let i = 0; i < STATE_SIZE; i++) {
+      this.state[i] = snapshot.state[i] >>> 0;
+    }
+    this.index = snapshot.index;
   }
 }
 
@@ -138,8 +162,22 @@ export class RandomGenerator {
   randomIndex<T extends { length: number }>(container: T): number {
     return this.irandom(container.length);
   }
+
+  toSnapshot(): MersenneTwister19937State {
+    return this.mt.getState();
+  }
+
+  restoreSnapshot(snapshot: MersenneTwister19937State): void {
+    this.mt.restoreState(snapshot);
+  }
 }
 
 export function createRandomGenerator(options?: RandomGeneratorOptions): RandomGenerator {
   return new RandomGenerator(options);
+}
+
+export function createRandomGeneratorFromSnapshot(snapshot: MersenneTwister19937State): RandomGenerator {
+  const generator = new RandomGenerator({ seed: 0 });
+  generator.restoreSnapshot(snapshot);
+  return generator;
 }
