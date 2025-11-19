@@ -43,6 +43,7 @@ jobs:
           push: true  # Pushes the commit/tag back to main
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          PACKAGEJSON_DIR: 'quake2ts'
 
       - name: 'cat package.json'
         run: cat ./package.json
