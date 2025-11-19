@@ -57,10 +57,10 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Pickup items, teleporters, hurt triggers
 
 ### Spawn Registry
-- [ ] Build spawn function registry (mirrors `g_spawn.cpp`)
+- [x] Build spawn function registry (mirrors `g_spawn.cpp`)
   - Map classname string -> spawn function
   - ~200 spawn functions for all entity types
-- [ ] Core spawns (worldspawn, info_* entities)
+- [x] Core spawns (worldspawn, info_* entities)
   - `SP_worldspawn`: Parse world settings, set cvars, precache assets
   - `SP_info_player_start`, `SP_info_player_deathmatch`: Player spawn points
   - `SP_info_player_coop`: Coop spawn points (defer for base SP)
@@ -110,16 +110,16 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Link together by targetname
 
 ### BSP Entity Parsing & Level Spawn
-- [ ] Parse BSP entity lump
+- [x] Parse BSP entity lump
   - Extract entity string from BSP (text format, Quake key-value pairs)
   - Tokenize into entity dictionaries
   - First entity is always worldspawn
-- [ ] Spawn entities from BSP (`G_SpawnEntities`)
+- [x] Spawn entities from BSP (`G_SpawnEntities`)
   - Iterate entity dictionaries
   - Look up spawn function by classname
   - Call spawn function with key-value pairs
   - Handle unknown classnames gracefully (warn, skip)
-- [ ] Apply entity key-values
+- [x] Apply entity key-values
   - Set origin, angles, model, target, targetname, etc.
   - Parse spawnflags (bitfield)
   - Convert string values to appropriate types (int, float, vec3)
@@ -127,6 +127,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Add to entity list
   - For solid entities, link into BSP spatial areas
   - Build target->entity lookup table for scripting
+  - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking still pending
 
 - [x] Integrate with GameFrameLoop
   - Register think/touch systems with sim stage
@@ -153,15 +154,15 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Handle pickup, trigger, damage logic
 
 ### Entity Scripting & Targeting
-- [ ] Target resolution
+- [x] Target resolution
   - Build targetname -> entity map during spawn
   - `G_Find` functions: find by classname, targetname, etc.
-- [ ] Use activation (`G_UseTargets`)
+- [x] Use activation (`G_UseTargets`)
   - When entity is triggered, activate all entities with matching targetname
   - Call their `use` callback
   - Handle killtarget (remove target entity)
   - Delay support (trigger after N seconds)
-- [ ] Multi-target support
+- [x] Multi-target support
   - One entity can target multiple others (comma-separated or repeated triggers)
 - [ ] Trigger conditions
   - Some triggers require keys, specific conditions

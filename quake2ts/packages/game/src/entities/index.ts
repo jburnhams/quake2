@@ -13,3 +13,16 @@ export {
   ENTITY_FIELD_METADATA,
 } from './entity.js';
 export { EntitySystem } from './system.js';
+export {
+  applyEntityKeyValues,
+  createDefaultSpawnRegistry,
+  parseEntityLump,
+  registerDefaultSpawns,
+  spawnEntitiesFromText,
+  spawnEntityFromDictionary,
+  SpawnRegistry,
+  type ParsedEntity,
+  type SpawnOptions,
+  type SpawnContext,
+  type SpawnFunction,
+} from './spawn.js';

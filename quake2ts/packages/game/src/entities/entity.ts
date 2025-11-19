@@ -30,7 +30,7 @@ export enum DeadFlag {
 
 export type ThinkCallback = (self: Entity) => void;
 export type TouchCallback = (self: Entity, other: Entity | null) => void;
-export type UseCallback = (self: Entity, other: Entity | null) => void;
+export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
 export type DieCallback = (
   self: Entity,
@@ -72,6 +72,7 @@ export class Entity {
   spawnflags = 0;
   target?: string;
   targetname?: string;
+  killtarget?: string;
   team?: string;
   message?: string;
 
@@ -136,6 +137,7 @@ export class Entity {
     this.spawnflags = 0;
     this.target = undefined;
     this.targetname = undefined;
+    this.killtarget = undefined;
     this.team = undefined;
     this.message = undefined;
 
@@ -193,6 +195,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'spawnflags', type: 'int', save: true },
   { name: 'target', type: 'string', save: true },
   { name: 'targetname', type: 'string', save: true },
+  { name: 'killtarget', type: 'string', save: true },
   { name: 'team', type: 'string', save: true },
   { name: 'message', type: 'string', save: true },
   { name: 'origin', type: 'vec3', save: true },
