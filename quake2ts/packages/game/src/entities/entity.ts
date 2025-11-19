@@ -82,6 +82,8 @@ export class Entity {
   avelocity: Vec3 = copyVec3();
   angles: Vec3 = copyVec3();
 
+  viewheight = 0;
+
   mins: Vec3 = copyVec3();
   maxs: Vec3 = copyVec3();
   size: Vec3 = copyVec3();
@@ -106,6 +108,10 @@ export class Entity {
   goalentity: Entity | null = null;
   ideal_yaw = 0;
   yaw_speed = 0;
+  search_time = 0;
+  attack_finished_time = 0;
+  pain_finished_time = 0;
+  trail_time = 0;
 
   groundentity: Entity | null = null;
   groundentity_linkcount = 0;
@@ -146,6 +152,7 @@ export class Entity {
     this.velocity = copyVec3();
     this.avelocity = copyVec3();
     this.angles = copyVec3();
+    this.viewheight = 0;
 
     this.mins = copyVec3();
     this.maxs = copyVec3();
@@ -171,6 +178,10 @@ export class Entity {
     this.goalentity = null;
     this.ideal_yaw = 0;
     this.yaw_speed = 0;
+    this.search_time = 0;
+    this.attack_finished_time = 0;
+    this.pain_finished_time = 0;
+    this.trail_time = 0;
 
     this.groundentity = null;
     this.groundentity_linkcount = 0;
@@ -203,6 +214,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'velocity', type: 'vec3', save: true },
   { name: 'avelocity', type: 'vec3', save: true },
   { name: 'angles', type: 'vec3', save: true },
+  { name: 'viewheight', type: 'int', save: true },
   { name: 'mins', type: 'vec3', save: true },
   { name: 'maxs', type: 'vec3', save: true },
   { name: 'size', type: 'vec3', save: true },
@@ -224,6 +236,10 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'goalentity', type: 'entity', save: true },
   { name: 'ideal_yaw', type: 'float', save: true },
   { name: 'yaw_speed', type: 'float', save: true },
+  { name: 'search_time', type: 'float', save: true },
+  { name: 'attack_finished_time', type: 'float', save: true },
+  { name: 'pain_finished_time', type: 'float', save: true },
+  { name: 'trail_time', type: 'float', save: true },
   { name: 'groundentity', type: 'entity', save: true },
   { name: 'groundentity_linkcount', type: 'int', save: true },
   { name: 'waterlevel', type: 'int', save: true },
