@@ -30,7 +30,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@quake2ts/shared": "workspace:*"
+    "@quake2ts/shared": "workspace:*",
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
   },
   "devDependencies": {
     "jsdom": "^27.2.0",
