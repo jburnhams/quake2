@@ -101,26 +101,28 @@ This section covers the save/load system that allows players to save game progre
   - Set camera position
 
 ### Save File Management
-- [ ] Save file storage
+- [x] Save file storage
   - Use IndexedDB for large save files (localStorage too small)
   - Store saves as JSON blobs
   - Key by save name or timestamp
-- [ ] Save file metadata
+- [x] Save file metadata
   - List of saves with preview info (map name, time, date)
   - Thumbnails (screenshot at save time, optional)
   - Quick save / auto save support
-- [ ] Save operations
+- [x] Save operations
   - **Quick save**: Save to "quicksave" slot (overwrite previous)
   - **Manual save**: Prompt for save name
   - **Auto save**: Save automatically at checkpoints (level start, objectives)
   - **Prevent save**: Some moments should block saving (mid-cinematic, dead)
-- [ ] Load operations
+- [x] Load operations
   - **Quick load**: Load from "quicksave" slot
   - **Manual load**: Choose from save list
   - **Verify save**: Check version, map exists, data valid before loading
   - **Error handling**: Graceful failure if save corrupted
-- [ ] Delete saves
-  - Remove save from IndexedDB
+- Storage layer now exposes quickslot helpers plus named/manual saves; auto-save/prevent-save gating still needs integration with
+  game flow triggers.
+- [x] Delete saves
+  - Remove save from IndexedDB (storage layer now reports deletion status)
   - Update save list UI
 
 ### Determinism & Reproducibility
