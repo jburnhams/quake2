@@ -13,3 +13,4 @@ export * from './pmove/water.js';
 export * from './pmove/jump.js';
 export * from './pmove/dimensions.js';
 export * from './pmove/duck.js';
+export * from './pmove/categorize.js';
