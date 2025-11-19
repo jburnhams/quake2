@@ -33,6 +33,18 @@ describe('AudioSystem', () => {
     expect(fakeContext.sources.at(-1)?.startedAt).toBe(0);
   });
 
+  it('honors the initial master volume when creating the audio graph', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+
+    const system = new AudioSystem({ context: controller, registry, masterVolume: 0.25 });
+    system.play({ entity: 1, channel: SoundChannel.Weapon, soundIndex, volume: 255, attenuation: 1 });
+
+    expect(fakeContext.gains[0]?.gain.value).toBeCloseTo(0.25);
+  });
+
   it('applies time offsets and overrides existing sounds on the same entchannel', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
@@ -159,6 +171,27 @@ describe('AudioSystem', () => {
     expect(ambient?.endTimeMs).toBe(Number.POSITIVE_INFINITY);
   });
 
+  it('falls back to gain-based panners when the context has no panner factory', () => {
+    const fakeContext = new FakeAudioContext(false);
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/ambience/water1.wav', createBuffer(2));
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 1, y: 2, z: 3 }, right: { x: 1, y: 0, z: 0 } },
+    });
+
+    const active = system.play({ entity: 4, channel: SoundChannel.Auto, soundIndex, volume: 64, attenuation: 1 });
+    expect(active).toBeTruthy();
+    expect(active?.panner.positionX.value).toBe(1);
+    system.updateEntityPosition(4, { x: -1, y: -2, z: -3 });
+    expect(active?.panner.positionX.value).toBe(-1);
+    expect(active?.panner.positionY.value).toBe(-2);
+    expect(active?.panner.positionZ.value).toBe(-3);
+  });
+
   it('updates looping sound positions when entities move', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
@@ -187,5 +220,24 @@ describe('AudioSystem', () => {
     expect(panner.positionX.value).toBe(-4);
     expect(panner.positionY.value).toBe(-5);
     expect(panner.positionZ.value).toBe(-6);
+  });
+
+  it('stops entity-owned channels and toggles underwater filtering when available', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/wind.wav', createBuffer(1));
+
+    const system = new AudioSystem({ context: controller, registry, listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } } });
+    system.play({ entity: 3, channel: SoundChannel.Auto, soundIndex, volume: 255, attenuation: 1, origin: { x: 0, y: 0, z: 0 }, looping: true });
+    expect(system.getChannelState(0)?.active).toBe(true);
+
+    system.stopEntitySounds(3);
+    expect(system.getChannelState(0)?.active).toBe(false);
+
+    system.setUnderwater(true, 350);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(350);
+    system.setUnderwater(false);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(20000);
   });
 });

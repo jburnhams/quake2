@@ -119,12 +119,16 @@ export {
   type AudioGraph,
   type AudioNodeLike,
   type GainNodeLike,
+  type BiquadFilterNodeLike,
   type PannerNodeLike,
 } from './audio/context.js';
 export { SoundRegistry } from './audio/registry.js';
+export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';
 export { AudioSystem, type AudioSystemOptions, type SoundRequest } from './audio/system.js';
 export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
+export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
+export { AudioApi, type AudioApiOptions } from './audio/api.js';
 export {
   EngineHost,
   type ClientRenderer,

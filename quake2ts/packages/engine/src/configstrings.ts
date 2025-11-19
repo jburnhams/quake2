@@ -75,6 +75,15 @@ export class ConfigStringRegistry {
     return this.register(path, ConfigStringIndex.Sounds, MAX_SOUNDS, 'soundCursor');
   }
 
+  findSoundIndex(path: string): number | undefined {
+    for (let i = ConfigStringIndex.Sounds; i < ConfigStringIndex.Sounds + MAX_SOUNDS; i += 1) {
+      if (this.values.get(i) === path) {
+        return i;
+      }
+    }
+    return undefined;
+  }
+
   imageIndex(path: string): number {
     return this.register(path, ConfigStringIndex.Images, MAX_IMAGES, 'imageCursor');
   }
