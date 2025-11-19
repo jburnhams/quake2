@@ -86,6 +86,7 @@ function assignField(
 export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
+  private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private currentTimeSeconds = 0;
 
   constructor(maxEntities?: number) {
@@ -116,8 +117,15 @@ export class EntitySystem {
   }
 
   free(entity: Entity): void {
+    this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.pool.deferFree(entity);
+  }
+
+  freeImmediate(entity: Entity): void {
+    this.unregisterTarget(entity);
+    this.thinkScheduler.cancel(entity);
+    this.pool.freeImmediate(entity);
   }
 
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {
@@ -126,6 +134,51 @@ export class EntitySystem {
 
   beginFrame(timeSeconds: number): void {
     this.currentTimeSeconds = timeSeconds;
+  }
+
+  finalizeSpawn(entity: Entity): void {
+    if (!entity.inUse || entity.freePending) {
+      return;
+    }
+    this.registerTarget(entity);
+  }
+
+  findByClassname(classname: string): Entity[] {
+    const matches: Entity[] = [];
+    for (const entity of this.pool) {
+      if (entity.classname === classname && entity.inUse && !entity.freePending) {
+        matches.push(entity);
+      }
+    }
+    return matches;
+  }
+
+  findByTargetName(targetname: string): Entity[] {
+    const matches = this.targetNameIndex.get(targetname);
+    if (!matches) {
+      return [];
+    }
+    return Array.from(matches).filter((entity) => entity.inUse && !entity.freePending);
+  }
+
+  useTargets(entity: Entity, activator: Entity | null = null): void {
+    if (entity.target) {
+      for (const target of this.findByTargetName(entity.target)) {
+        if (target === entity) {
+          continue;
+        }
+        target.use?.(target, entity, activator ?? entity);
+      }
+    }
+
+    if (entity.killtarget) {
+      for (const victim of this.findByTargetName(entity.killtarget)) {
+        if (victim === entity) {
+          continue;
+        }
+        this.free(victim);
+      }
+    }
   }
 
   runFrame(): void {
@@ -257,6 +310,32 @@ export class EntitySystem {
           second.touch(second, first);
         }
       }
+    }
+  }
+
+  private registerTarget(entity: Entity): void {
+    if (!entity.targetname) {
+      return;
+    }
+    let bucket = this.targetNameIndex.get(entity.targetname);
+    if (!bucket) {
+      bucket = new Set<Entity>();
+      this.targetNameIndex.set(entity.targetname, bucket);
+    }
+    bucket.add(entity);
+  }
+
+  private unregisterTarget(entity: Entity): void {
+    if (!entity.targetname) {
+      return;
+    }
+    const bucket = this.targetNameIndex.get(entity.targetname);
+    if (!bucket) {
+      return;
+    }
+    bucket.delete(entity);
+    if (bucket.size === 0) {
+      this.targetNameIndex.delete(entity.targetname);
     }
   }
 }

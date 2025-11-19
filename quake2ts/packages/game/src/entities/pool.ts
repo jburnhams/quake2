@@ -94,6 +94,20 @@ export class EntityPool implements Iterable<Entity> {
     this.pendingFree.push(entity.index);
   }
 
+  freeImmediate(entity: Entity): void {
+    if (entity.index === WORLD_INDEX) {
+      throw new Error('Cannot free world entity');
+    }
+
+    if (!entity.inUse) {
+      return;
+    }
+
+    this.unlink(entity);
+    entity.reset();
+    this.freeList.push(entity.index);
+  }
+
   flushFreeList(): void {
     if (this.pendingFree.length === 0) {
       return;
