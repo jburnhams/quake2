@@ -1,0 +1,190 @@
+import { describe, expect, it } from 'vitest';
+import {
+  DEFAULT_FORWARD_SPEED,
+  DEFAULT_MOUSE_SENSITIVITY,
+  DEFAULT_PITCH_SPEED,
+  DEFAULT_YAW_SPEED,
+  PlayerButton,
+  angleMod,
+} from '@quake2ts/shared';
+import {
+  InputBindings,
+  InputCommandBuffer,
+  InputController,
+  createDefaultBindings,
+} from '../src/index.js';
+
+function createController(): InputController {
+  return new InputController({}, createDefaultBindings());
+}
+
+describe('InputBindings', () => {
+  it('provides default commands and allows rebinding', () => {
+    const bindings = new InputBindings();
+    expect(bindings.getBinding('KeyW')).toBe('+forward');
+    expect(bindings.getBinding('Mouse1')).toBe('+attack');
+
+    bindings.bind('KeyW', '+back');
+    expect(bindings.getBinding('KeyW')).toBe('+back');
+
+    bindings.unbind('Mouse1');
+    expect(bindings.getBinding('Mouse1')).toBeUndefined();
+  });
+});
+
+describe('InputController', () => {
+  it('translates held movement keys into Quake II style forward/sidemove values', () => {
+    const controller = createController();
+    controller.handleKeyDown('KeyW', 0);
+    controller.handleKeyDown('KeyD', 0);
+
+    const cmd = controller.buildCommand(50, 50);
+
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+    expect(cmd.sidemove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+    expect(cmd.upmove).toBe(0);
+    expect(cmd.msec).toBe(50);
+    expect(cmd.buttons & PlayerButton.Any).toBe(PlayerButton.Any);
+  });
+
+  it('keeps movement active while any bound key remains held and drops when all release', () => {
+    const controller = createController();
+    controller.handleKeyDown('KeyW', 0);
+    controller.handleKeyDown('ArrowUp', 10);
+
+    let cmd = controller.buildCommand(30, 30);
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+
+    controller.handleKeyUp('KeyW', 40);
+    cmd = controller.buildCommand(20, 60);
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+
+    controller.handleKeyUp('ArrowUp', 80);
+    cmd = controller.buildCommand(20, 100);
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+
+    cmd = controller.buildCommand(20, 120);
+    expect(cmd.forwardmove).toBe(0);
+  });
+
+  it('applies run modifier mirroring cl_run/+speed semantics', () => {
+    const controller = createController();
+    controller.handleKeyDown('KeyW', 0);
+    controller.handleKeyDown('ShiftLeft', 0);
+
+    const cmd = controller.buildCommand(100, 100);
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED * 0.5);
+  });
+
+  it('sets attack, jump, and crouch button bits with matching upmove adjustments', () => {
+    const controller = createController();
+    controller.handleMouseButtonDown(0, 0);
+    controller.handleKeyDown('Space', 0);
+    controller.handleKeyDown('ControlLeft', 0);
+
+    const cmd = controller.buildCommand(16, 16);
+    expect(cmd.buttons & PlayerButton.Attack).toBe(PlayerButton.Attack);
+    expect(cmd.buttons & PlayerButton.Jump).toBe(PlayerButton.Jump);
+    expect(cmd.buttons & PlayerButton.Crouch).toBe(PlayerButton.Crouch);
+    expect(cmd.upmove).toBeCloseTo(0);
+
+    controller.handleMouseButtonUp(0, 32);
+    const cmdAfterRelease = controller.buildCommand(16, 48);
+    expect(cmdAfterRelease.buttons & PlayerButton.Attack).toBe(PlayerButton.Attack);
+
+    const cmdCleared = controller.buildCommand(16, 64);
+    expect(cmdCleared.buttons & PlayerButton.Attack).toBe(PlayerButton.None);
+  });
+
+  it('converts mouse deltas into view angle changes with Quake pitch clamping', () => {
+    const controller = createController();
+    controller.setPointerLocked(true);
+    controller.handleMouseMove(10, -5);
+
+    const cmd = controller.buildCommand(16, 16);
+    expect(cmd.angles.y).toBeCloseTo(angleMod(10 * DEFAULT_MOUSE_SENSITIVITY));
+    expect(cmd.angles.x).toBeCloseTo(angleMod(-5 * DEFAULT_MOUSE_SENSITIVITY));
+
+    const cmdNoMove = controller.buildCommand(16, 32);
+    expect(cmdNoMove.angles.y).toBeCloseTo(cmd.angles.y);
+    expect(cmdNoMove.angles.x).toBeCloseTo(cmd.angles.x);
+  });
+
+  it('uses keyboard look keys at the rerelease pitch/yaw speeds', () => {
+    const controller = createController();
+    controller.handleKeyDown('ArrowRight', 0);
+    controller.handleKeyDown('PageDown', 0);
+
+    const frameMsec = 50;
+    const cmd = controller.buildCommand(frameMsec, frameMsec);
+
+    const expectedYaw = (DEFAULT_YAW_SPEED * frameMsec) / 1000;
+    const expectedPitch = (DEFAULT_PITCH_SPEED * frameMsec) / 1000;
+    expect(cmd.angles.y).toBeCloseTo(expectedYaw);
+    expect(cmd.angles.x).toBeCloseTo(expectedPitch);
+  });
+
+  it('queues non-action bindings as console commands', () => {
+    const bindings = new InputBindings();
+    const controller = new InputController({}, bindings);
+    controller.handleKeyDown('Digit2', 0);
+
+    const pending = controller.consumeConsoleCommands();
+    expect(pending).toEqual(['weapon 2']);
+    expect(controller.consumeConsoleCommands()).toEqual([]);
+  });
+
+  it('emits +action/-action command strings only on transitions', () => {
+    const controller = createController();
+
+    controller.handleKeyDown('KeyW', 0);
+    controller.handleKeyDown('ArrowUp', 0);
+    expect(controller.consumeConsoleCommands()).toEqual(['+forward']);
+
+    controller.handleKeyUp('KeyW', 10);
+    expect(controller.consumeConsoleCommands()).toEqual([]);
+
+    controller.handleKeyUp('ArrowUp', 20);
+    expect(controller.consumeConsoleCommands()).toEqual(['-forward']);
+  });
+
+  it('supports per-axis sensitivity and mouse filtering', () => {
+    const controller = new InputController({
+      sensitivityX: 2,
+      sensitivityY: 4,
+      mouseFilter: true,
+      requirePointerLock: false,
+    });
+
+    controller.handleMouseMove(4, 2);
+    let cmd = controller.buildCommand(16, 16);
+    expect(cmd.angles.y).toBeCloseTo(4); // (4 + 0) / 2 * 2
+    expect(cmd.angles.x).toBeCloseTo(4); // (2 + 0) / 2 * 4
+
+    controller.handleMouseMove(4, 2);
+    cmd = controller.buildCommand(16, 32);
+    expect(cmd.angles.y).toBeCloseTo(12); // previous yaw 4 + (4 + 4) / 2 * 2
+    expect(cmd.angles.x).toBeCloseTo(12);
+  });
+
+  it('buffers usercmd frames and console commands together', () => {
+    const bindings = new InputBindings();
+    const buffer = new InputCommandBuffer({}, new InputController({}, bindings));
+    const controller = buffer.getController();
+
+    controller.handleKeyDown('KeyW', 0);
+    controller.handleKeyDown('Digit1', 0);
+
+    const first = buffer.captureFrame(20, 20, 1);
+    expect(first.command.forwardmove).toBeGreaterThan(0);
+    expect(first.console).toEqual(['+forward', 'weapon 1']);
+
+    controller.handleKeyUp('KeyW', 40);
+    const second = buffer.captureFrame(20, 40, 2);
+    expect(second.console).toEqual(['-forward']);
+
+    const queued = buffer.consumeQueued();
+    expect(queued).toHaveLength(2);
+    expect(buffer.consumeQueued()).toEqual([]);
+  });
+});
