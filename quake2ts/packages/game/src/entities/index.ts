@@ -7,6 +7,7 @@ export {
   type ThinkCallback,
   type TouchCallback,
   type UseCallback,
+  type MonsterInfo,
   MoveType,
   Solid,
   ServerFlags,

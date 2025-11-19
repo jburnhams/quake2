@@ -76,6 +76,12 @@ function copyVec3(): Vec3 {
   return { ...ZERO };
 }
 
+export interface MonsterInfo {
+  aiflags: number;
+}
+
+const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({ aiflags: 0 });
+
 export class Entity {
   readonly index: number;
 
@@ -155,6 +161,8 @@ export class Entity {
   solid: Solid = Solid.Not;
   flags = 0;
   svflags = 0;
+
+  monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO };
 
   constructor(index: number) {
     this.index = index;
@@ -236,6 +244,8 @@ export class Entity {
     this.solid = Solid.Not;
     this.flags = 0;
     this.svflags = 0;
+
+    this.monsterinfo = { ...DEFAULT_MONSTER_INFO };
   }
 }
 

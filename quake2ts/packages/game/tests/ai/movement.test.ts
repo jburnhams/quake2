@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   Entity,
   ai_face,
+  ai_charge,
   ai_move,
+  facingIdeal,
+  ai_run,
+  ai_stand,
   ai_turn,
+  ai_walk,
+  AIFlags,
   changeYaw,
   walkMove,
 } from '../../src/index.js';
@@ -69,6 +75,35 @@ describe('changeYaw', () => {
   });
 });
 
+describe('facingIdeal', () => {
+  it('uses a 45 degree tolerance by default', () => {
+    const ent = createEntity();
+    ent.angles.y = 0;
+    ent.ideal_yaw = 46;
+
+    expect(facingIdeal(ent)).toBe(false);
+
+    ent.ideal_yaw = 45;
+    expect(facingIdeal(ent)).toBe(true);
+
+    ent.ideal_yaw = 314;
+    ent.angles.y = 0;
+    expect(facingIdeal(ent)).toBe(false);
+  });
+
+  it('tightens tolerance when pathing to match rerelease steering', () => {
+    const ent = createEntity();
+    ent.monsterinfo.aiflags |= AIFlags.Pathing;
+    ent.angles.y = 0;
+
+    ent.ideal_yaw = 6;
+    expect(facingIdeal(ent)).toBe(false);
+
+    ent.ideal_yaw = 355;
+    expect(facingIdeal(ent)).toBe(true);
+  });
+});
+
 describe('ai_move', () => {
   it('walks forward along the current yaw without turning', () => {
     const ent = createEntity();
@@ -97,6 +132,53 @@ describe('ai_turn', () => {
   });
 });
 
+describe('ai_stand', () => {
+  it('only rotates toward ideal yaw without translation', () => {
+    const ent = createEntity();
+    ent.angles.y = 350;
+    ent.ideal_yaw = 10;
+    ent.yaw_speed = 90;
+
+    ai_stand(ent, 0.1);
+
+    expect(ent.origin).toEqual({ x: 0, y: 0, z: 0 });
+    expect(ent.angles.y).toBeCloseTo(10, 6);
+  });
+});
+
+describe('ai_walk', () => {
+  it('faces the goal entity before stepping forward', () => {
+    const ent = createEntity();
+    ent.yaw_speed = 90;
+    const goal = createEntity();
+    goal.origin = { x: 0, y: 10, z: 0 };
+    ent.goalentity = goal;
+
+    ai_walk(ent, 4, 0.1);
+
+    expect(ent.ideal_yaw).toBeCloseTo(90, 6);
+    expect(ent.angles.y).toBeCloseTo(90, 6);
+    expect(ent.origin.y).toBeCloseTo(4, 6);
+  });
+});
+
+describe('ai_run', () => {
+  it('prioritizes the enemy for turning and movement', () => {
+    const ent = createEntity();
+    ent.yaw_speed = 60;
+    const enemy = createEntity();
+    enemy.origin = { x: -10, y: 0, z: 0 };
+    ent.enemy = enemy;
+
+    ai_run(ent, 6, 0.1);
+
+    expect(ent.ideal_yaw).toBeCloseTo(180, 6);
+    expect(ent.angles.y).toBeCloseTo(300, 6);
+    expect(ent.origin.x).toBeCloseTo(3, 6);
+    expect(ent.origin.y).toBeCloseTo(-5.1961524, 5);
+  });
+});
+
 describe('ai_face', () => {
   it('computes ideal yaw toward the enemy and rotates before moving', () => {
     const ent = createEntity();
@@ -112,5 +194,22 @@ describe('ai_face', () => {
     expect(ent.angles.y).toBeCloseTo(90, 6);
     expect(ent.origin.x).toBeCloseTo(0, 6);
     expect(ent.origin.y).toBeCloseTo(4, 6);
+  });
+});
+
+describe('ai_charge', () => {
+  it('matches ai_run behavior while always honoring the enemy yaw', () => {
+    const ent = createEntity();
+    ent.yaw_speed = 120;
+    const enemy = createEntity();
+    enemy.origin = { x: 0, y: -8, z: 0 };
+    ent.enemy = enemy;
+
+    ai_charge(ent, 8, 0.1);
+
+    expect(ent.ideal_yaw).toBeCloseTo(270, 6);
+    expect(ent.angles.y).toBeCloseTo(270, 6);
+    expect(ent.origin.x).toBeCloseTo(0, 6);
+    expect(ent.origin.y).toBeCloseTo(-8, 6);
   });
 });
