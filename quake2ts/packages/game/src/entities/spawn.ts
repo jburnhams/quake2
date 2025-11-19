@@ -1,5 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { ENTITY_FIELD_METADATA, type EntityFieldDescriptor, Entity, MoveType, Solid } from './entity.js';
+import { registerTriggerSpawns } from './triggers.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
@@ -266,6 +267,8 @@ export function registerDefaultSpawns(registry: SpawnRegistry): void {
   registry.register('info_notnull', () => {
     // Placeholder positional target
   });
+
+  registerTriggerSpawns(registry);
 }
 
 export function createDefaultSpawnRegistry(): SpawnRegistry {
