@@ -75,6 +75,53 @@ describe('applyEnvironmentalDamage', () => {
     expect(target.health).toBe(88);
   });
 
+  it('caps drowning escalation at the rerelease 15 damage ceiling', () => {
+    const now = 10_000;
+    const target = makeTarget({ airFinished: now - 10_000 });
+
+    const first = applyEnvironmentalDamage(target, now);
+    expect(first.events[0]).toMatchObject({ mod: DamageMod.WATER, amount: 15 });
+    expect(target.health).toBe(85);
+
+    const second = applyEnvironmentalDamage(target, now + 1_000);
+    expect(second.events[0]).toMatchObject({ mod: DamageMod.WATER, amount: 15 });
+    expect(target.health).toBe(70);
+  });
+
+  it('lets water exit and re-entry reset the 100ms lava/slime debounce', () => {
+    const now = 0;
+    const target = makeTarget({ waterlevel: WaterLevel.Waist, watertype: CONTENTS_SLIME });
+
+    const first = applyEnvironmentalDamage(target, now);
+    expect(first.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 8 });
+    expect(target.damageDebounceTime).toBe(100);
+
+    target.waterlevel = WaterLevel.None;
+    const exit = applyEnvironmentalDamage(target, now + 50);
+    expect(exit.leftWater).toBe(true);
+
+    target.waterlevel = WaterLevel.Waist;
+    target.watertype = CONTENTS_SLIME;
+    const reentered = applyEnvironmentalDamage(target, now + 60);
+    expect(reentered.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 8 });
+    expect(target.damageDebounceTime).toBe(160);
+  });
+
+  it('honors slime immunity flags alongside lava immunity', () => {
+    const now = 250;
+    const target = makeTarget({
+      waterlevel: WaterLevel.Under,
+      watertype: CONTENTS_SLIME,
+      environmentFlags: EnvironmentalFlags.IMMUNE_SLIME,
+    });
+
+    const result = applyEnvironmentalDamage(target, now);
+
+    expect(result.events).toHaveLength(0);
+    expect(target.health).toBe(100);
+    expect(target.damageDebounceTime).toBe(0);
+  });
+
   it('tracks water entry/exit state so callers can trigger ambience', () => {
     const now = 0;
     const target = makeTarget({ waterlevel: WaterLevel.Waist, airFinished: -5000 });
