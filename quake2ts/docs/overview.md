@@ -15,6 +15,7 @@ The remaining work has been divided into developer-friendly sections that can be
 7. **[Audio System (WebAudio)](section-7-audio.md)** - WebAudio integration, 3D positional audio, music, sound effects
 8. **[Input, UI & Client Systems](section-8-input-ui-client.md)** - Input capture, HUD, menus, client prediction, browser integration
 9. **[Save/Load & Persistence](section-9-save-load.md)** - Serialization, save file management, deterministic saves
+10. **[Integration, Shared Code Review & Testing](section-10-integration-testing.md)** - Comprehensive integration testing, API contract validation, shared code review, determinism verification
 
 ## What we are building
 - **Engine package (`packages/engine`)**: Web-facing services (WebGL2 renderer, WebAudio, input, VFS/PAK ingestion, config/cvars) plus the fixed 40 Hz loop, configstring/asset registries, and import tables that mirror `game_import_t`/`cgame_import_t` expectations.
