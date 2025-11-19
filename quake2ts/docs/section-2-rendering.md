@@ -16,15 +16,15 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 ## Tasks Remaining
 
 ### WebGL2 Context & Core Abstractions
-- [ ] Initialize WebGL2 context with proper settings
+- [x] Initialize WebGL2 context with proper settings (engine `createWebGLContext` covers blending, depth/cull defaults, extension lookup, and loss/restore callbacks)
   - Alpha blending, depth testing, culling setup
   - Extension detection and fallbacks
   - Context loss/restore handling
-- [ ] Implement shader program management
+- [x] Implement shader program management (compilation/linking helpers with uniform/attribute caching in `ShaderProgram`)
   - Shader compilation and linking utilities
   - Uniform/attribute location caching
   - Shader variant system (e.g., lightmap vs. vertex-lit)
-- [ ] Create GPU resource wrappers
+- [x] Create GPU resource wrappers (buffer/VAO/texture/framebuffer helpers in the engine render package)
   - Vertex Buffer Objects (VBO) with typed layouts
   - Index Buffer Objects (IBO)
   - Vertex Array Objects (VAO) for state caching
@@ -32,7 +32,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Framebuffer objects for effects
 
 ### BSP World Rendering
-- [ ] Build BSP rendering data structures from loaded assets
+- [x] Build BSP rendering data structures from loaded assets (lightmap atlas packer, face-to-texture mapping, VAO/VBO/IBO setup)
   - Convert BSP faces to GPU vertex/index buffers
   - Upload lightmap atlas to texture array or large texture
   - Create face-to-texture mapping

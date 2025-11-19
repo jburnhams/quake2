@@ -67,3 +67,25 @@ export {
   type GameSimulation,
 };
 export { EngineRuntime, createEngineRuntime };
+export { createWebGLContext, type WebGLContextInitOptions, type WebGLContextState } from './render/context.js';
+export { ShaderProgram, createProgramFromSources, type ShaderSources } from './render/shaderProgram.js';
+export {
+  Framebuffer,
+  IndexBuffer,
+  Texture2D,
+  VertexArray,
+  VertexBuffer,
+  type BufferUsage,
+  type TextureParameters,
+  type VertexAttributeLayout,
+} from './render/resources.js';
+export {
+  BSP_VERTEX_LAYOUT,
+  buildBspGeometry,
+  type BspGeometryBuildResult,
+  type BspLightmapData,
+  type BspSurfaceGeometry,
+  type BspSurfaceInput,
+  type LightmapAtlas,
+  type LightmapPlacement,
+} from './render/bsp.js';
