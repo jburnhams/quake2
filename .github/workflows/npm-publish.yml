@@ -11,6 +11,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quake2ts
     steps:
       - uses: actions/checkout@v4
 
@@ -19,12 +22,5 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      # Ensure npm 11.5.1 or later is installed
-      - name: Update npm
-        run: npm install -g npm@latest
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - run: npm run smoke
-      - run: npm run size
-      - run: npm publish
+      - run: pnpm install
+      - run: pnpm publish
