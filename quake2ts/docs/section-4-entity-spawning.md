@@ -66,14 +66,13 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - `SP_info_player_coop`: Coop spawn points (defer for base SP)
   - `SP_info_null`: No-op (removed entities)
 - [ ] Trigger spawns (trigger_* entities)
-  - `SP_trigger_multiple`, `SP_trigger_once`: Generic triggers
-  - `SP_trigger_relay`: Relay target events
-  - `SP_trigger_push`: Jump pads, wind tunnels
-  - `SP_trigger_hurt`: Damage zones (lava, slime)
-  - `SP_trigger_teleport`: Teleport destinations
-  - `SP_trigger_gravity`: Gravity modifiers
-  - `SP_trigger_monsterjump`: Monster navigation hints
-  - Others: `trigger_always`, `trigger_counter`, `trigger_key`, `trigger_elevator`
+  - [x] `SP_trigger_multiple`, `SP_trigger_once`, `SP_trigger_relay`, `trigger_always`
+  - [x] `SP_trigger_push`: Jump pads, wind tunnels
+  - [x] `SP_trigger_hurt`: Damage zones (lava, slime)
+  - [ ] `SP_trigger_teleport`: Teleport destinations
+  - [ ] `SP_trigger_gravity`: Gravity modifiers
+  - [ ] `SP_trigger_monsterjump`: Monster navigation hints
+  - [ ] Others: `trigger_counter`, `trigger_key`, `trigger_elevator`
 - [ ] Target spawns (target_* entities)
   - `SP_target_temp_entity`: Spawn temporary effects
   - `SP_target_speaker`: Ambient sounds
@@ -212,7 +211,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Preserve velocity or zero it (based on flags)
 
 ### Entity Utility Functions
-- [ ] `G_SetMovedir`: Calculate move direction from angles
+- [x] `G_SetMovedir`: Calculate move direction from angles
 - [ ] `G_TouchTriggers`: Check if entity is touching any triggers
 - [ ] `G_PickTarget`: Choose random entity matching targetname (for randomization)
 - [ ] `KillBox`: Kill any entities at spawn position (prevent stuck spawns)

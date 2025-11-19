@@ -1,5 +1,5 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { Entity } from './entity.js';
+import { Entity, Solid } from './entity.js';
 import { EntityPool } from './pool.js';
 import { ThinkScheduler } from './thinkScheduler.js';
 
@@ -113,23 +113,21 @@ export class EntitySystem {
   }
 
   useTargets(entity: Entity, activator: Entity | null = null): void {
-    if (entity.target) {
-      for (const target of this.findByTargetName(entity.target)) {
-        if (target === entity) {
-          continue;
-        }
-        target.use?.(target, entity, activator ?? entity);
-      }
+    if (entity.delay > 0) {
+      const delayed = this.spawn();
+      delayed.classname = 'DelayedUse';
+      delayed.target = entity.target;
+      delayed.killtarget = entity.killtarget;
+      delayed.message = entity.message;
+      delayed.think = (self) => {
+        this.useTargetsImmediate(self, activator ?? entity);
+        this.free(self);
+      };
+      this.scheduleThink(delayed, this.currentTimeSeconds + entity.delay);
+      return;
     }
 
-    if (entity.killtarget) {
-      for (const victim of this.findByTargetName(entity.killtarget)) {
-        if (victim === entity) {
-          continue;
-        }
-        this.free(victim);
-      }
-    }
+    this.useTargetsImmediate(entity, activator ?? entity);
   }
 
   runFrame(): void {
@@ -145,7 +143,7 @@ export class EntitySystem {
       if (entity === world) {
         continue;
       }
-      if (!entity.inUse || entity.freePending) {
+      if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) {
         continue;
       }
       activeEntities.push(entity);
@@ -199,6 +197,26 @@ export class EntitySystem {
     bucket.delete(entity);
     if (bucket.size === 0) {
       this.targetNameIndex.delete(entity.targetname);
+    }
+  }
+
+  private useTargetsImmediate(entity: Entity, activator: Entity | null): void {
+    if (entity.target) {
+      for (const target of this.findByTargetName(entity.target)) {
+        if (target === entity) {
+          continue;
+        }
+        target.use?.(target, entity, activator);
+      }
+    }
+
+    if (entity.killtarget) {
+      for (const victim of this.findByTargetName(entity.killtarget)) {
+        if (victim === entity) {
+          continue;
+        }
+        this.free(victim);
+      }
     }
   }
 }
