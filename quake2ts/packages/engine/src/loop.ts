@@ -20,6 +20,7 @@ export interface LoopOptions {
   readonly fixedDeltaMs: number;
   readonly maxSubSteps: number;
   readonly maxDeltaMs: number;
+  readonly startTimeMs?: number;
   readonly now: () => number;
   readonly schedule: (tick: () => void) => unknown;
 }
@@ -51,6 +52,7 @@ export class FixedTimestepLoop {
       fixedDeltaMs,
       maxSubSteps,
       maxDeltaMs: options.maxDeltaMs ?? fixedDeltaMs * maxSubSteps,
+      startTimeMs: options.startTimeMs,
       now: options.now ?? defaultNow,
       schedule: options.schedule ?? defaultScheduler,
     } satisfies LoopOptions;
@@ -59,7 +61,7 @@ export class FixedTimestepLoop {
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.lastTimeMs = this.options.now();
+    this.lastTimeMs = this.options.startTimeMs ?? this.options.now();
     this.options.schedule(this.tick);
   }
 
