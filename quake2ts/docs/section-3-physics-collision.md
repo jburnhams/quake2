@@ -58,13 +58,14 @@ This section covers the physics simulation and collision detection system that f
 - [x] Optimize with BSP leaf lookup
   - Traverse BSP nodes to find containing leaf
   - Test only brushes in that leaf
-- [ ] Multi-point queries for efficiency
+- [x] Multi-point queries for efficiency
   - Query multiple points in batch (for water level probing)
 
 - [x] Implement `boxcontents` helper (used internally)
   - Test if a bounding box intersects specific contents
   - Used to check if player is in water, lava, slime
-- [ ] Implement `inPVS` check (for entity visibility)
+  - Traverses BSP splits for boxes that cross multiple leaves to accumulate all relevant contents
+- [x] Implement `inPVS` check (for entity visibility)
   - Check if two points are in the same Potentially Visible Set
   - Uses BSP PVS data from asset loader
   - Used to skip AI/sound updates for distant entities
