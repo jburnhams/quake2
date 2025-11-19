@@ -16,6 +16,8 @@ export class MockWebGL2RenderingContext {
   readonly FLOAT = 0x1406;
   readonly UNSIGNED_SHORT = 0x1403;
   readonly TEXTURE_2D = 0x0de1;
+  readonly TEXTURE_CUBE_MAP = 0x8513;
+  readonly TEXTURE_CUBE_MAP_POSITIVE_X = 0x8515;
   readonly TEXTURE0 = 0x84c0;
   readonly TEXTURE_WRAP_S = 0x2802;
   readonly TEXTURE_WRAP_T = 0x2803;
@@ -29,6 +31,7 @@ export class MockWebGL2RenderingContext {
   readonly FRAMEBUFFER = 0x8d40;
   readonly COLOR_ATTACHMENT0 = 0x8ce0;
   readonly DEPTH_ATTACHMENT = 0x8d00;
+  readonly TRIANGLES = 0x0004;
   readonly DEPTH_TEST = 0x0b71;
   readonly CULL_FACE = 0x0b44;
   readonly BLEND = 0x0be2;
@@ -153,11 +156,22 @@ export class MockWebGL2RenderingContext {
   );
   deleteFramebuffer = vi.fn((fb: WebGLFramebuffer) => this.calls.push(`deleteFramebuffer:${!!fb}`));
 
+  drawArrays = vi.fn((mode: GLenum, first: GLint, count: GLsizei) =>
+    this.calls.push(`drawArrays:${mode}:${first}:${count}`)
+  );
+
+  drawElements = vi.fn((mode: GLenum, count: GLsizei, type: GLenum, offset: GLintptr) =>
+    this.calls.push(`drawElements:${mode}:${count}:${type}:${offset}`)
+  );
+
   uniform1f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat) =>
     this.calls.push(`uniform1f:${location ? 'set' : 'null'}:${x}`)
   );
   uniform1i = vi.fn((location: WebGLUniformLocation | null, x: GLint) =>
     this.calls.push(`uniform1i:${location ? 'set' : 'null'}:${x}`)
+  );
+  uniform3fv = vi.fn((location: WebGLUniformLocation | null, data: Float32List | number[]) =>
+    this.calls.push(`uniform3fv:${location ? 'set' : 'null'}:${Array.from(data as Iterable<number>).join(',')}`)
   );
   uniform2f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat, y: GLfloat) =>
     this.calls.push(`uniform2f:${location ? 'set' : 'null'}:${x}:${y}`)
