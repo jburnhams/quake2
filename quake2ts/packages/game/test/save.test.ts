@@ -192,7 +192,10 @@ describe('Game save files', () => {
       rngState: rng.getState(),
     });
 
-    expect(() => parseSaveFile({ ...valid, version: 99 })).toThrow('Unsupported save version');
+    expect(parseSaveFile({ ...valid, version: 99 }).version).toBe(99);
+    expect(() => parseSaveFile({ ...valid, version: 99 }, { allowNewerVersion: false })).toThrow(
+      'newer than supported',
+    );
     expect(() => parseSaveFile({ ...valid, level: null as unknown as LevelFrameState })).toThrow();
     expect(() =>
       parseSaveFile({

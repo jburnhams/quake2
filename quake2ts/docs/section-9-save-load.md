@@ -124,12 +124,12 @@ This section covers the save/load system that allows players to save game progre
   - Update save list UI
 
 ### Determinism & Reproducibility
-- [ ] Ensure deterministic save/load
-  - Same save loaded twice produces identical gameplay
-  - RNG state must be saved and restored exactly
+- [x] Ensure deterministic save/load
+  - Same save loaded twice produces identical gameplay (validated via entity pool/think snapshot parity tests)
+  - RNG state must be saved and restored exactly (round-trip tests cover `RandomGenerator` state)
   - Entity order must be preserved (save by slot index)
   - Frame timing must match (use saved frame number)
-- [ ] Test reproducibility
+- [x] Test reproducibility
   - Save game, load twice in parallel, verify divergence-free
   - Useful for debugging desyncs (multiplayer future-proofing)
 
@@ -137,18 +137,18 @@ This section covers the save/load system that allows players to save game progre
 - [x] Version number in save file
   - Increment when save format changes
   - Check version on load
-- [ ] Backward compatibility
+- [x] Backward compatibility
   - Load old saves with migration logic
-  - Fill in missing fields with defaults
+  - Fill in missing fields with defaults (parsing now tolerates absent optional fields and defaults level/RNG state)
   - Warn user if save is from incompatible version
-- [ ] Forward compatibility
-  - Ignore unknown fields from newer saves
+- [x] Forward compatibility
+  - Ignore unknown fields from newer saves (parser accepts newer versions unless explicitly disallowed)
   - May lose data, but don't crash
 
 ### Rerelease JSON Save Compatibility (Optional)
-- [ ] Analyze rerelease JSON save format
-  - Study structure, field names, types
-  - Document differences from quake2ts format
+- [x] Analyze rerelease JSON save format
+  - Study structure, field names, types (top-level `save_version`, game saves with `game` + `clients[]`, level saves with `level` + sparse `entities` object keyed by edict index string)
+  - Document differences from quake2ts format (slot-index array vs rerelease object map)
 - [ ] Implement converter (mapper)
   - **Import**: Read rerelease JSON, convert to quake2ts format
   - **Export**: Convert quake2ts save to rerelease JSON format

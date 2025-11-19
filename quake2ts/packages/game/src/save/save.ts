@@ -1,6 +1,6 @@
 import type { CvarRegistry } from '@quake2ts/engine';
-import { CvarFlags, type RandomGeneratorState } from '@quake2ts/shared';
-import type { RandomGenerator } from '@quake2ts/shared';
+import { CvarFlags, RandomGenerator, type RandomGeneratorState } from '@quake2ts/shared';
+import type { RandomGenerator as RandomGeneratorType } from '@quake2ts/shared';
 import type { EntitySystem, EntitySystemSnapshot, SerializedEntityState } from '../entities/index.js';
 import type { LevelClock, LevelFrameState } from '../level.js';
 
@@ -42,9 +42,15 @@ export interface SaveCreationOptions {
 export interface SaveApplyTargets {
   readonly levelClock: LevelClock;
   readonly entitySystem: EntitySystem;
-  readonly rng: RandomGenerator;
+  readonly rng: RandomGeneratorType;
   readonly cvars?: CvarRegistry;
 }
+
+export interface ParseSaveOptions {
+  readonly allowNewerVersion?: boolean;
+}
+
+const MIN_SUPPORTED_VERSION = 1;
 
 function ensureObject(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -58,6 +64,13 @@ function ensureNumber(value: unknown, label: string): number {
     throw new Error(`${label} must be a finite number`);
   }
   return value;
+}
+
+function ensureNumberOrDefault(value: unknown, label: string, defaultValue: number): number {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return ensureNumber(value, label);
 }
 
 function ensureString(value: unknown, label: string): string {
@@ -78,16 +91,24 @@ function ensureNumberArray(value: unknown, label: string): readonly number[] {
 }
 
 function parseLevelState(raw: unknown): LevelFrameState {
+  if (raw === undefined) {
+    return { frameNumber: 0, timeSeconds: 0, previousTimeSeconds: 0, deltaSeconds: 0 };
+  }
+
   const level = ensureObject(raw, 'level');
   return {
-    frameNumber: ensureNumber(level.frameNumber, 'level.frameNumber'),
-    timeSeconds: ensureNumber(level.timeSeconds, 'level.timeSeconds'),
-    previousTimeSeconds: ensureNumber(level.previousTimeSeconds, 'level.previousTimeSeconds'),
-    deltaSeconds: ensureNumber(level.deltaSeconds, 'level.deltaSeconds'),
+    frameNumber: ensureNumberOrDefault(level.frameNumber, 'level.frameNumber', 0),
+    timeSeconds: ensureNumberOrDefault(level.timeSeconds, 'level.timeSeconds', 0),
+    previousTimeSeconds: ensureNumberOrDefault(level.previousTimeSeconds, 'level.previousTimeSeconds', 0),
+    deltaSeconds: ensureNumberOrDefault(level.deltaSeconds, 'level.deltaSeconds', 0),
   };
 }
 
 function parseRngState(raw: unknown): RandomGeneratorState {
+  if (raw === undefined) {
+    return new RandomGenerator().getState();
+  }
+
   const rng = ensureObject(raw, 'rng');
   const mt = ensureObject(rng.mt, 'rng.mt');
   const state = ensureNumberArray(mt.state, 'rng.mt.state');
@@ -252,6 +273,15 @@ function applyCvars(entries: readonly CvarSaveEntry[], registry: CvarRegistry | 
   }
 }
 
+function cloneRngState(state: RandomGeneratorState): RandomGeneratorState {
+  return {
+    mt: {
+      index: state.mt.index,
+      state: [...state.mt.state],
+    },
+  };
+}
+
 export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
   const {
     map,
@@ -272,22 +302,27 @@ export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
     map,
     difficulty,
     playtimeSeconds,
-    gameState,
+    gameState: { ...gameState },
     level: { ...levelState },
-    rng: { ...rngState },
+    rng: cloneRngState(rngState),
     entities: entitySystem.createSnapshot(),
     cvars: serializeCvars(cvars),
     configstrings: [...configstrings],
   };
 }
 
-export function parseSaveFile(serialized: unknown): GameSaveFile {
+export function parseSaveFile(serialized: unknown, options: ParseSaveOptions = {}): GameSaveFile {
+  const { allowNewerVersion = true } = options;
   const raw = typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
   const save = ensureObject(raw, 'save');
 
-  const version = ensureNumber(save.version, 'version');
-  if (version !== SAVE_FORMAT_VERSION) {
+  const versionValue = save.version ?? SAVE_FORMAT_VERSION;
+  const version = ensureNumber(versionValue, 'version');
+  if (version < MIN_SUPPORTED_VERSION) {
     throw new Error(`Unsupported save version ${version}`);
+  }
+  if (version > SAVE_FORMAT_VERSION && !allowNewerVersion) {
+    throw new Error(`Save version ${version} is newer than supported ${SAVE_FORMAT_VERSION}`);
   }
 
   return {
