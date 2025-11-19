@@ -38,3 +38,13 @@ export interface PmoveWishParams {
   readonly maxSpeed: number;
 }
 
+export interface PmoveTraceResult {
+  readonly fraction: number;
+  readonly endpos: Vec3;
+  readonly planeNormal?: Vec3;
+  readonly allsolid: boolean;
+  readonly startsolid: boolean;
+}
+
+export type PmoveTraceFn = (start: Vec3, end: Vec3) => PmoveTraceResult;
+

@@ -1,11 +1,31 @@
-import { ZERO_VEC3, clipVelocityVec3, crossVec3, dotVec3, scaleVec3, type Vec3 } from '../math/vec3.js';
+import { addVec3, ZERO_VEC3, clipVelocityVec3, crossVec3, dotVec3, scaleVec3, type Vec3 } from '../math/vec3.js';
+import type { PmoveTraceFn } from './types.js';
 
 const DEFAULT_MAX_CLIP_PLANES = 5;
+const DEFAULT_MAX_BUMPS = 4;
+
+export const SLIDEMOVE_BLOCKED_FLOOR = 1;
+export const SLIDEMOVE_BLOCKED_WALL = 2;
 
 export interface SlideMoveResult {
   readonly velocity: Vec3;
   readonly planes: readonly Vec3[];
   readonly stopped: boolean;
+}
+
+export interface SlideMoveParams {
+  readonly origin: Vec3;
+  readonly velocity: Vec3;
+  readonly frametime: number;
+  readonly overbounce: number;
+  readonly trace: PmoveTraceFn;
+  readonly maxBumps?: number;
+  readonly maxClipPlanes?: number;
+}
+
+export interface SlideMoveOutcome extends SlideMoveResult {
+  readonly origin: Vec3;
+  readonly blocked: number;
 }
 
 /**
@@ -17,17 +37,18 @@ export interface SlideMoveResult {
  * the adjusted velocity would oppose the primal direction.
  */
 export function resolveSlideMove(
-  primalVelocity: Vec3,
+  initialVelocity: Vec3,
   planesEncountered: readonly Vec3[],
   overbounce: number,
   maxClipPlanes = DEFAULT_MAX_CLIP_PLANES,
+  primalVelocity: Vec3 = initialVelocity,
 ): SlideMoveResult {
   if (planesEncountered.length === 0) {
-    return { velocity: primalVelocity, planes: [], stopped: false };
+    return { velocity: initialVelocity, planes: [], stopped: false };
   }
 
   const planes: Vec3[] = [];
-  let velocity: Vec3 = primalVelocity;
+  let velocity: Vec3 = initialVelocity;
 
   for (const plane of planesEncountered) {
     if (planes.length >= maxClipPlanes) {
@@ -79,4 +100,73 @@ export function resolveSlideMove(
 
   const stopped = velocity.x === 0 && velocity.y === 0 && velocity.z === 0;
   return { velocity, planes, stopped };
+}
+
+/**
+ * Pure mirror of PM_SlideMoveGeneric from rerelease `p_move.cpp` (minus gravity/step handling).
+ * Uses a caller-provided trace to collect collision planes, accumulates them through
+ * `resolveSlideMove`, and returns the resulting origin/velocity/blocking state.
+ */
+export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
+  const {
+    origin: initialOrigin,
+    velocity: initialVelocity,
+    frametime,
+    overbounce,
+    trace,
+    maxBumps = DEFAULT_MAX_BUMPS,
+    maxClipPlanes = DEFAULT_MAX_CLIP_PLANES,
+  } = params;
+
+  let origin = initialOrigin;
+  let velocity = initialVelocity;
+  const planes: Vec3[] = [];
+  const primalVelocity = initialVelocity;
+  let timeLeft = frametime;
+  let blocked = 0;
+
+  for (let bump = 0; bump < maxBumps; bump++) {
+    if (velocity.x === 0 && velocity.y === 0 && velocity.z === 0) {
+      break;
+    }
+
+    const end = addVec3(origin, scaleVec3(velocity, timeLeft));
+    const tr = trace(origin, end);
+
+    if (tr.allsolid) {
+      return { origin: tr.endpos, velocity: ZERO_VEC3, planes, stopped: true, blocked };
+    }
+
+    if (tr.fraction > 0) {
+      origin = tr.endpos;
+    }
+
+    if (tr.fraction === 1) {
+      break;
+    }
+
+    if (!tr.planeNormal) {
+      return { origin, velocity: ZERO_VEC3, planes, stopped: true, blocked };
+    }
+
+    if (tr.planeNormal.z > 0.7) {
+      blocked |= SLIDEMOVE_BLOCKED_FLOOR;
+    }
+    if (tr.planeNormal.z === 0) {
+      blocked |= SLIDEMOVE_BLOCKED_WALL;
+    }
+
+    planes.push(tr.planeNormal);
+    timeLeft -= timeLeft * tr.fraction;
+
+    const resolved = resolveSlideMove(velocity, planes, overbounce, maxClipPlanes, primalVelocity);
+    velocity = resolved.velocity;
+    planes.splice(0, planes.length, ...resolved.planes);
+
+    if (resolved.stopped) {
+      return { origin, velocity, planes, stopped: true, blocked };
+    }
+  }
+
+  return { origin, velocity, planes, stopped: velocity.x === 0 && velocity.y === 0 && velocity.z === 0, blocked };
 }

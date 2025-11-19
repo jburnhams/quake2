@@ -18,6 +18,7 @@
 - Built an `EngineHost` wrapper around the fixed-step loop to drive game simulation snapshots and feed previous/latest frames to the client renderer, with unit coverage for init/shutdown ordering and manual pump control.
 - Introduced an `EngineRuntime` harness that wires engine init/shutdown around the host and client/game lifecycles so embedders can spin the fixed-step loop up with a single call; the viewer bootstrap now uses it.
 - Added `resolveSlideMove`, a pure clip-plane accumulator mirroring the inner loop of `PM_StepSlideMove_Generic` so slide/crease resolution can be unit-tested outside of the full pmove trace path.
+- Added a trace-driven `slideMove` helper that mirrors `PM_SlideMoveGeneric` (minus gravity/stepping) and scripts collision planes through unit tests to verify multi-bump handling.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
