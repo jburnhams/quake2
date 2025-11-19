@@ -34,6 +34,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Trace line-of-sight to each (blocked by walls = reduced damage)
   - Calculate damage falloff by distance
   - Apply damage with outward knockback direction
+  - Verified radius limits and bounding-box-aware distance checks against rerelease behavior with regression tests
 - [x] Armor system
   - Reduce damage based on armor value and type
   - Different armor types: jacket (light), combat (medium), body (heavy)

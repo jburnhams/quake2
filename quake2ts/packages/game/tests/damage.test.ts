@@ -133,4 +133,26 @@ describe('T_RadiusDamage', () => {
     expect(visible.health).toBeLessThan(100);
     expect(blocked.health).toBe(100);
   });
+
+  it('respects the requested radius instead of scaling purely by damage', () => {
+    const inflictor = { origin: { x: 0, y: 0, z: 0 } };
+    const close = makeEntity({ origin: { x: 10, y: 0, z: 0 } });
+    const far = makeEntity({ origin: { x: 80, y: 0, z: 0 } });
+
+    const hits = T_RadiusDamage([close, far], inflictor, null, 200, null, 30, DamageFlags.NONE, MOD_UNKNOWN);
+
+    expect(hits.map((hit) => hit.target)).toEqual([close]);
+    expect(close.health).toBeLessThan(100);
+    expect(far.health).toBe(100);
+  });
+
+  it('uses bounding boxes relative to origin when measuring explosion distance', () => {
+    const inflictor = { origin: { x: 0, y: 0, z: 0 } };
+    const tallBox = makeEntity({ origin: { x: 100, y: 0, z: 0 }, mins: { x: -16, y: -16, z: 0 }, maxs: { x: 16, y: 16, z: 56 } });
+
+    const hits = T_RadiusDamage([tallBox], inflictor, null, 120, null, 50, DamageFlags.NONE, MOD_UNKNOWN);
+
+    expect(hits).toHaveLength(0);
+    expect(tallBox.health).toBe(100);
+  });
 });

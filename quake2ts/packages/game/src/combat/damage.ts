@@ -113,9 +113,9 @@ function applyProtection(
 function targetCenter(ent: DamageSource | Damageable): Vec3 {
   if (ent.mins && ent.maxs) {
     return {
-      x: (ent.mins.x + ent.maxs.x) * 0.5,
-      y: (ent.mins.y + ent.maxs.y) * 0.5,
-      z: (ent.mins.z + ent.maxs.z) * 0.5,
+      x: ent.origin.x + (ent.mins.x + ent.maxs.x) * 0.5,
+      y: ent.origin.y + (ent.mins.y + ent.maxs.y) * 0.5,
+      z: ent.origin.z + (ent.mins.z + ent.maxs.z) * 0.5,
     };
   }
   return ent.origin;
@@ -200,9 +200,16 @@ export function T_RadiusDamage(
       continue;
     }
 
-    const entCenter = ent.mins && ent.maxs ? closestPointToBox(inflictorCenter, ent.mins, ent.maxs) : targetCenter(ent);
+    const entCenter = ent.mins && ent.maxs
+      ? closestPointToBox(inflictorCenter, addVec3(ent.origin, ent.mins), addVec3(ent.origin, ent.maxs))
+      : targetCenter(ent);
     const toTarget = subtractVec3(inflictorCenter, entCenter);
-    const points = damage - 0.5 * lengthVec3(toTarget);
+    const distance = lengthVec3(toTarget);
+    if (radius > 0 && distance > radius) {
+      continue;
+    }
+
+    const points = damage - 0.5 * distance;
     if (points <= 0) {
       continue;
     }
