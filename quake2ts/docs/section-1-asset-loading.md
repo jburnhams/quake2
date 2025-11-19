@@ -48,38 +48,38 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
   - Parse header, frames, triangles, texture coordinates, GL commands
   - Build per-frame vertex/normal buffers
   - Support animation frame sequences
-- [ ] MD3 loader
+- [x] MD3 loader
   - Parse header, surfaces, frames, tags (attachment points)
   - Multi-surface models (head, torso, legs for player models)
   - Support tag-based hierarchical attachments
-- [ ] Model animation controller helpers
+- [x] Model animation controller helpers
   - Frame interpolation between keyframes
   - Animation sequence definitions (idle, run, attack, death, etc.)
 
 ### Texture Loaders
-- [ ] WAL texture loader
+- [x] WAL texture loader
   - Parse Quake II WAL format (mipmap levels, name, flags)
   - Extract base texture and mipmaps
   - Preserve surface flags (SURF_SKY, SURF_WARP, etc.)
-- [ ] PCX image loader
+- [x] PCX image loader
   - Parse PCX header and RLE-compressed data
   - Support palette-based and RGB formats
   - Used for textures, HUD graphics, skyboxes
-- [ ] Texture caching and GPU upload preparation
+- [x] Texture caching and GPU upload preparation
   - Convert to RGBA8 format for WebGL
   - Preserve mipmap chains
   - Handle special textures (warp, sky, transparent)
 
 ### Audio Loaders
-- [ ] WAV loader
+- [x] WAV loader
   - Parse RIFF/WAV headers
   - Extract PCM audio data
   - Support various sample rates and bit depths
-- [ ] OGG Vorbis loader
+- [x] OGG Vorbis loader
   - Integrate OGG decoder library (e.g., vorbis.js or Web Audio native decode)
   - Async decoding for large files
   - Stream preparation for ambient sounds
-- [ ] Audio asset registry
+- [x] Audio asset registry
   - Map sound indices to decoded audio buffers
   - Support for precache during level load
   - Reference counting for memory management
