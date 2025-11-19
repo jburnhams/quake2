@@ -19,6 +19,7 @@ export interface PakValidationOutcome {
 export const RERELEASE_KNOWN_PAKS: readonly KnownPakChecksum[] = Object.freeze([
   // Base campaign
   { name: 'pak0.pak', checksum: 0x8dbe2e6d, description: 'Base game assets' },
+  { name: 'pak0.pak@baseq2', checksum: 0x8dbe2e6d, description: 'Base game assets (baseq2)' },
   // Mission packs bundled with the rerelease
   { name: 'pak0.pak@rogue', checksum: 0xc90f1e6d, description: 'Ground Zero (rogue) mission pack' },
   { name: 'pak0.pak@xatrix', checksum: 0x50f58d80, description: 'The Reckoning (xatrix) mission pack' },

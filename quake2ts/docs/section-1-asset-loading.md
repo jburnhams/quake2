@@ -129,3 +129,5 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
 - Texture and audio formats should be converted to WebGL/WebAudio-friendly formats during load
 - PAK ingestion defaults to non-fatal validation; mismatches are reported while later PAKs continue mounting, and persisted
   PAK indexes remove all checksum variants for the same filename when cleared
+- Validation recognizes the base rerelease install path (`baseq2/pak0.pak`) alongside plain filenames so strict validation
+  does not reject canonical layouts

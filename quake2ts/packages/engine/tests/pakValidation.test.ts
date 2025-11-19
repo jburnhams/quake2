@@ -23,4 +23,14 @@ describe('PakValidator', () => {
     const outcome = validator.validateArchive(archive);
     expect(outcome.status).toBe('unknown');
   });
+
+  it('treats baseq2 directory-normalized pak0 as known', () => {
+    const validator = new PakValidator();
+    const normalized = validator.validateArchive(
+      { name: 'pak0.pak', checksum: 0x8dbe2e6d },
+      'baseq2/pak0.pak',
+    );
+    expect(normalized.status).toBe('valid');
+    expect(normalized.description).toMatch(/baseq2/i);
+  });
 });
