@@ -83,6 +83,7 @@ export {
   Framebuffer,
   IndexBuffer,
   Texture2D,
+  TextureCubeMap,
   VertexArray,
   VertexBuffer,
   type BufferUsage,
@@ -111,3 +112,22 @@ export {
   type BspSurfaceBindOptions,
   type SurfaceRenderState,
 } from './render/bspPipeline.js';
+export {
+  SKYBOX_FRAGMENT_SHADER,
+  SKYBOX_VERTEX_SHADER,
+  SkyboxPipeline,
+  computeSkyScroll,
+  removeViewTranslation,
+} from './render/skybox.js';
+export {
+  MD2_FRAGMENT_SHADER,
+  MD2_VERTEX_SHADER,
+  Md2MeshBuffers,
+  Md2Pipeline,
+  buildMd2Geometry,
+  buildMd2VertexData,
+  type Md2BindOptions,
+  type Md2FrameBlend,
+  type Md2Geometry,
+  type Md2DrawVertex,
+} from './render/md2Pipeline.js';
