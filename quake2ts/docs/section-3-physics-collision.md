@@ -19,14 +19,14 @@ This section covers the physics simulation and collision detection system that f
 ## Tasks Remaining
 
 ### BSP Collision Geometry
-- [ ] Build collision data structures from loaded BSP
+- [x] Build collision data structures from loaded BSP
   - Extract brush definitions (planes, sides, contents)
   - Build brush models for world and inline bmodels (func_door, func_wall, etc.)
   - Organize brushes into spatial hierarchy for efficient queries
-- [ ] Implement plane distance/side tests
+- [x] Implement plane distance/side tests
   - Point on plane side (epsilon handling)
   - Box on plane side (bbox min/max tests)
-- [ ] Brush/hull collision tests
+- [x] Brush/hull collision tests
   - Point in brush test
   - Box intersects brush test
   - Ray intersects brush test
