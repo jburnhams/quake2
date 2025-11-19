@@ -69,6 +69,33 @@ export {
   type Md2Model,
 } from './assets/md2.js';
 export {
+  ATTN_IDLE,
+  ATTN_LOOP_NONE,
+  ATTN_NONE,
+  ATTN_NORM,
+  ATTN_STATIC,
+  MAX_SOUND_CHANNELS as MAX_SOUND_CHANNELS,
+  SOUND_FULLVOLUME,
+  SOUND_LOOP_ATTENUATE,
+  SoundChannel,
+  attenuationToDistanceMultiplier,
+  calculateMaxAudibleDistance,
+} from './audio/constants.js';
+export {
+  AudioContextController,
+  createAudioGraph,
+  type AudioBufferLike,
+  type AudioContextLike,
+  type AudioGraph,
+  type AudioNodeLike,
+  type GainNodeLike,
+  type PannerNodeLike,
+} from './audio/context.js';
+export { SoundRegistry } from './audio/registry.js';
+export { AudioSystem, type AudioSystemOptions, type SoundRequest } from './audio/system.js';
+export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
+export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
+export {
   EngineHost,
   type ClientRenderer,
   type EngineHostOptions,
