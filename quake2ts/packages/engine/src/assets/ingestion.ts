@@ -1,5 +1,7 @@
 import { PakArchive } from './pak.js';
 import { VirtualFileSystem } from './vfs.js';
+import { PakIndexStore } from './pakIndexStore.js';
+import { PakValidationError, PakValidator, type PakValidationOutcome } from './pakValidation.js';
 
 export interface PakSource {
   readonly name: string;
@@ -16,6 +18,7 @@ export interface PakIngestionProgress {
 export interface PakIngestionResult {
   readonly archive: PakArchive;
   readonly mounted: boolean;
+  readonly validation?: PakValidationOutcome;
 }
 
 export interface PakIngestionOptions {
@@ -26,6 +29,34 @@ export interface PakIngestionOptions {
    * Defaults to false to allow partial success in multi-PAK scenarios.
    */
   readonly stopOnError?: boolean;
+  /**
+   * Optional persistence target for PAK directory indexes. When provided, each successfully
+   * parsed archive will be stored in IndexedDB so the browser can rebuild listings without
+   * reparsing the binary payload.
+   */
+  readonly pakIndexStore?: PakIndexStore;
+  /**
+   * Whether to persist parsed PAK indexes. Defaults to true when a pakIndexStore is provided.
+   */
+  readonly persistIndexes?: boolean;
+  /**
+   * Optional checksum validator. When provided, PAKs whose checksums do not match the known list will
+   * raise a PakValidationError unless `enforceValidation` is explicitly set to false.
+   */
+  readonly validator?: PakValidator;
+  /**
+   * Whether checksum mismatches should prevent mounting the archive. Defaults to true when a validator
+   * is supplied.
+   */
+  readonly enforceValidation?: boolean;
+  /**
+   * Whether unknown PAKs (not present in the validator list) are allowed. Defaults to true.
+   */
+  readonly allowUnknownPaks?: boolean;
+  /**
+   * Callback invoked with the validation outcome when a validator is provided.
+   */
+  readonly onValidationResult?: (outcome: PakValidationOutcome) => void;
 }
 
 export class PakIngestionError extends Error {
@@ -134,20 +165,50 @@ export async function ingestPaks(
   const options: PakIngestionOptions =
     typeof onProgressOrOptions === 'function' ? { onProgress: onProgressOrOptions } : onProgressOrOptions ?? {};
 
+  const shouldPersist = options.persistIndexes ?? Boolean(options.pakIndexStore);
+  const enforceValidation = options.enforceValidation ?? Boolean(options.validator);
+  const allowUnknownPaks = options.allowUnknownPaks ?? true;
+  const stopOnError = options.stopOnError ?? false;
+
   const results: PakIngestionResult[] = [];
 
   for (const source of sources) {
     try {
       const buffer = await toArrayBuffer(source, options.onProgress);
       const archive = PakArchive.fromArrayBuffer(source.name, buffer);
+      const validation = options.validator?.validateArchive(archive);
+      if (validation) {
+        options.onValidationResult?.(validation);
+        const isMismatch = validation.status === 'mismatch';
+        const isUnknown = validation.status === 'unknown';
+        if ((isMismatch && enforceValidation) || (isUnknown && !allowUnknownPaks)) {
+          const validationError = new PakValidationError(validation);
+          options.onError?.(source.name, validationError);
+          if (stopOnError) {
+            throw new PakIngestionError(source.name, validationError);
+          }
+          results.push({ archive, mounted: false, validation });
+          continue;
+        }
+      }
       vfs.mountPak(archive);
+      if (shouldPersist && options.pakIndexStore) {
+        try {
+          await options.pakIndexStore.persist(archive);
+        } catch (error) {
+          options.onError?.(source.name, error);
+          if (stopOnError) {
+            throw new PakIngestionError(source.name, error);
+          }
+        }
+      }
       options.onProgress?.({ file: source.name, loadedBytes: buffer.byteLength, totalBytes: buffer.byteLength, state: 'parsed' });
-      results.push({ archive, mounted: true });
+      results.push({ archive, mounted: true, validation });
     } catch (error) {
       options.onProgress?.({ file: source.name, loadedBytes: 0, totalBytes: 0, state: 'error' });
       options.onError?.(source.name, error);
 
-      if (options.stopOnError) {
+      if (stopOnError) {
         throw new PakIngestionError(source.name, error);
       }
     }

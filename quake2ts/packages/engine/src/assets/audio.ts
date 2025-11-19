@@ -24,6 +24,10 @@ export class AudioRegistry {
     this.cache = new LruCache<DecodedAudio>(options.cacheSize ?? 64);
   }
 
+  get size(): number {
+    return this.cache.size;
+  }
+
   async load(path: string): Promise<DecodedAudio> {
     const normalized = path.toLowerCase();
     const cached = this.cache.get(normalized);
@@ -49,6 +53,11 @@ export class AudioRegistry {
     } else {
       this.refCounts.set(normalized, count - 1);
     }
+  }
+
+  clearAll(): void {
+    this.cache.clear();
+    this.refCounts.clear();
   }
 
   private async decodeByExtension(path: string, buffer: ArrayBuffer): Promise<DecodedAudio> {
