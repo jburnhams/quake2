@@ -76,7 +76,7 @@ This document outlines the concrete architecture, repository layout, and step-by
 ## Readiness notes
 - The rerelease mapping (`docs/rerelease-mapping.md`) provides the authoritative import/export and configstring behavior; the TS plan now mirrors those boundaries directly.
 - All open questions in `docs/questions.md` are answered for the base-campaign scope; no further research is blocking bootstrap.
-- Next concrete action: draft TypeScript interface stubs for the engine↔game↔client tables and scaffold the pnpm workspace/tooling to host them.
+- Next concrete action: start exercising the fixed 40 Hz loop against the engine→game/client entrypoints (init/spawn/frame hooks) so we can validate the scheduling contract while fleshing out import/export tables. The `EngineHost` wrapper now wires the fixed-step loop to game/client snapshots, so the viewer/bootstrap app can be hooked up quickly. An `EngineRuntime` layer now starts/stops the engine alongside the host so embedders can spin up the loop with a single call.
 
 ## Extension hooks for later
 - Expansion modules (CTF/Rogue/Xatrix) as opt-in packages that register additional spawn tables, assets, and rules via the same API surfaces.

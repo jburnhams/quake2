@@ -1,4 +1,9 @@
-import type { EngineImports } from '@quake2ts/engine';
+import type {
+  ClientRenderer,
+  EngineImports,
+  GameFrameResult,
+  GameRenderSample,
+} from '@quake2ts/engine';
 import type { Vec3 } from '@quake2ts/shared';
 
 export interface ClientImports {
@@ -10,14 +15,16 @@ export interface PredictionState {
   readonly velocity: Vec3;
 }
 
-export interface ClientExports {
-  init(): void;
+export interface ClientExports extends ClientRenderer<PredictionState> {
   predict(next: PredictionState): PredictionState;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
+  let latestFrame: GameFrameResult<PredictionState> | undefined;
+
   return {
-    init() {
+    init(initial) {
+      latestFrame = initial;
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
     predict(next: PredictionState): PredictionState {
@@ -30,6 +37,13 @@ export function createClient(imports: ClientImports): ClientExports {
         },
         velocity,
       };
+    },
+    render(sample: GameRenderSample<PredictionState>): void {
+      latestFrame = sample.latest ?? latestFrame;
+      void sample;
+    },
+    shutdown() {
+      latestFrame = undefined;
     },
   };
 }
