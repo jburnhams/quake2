@@ -1,4 +1,14 @@
 import { Vec3 } from '@quake2ts/shared';
+import {
+  EngineHost,
+  type ClientRenderer,
+  type EngineHostOptions,
+  type GameFrameResult,
+  type GameRenderSample,
+  type GameSimulation,
+} from './host.js';
+import { FixedTimestepLoop, type LoopCallbacks, type LoopOptions } from './loop.js';
+import { EngineRuntime, createEngineRuntime } from './runtime.js';
 
 export interface TraceResult {
   readonly start: Vec3;
@@ -14,6 +24,7 @@ export interface EngineImports {
 export interface EngineExports {
   init(): void;
   shutdown(): void;
+  createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop;
 }
 
 export function createEngine(imports: EngineImports): EngineExports {
@@ -24,5 +35,20 @@ export function createEngine(imports: EngineImports): EngineExports {
     shutdown() {
       /* no-op for bootstrap */
     },
+    createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop {
+      return new FixedTimestepLoop(callbacks, options);
+    },
   };
 }
+
+export { FixedTimestepLoop };
+export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
+export {
+  EngineHost,
+  type ClientRenderer,
+  type EngineHostOptions,
+  type GameFrameResult,
+  type GameRenderSample,
+  type GameSimulation,
+};
+export { EngineRuntime, createEngineRuntime };
