@@ -74,8 +74,12 @@ export function normalizeVec3(a: Vec3): Vec3 {
  * Based on ProjectPointOnPlane in the rerelease q_vec3 helpers.
  */
 export function projectPointOnPlane(point: Vec3, normal: Vec3): Vec3 {
-  const invDenom = 1 / dotVec3(normal, normal);
-  const d = dotVec3(normal, point) * invDenom;
+  const denom = dotVec3(normal, normal);
+  if (denom === 0) {
+    return point;
+  }
+
+  const d = dotVec3(normal, point) / denom;
   return subtractVec3(point, scaleVec3(normal, d));
 }
 

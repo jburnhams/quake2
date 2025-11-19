@@ -71,6 +71,9 @@ describe('vec3 helpers', () => {
 
   it('projects points onto planes and finds perpendicular vectors', () => {
     expect(projectPointOnPlane({ x: 3, y: 4, z: 5 }, { x: 0, y: 0, z: 2 })).toEqual({ x: 3, y: 4, z: 0 });
+    // Degenerate normals should leave the point unchanged to mirror the C helper's zero-length guard
+    const degenerate = projectPointOnPlane({ x: 1, y: 2, z: 3 }, ZERO_VEC3);
+    expect(degenerate).toEqual({ x: 1, y: 2, z: 3 });
 
     const normal = normalizeVec3({ x: 1, y: 1, z: 1 });
     const perpendicular = perpendicularVec3(normal);
