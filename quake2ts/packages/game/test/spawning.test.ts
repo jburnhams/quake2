@@ -4,9 +4,11 @@ import {
   applyEntityKeyValues,
   createDefaultSpawnRegistry,
   MoveType,
+  ServerFlags,
   parseEntityLump,
   Solid,
   spawnEntitiesFromText,
+  spawnEntityFromDictionary,
 } from '../src/entities/index.js';
 
 describe('Entity lump parsing', () => {
@@ -201,5 +203,423 @@ describe('Targeting and entity linking', () => {
       { self: 'target', other: 'trigger', activator: 'activator' },
     ]);
     expect(system.findByClassname('victim')).toHaveLength(0);
+  });
+
+  it('defers target activation using delay before firing', () => {
+    const system = new EntitySystem();
+
+    const trigger = system.spawn();
+    trigger.classname = 'delay_source';
+    trigger.target = 'wait_for_it';
+    trigger.delay = 0.4;
+    system.finalizeSpawn(trigger);
+
+    const target = system.spawn();
+    target.classname = 'delayed_target';
+    target.targetname = 'wait_for_it';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    system.beginFrame(0);
+    system.useTargets(trigger, trigger);
+    system.runFrame();
+    expect(uses).toBe(0);
+
+    system.beginFrame(0.39);
+    system.runFrame();
+    expect(uses).toBe(0);
+
+    system.beginFrame(0.4);
+    system.runFrame();
+    expect(uses).toBe(1);
+  });
+});
+
+describe('Trigger spawns', () => {
+  function spawnPlayer(system: EntitySystem) {
+    const player = system.spawn();
+    player.classname = 'player';
+    player.svflags = ServerFlags.Player;
+    player.mins = { x: -8, y: -8, z: -8 };
+    player.maxs = { x: 8, y: 8, z: 8 };
+    player.solid = Solid.BoundingBox;
+    player.takedamage = true;
+    player.health = 100;
+    system.finalizeSpawn(player);
+    return player;
+  }
+
+  function spawnMonster(system: EntitySystem) {
+    const monster = system.spawn();
+    monster.classname = 'monster';
+    monster.svflags = ServerFlags.Monster;
+    monster.takedamage = true;
+    monster.health = 50;
+    monster.mins = { x: -8, y: -8, z: -8 };
+    monster.maxs = { x: 8, y: 8, z: 8 };
+    monster.solid = Solid.BoundingBox;
+    system.finalizeSpawn(monster);
+    return monster;
+  }
+
+  it('trigger_multiple respects wait, activator, and gating rules', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_multiple',
+        target: 'door',
+        wait: '0.5',
+        mins: '-16 -16 -16',
+        maxs: '16 16 16',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('trigger failed to spawn');
+    }
+
+    const door = system.spawn();
+    door.classname = 'func_door';
+    door.targetname = 'door';
+    let uses = 0;
+    door.use = (_self, other, activator) => {
+      uses += 1;
+      expect(other).toBe(trigger);
+      expect(activator?.classname).toBe('player');
+    };
+    system.finalizeSpawn(door);
+
+    const player = spawnPlayer(system);
+    void player;
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(1);
+
+    system.beginFrame(0.25);
+    system.runFrame();
+    expect(uses).toBe(1);
+
+    system.beginFrame(0.5);
+    system.runFrame();
+    expect(uses).toBe(2);
+  });
+
+  it('trigger_once frees itself after the first activation', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_once',
+        target: 'once_target',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('trigger failed to spawn');
+    }
+
+    const target = system.spawn();
+    target.classname = 'target';
+    target.targetname = 'once_target';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    spawnPlayer(system);
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(1);
+
+    system.beginFrame(1 / 40);
+    system.runFrame();
+
+    expect(system.findByClassname('trigger_once')).toHaveLength(0);
+  });
+
+  it('trigger_multiple with TRIGGERED stays inactive until enabled', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_multiple',
+        target: 'delayed_target',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+        spawnflags: `${1 << 2}`,
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('trigger failed to spawn');
+    }
+    expect(trigger.solid).toBe(Solid.Not);
+
+    const target = system.spawn();
+    target.classname = 'target_delay';
+    target.targetname = 'delayed_target';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    spawnPlayer(system);
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(0);
+
+    trigger.use?.(trigger, null, trigger);
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(1);
+  });
+
+  it('trigger_relay forwards use to its targets', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const relay = spawnEntityFromDictionary(
+      { classname: 'trigger_relay', target: 'relay_target' },
+      { registry, entities: system },
+    );
+    if (!relay) {
+      throw new Error('relay failed to spawn');
+    }
+
+    const target = system.spawn();
+    target.classname = 'target_temp';
+    target.targetname = 'relay_target';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    relay.use?.(relay, null, relay);
+    expect(uses).toBe(1);
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(1);
+  });
+
+  it('trigger_always schedules its targets immediately with a default delay', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const always = spawnEntityFromDictionary(
+      { classname: 'trigger_always', target: 'fire_me' },
+      { registry, entities: system },
+    );
+    if (!always) {
+      throw new Error('always failed to spawn');
+    }
+
+    const target = system.spawn();
+    target.classname = 'target_always';
+    target.targetname = 'fire_me';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(uses).toBe(0);
+
+    system.beginFrame(0.2);
+    system.runFrame();
+    expect(uses).toBe(1);
+  });
+
+  it('trigger_push applies velocity and removes itself when PUSH_ONCE is set', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_push',
+        angles: '0 90 0',
+        speed: '800',
+        spawnflags: `${1 << 0}`,
+        mins: '-16 -16 -16',
+        maxs: '16 16 16',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('push failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.velocity = { x: 0, y: 0, z: 0 };
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(player.velocity.y).toBeCloseTo(8000);
+    expect(player.velocity.x).toBeCloseTo(0, 6);
+    expect(player.velocity.z).toBeCloseTo(0, 6);
+
+    system.beginFrame(0.1);
+    system.runFrame();
+    expect(system.findByClassname('trigger_push')).toHaveLength(0);
+  });
+
+  it('trigger_push uses default movedir when angles are omitted', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_push',
+        mins: '-16 -16 -16',
+        maxs: '16 16 16',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('push failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.velocity = { x: 0, y: 0, z: 0 };
+
+    system.beginFrame(0);
+    system.runFrame();
+
+    expect(player.velocity.x).toBeCloseTo(10000);
+    expect(player.velocity.y).toBeCloseTo(0, 6);
+    expect(player.velocity.z).toBeCloseTo(0, 6);
+  });
+
+  it('trigger_push respects START_OFF toggling and push_plus timing', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_push',
+        angles: '0 90 0',
+        spawnflags: `${(1 << 3) | (1 << 1)}`,
+        wait: '0.1',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+        targetname: 'pusher',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('push_plus failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(player.velocity).toEqual({ x: 0, y: 0, z: 0 });
+
+    trigger.use?.(trigger, null, trigger);
+
+    player.velocity = { x: 0, y: 0, z: 0 };
+    system.beginFrame(0.05);
+    system.runFrame();
+    expect(player.velocity.y).toBeCloseTo(10000);
+    expect(player.velocity.x).toBeCloseTo(0, 6);
+    expect(player.velocity.z).toBeCloseTo(0, 6);
+
+    player.velocity = { x: 0, y: 0, z: 0 };
+    system.beginFrame(0.1);
+    system.runFrame();
+    expect(player.velocity).toEqual({ x: 0, y: 0, z: 0 });
+
+    player.velocity = { x: 0, y: 0, z: 0 };
+    system.beginFrame(0.2);
+    system.runFrame();
+    expect(player.velocity.y).toBeCloseTo(10000);
+    expect(player.velocity.x).toBeCloseTo(0, 6);
+    expect(player.velocity.z).toBeCloseTo(0, 6);
+
+    trigger.use?.(trigger, null, trigger);
+    player.velocity = { x: 0, y: 0, z: 0 };
+    system.beginFrame(0.25);
+    system.runFrame();
+    expect(player.velocity).toEqual({ x: 0, y: 0, z: 0 });
+  });
+
+  it('trigger_hurt applies periodic damage and honours player/monster filters', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_hurt',
+        dmg: '7',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+        spawnflags: `${1 << 5}`,
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('hurt failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    const monster = spawnMonster(system);
+    player.health = 30;
+    monster.health = 40;
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(player.health).toBe(30);
+    expect(monster.health).toBe(33);
+
+    system.beginFrame(0.05);
+    system.runFrame();
+    expect(monster.health).toBe(33);
+
+    system.beginFrame(0.11);
+    system.runFrame();
+    expect(monster.health).toBe(26);
+  });
+
+  it('trigger_hurt toggles on use when START_OFF and TOGGLE are set', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_hurt',
+        dmg: '10',
+        spawnflags: `${(1 << 0) | (1 << 1)}`,
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('hurt toggle failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.health = 25;
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(player.health).toBe(25);
+
+    trigger.use?.(trigger, null, trigger);
+    system.beginFrame(0.01);
+    system.runFrame();
+    expect(player.health).toBe(15);
+
+    trigger.use?.(trigger, null, trigger);
+    system.beginFrame(0.2);
+    system.runFrame();
+    expect(player.health).toBe(15);
   });
 });

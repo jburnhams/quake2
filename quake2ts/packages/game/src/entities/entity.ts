@@ -21,6 +21,22 @@ export enum Solid {
   Bsp = 3,
 }
 
+export enum ServerFlags {
+  None = 0,
+  NoClient = 1 << 0,
+  DeadMonster = 1 << 1,
+  Monster = 1 << 2,
+  Player = 1 << 3,
+  Bot = 1 << 4,
+  NoBots = 1 << 5,
+  Respawning = 1 << 6,
+  Projectile = 1 << 7,
+  Instanced = 1 << 8,
+  Door = 1 << 9,
+  NoCull = 1 << 10,
+  Hull = 1 << 11,
+}
+
 export enum DeadFlag {
   Alive = 0,
   Dying = 1,
@@ -60,6 +76,12 @@ function copyVec3(): Vec3 {
   return { ...ZERO };
 }
 
+export interface MonsterInfo {
+  aiflags: number;
+}
+
+const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({ aiflags: 0 });
+
 export class Entity {
   readonly index: number;
 
@@ -75,6 +97,7 @@ export class Entity {
   killtarget?: string;
   team?: string;
   message?: string;
+  model?: string;
 
   origin: Vec3 = copyVec3();
   old_origin: Vec3 = copyVec3();
@@ -90,6 +113,7 @@ export class Entity {
   mass = 0;
   gravity = 1;
   movetype: MoveType = MoveType.None;
+  movedir: Vec3 = copyVec3();
 
   modelindex = 0;
   frame = 0;
@@ -101,7 +125,15 @@ export class Entity {
   max_health = 0;
   takedamage = false;
   dmg = 0;
+  speed = 0;
   deadflag: DeadFlag = DeadFlag.Alive;
+  count = 0;
+  wait = 0;
+  delay = 0;
+  timestamp = 0;
+  sounds = 0;
+  noise_index = 0;
+  fly_sound_debounce_time = 0;
 
   enemy: Entity | null = null;
   movetarget: Entity | null = null;
@@ -124,10 +156,13 @@ export class Entity {
   use?: UseCallback;
   pain?: PainCallback;
   die?: DieCallback;
+  activator: Entity | null = null;
 
   solid: Solid = Solid.Not;
   flags = 0;
   svflags = 0;
+
+  monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO };
 
   constructor(index: number) {
     this.index = index;
@@ -146,6 +181,7 @@ export class Entity {
     this.killtarget = undefined;
     this.team = undefined;
     this.message = undefined;
+    this.model = undefined;
 
     this.origin = copyVec3();
     this.old_origin = copyVec3();
@@ -160,6 +196,7 @@ export class Entity {
     this.mass = 0;
     this.gravity = 1;
     this.movetype = MoveType.None;
+    this.movedir = copyVec3();
 
     this.modelindex = 0;
     this.frame = 0;
@@ -171,7 +208,15 @@ export class Entity {
     this.max_health = 0;
     this.takedamage = false;
     this.dmg = 0;
+    this.speed = 0;
     this.deadflag = DeadFlag.Alive;
+    this.count = 0;
+    this.wait = 0;
+    this.delay = 0;
+    this.timestamp = 0;
+    this.sounds = 0;
+    this.noise_index = 0;
+    this.fly_sound_debounce_time = 0;
 
     this.enemy = null;
     this.movetarget = null;
@@ -194,10 +239,13 @@ export class Entity {
     this.use = undefined;
     this.pain = undefined;
     this.die = undefined;
+    this.activator = null;
 
     this.solid = Solid.Not;
     this.flags = 0;
     this.svflags = 0;
+
+    this.monsterinfo = { ...DEFAULT_MONSTER_INFO };
   }
 }
 
@@ -209,6 +257,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'killtarget', type: 'string', save: true },
   { name: 'team', type: 'string', save: true },
   { name: 'message', type: 'string', save: true },
+  { name: 'model', type: 'string', save: true },
   { name: 'origin', type: 'vec3', save: true },
   { name: 'old_origin', type: 'vec3', save: true },
   { name: 'velocity', type: 'vec3', save: true },
@@ -221,6 +270,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'mass', type: 'int', save: true },
   { name: 'gravity', type: 'float', save: true },
   { name: 'movetype', type: 'int', save: true },
+  { name: 'movedir', type: 'vec3', save: true },
   { name: 'modelindex', type: 'int', save: true },
   { name: 'frame', type: 'int', save: true },
   { name: 'skin', type: 'int', save: true },
@@ -230,7 +280,15 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'max_health', type: 'int', save: true },
   { name: 'takedamage', type: 'boolean', save: true },
   { name: 'dmg', type: 'int', save: true },
+  { name: 'speed', type: 'float', save: true },
   { name: 'deadflag', type: 'int', save: true },
+  { name: 'count', type: 'int', save: true },
+  { name: 'wait', type: 'float', save: true },
+  { name: 'delay', type: 'float', save: true },
+  { name: 'timestamp', type: 'float', save: true },
+  { name: 'sounds', type: 'int', save: true },
+  { name: 'noise_index', type: 'int', save: true },
+  { name: 'fly_sound_debounce_time', type: 'float', save: true },
   { name: 'enemy', type: 'entity', save: true },
   { name: 'movetarget', type: 'entity', save: true },
   { name: 'goalentity', type: 'entity', save: true },

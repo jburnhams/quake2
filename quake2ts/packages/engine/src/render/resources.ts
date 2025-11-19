@@ -158,6 +158,62 @@ export class Texture2D {
   }
 }
 
+export class TextureCubeMap {
+  readonly gl: WebGL2RenderingContext;
+  readonly texture: WebGLTexture;
+  readonly target: GLenum;
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl;
+    this.target = gl.TEXTURE_CUBE_MAP;
+    const texture = gl.createTexture();
+    if (!texture) {
+      throw new Error('Failed to allocate cubemap texture');
+    }
+    this.texture = texture;
+  }
+
+  bind(unit = 0): void {
+    this.gl.activeTexture(this.gl.TEXTURE0 + unit);
+    this.gl.bindTexture(this.target, this.texture);
+  }
+
+  setParameters(params: TextureParameters): void {
+    this.bind();
+    if (params.wrapS !== undefined) {
+      this.gl.texParameteri(this.target, this.gl.TEXTURE_WRAP_S, params.wrapS);
+    }
+    if (params.wrapT !== undefined) {
+      this.gl.texParameteri(this.target, this.gl.TEXTURE_WRAP_T, params.wrapT);
+    }
+    if (params.minFilter !== undefined) {
+      this.gl.texParameteri(this.target, this.gl.TEXTURE_MIN_FILTER, params.minFilter);
+    }
+    if (params.magFilter !== undefined) {
+      this.gl.texParameteri(this.target, this.gl.TEXTURE_MAG_FILTER, params.magFilter);
+    }
+  }
+
+  uploadFace(
+    faceTarget: GLenum,
+    level: number,
+    internalFormat: GLenum,
+    width: number,
+    height: number,
+    border: number,
+    format: GLenum,
+    type: GLenum,
+    data: ArrayBufferView | null
+  ): void {
+    this.bind();
+    this.gl.texImage2D(faceTarget, level, internalFormat, width, height, border, format, type, data);
+  }
+
+  dispose(): void {
+    this.gl.deleteTexture(this.texture);
+  }
+}
+
 export class Framebuffer {
   readonly gl: WebGL2RenderingContext;
   readonly framebuffer: WebGLFramebuffer;

@@ -175,10 +175,12 @@ describe('Touch detection', () => {
     mover.origin = { x: 0, y: 0, z: 0 };
     mover.mins = { x: -16, y: -16, z: -16 };
     mover.maxs = { x: 16, y: 16, z: 16 };
+    mover.solid = Solid.BoundingBox;
 
     trigger.origin = { x: 0, y: 0, z: 0 };
     trigger.mins = { x: -8, y: -8, z: -8 };
     trigger.maxs = { x: 8, y: 8, z: 8 };
+    trigger.solid = Solid.Trigger;
 
     let touched = 0;
     trigger.touch = () => {

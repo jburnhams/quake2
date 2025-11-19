@@ -16,10 +16,28 @@ import { InputBindings, normalizeCommand, normalizeInputCode, type InputCode } f
 
 const MSEC_MAX = 250;
 
+export interface GamepadLikeButton {
+  readonly pressed: boolean;
+  readonly value: number;
+}
+
+export interface GamepadLike {
+  readonly axes: readonly number[];
+  readonly buttons: readonly GamepadLikeButton[];
+  readonly index?: number;
+  readonly connected?: boolean;
+}
+
 interface ButtonState {
   readonly active: boolean;
   readonly wasPressed: boolean;
   readonly fraction: number;
+}
+
+export interface TouchInputState {
+  readonly move?: { readonly x: number; readonly y: number };
+  readonly look?: { readonly x: number; readonly y: number };
+  readonly buttons?: Partial<Record<InputAction, boolean>>;
 }
 
 class KeyButton {
@@ -90,6 +108,10 @@ export interface InputControllerOptions {
   readonly jumpAddsUpMove?: boolean;
   readonly crouchAddsDownMove?: boolean;
   readonly mouseFilter?: boolean;
+  readonly getGamepads?: () => readonly (GamepadLike | null | undefined)[];
+  readonly gamepadDeadZone?: number;
+  readonly gamepadLookScale?: number;
+  readonly invertGamepadY?: boolean;
 }
 
 export enum InputAction {
@@ -145,6 +167,14 @@ export class InputController {
   private previousMouseDelta: MouseDelta = { deltaX: 0, deltaY: 0 };
   private anyPressed = false;
   private commandQueue: string[] = [];
+  private pendingGamepads: readonly (GamepadLike | null | undefined)[] | undefined;
+  private readonly gamepadButtons = new Map<string, boolean>();
+  private gamepadMove = { x: 0, y: 0 };
+  private gamepadLook = { x: 0, y: 0 };
+  private pendingTouchState: TouchInputState | undefined;
+  private readonly touchButtons = new Map<InputAction, boolean>();
+  private touchMove = { x: 0, y: 0 };
+  private touchLook = { x: 0, y: 0 };
 
   private readonly forwardSpeed: number;
   private readonly sideSpeed: number;
@@ -160,6 +190,10 @@ export class InputController {
   private readonly jumpAddsUpMove: boolean;
   private readonly crouchAddsDownMove: boolean;
   private readonly mouseFilter: boolean;
+  private readonly getGamepads?: () => readonly (GamepadLike | null | undefined)[];
+  private readonly gamepadDeadZone: number;
+  private readonly gamepadLookScale: number;
+  private readonly invertGamepadY: boolean;
 
   constructor(options: InputControllerOptions = {}, bindings = new InputBindings()) {
     this.bindings = bindings;
@@ -177,6 +211,10 @@ export class InputController {
     this.jumpAddsUpMove = options.jumpAddsUpMove ?? true;
     this.crouchAddsDownMove = options.crouchAddsDownMove ?? true;
     this.mouseFilter = options.mouseFilter ?? false;
+    this.getGamepads = options.getGamepads;
+    this.gamepadDeadZone = options.gamepadDeadZone ?? 0.15;
+    this.gamepadLookScale = options.gamepadLookScale ?? 1;
+    this.invertGamepadY = options.invertGamepadY ?? this.invertMouseY;
   }
 
   handleKeyDown(code: string, eventTimeMs: number = nowMs()): void {
@@ -218,7 +256,18 @@ export class InputController {
     this.pointerLocked = locked;
   }
 
+  setGamepadState(gamepads: readonly (GamepadLike | null | undefined)[]): void {
+    this.pendingGamepads = gamepads;
+  }
+
+  setTouchState(state: TouchInputState): void {
+    this.pendingTouchState = state;
+  }
+
   buildCommand(frameMsec: number, now: number = nowMs(), serverFrame?: number): UserCommand {
+    this.pollGamepads(now);
+    this.applyTouchState(now);
+
     const yawStep = (this.yawSpeed * frameMsec) / 1000;
     const pitchStep = (this.pitchSpeed * frameMsec) / 1000;
 
@@ -232,6 +281,24 @@ export class InputController {
       y: (turnRight.fraction - turnLeft.fraction) * yawStep,
       z: 0,
     };
+
+    if (this.gamepadLook.x !== 0 || this.gamepadLook.y !== 0) {
+      const pitch = this.gamepadLook.y * (this.invertGamepadY ? -1 : 1);
+      viewDelta = {
+        x: viewDelta.x + pitch * pitchStep * this.gamepadLookScale,
+        y: viewDelta.y + this.gamepadLook.x * yawStep * this.gamepadLookScale,
+        z: 0,
+      };
+    }
+
+    if (this.touchLook.x !== 0 || this.touchLook.y !== 0) {
+      const pitch = this.touchLook.y * (this.invertMouseY ? -1 : 1);
+      viewDelta = {
+        x: viewDelta.x + pitch * pitchStep,
+        y: viewDelta.y + this.touchLook.x * yawStep,
+        z: 0,
+      };
+    }
 
     if (this.pointerLocked || !this.requirePointerLock) {
       const sampledDelta = this.sampleMouseDelta();
@@ -273,6 +340,16 @@ export class InputController {
     let sidemove = this.sideSpeed * (moveRight.fraction - moveLeft.fraction) * speedScale;
     let upmove = this.upSpeed * (moveUp.fraction - moveDown.fraction);
 
+    if (this.gamepadMove.x !== 0 || this.gamepadMove.y !== 0) {
+      forwardmove += this.forwardSpeed * this.gamepadMove.y * speedScale;
+      sidemove += this.sideSpeed * this.gamepadMove.x * speedScale;
+    }
+
+    if (this.touchMove.x !== 0 || this.touchMove.y !== 0) {
+      forwardmove += this.forwardSpeed * this.touchMove.y * speedScale;
+      sidemove += this.sideSpeed * this.touchMove.x * speedScale;
+    }
+
     if (this.jumpAddsUpMove && jump.fraction > 0) {
       upmove += this.upSpeed * jump.fraction;
     }
@@ -280,6 +357,10 @@ export class InputController {
     if (this.crouchAddsDownMove && crouch.fraction > 0) {
       upmove -= this.upSpeed * crouch.fraction;
     }
+
+    forwardmove = this.clampMove(forwardmove, this.forwardSpeed);
+    sidemove = this.clampMove(sidemove, this.sideSpeed);
+    upmove = this.clampMove(upmove, this.upSpeed);
 
     let buttons = this.collectButtonBits(frameMsec, now);
 
@@ -306,6 +387,91 @@ export class InputController {
     const commands = this.commandQueue;
     this.commandQueue = [];
     return commands;
+  }
+
+  private pollGamepads(now: number): void {
+    const gamepads = this.getGamepads?.() ?? this.pendingGamepads ?? [];
+    this.pendingGamepads = undefined;
+
+    this.gamepadMove = { x: 0, y: 0 };
+    this.gamepadLook = { x: 0, y: 0 };
+
+    const pressedThisFrame = new Set<InputCode>();
+
+    for (const pad of gamepads) {
+      if (!pad || pad.connected === false) continue;
+
+      const index = pad.index ?? 0;
+      const axes = pad.axes ?? [];
+
+      this.gamepadMove = {
+        x: this.mergeAnalog(this.gamepadMove.x, this.applyDeadZone(axes[0] ?? 0)),
+        y: this.mergeAnalog(this.gamepadMove.y, -this.applyDeadZone(axes[1] ?? 0)),
+      };
+
+      this.gamepadLook = {
+        x: this.mergeAnalog(this.gamepadLook.x, this.applyDeadZone(axes[2] ?? 0)),
+        y: this.mergeAnalog(this.gamepadLook.y, this.applyDeadZone(axes[3] ?? 0)),
+      };
+
+      const buttons = pad.buttons ?? [];
+      for (let i = 0; i < buttons.length; i++) {
+        const button = buttons[i];
+        if (!button) continue;
+
+        const pressed = button.pressed || button.value > this.gamepadDeadZone;
+        const code = this.gamepadButtonCode(index, i);
+        if (pressed) pressedThisFrame.add(code);
+
+        const wasPressed = this.gamepadButtons.get(code) ?? false;
+        if (pressed !== wasPressed) {
+          this.applyCommand(this.bindings.getBinding(code), pressed, code, now);
+          this.gamepadButtons.set(code, pressed);
+        }
+      }
+    }
+
+    for (const [code, wasPressed] of this.gamepadButtons.entries()) {
+      if (wasPressed && !pressedThisFrame.has(code)) {
+        this.applyCommand(this.bindings.getBinding(code), false, code, now);
+        this.gamepadButtons.set(code, false);
+      }
+    }
+  }
+
+  private applyTouchState(now: number): void {
+    const state = this.pendingTouchState;
+    if (!state) return;
+
+    this.pendingTouchState = undefined;
+
+    if (state.move) {
+      this.touchMove = {
+        x: this.clampAnalog(state.move.x),
+        y: this.clampAnalog(state.move.y),
+      };
+    }
+
+    if (state.look) {
+      this.touchLook = {
+        x: this.clampAnalog(state.look.x),
+        y: this.clampAnalog(state.look.y),
+      };
+    }
+
+    if (state.buttons) {
+      for (const [action, pressed] of Object.entries(state.buttons) as Array<
+        [InputAction, boolean | undefined]
+      >) {
+        if (pressed === undefined) continue;
+
+        const wasPressed = this.touchButtons.get(action) ?? false;
+        if (pressed !== wasPressed) {
+          this.applyCommand(action, pressed, this.touchButtonCode(action), now);
+          this.touchButtons.set(action, pressed);
+        }
+      }
+    }
   }
 
   private applyCommand(
@@ -388,6 +554,30 @@ export class InputController {
   private sample(action: InputAction, frameMsec: number, now: number): ButtonState {
     const button = this.lookupButton(action);
     return button.sample(frameMsec, now);
+  }
+
+  private gamepadButtonCode(index: number, button: number): InputCode {
+    return `Gamepad${index}-Button${button}`;
+  }
+
+  private touchButtonCode(action: InputAction): InputCode {
+    return `Touch-${action}`;
+  }
+
+  private clampAnalog(value: number): number {
+    return Math.max(-1, Math.min(1, value));
+  }
+
+  private applyDeadZone(value: number): number {
+    return Math.abs(value) < this.gamepadDeadZone ? 0 : value;
+  }
+
+  private mergeAnalog(current: number, incoming: number): number {
+    return Math.abs(incoming) > Math.abs(current) ? incoming : current;
+  }
+
+  private clampMove(value: number, max: number): number {
+    return Math.max(-max, Math.min(max, value));
   }
 }
 

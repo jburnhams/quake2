@@ -118,7 +118,7 @@ export {
   ATTN_NONE,
   ATTN_NORM,
   ATTN_STATIC,
-  MAX_SOUND_CHANNELS as MAX_SOUND_CHANNELS,
+  MAX_SOUND_CHANNELS,
   SOUND_FULLVOLUME,
   SOUND_LOOP_ATTENUATE,
   SoundChannel,
@@ -133,12 +133,16 @@ export {
   type AudioGraph,
   type AudioNodeLike,
   type GainNodeLike,
+  type BiquadFilterNodeLike,
   type PannerNodeLike,
 } from './audio/context.js';
 export { SoundRegistry } from './audio/registry.js';
+export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';
 export { AudioSystem, type AudioSystemOptions, type SoundRequest } from './audio/system.js';
 export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
+export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
+export { AudioApi, type AudioApiOptions } from './audio/api.js';
 export {
   EngineHost,
   type ClientRenderer,
@@ -154,6 +158,7 @@ export {
   Framebuffer,
   IndexBuffer,
   Texture2D,
+  TextureCubeMap,
   VertexArray,
   VertexBuffer,
   type BufferUsage,
@@ -182,3 +187,22 @@ export {
   type BspSurfaceBindOptions,
   type SurfaceRenderState,
 } from './render/bspPipeline.js';
+export {
+  SKYBOX_FRAGMENT_SHADER,
+  SKYBOX_VERTEX_SHADER,
+  SkyboxPipeline,
+  computeSkyScroll,
+  removeViewTranslation,
+} from './render/skybox.js';
+export {
+  MD2_FRAGMENT_SHADER,
+  MD2_VERTEX_SHADER,
+  Md2MeshBuffers,
+  Md2Pipeline,
+  buildMd2Geometry,
+  buildMd2VertexData,
+  type Md2BindOptions,
+  type Md2FrameBlend,
+  type Md2Geometry,
+  type Md2DrawVertex,
+} from './render/md2Pipeline.js';

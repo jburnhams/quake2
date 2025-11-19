@@ -32,8 +32,10 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   readonly entities: EntitySystem;
 }
 
+export { hashGameState } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
+export * from './inventory/index.js';
 
 export function createGame(
   engine: { trace(start: Vec3, end: Vec3): unknown },

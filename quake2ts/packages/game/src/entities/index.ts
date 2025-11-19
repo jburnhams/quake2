@@ -7,8 +7,10 @@ export {
   type ThinkCallback,
   type TouchCallback,
   type UseCallback,
+  type MonsterInfo,
   MoveType,
   Solid,
+  ServerFlags,
   DeadFlag,
   ENTITY_FIELD_METADATA,
 } from './entity.js';
@@ -28,3 +30,4 @@ export {
   type SpawnContext,
   type SpawnFunction,
 } from './spawn.js';
+export { isZeroVector, setMovedir } from './utils.js';
