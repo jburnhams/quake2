@@ -86,10 +86,10 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
 
 ### Asset Caching & Management
 - [x] Implement LRU cache for loaded assets
-- [ ] Optional IndexedDB persistence for PAK indexes
-- [ ] Asset validation (checksum verification against known PAK files)
-- [ ] Memory management and cleanup on level changes
-- [ ] Asset dependency tracking (ensure textures load before models that use them)
+- [x] Optional IndexedDB persistence for PAK indexes
+- [x] Asset validation (checksum verification against known PAK files)
+- [x] Memory management and cleanup on level changes
+- [x] Asset dependency tracking (ensure textures load before models that use them)
 
 ## Integration Points
 - **To Rendering System (Section 2)**: Exposes loaded BSP geometry, lightmaps, model vertex data, and textures ready for GPU upload
@@ -127,3 +127,5 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
 - Model animation data should be preprocessed into a format that's efficient for GPU skinning (if implementing GPU-based animation)
 - Consider Web Workers for heavy parsing tasks (BSP, large model files)
 - Texture and audio formats should be converted to WebGL/WebAudio-friendly formats during load
+- PAK ingestion defaults to non-fatal validation; mismatches are reported while later PAKs continue mounting, and persisted
+  PAK indexes remove all checksum variants for the same filename when cleared

@@ -53,4 +53,11 @@ describe('Audio registry', () => {
     const badRegistry = new AudioRegistry(badVfs);
     await expect(badRegistry.load('sound/bad.txt')).rejects.toBeInstanceOf(AudioRegistryError);
   });
+
+  it('clears cache and refcounts when requested', async () => {
+    await registry.load('sound/weapons/blaster.wav');
+    registry.clearAll();
+    expect(registry.size).toBe(0);
+    await expect(registry.load('sound/weapons/blaster.wav')).resolves.toBeDefined();
+  });
 });

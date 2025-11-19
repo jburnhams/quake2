@@ -98,6 +98,21 @@ export {
 export { parseWav, type WavData } from './assets/wav.js';
 export { decodeOgg, type OggAudio } from './assets/ogg.js';
 export { AudioRegistry, AudioRegistryError, type DecodedAudio } from './assets/audio.js';
+export { PakIndexStore, type StoredPakIndex } from './assets/pakIndexStore.js';
+export {
+  PakValidationError,
+  PakValidator,
+  RERELEASE_KNOWN_PAKS,
+  type KnownPakChecksum,
+  type PakValidationOutcome,
+} from './assets/pakValidation.js';
+export {
+  AssetDependencyError,
+  AssetDependencyTracker,
+  AssetManager,
+  type AssetManagerOptions,
+} from './assets/manager.js';
+export {
   ATTN_IDLE,
   ATTN_LOOP_NONE,
   ATTN_NONE,
