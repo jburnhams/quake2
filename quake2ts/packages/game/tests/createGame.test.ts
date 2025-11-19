@@ -19,6 +19,8 @@ describe('createGame', () => {
     expect(snapshot?.state?.gravity).toEqual({ x: 0, y: 0, z: -800 });
     expect(snapshot?.state?.origin).toEqual(ZERO_VEC3);
     expect(snapshot?.state?.velocity).toEqual(ZERO_VEC3);
+    expect(snapshot?.state?.level.timeSeconds).toBeCloseTo(1, 5);
+    expect(snapshot?.state?.level.frameNumber).toBe(0);
   });
 
   it('integrates velocity and origin over successive frames', () => {
@@ -30,7 +32,11 @@ describe('createGame', () => {
 
     expect(first.state?.velocity.z).toBeCloseTo(-20, 5);
     expect(first.state?.origin.z).toBeCloseTo(-0.5, 5);
+    expect(first.state?.level.frameNumber).toBe(1);
+    expect(first.state?.level.timeSeconds).toBeCloseTo(0.025, 5);
     expect(second.state?.velocity.z).toBeCloseTo(-40, 5);
     expect(second.state?.origin.z).toBeCloseTo(-1.5, 5);
+    expect(second.state?.level.previousTimeSeconds).toBeCloseTo(0.025, 5);
+    expect(second.state?.level.timeSeconds).toBeCloseTo(0.05, 5);
   });
 });

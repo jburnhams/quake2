@@ -44,4 +44,36 @@ describe('GameFrameLoop', () => {
     expect(second.previousTimeMs).toBe(125);
     expect(loop.time).toBe(175);
   });
+
+  it('allows adding and removing stage handlers while preserving order', () => {
+    const loop = new GameFrameLoop();
+    const order: string[] = [];
+
+    loop.addStage('prep', () => order.push('prep-a'));
+    const disposePrep = loop.addStage('prep', () => order.push('prep-b'));
+    const disposeSim = loop.addStage('simulate', () => order.push('sim-a'));
+    loop.addStage('simulate', () => order.push('sim-b'));
+    const disposeFinish = loop.addStage('finish', () => order.push('finish-a'));
+
+    loop.reset(0);
+    loop.advance({ frame: 1, deltaMs: 25, nowMs: 25 });
+    expect(order).toEqual(['prep-a', 'prep-b', 'sim-a', 'sim-b', 'finish-a']);
+
+    disposePrep();
+    disposeSim();
+    disposeFinish();
+    order.length = 0;
+
+    loop.advance({ frame: 2, deltaMs: 25, nowMs: 50 });
+    expect(order).toEqual(['prep-a', 'sim-b']);
+  });
+
+  it('throws if no simulate stages are registered', () => {
+    const loop = new GameFrameLoop();
+    loop.addStage('prep', () => {});
+    loop.reset(0);
+    expect(() => loop.advance({ frame: 1, deltaMs: 25, nowMs: 25 })).toThrow(
+      /simulate stage/,
+    );
+  });
 });
