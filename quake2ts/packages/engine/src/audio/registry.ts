@@ -6,10 +6,18 @@ export class SoundRegistry {
 
   constructor(private readonly configStrings = new ConfigStringRegistry()) {}
 
+  registerName(name: string): number {
+    return this.configStrings.soundIndex(name);
+  }
+
   register(name: string, buffer: AudioBufferLike): number {
-    const index = this.configStrings.soundIndex(name);
+    const index = this.registerName(name);
     this.buffers.set(index, buffer);
     return index;
+  }
+
+  find(name: string): number | undefined {
+    return this.configStrings.findSoundIndex(name);
   }
 
   get(index: number): AudioBufferLike | undefined {

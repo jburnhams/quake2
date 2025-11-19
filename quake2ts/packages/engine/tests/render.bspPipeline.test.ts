@@ -42,6 +42,7 @@ describe('BspSurfacePipeline', () => {
       'u_alpha',
       'u_applyLightmap',
       'u_warp',
+      'u_time',
       'u_diffuseMap',
       'u_lightmapAtlas',
     ];
@@ -68,6 +69,7 @@ describe('BspSurfacePipeline', () => {
     expect(gl.uniform4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_lightStyleFactors'), new Float32Array([0.1, 0.75, 0, 0]));
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_applyLightmap'), 1);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_warp'), 0);
+    expect(gl.uniform1f).toHaveBeenCalledWith(gl.uniformLocations.get('u_time'), 1.5);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_diffuseMap'), 3);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_lightmapAtlas'), 4);
     expect(state.alpha).toBeCloseTo(0.33);

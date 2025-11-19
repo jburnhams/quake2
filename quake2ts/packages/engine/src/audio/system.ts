@@ -67,6 +67,7 @@ export class AudioSystem {
     this.sfxVolume = options.sfxVolume ?? 1;
     this.masterVolume = options.masterVolume ?? 1;
     this.graph = createAudioGraph(this.contextController);
+    this.graph.master.gain.value = this.masterVolume;
   }
 
   setListener(listener: ListenerState): void {
@@ -164,6 +165,15 @@ export class AudioSystem {
     this.activeSources.delete(channelIndex);
   }
 
+  stopEntitySounds(entnum: number): void {
+    for (const [index, active] of [...this.activeSources.entries()]) {
+      if (active.entnum !== entnum) continue;
+      active.source.stop();
+      this.channels[index].active = false;
+      this.activeSources.delete(index);
+    }
+  }
+
   updateEntityPosition(entnum: number, origin: Vec3): void {
     for (const active of this.activeSources.values()) {
       if (active.entnum !== entnum) continue;
@@ -198,8 +208,27 @@ export class AudioSystem {
     return this.channels[index];
   }
 
+  setUnderwater(enabled: boolean, cutoffHz = 400): void {
+    const filter = this.graph.filter;
+    if (!filter) return;
+    filter.type = 'lowpass';
+    filter.Q.value = 0.707;
+    filter.frequency.value = enabled ? cutoffHz : 20000;
+  }
+
   private createPanner(context: AudioContextLike, attenuation: number): PannerNodeLike {
-    const panner = context.createPanner ? context.createPanner() : (context.createGain() as unknown as PannerNodeLike);
+    const panner = context.createPanner
+      ? context.createPanner()
+      : Object.assign(context.createGain(), {
+          positionX: { value: this.listener.origin.x },
+          positionY: { value: this.listener.origin.y },
+          positionZ: { value: this.listener.origin.z },
+        } satisfies Partial<PannerNodeLike>);
+
+    return this.configurePanner(panner, attenuation);
+  }
+
+  private configurePanner(panner: PannerNodeLike, attenuation: number): PannerNodeLike {
     const distMult = attenuationToDistanceMultiplier(attenuation);
     panner.refDistance = SOUND_FULLVOLUME;
     panner.maxDistance = calculateMaxAudibleDistance(attenuation);

@@ -41,16 +41,17 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Armor absorbs percentage of damage, remainder goes to health
   - Deplete armor based on damage absorbed
   - Implemented parity-checked armor absorption helpers (`applyRegularArmor`, `applyPowerArmor`) with Vitest coverage mirroring rerelease `CheckArmor`/`CheckPowerArmor` rules.
-- [ ] Damage modifiers
+- [x] Damage modifiers
   - Means of death (MOD_*): blaster, shotgun, rocket, falling, lava, etc.
   - Used for obituary messages ("Player was blasted by Monster")
   - Some entities immune to certain damage types
-- [ ] Special damage types
-  - Falling damage (based on fall velocity)
-  - Drowning (when underwater too long, no air)
-  - Slime/lava damage (periodic damage in liquid)
-  - Crush damage (from doors, platforms)
-  - Telefrag (telefrag target if telefrag position occupied)
+- [x] Special damage types
+- Verified environmental and situational damage parity with rerelease math (drowning escalation cap, water exit/reset, slime/lava immunity flags) via new regression tests.
+- [x] Falling damage (based on fall velocity and bypasses armor like rerelease)
+  - [x] Drowning (when underwater too long, no air)
+  - [x] Slime/lava damage (periodic damage in liquid)
+  - [x] Crush damage (from doors, platforms)
+  - [x] Telefrag (telefrag target if telefrag position occupied)
 
 ### Weapon System
 - [ ] Weapon definitions
@@ -132,9 +133,10 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - `item_ammo_shells`, `item_ammo_bullets`, etc.
   - Small and large ammo packs
   - Touch callback: add ammo to inventory
-- [ ] Ammo limits
+- [x] Ammo limits
   - Max ammo per type (e.g., 100 shells, 200 bullets)
   - Backpack item doubles ammo limits (optional, CTF/DM)
+  - Mirrored rerelease base caps (50 default, 200 bullets/cells, 100 shells) with parity tests.
 
 ### Health & Armor Pickups
 - [ ] Health items
