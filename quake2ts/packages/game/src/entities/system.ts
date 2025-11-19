@@ -1,5 +1,13 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { ENTITY_FIELD_METADATA, Entity, type EntityFieldDescriptor, Solid } from './entity.js';
+import { createRandomGenerator } from '@quake2ts/shared';
+import {
+  DeadFlag,
+  ENTITY_FIELD_METADATA,
+  Entity,
+  ServerFlags,
+  type EntityFieldDescriptor,
+  Solid,
+} from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 
@@ -87,6 +95,7 @@ export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
+  private readonly random = createRandomGenerator();
   private currentTimeSeconds = 0;
 
   constructor(maxEntities?: number) {
@@ -159,6 +168,39 @@ export class EntitySystem {
       return [];
     }
     return Array.from(matches).filter((entity) => entity.inUse && !entity.freePending);
+  }
+
+  pickTarget(targetname: string | undefined): Entity | null {
+    if (!targetname) {
+      return null;
+    }
+    const matches = this.findByTargetName(targetname);
+    if (matches.length === 0) {
+      return null;
+    }
+    const choice = this.random.randomIndex(matches);
+    return matches[choice] ?? null;
+  }
+
+  killBox(entity: Entity): void {
+    const targetBounds = computeBounds(entity);
+    for (const other of this.pool) {
+      if (other === entity || other === this.pool.world) {
+        continue;
+      }
+      if (!other.inUse || other.freePending || other.solid === Solid.Not) {
+        continue;
+      }
+      if (other.svflags & ServerFlags.DeadMonster) {
+        continue;
+      }
+      if (!boundsIntersect(targetBounds, computeBounds(other))) {
+        continue;
+      }
+      other.health = 0;
+      other.deadflag = DeadFlag.Dead;
+      this.free(other);
+    }
   }
 
   useTargets(entity: Entity, activator: Entity | null = null): void {

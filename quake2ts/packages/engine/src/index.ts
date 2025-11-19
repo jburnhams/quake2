@@ -98,6 +98,7 @@ export {
 export { parseWav, type WavData } from './assets/wav.js';
 export { decodeOgg, type OggAudio } from './assets/ogg.js';
 export { AudioRegistry, AudioRegistryError, type DecodedAudio } from './assets/audio.js';
+export {
   ATTN_IDLE,
   ATTN_LOOP_NONE,
   ATTN_NONE,

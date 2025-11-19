@@ -37,6 +37,11 @@ export enum ServerFlags {
   Hull = 1 << 11,
 }
 
+export enum EntityFlags {
+  Fly = 1 << 0,
+  Swim = 1 << 1,
+}
+
 export enum DeadFlag {
   Alive = 0,
   Dying = 1,
@@ -92,6 +97,9 @@ export class Entity {
   team?: string;
   message?: string;
   model?: string;
+  item?: string;
+
+  inventory: Record<string, number> = {};
 
   origin: Vec3 = copyVec3();
   old_origin: Vec3 = copyVec3();
@@ -174,6 +182,9 @@ export class Entity {
     this.team = undefined;
     this.message = undefined;
     this.model = undefined;
+    this.item = undefined;
+
+    this.inventory = {};
 
     this.origin = copyVec3();
     this.old_origin = copyVec3();
@@ -248,6 +259,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'team', type: 'string', save: true },
   { name: 'message', type: 'string', save: true },
   { name: 'model', type: 'string', save: true },
+  { name: 'item', type: 'string', save: true },
   { name: 'origin', type: 'vec3', save: true },
   { name: 'old_origin', type: 'vec3', save: true },
   { name: 'velocity', type: 'vec3', save: true },

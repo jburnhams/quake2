@@ -412,6 +412,20 @@ describe('Trigger spawns', () => {
     expect(uses).toBe(1);
   });
 
+  it('trigger_relay respects the NO_SOUND spawnflag', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const relay = spawnEntityFromDictionary(
+      { classname: 'trigger_relay', target: 'relay_target', spawnflags: `${1 << 0}` },
+      { registry, entities: system },
+    );
+    if (!relay) {
+      throw new Error('relay failed to spawn');
+    }
+
+    expect(relay.noise_index).toBe(-1);
+  });
+
   it('trigger_always schedules its targets immediately with a default delay', () => {
     const system = new EntitySystem();
     const registry = createDefaultSpawnRegistry();
@@ -438,6 +452,82 @@ describe('Trigger spawns', () => {
 
     system.beginFrame(0.2);
     system.runFrame();
+    expect(uses).toBe(1);
+  });
+
+  it('trigger_counter waits for required uses before firing and then frees itself', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const counter = spawnEntityFromDictionary(
+      { classname: 'trigger_counter', target: 'count_target', count: '3' },
+      { registry, entities: system },
+    );
+    if (!counter) {
+      throw new Error('counter failed to spawn');
+    }
+
+    const target = system.spawn();
+    target.classname = 'target_counter';
+    target.targetname = 'count_target';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    const activator = spawnPlayer(system);
+
+    counter.use?.(counter, null, activator);
+    counter.use?.(counter, null, activator);
+    expect(uses).toBe(0);
+    expect(counter.count).toBe(1);
+
+    counter.use?.(counter, null, activator);
+    expect(uses).toBe(1);
+
+    system.beginFrame(1 / 40);
+    system.runFrame();
+    expect(system.findByClassname('trigger_counter')).toHaveLength(0);
+  });
+
+  it('trigger_key requires an item and consumes it on success', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const warnings: string[] = [];
+    const missing = spawnEntityFromDictionary(
+      { classname: 'trigger_key', target: 'locked' },
+      { registry, entities: system, onWarning: (message) => warnings.push(message) },
+    );
+    expect(missing).toBeNull();
+    expect(warnings.some((message) => message.includes('requires an item'))).toBe(true);
+
+    const trigger = spawnEntityFromDictionary(
+      { classname: 'trigger_key', target: 'locked', item: 'key_data_cd' },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('trigger_key failed to spawn');
+    }
+
+    const target = system.spawn();
+    target.classname = 'locked_door';
+    target.targetname = 'locked';
+    let uses = 0;
+    target.use = () => {
+      uses += 1;
+    };
+    system.finalizeSpawn(target);
+
+    const player = spawnPlayer(system);
+    trigger.use?.(trigger, null, player);
+    expect(uses).toBe(0);
+
+    player.inventory['key_data_cd'] = 1;
+    trigger.use?.(trigger, null, player);
+    expect(uses).toBe(1);
+    expect(player.inventory['key_data_cd']).toBeUndefined();
+
+    trigger.use?.(trigger, null, player);
     expect(uses).toBe(1);
   });
 
@@ -621,5 +711,180 @@ describe('Trigger spawns', () => {
     system.beginFrame(0.2);
     system.runFrame();
     expect(player.health).toBe(15);
+  });
+
+  it('trigger_teleport moves entities to destinations and telefrags occupants', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_teleport',
+        target: 'tele_dest',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('teleport failed to spawn');
+    }
+
+    const destination = spawnEntityFromDictionary(
+      {
+        classname: 'info_teleport_destination',
+        targetname: 'tele_dest',
+        origin: '100 50 24',
+        angles: '0 180 0',
+      },
+      { registry, entities: system },
+    );
+    if (!destination) {
+      throw new Error('destination failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.origin = { x: 0, y: 0, z: 0 };
+
+    const blocker = spawnMonster(system);
+    blocker.origin = { x: 100, y: 50, z: 24 };
+
+    system.beginFrame(0);
+    system.runFrame();
+
+    expect(player.origin).toEqual({ x: 100, y: 50, z: 34 });
+    expect(player.old_origin).toEqual({ x: 100, y: 50, z: 34 });
+    expect(player.velocity).toEqual({ x: 0, y: 0, z: 0 });
+    expect(player.angles.y).toBe(180);
+    expect(system.findByClassname('monster')).toHaveLength(0);
+  });
+
+  it('trigger_teleport respects targetname gating and START_ON', () => {
+    const registry = createDefaultSpawnRegistry();
+
+    const inactiveSystem = new EntitySystem();
+    const inactiveTrigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_teleport',
+        target: 'tele_dest',
+        targetname: 'gate',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: inactiveSystem },
+    );
+    if (!inactiveTrigger) {
+      throw new Error('gated teleport failed to spawn');
+    }
+
+    spawnEntityFromDictionary(
+      { classname: 'info_teleport_destination', targetname: 'tele_dest', origin: '32 0 0' },
+      { registry, entities: inactiveSystem },
+    );
+
+    const inactivePlayer = spawnPlayer(inactiveSystem);
+    inactiveSystem.beginFrame(0);
+    inactiveSystem.runFrame();
+    expect(inactivePlayer.origin).toEqual({ x: 0, y: 0, z: 0 });
+
+    inactiveTrigger.use?.(inactiveTrigger, null, inactivePlayer);
+    inactiveSystem.beginFrame(0.1);
+    inactiveSystem.runFrame();
+    expect(inactivePlayer.origin).toEqual({ x: 32, y: 0, z: 10 });
+
+    const startOnSystem = new EntitySystem();
+    const startOnTrigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_teleport',
+        target: 'tele_dest',
+        targetname: 'gate',
+        spawnflags: `${1 << 3}`,
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: startOnSystem },
+    );
+    if (!startOnTrigger) {
+      throw new Error('start_on teleport failed to spawn');
+    }
+
+    spawnEntityFromDictionary(
+      { classname: 'info_teleport_destination', targetname: 'tele_dest', origin: '64 0 0' },
+      { registry, entities: startOnSystem },
+    );
+
+    const startOnPlayer = spawnPlayer(startOnSystem);
+    startOnSystem.beginFrame(0);
+    startOnSystem.runFrame();
+    expect(startOnPlayer.origin).toEqual({ x: 64, y: 0, z: 10 });
+  });
+
+  it('trigger_gravity updates gravity and supports toggle/start_off', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_gravity',
+        gravity: '0.5',
+        spawnflags: `${(1 << 0) | (1 << 1)}`,
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('gravity trigger failed to spawn');
+    }
+
+    const player = spawnPlayer(system);
+    player.gravity = 1;
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(player.gravity).toBe(1);
+
+    trigger.use?.(trigger, null, trigger);
+    system.beginFrame(0.05);
+    system.runFrame();
+    expect(player.gravity).toBeCloseTo(0.5);
+
+    trigger.use?.(trigger, null, trigger);
+    system.beginFrame(0.1);
+    system.runFrame();
+    expect(player.gravity).toBeCloseTo(0.5);
+  });
+
+  it('trigger_monsterjump boosts ground monsters forward and upward', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const trigger = spawnEntityFromDictionary(
+      {
+        classname: 'trigger_monsterjump',
+        speed: '300',
+        height: '400',
+        mins: '-8 -8 -8',
+        maxs: '8 8 8',
+      },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('monsterjump failed to spawn');
+    }
+
+    const monster = spawnMonster(system);
+    monster.origin = { x: 0, y: 0, z: 0 };
+    monster.velocity = { x: 0, y: 0, z: 0 };
+    monster.groundentity = system.world;
+
+    const player = spawnPlayer(system);
+    player.origin = { x: 0, y: 0, z: 0 };
+
+    system.beginFrame(0);
+    system.runFrame();
+
+    expect(monster.velocity.x).toBeCloseTo(trigger.movedir.x * 300);
+    expect(monster.velocity.z).toBeCloseTo(400);
+    expect(monster.groundentity).toBeNull();
+    expect(player.velocity.z).toBe(0);
   });
 });
