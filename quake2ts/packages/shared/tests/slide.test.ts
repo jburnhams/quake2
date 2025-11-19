@@ -5,8 +5,10 @@ import {
   normalizeVec3,
   resolveSlideMove,
   slideMove,
+  stepSlideMove,
   SLIDEMOVE_BLOCKED_FLOOR,
   SLIDEMOVE_BLOCKED_WALL,
+  type PmoveTraceFn,
   type PmoveTraceResult,
 } from '../src/index.js';
 
@@ -177,5 +179,117 @@ describe('slideMove', () => {
     expect(result.velocity).toEqual(ZERO_VEC3);
     expect(result.origin).toEqual({ x: 0, y: 0, z: 0 });
     expect(result.stopped).toBe(true);
+  });
+
+  it('restores the primal velocity when hasTime is set', () => {
+    const { trace } = scriptedTrace([
+      {
+        fraction: 0.5,
+        endpos: { x: 0.5, y: 0, z: 0 },
+        planeNormal: { x: -1, y: 0, z: 0 },
+        allsolid: false,
+        startsolid: false,
+      },
+    ]);
+
+    const primal = { x: 10, y: 0, z: 0 } as const;
+    const result = slideMove({
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: primal,
+      frametime: 0.1,
+      overbounce: OVERBOUNCE,
+      trace,
+      hasTime: true,
+    });
+
+    expect(result.velocity).toEqual(primal);
+  });
+});
+
+function steppedWorldTrace(stepHeight = 16, stepStartX = 4): PmoveTraceFn {
+  const floorHeightAt = (x: number) => (x >= stepStartX ? stepHeight : 0);
+
+  return ((start, end) => {
+    const deltaX = end.x - start.x;
+    const movingDown = end.z < start.z;
+
+    if (movingDown) {
+      const targetFloor = floorHeightAt(end.x);
+      if (end.z < targetFloor) {
+        const t = (start.z - targetFloor) / (start.z - end.z);
+        const hitX = start.x + deltaX * t;
+        return {
+          fraction: t,
+          endpos: { x: hitX, y: end.y, z: targetFloor },
+          planeNormal: { x: 0, y: 0, z: 1 },
+          allsolid: false,
+          startsolid: false,
+        } satisfies PmoveTraceResult;
+      }
+    }
+
+    if (deltaX > 0 && start.x < stepStartX && end.x > stepStartX && start.z <= floorHeightAt(start.x)) {
+      const frac = (stepStartX - start.x) / deltaX;
+      return {
+        fraction: frac,
+        endpos: { x: stepStartX, y: end.y, z: start.z },
+        planeNormal: { x: -1, y: 0, z: 0 },
+        allsolid: false,
+        startsolid: false,
+      } satisfies PmoveTraceResult;
+    }
+
+    return { fraction: 1, endpos: end, planeNormal: undefined, allsolid: false, startsolid: false } satisfies PmoveTraceResult;
+  }) satisfies PmoveTraceFn;
+}
+
+describe('stepSlideMove', () => {
+  it('steps over a ledge and keeps planar distance when it is faster', () => {
+    const trace = steppedWorldTrace();
+
+    const result = stepSlideMove({
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 200, y: 0, z: 0 },
+      frametime: 0.1,
+      overbounce: OVERBOUNCE,
+      trace,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+    });
+
+    expect(result.stepped).toBe(true);
+    expect(result.origin.x).toBeCloseTo(20, 4);
+    expect(result.origin.z).toBeCloseTo(16, 4);
+    expect(result.stepHeight).toBeCloseTo(18, 4);
+    expect(result.velocity.x).toBe(200);
+    expect(result.velocity.z).toBe(0);
+  });
+
+  it('falls back to the non-step path when the upward trace is blocked', () => {
+    const blockingTrace: PmoveTraceFn = (start, end) => {
+      if (end.z > start.z) {
+        return {
+          fraction: 0,
+          endpos: start,
+          planeNormal: { x: 0, y: 0, z: 1 },
+          allsolid: true,
+          startsolid: true,
+        } satisfies PmoveTraceResult;
+      }
+      return { fraction: 1, endpos: end, planeNormal: undefined, allsolid: false, startsolid: false } satisfies PmoveTraceResult;
+    };
+
+    const result = stepSlideMove({
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 100, y: 0, z: 0 },
+      frametime: 0.1,
+      overbounce: OVERBOUNCE,
+      trace: blockingTrace,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+    });
+
+    expect(result.stepped).toBe(false);
+    expect(result.origin).toEqual({ x: 10, y: 0, z: 0 });
   });
 });

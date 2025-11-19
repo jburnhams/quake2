@@ -19,6 +19,7 @@
 - Introduced an `EngineRuntime` harness that wires engine init/shutdown around the host and client/game lifecycles so embedders can spin the fixed-step loop up with a single call; the viewer bootstrap now uses it.
 - Added `resolveSlideMove`, a pure clip-plane accumulator mirroring the inner loop of `PM_StepSlideMove_Generic` so slide/crease resolution can be unit-tested outside of the full pmove trace path.
 - Added a trace-driven `slideMove` helper that mirrors `PM_SlideMoveGeneric` (minus gravity/stepping) and scripts collision planes through unit tests to verify multi-bump handling.
+- Added a pmove-style `stepSlideMove` that mirrors `PM_StepSlideMove`, including the pm_time velocity preservation flag and bounding-box-aware traces, with tests that step onto a 16u ledge and fall back to the flat slide path when stepping is blocked.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
@@ -29,4 +30,4 @@
 - Expand the engine→game/client interface stubs beyond the placeholder lifecycle/hooks now in the scaffolding packages, now that the fixed-step loop surface exists.
 - Sketch the browser asset-ingestion UX (file drop/selector, caching/error UX) aligned with the configstring/index pipeline documented in the plan.
 - Enumerate renderer/input abstractions the HUD/client module needs from the engine (pic/font helpers, text metrics, cvars) to keep the UI sandboxed.
-- Continue building out the shared pmove helpers (air/water move, clipping/slide helpers, etc.) so client prediction and the authoritative game layer can share identical movement math, now including the clip-plane resolution helper mirrored from `PM_StepSlideMove_Generic`.
+- Continue building out the shared pmove helpers (air/water move, clipping/slide helpers, etc.) so client prediction and the authoritative game layer can share identical movement math, now including the clip-plane resolution helper mirrored from `PM_StepSlideMove_Generic` and the stepped variant of `PM_StepSlideMove`.

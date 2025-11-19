@@ -46,5 +46,5 @@ export interface PmoveTraceResult {
   readonly startsolid: boolean;
 }
 
-export type PmoveTraceFn = (start: Vec3, end: Vec3) => PmoveTraceResult;
+export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => PmoveTraceResult;
 

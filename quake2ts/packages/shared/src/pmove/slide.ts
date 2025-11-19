@@ -3,6 +3,8 @@ import type { PmoveTraceFn } from './types.js';
 
 const DEFAULT_MAX_CLIP_PLANES = 5;
 const DEFAULT_MAX_BUMPS = 4;
+const DEFAULT_STEP_SIZE = 18;
+const MIN_STEP_NORMAL = 0.7;
 
 export const SLIDEMOVE_BLOCKED_FLOOR = 1;
 export const SLIDEMOVE_BLOCKED_WALL = 2;
@@ -21,11 +23,31 @@ export interface SlideMoveParams {
   readonly trace: PmoveTraceFn;
   readonly maxBumps?: number;
   readonly maxClipPlanes?: number;
+  readonly mins?: Vec3;
+  readonly maxs?: Vec3;
+  /**
+   * Mirrors the pm->s.pm_time check in PM_StepSlideMove_Generic: if true, the
+   * returned velocity is reset to the primal velocity after collision
+   * resolution so time-based effects (like knockbacks) don't dampen.
+   */
+  readonly hasTime?: boolean;
 }
 
 export interface SlideMoveOutcome extends SlideMoveResult {
   readonly origin: Vec3;
   readonly blocked: number;
+}
+
+export interface StepSlideMoveParams extends SlideMoveParams {
+  readonly mins: Vec3;
+  readonly maxs: Vec3;
+  readonly stepSize?: number;
+}
+
+export interface StepSlideMoveOutcome extends SlideMoveOutcome {
+  readonly stepped: boolean;
+  readonly stepHeight: number;
+  readonly stepNormal?: Vec3;
 }
 
 /**
@@ -116,6 +138,9 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     trace,
     maxBumps = DEFAULT_MAX_BUMPS,
     maxClipPlanes = DEFAULT_MAX_CLIP_PLANES,
+    mins,
+    maxs,
+    hasTime = false,
   } = params;
 
   let origin = initialOrigin;
@@ -131,10 +156,11 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     }
 
     const end = addVec3(origin, scaleVec3(velocity, timeLeft));
-    const tr = trace(origin, end);
+    const tr = trace(origin, end, mins, maxs);
 
     if (tr.allsolid) {
-      return { origin: tr.endpos, velocity: ZERO_VEC3, planes, stopped: true, blocked };
+      const velocity = hasTime ? primalVelocity : ZERO_VEC3;
+      return { origin: tr.endpos, velocity, planes, stopped: true, blocked };
     }
 
     if (tr.fraction > 0) {
@@ -146,7 +172,8 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     }
 
     if (!tr.planeNormal) {
-      return { origin, velocity: ZERO_VEC3, planes, stopped: true, blocked };
+      const velocity = hasTime ? primalVelocity : ZERO_VEC3;
+      return { origin, velocity, planes, stopped: true, blocked };
     }
 
     if (tr.planeNormal.z > 0.7) {
@@ -164,9 +191,68 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     planes.splice(0, planes.length, ...resolved.planes);
 
     if (resolved.stopped) {
-      return { origin, velocity, planes, stopped: true, blocked };
+      const velocityOut = hasTime ? primalVelocity : velocity;
+      return { origin, velocity: velocityOut, planes, stopped: true, blocked };
     }
   }
 
-  return { origin, velocity, planes, stopped: velocity.x === 0 && velocity.y === 0 && velocity.z === 0, blocked };
+  const velocityOut = hasTime ? primalVelocity : velocity;
+  return { origin, velocity: velocityOut, planes, stopped: velocityOut.x === 0 && velocityOut.y === 0 && velocityOut.z === 0, blocked };
+}
+
+/**
+ * Mirrors PM_StepSlideMove (rerelease p_move.cpp) in a pure form: attempts a
+ * regular slide move, then retries from a stepped-up position when the first
+ * attempt was blocked. The function compares planar distance traveled and the
+ * steepness of the landing plane to decide whether to keep the step.
+ */
+export function stepSlideMove(params: StepSlideMoveParams): StepSlideMoveOutcome {
+  const { mins, maxs, stepSize = DEFAULT_STEP_SIZE, ...rest } = params;
+
+  const startOrigin = params.origin;
+  const startVelocity = params.velocity;
+
+  const downResult = slideMove({ ...rest, mins, maxs });
+
+  const upTarget = addVec3(startOrigin, { x: 0, y: 0, z: stepSize });
+  const upTrace = rest.trace(startOrigin, upTarget, mins, maxs);
+  if (upTrace.allsolid) {
+    return { ...downResult, stepped: false, stepHeight: 0 };
+  }
+
+  const actualStep = upTrace.endpos.z - startOrigin.z;
+  const steppedResult = slideMove({ ...rest, origin: upTrace.endpos, velocity: startVelocity, mins, maxs });
+
+  const pushDownTarget = addVec3(steppedResult.origin, { x: 0, y: 0, z: -actualStep });
+  const downTrace = rest.trace(steppedResult.origin, pushDownTarget, mins, maxs);
+
+  let steppedOrigin = steppedResult.origin;
+  let stepNormal = downTrace.planeNormal;
+
+  if (!downTrace.allsolid) {
+    steppedOrigin = downTrace.endpos;
+  }
+
+  const planarDistanceSquared = (a: Vec3, b: Vec3) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+  const downDist = planarDistanceSquared(downResult.origin, startOrigin);
+  const upDist = planarDistanceSquared(steppedOrigin, startOrigin);
+
+  if (downDist > upDist || (stepNormal && stepNormal.z < MIN_STEP_NORMAL)) {
+    return { ...downResult, stepped: false, stepHeight: 0 };
+  }
+
+  const steppedVelocity = { ...steppedResult.velocity, z: downResult.velocity.z };
+  const steppedBlocked = steppedResult.blocked;
+  const stopped = steppedVelocity.x === 0 && steppedVelocity.y === 0 && steppedVelocity.z === 0;
+
+  return {
+    origin: steppedOrigin,
+    velocity: steppedVelocity,
+    planes: steppedResult.planes,
+    blocked: steppedBlocked,
+    stopped,
+    stepped: true,
+    stepHeight: actualStep,
+    stepNormal,
+  };
 }
