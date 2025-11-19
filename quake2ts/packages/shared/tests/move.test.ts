@@ -9,8 +9,37 @@ const maxs: Vec3 = { x: 16, y: 16, z: 32 };
 const origin: Vec3 = { x: 0, y: 0, z: 0 };
 const forward: Vec3 = { x: 1, y: 0, z: 0 };
 const right: Vec3 = { x: 0, y: 1, z: 0 };
+const wallNormal: Vec3 = { x: -1, y: 0, z: 0 };
 
 function identityTrace(_: Vec3, end: Vec3): PmoveTraceResult {
+  return {
+    fraction: 1,
+    endpos: end,
+    allsolid: false,
+    startsolid: false,
+  };
+}
+
+function forwardWallTrace(start: Vec3, end: Vec3): PmoveTraceResult {
+  if (end.z !== start.z) {
+    return {
+      fraction: 1,
+      endpos: end,
+      allsolid: false,
+      startsolid: false,
+    };
+  }
+
+  if (end.x > start.x) {
+    return {
+      fraction: 0,
+      endpos: start,
+      allsolid: false,
+      startsolid: false,
+      planeNormal: wallNormal,
+    };
+  }
+
   return {
     fraction: 1,
     endpos: end,
@@ -207,6 +236,38 @@ describe('applyPmoveAirMove', () => {
 
     expect(result.velocity.z).toBeCloseTo(100, 5);
   });
+
+  it('defaults to the Quake II overbounce constant when omitted', () => {
+    const result = applyPmoveAirMove({
+      origin,
+      velocity: { x: 200, y: 0, z: 0 },
+      frametime: 0.1,
+      mins,
+      maxs,
+      trace: forwardWallTrace,
+      cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0 },
+      forward,
+      right,
+      pmFlags: 0,
+      onGround: false,
+      gravity: 0,
+      pmType: PmType.Normal,
+      pmAccelerate: 10,
+      pmAirAccelerate: 0,
+      pmMaxSpeed: 320,
+      pmDuckSpeed: 150,
+      onLadder: false,
+      waterlevel: WaterLevel.None,
+      watertype: 0,
+      groundContents: 0,
+      viewPitch: 0,
+      ladderMod: 1,
+      pmWaterSpeed: 400,
+    });
+
+    expect(result.velocity.x).toBe(0);
+    expect(result.blocked).not.toBe(0);
+  });
 });
 
 describe('applyPmoveWaterMove', () => {
@@ -265,5 +326,34 @@ describe('applyPmoveWaterMove', () => {
     });
 
     expect(Math.hypot(result.velocity.x, result.velocity.y)).toBeLessThanOrEqual(100);
+  });
+
+  it('defaults the overbounce constant before resolving collisions', () => {
+    const result = applyPmoveWaterMove({
+      origin,
+      velocity: { x: 200, y: 0, z: 0 },
+      frametime: 0.1,
+      mins,
+      maxs,
+      trace: forwardWallTrace,
+      cmd: { forwardmove: 200, sidemove: 0, upmove: 0, buttons: 0 },
+      forward,
+      right,
+      pmFlags: 0,
+      onGround: false,
+      pmMaxSpeed: 320,
+      pmDuckSpeed: 150,
+      pmWaterAccelerate: 10,
+      pmWaterSpeed: 400,
+      onLadder: false,
+      watertype: 0,
+      groundContents: 0,
+      waterlevel: WaterLevel.Waist,
+      viewPitch: 0,
+      ladderMod: 1,
+    });
+
+    expect(result.velocity.x).toBe(0);
+    expect(result.blocked).not.toBe(0);
   });
 });

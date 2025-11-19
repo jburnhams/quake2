@@ -68,6 +68,7 @@ export interface WaterMoveParams extends BaseMoveParams {
 
 const DEFAULT_AIR_ACCELERATE = 1;
 const WATER_DRIFT_SPEED = 60;
+const DEFAULT_STEP_OVERBOUNCE = 1.01;
 
 export function applyPmoveAirMove(params: AirMoveParams): StepSlideMoveOutcome {
   const {
@@ -76,7 +77,7 @@ export function applyPmoveAirMove(params: AirMoveParams): StepSlideMoveOutcome {
     mins,
     maxs,
     trace,
-    overbounce,
+    overbounce = DEFAULT_STEP_OVERBOUNCE,
     stepSize,
     maxBumps,
     maxClipPlanes,
@@ -235,7 +236,7 @@ export function applyPmoveWaterMove(params: WaterMoveParams): StepSlideMoveOutco
     mins,
     maxs,
     trace,
-    overbounce,
+    overbounce = DEFAULT_STEP_OVERBOUNCE,
     stepSize,
     maxBumps,
     maxClipPlanes,
