@@ -1,7 +1,7 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { Entity } from './entity.js';
-import { EntityPool } from './pool.js';
-import { ThinkScheduler } from './thinkScheduler.js';
+import { ENTITY_FIELD_METADATA, Entity, type EntityFieldDescriptor } from './entity.js';
+import { EntityPool, type EntityPoolSnapshot } from './pool.js';
+import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 
 interface Bounds {
   min: Vec3;
@@ -32,6 +32,55 @@ function boundsIntersect(a: Bounds, b: Bounds): boolean {
     a.min.z > b.max.z ||
     a.max.z < b.min.z
   );
+}
+
+type SerializableVec3 = readonly [number, number, number];
+
+type SerializableEntityFieldValue = number | string | boolean | null | SerializableVec3;
+
+type SerializableFieldName = Exclude<
+  (typeof ENTITY_FIELD_METADATA)[number]['name'],
+  'think' | 'touch' | 'use' | 'pain' | 'die' | 'index'
+>;
+type SerializableFieldDescriptor = EntityFieldDescriptor<SerializableFieldName>;
+
+const SERIALIZABLE_FIELDS = ENTITY_FIELD_METADATA.filter(
+  (field) => field.save,
+) as SerializableFieldDescriptor[];
+const DESCRIPTORS = new Map(SERIALIZABLE_FIELDS.map((descriptor) => [descriptor.name, descriptor]));
+
+export interface SerializedEntityState {
+  readonly index: number;
+  readonly fields: Partial<Record<SerializableFieldName, SerializableEntityFieldValue>>;
+}
+
+export interface EntitySystemSnapshot {
+  readonly timeSeconds: number;
+  readonly pool: EntityPoolSnapshot;
+  readonly entities: SerializedEntityState[];
+  readonly thinks: ThinkScheduleEntry[];
+}
+
+
+function serializeVec3(vec: Vec3): SerializableVec3 {
+  return [vec.x, vec.y, vec.z];
+}
+
+function deserializeVec3(value: SerializableEntityFieldValue): Vec3 {
+  const vec = value as SerializableVec3;
+  if (!Array.isArray(vec) || vec.length !== 3) {
+    throw new Error('Invalid vec3 serialization');
+  }
+  const [x, y, z] = vec;
+  return { x, y, z };
+}
+
+function assignField(
+  entity: Entity,
+  name: SerializableFieldName,
+  value: Entity[SerializableFieldName],
+): void {
+  (entity as Record<SerializableFieldName, Entity[SerializableFieldName]>)[name] = value;
 }
 
 export class EntitySystem {
@@ -136,6 +185,94 @@ export class EntitySystem {
     this.thinkScheduler.runDueThinks(this.currentTimeSeconds);
     this.runTouches();
     this.pool.flushFreeList();
+  }
+
+  createSnapshot(): EntitySystemSnapshot {
+    const entities: SerializedEntityState[] = [];
+    for (const entity of this.pool) {
+      const fields: Partial<Record<SerializableFieldName, SerializableEntityFieldValue>> = {};
+      for (const descriptor of SERIALIZABLE_FIELDS) {
+        const value = entity[descriptor.name];
+        switch (descriptor.type) {
+          case 'vec3':
+            fields[descriptor.name] = serializeVec3(value as Vec3);
+            break;
+          case 'entity':
+            fields[descriptor.name] = (value as Entity | null)?.index ?? null;
+            break;
+          default:
+            fields[descriptor.name] = (value as SerializableEntityFieldValue) ?? null;
+            break;
+        }
+      }
+      entities.push({
+        index: entity.index,
+        fields,
+      });
+    }
+
+    return {
+      timeSeconds: this.currentTimeSeconds,
+      pool: this.pool.createSnapshot(),
+      entities,
+      thinks: this.thinkScheduler.snapshot(),
+    };
+  }
+
+  restore(snapshot: EntitySystemSnapshot): void {
+    this.currentTimeSeconds = snapshot.timeSeconds;
+    this.pool.restore(snapshot.pool);
+
+    const indexToEntity = new Map<number, Entity>();
+    for (const entity of this.pool) {
+      indexToEntity.set(entity.index, entity);
+    }
+
+    const pendingEntityRefs: Array<{ entity: Entity; name: SerializableFieldName; targetIndex: number | null }>
+      = [];
+
+    for (const serialized of snapshot.entities) {
+      const entity = indexToEntity.get(serialized.index);
+      if (!entity) {
+        continue;
+      }
+
+      for (const [name, value] of Object.entries(serialized.fields) as [
+        SerializableFieldName,
+        SerializableEntityFieldValue,
+      ][]) {
+        const descriptor = DESCRIPTORS.get(name);
+        if (!descriptor || value === undefined) {
+          continue;
+        }
+
+        switch (descriptor.type) {
+          case 'vec3':
+            assignField(entity, name, deserializeVec3(value) as Entity[typeof name]);
+            break;
+          case 'entity':
+            pendingEntityRefs.push({
+              entity,
+              name: descriptor.name,
+              targetIndex: value as number | null,
+            });
+            break;
+          case 'boolean':
+            assignField(entity, name, Boolean(value) as Entity[typeof name]);
+            break;
+          default:
+            assignField(entity, name, value as Entity[typeof name]);
+            break;
+        }
+      }
+    }
+
+    for (const ref of pendingEntityRefs) {
+      const target = ref.targetIndex === null ? null : indexToEntity.get(ref.targetIndex) ?? null;
+      assignField(ref.entity, ref.name, target as Entity[SerializableFieldName]);
+    }
+
+    this.thinkScheduler.restore(snapshot.thinks, (index) => indexToEntity.get(index));
   }
 
   private runTouches(): void {

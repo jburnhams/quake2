@@ -5,6 +5,11 @@ const UPPER_MASK = 0x80000000;
 const LOWER_MASK = 0x7fffffff;
 const TWO_POW_32 = 0x100000000;
 
+export interface MersenneTwisterState {
+  readonly index: number;
+  readonly state: readonly number[];
+}
+
 /**
  * Minimal MT19937 implementation mirroring the rerelease's std::mt19937 usage in g_local.h.
  * The generator outputs deterministic unsigned 32-bit integers which drive the
@@ -52,10 +57,30 @@ export class MersenneTwister19937 {
     }
     this.index = 0;
   }
+
+  getState(): MersenneTwisterState {
+    return {
+      index: this.index,
+      state: Array.from(this.state),
+    };
+  }
+
+  setState(snapshot: MersenneTwisterState): void {
+    if (snapshot.state.length !== STATE_SIZE) {
+      throw new Error(`Expected ${STATE_SIZE} MT state values, received ${snapshot.state.length}`);
+    }
+
+    this.index = snapshot.index;
+    this.state = Uint32Array.from(snapshot.state, (value) => value >>> 0);
+  }
 }
 
 export interface RandomGeneratorOptions {
   readonly seed?: number;
+}
+
+export interface RandomGeneratorState {
+  readonly mt: MersenneTwisterState;
 }
 
 /**
@@ -137,6 +162,14 @@ export class RandomGenerator {
 
   randomIndex<T extends { length: number }>(container: T): number {
     return this.irandom(container.length);
+  }
+
+  getState(): RandomGeneratorState {
+    return { mt: this.mt.getState() };
+  }
+
+  setState(snapshot: RandomGeneratorState): void {
+    this.mt.setState(snapshot.mt);
   }
 }
 
