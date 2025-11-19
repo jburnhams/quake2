@@ -41,6 +41,7 @@ export class MockWebGL2RenderingContext {
   readonly FRAGMENT_SHADER = 0x8b30;
   readonly COMPILE_STATUS = 0x8b81;
   readonly LINK_STATUS = 0x8b82;
+  readonly ONE_MINUS_SRC_COLOR = 0x0301;
 
   private shaderCounter = 0;
   private programCounter = 0;
@@ -56,11 +57,14 @@ export class MockWebGL2RenderingContext {
   readonly attributeLocations = new Map<string, number>();
 
   enable = vi.fn((cap: GLenum) => this.calls.push(`enable:${cap}`));
+  disable = vi.fn((cap: GLenum) => this.calls.push(`disable:${cap}`));
   depthFunc = vi.fn((func: GLenum) => this.calls.push(`depthFunc:${func}`));
   cullFace = vi.fn((mode: GLenum) => this.calls.push(`cullFace:${mode}`));
+  depthMask = vi.fn((flag: GLboolean) => this.calls.push(`depthMask:${flag}`));
   blendFuncSeparate = vi.fn((srcRGB: GLenum, dstRGB: GLenum, srcAlpha: GLenum, dstAlpha: GLenum) =>
     this.calls.push(`blendFuncSeparate:${srcRGB}:${dstRGB}:${srcAlpha}:${dstAlpha}`)
   );
+  blendFunc = vi.fn((sfactor: GLenum, dfactor: GLenum) => this.calls.push(`blendFunc:${sfactor}:${dfactor}`));
   getExtension = vi.fn((name: string) => this.extensions.get(name) ?? null);
 
   createShader = vi.fn((type: GLenum) => ({ id: ++this.shaderCounter, type } as unknown as WebGLShader));
@@ -148,6 +152,23 @@ export class MockWebGL2RenderingContext {
       this.calls.push(`framebufferTexture2D:${target}:${attachment}:${textarget}:${!!texture}:${level}`)
   );
   deleteFramebuffer = vi.fn((fb: WebGLFramebuffer) => this.calls.push(`deleteFramebuffer:${!!fb}`));
+
+  uniform1f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat) =>
+    this.calls.push(`uniform1f:${location ? 'set' : 'null'}:${x}`)
+  );
+  uniform1i = vi.fn((location: WebGLUniformLocation | null, x: GLint) =>
+    this.calls.push(`uniform1i:${location ? 'set' : 'null'}:${x}`)
+  );
+  uniform2f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat, y: GLfloat) =>
+    this.calls.push(`uniform2f:${location ? 'set' : 'null'}:${x}:${y}`)
+  );
+  uniform4fv = vi.fn((location: WebGLUniformLocation | null, data: Float32List) =>
+    this.calls.push(`uniform4fv:${location ? 'set' : 'null'}:${Array.from(data as Iterable<number>).join(',')}`)
+  );
+  uniformMatrix4fv = vi.fn(
+    (location: WebGLUniformLocation | null, transpose: GLboolean, data: Float32List | Iterable<number>) =>
+      this.calls.push(`uniformMatrix4fv:${location ? 'set' : 'null'}:${transpose}:${Array.from(data as Iterable<number>).join(',')}`)
+  );
 
   isContextLost = vi.fn(() => false);
 }
