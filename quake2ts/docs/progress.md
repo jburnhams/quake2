@@ -39,6 +39,8 @@
 - Hardened the shared `applyPmoveAirMove`/`applyPmoveWaterMove` helpers to always seed the canonical Quake II 1.01 overbounce constant before invoking `stepSlideMove`, preventing undefined multipliers from producing NaN velocities during collisions. Fresh regression tests drive both helpers into scripted wall traces to lock down the default.
 - Added pure `goodPosition`, `snapPosition`, and `initialSnapPosition` helpers that mirror `PM_GoodPosition`, `PM_SnapPosition`, and `PM_InitialSnapPosition` from `rerelease/p_move.cpp`, wiring them to the shared stuck-object fixer and covering valid, stuck-but-fixable, fallback, and offset-search cases in Vitest.
 - Added a `clampViewAngles` helper that mirrors `PM_ClampAngles`, including the teleport pitch reset, ±90° pitch limits, and the derived forward/right/up vectors so both the client and server can seed identical orientation axes before invoking the rest of pmove. Vitest coverage exercises teleport pauses, upward/downward clamps, and the resulting axes.
+- Mirrored the rerelease configstring layout (`CS_*` ranges and size rules) in a shared `protocol/configstrings` module and introduced an engine `ConfigStringRegistry` with Vitest coverage for deterministic model/sound/image indexing, reuse, overflow, and length enforcement.
+- Added an engine `CvarRegistry`/`Cvar` pair with latch/archive/userinfo flags matching the rerelease semantics, plus Vitest coverage for numeric/boolean accessors, change callbacks, latched apply, and registry-level resets.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
@@ -48,5 +50,5 @@
 ## Next up
 - Expand the engine→game/client interface stubs beyond the placeholder lifecycle/hooks now in the scaffolding packages, now that the fixed-step loop surface exists.
 - Sketch the browser asset-ingestion UX (file drop/selector, caching/error UX) aligned with the configstring/index pipeline documented in the plan.
-- Enumerate renderer/input abstractions the HUD/client module needs from the engine (pic/font helpers, text metrics, cvars) to keep the UI sandboxed.
+- Enumerate renderer/input abstractions the HUD/client module needs from the engine (pic/font helpers, text metrics, cvars) to keep the UI sandboxed, and start threading the new configstring registry through those import surfaces.
 - Continue building out the shared pmove helpers (air/water move, clipping/slide helpers, etc.) so client prediction and the authoritative game layer can share identical movement math, now including the clip-plane resolution helper mirrored from `PM_StepSlideMove_Generic` and the stepped variant of `PM_StepSlideMove`.
