@@ -7,6 +7,7 @@ import {
   type GameRenderSample,
   type GameSimulation,
 } from './host.js';
+import { ConfigStringRegistry } from './configstrings.js';
 import { FixedTimestepLoop, type LoopCallbacks, type LoopOptions } from './loop.js';
 import { EngineRuntime, createEngineRuntime } from './runtime.js';
 
@@ -42,6 +43,8 @@ export function createEngine(imports: EngineImports): EngineExports {
 }
 
 export { FixedTimestepLoop };
+export { ConfigStringRegistry };
+export { Cvar, CvarRegistry } from './cvars.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
 export {
   EngineHost,

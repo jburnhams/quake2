@@ -29,7 +29,7 @@ This document outlines the concrete architecture, repository layout, and step-by
 - **Input subsystem:** Pointer lock + keyboard/gamepad mapping to pmove command buffers; configurable bindings stored in cvars/local storage.
 - **Filesystem/asset ingestion:** Virtual file system backed by in-memory PAKs; async loaders for BSP/MD2/MD3/WAL/PCX/WAV/OGG; prefetch/cache with checksum validation; exposes `modelindex/soundindex/imageindex` style registries to the game layer.
 - **Timing/loop:** Deterministic simulation tick at 40 Hz with frame interpolation for rendering; decoupled render loop using `requestAnimationFrame`; fixed-step accumulator safeguards.
-- **Config/cvars:** Typed cvar registry with change callbacks, persistence, and sandbox-safe console exposure.
+- **Config/cvars:** Typed cvar registry with change callbacks, persistence, and sandbox-safe console exposure. The engine package now ships a `CvarRegistry`/`Cvar` pair mirroring the rerelease flags (archive/userinfo/serverinfo/latch/cheat) so lifecycle plumbing can begin threading configuration through imports/exports.
 
 ### Game layer (authoritative simulation)
 - **Entity system:** Data-oriented entities with typed components for transform, physics body, render model refs, AI controller, inventory, and triggers. Spawn registry mirrors `g_spawn.cpp` classnames. Deterministic random seed per level. Configstrings (models/sounds/images/csbcs) are emitted here to drive renderer/HUD asset binding.
@@ -76,6 +76,7 @@ This document outlines the concrete architecture, repository layout, and step-by
 ## Readiness notes
 - The rerelease mapping (`docs/rerelease-mapping.md`) provides the authoritative import/export and configstring behavior; the TS plan now mirrors those boundaries directly.
 - All open questions in `docs/questions.md` are answered for the base-campaign scope; no further research is blocking bootstrap.
+- The configstring ranges and size constraints from `game.h` now live in `packages/shared/src/protocol/configstrings.ts` alongside an engine `ConfigStringRegistry`, so the upcoming asset ingestion work can start wiring deterministic `modelindex`/`soundindex` behavior immediately.
 - Next concrete action: start exercising the fixed 40 Hz loop against the engine→game/client entrypoints (init/spawn/frame hooks) so we can validate the scheduling contract while fleshing out import/export tables. The `EngineHost` wrapper now wires the fixed-step loop to game/client snapshots, so the viewer/bootstrap app can be hooked up quickly. An `EngineRuntime` layer now starts/stops the engine alongside the host so embedders can spin up the loop with a single call.
 
 ## Extension hooks for later
