@@ -14,16 +14,16 @@
     "physics",
     "3d"
   ],
-  "author": "Your Name",
+  "author": "Jonathan Burnhams",
   "license": "GPL-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/quake2ts.git"
+    "url": "https://github.com/jburnhams/quake2.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/quake2ts/issues"
+    "url": "https://github.com/jburnhams/quake2/issues"
   },
-  "homepage": "https://github.com/yourusername/quake2ts#readme",
+  "homepage": "https://github.com/jburnhams/quake2#readme",
   "exports": {
     "./shared": {
       "types": "./packages/shared/dist/types/index.d.ts",
