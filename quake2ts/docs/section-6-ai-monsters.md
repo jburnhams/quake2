@@ -233,15 +233,19 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [ ] `ai_walk`: Walk toward goal
 - [ ] `ai_run`: Run toward goal
 - [ ] `ai_charge`: Charge attack (Berserker)
-- [ ] `ai_turn`: Turn toward ideal_yaw
-- [ ] `ai_face`: Face toward enemy
-- [ ] `ai_move`: Move forward by distance
+- [x] `ai_turn`: Turn toward ideal_yaw
+- [x] `ai_face`: Face toward enemy
+- [x] `ai_move`: Move forward by distance
 - [ ] `FindTarget`: Scan for enemy
 - [ ] `FoundTarget`: React to spotting enemy (sound, alert)
 - [ ] `HuntTarget`: Move toward last known enemy position
 - [x] `visible`: Check if entity is visible
 - [x] `infront`: Check if entity is in front hemisphere
 - [x] `range`: Check distance to entity (melee, short, medium, long)
+
+Recent work:
+- Implemented the rerelease-style turning and movement helpers (`changeYaw`/`walkMove`) and wired `ai_move`, `ai_turn`, and `ai_face` to mirror `M_ChangeYaw`/`M_walkmove` behavior for deterministic math-only movement. Verified against new unit tests that exercise wraparound yaw clamping and forward stepping.
+- Tightened the movement helpers to mutate entity vectors in place (matching the C data flow) and added guardrails in tests to ensure yaw/position updates preserve references for downstream systems.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback
