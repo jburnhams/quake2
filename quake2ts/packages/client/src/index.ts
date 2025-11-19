@@ -6,7 +6,14 @@ import type {
 } from '@quake2ts/engine';
 import type { Vec3 } from '@quake2ts/shared';
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
-export { InputAction, InputController, type InputControllerOptions } from './input/controller.js';
+export {
+  GamepadLike,
+  GamepadLikeButton,
+  InputAction,
+  InputController,
+  TouchInputState,
+  type InputControllerOptions,
+} from './input/controller.js';
 export {
   InputCommandBuffer,
   type QueuedFrameCommands,

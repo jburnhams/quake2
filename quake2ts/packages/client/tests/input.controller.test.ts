@@ -3,6 +3,7 @@ import {
   DEFAULT_FORWARD_SPEED,
   DEFAULT_MOUSE_SENSITIVITY,
   DEFAULT_PITCH_SPEED,
+  DEFAULT_SIDE_SPEED,
   DEFAULT_YAW_SPEED,
   PlayerButton,
   angleMod,
@@ -11,7 +12,9 @@ import {
   InputBindings,
   InputCommandBuffer,
   InputController,
+  InputAction,
   createDefaultBindings,
+  type GamepadLike,
 } from '../src/index.js';
 
 function createController(): InputController {
@@ -200,5 +203,110 @@ describe('InputController', () => {
     const queued = buffer.consumeQueued();
     expect(queued).toHaveLength(2);
     expect(buffer.consumeQueued()).toEqual([]);
+  });
+
+  it('captures gamepad button transitions and default bindings', () => {
+    const controller = createController();
+
+    const gamepadPress: GamepadLike = {
+      axes: [0, 0, 0, 0],
+      buttons: Array.from({ length: 8 }, (_, i) => ({ pressed: i === 7, value: i === 7 ? 1 : 0 })),
+      index: 0,
+      connected: true,
+    };
+
+    controller.setGamepadState([gamepadPress]);
+    controller.buildCommand(16, 16);
+    expect(controller.consumeConsoleCommands()).toEqual(['+attack']);
+
+    const gamepadRelease: GamepadLike = {
+      ...gamepadPress,
+      buttons: gamepadPress.buttons.map(() => ({ pressed: false, value: 0 })),
+    };
+
+    controller.setGamepadState([gamepadRelease]);
+    controller.buildCommand(16, 32);
+    expect(controller.consumeConsoleCommands()).toEqual(['-attack']);
+  });
+
+  it('translates analog stick axes into movement with deadzone clamping', () => {
+    const controller = createController();
+    const pad: GamepadLike = {
+      axes: [0.5, -1, 0, 0],
+      buttons: [],
+      index: 0,
+      connected: true,
+    };
+
+    controller.setGamepadState([pad]);
+    const cmd = controller.buildCommand(40, 40);
+
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
+    expect(cmd.sidemove).toBeCloseTo(DEFAULT_FORWARD_SPEED * 0.5);
+
+    controller.setGamepadState([{ ...pad, axes: [0.05, 0.05, 0, 0] }]);
+    const noMove = controller.buildCommand(40, 80);
+    expect(noMove.forwardmove).toBe(0);
+    expect(noMove.sidemove).toBe(0);
+  });
+
+  it('applies analog look input scaled by yaw/pitch speed and inversion setting', () => {
+    const controller = new InputController({ invertGamepadY: true }, createDefaultBindings());
+    const pad: GamepadLike = {
+      axes: [0, 0, 0.25, -0.5],
+      buttons: [],
+      index: 0,
+      connected: true,
+    };
+
+    const frameMsec = 50;
+    controller.setGamepadState([pad]);
+    const cmd = controller.buildCommand(frameMsec, frameMsec);
+
+    const yawStep = (DEFAULT_YAW_SPEED * frameMsec) / 1000;
+    const pitchStep = (DEFAULT_PITCH_SPEED * frameMsec) / 1000;
+
+    expect(cmd.angles.y).toBeCloseTo(0.25 * yawStep);
+    expect(cmd.angles.x).toBeCloseTo(0.5 * pitchStep);
+  });
+
+  it('accepts touch virtual sticks for movement and look without pointer lock', () => {
+    const controller = new InputController({ requirePointerLock: false }, createDefaultBindings());
+    const frameMsec = 20;
+
+    controller.setTouchState({
+      move: { x: 1, y: 0.5 },
+      look: { x: -0.25, y: 0.5 },
+    });
+
+    const cmd = controller.buildCommand(frameMsec, frameMsec);
+
+    const yawStep = (DEFAULT_YAW_SPEED * frameMsec) / 1000;
+    const pitchStep = (DEFAULT_PITCH_SPEED * frameMsec) / 1000;
+
+    expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED * 0.5);
+    expect(cmd.sidemove).toBeCloseTo(DEFAULT_SIDE_SPEED);
+    expect(cmd.angles.y).toBeCloseTo(angleMod(-0.25 * yawStep));
+    expect(cmd.angles.x).toBeCloseTo(0.5 * pitchStep);
+  });
+
+  it('queues touch button transitions and preserves held state across frames', () => {
+    const controller = createController();
+
+    controller.setTouchState({
+      buttons: { [InputAction.Attack]: true, [InputAction.Jump]: true },
+    });
+    controller.buildCommand(16, 16);
+
+    expect(controller.consumeConsoleCommands()).toEqual(['+attack', '+jump']);
+
+    const held = controller.buildCommand(16, 32);
+    expect(held.buttons & PlayerButton.Attack).toBe(PlayerButton.Attack);
+    expect(held.buttons & PlayerButton.Jump).toBe(PlayerButton.Jump);
+
+    controller.setTouchState({ buttons: { [InputAction.Attack]: false, [InputAction.Jump]: false } });
+    controller.buildCommand(16, 48);
+
+    expect(controller.consumeConsoleCommands()).toEqual(['-attack', '-jump']);
   });
 });
