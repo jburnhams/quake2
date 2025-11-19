@@ -142,12 +142,13 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Used for synchronized effects (e.g., grenade lands, then explodes)
 - [x] Sound entity tracking
   - Entity panners update every frame; `stopEntitySounds` clears active channels when entities are removed
-- [x] Underwater sound filtering (optional)
-  - Lowpass `BiquadFilter` wired into the master chain; toggleable with cutoff controls
-  - [ ] Occlusion (optional, advanced)
-  - Trace from listener to sound source
-  - If blocked by wall, reduce volume or apply filter
-  - Expensive, may skip for initial release
+  - [x] Underwater sound filtering (optional)
+    - Lowpass `BiquadFilter` wired into the master chain; toggleable with cutoff controls
+    - [x] Occlusion (optional, advanced)
+    - Trace from listener to sound source
+    - If blocked by wall, reduce volume or apply filter
+    - Lowpass filters are pre-wired for occlusion-enabled contexts so mid-sound occlusion reports can immediately clamp cutoff frequencies and later clear back to full bandwidth when visibility returns
+    - Expensive, may skip for initial release
 
 ### Sound Effects Library
 No implementation needed here, but be aware of sound categories:
@@ -167,14 +168,14 @@ Expose to game layer:
 - [x] Music control functions (play, stop, volume)
 
 ### Debugging & Diagnostics
-- [ ] Sound visualization (optional)
-  - Show active sound sources in 3D (debug overlay)
+- [x] Sound visualization (optional)
+  - `AudioSystem.getDiagnostics` surfaces live channel metadata (origins, gains, attenuation, occlusion) for overlays
   - Display sound names, volumes, channels
-- [ ] Channel usage display
-  - Show how many channels active
+- [x] Channel usage display
+  - `getDiagnostics` reports active channel count and channel table snapshot for UI consumption
   - Identify channel stealing
-- [ ] Volume meters
-  - Visual feedback for master/SFX/music volumes
+- [x] Volume meters
+  - `getDiagnostics` exposes current master and SFX gain levels for quick meters
 
 ## Integration Points
 - **From Asset Loading (Section 1)**: Receives decoded audio buffers keyed by sound index

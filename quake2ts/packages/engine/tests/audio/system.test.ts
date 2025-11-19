@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
@@ -239,5 +239,182 @@ describe('AudioSystem', () => {
     expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(350);
     system.setUnderwater(false);
     expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(20000);
+  });
+
+  it('reduces gain and applies optional lowpass filters when occlusion is reported', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/occluded.wav', createBuffer(1));
+    const resolver = vi.fn().mockReturnValue({ gainScale: 0.3, lowpassHz: 900 });
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      resolveOcclusion: resolver,
+    });
+
+    const active = system.play({
+      entity: 4,
+      channel: SoundChannel.Auto,
+      soundIndex,
+      volume: 255,
+      attenuation: 1,
+      origin: { x: 0, y: 0, z: 0 },
+    });
+
+    expect(active).toBeTruthy();
+    expect(resolver).toHaveBeenCalledWith(
+      { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      { x: 0, y: 0, z: 0 },
+      1,
+    );
+    const diagnostics = system.getDiagnostics();
+    const activeSound = diagnostics.activeSounds[0]!;
+    expect(activeSound.gain).toBeCloseTo(activeSound.baseGain * 0.3);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(900);
+    expect(diagnostics.activeChannels).toBe(1);
+    expect(activeSound.occlusion?.scale).toBeCloseTo(0.3);
+    expect(activeSound.occlusion?.lowpassHz).toBe(900);
+  });
+
+  it('prepares occlusion filters even when initial resolver results are clear', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/late-occlude.wav', createBuffer(1));
+    const resolver = vi
+      .fn()
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce({ gainScale: 0.4, lowpassHz: 800 });
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      resolveOcclusion: resolver,
+    });
+
+    system.play({
+      entity: 6,
+      channel: SoundChannel.Body,
+      soundIndex,
+      volume: 255,
+      attenuation: 1,
+      origin: { x: 0, y: 0, z: 0 },
+      looping: true,
+    });
+
+    expect(fakeContext.filters.length).toBeGreaterThan(0);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(20000);
+
+    system.updateEntityPosition(6, { x: 5, y: 0, z: 0 });
+    const diagnostics = system.getDiagnostics();
+    const activeSound = diagnostics.activeSounds[0]!;
+    expect(activeSound.gain).toBeCloseTo(activeSound.baseGain * 0.4);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(800);
+    expect(resolver).toHaveBeenCalledTimes(2);
+  });
+
+  it('restores full-band playback when occlusion is cleared after being applied', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/clear-occlude.wav', createBuffer(1));
+    const resolver = vi
+      .fn()
+      .mockReturnValueOnce({ gainScale: 0.2, lowpassHz: 700 })
+      .mockReturnValueOnce(undefined);
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      resolveOcclusion: resolver,
+    });
+
+    system.play({
+      entity: 7,
+      channel: SoundChannel.Auto,
+      soundIndex,
+      volume: 200,
+      attenuation: 1,
+      origin: { x: 2, y: 0, z: 0 },
+      looping: true,
+    });
+
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(700);
+    system.updateEntityPosition(7, { x: 3, y: 0, z: 0 });
+    const diagnostics = system.getDiagnostics();
+    const activeSound = diagnostics.activeSounds[0]!;
+    expect(activeSound.gain).toBeCloseTo(activeSound.baseGain);
+    expect(activeSound.occlusion?.lowpassHz).toBeUndefined();
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(20000);
+  });
+
+  it('refreshes occlusion state when tracked entities move', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/move.wav', createBuffer(1));
+    const resolver = vi
+      .fn()
+      .mockReturnValueOnce({ gainScale: 0.5, lowpassHz: 1200 })
+      .mockReturnValueOnce({ gainScale: 0.1, lowpassHz: 600 });
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      resolveOcclusion: resolver,
+    });
+
+    system.play({
+      entity: 5,
+      channel: SoundChannel.Body,
+      soundIndex,
+      volume: 200,
+      attenuation: 1,
+      origin: { x: 10, y: 0, z: 0 },
+      looping: true,
+    });
+
+    expect(fakeContext.gains.at(-1)?.gain.value).toBeCloseTo(0.392, 3);
+    system.updateEntityPosition(5, { x: 20, y: 0, z: 0 });
+    expect(fakeContext.gains.at(-1)?.gain.value).toBeCloseTo(0.078, 3);
+    expect(resolver).toHaveBeenCalledTimes(2);
+    expect(fakeContext.filters.at(-1)?.frequency.value).toBeCloseTo(600);
+  });
+
+  it('exposes diagnostics for channel usage and mixing levels', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('world/debug.wav', createBuffer(1));
+
+    const system = new AudioSystem({
+      context: controller,
+      registry,
+      listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } },
+      masterVolume: 0.8,
+      sfxVolume: 0.5,
+    });
+
+    system.play({
+      entity: 1,
+      channel: SoundChannel.Weapon,
+      soundIndex,
+      volume: 128,
+      attenuation: 1,
+      origin: { x: 0, y: 0, z: 0 },
+    });
+
+    const diagnostics = system.getDiagnostics();
+    expect(diagnostics.masterVolume).toBeCloseTo(0.8);
+    expect(diagnostics.sfxVolume).toBeCloseTo(0.5);
+    expect(diagnostics.channels.length).toBeGreaterThan(0);
+    expect(diagnostics.activeSounds[0]?.gain).toBeGreaterThan(0);
+    expect(diagnostics.activeSounds[0]?.entchannel).toBe(SoundChannel.Weapon);
   });
 });
