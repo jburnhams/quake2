@@ -1,4 +1,5 @@
 import type { Vec3 } from '../math/vec3.js';
+import { ZERO_VEC3, addVec3, scaleVec3, subtractVec3 } from '../math/vec3.js';
 
 export interface CollisionPlane {
   normal: Vec3;
@@ -66,6 +67,17 @@ export interface TraceResult {
   allsolid: boolean;
 }
 
+export interface CollisionTraceResult {
+  fraction: number;
+  endpos: Vec3;
+  plane: CollisionPlane | null;
+  planeNormal?: Vec3;
+  contents?: number;
+  surfaceFlags?: number;
+  startsolid: boolean;
+  allsolid: boolean;
+}
+
 export enum PlaneSide {
   FRONT = 1,
   BACK = 2,
@@ -73,6 +85,9 @@ export enum PlaneSide {
 }
 
 export const DIST_EPSILON = 0.03125;
+
+const MAX_CHECKCOUNT = Number.MAX_SAFE_INTEGER - 1;
+let globalBrushCheckCount = 1;
 
 export function buildCollisionModel(lumps: CollisionLumpData): CollisionModel {
   const planes: CollisionPlane[] = lumps.planes.map((plane) => ({
@@ -306,4 +321,315 @@ export function createDefaultTrace(): TraceResult {
     startsolid: false,
     allsolid: false,
   };
+}
+
+function nextBrushCheckCount(): number {
+  const count = globalBrushCheckCount;
+  globalBrushCheckCount += 1;
+  if (globalBrushCheckCount >= MAX_CHECKCOUNT) {
+    globalBrushCheckCount = 1;
+  }
+  return count;
+}
+
+function isPointBounds(mins: Vec3, maxs: Vec3): boolean {
+  return mins.x === 0 && mins.y === 0 && mins.z === 0 && maxs.x === 0 && maxs.y === 0 && maxs.z === 0;
+}
+
+function planeOffsetForBounds(plane: CollisionPlane, mins: Vec3, maxs: Vec3): number {
+  if (isPointBounds(mins, maxs)) return 0;
+
+  const offset =
+    plane.normal.x * (plane.normal.x < 0 ? maxs.x : mins.x) +
+    plane.normal.y * (plane.normal.y < 0 ? maxs.y : mins.y) +
+    plane.normal.z * (plane.normal.z < 0 ? maxs.z : mins.z);
+
+  return offset;
+}
+
+function lerpPoint(start: Vec3, end: Vec3, t: number): Vec3 {
+  return addVec3(start, scaleVec3(subtractVec3(end, start), t));
+}
+
+function recursiveHullCheck(params: {
+  readonly model: CollisionModel;
+  readonly nodeIndex: number;
+  readonly startFraction: number;
+  readonly endFraction: number;
+  readonly start: Vec3;
+  readonly end: Vec3;
+  readonly traceStart: Vec3;
+  readonly traceEnd: Vec3;
+  readonly mins: Vec3;
+  readonly maxs: Vec3;
+  readonly contentMask: number;
+  readonly trace: TraceResult;
+  readonly brushCheckCount: number;
+}): void {
+  const {
+    model,
+    nodeIndex,
+    startFraction,
+    endFraction,
+    start,
+    end,
+    traceStart,
+    traceEnd,
+    mins,
+    maxs,
+    contentMask,
+    trace,
+    brushCheckCount,
+  } = params;
+
+  if (trace.fraction <= startFraction) {
+    return;
+  }
+
+  if (nodeIndex < 0) {
+    const leafIndex = -1 - nodeIndex;
+    const leaf = model.leaves[leafIndex];
+
+    const brushStart = leaf.firstLeafBrush;
+    const brushEnd = brushStart + leaf.numLeafBrushes;
+
+    for (let i = brushStart; i < brushEnd; i += 1) {
+      const brushIndex = model.leafBrushes[i];
+      const brush = model.brushes[brushIndex];
+
+      if ((brush.contents & contentMask) === 0) continue;
+      if (!brush.sides.length) continue;
+      if (brush.checkcount === brushCheckCount) continue;
+
+      brush.checkcount = brushCheckCount;
+
+      clipBoxToBrush({ start: traceStart, end: traceEnd, mins, maxs, brush, trace });
+      if (trace.allsolid) {
+        return;
+      }
+    }
+    return;
+  }
+
+  const node = model.nodes[nodeIndex];
+  const plane = node.plane;
+  const offset = planeOffsetForBounds(plane, mins, maxs);
+
+  const startDist = planeDistanceToPoint(plane, start) + offset;
+  const endDist = planeDistanceToPoint(plane, end) + offset;
+
+  if (startDist >= 0 && endDist >= 0) {
+    recursiveHullCheck({
+      model,
+      nodeIndex: node.children[0],
+      startFraction,
+      endFraction,
+      start,
+      end,
+      traceStart,
+      traceEnd,
+      mins,
+      maxs,
+      contentMask,
+      trace,
+      brushCheckCount,
+    });
+    return;
+  }
+
+  if (startDist < 0 && endDist < 0) {
+    recursiveHullCheck({
+      model,
+      nodeIndex: node.children[1],
+      startFraction,
+      endFraction,
+      start,
+      end,
+      traceStart,
+      traceEnd,
+      mins,
+      maxs,
+      contentMask,
+      trace,
+      brushCheckCount,
+    });
+    return;
+  }
+
+  let side = 0;
+  let idist = 1 / (startDist - endDist);
+  let fraction1 = (startDist - DIST_EPSILON) * idist;
+  let fraction2 = (startDist + DIST_EPSILON) * idist;
+
+  if (startDist < endDist) {
+    side = 1;
+    fraction1 = (startDist + DIST_EPSILON) * idist;
+    fraction2 = (startDist - DIST_EPSILON) * idist;
+  }
+
+  if (fraction1 < 0) fraction1 = 0;
+  else if (fraction1 > 1) fraction1 = 1;
+
+  if (fraction2 < 0) fraction2 = 0;
+  else if (fraction2 > 1) fraction2 = 1;
+
+  const midFraction = startFraction + (endFraction - startFraction) * fraction1;
+  const midPoint = lerpPoint(start, end, fraction1);
+
+  recursiveHullCheck({
+    model,
+    nodeIndex: node.children[side],
+    startFraction,
+    endFraction: midFraction,
+    start,
+    end: midPoint,
+    traceStart,
+    traceEnd,
+    mins,
+    maxs,
+    contentMask,
+    trace,
+    brushCheckCount,
+  });
+
+  const updatedFraction = trace.fraction;
+
+  if (updatedFraction <= midFraction) {
+    return;
+  }
+
+  const midFraction2 = startFraction + (endFraction - startFraction) * fraction2;
+  const midPoint2 = lerpPoint(start, end, fraction2);
+
+  recursiveHullCheck({
+    model,
+    nodeIndex: node.children[1 - side],
+    startFraction: midFraction2,
+    endFraction,
+    start: midPoint2,
+    end,
+    traceStart,
+    traceEnd,
+    mins,
+    maxs,
+    contentMask,
+    trace,
+    brushCheckCount,
+  });
+}
+
+export interface CollisionTraceParams {
+  readonly model: CollisionModel;
+  readonly start: Vec3;
+  readonly end: Vec3;
+  readonly mins?: Vec3;
+  readonly maxs?: Vec3;
+  readonly headnode?: number;
+  readonly contentMask?: number;
+}
+
+export function traceBox(params: CollisionTraceParams): CollisionTraceResult {
+  const { model, start, end } = params;
+  const mins = params.mins ?? ZERO_VEC3;
+  const maxs = params.maxs ?? ZERO_VEC3;
+  const contentMask = params.contentMask ?? 0xffffffff;
+  const headnode = params.headnode ?? 0;
+
+  const trace = createDefaultTrace();
+  const brushCheckCount = nextBrushCheckCount();
+
+  recursiveHullCheck({
+    model,
+    nodeIndex: headnode,
+    startFraction: 0,
+    endFraction: 1,
+    start,
+    end,
+    traceStart: start,
+    traceEnd: end,
+    mins,
+    maxs,
+    contentMask,
+    trace,
+    brushCheckCount,
+  });
+
+  const clampedFraction = trace.allsolid ? 0 : trace.fraction;
+  const endpos = lerpPoint(start, end, clampedFraction);
+
+  return {
+    fraction: clampedFraction,
+    endpos,
+    plane: trace.plane,
+    planeNormal: trace.startsolid ? undefined : trace.plane?.normal,
+    contents: trace.contents,
+    surfaceFlags: trace.surfaceFlags,
+    startsolid: trace.startsolid,
+    allsolid: trace.allsolid,
+  };
+}
+
+export function pointContents(point: Vec3, model: CollisionModel, headnode = 0): number {
+  let nodeIndex = headnode;
+
+  while (nodeIndex >= 0) {
+    const node = model.nodes[nodeIndex];
+    const dist = planeDistanceToPoint(node.plane, point);
+    nodeIndex = dist >= 0 ? node.children[0] : node.children[1];
+  }
+
+  const leaf = model.leaves[-1 - nodeIndex];
+  let contents = leaf.contents;
+
+  const brushCheckCount = nextBrushCheckCount();
+  const start = leaf.firstLeafBrush;
+  const end = start + leaf.numLeafBrushes;
+
+  for (let i = start; i < end; i += 1) {
+    const brushIndex = model.leafBrushes[i];
+    const brush = model.brushes[brushIndex];
+
+    if (brush.checkcount === brushCheckCount) continue;
+    brush.checkcount = brushCheckCount;
+
+    if (brush.sides.length === 0) continue;
+    if (pointInsideBrush(point, brush)) {
+      contents |= brush.contents;
+    }
+  }
+
+  return contents;
+}
+
+export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: CollisionModel, headnode = 0): number {
+  let nodeIndex = headnode;
+
+  while (nodeIndex >= 0) {
+    const node = model.nodes[nodeIndex];
+    const dist = planeDistanceToPoint(node.plane, origin);
+    nodeIndex = dist >= 0 ? node.children[0] : node.children[1];
+  }
+
+  const leaf = model.leaves[-1 - nodeIndex];
+  let contents = leaf.contents;
+  const brushCheckCount = nextBrushCheckCount();
+  const start = leaf.firstLeafBrush;
+  const end = start + leaf.numLeafBrushes;
+
+  for (let i = start; i < end; i += 1) {
+    const brushIndex = model.leafBrushes[i];
+    const brush = model.brushes[brushIndex];
+
+    if (brush.checkcount === brushCheckCount) continue;
+    brush.checkcount = brushCheckCount;
+
+    if (brush.sides.length === 0) continue;
+
+    const result = testBoxInBrush(origin, mins, maxs, brush);
+    if (result.startsolid) {
+      contents |= result.contents;
+    }
+  }
+
+  return contents;
 }
