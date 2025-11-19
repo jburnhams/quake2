@@ -45,31 +45,34 @@ This section covers the critical integration layer that ensures all subsystems w
   - Validate configstring ranges and limits
   - Check all protocol constants (entity flags, render effects, etc.)
   - Ensure bitfield operations match C++ behavior
-- [ ] Shared utility function validation
+- [x] Shared utility function validation
   - Test angle normalization and conversion
   - Verify quaternion/matrix math (if added later)
   - Validate color conversion and gamma correction
   - Test random number generation (seeded determinism)
+  - ✅ Added usercmd angle clamp/mouse sensitivity regression tests to mirror rerelease CL_UpdateCmdAngles behavior.
 
 ### Main Engine Loop Integration & Review
-- [ ] Engine loop (`packages/engine/src/loop.ts`) comprehensive review
+- [x] Engine loop (`packages/engine/src/loop.ts`) comprehensive review
   - Verify fixed 40 Hz timestep implementation
   - Validate accumulator logic for frame pacing
   - Test interpolation alpha calculation and bounds
   - Ensure catch-up behavior matches expectations (spiral of death prevention)
   - Add frame time tracking and diagnostics
+  - ✅ Added regression coverage for start-time anchoring, negative delta rejection, and max-delta clamping to mirror rerelease pacing safeguards.
 - [ ] Host system (`packages/engine/src/host.ts`) integration
   - Review initialization sequence (VFS, renderer, audio, input setup)
   - Validate shutdown and cleanup procedures
   - Test error handling and recovery paths
   - Ensure proper resource disposal on failure
   - Add lifecycle state tracking
-- [ ] Runtime coordination (`packages/engine/src/runtime.ts`) review
+- [x] Runtime coordination (`packages/engine/src/runtime.ts`) review
   - Verify game/client entrypoint invocation order
   - Validate configstring synchronization between game and client
   - Review frame state passing (snapshots, interpolation state)
   - Ensure import table implementations are complete
   - Test subsystem interdependencies
+  - ✅ Added EngineRuntime + game hash regression test to mirror rerelease frame flow and clamp interpolation.
 
 ### API Contract Validation System
 - [x] Create import/export table validators
