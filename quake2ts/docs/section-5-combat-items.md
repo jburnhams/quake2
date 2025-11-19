@@ -41,16 +41,16 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Armor absorbs percentage of damage, remainder goes to health
   - Deplete armor based on damage absorbed
   - Implemented parity-checked armor absorption helpers (`applyRegularArmor`, `applyPowerArmor`) with Vitest coverage mirroring rerelease `CheckArmor`/`CheckPowerArmor` rules.
-- [ ] Damage modifiers
+- [x] Damage modifiers
   - Means of death (MOD_*): blaster, shotgun, rocket, falling, lava, etc.
   - Used for obituary messages ("Player was blasted by Monster")
   - Some entities immune to certain damage types
 - [ ] Special damage types
-  - Falling damage (based on fall velocity)
-  - Drowning (when underwater too long, no air)
-  - Slime/lava damage (periodic damage in liquid)
-  - Crush damage (from doors, platforms)
-  - Telefrag (telefrag target if telefrag position occupied)
+- [x] Falling damage (based on fall velocity and bypasses armor like rerelease)
+  - [x] Drowning (when underwater too long, no air)
+  - [x] Slime/lava damage (periodic damage in liquid)
+  - [x] Crush damage (from doors, platforms)
+  - [x] Telefrag (telefrag target if telefrag position occupied)
 
 ### Weapon System
 - [ ] Weapon definitions

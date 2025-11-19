@@ -1,17 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  ArmorType,
-  DamageFlags,
-  EntityDamageFlags,
-  T_Damage,
-  T_RadiusDamage,
-  type Damageable,
-  type DamageMod,
-} from '../src/combat/index.js';
+import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage, type Damageable } from '../src/combat/index.js';
 
 type PartialEntity = Partial<Damageable> & Pick<Damageable, 'origin'>;
 
-const MOD_UNKNOWN: DamageMod = { id: 'unknown' };
+const MOD_UNKNOWN = DamageMod.UNKNOWN;
 
 function makeEntity(partial: PartialEntity): Damageable {
   return {

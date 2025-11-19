@@ -1,10 +1,7 @@
 import { addVec3, closestPointToBox, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, type Vec3 } from '@quake2ts/shared';
 import { applyPowerArmor, applyRegularArmor, type PowerArmorState, type RegularArmorState } from './armor.js';
 import { DamageFlags, hasAnyDamageFlag } from './damageFlags.js';
-
-export interface DamageMod {
-  readonly id: string;
-}
+import { DamageMod } from './damageMods.js';
 
 export interface DamageableCallbacks {
   pain?: (self: Damageable, attacker: Damageable | null, knockback: number, take: number, mod: DamageMod) => void;
