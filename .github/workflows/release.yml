@@ -2,7 +2,7 @@ name: 'Bump Version and Release'
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["quake2ts CI"]
     types:
       - completed
     branches:
