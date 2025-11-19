@@ -40,13 +40,13 @@ export function getWaterLevel(params: WaterLevelParams): WaterLevelResult {
   const watertype = contents;
   let waterlevel = WaterLevel.Feet;
 
-  point.z = origin.z + mins.z + sample1;
-  contents = pointContents(point);
+  let point2: Vec3 = { x: point.x, y: point.y, z: origin.z + mins.z + sample1 };
+  contents = pointContents(point2);
   if ((contents & MASK_WATER) !== 0) {
     waterlevel = WaterLevel.Waist;
 
-    point.z = origin.z + mins.z + sample2;
-    contents = pointContents(point);
+    let point3: Vec3 = { x: point.x, y: point.y, z: origin.z + mins.z + sample2 };
+    contents = pointContents(point3);
     if ((contents & MASK_WATER) !== 0) {
       waterlevel = WaterLevel.Under;
     }

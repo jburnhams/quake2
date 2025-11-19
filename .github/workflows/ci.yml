@@ -9,8 +9,13 @@ on:
       - 'quake2ts/**'
 
 jobs:
-  build-and-test:
+  unit-tests:
+    name: Unit Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24, 25]
+      fail-fast: false
     defaults:
       run:
         working-directory: quake2ts
@@ -21,12 +26,12 @@ jobs:
           version: 8
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
           cache-dependency-path: quake2ts/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install
       - name: Build packages
         run: pnpm run build
-      - name: Run tests
+      - name: Run unit tests
         run: pnpm run test
