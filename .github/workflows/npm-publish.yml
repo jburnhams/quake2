@@ -16,11 +16,14 @@ jobs:
         working-directory: quake2ts
     steps:
       - uses: actions/checkout@v4
-
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
-
       - run: pnpm install
       - run: pnpm publish
