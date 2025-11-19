@@ -46,6 +46,18 @@ export { FixedTimestepLoop };
 export { ConfigStringRegistry };
 export { Cvar, CvarRegistry } from './cvars.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
+export { PakArchive, PakParseError, calculatePakChecksum } from './assets/pak.js';
+export { VirtualFileSystem } from './assets/vfs.js';
+export {
+  ingestPaks,
+  PakIngestionError,
+  type PakIngestionOptions,
+  type PakIngestionProgress,
+  type PakIngestionResult,
+  type PakSource,
+} from './assets/ingestion.js';
+export { LruCache } from './assets/cache.js';
+export { filesToPakSources, ingestPakFiles, wireDropTarget, wireFileInput } from './assets/browserIngestion.js';
 export {
   EngineHost,
   type ClientRenderer,

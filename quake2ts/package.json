@@ -101,6 +101,7 @@
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "devDependencies": {
+    "jsdom": "^27.2.0",
     "typescript": "^5.4.5",
     "vitest": "^1.5.3"
   }
