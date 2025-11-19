@@ -24,6 +24,7 @@
 - Ported `G_FixStuckObject_Generic` from `rerelease/p_move.cpp` as a pure `fixStuckObjectGeneric` helper that tests each face of the bounding box and keeps the smallest displacement that escapes solid space, complete with Vitest coverage for free, stuck-but-fixable, and no-good-position scenarios.
 - Mirrored the rerelease `game.h` collision bitfields (`CONTENTS_*`, `SURF_*`, and the `MASK_*` helpers) in a shared `bsp/contents` module so both the game and client can share the same numeric masks, with exhaustive Vitest coverage keeping every bit position honest.
 - Expanded the root build to run the TypeScript project references and every workspace package/app's own `build` script so the entire `quake2ts` tree (engine, game, client, tools, shared, and viewer) is exercised consistently.
+- Prepped `@quake2ts/shared` for publication by emitting dual CJS/ESM bundles plus a browser-friendly IIFE build via tsup, while the TypeScript project reference now produces declaration-only output so workspace builds keep `.d.ts` artifacts separate from runtime bundles.
 
 ## Artifacts in this stage
 - `docs/rerelease-mapping.md`: structural map of the rerelease server/client/game modules and how they relate to the planned TypeScript/WebGL layers.
