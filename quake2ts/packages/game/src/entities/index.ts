@@ -31,4 +31,5 @@ export {
   type SpawnFunction,
 } from './spawn.js';
 export { isZeroVector, setMovedir } from './utils.js';
+export * from './items/index.js';
 export * from './callbacks.js';

@@ -1,5 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3 } from '@quake2ts/shared';
+import { PlayerClient } from '../inventory/playerInventory.js';
 
 export enum MoveType {
   None = 0,
@@ -192,6 +193,8 @@ export class Entity {
   combattarget?: string;
   show_hostile = 0;
   light_level = 0;
+
+  client?: PlayerClient;
 
   constructor(index: number) {
     this.index = index;

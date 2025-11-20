@@ -1,5 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { GameEngine } from '../index.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -116,10 +117,12 @@ export class EntitySystem {
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
+  private readonly engine: GameEngine;
 
-  constructor(maxEntities?: number, callbackRegistry?: CallbackRegistry) {
+  constructor(engine: GameEngine, maxEntities?: number, callbackRegistry?: CallbackRegistry) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
+    this.engine = engine;
     this.callbackToName = new Map<AnyCallback, string>();
     if (callbackRegistry) {
       for (const [name, fn] of callbackRegistry.entries()) {
@@ -160,6 +163,10 @@ export class EntitySystem {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.pool.freeImmediate(entity);
+  }
+
+  sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void {
+    this.engine.sound?.(entity, channel, sound, volume, attenuation, timeofs);
   }
 
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {
