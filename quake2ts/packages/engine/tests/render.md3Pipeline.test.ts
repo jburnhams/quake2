@@ -154,6 +154,65 @@ describe('MD3 geometry', () => {
     expect(firstColor[1]).toBeCloseTo(1);
     expect(firstColor[2]).toBeCloseTo(1);
   });
+
+  it('computes dynamic light intensity from light vector, not directional light', () => {
+    // Test model with downward-facing normal (opposite to DEFAULT_DIRECTION which is {0,0,1})
+    const downFacingModel = parseMd3(
+      buildMd3({
+        frames: [
+          { min: { x: -1, y: -1, z: -1 }, max: { x: 1, y: 1, z: 1 }, origin: { x: 0, y: 0, z: 0 }, radius: 2, name: 'frame0' },
+        ],
+        surfaces: [
+          {
+            name: 'floor',
+            triangles: [[0, 1, 2]],
+            texCoords: [
+              { s: 0, t: 0 },
+              { s: 1, t: 0 },
+              { s: 0, t: 1 },
+            ],
+            shaders: [{ name: 'skin', index: 0 }],
+            vertices: [
+              [
+                // Normal pointing downward (0, 0, -1) encoded as latLng
+                { position: { x: 0, y: 0, z: 0 }, latLng: 0x7f7f },
+                { position: { x: 1, y: 0, z: 0 }, latLng: 0x7f7f },
+                { position: { x: 0, y: 1, z: 0 }, latLng: 0x7f7f },
+              ],
+            ],
+          },
+        ],
+      })
+    );
+
+    const geometry = buildMd3SurfaceGeometry(downFacingModel.surfaces[0]!);
+    const blend = { currentFrame: 0, nextFrame: 0, lerp: 0 };
+
+    // With no dynamic lights, surface facing away from directional light should be dark
+    const withoutDynamicLight = buildMd3VertexData(downFacingModel.surfaces[0]!, geometry, blend, {
+      ambient: [0, 0, 0],
+      directional: { direction: { x: 0, y: 0, z: 1 }, color: [1, 1, 1] },
+    });
+
+    // With a dynamic light below the surface (where it's facing), it should be lit
+    const withDynamicLight = buildMd3VertexData(downFacingModel.surfaces[0]!, geometry, blend, {
+      ambient: [0, 0, 0],
+      directional: { direction: { x: 0, y: 0, z: 1 }, color: [1, 1, 1] },
+      dynamicLights: [{ origin: { x: 0.5, y: 0.5, z: -0.5 }, color: [1, 0, 0], radius: 2 }],
+    });
+
+    const colorStart = 8;
+    const unlitColor = Array.from(withoutDynamicLight.slice(colorStart, colorStart + 3));
+    const litColor = Array.from(withDynamicLight.slice(colorStart, colorStart + 3));
+
+    // Surface facing away from directional light receives zero directional lighting
+    expect(unlitColor[0]).toBeCloseTo(0);
+
+    // But receives dynamic lighting from below because dynamic light dot product is computed independently
+    expect(litColor[0]).toBeGreaterThan(0.3);
+    expect(litColor[1]).toBeCloseTo(0);
+    expect(litColor[2]).toBeCloseTo(0);
+  });
 });
 
 describe('MD3 tags', () => {

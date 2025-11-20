@@ -110,7 +110,10 @@ function evaluateLighting(normal: Vec3, position: Vec3, lighting?: Md3LightingOp
       const radiusSq = light.radius * light.radius;
       if (distSq < radiusSq && radiusSq > 0) {
         const attenuation = 1 - Math.sqrt(distSq) / light.radius;
-        const amount = clamp01(attenuation * ndotl);
+        // Compute dot product with direction to this specific dynamic light
+        const dist = Math.sqrt(distSq);
+        const lightDotN = dist > 0 ? clamp01(-(dx * n.x + dy * n.y + dz * n.z) / dist) : 0;
+        const amount = clamp01(attenuation * lightDotN);
         r += light.color[0] * amount;
         g += light.color[1] * amount;
         b += light.color[2] * amount;
