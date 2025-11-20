@@ -767,7 +767,7 @@ describe('Trigger spawns', () => {
   it('trigger_teleport respects targetname gating and START_ON', () => {
     const registry = createDefaultSpawnRegistry();
 
-    const inactiveSystem = new EntitySystem();
+    const inactiveSystem = new EntitySystem(mockEngine);
     const inactiveTrigger = spawnEntityFromDictionary(
       {
         classname: 'trigger_teleport',
@@ -797,7 +797,7 @@ describe('Trigger spawns', () => {
     inactiveSystem.runFrame();
     expect(inactivePlayer.origin).toEqual({ x: 32, y: 0, z: 10 });
 
-    const startOnSystem = new EntitySystem();
+    const startOnSystem = new EntitySystem(mockEngine);
     const startOnTrigger = spawnEntityFromDictionary(
       {
         classname: 'trigger_teleport',
