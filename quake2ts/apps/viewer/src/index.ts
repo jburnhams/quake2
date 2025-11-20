@@ -14,6 +14,8 @@ export function bootstrapViewer() {
     trace(start, end) {
       return { start, end, fraction: 1 };
     },
+    sound() {},
+    centerprintf() {},
   }, { gravity: ZERO_VEC3 });
 
   const client = createClient({ engine: { trace: () => ({ start: ZERO_VEC3, end: ZERO_VEC3, fraction: 1 }) } });

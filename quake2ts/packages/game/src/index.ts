@@ -16,6 +16,12 @@ export interface GameCreateOptions {
   gravity: Vec3;
 }
 
+export interface GameEngine {
+    trace(start: Vec3, end: Vec3): unknown;
+    sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+    centerprintf(entity: Entity, message: string): void;
+}
+
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
   readonly origin: Vec3;
@@ -27,9 +33,14 @@ export interface GameStateSnapshot {
   };
 }
 
+import { Entity } from './entities/entity.js';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
   readonly entities: EntitySystem;
+  sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+  centerprintf(entity: Entity, message: string): void;
+  readonly time: number;
 }
 
 export { hashGameState } from './checksum.js';
@@ -38,13 +49,13 @@ export * from './combat/index.js';
 export * from './inventory/index.js';
 
 export function createGame(
-  engine: { trace(start: Vec3, end: Vec3): unknown },
+  engine: GameEngine,
   options: GameCreateOptions,
 ): GameExports {
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem();
+  const entities = new EntitySystem(engine);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
@@ -109,5 +120,14 @@ export function createGame(
       return snapshot(context.frame);
     },
     entities,
+    sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void {
+      entities.sound(entity, channel, sound, volume, attenuation, timeofs);
+    },
+    centerprintf(entity: Entity, message: string): void {
+      engine.centerprintf(entity, message);
+    },
+    get time() {
+      return levelClock.current.timeSeconds;
+    }
   };
 }

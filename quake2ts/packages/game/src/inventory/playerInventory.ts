@@ -9,6 +9,7 @@ import {
   createAmmoInventory,
   pickupAmmo,
 } from './ammo.js';
+import { WeaponItem } from './items.js';
 
 export enum WeaponId {
   Blaster = 'blaster',
@@ -54,6 +55,10 @@ export interface PlayerInventory {
   armor: RegularArmorState | null;
   readonly powerups: Map<PowerupId, number | null>;
   readonly keys: Set<KeyId>;
+}
+
+export interface PlayerClient {
+    inventory: PlayerInventory;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
@@ -141,4 +146,17 @@ export function addKey(inventory: PlayerInventory, key: KeyId): boolean {
 
 export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
   return inventory.keys.has(key);
+}
+
+export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem): boolean {
+    const hadWeapon = hasWeapon(inventory, weaponItem.weaponId);
+
+    giveWeapon(inventory, weaponItem.weaponId, true);
+
+    if (weaponItem.ammoType) {
+        const ammoToAdd = hadWeapon ? weaponItem.pickupAmmo : weaponItem.initialAmmo;
+        addAmmo(inventory.ammo, weaponItem.ammoType, ammoToAdd);
+    }
+
+    return !hadWeapon;
 }
