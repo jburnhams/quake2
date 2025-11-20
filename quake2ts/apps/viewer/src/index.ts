@@ -1,5 +1,5 @@
 import { createClient } from '@quake2ts/client';
-import { createEngine, createEngineRuntime } from '@quake2ts/engine';
+import { ClientRenderer, createEngine, createEngineRuntime } from '@quake2ts/engine';
 import { createGame } from '@quake2ts/game';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
@@ -18,7 +18,7 @@ export function bootstrapViewer() {
 
   const client = createClient({ engine: { trace: () => ({ start: ZERO_VEC3, end: ZERO_VEC3, fraction: 1 }) } });
 
-  const runtime = createEngineRuntime(engine, game, client);
+  const runtime = createEngineRuntime(engine, game, client as unknown as ClientRenderer);
   runtime.start();
 
   return { engine, game, client, runtime };

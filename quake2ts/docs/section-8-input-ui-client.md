@@ -70,17 +70,17 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - Per-axis sensitivity and optional m_filter-style smoothing implemented; acceleration remains optional for later tuning.
 
 ### Client Prediction
-- [ ] Implement client-side prediction
+- [x] Implement client-side prediction
   - Maintain copy of player state
   - Run shared pmove locally on client input
   - Predict movement before server confirms
   - Reconcile with authoritative server state
-- [ ] Prediction reconciliation (for future multiplayer)
+- [x] Prediction reconciliation (for future multiplayer)
   - Compare predicted state to server snapshot
   - Correct if diverged (teleport, collision misprediction)
   - Replay unacknowledged inputs after correction
   - For single-player, prediction always matches (no network lag)
-- [ ] View interpolation
+- [x] View interpolation
   - Interpolate between previous and current frame
   - Smooth out 40Hz simulation to 60+ Hz render rate
   - Apply to player position, view angles
@@ -211,11 +211,11 @@ Expose from client package to engine:
 - [ ] `ParseNotify()`: Handle notification messages
 
 ### Interpolation & Smoothing
-- [ ] Position interpolation
+- [x] Position interpolation
   - Lerp between prev and current player position
   - Use interpolation alpha from engine loop
   - Smooth out discrete 40Hz steps
-- [ ] Angle interpolation
+- [x] Angle interpolation
   - Slerp or shortest-path angle lerp
   - Smooth view rotation
   - Apply view bob/roll on top
@@ -224,15 +224,15 @@ Expose from client package to engine:
   - Blend between animation frames based on time
 
 ### View Presentation
-- [ ] View bob (walking sway)
+- [x] View bob (walking sway)
   - Sine wave based on walk cycle
   - Bob intensity setting
   - Disabled when in air
-- [ ] View roll (strafe lean)
+- [x] View roll (strafe lean)
   - Lean left/right when moving sideways
   - Roll angle based on strafe velocity
   - Smooth in/out
-- [ ] View kick (recoil)
+- [x] View kick (recoil)
   - Pitch up when firing
   - Decay back to center
   - Varies by weapon
