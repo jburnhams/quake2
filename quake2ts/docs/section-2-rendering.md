@@ -41,18 +41,18 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - PVS (Potentially Visible Set) query from current leaf
   - Front-to-back face sorting for optimal fill rate
 - [x] Shader pipeline for BSP surfaces
-  - Vertex shader: world transform, texture/lightmap UVs
-  - Fragment shader: multi-texture (diffuse + lightmap)
-  - Support for multiple lightmap styles (animated lighting)
-  - Handle special surfaces (SKY, WARP, TRANS33, TRANS66, FLOWING)
+  - [x] Vertex shader: world transform, texture/lightmap UVs
+  - [x] Fragment shader: multi-texture (diffuse + lightmap)
+  - [x] Support for multiple lightmap styles (animated lighting)
+  - [x] Handle special surfaces (SKY, WARP, TRANS33, TRANS66, FLOWING)
 - [x] Sky rendering
-  - Skybox texture loading (6-sided or dome)
-  - Render sky faces at infinite distance
-  - Support scrolling/animated sky textures
+  - [x] Skybox texture loading (6-sided or dome)
+  - [x] Render sky faces at infinite distance
+  - [x] Support scrolling/animated sky textures
 - [x] Water/liquid surface effects
-  - Warp shader for SURF_WARP surfaces
-  - Animated texture scrolling for SURF_FLOWING
-  - Optional reflection/refraction (stretch goal, deferred)
+  - [x] Warp shader for SURF_WARP surfaces
+  - [x] Animated texture scrolling for SURF_FLOWING
+  - [ ] Optional reflection/refraction (stretch goal, deferred)
 
 ### Model Rendering (MD2/MD3)
 - [x] MD2 skeletal animation renderer
