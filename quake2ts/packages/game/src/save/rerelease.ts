@@ -1,3 +1,10 @@
+import { SAVE_FORMAT_VERSION, type GameSaveFile } from './save.js';
+import type { RandomGeneratorState } from '@quake2ts/shared';
+import { RandomGenerator } from '@quake2ts/shared';
+import { ENTITY_FIELD_METADATA } from '../entities/entity.js';
+import type { EntitySystemSnapshot, SerializedEntityState } from '../entities/system.js';
+import type { LevelFrameState } from '../level.js';
+
 export type JsonObject = Record<string, unknown>;
 
 export interface RereleaseGameSave {
@@ -22,6 +29,20 @@ export interface RereleaseSaveSummary {
   readonly entityCount?: number;
   readonly highestEntityIndex?: number;
 }
+
+export interface RereleaseLevelSaveJson {
+  readonly save_version: number;
+  readonly level: JsonObject;
+  readonly entities: Record<string, JsonObject>;
+}
+
+export interface RereleaseGameSaveJson {
+  readonly save_version: number;
+  readonly game: JsonObject;
+  readonly clients: readonly JsonObject[];
+}
+
+export type RereleaseSaveJson = RereleaseLevelSaveJson | RereleaseGameSaveJson;
 
 function ensureObject(value: unknown, label: string): JsonObject {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -109,4 +130,189 @@ export function summarizeRereleaseSave(raw: unknown): RereleaseSaveSummary {
     entityCount: parsed.entities.size,
     highestEntityIndex: highestEntityIndex >= 0 ? highestEntityIndex : undefined,
   };
+}
+
+const SERIALIZABLE_FIELD_NAMES = new Set<keyof SerializedEntityState['fields']>(
+  ENTITY_FIELD_METADATA.filter((field) => field.save).map((field) => field.name as keyof SerializedEntityState['fields']),
+);
+
+function toVec3(value: unknown, label: string): [number, number, number] {
+  if (!Array.isArray(value) || value.length !== 3) {
+    throw new Error(`${label} must be a vec3 array`);
+  }
+  const [x, y, z] = value;
+  return [ensureNumber(x, `${label}[0]`), ensureNumber(y, `${label}[1]`), ensureNumber(z, `${label}[2]`)];
+}
+
+function normalizeEntityFields(raw: JsonObject, label: string): SerializedEntityState['fields'] {
+  const fields: SerializedEntityState['fields'] = {};
+  for (const [rawName, value] of Object.entries(raw)) {
+    const name = rawName as keyof SerializedEntityState['fields'];
+    if (!SERIALIZABLE_FIELD_NAMES.has(name)) {
+      continue;
+    }
+
+    if (value === null) {
+      fields[name as keyof SerializedEntityState['fields']] = null;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      fields[name as keyof SerializedEntityState['fields']] = toVec3(value, `${label}.${name}`);
+      continue;
+    }
+
+    switch (typeof value) {
+      case 'number':
+      case 'string':
+      case 'boolean':
+        fields[name as keyof SerializedEntityState['fields']] = value;
+        break;
+      default:
+        throw new Error(`Unsupported field type for ${label}.${name}`);
+    }
+  }
+  return fields;
+}
+
+function buildEntitySnapshot(
+  entities: ReadonlyMap<number, JsonObject>,
+  levelTimeSeconds: number,
+  capacityHint?: number,
+): EntitySystemSnapshot {
+  let highestIndex = 0;
+  const active = new Set<number>();
+  const activeOrder: number[] = [];
+  const serialized: SerializedEntityState[] = [];
+
+  for (const [index, entry] of entities.entries()) {
+    if (index > highestIndex) {
+      highestIndex = index;
+    }
+
+    const inUse = (entry.inuse as boolean | undefined) !== false;
+    if (!inUse) {
+      continue;
+    }
+
+    if (!active.has(index)) {
+      activeOrder.push(index);
+    }
+    active.add(index);
+    serialized.push({ index, fields: normalizeEntityFields(entry, `entities[${index}]`) });
+  }
+
+  if (!active.has(0)) {
+    active.add(0);
+    activeOrder.unshift(0);
+    serialized.unshift({ index: 0, fields: { classname: 'worldspawn' } });
+  }
+
+  const capacity = Math.max(capacityHint ?? 0, highestIndex + 1, Math.max(...active) + 1);
+  const freeList: number[] = [];
+  for (let i = 0; i < capacity; i += 1) {
+    if (!active.has(i)) {
+      freeList.push(i);
+    }
+  }
+
+  return {
+    timeSeconds: levelTimeSeconds,
+    pool: { capacity, activeOrder, freeList, pendingFree: [] },
+    entities: serialized,
+    thinks: [],
+  };
+}
+
+function buildLevelState(level: JsonObject): LevelFrameState {
+  const timeSeconds = typeof level.time === 'number' ? level.time : 0;
+  const frameNumber = typeof level.framenum === 'number' ? level.framenum : 0;
+  const deltaSeconds = typeof level.frametime === 'number' ? level.frametime : 0;
+  const previousTimeSeconds = timeSeconds - deltaSeconds;
+  return { frameNumber, timeSeconds, previousTimeSeconds, deltaSeconds };
+}
+
+export interface RereleaseImportOptions {
+  readonly timestamp?: number;
+  readonly defaultDifficulty?: number;
+  readonly defaultPlaytimeSeconds?: number;
+  readonly rngState?: RandomGeneratorState;
+  readonly configstrings?: readonly string[];
+  readonly gameState?: Record<string, unknown>;
+}
+
+export function convertRereleaseLevelToGameSave(
+  save: RereleaseLevelSave,
+  options: RereleaseImportOptions = {},
+): GameSaveFile {
+  const { timestamp = Date.now(), defaultDifficulty = 1, defaultPlaytimeSeconds, rngState, configstrings = [] } = options;
+  const levelName = (save.level.mapname as string | undefined) ?? 'unknown';
+  const level = buildLevelState(save.level);
+  const playtimeSeconds = defaultPlaytimeSeconds ?? level.timeSeconds;
+
+  return {
+    version: SAVE_FORMAT_VERSION,
+    timestamp,
+    map: levelName,
+    difficulty: defaultDifficulty,
+    playtimeSeconds,
+    gameState: { ...(options.gameState ?? {}), rereleaseVersion: save.saveVersion },
+    level,
+    rng: rngState ? { mt: { index: rngState.mt.index, state: [...rngState.mt.state] } } : new RandomGenerator().getState(),
+    entities: buildEntitySnapshot(save.entities, level.timeSeconds, (save.level.maxentities as number | undefined) ?? undefined),
+    cvars: [],
+    configstrings: [...configstrings],
+  };
+}
+
+export function convertRereleaseSaveToGameSave(
+  save: RereleaseSave,
+  options: RereleaseImportOptions = {},
+): GameSaveFile {
+  if ('game' in save) {
+    throw new Error('Game-wide rerelease saves are not currently supported for conversion');
+  }
+  return convertRereleaseLevelToGameSave(save, options);
+}
+
+export function convertGameSaveToRereleaseLevel(save: GameSaveFile): RereleaseLevelSave {
+  const active = new Set(save.entities.pool.activeOrder);
+  const entities = new Map<number, JsonObject>();
+  for (const entity of save.entities.entities) {
+    if (!active.has(entity.index)) {
+      continue;
+    }
+    const fields: JsonObject = { inuse: true };
+    for (const [name, value] of Object.entries(entity.fields)) {
+      if (value === undefined) {
+        continue;
+      }
+      fields[name] = value as unknown;
+    }
+    entities.set(entity.index, fields);
+  }
+
+  return {
+    saveVersion: save.version,
+    level: {
+      mapname: save.map,
+      time: save.level.timeSeconds,
+      framenum: save.level.frameNumber,
+      frametime: save.level.deltaSeconds,
+    },
+    entities,
+  };
+}
+
+export function serializeRereleaseSave(save: RereleaseSave): RereleaseSaveJson {
+  if ('game' in save) {
+    return { save_version: save.saveVersion, game: save.game, clients: save.clients };
+  }
+
+  const entities: Record<string, JsonObject> = {};
+  for (const [index, entity] of save.entities.entries()) {
+    entities[index.toString(10)] = entity;
+  }
+
+  return { save_version: save.saveVersion, level: save.level, entities };
 }
