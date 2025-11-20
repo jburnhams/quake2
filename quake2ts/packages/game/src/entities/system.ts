@@ -161,7 +161,7 @@ export class EntitySystem {
   }
 
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void {
-    this.engine.sound(entity, channel, sound, volume, attenuation, timeofs);
+    this.engine.sound?.(entity, channel, sound, volume, attenuation, timeofs);
   }
 
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {

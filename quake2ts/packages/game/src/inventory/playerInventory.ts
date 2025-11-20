@@ -150,13 +150,19 @@ export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
 
 export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem): boolean {
     const hadWeapon = hasWeapon(inventory, weaponItem.weaponId);
-
-    giveWeapon(inventory, weaponItem.weaponId, true);
+    let ammoAdded = false;
 
     if (weaponItem.ammoType) {
         const ammoToAdd = hadWeapon ? weaponItem.pickupAmmo : weaponItem.initialAmmo;
-        addAmmo(inventory.ammo, weaponItem.ammoType, ammoToAdd);
+        const result = addAmmo(inventory.ammo, weaponItem.ammoType, ammoToAdd);
+        ammoAdded = result.pickedUp;
     }
 
-    return !hadWeapon;
+    if (hadWeapon && !ammoAdded) {
+        return false;
+    }
+
+    giveWeapon(inventory, weaponItem.weaponId, true);
+
+    return true;
 }

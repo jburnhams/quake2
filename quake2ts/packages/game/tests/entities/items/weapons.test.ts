@@ -21,6 +21,9 @@ describe('Weapon Pickup Entities', () => {
             sound: vi.fn(),
             centerprintf: vi.fn(),
             time: 100,
+            entities: {
+                scheduleThink: vi.fn(),
+            },
         } as unknown as GameExports;
     });
 
@@ -51,6 +54,7 @@ describe('Weapon Pickup Entities', () => {
         expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got the Shotgun');
         expect(entity.solid).toBe(Solid.Not);
         expect(entity.nextthink).toBe(130);
+        expect(mockGame.entities.scheduleThink).toHaveBeenCalledWith(entity, 130);
     });
 
     it('should respawn when the think function is called', () => {

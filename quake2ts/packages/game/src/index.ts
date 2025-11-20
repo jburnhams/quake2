@@ -18,8 +18,8 @@ export interface GameCreateOptions {
 
 export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
-    sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
-    centerprintf(entity: Entity, message: string): void;
+    sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+    centerprintf?(entity: Entity, message: string): void;
 }
 
 export interface GameStateSnapshot {
@@ -124,7 +124,7 @@ export function createGame(
       entities.sound(entity, channel, sound, volume, attenuation, timeofs);
     },
     centerprintf(entity: Entity, message: string): void {
-      engine.centerprintf(entity, message);
+      engine.centerprintf?.(entity, message);
     },
     get time() {
       return levelClock.current.timeSeconds;
