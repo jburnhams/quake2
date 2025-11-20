@@ -65,7 +65,7 @@ This section covers the save/load system that allows players to save game progre
   - Random seed state (entire RNG state for reproducibility)
   - Level-global flags, counters, objectives *(basic time counters captured; doors/triggers still TODO)*
   - Active triggers, doors (position, state)
-- [ ] Player state serialization
+- [x] Player state serialization
   - Full player entity
   - Inventory: weapons owned, ammo counts, keys, powerups
   - View angles, velocity, position
@@ -85,7 +85,7 @@ This section covers the save/load system that allows players to save game progre
   - enemy index -> enemy entity pointer
   - groundentity index -> groundentity pointer
   - target name -> target entity (via targetname lookup)
-- [ ] Function reference restoration
+- [x] Function reference restoration
   - thinkfunc name -> actual function pointer
   - touch, use, pain, die callbacks by name
   - Maintain registry of serializable functions
@@ -94,7 +94,7 @@ This section covers the save/load system that allows players to save game progre
   - Restore RNG state (seed and internal state)
   - Restore level flags, objectives *(needs door/trigger state once implemented)*
   - Re-link entities into world (spatial structures)
-- [ ] Player state restoration
+- [x] Player state restoration
   - Restore player entity
   - Restore inventory, weapon state
   - Restore position, angles, velocity

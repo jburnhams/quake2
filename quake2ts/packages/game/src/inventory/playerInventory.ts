@@ -142,3 +142,40 @@ export function addKey(inventory: PlayerInventory, key: KeyId): boolean {
 export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
   return inventory.keys.has(key);
 }
+
+export interface SerializedPlayerInventory {
+  readonly ammo: readonly number[];
+  readonly ownedWeapons: readonly WeaponId[];
+  readonly currentWeapon?: WeaponId;
+  readonly armor: RegularArmorState | null;
+  readonly powerups: readonly [PowerupId, number | null][];
+  readonly keys: readonly KeyId[];
+}
+
+export function serializePlayerInventory(inventory: PlayerInventory): SerializedPlayerInventory {
+  return {
+    ammo: inventory.ammo.counts,
+    ownedWeapons: [...inventory.ownedWeapons],
+    currentWeapon: inventory.currentWeapon,
+    armor: inventory.armor ? { ...inventory.armor } : null,
+    powerups: [...inventory.powerups.entries()],
+    keys: [...inventory.keys],
+  };
+}
+
+export function deserializePlayerInventory(
+  serialized: SerializedPlayerInventory,
+  options: PlayerInventoryOptions = {},
+): PlayerInventory {
+  const ammo = createAmmoInventory(options.ammoCaps);
+  ammo.counts = [...serialized.ammo];
+
+  return {
+    ammo,
+    ownedWeapons: new Set(serialized.ownedWeapons),
+    currentWeapon: serialized.currentWeapon,
+    armor: serialized.armor ? { ...serialized.armor } : null,
+    powerups: new Map(serialized.powerups),
+    keys: new Set(serialized.keys),
+  };
+}
