@@ -65,6 +65,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - `SP_info_player_start`, `SP_info_player_deathmatch`: Player spawn points
   - `SP_info_player_coop`: Coop spawn points (defer for base SP)
   - `SP_info_null`: No-op (removed entities)
+  - **Status**: Implemented, with player spawn at `info_player_start`.
 - [ ] Trigger spawns (trigger_* entities)
   - [x] `SP_trigger_multiple`, `SP_trigger_once`, `SP_trigger_relay`, `trigger_always`
   - [x] `SP_trigger_push`: Jump pads, wind tunnels

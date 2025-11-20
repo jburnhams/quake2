@@ -56,6 +56,7 @@ This section covers the physics simulation and collision detection system that f
   - Test point against BSP leafs and brushes
   - Return combined contents flags
   - Used for water level detection, trigger volumes, death zones
+  - **Status**: Implemented.
 - [x] Optimize with BSP leaf lookup
   - Traverse BSP nodes to find containing leaf
   - Test only brushes in that leaf
@@ -86,18 +87,19 @@ This section covers the physics simulation and collision detection system that f
   - Used for touch/trigger logic in game layer
 
 ### Player Movement Integration
-- [ ] Wire shared pmove to real trace function
+- [x] Wire shared pmove to real trace function
   - Implement trace callback matching pmove expectations
   - Provide current player mins/maxs (standing, crouched, dead)
   - Pass MASK_PLAYERSOLID contentmask
-- [ ] Ground detection
+  - **Status**: Implemented in the client-side prediction system.
+- [x] Ground detection
   - Trace downward to find ground plane
   - Check surface slope (too steep = not ground)
   - Record ground entity (moving platforms)
-- [ ] Step/stair climbing
+- [x] Step/stair climbing
   - Trace upward step amount, then forward, then down
   - Implemented in shared `stepSlideMove`, needs real traces
-- [ ] Stuck position recovery
+- [x] Stuck position recovery
   - Use shared `fixStuckObjectGeneric` with real traces
   - Nudge player out of geometry on spawn/teleport
 

@@ -10,8 +10,16 @@ import {
   type UserCommand,
 } from '@quake2ts/shared';
 import { ClientPrediction, defaultPredictionState, interpolatePredictionState } from '../src/index.js';
+import { PmoveTraceResult } from '@quake2ts/shared';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 } as const;
+
+const mockTrace = (start, end) => ({
+    fraction: 1,
+    endpos: end,
+    allsolid: false,
+    startsolid: false,
+} as PmoveTraceResult);
 
 function createGroundState() {
   return {
@@ -28,7 +36,7 @@ function createGroundState() {
 
 describe('ClientPrediction', () => {
   it('applies ground friction and acceleration identically to rerelease pmove', () => {
-    const prediction = new ClientPrediction();
+    const prediction = new ClientPrediction(mockTrace);
     const base = createGroundState();
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
 
@@ -73,7 +81,7 @@ describe('ClientPrediction', () => {
   });
 
   it('replays unacknowledged commands after an authoritative correction', () => {
-    const prediction = new ClientPrediction();
+    const prediction = new ClientPrediction(mockTrace);
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: createGroundState() });
 
     const earlyCmd: UserCommand = {
@@ -103,7 +111,7 @@ describe('ClientPrediction', () => {
   });
 
   it('keeps absolute view angles between commands instead of compounding them', () => {
-    const prediction = new ClientPrediction();
+    const prediction = new ClientPrediction(mockTrace);
     const base = createGroundState();
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
 
@@ -123,6 +131,31 @@ describe('ClientPrediction', () => {
     const second = prediction.enqueueCommand({ ...cmd, serverFrame: 3 });
     expect(second.viewangles).toEqual(cmdAngles);
   });
+
+  it('stops movement on collision', () => {
+    const trace = (start, end) => ({
+      fraction: 0.5,
+      endpos: { x: 5, y: 0, z: 0 },
+      allsolid: false,
+      startsolid: false,
+    } as PmoveTraceResult);
+    const prediction = new ClientPrediction(trace);
+    const base = createGroundState();
+    prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
+
+    const cmd: UserCommand = {
+      msec: 25,
+      buttons: 0,
+      angles: base.viewangles,
+      forwardmove: 200,
+      sidemove: 0,
+      upmove: 0,
+      serverFrame: 1,
+    };
+
+    const predicted = prediction.enqueueCommand(cmd);
+    expect(predicted.origin.x).toBe(5);
+    });
 });
 
 describe('interpolatePredictionState', () => {

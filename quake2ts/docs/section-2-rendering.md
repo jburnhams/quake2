@@ -100,20 +100,21 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Or deferred lighting approach (advanced)
 
 ### HUD & UI Rendering
-- [ ] 2D orthographic rendering mode
+- [x] 2D orthographic rendering mode
   - Screen-space coordinate system
   - Disable depth testing for UI
-- [ ] Pic (image) rendering
+- [x] Pic (image) rendering
   - `Draw_RegisterPic` equivalent: load and cache UI images
   - `Draw_Pic` / `Draw_StretchPic`: render at specified screen coords
   - `Draw_GetPicSize`: query image dimensions for layout
   - Alpha blending for transparent HUD elements
-- [ ] Font rendering
+- [x] Font rendering
   - Bitmap font atlas loading
   - Character lookup and UV mapping
   - `Draw_Char` / `Draw_String` / `Draw_AltString` equivalents
   - Color codes support (^1, ^2, etc.)
   - Text metrics for layout (width, height queries)
+  - **Status**: Implemented using a bitmap font loaded from `pics/conchars.pcx`.
 - [ ] HUD layout system
   - Status bar (health, armor, ammo)
   - Weapon/item icons

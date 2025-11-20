@@ -133,6 +133,7 @@ function simulateCommand(
   state: PredictionState,
   cmd: UserCommand,
   settings: PredictionSettings,
+  trace: PmoveTraceFn,
 ): PredictionState {
   const frametime = Math.min(Math.max(cmd.msec, 0), MSEC_MAX) / 1000;
   const onGround = hasPmFlag(state.pmFlags, PmFlag.OnGround);
@@ -197,8 +198,8 @@ function simulateCommand(
     velocity = { ...velocity, z: velocity.z - state.gravity * frametime };
   }
 
-  const originDelta = scaleVec3(velocity, frametime);
-  const origin = addVec3(state.origin, originDelta);
+  const traceResult = trace(state.origin, addVec3(state.origin, scaleVec3(velocity, frametime)));
+  const origin = traceResult.endpos;
 
   return {
     ...state,
@@ -208,8 +209,11 @@ function simulateCommand(
   } satisfies PredictionState;
 }
 
+import { PmoveTraceFn } from '@quake2ts/shared';
+
 export class ClientPrediction {
   private readonly settings: PredictionSettings;
+  private readonly trace: PmoveTraceFn;
   private baseFrame: GameFrameResult<PredictionState> = {
     frame: 0,
     timeMs: 0,
@@ -218,8 +222,9 @@ export class ClientPrediction {
   private commands: UserCommand[] = [];
   private predicted: PredictionState = defaultPredictionState();
 
-  constructor(settings: Partial<PredictionSettings> = {}) {
+  constructor(trace: PmoveTraceFn, settings: Partial<PredictionSettings> = {}) {
     this.settings = { ...DEFAULTS, ...settings } satisfies PredictionSettings;
+    this.trace = trace;
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
@@ -243,7 +248,7 @@ export class ClientPrediction {
     let state = normalizeState(this.baseFrame.state);
 
     for (const cmd of this.commands) {
-      state = simulateCommand(state, cmd, this.settings);
+      state = simulateCommand(state, cmd, this.settings, this.trace);
     }
 
     this.predicted = state;

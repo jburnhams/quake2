@@ -62,7 +62,7 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - Queue input commands each frame
   - Convert to pmove command structure (forward, side, up, angles)
   - Send to game simulation
-  - InputCommandBuffer now batches per-frame UserCommands with the console/action command queue for engine consumption.
+  - **Status**: Implemented. The `InputController` builds a `UserCommand` which is then passed to the game simulation.
 - [x] Mouse look
   - Invert Y axis option
   - Mouse sensitivity (X and Y separate)

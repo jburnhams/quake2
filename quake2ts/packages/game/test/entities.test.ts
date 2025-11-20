@@ -212,6 +212,22 @@ describe('Entity field metadata', () => {
 });
 
 describe('Game loop integration', () => {
+  it('spawns a player at the start location', () => {
+    const game = createGame(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } }), () => 0, { gravity: { x: 0, y: 0, z: -1 } });
+    game.init(0);
+    const playerStart = game.entities.spawn();
+    playerStart.classname = 'info_player_start';
+    playerStart.origin = { x: 1, y: 2, z: 3 };
+    playerStart.angles = { x: 0, y: 90, z: 0 };
+    game.entities.finalizeSpawn(playerStart);
+    game.spawnWorld();
+    const player = game.entities.find((e) => e.classname === 'player');
+    expect(player).toBeDefined();
+    expect(player.origin).toEqual(playerStart.origin);
+    expect(player.angles).toEqual(playerStart.angles);
+    expect(player.health).toBe(100);
+  });
+
   it('exposes entity state inside snapshots and processes thinks during simulation', () => {
     const game = createGame(mockEngine, { gravity: { x: 0, y: 0, z: -1 } });
     game.init(0);

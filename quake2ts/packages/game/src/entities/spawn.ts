@@ -1,5 +1,11 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { ENTITY_FIELD_METADATA, type EntityFieldDescriptor, Entity, MoveType, Solid } from './entity.js';
+import {
+  ENTITY_FIELD_METADATA,
+  type EntityFieldDescriptor,
+  Entity,
+  MoveType,
+  Solid,
+} from './entity.js';
 import { registerTriggerSpawns } from './triggers.js';
 import type { EntitySystem } from './system.js';
 
@@ -239,6 +245,12 @@ export function spawnEntitiesFromText(text: string, options: SpawnOptions): Enti
   }
 
   return spawned;
+}
+
+export function findPlayerStart(entities: EntitySystem): Entity | undefined {
+  return entities.find(
+    (entity: Entity) => entity.classname === 'info_player_start'
+  );
 }
 
 export function registerDefaultSpawns(registry: SpawnRegistry): void {
