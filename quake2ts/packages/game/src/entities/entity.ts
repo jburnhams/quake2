@@ -76,11 +76,25 @@ function copyVec3(): Vec3 {
   return { ...ZERO };
 }
 
+export type MonsterAction = (self: Entity) => void;
+export type MonsterSightCallback = (self: Entity, enemy: Entity) => void;
+
 export interface MonsterInfo {
   aiflags: number;
+  last_sighting: Vec3;
+  trail_time: number;
+  pausetime: number;
+  run?: MonsterAction;
+  stand?: MonsterAction;
+  sight?: MonsterSightCallback;
 }
 
-const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({ aiflags: 0 });
+const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
+  aiflags: 0,
+  last_sighting: ZERO,
+  trail_time: 0,
+  pausetime: 0,
+});
 
 export class Entity {
   readonly index: number;
@@ -162,7 +176,11 @@ export class Entity {
   flags = 0;
   svflags = 0;
 
-  monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO };
+  monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
+
+  combattarget?: string;
+  show_hostile = 0;
+  light_level = 0;
 
   constructor(index: number) {
     this.index = index;
@@ -245,7 +263,10 @@ export class Entity {
     this.flags = 0;
     this.svflags = 0;
 
-    this.monsterinfo = { ...DEFAULT_MONSTER_INFO };
+    this.monsterinfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
+    this.combattarget = undefined;
+    this.show_hostile = 0;
+    this.light_level = 0;
   }
 }
 
