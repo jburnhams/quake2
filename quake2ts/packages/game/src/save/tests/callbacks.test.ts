@@ -9,12 +9,12 @@ describe('Callback Serialization', () => {
     const testThink = (self: Entity) => {};
     registerCallback(callbackRegistry, 'testThink', testThink);
 
-    const entitySystem = new EntitySystem(1, callbackRegistry);
+    const entitySystem = new EntitySystem(null, 1, callbackRegistry);
     const entity = entitySystem.world;
     entity.think = testThink;
 
     const snapshot = entitySystem.createSnapshot();
-    const newEntitySystem = new EntitySystem(1);
+    const newEntitySystem = new EntitySystem(null, 1);
     newEntitySystem.restore(snapshot, callbackRegistry);
 
     const restoredEntity = newEntitySystem.world;
