@@ -289,12 +289,12 @@ describe('applyPmoveAirMove', () => {
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       onLadder: false,
-      waterlevel: WaterLevel.NotIn,
+      waterlevel: WaterLevel.None,
       watertype: 0,
       groundContents: 0,
       viewPitch: 0,
-      ladderMod: 0,
-      pmWaterSpeed: 0,
+      ladderMod: 0.5,
+      pmWaterSpeed: 400,
     };
 
     const result = applyPmoveAirMove(params);
@@ -321,12 +321,12 @@ describe('applyPmoveAirMove', () => {
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       onLadder: true,
-      waterlevel: WaterLevel.NotIn,
+      waterlevel: WaterLevel.None,
       watertype: 0,
       groundContents: 0,
       viewPitch: 0,
-      ladderMod: 0,
-      pmWaterSpeed: 0,
+      ladderMod: 0.5,
+      pmWaterSpeed: 400,
     };
 
     // Move up
@@ -360,7 +360,7 @@ describe('applyPmoveWaterMove', () => {
       forward: { x: 1, y: 0, z: 0 },
       right: { x: 0, y: 1, z: 0 },
       pmFlags: 0,
-      onGround: false,
+      onGround: true,
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       pmWaterAccelerate: 10,
@@ -375,10 +375,19 @@ describe('applyPmoveWaterMove', () => {
 
     const result = applyPmoveWaterMove(params);
 
-    const airParams = { ...params, waterlevel: WaterLevel.NotIn };
-    const airResult = applyPmoveAirMove(airParams);
+    // Compare with ground movement (not airborne) which uses same acceleration
+    const groundParams = {
+      ...params,
+      waterlevel: WaterLevel.None,
+      gravity: 800,
+      pmType: PmType.Normal,
+      pmAccelerate: 10,
+      pmAirAccelerate: 0,
+    };
+    const groundResult = applyPmoveAirMove(groundParams);
 
-    expect(result.velocity.x).toBeLessThan(airResult.velocity.x);
+    // Water movement should be slower due to wishspeed *= 0.5 in water
+    expect(result.velocity.x).toBeLessThan(groundResult.velocity.x);
   });
   it('drifts downward when idle and underwater', () => {
     const result = applyPmoveWaterMove({
