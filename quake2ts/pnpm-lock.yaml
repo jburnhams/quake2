@@ -15,6 +15,9 @@ importers:
       '@napi-rs/canvas':
         specifier: ^0.1.82
         version: 0.1.82
+      fake-indexeddb:
+        specifier: ^6.0.0
+        version: 6.2.5
       jsdom:
         specifier: ^27.2.0
         version: 27.2.0

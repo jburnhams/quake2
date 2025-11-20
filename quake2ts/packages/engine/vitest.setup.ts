@@ -1,12 +1,13 @@
 /**
  * Vitest setup file for engine package tests
  *
- * Sets up jsdom with napi-rs/canvas support for Node.js testing
+ * Sets up jsdom with napi-rs/canvas and fake-indexeddb support for Node.js testing
  */
 
 import { vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { Canvas, Image, ImageData } from '@napi-rs/canvas';
+import 'fake-indexeddb/auto';
 
 // Create a JSDOM instance
 const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
