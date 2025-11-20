@@ -60,25 +60,25 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Upload current/next frame to GPU
   - [x] Interpolate based on lerp factor (with renormalized normals)
   - [x] Texture binding per model skin
-- [ ] MD3 hierarchical model renderer
+- [x] MD3 hierarchical model renderer
   - Multi-surface rendering (separate meshes)
   - Tag-based attachment system (weapons attached to hand tags)
   - Per-surface texture/shader assignment
-- [ ] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
+- [x] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
   - Vertex lighting based on current position (interpolate between BSP light samples)
   - Optional dynamic lights (from weapon fire, explosions)
   - Ambient + directional light from worldspawn
 
 ### Particle System
-- [ ] Particle emitter framework
+- [x] Particle emitter framework
   - Particle pool with efficient allocation
   - Per-particle state: position, velocity, color, size, lifetime
   - Update loop (gravity, air resistance, collision)
-- [ ] Particle rendering
+- [x] Particle rendering
   - Billboarded quads facing camera
   - Additive/alpha blending modes
   - Batch rendering for performance (instanced or dynamic VBO)
-- [ ] Particle effect types
+- [x] Particle effect types
   - Bullet impacts (sparks, dust)
   - Explosions (fire, smoke)
   - Blood splatter
