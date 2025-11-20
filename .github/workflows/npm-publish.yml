@@ -26,4 +26,4 @@ jobs:
           cache-dependency-path: quake2ts/pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install
-      - run: pnpm publish
+      - run: pnpm publish --no-git-checks
