@@ -854,6 +854,86 @@ describe('Trigger spawns', () => {
     expect(player.gravity).toBeCloseTo(0.5);
   });
 
+  it('trigger_elevator links to func_train targets during init', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+
+    const train = system.spawn();
+    train.classname = 'func_train';
+    train.targetname = 'lift_train';
+    system.finalizeSpawn(train);
+
+    const trigger = spawnEntityFromDictionary(
+      { classname: 'trigger_elevator', target: 'lift_train' },
+      { registry, entities: system },
+    );
+    if (!trigger) {
+      throw new Error('trigger_elevator failed to spawn');
+    }
+
+    system.beginFrame(0);
+    system.runFrame();
+    expect(trigger.use).toBeUndefined();
+
+    system.beginFrame(1 / 40);
+    system.runFrame();
+
+    expect(trigger.movetarget).toBe(train);
+    expect(trigger.use).toBeDefined();
+    expect(trigger.svflags & ServerFlags.NoClient).toBe(ServerFlags.NoClient);
+  });
+
+  it('trigger_elevator validates pathtargets and resumes trains when idle', () => {
+    const system = new EntitySystem();
+    const registry = createDefaultSpawnRegistry();
+    const warnings: string[] = [];
+
+    const train = system.spawn();
+    train.classname = 'func_train';
+    train.targetname = 'lift_train';
+    system.finalizeSpawn(train);
+
+    const destination = system.spawn();
+    destination.classname = 'path_corner';
+    destination.targetname = 'lift_dest';
+    system.finalizeSpawn(destination);
+
+    const trigger = spawnEntityFromDictionary(
+      { classname: 'trigger_elevator', target: 'lift_train' },
+      { registry, entities: system, onWarning: (message) => warnings.push(message) },
+    );
+    if (!trigger) {
+      throw new Error('trigger_elevator failed to spawn');
+    }
+
+    system.beginFrame(1 / 40);
+    system.runFrame();
+
+    const activator = system.spawn();
+    activator.classname = 'func_button';
+    system.finalizeSpawn(activator);
+
+    trigger.use?.(trigger, activator, activator);
+    expect(warnings.some((message) => message.includes('no pathtarget'))).toBe(true);
+    expect(train.target_ent).toBeNull();
+
+    warnings.length = 0;
+    activator.pathtarget = 'lift_dest';
+    trigger.use?.(trigger, activator, activator);
+
+    expect(train.target_ent).toBe(destination);
+    expect(train.nextthink).toBeCloseTo(system.timeSeconds + 1 / 40);
+
+    system.beginFrame(train.nextthink);
+    system.runFrame();
+    expect(train.nextthink).toBe(0);
+
+    activator.pathtarget = 'invalid_dest';
+    trigger.use?.(trigger, activator, activator);
+    expect(warnings.some((message) => message.includes('bad pathtarget'))).toBe(true);
+    expect(train.target_ent).toBe(destination);
+  });
+
   it('trigger_monsterjump boosts ground monsters forward and upward', () => {
     const system = new EntitySystem();
     const registry = createDefaultSpawnRegistry();
