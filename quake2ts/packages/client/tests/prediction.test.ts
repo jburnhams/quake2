@@ -101,6 +101,28 @@ describe('ClientPrediction', () => {
     expect(predicted.origin.x).toBeGreaterThan(afterCorrection.origin.x);
     expect(prediction.getPredictedState()).toEqual(predicted);
   });
+
+  it('keeps absolute view angles between commands instead of compounding them', () => {
+    const prediction = new ClientPrediction();
+    const base = createGroundState();
+    prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
+
+    const cmdAngles = { x: 5, y: 45, z: 0 } as const;
+    const cmd: UserCommand = {
+      msec: 25,
+      buttons: 0,
+      angles: cmdAngles,
+      forwardmove: 0,
+      sidemove: 0,
+      upmove: 0,
+    };
+
+    const first = prediction.enqueueCommand({ ...cmd, serverFrame: 2 });
+    expect(first.viewangles).toEqual(cmdAngles);
+
+    const second = prediction.enqueueCommand({ ...cmd, serverFrame: 3 });
+    expect(second.viewangles).toEqual(cmdAngles);
+  });
 });
 
 describe('interpolatePredictionState', () => {

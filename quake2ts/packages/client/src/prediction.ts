@@ -1,6 +1,5 @@
 import {
   addVec3,
-  addViewAngles,
   angleMod,
   scaleVec3,
   type Vec3,
@@ -205,7 +204,7 @@ function simulateCommand(
     ...state,
     origin,
     velocity,
-    viewangles: addViewAngles(state.viewangles, cmd.angles),
+    viewangles,
   } satisfies PredictionState;
 }
 
