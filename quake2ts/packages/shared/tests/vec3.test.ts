@@ -256,4 +256,38 @@ describe('vec3 helpers', () => {
     const unchanged = rotatePointAroundVector(ZERO_VEC3, point, 45);
     expect(unchanged).toEqual(point);
   });
+
+  it('handles perpendicularVec3 for all axes', () => {
+    const perpX = perpendicularVec3({ x: 1, y: 0, z: 0 });
+    expect(perpX.x).toBeCloseTo(0, 6);
+    const perpY = perpendicularVec3({ x: 0, y: 1, z: 0 });
+    expect(perpY.y).toBeCloseTo(0, 6);
+    const perpZ = perpendicularVec3({ x: 0, y: 0, z: 1 });
+    expect(perpZ.z).toBeCloseTo(0, 6);
+  });
+
+  it('handles clipVelocityAgainstPlanes with three planes', () => {
+    const velocity = { x: 10, y: 10, z: 10 };
+    const p1 = { x: -1, y: 0, z: 0 };
+    const p2 = { x: 0, y: -1, z: 0 };
+    const p3 = { x: 0, y: 0, z: -1 };
+
+    const result = clipVelocityAgainstPlanes(velocity, [p1, p2, p3], 1.0, velocity);
+    expect(result).toEqual(ZERO_VEC3);
+  });
+
+  it('normalizeVec3 handles very small vectors', () => {
+    const smallVec = { x: 1e-7, y: 0, z: 0 };
+    const normalized = normalizeVec3(smallVec);
+    expect(normalized.x).toBeCloseTo(1, 6);
+
+    const zeroVec = { x: 1e-9, y: 0, z: 0 };
+    const normalizedZero = normalizeVec3(zeroVec);
+    // Based on Quake 2's behavior, which doesn't normalize if length is zero.
+    // JavaScript's floating point precision might make the length non-zero.
+    // This test ensures we handle it gracefully.
+    const len = lengthVec3(normalizedZero);
+    const isNormalized = Math.abs(len - 1.0) < 1e-6 || len === 0;
+    expect(isNormalized).toBe(true);
+  });
 });

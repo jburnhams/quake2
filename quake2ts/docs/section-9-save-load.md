@@ -65,7 +65,7 @@ This section covers the save/load system that allows players to save game progre
   - Random seed state (entire RNG state for reproducibility)
   - Level-global flags, counters, objectives *(basic time counters captured; doors/triggers still TODO)*
   - Active triggers, doors (position, state)
-- [ ] Player state serialization
+- [x] Player state serialization
   - Full player entity
   - Inventory: weapons owned, ammo counts, keys, powerups
   - View angles, velocity, position
@@ -85,7 +85,7 @@ This section covers the save/load system that allows players to save game progre
   - enemy index -> enemy entity pointer
   - groundentity index -> groundentity pointer
   - target name -> target entity (via targetname lookup)
-- [ ] Function reference restoration
+- [x] Function reference restoration
   - thinkfunc name -> actual function pointer
   - touch, use, pain, die callbacks by name
   - Maintain registry of serializable functions
@@ -94,7 +94,7 @@ This section covers the save/load system that allows players to save game progre
   - Restore RNG state (seed and internal state)
   - Restore level flags, objectives *(needs door/trigger state once implemented)*
   - Re-link entities into world (spatial structures)
-- [ ] Player state restoration
+- [x] Player state restoration
   - Restore player entity
   - Restore inventory, weapon state
   - Restore position, angles, velocity
@@ -151,14 +151,14 @@ This section covers the save/load system that allows players to save game progre
 - [x] Analyze rerelease JSON save format
   - Study structure, field names, types (top-level `save_version`, game saves with `game` + `clients[]`, level saves with `level` + sparse `entities` object keyed by edict index string)
   - Document differences from quake2ts format (slot-index array vs rerelease object map)
-- [ ] Implement converter (mapper)
-  - **Import**: Read rerelease JSON, convert to quake2ts format
-  - **Export**: Convert quake2ts save to rerelease JSON format
-  - May not be 100% compatible (some fields/systems differ)
-- [ ] Use cases
-  - Allow players to migrate saves from rerelease to quake2ts
+- [x] Implement converter (mapper)
+  - **Import**: Read rerelease JSON level saves, convert to quake2ts format with deterministic pool reconstruction and vec3/entity field normalization
+  - **Export**: Convert quake2ts level snapshots to rerelease-shaped JSON (snake_case with `entities` keyed by edict index)
+  - Game-save conversion intentionally blocked until client/player state is mapped; emits explicit error to avoid silent drift
+- [x] Use cases
+  - Allow players to migrate level saves from rerelease to quake2ts and round-trip snapshots for debugging
   - Debugging: compare quake2ts state to rerelease state
-  - Not critical for initial release; defer if complex
+  - Game-save migration deferred pending client serialization
 
 ### Save/Load UI Integration
 - [ ] In-game save menu

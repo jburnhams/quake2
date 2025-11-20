@@ -11,6 +11,7 @@ import {
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
+import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 
 interface Bounds {
   min: Vec3;
@@ -55,14 +56,11 @@ type SerializableEntityFieldValue =
   | SerializableVec3
   | SerializableInventory;
 
-type SerializableFieldName = Exclude<
-  (typeof ENTITY_FIELD_METADATA)[number]['name'],
-  'think' | 'touch' | 'use' | 'pain' | 'die' | 'index'
->;
+type SerializableFieldName = (typeof ENTITY_FIELD_METADATA)[number]['name'];
 type SerializableFieldDescriptor = EntityFieldDescriptor<SerializableFieldName>;
 
 const SERIALIZABLE_FIELDS = ENTITY_FIELD_METADATA.filter(
-  (field) => field.save,
+  (field) => field.save || field.type === 'callback',
 ) as SerializableFieldDescriptor[];
 const DESCRIPTORS = new Map(SERIALIZABLE_FIELDS.map((descriptor) => [descriptor.name, descriptor]));
 
@@ -117,13 +115,20 @@ export class EntitySystem {
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private readonly random = createRandomGenerator();
+  private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
   private readonly engine: GameEngine;
 
-  constructor(engine: GameEngine, maxEntities?: number) {
+  constructor(engine: GameEngine, maxEntities?: number, callbackRegistry?: CallbackRegistry) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
+    this.callbackToName = new Map<AnyCallback, string>();
+    if (callbackRegistry) {
+      for (const [name, fn] of callbackRegistry.entries()) {
+        this.callbackToName.set(fn, name);
+      }
+    }
   }
 
   get world(): Entity {
@@ -270,6 +275,9 @@ export class EntitySystem {
           case 'inventory':
             fields[descriptor.name] = serializeInventory(value as Record<string, number>);
             break;
+          case 'callback':
+            fields[descriptor.name] = value ? this.callbackToName.get(value as AnyCallback) ?? null : null;
+            break;
           default:
             fields[descriptor.name] = (value as SerializableEntityFieldValue) ?? null;
             break;
@@ -289,7 +297,7 @@ export class EntitySystem {
     };
   }
 
-  restore(snapshot: EntitySystemSnapshot): void {
+  restore(snapshot: EntitySystemSnapshot, callbackRegistry?: CallbackRegistry): void {
     this.currentTimeSeconds = snapshot.timeSeconds;
     this.pool.restore(snapshot.pool);
 
@@ -332,6 +340,14 @@ export class EntitySystem {
             break;
           case 'boolean':
             assignField(entity, name, Boolean(value) as Entity[typeof name]);
+            break;
+          case 'callback':
+            if (value) {
+              const callback = callbackRegistry?.get(value as string);
+              if (callback) {
+                assignField(entity, name, callback as Entity[typeof name]);
+              }
+            }
             break;
           default:
             assignField(entity, name, value as Entity[typeof name]);

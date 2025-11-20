@@ -1,10 +1,21 @@
 import type { CvarRegistry } from '@quake2ts/engine';
 import { CvarFlags, RandomGenerator, type RandomGeneratorState } from '@quake2ts/shared';
 import type { RandomGenerator as RandomGeneratorType } from '@quake2ts/shared';
-import type { EntitySystem, EntitySystemSnapshot, SerializedEntityState } from '../entities/index.js';
+import type {
+  CallbackRegistry,
+  EntitySystem,
+  EntitySystemSnapshot,
+  SerializedEntityState,
+} from '../entities/index.js';
+import {
+  type PlayerInventory,
+  type SerializedPlayerInventory,
+  deserializePlayerInventory,
+  serializePlayerInventory,
+} from '../inventory/index.js';
 import type { LevelClock, LevelFrameState } from '../level.js';
 
-export const SAVE_FORMAT_VERSION = 1;
+export const SAVE_FORMAT_VERSION = 2;
 
 export interface CvarSaveEntry {
   readonly name: string;
@@ -24,6 +35,7 @@ export interface GameSaveFile {
   readonly entities: EntitySystemSnapshot;
   readonly cvars: readonly CvarSaveEntry[];
   readonly configstrings: readonly string[];
+  readonly player?: SerializedPlayerInventory;
 }
 
 export interface SaveCreationOptions {
@@ -37,6 +49,7 @@ export interface SaveCreationOptions {
   readonly cvars?: CvarRegistry;
   readonly gameState?: Record<string, unknown>;
   readonly timestamp?: number;
+  readonly player?: PlayerInventory;
 }
 
 export interface SaveApplyTargets {
@@ -44,6 +57,8 @@ export interface SaveApplyTargets {
   readonly entitySystem: EntitySystem;
   readonly rng: RandomGeneratorType;
   readonly cvars?: CvarRegistry;
+  readonly player?: PlayerInventory;
+  readonly callbackRegistry?: CallbackRegistry;
 }
 
 export interface ParseSaveOptions {
@@ -303,6 +318,7 @@ export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
     cvars,
     gameState = {},
     timestamp = Date.now(),
+    player,
   } = options;
 
   return {
@@ -317,6 +333,7 @@ export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
     entities: entitySystem.createSnapshot(),
     cvars: serializeCvars(cvars),
     configstrings: [...configstrings],
+    player: player ? serializePlayerInventory(player) : undefined,
   };
 }
 
@@ -346,12 +363,18 @@ export function parseSaveFile(serialized: unknown, options: ParseSaveOptions = {
     entities: parseEntitySnapshot(save.entities),
     cvars: parseCvars(save.cvars),
     configstrings: parseConfigstrings(save.configstrings),
+    player: save.player ? (save.player as SerializedPlayerInventory) : undefined,
   };
 }
 
 export function applySaveFile(save: GameSaveFile, targets: SaveApplyTargets): void {
   targets.levelClock.restore(save.level);
-  targets.entitySystem.restore(save.entities);
+  targets.entitySystem.restore(save.entities, targets.callbackRegistry);
   targets.rng.setState(save.rng);
   applyCvars(save.cvars, targets.cvars);
+
+  if (save.player && targets.player) {
+    const deserialized = deserializePlayerInventory(save.player);
+    Object.assign(targets.player, deserialized);
+  }
 }

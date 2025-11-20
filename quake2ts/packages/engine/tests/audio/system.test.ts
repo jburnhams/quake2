@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
-import { SoundChannel, calculateMaxAudibleDistance } from '../../src/audio/constants.js';
+import { SoundChannel, calculateMaxAudibleDistance, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '../../src/audio/constants.js';
 import { FakeAudioContext, createBuffer } from './fakes.js';
 
 describe('AudioSystem', () => {
@@ -416,5 +416,93 @@ describe('AudioSystem', () => {
     expect(diagnostics.channels.length).toBeGreaterThan(0);
     expect(diagnostics.activeSounds[0]?.gain).toBeGreaterThan(0);
     expect(diagnostics.activeSounds[0]?.entchannel).toBe(SoundChannel.Weapon);
+  });
+
+  it('applies attenuation settings to the panner node', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const system = new AudioSystem({ context: controller, registry });
+
+    system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_NORM);
+    const pannerNorm = fakeContext.panners[0];
+    expect(pannerNorm.distanceModel).toBe('inverse');
+
+    system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_IDLE);
+    const pannerIdle = fakeContext.panners[1];
+    expect(pannerIdle.distanceModel).toBe('inverse');
+
+    system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_STATIC);
+    const pannerStatic = fakeContext.panners[2];
+    expect(pannerStatic.distanceModel).toBe('inverse');
+
+    system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_NONE);
+    const pannerNone = fakeContext.panners[3];
+    expect(pannerNone.distanceModel).toBe('linear');
+  });
+
+  it('starts and stops looping sounds', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const system = new AudioSystem({ context: controller, registry });
+
+    const activeSound = system.play({
+      entity: 1,
+      channel: SoundChannel.Auto,
+      soundIndex,
+      volume: 255,
+      attenuation: ATTN_NORM,
+      looping: true,
+    });
+
+    const source = fakeContext.sources[0];
+    expect(source.loop).toBe(true);
+
+    system.stop(activeSound.channelIndex);
+    expect(source.stoppedAt).toBeDefined();
+  });
+
+  it('calculates the final gain based on master, sfx, and per-sound volume', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const system = new AudioSystem({ context: controller, registry, masterVolume: 0.5, sfxVolume: 0.8 });
+
+    system.play({
+      entity: 1,
+      channel: SoundChannel.Auto,
+      soundIndex,
+      volume: 128, // ~0.5
+      attenuation: ATTN_NONE, // no distance attenuation
+    });
+
+    const gain = fakeContext.gains[2]; // sound-specific gain
+    const expectedGain = (128 / 255) * 0.5 * 0.8;
+    expect(gain.gain.value).toBeCloseTo(expectedGain);
+  });
+
+  it('delays sound playback with timeofs', () => {
+    const fakeContext = new FakeAudioContext();
+    const controller = new AudioContextController(() => fakeContext);
+    const registry = new SoundRegistry();
+    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const system = new AudioSystem({ context: controller, registry });
+
+    fakeContext.currentTime = 5;
+    system.play({
+      entity: 1,
+      channel: SoundChannel.Auto,
+      soundIndex,
+      volume: 255,
+      attenuation: ATTN_NORM,
+      timeOffsetMs: 100,
+    });
+
+    const source = fakeContext.sources[0];
+    expect(source.startedAt).toBeCloseTo(5.1);
   });
 });
