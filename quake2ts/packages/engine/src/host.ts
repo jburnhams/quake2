@@ -13,7 +13,7 @@ export interface GameFrameResult<FrameState = unknown> {
 
 export interface GameSimulation<FrameState = unknown> {
   init(startTimeMs: number): GameFrameResult<FrameState> | void;
-  frame(step: FixedStepContext): GameFrameResult<FrameState>;
+  frame(step: FixedStepContext, command?: any): GameFrameResult<FrameState>;
   shutdown(): void;
 }
 
@@ -22,10 +22,14 @@ export interface GameRenderSample<FrameState = unknown> extends RenderContext {
   readonly latest?: GameFrameResult<FrameState>;
 }
 
+import { UserCommand } from '@quake2ts/shared';
+import { Camera } from './render/camera.js';
+
 export interface ClientRenderer<FrameState = unknown> {
   init(initial?: GameFrameResult<FrameState>): void;
-  render(sample: GameRenderSample<FrameState>): void;
+  render(sample: GameRenderSample<FrameState>): any;
   shutdown(): void;
+  camera?: Camera;
 }
 
 export interface EngineHostOptions {
@@ -39,6 +43,7 @@ export class EngineHost<FrameState = unknown> {
   private previousFrame?: GameFrameResult<FrameState>;
   private latestFrame?: GameFrameResult<FrameState>;
   private started = false;
+  private latestCommand?: UserCommand;
 
   constructor(
     private readonly game: GameSimulation<FrameState>,
@@ -91,12 +96,13 @@ export class EngineHost<FrameState = unknown> {
 
   private stepSimulation = (step: FixedStepContext): void => {
     this.previousFrame = this.latestFrame;
-    this.latestFrame = this.game.frame(step);
+    this.latestFrame = this.game.frame(step, this.latestCommand);
   };
 
   private renderClient = (renderContext: RenderContext): void => {
     if (!this.client) return;
-    this.client.render({
+
+    this.latestCommand = this.client.render({
       ...renderContext,
       previous: this.previousFrame,
       latest: this.latestFrame,

@@ -10,7 +10,7 @@ const mockEngine = {
 };
 
 function runGameHashes({ frames = 8, gravity = GRAVITY } = {}): number[] {
-  const game = createGame(mockEngine, { gravity });
+  const game = createGame(mockEngine.trace, () => 0, { gravity });
   const hashes: number[] = [];
   const initial = game.init(0);
   if (initial?.state) {

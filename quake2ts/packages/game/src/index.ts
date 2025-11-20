@@ -27,6 +27,10 @@ export interface GameStateSnapshot {
   };
 }
 
+import { findPlayerStart } from './entities/spawn.js';
+
+import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
   readonly entities: EntitySystem;
@@ -37,8 +41,11 @@ export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
 
+import { CollisionModel } from '@quake2ts/shared';
+
 export function createGame(
-  engine: { trace(start: Vec3, end: Vec3): unknown },
+  trace: (start: Vec3, end: Vec3) => PmoveTraceResult,
+  pointContents: (point: Vec3) => number,
   options: GameCreateOptions,
 ): GameExports {
   const gravity = options.gravity;
@@ -95,17 +102,40 @@ export function createGame(
   return {
     init(startTimeMs: number) {
       resetState(startTimeMs);
-      void engine.trace({ x: 0, y: 0, z: 0 }, gravity);
       return snapshot(0);
     },
     shutdown() {
       /* placeholder shutdown */
     },
     spawnWorld() {
-      /* placeholder world spawn */
+      const playerStart = findPlayerStart(entities);
+      if (playerStart) {
+        const player = entities.spawn();
+        player.classname = 'player';
+        player.origin = { ...playerStart.origin };
+        player.angles = { ...playerStart.angles };
+        player.health = 100;
+        player.mins = { x: -16, y: -16, z: -24 };
+        player.maxs = { x: 16, y: 16, z: 32 };
+        entities.finalizeSpawn(player);
+        origin = { ...player.origin };
+      }
     },
-    frame(step: FixedStepContext) {
+    frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
+      const player = entities.find((e) => e.classname === 'player');
+      if (command && player) {
+        const pcmd = {
+          forwardmove: command.forwardmove,
+          sidemove: command.sidemove,
+          upmove: command.upmove,
+          buttons: command.buttons,
+        };
+        const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs };
+        const newState = applyPmove(playerState, pcmd, trace, pointContents);
+        player.origin = newState.origin;
+        player.velocity = newState.velocity;
+      }
       return snapshot(context.frame);
     },
     entities,

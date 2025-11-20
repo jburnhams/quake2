@@ -77,67 +77,67 @@ These pieces are **essential blockers** for the demo and must be completed in th
   - [x] Basic vertex/fragment shaders for world ✅
   - [x] Texture binding ✅
   - [x] Lightmap support ✅
-- [ ] **HUD/2D rendering primitives** ⚠️ CRITICAL
-  - [ ] `Draw_RegisterPic(name)`: Load HUD image, return handle
-  - [ ] `Draw_Pic(x, y, pic)`: Draw image at screen position
-  - [ ] `Draw_String(x, y, text)`: Draw text string
-  - [ ] `Draw_Char(x, y, char)`: Draw single character
-  - [ ] Bitmap font rendering or canvas-based text
-  - **Status**: NOT IMPLEMENTED - this blocks all HUD/debug text
-- [ ] **Camera/view matrix setup**
-  - [ ] Perspective projection matrix
-  - [ ] View matrix from player position/angles
+- [x] **HUD/2D rendering primitives** ✅ CRITICAL
+  - [x] `Draw_RegisterPic(name)`: Load HUD image, return handle
+  - [x] `Draw_Pic(x, y, pic)`: Draw image at screen position
+  - [x] `Draw_String(x, y, text)`: Draw text string
+  - [x] `Draw_Char(x, y, char)`: Draw single character
+  - [x] Bitmap font rendering or canvas-based text
+  - **Status**: Implemented, with bitmap font rendering from `pics/conchars.pcx`.
+- [x] **Camera/view matrix setup** ✅
+  - [x] Perspective projection matrix
+  - [x] View matrix from player position/angles
   - [ ] Frustum culling (optional for MVP, improves performance)
-  - **Status**: Partially done, needs player integration
+  - **Status**: Implemented.
 
 ### From Section 3 (Physics/Collision)
 - [x] **BSP collision trace** ✅ (core trace done)
   - [x] `trace(start, end, mins, maxs, contentmask)` working ✅
   - [x] Collision with world geometry ✅
-- [ ] **Player movement integration** ⚠️ CRITICAL
-  - [ ] Wire shared pmove to real trace function
-  - [ ] Implement pmove callback for player entity
-  - [ ] Ground detection, step climbing
-  - [ ] Apply player inputs (forward/back/strafe) to pmove
-  - **Status**: Trace works, but not wired to player movement yet
+- [x] **Player movement integration** ✅ CRITICAL
+  - [x] Wire shared pmove to real trace function
+  - [x] Implement pmove callback for player entity
+  - [x] Ground detection, step climbing
+  - [x] Apply player inputs (forward/back/strafe) to pmove
+  - **Status**: Implemented in the demo application.
 
 ### From Section 4 (Entity System)
-- [ ] **Player entity spawn** ⚠️ CRITICAL
-  - [ ] Create player entity at map spawn point
-  - [ ] Initialize player state (health, position, angles)
-  - [ ] Set player bounding box (standing mins/maxs)
-  - [ ] Attach player to camera for rendering
-  - **Status**: Entity system exists, but no player spawn logic
+- [x] **Player entity spawn** ✅ CRITICAL
+  - [x] Create player entity at map spawn point
+  - [x] Initialize player state (health, position, angles)
+  - [x] Set player bounding box (standing mins/maxs)
+  - [x] Attach player to camera for rendering
+  - **Status**: Implemented.
 
 ### From Section 8 (Input/UI)
 - [x] **Keyboard input capture** ✅ (already done)
 - [x] **Mouse look with pointer lock** ✅ (already done)
-- [ ] **Input command buffer** ⚠️ CRITICAL
+- [x] **Input command buffer** ✅ CRITICAL
   - [x] Convert input state to pmove command structure ✅
-  - [ ] Pass commands to player entity each frame
-  - **Status**: Input works, but not connected to player movement
+  - [x] Pass commands to player entity each frame
+  - **Status**: Implemented.
 
 ### From Section 1 (Asset Loading)
 - [x] **PAK file reader** ✅ (already done)
 - [x] **VFS with browser file input** ✅ (already done)
 - [x] **BSP loader** ✅ (already done)
 - [x] **Texture loading and upload** ✅ (already done)
-- [ ] **Find player spawn point** ⚠️ NEEDED
-  - [ ] Parse `info_player_start` from BSP entity string
-  - [ ] Extract origin and angles for player spawn
-  - **Status**: BSP entity parsing exists, need to query spawn points
+- [x] **Find player spawn point** ✅ NEEDED
+  - [x] Parse `info_player_start` from BSP entity string
+  - [x] Extract origin and angles for player spawn
+  - **Status**: Implemented.
 
 ## Demo-Specific Tasks
 
 These are tasks specific to the `apps/demo` application, not core engine/game work:
 
 ### Phase 1: Basic Skeleton (Get Something on Screen)
-- [ ] **Set up demo app scaffold**
-  - [ ] Create `apps/demo` directory structure
-  - [ ] Set up Vite bundler for TypeScript + HTML
-  - [ ] Create basic `index.html` with canvas element
-  - [ ] Wire up TypeScript entry point (`main.ts`)
-  - [ ] Add CSS for fullscreen canvas
+- [x] **Set up demo app scaffold**
+  - [x] Create `apps/demo` directory structure
+  - [x] Set up Vite bundler for TypeScript + HTML
+  - [x] Create basic `index.html` with canvas element
+  - [x] Wire up TypeScript entry point (`main.ts`)
+  - [x] Add CSS for fullscreen canvas
 - [ ] **Initialize WebGL canvas**
   - [ ] Get canvas element, create WebGL2 context
   - [ ] Set up viewport, clear color

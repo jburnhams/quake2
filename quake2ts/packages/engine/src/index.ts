@@ -11,10 +11,11 @@ import { ConfigStringRegistry } from './configstrings.js';
 import { FixedTimestepLoop, type LoopCallbacks, type LoopOptions } from './loop.js';
 import { EngineRuntime, createEngineRuntime } from './runtime.js';
 
-export interface TraceResult {
+import { PmoveTraceResult } from '@quake2ts/shared';
+
+export interface TraceResult extends PmoveTraceResult {
   readonly start: Vec3;
   readonly end: Vec3;
-  readonly fraction: number;
   readonly hit?: Vec3;
 }
 
@@ -206,3 +207,4 @@ export {
   type Md2Geometry,
   type Md2DrawVertex,
 } from './render/md2Pipeline.js';
+export { createCamera, type Camera } from './render/camera.js';

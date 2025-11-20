@@ -141,6 +141,15 @@ export class EntitySystem {
     }
   }
 
+  find(predicate: (entity: Entity) => boolean): Entity | undefined {
+    for (const entity of this.pool) {
+      if (predicate(entity)) {
+        return entity;
+      }
+    }
+    return undefined;
+  }
+
   spawn(): Entity {
     return this.pool.spawn();
   }
