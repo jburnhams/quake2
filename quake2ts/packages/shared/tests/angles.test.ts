@@ -69,4 +69,38 @@ describe('angle math helpers', () => {
     expect(angled.x).toBeCloseTo(-35.264, 3);
     expect(angled.z).toBe(0);
   });
+
+  it('handles angle round-tripping', () => {
+    const originalAngles = { x: 30, y: 60, z: 0 };
+    const { forward: originalForward } = angleVectors(originalAngles);
+    const convertedAngles = vectorToAngles(originalForward);
+
+    // Check yaw first, as it's less ambiguous than pitch
+    expect(convertedAngles.y).toBeCloseTo(originalAngles.y, 3);
+
+    // Now, convert the angles back to a vector and ensure it matches the original.
+    // This is the most reliable way to test the round trip, as there can be multiple
+    // equivalent Euler angle representations for the same direction.
+    const { forward: roundTrippedForward } = angleVectors(convertedAngles);
+
+    expect(roundTrippedForward.x).toBeCloseTo(originalForward.x, 3);
+    expect(roundTrippedForward.y).toBeCloseTo(originalForward.y, 3);
+    expect(roundTrippedForward.z).toBeCloseTo(originalForward.z, 3);
+  });
+
+  it('handles gimbal lock and poles correctly', () => {
+    // Looking straight up
+    const up = { x: 0, y: 0, z: 1 };
+    const upAngles = vectorToAngles(up);
+    expect(upAngles).toEqual({ x: -90, y: 0, z: 0 });
+    const { forward: upForward } = angleVectors(upAngles);
+    expectVec3(upForward, up);
+
+    // Looking straight down
+    const down = { x: 0, y: 0, z: -1 };
+    const downAngles = vectorToAngles(down);
+    expect(downAngles).toEqual({ x: -270, y: 0, z: 0 });
+    const { forward: downForward } = angleVectors(downAngles);
+    expectVec3(downForward, down);
+  });
 });
