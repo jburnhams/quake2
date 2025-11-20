@@ -50,15 +50,32 @@ export const stairTrace: PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, ma
 
   // If moving down and over the step area, land on the step surface
   if (isMovingDown && end.x >= STEP_X_START) {
-    // Check if we'd pass through the step surface (z=STEP_HEIGHT)
-    if (start.z > STEP_HEIGHT && end.z + useMins.z < STEP_HEIGHT) {
-      // Land on the step surface
-      const landZ = STEP_HEIGHT - useMins.z;
+    // The step surface is at z=STEP_HEIGHT in world space
+    // The player's bbox bottom reaches this plane when origin.z + mins.z = STEP_HEIGHT
+    // So the player's origin should be at z = STEP_HEIGHT - mins.z
+    const landZ = STEP_HEIGHT - useMins.z;
+
+    // Check if we'd pass through the step surface
+    // We cross the plane if start is above it and end would be below it
+    if (startMinZ > STEP_HEIGHT && endMinZ < STEP_HEIGHT) {
+      // Calculate the fraction along the ray where we intersect the plane
+      // The bbox bottom is at: start.z + useMins.z + t * (end.z - start.z + 0) = STEP_HEIGHT
+      // Solving for t: t = (STEP_HEIGHT - (start.z + useMins.z)) / ((end.z + useMins.z) - (start.z + useMins.z))
+      const fraction = (STEP_HEIGHT - startMinZ) / (endMinZ - startMinZ);
+
+      // Clamp to valid range [0, 1]
+      const clampedFraction = Math.max(0, Math.min(1, fraction));
+
+      // Calculate the endpos along the ray at this fraction
+      const finalX = start.x + clampedFraction * (end.x - start.x);
+      const finalY = start.y + clampedFraction * (end.y - start.y);
+      const finalZ = start.z + clampedFraction * (end.z - start.z);
+
       return {
         allsolid: false,
         startsolid: false,
-        fraction: (start.z - landZ) / (start.z - end.z),
-        endpos: { x: end.x, y: end.y, z: landZ },
+        fraction: clampedFraction,
+        endpos: { x: finalX, y: finalY, z: finalZ },
         planeNormal: { x: 0, y: 0, z: 1 },
         contents: 1,
       };
@@ -67,13 +84,35 @@ export const stairTrace: PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, ma
 
   // If moving down and would go below floor level, block at floor
   if (isMovingDown && endMinZ < 0) {
-    // Land on the floor
+    // Floor is at z=0, so player origin should be at z = -mins.z when landing
     const landZ = -useMins.z;
+
+    // Only apply if we're crossing the floor plane
+    if (startMinZ >= 0) {
+      // Calculate fraction where bbox bottom hits z=0
+      const fraction = (0 - startMinZ) / (endMinZ - startMinZ);
+      const clampedFraction = Math.max(0, Math.min(1, fraction));
+
+      const finalX = start.x + clampedFraction * (end.x - start.x);
+      const finalY = start.y + clampedFraction * (end.y - start.y);
+      const finalZ = start.z + clampedFraction * (end.z - start.z);
+
+      return {
+        allsolid: false,
+        startsolid: false,
+        fraction: clampedFraction,
+        endpos: { x: finalX, y: finalY, z: finalZ },
+        planeNormal: { x: 0, y: 0, z: 1 },
+        contents: 1,
+      };
+    }
+
+    // Already below floor, block immediately
     return {
       allsolid: false,
       startsolid: false,
-      fraction: startMinZ >= 0 ? (start.z - landZ) / (start.z - end.z) : 0,
-      endpos: { x: end.x, y: end.y, z: landZ },
+      fraction: 0,
+      endpos: start,
       planeNormal: { x: 0, y: 0, z: 1 },
       contents: 1,
     };
