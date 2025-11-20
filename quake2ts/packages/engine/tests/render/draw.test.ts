@@ -4,8 +4,6 @@ import * as draw from '../../src/render/draw';
 import { PakArchive } from '../../src/assets/pak.js';
 
 describe('draw', () => {
-  let ctx;
-
   beforeEach(() => {
     // Clear document body before each test
     document.body.innerHTML = '';
