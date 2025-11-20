@@ -6,19 +6,28 @@ import { Entity } from '../entity.js';
 import { pickupWeapon, WeaponItem } from '../../inventory/index.js';
 import { GameExports } from '../../index.js';
 
+import { Solid } from '../entity.js';
+
 export function createWeaponPickupEntity(game: GameExports, weaponItem: WeaponItem): Partial<Entity> {
+    const respawn = (self: Entity) => {
+        self.solid = Solid.Trigger;
+    };
+
     return {
         classname: weaponItem.id,
+        solid: Solid.Trigger,
         touch: (self, other) => {
-            if (!other.client) {
+            if (!other || !other.client) {
                 return;
             }
 
             if (pickupWeapon(other.client.inventory, weaponItem)) {
                 game.sound(other, 0, 'items/pkup.wav', 1, 1, 0);
-                // TODO: Show pickup message on HUD
-                game.addUFFlags(self, -1);
+                game.centerprintf(other, `You got the ${weaponItem.name}`);
+                self.solid = Solid.Not;
+                self.nextthink = game.time + 30;
             }
         },
+        think: respawn,
     };
 }

@@ -47,7 +47,6 @@ export const WEAPONS: Record<WeaponType, Weapon> = {
     spread: 0.1,
     projectileSpeed: null,
   },
-  // TODO: Add other weapons
   [WeaponType.SUPER_SHOTGUN]: {
     type: WeaponType.SUPER_SHOTGUN,
     name: 'Super Shotgun',

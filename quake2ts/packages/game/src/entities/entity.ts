@@ -1,5 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3 } from '@quake2ts/shared';
+import { PlayerClient } from '../inventory/playerInventory.js';
 
 export enum MoveType {
   None = 0,
@@ -174,6 +175,8 @@ export class Entity {
   svflags = 0;
 
   monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO };
+
+  client?: PlayerClient;
 
   constructor(index: number) {
     this.index = index;

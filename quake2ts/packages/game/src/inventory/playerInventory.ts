@@ -57,6 +57,10 @@ export interface PlayerInventory {
   readonly keys: Set<KeyId>;
 }
 
+export interface PlayerClient {
+    inventory: PlayerInventory;
+}
+
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
   const ammo = createAmmoInventory(options.ammoCaps);
   const ownedWeapons = new Set(options.weapons ?? []);

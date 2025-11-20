@@ -11,6 +11,7 @@ import { AmmoType } from '../../../src/inventory/ammo';
 import { GameExports } from '../../../src';
 
 import { beforeEach } from 'vitest';
+import { Solid } from '../../../src/entities/entity';
 
 describe('Weapon Pickup Entities', () => {
     let mockGame: GameExports;
@@ -18,7 +19,8 @@ describe('Weapon Pickup Entities', () => {
     beforeEach(() => {
         mockGame = {
             sound: vi.fn(),
-            addUFFlags: vi.fn(),
+            centerprintf: vi.fn(),
+            time: 100,
         } as unknown as GameExports;
     });
 
@@ -28,9 +30,10 @@ describe('Weapon Pickup Entities', () => {
 
         expect(entity.classname).toBe('weapon_shotgun');
         expect(entity.touch).toBeDefined();
+        expect(entity.solid).toBe(Solid.Trigger);
     });
 
-    it('should call pickupWeapon when touched by a player', () => {
+    it('should become non-solid and set a respawn timer when touched by a player', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
@@ -45,7 +48,19 @@ describe('Weapon Pickup Entities', () => {
         expect(player.client.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
         expect(player.client.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
         expect(mockGame.sound).toHaveBeenCalledWith(player, 0, 'items/pkup.wav', 1, 1, 0);
-        expect(mockGame.addUFFlags).toHaveBeenCalledWith(entity, -1);
+        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got the Shotgun');
+        expect(entity.solid).toBe(Solid.Not);
+        expect(entity.nextthink).toBe(130);
+    });
+
+    it('should respawn when the think function is called', () => {
+        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
+
+        entity.solid = Solid.Not;
+        entity.think(entity);
+
+        expect(entity.solid).toBe(Solid.Trigger);
     });
 
     it('should not do anything when touched by a non-player', () => {
@@ -57,6 +72,5 @@ describe('Weapon Pickup Entities', () => {
         entity.touch(entity, nonPlayer);
 
         expect(mockGame.sound).not.toHaveBeenCalled();
-        expect(mockGame.addUFFlags).not.toHaveBeenCalled();
     });
 });
