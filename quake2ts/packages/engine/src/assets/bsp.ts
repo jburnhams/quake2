@@ -497,10 +497,19 @@ function parseLeafLists(
   const leafFaces: number[][] = [];
   const leafBrushes: number[][] = [];
 
+  const maxLeafFaceIndex = leafFacesInfo.length / 2;
+  const maxLeafBrushIndex = leafBrushesInfo.length / 2;
+
   const faceView = new DataView(buffer, leafFacesInfo.offset, leafFacesInfo.length);
   const brushView = new DataView(buffer, leafBrushesInfo.offset, leafBrushesInfo.length);
 
   for (const leaf of leafs) {
+    if (leaf.firstLeafFace + leaf.numLeafFaces > maxLeafFaceIndex) {
+      throw new BspParseError('Leaf faces reference data past lump bounds');
+    }
+    if (leaf.firstLeafBrush + leaf.numLeafBrushes > maxLeafBrushIndex) {
+      throw new BspParseError('Leaf brushes reference data past lump bounds');
+    }
     const faces: number[] = [];
     for (let i = 0; i < leaf.numLeafFaces; i += 1) {
       faces.push(faceView.getUint16((leaf.firstLeafFace + i) * 2, true));
@@ -522,30 +531,58 @@ function parseVisibility(buffer: ArrayBuffer, info: BspLumpInfo): BspVisibility 
   if (info.length === 0) {
     return undefined;
   }
+  if (info.length < 4) {
+    throw new BspParseError('Visibility lump too small');
+  }
   const view = new DataView(buffer, info.offset, info.length);
   const numClusters = view.getInt32(0, true);
+  const headerBytes = 4 + numClusters * 8;
+  if (numClusters < 0 || headerBytes > info.length) {
+    throw new BspParseError('Visibility lump truncated');
+  }
   let cursor = 4;
   const clusters: BspVisibilityCluster[] = [];
   for (let i = 0; i < numClusters; i += 1) {
     const pvsOffset = view.getInt32(cursor, true);
     const phsOffset = view.getInt32(cursor + 4, true);
     cursor += 8;
-    clusters.push({ pvs: decompressVis(buffer, info.offset + pvsOffset, numClusters), phs: decompressVis(buffer, info.offset + phsOffset, numClusters) });
+    const absolutePvs = info.offset + pvsOffset;
+    const absolutePhs = info.offset + phsOffset;
+    const lumpEnd = info.offset + info.length;
+    if (
+      pvsOffset < 0 ||
+      phsOffset < 0 ||
+      absolutePvs >= lumpEnd ||
+      absolutePhs >= lumpEnd
+    ) {
+      throw new BspParseError('Visibility offsets out of range');
+    }
+    clusters.push({
+      pvs: decompressVis(buffer, absolutePvs, numClusters, info),
+      phs: decompressVis(buffer, absolutePhs, numClusters, info),
+    });
   }
   return { numClusters, clusters };
 }
 
-function decompressVis(buffer: ArrayBuffer, offset: number, numClusters: number): Uint8Array {
+function decompressVis(buffer: ArrayBuffer, offset: number, numClusters: number, lump: BspLumpInfo): Uint8Array {
   const rowBytes = Math.ceil(numClusters / 8);
   const result = new Uint8Array(rowBytes);
-  const src = new Uint8Array(buffer, offset);
-  let srcIndex = 0;
+  const src = new Uint8Array(buffer);
+  let srcIndex = offset;
   let destIndex = 0;
+  const maxOffset = lump.offset + lump.length;
   while (destIndex < rowBytes) {
+    if (srcIndex >= maxOffset) {
+      throw new BspParseError('Visibility data truncated');
+    }
     const value = src[srcIndex++];
     if (value !== 0) {
       result[destIndex++] = value;
       continue;
+    }
+    if (srcIndex >= maxOffset) {
+      throw new BspParseError('Visibility run exceeds lump bounds');
     }
     const runLength = src[srcIndex++];
     for (let i = 0; i < runLength && destIndex < rowBytes; i += 1) {
@@ -567,11 +604,20 @@ function buildLightMapInfo(faces: readonly BspFace[], lightingLump: BspLumpInfo)
   });
 }
 
-export function createFaceLightmap(face: BspFace, lightMaps: Uint8Array): Uint8Array | undefined {
+export function createFaceLightmap(
+  face: BspFace,
+  lightMaps: Uint8Array,
+  info?: BspLightmapInfo,
+): Uint8Array | undefined {
   if (face.lightOffset < 0 || face.lightOffset >= lightMaps.byteLength) {
     return undefined;
   }
-  return lightMaps.subarray(face.lightOffset);
+  const available = lightMaps.byteLength - face.lightOffset;
+  const length = Math.min(info?.length ?? available, available);
+  if (length <= 0) {
+    return undefined;
+  }
+  return lightMaps.subarray(face.lightOffset, face.lightOffset + length);
 }
 
 export function parseWorldspawnSettings(entities: BspEntities): Record<string, string> {

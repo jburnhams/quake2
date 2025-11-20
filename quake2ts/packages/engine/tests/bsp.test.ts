@@ -3,6 +3,7 @@ import {
   BspLoader,
   BspLump,
   BspParseError,
+  type BspFace,
   createFaceLightmap,
   parseBsp,
   parseWorldspawnSettings,
@@ -11,6 +12,14 @@ import { PakArchive } from '../src/assets/pak.js';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
 import { buildPak } from './helpers/pakBuilder.js';
 import { buildTestBsp, encodedVisForClusters } from './helpers/bspBuilder.js';
+
+function getLumpInfo(buffer: ArrayBuffer, lump: BspLump): { offset: number; length: number } {
+  const view = new DataView(buffer);
+  return {
+    offset: view.getInt32(8 + lump * 8, true),
+    length: view.getInt32(12 + lump * 8, true),
+  };
+}
 
 function sampleBspBuffer(): ArrayBuffer {
   return buildTestBsp({
@@ -127,7 +136,7 @@ describe('BSP parsing', () => {
   it('returns lightmap slices for faces', () => {
     const bsp = parseBsp(sampleBspBuffer());
     const face = bsp.faces[0];
-    const slice = createFaceLightmap(face, bsp.lightMaps);
+    const slice = createFaceLightmap(face, bsp.lightMaps, bsp.lightMapInfo[0]);
     expect(slice?.length).toBeGreaterThan(0);
     expect(slice?.[0]).toBe(10);
   });
@@ -167,5 +176,37 @@ describe('BSP parsing', () => {
     const bsp = await loader.load('maps/test.bsp');
     expect(bsp.faces).toHaveLength(1);
     expect(parseWorldspawnSettings(bsp.entities).sky).toBe('unit1');
+  });
+
+  it('rejects visibility offsets that leave the lump bounds', () => {
+    const buffer = sampleBspBuffer();
+    const view = new DataView(buffer);
+    const vis = getLumpInfo(buffer, BspLump.Visibility);
+    view.setInt32(vis.offset + 4, vis.length + 4, true);
+    expect(() => parseBsp(buffer)).toThrow(BspParseError);
+  });
+
+  it('guards against leaf face/brush lists that overflow their lumps', () => {
+    const buffer = sampleBspBuffer();
+    const view = new DataView(buffer);
+    const leafs = getLumpInfo(buffer, BspLump.Leafs);
+    // numLeafFaces is stored at offset + 22
+    view.setUint16(leafs.offset + 22, 5, true);
+    expect(() => parseBsp(buffer)).toThrow(BspParseError);
+  });
+
+  it('slices face lightmaps using the reported lump length', () => {
+    const lightMaps = new Uint8Array([1, 2, 3, 4, 5]);
+    const face: BspFace = {
+      planeIndex: 0,
+      side: 0,
+      firstEdge: 0,
+      numEdges: 0,
+      texInfo: 0,
+      styles: [0, 0, 0, 0],
+      lightOffset: 1,
+    };
+    const slice = createFaceLightmap(face, lightMaps, { offset: 1, length: 3 });
+    expect(slice).toEqual(lightMaps.subarray(1, 4));
   });
 });
