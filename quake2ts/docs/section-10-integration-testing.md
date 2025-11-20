@@ -73,6 +73,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - Ensure import table implementations are complete
   - Test subsystem interdependencies
   - ✅ Added EngineRuntime + game hash regression test to mirror rerelease frame flow and clamp interpolation.
+  - ✅ Engine runtime tests now resolve `@quake2ts/game` directly from source, removing the need for prebuilt game artifacts during `vitest` runs.
 
 ### API Contract Validation System
 - [x] Create import/export table validators
