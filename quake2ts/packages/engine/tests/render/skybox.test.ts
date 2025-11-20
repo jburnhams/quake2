@@ -1,9 +1,57 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   removeViewTranslation,
   computeSkyScroll,
+  SkyboxPipeline,
 } from '../../src/render/skybox.js';
 import { mat4 } from 'gl-matrix';
+
+const mockLocations = {
+  u_viewProjectionNoTranslation: { id: 1 },
+  u_scroll: { id: 2 },
+  u_skybox: { id: 3 },
+};
+
+vi.mock('../../src/render/shaderProgram.js', () => {
+  const getUniformLocation = vi.fn(
+    (name: keyof typeof mockLocations) => mockLocations[name]
+  );
+  const use = vi.fn();
+  const dispose = vi.fn();
+
+  const ShaderProgram = vi.fn(() => ({
+    getUniformLocation,
+    use,
+    dispose,
+  }));
+
+  ShaderProgram.create = vi.fn(() => ({
+    getUniformLocation,
+    use,
+    dispose,
+  }));
+
+  return { ShaderProgram };
+});
+
+vi.mock('../../src/render/resources.js', () => {
+  const VertexArray = vi.fn(() => ({
+    configureAttributes: vi.fn(),
+    bind: vi.fn(),
+    dispose: vi.fn(),
+  }));
+  const VertexBuffer = vi.fn(() => ({
+    upload: vi.fn(),
+    dispose: vi.fn(),
+  }));
+  const TextureCubeMap = vi.fn(() => ({
+    setParameters: vi.fn(),
+    bind: vi.fn(),
+    dispose: vi.fn(),
+  }));
+
+  return { VertexArray, VertexBuffer, TextureCubeMap };
+});
 
 describe('skybox', () => {
   describe('removeViewTranslation', () => {
@@ -25,6 +73,47 @@ describe('skybox', () => {
     it('should compute sky scroll based on time and custom speeds', () => {
       const scroll = computeSkyScroll(2.0, [0.1, 0.2]);
       expect(scroll).toEqual([0.2, 0.4]);
+    });
+  });
+
+  describe('SkyboxPipeline', () => {
+    const createMockGl = (): WebGL2RenderingContext =>
+      ({
+        uniformMatrix4fv: vi.fn(),
+        uniform2f: vi.fn(),
+        uniform1i: vi.fn(),
+        depthMask: vi.fn(),
+        drawArrays: vi.fn(),
+        TRIANGLES: 0x0004,
+      } as any);
+
+    it('should bind uniforms and draw', () => {
+      const gl = createMockGl();
+      const pipeline = new SkyboxPipeline(gl);
+
+      const viewProjection = mat4.create();
+      const scroll: [number, number] = [0.1, 0.2];
+
+      pipeline.bind({
+        viewProjection,
+        scroll,
+      });
+
+      expect(gl.depthMask).toHaveBeenCalledWith(false);
+      expect(gl.uniformMatrix4fv).toHaveBeenCalledWith(
+        mockLocations.u_viewProjectionNoTranslation,
+        false,
+        viewProjection
+      );
+      expect(gl.uniform2f).toHaveBeenCalledWith(
+        mockLocations.u_scroll,
+        scroll[0],
+        scroll[1]
+      );
+      expect(gl.uniform1i).toHaveBeenCalledWith(mockLocations.u_skybox, 0);
+
+      pipeline.draw();
+      expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 36);
     });
   });
 });

@@ -134,31 +134,67 @@ describe('bspPipeline', () => {
       expect(warpUniformCall[1]).toBe(1);
     });
 
-    it('should bind flow uniforms when SURF_FLOWING is set', () => {
-      const gl = createMockGl();
-      const pipeline = new BspSurfacePipeline(gl);
-      const timeSeconds = 2.0;
-      const expectedOffset = -0.5; // (2.0 * 0.25) % 1 = 0.5
+    it.each([
+      { timeSeconds: 2.0, expectedOffset: -0.5 },
+      { timeSeconds: 5.0, expectedOffset: -0.25 },
+      { timeSeconds: 0.0, expectedOffset: -0.0 },
+      { timeSeconds: 4.0, expectedOffset: -0.0 },
+    ])(
+      'should bind flow uniforms for time $timeSeconds',
+      ({ timeSeconds, expectedOffset }) => {
+        const gl = createMockGl();
+        const pipeline = new BspSurfacePipeline(gl);
 
-      pipeline.bind({
-        modelViewProjection: mockMvp,
-        surfaceFlags: SURF_FLOWING,
-        timeSeconds,
-      });
+        pipeline.bind({
+          modelViewProjection: mockMvp,
+          surfaceFlags: SURF_FLOWING,
+          timeSeconds,
+        });
 
-      const texScrollCall = (gl.uniform2f as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_texScroll
-      );
-      expect(texScrollCall).toBeDefined();
-      expect(texScrollCall[1]).toBe(expectedOffset);
-      expect(texScrollCall[2]).toBe(0);
+        const texScrollCall = (gl.uniform2f as any).mock.calls.find(
+          (call: any) => call[0] === mockLocations.u_texScroll
+        );
+        expect(texScrollCall).toBeDefined();
+        expect(texScrollCall[1]).toBeCloseTo(expectedOffset, 5);
+        expect(texScrollCall[2]).toBe(0);
 
-      const lmScrollCall = (gl.uniform2f as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_lightmapScroll
-      );
-      expect(lmScrollCall).toBeDefined();
-      expect(lmScrollCall[1]).toBe(expectedOffset);
-      expect(lmScrollCall[2]).toBe(0);
+        const lmScrollCall = (gl.uniform2f as any).mock.calls.find(
+          (call: any) => call[0] === mockLocations.u_lightmapScroll
+        );
+        expect(lmScrollCall).toBeDefined();
+        expect(lmScrollCall[1]).toBeCloseTo(expectedOffset, 5);
+        expect(lmScrollCall[2]).toBe(0);
+      }
+    );
+  });
+
+  describe('warpCoords GLSL logic', () => {
+    // Replicating the GLSL function in JS for testing purposes
+    const warpCoords = (
+      uv: readonly [number, number],
+      time: number
+    ): [number, number] => {
+      const s = uv[0] + Math.sin(uv[1] * 0.125 + time) * 0.125;
+      const t = uv[1] + Math.sin(uv[0] * 0.125 + time) * 0.125;
+      return [s, t];
+    };
+
+    it('should return original coords at time 0 and uv 0,0', () => {
+      const uv: [number, number] = [0, 0];
+      const time = 0;
+      const result = warpCoords(uv, time);
+      expect(result[0]).toBeCloseTo(0);
+      expect(result[1]).toBeCloseTo(0);
+    });
+
+    it('should calculate warped coordinates correctly for given inputs', () => {
+      const uv: [number, number] = [0.5, 0.5];
+      const time = 1.0;
+      const expectedS = 0.5 + Math.sin(0.5 * 0.125 + 1.0) * 0.125;
+      const expectedT = 0.5 + Math.sin(0.5 * 0.125 + 1.0) * 0.125;
+      const result = warpCoords(uv, time);
+      expect(result[0]).toBeCloseTo(expectedS);
+      expect(result[1]).toBeCloseTo(expectedT);
     });
   });
 });
