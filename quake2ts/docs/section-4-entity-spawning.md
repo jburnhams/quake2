@@ -78,7 +78,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
     - [x] `trigger_counter`: Fires targets after a configurable number of uses (default 2)
     - [x] `trigger_key`: Requires matching key item; consumes inventory and warns when missing
     - [x] `trigger_elevator`
-- [ ] Target spawns (target_* entities)
+- [x] Target spawns (target_* entities)
   - `SP_target_temp_entity`: Spawn temporary effects
   - `SP_target_speaker`: Ambient sounds
   - `SP_target_explosion`, `SP_target_splash`: Effects on trigger
@@ -86,7 +86,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - `SP_target_changelevel`: Level transitions
   - `SP_target_string`, `SP_target_character`: On-screen messages
   - Others: Many target types for scripted sequences
-- [ ] Misc spawns (misc_* decorative/functional)
+- [x] Misc spawns (misc_* decorative/functional)
   - `SP_misc_teleporter`, `SP_misc_teleporter_dest`
   - `SP_misc_explobox`, `SP_misc_banner`: Decorative items
   - `SP_misc_deadsoldier`, `SP_misc_gib_*`: Dead bodies, gibs
