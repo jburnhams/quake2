@@ -31,8 +31,6 @@ export interface HearabilityHooks {
   areasConnected?: (self: Entity, other: Entity) => boolean;
 }
 
-export interface FindTargetOptions extends HearabilityHooks {}
-
 function setIdealYawTowards(self: Entity, other: Entity): void {
   const delta: Vec3 = {
     x: other.origin.x - self.origin.x,
@@ -103,15 +101,18 @@ export function foundTarget(
   self.monsterinfo.run?.(self);
 }
 
-function classifyClientVisibility(self: Entity, other: Entity, level: TargetAwarenessState): boolean {
+function classifyClientVisibility(
+  self: Entity,
+  other: Entity,
+  level: TargetAwarenessState,
+  trace: TraceFunction,
+): boolean {
   const distance = rangeTo(self, other);
   const range = classifyRange(distance);
 
-  const passthrough: TraceFunction = (_start, _end, _ignore, _mask) => ({ fraction: 1, entity: other });
-
   if (range === RangeCategory.Far) return false;
   if (other.light_level <= 5) return false;
-  if (!visible(self, other, passthrough, { throughGlass: false })) return false;
+  if (!visible(self, other, trace, { throughGlass: false })) return false;
 
   if (range === RangeCategory.Near) {
     return level.timeSeconds <= other.show_hostile || infront(self, other);
@@ -129,11 +130,10 @@ function updateSoundChase(
   client: Entity,
   level: TargetAwarenessState,
   hearability: HearabilityHooks,
+  trace: TraceFunction,
 ): boolean {
-  const passthrough: TraceFunction = (_start, _end, _ignore, _mask) => ({ fraction: 1, entity: client });
-
   if ((self.spawnflags & SPAWNFLAG_MONSTER_AMBUSH) !== 0) {
-    if (!visible(self, client, passthrough)) return false;
+    if (!visible(self, client, trace)) return false;
   } else if (hearability.canHear && !hearability.canHear(self, client)) {
     return false;
   }
@@ -193,7 +193,8 @@ function rejectNotargetEntity(client: Entity): boolean {
 export function findTarget(
   self: Entity,
   level: TargetAwarenessState,
-  hearability: FindTargetOptions = {},
+  trace: TraceFunction,
+  hearability: HearabilityHooks = {},
 ): boolean {
   if ((self.monsterinfo.aiflags & AIFlags.GoodGuy) !== 0) {
     if (self.goalentity?.classname === 'target_actor') {
@@ -212,10 +213,10 @@ export function findTarget(
   if (rejectNotargetEntity(candidate)) return false;
 
   if (!heardit) {
-    if (!classifyClientVisibility(self, candidate, level)) return false;
+    if (!classifyClientVisibility(self, candidate, level, trace)) return false;
     self.monsterinfo.aiflags &= ~AIFlags.SoundTarget;
     self.enemy = candidate;
-  } else if (!updateSoundChase(self, candidate, level, hearability)) {
+  } else if (!updateSoundChase(self, candidate, level, hearability, trace)) {
     return false;
   }
 
