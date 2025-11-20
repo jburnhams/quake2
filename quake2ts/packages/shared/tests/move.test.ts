@@ -289,12 +289,12 @@ describe('applyPmoveAirMove', () => {
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       onLadder: false,
-      waterlevel: WaterLevel.NotIn,
+      waterlevel: WaterLevel.None,
       watertype: 0,
       groundContents: 0,
       viewPitch: 0,
-      ladderMod: 0,
-      pmWaterSpeed: 0,
+      ladderMod: 0.5,
+      pmWaterSpeed: 400,
     };
 
     const result = applyPmoveAirMove(params);
@@ -321,12 +321,12 @@ describe('applyPmoveAirMove', () => {
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       onLadder: true,
-      waterlevel: WaterLevel.NotIn,
+      waterlevel: WaterLevel.None,
       watertype: 0,
       groundContents: 0,
       viewPitch: 0,
-      ladderMod: 0,
-      pmWaterSpeed: 0,
+      ladderMod: 0.5,
+      pmWaterSpeed: 400,
     };
 
     // Move up
@@ -360,7 +360,7 @@ describe('applyPmoveWaterMove', () => {
       forward: { x: 1, y: 0, z: 0 },
       right: { x: 0, y: 1, z: 0 },
       pmFlags: 0,
-      onGround: false,
+      onGround: true,
       pmMaxSpeed: 320,
       pmDuckSpeed: 100,
       pmWaterAccelerate: 10,
@@ -375,10 +375,19 @@ describe('applyPmoveWaterMove', () => {
 
     const result = applyPmoveWaterMove(params);
 
-    const airParams = { ...params, waterlevel: WaterLevel.NotIn };
-    const airResult = applyPmoveAirMove(airParams);
+    // Compare with ground movement (not airborne) which uses same acceleration
+    const groundParams = {
+      ...params,
+      waterlevel: WaterLevel.None,
+      gravity: 800,
+      pmType: PmType.Normal,
+      pmAccelerate: 10,
+      pmAirAccelerate: 0,
+    };
+    const groundResult = applyPmoveAirMove(groundParams);
 
-    expect(result.velocity.x).toBeLessThan(airResult.velocity.x);
+    // Water movement should be slower due to wishspeed *= 0.5 in water
+    expect(result.velocity.x).toBeLessThan(groundResult.velocity.x);
   });
   it('drifts downward when idle and underwater', () => {
     const result = applyPmoveWaterMove({
@@ -466,4 +475,110 @@ describe('applyPmoveWaterMove', () => {
     expect(result.blocked).not.toBe(0);
   });
 
+});
+
+describe('stairTrace edge cases', () => {
+  const testMins: Vec3 = { x: -16, y: -16, z: -24 };
+  const testMaxs: Vec3 = { x: 16, y: 16, z: 32 };
+
+  it('should clamp fraction to [0, 1] when landing on step from above', () => {
+    // Player at z=18 trying to drop to z=0, should land on step at z=8
+    const start: Vec3 = { x: 5, y: 0, z: 18 };
+    const end: Vec3 = { x: 5, y: 0, z: 0 };
+
+    const result = stairTrace(start, end, testMins, testMaxs);
+
+    // Fraction should be in valid range [0, 1]
+    expect(result.fraction).toBeGreaterThanOrEqual(0);
+    expect(result.fraction).toBeLessThanOrEqual(1);
+
+    // Should land on step surface (z=8 with mins.z=-24 means origin at z=32)
+    expect(result.endpos.z).toBeGreaterThanOrEqual(start.z);
+    expect(result.endpos.z).toBeLessThanOrEqual(32); // STEP_HEIGHT - mins.z = 8 - (-24) = 32
+  });
+
+  it('should not produce negative fractions when descending onto step', () => {
+    // Various descent scenarios
+    const testCases = [
+      { start: { x: 10, y: 0, z: 20 }, end: { x: 10, y: 0, z: 0 } },
+      { start: { x: 10, y: 0, z: 18 }, end: { x: 10, y: 0, z: -5 } },
+      { start: { x: 10, y: 0, z: 15 }, end: { x: 10, y: 0, z: 0 } },
+      { start: { x: 10, y: 0, z: 10 }, end: { x: 10, y: 0, z: 0 } },
+    ];
+
+    for (const { start, end } of testCases) {
+      const result = stairTrace(start, end, testMins, testMaxs);
+
+      expect(result.fraction).toBeGreaterThanOrEqual(0);
+      expect(result.fraction).toBeLessThanOrEqual(1);
+
+      // endpos should be between start and end (or at one of them)
+      expect(result.endpos.z).toBeLessThanOrEqual(Math.max(start.z, end.z));
+      expect(result.endpos.z).toBeGreaterThanOrEqual(Math.min(start.z, end.z));
+    }
+  });
+
+  it('should handle descent from below step height correctly', () => {
+    // Player already below step, descending further
+    const start: Vec3 = { x: 10, y: 0, z: 5 };
+    const end: Vec3 = { x: 10, y: 0, z: 0 };
+
+    const result = stairTrace(start, end, testMins, testMaxs);
+
+    expect(result.fraction).toBeGreaterThanOrEqual(0);
+    expect(result.fraction).toBeLessThanOrEqual(1);
+  });
+
+  it('should handle horizontal movement at step height correctly', () => {
+    // Moving horizontally at exactly step height
+    const start: Vec3 = { x: 5, y: 0, z: 8 };
+    const end: Vec3 = { x: 15, y: 0, z: 8 };
+
+    const result = stairTrace(start, end, testMins, testMaxs);
+
+    expect(result.fraction).toBeGreaterThanOrEqual(0);
+    expect(result.fraction).toBeLessThanOrEqual(1);
+  });
+
+  it('should produce endpos on the ray between start and end', () => {
+    // When fraction < 1, endpos must be on the line segment
+    const start: Vec3 = { x: 10, y: 5, z: 20 };
+    const end: Vec3 = { x: 10, y: 5, z: 0 };
+
+    const result = stairTrace(start, end, testMins, testMaxs);
+
+    if (result.fraction < 1.0) {
+      // Check that endpos is on the line segment
+      const t = result.fraction;
+      const expectedX = start.x + t * (end.x - start.x);
+      const expectedY = start.y + t * (end.y - start.y);
+      const expectedZ = start.z + t * (end.z - start.z);
+
+      // Allow for floating point imprecision
+      expect(result.endpos.x).toBeCloseTo(expectedX, 5);
+      expect(result.endpos.y).toBeCloseTo(expectedY, 5);
+      expect(result.endpos.z).toBeCloseTo(expectedZ, 5);
+    }
+  });
+
+  it('should handle floor landing with proper fractions', () => {
+    // Player descending to floor from above (before step area)
+    // With mins.z = -24, the bbox bottom is at z + mins.z
+    // To start above floor (z=0), we need start.z + mins.z > 0, so start.z > 24
+    const start: Vec3 = { x: -20, y: 0, z: 30 };
+    const end: Vec3 = { x: -20, y: 0, z: 0 };
+
+    const result = stairTrace(start, end, testMins, testMaxs);
+
+    expect(result.fraction).toBeGreaterThanOrEqual(0);
+    expect(result.fraction).toBeLessThanOrEqual(1);
+
+    // Should land on floor when bbox bottom (start.z + mins.z) hits z=0
+    // That means origin should be at z=24 when landing
+    if (result.fraction < 1.0) {
+      expect(result.endpos.z).toBeCloseTo(24, 5); // -mins.z = -(-24) = 24
+      // Verify fraction is correct: bbox bottom should be at z=0
+      expect(result.endpos.z + testMins.z).toBeCloseTo(0, 5);
+    }
+  });
 });
