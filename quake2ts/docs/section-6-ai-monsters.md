@@ -42,9 +42,9 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 
 ### Perception System
 - [ ] Vision (enemy detection)
-  - **Line-of-sight check**: Trace from monster eyes to player
-  - **FOV check**: Only see player in front hemisphere (or full 360 for some monsters)
-  - **Range check**: Maximum sight distance (varies by monster, lighting)
+  - [x] **Line-of-sight check**: Trace from monster eyes to player
+  - [x] **FOV check**: Only see player in front hemisphere (or full 360 for some monsters)
+  - [x] **Range check**: Maximum sight distance (varies by monster, lighting)
   - **Visibility cooldown**: Once seen, track for N seconds even if LOS lost
 - [ ] Hearing (sound-based detection)
   - Weapon fire, footsteps, item pickup generate "noise"
@@ -237,17 +237,20 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] `ai_face`: Face toward enemy
 - [x] `ai_move`: Move forward by distance
 - [ ] `FindTarget`: Scan for enemy
-- [ ] `FoundTarget`: React to spotting enemy (sound, alert)
-- [ ] `HuntTarget`: Move toward last known enemy position
+- [x] `FoundTarget`: React to spotting enemy (sound, alert)
+- [x] `HuntTarget`: Move toward last known enemy position
 - [x] `visible`: Check if entity is visible
 - [x] `infront`: Check if entity is in front hemisphere
 - [x] `range`: Check distance to entity (melee, short, medium, long)
 
 Recent work:
+- Added perception coverage for rerelease LOS/FOV/range rules with unit tests that lock in ambush cones, viewheight trace masks,
+  and bounding-box distance buckets for melee/near/mid/far ranges.
 - Implemented the rerelease-style turning and movement helpers (`changeYaw`/`walkMove`) and wired `ai_move`, `ai_turn`, and `ai_face` to mirror `M_ChangeYaw`/`M_walkmove` behavior for deterministic math-only movement. Verified against new unit tests that exercise wraparound yaw clamping and forward stepping.
 - Tightened the movement helpers to mutate entity vectors in place (matching the C data flow) and added guardrails in tests to ensure yaw/position updates preserve references for downstream systems.
 - Added the core `ai_stand`/`ai_walk`/`ai_run`/`ai_charge` behaviors that honor target-facing rules from the rerelease before applying movement, with deterministic yaw clamping tests covering idle turns, goal-facing walks, enemy-priority runs, and charge-style pursuit.
 - Added `facingIdeal` with rerelease yaw tolerance (default and pathing-specific) plus a `monsterinfo.aiflags` scaffold on entities so pathfinding and steering logic can branch correctly in future behaviors.
+- Ported the `HuntTarget`/`FoundTarget` flows with rerelease-style field updates (last sighting, combat point handoff, attack cooldown) and unit tests to pin down wakeup rules, notarget rejection, and hearing limits.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback

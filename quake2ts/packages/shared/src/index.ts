@@ -2,6 +2,7 @@ export * from './math/vec3.js';
 export * from './math/angles.js';
 export * from './math/color.js';
 export * from './math/random.js';
+export * from './math/mat4.js';
 export * from './bsp/contents.js';
 export * from './bsp/collision.js';
 export * from './protocol/cvar.js';

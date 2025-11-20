@@ -53,8 +53,8 @@ describe('SaveStorage (memory fallback)', () => {
     const loadedQuick = await storage.load('slot2');
     expect(loadedQuick.playtimeSeconds).toBe(second.playtimeSeconds);
 
-    expect(firstMeta.version).toBe(1);
-    expect(secondMeta.version).toBe(1);
+    expect(firstMeta.version).toBe(2);
+    expect(secondMeta.version).toBe(2);
   });
 
   it('overwrites the quicksave slot and rejects missing loads', async () => {
@@ -90,7 +90,7 @@ describe('SaveStorage (IndexedDB)', () => {
 
     const loaded = await second.load('slot-a', { allowNewerVersion: false });
     expect(loaded.map).toBe('hub');
-    expect(loaded.version).toBe(1);
+    expect(loaded.version).toBe(2);
   });
 
   it('removes saves from IndexedDB and reports deletion status', async () => {

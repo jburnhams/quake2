@@ -9,6 +9,7 @@ import {
   createAmmoInventory,
   pickupAmmo,
 } from './ammo.js';
+import { WeaponItem } from './items.js';
 
 export enum WeaponId {
   Blaster = 'blaster',
@@ -54,6 +55,10 @@ export interface PlayerInventory {
   armor: RegularArmorState | null;
   readonly powerups: Map<PowerupId, number | null>;
   readonly keys: Set<KeyId>;
+}
+
+export interface PlayerClient {
+    inventory: PlayerInventory;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
@@ -141,4 +146,63 @@ export function addKey(inventory: PlayerInventory, key: KeyId): boolean {
 
 export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
   return inventory.keys.has(key);
+}
+
+export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem): boolean {
+  const hadWeapon = hasWeapon(inventory, weaponItem.weaponId);
+  let ammoAdded = false;
+
+  if (weaponItem.ammoType) {
+      const ammoToAdd = hadWeapon ? weaponItem.pickupAmmo : weaponItem.initialAmmo;
+      const result = addAmmo(inventory.ammo, weaponItem.ammoType, ammoToAdd);
+      ammoAdded = result.pickedUp;
+  }
+
+  if (hadWeapon && !ammoAdded) {
+      return false;
+  }
+
+  giveWeapon(inventory, weaponItem.weaponId, true);
+
+  return true;
+}
+  
+export interface SerializedPlayerInventory {
+  readonly ammo: readonly number[];
+  readonly ownedWeapons: readonly WeaponId[];
+  readonly currentWeapon?: WeaponId;
+  readonly armor: RegularArmorState | null;
+  readonly powerups: readonly [PowerupId, number | null][];
+  readonly keys: readonly KeyId[];
+}
+
+export function serializePlayerInventory(inventory: PlayerInventory): SerializedPlayerInventory {
+  return {
+    ammo: inventory.ammo.counts,
+    ownedWeapons: [...inventory.ownedWeapons],
+    currentWeapon: inventory.currentWeapon,
+    armor: inventory.armor ? { ...inventory.armor } : null,
+    powerups: [...inventory.powerups.entries()],
+    keys: [...inventory.keys],
+  };
+}
+
+export function deserializePlayerInventory(
+  serialized: SerializedPlayerInventory,
+  options: PlayerInventoryOptions = {},
+): PlayerInventory {
+  const ammo = createAmmoInventory(options.ammoCaps);
+  const limit = Math.min(ammo.counts.length, serialized.ammo.length);
+  for (let i = 0; i < limit; i++) {
+    ammo.counts[i] = serialized.ammo[i];
+  }
+
+  return {
+    ammo,
+    ownedWeapons: new Set(serialized.ownedWeapons),
+    currentWeapon: serialized.currentWeapon,
+    armor: serialized.armor ? { ...serialized.armor } : null,
+    powerups: new Map(serialized.powerups),
+    keys: new Set(serialized.keys),
+  };
 }

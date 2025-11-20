@@ -99,4 +99,27 @@ describe('RandomGenerator helpers', () => {
     expect(index).toBeGreaterThanOrEqual(0);
     expect(index).toBeLessThan(arr.length);
   });
+
+  it('restores state to reproduce the same random sequence', () => {
+    const rng1 = new RandomGenerator({ seed: 123 });
+    rng1.frandom();
+    rng1.frandom();
+
+    const state = rng1.getState();
+    const rng2 = new RandomGenerator({ seed: 456 }); // different seed
+    rng2.setState(state);
+
+    expect(rng1.frandom()).toBe(rng2.frandom());
+    expect(rng1.irandom(100)).toBe(rng2.irandom(100));
+  });
+
+  it('debiases integer ranges correctly', () => {
+    const span = 10;
+    const limit = TWO_POW_32 - (TWO_POW_32 % span);
+    // First sample is biased (above the limit), second is not.
+    const rng = stubbedRandomGenerator([limit, 5]);
+    // The first sample should be discarded by the debiasing loop.
+    const result = rng.irandomRange(100, 110);
+    expect(result).toBe(105); // 100 + (5 % 10)
+  });
 });

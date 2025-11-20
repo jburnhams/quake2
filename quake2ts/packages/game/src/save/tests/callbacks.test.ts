@@ -1,0 +1,23 @@
+import { describe, expect, it } from 'vitest';
+import { Entity } from '../../entities/entity.js';
+import { EntitySystem } from '../../entities/system.js';
+import { createCallbackRegistry, registerCallback } from '../../entities/callbacks.js';
+
+describe('Callback Serialization', () => {
+  it('should serialize and deserialize function references', () => {
+    const callbackRegistry = createCallbackRegistry();
+    const testThink = (self: Entity) => {};
+    registerCallback(callbackRegistry, 'testThink', testThink);
+
+    const entitySystem = new EntitySystem(null, 1, callbackRegistry);
+    const entity = entitySystem.world;
+    entity.think = testThink;
+
+    const snapshot = entitySystem.createSnapshot();
+    const newEntitySystem = new EntitySystem(null, 1);
+    newEntitySystem.restore(snapshot, callbackRegistry);
+
+    const restoredEntity = newEntitySystem.world;
+    expect(restoredEntity.think).toBe(testThink);
+  });
+});

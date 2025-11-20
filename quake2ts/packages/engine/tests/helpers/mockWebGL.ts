@@ -13,6 +13,7 @@ export class MockWebGL2RenderingContext {
   readonly ARRAY_BUFFER = 0x8892;
   readonly ELEMENT_ARRAY_BUFFER = 0x8893;
   readonly STATIC_DRAW = 0x88e4;
+  readonly DYNAMIC_DRAW = 0x88e8;
   readonly FLOAT = 0x1406;
   readonly UNSIGNED_SHORT = 0x1403;
   readonly TEXTURE_2D = 0x0de1;
