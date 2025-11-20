@@ -2,10 +2,26 @@ export const RANGE_MELEE = 20; // bboxes basically touching
 export const RANGE_NEAR = 440;
 export const RANGE_MID = 940;
 
+export const FL_NOTARGET = 1 << 5;
 export const FL_NOVISIBLE = 1 << 24; // super invisibility
 export const SPAWNFLAG_MONSTER_AMBUSH = 1 << 0;
 
 export enum AIFlags {
+  StandGround = 1 << 0,
+  TempStandGround = 1 << 1,
+  SoundTarget = 1 << 2,
+  LostSight = 1 << 3,
+  PursuitLastSeen = 1 << 4,
+  PursueNext = 1 << 5,
+  PursueTemp = 1 << 6,
+  HoldFrame = 1 << 7,
+  GoodGuy = 1 << 8,
+  Brutal = 1 << 9,
+  NoStep = 1 << 10,
+  Ducked = 1 << 11,
+  CombatPoint = 1 << 12,
+  Medic = 1 << 13,
+  Resurrecting = 1 << 14,
   Pathing = 1 << 30,
 }
 

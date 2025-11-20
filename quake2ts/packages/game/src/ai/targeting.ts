@@ -1,0 +1,228 @@
+import {
+  angleMod,
+  lengthVec3,
+  subtractVec3,
+  vectorToYaw,
+  type Vec3,
+} from '@quake2ts/shared';
+import {
+  AIFlags,
+  FL_NOTARGET,
+  SPAWNFLAG_MONSTER_AMBUSH,
+} from './constants.js';
+import { RangeCategory, classifyRange, infront, rangeTo, visible, type TraceFunction } from './perception.js';
+import type { Entity } from '../entities/entity.js';
+import { ServerFlags } from '../entities/entity.js';
+
+export interface TargetAwarenessState {
+  timeSeconds: number;
+  frameNumber: number;
+  sightEntity: Entity | null;
+  sightEntityFrame: number;
+  soundEntity: Entity | null;
+  soundEntityFrame: number;
+  sound2Entity: Entity | null;
+  sound2EntityFrame: number;
+  sightClient: Entity | null;
+}
+
+export interface HearabilityHooks {
+  canHear?: (self: Entity, other: Entity) => boolean;
+  areasConnected?: (self: Entity, other: Entity) => boolean;
+}
+
+export interface FindTargetOptions extends HearabilityHooks {}
+
+function setIdealYawTowards(self: Entity, other: Entity): void {
+  const delta: Vec3 = {
+    x: other.origin.x - self.origin.x,
+    y: other.origin.y - self.origin.y,
+    z: other.origin.z - self.origin.z,
+  };
+  self.ideal_yaw = vectorToYaw(delta);
+}
+
+function faceYawInstantly(self: Entity): void {
+  (self.angles as { y: number }).y = angleMod(self.ideal_yaw);
+}
+
+export function huntTarget(self: Entity, level: TargetAwarenessState): void {
+  if (!self.enemy) return;
+
+  self.goalentity = self.enemy;
+  setIdealYawTowards(self, self.enemy);
+  faceYawInstantly(self);
+  if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
+    self.monsterinfo.stand?.(self);
+  } else {
+    self.monsterinfo.run?.(self);
+    self.attack_finished_time = level.timeSeconds + 1;
+  }
+}
+
+export interface FoundTargetOptions {
+  pickTarget?: (name: string) => Entity | null;
+}
+
+export function foundTarget(
+  self: Entity,
+  level: TargetAwarenessState,
+  options?: FoundTargetOptions,
+): void {
+  if (!self.enemy) return;
+
+  if ((self.enemy.svflags & ServerFlags.Player) !== 0) {
+    level.sightEntity = self;
+    level.sightEntityFrame = level.frameNumber;
+    self.light_level = 128;
+  }
+
+  self.show_hostile = level.timeSeconds + 1;
+  const lastSighting = self.monsterinfo.last_sighting as { x: number; y: number; z: number };
+  lastSighting.x = self.enemy.origin.x;
+  lastSighting.y = self.enemy.origin.y;
+  lastSighting.z = self.enemy.origin.z;
+  self.trail_time = level.timeSeconds;
+  self.monsterinfo.trail_time = level.timeSeconds;
+
+  if (!self.combattarget) {
+    huntTarget(self, level);
+    return;
+  }
+
+  const pickTarget = options?.pickTarget;
+  const movetarget = pickTarget?.(self.combattarget) ?? self.enemy;
+  self.goalentity = movetarget;
+  self.movetarget = movetarget;
+  self.combattarget = undefined;
+  self.monsterinfo.aiflags |= AIFlags.CombatPoint;
+  if (self.movetarget) {
+    self.movetarget.targetname = undefined;
+  }
+  self.monsterinfo.pausetime = 0;
+  self.monsterinfo.run?.(self);
+}
+
+function classifyClientVisibility(self: Entity, other: Entity, level: TargetAwarenessState): boolean {
+  const distance = rangeTo(self, other);
+  const range = classifyRange(distance);
+
+  const passthrough: TraceFunction = (_start, _end, _ignore, _mask) => ({ fraction: 1, entity: other });
+
+  if (range === RangeCategory.Far) return false;
+  if (other.light_level <= 5) return false;
+  if (!visible(self, other, passthrough, { throughGlass: false })) return false;
+
+  if (range === RangeCategory.Near) {
+    return level.timeSeconds <= other.show_hostile || infront(self, other);
+  }
+
+  if (range === RangeCategory.Mid) {
+    return infront(self, other);
+  }
+
+  return true;
+}
+
+function updateSoundChase(
+  self: Entity,
+  client: Entity,
+  level: TargetAwarenessState,
+  hearability: HearabilityHooks,
+): boolean {
+  const passthrough: TraceFunction = (_start, _end, _ignore, _mask) => ({ fraction: 1, entity: client });
+
+  if ((self.spawnflags & SPAWNFLAG_MONSTER_AMBUSH) !== 0) {
+    if (!visible(self, client, passthrough)) return false;
+  } else if (hearability.canHear && !hearability.canHear(self, client)) {
+    return false;
+  }
+
+  const delta = subtractVec3(client.origin, self.origin);
+  if (lengthVec3(delta) > 1000) return false;
+  if (hearability.areasConnected && !hearability.areasConnected(self, client)) return false;
+
+  self.ideal_yaw = vectorToYaw(delta);
+  faceYawInstantly(self);
+  self.monsterinfo.aiflags |= AIFlags.SoundTarget;
+  self.enemy = client;
+  return true;
+}
+
+function chooseCandidate(self: Entity, level: TargetAwarenessState): { candidate: Entity | null; heardit: boolean } {
+  if (
+    level.sightEntity &&
+    level.sightEntityFrame >= level.frameNumber - 1 &&
+    (self.spawnflags & SPAWNFLAG_MONSTER_AMBUSH) === 0
+  ) {
+    if (level.sightEntity.enemy !== self.enemy) {
+      return { candidate: level.sightEntity, heardit: false };
+    }
+    return { candidate: null, heardit: false };
+  }
+
+  if (level.soundEntity && level.soundEntityFrame >= level.frameNumber - 1) {
+    return { candidate: level.soundEntity, heardit: true };
+  }
+
+  if (
+    !self.enemy &&
+    level.sound2Entity &&
+    level.sound2EntityFrame >= level.frameNumber - 1 &&
+    (self.spawnflags & SPAWNFLAG_MONSTER_AMBUSH) === 0
+  ) {
+    return { candidate: level.sound2Entity, heardit: true };
+  }
+
+  if (level.sightClient) {
+    return { candidate: level.sightClient, heardit: false };
+  }
+
+  return { candidate: null, heardit: false };
+}
+
+function rejectNotargetEntity(client: Entity): boolean {
+  if ((client.flags & FL_NOTARGET) !== 0) return true;
+  if ((client.svflags & ServerFlags.Monster) !== 0 && client.enemy) {
+    return (client.enemy.flags & FL_NOTARGET) !== 0;
+  }
+  if (client.enemy && (client.enemy.flags & FL_NOTARGET) !== 0) return true;
+  return false;
+}
+
+export function findTarget(
+  self: Entity,
+  level: TargetAwarenessState,
+  hearability: FindTargetOptions = {},
+): boolean {
+  if ((self.monsterinfo.aiflags & AIFlags.GoodGuy) !== 0) {
+    if (self.goalentity?.classname === 'target_actor') {
+      return false;
+    }
+    return false;
+  }
+
+  if ((self.monsterinfo.aiflags & AIFlags.CombatPoint) !== 0) {
+    return false;
+  }
+
+  const { candidate, heardit } = chooseCandidate(self, level);
+  if (!candidate || !candidate.inUse) return false;
+  if (candidate === self.enemy) return true;
+  if (rejectNotargetEntity(candidate)) return false;
+
+  if (!heardit) {
+    if (!classifyClientVisibility(self, candidate, level)) return false;
+    self.monsterinfo.aiflags &= ~AIFlags.SoundTarget;
+    self.enemy = candidate;
+  } else if (!updateSoundChase(self, candidate, level, hearability)) {
+    return false;
+  }
+
+  foundTarget(self, level);
+  if ((self.monsterinfo.aiflags & AIFlags.SoundTarget) === 0) {
+    self.monsterinfo.sight?.(self, self.enemy!);
+  }
+
+  return true;
+}
