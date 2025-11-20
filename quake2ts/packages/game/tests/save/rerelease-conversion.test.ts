@@ -74,7 +74,9 @@ describe('rerelease save conversions', () => {
     expect(() => convertRereleaseSaveToGameSave(rerelease)).toThrow('not currently supported');
   });
 
-  test.skip('skipped TODO - exports snapshots back to rerelease-shaped JSON deterministically', () => {
+  // TODO: Implement inventory field serialization in rerelease save conversion
+  // Currently fails with "Unsupported field type for entities[2046].inventory"
+  test.skip('exports snapshots back to rerelease-shaped JSON deterministically', () => {
     const { system, crate, soldier } = createBasicSnapshot();
     const clock = new LevelClock();
     const levelState = { frameNumber: 2, timeSeconds: 0.05, previousTimeSeconds: 0.025, deltaSeconds: 0.025 } as const;

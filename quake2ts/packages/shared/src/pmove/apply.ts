@@ -41,6 +41,20 @@ export const applyPmove = (
 
   const { origin, velocity, onGround, waterLevel } = newState;
 
+  // Apply friction BEFORE acceleration to match original Quake 2 rerelease behavior
+  // See: rerelease/src/game/player/pmove.c lines 1678 (PM_Friction) then 1693 (PM_AirMove->PM_Accelerate)
+  const frictionedVelocity = applyPmoveFriction({
+    velocity,
+    frametime: FRAMETIME,
+    onGround,
+    groundIsSlick: false,
+    onLadder: false,
+    waterlevel: waterLevel,
+    pmFriction: 6,
+    pmStopSpeed: 100,
+    pmWaterFriction: 1,
+  });
+
   const wish = waterLevel >= 2
     ? buildWaterWish({
         forward: { x: 1, y: 0, z: 0 },
@@ -55,24 +69,12 @@ export const applyPmove = (
         maxSpeed: 320,
       });
 
-  const newVelocity = applyPmoveAccelerate({
-    velocity,
+  const finalVelocity = applyPmoveAccelerate({
+    velocity: frictionedVelocity,
     wishdir: wish.wishdir,
     wishspeed: wish.wishspeed,
     accel: onGround ? 10 : 1,
     frametime: FRAMETIME,
-  });
-
-  const finalVelocity = applyPmoveFriction({
-    velocity: newVelocity,
-    frametime: FRAMETIME,
-    onGround,
-    groundIsSlick: false,
-    onLadder: false,
-    waterlevel: waterLevel,
-    pmFriction: 6,
-    pmStopSpeed: 100,
-    pmWaterFriction: 1,
   });
 
   const traceResult = trace(origin, {

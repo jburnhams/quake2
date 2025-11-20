@@ -1,7 +1,7 @@
 
 import { Vec3 } from '../math/vec3.js';
 
-import { WaterLevel } from '../bsp/contents.js';
+import { WaterLevel } from '../pmove/constants.js';
 
 export interface PlayerState {
   origin: Vec3;

@@ -48,7 +48,7 @@ This section covers the physics simulation and collision detection system that f
   - [x] Zero-length traces (point tests)
   - [x] Trace starting in solid (set startsolid, allsolid flags)
   - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
-  - [ ] Epsilon handling for surface snapping
+  - [x] Epsilon handling for surface snapping
 
 ### Point Queries
 - [x] Implement `pointcontents` function
