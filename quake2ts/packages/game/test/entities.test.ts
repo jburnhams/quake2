@@ -213,7 +213,12 @@ describe('Entity field metadata', () => {
 
 describe('Game loop integration', () => {
   it('spawns a player at the start location', () => {
-    const game = createGame(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } }), () => 0, { gravity: { x: 0, y: 0, z: -1 } });
+    const game = createGame(
+      () => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } }) as any,
+      () => 0,
+      mockEngine as any,
+      { gravity: { x: 0, y: 0, z: -1 } }
+    );
     game.init(0);
     const playerStart = game.entities.spawn();
     playerStart.classname = 'info_player_start';
@@ -229,7 +234,12 @@ describe('Game loop integration', () => {
   });
 
   it('exposes entity state inside snapshots and processes thinks during simulation', () => {
-    const game = createGame(mockEngine, { gravity: { x: 0, y: 0, z: -1 } });
+    const game = createGame(
+      mockEngine.trace as any,
+      () => 0,
+      mockEngine as any,
+      { gravity: { x: 0, y: 0, z: -1 } }
+    );
     game.init(0);
 
     const thinker = game.entities.spawn();

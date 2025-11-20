@@ -11,7 +11,12 @@ const mockEngine = {
 
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {
-    const game = createGame(mockEngine.trace, () => 0, { gravity: { x: 0, y: 0, z: -800 } });
+    const game = createGame(
+      mockEngine.trace as any,
+      () => 0,
+      mockEngine as any,
+      { gravity: { x: 0, y: 0, z: -800 } }
+    );
     const snapshot = game.init(1000);
 
     expect(snapshot?.frame).toBe(0);
@@ -24,7 +29,12 @@ describe('createGame', () => {
   });
 
   it('integrates velocity and origin over successive frames', () => {
-    const game = createGame(mockEngine.trace, () => 0, { gravity: { x: 0, y: 0, z: -800 } });
+    const game = createGame(
+      mockEngine.trace as any,
+      () => 0,
+      mockEngine as any,
+      { gravity: { x: 0, y: 0, z: -800 } }
+    );
     game.init(0);
 
     const first = game.frame({ frame: 1, deltaMs: 25, nowMs: 25 });
