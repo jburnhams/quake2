@@ -142,9 +142,9 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Used for synchronized effects (e.g., grenade lands, then explodes)
 - [x] Sound entity tracking
   - Entity panners update every frame; `stopEntitySounds` clears active channels when entities are removed
-  - [x] Underwater sound filtering (optional)
+- [x] Underwater sound filtering (optional)
     - Lowpass `BiquadFilter` wired into the master chain; toggleable with cutoff controls
-    - [x] Occlusion (optional, advanced)
+- [x] Occlusion (optional, advanced)
     - Trace from listener to sound source
     - If blocked by wall, reduce volume or apply filter
     - Lowpass filters are pre-wired for occlusion-enabled contexts so mid-sound occlusion reports can immediately clamp cutoff frequencies and later clear back to full bandwidth when visibility returns
