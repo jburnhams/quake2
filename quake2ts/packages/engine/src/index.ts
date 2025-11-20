@@ -98,6 +98,20 @@ export {
 export { parseWav, type WavData } from './assets/wav.js';
 export { decodeOgg, type OggAudio } from './assets/ogg.js';
 export { AudioRegistry, AudioRegistryError, type DecodedAudio } from './assets/audio.js';
+export { PakIndexStore, type StoredPakIndex } from './assets/pakIndexStore.js';
+export {
+  PakValidationError,
+  PakValidator,
+  RERELEASE_KNOWN_PAKS,
+  type KnownPakChecksum,
+  type PakValidationOutcome,
+} from './assets/pakValidation.js';
+export {
+  AssetDependencyError,
+  AssetDependencyTracker,
+  AssetManager,
+  type AssetManagerOptions,
+} from './assets/manager.js';
 export {
   ATTN_IDLE,
   ATTN_LOOP_NONE,
@@ -119,12 +133,16 @@ export {
   type AudioGraph,
   type AudioNodeLike,
   type GainNodeLike,
+  type BiquadFilterNodeLike,
   type PannerNodeLike,
 } from './audio/context.js';
 export { SoundRegistry } from './audio/registry.js';
+export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';
 export { AudioSystem, type AudioSystemOptions, type SoundRequest } from './audio/system.js';
 export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
+export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
+export { AudioApi, type AudioApiOptions } from './audio/api.js';
 export {
   EngineHost,
   type ClientRenderer,
@@ -140,6 +158,7 @@ export {
   Framebuffer,
   IndexBuffer,
   Texture2D,
+  TextureCubeMap,
   VertexArray,
   VertexBuffer,
   type BufferUsage,
@@ -168,3 +187,22 @@ export {
   type BspSurfaceBindOptions,
   type SurfaceRenderState,
 } from './render/bspPipeline.js';
+export {
+  SKYBOX_FRAGMENT_SHADER,
+  SKYBOX_VERTEX_SHADER,
+  SkyboxPipeline,
+  computeSkyScroll,
+  removeViewTranslation,
+} from './render/skybox.js';
+export {
+  MD2_FRAGMENT_SHADER,
+  MD2_VERTEX_SHADER,
+  Md2MeshBuffers,
+  Md2Pipeline,
+  buildMd2Geometry,
+  buildMd2VertexData,
+  type Md2BindOptions,
+  type Md2FrameBlend,
+  type Md2Geometry,
+  type Md2DrawVertex,
+} from './render/md2Pipeline.js';

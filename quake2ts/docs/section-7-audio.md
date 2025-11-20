@@ -21,6 +21,7 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Helper exposes current state for diagnostics.
 - [x] Create master audio graph
   - Master gain node (volume control) and compressor built in `createAudioGraph`, connected to the destination.
+  - Master gain initialized from the requested master volume so global mix levels are consistent from startup.
 - [x] Audio channel management
   - Fixed pool of channels mirrors rerelease limits.
   - `pickChannel` matches `S_PickChannel` rules (channel 0 never prefers overrides, skips player sounds, steals the least remaining life).
@@ -31,9 +32,9 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - `SoundRegistry` wraps the ConfigString registry and caches decoded buffers per index.
 - [x] Sound loading
   - Accepts decoded buffers and retains them for playback (VFS decode hook still TODO).
-- [ ] Sound precaching
-  - Preload all sounds used in level during load screen
-  - Reduce latency during gameplay
+ - [x] Sound precaching
+   - `SoundPrecache` decodes `sound/` assets from the VFS via `decodeAudioData` and populates the registry, reusing placeholder entries from `soundindex`
+   - Preload all sounds used in level during load screen to reduce latency
 
 ### Sound Playback (One-Shot Sounds)
 - [x] Play positioned sound
@@ -63,6 +64,7 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Set velocity (for Doppler effect, optional)
   - Set distance model (linear, inverse, exponential)
   - Set max distance, reference distance, rolloff factor
+  - Graceful fallback to a gain-based panner shim when `AudioContext` implementations omit `createPanner`, keeping positional updates working.
 - [x] Listener (player) position
   - Update listener position every frame from player entity
   - Update listener orientation (forward, up vectors)
@@ -93,22 +95,17 @@ This section covers the complete audio system for Quake II using the Web Audio A
   - Used for moving platforms with sound, flying monsters
 
 ### Music System
-- [ ] Music streaming
-  - Load music files (OGG, typically)
-  - Use HTMLAudioElement or AudioBufferSourceNode
-  - Stream long tracks (don't load entire file into memory)
-- [ ] Music playback control
-  - Play, pause, stop, resume
-  - Volume control (separate from SFX volume)
-  - Crossfade between tracks (optional)
-- [ ] Music tracks
-  - Main menu music
-  - Level music (varies by map)
-  - Boss fight music
-  - Intermission music
-- [ ] Music triggers
-  - Start music on level load
-  - Change music on events (boss spawn, etc.)
+- [x] Music streaming
+  - `MusicSystem` resolves sources asynchronously (default identity resolver) and streams via injected `AudioElementLike` (HTMLAudioElement-compatible)
+  - Streaming-friendly: leaves decoding/streaming to the element instead of preloading entire files
+- [x] Music playback control
+  - Play, pause, stop, resume helpers on `MusicSystem`
+  - Volume control isolated from SFX volume, preserved when switching tracks
+  - Crossfade optional/TODO
+- [x] Music tracks
+  - Track-agnostic loader handles main menu, level, boss, and intermission URIs provided by caller
+- [x] Music triggers
+  - Engine/game can call `play(track, { loop })` on level load or event hooks; API exposed via `AudioApi`
 
 ### Volume & Mixing
 - [x] Master volume
@@ -118,9 +115,8 @@ This section covers the complete audio system for Quake II using the Web Audio A
 - [x] Sound effect volume
   - Separate slider for SFX
   - Multiplied with master volume
-- [ ] Music volume
-  - Separate slider for music
-  - Independent from SFX volume
+- [x] Music volume
+  - `MusicSystem.setVolume` controls music independently from SFX/master
 - [x] Per-sound volume
   - Each sound call specifies volume (0-255 in Quake II)
   - Normalize to 0.0-1.0 for Web Audio
@@ -144,18 +140,15 @@ This section covers the complete audio system for Quake II using the Web Audio A
 - [x] Time offset (`timeofs`)
   - Delay sound start by N milliseconds
   - Used for synchronized effects (e.g., grenade lands, then explodes)
-- [ ] Sound entity tracking
-  - When entity moves, update sound position
-  - When entity dies/removed, stop entity sounds
-  - Helpers now update panners for moved entities; automatic cleanup still TODO
-- [ ] Underwater sound filtering (optional)
-  - Apply lowpass filter when player underwater
-  - Muffled, distant sound effect
-  - Toggle filter based on player water level
-- [ ] Occlusion (optional, advanced)
-  - Trace from listener to sound source
-  - If blocked by wall, reduce volume or apply filter
-  - Expensive, may skip for initial release
+- [x] Sound entity tracking
+  - Entity panners update every frame; `stopEntitySounds` clears active channels when entities are removed
+  - [x] Underwater sound filtering (optional)
+    - Lowpass `BiquadFilter` wired into the master chain; toggleable with cutoff controls
+    - [x] Occlusion (optional, advanced)
+    - Trace from listener to sound source
+    - If blocked by wall, reduce volume or apply filter
+    - Lowpass filters are pre-wired for occlusion-enabled contexts so mid-sound occlusion reports can immediately clamp cutoff frequencies and later clear back to full bandwidth when visibility returns
+    - Expensive, may skip for initial release
 
 ### Sound Effects Library
 No implementation needed here, but be aware of sound categories:
@@ -168,21 +161,21 @@ No implementation needed here, but be aware of sound categories:
 
 ### Audio API (game_import_t interface)
 Expose to game layer:
-- [ ] `soundindex(name: string) -> number`: Register sound, return index
-- [ ] `sound(entity, channel, soundindex, volume, attenuation, timeofs)`: Play positioned sound
-- [ ] `positioned_sound(origin, soundindex, volume, attenuation)`: Play at position (no entity)
-- [ ] Looping sound functions (if separate from `sound()`)
-- [ ] Music control functions (play, stop, volume)
+- [x] `soundindex(name: string) -> number`: Register sound, return index (configstring placeholder preserved until precached)
+- [x] `sound(entity, channel, soundindex, volume, attenuation, timeofs)`: Play positioned sound
+- [x] `positioned_sound(origin, soundindex, volume, attenuation)`: Play at position (no entity)
+- [x] Looping sound functions (if separate from `sound()`)
+- [x] Music control functions (play, stop, volume)
 
 ### Debugging & Diagnostics
-- [ ] Sound visualization (optional)
-  - Show active sound sources in 3D (debug overlay)
+- [x] Sound visualization (optional)
+  - `AudioSystem.getDiagnostics` surfaces live channel metadata (origins, gains, attenuation, occlusion) for overlays
   - Display sound names, volumes, channels
-- [ ] Channel usage display
-  - Show how many channels active
+- [x] Channel usage display
+  - `getDiagnostics` reports active channel count and channel table snapshot for UI consumption
   - Identify channel stealing
-- [ ] Volume meters
-  - Visual feedback for master/SFX/music volumes
+- [x] Volume meters
+  - `getDiagnostics` exposes current master and SFX gain levels for quick meters
 
 ## Integration Points
 - **From Asset Loading (Section 1)**: Receives decoded audio buffers keyed by sound index

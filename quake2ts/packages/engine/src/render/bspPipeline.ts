@@ -64,6 +64,7 @@ uniform vec4 u_lightStyleFactors;
 uniform float u_alpha;
 uniform bool u_applyLightmap;
 uniform bool u_warp;
+uniform float u_time;
 
 out vec4 o_color;
 
@@ -72,9 +73,9 @@ vec2 warpCoords(vec2 uv) {
   if (!u_warp) {
     return uv;
   }
-  float s = sin(uv.y * 3.14159) * 0.02;
-  float t = cos(uv.x * 3.14159) * 0.02;
-  return uv + vec2(s, t);
+  float s = uv.x + sin(uv.y * 0.125 + u_time) * 0.125;
+  float t = uv.y + sin(uv.x * 0.125 + u_time) * 0.125;
+  return vec2(s, t);
 }
 
 void main() {
@@ -153,6 +154,7 @@ export class BspSurfacePipeline {
   private readonly uniformWarp: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
   private readonly uniformLightmap: WebGLUniformLocation | null;
+  private readonly uniformTime: WebGLUniformLocation | null;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -171,6 +173,7 @@ export class BspSurfacePipeline {
     this.uniformWarp = this.program.getUniformLocation('u_warp');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
     this.uniformLightmap = this.program.getUniformLocation('u_lightmapAtlas');
+    this.uniformTime = this.program.getUniformLocation('u_time');
   }
 
   bind(options: BspSurfaceBindOptions): SurfaceRenderState {
@@ -195,6 +198,7 @@ export class BspSurfacePipeline {
     this.gl.uniform1f(this.uniformAlpha, state.alpha);
     this.gl.uniform1i(this.uniformApplyLightmap, state.sky ? 0 : 1);
     this.gl.uniform1i(this.uniformWarp, state.warp ? 1 : 0);
+    this.gl.uniform1f(this.uniformTime, timeSeconds);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
     this.gl.uniform1i(this.uniformLightmap, lightmapSampler);
 

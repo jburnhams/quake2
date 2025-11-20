@@ -61,6 +61,34 @@ describe('EntitySystem snapshots', () => {
     restored.runFrame();
     expect(thinkCount).toBe(1);
   });
+
+  it('preserves inventory contents across snapshots', () => {
+    const system = new EntitySystem(3);
+    system.beginFrame(0.1);
+
+    const player = system.spawn();
+    player.classname = 'player';
+    player.inventory['key_data_cd'] = 2;
+    player.inventory['key_security'] = 1;
+
+    const snapshot = collectSnapshot(system);
+
+    const restored = new EntitySystem(3);
+    restored.restore(snapshot);
+
+    let restoredPlayer: typeof player | null = null;
+    restored.forEachEntity((entity) => {
+      if (entity.classname === 'player') {
+        restoredPlayer = entity;
+      }
+    });
+
+    expect(restoredPlayer).not.toBeNull();
+    expect(restoredPlayer?.inventory).toEqual({
+      key_data_cd: 2,
+      key_security: 1,
+    });
+  });
 });
 
 describe('Game save files', () => {
@@ -192,7 +220,10 @@ describe('Game save files', () => {
       rngState: rng.getState(),
     });
 
-    expect(() => parseSaveFile({ ...valid, version: 99 })).toThrow('Unsupported save version');
+    expect(parseSaveFile({ ...valid, version: 99 }).version).toBe(99);
+    expect(() => parseSaveFile({ ...valid, version: 99 }, { allowNewerVersion: false })).toThrow(
+      'newer than supported',
+    );
     expect(() => parseSaveFile({ ...valid, level: null as unknown as LevelFrameState })).toThrow();
     expect(() =>
       parseSaveFile({

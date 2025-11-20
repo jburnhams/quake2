@@ -1,3 +1,4 @@
+import { CONTENTS_TRIGGER } from './contents.js';
 import type { Vec3 } from '../math/vec3.js';
 import { ZERO_VEC3, addVec3, scaleVec3, subtractVec3 } from '../math/vec3.js';
 
@@ -393,11 +394,31 @@ function planeOffsetForBounds(plane: CollisionPlane, mins: Vec3, maxs: Vec3): nu
     plane.normal.y * (plane.normal.y < 0 ? maxs.y : mins.y) +
     plane.normal.z * (plane.normal.z < 0 ? maxs.z : mins.z);
 
-  return Math.abs(offset);
+  return offset;
+}
+
+function planeOffsetMagnitude(plane: CollisionPlane, mins: Vec3, maxs: Vec3): number {
+  return Math.abs(planeOffsetForBounds(plane, mins, maxs));
 }
 
 function lerpPoint(start: Vec3, end: Vec3, t: number): Vec3 {
   return addVec3(start, scaleVec3(subtractVec3(end, start), t));
+}
+
+function finalizeTrace(trace: TraceResult, start: Vec3, end: Vec3): CollisionTraceResult {
+  const clampedFraction = trace.allsolid ? 0 : trace.fraction;
+  const endpos = lerpPoint(start, end, clampedFraction);
+
+  return {
+    fraction: clampedFraction,
+    endpos,
+    plane: trace.plane,
+    planeNormal: trace.startsolid ? undefined : trace.plane?.normal,
+    contents: trace.contents,
+    surfaceFlags: trace.surfaceFlags,
+    startsolid: trace.startsolid,
+    allsolid: trace.allsolid,
+  };
 }
 
 function clusterForPoint(point: Vec3, model: CollisionModel, headnode: number): number {
@@ -626,19 +647,7 @@ export function traceBox(params: CollisionTraceParams): CollisionTraceResult {
     brushCheckCount,
   });
 
-  const clampedFraction = trace.allsolid ? 0 : trace.fraction;
-  const endpos = lerpPoint(start, end, clampedFraction);
-
-  return {
-    fraction: clampedFraction,
-    endpos,
-    plane: trace.plane,
-    planeNormal: trace.startsolid ? undefined : trace.plane?.normal,
-    contents: trace.contents,
-    surfaceFlags: trace.surfaceFlags,
-    startsolid: trace.startsolid,
-    allsolid: trace.allsolid,
-  };
+  return finalizeTrace(trace, start, end);
 }
 
 export function pointContents(point: Vec3, model: CollisionModel, headnode = 0): number {
@@ -700,7 +709,7 @@ export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: Collisi
 
     const node = model.nodes[nodeIndex];
     const plane = node.plane;
-    const offset = planeOffsetForBounds(plane, mins, maxs);
+    const offset = planeOffsetMagnitude(plane, mins, maxs);
     const dist = planeDistanceToPoint(plane, origin);
 
     if (offset === 0) {
@@ -745,4 +754,158 @@ export function inPHS(p1: Vec3, p2: Vec3, model: CollisionModel, headnode = 0): 
   const cluster2 = clusterForPoint(p2, model, headnode);
 
   return clusterVisible(visibility, cluster1, cluster2, true);
+}
+
+export interface CollisionEntityLink {
+  readonly id: number;
+  readonly origin: Vec3;
+  readonly mins: Vec3;
+  readonly maxs: Vec3;
+  readonly contents: number;
+  readonly surfaceFlags?: number;
+}
+
+interface CollisionEntityState extends CollisionEntityLink {
+  readonly brush: CollisionBrush;
+  readonly bounds: { readonly mins: Vec3; readonly maxs: Vec3 };
+}
+
+function axisAlignedPlane(normal: Vec3, dist: number, type: number): CollisionPlane {
+  return { normal, dist, type, signbits: computePlaneSignBits(normal) };
+}
+
+function makeEntityBrush(link: CollisionEntityLink): CollisionBrush {
+  const sx = link.surfaceFlags ?? 0;
+  const xMax = link.origin.x + link.maxs.x;
+  const xMin = link.origin.x + link.mins.x;
+  const yMax = link.origin.y + link.maxs.y;
+  const yMin = link.origin.y + link.mins.y;
+  const zMax = link.origin.z + link.maxs.z;
+  const zMin = link.origin.z + link.mins.z;
+
+  const planes: CollisionPlane[] = [
+    axisAlignedPlane({ x: 1, y: 0, z: 0 }, xMax, 0),
+    axisAlignedPlane({ x: -1, y: 0, z: 0 }, -xMin, 0),
+    axisAlignedPlane({ x: 0, y: 1, z: 0 }, yMax, 1),
+    axisAlignedPlane({ x: 0, y: -1, z: 0 }, -yMin, 1),
+    axisAlignedPlane({ x: 0, y: 0, z: 1 }, zMax, 2),
+    axisAlignedPlane({ x: 0, y: 0, z: -1 }, -zMin, 2),
+  ];
+
+  const sides: CollisionBrushSide[] = planes.map((plane) => ({ plane, surfaceFlags: sx }));
+
+  return { contents: link.contents, sides, checkcount: 0 };
+}
+
+function makeEntityState(link: CollisionEntityLink): CollisionEntityState {
+  const brush = makeEntityBrush(link);
+  return {
+    ...link,
+    brush,
+    bounds: {
+      mins: {
+        x: link.origin.x + link.mins.x,
+        y: link.origin.y + link.mins.y,
+        z: link.origin.z + link.mins.z,
+      },
+      maxs: {
+        x: link.origin.x + link.maxs.x,
+        y: link.origin.y + link.maxs.y,
+        z: link.origin.z + link.maxs.z,
+      },
+    },
+  };
+}
+
+function boundsIntersect(a: { mins: Vec3; maxs: Vec3 }, b: { mins: Vec3; maxs: Vec3 }): boolean {
+  return !(
+    a.mins.x > b.maxs.x ||
+    a.maxs.x < b.mins.x ||
+    a.mins.y > b.maxs.y ||
+    a.maxs.y < b.mins.y ||
+    a.mins.z > b.maxs.z ||
+    a.maxs.z < b.mins.z
+  );
+}
+
+function pickBetterTrace(
+  best: CollisionTraceResult,
+  candidate: CollisionTraceResult,
+): boolean {
+  if (candidate.allsolid && !best.allsolid) return true;
+  if (candidate.startsolid && !best.startsolid) return true;
+  return candidate.fraction < best.fraction;
+}
+
+export interface CollisionEntityTraceParams extends CollisionTraceParams {
+  readonly passId?: number;
+}
+
+export interface CollisionEntityTraceResult extends CollisionTraceResult {
+  readonly entityId: number | null;
+}
+
+export class CollisionEntityIndex {
+  private readonly entities = new Map<number, CollisionEntityState>();
+
+  link(entity: CollisionEntityLink): void {
+    this.entities.set(entity.id, makeEntityState(entity));
+  }
+
+  unlink(entityId: number): void {
+    this.entities.delete(entityId);
+  }
+
+  trace(params: CollisionEntityTraceParams): CollisionEntityTraceResult {
+    const { passId } = params;
+    const mins = params.mins ?? ZERO_VEC3;
+    const maxs = params.maxs ?? ZERO_VEC3;
+    const contentMask = params.contentMask ?? 0xffffffff;
+
+    let bestTrace: CollisionTraceResult;
+    let bestEntity: number | null = null;
+
+    if (params.model) {
+      bestTrace = traceBox(params);
+    } else {
+      bestTrace = finalizeTrace(createDefaultTrace(), params.start, params.end);
+    }
+
+    for (const entity of this.entities.values()) {
+      if (entity.id === passId) continue;
+      if ((entity.contents & contentMask) === 0) continue;
+
+      const trace = createDefaultTrace();
+      clipBoxToBrush({ start: params.start, end: params.end, mins, maxs, brush: entity.brush, trace });
+
+      if (trace.contents === 0) {
+        trace.contents = entity.contents;
+      }
+
+      const candidate = finalizeTrace(trace, params.start, params.end);
+      if (pickBetterTrace(bestTrace, candidate)) {
+        bestTrace = candidate;
+        bestEntity = entity.id;
+      }
+    }
+
+    return { ...bestTrace, entityId: bestEntity };
+  }
+
+  gatherTriggerTouches(origin: Vec3, mins: Vec3, maxs: Vec3, mask = CONTENTS_TRIGGER): number[] {
+    const results: number[] = [];
+    const queryBounds = {
+      mins: addVec3(origin, mins),
+      maxs: addVec3(origin, maxs),
+    };
+
+    for (const entity of this.entities.values()) {
+      if ((entity.contents & mask) === 0) continue;
+      if (boundsIntersect(queryBounds, entity.bounds)) {
+        results.push(entity.id);
+      }
+    }
+
+    return results;
+  }
 }

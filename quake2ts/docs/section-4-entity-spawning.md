@@ -70,10 +70,13 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `SP_trigger_push`: Jump pads, wind tunnels
     - Default movedir now derived even when `angles` are omitted (mirrors `G_SetMovedir`).
   - [x] `SP_trigger_hurt`: Damage zones (lava, slime)
-  - [ ] `SP_trigger_teleport`: Teleport destinations
-  - [ ] `SP_trigger_gravity`: Gravity modifiers
-  - [ ] `SP_trigger_monsterjump`: Monster navigation hints
-  - [ ] Others: `trigger_counter`, `trigger_key`, `trigger_elevator`
+  - [x] `SP_trigger_teleport`: Teleport destinations
+  - [x] `SP_trigger_gravity`: Gravity modifiers
+  - [x] `SP_trigger_monsterjump`: Monster navigation hints
+  - Others:
+    - [x] `trigger_counter`: Fires targets after a configurable number of uses (default 2)
+    - [x] `trigger_key`: Requires matching key item; consumes inventory and warns when missing
+    - [ ] `trigger_elevator`
 - [ ] Target spawns (target_* entities)
   - `SP_target_temp_entity`: Spawn temporary effects
   - `SP_target_speaker`: Ambient sounds
@@ -206,16 +209,16 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Trigger targets
   - Multiple: can trigger repeatedly; Once: trigger then remove
   - Delay, sounds
-- [ ] **trigger_teleport**
-  - Touch: teleport entity to destination
-  - Find matching `misc_teleporter_dest`
-  - Preserve velocity or zero it (based on flags)
+- [x] **trigger_teleport**
+  - Touch: teleport entity to destination (uses `info_teleport_destination` targets)
+  - Telefrag logic mirrors KillBox behaviour, zeroing velocity and clearing groundentity
+  - Preserves destination angles for orientation
 
 ### Entity Utility Functions
 - [x] `G_SetMovedir`: Calculate move direction from angles
 - [ ] `G_TouchTriggers`: Check if entity is touching any triggers
-- [ ] `G_PickTarget`: Choose random entity matching targetname (for randomization)
-- [ ] `KillBox`: Kill any entities at spawn position (prevent stuck spawns)
+- [x] `G_PickTarget`: Choose random entity matching targetname (for randomization)
+- [x] `KillBox`: Kill any entities at spawn position (prevent stuck spawns)
 - [ ] `VelocityForDamage`: Calculate knockback velocity
 - [ ] `ClipVelocity`: Reflect velocity off plane (uses shared helper)
 

@@ -240,6 +240,41 @@ describe('trace and contents queries', () => {
     expect(trace.plane?.normal).toEqual({ x: -1, y: 0, z: 0 });
   });
 
+  it('considers bbox extents when classifying which side of a split to traverse', () => {
+    const splitPlane = makePlane({ x: 1, y: 0, z: 0 }, 0);
+    const brush: CollisionBrush = {
+      contents: CONTENTS_SOLID,
+      sides: [
+        { plane: makePlane({ x: 1, y: 0, z: 0 }, -8), surfaceFlags: 0 },
+        { plane: makePlane({ x: -1, y: 0, z: 0 }, 32), surfaceFlags: 0 },
+        { plane: makePlane({ x: 0, y: 1, z: 0 }, 8), surfaceFlags: 0 },
+        { plane: makePlane({ x: 0, y: -1, z: 0 }, 8), surfaceFlags: 0 },
+        { plane: makePlane({ x: 0, y: 0, z: 1 }, 8), surfaceFlags: 0 },
+        { plane: makePlane({ x: 0, y: 0, z: -1 }, 8), surfaceFlags: 0 },
+      ],
+    };
+
+    const model: CollisionModel = {
+      planes: [splitPlane, ...brush.sides.map((side) => side.plane)],
+      nodes: [{ plane: splitPlane, children: [-1, -2] }],
+      leaves: [makeLeaf(0, 0, 0), makeLeaf(0, 0, 1)],
+      brushes: [brush],
+      leafBrushes: [0],
+      bmodels: [],
+    };
+
+    const start = { x: -8, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 32, y: 0, z: 0 } satisfies Vec3;
+    const mins = { x: -16, y: -8, z: -8 } satisfies Vec3;
+    const maxs = { x: 16, y: 8, z: 8 } satisfies Vec3;
+
+    const result = traceBox({ model, start, end, mins, maxs, headnode: 0, contentMask: CONTENTS_SOLID });
+
+    expect(result.startsolid).toBe(true);
+    expect(result.allsolid).toBe(false);
+    expect(result.plane).toBeNull();
+  });
+
   it('traverses BSP children to find the first blocking plane', () => {
     const brush = makeAxisBrush(64);
     const planes = brush.sides.map((side) => side.plane);

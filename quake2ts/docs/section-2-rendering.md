@@ -45,26 +45,26 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Fragment shader: multi-texture (diffuse + lightmap)
   - Support for multiple lightmap styles (animated lighting)
   - Handle special surfaces (SKY, WARP, TRANS33, TRANS66, FLOWING)
-- [ ] Sky rendering
+- [x] Sky rendering
   - Skybox texture loading (6-sided or dome)
   - Render sky faces at infinite distance
   - Support scrolling/animated sky textures
-- [ ] Water/liquid surface effects
+- [x] Water/liquid surface effects
   - Warp shader for SURF_WARP surfaces
   - Animated texture scrolling for SURF_FLOWING
-  - Optional reflection/refraction (stretch goal)
+  - Optional reflection/refraction (stretch goal, deferred)
 
 ### Model Rendering (MD2/MD3)
-- [ ] MD2 skeletal animation renderer
-  - Per-frame vertex interpolation
-  - Upload current/next frame to GPU
-  - Interpolate in vertex shader based on lerp factor
-  - Texture binding per model skin
+- [x] MD2 skeletal animation renderer
+  - [x] Per-frame vertex interpolation
+  - [x] Upload current/next frame to GPU
+  - [x] Interpolate based on lerp factor (with renormalized normals)
+  - [x] Texture binding per model skin
 - [ ] MD3 hierarchical model renderer
   - Multi-surface rendering (separate meshes)
   - Tag-based attachment system (weapons attached to hand tags)
   - Per-surface texture/shader assignment
-- [ ] Model lighting
+- [ ] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
   - Vertex lighting based on current position (interpolate between BSP light samples)
   - Optional dynamic lights (from weapon fire, explosions)
   - Ambient + directional light from worldspawn

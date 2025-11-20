@@ -47,6 +47,7 @@ This section covers the physics simulation and collision detection system that f
 - [ ] Handle edge cases
   - [x] Zero-length traces (point tests)
   - [x] Trace starting in solid (set startsolid, allsolid flags)
+  - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
   - [ ] Epsilon handling for surface snapping
 
 ### Point Queries
@@ -71,16 +72,16 @@ This section covers the physics simulation and collision detection system that f
   - Used to skip AI/sound updates for distant entities
 
 ### Entity Collision Integration
-- [ ] Entity bounding box management
+- [x] Entity bounding box management (CollisionEntityIndex stores world-space mins/maxs and rebuilds brushes on updates)
   - Store mins/maxs per entity (world-space)
   - Update when entity moves or changes model
   - Support for rotating bounding boxes (optional, Quake II uses axis-aligned)
-- [ ] Entity trace tests
+- [x] Entity trace tests
   - `clipToEntities`: trace against all entities in region
   - Filter by contentmask (CONTENTS_SOLID, CONTENTS_MONSTER, etc.)
   - Skip passent (entity initiating trace)
   - Combine with world trace to find nearest hit
-- [ ] Trigger volume detection
+- [x] Trigger volume detection
   - Identify entities with CONTENTS_TRIGGER
   - Used for touch/trigger logic in game layer
 

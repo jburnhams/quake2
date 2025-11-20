@@ -268,6 +268,10 @@ export function registerDefaultSpawns(registry: SpawnRegistry): void {
     // Placeholder positional target
   });
 
+  registry.register('info_teleport_destination', () => {
+    // Destination marker for trigger_teleport
+  });
+
   registerTriggerSpawns(registry);
 }
 

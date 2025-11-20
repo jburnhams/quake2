@@ -229,10 +229,10 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Break from script when player sighted
 
 ### AI Utilities
-- [ ] `ai_stand`: Idle state, look around
-- [ ] `ai_walk`: Walk toward goal
-- [ ] `ai_run`: Run toward goal
-- [ ] `ai_charge`: Charge attack (Berserker)
+- [x] `ai_stand`: Idle state, look around
+- [x] `ai_walk`: Walk toward goal
+- [x] `ai_run`: Run toward goal
+- [x] `ai_charge`: Charge attack (Berserker)
 - [x] `ai_turn`: Turn toward ideal_yaw
 - [x] `ai_face`: Face toward enemy
 - [x] `ai_move`: Move forward by distance
@@ -246,6 +246,8 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 Recent work:
 - Implemented the rerelease-style turning and movement helpers (`changeYaw`/`walkMove`) and wired `ai_move`, `ai_turn`, and `ai_face` to mirror `M_ChangeYaw`/`M_walkmove` behavior for deterministic math-only movement. Verified against new unit tests that exercise wraparound yaw clamping and forward stepping.
 - Tightened the movement helpers to mutate entity vectors in place (matching the C data flow) and added guardrails in tests to ensure yaw/position updates preserve references for downstream systems.
+- Added the core `ai_stand`/`ai_walk`/`ai_run`/`ai_charge` behaviors that honor target-facing rules from the rerelease before applying movement, with deterministic yaw clamping tests covering idle turns, goal-facing walks, enemy-priority runs, and charge-style pursuit.
+- Added `facingIdeal` with rerelease yaw tolerance (default and pathing-specific) plus a `monsterinfo.aiflags` scaffold on entities so pathfinding and steering logic can branch correctly in future behaviors.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback

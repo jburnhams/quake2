@@ -1,5 +1,13 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { ENTITY_FIELD_METADATA, Entity, type EntityFieldDescriptor, Solid } from './entity.js';
+import { createRandomGenerator } from '@quake2ts/shared';
+import {
+  DeadFlag,
+  ENTITY_FIELD_METADATA,
+  Entity,
+  ServerFlags,
+  type EntityFieldDescriptor,
+  Solid,
+} from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 
@@ -36,7 +44,15 @@ function boundsIntersect(a: Bounds, b: Bounds): boolean {
 
 type SerializableVec3 = readonly [number, number, number];
 
-type SerializableEntityFieldValue = number | string | boolean | null | SerializableVec3;
+type SerializableInventory = Record<string, number>;
+
+type SerializableEntityFieldValue =
+  | number
+  | string
+  | boolean
+  | null
+  | SerializableVec3
+  | SerializableInventory;
 
 type SerializableFieldName = Exclude<
   (typeof ENTITY_FIELD_METADATA)[number]['name'],
@@ -75,18 +91,31 @@ function deserializeVec3(value: SerializableEntityFieldValue): Vec3 {
   return { x, y, z };
 }
 
-function assignField(
-  entity: Entity,
-  name: SerializableFieldName,
-  value: Entity[SerializableFieldName],
-): void {
+function assignField(entity: Entity, name: SerializableFieldName, value: Entity[SerializableFieldName]): void {
   (entity as Record<SerializableFieldName, Entity[SerializableFieldName]>)[name] = value;
+}
+
+function serializeInventory(inventory: Record<string, number>): SerializableInventory {
+  return { ...inventory };
+}
+
+function deserializeInventory(value: SerializableEntityFieldValue): Record<string, number> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid inventory serialization');
+  }
+
+  const parsed: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    parsed[key] = Number(entry);
+  }
+  return parsed;
 }
 
 export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
+  private readonly random = createRandomGenerator();
   private currentTimeSeconds = 0;
 
   constructor(maxEntities?: number) {
@@ -161,6 +190,39 @@ export class EntitySystem {
     return Array.from(matches).filter((entity) => entity.inUse && !entity.freePending);
   }
 
+  pickTarget(targetname: string | undefined): Entity | null {
+    if (!targetname) {
+      return null;
+    }
+    const matches = this.findByTargetName(targetname);
+    if (matches.length === 0) {
+      return null;
+    }
+    const choice = this.random.randomIndex(matches);
+    return matches[choice] ?? null;
+  }
+
+  killBox(entity: Entity): void {
+    const targetBounds = computeBounds(entity);
+    for (const other of this.pool) {
+      if (other === entity || other === this.pool.world) {
+        continue;
+      }
+      if (!other.inUse || other.freePending || other.solid === Solid.Not) {
+        continue;
+      }
+      if (other.svflags & ServerFlags.DeadMonster) {
+        continue;
+      }
+      if (!boundsIntersect(targetBounds, computeBounds(other))) {
+        continue;
+      }
+      other.health = 0;
+      other.deadflag = DeadFlag.Dead;
+      this.free(other);
+    }
+  }
+
   useTargets(entity: Entity, activator: Entity | null = null): void {
     if (entity.delay > 0) {
       const delayed = this.spawn();
@@ -197,6 +259,9 @@ export class EntitySystem {
             break;
           case 'entity':
             fields[descriptor.name] = (value as Entity | null)?.index ?? null;
+            break;
+          case 'inventory':
+            fields[descriptor.name] = serializeInventory(value as Record<string, number>);
             break;
           default:
             fields[descriptor.name] = (value as SerializableEntityFieldValue) ?? null;
@@ -254,6 +319,9 @@ export class EntitySystem {
               name: descriptor.name,
               targetIndex: value as number | null,
             });
+            break;
+          case 'inventory':
+            assignField(entity, name, deserializeInventory(value) as Entity[typeof name]);
             break;
           case 'boolean':
             assignField(entity, name, Boolean(value) as Entity[typeof name]);

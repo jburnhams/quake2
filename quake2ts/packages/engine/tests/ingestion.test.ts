@@ -1,7 +1,10 @@
+import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
 import { ingestPaks, PakIngestionError } from '../src/assets/ingestion.js';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
 import { PakArchive } from '../src/assets/pak.js';
+import { PakIndexStore } from '../src/assets/pakIndexStore.js';
+import { PakValidator } from '../src/assets/pakValidation.js';
 import { buildPak, textData } from './helpers/pakBuilder.js';
 
 describe('ingestPaks', () => {
@@ -68,5 +71,71 @@ describe('ingestPaks', () => {
     const vfs = new VirtualFileSystem();
 
     await expect(ingestPaks(vfs, sources, { stopOnError: true })).rejects.toBeInstanceOf(PakIngestionError);
+  });
+
+  it('persists indexes when a PakIndexStore is provided', async () => {
+    const pakBuffers = [buildPak([{ path: 'maps/base1.bsp', data: textData('world') }])];
+    const sources = [{ name: 'pak0.pak', data: pakBuffers[0]! }];
+    const vfs = new VirtualFileSystem();
+    const store = new PakIndexStore('ingestion-persist-test');
+    await store.clear();
+
+    await ingestPaks(vfs, sources, { pakIndexStore: store });
+
+    const [entry] = await store.list();
+    expect(entry.name).toBe('pak0.pak');
+    expect(entry.entries[0]?.name).toBe('maps/base1.bsp');
+  });
+
+  it('rejects mounts when validation fails', async () => {
+    const pakBuffer = buildPak([{ path: 'maps/base1.bsp', data: textData('world') }]);
+    const vfs = new VirtualFileSystem();
+    const validator = new PakValidator([{ name: 'pak0.pak', checksum: 0 }]);
+
+    await expect(
+      ingestPaks(vfs, [{ name: 'pak0.pak', data: pakBuffer }], { validator, stopOnError: true }),
+    ).rejects.toBeInstanceOf(PakIngestionError);
+    expect(vfs.hasFile('maps/base1.bsp')).toBe(false);
+  });
+
+  it('continues ingesting after a validation mismatch when stopOnError defaults to false', async () => {
+    const mismatched = buildPak([{ path: 'textures/bad.wal', data: textData('x') }]);
+    const valid = buildPak([{ path: 'textures/good.wal', data: textData('ok') }]);
+    const vfs = new VirtualFileSystem();
+    const validator = new PakValidator([{ name: 'pak0.pak', checksum: 1234 }]);
+
+    const results = await ingestPaks(
+      vfs,
+      [
+        { name: 'pak0.pak', data: mismatched },
+        { name: 'pak1.pak', data: valid },
+      ],
+      { validator },
+    );
+
+    expect(results).toHaveLength(2);
+    expect(results[0]).toEqual(
+      expect.objectContaining({ mounted: false, validation: expect.objectContaining({ status: 'mismatch' }) }),
+    );
+    expect(results[1]).toEqual(expect.objectContaining({ mounted: true }));
+    expect(vfs.hasFile('textures/bad.wal')).toBe(false);
+    expect(vfs.hasFile('textures/good.wal')).toBe(true);
+  });
+
+  it('reports unknown validation outcomes while still mounting when allowed', async () => {
+    const pakBuffer = buildPak([{ path: 'textures/wall.wal', data: textData('wal') }]);
+    const vfs = new VirtualFileSystem();
+    const validator = new PakValidator([{ name: 'different.pak', checksum: 123 }]);
+    const onValidation = vi.fn();
+
+    const [result] = await ingestPaks(vfs, [{ name: 'pak0.pak', data: pakBuffer }], {
+      validator,
+      allowUnknownPaks: true,
+      onValidationResult: onValidation,
+    });
+
+    expect(result.validation?.status).toBe('unknown');
+    expect(onValidation).toHaveBeenCalled();
+    expect(vfs.hasFile('textures/wall.wal')).toBe(true);
   });
 });

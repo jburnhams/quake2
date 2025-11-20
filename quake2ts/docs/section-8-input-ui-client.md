@@ -31,17 +31,17 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - Sensitivity setting (pixels to view angle conversion) and optional invert-Y handling for mouse look.
   - Mouse buttons (fire, alt fire, etc.) participate in the same binding map so button presses feed into action bits.
   - Pointer lock request/exit UI still to be connected, but the controller accepts lock state updates.
-- [ ] Gamepad input (optional, but nice to have)
+- [x] Gamepad input (optional, but nice to have)
   - Gamepad API detection
-  - Map gamepad buttons/axes to actions
-  - Analog stick for movement, look
-  - Trigger buttons for fire
-  - Deadzone handling
-- [ ] Touch input (mobile, optional)
-  - Virtual joystick for movement
-  - Touch drag for camera
-  - Touch buttons for fire, jump, crouch
-  - May defer for initial desktop-focused release
+  - Map gamepad buttons/axes to actions (default mapping mirrors rerelease pad layout: RT fire, LT zoom, A jump, B crouch, X use, bumpers for weapon cycling)
+  - Analog stick for movement, look with per-frame polling
+  - Trigger buttons for fire and zoom
+  - Deadzone handling with configurable threshold
+- [x] Touch input (mobile, optional)
+  - Virtual joystick for movement delivered through `InputController.setTouchState`
+  - Touch drag/look applies analog camera deltas without requiring pointer lock and honors invert-Y
+  - Touch buttons generate +action/-action transitions for fire, jump, crouch, etc., matching rerelease semantics
+  - Per-frame touch updates are stored and merged with other inputs; tests cover button transitions and analog scaling
 
 ### Input Bindings & Commands
 - [x] Key binding system

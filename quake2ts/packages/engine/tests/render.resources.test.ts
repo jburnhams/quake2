@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { Framebuffer, IndexBuffer, Texture2D, VertexArray, VertexBuffer } from '../src/render/resources.js';
+import {
+  Framebuffer,
+  IndexBuffer,
+  Texture2D,
+  TextureCubeMap,
+  VertexArray,
+  VertexBuffer,
+} from '../src/render/resources.js';
 import { createMockGL } from './helpers/mockWebGL.js';
 
 describe('VertexBuffer and IndexBuffer', () => {
@@ -75,6 +82,44 @@ describe('Texture2D', () => {
 
     texture.dispose();
     expect(gl.deleteTexture).toHaveBeenCalledWith(texture.texture);
+  });
+});
+
+describe('TextureCubeMap', () => {
+  it('binds, sets parameters, and uploads faces', () => {
+    const gl = createMockGL();
+    const cubemap = new TextureCubeMap(gl as unknown as WebGL2RenderingContext);
+
+    cubemap.setParameters({ minFilter: gl.LINEAR, magFilter: gl.LINEAR });
+    cubemap.uploadFace(
+      gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      0,
+      gl.RGBA ?? 0x1908,
+      32,
+      32,
+      0,
+      gl.RGBA ?? 0x1908,
+      gl.UNSIGNED_BYTE ?? 0x1401,
+      null
+    );
+
+    expect(gl.activeTexture).toHaveBeenCalledWith(gl.TEXTURE0);
+    expect(gl.bindTexture).toHaveBeenCalledWith(gl.TEXTURE_CUBE_MAP, cubemap.texture);
+    expect(gl.texParameteri).toHaveBeenCalledWith(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    expect(gl.texImage2D).toHaveBeenCalledWith(
+      gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      0,
+      gl.RGBA ?? 0x1908,
+      32,
+      32,
+      0,
+      gl.RGBA ?? 0x1908,
+      gl.UNSIGNED_BYTE ?? 0x1401,
+      null
+    );
+
+    cubemap.dispose();
+    expect(gl.deleteTexture).toHaveBeenCalledWith(cubemap.texture);
   });
 });
 
