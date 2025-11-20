@@ -121,6 +121,7 @@ export class Entity {
   pathtarget?: string;
   model?: string;
   item?: string;
+  map?: string;
 
   inventory: Record<string, number> = {};
 
@@ -300,6 +301,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'pathtarget', type: 'string', save: true },
   { name: 'model', type: 'string', save: true },
   { name: 'item', type: 'string', save: true },
+  { name: 'map', type: 'string', save: true },
   { name: 'inventory', type: 'inventory', save: true },
   { name: 'origin', type: 'vec3', save: true },
   { name: 'old_origin', type: 'vec3', save: true },

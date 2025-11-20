@@ -6,6 +6,8 @@ import {
   MoveType,
   Solid,
 } from './entity.js';
+import { registerMiscSpawns } from './misc.js';
+import { registerTargetSpawns } from './targets.js';
 import { registerTriggerSpawns } from './triggers.js';
 import type { EntitySystem } from './system.js';
 
@@ -285,6 +287,8 @@ export function registerDefaultSpawns(registry: SpawnRegistry): void {
   });
 
   registerTriggerSpawns(registry);
+  registerTargetSpawns(registry);
+  registerMiscSpawns(registry);
 }
 
 export function createDefaultSpawnRegistry(): SpawnRegistry {
