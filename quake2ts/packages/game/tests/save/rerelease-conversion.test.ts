@@ -10,9 +10,14 @@ import {
 import { EntitySystem } from '../../src/entities/index.js';
 import { LevelClock } from '../../src/level.js';
 import { createSaveFile, SAVE_FORMAT_VERSION } from '../../src/save/save.js';
+import type { GameEngine } from '../../src/index.js';
+
+const mockEngine: GameEngine = {
+  trace: () => ({}),
+};
 
 function createBasicSnapshot() {
-  const system = new EntitySystem();
+  const system = new EntitySystem(mockEngine);
   system.beginFrame(2.5);
   const crate = system.spawn();
   crate.classname = 'misc_crate';

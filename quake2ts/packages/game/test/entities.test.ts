@@ -6,13 +6,17 @@ import {
   MoveType,
   Solid,
 } from '../src/entities/index.js';
-import { createGame } from '../src/index.js';
+import { createGame, type GameEngine } from '../src/index.js';
 
 const ZERO_VEC3 = { x: 0, y: 0, z: 0 } as const;
 
+const mockEngine: GameEngine = {
+  trace: () => ({}),
+};
+
 describe('Entity defaults', () => {
   it('initializes core fields to rerelease defaults', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const entity = system.spawn();
 
     expect(entity.inUse).toBe(true);
@@ -31,7 +35,7 @@ describe('Entity defaults', () => {
 
 describe('Entity pool lifecycle', () => {
   it('defers frees until the end of the frame', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const first = system.spawn();
     const second = system.spawn();
 
@@ -48,7 +52,7 @@ describe('Entity pool lifecycle', () => {
   });
 
   it('keeps the world entity alive', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     expect(system.world.classname).toBe('worldspawn');
     expect(() => system.free(system.world)).toThrow();
   });
@@ -56,7 +60,7 @@ describe('Entity pool lifecycle', () => {
 
 describe('Think scheduling', () => {
   it('fires thinks when time reaches nextthink', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const thinker = system.spawn();
     let fired = false;
     thinker.think = () => {
@@ -74,7 +78,7 @@ describe('Think scheduling', () => {
   });
 
   it('orders thinks deterministically by scheduled time then entity index', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const first = system.spawn();
     const second = system.spawn();
     const order: number[] = [];
@@ -94,7 +98,7 @@ describe('Think scheduling', () => {
 
 describe('Touch detection', () => {
   it('invokes touch callbacks when bounds overlap', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const trigger = system.spawn();
     const target = system.spawn();
 
@@ -125,7 +129,7 @@ describe('Touch detection', () => {
   });
 
   it('skips touch callbacks when bounds do not intersect', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const trigger = system.spawn();
     const target = system.spawn();
 
@@ -150,7 +154,7 @@ describe('Touch detection', () => {
   });
 
   it('does not call touch handlers for freed entities', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const trigger = system.spawn();
     const target = system.spawn();
 
@@ -168,7 +172,7 @@ describe('Touch detection', () => {
   });
 
   it('fires touch callbacks even if only one participant defines touch', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const mover = system.spawn();
     const trigger = system.spawn();
 
@@ -225,7 +229,7 @@ describe('Game loop integration', () => {
   });
 
   it('exposes entity state inside snapshots and processes thinks during simulation', () => {
-    const game = createGame(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } }), () => 0, { gravity: { x: 0, y: 0, z: -1 } });
+    const game = createGame(mockEngine, { gravity: { x: 0, y: 0, z: -1 } });
     game.init(0);
 
     const thinker = game.entities.spawn();
