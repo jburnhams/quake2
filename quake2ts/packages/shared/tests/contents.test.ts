@@ -23,6 +23,7 @@ import {
   CONTENTS_PROJECTILECLIP,
   CONTENTS_SLIME,
   CONTENTS_SOLID,
+  CONTENTS_TRIGGER,
   CONTENTS_TRANSLUCENT,
   CONTENTS_WATER,
   CONTENTS_WINDOW,
@@ -71,6 +72,7 @@ describe('contents flags mirror rerelease game.h bit positions', () => {
     ['CONTENTS_SLIME', CONTENTS_SLIME, 1 << 4],
     ['CONTENTS_WATER', CONTENTS_WATER, 1 << 5],
     ['CONTENTS_MIST', CONTENTS_MIST, 1 << 6],
+    ['CONTENTS_TRIGGER', CONTENTS_TRIGGER, 0x40000000],
     ['CONTENTS_NO_WATERJUMP', CONTENTS_NO_WATERJUMP, 1 << 13],
     ['CONTENTS_PROJECTILECLIP', CONTENTS_PROJECTILECLIP, 1 << 14],
     ['CONTENTS_AREAPORTAL', CONTENTS_AREAPORTAL, 1 << 15],
@@ -98,6 +100,10 @@ describe('contents flags mirror rerelease game.h bit positions', () => {
 
   it('tracks the last visible contents sentinel', () => {
     expect(LAST_VISIBLE_CONTENTS).toBe(CONTENTS_MIST);
+  });
+
+  it('places trigger contents outside the visible contents range', () => {
+    expect(CONTENTS_TRIGGER & LAST_VISIBLE_CONTENTS).toBe(0);
   });
 });
 
