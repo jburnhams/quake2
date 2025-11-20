@@ -23,10 +23,14 @@ export interface EngineImports {
   trace(start: Vec3, end: Vec3): TraceResult;
 }
 
+import { BspMap } from './assets/bsp.js';
+import { loadCollisionModel } from './collision.js';
+
 export interface EngineExports {
   init(): void;
   shutdown(): void;
   createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop;
+  loadBsp(bspMap: BspMap): void;
 }
 
 export function createEngine(imports: EngineImports): EngineExports {
@@ -39,6 +43,9 @@ export function createEngine(imports: EngineImports): EngineExports {
     },
     createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop {
       return new FixedTimestepLoop(callbacks, options);
+    },
+    loadBsp(bspMap: BspMap) {
+      loadCollisionModel(bspMap);
     },
   };
 }

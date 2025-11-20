@@ -3,9 +3,17 @@ import { Entity } from '../../entities/entity.js';
 import { EntitySystem } from '../../entities/system.js';
 import { createCallbackRegistry, registerCallback } from '../../entities/callbacks.js';
 import type { GameEngine } from '../../index.js';
+import { TraceResult } from '@quake2ts/shared';
 
 const mockEngine: GameEngine = {
-  trace: () => ({}),
+  trace: (): TraceResult => ({
+    fraction: 1,
+    plane: null,
+    surfaceFlags: 0,
+    contents: 0,
+    allsolid: false,
+    startsolid: false,
+  }),
 };
 
 describe('Callback Serialization', () => {

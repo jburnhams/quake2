@@ -16,8 +16,21 @@ export interface GameCreateOptions {
   gravity: Vec3;
 }
 
+import { TraceResult } from '@quake2ts/shared';
+import { Entity } from './entities/entity.js';
+
 export interface GameEngine {
-    trace(start: Vec3, end: Vec3): unknown;
+    trace(
+        start: Vec3,
+        end: Vec3,
+        mins: Vec3,
+        maxs: Vec3,
+        passent: Entity | null,
+        contentmask: number
+    ): TraceResult;
+    pointcontents(point: Vec3): number;
+    inPVS(p1: Vec3, p2: Vec3): boolean;
+    inPHS(p1: Vec3, p2: Vec3): boolean;
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
     centerprintf?(entity: Entity, message: string): void;
 }
@@ -36,7 +49,6 @@ export interface GameStateSnapshot {
 import { findPlayerStart } from './entities/spawn.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
-import { Entity } from './entities/entity.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
@@ -44,6 +56,25 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
+  trace(
+    start: Vec3,
+    end: Vec3,
+    mins: Vec3,
+    maxs: Vec3,
+    passent: Entity | null,
+    contentmask: number
+  ): TraceResult;
+  pointcontents(point: Vec3): number;
+  clip(
+    start: Vec3,
+    end: Vec3,
+    mins: Vec3,
+    maxs: Vec3,
+    passent: Entity | null,
+    contentmask: number
+  ): TraceResult;
+  inPVS(p1: Vec3, p2: Vec3): boolean;
+  inPHS(p1: Vec3, p2: Vec3): boolean;
 }
 
 export { hashGameState } from './checksum.js';
@@ -158,6 +189,11 @@ export function createGame(
     },
     get time() {
       return levelClock.current.timeSeconds;
-    }
+    },
+    trace: engine.trace,
+    pointcontents: engine.pointcontents,
+    clip: engine.trace,
+    inPVS: engine.inPVS,
+    inPHS: engine.inPHS,
   };
 }
