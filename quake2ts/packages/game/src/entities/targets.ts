@@ -27,6 +27,9 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
   });
 
   registry.register('target_secret', (entity, { entities }) => {
+    if (entity.count === 0) {
+      entity.count = 1;
+    }
     entity.use = (self) => {
       self.count--;
       if (self.count === 0) {
