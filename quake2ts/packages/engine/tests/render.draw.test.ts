@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Draw_Init, Draw_InitFont, Draw_String, Draw_Char } from '../src/render/draw.js';
 import { PakArchive } from '../src/assets/pak.js';
-import * as pcx from '../../src/assets/pcx.js';
 
 describe('draw', () => {
     beforeEach(() => {
