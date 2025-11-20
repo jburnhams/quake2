@@ -138,25 +138,25 @@ These are tasks specific to the `apps/demo` application, not core engine/game wo
   - [x] Create basic `index.html` with canvas element
   - [x] Wire up TypeScript entry point (`main.ts`)
   - [x] Add CSS for fullscreen canvas
-- [ ] **Initialize WebGL canvas**
-  - [ ] Get canvas element, create WebGL2 context
-  - [ ] Set up viewport, clear color
-  - [ ] Render loop with `requestAnimationFrame`
+- [x] **Initialize WebGL canvas**
+  - [x] Get canvas element, create WebGL2 context
+  - [x] Set up viewport, clear color
+  - [x] Render loop with `requestAnimationFrame`
   - [ ] Show FPS counter (basic benchmark)
-- [ ] **Test render something simple**
-  - [ ] Render single colored triangle (sanity check)
-  - [ ] Rotate triangle to verify animation loop
+- [x] **Test render something simple**
+  - [x] Render single colored triangle (sanity check)
+  - [x] Rotate triangle to verify animation loop
   - **Goal**: Prove WebGL2 works in the demo app
 
 ### Phase 2: PAK Loading UI
-- [ ] **Create landing page**
-  - [ ] Show title "Quake II TS Demo"
-  - [ ] "Load PAK Files" button and drag-drop area
-  - [ ] Instructions: "Drag baseq2/pak0.pak here"
-  - [ ] Style with basic CSS
-- [ ] **Wire PAK file input**
-  - [ ] Handle file drop events
-  - [ ] Call engine VFS ingest functions
+- [x] **Create landing page**
+  - [x] Show title "Quake II TS Demo"
+  - [x] "Load PAK Files" button and drag-drop area
+  - [x] Instructions: "Drag baseq2/pak0.pak here"
+  - [x] Style with basic CSS
+- [x] **Wire PAK file input**
+  - [x] Handle file drop events
+  - [x] Call engine VFS ingest functions
   - [ ] Show loading progress (file size, bytes loaded)
   - [ ] Display error if PAK invalid
   - [ ] Show success message when mounted
@@ -170,10 +170,10 @@ These are tasks specific to the `apps/demo` application, not core engine/game wo
   - **Goal**: User can load their Quake II data into the demo
 
 ### Phase 3: Map Selection & Loading
-- [ ] **Build map selection screen**
-  - [ ] Query VFS for `maps/*.bsp` files
-  - [ ] Display list of map names (e.g., "base1", "base2")
-  - [ ] Clickable list items
+- [x] **Build map selection screen**
+  - [x] Query VFS for `maps/*.bsp` files
+  - [x] Display list of map names (e.g., "base1", "base2")
+  - [x] Clickable list items
   - [ ] "Load Map" button
 - [ ] **Implement map loading**
   - [ ] Show loading screen with progress bar
@@ -194,11 +194,11 @@ These are tasks specific to the `apps/demo` application, not core engine/game wo
   - **Goal**: Load a real Quake II map and prepare it for rendering
 
 ### Phase 4: Render the World
-- [ ] **Set up camera**
-  - [ ] Create camera class with position, angles, FOV
-  - [ ] Build view matrix from camera position/angles
-  - [ ] Build projection matrix (90° FOV, near/far planes)
-  - [ ] Initially position camera at map spawn point
+- [x] **Set up camera**
+  - [x] Create camera class with position, angles, FOV
+  - [x] Build view matrix from camera position/angles
+  - [x] Build projection matrix (90° FOV, near/far planes)
+  - [x] Initially position camera at map spawn point
 - [ ] **Render BSP world**
   - [ ] Upload BSP geometry to GPU (use existing engine renderer)
   - [ ] Bind world textures
@@ -216,26 +216,26 @@ These are tasks specific to the `apps/demo` application, not core engine/game wo
   - **Goal**: See the Quake II map rendered in 3D, fly around freely
 
 ### Phase 5: Player Entity & Movement
-- [ ] **Spawn player entity**
-  - [ ] Create player entity at spawn point
+- [x] **Spawn player entity**
+  - [x] Create player entity at spawn point
   - [ ] Set bounding box (16x16x56 standing)
   - [ ] Initialize health (100), armor (0)
-  - [ ] Set initial angles from spawn point
-- [ ] **Wire input to player**
-  - [ ] Capture keyboard state (W/A/S/D, space, ctrl)
-  - [ ] Capture mouse delta for view rotation
-  - [ ] Build pmove command structure each frame
-  - [ ] Set forward/side/up movement from keys
-  - [ ] Set angles from mouse look
-- [ ] **Run pmove for player**
-  - [ ] Call shared pmove with player state + input
-  - [ ] Provide trace callback (using engine collision)
-  - [ ] Update player position/velocity from pmove result
+  - [x] Set initial angles from spawn point
+- [x] **Wire input to player**
+  - [x] Capture keyboard state (W/A/S/D, space, ctrl)
+  - [x] Capture mouse delta for view rotation
+  - [x] Build pmove command structure each frame
+  - [x] Set forward/side/up movement from keys
+  - [x] Set angles from mouse look
+- [x] **Run pmove for player**
+  - [x] Call shared pmove with player state + input
+  - [x] Provide trace callback (using engine collision)
+  - [x] Update player position/velocity from pmove result
   - [ ] Detect ground, handle jumping
   - [ ] Handle crouch (toggle or hold)
-- [ ] **Attach camera to player**
-  - [ ] Set camera position = player position + view height
-  - [ ] Set camera angles = player angles
+- [x] **Attach camera to player**
+  - [x] Set camera position = player position + view height
+  - [x] Set camera angles = player angles
   - [ ] Apply view bob (optional, adds realism)
   - [ ] Interpolate camera smoothly (framerate independent)
 - [ ] **Test player movement**
@@ -246,17 +246,17 @@ These are tasks specific to the `apps/demo` application, not core engine/game wo
   - **Goal**: Full player movement with real physics
 
 ### Phase 6: Basic HUD & Debug Info
-- [ ] **Implement HUD text rendering**
-  - [ ] Choose approach:
+- [x] **Implement HUD text rendering**
+  - [x] Choose approach:
     - Option A: Canvas 2D overlay (easiest)
     - Option B: WebGL bitmap font (more authentic)
     - Option C: HTML/CSS overlay (simplest)
   - [ ] Implement `Draw_String(x, y, text)` using chosen method
   - [ ] Test rendering text at various positions
-- [ ] **Create debug overlay**
+- [x] **Create debug overlay**
   - [ ] Top-left corner: FPS counter
-  - [ ] Position: `x, y, z` coordinates
-  - [ ] Velocity: `vx, vy, vz` speeds
+  - [x] Position: `x, y, z` coordinates
+  - [x] Velocity: `vx, vy, vz` speeds
   - [ ] Ground status: "On Ground" / "In Air"
   - [ ] Health: `100` (hardcoded for now)
   - [ ] Current map name
@@ -461,3 +461,4 @@ But for now, focus on **getting the MVP running** so you can see your work in ac
 - Document limitations clearly so users know what to expect
 - The demo will evolve as more sections are completed
 - Consider this the **first playable build** of many iterations
+- **Known Issue:** The collision detection in `BspTrace.ts` may be incorrect. The `surfaceFlags` are currently being sourced from `texInfo`, which is likely wrong. This needs to be investigated and fixed.
