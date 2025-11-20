@@ -444,4 +444,17 @@ describe('trace and contents queries', () => {
     };
     expect(inPVS({ x: 64, y: 0, z: 0 }, { x: -64, y: 0, z: 0 }, solidLeaf, 0)).toBe(false);
   });
+
+  it('handles traces that stop exactly on a surface within epsilon', () => {
+    const brush = makeAxisBrush(64);
+    const model = makeLeafModel([brush]);
+
+    const start = { x: -64, y: 0, z: 0 } satisfies Vec3;
+    const end = { x: 32, y: 0, z: 0 } satisfies Vec3;
+
+    const trace = traceBox({ model, start, end, headnode: -1 });
+
+    const expectedFraction = (32 - DIST_EPSILON) / 96;
+    expect(trace.fraction).toBeCloseTo(expectedFraction, 6);
+  });
 });
