@@ -114,7 +114,7 @@ export class Camera {
     // (X forward, Y left, Z up) to WebGL's coordinate system (X right, Y up, Z back).
     const quakeToGl = mat4.fromValues(
        0,  0, -1, 0,
-      -1,  0,  0, 0,
+       1,  0,  0, 0,
        0,  1,  0, 0,
        0,  0,  0, 1
     );
