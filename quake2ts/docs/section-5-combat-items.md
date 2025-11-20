@@ -54,7 +54,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - [x] Telefrag (telefrag target if telefrag position occupied)
 
 ### Weapon System
-- [ ] Weapon definitions
+- [x] Weapon definitions
   - **All base campaign weapons:**
     - Blaster (infinite ammo, weak)
     - Shotgun (shells)
@@ -89,7 +89,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Check if weapon is owned, has ammo
   - Animate weapon down, switch, animate up
   - Track current weapon in player state
-- [ ] Weapon pickup
+- [x] Weapon pickup
   - Touch weapon entity
   - Add to inventory, give initial ammo
   - If already owned, just give ammo

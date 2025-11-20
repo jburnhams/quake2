@@ -27,9 +27,13 @@ export interface GameStateSnapshot {
   };
 }
 
+import { Entity } from './entities/entity.js';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
   readonly entities: EntitySystem;
+  sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+  addUFFlags(entity: Entity, flags: number): void;
 }
 
 export { hashGameState } from './checksum.js';
@@ -109,5 +113,11 @@ export function createGame(
       return snapshot(context.frame);
     },
     entities,
+    sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void {
+      // TODO: Implement sound
+    },
+    addUFFlags(entity: Entity, flags: number): void {
+      // TODO: Implement addUFFlags
+    },
   };
 }
