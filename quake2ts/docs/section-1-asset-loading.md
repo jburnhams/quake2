@@ -11,6 +11,7 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
 - ✅ Shared BSP constants (`packages/shared/src/bsp/contents.ts`) with CONTENTS/SURF/MASK definitions
 - ✅ ConfigString registry in engine (`packages/engine/src/configstrings.ts`) with deterministic indexing
 - ✅ Protocol configstring ranges defined (`packages/shared/src/protocol/configstrings.ts`)
+- ✅ BSP loader hardened with rerelease-style visibility/leaf bounds checks and precise lightmap slicing backed by new tests
 
 ## Tasks Remaining
 
