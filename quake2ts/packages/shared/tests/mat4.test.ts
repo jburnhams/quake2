@@ -43,4 +43,40 @@ describe('mat4 helpers', () => {
     const point = transformPointMat4(basis, { x: 1, y: 2, z: 3 });
     expect(point).toEqual({ x: 7, y: 6, z: 8 });
   });
+
+  it('multiplies matrices with a known result', () => {
+    const a = new Float32Array([
+      1, 2, 3, 4,
+      5, 6, 7, 8,
+      9, 10, 11, 12,
+      13, 14, 15, 16
+    ]);
+    const b = new Float32Array([
+      17, 18, 19, 20,
+      21, 22, 23, 24,
+      25, 26, 27, 28,
+      29, 30, 31, 32
+    ]);
+
+    const result = multiplyMat4(a, b);
+    const expected = new Float32Array([
+      538, 612, 686, 760,
+      650, 740, 830, 920,
+      762, 868, 974, 1080,
+      874, 996, 1118, 1240
+    ]);
+
+    for (let i = 0; i < 16; i++) {
+      expect(result[i]).toBeCloseTo(expected[i], 4);
+    }
+  });
+
+  it('transforms a point with the identity matrix', () => {
+    const identity = createMat4Identity();
+    const point = { x: 1, y: 2, z: 3 };
+    const transformed = transformPointMat4(identity, point);
+    expect(transformed.x).toBeCloseTo(point.x, 4);
+    expect(transformed.y).toBeCloseTo(point.y, 4);
+    expect(transformed.z).toBeCloseTo(point.z, 4);
+  });
 });

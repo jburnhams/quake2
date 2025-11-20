@@ -28,12 +28,12 @@ This section covers the critical integration layer that ensures all subsystems w
 ## Tasks Remaining
 
 ### Shared Code Review & Hardening
-- [ ] Complete audit of `packages/shared/src/`
-  - Review all math utilities (vec3, angles, color, random)
-  - Verify deterministic behavior across platforms (floating point consistency)
-  - Ensure no platform-specific dependencies
-  - Validate against rerelease reference implementations
-  - Add comprehensive edge case tests
+- [x] Complete audit of `packages/shared/src/`
+  - [x] Review all math utilities (vec3, angles, color, random)
+  - [x] Verify deterministic behavior across platforms (floating point consistency)
+  - [x] Ensure no platform-specific dependencies
+  - [x] Validate against rerelease reference implementations
+  - [x] Add comprehensive edge case tests
 - [ ] Review and validate pmove system integration
   - Cross-reference all pmove functions with rerelease `src/client/cl_pred.cpp`
   - Verify slide/step/categorize logic matches C++ behavior exactly
