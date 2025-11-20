@@ -34,7 +34,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - [x] Ensure no platform-specific dependencies
   - [x] Validate against rerelease reference implementations
   - [x] Add comprehensive edge case tests
-- [ ] Review and validate pmove system integration
+- [x] Review and validate pmove system integration
   - Cross-reference all pmove functions with rerelease `src/client/cl_pred.cpp`
   - Verify slide/step/categorize logic matches C++ behavior exactly
   - Test all movement edge cases (stairs, ramps, underwater, ladders)

@@ -17,16 +17,15 @@ export function bootstrapViewer() {
     };
   };
 
+  const pointContents = (point: Vec3) => 0;
+
   const engine = createEngine({
     trace,
   });
 
-  const game = createGame({
-    trace(start, end) {
-      return { start, end, fraction: 1 };
-    },
-    sound: (entity, channel, sound) => console.log(`Sound played: ${sound}`),
-    centerprintf(entity, message) {
+  const gameEngine = {
+    sound: (entity: number, channel: number, sound: string) => console.log(`Sound played: ${sound}`),
+    centerprintf(entity: number, message: string) {
       const el = document.createElement('div');
       el.style.position = 'absolute';
       el.style.top = '50%';
@@ -39,7 +38,9 @@ export function bootstrapViewer() {
       document.body.appendChild(el);
       setTimeout(() => document.body.removeChild(el), 3000);
     },
-  }, { gravity: ZERO_VEC3 });
+  };
+
+  const game = createGame(trace, pointContents, gameEngine as any, { gravity: ZERO_VEC3 });
 
   const client = createClient({ engine: { trace } });
 

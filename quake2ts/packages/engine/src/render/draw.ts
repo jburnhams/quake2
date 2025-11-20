@@ -25,9 +25,9 @@ export const Draw_Init = (width: number, height: number) => {
 export const Draw_InitFont = async (pak: PakArchive) => {
     try {
         const data = pak.readFile('pics/conchars.pcx');
-        const pcx = parsePcx(data.buffer.slice(0));
+        const pcx = parsePcx(data.buffer.slice(0) as ArrayBuffer);
         const rgba = pcxToRgba(pcx);
-        const imageData = new ImageData(new Uint8ClampedArray(rgba.buffer.slice(0)), pcx.width, pcx.height);
+        const imageData = new ImageData(new Uint8ClampedArray(rgba), pcx.width, pcx.height);
         conchars = await createImageBitmap(imageData);
     } catch (e) {
         console.error('Failed to load font:', e);

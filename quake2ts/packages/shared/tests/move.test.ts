@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PmFlag, PmType, PlayerButton, WaterLevel } from '../src/index.js';
 import type { Vec3 } from '../src/index.js';
-import type { PmoveTraceResult } from '../src/pmove/types.js';
+import type { PmoveTraceResult, PmoveTraceFn } from '../src/pmove/types.js';
 import { applyPmoveAirMove, applyPmoveWaterMove } from '../src/pmove/move.js';
+import { stairTrace, ladderTrace } from './test-helpers.js';
 
 const mins: Vec3 = { x: -16, y: -16, z: -24 };
 const maxs: Vec3 = { x: 16, y: 16, z: 32 };
@@ -268,9 +269,117 @@ describe('applyPmoveAirMove', () => {
     expect(result.velocity.x).toBe(0);
     expect(result.blocked).not.toBe(0);
   });
+
+  it('should step up a single stair', () => {
+    const params = {
+      origin: { x: -10, y: 0, z: 0 },
+      velocity: { x: 100, y: 0, z: 0 },
+      frametime: 0.1,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+      trace: stairTrace,
+      cmd: { forwardmove: 100, sidemove: 0, upmove: 0 },
+      forward: { x: 1, y: 0, z: 0 },
+      right: { x: 0, y: 1, z: 0 },
+      pmFlags: 0,
+      onGround: true,
+      gravity: 800,
+      pmType: PmType.Normal,
+      pmAccelerate: 10,
+      pmMaxSpeed: 320,
+      pmDuckSpeed: 100,
+      onLadder: false,
+      waterlevel: WaterLevel.NotIn,
+      watertype: 0,
+      groundContents: 0,
+      viewPitch: 0,
+      ladderMod: 0,
+      pmWaterSpeed: 0,
+    };
+
+    const result = applyPmoveAirMove(params);
+
+    expect(result.origin.x).toBeGreaterThan(params.origin.x);
+    expect(result.origin.z).toBeGreaterThan(0);
+  });
+
+  it('should move up and down a ladder', () => {
+    const baseParams = {
+      origin: { x: 2, y: 0, z: 10 },
+      velocity: { x: 0, y: 0, z: 0 },
+      frametime: 0.1,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+      trace: ladderTrace,
+      forward: { x: 1, y: 0, z: 0 },
+      right: { x: 0, y: 1, z: 0 },
+      pmFlags: PmFlag.OnLadder,
+      onGround: false,
+      gravity: 800,
+      pmType: PmType.Normal,
+      pmAccelerate: 10,
+      pmMaxSpeed: 320,
+      pmDuckSpeed: 100,
+      onLadder: true,
+      waterlevel: WaterLevel.NotIn,
+      watertype: 0,
+      groundContents: 0,
+      viewPitch: 0,
+      ladderMod: 0,
+      pmWaterSpeed: 0,
+    };
+
+    // Move up
+    const upResult = applyPmoveAirMove({
+      ...baseParams,
+      cmd: { forwardmove: 0, sidemove: 0, upmove: 100, buttons: PlayerButton.Jump },
+    });
+
+    expect(upResult.origin.z).toBeGreaterThan(baseParams.origin.z);
+
+    // Move down
+    const downResult = applyPmoveAirMove({
+      ...baseParams,
+      cmd: { forwardmove: 0, sidemove: 0, upmove: -100, buttons: PlayerButton.Crouch },
+    });
+
+    expect(downResult.origin.z).toBeLessThan(baseParams.origin.z);
+  });
 });
 
 describe('applyPmoveWaterMove', () => {
+  it('should have reduced speed in water', () => {
+    const params = {
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      frametime: 0.1,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+      trace: identityTrace,
+      cmd: { forwardmove: 100, sidemove: 0, upmove: 0 },
+      forward: { x: 1, y: 0, z: 0 },
+      right: { x: 0, y: 1, z: 0 },
+      pmFlags: 0,
+      onGround: false,
+      pmMaxSpeed: 320,
+      pmDuckSpeed: 100,
+      pmWaterAccelerate: 10,
+      pmWaterSpeed: 400,
+      onLadder: false,
+      watertype: 0,
+      groundContents: 0,
+      waterlevel: WaterLevel.Waist,
+      viewPitch: 0,
+      ladderMod: 1,
+    };
+
+    const result = applyPmoveWaterMove(params);
+
+    const airParams = { ...params, waterlevel: WaterLevel.NotIn };
+    const airResult = applyPmoveAirMove(airParams);
+
+    expect(result.velocity.x).toBeLessThan(airResult.velocity.x);
+  });
   it('drifts downward when idle and underwater', () => {
     const result = applyPmoveWaterMove({
       origin,
@@ -356,4 +465,5 @@ describe('applyPmoveWaterMove', () => {
     expect(result.velocity.x).toBe(0);
     expect(result.blocked).not.toBe(0);
   });
+
 });
