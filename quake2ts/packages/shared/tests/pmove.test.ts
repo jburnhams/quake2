@@ -375,3 +375,238 @@ describe('pmove helpers (command scaling)', () => {
     expect(verticalTotal * verticalScale).toBeCloseTo(maxSpeed * (96 / 127), 4);
   });
 });
+
+describe('pmove order of operations (friction before acceleration)', () => {
+  it('applies friction BEFORE acceleration to match Quake 2 rerelease pmove.c', () => {
+    // This test verifies the correct order as seen in rerelease/src/game/player/pmove.c:
+    // Line 1678: PM_Friction() is called first
+    // Line 1693: PM_AirMove() -> PM_Accelerate() is called second
+    //
+    // The order matters because friction reduces speed, and acceleration adds speed.
+    // If you accelerate first, then apply friction, you get different results.
+
+    const initialVelocity = { x: 200, y: 0, z: 0 };
+    const wishdir = normalizeVec3({ x: 1, y: 0, z: 0 });
+    const wishspeed = 300;
+    const accel = 10;
+    const frametime = 0.1;
+    const pmFriction = 6;
+    const pmStopSpeed = 100;
+
+    // CORRECT ORDER: Friction THEN Acceleration (matches original C code)
+    const frictionedVelocity = applyPmoveFriction({
+      velocity: initialVelocity,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+
+    const correctResult = applyPmoveAccelerate({
+      velocity: frictionedVelocity,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+
+    // INCORRECT ORDER: Acceleration THEN Friction (bug in old implementation)
+    const acceleratedVelocity = applyPmoveAccelerate({
+      velocity: initialVelocity,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+
+    const incorrectResult = applyPmoveFriction({
+      velocity: acceleratedVelocity,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+
+    // The results should be different, proving order matters
+    expect(lengthVec3(correctResult)).not.toBeCloseTo(lengthVec3(incorrectResult), 1);
+
+    // Let's verify the correct physics:
+    // 1. Initial speed: 200
+    const initialSpeed = lengthVec3(initialVelocity);
+    expect(initialSpeed).toBe(200);
+
+    // 2. After friction: speed - (control * friction * frametime)
+    const control = initialSpeed < pmStopSpeed ? pmStopSpeed : initialSpeed;
+    const drop = control * pmFriction * frametime;
+    const expectedSpeedAfterFriction = Math.max(initialSpeed - drop, 0);
+    expect(lengthVec3(frictionedVelocity)).toBeCloseTo(expectedSpeedAfterFriction, 4);
+
+    // 3. After acceleration: should be higher than after friction alone
+    const correctSpeed = lengthVec3(correctResult);
+    expect(correctSpeed).toBeGreaterThan(expectedSpeedAfterFriction);
+  });
+
+  it('demonstrates prediction drift when orders differ between client and server', () => {
+    // This test shows why the order mismatch causes prediction drift.
+    // If client applies friction-then-acceleration but server applies acceleration-then-friction,
+    // they will compute different velocities even with identical inputs.
+
+    const startVelocity = { x: 250, y: 150, z: 0 };
+    const wishdir = normalizeVec3({ x: 1, y: 0.5, z: 0 });
+    const wishspeed = 320;
+    const accel = 10;
+    const frametime = 0.025; // 25ms frame (40 FPS)
+    const pmFriction = 6;
+    const pmStopSpeed = 100;
+
+    // Client order (CORRECT - friction first)
+    const clientFriction = applyPmoveFriction({
+      velocity: startVelocity,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+    const clientVelocity = applyPmoveAccelerate({
+      velocity: clientFriction,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+
+    // Server order (WRONG - acceleration first)
+    const serverAccel = applyPmoveAccelerate({
+      velocity: startVelocity,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+    const serverVelocity = applyPmoveFriction({
+      velocity: serverAccel,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+
+    // Compute the prediction error
+    const errorX = Math.abs(clientVelocity.x - serverVelocity.x);
+    const errorY = Math.abs(clientVelocity.y - serverVelocity.y);
+    const totalError = Math.sqrt(errorX * errorX + errorY * errorY);
+
+    // With mismatched order, there should be noticeable drift
+    expect(totalError).toBeGreaterThan(1); // More than 1 unit/sec of drift
+
+    // This drift accumulates every frame, causing client corrections
+    console.log(`Prediction drift per frame: ${totalError.toFixed(2)} units/sec`);
+    console.log(`Client velocity: (${clientVelocity.x.toFixed(2)}, ${clientVelocity.y.toFixed(2)})`);
+    console.log(`Server velocity: (${serverVelocity.x.toFixed(2)}, ${serverVelocity.y.toFixed(2)})`);
+  });
+
+  it('verifies friction-then-acceleration produces physically correct deceleration', () => {
+    // When moving in the same direction you're already going, friction should slow you down
+    // before acceleration speeds you back up. This creates the characteristic Quake movement feel.
+
+    const movingFast = { x: 400, y: 0, z: 0 }; // Moving faster than max speed
+    const wishdir = normalizeVec3({ x: 1, y: 0, z: 0 }); // Same direction
+    const wishspeed = 320; // Standard max speed
+    const accel = 10;
+    const frametime = 0.1;
+    const pmFriction = 6;
+    const pmStopSpeed = 100;
+
+    // Apply correct order
+    const afterFriction = applyPmoveFriction({
+      velocity: movingFast,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+
+    const afterAcceleration = applyPmoveAccelerate({
+      velocity: afterFriction,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+
+    // The physics works like this:
+    // 1. Friction significantly reduces the high speed (400 -> ~160)
+    expect(lengthVec3(afterFriction)).toBeLessThan(lengthVec3(movingFast));
+
+    // 2. After friction reduces speed below wishspeed (320), acceleration adds it back
+    // The final speed should be at or approaching the wishspeed
+    expect(lengthVec3(afterAcceleration)).toBeGreaterThan(lengthVec3(afterFriction));
+    expect(lengthVec3(afterAcceleration)).toBeLessThanOrEqual(wishspeed);
+
+    // But overall, we should still have decelerated from the original overspeed
+    expect(lengthVec3(afterAcceleration)).toBeLessThan(lengthVec3(movingFast));
+  });
+
+  it('handles perpendicular acceleration correctly after friction', () => {
+    // When changing direction, friction first reduces speed in current direction,
+    // then acceleration adds speed in the new direction.
+
+    const velocity = { x: 300, y: 0, z: 0 }; // Moving along X
+    const wishdir = normalizeVec3({ x: 0, y: 1, z: 0 }); // Want to move along Y
+    const wishspeed = 320;
+    const accel = 10;
+    const frametime = 0.1;
+    const pmFriction = 6;
+    const pmStopSpeed = 100;
+
+    // Correct order
+    const afterFriction = applyPmoveFriction({
+      velocity,
+      frametime,
+      onGround: true,
+      groundIsSlick: false,
+      onLadder: false,
+      waterlevel: 0,
+      pmFriction,
+      pmStopSpeed,
+      pmWaterFriction: 1,
+    });
+
+    const afterAcceleration = applyPmoveAccelerate({
+      velocity: afterFriction,
+      wishdir,
+      wishspeed,
+      accel,
+      frametime,
+    });
+
+    // After friction, X velocity should be reduced
+    expect(lengthVec3(afterFriction)).toBeLessThan(lengthVec3(velocity));
+
+    // After acceleration, we should have gained Y velocity
+    expect(afterAcceleration.y).toBeGreaterThan(0);
+
+    // The X component should still be reduced from friction
+    expect(Math.abs(afterAcceleration.x)).toBeLessThan(Math.abs(velocity.x));
+  });
+});
