@@ -42,6 +42,8 @@ describe('EngineRuntime + game integration determinism', () => {
     const runtime = createEngineRuntime(
       engine,
       createGame(
+        trace,
+        () => 0,
         {
           trace,
         },
@@ -90,6 +92,8 @@ describe('EngineRuntime + game integration determinism', () => {
     const runtime = createEngineRuntime(
       engine,
       createGame(
+        trace,
+        () => 0,
         {
           trace,
         },

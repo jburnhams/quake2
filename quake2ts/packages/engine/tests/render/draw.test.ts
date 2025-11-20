@@ -1,48 +1,122 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as draw from '../../src/render/draw';
+import * as draw from '../../src/render/draw.js';
 import { PakArchive } from '../../src/assets/pak.js';
-import { createCanvas, Image } from 'canvas';
+import * as pcx from '../../src/assets/pcx.js';
 
 describe('draw', () => {
-  beforeEach(() => {
-    const canvas = createCanvas(800, 600);
-    const ctx = canvas.getContext('2d');
-    draw.Draw_Init(800, 600);
-    (draw as any).canvas = canvas;
-    (draw as any).ctx = ctx;
+  let ctx;
 
-    global.Image = Image;
+  beforeEach(() => {
+    const canvas = document.createElement('canvas');
+    ctx = {
+      drawImage: vi.fn(),
+      createImageData: vi.fn(() => ({ data: new Uint8ClampedArray(100) })),
+    };
+    vi.spyOn(canvas, 'getContext').mockReturnValue(ctx);
+    document.body.innerHTML = '';
+    document.body.appendChild(canvas);
+
+    global.createImageBitmap = vi.fn(() => ({
+        width: 10,
+        height: 10
+    }));
+
+    draw.Draw_Init(800, 600);
+    vi.spyOn(pcx, 'parsePcx').mockReturnValue({
+      width: 10,
+      height: 10,
+      pixels: new Uint8Array(100),
+      palette: new Uint8Array(768),
+    });
   });
 
   it('should register a pic', async () => {
-    const pak = PakArchive.fromArrayBuffer('test.pak', new ArrayBuffer(0));
+    const buffer = new ArrayBuffer(200);
+    const view = new DataView(buffer);
+    view.setUint32(0, 0x4b434150, true); // 'PACK'
+    view.setUint32(4, 12, true); // dirOffset
+    view.setUint32(8, 64, true); // dirLength
+    const name = 'test.png';
+    for (let i = 0; i < name.length; i++) {
+      view.setUint8(12 + i, name.charCodeAt(i));
+    }
+    view.setUint32(12 + 56, 100, true); // fileOffset
+    view.setUint32(12 + 60, 100, true); // fileLength
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer);
     const pic = await draw.Draw_RegisterPic(pak, 'test.png');
     expect(pic).toBe(-1);
   });
 
   it('should draw a pic', async () => {
-    const pak = PakArchive.fromArrayBuffer('test.pak', new ArrayBuffer(0));
+    const buffer = new ArrayBuffer(200);
+    const view = new DataView(buffer);
+    view.setUint32(0, 0x4b434150, true); // 'PACK'
+    view.setUint32(4, 12, true); // dirOffset
+    view.setUint32(8, 64, true); // dirLength
+    const name = 'test.png';
+    for (let i = 0; i < name.length; i++) {
+      view.setUint8(12 + i, name.charCodeAt(i));
+    }
+    view.setUint32(12 + 56, 100, true); // fileOffset
+    view.setUint32(12 + 60, 100, true); // fileLength
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer);
     await draw.Draw_RegisterPic(pak, 'test.png');
-    const spy = vi.spyOn((draw as any).ctx, 'drawImage');
+    const spy = vi.spyOn(ctx, 'drawImage');
     draw.Draw_Pic(10, 20, 0);
     expect(spy).toHaveBeenCalled();
   });
 
-  it('should draw a string', () => {
-    const spy = vi.spyOn((draw as any).ctx, 'drawImage');
+  it('should draw a string', async () => {
+    const buffer = new ArrayBuffer(200);
+    const view = new DataView(buffer);
+    view.setUint32(0, 0x4b434150, true); // 'PACK'
+    view.setUint32(4, 12, true); // dirOffset
+    view.setUint32(8, 64, true); // dirLength
+    const name = 'pics/conchars.pcx';
+    for (let i = 0; i < name.length; i++) {
+      view.setUint8(12 + i, name.charCodeAt(i));
+    }
+    view.setUint32(12 + 56, 100, true); // fileOffset
+    view.setUint32(12 + 60, 100, true); // fileLength
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer);
+    await draw.Draw_InitFont(pak);
+    const spy = vi.spyOn(ctx, 'drawImage');
     draw.Draw_String(10, 20, 'test');
     expect(spy).toHaveBeenCalledTimes(4);
   });
 
-  it('should draw a char', () => {
-    const spy = vi.spyOn((draw as any).ctx, 'drawImage');
+  it('should draw a char', async () => {
+    const buffer = new ArrayBuffer(200);
+    const view = new DataView(buffer);
+    view.setUint32(0, 0x4b434150, true); // 'PACK'
+    view.setUint32(4, 12, true); // dirOffset
+    view.setUint32(8, 64, true); // dirLength
+    const name = 'pics/conchars.pcx';
+    for (let i = 0; i < name.length; i++) {
+      view.setUint8(12 + i, name.charCodeAt(i));
+    }
+    view.setUint32(12 + 56, 100, true); // fileOffset
+    view.setUint32(12 + 60, 100, true); // fileLength
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer);
+    await draw.Draw_InitFont(pak);
+    const spy = vi.spyOn(ctx, 'drawImage');
     draw.Draw_Char(10, 20, 65);
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('should get the pic size', async () => {
-    const pak = PakArchive.fromArrayBuffer('test.pak', new ArrayBuffer(0));
+    const buffer = new ArrayBuffer(200);
+    const view = new DataView(buffer);
+    view.setUint32(0, 0x4b434150, true); // 'PACK'
+    view.setUint32(4, 12, true); // dirOffset
+    view.setUint32(8, 64, true); // dirLength
+    const name = 'test.png';
+    for (let i = 0; i < name.length; i++) {
+      view.setUint8(12 + i, name.charCodeAt(i));
+    }
+    view.setUint32(12 + 56, 100, true); // fileOffset
+    view.setUint32(12 + 60, 100, true); // fileLength
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer);
     const pic = await draw.Draw_RegisterPic(pak, 'test.png');
     const size = draw.Draw_GetPicSize(pic);
     expect(size).toEqual([0, 0]);
