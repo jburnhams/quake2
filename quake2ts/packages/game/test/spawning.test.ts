@@ -10,6 +10,11 @@ import {
   spawnEntitiesFromText,
   spawnEntityFromDictionary,
 } from '../src/entities/index.js';
+import type { GameEngine } from '../src/index.js';
+
+const mockEngine: GameEngine = {
+  trace: () => ({}),
+};
 
 describe('Entity lump parsing', () => {
   it('parses multiple entities and ignores underscored keys', () => {
@@ -40,7 +45,7 @@ describe('Entity lump parsing', () => {
 
 describe('Key/value application', () => {
   it('coerces types and updates derived size', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const entity = system.spawn();
 
     applyEntityKeyValues(entity, {
@@ -62,7 +67,7 @@ describe('Key/value application', () => {
   });
 
   it('uses angle as yaw when angles are not provided', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const entity = system.spawn();
 
     applyEntityKeyValues(entity, {
@@ -76,7 +81,7 @@ describe('Key/value application', () => {
 
 describe('Spawn registry and entity spawning', () => {
   it('spawns known entities and runs default spawn functions', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const warnings: string[] = [];
 
@@ -114,7 +119,7 @@ describe('Spawn registry and entity spawning', () => {
   });
 
   it('warns and skips entities with no classname', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const warnings: string[] = [];
 
@@ -136,7 +141,7 @@ describe('Spawn registry and entity spawning', () => {
 
 describe('Targeting and entity linking', () => {
   it('indexes targetnames during spawn and updates on free', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
 
     const lump = `
@@ -167,7 +172,7 @@ describe('Targeting and entity linking', () => {
   });
 
   it('activates targets and processes killtargets', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
 
     const activator = system.spawn();
     activator.classname = 'activator';
@@ -206,7 +211,7 @@ describe('Targeting and entity linking', () => {
   });
 
   it('defers target activation using delay before firing', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
 
     const trigger = system.spawn();
     trigger.classname = 'delay_source';
@@ -266,7 +271,7 @@ describe('Trigger spawns', () => {
   }
 
   it('trigger_multiple respects wait, activator, and gating rules', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -310,7 +315,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_once frees itself after the first activation', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -347,7 +352,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_multiple with TRIGGERED stays inactive until enabled', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -386,7 +391,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_relay forwards use to its targets', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const relay = spawnEntityFromDictionary(
       { classname: 'trigger_relay', target: 'relay_target' },
@@ -413,7 +418,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_relay respects the NO_SOUND spawnflag', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const relay = spawnEntityFromDictionary(
       { classname: 'trigger_relay', target: 'relay_target', spawnflags: `${1 << 0}` },
@@ -427,7 +432,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_always schedules its targets immediately with a default delay', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const always = spawnEntityFromDictionary(
       { classname: 'trigger_always', target: 'fire_me' },
@@ -456,7 +461,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_counter waits for required uses before firing and then frees itself', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const counter = spawnEntityFromDictionary(
       { classname: 'trigger_counter', target: 'count_target', count: '3' },
@@ -491,7 +496,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_key requires an item and consumes it on success', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const warnings: string[] = [];
     const missing = spawnEntityFromDictionary(
@@ -532,7 +537,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_push applies velocity and removes itself when PUSH_ONCE is set', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -564,7 +569,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_push uses default movedir when angles are omitted', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -590,7 +595,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_push respects START_OFF toggling and push_plus timing', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -643,7 +648,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_hurt applies periodic damage and honours player/monster filters', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -679,7 +684,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_hurt toggles on use when START_OFF and TOGGLE are set', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -714,7 +719,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_teleport moves entities to destinations and telefrags occupants', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
 
     const trigger = spawnEntityFromDictionary(
@@ -762,7 +767,7 @@ describe('Trigger spawns', () => {
   it('trigger_teleport respects targetname gating and START_ON', () => {
     const registry = createDefaultSpawnRegistry();
 
-    const inactiveSystem = new EntitySystem();
+    const inactiveSystem = new EntitySystem(mockEngine);
     const inactiveTrigger = spawnEntityFromDictionary(
       {
         classname: 'trigger_teleport',
@@ -792,7 +797,7 @@ describe('Trigger spawns', () => {
     inactiveSystem.runFrame();
     expect(inactivePlayer.origin).toEqual({ x: 32, y: 0, z: 10 });
 
-    const startOnSystem = new EntitySystem();
+    const startOnSystem = new EntitySystem(mockEngine);
     const startOnTrigger = spawnEntityFromDictionary(
       {
         classname: 'trigger_teleport',
@@ -820,7 +825,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_gravity updates gravity and supports toggle/start_off', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
@@ -855,7 +860,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_elevator links to func_train targets during init', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
 
     const train = system.spawn();
@@ -884,7 +889,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_elevator validates pathtargets and resumes trains when idle', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const warnings: string[] = [];
 
@@ -935,7 +940,7 @@ describe('Trigger spawns', () => {
   });
 
   it('trigger_monsterjump boosts ground monsters forward and upward', () => {
-    const system = new EntitySystem();
+    const system = new EntitySystem(mockEngine);
     const registry = createDefaultSpawnRegistry();
     const trigger = spawnEntityFromDictionary(
       {
