@@ -4,6 +4,11 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { LevelClock } from '../../src/level.js';
 import { createSaveFile } from '../../src/save/save.js';
 import { SaveStorage } from '../../src/save/storage.js';
+import type { GameEngine } from '../../src/index.js';
+
+const mockEngine: GameEngine = {
+  trace: () => ({}),
+};
 
 function buildSave({
   map = 'base1',
@@ -15,7 +20,7 @@ function buildSave({
   levelClock.start(0);
   levelClock.tick({ frame: 5, timeMs: 125, previousTimeMs: 100, deltaSeconds: 0.025 });
 
-  const entities = new EntitySystem(2);
+  const entities = new EntitySystem(mockEngine, 2);
   entities.beginFrame(levelClock.current.timeSeconds);
   entities.spawn();
 
