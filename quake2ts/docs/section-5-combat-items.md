@@ -122,14 +122,14 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Respawn effect (particles, sound)
 
 ### Ammo & Ammo Pickups
-- [ ] Ammo types
+- [x] Ammo types
   - Shells (shotgun, super shotgun)
   - Bullets (machinegun, chaingun)
   - Grenades (grenade launcher)
   - Rockets (rocket launcher)
   - Cells (hyperblaster, BFG)
   - Slugs (railgun)
-- [ ] Ammo pickup entities
+- [x] Ammo pickup entities
   - `item_ammo_shells`, `item_ammo_bullets`, etc.
   - Small and large ammo packs
   - Touch callback: add ammo to inventory
@@ -137,6 +137,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Max ammo per type (e.g., 100 shells, 200 bullets)
   - Backpack item doubles ammo limits (optional, CTF/DM)
   - Mirrored rerelease base caps (50 default, 200 bullets/cells, 100 shells) with parity tests.
+  - Added ammo item definitions (quantities + ammo mapping) and pickup helpers that clamp to rerelease caps with Vitest coverage mirroring `G_AddAmmoAndCap`/`Pickup_Ammo`.
 
 ### Health & Armor Pickups
 - [ ] Health items
@@ -184,19 +185,20 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Play sound, show message
 
 ### Inventory Management
-- [ ] Player inventory structure
+- [x] Player inventory structure
   - Current weapon
   - Owned weapons (bitmask or array)
   - Ammo counts per type
   - Armor value and type
   - Powerup flags and timers
   - Keys
-- [ ] Inventory functions
+- [x] Inventory functions
   - Add item
   - Remove item
   - Check if item present
   - Get ammo count
   - Set ammo count
+  - Added player inventory helpers for ammo, weapons, armor clamping, powerup timers, and key tracking with parity tests for rerelease limits/selection rules.
 
 ### Weapon Ballistics & Spread
 - [ ] Instant hit traces
