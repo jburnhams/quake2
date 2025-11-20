@@ -76,7 +76,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Others:
     - [x] `trigger_counter`: Fires targets after a configurable number of uses (default 2)
     - [x] `trigger_key`: Requires matching key item; consumes inventory and warns when missing
-    - [ ] `trigger_elevator`
+    - [x] `trigger_elevator`
 - [ ] Target spawns (target_* entities)
   - `SP_target_temp_entity`: Spawn temporary effects
   - `SP_target_speaker`: Ambient sounds

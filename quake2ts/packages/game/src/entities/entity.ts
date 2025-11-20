@@ -103,6 +103,7 @@ export class Entity {
   killtarget?: string;
   team?: string;
   message?: string;
+  pathtarget?: string;
   model?: string;
   item?: string;
 
@@ -146,6 +147,7 @@ export class Entity {
 
   enemy: Entity | null = null;
   movetarget: Entity | null = null;
+  target_ent: Entity | null = null;
   goalentity: Entity | null = null;
   ideal_yaw = 0;
   yaw_speed = 0;
@@ -190,6 +192,7 @@ export class Entity {
     this.killtarget = undefined;
     this.team = undefined;
     this.message = undefined;
+    this.pathtarget = undefined;
     this.model = undefined;
     this.item = undefined;
 
@@ -232,6 +235,7 @@ export class Entity {
 
     this.enemy = null;
     this.movetarget = null;
+    this.target_ent = null;
     this.goalentity = null;
     this.ideal_yaw = 0;
     this.yaw_speed = 0;
@@ -269,6 +273,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'killtarget', type: 'string', save: true },
   { name: 'team', type: 'string', save: true },
   { name: 'message', type: 'string', save: true },
+  { name: 'pathtarget', type: 'string', save: true },
   { name: 'model', type: 'string', save: true },
   { name: 'item', type: 'string', save: true },
   { name: 'inventory', type: 'inventory', save: true },
@@ -305,6 +310,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'fly_sound_debounce_time', type: 'float', save: true },
   { name: 'enemy', type: 'entity', save: true },
   { name: 'movetarget', type: 'entity', save: true },
+  { name: 'target_ent', type: 'entity', save: true },
   { name: 'goalentity', type: 'entity', save: true },
   { name: 'ideal_yaw', type: 'float', save: true },
   { name: 'yaw_speed', type: 'float', save: true },
