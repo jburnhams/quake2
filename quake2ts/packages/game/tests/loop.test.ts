@@ -107,3 +107,66 @@ describe('GameFrameLoop', () => {
     );
   });
 });
+
+import { Entity, MoveType } from '../src/entities/entity.js';
+import { EntitySystem } from '../src/entities/system.js';
+import { GameImports, GameTraceResult } from '../src/imports.js';
+import { Vec3 } from '@quake2ts/shared';
+
+const mockTraceFn = (result: GameTraceResult) => {
+  return (
+    start: Vec3,
+    mins: Vec3 | null,
+    maxs: Vec3 | null,
+    end: Vec3,
+    passent: Entity | null,
+    contentmask: number
+  ) => result;
+};
+
+const mockImports = (result: GameTraceResult): GameImports => ({
+  trace: mockTraceFn(result),
+  pointcontents: () => 0,
+});
+
+describe('GameFrameLoop Physics Integration', () => {
+  it('should call the correct physics function for an entity with MOVETYPE_TOSS', () => {
+    const mockTrace: GameTraceResult = {
+      fraction: 1.0,
+      plane: null,
+      contents: 0,
+      surfaceFlags: 0,
+      startsolid: false,
+      allsolid: false,
+      endpos: { x: 0, y: 0, z: 0 },
+      ent: null,
+    };
+
+    const imports = mockImports(mockTrace);
+    const entitySystem = new EntitySystem({} as any, imports, { x: 0, y: 0, z: -800 });
+    const ent = entitySystem.spawn();
+    ent.movetype = MoveType.Toss;
+    ent.velocity = { x: 0, y: 0, z: 100 };
+
+    const loop = new GameFrameLoop();
+    loop.addStage('simulate', () => entitySystem.runFrame());
+    loop.reset(0);
+    entitySystem.beginFrame(0.1);
+    loop.advance({
+      frame: 1,
+      lastFrameTime: 0,
+      totalElapsed: 100,
+      extrapolation: 0,
+      deltaSeconds: 0.1,
+    });
+
+    expect(ent.velocity.z).toBeLessThan(100);
+  });
+
+  it('should initialize the timestamp of a newly spawned entity', () => {
+    const entitySystem = new EntitySystem({} as any, {} as any, { x: 0, y: 0, z: 0 });
+    entitySystem.beginFrame(123.45);
+    const ent = entitySystem.spawn();
+    expect(ent.timestamp).toBe(123.45);
+  });
+});

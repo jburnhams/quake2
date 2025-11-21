@@ -14,7 +14,12 @@ describe('Callback Serialization', () => {
     const testThink = (self: Entity) => {};
     registerCallback(callbackRegistry, 'testThink', testThink);
 
-    const entitySystem = new EntitySystem(mockEngine, 1, callbackRegistry);
+    const mockImports = {
+      trace: () => ({} as any),
+      pointcontents: () => 0,
+    };
+
+    const entitySystem = new EntitySystem(mockEngine, mockImports, { x: 0, y: 0, z: 0 }, 1, callbackRegistry);
     const entity = entitySystem.world;
     entity.think = testThink;
 

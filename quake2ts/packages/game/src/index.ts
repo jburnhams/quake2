@@ -36,7 +36,7 @@ export interface GameStateSnapshot {
 import { findPlayerStart } from './entities/spawn.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
-import { Entity } from './entities/entity.js';
+import { Entity, MoveType } from './entities/entity.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
@@ -55,16 +55,16 @@ import { createPlayerWeaponStates } from './combat/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';
 
+import { GameImports } from './imports.js';
 export function createGame(
-  trace: (start: Vec3, end: Vec3) => PmoveTraceResult,
-  pointContents: (point: Vec3) => number,
+  imports: GameImports,
   engine: GameEngine,
-  options: GameCreateOptions,
+  options: GameCreateOptions
 ): GameExports {
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem(engine);
+  const entities = new EntitySystem(engine, imports, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
@@ -128,6 +128,7 @@ export function createGame(
         player.origin = { ...playerStart.origin };
         player.angles = { ...playerStart.angles };
         player.health = 100;
+        player.movetype = MoveType.Toss;
         player.mins = { x: -16, y: -16, z: -24 };
         player.maxs = { x: 16, y: 16, z: 32 };
         player.client = {
