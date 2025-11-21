@@ -4,6 +4,9 @@ import { DEG2RAD } from '@quake2ts/shared';
 export class Camera {
   private _position: vec3 = vec3.create();
   private _angles: vec3 = vec3.create(); // pitch, yaw, roll
+  private _bobAngles: vec3 = vec3.create();
+  private _kickAngles: vec3 = vec3.create();
+  private _rollAngle = 0;
   private _fov = 90;
   private _aspect = 1.0;
   private _near = 0.1;
@@ -29,6 +32,33 @@ export class Camera {
 
   set angles(value: vec3) {
     vec3.copy(this._angles, value);
+    this._dirty = true;
+  }
+
+  get bobAngles(): vec3 {
+    return this._bobAngles;
+  }
+
+  set bobAngles(value: vec3) {
+    vec3.copy(this._bobAngles, value);
+    this._dirty = true;
+  }
+
+  get kickAngles(): vec3 {
+    return this._kickAngles;
+  }
+
+  set kickAngles(value: vec3) {
+    vec3.copy(this._kickAngles, value);
+    this._dirty = true;
+  }
+
+  get rollAngle(): number {
+    return this._rollAngle;
+  }
+
+  set rollAngle(value: number) {
+    this._rollAngle = value;
     this._dirty = true;
   }
 
@@ -107,9 +137,13 @@ export class Camera {
     );
 
     // 3. Construct the Quake rotation matrix
-    const pitchRad = this._angles[0] * DEG2RAD;
-    const yawRad = this._angles[1] * DEG2RAD;
-    const rollRad = this._angles[2] * DEG2RAD;
+    const pitch = this._angles[0] + this._bobAngles[0] + this._kickAngles[0];
+    const yaw = this._angles[1] + this._bobAngles[1] + this._kickAngles[1];
+    const roll = this._angles[2] + this._bobAngles[2] + this._kickAngles[2] + this._rollAngle;
+
+    const pitchRad = pitch * DEG2RAD;
+    const yawRad = yaw * DEG2RAD;
+    const rollRad = roll * DEG2RAD;
 
     const rotationQuake = mat4.create();
     mat4.identity(rotationQuake);
