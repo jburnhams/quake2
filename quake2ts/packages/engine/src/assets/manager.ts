@@ -1,9 +1,10 @@
 import { normalizePath } from './pak.js';
-import { TextureCache, type PreparedTexture } from './texture.js';
+import { TextureCache, type PreparedTexture, parseWalTexture, preparePcxTexture } from './texture.js';
 import { AudioRegistry, type DecodedAudio } from './audio.js';
 import { Md2Loader, type Md2Model } from './md2.js';
 import { Md3Loader, type Md3Model } from './md3.js';
 import { VirtualFileSystem } from './vfs.js';
+import { parsePcx } from './pcx.js';
 
 type AssetType = 'texture' | 'model' | 'sound';
 
@@ -89,13 +90,40 @@ export class AssetManager {
   readonly dependencyTracker: AssetDependencyTracker;
   private readonly md2: Md2Loader;
   private readonly md3: Md3Loader;
+  private palette: Uint8Array | undefined;
 
-  constructor(private readonly vfs: VirtualFileSystem, options: AssetManagerOptions = {}) {
+  constructor(
+    readonly vfs: VirtualFileSystem,
+    options: AssetManagerOptions = {}
+  ) {
     this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
     this.audio = new AudioRegistry(vfs, { cacheSize: options.audioCacheSize ?? 64 });
     this.dependencyTracker = options.dependencyTracker ?? new AssetDependencyTracker();
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
+  }
+
+  async loadPalette(): Promise<Uint8Array> {
+    if (this.palette) {
+      return this.palette;
+    }
+    const buffer = await this.vfs.readFile('pics/colormap.pcx');
+    const pcx = parsePcx(buffer);
+    this.palette = pcx.palette;
+    return this.palette;
+  }
+
+  async loadTexture(name: string): Promise<PreparedTexture> {
+    const cached = this.textures.get(name);
+    if (cached) {
+      return cached;
+    }
+
+    const palette = await this.loadPalette();
+    const buffer = await this.vfs.readFile(`textures/${name}.wal`);
+    const texture = parseWalTexture(buffer, palette);
+    this.textures.set(name, texture);
+    return texture;
   }
 
   isAssetLoaded(type: AssetType, path: string): boolean {
