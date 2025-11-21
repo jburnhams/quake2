@@ -28,14 +28,14 @@ describe('runGravity', () => {
     ent.velocity = { x: 0, y: 0, z: 0 };
 
     // Mock world constants
-    const sv_gravity = 800;
+    const gravity = { x: 0, y: 0, z: -800 };
     const frametime = 0.1; // 100ms
 
-    runGravity(ent, sv_gravity, frametime);
+    runGravity(ent, gravity, frametime);
 
     // From Quake C code: ent->velocity[2] -= ent->gravity * sv_gravity * frametime;
     // Assuming ent.gravity is 1.0
-    const expectedZVelocity = 0 - 1.0 * sv_gravity * frametime;
+    const expectedZVelocity = 0 + 1.0 * gravity.z * frametime;
     expect(ent.velocity.z).toBe(expectedZVelocity);
   });
 });

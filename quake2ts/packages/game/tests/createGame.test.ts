@@ -45,8 +45,9 @@ describe('createGame', () => {
     expect(player?.origin.z).toBeCloseTo(-0.5, 5);
     expect(first.state?.level.frameNumber).toBe(1);
     expect(first.state?.level.timeSeconds).toBeCloseTo(0.025, 5);
-    expect(second.state?.velocity.z).toBeCloseTo(-40, 5);
-    expect(second.state?.origin.z).toBeCloseTo(-1.5, 5);
+    const secondPlayer = game.entities.find((e) => e.classname === 'player');
+    expect(secondPlayer?.velocity.z).toBeCloseTo(-40, 5);
+    expect(secondPlayer?.origin.z).toBeCloseTo(-1.5, 5);
     expect(second.state?.level.previousTimeSeconds).toBeCloseTo(0.025, 5);
     expect(second.state?.level.timeSeconds).toBeCloseTo(0.05, 5);
   });

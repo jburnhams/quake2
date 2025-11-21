@@ -1,5 +1,5 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { createRandomGenerator } from '@quake2ts/shared';
+import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
 import { GameEngine } from '../index.js';
 import { GameImports } from '../imports.js';
@@ -287,7 +287,7 @@ export class EntitySystem {
 
       switch (ent.movetype) {
         case MoveType.Toss:
-          runGravity(ent, this.gravity.z, this.currentTimeSeconds - (ent.timestamp || 0));
+          runGravity(ent, scaleVec3(this.gravity, -1), this.currentTimeSeconds - (ent.timestamp || 0));
           runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
           break;
         case MoveType.Bounce:
