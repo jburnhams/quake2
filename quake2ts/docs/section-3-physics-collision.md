@@ -51,8 +51,8 @@ This section covers the physics simulation and collision detection system that f
   - [x] Trace starting in solid (set startsolid, allsolid flags)
   - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
   - [x] Epsilon handling for surface snapping
-  - [ ] Grazing hits (comprehensive tests written)
-  - [ ] Corner collisions (comprehensive tests written)
+  - [x] Grazing hits (comprehensive tests in `tests/bsp/trace.grazing.test.ts`)
+  - [x] Corner collisions (comprehensive tests in `tests/bsp/trace.corners.test.ts`)
 
 ### Point Queries
 - [x] Implement `pointcontents` function
