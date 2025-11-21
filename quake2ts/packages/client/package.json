@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",
-    "@quake2ts/shared": "workspace:*"
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/game": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.1.0"

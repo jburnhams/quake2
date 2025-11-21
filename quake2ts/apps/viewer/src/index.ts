@@ -42,7 +42,22 @@ export function bootstrapViewer() {
 
   const game = createGame(trace, pointContents, gameEngine as any, { gravity: ZERO_VEC3 });
 
-  const client = createClient({ engine: { trace } });
+  const engineImports = {
+    trace,
+    renderer: {
+        width: 0,
+        height: 0,
+        renderFrame: () => {},
+        registerPic: async () => ({}),
+        begin2D: () => {},
+        end2D: () => {},
+        drawPic: () => {},
+        drawString: () => {},
+        drawfillRect: () => {},
+    } as any,
+  };
+
+  const client = createClient({ engine: engineImports });
 
   const runtime = createEngineRuntime(engine, game, client as unknown as ClientRenderer);
   runtime.start();

@@ -5,6 +5,7 @@ export class Camera {
   private _position: vec3 = vec3.create();
   private _angles: vec3 = vec3.create(); // pitch, yaw, roll
   private _bobAngles: vec3 = vec3.create();
+  private _bobOffset: vec3 = vec3.create();
   private _kickAngles: vec3 = vec3.create();
   private _rollAngle = 0;
   private _fov = 90;
@@ -50,6 +51,15 @@ export class Camera {
 
   set kickAngles(value: vec3) {
     vec3.copy(this._kickAngles, value);
+    this._dirty = true;
+  }
+
+  get bobOffset(): vec3 {
+    return this._bobOffset;
+  }
+
+  set bobOffset(value: vec3) {
+    vec3.copy(this._bobOffset, value);
     this._dirty = true;
   }
 
@@ -160,7 +170,8 @@ export class Camera {
 
     // 5. Calculate the view matrix translation
     // Apply rotation in Quake space first, then transform to GL coordinates
-    const negativePosition = vec3.negate(vec3.create(), this._position);
+    const positionWithOffset = vec3.add(vec3.create(), this._position, this._bobOffset);
+    const negativePosition = vec3.negate(vec3.create(), positionWithOffset);
     const rotatedPosQuake = vec3.create();
     vec3.transformMat4(rotatedPosQuake, negativePosition, rotationQuake);
 

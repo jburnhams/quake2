@@ -1,58 +1,101 @@
-import { Draw_Hud } from '../src/hud.js';
-import { Draw_Number } from '../src/hud/numbers.js';
-import { HUD_LAYOUT } from '../src/hud/layout.js';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { Renderer } from '@quake2ts/engine';
+import { describe, it, expect, vi } from 'vitest';
+import { Draw_Hud, Init_Hud } from '../src/hud';
+import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
+import { PlayerClient, WeaponId, PowerupId } from '@quake2ts/game';
+import { HUD_LAYOUT } from '../src/hud/layout';
 
-// Mock the numbers module to isolate the Draw_Hud logic
-vi.mock('../src/hud/numbers.js', () => ({
-    Draw_Number: vi.fn(),
-}));
+import { PlayerState, angleVectors, dotVec3 } from '@quake2ts/shared';
 
 describe('HUD', () => {
-    let mockRenderer: Renderer;
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockRenderer = {
-            renderFrame: vi.fn(),
-            registerPic: vi.fn(),
+    it('should draw all HUD elements correctly', async () => {
+        const mockRenderer = {
+            width: 800,
+            height: 600,
+            gl: { canvas: { width: 800, height: 600 } },
+            registerPic: vi.fn(async (name: string, buffer: ArrayBuffer) => ({
+                width: 24,
+                height: 24,
+                name,
+            })),
+            drawPic: vi.fn(),
             begin2D: vi.fn(),
             end2D: vi.fn(),
-            drawPic: vi.fn(),
+            drawfillRect: vi.fn(),
             drawString: vi.fn(),
-        };
-    });
+        } as unknown as Renderer;
 
-    it('should draw the status bar', () => {
-        Draw_Hud(mockRenderer, 100, 50, 30);
+        const mockPak = {
+            readFile: vi.fn(() => ({ buffer: new ArrayBuffer(0) })),
+        } as unknown as PakArchive;
 
-        expect(mockRenderer.begin2D).toHaveBeenCalledTimes(1);
-        expect(mockRenderer.end2D).toHaveBeenCalledTimes(1);
+        const mockClient = {
+            inventory: {
+                currentWeapon: WeaponId.Shotgun,
+                powerups: new Map<PowerupId, number | null>([
+                    [PowerupId.QuadDamage, 10],
+                    [PowerupId.Invulnerability, 5],
+                ]),
+            },
+        } as unknown as PlayerClient;
 
-        expect(Draw_Number).toHaveBeenCalledWith(
-            mockRenderer,
-            HUD_LAYOUT.HEALTH_X,
-            HUD_LAYOUT.HEALTH_Y,
-            100,
-            expect.any(Array),
-            expect.any(Number)
+        const mockPlayerState = {
+            damageAlpha: 0.5,
+            damageIndicators: [{ direction: { x: 0, y: 1, z: 0 }, strength: 1 }],
+            viewAngles: { x: 0, y: 90, z: 0 },
+        } as unknown as PlayerState;
+
+        const mockStats = {
+            fps: 60,
+            drawCalls: 100,
+            batches: 10,
+            facesDrawn: 1000,
+            vertexCount: 50000,
+        } as FrameRenderStats;
+
+        await Init_Hud(mockRenderer, mockPak);
+        Draw_Hud(mockRenderer, mockPlayerState, mockClient, 100, 50, 25, mockStats);
+
+        // Verify damage flash
+        expect(mockRenderer.drawfillRect).toHaveBeenCalledWith(0, 0, 800, 600, [1, 0, 0, 0.5]);
+
+        // Verify diagnostics
+        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 10, 'FPS: 60');
+        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 20, 'Draw Calls: 100');
+        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 30, 'Batches: 10');
+        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 40, 'Faces Drawn: 1000');
+        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 50, 'Vertices: 50000');
+        
+        // Verify crosshair
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            (800 - 24) / 2, 
+            (600 - 24) / 2, 
+            expect.objectContaining({ name: 'crosshair' })
         );
-        expect(Draw_Number).toHaveBeenCalledWith(
-            mockRenderer,
-            HUD_LAYOUT.ARMOR_X,
-            HUD_LAYOUT.ARMOR_Y,
-            50,
-            expect.any(Array),
-            expect.any(Number)
+
+        // Verify weapon icon
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            HUD_LAYOUT.WEAPON_ICON_X, 
+            HUD_LAYOUT.WEAPON_ICON_Y, 
+            expect.objectContaining({ name: 'w_shotgun' })
         );
-        expect(Draw_Number).toHaveBeenCalledWith(
-            mockRenderer,
-            HUD_LAYOUT.AMMO_X,
-            HUD_LAYOUT.AMMO_Y,
-            30,
-            expect.any(Array),
-            expect.any(Number)
+
+        // Verify powerup icons
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            HUD_LAYOUT.POWERUP_X, 
+            HUD_LAYOUT.POWERUP_Y, 
+            expect.objectContaining({ name: 'p_quad' })
+        );
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            HUD_LAYOUT.POWERUP_X - 28, // 24 width + 4 padding 
+            HUD_LAYOUT.POWERUP_Y, 
+            expect.objectContaining({ name: 'p_invulnerability' })
+        );
+
+        // Verify damage indicators
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            0,
+            (600 - 24) / 2,
+            expect.objectContaining({ name: 'd_left' })
         );
     });
 });

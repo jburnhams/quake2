@@ -13,4 +13,10 @@ export const HUD_LAYOUT = {
     // Center print messages
     CENTER_PRINT_X: 320,
     CENTER_PRINT_Y: 100,
+
+    // Weapon and powerup icons
+    WEAPON_ICON_X: 10,
+    WEAPON_ICON_Y: 450,
+    POWERUP_X: 610,
+    POWERUP_Y: 450,
 };
