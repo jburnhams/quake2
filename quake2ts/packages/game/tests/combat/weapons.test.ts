@@ -3,7 +3,7 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { createPlayerInventory, createPlayerWeaponStates, WeaponId } from '../../src/inventory/index.js';
+import { createPlayerInventory, createPlayerWeaponStates, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import { getWeaponState } from '../../src/combat/weapons/state.js';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
@@ -28,10 +28,13 @@ describe('Weapon System', () => {
         const game = createGame(trace, pointContents, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.spawnWorld();
         const player = game.entities.find(e => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({ weapons: [WeaponId.Shotgun], ammo: { shells: 10 } });
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.Shotgun],
+            ammo: { [AmmoType.Shells]: 10 },
+        });
 
         fire(game, player, WeaponId.Shotgun);
 
-        expect(player.client!.inventory.ammo.shells).toBe(9);
+        expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(9);
     });
 });

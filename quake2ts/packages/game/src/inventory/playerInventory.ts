@@ -5,6 +5,7 @@ import {
   AmmoType,
   AmmoAdjustmentResult,
   AmmoCaps,
+  AmmoSeed,
   addAmmo,
   createAmmoInventory,
   pickupAmmo,
@@ -42,6 +43,7 @@ export enum KeyId {
 
 export interface PlayerInventoryOptions {
   readonly ammoCaps?: AmmoCaps;
+  readonly ammo?: AmmoSeed;
   readonly weapons?: readonly WeaponId[];
   readonly currentWeapon?: WeaponId;
   readonly armor?: RegularArmorState | null;
@@ -64,7 +66,7 @@ export interface PlayerClient {
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
-  const ammo = createAmmoInventory(options.ammoCaps);
+  const ammo = createAmmoInventory(options.ammoCaps, options.ammo);
   const ownedWeapons = new Set(options.weapons ?? []);
   const powerups = new Map<PowerupId, number | null>(options.powerups ?? []);
   const keys = new Set(options.keys ?? []);

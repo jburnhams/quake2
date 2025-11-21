@@ -11,6 +11,8 @@ export const AMMO_TYPE_COUNT = Object.keys(AmmoType).length / 2;
 
 export type AmmoCaps = readonly number[];
 
+export type AmmoSeed = Partial<Record<AmmoType, number>>;
+
 export interface AmmoInventory {
   readonly caps: AmmoCaps;
   counts: number[];
@@ -53,8 +55,14 @@ export function getAmmoItemDefinition(id: AmmoItemId): AmmoItemDefinition {
   return AMMO_ITEM_DEFINITIONS[id];
 }
 
-export function createAmmoInventory(caps: AmmoCaps = createBaseAmmoCaps()): AmmoInventory {
-  return { caps: caps.slice(), counts: Array(AMMO_TYPE_COUNT).fill(0) };
+export function createAmmoInventory(caps: AmmoCaps = createBaseAmmoCaps(), seed?: AmmoSeed): AmmoInventory {
+  const counts = Array(AMMO_TYPE_COUNT).fill(0);
+  if (seed) {
+    for (const [ammoType, count] of Object.entries(seed)) {
+      counts[Number(ammoType)] = count;
+    }
+  }
+  return { caps: caps.slice(), counts };
 }
 
 /**
