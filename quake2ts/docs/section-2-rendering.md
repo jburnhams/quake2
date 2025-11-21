@@ -125,13 +125,13 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 
 ### Camera & View System
 - [ ] Camera state management
-  - Position, orientation (pitch, yaw, roll)
-  - FOV (field of view) setting
-  - Interpolation between game ticks
+  - [x] Position, orientation (pitch, yaw, roll)
+  - [x] FOV (field of view) setting
+  - [x] Interpolation between game ticks
 - [ ] View matrix construction
-  - Convert Quake II angles to view transform
-  - Projection matrix (perspective)
-  - Handle viewmodel (weapon) rendering with separate FOV
+  - [x] Convert Quake II angles to view transform
+  - [x] Projection matrix (perspective)
+  - [x] Handle viewmodel (weapon) rendering with separate FOV
 - [ ] Viewmodel rendering
   - Render weapon model with higher FOV in foreground
   - Separate depth range to avoid clipping with world
@@ -162,15 +162,15 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 
 ### Material System
 - [ ] Material definition structure
-  - Texture bindings
-  - Shader selection
-  - Blend mode (opaque, alpha, additive)
-  - Render flags (two-sided, depth write, etc.)
+  - [x] Texture bindings
+  - [x] Shader selection
+  - [x] Blend mode (opaque, alpha, additive)
+  - [x] Render flags (two-sided, depth write, etc.)
 - [ ] Special material handling
-  - Animated textures (texture cycling)
-  - Scrolling textures (conveyor belts)
-  - Warping (water, lava)
-  - Transparency levels (TRANS33, TRANS66)
+  - [x] Animated textures (texture cycling)
+  - [x] Scrolling textures (conveyor belts)
+  - [x] Warping (water, lava)
+  - [x] Transparency levels (TRANS33, TRANS66)
 - [ ] Material precache and lookup
   - Match material to surface by texinfo/surface flags
   - Runtime material switching for effects
