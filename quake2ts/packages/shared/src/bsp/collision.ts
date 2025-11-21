@@ -509,21 +509,12 @@ function recursiveHullCheck(params: {
 
   const node = model.nodes[nodeIndex];
   const plane = node.plane;
-  const offset = planeOffsetForBounds(plane, mins, maxs);
+  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271)
+  // which uses fabs() on each component
+  const offset = planeOffsetMagnitude(plane, mins, maxs);
 
   const startDist = planeDistanceToPoint(plane, start);
   const endDist = planeDistanceToPoint(plane, end);
-
-  console.log('--- RECURSIVE HULL CHECK ---');
-    console.log('nodeIndex', nodeIndex);
-    console.log('startFraction', startFraction);
-    console.log('endFraction', endFraction);
-    console.log('start', start);
-    console.log('end', end);
-    console.log('startDist', startDist);
-    console.log('endDist', endDist);
-    console.log('offset', offset);
-
 
   if (startDist >= offset && endDist >= offset) {
     recursiveHullCheck({
@@ -563,18 +554,22 @@ function recursiveHullCheck(params: {
     return;
   }
 
+  // Put the crosspoint DIST_EPSILON pixels on the near side
+  // See full/qcommon/cmodel.c:1293-1313 (CM_RecursiveHullCheck)
+  // fraction1 (frac) is used for "move up to node" - the near-side recursion
+  // fraction2 (frac2) is used for "go past the node" - the far-side recursion
   let side = 0;
   let idist = 1 / (startDist - endDist);
   let fraction1, fraction2;
 
   if (startDist < endDist) {
     side = 1;
-    fraction1 = (startDist + offset + DIST_EPSILON) * idist;
-    fraction2 = (startDist - offset + DIST_EPSILON) * idist;
+    fraction2 = (startDist + offset + DIST_EPSILON) * idist;
+    fraction1 = (startDist - offset + DIST_EPSILON) * idist;
   } else {
     side = 0;
-    fraction1 = (startDist - offset - DIST_EPSILON) * idist;
-    fraction2 = (startDist + offset - DIST_EPSILON) * idist;
+    fraction2 = (startDist - offset - DIST_EPSILON) * idist;
+    fraction1 = (startDist + offset + DIST_EPSILON) * idist;
   }
 
   if (fraction1 < 0) fraction1 = 0;

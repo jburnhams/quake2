@@ -64,6 +64,7 @@ describe('traceBox complex geometry cases', () => {
     const result = traceBox({ model, start, end, headnode: 0 });
 
     expect(result.fraction).toBeLessThan(1);
-    expect(result.endpos.x).toBeCloseTo(-32.03125);
+    // Trace stops DIST_EPSILON (0.03125) before hitting the surface at x=-32
+    expect(result.endpos.x).toBeCloseTo(-31.96875);
   });
 });

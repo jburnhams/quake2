@@ -72,7 +72,10 @@ The primary goal is to achieve behavioral parity with the original `CM_BoxTrace`
     - [x] Write a test for a trace that runs parallel to and "grazes" a brush surface.
 - [x] **TDD Cycle: Complex Geometry**
     - [x] Write tests for traces that collide with internal corners (concave geometry).
-    - [ ] Write tests for traces that collide with external corners (convex geometry).
-    - [ ] Write tests that require the BSP tree traversal to split the trace and check multiple leaves.
-- [ ] Refine the `traceBox` implementation in `packages/shared/src/bsp/collision.ts` to pass all new tests.
+    - [x] Write tests for traces that collide with external corners (convex geometry). See `tests/bsp/trace.corners.test.ts`
+    - [x] Write tests that require the BSP tree traversal to split the trace and check multiple leaves. See `tests/bsp/trace.bsp-split.test.ts`
+- [x] Refine the `traceBox` implementation in `packages/shared/src/bsp/collision.ts` to pass all new tests.
+    - Fixed swapped fraction1/fraction2 calculations in recursiveHullCheck (full/qcommon/cmodel.c:1293-1313)
+    - Fixed planeOffset to use absolute value like original C code with fabs()
 - [x] Update `section-3-physics-collision.md` with progress.
+- [x] Added comprehensive grazing hit tests. See `tests/bsp/trace.grazing.test.ts`
