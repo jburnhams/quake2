@@ -511,10 +511,21 @@ function recursiveHullCheck(params: {
   const plane = node.plane;
   const offset = planeOffsetForBounds(plane, mins, maxs);
 
-  const startDist = planeDistanceToPoint(plane, start) + offset;
-  const endDist = planeDistanceToPoint(plane, end) + offset;
+  const startDist = planeDistanceToPoint(plane, start);
+  const endDist = planeDistanceToPoint(plane, end);
 
-  if (startDist >= 0 && endDist >= 0) {
+  console.log('--- RECURSIVE HULL CHECK ---');
+    console.log('nodeIndex', nodeIndex);
+    console.log('startFraction', startFraction);
+    console.log('endFraction', endFraction);
+    console.log('start', start);
+    console.log('end', end);
+    console.log('startDist', startDist);
+    console.log('endDist', endDist);
+    console.log('offset', offset);
+
+
+  if (startDist >= offset && endDist >= offset) {
     recursiveHullCheck({
       model,
       nodeIndex: node.children[0],
@@ -533,7 +544,7 @@ function recursiveHullCheck(params: {
     return;
   }
 
-  if (startDist < 0 && endDist < 0) {
+  if (startDist < -offset && endDist < -offset) {
     recursiveHullCheck({
       model,
       nodeIndex: node.children[1],
@@ -554,13 +565,16 @@ function recursiveHullCheck(params: {
 
   let side = 0;
   let idist = 1 / (startDist - endDist);
-  let fraction1 = (startDist - DIST_EPSILON) * idist;
-  let fraction2 = (startDist + DIST_EPSILON) * idist;
+  let fraction1, fraction2;
 
   if (startDist < endDist) {
     side = 1;
-    fraction1 = (startDist + DIST_EPSILON) * idist;
-    fraction2 = (startDist - DIST_EPSILON) * idist;
+    fraction1 = (startDist + offset + DIST_EPSILON) * idist;
+    fraction2 = (startDist - offset + DIST_EPSILON) * idist;
+  } else {
+    side = 0;
+    fraction1 = (startDist - offset - DIST_EPSILON) * idist;
+    fraction2 = (startDist + offset - DIST_EPSILON) * idist;
   }
 
   if (fraction1 < 0) fraction1 = 0;
