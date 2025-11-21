@@ -67,11 +67,11 @@ This section covers the combat system (damage, knockback, weapon firing), invent
     - Railgun (slugs, instant hit, penetrating)
     - BFG10K (cells, massive blast)
   - For each weapon: damage, ammo type, ammo per shot, fire rate, projectile speed, spread
-- [ ] Weapon state machine
+- [x] Weapon state machine
   - Idle, firing, reloading (Quake II has no reload, but has fire rate limiting)
   - Track last fire time, prevent rapid fire beyond weapon rate
   - Weapon switching delay
-- [ ] Weapon firing (`weapon_fire` functions)
+- [x] Weapon firing (`weapon_fire` functions)
   - Check ammo, deduct ammo
   - Instant hit (blaster, shotgun, machinegun, railgun): trace from player, apply damage to hit entity
   - Projectile (grenades, rockets, BFG): spawn projectile entity with velocity
@@ -79,12 +79,12 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Apply weapon kick (view angle recoil)
   - Play fire sound, show muzzle flash effect
   - Set animation frame (weapon model on screen)
-- [ ] Projectile entities
+- [x] Projectile entities
   - **Grenade**: Bouncing physics, timer-based explosion, can be shot mid-air
   - **Rocket**: Flies straight, explodes on impact
   - **BFG ball**: Slow moving, massive explosion, secondary laser damage
   - Each projectile: think function (move, check collision, explode)
-- [ ] Weapon switching
+- [x] Weapon switching
   - Player selects new weapon (via input)
   - Check if weapon is owned, has ammo
   - Animate weapon down, switch, animate up
@@ -96,20 +96,20 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Play pickup sound
 
 ### Item System
-- [ ] Item definitions (item_t structure)
+- [x] Item definitions (item_t structure)
   - Classname, pickup name (displayed on HUD)
   - Model, world model, view model
   - Icon (for HUD)
   - Pickup sound
   - Quantity (ammo amount, health amount)
   - Flags (droppable, weapon, ammo, powerup, etc.)
-- [ ] Item spawn (`SP_item_*` functions)
+- [x] Item spawn (`SP_item_*` functions)
   - Place item in world at origin
   - Set bounding box (SOLID_TRIGGER)
   - Set model (rotating pickup model)
   - Bobbing animation (items hover and rotate)
   - Set touch callback for pickup
-- [ ] Item pickup (`Pickup_*` functions)
+- [x] Item pickup (`Pickup_*` functions)
   - Check if player can pick up (inventory not full, doesn't already have, etc.)
   - Add to inventory
   - Apply item effect (restore health, give ammo, add weapon)
@@ -140,46 +140,46 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Added ammo item definitions (quantities + ammo mapping) and pickup helpers that clamp to rerelease caps with Vitest coverage mirroring `G_AddAmmoAndCap`/`Pickup_Ammo`.
 
 ### Health & Armor Pickups
-- [ ] Health items
+- [x] Health items
   - Small health (+2), medium health (+10), large health (+25)
   - Mega health (+100, over max health, decays over time)
   - Stimpack, medkit
-- [ ] Armor items
+- [x] Armor items
   - Jacket Armor (+25, 30% absorption)
   - Combat Armor (+50, 60% absorption)
   - Body Armor (+100, 80% absorption)
   - Armor shards (+2, common in DM)
-- [ ] Pickup logic
+- [x] Pickup logic
   - Restore health/armor
   - Cannot pick up if already at max (unless mega health)
   - Play pickup sound, show message
 
 ### Powerups
-- [ ] Quad Damage
+- [x] Quad Damage
   - 4x damage multiplier for 30 seconds
   - Damage sound while active
   - Glowing effect on player
-- [ ] Invulnerability
+- [x] Invulnerability
   - No damage taken for 30 seconds
   - Glowing green effect
-- [ ] Enviro Suit
+- [x] Enviro Suit
   - Breathe underwater, immune to slime/lava for 30 seconds
-- [ ] Rebreather
+- [x] Rebreather
   - Breathe underwater for 30 seconds (no lava protection)
-- [ ] Silencer
+- [x] Silencer
   - Enemies don't hear your weapon fire
 - [ ] Power Screen, Power Shield (advanced, defer)
-- [ ] Powerup timing
+- [x] Powerup timing
   - Countdown timer
   - Warning when about to expire
   - Expire effect (sound, screen flash)
 
 ### Keys
-- [ ] Key items (for locked doors)
+- [x] Key items (for locked doors)
   - Key colors: blue, red, green, yellow, etc.
   - Add to key inventory
   - Check key in door logic (Section 4)
-- [ ] Key pickup
+- [x] Key pickup
   - Touch key entity
   - Add to key ring
   - Play sound, show message

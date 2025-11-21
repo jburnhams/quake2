@@ -50,6 +50,7 @@ export { hashGameState } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
+import { createPlayerInventory, createPlayerWeaponStates } from './inventory/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';
 
@@ -128,6 +129,10 @@ export function createGame(
         player.health = 100;
         player.mins = { x: -16, y: -16, z: -24 };
         player.maxs = { x: 16, y: 16, z: 32 };
+        player.client = {
+            inventory: createPlayerInventory(),
+            weaponStates: createPlayerWeaponStates(),
+        };
         entities.finalizeSpawn(player);
         origin = { ...player.origin };
       }

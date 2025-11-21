@@ -18,6 +18,26 @@ export interface WeaponItem extends BaseItem {
     pickupAmmo: number;
 }
 
+export interface HealthItem extends BaseItem {
+    type: 'health';
+    amount: number;
+    max: number;
+}
+
+export interface ArmorItem extends BaseItem {
+    type: 'armor';
+    amount: number;
+}
+
+export interface PowerupItem extends BaseItem {
+    type: 'powerup';
+    timer: number;
+}
+
+export interface KeyItem extends BaseItem {
+    type: 'key';
+}
+
 export const WEAPON_ITEMS: Record<string, WeaponItem> = {
     'weapon_blaster': {
         type: 'weapon',
@@ -108,5 +128,119 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         ammoType: AmmoType.Cells,
         initialAmmo: 50,
         pickupAmmo: 50,
+    },
+};
+
+export const HEALTH_ITEMS: Record<string, HealthItem> = {
+    'item_health_small': {
+        type: 'health',
+        id: 'item_health_small',
+        name: 'Small Health',
+        amount: 2,
+        max: 100,
+    },
+    'item_health': {
+        type: 'health',
+        id: 'item_health',
+        name: 'Medium Health',
+        amount: 10,
+        max: 100,
+    },
+    'item_health_large': {
+        type: 'health',
+        id: 'item_health_large',
+        name: 'Large Health',
+        amount: 25,
+        max: 100,
+    },
+    'item_health_mega': {
+        type: 'health',
+        id: 'item_health_mega',
+        name: 'Mega Health',
+        amount: 100,
+        max: 200,
+    },
+};
+
+export const ARMOR_ITEMS: Record<string, ArmorItem> = {
+    'item_armor_shard': {
+        type: 'armor',
+        id: 'item_armor_shard',
+        name: 'Armor Shard',
+        amount: 2,
+    },
+    'item_armor_jacket': {
+        type: 'armor',
+        id: 'item_armor_jacket',
+        name: 'Jacket Armor',
+        amount: 25,
+    },
+    'item_armor_combat': {
+        type: 'armor',
+        id: 'item_armor_combat',
+        name: 'Combat Armor',
+        amount: 50,
+    },
+    'item_armor_body': {
+        type: 'armor',
+        id: 'item_armor_body',
+        name: 'Body Armor',
+        amount: 100,
+    },
+};
+
+export const POWERUP_ITEMS: Record<string, PowerupItem> = {
+    'item_quad': {
+        type: 'powerup',
+        id: 'item_quad',
+        name: 'Quad Damage',
+        timer: 30,
+    },
+    'item_invulnerability': {
+        type: 'powerup',
+        id: 'item_invulnerability',
+        name: 'Invulnerability',
+        timer: 30,
+    },
+    'item_silencer': {
+        type: 'powerup',
+        id: 'item_silencer',
+        name: 'Silencer',
+        timer: 30,
+    },
+    'item_rebreather': {
+        type: 'powerup',
+        id: 'item_rebreather',
+        name: 'Rebreather',
+        timer: 30,
+    },
+    'item_enviro': {
+        type: 'powerup',
+        id: 'item_enviro',
+        name: 'Enviro Suit',
+        timer: 30,
+    },
+};
+
+export const KEY_ITEMS: Record<string, KeyItem> = {
+    'key_blue': {
+        type: 'key',
+        id: 'key_blue',
+        name: 'Blue Key',
+    },
+    'key_red': {
+        type: 'key',
+        id: 'key_red',
+        name: 'Red Key',
+    },
+    'key_green': {
+        type: 'key',
+        id: 'key_green',
+        name: 'Green Key',
+    },
+    'key_yellow': {
+        type: 'key',
+        id: 'key_yellow',
+        name: 'Yellow Key',
     },
 };
