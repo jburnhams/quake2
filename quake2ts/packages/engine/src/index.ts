@@ -240,3 +240,4 @@ export {
   type ParticleSimulationOptions,
   type ParticleSpawnOptions,
 } from './render/particleSystem.js';
+export { Pic, Renderer } from './render/renderer.js';

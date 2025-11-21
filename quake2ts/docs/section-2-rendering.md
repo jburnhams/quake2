@@ -62,9 +62,9 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Interpolate based on lerp factor (with renormalized normals)
   - [x] Texture binding per model skin
 - [x] MD3 hierarchical model renderer
-  - Multi-surface rendering (separate meshes)
-  - Tag-based attachment system (weapons attached to hand tags)
-  - Per-surface texture/shader assignment
+  - [x] Multi-surface rendering (separate meshes)
+  - [x] Tag-based attachment system (weapons attached to hand tags)
+  - [x] Per-surface texture/shader assignment
 - [x] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
   - Vertex lighting based on current position (interpolate between BSP light samples)
   - Optional dynamic lights (from weapon fire, explosions)
@@ -116,13 +116,13 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Color codes support (^1, ^2, etc.)
   - Text metrics for layout (width, height queries)
   - **Status**: Implemented using a bitmap font loaded from `pics/conchars.pcx`.
-- [ ] HUD layout system
-  - Status bar (health, armor, ammo)
-  - Weapon/item icons
-  - Crosshair rendering
-  - Damage direction indicators
-  - Center print messages
-  - Notification area
+- [x] HUD layout system
+  - [x] Status bar (health, armor, ammo)
+  - [ ] Weapon/item icons
+  - [ ] Crosshair rendering
+  - [ ] Damage direction indicators
+  - [x] Center print messages
+  - [ ] Notification area
 
 ### Camera & View System
 - [x] Camera state management
@@ -137,10 +137,10 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Render weapon model with higher FOV in foreground
   - [x] Separate depth range to avoid clipping with world
   - [x] Anchor transform to camera (strip world translation)
-  - [ ] Apply view bob, roll, and kick effects
+  - [x] Apply view bob, roll, and kick effects
 
 ### Render Pipeline & Optimization
-- [ ] Implement frame rendering sequence
+- [x] Implement frame rendering sequence
   1. Clear buffers
   2. Update camera/view matrices
   3. Traverse BSP, cull, render world
@@ -149,7 +149,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   6. Render particles
   7. Render viewmodel
   8. Switch to 2D mode, render HUD
-  - **Status**: Currently covers skybox/world/viewmodel passes; model, particle, and HUD steps remain to be wired into the frame renderer.
+  - **Status**: All passes are now wired into the main render loop.
 - [x] Occlusion culling
   - Use BSP leaf/PVS data to skip invisible geometry
   - Frustum culling for models
