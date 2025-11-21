@@ -138,6 +138,7 @@ export class Entity {
   size: Vec3 = copyVec3();
   mass = 0;
   gravity = 1;
+  bounce = 1;
   movetype: MoveType = MoveType.None;
   movedir: Vec3 = copyVec3();
 
@@ -186,6 +187,7 @@ export class Entity {
   activator: Entity | null = null;
 
   solid: Solid = Solid.Not;
+  clipmask = 0;
   flags = 0;
   svflags = 0;
 
@@ -234,6 +236,7 @@ export class Entity {
     this.size = copyVec3();
     this.mass = 0;
     this.gravity = 1;
+    this.bounce = 1;
     this.movetype = MoveType.None;
     this.movedir = copyVec3();
 

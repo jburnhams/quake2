@@ -12,8 +12,7 @@ const mockEngine = {
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {
     const game = createGame(
-      mockEngine.trace as any,
-      () => 0,
+      { trace: mockEngine.trace as any, pointcontents: () => 0 },
       mockEngine as any,
       { gravity: { x: 0, y: 0, z: -800 } }
     );
@@ -30,18 +29,20 @@ describe('createGame', () => {
 
   it('integrates velocity and origin over successive frames', () => {
     const game = createGame(
-      mockEngine.trace as any,
-      () => 0,
+      { trace: mockEngine.trace as any, pointcontents: () => 0 },
       mockEngine as any,
       { gravity: { x: 0, y: 0, z: -800 } }
     );
     game.init(0);
+    game.spawnWorld();
 
     const first = game.frame({ frame: 1, deltaMs: 25, nowMs: 25 });
     const second = game.frame({ frame: 2, deltaMs: 25, nowMs: 50 });
 
-    expect(first.state?.velocity.z).toBeCloseTo(-20, 5);
-    expect(first.state?.origin.z).toBeCloseTo(-0.5, 5);
+    const player = game.entities.find((e) => e.classname === 'player');
+
+    expect(player?.velocity.z).toBeCloseTo(-20, 5);
+    expect(player?.origin.z).toBeCloseTo(-0.5, 5);
     expect(first.state?.level.frameNumber).toBe(1);
     expect(first.state?.level.timeSeconds).toBeCloseTo(0.025, 5);
     expect(second.state?.velocity.z).toBeCloseTo(-40, 5);

@@ -1,10 +1,13 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
 import { GameEngine } from '../index.js';
+import { GameImports } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
   Entity,
+  MoveType,
   ServerFlags,
   type EntityFieldDescriptor,
   Solid,
@@ -118,11 +121,21 @@ export class EntitySystem {
   private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
   private readonly engine: GameEngine;
+  private readonly imports: GameImports;
+  private readonly gravity: Vec3;
 
-  constructor(engine: GameEngine, maxEntities?: number, callbackRegistry?: CallbackRegistry) {
+  constructor(
+    engine: GameEngine,
+    imports: GameImports,
+    gravity: Vec3,
+    maxEntities?: number,
+    callbackRegistry?: CallbackRegistry
+  ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
+    this.imports = imports;
+    this.gravity = gravity;
     this.callbackToName = new Map<AnyCallback, string>();
     if (callbackRegistry) {
       for (const [name, fn] of callbackRegistry.entries()) {
@@ -159,7 +172,9 @@ export class EntitySystem {
   }
 
   spawn(): Entity {
-    return this.pool.spawn();
+    const ent = this.pool.spawn();
+    ent.timestamp = this.currentTimeSeconds;
+    return ent;
   }
 
   free(entity: Entity): void {
@@ -264,6 +279,27 @@ export class EntitySystem {
 
   runFrame(): void {
     this.thinkScheduler.runDueThinks(this.currentTimeSeconds);
+
+    for (const ent of this.pool) {
+      if (!ent.inUse || ent.freePending) {
+        continue;
+      }
+
+      switch (ent.movetype) {
+        case MoveType.Toss:
+          runGravity(ent, this.gravity.z, this.currentTimeSeconds - (ent.timestamp || 0));
+          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          break;
+        case MoveType.Bounce:
+          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          break;
+        case MoveType.FlyMissile:
+          runProjectileMovement(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          break;
+      }
+      ent.timestamp = this.currentTimeSeconds;
+    }
+
     this.runTouches();
     this.pool.flushFreeList();
   }
