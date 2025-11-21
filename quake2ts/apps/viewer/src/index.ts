@@ -40,7 +40,7 @@ export function bootstrapViewer() {
     },
   };
 
-  const game = createGame(trace, pointContents, gameEngine as any, { gravity: ZERO_VEC3 });
+  const game = createGame({ trace, pointContents }, gameEngine as any, { gravity: ZERO_VEC3 });
 
   const client = createClient({ engine: { trace } });
 

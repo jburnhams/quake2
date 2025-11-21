@@ -42,10 +42,9 @@ describe('EngineRuntime + game integration determinism', () => {
     const runtime = createEngineRuntime(
       engine,
       createGame(
-        trace as any,
-        () => 0,
+        { trace: trace as any, pointContents: () => 0 },
         {} as any,
-        { gravity: GRAVITY },
+        { gravity: GRAVITY }
       ),
       client,
       { loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25 }, startTimeMs: 0 },
@@ -90,10 +89,9 @@ describe('EngineRuntime + game integration determinism', () => {
     const runtime = createEngineRuntime(
       engine,
       createGame(
-        trace as any,
-        () => 0,
+        { trace: trace as any, pointContents: () => 0 },
         {} as any,
-        { gravity: GRAVITY },
+        { gravity: GRAVITY }
       ),
       client,
       {

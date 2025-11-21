@@ -6,9 +6,13 @@ import { Vec3 } from '@quake2ts/shared';
 
 const engine = createEngine({});
 
-const game = createGame(engine.trace, engine.pointContents, {
-  gravity: { x: 0, y: 0, z: -800 },
-});
+const game = createGame(
+  { trace: engine.trace, pointContents: engine.pointContents },
+  engine as any,
+  {
+    gravity: { x: 0, y: 0, z: -800 },
+  }
+);
 
 const client = createClient({ engine });
 

@@ -108,16 +108,16 @@ This section covers the physics simulation and collision detection system that f
   - Nudge player out of geometry on spawn/teleport
 
 ### Physics Simulation (Non-Player Entities)
-- [ ] Gravity integration
+- [x] Gravity integration
   - Apply gravitational acceleration per frame
   - Different gravity for water vs. air
   - Handle MOVETYPE_BOUNCE (grenades), MOVETYPE_TOSS (gibs)
-- [ ] Bouncing physics
+- [x] Bouncing physics
   - Detect collision with trace
   - Reflect velocity based on hit plane normal
   - Apply bounce damping (e.g., 1.5x for grenades)
   - Stop when velocity too low
-- [ ] Projectile movement
+- [x] Projectile movement
   - Linear movement with trace per frame
   - Explode/remove on impact
   - Handle MOVETYPE_FLYMISSILE (no gravity, flies straight)
@@ -127,7 +127,7 @@ This section covers the physics simulation and collision detection system that f
   - Crush damage if blocked
 
 ### Collision Query API (game_import_t interface)
-- [ ] Expose to game layer:
+- [x] Expose to game layer:
   - `trace(start, end, mins, maxs, passent, contentmask)`
   - `pointcontents(point)`
   - `clip(start, mins, maxs, end, passent, contentmask)` (alias for trace)

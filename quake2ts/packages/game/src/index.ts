@@ -36,7 +36,7 @@ export interface GameStateSnapshot {
 import { findPlayerStart } from './entities/spawn.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
-import { Entity } from './entities/entity.js';
+import { Entity, MoveType } from './entities/entity.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
@@ -59,29 +59,17 @@ export function createGame(
   trace: (start: Vec3, end: Vec3) => PmoveTraceResult,
   pointContents: (point: Vec3) => number,
   engine: GameEngine,
-  options: GameCreateOptions,
+  options: GameCreateOptions
 ): GameExports {
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem(engine);
+  const entities = new EntitySystem(engine, { trace, pointContents } as any, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
   });
   frameLoop.addStage('simulate', ({ deltaSeconds }) => {
-    velocity = {
-      x: velocity.x + gravity.x * deltaSeconds,
-      y: velocity.y + gravity.y * deltaSeconds,
-      z: velocity.z + gravity.z * deltaSeconds,
-    };
-
-    origin = {
-      x: origin.x + velocity.x * deltaSeconds,
-      y: origin.y + velocity.y * deltaSeconds,
-      z: origin.z + velocity.z * deltaSeconds,
-    };
-
     entities.runFrame();
   });
 
@@ -128,6 +116,7 @@ export function createGame(
         player.origin = { ...playerStart.origin };
         player.angles = { ...playerStart.angles };
         player.health = 100;
+        player.movetype = MoveType.Toss;
         player.mins = { x: -16, y: -16, z: -24 };
         player.maxs = { x: 16, y: 16, z: 32 };
         player.client = {
@@ -149,7 +138,10 @@ export function createGame(
           buttons: command.buttons,
         };
         const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs };
-        const newState = applyPmove(playerState, pcmd, trace, pointContents);
+        const pmoveTrace = (start: Vec3, end: Vec3) => {
+          return trace(start, end);
+        };
+        const newState = applyPmove(playerState, pcmd, pmoveTrace, pointContents);
         player.origin = newState.origin;
         player.velocity = newState.velocity;
       }

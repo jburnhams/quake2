@@ -26,7 +26,7 @@ describe('Weapon System', () => {
             sound: vi.fn(),
             centerprintf: vi.fn(),
         };
-        const game = createGame(trace, pointContents, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
         // Spawn a player start point so spawnWorld creates a player
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
