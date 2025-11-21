@@ -53,20 +53,12 @@ describe('Powerup Pickups', () => {
         expect(inventory.powerups.get(PowerupId.EnviroSuit)).toBe(30);
     });
 
-    it('should refresh the timer if the player already has the powerup', () => {
+    it('should extend the timer if the player already has the powerup', () => {
         const inventory = createPlayerInventory();
         const item = POWERUP_ITEMS['item_quad'];
-        pickupPowerup(inventory, item, 0);
-        const pickedUp = pickupPowerup(inventory, item, 15);
+        pickupPowerup(inventory, item, 0); // Expires at 30
+        const pickedUp = pickupPowerup(inventory, item, 15); // Pick up at 15
         expect(pickedUp).toBe(true);
-        expect(inventory.powerups.get(PowerupId.QuadDamage)).toBe(45);
-    });
-
-    it('should not refresh the timer if the player has more time remaining', () => {
-        const inventory = createPlayerInventory();
-        const item = POWERUP_ITEMS['item_quad'];
-        pickupPowerup(inventory, item, 0);
-        const pickedUp = pickupPowerup(inventory, item, 0);
-        expect(pickedUp).toBe(false);
+        expect(inventory.powerups.get(PowerupId.QuadDamage)).toBe(60); // 30 + 30
     });
 });

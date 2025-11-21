@@ -218,16 +218,12 @@ export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, tim
     }
 
     if (powerupId) {
-        if (inventory.powerups.has(powerupId)) {
-            const expiresAt = inventory.powerups.get(powerupId);
-            if (expiresAt === null || expiresAt < time) {
-                inventory.powerups.set(powerupId, time + item.timer);
-                return true;
-            }
-            return false;
+        const expiresAt = inventory.powerups.get(powerupId);
+        if (expiresAt && expiresAt > time) {
+            inventory.powerups.set(powerupId, expiresAt + item.timer);
+        } else {
+            inventory.powerups.set(powerupId, time + item.timer);
         }
-
-        inventory.powerups.set(powerupId, time + item.timer);
         return true;
     }
 
