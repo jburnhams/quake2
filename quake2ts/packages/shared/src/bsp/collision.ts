@@ -314,7 +314,10 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
 
   if (!startout) {
     trace.startsolid = true;
-    if (!getout) trace.allsolid = true;
+    if (!getout) {
+      trace.allsolid = true;
+    }
+    trace.fraction = 0;
     return;
   }
 
