@@ -5,11 +5,13 @@ import {
   AmmoType,
   AmmoAdjustmentResult,
   AmmoCaps,
+  AmmoSeed,
   addAmmo,
   createAmmoInventory,
   pickupAmmo,
 } from './ammo.js';
-import { WeaponItem } from './items.js';
+import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, ARMOR_ITEMS } from './items.js';
+import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 
 export enum WeaponId {
   Blaster = 'blaster',
@@ -41,6 +43,7 @@ export enum KeyId {
 
 export interface PlayerInventoryOptions {
   readonly ammoCaps?: AmmoCaps;
+  readonly ammo?: AmmoSeed;
   readonly weapons?: readonly WeaponId[];
   readonly currentWeapon?: WeaponId;
   readonly armor?: RegularArmorState | null;
@@ -59,10 +62,11 @@ export interface PlayerInventory {
 
 export interface PlayerClient {
     inventory: PlayerInventory;
+    weaponStates: PlayerWeaponStates;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
-  const ammo = createAmmoInventory(options.ammoCaps);
+  const ammo = createAmmoInventory(options.ammoCaps, options.ammo);
   const ownedWeapons = new Set(options.weapons ?? []);
   const powerups = new Map<PowerupId, number | null>(options.powerups ?? []);
   const keys = new Set(options.keys ?? []);
@@ -146,6 +150,111 @@ export function addKey(inventory: PlayerInventory, key: KeyId): boolean {
 
 export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
   return inventory.keys.has(key);
+}
+
+export function canPickupHealth(inventory: PlayerInventory, health: number, item: HealthItem): boolean {
+    if (health >= item.max) {
+        return false;
+    }
+
+    return true;
+}
+
+export function pickupArmor(inventory: PlayerInventory, item: ArmorItem): boolean {
+    let armorType: ArmorType | null = null;
+    if (item.id === 'item_armor_jacket') {
+        armorType = ArmorType.JACKET;
+    } else if (item.id === 'item_armor_combat') {
+        armorType = ArmorType.COMBAT;
+    } else if (item.id === 'item_armor_body') {
+        armorType = ArmorType.BODY;
+    }
+
+    if (armorType) {
+        const armorInfo = ARMOR_INFO[armorType];
+        if (!inventory.armor || inventory.armor.armorType !== armorType) {
+            inventory.armor = { armorType, armorCount: item.amount };
+        } else {
+            inventory.armor.armorCount += item.amount;
+            if (inventory.armor.armorCount > armorInfo.maxCount) {
+                inventory.armor.armorCount = armorInfo.maxCount;
+            }
+        }
+        return true;
+    }
+
+    if (item.id === 'item_armor_shard') {
+        if (!inventory.armor) {
+            return false;
+        }
+        inventory.armor.armorCount += item.amount;
+        const armorInfo = ARMOR_INFO[inventory.armor.armorType!];
+        if (inventory.armor.armorCount > armorInfo.maxCount) {
+            inventory.armor.armorCount = armorInfo.maxCount;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, time: number): boolean {
+    let powerupId: PowerupId | null = null;
+
+    switch (item.id) {
+        case 'item_quad':
+            powerupId = PowerupId.QuadDamage;
+            break;
+        case 'item_invulnerability':
+            powerupId = PowerupId.Invulnerability;
+            break;
+        case 'item_silencer':
+            powerupId = PowerupId.Silencer;
+            break;
+        case 'item_rebreather':
+            powerupId = PowerupId.Rebreather;
+            break;
+        case 'item_enviro':
+            powerupId = PowerupId.EnviroSuit;
+            break;
+    }
+
+    if (powerupId) {
+        const expiresAt = inventory.powerups.get(powerupId);
+        if (expiresAt && expiresAt > time) {
+            inventory.powerups.set(powerupId, expiresAt + item.timer);
+        } else {
+            inventory.powerups.set(powerupId, time + item.timer);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+export function pickupKey(inventory: PlayerInventory, item: KeyItem): boolean {
+    let keyId: KeyId | null = null;
+
+    switch (item.id) {
+        case 'key_blue':
+            keyId = KeyId.Blue;
+            break;
+        case 'key_red':
+            keyId = KeyId.Red;
+            break;
+        case 'key_green':
+            keyId = KeyId.Green;
+            break;
+        case 'key_yellow':
+            keyId = KeyId.Yellow;
+            break;
+    }
+
+    if (keyId) {
+        return addKey(inventory, keyId);
+    }
+
+    return false;
 }
 
 export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem): boolean {
