@@ -17,6 +17,8 @@ describe('HUD', () => {
         mockRenderer = {
             renderFrame: vi.fn(),
             registerPic: vi.fn(),
+            begin2D: vi.fn(),
+            end2D: vi.fn(),
             drawPic: vi.fn(),
             drawString: vi.fn(),
         };
@@ -24,6 +26,9 @@ describe('HUD', () => {
 
     it('should draw the status bar', () => {
         Draw_Hud(mockRenderer, 100, 50, 30);
+
+        expect(mockRenderer.begin2D).toHaveBeenCalledTimes(1);
+        expect(mockRenderer.end2D).toHaveBeenCalledTimes(1);
 
         expect(Draw_Number).toHaveBeenCalledWith(
             mockRenderer,

@@ -1,5 +1,6 @@
 
-import { Mat4, multiplyMat4, createMat4Identity } from '@quake2ts/shared';
+import { Mat4, multiplyMat4 } from '@quake2ts/shared';
+import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
 import { createFrameRenderer, FrameRenderOptions } from './frame.js';
@@ -9,7 +10,6 @@ import { RenderableEntity } from './scene.js';
 import { SkyboxPipeline } from './skybox.js';
 import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
-import { parsePcx, pcxToRgba } from '../assets/pcx.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -19,6 +19,8 @@ export interface Renderer {
 
     // HUD Methods
     registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
+    begin2D(): void;
+    end2D(): void;
     drawPic(x: number, y: number, pic: Pic): void;
     drawString(x: number, y: number, text: string): void;
 }
@@ -83,14 +85,14 @@ export const createRenderer = (
             return picCache.get(name)!;
         }
 
-        // For now, assume all pics are PCX. A more robust solution would inspect the data.
-        const pcx = parsePcx(data);
-        const rgba = pcxToRgba(pcx);
+        const blob = new Blob([data]);
+        const imageBitmap = await createImageBitmap(blob);
+
         const texture = new Texture2D(gl);
-        texture.upload(pcx.width, pcx.height, rgba);
+        texture.upload(imageBitmap.width, imageBitmap.height, imageBitmap);
         picCache.set(name, texture);
 
-        if (name === 'pics/conchars.pcx') {
+        if (name.includes('conchars')) {
             font = texture;
         }
 
@@ -103,19 +105,19 @@ export const createRenderer = (
         gl.disable(gl.DEPTH_TEST);
         gl.depthMask(false);
 
-        const projection = createMat4Identity();
-        // A simple orthographic projection.
-        // A more robust solution would use mat4.ortho and handle resizing.
-        projection[0] = 2 / gl.canvas.width;
-        projection[5] = -2 / gl.canvas.height;
-        projection[12] = -1;
-        projection[13] = 1;
+        const projection = mat4.create();
+        mat4.ortho(projection, 0, gl.canvas.width, gl.canvas.height, 0, -1, 1);
 
-        spriteRenderer.begin(projection);
+        spriteRenderer.begin(projection as Float32Array);
+    };
+
+    const end2D = () => {
+        gl.disable(gl.BLEND);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
     };
 
     const drawPic = (x: number, y: number, pic: Pic) => {
-        begin2D();
         pic.bind(0);
         spriteRenderer.draw(x, y, pic.width, pic.height);
     };
@@ -135,8 +137,6 @@ export const createRenderer = (
         const u1 = u0 + charWidth / font.width;
         const v1 = v0 + charHeight / font.height;
 
-        // This is inefficient. A better solution would batch all characters.
-        begin2D();
         font.bind(0);
         spriteRenderer.draw(x, y, charWidth, charHeight, u0, v0, u1, v1);
     }
@@ -151,6 +151,8 @@ export const createRenderer = (
     return {
         renderFrame,
         registerPic,
+        begin2D,
+        end2D,
         drawPic,
         drawString,
     };
