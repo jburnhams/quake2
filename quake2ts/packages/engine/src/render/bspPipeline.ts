@@ -182,7 +182,7 @@ export class BspSurfacePipeline {
       styleIndices = DEFAULT_STYLE_INDICES,
       styleValues = [],
       diffuseSampler = 0,
-      lightmapSampler = 1,
+      lightmapSampler,
       surfaceFlags = SURF_NONE,
       timeSeconds = 0,
     } = options;
@@ -196,11 +196,12 @@ export class BspSurfacePipeline {
     this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]);
     this.gl.uniform4fv(this.uniformLightStyles, styles);
     this.gl.uniform1f(this.uniformAlpha, state.alpha);
-    this.gl.uniform1i(this.uniformApplyLightmap, state.sky ? 0 : 1);
+    const applyLightmap = !state.sky && lightmapSampler !== undefined;
+    this.gl.uniform1i(this.uniformApplyLightmap, applyLightmap ? 1 : 0);
     this.gl.uniform1i(this.uniformWarp, state.warp ? 1 : 0);
     this.gl.uniform1f(this.uniformTime, timeSeconds);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
-    this.gl.uniform1i(this.uniformLightmap, lightmapSampler);
+    this.gl.uniform1i(this.uniformLightmap, lightmapSampler ?? 0);
 
     return state;
   }

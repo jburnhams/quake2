@@ -49,6 +49,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Skybox texture loading (6-sided or dome)
   - [x] Render sky faces at infinite distance
   - [x] Support scrolling/animated sky textures
+  - [x] Skip drawing BSP sky surfaces in the world pass once skybox is rendered
 - [x] Water/liquid surface effects
   - [x] Warp shader for SURF_WARP surfaces
   - [x] Animated texture scrolling for SURF_FLOWING
@@ -138,7 +139,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Apply view bob, roll, and kick effects
 
 ### Render Pipeline & Optimization
-- [ ] Implement frame rendering sequence
+- [x] Implement frame rendering sequence
   1. Clear buffers
   2. Update camera/view matrices
   3. Traverse BSP, cull, render world
@@ -147,7 +148,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   6. Render particles
   7. Render viewmodel
   8. Switch to 2D mode, render HUD
-- [ ] Occlusion culling
+- [x] Occlusion culling
   - Use BSP leaf/PVS data to skip invisible geometry
   - Frustum culling for models
 - [ ] Batching and draw call reduction

@@ -1,5 +1,6 @@
 import { ShaderProgram } from './shaderProgram.js';
 import { TextureCubeMap, VertexArray, VertexBuffer, type VertexAttributeLayout } from './resources.js';
+import type { ReadonlyMat4 } from 'gl-matrix';
 
 const SKYBOX_POSITIONS = new Float32Array([
   // Front
@@ -143,8 +144,8 @@ export class SkyboxPipeline {
   }
 }
 
-export function removeViewTranslation(viewMatrix: Float32Array): Float32Array {
-  const noTranslation = viewMatrix.slice();
+export function removeViewTranslation(viewMatrix: ReadonlyMat4 | Float32Array): Float32Array {
+  const noTranslation = new Float32Array(viewMatrix);
   noTranslation[12] = 0;
   noTranslation[13] = 0;
   noTranslation[14] = 0;
