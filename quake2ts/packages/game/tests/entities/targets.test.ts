@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
-import { Solid } from '../../src/entities/entity.js';
+import { Solid, ServerFlags } from '../../src/entities/entity.js';
 
 describe('Target Entities', () => {
   const registry = createDefaultSpawnRegistry();
@@ -42,14 +42,14 @@ describe('Target Entities', () => {
   it('target_explosion should be created', () => {
     const target = spawnEntityFromDictionary({ classname: 'target_explosion' }, { registry, entities });
     expect(target).not.toBeNull();
-    expect(target.svflags & 8).toBe(8); // SVF_NOCLIENT
+    expect(target.svflags & ServerFlags.NoClient).toBe(ServerFlags.NoClient);
     expect(target.use).toBeDefined();
   });
 
   it('target_splash should be created', () => {
     const target = spawnEntityFromDictionary({ classname: 'target_splash' }, { registry, entities });
     expect(target).not.toBeNull();
-    expect(target.svflags & 8).toBe(8); // SVF_NOCLIENT
+    expect(target.svflags & ServerFlags.NoClient).toBe(ServerFlags.NoClient);
     expect(target.use).toBeDefined();
   });
 });

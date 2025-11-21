@@ -3,7 +3,8 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { createPlayerInventory, createPlayerWeaponStates, WeaponId, AmmoType } from '../../src/inventory/index.js';
+import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
+import { createPlayerWeaponStates } from '../../src/combat/index.js';
 import { getWeaponState } from '../../src/combat/weapons/state.js';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
@@ -26,6 +27,12 @@ describe('Weapon System', () => {
             centerprintf: vi.fn(),
         };
         const game = createGame(trace, pointContents, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        // Spawn a player start point so spawnWorld creates a player
+        const playerStart = game.entities.spawn();
+        playerStart.classname = 'info_player_start';
+        playerStart.origin = { x: 0, y: 0, z: 0 };
+        playerStart.angles = { x: 0, y: 0, z: 0 };
+        game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
         const player = game.entities.find(e => e.classname === 'player')!;
         player.client!.inventory = createPlayerInventory({
