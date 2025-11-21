@@ -37,14 +37,14 @@ describe('createGame', () => {
     game.spawnWorld();
 
     const first = game.frame({ frame: 1, deltaMs: 25, nowMs: 25 });
-    const second = game.frame({ frame: 2, deltaMs: 25, nowMs: 50 });
-
     const player = game.entities.find((e) => e.classname === 'player');
 
     expect(player?.velocity.z).toBeCloseTo(-20, 5);
     expect(player?.origin.z).toBeCloseTo(-0.5, 5);
     expect(first.state?.level.frameNumber).toBe(1);
     expect(first.state?.level.timeSeconds).toBeCloseTo(0.025, 5);
+
+    const second = game.frame({ frame: 2, deltaMs: 25, nowMs: 50 });
     const secondPlayer = game.entities.find((e) => e.classname === 'player');
     expect(secondPlayer?.velocity.z).toBeCloseTo(-40, 5);
     expect(secondPlayer?.origin.z).toBeCloseTo(-1.5, 5);

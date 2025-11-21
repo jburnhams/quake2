@@ -235,8 +235,7 @@ describe('Game loop integration', () => {
 
   it('exposes entity state inside snapshots and processes thinks during simulation', () => {
     const game = createGame(
-      mockEngine.trace as any,
-      () => 0,
+      { trace: mockEngine.trace as any, pointcontents: () => 0 },
       mockEngine as any,
       { gravity: { x: 0, y: 0, z: -1 } }
     );

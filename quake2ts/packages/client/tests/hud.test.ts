@@ -92,10 +92,12 @@ describe('HUD', () => {
         );
 
         // Verify damage indicators
+        // Damage from {x:0, y:1, z:0} with player facing yaw=90 (east)
+        // means damage comes from straight ahead, so should show d_up (forward indicator)
         expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            (800 - 24) / 2,
             0,
-            (600 - 24) / 2,
-            expect.objectContaining({ name: 'd_left' })
+            expect.objectContaining({ name: 'd_up' })
         );
     });
 });

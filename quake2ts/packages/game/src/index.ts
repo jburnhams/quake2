@@ -122,22 +122,20 @@ export function createGame(
     },
     spawnWorld() {
       const playerStart = findPlayerStart(entities);
-      if (playerStart) {
-        const player = entities.spawn();
-        player.classname = 'player';
-        player.origin = { ...playerStart.origin };
-        player.angles = { ...playerStart.angles };
-        player.health = 100;
-        player.movetype = MoveType.Toss;
-        player.mins = { x: -16, y: -16, z: -24 };
-        player.maxs = { x: 16, y: 16, z: 32 };
-        player.client = {
-            inventory: createPlayerInventory(),
-            weaponStates: createPlayerWeaponStates(),
-        };
-        entities.finalizeSpawn(player);
-        origin = { ...player.origin };
-      }
+      const player = entities.spawn();
+      player.classname = 'player';
+      player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
+      player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
+      player.health = 100;
+      player.movetype = MoveType.Toss;
+      player.mins = { x: -16, y: -16, z: -24 };
+      player.maxs = { x: 16, y: 16, z: 32 };
+      player.client = {
+          inventory: createPlayerInventory(),
+          weaponStates: createPlayerWeaponStates(),
+      };
+      entities.finalizeSpawn(player);
+      origin = { ...player.origin };
     },
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
@@ -150,7 +148,21 @@ export function createGame(
           buttons: command.buttons,
         };
         const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs, damageAlpha: 0, damageIndicators: [], viewAngles: player.angles };
-        const newState = applyPmove(playerState, pcmd, trace, pointContents);
+
+        // Adapter functions to match pmove signatures
+        const traceAdapter = (start: Vec3, end: Vec3) => {
+          const result = imports.trace(start, player.mins, player.maxs, end, player, 0x10000001);
+          return {
+            fraction: result.fraction,
+            endpos: result.endpos,
+            allsolid: result.allsolid,
+            startsolid: result.startsolid,
+            planeNormal: result.plane?.normal,
+          };
+        };
+        const pointContentsAdapter = (point: Vec3) => imports.pointcontents(point);
+
+        const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
         player.origin = newState.origin;
         player.velocity = newState.velocity;
       }

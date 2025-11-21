@@ -1,10 +1,11 @@
 import { Entity, MoveType } from '../entities/entity.js';
 import { GameImports } from '../imports.js';
-import { addVec3, scaleVec3, clipVelocityVec3 } from '@quake2ts/shared';
+import { addVec3, scaleVec3, clipVelocityVec3, Vec3 } from '@quake2ts/shared';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
     ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+    ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
   }
 }
 

@@ -126,16 +126,28 @@ export class EntitySystem {
 
   constructor(
     engine: GameEngine,
-    imports: GameImports,
-    gravity: Vec3,
+    imports?: GameImports,
+    gravity?: Vec3,
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
-    this.imports = imports;
-    this.gravity = gravity;
+    this.imports = imports || {
+      trace: () => ({
+        allsolid: false,
+        startsolid: false,
+        fraction: 1,
+        endpos: { x: 0, y: 0, z: 0 },
+        plane: null,
+        surfaceFlags: 0,
+        contents: 0,
+        ent: null,
+      }),
+      pointcontents: () => 0,
+    };
+    this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
     if (callbackRegistry) {
       for (const [name, fn] of callbackRegistry.entries()) {
@@ -285,19 +297,22 @@ export class EntitySystem {
         continue;
       }
 
+      const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
       switch (ent.movetype) {
         case MoveType.Toss:
-          runGravity(ent, scaleVec3(this.gravity, -1), this.currentTimeSeconds - (ent.timestamp || 0));
-          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runGravity(ent, this.gravity, frametime);
+          runBouncing(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.Bounce:
-          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runBouncing(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.FlyMissile:
-          runProjectileMovement(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runProjectileMovement(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
       }
-      ent.timestamp = this.currentTimeSeconds;
     }
 
     this.runTouches();
