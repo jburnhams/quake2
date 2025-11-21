@@ -314,7 +314,10 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
 
   if (!startout) {
     trace.startsolid = true;
-    if (!getout) trace.allsolid = true;
+    if (!getout) {
+      trace.allsolid = true;
+    }
+    trace.fraction = 0;
     return;
   }
 
@@ -506,12 +509,14 @@ function recursiveHullCheck(params: {
 
   const node = model.nodes[nodeIndex];
   const plane = node.plane;
-  const offset = planeOffsetForBounds(plane, mins, maxs);
+  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271)
+  // which uses fabs() on each component
+  const offset = planeOffsetMagnitude(plane, mins, maxs);
 
-  const startDist = planeDistanceToPoint(plane, start) + offset;
-  const endDist = planeDistanceToPoint(plane, end) + offset;
+  const startDist = planeDistanceToPoint(plane, start);
+  const endDist = planeDistanceToPoint(plane, end);
 
-  if (startDist >= 0 && endDist >= 0) {
+  if (startDist >= offset && endDist >= offset) {
     recursiveHullCheck({
       model,
       nodeIndex: node.children[0],
@@ -530,7 +535,7 @@ function recursiveHullCheck(params: {
     return;
   }
 
-  if (startDist < 0 && endDist < 0) {
+  if (startDist < -offset && endDist < -offset) {
     recursiveHullCheck({
       model,
       nodeIndex: node.children[1],
@@ -549,15 +554,22 @@ function recursiveHullCheck(params: {
     return;
   }
 
+  // Put the crosspoint DIST_EPSILON pixels on the near side
+  // See full/qcommon/cmodel.c:1293-1313 (CM_RecursiveHullCheck)
+  // fraction1 (frac) is used for "move up to node" - the near-side recursion
+  // fraction2 (frac2) is used for "go past the node" - the far-side recursion
   let side = 0;
   let idist = 1 / (startDist - endDist);
-  let fraction1 = (startDist - DIST_EPSILON) * idist;
-  let fraction2 = (startDist + DIST_EPSILON) * idist;
+  let fraction1, fraction2;
 
   if (startDist < endDist) {
     side = 1;
-    fraction1 = (startDist + DIST_EPSILON) * idist;
-    fraction2 = (startDist - DIST_EPSILON) * idist;
+    fraction2 = (startDist + offset + DIST_EPSILON) * idist;
+    fraction1 = (startDist - offset + DIST_EPSILON) * idist;
+  } else {
+    side = 0;
+    fraction2 = (startDist - offset - DIST_EPSILON) * idist;
+    fraction1 = (startDist + offset + DIST_EPSILON) * idist;
   }
 
   if (fraction1 < 0) fraction1 = 0;

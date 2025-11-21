@@ -15,6 +15,8 @@ This section covers the physics simulation and collision detection system that f
   - Deterministic movement helpers with full unit test coverage
 - ✅ BSP collision constants (CONTENTS_*, SURF_*, MASK_*) in `packages/shared/src/bsp/contents.ts`
 - ✅ Vec3 math utilities including clip-plane resolution
+- ✅ Initial implementation of the core trace system (`traceBox`) in `packages/shared/src/bsp/collision.ts`.
+- ✅ Exhaustive, behavior-driven test suite for `traceBox` that validates its behavior against the original C code.
 
 ## Tasks Remaining
 
@@ -44,11 +46,13 @@ This section covers the physics simulation and collision detection system that f
   - BSP node traversal to limit brush tests
   - Early-out when trace is blocked
   - Trace cache for repeated queries (optional)
-- [ ] Handle edge cases
+- [x] Handle edge cases
   - [x] Zero-length traces (point tests)
   - [x] Trace starting in solid (set startsolid, allsolid flags)
   - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
   - [x] Epsilon handling for surface snapping
+  - [x] Grazing hits (comprehensive tests in `tests/bsp/trace.grazing.test.ts`)
+  - [x] Corner collisions (comprehensive tests in `tests/bsp/trace.corners.test.ts`)
 
 ### Point Queries
 - [x] Implement `pointcontents` function
@@ -136,15 +140,14 @@ This section covers the physics simulation and collision detection system that f
   - Toggle to see BSP brush wireframes
 
 ### Edge Cases & Special Handling
-- [ ] Epsilon values for surface snapping
-  - STOP_EPSILON, DIST_EPSILON matching rerelease
-  - Prevent jittering on slopes
-- [ ] Crease/corner handling in slide movement
-  - Already implemented in shared pmove, verify with real geometry
-- [ ] Stuck-in-solid recovery
-  - Detect when entity spawns inside geometry
-  - Use fixStuckObject to nudge out
-  - Fail gracefully if no valid position found
+- [x] Epsilon values for surface snapping
+  - STOP_EPSILON (0.1) in `shared/src/math/vec3.ts`, DIST_EPSILON (0.03125) in `shared/src/bsp/collision.ts`
+  - Used in clip calculations and velocity blocking
+- [x] Crease/corner handling in slide movement
+  - Implemented in shared pmove (`slideMove`, `clipVelocity`)
+- [x] Stuck-in-solid recovery
+  - `fixStuckObjectGeneric` in `shared/src/pmove/stuck.ts`
+  - `snapPosition` in `shared/src/pmove/snap.ts`
 - [ ] Water/liquid transitions
   - Detect when entering/exiting water
   - Trigger splash sounds/effects (via game layer)

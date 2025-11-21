@@ -6,7 +6,10 @@ import {
   MoveType,
   Solid,
 } from './entity.js';
+import { registerMiscSpawns } from './misc.js';
+import { registerTargetSpawns } from './targets.js';
 import { registerTriggerSpawns } from './triggers.js';
+import { registerItemSpawns } from './items.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
@@ -253,7 +256,7 @@ export function findPlayerStart(entities: EntitySystem): Entity | undefined {
   );
 }
 
-export function registerDefaultSpawns(registry: SpawnRegistry): void {
+export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void {
   registry.register('worldspawn', (entity) => {
     entity.movetype = MoveType.Push;
     entity.solid = Solid.Bsp;
@@ -285,10 +288,13 @@ export function registerDefaultSpawns(registry: SpawnRegistry): void {
   });
 
   registerTriggerSpawns(registry);
+  registerTargetSpawns(registry);
+  registerMiscSpawns(registry);
+  registerItemSpawns(game, registry);
 }
 
-export function createDefaultSpawnRegistry(): SpawnRegistry {
+export function createDefaultSpawnRegistry(game: any): SpawnRegistry {
   const registry = new SpawnRegistry();
-  registerDefaultSpawns(registry);
+  registerDefaultSpawns(game, registry);
   return registry;
 }

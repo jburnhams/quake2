@@ -108,6 +108,9 @@ export class Texture2D {
   readonly texture: WebGLTexture;
   readonly target: GLenum;
 
+  width = 0;
+  height = 0;
+
   constructor(gl: WebGL2RenderingContext, target: GLenum = gl.TEXTURE_2D) {
     this.gl = gl;
     this.target = target;
@@ -139,6 +142,12 @@ export class Texture2D {
     }
   }
 
+  upload(width: number, height: number, data: TexImageSource | ArrayBufferView | null) {
+      this.width = width;
+      this.height = height;
+      this.uploadImage(0, this.gl.RGBA, width, height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, data);
+  }
+
   uploadImage(
     level: number,
     internalFormat: GLenum,
@@ -147,10 +156,10 @@ export class Texture2D {
     border: number,
     format: GLenum,
     type: GLenum,
-    data: ArrayBufferView | null
+    data: TexImageSource | ArrayBufferView | null
   ): void {
     this.bind();
-    this.gl.texImage2D(this.target, level, internalFormat, width, height, border, format, type, data);
+    this.gl.texImage2D(this.target, level, internalFormat, width, height, border, format, type, data as any);
   }
 
   dispose(): void {

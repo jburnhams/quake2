@@ -7,6 +7,10 @@ export const ROLL = 2;
 const DEG2RAD_FACTOR = Math.PI / 180;
 const RAD2DEG_FACTOR = 180 / Math.PI;
 
+// Export constants for direct use in matrix operations
+export const DEG2RAD = DEG2RAD_FACTOR;
+export const RAD2DEG = RAD2DEG_FACTOR;
+
 function axisComponent(vec: Vec3, axis: number): number {
   switch (axis) {
     case PITCH:

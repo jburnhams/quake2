@@ -4,3 +4,4 @@ export * from './damage.js';
 export * from './damageMods.js';
 export * from './specialDamage.js';
 export * from './weapon.js';
+export * from './weapons/state.js';
