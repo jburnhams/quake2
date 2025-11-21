@@ -122,22 +122,20 @@ export function createGame(
     },
     spawnWorld() {
       const playerStart = findPlayerStart(entities);
-      if (playerStart) {
-        const player = entities.spawn();
-        player.classname = 'player';
-        player.origin = { ...playerStart.origin };
-        player.angles = { ...playerStart.angles };
-        player.health = 100;
-        player.movetype = MoveType.Toss;
-        player.mins = { x: -16, y: -16, z: -24 };
-        player.maxs = { x: 16, y: 16, z: 32 };
-        player.client = {
-            inventory: createPlayerInventory(),
-            weaponStates: createPlayerWeaponStates(),
-        };
-        entities.finalizeSpawn(player);
-        origin = { ...player.origin };
-      }
+      const player = entities.spawn();
+      player.classname = 'player';
+      player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
+      player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
+      player.health = 100;
+      player.movetype = MoveType.Toss;
+      player.mins = { x: -16, y: -16, z: -24 };
+      player.maxs = { x: 16, y: 16, z: 32 };
+      player.client = {
+          inventory: createPlayerInventory(),
+          weaponStates: createPlayerWeaponStates(),
+      };
+      entities.finalizeSpawn(player);
+      origin = { ...player.origin };
     },
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
