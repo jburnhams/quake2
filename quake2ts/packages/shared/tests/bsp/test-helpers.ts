@@ -3,6 +3,8 @@ import {
   type CollisionBrush,
   type CollisionModel,
   type CollisionPlane,
+  type CollisionNode,
+  type CollisionLeaf,
 } from '../../src/bsp/collision.js';
 import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
 import type { Vec3 } from '../../src/math/vec3.js';
