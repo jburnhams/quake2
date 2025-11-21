@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFrameRenderer, type FrameRenderOptions } from '../../src/render/frame.js';
 import type { BspSurfacePipeline } from '../../src/render/bspPipeline.js';
-import type { SkyboxPipeline } from '../../src/render/skybox.js';
+import { removeViewTranslation, type SkyboxPipeline } from '../../src/render/skybox.js';
 import type { BspSurfaceGeometry } from '../../src/render/bsp.js';
 import { Camera } from '../../src/render/camera.js';
-import { vec3 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { createMockGL } from '../helpers/mockWebGL.js';
 
 let callOrder: string[] = [];
@@ -34,6 +34,7 @@ describe('FrameRenderer', () => {
       clear: vi.fn(),
       COLOR_BUFFER_BIT: 0x1,
       DEPTH_BUFFER_BIT: 0x2,
+      depthRange: vi.fn(),
     }, glOverrides) as unknown as WebGL2RenderingContext;
 
     const bspPipeline = {
@@ -60,7 +61,7 @@ describe('FrameRenderer', () => {
       ]),
       extractFrustumPlanes: vi.fn(() => []),
       computeSkyScroll: vi.fn(() => [0.1, 0.2]),
-      removeViewTranslation: vi.fn((view: Float32Array) => view.slice()),
+      removeViewTranslation: vi.fn(removeViewTranslation),
       ...depsOverrides,
     } as any;
 
@@ -79,7 +80,7 @@ describe('FrameRenderer', () => {
       sky: { scrollSpeeds: [0.05, 0.1], textureUnit: 2 },
     };
 
-    renderer.renderFrame(options);
+    const stats = renderer.renderFrame(options);
 
     expect(gl.clearColor).toHaveBeenCalledWith(0.2, 0.3, 0.4, 1);
     expect(gl.clear).toHaveBeenCalledWith(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -90,6 +91,8 @@ describe('FrameRenderer', () => {
     expect((skyboxPipeline.bind as any).mock.calls[0][0].textureUnit).toBe(2);
     expect((skyboxPipeline.gl.depthMask as any)).toHaveBeenCalledWith(true);
     expect(callOrder).toContain('sky-draw');
+    expect(stats.skyDrawn).toBe(true);
+    expect(stats.viewModelDrawn).toBe(false);
   });
 
   it('gathers visible faces, sorts front-to-back, and binds textures/lightmaps', () => {
@@ -116,7 +119,7 @@ describe('FrameRenderer', () => {
     const camera = new Camera();
     camera.position = vec3.fromValues(1, 2, 3);
 
-    renderer.renderFrame({ camera, world, timeSeconds: 1 });
+    const stats = renderer.renderFrame({ camera, world, timeSeconds: 1 });
 
     const expectedViewProj = Array.from(new Float32Array(camera.viewProjectionMatrix));
     expect(deps.extractFrustumPlanes).toHaveBeenCalledWith(expectedViewProj);
@@ -144,6 +147,9 @@ describe('FrameRenderer', () => {
     expect(diffuse.bind).toHaveBeenCalledTimes(2);
     expect(lightmapTexture.bind).toHaveBeenCalled();
     expect(gl.drawElements).toHaveBeenCalledTimes(2);
+    expect(stats.facesDrawn).toBe(2);
+    expect(stats.drawCalls).toBe(2);
+    expect(stats.batches).toBe(2);
   });
 
   it('disables lightmap sampling when a surface lacks an atlas placement', () => {
@@ -168,11 +174,12 @@ describe('FrameRenderer', () => {
     } as any;
 
     const camera = new Camera();
-    renderer.renderFrame({ camera, world });
+    const stats = renderer.renderFrame({ camera, world });
 
     expect(deps.gatherVisibleFaces).toHaveBeenCalled();
     expect(callOrder).toEqual(['diffuse', 'nolight-vao', 'nolight-ibo']);
     expect((bspPipeline.bind as any).mock.calls[0][0].lightmapSampler).toBeUndefined();
+    expect(stats.facesDrawn).toBe(1);
   });
 
   it('skips drawing sky surfaces that were gathered from visibility', () => {
@@ -198,10 +205,74 @@ describe('FrameRenderer', () => {
     } as any;
 
     const camera = new Camera();
-    renderer.renderFrame({ camera, world });
+    const stats = renderer.renderFrame({ camera, world });
 
     expect(deps.gatherVisibleFaces).toHaveBeenCalled();
     expect(gl.drawElements).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(['floor-tex', 'lm', 'floor-vao', 'floor-ibo']);
+    expect(stats.facesDrawn).toBe(1);
+    expect(stats.batches).toBe(1);
+  });
+
+  it('reuses batch state when surfaces share materials and styles', () => {
+    const { renderer, bspPipeline } = makeRenderer({
+      gatherVisibleFaces: vi.fn(() => [
+        { faceIndex: 0, leafIndex: 0, sortKey: -1 },
+        { faceIndex: 1, leafIndex: 0, sortKey: -2 },
+      ]),
+    });
+
+    const diffuse = { bind: vi.fn(() => callOrder.push('diffuse')) } as any;
+    const lightmapTexture = { bind: vi.fn(() => callOrder.push('lightmap')) } as any;
+
+    const world = {
+      map: { faces: [{ styles: [0, 0, 0, 0] }, { styles: [0, 0, 0, 0] }] },
+      surfaces: [createStubGeometry('a'), createStubGeometry('b')],
+      lightmaps: [{ texture: lightmapTexture }],
+      textures: new Map([
+        ['a', diffuse],
+        ['b', diffuse],
+      ]),
+      lightStyles: [1, 1, 1, 1],
+    } as any;
+
+    const camera = new Camera();
+    const stats = renderer.renderFrame({ camera, world, timeSeconds: 5 });
+
+    expect(stats.batches).toBe(1);
+    expect(stats.facesDrawn).toBe(2);
+    expect((bspPipeline.bind as any).mock.calls).toHaveLength(1);
+    expect(diffuse.bind).toHaveBeenCalledTimes(1);
+    expect(lightmapTexture.bind).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the viewmodel with separate projection and depth range while anchored to the camera', () => {
+    const viewModelDraw = vi.fn();
+    const { gl, renderer } = makeRenderer();
+    const camera = new Camera();
+    camera.fov = 100;
+    camera.position = vec3.fromValues(5, 6, 7);
+
+    const stats = renderer.renderFrame({
+      camera,
+      viewModel: {
+        fov: 80,
+        depthRange: [0.2, 0.6],
+        draw: viewModelDraw,
+      },
+    });
+
+    const expectedProjection = camera.getViewmodelProjectionMatrix(80);
+    const expectedView = removeViewTranslation(camera.viewMatrix);
+    const expectedViewProjection = mat4.create();
+    mat4.multiply(expectedViewProjection, expectedProjection, expectedView);
+
+    expect(viewModelDraw).toHaveBeenCalledTimes(1);
+    expect(Array.from(viewModelDraw.mock.calls[0][0] as Float32Array)).toEqual(
+      Array.from(new Float32Array(expectedViewProjection))
+    );
+    expect(gl.depthRange).toHaveBeenCalledWith(0.2, 0.6);
+    expect(gl.depthRange).toHaveBeenCalledWith(0, 1);
+    expect(stats.viewModelDrawn).toBe(true);
   });
 });

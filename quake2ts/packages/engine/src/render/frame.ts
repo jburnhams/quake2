@@ -19,6 +19,20 @@ export interface SkyRenderState {
   readonly textureUnit?: number;
 }
 
+export interface ViewModelRenderState {
+  readonly fov?: number;
+  readonly depthRange?: readonly [number, number];
+  readonly draw: (viewProjection: Float32Array) => void;
+}
+
+export interface FrameRenderStats {
+  batches: number;
+  facesDrawn: number;
+  drawCalls: number;
+  skyDrawn: boolean;
+  viewModelDrawn: boolean;
+}
+
 export interface WorldRenderState {
   readonly map: BspMap;
   readonly surfaces: readonly BspSurfaceGeometry[];
@@ -31,6 +45,7 @@ export interface FrameRenderOptions {
   readonly camera: Camera;
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
+  readonly viewModel?: ViewModelRenderState;
   readonly timeSeconds?: number;
   readonly clearColor?: readonly [number, number, number, number];
 }
@@ -80,23 +95,85 @@ function sortVisibleFaces(faces: readonly VisibleFace[]): VisibleFace[] {
   return [...faces].sort((a, b) => b.sortKey - a.sortKey);
 }
 
+interface TextureBindingCache {
+  diffuse?: Texture2D;
+  lightmap?: Texture2D;
+}
+
+interface ResolvedSurfaceTextures {
+  diffuse?: Texture2D;
+  lightmap?: Texture2D;
+}
+
+interface BatchKey {
+  diffuse?: Texture2D;
+  lightmap?: Texture2D;
+  surfaceFlags: number;
+  styleKey: string;
+}
+
+function resolveSurfaceTextures(geometry: BspSurfaceGeometry, world: WorldRenderState | undefined): ResolvedSurfaceTextures {
+  const diffuse = world?.textures?.get(geometry.texture);
+  const lightmapIndex = geometry.lightmap?.atlasIndex;
+  const lightmap = lightmapIndex !== undefined ? world?.lightmaps?.[lightmapIndex]?.texture : undefined;
+  return { diffuse, lightmap };
+}
+
 function bindSurfaceTextures(
   geometry: BspSurfaceGeometry,
-  world: WorldRenderState | undefined
+  world: WorldRenderState | undefined,
+  cache: TextureBindingCache,
+  resolved?: ResolvedSurfaceTextures
 ): { diffuse?: number; lightmap?: number } {
-  const diffuse = world?.textures?.get(geometry.texture);
-  diffuse?.bind(0);
+  const diffuse = resolved?.diffuse ?? world?.textures?.get(geometry.texture);
+  if (diffuse && cache.diffuse !== diffuse) {
+    diffuse.bind(0);
+    cache.diffuse = diffuse;
+  }
 
   const lightmapPlacement = geometry.lightmap;
-  const lightmap =
-    lightmapPlacement && world?.lightmaps?.[lightmapPlacement.atlasIndex]?.texture;
-  lightmap?.bind(1);
+  const lightmap = resolved?.lightmap ?? (lightmapPlacement && world?.lightmaps?.[lightmapPlacement.atlasIndex]?.texture);
+  if (lightmap && cache.lightmap !== lightmap) {
+    lightmap.bind(1);
+    cache.lightmap = lightmap;
+  }
+  if (!lightmap) {
+    cache.lightmap = undefined;
+  }
 
   return { diffuse: 0, lightmap: lightmap ? 1 : undefined };
 }
 
 export interface FrameRenderer {
-  renderFrame(options: FrameRenderOptions): void;
+  renderFrame(options: FrameRenderOptions): FrameRenderStats;
+}
+
+function renderViewModel(
+  gl: WebGL2RenderingContext,
+  camera: Camera,
+  viewModel: ViewModelRenderState | undefined,
+  removeTranslation: typeof removeViewTranslation
+): boolean {
+  if (!viewModel) {
+    return false;
+  }
+
+  const projection = viewModel.fov ? camera.getViewmodelProjectionMatrix(viewModel.fov) : camera.projectionMatrix;
+  const view = removeTranslation(camera.viewMatrix);
+  const viewProjection = mat4.create();
+  mat4.multiply(viewProjection, projection, view);
+
+  if (viewModel.depthRange) {
+    gl.depthRange(viewModel.depthRange[0], viewModel.depthRange[1]);
+  }
+
+  viewModel.draw(new Float32Array(viewProjection));
+
+  if (viewModel.depthRange) {
+    gl.depthRange(0, 1);
+  }
+
+  return true;
 }
 
 export const createFrameRenderer = (
@@ -105,14 +182,23 @@ export const createFrameRenderer = (
   skyboxPipeline: SkyboxPipeline,
   deps: FrameRendererDependencies = DEFAULT_DEPS
 ): FrameRenderer => {
-  const renderFrame = (options: FrameRenderOptions) => {
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0 } = options;
+  const renderFrame = (options: FrameRenderOptions): FrameRenderStats => {
+    const stats: FrameRenderStats = {
+      batches: 0,
+      facesDrawn: 0,
+      drawCalls: 0,
+      skyDrawn: false,
+      viewModelDrawn: false,
+    };
+
+    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     renderSky(skyboxPipeline, camera, timeSeconds, sky, deps);
+    stats.skyDrawn = Boolean(sky);
 
     if (world) {
       const frustum = deps.extractFrustumPlanes(Array.from(viewProjection));
@@ -124,6 +210,10 @@ export const createFrameRenderer = (
       const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
       const sortedFaces = sortVisibleFaces(visibleFaces);
 
+      let lastBatchKey: BatchKey | undefined;
+      let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
+      const cache: TextureBindingCache = {};
+
       for (const { faceIndex } of sortedFaces) {
         const geometry = world.surfaces[faceIndex];
         if (!geometry) {
@@ -134,23 +224,59 @@ export const createFrameRenderer = (
           continue;
         }
 
-        const textures = bindSurfaceTextures(geometry, world);
-        const state = bspPipeline.bind({
-          modelViewProjection: viewProjection,
-          styleIndices: world.map.faces[faceIndex]?.styles,
-          styleValues: world.lightStyles,
+        const faceStyles = world.map.faces[faceIndex]?.styles;
+        const resolvedTextures = resolveSurfaceTextures(geometry, world);
+        const batchKey: BatchKey = {
+          diffuse: resolvedTextures.diffuse,
+          lightmap: resolvedTextures.lightmap,
           surfaceFlags: geometry.surfaceFlags,
-          timeSeconds,
-          diffuseSampler: textures.diffuse ?? 0,
-          lightmapSampler: textures.lightmap,
-        });
+          styleKey: faceStyles?.join(',') ?? '',
+        };
 
-        applySurfaceState(gl, state);
+        const isSameBatch =
+          lastBatchKey &&
+          lastBatchKey.diffuse === batchKey.diffuse &&
+          lastBatchKey.lightmap === batchKey.lightmap &&
+          lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
+          lastBatchKey.styleKey === batchKey.styleKey;
+
+        if (!isSameBatch) {
+          stats.batches += 1;
+          cache.diffuse = undefined;
+          cache.lightmap = undefined;
+
+          const textures = bindSurfaceTextures(geometry, world, cache, resolvedTextures);
+          cachedState = bspPipeline.bind({
+            modelViewProjection: viewProjection,
+            styleIndices: faceStyles,
+            styleValues: world.lightStyles,
+            surfaceFlags: geometry.surfaceFlags,
+            timeSeconds,
+            diffuseSampler: textures.diffuse ?? 0,
+            lightmapSampler: textures.lightmap,
+          });
+          applySurfaceState(gl, cachedState);
+          lastBatchKey = batchKey;
+        } else {
+          bindSurfaceTextures(geometry, world, cache, resolvedTextures);
+          if (cachedState) {
+            applySurfaceState(gl, cachedState);
+          }
+        }
+
         geometry.vao.bind();
         geometry.indexBuffer.bind();
         gl.drawElements(gl.TRIANGLES, geometry.indexCount, gl.UNSIGNED_SHORT, 0);
+        stats.facesDrawn += 1;
+        stats.drawCalls += 1;
       }
     }
+
+    if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
+      stats.viewModelDrawn = true;
+    }
+
+    return stats;
   };
 
   return {
