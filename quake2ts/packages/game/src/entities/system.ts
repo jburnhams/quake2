@@ -297,19 +297,22 @@ export class EntitySystem {
         continue;
       }
 
+      const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
       switch (ent.movetype) {
         case MoveType.Toss:
-          runGravity(ent, this.gravity, this.currentTimeSeconds - (ent.timestamp || 0));
-          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runGravity(ent, this.gravity, frametime);
+          runBouncing(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.Bounce:
-          runBouncing(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runBouncing(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.FlyMissile:
-          runProjectileMovement(ent, this.imports, this.currentTimeSeconds - (ent.timestamp || 0));
+          runProjectileMovement(ent, this.imports, frametime);
+          ent.timestamp = this.currentTimeSeconds;
           break;
       }
-      ent.timestamp = this.currentTimeSeconds;
     }
 
     this.runTouches();
