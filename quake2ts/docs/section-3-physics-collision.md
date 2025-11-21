@@ -140,15 +140,14 @@ This section covers the physics simulation and collision detection system that f
   - Toggle to see BSP brush wireframes
 
 ### Edge Cases & Special Handling
-- [ ] Epsilon values for surface snapping
-  - STOP_EPSILON, DIST_EPSILON matching rerelease
-  - Prevent jittering on slopes
-- [ ] Crease/corner handling in slide movement
-  - Already implemented in shared pmove, verify with real geometry
-- [ ] Stuck-in-solid recovery
-  - Detect when entity spawns inside geometry
-  - Use fixStuckObject to nudge out
-  - Fail gracefully if no valid position found
+- [x] Epsilon values for surface snapping
+  - STOP_EPSILON (0.1) in `shared/src/math/vec3.ts`, DIST_EPSILON (0.03125) in `shared/src/bsp/collision.ts`
+  - Used in clip calculations and velocity blocking
+- [x] Crease/corner handling in slide movement
+  - Implemented in shared pmove (`slideMove`, `clipVelocity`)
+- [x] Stuck-in-solid recovery
+  - `fixStuckObjectGeneric` in `shared/src/pmove/stuck.ts`
+  - `snapPosition` in `shared/src/pmove/snap.ts`
 - [ ] Water/liquid transitions
   - Detect when entering/exiting water
   - Trigger splash sounds/effects (via game layer)
