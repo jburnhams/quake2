@@ -30,6 +30,20 @@ The collision detection process can be broken down into three main parts:
 
 An important detail is the use of `DIST_EPSILON` (0.03125). This small value is used to push the intersection point slightly away from the collision plane. This helps to prevent the physics simulation from getting stuck on surfaces due to floating-point inaccuracies.
 
+#### Analysis of CM_RecursiveHullCheck
+
+1.  **Check for early exit:** If the trace has already found a closer collision, exit.
+2.  **Check for leaf node:** If the current node is a leaf, trace against the brushes in that leaf and exit.
+3.  **Calculate distances to splitting plane:** Calculate the distance from the start and end points of the trace to the splitting plane of the current node.
+4.  **Calculate offset:** Calculate the offset of the bounding box from the splitting plane.
+5.  **Check which side of the plane the trace is on:**
+    *   If the trace is entirely on the front side, recurse into the front child.
+    *   If the trace is entirely on the back side, recurse into the back child.
+6.  **If the trace crosses the plane:**
+    *   Calculate `frac` and `frac2`, the fractions at which the leading and trailing edges of the bounding box cross the plane.
+    *   Recurse into the near side of the plane, from the start of the trace to the intersection point.
+    *   Recurse into the far side of the plane, from the intersection point to the end of the trace.
+
 ## TypeScript Implementation Analysis
 
 The existing TypeScript implementation in `packages/shared/src/bsp/collision.ts` is a good starting point, but it must now be rigorously tested against the original C code's behavior. The `traceBox` function is the equivalent of `CM_BoxTrace`, and the `TraceResult` interface is analogous to the `trace_t` struct.
