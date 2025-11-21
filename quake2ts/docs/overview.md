@@ -2,6 +2,10 @@
 
 This repo is a browser-first TypeScript/WebGL port of the Quake II rerelease, scoped to the single-player base campaign with deterministic simulation and user-provided PAK assets. The goal is a faithful, testable recreation that mirrors the rerelease import/export surfaces while remaining modular and browser-safe.
 
+## Original code
+
+The primary C code to be ported is in the rerelease repo root folder. However this seems to have some dependencies on code that isn't present and can be found in the more extensive original source release in the full folder in repo root - particularly relevant for low level physics and rendering code. Always refer to the original if unsure how to implement something, or what the correct behaviour should be. Then create unit tests to enforce this and prevent regression. Add comments referring to the original source location where appropriate (ie for tricky bits)
+
 ## Development Sections
 
 The remaining work has been divided into developer-friendly sections that can be worked on in parallel. Each section document contains an overview, work already completed, dependencies, detailed task lists, and testing requirements.
