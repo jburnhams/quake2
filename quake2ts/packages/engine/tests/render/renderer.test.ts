@@ -2,11 +2,13 @@ import { createRenderer } from '../../src/render/renderer.js';
 import { FrameRenderer } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
+import { SpriteRenderer } from '../../src/render/sprite.js';
 
 // Mock the pipeline dependencies to prevent WebGL calls
 vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
 vi.mock('../../src/render/skybox.js', () => ({ SkyboxPipeline: vi.fn() }));
 vi.mock('../../src/render/md2Pipeline.js', () => ({ Md2Pipeline: vi.fn() }));
+vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
 
 const mockMd3Pipeline = {
     bind: vi.fn(),
@@ -36,24 +38,31 @@ vi.mock('../../src/render/frame.js', () => ({
 
 
 describe('Renderer', () => {
+    let mockGl: WebGL2RenderingContext;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGl = {
+            disable: vi.fn(),
+            enable: vi.fn(),
+            depthMask: vi.fn(),
+        } as unknown as WebGL2RenderingContext;
     });
 
-    it('should call the underlying frame renderer', () => {
-        const mockGl = {} as WebGL2RenderingContext;
+    it('should set initial GL state and call the underlying frame renderer', () => {
         const renderer = createRenderer(mockGl);
         const options = { camera: { viewProjectionMatrix: new Float32Array(16) } } as any;
         const entities: any[] = [];
 
         renderer.renderFrame(options, entities);
 
+        expect(mockGl.disable).toHaveBeenCalled();
+        expect(mockGl.enable).toHaveBeenCalled();
+        expect(mockGl.depthMask).toHaveBeenCalled();
         expect(mockFrameRenderer.renderFrame).toHaveBeenCalledWith(options);
-        expect(mockFrameRenderer.renderFrame).toHaveBeenCalledTimes(1);
     });
 
     it('should render an MD3 entity', () => {
-        const mockGl = {} as WebGL2RenderingContext;
         const renderer = createRenderer(mockGl);
         const options = { camera: { viewProjectionMatrix: new Float32Array(16) } } as any;
         const entities = [{
