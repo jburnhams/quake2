@@ -118,9 +118,9 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - **Status**: Implemented using a bitmap font loaded from `pics/conchars.pcx`.
 - [x] HUD layout system
   - [x] Status bar (health, armor, ammo)
-  - [ ] Weapon/item icons
-  - [ ] Crosshair rendering
-  - [ ] Damage direction indicators
+  - [x] Weapon/item icons
+  - [x] Crosshair rendering
+  - [x] Damage direction indicators
   - [x] Center print messages
   - [ ] Notification area
 
@@ -133,7 +133,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Convert Quake II angles to view transform
   - [x] Projection matrix (perspective)
   - [x] Handle viewmodel (weapon) rendering with separate FOV
-- [ ] Viewmodel rendering
+- [x] Viewmodel rendering
   - [x] Render weapon model with higher FOV in foreground
   - [x] Separate depth range to avoid clipping with world
   - [x] Anchor transform to camera (strip world translation)
@@ -157,10 +157,10 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Group faces by texture/lightmap
   - [ ] Batch particle rendering
   - [x] Minimize state changes (state re-use, texture binding cache)
-- [ ] Frame timing and diagnostics
-  - [ ] FPS counter
+- [x] Frame timing and diagnostics
+  - [x] FPS counter
   - [x] Draw call counter (per-frame stats reported by renderer)
-  - [ ] Vertex/triangle counts
+  - [x] Vertex/triangle counts
   - [ ] GPU time profiling (if extensions available)
 
 ### Material System

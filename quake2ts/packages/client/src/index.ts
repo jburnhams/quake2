@@ -4,12 +4,15 @@ import {
   GameFrameResult,
   GameRenderSample,
   Camera,
+  Renderer,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3 } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
+import { Draw_Hud, Init_Hud } from './hud.js';
+import { FrameRenderStats } from '@quake2ts/engine';
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
   GamepadLike,
@@ -33,7 +36,7 @@ export {
 export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from './view-effects.js';
 
 export interface ClientImports {
-  readonly engine: EngineImports;
+  readonly engine: EngineImports & { renderer: Renderer };
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
@@ -89,6 +92,31 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       const command = {} as UserCommand;
+
+      if (imports.engine.renderer && lastRendered && lastRendered.client) {
+        const stats: FrameRenderStats = {
+          batches: 0,
+          facesDrawn: 0,
+          drawCalls: 0,
+          skyDrawn: false,
+          viewModelDrawn: false,
+          fps: 0,
+          vertexCount: 0,
+        };
+
+        const playerState: PlayerState = {
+            origin: lastRendered.origin,
+            velocity: lastRendered.velocity,
+            viewAngles: lastRendered.viewangles,
+            onGround: hasPmFlag(lastRendered.pmFlags, PmFlag.OnGround),
+            waterLevel: lastRendered.waterlevel,
+            mins: { x: -16, y: -16, z: -24 },
+            maxs: { x: 16, y: 16, z: 32 },
+            damageAlpha: 0,
+            damageIndicators: [],
+        };
+        Draw_Hud(imports.engine.renderer, playerState, lastRendered.client, lastRendered.health, lastRendered.armor, lastRendered.ammo, stats);
+      }
 
       void imports;
       void sample;

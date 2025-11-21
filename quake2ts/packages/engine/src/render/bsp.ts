@@ -34,6 +34,7 @@ export interface BspSurfaceGeometry {
   readonly vertexBuffer: VertexBuffer;
   readonly indexBuffer: IndexBuffer;
   readonly indexCount: number;
+  readonly vertexCount: number;
   readonly texture: string;
   readonly surfaceFlags: SurfaceFlag;
   readonly lightmap?: LightmapPlacement;
@@ -304,6 +305,7 @@ export function buildBspGeometry(
       vertexBuffer,
       indexBuffer,
       indexCount: indexData.length,
+      vertexCount: vertexData.length / 7,
       texture: surface.texture,
       surfaceFlags: surface.surfaceFlags ?? SURF_NONE,
       lightmap: placement,

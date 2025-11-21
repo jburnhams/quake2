@@ -149,7 +149,7 @@ export function createGame(
           upmove: command.upmove,
           buttons: command.buttons,
         };
-        const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs };
+        const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs, damageAlpha: 0, damageIndicators: [], viewAngles: player.angles };
         const newState = applyPmove(playerState, pcmd, trace, pointContents);
         player.origin = newState.origin;
         player.velocity = newState.velocity;

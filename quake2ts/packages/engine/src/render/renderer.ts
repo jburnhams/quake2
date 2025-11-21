@@ -15,6 +15,8 @@ import { Texture2D } from './resources.js';
 export type Pic = Texture2D;
 
 export interface Renderer {
+    readonly width: number;
+    readonly height: number;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
 
     // HUD Methods
@@ -23,6 +25,7 @@ export interface Renderer {
     end2D(): void;
     drawPic(x: number, y: number, pic: Pic): void;
     drawString(x: number, y: number, text: string): void;
+    drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
 }
 
 export const createRenderer = (
@@ -158,12 +161,19 @@ export const createRenderer = (
         }
     };
 
+    const drawfillRect = (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => {
+        spriteRenderer.drawRect(x, y, width, height, color);
+    };
+
     return {
+        get width() { return gl.canvas.width; },
+        get height() { return gl.canvas.height; },
         renderFrame,
         registerPic,
         begin2D,
         end2D,
         drawPic,
         drawString,
+        drawfillRect,
     };
 };

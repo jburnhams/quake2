@@ -19,8 +19,11 @@ export interface TraceResult extends PmoveTraceResult {
   readonly hit?: Vec3;
 }
 
+import { Renderer } from './render/renderer.js';
+
 export interface EngineImports {
   trace(start: Vec3, end: Vec3): TraceResult;
+  renderer?: Renderer;
 }
 
 export interface EngineExports {
@@ -241,3 +244,4 @@ export {
   type ParticleSpawnOptions,
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
+export { FrameRenderStats, FrameRenderOptions } from './render/frame.js';

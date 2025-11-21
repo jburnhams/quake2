@@ -20,6 +20,8 @@ import {
 } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
 
+import { PlayerClient } from '@quake2ts/game';
+
 export interface PredictionState {
   readonly origin: Vec3;
   readonly velocity: Vec3;
@@ -29,6 +31,10 @@ export interface PredictionState {
   readonly waterlevel: WaterLevel;
   readonly gravity: number;
   readonly deltaAngles?: Vec3;
+  readonly client?: PlayerClient;
+  readonly health: number;
+  readonly armor: number;
+  readonly ammo: number;
 }
 
 export interface PredictionSettings {
@@ -71,6 +77,9 @@ export function defaultPredictionState(): PredictionState {
     waterlevel: WaterLevel.None,
     gravity: DEFAULT_GRAVITY,
     deltaAngles: ZERO_VEC3,
+    health: 0,
+    armor: 0,
+    ammo: 0,
   } satisfies PredictionState;
 }
 
@@ -126,6 +135,10 @@ export function interpolatePredictionState(
     waterlevel: latest.waterlevel,
     gravity: latest.gravity,
     deltaAngles: latest.deltaAngles,
+    client: latest.client,
+    health: lerp(previous.health, latest.health, clamped),
+    armor: lerp(previous.armor, latest.armor, clamped),
+    ammo: lerp(previous.ammo, latest.ammo, clamped),
   } satisfies PredictionState;
 }
 

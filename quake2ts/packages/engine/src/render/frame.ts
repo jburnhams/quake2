@@ -14,7 +14,9 @@ import {
 import { mat4 } from 'gl-matrix';
 import { SURF_SKY } from '@quake2ts/shared';
 
-export interface SkyRenderState {
+export { FrameRenderStats, FrameRenderOptions };
+
+interface SkyRenderState {
   readonly scrollSpeeds?: readonly [number, number];
   readonly textureUnit?: number;
 }
@@ -25,12 +27,14 @@ export interface ViewModelRenderState {
   readonly draw: (viewProjection: Float32Array) => void;
 }
 
-export interface FrameRenderStats {
+interface FrameRenderStats {
   batches: number;
   facesDrawn: number;
   drawCalls: number;
   skyDrawn: boolean;
   viewModelDrawn: boolean;
+  fps: number;
+  vertexCount: number;
 }
 
 export interface WorldRenderState {
@@ -41,7 +45,7 @@ export interface WorldRenderState {
   readonly lightStyles?: ReadonlyArray<number>;
 }
 
-export interface FrameRenderOptions {
+interface FrameRenderOptions {
   readonly camera: Camera;
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
@@ -182,13 +186,21 @@ export const createFrameRenderer = (
   skyboxPipeline: SkyboxPipeline,
   deps: FrameRendererDependencies = DEFAULT_DEPS
 ): FrameRenderer => {
+  let lastFrameTime = 0;
+
   const renderFrame = (options: FrameRenderOptions): FrameRenderStats => {
+    const now = performance.now();
+    const fps = lastFrameTime > 0 ? 1000 / (now - lastFrameTime) : 0;
+    lastFrameTime = now;
+
     const stats: FrameRenderStats = {
       batches: 0,
       facesDrawn: 0,
       drawCalls: 0,
       skyDrawn: false,
       viewModelDrawn: false,
+      fps: Math.round(fps),
+      vertexCount: 0,
     };
 
     const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel } = options;
@@ -269,6 +281,7 @@ export const createFrameRenderer = (
         gl.drawElements(gl.TRIANGLES, geometry.indexCount, gl.UNSIGNED_SHORT, 0);
         stats.facesDrawn += 1;
         stats.drawCalls += 1;
+        stats.vertexCount += geometry.vertexCount;
       }
     }
 

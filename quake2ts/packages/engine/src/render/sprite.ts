@@ -30,11 +30,13 @@ void main() {
   o_color = texture(u_diffuseMap, v_texCoord) * u_tint;
 }`;
 
+import { Texture2D } from './resources.js';
 export class SpriteRenderer {
     readonly gl: WebGL2RenderingContext;
     readonly program: ShaderProgram;
     readonly vao: VertexArray;
     readonly vbo: VertexBuffer;
+    readonly whiteTexture: Texture2D;
 
     private readonly uniformProjection: WebGLUniformLocation | null;
     private readonly uniformDiffuse: WebGLUniformLocation | null;
@@ -62,6 +64,9 @@ export class SpriteRenderer {
             ],
             this.vbo
         );
+
+        this.whiteTexture = new Texture2D(gl);
+        this.whiteTexture.upload(1, 1, new Uint8Array([255, 255, 255, 255]));
     }
 
     begin(projection: Float32List) {
@@ -87,5 +92,10 @@ export class SpriteRenderer {
 
         this.vao.bind();
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    drawRect(x: number, y: number, width: number, height: number, color: readonly [number, number, number, number]) {
+        this.whiteTexture.bind(0);
+        this.draw(x, y, width, height, 0, 0, 1, 1, color);
     }
 }
