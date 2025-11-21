@@ -4,7 +4,7 @@
 
 import { Entity, MoveType, Solid } from './entity.js';
 import { GameExports } from '../index.js';
-import { T_Damage } from '../combat/damage.js';
+import { T_Damage, Damageable } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
@@ -23,8 +23,8 @@ export function createRocket(game: GameExports, owner: Entity, start: any, dir: 
             return;
         }
 
-        if (self.owner && self.owner.client) {
-            T_Damage(other, self, self.owner, dir, self.origin, ZERO_VEC3, damage, 0, DamageFlags.NONE, 0);
+        if (self.owner && self.owner.client && other) {
+            T_Damage(other as Damageable, self as unknown as Damageable, self.owner as unknown as Damageable, dir, self.origin, ZERO_VEC3, damage, 0, DamageFlags.NONE, 0);
         }
 
         game.entities.free(self);

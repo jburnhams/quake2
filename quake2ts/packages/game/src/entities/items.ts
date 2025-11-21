@@ -12,6 +12,7 @@ import {
     KEY_ITEMS,
 } from '../inventory/items.js';
 import { createWeaponPickupEntity } from './items/weapons.js';
+export { createWeaponPickupEntity } from './items/weapons.js';
 import { createHealthPickupEntity } from './items/health.js';
 import { createArmorPickupEntity } from './items/armor.js';
 import { createPowerupPickupEntity } from './items/powerups.js';

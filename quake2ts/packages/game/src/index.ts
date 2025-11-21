@@ -50,7 +50,8 @@ export { hashGameState } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
-import { createPlayerInventory, createPlayerWeaponStates } from './inventory/index.js';
+import { createPlayerInventory } from './inventory/index.js';
+import { createPlayerWeaponStates } from './combat/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';
 
