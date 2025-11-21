@@ -136,6 +136,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 - [ ] Viewmodel rendering
   - [x] Render weapon model with higher FOV in foreground
   - [x] Separate depth range to avoid clipping with world
+  - [x] Anchor transform to camera (strip world translation)
   - [ ] Apply view bob, roll, and kick effects
 
 ### Render Pipeline & Optimization

@@ -148,14 +148,20 @@ export interface FrameRenderer {
   renderFrame(options: FrameRenderOptions): FrameRenderStats;
 }
 
-function renderViewModel(gl: WebGL2RenderingContext, camera: Camera, viewModel: ViewModelRenderState | undefined): boolean {
+function renderViewModel(
+  gl: WebGL2RenderingContext,
+  camera: Camera,
+  viewModel: ViewModelRenderState | undefined,
+  removeTranslation: typeof removeViewTranslation
+): boolean {
   if (!viewModel) {
     return false;
   }
 
   const projection = viewModel.fov ? camera.getViewmodelProjectionMatrix(viewModel.fov) : camera.projectionMatrix;
+  const view = removeTranslation(camera.viewMatrix);
   const viewProjection = mat4.create();
-  mat4.multiply(viewProjection, projection, camera.viewMatrix);
+  mat4.multiply(viewProjection, projection, view);
 
   if (viewModel.depthRange) {
     gl.depthRange(viewModel.depthRange[0], viewModel.depthRange[1]);
@@ -266,7 +272,7 @@ export const createFrameRenderer = (
       }
     }
 
-    if (renderViewModel(gl, camera, viewModel)) {
+    if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
       stats.viewModelDrawn = true;
     }
 

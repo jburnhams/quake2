@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFrameRenderer, type FrameRenderOptions } from '../../src/render/frame.js';
 import type { BspSurfacePipeline } from '../../src/render/bspPipeline.js';
-import type { SkyboxPipeline } from '../../src/render/skybox.js';
+import { removeViewTranslation, type SkyboxPipeline } from '../../src/render/skybox.js';
 import type { BspSurfaceGeometry } from '../../src/render/bsp.js';
 import { Camera } from '../../src/render/camera.js';
 import { mat4, vec3 } from 'gl-matrix';
@@ -61,7 +61,7 @@ describe('FrameRenderer', () => {
       ]),
       extractFrustumPlanes: vi.fn(() => []),
       computeSkyScroll: vi.fn(() => [0.1, 0.2]),
-      removeViewTranslation: vi.fn((view: Float32Array) => view.slice()),
+      removeViewTranslation: vi.fn(removeViewTranslation),
       ...depsOverrides,
     } as any;
 
@@ -246,11 +246,12 @@ describe('FrameRenderer', () => {
     expect(lightmapTexture.bind).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the viewmodel with separate projection and depth range', () => {
+  it('renders the viewmodel with separate projection and depth range while anchored to the camera', () => {
     const viewModelDraw = vi.fn();
     const { gl, renderer } = makeRenderer();
     const camera = new Camera();
     camera.fov = 100;
+    camera.position = vec3.fromValues(5, 6, 7);
 
     const stats = renderer.renderFrame({
       camera,
@@ -262,8 +263,9 @@ describe('FrameRenderer', () => {
     });
 
     const expectedProjection = camera.getViewmodelProjectionMatrix(80);
+    const expectedView = removeViewTranslation(camera.viewMatrix);
     const expectedViewProjection = mat4.create();
-    mat4.multiply(expectedViewProjection, expectedProjection, camera.viewMatrix);
+    mat4.multiply(expectedViewProjection, expectedProjection, expectedView);
 
     expect(viewModelDraw).toHaveBeenCalledTimes(1);
     expect(Array.from(viewModelDraw.mock.calls[0][0] as Float32Array)).toEqual(
