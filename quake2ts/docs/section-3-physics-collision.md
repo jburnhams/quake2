@@ -15,6 +15,8 @@ This section covers the physics simulation and collision detection system that f
   - Deterministic movement helpers with full unit test coverage
 - ✅ BSP collision constants (CONTENTS_*, SURF_*, MASK_*) in `packages/shared/src/bsp/contents.ts`
 - ✅ Vec3 math utilities including clip-plane resolution
+- ✅ Initial implementation of the core trace system (`traceBox`) in `packages/shared/src/bsp/collision.ts`.
+- ✅ Initial test suite for `traceBox` in `packages/shared/tests/bsp/trace.test.ts`.
 
 ## Tasks Remaining
 
@@ -49,6 +51,8 @@ This section covers the physics simulation and collision detection system that f
   - [x] Trace starting in solid (set startsolid, allsolid flags)
   - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
   - [x] Epsilon handling for surface snapping
+  - [ ] Grazing hits
+  - [ ] Corner collisions
 
 ### Point Queries
 - [x] Implement `pointcontents` function

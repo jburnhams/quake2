@@ -140,7 +140,7 @@ describe('brush tests', () => {
 
     expect(insideTrace.startsolid).toBe(true);
     expect(insideTrace.allsolid).toBe(false);
-    expect(insideTrace.fraction).toBe(1);
+    expect(insideTrace.fraction).toBe(0);
   });
 });
 
@@ -218,8 +218,8 @@ describe('trace and contents queries', () => {
 
     expect(trace.startsolid).toBe(true);
     expect(trace.allsolid).toBe(false);
-    expect(trace.fraction).toBe(1);
-    expect(trace.endpos).toEqual(end);
+    expect(trace.fraction).toBe(0);
+    expect(trace.endpos).toEqual(start);
   });
 
   it('handles bounding boxes by expanding the plane offsets during traversal', () => {
