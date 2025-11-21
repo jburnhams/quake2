@@ -195,6 +195,8 @@ export class Entity {
   show_hostile = 0;
   light_level = 0;
 
+  owner: Entity | null = null;
+
   client?: PlayerClient;
 
   constructor(index: number) {
