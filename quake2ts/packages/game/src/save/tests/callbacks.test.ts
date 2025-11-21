@@ -24,7 +24,7 @@ describe('Callback Serialization', () => {
     entity.think = testThink;
 
     const snapshot = entitySystem.createSnapshot();
-    const newEntitySystem = new EntitySystem(mockEngine, 1);
+    const newEntitySystem = new EntitySystem(mockEngine, mockImports, { x: 0, y: 0, z: 0 }, 1, callbackRegistry);
     newEntitySystem.restore(snapshot, callbackRegistry);
 
     const restoredEntity = newEntitySystem.world;

@@ -41,9 +41,9 @@ export const Draw_Damage = (renderer: Renderer, ps: PlayerState) => {
         }
 
         const rightDot = dotVec3(normalizedDirection, right);
-        const upDot = dotVec3(normalizedDirection, up);
+        const forwardDot = dotVec3(normalizedDirection, forward);
 
-        const angle = Math.atan2(upDot, rightDot) * 180 / Math.PI;
+        const angle = Math.atan2(forwardDot, rightDot) * 180 / Math.PI;
 
         let pic: Pic | undefined;
         let x = 0;

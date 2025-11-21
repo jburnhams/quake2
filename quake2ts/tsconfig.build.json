@@ -5,7 +5,6 @@
     { "path": "./packages/engine" },
     { "path": "./packages/game" },
     { "path": "./packages/client" },
-    { "path": "./packages/tools" },
-    { "path": "./apps/viewer" }
+    { "path": "./packages/tools" }
   ]
 }
