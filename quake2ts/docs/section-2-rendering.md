@@ -125,21 +125,21 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Notification area
 
 ### Camera & View System
-- [ ] Camera state management
+- [x] Camera state management
   - [x] Position, orientation (pitch, yaw, roll)
   - [x] FOV (field of view) setting
   - [x] Interpolation between game ticks
-- [ ] View matrix construction
+- [x] View matrix construction
   - [x] Convert Quake II angles to view transform
   - [x] Projection matrix (perspective)
   - [x] Handle viewmodel (weapon) rendering with separate FOV
 - [ ] Viewmodel rendering
-  - Render weapon model with higher FOV in foreground
-  - Separate depth range to avoid clipping with world
-  - Apply view bob, roll, and kick effects
+  - [x] Render weapon model with higher FOV in foreground
+  - [x] Separate depth range to avoid clipping with world
+  - [ ] Apply view bob, roll, and kick effects
 
 ### Render Pipeline & Optimization
-- [x] Implement frame rendering sequence
+- [ ] Implement frame rendering sequence
   1. Clear buffers
   2. Update camera/view matrices
   3. Traverse BSP, cull, render world
@@ -148,18 +148,19 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   6. Render particles
   7. Render viewmodel
   8. Switch to 2D mode, render HUD
+  - **Status**: Currently covers skybox/world/viewmodel passes; model, particle, and HUD steps remain to be wired into the frame renderer.
 - [x] Occlusion culling
   - Use BSP leaf/PVS data to skip invisible geometry
   - Frustum culling for models
 - [ ] Batching and draw call reduction
-  - Group faces by texture/lightmap
-  - Batch particle rendering
-  - Minimize state changes
+  - [x] Group faces by texture/lightmap
+  - [ ] Batch particle rendering
+  - [x] Minimize state changes (state re-use, texture binding cache)
 - [ ] Frame timing and diagnostics
-  - FPS counter
-  - Draw call counter
-  - Vertex/triangle counts
-  - GPU time profiling (if extensions available)
+  - [ ] FPS counter
+  - [x] Draw call counter (per-frame stats reported by renderer)
+  - [ ] Vertex/triangle counts
+  - [ ] GPU time profiling (if extensions available)
 
 ### Material System
 - [ ] Material definition structure
@@ -189,6 +190,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 - Matrix math (view, projection transforms)
 - Texture upload and binding
 - Buffer creation and updates
+- Frame renderer batching/state caching and viewmodel depth range handling
 
 ### Integration Tests
 - **Full frame render**: Load a map, render a complete frame with world, models, HUD
@@ -217,6 +219,6 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 - Shader compilation can be slow on first load; consider shader precompilation or caching
 - Large lightmap atlases may exceed texture size limits on some devices; plan for tiling or compression
 - HUD rendering should be resolution-independent (scale with window size)
-- Viewmodel rendering is tricky: must not clip through walls, requires careful depth range setup
+- Viewmodel rendering uses a separate projection/depth range path; remaining work includes bob/roll/kick effects
 - Particle system is CPU-intensive; consider GPU-based particles (compute shaders) as optimization
 - PVS data is critical for performance; without it, frame rates will suffer in large maps
