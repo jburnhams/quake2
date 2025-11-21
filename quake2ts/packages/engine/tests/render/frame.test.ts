@@ -146,6 +146,35 @@ describe('FrameRenderer', () => {
     expect(gl.drawElements).toHaveBeenCalledTimes(2);
   });
 
+  it('disables lightmap sampling when a surface lacks an atlas placement', () => {
+    const { bspPipeline, renderer, deps } = makeRenderer({
+      gatherVisibleFaces: vi.fn(() => [{ faceIndex: 0, leafIndex: 0, sortKey: -1 }]),
+    });
+
+    const diffuse = { bind: vi.fn(() => callOrder.push('diffuse')) } as any;
+
+    const world = {
+      map: { faces: [{ styles: [0, 255, 255, 255] }] },
+      surfaces: [
+        {
+          ...createStubGeometry('nolight'),
+          lightmap: undefined,
+          surfaceFlags: 0,
+        },
+      ],
+      lightmaps: [],
+      textures: new Map([['nolight', diffuse]]),
+      lightStyles: [],
+    } as any;
+
+    const camera = new Camera();
+    renderer.renderFrame({ camera, world });
+
+    expect(deps.gatherVisibleFaces).toHaveBeenCalled();
+    expect(callOrder).toEqual(['diffuse', 'nolight-vao', 'nolight-ibo']);
+    expect((bspPipeline.bind as any).mock.calls[0][0].lightmapSampler).toBeUndefined();
+  });
+
   it('skips drawing sky surfaces that were gathered from visibility', () => {
     const { gl, renderer, deps } = makeRenderer({
       gatherVisibleFaces: vi.fn(() => [

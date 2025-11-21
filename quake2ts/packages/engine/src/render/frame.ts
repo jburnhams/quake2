@@ -142,7 +142,7 @@ export const createFrameRenderer = (
           surfaceFlags: geometry.surfaceFlags,
           timeSeconds,
           diffuseSampler: textures.diffuse ?? 0,
-          lightmapSampler: textures.lightmap ?? 1,
+          lightmapSampler: textures.lightmap,
         });
 
         applySurfaceState(gl, state);

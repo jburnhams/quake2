@@ -118,6 +118,50 @@ describe('bspPipeline', () => {
 
     const mockMvp = new Float32Array(16);
 
+    it('disables lightmap uniforms when no lightmap is provided', () => {
+      const gl = createMockGl();
+      const pipeline = new BspSurfacePipeline(gl as unknown as WebGL2RenderingContext);
+
+      pipeline.bind({
+        modelViewProjection: mockMvp,
+        surfaceFlags: SURF_FLOWING,
+      });
+
+      const applyLmCall = (gl.uniform1i as any).mock.calls.find(
+        (call: any) => call[0] === mockLocations.u_applyLightmap
+      );
+      expect(applyLmCall).toBeDefined();
+      expect(applyLmCall[1]).toBe(0);
+
+      const lightmapCall = (gl.uniform1i as any).mock.calls.find(
+        (call: any) => call[0] === mockLocations.u_lightmapAtlas
+      );
+      expect(lightmapCall).toBeDefined();
+      expect(lightmapCall[1]).toBe(0);
+    });
+
+    it('enables lightmap uniforms when a sampler is provided', () => {
+      const gl = createMockGl();
+      const pipeline = new BspSurfacePipeline(gl as unknown as WebGL2RenderingContext);
+
+      pipeline.bind({
+        modelViewProjection: mockMvp,
+        lightmapSampler: 2,
+      });
+
+      const applyLmCall = (gl.uniform1i as any).mock.calls.find(
+        (call: any) => call[0] === mockLocations.u_applyLightmap
+      );
+      expect(applyLmCall).toBeDefined();
+      expect(applyLmCall[1]).toBe(1);
+
+      const lightmapCall = (gl.uniform1i as any).mock.calls.find(
+        (call: any) => call[0] === mockLocations.u_lightmapAtlas
+      );
+      expect(lightmapCall).toBeDefined();
+      expect(lightmapCall[1]).toBe(2);
+    });
+
     it('should bind warp uniforms when SURF_WARP is set', () => {
       const gl = createMockGl();
       const pipeline = new BspSurfacePipeline(gl);
