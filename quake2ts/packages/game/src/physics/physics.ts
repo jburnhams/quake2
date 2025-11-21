@@ -4,15 +4,25 @@ import { GameEngine } from '../index.js';
 import { EntitySystem } from '../entities/system.js';
 
 const SV_GRAVITY = 800;
-const DIST_EPSILON = 0.03125;
+const SV_MAXVELOCITY = 2000;
+
+export function checkVelocity(entity: Entity) {
+    const speed = Math.sqrt(
+        entity.velocity.x * entity.velocity.x +
+        entity.velocity.y * entity.velocity.y +
+        entity.velocity.z * entity.velocity.z
+    );
+
+    if (speed > SV_MAXVELOCITY) {
+        const scale = SV_MAXVELOCITY / speed;
+        entity.velocity.x *= scale;
+        entity.velocity.y *= scale;
+        entity.velocity.z *= scale;
+    }
+}
 
 export function applyGravity(entity: Entity, deltaTime: number) {
-    if (
-        entity.movetype === MoveType.None ||
-        entity.movetype === MoveType.Noclip ||
-        entity.movetype === MoveType.Fly ||
-        entity.movetype === MoveType.FlyMissile
-    ) {
+    if (entity.gravity === 0) {
         return;
     }
 
@@ -41,33 +51,30 @@ export function clipVelocity(vel: Vec3, normal: Vec3, overbounce: number): Vec3 
     return newVel;
 }
 
-export function bounce(entity: Entity, trace: TraceResult) {
-    if (entity.movetype !== MoveType.Bounce) {
-        return;
+export function checkWaterTransition(gameEngine: GameEngine, entity: Entity): boolean {
+    const wasinwater = (entity.watertype & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER)) !== 0;
+    checkWater(gameEngine, entity);
+    const isinwater = (entity.watertype & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER)) !== 0;
+
+    if (isinwater !== wasinwater) {
+        // TODO: play water sound
     }
 
-    if (trace.fraction === 1.0) {
-        return;
-    }
-
-    if (trace.plane) {
-        entity.velocity = clipVelocity(entity.velocity, trace.plane.normal, 1.5);
-    }
+    return isinwater;
 }
 
-export function explode(entitySystem: EntitySystem, entity: Entity) {
-    entitySystem.free(entity);
-}
-
-export function moveProjectile(
+export function physicsToss(
     gameEngine: GameEngine,
     entitySystem: EntitySystem,
     entity: Entity,
     deltaTime: number
 ) {
-    if (entity.movetype !== MoveType.FlyMissile) {
+    if (entity.groundentity) {
         return;
     }
+
+    checkVelocity(entity);
+    applyGravity(entity, deltaTime);
 
     const end = {
         x: entity.origin.x + entity.velocity.x * deltaTime,
@@ -85,10 +92,22 @@ export function moveProjectile(
     );
 
     if (trace.fraction < 1.0) {
-        explode(entitySystem, entity);
+        if (entity.movetype === MoveType.Bounce) {
+            if (trace.plane) {
+                entity.velocity = clipVelocity(entity.velocity, trace.plane.normal, 1.5);
+            }
+        } else {
+            explode(entitySystem, entity);
+        }
     } else {
         entity.origin = trace.endpos;
     }
+
+    checkWaterTransition(gameEngine, entity);
+}
+
+export function explode(entitySystem: EntitySystem, entity: Entity) {
+    entitySystem.free(entity);
 }
 
 export function fixStuck(gameEngine: GameEngine, entity: Entity) {

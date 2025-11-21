@@ -30,7 +30,7 @@ export function loadCollisionModel(bspMap: BspMap) {
             planenum: side.planeIndex,
             surfaceFlags: side.texInfo,
         })),
-        leafBrushes: bspMap.leafLists.leafBrushes.flat(),
+        leafBrushes: Array.from(bspMap.leafLists.leafBrushes.flat()),
         bmodels: bspMap.models.map((model) => ({
             mins: { x: model.mins[0], y: model.mins[1], z: model.mins[2] },
             maxs: { x: model.maxs[0], y: model.maxs[1], z: model.maxs[2] },
