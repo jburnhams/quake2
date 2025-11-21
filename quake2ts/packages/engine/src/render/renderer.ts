@@ -50,6 +50,8 @@ export const createRenderer = (
         const viewProjection = options.camera.viewProjectionMatrix;
 
         // 2. Render models (entities)
+        let lastTexture: Texture2D | undefined;
+
         for (const entity of entities) {
             switch (entity.type) {
                 case 'md2':
@@ -71,6 +73,14 @@ export const createRenderer = (
                         for (const surface of entity.model.surfaces) {
                             const surfaceMesh = mesh.surfaces.get(surface.name);
                             if (surfaceMesh) {
+                                const textureName = entity.skins?.get(surface.name);
+                                const texture = textureName ? options.world?.textures?.get(textureName) : undefined;
+
+                                if (texture && texture !== lastTexture) {
+                                    texture.bind(0);
+                                    lastTexture = texture;
+                                }
+
                                 md3Pipeline.drawSurface(surfaceMesh);
                             }
                         }
