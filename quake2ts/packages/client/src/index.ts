@@ -3,7 +3,6 @@ import {
   EngineImports,
   GameFrameResult,
   GameRenderSample,
-  createCamera,
   Camera,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3 } from '@quake2ts/shared';
@@ -82,13 +81,11 @@ export function createClient(imports: ClientImports): ClientExports {
 
       if (lastRendered) {
         const { origin, viewangles } = lastRendered;
-        const position = vec3.fromValues(origin.x, origin.y, origin.z);
-        const rotation = mat4.create();
-        mat4.rotateY(rotation, rotation, viewangles.y * (Math.PI / 180));
-        mat4.rotateX(rotation, rotation, viewangles.x * (Math.PI / 180));
-        const forward = vec3.transformMat4(vec3.create(), vec3.fromValues(1, 0, 0), rotation);
-        const target = vec3.add(vec3.create(), position, forward);
-        camera = createCamera(position, target, vec3.fromValues(0, 0, 1), 90, 4 / 3, 0.1, 1000);
+        camera = new Camera();
+        camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
+        camera.angles = vec3.fromValues(viewangles.x, viewangles.y, viewangles.z);
+        camera.fov = 90;
+        camera.aspect = 4 / 3;
       }
 
       const command = {} as UserCommand;

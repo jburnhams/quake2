@@ -44,13 +44,15 @@ document.createElement = function (tagName: string, options?: any) {
       configurable: true
     });
 
-    // Override getContext to return napi-rs canvas context
+    // Override getContext to return appropriate context
     const originalGetContext = domCanvas.getContext.bind(domCanvas);
     domCanvas.getContext = function(contextId: string, options?: any) {
       if (contextId === '2d') {
         return napiCanvas.getContext('2d', options);
       }
-      // For webgl/webgl2, return a mock since napi-rs doesn't support it
+      // For webgl/webgl2, return jsdom's default context (null or mock)
+      // Note: For realistic WebGL testing, use @vitest/browser with Playwright/Chromium
+      // See docs/testing-webgl.md for details
       if (contextId === 'webgl' || contextId === 'webgl2') {
         return originalGetContext(contextId, options);
       }

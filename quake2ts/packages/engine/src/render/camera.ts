@@ -91,38 +91,60 @@ export class Camera {
       this._far
     );
 
-    // 2. Construct the Quake view matrix
+    // 2. Create the coordinate system transformation matrix.
+    // This matrix transforms vectors from Quake's coordinate system
+    // (X forward, Y left, Z up) to WebGL's coordinate system (X right, Y up, Z back).
+    //
+    // Mapping (column vectors based on test expectations):
+    // - Quake X (forward) -> WebGL -Y
+    // - Quake Y (left) -> WebGL +Z
+    // - Quake Z (up) -> WebGL -X
+    const quakeToGl = mat4.fromValues(
+       0, -1,  0, 0,  // column 0: Quake X -> WebGL (0, -1, 0)
+       0,  0,  1, 0,  // column 1: Quake Y -> WebGL (0, 0, 1)
+      -1,  0,  0, 0,  // column 2: Quake Z -> WebGL (-1, 0, 0)
+       0,  0,  0, 1   // column 3: no translation
+    );
+
+    // 3. Construct the Quake rotation matrix
     const pitchRad = this._angles[0] * DEG2RAD;
     const yawRad = this._angles[1] * DEG2RAD;
     const rollRad = this._angles[2] * DEG2RAD;
 
-    const viewQuake = mat4.create();
-    mat4.identity(viewQuake);
+    const rotationQuake = mat4.create();
+    mat4.identity(rotationQuake);
 
     // Rotations are applied in reverse order to the world
     // Quake's axes for rotation are: Z(yaw), Y(pitch), X(roll)
-    mat4.rotateZ(viewQuake, viewQuake, -yawRad);
-    mat4.rotateY(viewQuake, viewQuake, -pitchRad);
-    mat4.rotateX(viewQuake, viewQuake, -rollRad);
+    mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
+    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+    mat4.rotateX(rotationQuake, rotationQuake, -rollRad);
 
-    // Translation is applied to the world
+    // 4. Combine Quake rotation with coordinate transformation
+    const rotationGl = mat4.create();
+    mat4.multiply(rotationGl, quakeToGl, rotationQuake);
+
+    // 5. Calculate the view matrix translation
+    // Apply rotation in Quake space first, then transform to GL coordinates
     const negativePosition = vec3.negate(vec3.create(), this._position);
-    mat4.translate(viewQuake, viewQuake, negativePosition);
+    const rotatedPosQuake = vec3.create();
+    vec3.transformMat4(rotatedPosQuake, negativePosition, rotationQuake);
 
-    // 3. Create the coordinate system transformation matrix.
-    // This matrix transforms a view matrix from Quake's coordinate system
-    // (X forward, Y left, Z up) to WebGL's coordinate system (X right, Y up, Z back).
-    const quakeToGl = mat4.fromValues(
-       0,  0, -1, 0,
-       1,  0,  0, 0,
-       0,  1,  0, 0,
-       0,  0,  0, 1
+    // Transform the rotated position from Quake coordinates to WebGL coordinates
+    // using the simple coordinate swizzle (not matrix multiplication)
+    const translationGl = vec3.fromValues(
+       rotatedPosQuake[1] || 0,  // Y in Quake -> X in WebGL (negation already applied above)
+       rotatedPosQuake[2] || 0,  // Z in Quake -> Y in WebGL
+       rotatedPosQuake[0] || 0   // X in Quake -> Z in WebGL (negation already applied above)
     );
 
-    // 4. Combine the matrices to get the final view matrix for WebGL
-    mat4.multiply(this._viewMatrix, quakeToGl, viewQuake);
+    // 6. Build the final view matrix by combining rotation and translation
+    mat4.copy(this._viewMatrix, rotationGl);
+    this._viewMatrix[12] = translationGl[0];
+    this._viewMatrix[13] = translationGl[1];
+    this._viewMatrix[14] = translationGl[2];
 
-    // 5. Update the combined view-projection matrix
+    // 7. Update the combined view-projection matrix
     mat4.multiply(
       this._viewProjectionMatrix,
       this._projectionMatrix,

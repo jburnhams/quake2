@@ -207,7 +207,7 @@ export {
   type Md2Geometry,
   type Md2DrawVertex,
 } from './render/md2Pipeline.js';
-export { createCamera, type Camera } from './render/camera.js';
+export { Camera } from './render/camera.js';
 export {
   MD3_FRAGMENT_SHADER,
   MD3_VERTEX_SHADER,
