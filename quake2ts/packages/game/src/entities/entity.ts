@@ -60,6 +60,7 @@ export type DieCallback = (
   inflictor: Entity | null,
   attacker: Entity | null,
   damage: number,
+  point: Vec3
 ) => void;
 
 export type EntityFieldType =
@@ -158,6 +159,9 @@ export class Entity {
   takedamage = false;
   dmg = 0;
   speed = 0;
+  accel = 0;
+  decel = 0;
+  height = 0;
   deadflag: DeadFlag = DeadFlag.Alive;
   count = 0;
   wait = 0;
@@ -263,6 +267,9 @@ export class Entity {
     this.takedamage = false;
     this.dmg = 0;
     this.speed = 0;
+    this.accel = 0;
+    this.decel = 0;
+    this.height = 0;
     this.deadflag = DeadFlag.Alive;
     this.count = 0;
     this.wait = 0;
@@ -350,6 +357,9 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'takedamage', type: 'boolean', save: true },
   { name: 'dmg', type: 'int', save: true },
   { name: 'speed', type: 'float', save: true },
+  { name: 'accel', type: 'float', save: true },
+  { name: 'decel', type: 'float', save: true },
+  { name: 'height', type: 'float', save: true },
   { name: 'deadflag', type: 'int', save: true },
   { name: 'count', type: 'int', save: true },
   { name: 'wait', type: 'float', save: true },
