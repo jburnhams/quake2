@@ -16,6 +16,7 @@ import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 import { lengthVec3, subtractVec3 } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
+import { TraceFunction, PointContentsFunction } from '../imports.js';
 
 interface Bounds {
   min: Vec3;
@@ -124,6 +125,14 @@ export class EntitySystem {
   private readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
+
+  get trace(): TraceFunction {
+    return this.imports.trace;
+  }
+
+  get pointcontents(): PointContentsFunction {
+    return this.imports.pointcontents;
+  }
 
   constructor(
     engine: GameEngine,

@@ -1,3 +1,4 @@
+import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
 import {
   ai_charge,
   ai_run,
@@ -5,6 +6,7 @@ import {
   ai_walk,
   monster_think,
 } from '../../ai/index.js';
+import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
   Entity,
@@ -15,23 +17,24 @@ import {
 } from '../entity.js';
 import { SpawnContext } from '../spawn.js';
 import { SpawnRegistry } from '../spawn.js';
+import { monster_fire_bullet } from './attack.js';
 
 const MONSTER_TICK = 0.1;
 
 // Wrappers for AI functions to match AIAction signature (self, dist)
-function monster_ai_stand(self: Entity, dist: number): void {
+function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK);
 }
 
-function monster_ai_walk(self: Entity, dist: number): void {
-  ai_walk(self, dist, MONSTER_TICK);
+function monster_ai_walk(self: Entity, dist: number, context: any): void {
+  ai_walk(self, dist, MONSTER_TICK, context);
 }
 
-function monster_ai_run(self: Entity, dist: number): void {
+function monster_ai_run(self: Entity, dist: number, context: any): void {
   ai_run(self, dist, MONSTER_TICK);
 }
 
-function monster_ai_charge(self: Entity, dist: number): void {
+function monster_ai_charge(self: Entity, dist: number, context: any): void {
   ai_charge(self, dist, MONSTER_TICK);
 }
 
@@ -61,9 +64,22 @@ function soldier_attack(self: Entity): void {
   self.monsterinfo.current_move = attack_move;
 }
 
-function soldier_fire(self: Entity): void {
-    // Actual firing logic placeholder
-    // if (visible(self, self.enemy)) ...
+function soldier_fire(self: Entity, context: any): void {
+  // soldier_fire logic
+  if (!self.enemy) return;
+
+  const start: Vec3 = {
+    x: self.origin.x,
+    y: self.origin.y,
+    z: self.origin.z + self.viewheight,
+  };
+
+  const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+  const damage = 4;
+  const kick = 4;
+
+  // fire bullet
+  monster_fire_bullet(self, start, forward, damage, kick, 0, 0, 0, context, DamageMod.MACHINEGUN);
 }
 
 // Define moves

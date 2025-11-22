@@ -183,7 +183,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_rocketlauncher_fire
             inventory.ammo.counts[AmmoType.Rockets]--;
-            createRocket(game, player, player.origin, forward, 100, 650);
+            createRocket(game.entities, player, player.origin, forward, 100, 650);
             break;
         }
         case WeaponId.GrenadeLauncher: {
@@ -192,7 +192,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_grenadelauncher_fire
             inventory.ammo.counts[AmmoType.Grenades]--;
-            createGrenade(game, player, player.origin, forward, 120, 600);
+            createGrenade(game.entities, player, player.origin, forward, 120, 600);
             break;
         }
         case WeaponId.BFG10K: {
@@ -201,7 +201,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_bfg_fire
             inventory.ammo.counts[AmmoType.Cells] -= 50;
-            createBfgBall(game, player, player.origin, forward, 200, 400);
+            createBfgBall(game.entities, player, player.origin, forward, 200, 400);
             break;
         }
     }

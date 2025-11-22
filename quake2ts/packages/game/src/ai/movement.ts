@@ -1,6 +1,7 @@
 import { angleMod, degToRad, vectorToYaw } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
+import type { EntitySystem } from '../entities/system.js';
 import { AIFlags } from './constants.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
@@ -86,16 +87,32 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
   self.ideal_yaw = vectorToYaw(toTarget);
 }
 
+import { rangeTo } from './perception.js';
+
 export function ai_stand(self: Entity, deltaSeconds: number): void {
   changeYaw(self, deltaSeconds);
 }
 
-export function ai_walk(self: Entity, distance: number, deltaSeconds: number): void {
+export function ai_walk(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
   setIdealYawTowards(self, self.goalentity);
   changeYaw(self, deltaSeconds);
 
   if (distance !== 0) {
     walkMove(self, self.angles.y, distance);
+  }
+
+  // Check if we reached goal (path_corner logic)
+  if (self.goalentity && self.goalentity.classname === 'path_corner') {
+    const dist = rangeTo(self, self.goalentity);
+    if (dist < 64) {
+      if (self.goalentity.target) {
+        const next = context.pickTarget(self.goalentity.target);
+        if (next) {
+          self.goalentity = next;
+          self.ideal_yaw = self.angles.y;
+        }
+      }
+    }
   }
 }
 

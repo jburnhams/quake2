@@ -37,7 +37,7 @@ describe('BFG Ball Projectile', () => {
 
         trace.mockReturnValue({ ent: target });
 
-        createBfgBall(game, player, player.origin, { x: 1, y: 0, z: 0 }, 200, 400);
+        createBfgBall(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 200, 400);
 
         const bfgBall = game.entities.find(e => e.classname === 'bfg_ball')!;
 
