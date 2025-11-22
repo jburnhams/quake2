@@ -110,12 +110,14 @@ Web-facing services: WebGL2 rendering, asset loading, virtual filesystem, and en
 - `PakArchive`, `VirtualFileSystem` - PAK file reading and virtual filesystem
 - `ingestPaks`, `ingestPakFiles` - Asset ingestion pipeline with progress callbacks
 - `wireFileInput`, `wireDropTarget` - Browser file handling helpers
+- `BspLoader`, `parseBsp` - BSP map parsing
 - `Md2Loader`, `parseMd2` - MD2 model parsing with animation support
 - `LruCache` - Asset caching system
 
 **Rendering:**
 - `createWebGLContext` - WebGL2 context initialization
 - `ShaderProgram`, `VertexBuffer`, `IndexBuffer`, `Texture2D` - GPU resource wrappers
+- `createBspSurfaces` - Converts parsed BSP map data into renderable surfaces
 - `buildBspGeometry` - BSP geometry builder with lightmap atlas packing
 
 **Engine Core:**
@@ -231,16 +233,17 @@ const maps = vfs.listFiles('maps/*.bsp');
 console.log('Available maps:', maps);
 
 // Render a specific map
-const bspData = vfs.readFile('maps/base1.bsp');
-const geometry = buildBspGeometry(bspData);
+const bspBuffer = await vfs.readFile('maps/base1.bsp');
+const bspMap = parseBsp(bspBuffer);
+const surfaces = createBspSurfaces(bspMap);
+const geometry = buildBspGeometry(gl, surfaces);
 
 // Display geometry stats
-console.log(`Vertices: ${geometry.vertices.length}`);
-console.log(`Faces: ${geometry.indices.length / 3}`);
+console.log(`Surfaces: ${geometry.surfaces.length}`);
 console.log(`Lightmaps: ${geometry.lightmaps.length}`);
 
 // Render with WebGL
-renderBspGeometry(gl, geometry);
+// (Use BspSurfacePipeline or your own shader to render `geometry.surfaces`)
 ```
 
 ### Example 2: MD2 Model Viewer with Animations
