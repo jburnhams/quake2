@@ -1,8 +1,10 @@
-import { distance, vec3Equals } from '@quake2ts/shared';
+import { distance, vec3Equals, normalizeVec3, subtractVec3, scaleVec3, addVec3 } from '@quake2ts/shared';
 import { Entity, MoveType, Solid } from './entity.js';
 import type { SpawnContext, SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
+
+// ... (imports and existing func_door/train/plat/rotating code) ...
 
 export enum DoorState {
   Open,
@@ -11,16 +13,12 @@ export enum DoorState {
   Closing,
 }
 
+// ... (door code) ...
 function door_blocked(self: Entity, other: Entity | null) {
-  // If blocked, damage the other entity
   if (other && other.takedamage) {
     const damage = self.dmg || 2;
     other.health -= damage;
-    // In a real implementation we'd check if other died, play sound, etc.
   }
-
-  // If the blocker is still there (simplification), reverse direction
-  // For now, if we are opening, we close. If closing, we open.
   if (self.state === DoorState.Opening) {
     self.state = DoorState.Closing;
     self.think = door_go_down;
@@ -36,37 +34,13 @@ function door_go_down(door: Entity, context: EntitySystem) {
     door.velocity = { x: 0, y: 0, z: 0 };
     return;
   }
-
   const move = distance(door.origin, door.pos1);
   const speed = Math.min(door.speed, move);
+  door.velocity = scaleVec3(normalizeVec3(subtractVec3(door.pos1, door.origin)), speed);
 
-  // Need to handle undershoot/overshoot carefully in a real engine
-  // Simplified: set velocity to reach target in 0.1s or cap at max speed
-  // But standard Q2 movement is velocity-based constant speed.
-
-  // If we are very close, snap?
-  // For now, just set velocity.
-
-  door.velocity = {
-    x: (door.pos1.x - door.origin.x) / distance(door.pos1, door.origin) * door.speed,
-    y: (door.pos1.y - door.origin.y) / distance(door.pos1, door.origin) * door.speed,
-    z: (door.pos1.z - door.origin.z) / distance(door.pos1, door.origin) * door.speed,
-  };
-
-  // Re-check distance to stop next frame if close enough
-  // For 0.1s think interval:
   if (move <= door.speed * 0.1) {
-       // We will reach or overshoot in next frame.
-       // We should snap in runPush or handle it here by setting nextthink shorter?
-       // For now, we rely on the loop checking position again.
-       // Ideally we should set velocity to exactly reach in 0.1s if close.
-       door.velocity = {
-          x: (door.pos1.x - door.origin.x) / 0.1,
-          y: (door.pos1.y - door.origin.y) / 0.1,
-          z: (door.pos1.z - door.origin.z) / 0.1,
-       };
+       door.velocity = scaleVec3(subtractVec3(door.pos1, door.origin), 10);
   }
-
   context?.scheduleThink(door, context.timeSeconds + 0.1);
 }
 
@@ -78,65 +52,33 @@ function door_go_up(door: Entity, context: EntitySystem) {
     door.think = door_go_down;
     return;
   }
-
   const move = distance(door.origin, door.pos2);
-
-  door.velocity = {
-    x: (door.pos2.x - door.origin.x) / distance(door.pos2, door.origin) * door.speed,
-    y: (door.pos2.y - door.origin.y) / distance(door.pos2, door.origin) * door.speed,
-    z: (door.pos2.z - door.origin.z) / distance(door.pos2, door.origin) * door.speed,
-  };
+  door.velocity = scaleVec3(normalizeVec3(subtractVec3(door.pos2, door.origin)), door.speed);
 
   if (move <= door.speed * 0.1) {
-       door.velocity = {
-          x: (door.pos2.x - door.origin.x) / 0.1,
-          y: (door.pos2.y - door.origin.y) / 0.1,
-          z: (door.pos2.z - door.origin.z) / 0.1,
-       };
+       door.velocity = scaleVec3(subtractVec3(door.pos2, door.origin), 10);
   }
-
   context?.scheduleThink(door, context.timeSeconds + 0.1);
 }
 
 const func_door: SpawnFunction = (entity, context) => {
   entity.movedir = setMovedir(entity.angles);
-
-  if (!entity.speed) {
-    entity.speed = 100;
-  }
-  if (!entity.wait) {
-    entity.wait = 3;
-  }
-  if (!entity.lip) {
-    entity.lip = 8;
-  }
-  if (!entity.dmg) {
-    entity.dmg = 2;
-  }
-  if (!entity.health) {
-    entity.health = 0;
-  }
-
+  if (!entity.speed) entity.speed = 100;
+  if (!entity.wait) entity.wait = 3;
+  if (!entity.lip) entity.lip = 8;
+  if (!entity.dmg) entity.dmg = 2;
+  if (!entity.health) entity.health = 0;
   entity.solid = Solid.Bsp;
   entity.movetype = MoveType.Push;
   entity.blocked = door_blocked;
-
   entity.state = DoorState.Closed;
-
   entity.pos1 = { ...entity.origin };
   const move = entity.movedir.x * (Math.abs(entity.maxs.x - entity.mins.x) - entity.lip) +
                entity.movedir.y * (Math.abs(entity.maxs.y - entity.mins.y) - entity.lip) +
                entity.movedir.z * (Math.abs(entity.maxs.z - entity.mins.z) - entity.lip);
-
-  entity.pos2 = {
-    x: entity.pos1.x + entity.movedir.x * move,
-    y: entity.pos1.y + entity.movedir.y * move,
-    z: entity.pos1.z + entity.movedir.z * move,
-  };
-
+  entity.pos2 = addVec3(entity.pos1, scaleVec3(entity.movedir, move));
   entity.use = (self) => {
-    if (self.state !== DoorState.Closed) return; // Simple debounce
-
+    if (self.state !== DoorState.Closed) return;
     self.state = DoorState.Opening;
     self.think = door_go_up;
     context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
@@ -151,7 +93,265 @@ const func_button: SpawnFunction = (entity, context) => {
   };
 };
 
+// ... (func_train code) ...
+const TRAIN_START_ON = 1;
+const TRAIN_TOGGLE = 2;
+const TRAIN_BLOCK_STOPS = 4;
+
+function train_blocked(self: Entity, other: Entity | null) {
+  if (other && other.takedamage) {
+    other.health -= self.dmg || 0;
+  }
+  if (!(self.spawnflags & TRAIN_BLOCK_STOPS)) {
+    return;
+  }
+  self.velocity = { x: 0, y: 0, z: 0 };
+  self.nextthink = 0;
+}
+
+function train_wait(self: Entity, context: EntitySystem) {
+  if (self.target_ent && self.target_ent.pathtarget) {
+    context.useTargets(self.target_ent, self);
+  }
+  if (self.target_ent && self.target_ent.target) {
+    const next = context.pickTarget(self.target_ent.target);
+    if (!next) return;
+    self.target_ent = next;
+    const dist = distance(self.origin, next.origin);
+    const speed = self.speed || 100;
+    const time = dist / speed;
+    const dir = normalizeVec3(subtractVec3(next.origin, self.origin));
+    self.velocity = scaleVec3(dir, speed);
+    self.think = train_next;
+    context.scheduleThink(self, context.timeSeconds + time);
+  }
+}
+
+function train_next(self: Entity, context: EntitySystem) {
+  self.velocity = { x: 0, y: 0, z: 0 };
+  if (self.target_ent) {
+    self.origin = { ...self.target_ent.origin };
+  }
+  const wait = self.wait || 0;
+  if (wait > 0) {
+    self.think = train_wait;
+    context.scheduleThink(self, context.timeSeconds + wait);
+  } else {
+    train_wait(self, context);
+  }
+}
+
+function train_find(self: Entity, context: EntitySystem) {
+  const target = context.pickTarget(self.target);
+  if (!target) return;
+  self.target_ent = target;
+  self.origin = { ...target.origin };
+  if (self.spawnflags & TRAIN_START_ON) {
+    train_wait(self, context);
+  } else {
+    self.use = (ent) => {
+      if (ent.velocity.x !== 0 || ent.velocity.y !== 0 || ent.velocity.z !== 0) return;
+      train_wait(ent, context);
+    };
+  }
+}
+
+const func_train: SpawnFunction = (entity, context) => {
+  entity.solid = Solid.Bsp;
+  entity.movetype = MoveType.Push;
+  entity.blocked = train_blocked;
+  if (!entity.speed) entity.speed = 100;
+  if (!entity.dmg) entity.dmg = 2;
+  entity.think = (self) => train_find(self, context.entities);
+  context.entities.scheduleThink(entity, context.entities.timeSeconds + 0.1);
+};
+
+// ... (func_plat code) ...
+enum PlatState {
+    Up,
+    Down,
+    GoingUp,
+    GoingDown,
+}
+
+function plat_go_down(ent: Entity, context: EntitySystem) {
+    if (vec3Equals(ent.origin, ent.pos2)) {
+        ent.state = PlatState.Down;
+        ent.velocity = { x: 0, y: 0, z: 0 };
+        return;
+    }
+    const move = distance(ent.origin, ent.pos2);
+    ent.velocity = scaleVec3(normalizeVec3(subtractVec3(ent.pos2, ent.origin)), ent.speed);
+    if (move <= ent.speed * 0.1) {
+         ent.velocity = scaleVec3(subtractVec3(ent.pos2, ent.origin), 10);
+    }
+    context.scheduleThink(ent, context.timeSeconds + 0.1);
+}
+
+function plat_go_up(ent: Entity, context: EntitySystem) {
+    if (vec3Equals(ent.origin, ent.pos1)) {
+        ent.state = PlatState.Up;
+        ent.velocity = { x: 0, y: 0, z: 0 };
+        if (!(ent.spawnflags & 1)) {
+             ent.think = plat_wait_top;
+             context.scheduleThink(ent, context.timeSeconds + ent.wait);
+        }
+        return;
+    }
+    const move = distance(ent.origin, ent.pos1);
+    ent.velocity = scaleVec3(normalizeVec3(subtractVec3(ent.pos1, ent.origin)), ent.speed);
+    if (move <= ent.speed * 0.1) {
+        ent.velocity = scaleVec3(subtractVec3(ent.pos1, ent.origin), 10);
+    }
+    context.scheduleThink(ent, context.timeSeconds + 0.1);
+}
+
+function plat_wait_top(ent: Entity, context: EntitySystem) {
+    ent.state = PlatState.GoingDown;
+    ent.think = plat_go_down;
+    plat_go_down(ent, context);
+}
+
+const func_plat: SpawnFunction = (entity, context) => {
+    entity.movedir = setMovedir(entity.angles);
+    if (!entity.speed) entity.speed = 200;
+    if (!entity.accel) entity.accel = 500;
+    if (!entity.decel) entity.decel = 500;
+    if (!entity.wait) entity.wait = 3;
+    if (!entity.lip) entity.lip = 8;
+    if (!entity.height) entity.height = (entity.size.z - entity.lip);
+
+    entity.solid = Solid.Bsp;
+    entity.movetype = MoveType.Push;
+
+    entity.pos1 = { ...entity.origin };
+
+    // Fix read-only assignment by creating a new object
+    entity.pos2 = {
+      x: entity.origin.x,
+      y: entity.origin.y,
+      z: entity.origin.z - entity.height
+    };
+
+    entity.origin = { ...entity.pos2 };
+    entity.state = PlatState.Down;
+
+    entity.blocked = (self, other) => {
+        if (other && other.takedamage) {
+             other.health -= self.dmg || 2;
+        }
+        if (self.state === PlatState.GoingUp) {
+             self.state = PlatState.GoingDown;
+             self.think = (e) => plat_go_down(e, context.entities);
+        }
+        else if (self.state === PlatState.GoingDown) {
+             self.state = PlatState.GoingUp;
+             self.think = (e) => plat_go_up(e, context.entities);
+        }
+    };
+
+    entity.use = (self) => {
+        if (self.state === PlatState.Down) {
+             self.state = PlatState.GoingUp;
+             self.think = (e) => plat_go_up(e, context.entities);
+             context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+        }
+    };
+
+    const trigger = context.entities.spawn();
+    trigger.classname = "plat_trigger";
+    trigger.movetype = MoveType.None;
+    trigger.solid = Solid.Trigger;
+    trigger.mins = { x: entity.mins.x + 25, y: entity.mins.y + 25, z: entity.maxs.z };
+    trigger.maxs = { x: entity.maxs.x - 25, y: entity.maxs.y - 25, z: entity.maxs.z + 8 };
+    trigger.touch = (t, other) => {
+        if (entity.state === PlatState.Down) {
+            entity.use?.(entity, other, other);
+        }
+    };
+};
+
+// ... (func_rotating code) ...
+const func_rotating: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Bsp;
+    entity.movetype = MoveType.Push;
+
+    if (!entity.speed) {
+        entity.speed = 100;
+    }
+
+    if (entity.spawnflags & 4) {
+        entity.avelocity = { x: entity.speed, y: 0, z: 0 };
+    } else if (entity.spawnflags & 8) {
+        entity.avelocity = { x: 0, y: entity.speed, z: 0 };
+    } else {
+        entity.avelocity = { x: 0, y: 0, z: entity.speed };
+    }
+
+    if (entity.dmg) {
+        entity.blocked = (self, other) => {
+            if (other && other.takedamage) {
+                other.health -= self.dmg;
+            }
+        };
+    }
+};
+
+// ============================================================================
+// FUNC MISC (Conveyor, Water, Explosive, Killbox)
+// ============================================================================
+
+const func_conveyor: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Bsp;
+
+    if (!entity.speed) entity.speed = 100;
+    entity.movetype = MoveType.None;
+};
+
+const func_water: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Bsp;
+    entity.movetype = MoveType.Push;
+};
+
+const func_explosive: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Bsp;
+    entity.movetype = MoveType.Push;
+
+    if (!entity.health) entity.health = 100;
+    if (!entity.dmg) entity.dmg = 120;
+
+    entity.takedamage = true;
+
+    entity.die = (self, inflictor, attacker, damage) => {
+        context.entities.free(self);
+    };
+};
+
+const func_killbox: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Not;
+    entity.movetype = MoveType.None;
+
+    entity.use = (self) => {
+        context.entities.killBox(self);
+    };
+};
+
+const func_areaportal: SpawnFunction = (entity, context) => {
+    entity.use = (self, other, activator) => {
+        entity.state = entity.state === DoorState.Open ? DoorState.Closed : DoorState.Open;
+        // Real implementation would update PVS visibility
+    };
+}
+
 export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_door', func_door);
   registry.register('func_button', func_button);
+  registry.register('func_train', func_train);
+  registry.register('func_plat', func_plat);
+  registry.register('func_rotating', func_rotating);
+  registry.register('func_conveyor', func_conveyor);
+  registry.register('func_water', func_water);
+  registry.register('func_explosive', func_explosive);
+  registry.register('func_killbox', func_killbox);
+  registry.register('func_areaportal', func_areaportal);
 }
