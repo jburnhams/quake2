@@ -7,14 +7,14 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { Entity } from '../../src/entities/entity.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
-import * as damage from '../../src/combat/damage.js';
-import { angleVectors } from '@quake2ts/shared';
+import * as projectiles from '../../src/entities/projectiles.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
 
 describe('Blaster', () => {
-    it('should not consume ammo and should deal damage', () => {
+    it('should not consume ammo and should spawn a blaster bolt', () => {
         const trace = vi.fn();
         const pointContents = vi.fn();
-        const T_Damage = vi.spyOn(damage, 'T_Damage');
+        const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
             sound: vi.fn(),
@@ -36,22 +36,8 @@ describe('Blaster', () => {
             ammo: {},
         });
 
-        const target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = 1;
-
-        trace.mockReturnValue({
-            ent: target,
-            endpos: { x: 0, y: 10, z: 0 },
-            plane: { normal: { x: 0, y: -1, z: 0 } },
-        });
-
         fire(game, player, WeaponId.Blaster);
 
-        const { forward } = angleVectors(player.angles);
-        const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
-
-        expect(trace).toHaveBeenCalledWith(player.origin, null, null, end, player, 0);
-        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 15, 1, 0, 0);
+        expect(createBlasterBolt).toHaveBeenCalledWith(game, player, player.origin, expect.anything(), 15, 1000, DamageMod.BLASTER);
     });
 });

@@ -7,6 +7,8 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
+import * as damage from '../../src/combat/damage.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
 
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {
@@ -37,5 +39,39 @@ describe('Grenade Launcher', () => {
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Grenades]).toBe(9);
         expect(createGrenade).toHaveBeenCalled();
+    });
+
+    it('should explode on impact with an entity', () => {
+        const trace = vi.fn();
+        const pointContents = vi.fn();
+        const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
+
+        const engine = {
+            sound: vi.fn(),
+            centerprintf: vi.fn(),
+        };
+        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+
+        const player = game.entities.spawn();
+        player.classname = 'player';
+        player.origin = { x: 0, y: 0, z: 0 };
+        game.entities.finalizeSpawn(player);
+
+        const target = game.entities.spawn();
+        target.health = 100;
+        target.takedamage = 1;
+        game.entities.finalizeSpawn(target);
+
+        projectiles.createGrenade(game, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
+        const grenade = game.entities.find(e => e.classname === 'grenade')!;
+
+        expect(grenade).toBeDefined();
+
+        // Simulate touch with target
+        if (grenade.touch) {
+            grenade.touch(grenade, target, null, null);
+        }
+
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), grenade, player, 120, player, 120, expect.anything(), DamageMod.GRENADE);
     });
 });

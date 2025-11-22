@@ -51,8 +51,8 @@ export enum DeadFlag {
   Respawnable = 3,
 }
 
-export type ThinkCallback = (self: Entity, context: EntitySystem) => void;
-export type TouchCallback = (self: Entity, other: Entity | null) => void;
+export type ThinkCallback = (self: Entity, context: any) => void;
+export type TouchCallback = (self: Entity, other: Entity | null, plane?: any, surf?: any) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type BlockedCallback = (self: Entity, other: Entity | null) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
