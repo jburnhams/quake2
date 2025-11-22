@@ -6,6 +6,7 @@ import {
   VertexBuffer,
   type VertexAttributeLayout,
 } from './resources.js';
+import { BspMap, createFaceLightmap } from '../assets/bsp.js';
 
 export interface BspLightmapData {
   readonly width: number;
@@ -243,6 +244,121 @@ function buildVertexData(
     interleaved[o + 6] = lightmapCoords[t + 1];
   }
   return interleaved;
+}
+
+/**
+ * Converts a parsed BSP map into a set of flat surface inputs ready for rendering.
+ *
+ * This function handles:
+ * 1. Traversing faces and their edges to build vertex lists.
+ * 2. Calculating texture coordinates (UVs) from surface normals and texture info.
+ * 3. Generating triangle indices (fan triangulation) for convex polygon faces.
+ * 4. Extracting and calculating lightmap data and coordinates.
+ *
+ * @param map The parsed BSP map structure.
+ * @returns An array of surface inputs suitable for consumption by `buildBspGeometry`.
+ */
+export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
+  const results: BspSurfaceInput[] = [];
+
+  // Iterate over all faces using index to allow efficient lookups of parallel arrays (e.g. lightMapInfo).
+  for (let faceIndex = 0; faceIndex < map.faces.length; faceIndex++) {
+    const face = map.faces[faceIndex];
+
+    // Skip faces with invalid texture info (e.g., logic/clip brushes).
+    if (face.texInfo < 0) continue;
+
+    const texInfo = map.texInfo[face.texInfo];
+    const vertices: number[] = [];
+    const textureCoords: number[] = [];
+    const lightmapCoords: number[] = [];
+
+    // Retrieve vertices for this face by walking its edges.
+    // BSP faces are stored as references to a global edge list.
+    for (let i = 0; i < face.numEdges; i++) {
+      const edgeIndex = map.surfEdges[face.firstEdge + i];
+      const edge = map.edges[Math.abs(edgeIndex)];
+      // A positive edge index means traversal from vertex 0 to 1.
+      // A negative edge index means traversal from vertex 1 to 0.
+      const vIndex = edgeIndex >= 0 ? edge.vertices[0] : edge.vertices[1];
+      const vertex = map.vertices[vIndex];
+
+      vertices.push(vertex[0], vertex[1], vertex[2]);
+
+      // Calculate standard texture coordinates (s, t) using the texture axes.
+      // s = dot(v, s_vector) + s_offset
+      // t = dot(v, t_vector) + t_offset
+      const s = vertex[0] * texInfo.s[0] + vertex[1] * texInfo.s[1] + vertex[2] * texInfo.s[2] + texInfo.sOffset;
+      const t = vertex[0] * texInfo.t[0] + vertex[1] * texInfo.t[1] + vertex[2] * texInfo.t[2] + texInfo.tOffset;
+
+      textureCoords.push(s, t);
+
+      // Lightmap coordinates are tentatively set to texture coordinates.
+      // If valid lightmap data exists, they will be recalculated later.
+      lightmapCoords.push(s, t);
+    }
+
+    // Triangulate the face. BSP faces are convex polygons, so a simple triangle fan
+    // originating from the first vertex (index 0) covers the surface.
+    const indices: number[] = [];
+    const vertexCount = vertices.length / 3;
+    for (let i = 1; i < vertexCount - 1; i++) {
+      indices.push(0, i, i + 1);
+    }
+
+    // Process lightmap data if available.
+    let lightmapData: BspLightmapData | undefined;
+    const lightmapInfo = map.lightMapInfo[faceIndex];
+
+    if (lightmapInfo) {
+      // Calculate the extents of the texture coordinates to determine lightmap dimensions.
+      // Quake 2 lightmaps are 1/16th scale of the texture coordinates.
+      let minS = Infinity, maxS = -Infinity, minT = Infinity, maxT = -Infinity;
+      for (let k = 0; k < textureCoords.length; k+=2) {
+        const s = textureCoords[k];
+        const t = textureCoords[k+1];
+        if (s < minS) minS = s;
+        if (s > maxS) maxS = s;
+        if (t < minT) minT = t;
+        if (t > maxT) maxT = t;
+      }
+
+      // Lightmap dimensions are ceil(max/16) - floor(min/16) + 1
+      const floorMinS = Math.floor(minS / 16);
+      const floorMinT = Math.floor(minT / 16);
+      const lmWidth = Math.ceil(maxS / 16) - floorMinS + 1;
+      const lmHeight = Math.ceil(maxT / 16) - floorMinT + 1;
+
+      // Extract the raw lightmap samples from the BSP lump.
+      const samples = createFaceLightmap(face, map.lightMaps, lightmapInfo);
+
+      if (samples) {
+          // Sanity check: the extracted sample count must match the calculated dimensions.
+          if (samples.length === lmWidth * lmHeight * 3) {
+               lightmapData = { width: lmWidth, height: lmHeight, samples };
+
+               // Recalculate lightmap UVs based on the 1/16th scale and min offset.
+               // We add 0.5 to center the sample.
+               for (let k = 0; k < lightmapCoords.length; k+=2) {
+                   lightmapCoords[k] = (textureCoords[k] / 16) - floorMinS + 0.5;
+                   lightmapCoords[k+1] = (textureCoords[k+1] / 16) - floorMinT + 0.5;
+               }
+          }
+      }
+    }
+
+    results.push({
+      vertices: new Float32Array(vertices),
+      textureCoords: new Float32Array(textureCoords),
+      lightmapCoords: new Float32Array(lightmapCoords),
+      indices: new Uint16Array(indices),
+      texture: texInfo.texture,
+      surfaceFlags: texInfo.flags,
+      lightmap: lightmapData
+    });
+  }
+
+  return results;
 }
 
 export function buildBspGeometry(

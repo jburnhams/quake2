@@ -63,6 +63,26 @@ export {
 export { LruCache } from './assets/cache.js';
 export { filesToPakSources, ingestPakFiles, wireDropTarget, wireFileInput } from './assets/browserIngestion.js';
 export {
+  BspLoader,
+  BspParseError,
+  parseBsp,
+  createFaceLightmap,
+  type BspMap,
+  type BspHeader,
+  type BspEntities,
+  type BspEntity,
+  type BspLump,
+  type BspLumpInfo,
+  type BspFace,
+  type BspLeaf,
+  type BspNode,
+  type BspPlane,
+  type BspTexInfo,
+  type BspModel,
+  type BspVisibility,
+  type BspVisibilityCluster,
+} from './assets/bsp.js';
+export {
   Md2Loader,
   Md2ParseError,
   groupMd2Animations,
@@ -178,6 +198,7 @@ export {
 } from './render/resources.js';
 export {
   BSP_VERTEX_LAYOUT,
+  createBspSurfaces,
   buildBspGeometry,
   type BspGeometryBuildResult,
   type BspLightmapData,
