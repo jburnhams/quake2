@@ -87,8 +87,23 @@ function copyVec3(): Vec3 {
 
 export type MonsterAction = (self: Entity) => void;
 export type MonsterSightCallback = (self: Entity, enemy: Entity) => void;
+export type AIAction = (self: Entity, dist: number) => void;
+
+export interface MonsterFrame {
+  ai: AIAction | null;
+  dist: number;
+  think?: MonsterAction | null;
+}
+
+export interface MonsterMove {
+  firstframe: number;
+  lastframe: number;
+  frames: MonsterFrame[];
+  endfunc: MonsterAction | null;
+}
 
 export interface MonsterInfo {
+  current_move?: MonsterMove;
   aiflags: number;
   last_sighting: Vec3;
   trail_time: number;
@@ -96,6 +111,14 @@ export interface MonsterInfo {
   run?: MonsterAction;
   stand?: MonsterAction;
   sight?: MonsterSightCallback;
+  idle?: MonsterAction;
+  search?: MonsterAction;
+  attack?: MonsterAction;
+  walk?: MonsterAction;
+  attack_state?: number;
+  lefty?: number;
+  nextframe?: number;
+  scale?: number;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({

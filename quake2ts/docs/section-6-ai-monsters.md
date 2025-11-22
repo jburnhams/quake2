@@ -17,15 +17,18 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Deterministic RNG for AI decisions
 - ✅ Perception utility layer (range classification, visibility, FOV tests) aligned with rerelease constants
 - ✅ Monster entity timing fields (search, attack, pain) exposed on base entity and saved
+- ✅ AI State Machine (`M_MoveFrame`, `monster_think`) implementation
+- ✅ Basic Soldier/Guard monster entity implementation (`monster_soldier`)
+- ✅ Unit tests for monster spawning, state transitions, and animation looping
 
 ## Tasks Remaining
 
 ### AI Core Framework
-- [ ] AI state machine
+- [x] AI state machine
   - States: idle, stand, walk, run, attack, melee, pain, death
   - State transitions based on conditions (see enemy, take damage, lose enemy)
   - Each monster has custom state functions
-- [ ] AI think callback
+- [x] AI think callback
   - Called every frame (or every N frames for distant monsters)
   - Update current state
   - Execute state-specific behavior
@@ -110,7 +113,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patterns vary by type.
 
 #### Ground Monsters
-- [ ] **Guard** (basic soldier)
+- [x] **Guard** (basic soldier)
   - Machinegun ranged attack
   - Moderate health, common enemy
 - [ ] **Shotgun Guard**
@@ -251,6 +254,10 @@ Recent work:
 - Added the core `ai_stand`/`ai_walk`/`ai_run`/`ai_charge` behaviors that honor target-facing rules from the rerelease before applying movement, with deterministic yaw clamping tests covering idle turns, goal-facing walks, enemy-priority runs, and charge-style pursuit.
 - Added `facingIdeal` with rerelease yaw tolerance (default and pathing-specific) plus a `monsterinfo.aiflags` scaffold on entities so pathfinding and steering logic can branch correctly in future behaviors.
 - Ported the `HuntTarget`/`FoundTarget` flows with rerelease-style field updates (last sighting, combat point handoff, attack cooldown) and unit tests to pin down wakeup rules, notarget rejection, and hearing limits.
+- Implemented the Quake II `mmove_t` and `mframe_t` system via `MonsterMove` and `MonsterFrame` interfaces.
+- Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
+- Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
+- Added comprehensive tests for monster spawning, frame advancement, and animation looping.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback
