@@ -97,18 +97,17 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
   - [x] `SP_func_button`: Buttons
-  - [ ] `SP_func_train`: Moving platforms
-  - [ ] `SP_func_plat`, `SP_func_plat2`: Elevators
-  - [ ] `SP_func_rotating`: Fans, gears
-  - `SP_func_conveyor`: Conveyor belts (affects movement)
-  - `SP_func_water`, `SP_func_areaportal`: Special brushes
-  - `SP_func_explosive`, `SP_func_killbox`: Damage/kill volumes
-  - And many more (see `g_spawn.cpp` for full list)
-- [ ] Light spawns (light, light_mine1, light_mine2)
+  - [x] `SP_func_train`: Moving platforms
+  - [x] `SP_func_plat`, `SP_func_plat2`: Elevators
+  - [x] `SP_func_rotating`: Fans, gears
+  - [x] `SP_func_conveyor`: Conveyor belts (affects movement)
+  - [x] `SP_func_water`, `SP_func_areaportal`: Special brushes
+  - [x] `SP_func_explosive`, `SP_func_killbox`: Damage/kill volumes
+- [x] Light spawns (light, light_mine1, light_mine2)
   - Parse light properties
   - Store for dynamic lighting (Section 2)
   - Static lights already in BSP lightmaps
-- [ ] Path spawns (path_corner)
+- [x] Path spawns (path_corner)
   - Waypoints for `func_train` and monster patrol paths
   - Link together by targetname
 
@@ -200,7 +199,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Use function: move in, wait, move out
   - Trigger targets when pressed
   - Sounds, speed, wait time
-- [ ] **func_train**
+- [x] **func_train**
   - Follow path_corner waypoints
   - Constant movement
   - Push entities riding on it
@@ -216,11 +215,11 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 
 ### Entity Utility Functions
 - [x] `G_SetMovedir`: Calculate move direction from angles
-- [ ] `G_TouchTriggers`: Check if entity is touching any triggers
+- [x] `G_TouchTriggers`: Check if entity is touching any triggers
 - [x] `G_PickTarget`: Choose random entity matching targetname (for randomization)
 - [x] `KillBox`: Kill any entities at spawn position (prevent stuck spawns)
-- [ ] `VelocityForDamage`: Calculate knockback velocity
-- [ ] `ClipVelocity`: Reflect velocity off plane (uses shared helper)
+- [x] `VelocityForDamage`: Calculate knockback velocity
+- [x] `ClipVelocity`: Reflect velocity off plane (uses shared helper)
 
 ## Integration Points
 - **From Asset Loading (Section 1)**: Receives BSP entity lump, model/sound indices
@@ -279,4 +278,4 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 
 - **Implemented**: `runPush` function in `movement.ts` handles the complex logic of pushing entities.
 - **Implemented**: `blocked` callback support in `Entity` class.
-- **Implemented**: `func_door` uses `MOVETYPE_PUSH` and responds to blocking by reversing direction and dealing damage.
+- **Implemented**: `func_door`, `func_train`, `func_plat` use `MOVETYPE_PUSH`.
