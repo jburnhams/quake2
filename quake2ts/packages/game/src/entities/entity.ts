@@ -50,7 +50,7 @@ export enum DeadFlag {
   Respawnable = 3,
 }
 
-export type ThinkCallback = (self: Entity) => void;
+export type ThinkCallback = (self: Entity, context: any) => void;
 export type TouchCallback = (self: Entity, other: Entity | null) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
@@ -130,11 +130,15 @@ export class Entity {
   velocity: Vec3 = copyVec3();
   avelocity: Vec3 = copyVec3();
   angles: Vec3 = copyVec3();
+  pos1: Vec3 = copyVec3();
+  pos2: Vec3 = copyVec3();
 
   viewheight = 0;
 
   mins: Vec3 = copyVec3();
   maxs: Vec3 = copyVec3();
+  absmin: Vec3 = copyVec3();
+  absmax: Vec3 = copyVec3();
   size: Vec3 = copyVec3();
   mass = 0;
   gravity = 1;
@@ -158,6 +162,8 @@ export class Entity {
   wait = 0;
   delay = 0;
   timestamp = 0;
+  lip = 0;
+  state = 0;
   sounds = 0;
   noise_index = 0;
   fly_sound_debounce_time = 0;
@@ -229,10 +235,14 @@ export class Entity {
     this.velocity = copyVec3();
     this.avelocity = copyVec3();
     this.angles = copyVec3();
+    this.pos1 = copyVec3();
+    this.pos2 = copyVec3();
     this.viewheight = 0;
 
     this.mins = copyVec3();
     this.maxs = copyVec3();
+    this.absmin = copyVec3();
+    this.absmax = copyVec3();
     this.size = copyVec3();
     this.mass = 0;
     this.gravity = 1;
@@ -256,6 +266,8 @@ export class Entity {
     this.wait = 0;
     this.delay = 0;
     this.timestamp = 0;
+    this.lip = 0;
+    this.state = 0;
     this.sounds = 0;
     this.noise_index = 0;
     this.fly_sound_debounce_time = 0;
@@ -313,9 +325,13 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'velocity', type: 'vec3', save: true },
   { name: 'avelocity', type: 'vec3', save: true },
   { name: 'angles', type: 'vec3', save: true },
+  { name: 'pos1', type: 'vec3', save: true },
+  { name: 'pos2', type: 'vec3', save: true },
   { name: 'viewheight', type: 'int', save: true },
   { name: 'mins', type: 'vec3', save: true },
   { name: 'maxs', type: 'vec3', save: true },
+  { name: 'absmin', type: 'vec3', save: true },
+  { name: 'absmax', type: 'vec3', save: true },
   { name: 'size', type: 'vec3', save: true },
   { name: 'mass', type: 'int', save: true },
   { name: 'gravity', type: 'float', save: true },
@@ -336,6 +352,8 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'wait', type: 'float', save: true },
   { name: 'delay', type: 'float', save: true },
   { name: 'timestamp', type: 'float', save: true },
+  { name: 'lip', type: 'int', save: true },
+  { name: 'state', type: 'int', save: true },
   { name: 'sounds', type: 'int', save: true },
   { name: 'noise_index', type: 'int', save: true },
   { name: 'fly_sound_debounce_time', type: 'float', save: true },

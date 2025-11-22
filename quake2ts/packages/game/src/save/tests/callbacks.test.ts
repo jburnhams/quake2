@@ -17,6 +17,7 @@ describe('Callback Serialization', () => {
     const mockImports = {
       trace: () => ({} as any),
       pointcontents: () => 0,
+      linkentity: () => {},
     };
 
     const entitySystem = new EntitySystem(mockEngine, mockImports, { x: 0, y: 0, z: 0 }, 1, callbackRegistry);

@@ -1,6 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
 import { GameEngine } from '../index.js';
 import { GameImports } from '../imports.js';
 import {
@@ -146,6 +146,7 @@ export class EntitySystem {
         ent: null,
       }),
       pointcontents: () => 0,
+      linkentity: () => {},
     };
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
@@ -290,7 +291,7 @@ export class EntitySystem {
   }
 
   runFrame(): void {
-    this.thinkScheduler.runDueThinks(this.currentTimeSeconds);
+    this.thinkScheduler.runDueThinks(this.currentTimeSeconds, this);
 
     for (const ent of this.pool) {
       if (!ent.inUse || ent.freePending) {
@@ -311,6 +312,9 @@ export class EntitySystem {
         case MoveType.FlyMissile:
           runProjectileMovement(ent, this.imports, frametime);
           ent.timestamp = this.currentTimeSeconds;
+          break;
+        case MoveType.Push:
+          runPush(ent, this.imports, frametime);
           break;
       }
     }
