@@ -60,6 +60,14 @@ export function lengthVec3(a: Vec3): number {
   return Math.sqrt(lengthSquaredVec3(a));
 }
 
+export function distance(a: Vec3, b: Vec3): number {
+  return lengthVec3(subtractVec3(a, b));
+}
+
+export function vec3Equals(a: Vec3, b: Vec3): boolean {
+  return a.x === b.x && a.y === b.y && a.z === b.z;
+}
+
 /**
  * Returns the normalized vector. If the vector is zero-length, the
  * input is returned to mirror the rerelease q_vec3 semantics.

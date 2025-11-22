@@ -94,13 +94,13 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - See Section 5 for details; stub here initially
 - [ ] Monster spawns (monster_*)
   - See Section 6 for details; stub here initially
-- [ ] Func spawns (func_* brush entities)
-  - `SP_func_wall`: Static geometry
-  - `SP_func_door`, `SP_func_door_rotating`, `SP_func_door_secret`: Doors
-  - `SP_func_button`: Buttons
-  - `SP_func_train`: Moving platforms
-  - `SP_func_plat`, `SP_func_plat2`: Elevators
-  - `SP_func_rotating`: Fans, gears
+- [x] Func spawns (func_* brush entities)
+  - [x] `SP_func_wall`: Static geometry
+  - [ ] `SP_func_door`, `SP_func_door_rotating`, `SP_func_door_secret`: Doors
+  - [x] `SP_func_button`: Buttons
+  - [ ] `SP_func_train`: Moving platforms
+  - [ ] `SP_func_plat`, `SP_func_plat2`: Elevators
+  - [ ] `SP_func_rotating`: Fans, gears
   - `SP_func_conveyor`: Conveyor belts (affects movement)
   - `SP_func_water`, `SP_func_areaportal`: Special brushes
   - `SP_func_explosive`, `SP_func_killbox`: Damage/kill volumes
@@ -275,3 +275,26 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 - Some entities precache assets during spawn; ensure asset registry is available (Section 1)
 - Rerelease source reference: `g_spawn.cpp`, `g_func.cpp`, `g_trigger.cpp`, `g_target.cpp`, `g_misc.cpp`, `g_utils.cpp`
 - Entities must support save/load; design serialization-friendly structures from the start
+
+## `MOVETYPE_PUSH` Implementation Details
+
+Based on an analysis of `rerelease/g_phys.cpp`, `MOVETYPE_PUSH` is handled by the `SV_Physics_Pusher` function. This function is called for entities with `movetype` `MOVETYPE_PUSH` or `MOVETYPE_STOP`.
+
+The core logic is in `SV_Push`, which is a complex function that does the following:
+
+1.  **Calculates the move:** It takes a `move` and `amove` (angular move) vector and calculates the final position of the pusher.
+2.  **Pushes other entities:** It iterates through all other entities to see if they are inside the pusher's final bounding box. If an entity is inside, it attempts to move it by the same `move` and `amove`.
+3.  **Collision detection:** It calls `SV_TestEntityPosition` to check if the pushed entity is in a valid position. If not, it reverts the move.
+4.  **Handles blocking:** If a move is blocked, it calls the `blocked` function on the pusher entity.
+
+For the TypeScript port, a faithful version of this logic will be implemented in a `runPush` function:
+
+1.  **Calculate the move:** The function will take the entity's `velocity` and `avelocity` and calculate the `move` and `amove` vectors for the current frame.
+2.  **Store pushed entities:** A list of pushed entities will be created to keep track of all the entities that are moved during the frame.
+3.  **Move the pusher:** The pusher entity will be moved to its final destination.
+4.  **Iterate through other entities:** The function will iterate through all other entities in the world to check for collisions.
+5.  **Check for collisions:** For each entity, the function will check if its bounding box intersects with the pusher's final bounding box.
+6.  **Push other entities:** If an entity is colliding with the pusher, it will be moved by the same `move` and `amove` vectors.
+7.  **Collision detection for pushed entities:** The function will call `SV_TestEntityPosition` to check if the pushed entity is in a valid position. If not, it will revert the move.
+8.  **Handle blocking:** If a move is blocked, the `blocked` function on the pusher entity will be called.
+9.  **Revert all moves if blocked:** If any part of the move is blocked, all entities that were moved will be reverted to their original positions.

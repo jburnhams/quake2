@@ -23,4 +23,6 @@ export interface GameImports {
   ): GameTraceResult;
 
   pointcontents(point: Vec3): number;
+
+  linkentity(ent: Entity): void;
 }

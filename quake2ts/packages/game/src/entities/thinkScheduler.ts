@@ -45,7 +45,7 @@ export class ThinkScheduler {
     }
   }
 
-  runDueThinks(currentTimeSeconds: number): void {
+  runDueThinks(currentTimeSeconds: number, context: any): void {
     while (this.queue.length > 0) {
       const next = this.queue[0];
       if (next.time > currentTimeSeconds) {
@@ -64,7 +64,7 @@ export class ThinkScheduler {
         continue;
       }
 
-      entity.think(entity);
+      entity.think(entity, context);
     }
   }
 }

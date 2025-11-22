@@ -10,6 +10,7 @@ import { registerMiscSpawns } from './misc.js';
 import { registerTargetSpawns } from './targets.js';
 import { registerTriggerSpawns } from './triggers.js';
 import { registerItemSpawns } from './items.js';
+import { registerFuncSpawns } from './funcs.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
@@ -291,6 +292,7 @@ export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void 
   registerTargetSpawns(registry);
   registerMiscSpawns(registry);
   registerItemSpawns(game, registry);
+  registerFuncSpawns(registry);
 }
 
 export function createDefaultSpawnRegistry(game: any): SpawnRegistry {
