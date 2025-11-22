@@ -1,6 +1,13 @@
 import { Entity, MoveType, Solid } from '../entities/entity.js';
 import { GameImports } from '../imports.js';
-import { addVec3, scaleVec3, clipVelocityVec3, Vec3 } from '@quake2ts/shared';
+import {
+  addVec3,
+  scaleVec3,
+  clipVelocityVec3,
+  Vec3,
+  subtractVec3,
+  rotatePointAroundVector
+} from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
@@ -183,7 +190,50 @@ export function runPush(
         z: ent.origin.z + move.z,
       };
 
-      // If standing on pusher, we might also rotate (TODO: amove support for riders)
+      // If standing on pusher, we might also rotate
+      if (ent.groundentity === pusher) {
+        // Rotation handling:
+        // 1. Calculate position relative to pusher's OLD origin
+        // 2. Rotate that relative vector by the angular move
+        // 3. Add to pusher's NEW origin (which is effectively doing translation + rotation)
+        // Note: We already applied translation (move) above, so ent.origin is currently
+        // (OldPos + move).
+        // We want: NewPos = PusherNewPos + Rotate(OldPos - PusherOldPos)
+        // Since PusherNewPos = PusherOldPos + move
+        // NewPos = PusherOldPos + move + Rotate(OldPos - PusherOldPos)
+        // Current ent.origin = OldPos + move
+        // So we need to adjust it.
+        // Let's recalculate from scratch to be safe.
+
+        const pusherOldOrigin = pushed[0].origin;
+        const pusherNewOrigin = pusher.origin; // Already moved
+        const entOldOrigin = pushed[pushed.length - 1].origin; // We just pushed it
+
+        let relPos = subtractVec3(entOldOrigin, pusherOldOrigin);
+
+        // Apply rotations. Order: Yaw (Z), Pitch (Y), Roll (X)
+        // Q2 angles are Pitch, Yaw, Roll.
+        // amove.x = pitch delta, amove.y = yaw delta, amove.z = roll delta.
+
+        if (amove.y !== 0) {
+          relPos = rotatePointAroundVector({ x: 0, y: 0, z: 1 }, relPos, amove.y);
+        }
+        if (amove.x !== 0) {
+          relPos = rotatePointAroundVector({ x: 0, y: 1, z: 0 }, relPos, amove.x);
+        }
+        if (amove.z !== 0) {
+          relPos = rotatePointAroundVector({ x: 1, y: 0, z: 0 }, relPos, amove.z);
+        }
+
+        ent.origin = addVec3(pusherNewOrigin, relPos);
+
+        // Also rotate the entity's facing angles
+        ent.angles = {
+          x: ent.angles.x + amove.x,
+          y: ent.angles.y + amove.y,
+          z: ent.angles.z + amove.z
+        };
+      }
 
       imports.linkentity(ent);
 
