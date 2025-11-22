@@ -11,13 +11,18 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
 ## Work Already Done
 - ✅ Basic bitstream reading capabilities in `packages/shared` (used for BSP/Map parsing, can be adapted).
 - ✅ Entity system and renderer capable of displaying the game state.
+- ✅ Defined `ServerCommand` (`svc_*`) and `ClientCommand` (`clc_*`) enums in `packages/shared/src/protocol/ops.ts`.
+- ✅ Implemented `NetworkMessageParser` in `packages/engine/src/demo/parser.ts` covering all standard `svc_` commands.
+- ✅ Implemented `DemoReader` in `packages/engine/src/demo/demoReader.ts` for `.dm2` container format.
+- ✅ Implemented `DemoPlaybackController` in `packages/engine/src/demo/playback.ts` for timing and loop control.
+- ✅ Exposed `DemoPlaybackController` in `packages/client` exports.
 
 ## Tasks Remaining
 
 ### 1. Protocol Definition & Parsers (`packages/shared/src/protocol`)
-- [ ] Define `ServerCommand` enum (`svc_*`) matching original `qcommon.h`.
-- [ ] Define `ClientCommand` enum (`clc_*`) for completeness (though primarily reading `svc_` for playback).
-- [ ] Implement typed parsers for each server command:
+- [x] Define `ServerCommand` enum (`svc_*`) matching original `qcommon.h`.
+- [x] Define `ClientCommand` enum (`clc_*`) for completeness (though primarily reading `svc_` for playback).
+- [x] Implement typed parsers for each server command:
   - `svc_serverdata`: Protocol version, server count, game dir, player num, map name.
   - `svc_configstring`: Updates to model/sound/image indices.
   - `svc_spawnbaseline`: Baseline entity states.
@@ -30,13 +35,13 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
   - `svc_disconnect`, `svc_reconnect`: Connection state management.
 
 ### 2. Demo File Container (`packages/engine/src/demo`)
-- [ ] Implement `DemoReader` class to handle the `.dm2` file structure.
+- [x] Implement `DemoReader` class to handle the `.dm2` file structure.
   - Format: Sequence of `[Length (4 bytes)] + [Message Block (Length bytes)]`.
   - Support async streaming or buffered reading of the demo file (ArrayBuffer).
   - Error handling for truncated or corrupt blocks.
 
 ### 3. Playback System (`packages/engine/src/demo`)
-- [ ] Create `DemoPlaybackController`.
+- [x] Create `DemoPlaybackController`.
   - Maintains playback state: `Paused`, `Playing`, `Finished`.
   - Handles the "read loop":
     1. Read next block length.

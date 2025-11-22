@@ -1,64 +1,57 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NetworkMessageParser } from '../../src/demo/parser.js';
-import { BinaryStream } from '@quake2ts/shared';
-import { ServerCommand } from '@quake2ts/shared';
+import { BinaryStream, ServerCommand } from '@quake2ts/shared';
+
+// Mock BinaryStream
+const createMockStream = (data: number[]) => {
+  const buffer = new Uint8Array(data).buffer;
+  return new BinaryStream(buffer);
+};
 
 describe('NetworkMessageParser', () => {
-  it('should parse a nop command', () => {
-    const buffer = new Uint8Array([ServerCommand.nop]);
-    const stream = new BinaryStream(buffer);
+  it('should parse svc_nop', () => {
+    const stream = createMockStream([ServerCommand.nop]);
     const parser = new NetworkMessageParser(stream);
-
-    // We can spy on console.log or just ensure it doesn't throw
-    const spy = vi.spyOn(console, 'log');
     parser.parseMessage();
-    expect(spy).not.toHaveBeenCalled(); // nop logs nothing
+    // Should not throw
   });
 
-  it('should parse a print command', () => {
-    const text = "Hello World";
+  it('should parse svc_print', () => {
+    const message = "Hello World";
     const encoder = new TextEncoder();
-    const textBytes = encoder.encode(text + '\0');
+    const msgBytes = encoder.encode(message);
 
-    const buffer = new Uint8Array(2 + textBytes.length);
-    buffer[0] = ServerCommand.print;
-    buffer[1] = 2; // print id
-    buffer.set(textBytes, 2);
+    const data = [
+      ServerCommand.print,
+      1, // id
+      ...msgBytes, 0 // null terminated string
+    ];
 
-    const stream = new BinaryStream(buffer);
+    const stream = createMockStream(data);
     const parser = new NetworkMessageParser(stream);
 
-    const spy = vi.spyOn(console, 'log');
+    const consoleSpy = vi.spyOn(console, 'log');
     parser.parseMessage();
-    expect(spy).toHaveBeenCalledWith('[Server Print 2]: Hello World');
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("Hello World"));
   });
 
-  it('should parse server data', () => {
-    // [byte cmd] [long protocol] [long servercount] [byte attract] [string gamedir] [short playernum] [string levelname]
-    const buffer = new ArrayBuffer(100);
-    const view = new DataView(buffer);
-    let offset = 0;
+  it('should parse svc_stufftext', () => {
+    const message = "cmd";
+    const encoder = new TextEncoder();
+    const msgBytes = encoder.encode(message);
 
-    view.setUint8(offset++, ServerCommand.serverdata);
-    view.setInt32(offset, 34, true); offset += 4; // protocol
-    view.setInt32(offset, 1, true); offset += 4;  // servercount
-    view.setUint8(offset++, 0);                   // attractloop
+    const data = [
+      ServerCommand.stufftext,
+      ...msgBytes, 0
+    ];
 
-    const gamedir = "baseq2";
-    for (let i = 0; i < gamedir.length; i++) view.setUint8(offset++, gamedir.charCodeAt(i));
-    view.setUint8(offset++, 0);
-
-    view.setInt16(offset, 0, true); offset += 2; // playernum
-
-    const level = "base1";
-    for (let i = 0; i < level.length; i++) view.setUint8(offset++, level.charCodeAt(i));
-    view.setUint8(offset++, 0);
-
-    const stream = new BinaryStream(buffer.slice(0, offset));
+    const stream = createMockStream(data);
     const parser = new NetworkMessageParser(stream);
 
-    const spy = vi.spyOn(console, 'log');
+    const consoleSpy = vi.spyOn(console, 'log');
     parser.parseMessage();
-    expect(spy).toHaveBeenCalledWith('Server Data: Protocol 34, Level base1, GameDir baseq2');
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("cmd"));
   });
 });

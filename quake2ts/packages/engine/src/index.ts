@@ -273,3 +273,4 @@ export {
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions } from './render/frame.js';
+export { DemoPlaybackController, PlaybackState, DemoReader, NetworkMessageParser } from './demo/index.js';
