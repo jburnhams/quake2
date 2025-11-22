@@ -11,19 +11,61 @@ export enum DoorState {
   Closing,
 }
 
+function door_blocked(self: Entity, other: Entity | null) {
+  // If blocked, damage the other entity
+  if (other && other.takedamage) {
+    const damage = self.dmg || 2;
+    other.health -= damage;
+    // In a real implementation we'd check if other died, play sound, etc.
+  }
+
+  // If the blocker is still there (simplification), reverse direction
+  // For now, if we are opening, we close. If closing, we open.
+  if (self.state === DoorState.Opening) {
+    self.state = DoorState.Closing;
+    self.think = door_go_down;
+  } else if (self.state === DoorState.Closing) {
+    self.state = DoorState.Opening;
+    self.think = door_go_up;
+  }
+}
+
 function door_go_down(door: Entity, context: EntitySystem) {
   if (vec3Equals(door.origin, door.pos1)) {
     door.state = DoorState.Closed;
+    door.velocity = { x: 0, y: 0, z: 0 };
     return;
   }
 
   const move = distance(door.origin, door.pos1);
   const speed = Math.min(door.speed, move);
+
+  // Need to handle undershoot/overshoot carefully in a real engine
+  // Simplified: set velocity to reach target in 0.1s or cap at max speed
+  // But standard Q2 movement is velocity-based constant speed.
+
+  // If we are very close, snap?
+  // For now, just set velocity.
+
   door.velocity = {
-    x: -door.movedir.x * speed,
-    y: -door.movedir.y * speed,
-    z: -door.movedir.z * speed,
+    x: (door.pos1.x - door.origin.x) / distance(door.pos1, door.origin) * door.speed,
+    y: (door.pos1.y - door.origin.y) / distance(door.pos1, door.origin) * door.speed,
+    z: (door.pos1.z - door.origin.z) / distance(door.pos1, door.origin) * door.speed,
   };
+
+  // Re-check distance to stop next frame if close enough
+  // For 0.1s think interval:
+  if (move <= door.speed * 0.1) {
+       // We will reach or overshoot in next frame.
+       // We should snap in runPush or handle it here by setting nextthink shorter?
+       // For now, we rely on the loop checking position again.
+       // Ideally we should set velocity to exactly reach in 0.1s if close.
+       door.velocity = {
+          x: (door.pos1.x - door.origin.x) / 0.1,
+          y: (door.pos1.y - door.origin.y) / 0.1,
+          z: (door.pos1.z - door.origin.z) / 0.1,
+       };
+  }
 
   context?.scheduleThink(door, context.timeSeconds + 0.1);
 }
@@ -31,18 +73,27 @@ function door_go_down(door: Entity, context: EntitySystem) {
 function door_go_up(door: Entity, context: EntitySystem) {
   if (vec3Equals(door.origin, door.pos2)) {
     door.state = DoorState.Open;
+    door.velocity = { x: 0, y: 0, z: 0 };
     context?.scheduleThink(door, context.timeSeconds + door.wait);
     door.think = door_go_down;
     return;
   }
 
   const move = distance(door.origin, door.pos2);
-  const speed = Math.min(door.speed, move);
+
   door.velocity = {
-    x: door.movedir.x * speed,
-    y: door.movedir.y * speed,
-    z: door.movedir.z * speed,
+    x: (door.pos2.x - door.origin.x) / distance(door.pos2, door.origin) * door.speed,
+    y: (door.pos2.y - door.origin.y) / distance(door.pos2, door.origin) * door.speed,
+    z: (door.pos2.z - door.origin.z) / distance(door.pos2, door.origin) * door.speed,
   };
+
+  if (move <= door.speed * 0.1) {
+       door.velocity = {
+          x: (door.pos2.x - door.origin.x) / 0.1,
+          y: (door.pos2.y - door.origin.y) / 0.1,
+          z: (door.pos2.z - door.origin.z) / 0.1,
+       };
+  }
 
   context?.scheduleThink(door, context.timeSeconds + 0.1);
 }
@@ -68,6 +119,7 @@ const func_door: SpawnFunction = (entity, context) => {
 
   entity.solid = Solid.Bsp;
   entity.movetype = MoveType.Push;
+  entity.blocked = door_blocked;
 
   entity.state = DoorState.Closed;
 
@@ -83,6 +135,8 @@ const func_door: SpawnFunction = (entity, context) => {
   };
 
   entity.use = (self) => {
+    if (self.state !== DoorState.Closed) return; // Simple debounce
+
     self.state = DoorState.Opening;
     self.think = door_go_up;
     context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);

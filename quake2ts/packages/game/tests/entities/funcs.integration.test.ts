@@ -9,7 +9,9 @@ describe('Funcs Integration', () => {
 
 
   it('should open a door when a button is used', () => {
-    const entities = new EntitySystem(2048);
+    const entities = new EntitySystem(null, null, null, 2048);
+    // Note: We set angle to 90 to ensure the door moves in the Y direction.
+    // We also set mins/maxs because func_door calculates travel distance based on size.
     const map = `
     {
       "classname" "func_button"
@@ -18,6 +20,9 @@ describe('Funcs Integration', () => {
     {
       "classname" "func_door"
       "targetname" "door1"
+      "angle" "90"
+      "mins" "-20 -20 0"
+      "maxs" "20 20 80"
     }
     `;
 
