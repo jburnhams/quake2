@@ -53,6 +53,7 @@ export enum DeadFlag {
 export type ThinkCallback = (self: Entity, context: any) => void;
 export type TouchCallback = (self: Entity, other: Entity | null) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
+export type BlockedCallback = (self: Entity, other: Entity | null) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
 export type DieCallback = (
   self: Entity,
@@ -188,6 +189,7 @@ export class Entity {
   think?: ThinkCallback;
   touch?: TouchCallback;
   use?: UseCallback;
+  blocked?: BlockedCallback;
   pain?: PainCallback;
   die?: DieCallback;
   activator: Entity | null = null;
@@ -292,6 +294,7 @@ export class Entity {
     this.think = undefined;
     this.touch = undefined;
     this.use = undefined;
+    this.blocked = undefined;
     this.pain = undefined;
     this.die = undefined;
     this.activator = null;
@@ -378,6 +381,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'think', type: 'callback', save: false },
   { name: 'touch', type: 'callback', save: false },
   { name: 'use', type: 'callback', save: false },
+  { name: 'blocked', type: 'callback', save: false },
   { name: 'pain', type: 'callback', save: false },
   { name: 'die', type: 'callback', save: false },
 ];

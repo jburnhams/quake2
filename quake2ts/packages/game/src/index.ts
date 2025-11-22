@@ -68,7 +68,21 @@ export function createGame(
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem(engine, { trace, pointcontents }, gravity);
+
+  const linkentity = (ent: Entity) => {
+    ent.absmin = {
+      x: ent.origin.x + ent.mins.x,
+      y: ent.origin.y + ent.mins.y,
+      z: ent.origin.z + ent.mins.z,
+    };
+    ent.absmax = {
+      x: ent.origin.x + ent.maxs.x,
+      y: ent.origin.y + ent.maxs.y,
+      z: ent.origin.z + ent.maxs.z,
+    };
+  };
+
+  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity }, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);

@@ -147,7 +147,18 @@ export class EntitySystem {
         ent: null,
       }),
       pointcontents: () => 0,
-      linkentity: () => {},
+      linkentity: (ent) => {
+        ent.absmin = {
+          x: ent.origin.x + ent.mins.x,
+          y: ent.origin.y + ent.mins.y,
+          z: ent.origin.z + ent.mins.z,
+        };
+        ent.absmax = {
+          x: ent.origin.x + ent.maxs.x,
+          y: ent.origin.y + ent.maxs.y,
+          z: ent.origin.z + ent.maxs.z,
+        };
+      },
     };
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
@@ -332,7 +343,7 @@ export class EntitySystem {
           ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.Push:
-          runPush(ent, this.imports, frametime);
+          runPush(ent, this, this.imports, frametime);
           break;
       }
     }
