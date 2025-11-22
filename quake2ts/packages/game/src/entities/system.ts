@@ -2,7 +2,7 @@ import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
 import { GameEngine } from '../index.js';
-import { GameImports } from '../imports.js';
+import { GameImports, TraceFunction, PointContentsFunction } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -16,7 +16,6 @@ import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 import { lengthVec3, subtractVec3 } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
-import { TraceFunction, PointContentsFunction } from '../imports.js';
 
 interface Bounds {
   min: Vec3;

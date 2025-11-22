@@ -211,12 +211,12 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_hyperblaster_fire
             inventory.ammo.counts[AmmoType.Cells]--;
-            createBlasterBolt(game, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
+            createBlasterBolt(game.entities, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
             break;
         }
         case WeaponId.Blaster: {
             // Ref: g_weapon.c -> weapon_blaster_fire
-            createBlasterBolt(game, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
+            createBlasterBolt(game.entities, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
             break;
         }
 
