@@ -1,9 +1,10 @@
 import type { Entity, MonsterMove } from '../entities/entity.js';
+import type { EntitySystem } from '../entities/system.js';
 import { AIFlags } from './constants.js';
 
 // Reference: game/m_monster.c
 
-export function M_MoveFrame(self: Entity): void {
+export function M_MoveFrame(self: Entity, context: EntitySystem): void {
   const move = self.monsterinfo.current_move;
   if (!move) {
     return;
@@ -22,11 +23,11 @@ export function M_MoveFrame(self: Entity): void {
   const frame = move.frames[index];
 
   if (frame.ai) {
-    frame.ai(self, frame.dist);
+    frame.ai(self, frame.dist, context);
   }
 
   if (frame.think) {
-    frame.think(self);
+    frame.think(self, context);
   }
 
   if (!self.inUse) {
@@ -36,7 +37,7 @@ export function M_MoveFrame(self: Entity): void {
   self.frame++;
   if (self.frame > move.lastframe) {
     if (move.endfunc) {
-      move.endfunc(self);
+      move.endfunc(self, context);
       // If endfunc changed the move, return (so we don't increment frame of new move wrongly or something?)
       // The original code returns here.
       if (self.monsterinfo.current_move !== move) {
@@ -46,15 +47,8 @@ export function M_MoveFrame(self: Entity): void {
   }
 }
 
-export function monster_think(self: Entity, context: any): void {
-  M_MoveFrame(self);
+export function monster_think(self: Entity, context: EntitySystem): void {
+  M_MoveFrame(self, context);
 
-  // In a real implementation, we would use `context.timeSeconds`
-  // EntitySystem passes itself as context, so we look for timeSeconds property.
-
-  const time = context && typeof context.timeSeconds === 'number'
-    ? context.timeSeconds
-    : self.nextthink; // Fallback if time is unavailable
-
-  self.nextthink = time + 0.1;
+  self.nextthink = context.timeSeconds + 0.1;
 }

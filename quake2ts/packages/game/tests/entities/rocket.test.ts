@@ -31,7 +31,7 @@ describe('Rocket Projectile', () => {
 
         const player = game.entities.find(e => e.classname === 'player')!;
 
-        createRocket(game, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
+        createRocket(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
 
         const rocket = game.entities.find(e => e.classname === 'rocket')!;
         const target = game.entities.spawn();
