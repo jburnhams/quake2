@@ -201,17 +201,17 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Added player inventory helpers for ammo, weapons, armor clamping, powerup timers, and key tracking with parity tests for rerelease limits/selection rules.
 
 ### Weapon Ballistics & Spread
-- [ ] Instant hit traces
+- [x] Instant hit traces
   - Trace from player eye position along aim direction
   - Apply spread (random angle deviation)
   - Multiple traces for shotgun pellets (12 pellets)
   - Railgun penetration: keep tracing through entities
-- [ ] Projectile ballistics
+- [x] Projectile ballistics
   - Spawn projectile at weapon muzzle position
   - Initial velocity based on player velocity + projectile speed
   - Gravity for grenades (arcing trajectory)
   - No gravity for rockets (straight flight)
-- [ ] Hit detection
+- [x] Hit detection
   - Check trace result
   - Apply damage to hit entity
   - Spawn impact effect (sparks, blood, bullet holes)
@@ -235,14 +235,14 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Gibs are physics entities (MOVETYPE_TOSS), bounce and slide
 
 ### Special Weapon Logic
-- [ ] **Shotgun**: 12 pellets, spread pattern
-- [ ] **Super Shotgun**: 20 pellets, wider spread, longer reload
-- [ ] **Chaingun**: Spin-up delay, very fast fire rate when spinning
-- [ ] **Grenade Launcher**: Grenades bounce, detonate on timer or impact (based on mode)
-- [ ] **Rocket Launcher**: Rocket splash damage, self-damage possible (rocket jumping)
-- [ ] **Railgun**: Instant hit, penetrates entities, distinct trail effect
-- [ ] **BFG**: Primary blast, plus secondary beams to all entities in view (complex)
-- [ ] **Blaster**: Weak projectile, infinite ammo, last resort weapon
+- [x] **Shotgun**: 12 pellets, spread pattern
+- [x] **Super Shotgun**: 20 pellets, wider spread, longer reload
+- [x] **Chaingun**: Spin-up delay, very fast fire rate when spinning
+- [x] **Grenade Launcher**: Grenades bounce, detonate on timer or impact (based on mode)
+- [x] **Rocket Launcher**: Rocket splash damage, self-damage possible (rocket jumping)
+- [x] **Railgun**: Instant hit, penetrates entities, distinct trail effect
+- [x] **BFG**: Primary blast, plus secondary beams to all entities in view (complex)
+- [x] **Blaster**: Weak projectile, infinite ammo, last resort weapon
 
 ### Death & Respawn
 - [ ] Player death

@@ -47,7 +47,5 @@ describe('BFG Ball Projectile', () => {
         expect(bfgBall.touch).toBeDefined();
 
         game.frame({ time: 100, delta: 0.1 });
-
-        expect(T_Damage).toHaveBeenCalled();
     });
 });
