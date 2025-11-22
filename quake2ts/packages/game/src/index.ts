@@ -20,6 +20,7 @@ export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
     centerprintf?(entity: Entity, message: string): void;
+    modelIndex?(model: string): number;
 }
 
 export interface GameStateSnapshot {
@@ -38,12 +39,15 @@ import { findPlayerStart } from './entities/spawn.js';
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
 import { Entity, MoveType } from './entities/entity.js';
 
+import { GameTraceResult } from './imports.js';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
   readonly entities: EntitySystem;
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
+  trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
 }
 
 export { hashGameState } from './checksum.js';
@@ -57,14 +61,14 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export function createGame(
-  imports: GameImports,
+  { trace, pointcontents }: GameImports,
   engine: GameEngine,
   options: GameCreateOptions
 ): GameExports {
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem(engine, imports, gravity);
+  const entities = new EntitySystem(engine, { trace, pointcontents }, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
@@ -151,7 +155,7 @@ export function createGame(
 
         // Adapter functions to match pmove signatures
         const traceAdapter = (start: Vec3, end: Vec3) => {
-          const result = imports.trace(start, player.mins, player.maxs, end, player, 0x10000001);
+          const result = trace(start, player.mins, player.maxs, end, player, 0x10000001);
           return {
             fraction: result.fraction,
             endpos: result.endpos,
@@ -160,7 +164,7 @@ export function createGame(
             planeNormal: result.plane?.normal,
           };
         };
-        const pointContentsAdapter = (point: Vec3) => imports.pointcontents(point);
+        const pointContentsAdapter = (point: Vec3) => pointcontents(point);
 
         const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
         player.origin = newState.origin;
@@ -175,6 +179,7 @@ export function createGame(
     centerprintf(entity: Entity, message: string): void {
       engine.centerprintf?.(entity, message);
     },
+    trace,
     get time() {
       return levelClock.current.timeSeconds;
     }

@@ -71,7 +71,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Idle, firing, reloading (Quake II has no reload, but has fire rate limiting)
   - Track last fire time, prevent rapid fire beyond weapon rate
   - Weapon switching delay
-- [ ] Weapon firing (`weapon_fire` functions)
+- [x] Weapon firing (`weapon_fire` functions)
   - Check ammo, deduct ammo
   - Instant hit (blaster, shotgun, machinegun, railgun): trace from player, apply damage to hit entity
   - Projectile (grenades, rockets, BFG): spawn projectile entity with velocity
@@ -79,7 +79,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Apply weapon kick (view angle recoil)
   - Play fire sound, show muzzle flash effect
   - Set animation frame (weapon model on screen)
-- [ ] Projectile entities
+- [x] Projectile entities
   - **Grenade**: Bouncing physics, timer-based explosion, can be shot mid-air
   - **Rocket**: Flies straight, explodes on impact
   - **BFG ball**: Slow moving, massive explosion, secondary laser damage

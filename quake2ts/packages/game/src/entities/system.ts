@@ -14,6 +14,7 @@ import {
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
+import { lengthVec3, subtractVec3 } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 
 interface Bounds {
@@ -205,6 +206,10 @@ export class EntitySystem {
     this.engine.sound?.(entity, channel, sound, volume, attenuation, timeofs);
   }
 
+  modelIndex(model: string): number {
+    return this.engine.modelIndex?.(model) || 0;
+  }
+
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {
     this.thinkScheduler.schedule(entity, nextThinkSeconds);
   }
@@ -236,6 +241,19 @@ export class EntitySystem {
       return [];
     }
     return Array.from(matches).filter((entity) => entity.inUse && !entity.freePending);
+  }
+
+  findByRadius(origin: Vec3, radius: number): Entity[] {
+    const matches: Entity[] = [];
+    for (const entity of this.pool) {
+      if (entity.inUse && !entity.freePending) {
+        const distance = lengthVec3(subtractVec3(origin, entity.origin));
+        if (distance <= radius) {
+          matches.push(entity);
+        }
+      }
+    }
+    return matches;
   }
 
   pickTarget(targetname: string | undefined): Entity | null {
