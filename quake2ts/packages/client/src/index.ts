@@ -5,6 +5,7 @@ import {
   GameRenderSample,
   Camera,
   Renderer,
+  DemoPlaybackController,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
@@ -46,11 +47,13 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly view: ViewEffects;
   readonly lastView?: ViewSample;
   camera?: Camera;
+  demoPlayback: DemoPlaybackController;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
+  const demoPlayback = new DemoPlaybackController();
   let latestFrame: GameFrameResult<PredictionState> | undefined;
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
@@ -141,6 +144,7 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     get camera(): Camera | undefined {
       return camera;
-    }
+    },
+    demoPlayback
   };
 }

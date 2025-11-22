@@ -1,6 +1,5 @@
-import { DemoReader } from './reader.js';
+import { DemoReader } from './demoReader.js';
 import { NetworkMessageParser } from './parser.js';
-import { BinaryStream } from '@quake2ts/shared';
 
 export enum PlaybackState {
   Stopped,
@@ -12,68 +11,62 @@ export enum PlaybackState {
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
   private state: PlaybackState = PlaybackState.Stopped;
-  private parser: NetworkMessageParser | null = null;
+  private playbackSpeed: number = 1.0;
 
-  // Timing control
-  private lastFrameTime = 0;
-  private accumulator = 0;
-  private playbackSpeed = 1.0;
+  // Timing
+  private accumulatedTime: number = 0;
+  private frameDuration: number = 100; // ms (10Hz default)
 
   constructor() {}
 
-  public loadDemo(buffer: ArrayBuffer): void {
+  public loadDemo(buffer: ArrayBuffer) {
     this.reader = new DemoReader(buffer);
     this.state = PlaybackState.Stopped;
+    this.accumulatedTime = 0;
   }
 
-  public play(): void {
-    if (!this.reader) {
-      console.warn("No demo loaded.");
-      return;
+  public play() {
+    if (this.reader) {
+      this.state = PlaybackState.Playing;
     }
-    this.state = PlaybackState.Playing;
-    this.lastFrameTime = performance.now();
   }
 
-  public pause(): void {
-    this.state = PlaybackState.Paused;
+  public pause() {
+    if (this.state === PlaybackState.Playing) {
+      this.state = PlaybackState.Paused;
+    }
   }
 
-  public stop(): void {
+  public stop() {
     this.state = PlaybackState.Stopped;
+    if (this.reader) {
+      this.reader.reset();
+    }
+    this.accumulatedTime = 0;
   }
 
-  public update(): void {
+  public update(dt: number) {
     if (this.state !== PlaybackState.Playing || !this.reader) {
       return;
     }
 
-    const now = performance.now();
-    const delta = (now - this.lastFrameTime) * this.playbackSpeed;
-    this.lastFrameTime = now;
+    this.accumulatedTime += dt * 1000 * this.playbackSpeed; // Convert to ms
 
-    // In a real implementation, we would use the delta to pace the demo.
-    // For this MVP, we will just try to read one block per update() call
-    // or match the server frame rate (10Hz typically, but we render at 60Hz).
-    // Standard Q2 demo playback is frame-based. We need to read until the next 'frame' command
-    // or pace it based on the `serverFrame` info if available.
+    while (this.accumulatedTime >= this.frameDuration) {
+        if (!this.reader.hasMore()) {
+            this.state = PlaybackState.Finished;
+            return;
+        }
 
-    // For now, let's just read one block per update loop to verify parsing.
-    // A real implementation needs a more sophisticated scheduler.
+        const block = this.reader.readNextBlock();
+        if (!block) {
+            this.state = PlaybackState.Finished;
+            return;
+        }
 
-    try {
-       const block = this.reader.readNextBlock();
-       if (block) {
-           const stream = new BinaryStream(block.data);
-           const parser = new NetworkMessageParser(stream);
-           parser.parseMessage();
-       } else {
-           this.state = PlaybackState.Finished;
-           console.log("Demo finished.");
-       }
-    } catch (e) {
-        console.error("Error reading demo block:", e);
-        this.state = PlaybackState.Stopped;
+        const parser = new NetworkMessageParser(block.data);
+        parser.parseMessage();
+        this.accumulatedTime -= this.frameDuration;
     }
   }
 
