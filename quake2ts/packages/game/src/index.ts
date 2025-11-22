@@ -68,7 +68,7 @@ export function createGame(
   const gravity = options.gravity;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const entities = new EntitySystem(engine, { trace, pointcontents }, gravity);
+  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity: () => {} }, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);

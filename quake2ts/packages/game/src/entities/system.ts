@@ -332,7 +332,7 @@ export class EntitySystem {
           ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.Push:
-          runPush(ent, this.imports, frametime);
+          runPush(ent, this, this.imports, frametime);
           break;
       }
     }

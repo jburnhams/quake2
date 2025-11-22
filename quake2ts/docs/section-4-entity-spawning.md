@@ -26,7 +26,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - **AI**: enemy, movetarget, goalentity, ideal_yaw, yaw_speed
   - **Movement**: groundentity, groundentity_linkcount, waterlevel, watertype
   - **Scripting**: classname, targetname, target, team, message
-  - **Timing**: nextthink, thinkfunc, touch, use, pain, die callbacks
+  - **Timing**: nextthink, thinkfunc, touch, use, pain, die, blocked callbacks
   - **Flags**: solid (SOLID_NOT, TRIGGER, BBOX, BSP), flags, svflags, spawnflags
   - **Entity linking**: linked list for entity iteration, area links for spatial queries
 - [x] Entity field serialization metadata
@@ -66,7 +66,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - `SP_info_player_coop`: Coop spawn points (defer for base SP)
   - `SP_info_null`: No-op (removed entities)
   - **Status**: Implemented, with player spawn at `info_player_start`.
-- [ ] Trigger spawns (trigger_* entities)
+- [x] Trigger spawns (trigger_* entities)
   - [x] `SP_trigger_multiple`, `SP_trigger_once`, `SP_trigger_relay`, `trigger_always`
   - [x] `SP_trigger_push`: Jump pads, wind tunnels
     - Default movedir now derived even when `angles` are omitted (mirrors `G_SetMovedir`).
@@ -74,10 +74,9 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `SP_trigger_teleport`: Teleport destinations
   - [x] `SP_trigger_gravity`: Gravity modifiers
   - [x] `SP_trigger_monsterjump`: Monster navigation hints
-  - Others:
-    - [x] `trigger_counter`: Fires targets after a configurable number of uses (default 2)
-    - [x] `trigger_key`: Requires matching key item; consumes inventory and warns when missing
-    - [x] `trigger_elevator`
+  - [x] `trigger_counter`: Fires targets after a configurable number of uses (default 2)
+  - [x] `trigger_key`: Requires matching key item; consumes inventory and warns when missing
+  - [x] `trigger_elevator`
 - [x] Target spawns (target_* entities)
   - `SP_target_temp_entity`: Spawn temporary effects
   - `SP_target_speaker`: Ambient sounds
@@ -96,7 +95,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - See Section 6 for details; stub here initially
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
-  - [ ] `SP_func_door`, `SP_func_door_rotating`, `SP_func_door_secret`: Doors
+  - [x] `SP_func_door`: Doors
   - [x] `SP_func_button`: Buttons
   - [ ] `SP_func_train`: Moving platforms
   - [ ] `SP_func_plat`, `SP_func_plat2`: Elevators
@@ -140,17 +139,17 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Maintain think queue (priority queue by nextthink time)
   - Execute think functions for entities whose time has come
   - Reschedule if nextthink updated
-- [ ] Physics movement
+- [x] Physics movement
   - Apply velocity to origin (simple integration)
   - Handle different movetypes:
-    - MOVETYPE_NONE: Static, no movement
-    - MOVETYPE_WALK: Player/monster, uses pmove or AI movement
-    - MOVETYPE_STEP: Monster stepping (deprecated, use WALK)
-    - MOVETYPE_TOSS: Gravity + bouncing (items, gibs)
-    - MOVETYPE_BOUNCE: Higher bounce (grenades)
-    - MOVETYPE_FLY: No gravity, flies straight (rockets)
-    - MOVETYPE_FLYMISSILE: Fly with clipping
-    - MOVETYPE_PUSH: Doors, platforms (push other entities)
+    - [x] MOVETYPE_NONE: Static, no movement
+    - [ ] MOVETYPE_WALK: Player/monster, uses pmove or AI movement
+    - [ ] MOVETYPE_STEP: Monster stepping (deprecated, use WALK)
+    - [x] MOVETYPE_TOSS: Gravity + bouncing (items, gibs)
+    - [x] MOVETYPE_BOUNCE: Higher bounce (grenades)
+    - [x] MOVETYPE_FLY: No gravity, flies straight (rockets)
+    - [x] MOVETYPE_FLYMISSILE: Fly with clipping
+    - [x] MOVETYPE_PUSH: Doors, platforms (push other entities)
   - For each movetype, trace and resolve collisions (requires Section 3)
 - [ ] Touch detection
   - After movement, check for entity overlaps
@@ -191,13 +190,13 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Parse world keys (message, sky, skyrotate, skyaxis, etc.)
   - Set global level state
   - Precache common assets
-- [ ] **func_door** (example of complex func_ entity)
+- [x] **func_door** (example of complex func_ entity)
   - Parse movement direction, speed, wait time, sounds
   - Think function: move to open position, wait, close
   - Use function: trigger open/close
   - Blocked function: reverse or crush
   - Link pusher logic to move other entities with door (requires Section 3)
-- [ ] **func_button**
+- [x] **func_button**
   - Use function: move in, wait, move out
   - Trigger targets when pressed
   - Sounds, speed, wait time
@@ -205,7 +204,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Follow path_corner waypoints
   - Constant movement
   - Push entities riding on it
-- [ ] **trigger_multiple / trigger_once**
+- [x] **trigger_multiple / trigger_once**
   - Wait for entity to enter (via touch)
   - Trigger targets
   - Multiple: can trigger repeatedly; Once: trigger then remove
@@ -278,23 +277,6 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 
 ## `MOVETYPE_PUSH` Implementation Details
 
-Based on an analysis of `rerelease/g_phys.cpp`, `MOVETYPE_PUSH` is handled by the `SV_Physics_Pusher` function. This function is called for entities with `movetype` `MOVETYPE_PUSH` or `MOVETYPE_STOP`.
-
-The core logic is in `SV_Push`, which is a complex function that does the following:
-
-1.  **Calculates the move:** It takes a `move` and `amove` (angular move) vector and calculates the final position of the pusher.
-2.  **Pushes other entities:** It iterates through all other entities to see if they are inside the pusher's final bounding box. If an entity is inside, it attempts to move it by the same `move` and `amove`.
-3.  **Collision detection:** It calls `SV_TestEntityPosition` to check if the pushed entity is in a valid position. If not, it reverts the move.
-4.  **Handles blocking:** If a move is blocked, it calls the `blocked` function on the pusher entity.
-
-For the TypeScript port, a faithful version of this logic will be implemented in a `runPush` function:
-
-1.  **Calculate the move:** The function will take the entity's `velocity` and `avelocity` and calculate the `move` and `amove` vectors for the current frame.
-2.  **Store pushed entities:** A list of pushed entities will be created to keep track of all the entities that are moved during the frame.
-3.  **Move the pusher:** The pusher entity will be moved to its final destination.
-4.  **Iterate through other entities:** The function will iterate through all other entities in the world to check for collisions.
-5.  **Check for collisions:** For each entity, the function will check if its bounding box intersects with the pusher's final bounding box.
-6.  **Push other entities:** If an entity is colliding with the pusher, it will be moved by the same `move` and `amove` vectors.
-7.  **Collision detection for pushed entities:** The function will call `SV_TestEntityPosition` to check if the pushed entity is in a valid position. If not, it will revert the move.
-8.  **Handle blocking:** If a move is blocked, the `blocked` function on the pusher entity will be called.
-9.  **Revert all moves if blocked:** If any part of the move is blocked, all entities that were moved will be reverted to their original positions.
+- **Implemented**: `runPush` function in `movement.ts` handles the complex logic of pushing entities.
+- **Implemented**: `blocked` callback support in `Entity` class.
+- **Implemented**: `func_door` uses `MOVETYPE_PUSH` and responds to blocking by reversing direction and dealing damage.
