@@ -121,7 +121,7 @@ This section covers the physics simulation and collision detection system that f
   - Linear movement with trace per frame
   - Explode/remove on impact
   - Handle MOVETYPE_FLYMISSILE (no gravity, flies straight)
-- [ ] Platform/pusher movement
+- [x] Platform/pusher movement
   - Doors, elevators, rotating brushes
   - Push entities along with platform
   - Crush damage if blocked
