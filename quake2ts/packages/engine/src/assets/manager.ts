@@ -3,9 +3,10 @@ import { TextureCache, type PreparedTexture } from './texture.js';
 import { AudioRegistry, type DecodedAudio } from './audio.js';
 import { Md2Loader, type Md2Model } from './md2.js';
 import { Md3Loader, type Md3Model } from './md3.js';
+import { SpriteLoader, type SpriteModel } from './sprite.js';
 import { VirtualFileSystem } from './vfs.js';
 
-type AssetType = 'texture' | 'model' | 'sound';
+type AssetType = 'texture' | 'model' | 'sound' | 'sprite';
 
 interface DependencyNode {
   readonly dependencies: Set<string>;
@@ -89,6 +90,7 @@ export class AssetManager {
   readonly dependencyTracker: AssetDependencyTracker;
   private readonly md2: Md2Loader;
   private readonly md3: Md3Loader;
+  private readonly sprite: SpriteLoader;
 
   constructor(private readonly vfs: VirtualFileSystem, options: AssetManagerOptions = {}) {
     this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
@@ -96,6 +98,7 @@ export class AssetManager {
     this.dependencyTracker = options.dependencyTracker ?? new AssetDependencyTracker();
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
+    this.sprite = new SpriteLoader(vfs);
   }
 
   isAssetLoaded(type: AssetType, path: string): boolean {
@@ -141,6 +144,14 @@ export class AssetManager {
     const model = await this.md3.load(path);
     this.dependencyTracker.markLoaded(modelKey);
     return model;
+  }
+
+  async loadSprite(path: string): Promise<SpriteModel> {
+    const spriteKey = this.makeKey('sprite', path);
+    this.dependencyTracker.register(spriteKey);
+    const sprite = await this.sprite.load(path);
+    this.dependencyTracker.markLoaded(spriteKey);
+    return sprite;
   }
 
   resetForLevelChange(): void {

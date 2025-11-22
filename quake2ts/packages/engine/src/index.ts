@@ -81,6 +81,13 @@ export {
   type Md3Surface,
 } from './assets/md3.js';
 export {
+  SpriteLoader,
+  SpriteParseError,
+  parseSprite,
+  type SpriteFrame,
+  type SpriteModel,
+} from './assets/sprite.js';
+export {
   advanceAnimation,
   computeFrameBlend,
   createAnimationState,
