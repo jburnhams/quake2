@@ -61,6 +61,6 @@ describe('Shotgun', () => {
         }
         expect(allSame).toBe(false);
 
-        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 4, 1, 0, 0);
+        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 4, 1, 16, 2);
     });
 });

@@ -6,13 +6,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
-import * as damage from '../../src/combat/damage.js';
+import * as projectiles from '../../src/entities/projectiles.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
 
 describe('HyperBlaster', () => {
-    it('should consume 1 cell and deal damage', () => {
+    it('should consume 1 cell and spawn a blaster bolt', () => {
         const trace = vi.fn();
         const pointContents = vi.fn();
-        const T_Damage = vi.spyOn(damage, 'T_Damage');
+        const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
             sound: vi.fn(),
@@ -34,20 +35,9 @@ describe('HyperBlaster', () => {
             ammo: { [AmmoType.Cells]: 50 },
         });
 
-        const target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = 1;
-
-        trace.mockReturnValue({
-            ent: target,
-            endpos: { x: 10, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
-        });
-
         fire(game, player, WeaponId.HyperBlaster);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(1);
-        expect(T_Damage).toHaveBeenCalled();
+        expect(createBlasterBolt).toHaveBeenCalledWith(game, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
     });
 });

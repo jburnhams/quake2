@@ -47,6 +47,7 @@ describe('Super Shotgun', () => {
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
         expect(trace).toHaveBeenCalledTimes(20);
-        expect(T_Damage).toHaveBeenCalled();
+        // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
+        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3);
     });
 });
