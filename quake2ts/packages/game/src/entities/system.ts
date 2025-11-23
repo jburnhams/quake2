@@ -1,6 +1,7 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
+import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
 import { GameImports, TraceFunction, PointContentsFunction } from '../imports.js';
 import {
@@ -333,6 +334,10 @@ export class EntitySystem {
     for (const ent of this.pool) {
       if (!ent.inUse || ent.freePending) {
         continue;
+      }
+
+      if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
+        checkWater(ent, this, this.imports);
       }
 
       const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
