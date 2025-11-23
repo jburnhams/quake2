@@ -7,6 +7,7 @@ import {
   Renderer,
   DemoPlaybackController,
   PlaybackState,
+  EngineHost,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
@@ -44,6 +45,7 @@ export { ClientConfigStrings } from './configStrings.js';
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
+  readonly host?: EngineHost;
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
@@ -76,7 +78,12 @@ export function createClient(imports: ClientImports): ClientExports {
   const view = new ViewEffects();
   const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
-  const demoHandler = new ClientNetworkHandler();
+  const demoHandler = new ClientNetworkHandler(imports);
+
+  // Hook up message system to demo handler
+  demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+  demoHandler.onPrint = (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+
   const configStrings = new ClientConfigStrings();
 
   demoPlayback.setHandler(demoHandler);
@@ -85,6 +92,19 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
+
+  if (imports.host?.commands) {
+    imports.host.commands.register('playdemo', (args) => {
+      if (args.length < 1) {
+        console.log('usage: playdemo <filename>');
+        return;
+      }
+      const filename = args[0];
+      console.log(`playdemo: ${filename}`);
+      console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
+      // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
+    }, 'Play a recorded demo');
+  }
 
   const clientExports: ClientExports = {
     init(initial) {
@@ -173,6 +193,13 @@ export function createClient(imports: ClientImports): ClientExports {
             damageIndicators: stateAsPlayerState.damageIndicators ?? [],
         };
 
+        const playbackState = demoPlayback.getState();
+
+        // Use demo time if playing, else game time
+        const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
+            ? (demoHandler.latestFrame?.serverFrame || 0) * 100 // Approximate
+            : timeMs;
+
         Draw_Hud(
           imports.engine.renderer,
           playerState,
@@ -182,7 +209,7 @@ export function createClient(imports: ClientImports): ClientExports {
           lastRendered.ammo,
           stats,
           messageSystem,
-          timeMs
+          hudTimeMs
         );
     },
 

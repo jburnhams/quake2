@@ -24,6 +24,15 @@ export enum WeaponId {
   HyperBlaster = 'hyperblaster',
   Railgun = 'railgun',
   BFG10K = 'bfg10k',
+  // New additions for demo playback and extended support
+  Grapple = 'grapple',
+  ChainFist = 'chainfist',
+  EtfRifle = 'etf_rifle',
+  ProxLauncher = 'prox_launcher',
+  IonRipper = 'ionripper',
+  PlasmaBeam = 'plasmabeam',
+  Phalanx = 'phalanx',
+  Disruptor = 'disruptor',
 }
 
 export enum PowerupId {
@@ -32,6 +41,26 @@ export enum PowerupId {
   EnviroSuit = 'enviro_suit',
   Rebreather = 'rebreather',
   Silencer = 'silencer',
+  // New additions for demo playback and extended support
+  PowerScreen = 'power_screen',
+  PowerShield = 'power_shield',
+  QuadFire = 'quad_fire',
+  Invisibility = 'invisibility',
+  Bandolier = 'bandolier',
+  AmmoPack = 'ammo_pack',
+  IRGoggles = 'ir_goggles',
+  DoubleDamage = 'double_damage',
+  SphereVengeance = 'sphere_vengeance',
+  SphereHunter = 'sphere_hunter',
+  SphereDefender = 'sphere_defender',
+  Doppelganger = 'doppelganger',
+  TagToken = 'tag_token',
+  TechResistance = 'tech_resistance',
+  TechStrength = 'tech_strength',
+  TechHaste = 'tech_haste',
+  TechRegeneration = 'tech_regeneration',
+  Flashlight = 'flashlight',
+  Compass = 'compass',
 }
 
 export enum KeyId {
@@ -39,6 +68,20 @@ export enum KeyId {
   Red = 'red',
   Green = 'green',
   Yellow = 'yellow',
+  // New additions for demo playback and extended support
+  DataCD = 'data_cd',
+  PowerCube = 'power_cube',
+  ExplosiveCharges = 'explosive_charges',
+  PowerCore = 'power_core',
+  Pyramid = 'pyramid',
+  DataSpinner = 'data_spinner',
+  Pass = 'pass',
+  CommanderHead = 'commander_head',
+  Airstrike = 'airstrike',
+  NukeContainer = 'nuke_container',
+  Nuke = 'nuke',
+  RedFlag = 'red_flag',
+  BlueFlag = 'blue_flag',
 }
 
 export interface PlayerInventoryOptions {
