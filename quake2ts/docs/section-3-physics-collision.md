@@ -181,8 +181,9 @@ This section covers the physics simulation and collision detection system that f
 - [x] **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection (partially covered in shared/tests/bsp and game/tests/physics/integration.test.ts)
 
 ### Performance Tests
-- **Trace throughput**: Measure traces per second on complex maps
+- [x] **Trace throughput**: Measure traces per second on complex maps
   - Target: 10,000+ traces/sec for real-time gameplay
+  - **Status**: Verified with `tests/bsp/trace.perf.test.ts`.
 - **Player movement frame time**: pmove with 20+ traces per frame should stay under 1ms
 - **Entity collision scaling**: Test with 100+ entities, measure trace overhead
 - **Spatial partitioning efficiency**: Verify BSP traversal reduces brush tests
