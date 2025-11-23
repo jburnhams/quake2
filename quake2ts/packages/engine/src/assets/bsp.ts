@@ -311,7 +311,7 @@ function parseVertices(buffer: ArrayBuffer, info: BspLumpInfo): Vec3[] {
 
 function parseNodes(buffer: ArrayBuffer, info: BspLumpInfo): BspNode[] {
   const view = new DataView(buffer, info.offset, info.length);
-  const entrySize = 36;
+  const entrySize = 28;
   const count = info.length / entrySize;
   if (count % 1 !== 0) {
     throw new BspParseError('Node lump has invalid length');
@@ -475,7 +475,7 @@ function parseBrushes(buffer: ArrayBuffer, info: BspLumpInfo): BspBrush[] {
 
 function parseBrushSides(buffer: ArrayBuffer, info: BspLumpInfo): BspBrushSide[] {
   const view = new DataView(buffer, info.offset, info.length);
-  const entrySize = 8;
+  const entrySize = 4;
   const count = info.length / entrySize;
   if (count % 1 !== 0) {
     throw new BspParseError('Brush side lump has invalid length');
