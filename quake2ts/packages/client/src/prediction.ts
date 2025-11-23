@@ -12,6 +12,7 @@ import {
   WaterLevel,
   type PmFlags,
   type UserCommand,
+  DamageIndicator,
 } from '@quake2ts/shared';
 import {
   applyPmoveAccelerate,
@@ -37,6 +38,10 @@ export interface PredictionState {
   readonly ammo: number;
   readonly centerPrint?: string;
   readonly notify?: string;
+  readonly blend: [number, number, number, number];
+  readonly pickupIcon?: string;
+  readonly damageAlpha: number;
+  readonly damageIndicators: DamageIndicator[];
 }
 
 export interface PredictionSettings {
@@ -82,6 +87,9 @@ export function defaultPredictionState(): PredictionState {
     health: 0,
     armor: 0,
     ammo: 0,
+    blend: [0, 0, 0, 0],
+    damageAlpha: 0,
+    damageIndicators: [],
   } satisfies PredictionState;
 }
 
@@ -95,6 +103,8 @@ function normalizeState(state: PredictionState | undefined): PredictionState {
     velocity: { ...state.velocity },
     viewangles: { ...state.viewangles },
     deltaAngles: state.deltaAngles ? { ...state.deltaAngles } : ZERO_VEC3,
+    blend: state.blend ? [...state.blend] : [0, 0, 0, 0],
+    damageIndicators: state.damageIndicators ? [...state.damageIndicators] : [],
   } satisfies PredictionState;
 }
 
@@ -143,6 +153,10 @@ export function interpolatePredictionState(
     ammo: lerp(previous.ammo, latest.ammo, clamped),
     centerPrint: latest.centerPrint,
     notify: latest.notify,
+    blend: latest.blend,
+    pickupIcon: latest.pickupIcon,
+    damageAlpha: latest.damageAlpha,
+    damageIndicators: latest.damageIndicators,
   } satisfies PredictionState;
 }
 

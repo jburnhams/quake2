@@ -1,4 +1,5 @@
 import { Vec3 } from '../math/vec3.js';
+import { ANORMS } from '../math/anorms.js';
 
 export class BinaryStream {
   private view: DataView;
@@ -118,8 +119,9 @@ export class BinaryStream {
       out.x = 0; out.y = 0; out.z = 0;
       return;
     }
-    // TODO: Implement bytedirs lookup
-    // For now, zero it out
-    out.x = 0; out.y = 0; out.z = 0;
+    const norm = ANORMS[b];
+    out.x = norm[0];
+    out.y = norm[1];
+    out.z = norm[2];
   }
 }

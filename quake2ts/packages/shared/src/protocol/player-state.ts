@@ -18,6 +18,8 @@ export interface PlayerState {
   maxs: Vec3;
   damageAlpha: number;
   damageIndicators: DamageIndicator[];
+  blend: [number, number, number, number]; // r, g, b, a
+  pickupIcon?: string; // Name of the icon to draw (e.g. 'w_railgun')
   centerPrint?: string;
   notify?: string;
 }

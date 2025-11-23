@@ -1,5 +1,6 @@
 export * from './math/vec3.js';
 export * from './math/angles.js';
+export * from './math/anorms.js';
 export * from './math/color.js';
 export * from './math/random.js';
 export * from './math/mat4.js';

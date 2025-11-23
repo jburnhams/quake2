@@ -21,12 +21,14 @@ export function createPowerupPickupEntity(game: GameExports, powerupItem: Poweru
                 return;
             }
 
-            if (pickupPowerup(other.client.inventory, powerupItem, game.time)) {
+            if (pickupPowerup(other.client.inventory, powerupItem, game.time * 1000)) {
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${powerupItem.name}`);
                 self.solid = Solid.Not;
-                self.nextthink = game.time + 30;
-                game.entities.scheduleThink(self, self.nextthink);
+                if (game.deathmatch) {
+                    self.nextthink = game.time + 30;
+                    game.entities.scheduleThink(self, self.nextthink);
+                }
             }
         },
         think: respawn,

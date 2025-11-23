@@ -10,6 +10,7 @@ import {
 } from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
+import { resolveImpact, checkTriggers } from './collision.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
@@ -164,7 +165,10 @@ export function runStep(
     }
 
     // Hit something
-    // TODO: SV_Impact / G_TouchTriggers should be called here if trace.ent is valid
+    if (trace.ent) {
+      resolveImpact(ent, trace, system);
+    }
+
     timeLeft -= timeLeft * trace.fraction;
 
     if (trace.plane) {
@@ -183,6 +187,7 @@ export function runStep(
   ent.velocity = velocity;
   imports.linkentity(ent);
 
+  checkTriggers(ent, system);
   CheckGround(ent, system);
 }
 

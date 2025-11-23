@@ -29,8 +29,10 @@ export function createHealthPickupEntity(game: GameExports, healthItem: HealthIt
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${healthItem.name}`);
                 self.solid = Solid.Not;
-                self.nextthink = game.time + 30;
-                game.entities.scheduleThink(self, self.nextthink);
+                if (game.deathmatch) {
+                    self.nextthink = game.time + 30;
+                    game.entities.scheduleThink(self, self.nextthink);
+                }
             }
         },
         think: respawn,

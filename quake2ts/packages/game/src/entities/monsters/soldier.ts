@@ -18,10 +18,14 @@ import {
 } from '../entity.js';
 import { SpawnContext } from '../spawn.js';
 import { SpawnRegistry } from '../spawn.js';
-import { monster_fire_bullet } from './attack.js';
+import { monster_fire_bullet, monster_fire_blaster, monster_fire_shotgun } from './attack.js';
 import { throwGibs } from '../gibs.js';
 
 const MONSTER_TICK = 0.1;
+
+const SOLDIER_LIGHT = 1;
+const SOLDIER_SSG = 2;
+const SOLDIER_MACHINEGUN = 4;
 
 // Wrappers for AI functions to match AIAction signature (self, dist)
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
@@ -48,7 +52,8 @@ function monster_ai_move(self: Entity, dist: number, context: any): void {
 let stand_move: MonsterMove;
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
-let attack_move: MonsterMove;
+let attack_move: MonsterMove; // Default/Blaster/SSG
+let attack_move_mg: MonsterMove; // Machinegun
 let pain_move: MonsterMove;
 let death_move: MonsterMove;
 
@@ -69,7 +74,12 @@ function soldier_run(self: Entity): void {
 }
 
 function soldier_attack(self: Entity): void {
-  self.monsterinfo.current_move = attack_move;
+  // Choose attack move based on spawnflags
+  if (self.spawnflags & SOLDIER_MACHINEGUN) {
+    self.monsterinfo.current_move = attack_move_mg;
+  } else {
+    self.monsterinfo.current_move = attack_move;
+  }
 }
 
 function soldier_pain(self: Entity): void {
@@ -80,22 +90,76 @@ function soldier_die(self: Entity): void {
   self.monsterinfo.current_move = death_move;
 }
 
-function soldier_fire(self: Entity, context: any): void {
-  // soldier_fire logic
-  if (!self.enemy) return;
-
-  const start: Vec3 = {
+function get_fire_start(self: Entity): Vec3 {
+  return {
     x: self.origin.x,
     y: self.origin.y,
     z: self.origin.z + self.viewheight,
   };
+}
 
-  const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+function get_fire_dir(self: Entity, start: Vec3): Vec3 {
+  if (!self.enemy) {
+    // Should not happen during attack usually, but fallback
+    const { forward } = angleVectors(self.angles);
+    return forward;
+  }
+
+  // Aim at enemy eye level (or center) if possible, not feet
+  const target = {
+    x: self.enemy.origin.x,
+    y: self.enemy.origin.y,
+    z: self.enemy.origin.z + (self.enemy.viewheight || 0),
+  };
+
+  return normalizeVec3(subtractVec3(target, start));
+}
+
+function soldier_fire_blaster(self: Entity, context: any): void {
+  if (!self.enemy) return;
+  const start = get_fire_start(self);
+  const forward = get_fire_dir(self, start);
+  const damage = 5;
+  const speed = 600;
+
+  monster_fire_blaster(self, start, forward, damage, speed, 0, 0, context, DamageMod.BLASTER);
+}
+
+function soldier_fire_ssg(self: Entity, context: any): void {
+  if (!self.enemy) return;
+  const start = get_fire_start(self);
+  const forward = get_fire_dir(self, start);
+  const damage = 2;
+  const kick = 4;
+  const count = 20;
+  // Spread: Approx 0.12-0.15 for shotgun at range
+  const hspread = 0.15;
+  const vspread = 0.15;
+
+  monster_fire_shotgun(self, start, forward, damage, kick, hspread, vspread, count, 0, context, DamageMod.SSHOTGUN);
+}
+
+function soldier_fire_machinegun(self: Entity, context: any): void {
+  if (!self.enemy) return;
+  const start = get_fire_start(self);
+  const forward = get_fire_dir(self, start);
   const damage = 4;
   const kick = 4;
+  // Little spread
+  const hspread = 0.05;
+  const vspread = 0.05;
 
-  // fire bullet
-  monster_fire_bullet(self, start, forward, damage, kick, 0, 0, 0, context, DamageMod.MACHINEGUN);
+  monster_fire_bullet(self, start, forward, damage, kick, hspread, vspread, 0, context, DamageMod.MACHINEGUN);
+}
+
+function soldier_fire(self: Entity, context: any): void {
+  // Dispatch based on flags
+  if (self.spawnflags & SOLDIER_SSG) {
+    soldier_fire_ssg(self, context);
+  } else {
+    // Default is Blaster (Light or normal)
+    soldier_fire_blaster(self, context);
+  }
 }
 
 // Define moves
@@ -135,6 +199,7 @@ run_move = {
   endfunc: soldier_run,
 };
 
+// Attack 1 (Blaster/SSG) - Fire once at frame 5
 const attack_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
   ai: monster_ai_charge,
   dist: 0,
@@ -147,6 +212,22 @@ attack_move = {
   frames: attack_frames,
   endfunc: soldier_run,
 };
+
+// Attack MG - Fire burst
+const attack_frames_mg: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
+  ai: monster_ai_charge,
+  dist: 0,
+  // Fire on frames 4, 5, 6, 7, 8
+  think: (i >= 4 && i <= 8) ? soldier_fire_machinegun : null,
+}));
+
+attack_move_mg = {
+  firstframe: 90,
+  lastframe: 99,
+  frames: attack_frames_mg,
+  endfunc: soldier_run,
+};
+
 
 const pain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
   ai: monster_ai_move,
@@ -179,7 +260,7 @@ death_move = {
 };
 
 
-function SP_monster_soldier(self: Entity, context: SpawnContext): void {
+export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.model = 'models/monsters/soldier/tris.md2';
   self.mins = { x: -16, y: -16, z: -24 };
   self.maxs = { x: 16, y: 16, z: 32 };
@@ -189,6 +270,27 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.max_health = 20;
   self.mass = 100;
   self.takedamage = true;
+
+  // Set skin and stats based on flags
+  if (self.spawnflags & SOLDIER_SSG) {
+    self.skin = 2;
+    self.health = 30; // Slightly stronger?
+    self.max_health = 30;
+  } else if (self.spawnflags & SOLDIER_MACHINEGUN) {
+    self.skin = 4;
+    self.health = 30;
+    self.max_health = 30;
+  } else {
+    // Light or Normal
+    self.skin = 0;
+    // self.health = 20;
+  }
+
+  // Override for Light soldier?
+  if (self.spawnflags & SOLDIER_LIGHT) {
+    self.health = 10;
+    self.max_health = 10;
+  }
 
   self.pain = (self, other, kick, damage) => {
     if (self.health < (self.max_health / 2)) {
@@ -220,6 +322,18 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
+export function SP_monster_soldier_light(self: Entity, context: SpawnContext): void {
+  self.spawnflags |= SOLDIER_LIGHT;
+  SP_monster_soldier(self, context);
+}
+
+export function SP_monster_soldier_ssg(self: Entity, context: SpawnContext): void {
+  self.spawnflags |= SOLDIER_SSG;
+  SP_monster_soldier(self, context);
+}
+
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registry.register('monster_soldier', SP_monster_soldier);
+  registry.register('monster_soldier_light', SP_monster_soldier_light);
+  registry.register('monster_soldier_ssg', SP_monster_soldier_ssg);
 }

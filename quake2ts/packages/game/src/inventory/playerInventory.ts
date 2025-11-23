@@ -10,7 +10,7 @@ import {
   createAmmoInventory,
   pickupAmmo,
 } from './ammo.js';
-import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, ARMOR_ITEMS } from './items.js';
+import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 
 export enum WeaponId {
@@ -101,6 +101,8 @@ export interface PlayerInventory {
   armor: RegularArmorState | null;
   readonly powerups: Map<PowerupId, number | null>;
   readonly keys: Set<KeyId>;
+  pickupItem?: string;
+  pickupTime?: number;
 }
 
 export interface PlayerClient {
@@ -122,6 +124,11 @@ export function createPlayerInventory(options: PlayerInventoryOptions = {}): Pla
     powerups,
     keys,
   };
+}
+
+export function setPickup(inventory: PlayerInventory, item: string, time: number) {
+    inventory.pickupItem = item;
+    inventory.pickupTime = time;
 }
 
 export function giveAmmo(inventory: PlayerInventory, ammoType: AmmoType, amount: number): AmmoAdjustmentResult {
@@ -203,14 +210,18 @@ export function canPickupHealth(inventory: PlayerInventory, health: number, item
     return true;
 }
 
-export function pickupArmor(inventory: PlayerInventory, item: ArmorItem): boolean {
+export function pickupArmor(inventory: PlayerInventory, item: ArmorItem, time: number): boolean {
     let armorType: ArmorType | null = null;
+    let icon = '';
     if (item.id === 'item_armor_jacket') {
         armorType = ArmorType.JACKET;
+        icon = 'i_jacketarmor';
     } else if (item.id === 'item_armor_combat') {
         armorType = ArmorType.COMBAT;
+        icon = 'i_combatarmor';
     } else if (item.id === 'item_armor_body') {
         armorType = ArmorType.BODY;
+        icon = 'i_bodyarmor';
     }
 
     if (armorType) {
@@ -223,6 +234,7 @@ export function pickupArmor(inventory: PlayerInventory, item: ArmorItem): boolea
                 inventory.armor.armorCount = armorInfo.maxCount;
             }
         }
+        setPickup(inventory, icon, time);
         return true;
     }
 
@@ -243,22 +255,28 @@ export function pickupArmor(inventory: PlayerInventory, item: ArmorItem): boolea
 
 export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, time: number): boolean {
     let powerupId: PowerupId | null = null;
+    let icon = '';
 
     switch (item.id) {
         case 'item_quad':
             powerupId = PowerupId.QuadDamage;
+            icon = 'p_quad';
             break;
         case 'item_invulnerability':
             powerupId = PowerupId.Invulnerability;
+            icon = 'p_invulnerability';
             break;
         case 'item_silencer':
             powerupId = PowerupId.Silencer;
+            icon = 'p_silencer';
             break;
         case 'item_rebreather':
             powerupId = PowerupId.Rebreather;
+            icon = 'p_rebreather';
             break;
         case 'item_enviro':
             powerupId = PowerupId.EnviroSuit;
+            icon = 'p_envirosuit';
             break;
     }
 
@@ -269,38 +287,46 @@ export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, tim
         } else {
             inventory.powerups.set(powerupId, time + item.timer);
         }
+        setPickup(inventory, icon, time);
         return true;
     }
 
     return false;
 }
 
-export function pickupKey(inventory: PlayerInventory, item: KeyItem): boolean {
+export function pickupKey(inventory: PlayerInventory, item: KeyItem, time: number): boolean {
     let keyId: KeyId | null = null;
+    let icon = '';
 
     switch (item.id) {
         case 'key_blue':
             keyId = KeyId.Blue;
+            icon = 'k_bluekey';
             break;
         case 'key_red':
             keyId = KeyId.Red;
+            icon = 'k_redkey';
             break;
         case 'key_green':
             keyId = KeyId.Green;
+            icon = 'k_security'; // Approx mapping
             break;
         case 'key_yellow':
             keyId = KeyId.Yellow;
+            icon = 'k_pyramid'; // Approx mapping
             break;
     }
 
     if (keyId) {
-        return addKey(inventory, keyId);
+        const res = addKey(inventory, keyId);
+        if (res) setPickup(inventory, icon, time);
+        return res;
     }
 
     return false;
 }
 
-export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem): boolean {
+export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem, time: number): boolean {
   const hadWeapon = hasWeapon(inventory, weaponItem.weaponId);
   let ammoAdded = false;
 
@@ -315,6 +341,12 @@ export function pickupWeapon(inventory: PlayerInventory, weaponItem: WeaponItem)
   }
 
   giveWeapon(inventory, weaponItem.weaponId, true);
+
+  // Icon name for weapon
+  // weaponItem.id is like 'weapon_railgun'
+  // icons are 'w_railgun'
+  const icon = `w_${weaponItem.id.substring(7)}`;
+  setPickup(inventory, icon, time);
 
   return true;
 }

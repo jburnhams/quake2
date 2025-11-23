@@ -22,6 +22,10 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Unit tests for monster spawning, state transitions, and animation looping
 - ✅ AI Movement helpers: `CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`
 - ✅ Implemented `pain` and `die` callbacks for Soldier and Gunner, including gibbing logic.
+- ✅ Implemented Soldier variants (Shotgun Guard, Machinegun Guard) via spawnflags and unit tests.
+- ✅ Implemented Gunner unit tests covering dual attacks (chain/grenade).
+- ✅ Implemented Infantry (Enforcer) behaviors and unit tests.
+- ✅ Implemented Berserker behaviors and unit tests.
 
 ## Tasks Remaining
 
@@ -118,18 +122,18 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Guard** (basic soldier)
   - Machinegun ranged attack
   - Moderate health, common enemy
-- [ ] **Shotgun Guard**
+- [x] **Shotgun Guard**
   - Shotgun ranged attack, spread damage
-- [ ] **Machinegun Guard**
+- [x] **Machinegun Guard**
   - Faster machinegun fire
-- [ ] **Enforcer** (chaingun soldier)
+- [x] **Enforcer** (chaingun soldier)
   - Chaingun attack, high fire rate
 - [x] **Gunner**
   - Dual attack: machinegun and grenade launcher
   - Choose based on range
 - [ ] **Infantry**
   - Machinegun, can dodge
-- [ ] **Berserker** (melee)
+- [x] **Berserker** (melee)
   - Strong melee attacks
   - Charge attack
   - High health
@@ -263,10 +267,14 @@ Recent work:
 - Implemented the Quake II `mmove_t` and `mframe_t` system via `MonsterMove` and `MonsterFrame` interfaces.
 - Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
 - Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
-- Added comprehensive tests for monster spawning, frame advancement, and animation looping.
+- Added comprehensive tests for monster spawning, state transitions, and animation looping.
 - Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
 - Implemented `monster_gunner` with machinegun and grenade launcher attacks, ensuring correct spawn properties and state transitions.
 - Implemented pain and death callbacks for `monster_soldier` and `monster_gunner`, including animation states and gibbing.
+- Implemented Soldier variants (Shotgun Guard, Machinegun Guard) via spawnflags and unit tests.
+- Implemented Gunner unit tests covering dual attacks (chain/grenade).
+- Implemented Infantry (Enforcer) behaviors and unit tests.
+- Implemented Berserker behaviors and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback

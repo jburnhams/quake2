@@ -14,6 +14,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 
 export interface GameCreateOptions {
   gravity: Vec3;
+  deathmatch?: boolean;
 }
 
 import { ServerCommand } from '@quake2ts/shared';
@@ -28,15 +29,35 @@ export interface GameEngine {
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }
 
+// Extend GameStateSnapshot to include what Client needs if possible
+// But createGame returns GameStateSnapshot, which createClient might expect to be compatible with PredictionState
+// or createClient converts it.
+// Given `createClient` expects `GameFrameResult<PredictionState>`, and `createGame` returns `GameFrameResult<GameStateSnapshot>`,
+// there must be a disconnect or loose typing in the test harness.
+// However, we will assume we can extend GameStateSnapshot to mimic PredictionState structure where possible.
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
   readonly origin: Vec3;
   readonly velocity: Vec3;
+  readonly viewangles: Vec3; // Added
   readonly level: LevelFrameState;
   readonly entities: {
     readonly activeCount: number;
     readonly worldClassname: string;
   };
+  // Adding fields to match PredictionState expectations roughly
+  readonly pmFlags: number; // PmFlags
+  readonly pmType: number; // PmType
+  readonly waterlevel: number;
+  readonly deltaAngles: Vec3;
+  readonly client?: PlayerClient;
+  readonly health: number;
+  readonly armor: number;
+  readonly ammo: number;
+  readonly blend: [number, number, number, number];
+  readonly pickupIcon?: string;
+  readonly damageAlpha: number;
+  readonly damageIndicators: any[];
 }
 
 import { findPlayerStart } from './entities/spawn.js';
@@ -54,6 +75,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
+  readonly deathmatch: boolean;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
@@ -63,7 +85,7 @@ export { hashGameState } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
-import { createPlayerInventory } from './inventory/index.js';
+import { createPlayerInventory, PlayerClient, PowerupId } from './inventory/index.js';
 import { createPlayerWeaponStates } from './combat/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';
@@ -75,6 +97,7 @@ export function createGame(
   options: GameCreateOptions
 ): GameExports {
   const gravity = options.gravity;
+  const deathmatch = options.deathmatch ?? false;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
 
@@ -115,20 +138,90 @@ export function createGame(
   let origin: Vec3 = { ...ZERO_VEC3 };
   let velocity: Vec3 = { ...ZERO_VEC3 };
 
-  const snapshot = (frame: number): GameFrameResult<GameStateSnapshot> => ({
-    frame,
-    timeMs: frameLoop.time,
-    state: {
-      gravity: { ...gravity },
-      origin: { ...origin },
-      velocity: { ...velocity },
-      level: { ...levelClock.current },
-      entities: {
-        activeCount: entities.activeCount,
-        worldClassname: entities.world.classname,
+  // Helper to calculate blend
+  const calculateBlend = (player: Entity | undefined, time: number): [number, number, number, number] => {
+      const blend: [number, number, number, number] = [0, 0, 0, 0];
+      if (!player || !player.client) return blend;
+
+      const inventory = player.client.inventory;
+
+      // Powerup blends
+      // Quad Damage: Blue
+      if (inventory.powerups.has(PowerupId.QuadDamage)) {
+           // In Q2, Quad is Blue blend (0, 0, 1, 0.2)? Or partial.
+           // Actually Q2 rerelease source: G_AddBlend(0, 0, 1, 0.08f, ent->client->ps.screen_blend);
+           blend[2] = 1;
+           blend[3] = 0.08;
+      }
+      // Invulnerability: Yellow/Red?
+      if (inventory.powerups.has(PowerupId.Invulnerability)) {
+           // Q2: G_AddBlend(1, 1, 0, 0.08f, ...) -> Yellow
+           blend[0] = 1;
+           blend[1] = 1;
+           blend[3] = 0.08;
+      }
+      // Enviro Suit: Green
+       if (inventory.powerups.has(PowerupId.EnviroSuit)) {
+           // Q2: G_AddBlend(0, 1, 0, 0.08f, ...) -> Green
+           blend[1] = 1;
+           blend[3] = 0.08;
+      }
+       // Rebreather: Whiteish?
+       if (inventory.powerups.has(PowerupId.Rebreather)) {
+           // Q2: G_AddBlend(0.4f, 1, 0.4f, 0.04f, ...)
+           blend[0] = 0.4;
+           blend[1] = 1;
+           blend[2] = 0.4;
+           blend[3] = 0.04;
+      }
+
+      // Damage red flash is handled separately via damageAlpha usually, but here we can combine or keep separate.
+      // Water/Slime/Lava tint would also go here if we had access to view content type.
+      // Assuming standard blending logic will combine these if we return a single tuple.
+      // Since we only support one "blend" field in PlayerState currently, we return the highest priority or accumulated one.
+
+      return blend;
+  };
+
+  const snapshot = (frame: number): GameFrameResult<GameStateSnapshot> => {
+    const player = entities.find(e => e.classname === 'player');
+
+    // Calculate pickup icon expiration
+    let pickupIcon: string | undefined = undefined;
+    if (player?.client?.inventory.pickupItem && player.client.inventory.pickupTime) {
+        if (levelClock.current.timeSeconds * 1000 < player.client.inventory.pickupTime + 3000) {
+            pickupIcon = player.client.inventory.pickupItem;
+        }
+    }
+
+    return {
+      frame,
+      timeMs: frameLoop.time,
+      state: {
+        gravity: { ...gravity },
+        origin: player ? { ...player.origin } : { ...origin },
+        velocity: player ? { ...player.velocity } : { ...velocity },
+        viewangles: player ? { ...player.angles } : { x:0, y:0, z:0 },
+        level: { ...levelClock.current },
+        entities: {
+          activeCount: entities.activeCount,
+          worldClassname: entities.world.classname,
+        },
+        pmFlags: 0, // TODO: get from player
+        pmType: 0,
+        waterlevel: player ? player.waterlevel : 0,
+        deltaAngles: { x: 0, y: 0, z: 0 },
+        client: player?.client,
+        health: player?.health ?? 0,
+        armor: player?.client?.inventory.armor?.armorCount ?? 0,
+        ammo: 0, // TODO: get current weapon ammo
+        blend: calculateBlend(player, frameLoop.time),
+        pickupIcon,
+        damageAlpha: 0, // TODO
+        damageIndicators: []
       },
-    },
-  });
+    };
+  };
 
   const resetState = (startTimeMs: number) => {
     frameLoop.reset(startTimeMs);
@@ -182,7 +275,19 @@ export function createGame(
           upmove: command.upmove,
           buttons: command.buttons,
         };
-        const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs, damageAlpha: 0, damageIndicators: [], viewAngles: player.angles };
+        // We really should use pmove state from the entity if possible
+        const playerState = {
+            origin: player.origin,
+            velocity: player.velocity,
+            onGround: false, // Should be persistent
+            waterLevel: 0,
+            mins: player.mins,
+            maxs: player.maxs,
+            damageAlpha: 0,
+            damageIndicators: [],
+            viewAngles: player.angles,
+            blend: [0,0,0,0] as [number, number, number, number]
+        };
 
         // Adapter functions to match pmove signatures
         const traceAdapter = (start: Vec3, end: Vec3) => {
@@ -200,6 +305,7 @@ export function createGame(
         const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
         player.origin = newState.origin;
         player.velocity = newState.velocity;
+        player.angles = newState.viewAngles; // Update angles
       }
       return snapshot(context.frame);
     },
@@ -211,6 +317,7 @@ export function createGame(
       engine.centerprintf?.(entity, message);
     },
     trace,
+    deathmatch,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
       multicast(origin, type, event, ...args);
     },

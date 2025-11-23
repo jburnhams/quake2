@@ -9,7 +9,7 @@ import {
   PlaybackState,
   EngineHost,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
@@ -19,6 +19,11 @@ import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
 import { ClientConfigStrings } from './configStrings.js';
+import { Cycle_Crosshair } from './hud/crosshair.js';
+import { MainMenuFactory, MainMenuOptions } from './ui/menu/main.js';
+import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
+import { MenuSystem } from './ui/menu/system.js';
+import { SaveStorage } from '@quake2ts/game';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -67,6 +72,9 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   demoPlayback: DemoPlaybackController;
   demoHandler: ClientNetworkHandler;
 
+  // Menu System
+  createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
   Shutdown(): void;
@@ -104,6 +112,11 @@ export function createClient(imports: ClientImports): ClientExports {
       console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
       // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
     }, 'Play a recorded demo');
+
+    imports.host.commands.register('crosshair', () => {
+        const index = Cycle_Crosshair();
+        console.log(`Crosshair changed to index ${index}`);
+    }, 'Cycle through available crosshairs');
   }
 
   const clientExports: ClientExports = {
@@ -116,11 +129,24 @@ export function createClient(imports: ClientImports): ClientExports {
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
+
+      // Initialize HUD assets if asset manager is available
+      if (imports.engine.assets && imports.engine.renderer) {
+         Init_Hud(imports.engine.renderer, imports.engine.assets);
+      }
+
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
 
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
+    },
+
+    createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+        const menuSystem = new MenuSystem();
+        const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
+        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, options);
+        return { menuSystem, factory };
     },
 
     render(sample: GameRenderSample<PredictionState>): UserCommand {
@@ -177,10 +203,6 @@ export function createClient(imports: ClientImports): ClientExports {
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
         if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
 
-        // Use values from lastRendered if available (cast to PlayerState to access damage fields if they exist)
-        // If not, fall back to defaults.
-        const stateAsPlayerState = lastRendered as unknown as PlayerState;
-
         const playerState: PlayerState = {
             origin: lastRendered.origin,
             velocity: lastRendered.velocity,
@@ -189,8 +211,10 @@ export function createClient(imports: ClientImports): ClientExports {
             waterLevel: lastRendered.waterlevel,
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
-            damageIndicators: stateAsPlayerState.damageIndicators ?? [],
+            damageAlpha: lastRendered.damageAlpha ?? 0,
+            damageIndicators: lastRendered.damageIndicators ?? [],
+            blend: lastRendered.blend ?? [0, 0, 0, 0],
+            pickupIcon: lastRendered.pickupIcon
         };
 
         const playbackState = demoPlayback.getState();
@@ -248,6 +272,34 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
+
+      // Precache assets
+      if (imports.engine.assets) {
+          const assets = imports.engine.assets;
+
+          if (index >= ConfigStringIndex.Models && index < ConfigStringIndex.Models + MAX_MODELS) {
+              const ext = value.split('.').pop()?.toLowerCase();
+              if (ext === 'md2') {
+                  // We don't have texture dependencies easily available here without parsing more,
+                  // or assuming a convention (like players). For now, just load geometry.
+                  assets.loadMd2Model(value).catch(e => console.warn(`Failed to precache MD2 ${value}`, e));
+              } else if (ext === 'sp2') {
+                  assets.loadSprite(value).catch(e => console.warn(`Failed to precache Sprite ${value}`, e));
+              } else if (ext === 'md3') {
+                  assets.loadMd3Model(value).catch(e => console.warn(`Failed to precache MD3 ${value}`, e));
+              }
+              // Inline BSP models (begins with *) are handled by map loader usually.
+          } else if (index >= ConfigStringIndex.Sounds && index < ConfigStringIndex.Sounds + MAX_SOUNDS) {
+               assets.loadSound(value).catch(e => console.warn(`Failed to precache sound ${value}`, e));
+          } else if (index >= ConfigStringIndex.Images && index < ConfigStringIndex.Images + MAX_IMAGES) {
+               assets.loadTexture(value).then(texture => {
+                   if (imports.engine.renderer) {
+                       // Register the texture with the renderer so it's ready for Draw_Pic
+                       imports.engine.renderer.registerTexture(value, texture);
+                   }
+               }).catch(e => console.warn(`Failed to precache image ${value}`, e));
+          }
+      }
     },
     demoHandler,
     configStrings
