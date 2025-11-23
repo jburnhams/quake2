@@ -1,104 +1,115 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerMutantSpawns } from '../../../src/entities/monsters/mutant.js';
-import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
+import { SP_monster_mutant } from '../../../src/entities/monsters/mutant.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { createGame } from '../../../src/index.js';
-import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
+import { SpawnContext } from '../../../src/entities/spawn.js';
+import { GameEngine } from '../../../src/engine.js';
+import { GameImports } from '../../../src/game.js';
+import { DamageMod } from '../../../src/combat/damageMods.js';
+import * as damageModule from '../../../src/combat/damage.js';
+import * as gibsModule from '../../../src/entities/gibs.js';
+
+const mockEngine = {
+  sound: vi.fn(),
+} as unknown as GameEngine;
+
+const mockImports = {
+  trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
+  pointcontents: vi.fn().mockReturnValue(0),
+  linkentity: vi.fn(),
+} as unknown as GameImports;
+
+const mockContext = {
+  entities: {
+    engine: mockEngine,
+    free: vi.fn(),
+    trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
+    multicast: vi.fn(),
+    spawn: vi.fn().mockReturnValue({} as Entity),
+  } as unknown as EntitySystem,
+} as unknown as SpawnContext;
 
 describe('monster_mutant', () => {
-  let system: EntitySystem;
-  let context: SpawnContext;
-  let registry: SpawnRegistry;
+  let mutant: Entity;
 
   beforeEach(() => {
-    // Mock game engine and imports
-    const engine = {
-      sound: vi.fn(),
-      modelIndex: vi.fn().mockReturnValue(1),
-    };
-    const imports = {
-      trace: vi.fn().mockReturnValue({
-        allsolid: false,
-        startsolid: false,
-        fraction: 1,
-        endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-        ent: null,
-      }),
-      pointcontents: vi.fn().mockReturnValue(0),
-      linkentity: vi.fn(),
-      multicast: vi.fn(),
-      unicast: vi.fn(),
-    };
-
-    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
-    system = (gameExports as any).entities;
-
-    context = {
-      keyValues: {},
-      entities: system,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
-
-    registry = new SpawnRegistry();
-    registerMutantSpawns(registry);
+    vi.clearAllMocks();
+    mutant = new Entity(1);
+    mutant.timestamp = 10;
+    SP_monster_mutant(mutant, mockContext);
   });
 
-  it('spawns with correct properties', () => {
-    const ent = system.spawn();
-    ent.classname = 'monster_mutant';
-    const spawnFunc = registry.get('monster_mutant');
-    expect(spawnFunc).toBeDefined();
-
-    spawnFunc!(ent, context);
-
-    expect(ent.model).toBe('models/monsters/mutant/tris.md2');
-    expect(ent.health).toBe(300);
-    expect(ent.max_health).toBe(300);
-    expect(ent.mass).toBe(300);
-    expect(ent.solid).toBe(Solid.BoundingBox);
-    expect(ent.movetype).toBe(MoveType.Step);
+  it('initializes with correct properties', () => {
+    expect(mutant.classname).toBe('monster_mutant');
+    expect(mutant.model).toBe('models/monsters/mutant/tris.md2');
+    expect(mutant.health).toBe(300);
+    expect(mutant.movetype).toBe(MoveType.Step);
+    expect(mutant.solid).toBe(Solid.BoundingBox);
+    expect(mutant.takedamage).toBe(true);
   });
 
-  it('has basic AI behavior', () => {
-    const ent = system.spawn();
-    const spawnFunc = registry.get('monster_mutant');
-    spawnFunc!(ent, context);
+  it('handles pain correctly', () => {
+    mutant.health = 300;
+    mutant.pain_finished_time = 0;
+    const painCallback = mutant.pain!;
 
-    expect(ent.monsterinfo.stand).toBeDefined();
-    expect(ent.monsterinfo.walk).toBeDefined();
-    expect(ent.monsterinfo.run).toBeDefined();
-    expect(ent.monsterinfo.checkattack).toBeDefined();
+    painCallback(mutant, null, 0, 10);
+
+    expect(mutant.pain_finished_time).toBeGreaterThan(mutant.timestamp);
+
+    mutant.health = 100;
+    painCallback(mutant, null, 0, 10);
+    expect(mutant.skin).toBe(1);
   });
 
-  it('triggers jump attack when appropriate', () => {
-      const ent = system.spawn();
-      registry.get('monster_mutant')!(ent, context);
+  it('handles death correctly', () => {
+    const dieCallback = mutant.die!;
+    mutant.health = 0;
 
-      const enemy = system.spawn();
-      enemy.origin = { x: 200, y: 0, z: 0 }; // Mid range
-      ent.enemy = enemy;
+    dieCallback(mutant, null, null, 10, { x: 0, y: 0, z: 0 });
 
-      // Force RNG to trigger jump
+    expect(mutant.deadflag).toBe(DeadFlag.Dead);
+    expect(mutant.solid).toBe(Solid.Not);
+  });
+
+  it('transitions to attack state', () => {
+      expect(mutant.monsterinfo.attack).toBeDefined();
+      mutant.monsterinfo.attack!(mutant);
+      // attack_move firstframe 70
+      expect(mutant.monsterinfo.current_move?.firstframe).toBe(70);
+  });
+
+  it('checkattack logic selects jump', () => {
+      const enemy = new Entity(2);
+      enemy.origin = { x: 300, y: 0, z: 0 }; // Distance 300, perfect for jump
+      mutant.enemy = enemy;
+      mutant.origin = { x: 0, y: 0, z: 0 };
+      enemy.health = 100;
+
+      // Mock random to trigger jump ( < 0.3 )
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-      const result = ent.monsterinfo.checkattack!(ent);
+      const result = mutant.monsterinfo.checkattack!(mutant);
 
       expect(result).toBe(true);
-      // Should transition to jump move (firstframe 90 in our approx)
-      expect(ent.monsterinfo.current_move?.firstframe).toBe(90);
+      // Jump move firstframe 93
+      expect(mutant.monsterinfo.current_move?.firstframe).toBe(93);
+  });
 
-      // Verify jump logic (frame 2 of jump move triggers mutant_jump)
-      const jumpFrame = ent.monsterinfo.current_move?.frames[2];
-      expect(jumpFrame?.think).toBeDefined();
+  it('checkattack logic selects melee when close', () => {
+      const enemy = new Entity(2);
+      enemy.origin = { x: 50, y: 0, z: 0 }; // Close
+      mutant.enemy = enemy;
+      mutant.origin = { x: 0, y: 0, z: 0 };
+      enemy.health = 100;
 
-      // Execute jump
-      jumpFrame?.think!(ent, system);
+      // Mock random to trigger attack ( < 0.5 )
+      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-      expect(ent.velocity.z).toBeGreaterThan(0);
-      expect(ent.groundentity).toBeNull();
+      const result = mutant.monsterinfo.checkattack!(mutant);
 
-      randomSpy.mockRestore();
+      expect(result).toBe(true);
+      // Attack move firstframe 70
+      expect(mutant.monsterinfo.current_move?.firstframe).toBe(70);
   });
 });

@@ -39,7 +39,7 @@ import { DamageFlags } from '../../combat/damageFlags.js';
 const MONSTER_TICK = 0.1;
 
 // Helper to access deterministic RNG or Math.random
-const random = Math.random;
+const random = () => Math.random();
 
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
@@ -493,6 +493,7 @@ death_move = {
 export function SP_monster_parasite(self: Entity, context: SpawnContext): void {
   // Removing soundIndex calls as they caused build errors and are optional/implicit in string usage.
 
+  self.classname = 'monster_parasite';
   self.model = 'models/monsters/parasite/tris.md2';
   self.mins = { x: -16, y: -16, z: -24 };
   self.maxs = { x: 16, y: 16, z: 24 };

@@ -32,6 +32,9 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Brain (Brains) behaviors (Tentacle attacks) and unit tests.
 - ✅ Implemented Flyer behaviors (Flying, Blaster, Slash) and unit tests.
 - ✅ Implemented Icarus behaviors (Flying, Blaster) and unit tests.
+- ✅ Implemented Parasite behaviors (Drain attack, healing) and unit tests.
+- ✅ Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
+- ✅ Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
 
 ## Tasks Remaining
 
@@ -177,13 +180,13 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Scripted sequences (may defer complex scripting)
 
 #### Special Monsters
-- [ ] **Parasite**
+- [x] **Parasite**
   - Leech attack: drains health from player, heals self
   - Melee range
-- [ ] **Chick / Iron Maiden**
+- [x] **Chick / Iron Maiden**
   - Rocket launcher attack
   - Melee slash
-- [ ] **Mutant**
+- [x] **Mutant**
   - Jumping melee attack
   - Agile, unpredictable movement
 - [ ] **Barracuda Shark** (water monster)
@@ -282,6 +285,9 @@ Recent work:
 - Implemented Tank and Tank Commander behaviors and unit tests.
 - Implemented Gladiator behaviors and unit tests.
 - Implemented Medic, Brain, Flyer, and Icarus with full behaviors and unit tests.
+- Implemented Parasite behaviors (Drain attack, healing) and unit tests.
+- Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
+- Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback
