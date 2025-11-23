@@ -13,14 +13,14 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
 
         const engine = {
             sound: vi.fn(),
             centerprintf: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -43,14 +43,14 @@ describe('Grenade Launcher', () => {
 
     it('should explode on impact with an entity', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
             sound: vi.fn(),
             centerprintf: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
