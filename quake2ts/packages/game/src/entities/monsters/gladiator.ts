@@ -1,4 +1,4 @@
-import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
 import {
   ai_charge,
   ai_move,
@@ -20,8 +20,7 @@ import { T_Damage } from '../../combat/damage.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import { throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
-// Need a railgun fire function for monsters, or generic bullet
-import { monster_fire_bullet } from './attack.js';
+import { monster_fire_railgun } from './attack.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -71,6 +70,13 @@ function gladiator_run(self: Entity): void {
   }
 }
 
+function classifyRange(distance: number): RangeCategory {
+  if (distance <= 80) return RangeCategory.Melee;
+  if (distance <= 500) return RangeCategory.Near;
+  if (distance <= 1000) return RangeCategory.Mid;
+  return RangeCategory.Far;
+}
+
 function gladiator_attack(self: Entity): void {
   if (!self.enemy) return;
 
@@ -81,14 +87,6 @@ function gladiator_attack(self: Entity): void {
   } else {
       self.monsterinfo.current_move = attack_gun_move;
   }
-}
-
-// Helper to classify range inside the module if not imported
-function classifyRange(distance: number): RangeCategory {
-  if (distance <= 80) return RangeCategory.Melee; // Approximated
-  if (distance <= 500) return RangeCategory.Near;
-  if (distance <= 1000) return RangeCategory.Mid;
-  return RangeCategory.Far;
 }
 
 function gladiator_melee(self: Entity, context: any): void {
@@ -106,7 +104,7 @@ function gladiator_melee(self: Entity, context: any): void {
   const start: Vec3 = {
       x: self.origin.x,
       y: self.origin.y,
-      z: self.origin.z + self.viewheight,
+      z: self.origin.z + (self.viewheight || 0),
   };
   const dir = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
@@ -120,14 +118,13 @@ function gladiator_fire_railgun(self: Entity, context: any): void {
    const start: Vec3 = {
        x: self.origin.x,
        y: self.origin.y,
-       z: self.origin.z + self.viewheight,
+       z: self.origin.z + (self.viewheight || 0),
    };
    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
    const damage = 50;
    const kick = 100;
 
-   // Using bullet for now as placeholder for railgun trace if not available
-   monster_fire_bullet(self, start, forward, damage, kick, 0, 0, 0, context, DamageMod.RAILGUN);
+   monster_fire_railgun(self, start, forward, damage, kick, 0, context);
 }
 
 
@@ -243,6 +240,7 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
   self.max_health = 400;
   self.mass = 400;
   self.takedamage = true;
+  self.viewheight = 40; // Gladiator viewheight
 
   self.pain = (self, other, kick, damage) => {
     // Cast to any for interface compatibility
