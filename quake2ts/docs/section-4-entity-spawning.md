@@ -101,24 +101,24 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `monster_soldier`: Implemented
   - [x] `monster_gunner`: Implemented
   - [x] `monster_berserk`: Implemented
-  - [ ] `monster_gladiator`: Pending
+  - [x] `monster_gladiator`: Implemented
   - [x] `monster_medic`: Implemented
   - [x] `monster_mutant`: Implemented
-  - [ ] `monster_parasite`: Pending
-  - [ ] `monster_tank`: Pending
-  - [ ] `monster_tank_commander`: Pending
-  - [ ] `monster_brain`: Pending
-  - [ ] `monster_flipper`: Pending
-  - [ ] `monster_chick` (Iron Maiden): Pending
-  - [ ] `monster_icarus`: Pending
-  - [ ] `monster_flyer`: Pending
-  - [ ] `monster_floater`: Pending
-  - [ ] `monster_hover`: Pending
-  - [ ] `monster_infantry`: Pending
-  - [ ] `monster_supertank`: Pending
-  - [ ] `monster_boss2` (Hornet): Pending
-  - [ ] `monster_jorg` (Boss3): Pending
-  - [ ] `monster_makron` (Boss3): Pending
+  - [x] `monster_parasite`: Implemented
+  - [x] `monster_tank`: Implemented
+  - [x] `monster_tank_commander`: Implemented
+  - [x] `monster_infantry`: Implemented
+  - [x] `monster_brain`: Implemented
+  - [x] `monster_flipper`: Implemented
+  - [x] `monster_chick` (Iron Maiden): Implemented
+  - [ ] `monster_icarus`: Stubbed (createMonsterSpawn)
+  - [ ] `monster_flyer`: Stubbed (createMonsterSpawn)
+  - [ ] `monster_floater`: Stubbed (createMonsterSpawn)
+  - [ ] `monster_hover`: Stubbed (createMonsterSpawn)
+  - [ ] `monster_supertank`: Stubbed (createMonsterSpawn)
+  - [ ] `monster_boss2` (Hornet): Stubbed (createMonsterSpawn)
+  - [ ] `monster_jorg` (Boss3): Stubbed (createMonsterSpawn)
+  - [ ] `monster_makron` (Boss3): Stubbed (createMonsterSpawn)
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors

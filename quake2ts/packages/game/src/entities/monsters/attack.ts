@@ -1,4 +1,4 @@
-import { angleVectors, addVec3, scaleVec3, normalizeVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity } from '@quake2ts/shared';
+import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity } from '@quake2ts/shared';
 import { Entity } from '../entity.js';
 import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
@@ -149,4 +149,47 @@ export function monster_fire_railgun(
             DamageMod.RAILGUN
         );
     }
+}
+
+export function monster_fire_hit(
+    self: Entity,
+    aim: Vec3,
+    damage: number,
+    kick: number,
+    context: EntitySystem
+): boolean {
+    if (!self.enemy) return false;
+
+    // 1. Get the direction the monster is facing
+    const { forward } = angleVectors(self.angles);
+
+    // 2. Calculate start position (adjust for viewheight)
+    const start = { ...self.origin };
+    start.z += self.viewheight || 0;
+
+    // 3. Calculate end position based on range (aim.x is usually the range)
+    const range = aim.x > 0 ? aim.x : 80; // Default to 80 if 0 passed
+    const end = addVec3(start, scaleVec3(forward, range));
+
+    // 4. Trace along that line
+    const tr = context.trace(start, end, ZERO_VEC3, ZERO_VEC3, self, 0x1 | 0x20000000); // MASK_SHOT
+
+    // 5. Check if we hit the enemy
+    if (tr.ent === self.enemy || (tr.ent && tr.ent.takedamage)) {
+        const dir = normalizeVec3(subtractVec3(tr.endpos, start));
+        T_Damage(
+            tr.ent as unknown as Damageable,
+            self as unknown as Damageable,
+            self as unknown as Damageable,
+            dir,
+            tr.endpos,
+            tr.plane?.normal || ZERO_VEC3,
+            damage,
+            kick,
+            0,
+            DamageMod.UNKNOWN
+        );
+        return true;
+    }
+    return false;
 }
