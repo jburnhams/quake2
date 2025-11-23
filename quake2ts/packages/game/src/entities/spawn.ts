@@ -15,7 +15,6 @@ import { registerPathSpawns } from './paths.js';
 import { registerLightSpawns } from './lights.js';
 import { registerGunnerSpawns } from './monsters/gunner.js';
 import { registerMonsterSpawns } from './monsters/soldier.js';
-import { registerMonsterStubs } from './monsters/stubs.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
