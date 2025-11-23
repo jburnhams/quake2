@@ -8,6 +8,7 @@ import {
   scaleVec3,
   addVec3,
   vectorToAngles,
+  copyVec3,
   ServerCommand,
   TempEntity,
   MASK_SHOT
@@ -39,10 +40,6 @@ const MONSTER_TICK = 0.1;
 
 // Helper to access deterministic RNG or Math.random
 const random = Math.random;
-
-function copyVec3(src: Vec3): Vec3 {
-    return { x: src.x, y: src.y, z: src.z };
-}
 
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {

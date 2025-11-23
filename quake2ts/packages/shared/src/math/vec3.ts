@@ -20,6 +20,10 @@ export interface Bounds3 {
 export type Mat3Row = readonly [number, number, number];
 export type Mat3 = readonly [Mat3Row, Mat3Row, Mat3Row];
 
+export function copyVec3(a: Vec3): Vec3 {
+  return { x: a.x, y: a.y, z: a.z };
+}
+
 export function addVec3(a: Vec3, b: Vec3): Vec3 {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
