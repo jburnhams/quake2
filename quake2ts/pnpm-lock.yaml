@@ -15,6 +15,9 @@ importers:
       '@napi-rs/canvas':
         specifier: ^0.1.82
         version: 0.1.82
+      '@quake2ts/tests':
+        specifier: workspace:^
+        version: link:packages/tests
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
@@ -62,6 +65,9 @@ importers:
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game
+      '@quake2ts/tests':
+        specifier: workspace:^
+        version: link:../tests
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
@@ -81,6 +87,9 @@ importers:
         specifier: workspace:*
         version: link:../shared
     devDependencies:
+      '@quake2ts/tests':
+        specifier: workspace:^
+        version: link:../tests
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5

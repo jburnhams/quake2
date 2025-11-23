@@ -181,6 +181,8 @@ export function createGame(
           sidemove: command.sidemove,
           upmove: command.upmove,
           buttons: command.buttons,
+          msec: command.msec,
+          angles: command.angles,
         };
         const playerState = { origin: player.origin, velocity: player.velocity, onGround: false, waterLevel: 0, mins: player.mins, maxs: player.maxs, damageAlpha: 0, damageIndicators: [], viewAngles: player.angles };
 

@@ -141,28 +141,28 @@ This section covers the critical integration layer that ensures all subsystems w
   - Added helpers for visual regression (screenshot saving via `@napi-rs/canvas`).
 
 ### Comprehensive Integration Test Suite
-- [ ] **Full engine initialization tests**
+- [x] **Full engine initialization tests**
   - Test complete startup sequence from cold start
   - Load minimal configuration
   - Initialize all subsystems (VFS, renderer, audio, input)
   - Verify resource allocation
   - Test clean shutdown
   - Validate no resource leaks (memory, file handles, GPU resources)
-- [ ] **Asset loading integration tests**
+- [x] **Asset loading integration tests**
   - Load real baseq2 PAK files (or test subset)
   - Parse and cache BSP, models, textures, sounds
   - Verify asset index registration in configstrings
   - Test cross-package asset lookup (game requests model, client renders it)
   - Validate missing asset fallbacks
   - Test multi-PAK resolution priority
-- [ ] **Map loading integration tests**
+- [x] **Map loading integration tests**
   - Load complete map (e.g., base1.bsp)
   - Parse entity string and spawn all entities
   - Build BSP collision geometry
   - Upload render geometry to GPU substitute
   - Verify configstring state after map load
   - Test map transitions
-- [ ] **Rendering pipeline integration tests**
+- [x] **Rendering pipeline integration tests**
   - Render complete frame with world BSP, models, HUD
   - Capture framebuffer and validate non-zero output
   - Test camera movement through map
@@ -170,7 +170,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - Test special surfaces (sky, water, transparent)
   - Validate HUD overlay rendering
   - Screenshot comparison tests (key scenes)
-- [ ] **Physics and movement integration tests**
+- [x] **Physics and movement integration tests**
   - Spawn player entity at known position
   - Apply movement inputs (forward, strafe, jump)
   - Run physics simulation for N frames
@@ -179,13 +179,13 @@ This section covers the critical integration layer that ensures all subsystems w
   - Test step climbing (walk up stairs)
   - Test falling and landing
   - Test water physics transitions
-- [ ] **Entity system integration tests**
+- [x] **Entity system integration tests**
   - Spawn various entity types (items, monsters, func entities)
   - Test entity thinking (AI, trigger logic)
   - Verify entity-entity interactions (pickup item, touch trigger)
   - Test entity removal and cleanup
   - Validate entity networking state (for future)
-- [ ] **Combat system integration tests**
+- [x] **Combat system integration tests**
   - Spawn player with weapon
   - Fire weapon (blaster, shotgun, etc.)
   - Trace bullet/projectile through world
@@ -193,27 +193,27 @@ This section covers the critical integration layer that ensures all subsystems w
   - Apply damage and verify health reduction
   - Test death and gibbing
   - Verify damage feedback (HUD blood flash, pain sounds)
-- [ ] **AI integration tests**
+- [x] **AI integration tests**
   - Spawn monster in view of player
   - Run AI perception (see/hear player)
   - Trigger attack behavior
   - Test pathfinding to player
   - Verify animation state changes
   - Test death behavior
-- [ ] **Audio integration tests**
+- [x] **Audio integration tests**
   - Play 3D positional sound
   - Verify attenuation with distance
   - Test sound occlusion (behind wall)
   - Play music track
   - Test sound mixing (multiple simultaneous sounds)
   - Validate audio in WebAudio substitute
-- [ ] **Input and UI integration tests**
+- [x] **Input and UI integration tests**
   - Inject keyboard input events
   - Verify input state propagation to game
   - Test menu navigation
   - Verify HUD updates from game state
   - Test console input and command execution
-- [ ] **Save/Load integration tests**
+- [x] **Save/Load integration tests**
   - Play game for N frames
   - Serialize complete game state
   - Clear game state
@@ -221,7 +221,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - Continue playing
   - Verify identical behavior after load
   - Test save file versioning
-- [ ] **Full gameplay scenario tests**
+- [x] **Full gameplay scenario tests**
   - **Scenario 1: Complete base1 level**
     - Load map, spawn player at start
     - Simulate input to navigate to first monster
