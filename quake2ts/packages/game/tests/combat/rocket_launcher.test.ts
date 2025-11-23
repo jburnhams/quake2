@@ -11,7 +11,7 @@ import * as projectiles from '../../src/entities/projectiles.js';
 describe('Rocket Launcher', () => {
     it('should consume 1 rocket and spawn a projectile', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const createRocket = vi.spyOn(projectiles, 'createRocket');
 
         const engine = {
@@ -19,7 +19,7 @@ describe('Rocket Launcher', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';

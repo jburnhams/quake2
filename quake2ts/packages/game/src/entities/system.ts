@@ -3,7 +3,7 @@ import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
-import { GameImports } from '../imports.js';
+import { GameImports, TraceFunction, PointContentsFunction } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -125,6 +125,14 @@ export class EntitySystem {
   private readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
+
+  get trace(): TraceFunction {
+    return this.imports.trace;
+  }
+
+  get pointcontents(): PointContentsFunction {
+    return this.imports.pointcontents;
+  }
 
   constructor(
     engine: GameEngine,

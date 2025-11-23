@@ -11,7 +11,7 @@ import * as damage from '../../src/combat/damage.js';
 describe('Grenade Projectile', () => {
     it('should have correct initial properties and explode on think', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
@@ -19,7 +19,7 @@ describe('Grenade Projectile', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -31,7 +31,7 @@ describe('Grenade Projectile', () => {
 
         const player = game.entities.find(e => e.classname === 'player')!;
 
-        createGrenade(game, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
+        createGrenade(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
 
         const grenade = game.entities.find(e => e.classname === 'grenade')!;
 

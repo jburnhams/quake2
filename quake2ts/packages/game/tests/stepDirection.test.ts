@@ -1,0 +1,108 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SV_StepDirection } from '../src/ai/movement.js';
+import type { Entity } from '../src/entities/entity.js';
+import type { EntitySystem } from '../src/entities/system.js';
+import { MoveType, Solid, EntityFlags } from '../src/entities/entity.js';
+
+describe('SV_StepDirection', () => {
+  let entity: Entity;
+  let context: EntitySystem;
+  let traceMock: any;
+  let pointContentsMock: any;
+
+  beforeEach(() => {
+    entity = {
+      origin: { x: 0, y: 0, z: 100 },
+      old_origin: { x: 0, y: 0, z: 100 },
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+      movetype: MoveType.Step,
+      flags: 0,
+      groundentity: { index: 1 } as Entity,
+      waterlevel: 0,
+      monsterinfo: {
+          aiflags: 0
+      },
+      angles: { x: 0, y: 0, z: 0 }
+    } as unknown as Entity;
+
+    traceMock = vi.fn();
+    pointContentsMock = vi.fn();
+
+    context = {
+      trace: traceMock,
+      pointcontents: pointContentsMock,
+    } as unknown as EntitySystem;
+  });
+
+  it('should return true if straight forward move succeeds', () => {
+    // Mock trace success for straight move
+    traceMock.mockReturnValue({ fraction: 1.0 });
+    pointContentsMock.mockReturnValue(0);
+
+    // M_walkmove checkBottom also needs to pass
+    // First trace in walkMove (move) -> success
+    // Second/Third trace in checkBottom -> success (fraction < 1.0 means ground hit)
+    traceMock.mockImplementation((start, mins, maxs, end) => {
+        // If checking bottom (downwards trace)
+        if (end.z < start.z - 10) return { fraction: 0.5 };
+        // If moving (horizontal)
+        return { fraction: 1.0 };
+    });
+
+    const result = SV_StepDirection(entity, 0, 10, context);
+    expect(result).toBe(true);
+  });
+
+  it('should try alternate angles if straight move fails', () => {
+     // Mock trace failure for straight move
+    traceMock.mockImplementation((start, mins, maxs, end) => {
+        // Checking bottom always succeeds
+        if (end.z < start.z - 10) return { fraction: 0.5 };
+
+        // Horizontal move
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+
+        // 0 degrees is blocked (positive x)
+        if (dx > 0 && Math.abs(dy) < 0.1) return { fraction: 0.5 };
+
+        // 45 degrees is clear
+        return { fraction: 1.0 };
+    });
+
+    pointContentsMock.mockReturnValue(0);
+
+    // 0 is straight forward
+    const result = SV_StepDirection(entity, 0, 10, context);
+    expect(result).toBe(true);
+
+    // Ideally it changed the angle
+    // Wait, M_walkmove updates origin, but SV_StepDirection doesn't change angle.
+    // The original SV_StepDirection only returns true if a move was successful.
+    // The caller is responsible for updating ideal_yaw or similar if they want to persist the turn,
+    // but M_walkmove moves the entity.
+    // Ah, wait. M_walkmove doesn't change entity angles. It just moves the entity.
+    // So checking entity.angles.y is wrong unless M_walkmove changed it (it doesn't).
+
+    // So we just expect true.
+    expect(result).toBe(true);
+
+    // And origin changed
+    expect(entity.origin.x).toBeGreaterThan(0);
+  });
+
+  it('should return false if all directions are blocked', () => {
+    // All blocked
+     traceMock.mockImplementation((start, mins, maxs, end) => {
+        // Checking bottom always succeeds
+        if (end.z < start.z - 10) return { fraction: 0.5 };
+        // Move always fails
+        return { fraction: 0.5 };
+    });
+    pointContentsMock.mockReturnValue(0);
+
+    const result = SV_StepDirection(entity, 0, 10, context);
+    expect(result).toBe(false);
+  });
+});

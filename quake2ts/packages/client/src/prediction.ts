@@ -35,6 +35,8 @@ export interface PredictionState {
   readonly health: number;
   readonly armor: number;
   readonly ammo: number;
+  readonly centerPrint?: string;
+  readonly notify?: string;
 }
 
 export interface PredictionSettings {
@@ -139,6 +141,8 @@ export function interpolatePredictionState(
     health: lerp(previous.health, latest.health, clamped),
     armor: lerp(previous.armor, latest.armor, clamped),
     ammo: lerp(previous.ammo, latest.ammo, clamped),
+    centerPrint: latest.centerPrint,
+    notify: latest.notify,
   } satisfies PredictionState;
 }
 

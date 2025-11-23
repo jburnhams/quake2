@@ -20,6 +20,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ AI State Machine (`M_MoveFrame`, `monster_think`) implementation
 - ✅ Basic Soldier/Guard monster entity implementation (`monster_soldier`)
 - ✅ Unit tests for monster spawning, state transitions, and animation looping
+- ✅ AI Movement helpers: `CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`
 
 ## Tasks Remaining
 
@@ -62,11 +63,11 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - In future multiplayer: closest, weakest, or attacker
 
 ### Movement System
-- [ ] Ground movement
-  - Walk/run toward goal (enemy, waypoint)
-  - Turn gradually (yaw_speed limit)
-  - Use trace to avoid walking off cliffs (or intentionally jump)
-  - Step up stairs, slide on slopes
+- [x] Ground movement
+  - [x] Walk/run toward goal (enemy, waypoint)
+  - [x] Turn gradually (yaw_speed limit)
+  - [x] Use trace to avoid walking off cliffs (or intentionally jump)
+  - [x] Step up stairs, slide on slopes
 - [ ] Flying movement (for flying monsters: Flyer, Icarus)
   - 3D movement, no ground constraint
   - Altitude control (rise, descend, hover)
@@ -245,6 +246,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] `visible`: Check if entity is visible
 - [x] `infront`: Check if entity is in front hemisphere
 - [x] `range`: Check distance to entity (melee, short, medium, long)
+- [x] `CheckGround`: Check if on ground
+- [x] `M_CheckBottom`: Check for ledges
+- [x] `M_walkmove`: Movement with collision
+- [x] `SV_StepDirection`: Try different step directions
+- [x] `SV_NewChaseDir`: Chase enemy
 
 Recent work:
 - Added perception coverage for rerelease LOS/FOV/range rules with unit tests that lock in ambush cones, viewheight trace masks,
@@ -258,6 +264,7 @@ Recent work:
 - Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
 - Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
 - Added comprehensive tests for monster spawning, frame advancement, and animation looping.
+- Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback
