@@ -70,6 +70,9 @@ This section covers the complete asset ingestion pipeline for Quake II assets in
   - Convert to RGBA8 format for WebGL
   - Preserve mipmap chains
   - Handle special textures (warp, sky, transparent)
+- [] TGA image loader
+  - Support palette-based and RGB formats
+  - Used for textures, HUD graphics, skyboxes
 
 ### Audio Loaders
 - [x] WAV loader
