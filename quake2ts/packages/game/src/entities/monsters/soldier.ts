@@ -1,6 +1,7 @@
 import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
 import {
   ai_charge,
+  ai_move,
   ai_run,
   ai_stand,
   ai_walk,
@@ -39,11 +40,17 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
   ai_charge(self, dist, MONSTER_TICK);
 }
 
+function monster_ai_move(self: Entity, dist: number, context: any): void {
+  ai_move(self, dist, MONSTER_TICK, context);
+}
+
 // Forward declarations for moves
 let stand_move: MonsterMove;
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
 let attack_move: MonsterMove;
+let pain_move: MonsterMove;
+let death_move: MonsterMove;
 
 function soldier_stand(self: Entity): void {
   self.monsterinfo.current_move = stand_move;
@@ -63,6 +70,14 @@ function soldier_run(self: Entity): void {
 
 function soldier_attack(self: Entity): void {
   self.monsterinfo.current_move = attack_move;
+}
+
+function soldier_pain(self: Entity): void {
+  self.monsterinfo.current_move = pain_move;
+}
+
+function soldier_die(self: Entity): void {
+  self.monsterinfo.current_move = death_move;
 }
 
 function soldier_fire(self: Entity, context: any): void {
@@ -133,6 +148,37 @@ attack_move = {
   endfunc: soldier_run,
 };
 
+const pain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
+  ai: monster_ai_move,
+  dist: 0,
+}));
+
+pain_move = {
+  firstframe: 100,
+  lastframe: 105,
+  frames: pain_frames,
+  endfunc: soldier_run,
+};
+
+const death_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
+  ai: monster_ai_move,
+  dist: 0,
+}));
+
+// End of death animation - stay on last frame
+function soldier_dead(self: Entity): void {
+  self.monsterinfo.nextframe = death_move.lastframe;
+  self.nextthink = -1; // Stop thinking
+}
+
+death_move = {
+  firstframe: 106,
+  lastframe: 115,
+  frames: death_frames,
+  endfunc: soldier_dead,
+};
+
+
 function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.model = 'models/monsters/soldier/tris.md2';
   self.mins = { x: -16, y: -16, z: -24 };
@@ -145,7 +191,9 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.takedamage = true;
 
   self.pain = (self, other, kick, damage) => {
-    // Pain logic
+    if (self.health < (self.max_health / 2)) {
+      self.monsterinfo.current_move = pain_move;
+    }
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -154,19 +202,11 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
 
     if (self.health < -40) {
         throwGibs(context.entities, self.origin, damage);
-        context.entities.free(self); // Remove entity if gibbed? Or keep invisible?
-        // Original Quake 2 behavior: if gibbed, ThrowGibs and free.
+        context.entities.free(self);
         return;
     }
 
-    // Trigger death animation
-    // self.monsterinfo.current_move = death_move;
-
-    // For now, just remove after a delay
-    self.think = (self) => {
-        context.entities.free(self);
-    };
-    self.nextthink = context.entities.timeSeconds + 5;
+    soldier_die(self);
   };
 
   self.monsterinfo.stand = soldier_stand;
