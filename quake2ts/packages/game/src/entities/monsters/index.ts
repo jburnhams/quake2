@@ -1,0 +1,46 @@
+import { SpawnRegistry } from '../spawn.js';
+import { registerBerserkSpawns } from './berserk.js';
+import { registerBoss2Spawns } from './boss2.js';
+import { registerBrainSpawns } from './brain.js';
+import { registerChickSpawns } from './chick.js';
+import { registerFlipperSpawns } from './flipper.js';
+import { registerFloaterSpawns } from './floater.js';
+import { registerFlyerSpawns } from './flyer.js';
+import { registerGladiatorSpawns } from './gladiator.js';
+import { registerGunnerSpawns } from './gunner.js';
+import { registerHoverSpawns } from './hover.js';
+import { registerIcarusSpawns } from './icarus.js';
+import { registerInfantrySpawns } from './infantry.js';
+import { registerJorgSpawns } from './jorg.js';
+import { registerMakronSpawns } from './makron.js';
+import { registerMedicSpawns } from './medic.js';
+import { registerMutantSpawns } from './mutant.js';
+import { registerParasiteSpawns } from './parasite.js';
+import { registerMonsterSpawns as registerSoldierSpawns } from './soldier.js';
+import { registerSupertankSpawns } from './supertank.js';
+import { registerTankSpawns } from './tank.js';
+import { registerTankCommanderSpawns } from './tankCommander.js';
+
+export function registerMonsterSpawns(registry: SpawnRegistry): void {
+  registerSoldierSpawns(registry);
+  registerGunnerSpawns(registry);
+  registerBerserkSpawns(registry);
+  registerGladiatorSpawns(registry);
+  registerMedicSpawns(registry);
+  registerMutantSpawns(registry);
+  registerParasiteSpawns(registry);
+  registerTankSpawns(registry);
+  registerTankCommanderSpawns(registry);
+  registerBrainSpawns(registry);
+  registerFlipperSpawns(registry);
+  registerChickSpawns(registry);
+  registerIcarusSpawns(registry);
+  registerFlyerSpawns(registry);
+  registerFloaterSpawns(registry);
+  registerHoverSpawns(registry);
+  registerInfantrySpawns(registry);
+  registerSupertankSpawns(registry);
+  registerBoss2Spawns(registry);
+  registerJorgSpawns(registry);
+  registerMakronSpawns(registry);
+}

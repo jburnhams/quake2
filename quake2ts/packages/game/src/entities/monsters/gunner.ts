@@ -221,6 +221,7 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.health = 175;
     self.max_health = 175;
     self.mass = 200;
+    self.takedamage = true;
 
     self.pain = (self, other, kick, damage) => {
         if (self.health < (self.max_health / 2)) {
