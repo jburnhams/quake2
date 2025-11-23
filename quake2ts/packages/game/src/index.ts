@@ -29,12 +29,6 @@ export interface GameEngine {
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }
 
-// Extend GameStateSnapshot to include what Client needs if possible
-// But createGame returns GameStateSnapshot, which createClient might expect to be compatible with PredictionState
-// or createClient converts it.
-// Given `createClient` expects `GameFrameResult<PredictionState>`, and `createGame` returns `GameFrameResult<GameStateSnapshot>`,
-// there must be a disconnect or loose typing in the test harness.
-// However, we will assume we can extend GameStateSnapshot to mimic PredictionState structure where possible.
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
   readonly origin: Vec3;
@@ -45,7 +39,6 @@ export interface GameStateSnapshot {
     readonly activeCount: number;
     readonly worldClassname: string;
   };
-  // Adding fields to match PredictionState expectations roughly
   readonly pmFlags: number; // PmFlags
   readonly pmType: number; // PmType
   readonly waterlevel: number;
@@ -61,7 +54,7 @@ export interface GameStateSnapshot {
 }
 
 import { findPlayerStart } from './entities/spawn.js';
-import { player_die } from './entities/player.js';
+import { player_die, player_think } from './entities/player.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
 import { Entity, MoveType } from './entities/entity.js';
@@ -148,37 +141,27 @@ export function createGame(
       // Powerup blends
       // Quad Damage: Blue
       if (inventory.powerups.has(PowerupId.QuadDamage)) {
-           // In Q2, Quad is Blue blend (0, 0, 1, 0.2)? Or partial.
-           // Actually Q2 rerelease source: G_AddBlend(0, 0, 1, 0.08f, ent->client->ps.screen_blend);
            blend[2] = 1;
            blend[3] = 0.08;
       }
       // Invulnerability: Yellow/Red?
       if (inventory.powerups.has(PowerupId.Invulnerability)) {
-           // Q2: G_AddBlend(1, 1, 0, 0.08f, ...) -> Yellow
            blend[0] = 1;
            blend[1] = 1;
            blend[3] = 0.08;
       }
       // Enviro Suit: Green
        if (inventory.powerups.has(PowerupId.EnviroSuit)) {
-           // Q2: G_AddBlend(0, 1, 0, 0.08f, ...) -> Green
            blend[1] = 1;
            blend[3] = 0.08;
       }
        // Rebreather: Whiteish?
        if (inventory.powerups.has(PowerupId.Rebreather)) {
-           // Q2: G_AddBlend(0.4f, 1, 0.4f, 0.04f, ...)
            blend[0] = 0.4;
            blend[1] = 1;
            blend[2] = 0.4;
            blend[3] = 0.04;
       }
-
-      // Damage red flash is handled separately via damageAlpha usually, but here we can combine or keep separate.
-      // Water/Slime/Lava tint would also go here if we had access to view content type.
-      // Assuming standard blending logic will combine these if we return a single tuple.
-      // Since we only support one "blend" field in PlayerState currently, we return the highest priority or accumulated one.
 
       return blend;
   };
@@ -261,6 +244,13 @@ export function createGame(
          // Use closure to access entities for gibs/obituaries
          player_die(self, inflictor, attacker, damage, point, mod, entities);
       };
+
+      // Attach think callback
+      player.think = (self) => {
+          player_think(self, entities);
+      };
+      player.nextthink = entities.timeSeconds + 0.1;
+      entities.scheduleThink(player, player.nextthink);
 
       entities.finalizeSpawn(player);
       origin = { ...player.origin };
