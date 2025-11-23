@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Draw_Hud, Init_Hud } from '../src/hud';
+import { MessageSystem } from '../src/hud/messages';
 import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
 import { PlayerClient, WeaponId, PowerupId } from '@quake2ts/game';
 import { HUD_LAYOUT } from '../src/hud/layout';
@@ -32,9 +33,10 @@ describe('HUD', () => {
             inventory: {
                 currentWeapon: WeaponId.Shotgun,
                 powerups: new Map<PowerupId, number | null>([
-                    [PowerupId.QuadDamage, 10],
-                    [PowerupId.Invulnerability, 5],
+                    [PowerupId.QuadDamage, 2000],
+                    [PowerupId.Invulnerability, 3000],
                 ]),
+                keys: new Set(),
             },
         } as unknown as PlayerClient;
 
@@ -52,8 +54,16 @@ describe('HUD', () => {
             vertexCount: 50000,
         } as FrameRenderStats;
 
+        const mockMessageSystem = new MessageSystem();
+        vi.spyOn(mockMessageSystem, 'drawCenterPrint');
+        vi.spyOn(mockMessageSystem, 'drawNotifications');
+
         await Init_Hud(mockRenderer, mockPak);
-        Draw_Hud(mockRenderer, mockPlayerState, mockClient, 100, 50, 25, mockStats);
+        Draw_Hud(mockRenderer, mockPlayerState, mockClient, 100, 50, 25, mockStats, mockMessageSystem, 1000);
+
+        // Verify message system called
+        expect(mockMessageSystem.drawCenterPrint).toHaveBeenCalledWith(mockRenderer, 1000);
+        expect(mockMessageSystem.drawNotifications).toHaveBeenCalledWith(mockRenderer, 1000);
 
         // Verify damage flash
         expect(mockRenderer.drawfillRect).toHaveBeenCalledWith(0, 0, 800, 600, [1, 0, 0, 0.5]);
@@ -85,8 +95,10 @@ describe('HUD', () => {
             HUD_LAYOUT.POWERUP_Y, 
             expect.objectContaining({ name: 'p_quad' })
         );
+        // Width of icon (24) + Width of number "1" (24) + padding (8) = 56
+        // 610 - 56 = 554
         expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            HUD_LAYOUT.POWERUP_X - 28, // 24 width + 4 padding 
+            HUD_LAYOUT.POWERUP_X - 56,
             HUD_LAYOUT.POWERUP_Y, 
             expect.objectContaining({ name: 'p_invulnerability' })
         );
