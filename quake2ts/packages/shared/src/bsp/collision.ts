@@ -1,6 +1,7 @@
 import { CONTENTS_TRIGGER } from './contents.js';
 import type { Vec3 } from '../math/vec3.js';
 import { ZERO_VEC3, addVec3, scaleVec3, subtractVec3 } from '../math/vec3.js';
+import { createSpatialTree, linkEntityToSpatialTree, querySpatialTree, SpatialNode } from './spatial.js';
 
 export interface CollisionPlane {
   normal: Vec3;
@@ -887,13 +888,36 @@ export interface CollisionEntityTraceResult extends CollisionTraceResult {
 
 export class CollisionEntityIndex {
   private readonly entities = new Map<number, CollisionEntityState>();
+  private readonly entityNodes = new Map<number, SpatialNode>();
+  private readonly rootNode = createSpatialTree();
 
   link(entity: CollisionEntityLink): void {
-    this.entities.set(entity.id, makeEntityState(entity));
+    const state = makeEntityState(entity);
+    this.entities.set(entity.id, state);
+
+    // Update spatial index
+    const existingNode = this.entityNodes.get(entity.id);
+    if (existingNode) {
+      existingNode.items.delete(entity.id);
+    }
+
+    const newNode = linkEntityToSpatialTree(
+      this.rootNode,
+      entity.id,
+      state.bounds.mins,
+      state.bounds.maxs
+    );
+    this.entityNodes.set(entity.id, newNode);
   }
 
   unlink(entityId: number): void {
     this.entities.delete(entityId);
+
+    const node = this.entityNodes.get(entityId);
+    if (node) {
+      node.items.delete(entityId);
+      this.entityNodes.delete(entityId);
+    }
   }
 
   trace(params: CollisionEntityTraceParams): CollisionEntityTraceResult {
@@ -911,8 +935,26 @@ export class CollisionEntityIndex {
       bestTrace = finalizeTrace(createDefaultTrace(), params.start, params.end);
     }
 
-    for (const entity of this.entities.values()) {
-      if (entity.id === passId) continue;
+    // Determine query bounds for spatial lookup
+    const traceAbsMin = {
+      x: Math.min(params.start.x, params.end.x) + mins.x,
+      y: Math.min(params.start.y, params.end.y) + mins.y,
+      z: Math.min(params.start.z, params.end.z) + mins.z,
+    };
+    const traceAbsMax = {
+      x: Math.max(params.start.x, params.end.x) + maxs.x,
+      y: Math.max(params.start.y, params.end.y) + maxs.y,
+      z: Math.max(params.start.z, params.end.z) + maxs.z,
+    };
+
+    const candidates = new Set<number>();
+    querySpatialTree(this.rootNode, traceAbsMin, traceAbsMax, candidates);
+
+    for (const entityId of candidates) {
+      if (entityId === passId) continue;
+
+      const entity = this.entities.get(entityId);
+      if (!entity) continue;
       if ((entity.contents & contentMask) === 0) continue;
 
       const trace = createDefaultTrace();
@@ -939,7 +981,13 @@ export class CollisionEntityIndex {
       maxs: addVec3(origin, maxs),
     };
 
-    for (const entity of this.entities.values()) {
+    const candidates = new Set<number>();
+    querySpatialTree(this.rootNode, queryBounds.mins, queryBounds.maxs, candidates);
+
+    for (const entityId of candidates) {
+      const entity = this.entities.get(entityId);
+      if (!entity) continue;
+
       if ((entity.contents & mask) === 0) continue;
       if (boundsIntersect(queryBounds, entity.bounds)) {
         results.push(entity.id);
