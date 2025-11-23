@@ -7,7 +7,8 @@ import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane } from '@quake2ts/shared';
+import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity } from '@quake2ts/shared';
+import { MulticastType } from '../imports.js';
 
 export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
     const rocket = sys.spawn();
@@ -43,6 +44,13 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
         const entities = sys.findByRadius(self.origin, 120);
         T_RadiusDamage(entities as any[], self as any, self.owner as any, 120, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH);
 
+        // Explosion effect
+        // gi.WriteByte (svc_temp_entity);
+        // gi.WriteByte (TE_ROCKET_EXPLOSION);
+        // gi.WritePosition (self->s.origin);
+        // gi.multicast (self->s.origin, MULTICAST_PHS);
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
+
         sys.free(self);
     };
 
@@ -64,6 +72,20 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
     grenade.mins = { x: -4, y: -4, z: -4 };
     grenade.maxs = { x: 4, y: 4, z: 4 };
 
+    const explode = (self: Entity) => {
+        const entities = sys.findByRadius(self.origin, 120);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE);
+
+        // Explosion effect
+        // gi.WriteByte (svc_temp_entity);
+        // gi.WriteByte (TE_GRENADE_EXPLOSION);
+        // gi.WritePosition (self->s.origin);
+        // gi.multicast (self->s.origin, MULTICAST_PHS);
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, self.origin);
+
+        sys.free(self);
+    };
+
     grenade.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
         if (other === self.owner) {
             return;
@@ -71,30 +93,11 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
         // Explode immediately if hitting a damageable entity (monster/player)
         if (other && other.takedamage) {
-             // Deal direct damage
-            T_Damage(
-                other as any,
-                self as any,
-                self.owner as any,
-                self.velocity,
-                self.origin,
-                plane ? plane.normal : ZERO_VEC3,
-                damage, // Direct impact damage? Usually separate but let's assume it's part of it or handled by radius.
-                // Actually G_Weapon.c Grenade_Touch calls Grenade_Explode which calls T_RadiusDamage.
-                // It doesn't seem to do T_Damage separately?
-                // Wait, if it hits a monster, it stops and explodes.
-                0,
-                DamageFlags.NONE,
-                DamageMod.GRENADE
-            );
-
-            // Trigger explosion logic
-            // We can just call the think function immediately or duplicate the explosion logic.
-            // Let's duplicate for clarity or refactor.
-             const entities = sys.findByRadius(self.origin, 120);
-             T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE);
-             sys.free(self);
-             return;
+            // Deal direct damage part handled by radius usually?
+            // Quake 2: grenade touches -> Grenade_Explode -> T_RadiusDamage
+            // But if it hits a monster directly, it stops and explodes.
+            explode(self);
+            return;
         }
 
         // Grenades bounce on walls
@@ -102,10 +105,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
         // We might play a sound here.
     };
     grenade.think = (self: Entity) => {
-        // Explode after a delay
-        const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE);
-        sys.free(self);
+        explode(self);
     };
     sys.scheduleThink(grenade, sys.timeSeconds + 2.5);
     sys.finalizeSpawn(grenade);
@@ -124,7 +124,14 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     bolt.mins = { x: -2, y: -2, z: -2 };
     bolt.maxs = { x: 2, y: 2, z: 2 };
 
-    // Effect flag for green/yellow light + particles would go here
+    // Light and effects are client-side usually, but we might want to set EF_BLASTER flag?
+    // Quake 2 uses EF_BLASTER or EF_HYPERBLASTER on entity effects.
+    // if (weapon == WEAPON_HYPERBLASTER) bolt->s.effects |= EF_HYPERBLASTER;
+    // else bolt->s.effects |= EF_BLASTER;
+    // We need EntityEffects enum. Assuming it matches.
+    // 0x00000008 = EF_BLASTER
+    // 0x00001000 = EF_HYPERBLASTER (maybe?)
+    // Let's just use TempEntities on impact for now.
 
     bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
         if (other === self.owner) {
@@ -146,6 +153,14 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
             );
         } else {
             // Wall impact effect
+            // gi.WriteByte (svc_temp_entity);
+            // gi.WriteByte (TE_BLASTER);
+            // gi.WritePosition (self->s.origin);
+            // gi.WriteDir (plane->normal);
+            // gi.multicast (self->s.origin, MULTICAST_PVS);
+            if (plane) {
+                sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLASTER, self.origin, plane.normal);
+            }
         }
 
         sys.free(self);
@@ -177,14 +192,10 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
         const entities = sys.findByRadius(self.origin, 200);
         T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, 200, DamageFlags.NONE, DamageMod.BFG_BLAST);
 
-        // Secondary lasers
-        // Quake 2 BFG logic:
-        // 1. Calculate vector from ball to player
-        // 2. Find all entities within 1000 units of ball
-        // 3. Check if entity is visible to player (trace from player eye to entity)
-        // 4. If visible, deal damage (Laser damage 10? or scaled by distance?)
-        // Ref: g_weapon.c BFG_Lasers
+        // Explosion effect
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);
 
+        // Secondary lasers
         if (self.owner) {
             const targets = sys.findByRadius(self.origin, 1000);
             const playerOrigin = self.owner.origin; // Ideally use eye position
@@ -192,16 +203,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
             for (const target of targets) {
                 if (target === self.owner || !target.takedamage) continue;
 
-                // Trace from player to target to check visibility
-                // Quake 2 uses 1000 as range for this check too? Or infinite?
-                // G_Weapon.c: if (!visible (self->owner, ent)) continue;
-
-                const tr = sys.trace(playerOrigin, null, null, target.origin, self.owner, 0x00000001 | 0x00000002 /* MASK_SOLID | MASK_OPAQUE - approximations */);
-
-                // If we hit the target or we hit nothing (should hit target?), visibility check is complex.
-                // Usually game.trace(start, null, null, end, ignore) returns fraction 1.0 if clear.
-                // But here we want to know if we can see the target.
-                // Simplified: if trace hits the target or ends near it.
+                const tr = sys.trace(playerOrigin, null, null, target.origin, self.owner, 0x00000001 | 0x00000002);
 
                 if (tr.ent !== target && tr.fraction < 1.0) {
                      continue; // Blocked
@@ -209,10 +211,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
                 // Deal damage
                  const dir = normalizeVec3(subtractVec3(target.origin, self.origin));
-                 // const dist = lengthVec3(subtractVec3(target.origin, self.origin));
                  let laserDamage = 10;
-                 // BFG Laser damage is usually fixed or distance based?
-                 // Ref: T_Damage (ent, self, self->owner, dir, ent->s.origin, vec3_origin, 10, 10, 0, MOD_BFG_LASER);
 
                  T_Damage(
                     target as any,
@@ -226,6 +225,14 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
                     DamageFlags.ENERGY,
                     DamageMod.BFG_LASER
                 );
+
+                // Laser effect? TE_BFG_LASER
+                // gi.WriteByte (svc_temp_entity);
+                // gi.WriteByte (TE_BFG_LASER);
+                // gi.WritePosition (self->owner->s.origin);
+                // gi.WritePosition (ent->s.origin);
+                // gi.multicast (self->s.origin, MULTICAST_PHS);
+                sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, playerOrigin, target.origin);
             }
         }
 

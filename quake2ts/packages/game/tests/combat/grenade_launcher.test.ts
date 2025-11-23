@@ -15,6 +15,8 @@ describe('Grenade Launcher', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
+        const multicast = vi.fn();
+        const unicast = vi.fn();
 
         const engine = {
             trace: vi.fn(),
@@ -22,7 +24,7 @@ describe('Grenade Launcher', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -46,6 +48,8 @@ describe('Grenade Launcher', () => {
     it('should explode on impact with an entity', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
@@ -54,7 +58,7 @@ describe('Grenade Launcher', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';

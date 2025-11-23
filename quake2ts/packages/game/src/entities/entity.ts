@@ -2,6 +2,7 @@ import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { PlayerClient } from '../inventory/playerInventory.js';
 import type { EntitySystem } from './system.js';
+import { DamageMod } from '../combat/damageMods.js';
 
 export enum MoveType {
   None = 0,
@@ -61,7 +62,8 @@ export type DieCallback = (
   inflictor: Entity | null,
   attacker: Entity | null,
   damage: number,
-  point: Vec3
+  point: Vec3,
+  mod: DamageMod
 ) => void;
 
 export type EntityFieldType =
