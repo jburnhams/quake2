@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
   Entity,
   ai_face,
@@ -26,16 +26,27 @@ function createEntity(): Entity {
 }
 
 // Mock context for M_walkmove
+const mockTraceFn = vi.fn();
+const mockPointcontentsFn = vi.fn();
+const mockPickTargetFn = vi.fn();
+
 const mockContext = {
-  trace: vi.fn().mockReturnValue({
+  trace: mockTraceFn,
+  pointcontents: mockPointcontentsFn,
+  pickTarget: mockPickTargetFn,
+} as unknown as EntitySystem;
+
+beforeEach(() => {
+  // Reset and reconfigure mocks before each test
+  mockTraceFn.mockReturnValue({
     fraction: 1.0,
     allsolid: false,
     startsolid: false,
     ent: null
-  }),
-  pointcontents: vi.fn().mockReturnValue(0),
-  pickTarget: vi.fn(),
-} as unknown as EntitySystem;
+  });
+  mockPointcontentsFn.mockReturnValue(0);
+  mockPickTargetFn.mockReturnValue(undefined);
+});
 
 describe('walkMove', () => {
   it('translates along the yaw plane matching M_walkmove math', () => {

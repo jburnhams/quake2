@@ -43,12 +43,12 @@ function monster_ai_run(self: Entity, dist: number, context: any): void {
   if (medic_find_dead(self, context as EntitySystem)) {
       self.monsterinfo.current_move = run_move;
   } else {
-      ai_run(self, dist, MONSTER_TICK);
+      ai_run(self, dist, MONSTER_TICK, context);
   }
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-  ai_charge(self, dist, MONSTER_TICK);
+  ai_charge(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
@@ -134,7 +134,7 @@ function medic_heal(self: Entity, context: EntitySystem): void {
 
     // Reset monster state
     if (ent.monsterinfo && ent.monsterinfo.stand) {
-        ent.monsterinfo.stand(ent);
+        ent.monsterinfo.stand(ent, context);
     }
 
     // Stop chasing this one

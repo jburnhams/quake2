@@ -118,6 +118,7 @@ export interface MonsterInfo {
   search?: MonsterAction;
   attack?: MonsterAction;
   walk?: MonsterAction;
+  checkattack?: (self: Entity) => boolean;
   attack_state?: number;
   lefty?: number;
   nextframe?: number;

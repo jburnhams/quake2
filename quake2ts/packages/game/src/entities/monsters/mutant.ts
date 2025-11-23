@@ -41,7 +41,7 @@ function monster_ai_run(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-  ai_charge(self, dist, MONSTER_TICK);
+  ai_charge(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
@@ -102,9 +102,11 @@ function mutant_jump(self: Entity, context: any): void {
 
     // Simple physics jump approximation
     const speed = 600;
-    self.velocity.x = dir.x * speed;
-    self.velocity.y = dir.y * speed;
-    self.velocity.z = 300; // Jump up
+    self.velocity = {
+      x: dir.x * speed,
+      y: dir.y * speed,
+      z: 300, // Jump up
+    };
 
     // Set movetype to Toss to allow physics engine to handle arc
     // But standard AI uses Step. We might need to temporarily switch or handle via special AI func.
