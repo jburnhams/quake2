@@ -170,7 +170,7 @@ This section covers the physics simulation and collision detection system that f
 - Pointcontents with known BSP data
 
 ### Integration Tests
-- **Player movement**: Full pmove with real BSP, verify slide, jump, step climbing
+- [x] **Player movement**: Full pmove with real BSP, verify slide, jump, step climbing
   - Test on stairs, ramps, ledges, corners
   - Verify no stuck-in-geometry bugs
   - Test crouch/uncrouch in tight spaces
