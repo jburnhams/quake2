@@ -35,11 +35,11 @@ function monster_ai_walk(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
-  ai_run(self, dist, MONSTER_TICK);
+  ai_run(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-  ai_charge(self, dist, MONSTER_TICK);
+  ai_charge(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {

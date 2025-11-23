@@ -43,6 +43,14 @@ describe('Combat and Items', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-setup default mock return values after clear
+    mockImports.trace.mockReturnValue({
+      fraction: 1,
+      endpos: { x: 0, y: 0, z: 0 },
+      allsolid: false,
+      startsolid: false,
+      ent: null
+    });
     game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld();
     world = game.entities.world;
