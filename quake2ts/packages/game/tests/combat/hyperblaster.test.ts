@@ -16,6 +16,7 @@ describe('HyperBlaster', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
@@ -38,6 +39,6 @@ describe('HyperBlaster', () => {
         fire(game, player, WeaponId.HyperBlaster);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
-        expect(createBlasterBolt).toHaveBeenCalledWith(game, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
+        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
     });
 });

@@ -10,6 +10,7 @@ export interface RenderableMd2 {
     readonly blend: Md2FrameBlend;
     readonly transform: Mat4;
     readonly skin?: string; // Texture name
+    readonly ambientLight?: number;
 }
 
 export interface RenderableMd3 {

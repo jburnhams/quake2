@@ -17,6 +17,8 @@ import { createHealthPickupEntity } from './items/health.js';
 import { createArmorPickupEntity } from './items/armor.js';
 import { createPowerupPickupEntity } from './items/powerups.js';
 import { createKeyPickupEntity } from './items/keys.js';
+import { createAmmoPickupEntity } from './items/ammo.js';
+import { AmmoItemId } from '../inventory/ammo.js';
 import { Entity } from './entity.js';
 
 export function registerItemSpawns(game: GameExports, registry: SpawnRegistry) {
@@ -47,6 +49,12 @@ export function registerItemSpawns(game: GameExports, registry: SpawnRegistry) {
     for (const keyItem of Object.values(KEY_ITEMS)) {
         registry.register(keyItem.id, (entity: Entity) => {
             Object.assign(entity, createKeyPickupEntity(game, keyItem));
+        });
+    }
+
+    for (const ammoId of Object.values(AmmoItemId)) {
+        registry.register(ammoId, (entity: Entity) => {
+            Object.assign(entity, createAmmoPickupEntity(game, ammoId));
         });
     }
 }

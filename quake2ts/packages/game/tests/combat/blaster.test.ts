@@ -17,6 +17,7 @@ describe('Blaster', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
@@ -38,6 +39,6 @@ describe('Blaster', () => {
 
         fire(game, player, WeaponId.Blaster);
 
-        expect(createBlasterBolt).toHaveBeenCalledWith(game, player, player.origin, expect.anything(), 15, 1000, DamageMod.BLASTER);
+        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 15, 1000, DamageMod.BLASTER);
     });
 });
