@@ -18,4 +18,6 @@ export interface PlayerState {
   maxs: Vec3;
   damageAlpha: number;
   damageIndicators: DamageIndicator[];
+  centerPrint?: string;
+  notify?: string;
 }

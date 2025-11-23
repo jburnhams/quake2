@@ -4,12 +4,14 @@ import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
 import { createFrameRenderer, FrameRenderOptions } from './frame.js';
-import { Md2Pipeline } from './md2Pipeline.js';
+import { Md2MeshBuffers, Md2Pipeline } from './md2Pipeline.js';
 import { Md3ModelMesh, Md3Pipeline } from './md3Pipeline.js';
 import { RenderableEntity } from './scene.js';
 import { SkyboxPipeline } from './skybox.js';
 import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
+import { CollisionVisRenderer } from './collisionVis.js';
+import { calculateEntityLight } from './light.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -17,6 +19,7 @@ export type Pic = Texture2D;
 export interface Renderer {
     readonly width: number;
     readonly height: number;
+    readonly collisionVis: CollisionVisRenderer;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
 
     // HUD Methods
@@ -25,6 +28,7 @@ export interface Renderer {
     end2D(): void;
     drawPic(x: number, y: number, pic: Pic): void;
     drawString(x: number, y: number, text: string): void;
+    drawCenterString(y: number, text: string): void;
     drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
 }
 
@@ -36,8 +40,10 @@ export const createRenderer = (
     const md2Pipeline = new Md2Pipeline(gl);
     const md3Pipeline = new Md3Pipeline(gl);
     const spriteRenderer = new SpriteRenderer(gl);
+    const collisionVis = new CollisionVisRenderer(gl);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
+    const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
     let font: Pic | null = null;
 
@@ -52,22 +58,64 @@ export const createRenderer = (
         const stats = frameRenderer.renderFrame(options);
         const viewProjection = options.camera.viewProjectionMatrix;
 
+        // Render collision vis debug lines (if any)
+        collisionVis.render(viewProjection as Float32Array);
+        // Clear the lines after rendering (immediate mode style)
+        collisionVis.clear();
+
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
 
         for (const entity of entities) {
+            // Calculate ambient light for the entity
+            // We can extract position from the transform matrix (last column)
+            const position = {
+                x: entity.transform[12],
+                y: entity.transform[13],
+                z: entity.transform[14]
+            };
+            const light = calculateEntityLight(options.world?.map, position);
+
             switch (entity.type) {
                 case 'md2':
-                    // TODO: implement MD2 rendering
+                    {
+                        let mesh = md2MeshCache.get(entity.model);
+                        if (!mesh) {
+                            mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
+                            md2MeshCache.set(entity.model, mesh);
+                        } else {
+                            mesh.update(entity.model, entity.blend);
+                        }
+
+                        const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
+                        const texture = entity.skin ? options.world?.textures?.get(entity.skin) : undefined;
+
+                        if (texture && texture !== lastTexture) {
+                            texture.bind(0);
+                            lastTexture = texture;
+                        }
+
+                        md2Pipeline.bind({
+                            modelViewProjection,
+                            ambientLight: light
+                        });
+                        md2Pipeline.draw(mesh);
+                    }
                     break;
                 case 'md3':
                     {
                         let mesh = md3MeshCache.get(entity.model);
+                        // Merge calculated light into lighting options if provided, or create new
+                        const lighting = {
+                            ...entity.lighting,
+                            ambient: [light, light, light] as const
+                        };
+
                         if (!mesh) {
-                            mesh = new Md3ModelMesh(gl, entity.model, entity.blend, entity.lighting);
+                            mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
                             md3MeshCache.set(entity.model, mesh);
                         } else {
-                            mesh.update(entity.blend, entity.lighting);
+                            mesh.update(entity.blend, lighting);
                         }
 
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
@@ -161,6 +209,13 @@ export const createRenderer = (
         }
     };
 
+    const drawCenterString = (y: number, text: string) => {
+        const charWidth = 8;
+        const width = text.length * charWidth;
+        const x = (gl.canvas.width - width) / 2;
+        drawString(x, y, text);
+    };
+
     const drawfillRect = (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => {
         spriteRenderer.drawRect(x, y, width, height, color);
     };
@@ -168,12 +223,14 @@ export const createRenderer = (
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
+        get collisionVis() { return collisionVis; },
         renderFrame,
         registerPic,
         begin2D,
         end2D,
         drawPic,
         drawString,
+        drawCenterString,
         drawfillRect,
     };
 };

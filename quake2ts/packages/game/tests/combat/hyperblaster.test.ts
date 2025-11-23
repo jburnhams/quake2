@@ -12,15 +12,16 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 describe('HyperBlaster', () => {
     it('should consume 1 cell and spawn a blaster bolt', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -38,6 +39,6 @@ describe('HyperBlaster', () => {
         fire(game, player, WeaponId.HyperBlaster);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
-        expect(createBlasterBolt).toHaveBeenCalledWith(game, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
+        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
     });
 });

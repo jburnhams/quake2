@@ -14,6 +14,7 @@ import {
   serializePlayerInventory,
 } from '../inventory/index.js';
 import type { LevelClock, LevelFrameState } from '../level.js';
+import { FNV_OFFSET_BASIS, hashNumber, hashString } from '../checksum.js';
 
 export const SAVE_FORMAT_VERSION = 2;
 
@@ -36,6 +37,7 @@ export interface GameSaveFile {
   readonly cvars: readonly CvarSaveEntry[];
   readonly configstrings: readonly string[];
   readonly player?: SerializedPlayerInventory;
+  readonly checksum?: number;
 }
 
 export interface SaveCreationOptions {
@@ -306,6 +308,61 @@ function cloneRngState(state: RandomGeneratorState): RandomGeneratorState {
   };
 }
 
+function hashValue(hash: number, value: unknown): number {
+  if (value === null || value === undefined) {
+    return hash;
+  }
+  if (typeof value === 'number') {
+    return hashNumber(hash, value);
+  }
+  if (typeof value === 'string') {
+    return hashString(hash, value);
+  }
+  if (typeof value === 'boolean') {
+    return hashNumber(hash, value ? 1 : 0);
+  }
+  if (Array.isArray(value)) {
+    let h = hash;
+    for (const item of value) {
+      h = hashValue(h, item);
+    }
+    return h;
+  }
+  if (typeof value === 'object') {
+    let h = hash;
+    const keys = Object.keys(value).sort();
+    for (const key of keys) {
+      h = hashString(h, key);
+      h = hashValue(h, (value as Record<string, unknown>)[key]);
+    }
+    return h;
+  }
+  return hash;
+}
+
+export function calculateSaveChecksum(save: Omit<GameSaveFile, 'checksum'>): number {
+  let hash = FNV_OFFSET_BASIS;
+
+  hash = hashNumber(hash, save.version);
+  hash = hashNumber(hash, save.timestamp);
+  hash = hashString(hash, save.map);
+  hash = hashNumber(hash, save.difficulty);
+  hash = hashNumber(hash, save.playtimeSeconds);
+
+  hash = hashValue(hash, save.gameState);
+  hash = hashValue(hash, save.level);
+  hash = hashValue(hash, save.rng);
+  hash = hashValue(hash, save.entities);
+  hash = hashValue(hash, save.cvars);
+  hash = hashValue(hash, save.configstrings);
+
+  if (save.player) {
+    hash = hashValue(hash, save.player);
+  }
+
+  return hash >>> 0;
+}
+
 export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
   const {
     map,
@@ -321,7 +378,7 @@ export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
     player,
   } = options;
 
-  return {
+  const saveWithoutChecksum: Omit<GameSaveFile, 'checksum'> = {
     version: SAVE_FORMAT_VERSION,
     timestamp,
     map,
@@ -334,6 +391,11 @@ export function createSaveFile(options: SaveCreationOptions): GameSaveFile {
     cvars: serializeCvars(cvars),
     configstrings: [...configstrings],
     player: player ? serializePlayerInventory(player) : undefined,
+  };
+
+  return {
+    ...saveWithoutChecksum,
+    checksum: calculateSaveChecksum(saveWithoutChecksum),
   };
 }
 
@@ -351,7 +413,7 @@ export function parseSaveFile(serialized: unknown, options: ParseSaveOptions = {
     throw new Error(`Save version ${version} is newer than supported ${SAVE_FORMAT_VERSION}`);
   }
 
-  return {
+  const parsedSave: GameSaveFile = {
     version,
     timestamp: ensureNumber(save.timestamp, 'timestamp'),
     map: ensureString(save.map, 'map'),
@@ -364,7 +426,17 @@ export function parseSaveFile(serialized: unknown, options: ParseSaveOptions = {
     cvars: parseCvars(save.cvars),
     configstrings: parseConfigstrings(save.configstrings),
     player: save.player ? (save.player as SerializedPlayerInventory) : undefined,
+    checksum: save.checksum !== undefined ? ensureNumber(save.checksum, 'checksum') : undefined,
   };
+
+  if (parsedSave.checksum !== undefined) {
+    const calculated = calculateSaveChecksum(parsedSave);
+    if (calculated !== parsedSave.checksum) {
+      throw new Error(`Save file checksum mismatch: expected ${parsedSave.checksum}, calculated ${calculated}`);
+    }
+  }
+
+  return parsedSave;
 }
 
 export function applySaveFile(save: GameSaveFile, targets: SaveApplyTargets): void {

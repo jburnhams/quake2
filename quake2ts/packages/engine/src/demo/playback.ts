@@ -1,5 +1,5 @@
 import { DemoReader } from './demoReader.js';
-import { NetworkMessageParser } from './parser.js';
+import { NetworkMessageParser, NetworkMessageHandler } from './parser.js';
 
 export enum PlaybackState {
   Stopped,
@@ -12,12 +12,17 @@ export class DemoPlaybackController {
   private reader: DemoReader | null = null;
   private state: PlaybackState = PlaybackState.Stopped;
   private playbackSpeed: number = 1.0;
+  private handler?: NetworkMessageHandler;
 
   // Timing
   private accumulatedTime: number = 0;
   private frameDuration: number = 100; // ms (10Hz default)
 
   constructor() {}
+
+  public setHandler(handler: NetworkMessageHandler) {
+      this.handler = handler;
+  }
 
   public loadDemo(buffer: ArrayBuffer) {
     this.reader = new DemoReader(buffer);
@@ -64,7 +69,7 @@ export class DemoPlaybackController {
             return;
         }
 
-        const parser = new NetworkMessageParser(block.data);
+        const parser = new NetworkMessageParser(block.data, this.handler);
         parser.parseMessage();
         this.accumulatedTime -= this.frameDuration;
     }

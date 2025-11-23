@@ -3,6 +3,7 @@ import { AIFlags, FL_NOTARGET, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../..
 import { findTarget, foundTarget, huntTarget, type TargetAwarenessState } from '../../src/ai/targeting.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import type { TraceFunction } from '../../src/ai/perception.js';
+import type { EntitySystem } from '../../src/entities/system.js';
 
 function makeEntity(index: number): Entity {
   const entity = new Entity(index);
@@ -32,6 +33,8 @@ function makeLevel(): TargetAwarenessState {
   };
 }
 
+const mockContext = {} as EntitySystem;
+
 describe('huntTarget', () => {
   it('faces the enemy and schedules an attack window when running', () => {
     const self = makeEntity(1);
@@ -44,9 +47,9 @@ describe('huntTarget', () => {
     const run = vi.fn();
     self.monsterinfo.run = run;
 
-    huntTarget(self, level);
+    huntTarget(self, level, mockContext);
 
-    expect(run).toHaveBeenCalledWith(self);
+    expect(run).toHaveBeenCalledWith(self, mockContext);
     expect(self.goalentity).toBe(enemy);
     expect(self.ideal_yaw).toBeCloseTo(0);
     expect(self.angles.y).toBeCloseTo(0);
@@ -62,9 +65,9 @@ describe('huntTarget', () => {
     self.monsterinfo.stand = vi.fn();
     self.enemy = enemy;
 
-    huntTarget(self, level);
+    huntTarget(self, level, mockContext);
 
-    expect(self.monsterinfo.stand).toHaveBeenCalledWith(self);
+    expect(self.monsterinfo.stand).toHaveBeenCalledWith(self, mockContext);
     expect(self.attack_finished_time).toBe(0);
   });
 });
@@ -85,14 +88,14 @@ describe('foundTarget', () => {
 
     const pickTarget = vi.fn().mockReturnValue(combatPoint);
 
-    foundTarget(self, level, { pickTarget });
+    foundTarget(self, level, mockContext, { pickTarget });
 
     expect(pickTarget).toHaveBeenCalledWith('point_a');
     expect(self.goalentity).toBe(combatPoint);
     expect(self.movetarget).toBe(combatPoint);
     expect(self.combattarget).toBeUndefined();
     expect(self.monsterinfo.aiflags & AIFlags.CombatPoint).not.toBe(0);
-    expect(self.monsterinfo.run).toHaveBeenCalledWith(self);
+    expect(self.monsterinfo.run).toHaveBeenCalledWith(self, mockContext);
     expect(self.monsterinfo.pausetime).toBe(0);
     expect(self.monsterinfo.last_sighting).toEqual(enemy.origin);
     expect(self.trail_time).toBeCloseTo(2.5);
@@ -116,7 +119,7 @@ describe('findTarget', () => {
     level.sightClient = enemy;
     const trace = createClearTrace();
 
-    const acquired = findTarget(self, level, trace);
+    const acquired = findTarget(self, level, mockContext, trace);
 
     expect(acquired).toBe(true);
     expect(self.enemy).toBe(enemy);
@@ -141,7 +144,7 @@ describe('findTarget', () => {
     level.sightClient = enemy;
     const trace = createClearTrace();
 
-    expect(findTarget(self, level, trace)).toBe(false);
+    expect(findTarget(self, level, mockContext, trace)).toBe(false);
     expect(self.enemy).toBeNull();
   });
 
@@ -156,13 +159,13 @@ describe('findTarget', () => {
     level.soundEntityFrame = 0;
     const trace = createClearTrace();
 
-    expect(findTarget(self, level, trace, { canHear: () => true })).toBe(false);
+    expect(findTarget(self, level, mockContext, trace, { canHear: () => true })).toBe(false);
 
     noisy.origin = { x: 0, y: 0, z: 400 };
     const canHear = vi.fn().mockReturnValue(true);
     const areasConnected = vi.fn().mockReturnValue(false);
 
-    expect(findTarget(self, level, trace, { canHear, areasConnected })).toBe(false);
+    expect(findTarget(self, level, mockContext, trace, { canHear, areasConnected })).toBe(false);
     expect(canHear).not.toHaveBeenCalled();
   });
 
@@ -182,7 +185,7 @@ describe('findTarget', () => {
       level.sightClient = enemy;
       const blockedTrace = createBlockedTrace();
 
-      const acquired = findTarget(self, level, blockedTrace);
+      const acquired = findTarget(self, level, mockContext, blockedTrace);
 
       // Should NOT acquire target when line-of-sight is blocked
       expect(acquired).toBe(false);
@@ -212,7 +215,7 @@ describe('findTarget', () => {
         return { fraction: 0.5, entity: null }; // blocked
       };
 
-      const acquired = findTarget(self, level, traceSpy);
+      const acquired = findTarget(self, level, mockContext, traceSpy);
 
       expect(acquired).toBe(false);
       expect(traceCallCount).toBeGreaterThan(0);
@@ -240,7 +243,7 @@ describe('findTarget', () => {
         return { fraction: 1, entity: null }; // clear
       };
 
-      const acquired = findTarget(self, level, traceSpy);
+      const acquired = findTarget(self, level, mockContext, traceSpy);
 
       expect(acquired).toBe(true);
       expect(traceCallCount).toBeGreaterThan(0);
@@ -263,7 +266,7 @@ describe('findTarget', () => {
         return { fraction: 0.3, entity: null }; // blocked
       };
 
-      const acquired = findTarget(self, level, blockedTrace);
+      const acquired = findTarget(self, level, mockContext, blockedTrace);
 
       // Ambush monsters should NOT respond to sounds through walls
       expect(acquired).toBe(false);
@@ -289,7 +292,7 @@ describe('findTarget', () => {
         return { fraction: 1, entity: null }; // clear
       };
 
-      const acquired = findTarget(self, level, clearTrace);
+      const acquired = findTarget(self, level, mockContext, clearTrace);
 
       expect(acquired).toBe(true);
       expect(traceCallCount).toBeGreaterThan(0);

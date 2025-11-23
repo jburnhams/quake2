@@ -12,17 +12,21 @@ export interface GameTraceResult {
   ent: Entity | null;
 }
 
-export interface GameImports {
-  trace(
-    start: Vec3,
-    mins: Vec3 | null,
-    maxs: Vec3 | null,
-    end: Vec3,
-    passent: Entity | null,
-    contentmask: number
-  ): GameTraceResult;
+export type TraceFunction = (
+  start: Vec3,
+  mins: Vec3 | null,
+  maxs: Vec3 | null,
+  end: Vec3,
+  passent: Entity | null,
+  contentmask: number
+) => GameTraceResult;
 
-  pointcontents(point: Vec3): number;
+export type PointContentsFunction = (point: Vec3) => number;
+
+export interface GameImports {
+  trace: TraceFunction;
+
+  pointcontents: PointContentsFunction;
 
   linkentity(ent: Entity): void;
 }

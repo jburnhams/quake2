@@ -1,8 +1,9 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
+import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
-import { GameImports } from '../imports.js';
+import { GameImports, TraceFunction, PointContentsFunction } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -124,6 +125,14 @@ export class EntitySystem {
   private readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
+
+  get trace(): TraceFunction {
+    return this.imports.trace;
+  }
+
+  get pointcontents(): PointContentsFunction {
+    return this.imports.pointcontents;
+  }
 
   constructor(
     engine: GameEngine,
@@ -325,6 +334,10 @@ export class EntitySystem {
     for (const ent of this.pool) {
       if (!ent.inUse || ent.freePending) {
         continue;
+      }
+
+      if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
+        checkWater(ent, this, this.imports);
       }
 
       const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
