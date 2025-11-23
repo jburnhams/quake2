@@ -102,8 +102,8 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `monster_gunner`: Implemented
   - [ ] `monster_berserk`: Pending
   - [ ] `monster_gladiator`: Pending
-  - [ ] `monster_medic`: Pending
-  - [ ] `monster_mutant`: Pending
+  - [x] `monster_medic`: Implemented
+  - [x] `monster_mutant`: Implemented
   - [ ] `monster_parasite`: Pending
   - [ ] `monster_tank`: Pending
   - [ ] `monster_tank_commander`: Pending
