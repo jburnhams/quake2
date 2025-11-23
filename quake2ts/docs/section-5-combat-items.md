@@ -116,8 +116,8 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Play pickup sound
   - Show pickup message on HUD ("You got the Shotgun")
   - Remove item from world or set respawn timer (deathmatch)
-- [ ] Item respawn (for deathmatch, not needed for single-player initially)
-  - After pickup, set respawn timer
+- [x] Item respawn (for deathmatch, not needed for single-player initially)
+  - After pickup, set respawn timer (conditional on deathmatch flag)
   - Respawn item after delay
   - Respawn effect (particles, sound)
 

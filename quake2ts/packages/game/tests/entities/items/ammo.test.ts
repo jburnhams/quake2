@@ -9,6 +9,7 @@ describe('Ammo Pickup Entities', () => {
         sound: vi.fn(),
         centerprintf: vi.fn(),
         time: 100,
+        deathmatch: true,
         entities: {
             scheduleThink: vi.fn()
         }

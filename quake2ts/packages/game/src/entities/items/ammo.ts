@@ -26,8 +26,10 @@ export function createAmmoPickupEntity(game: GameExports, itemId: AmmoItemId): P
         // TODO: Map ammo type to nice name
         game.centerprintf?.(other, `You got ${def.quantity} ${itemId.replace('ammo_', '')}`);
         self.solid = Solid.Not;
-        self.nextthink = game.time + 30;
-        game.entities.scheduleThink(self, self.nextthink);
+        if (game.deathmatch) {
+          self.nextthink = game.time + 30;
+          game.entities.scheduleThink(self, self.nextthink);
+        }
       }
     },
     think: respawn,

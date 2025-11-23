@@ -89,6 +89,13 @@ This section covers the physics simulation and collision detection system that f
 - [x] Trigger volume detection
   - Identify entities with CONTENTS_TRIGGER
   - Used for touch/trigger logic in game layer
+- [ ] **Entity Linking (SV_LinkEdict / BSP Spatial Linking)**
+  - **Pending**: Implement `SV_LinkEdict` (or equivalent) to insert entities into the BSP spatial partition (leaves/areas).
+  - This is required for:
+    - Efficient O(1) or O(small N) retrieval of entities in a region (`G_FindInRadius`, collision candidates).
+    - Optimizing touch triggers (avoiding O(N^2) checks).
+    - Determining which BSP leaf an entity currently occupies for PVS/PHS checks and lighting.
+    - Currently, entity linking only updates the absolute bounding box (`absmin`/`absmax`) but does not update the spatial hash/tree.
 
 ### Player Movement Integration
 - [x] Wire shared pmove to real trace function
@@ -181,8 +188,9 @@ This section covers the physics simulation and collision detection system that f
 - [x] **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection (partially covered in shared/tests/bsp and game/tests/physics/integration.test.ts)
 
 ### Performance Tests
-- **Trace throughput**: Measure traces per second on complex maps
+- [x] **Trace throughput**: Measure traces per second on complex maps
   - Target: 10,000+ traces/sec for real-time gameplay
+  - **Status**: Verified with `tests/bsp/trace.perf.test.ts`.
 - **Player movement frame time**: pmove with 20+ traces per frame should stay under 1ms
 - **Entity collision scaling**: Test with 100+ entities, measure trace overhead
 - **Spatial partitioning efficiency**: Verify BSP traversal reduces brush tests
