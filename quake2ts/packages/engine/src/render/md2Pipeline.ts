@@ -14,8 +14,8 @@ export interface Md2Geometry {
 }
 
 export interface Md2FrameBlend {
-  readonly currentFrame: number;
-  readonly nextFrame: number;
+  readonly frame0: number;
+  readonly frame1: number;
   readonly lerp: number;
 }
 
@@ -146,9 +146,9 @@ export function buildMd2VertexData(
   geometry: Md2Geometry,
   blend: Md2FrameBlend
 ): Float32Array {
-  const { currentFrame, nextFrame, lerp } = blend;
-  const frameA = model.frames[currentFrame];
-  const frameB = model.frames[nextFrame];
+  const { frame0, frame1, lerp } = blend;
+  const frameA = model.frames[frame0];
+  const frameB = model.frames[frame1];
 
   if (!frameA || !frameB) {
     throw new Error('Requested MD2 frames are out of range');

@@ -10,6 +10,17 @@ vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() 
 vi.mock('../../src/render/skybox.js', () => ({ SkyboxPipeline: vi.fn() }));
 vi.mock('../../src/render/md2Pipeline.js', () => ({ Md2Pipeline: vi.fn() }));
 vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
+// Mock PVS/BSP traversal to avoid complex map data setup
+vi.mock('../../src/render/bspTraversal.js', () => ({
+    findLeafForPoint: vi.fn().mockReturnValue(0), // Return a valid leaf index
+    isClusterVisible: vi.fn().mockReturnValue(true),
+    gatherVisibleFaces: vi.fn().mockReturnValue([]),
+}));
+// Mock light calculation to avoid map entity access
+vi.mock('../../src/render/light.js', () => ({
+    calculateEntityLight: vi.fn().mockReturnValue(1.0),
+}));
+
 // Mock CollisionVisRenderer as it is also instantiated in createRenderer
 vi.mock('../../src/render/collisionVis.js', () => ({
     CollisionVisRenderer: vi.fn(() => ({
@@ -67,7 +78,7 @@ describe('Renderer', () => {
 
     it('should set initial GL state and call the underlying frame renderer', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16) } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entities: any[] = [];
 
         renderer.renderFrame(options, entities);
@@ -80,11 +91,16 @@ describe('Renderer', () => {
 
     it('should render an MD3 entity', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16) } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entities = [{
             type: 'md3',
-            model: { surfaces: [{ name: 'test' }] },
-            blend: {},
+            model: {
+                surfaces: [{ name: 'test' }],
+                frames: [
+                    { minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }
+                ]
+            },
+            blend: { frame0: 0, frame1: 0, lerp: 0 },
             transform: new Float32Array(16),
         }] as any;
 
@@ -99,16 +115,26 @@ describe('Renderer', () => {
         const renderer = createRenderer(mockGl);
         const mockTexture = { bind: vi.fn() } as unknown as Texture2D;
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16) },
+            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
             world: {
                 textures: new Map([['test_skin', mockTexture]]),
+                // Mock map with basic structure expected by PVS logic
+                map: {
+                    leafs: [{ cluster: 0 }],
+                    visibility: undefined
+                },
             }
         } as any;
         const entities = [{
             type: 'md3',
-            model: { surfaces: [{ name: 'test' }] },
+            model: {
+                surfaces: [{ name: 'test' }],
+                frames: [
+                    { minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }
+                ]
+            },
             skins: new Map([['test', 'test_skin']]),
-            blend: {},
+            blend: { frame0: 0, frame1: 0, lerp: 0 },
             transform: new Float32Array(16),
         }] as any;
 
