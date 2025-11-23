@@ -14,6 +14,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 
 export interface GameCreateOptions {
   gravity: Vec3;
+  deathmatch?: boolean;
 }
 
 import { ServerCommand } from '@quake2ts/shared';
@@ -54,6 +55,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
+  readonly deathmatch: boolean;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
@@ -75,6 +77,7 @@ export function createGame(
   options: GameCreateOptions
 ): GameExports {
   const gravity = options.gravity;
+  const deathmatch = options.deathmatch ?? false;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
 
@@ -211,6 +214,7 @@ export function createGame(
       engine.centerprintf?.(entity, message);
     },
     trace,
+    deathmatch,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
       multicast(origin, type, event, ...args);
     },
