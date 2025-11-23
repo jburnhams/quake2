@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_berserk } from '../../../src/entities/monsters/berserk.js';
-import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
@@ -89,7 +89,7 @@ describe('monster_berserk', () => {
     expect(ent.die).toBeDefined();
     ent.die!(ent, system.world, system.world, 250, { x: 0, y: 0, z: 0 });
 
-    expect(ent.deadflag).toBe(1); // DeadFlag.Dead
+    expect(ent.deadflag).toBe(DeadFlag.Dead);
     expect(ent.solid).toBe(Solid.Not);
     // Should transition to death frames
     expect(ent.monsterinfo.current_move?.firstframe).toBe(122);
