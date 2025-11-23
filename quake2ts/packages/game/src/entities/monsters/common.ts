@@ -24,7 +24,7 @@ function generic_ai_walk(self: Entity, dist: number, context: any): void {
 }
 
 function generic_ai_run(self: Entity, dist: number, context: any): void {
-  ai_run(self, dist, MONSTER_TICK);
+  ai_run(self, dist, MONSTER_TICK, context);
 }
 
 const generic_stand_frames: MonsterFrame[] = Array.from({ length: 1 }, () => ({
