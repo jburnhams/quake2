@@ -38,6 +38,7 @@ describe('Physics: runStep', () => {
       // Mocking trace to delegate to imports.trace, which is what EntitySystem does
       trace: (...args: any[]) => (imports.trace as any)(...args),
       pointcontents: (...args: any[]) => (imports.pointcontents as any)(...args),
+      forEachEntity: vi.fn(),
     } as unknown as EntitySystem;
   });
 
