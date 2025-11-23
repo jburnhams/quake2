@@ -14,8 +14,8 @@ export interface Md3SurfaceGeometry {
 }
 
 export interface Md3FrameBlend {
-  readonly currentFrame: number;
-  readonly nextFrame: number;
+  readonly frame0: number;
+  readonly frame1: number;
   readonly lerp: number;
 }
 
@@ -130,8 +130,8 @@ export function buildMd3VertexData(
   blend: Md3FrameBlend,
   lighting?: Md3LightingOptions
 ): Float32Array {
-  const frameA = surface.vertices[blend.currentFrame];
-  const frameB = surface.vertices[blend.nextFrame];
+  const frameA = surface.vertices[blend.frame0];
+  const frameB = surface.vertices[blend.frame1];
 
   if (!frameA || !frameB) {
     throw new Error('Requested MD3 frames are out of range');
@@ -179,8 +179,8 @@ export function interpolateMd3Tag(model: Md3Model, blend: Md3FrameBlend, tagName
     return null;
   }
 
-  const tagA = model.tags[blend.currentFrame]?.[tagIndex];
-  const tagB = model.tags[blend.nextFrame]?.[tagIndex];
+  const tagA = model.tags[blend.frame0]?.[tagIndex];
+  const tagB = model.tags[blend.frame1]?.[tagIndex];
   if (!tagA || !tagB) {
     throw new Error(`Tag ${tagName} is missing for one of the interpolated frames`);
   }

@@ -54,7 +54,7 @@ describe('MD3 Pipeline', () => {
                 vertices: [{ vertexIndex: 0, texCoord: [0.5, 0.5] }],
                 indices: new Uint16Array([0]),
             };
-            const blend = { currentFrame: 0, nextFrame: 1, lerp: 0.5 };
+            const blend = { frame0: 0, frame1: 1, lerp: 0.5 };
             const lighting = {
                 ambient: [0.1, 0.1, 0.1],
                 directional: {

@@ -1,5 +1,5 @@
 
-import { Mat4, multiplyMat4 } from '@quake2ts/shared';
+import { Mat4, multiplyMat4, Vec3 } from '@quake2ts/shared';
 import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
@@ -13,6 +13,8 @@ import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
+import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
+import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 
 // A handle to a registered picture.
@@ -64,6 +66,21 @@ export const createRenderer = (
 
         const stats = frameRenderer.renderFrame(options);
         const viewProjection = options.camera.viewProjectionMatrix;
+        const frustumPlanes = extractFrustumPlanes(viewProjection);
+
+        // Determine view cluster for PVS culling
+        let viewCluster = -1;
+        if (options.world) {
+            const cameraPosition = {
+                x: options.camera.position[0],
+                y: options.camera.position[1],
+                z: options.camera.position[2],
+            };
+            const viewLeafIndex = findLeafForPoint(options.world.map, cameraPosition);
+            if (viewLeafIndex >= 0) {
+                viewCluster = options.world.map.leafs[viewLeafIndex].cluster;
+            }
+        }
 
         // Render collision vis debug lines (if any)
         collisionVis.render(viewProjection as Float32Array);
@@ -74,6 +91,69 @@ export const createRenderer = (
         let lastTexture: Texture2D | undefined;
 
         for (const entity of entities) {
+            // PVS Culling
+            if (options.world && viewCluster >= 0) {
+                // Use entity origin from transform (last column)
+                const origin = {
+                    x: entity.transform[12],
+                    y: entity.transform[13],
+                    z: entity.transform[14],
+                };
+                const entityLeafIndex = findLeafForPoint(options.world.map, origin);
+                if (entityLeafIndex >= 0) {
+                    const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
+                    if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
+                        continue;
+                    }
+                }
+            }
+
+            // Frustum Culling
+            let minBounds: Vec3 | undefined;
+            let maxBounds: Vec3 | undefined;
+
+            if (entity.type === 'md2') {
+                const frame0 = entity.model.frames[entity.blend.frame0];
+                const frame1 = entity.model.frames[entity.blend.frame1];
+                // Conservative bounds: union of both frames
+                minBounds = {
+                    x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
+                    y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
+                    z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
+                };
+                maxBounds = {
+                    x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
+                    y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
+                    z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
+                };
+            } else if (entity.type === 'md3') {
+                const frame0 = entity.model.frames[entity.blend.frame0];
+                const frame1 = entity.model.frames[entity.blend.frame1];
+                if (frame0 && frame1) {
+                     minBounds = {
+                        x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
+                        y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
+                        z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
+                    };
+                    maxBounds = {
+                        x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
+                        y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
+                        z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
+                    };
+                } else {
+                    // Fallback if frames missing (shouldn't happen)
+                     minBounds = { x: -32, y: -32, z: -32 };
+                     maxBounds = { x: 32, y: 32, z: 32 };
+                }
+            }
+
+            if (minBounds && maxBounds) {
+                const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
+                if (!boxIntersectsFrustum(worldBounds.mins, worldBounds.maxs, frustumPlanes)) {
+                    continue;
+                }
+            }
+
             // Calculate ambient light for the entity
             // We can extract position from the transform matrix (last column)
             const position = {

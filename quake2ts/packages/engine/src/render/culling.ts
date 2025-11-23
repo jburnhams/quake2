@@ -1,4 +1,4 @@
-import { type Vec3 } from '@quake2ts/shared';
+import { type Vec3, type Mat4 } from '@quake2ts/shared';
 
 export interface FrustumPlane {
   readonly normal: Vec3;
@@ -18,7 +18,7 @@ function normalizePlane(plane: FrustumPlane): FrustumPlane {
   };
 }
 
-export function extractFrustumPlanes(matrix: readonly number[]): readonly FrustumPlane[] {
+export function extractFrustumPlanes(matrix: ArrayLike<number>): readonly FrustumPlane[] {
   if (matrix.length !== 16) {
     throw new Error('View-projection matrix must contain 16 elements');
   }
@@ -73,4 +73,33 @@ export function boxIntersectsFrustum(mins: Vec3, maxs: Vec3, planes: readonly Fr
     }
   }
   return true;
+}
+
+export function transformAabb(mins: Vec3, maxs: Vec3, transform: Mat4): { mins: Vec3; maxs: Vec3 } {
+  // Center and extents
+  const cx = (mins.x + maxs.x) * 0.5;
+  const cy = (mins.y + maxs.y) * 0.5;
+  const cz = (mins.z + maxs.z) * 0.5;
+  const ex = (maxs.x - mins.x) * 0.5;
+  const ey = (maxs.y - mins.y) * 0.5;
+  const ez = (maxs.z - mins.z) * 0.5;
+
+  // Transform center
+  const m = transform;
+  const tcx = m[0] * cx + m[4] * cy + m[8] * cz + m[12];
+  const tcy = m[1] * cx + m[5] * cy + m[9] * cz + m[13];
+  const tcz = m[2] * cx + m[6] * cy + m[10] * cz + m[14];
+
+  // Transform extents (absolute sum)
+  const tex =
+    Math.abs(m[0]) * ex + Math.abs(m[4]) * ey + Math.abs(m[8]) * ez;
+  const tey =
+    Math.abs(m[1]) * ex + Math.abs(m[5]) * ey + Math.abs(m[9]) * ez;
+  const tez =
+    Math.abs(m[2]) * ex + Math.abs(m[6]) * ey + Math.abs(m[10]) * ez;
+
+  return {
+    mins: { x: tcx - tex, y: tcy - tey, z: tcz - tez },
+    maxs: { x: tcx + tex, y: tcy + tey, z: tcz + tez },
+  };
 }

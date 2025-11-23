@@ -82,7 +82,7 @@ const baseMd3 = parseMd3(
   })
 );
 
-const blend = { currentFrame: 0, nextFrame: 1, lerp: 0.5 } as const;
+const blend = { frame0: 0, frame1: 1, lerp: 0.5 } as const;
 
 describe('MD3 geometry', () => {
   it('builds indexed geometry per-surface with flipped v coordinates', () => {
@@ -186,7 +186,7 @@ describe('MD3 geometry', () => {
     );
 
     const geometry = buildMd3SurfaceGeometry(downFacingModel.surfaces[0]!);
-    const blend = { currentFrame: 0, nextFrame: 0, lerp: 0 };
+    const blend = { frame0: 0, frame1: 0, lerp: 0 };
 
     // With no dynamic lights, surface facing away from directional light should be dark
     const withoutDynamicLight = buildMd3VertexData(downFacingModel.surfaces[0]!, geometry, blend, {
@@ -255,7 +255,7 @@ describe('MD3 pipeline', () => {
   it('updates every surface when the model mesh blend changes', () => {
     const gl = createMockGL();
     const modelMesh = new Md3ModelMesh(gl as unknown as WebGL2RenderingContext, baseMd3, blend);
-    modelMesh.update({ currentFrame: 1, nextFrame: 1, lerp: 0 }, { ambient: [1, 0, 0] });
+    modelMesh.update({ frame0: 1, frame1: 1, lerp: 0 }, { ambient: [1, 0, 0] });
     expect(modelMesh.surfaces.get('head')).toBeDefined();
     expect(modelMesh.surfaces.get('eyes')).toBeDefined();
     modelMesh.dispose();
