@@ -102,10 +102,11 @@ function mutant_jump(self: Entity, context: any): void {
 
     // Simple physics jump approximation
     const speed = 600;
-    const velocity = self.velocity as { x: number; y: number; z: number };
-    velocity.x = dir.x * speed;
-    velocity.y = dir.y * speed;
-    velocity.z = 300; // Jump up
+    self.velocity = {
+      x: dir.x * speed,
+      y: dir.y * speed,
+      z: 300, // Jump up
+    };
 
     // Set movetype to Toss to allow physics engine to handle arc
     // But standard AI uses Step. We might need to temporarily switch or handle via special AI func.
