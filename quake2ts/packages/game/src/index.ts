@@ -74,7 +74,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }
 
-export { hashGameState } from './checksum.js';
+export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
@@ -84,6 +84,8 @@ import { createPlayerWeaponStates } from './combat/index.js';
 import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
+export type { GameImports }; // Export GameImports type
+
 export function createGame(
   { trace, pointcontents, multicast, unicast }: GameImports,
   engine: GameEngine,

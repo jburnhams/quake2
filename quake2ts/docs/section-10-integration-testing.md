@@ -249,13 +249,15 @@ This section covers the critical integration layer that ensures all subsystems w
   - Create deterministic hash/checksum of state
   - Store state snapshots at key frames
   - Added `hashGameState` FNV-1a helper and baseline hashes for the gravity loop to detect rerelease deviations.
-- [ ] Replay and comparison system
+- [x] Replay and comparison system
   - ✅ Defined Input Recording Schema in `packages/shared/src/replay/schema.ts`.
-  - Record input sequence for gameplay session
-  - Replay inputs and compare state checksums
-  - Verify identical results across runs
-  - Test on different platforms (Linux, macOS, Windows via CI)
-  - Baseline hash regression tests now fail fast on divergent physics; input recording still needed.
+  - ✅ Implemented `GameRecorder` and `GameReplayer` in `packages/game/src/replay/`.
+  - ✅ Implemented `hashEntitySystem` for deep state verification.
+  - ✅ Added unit tests for recording, replaying, and state divergence detection.
+  - [x] Record input sequence for gameplay session
+  - [x] Replay inputs and compare state checksums
+  - [x] Verify identical results across runs
+  - [ ] Test on different platforms (Linux, macOS, Windows via CI)
 - [ ] Floating point consistency tests
   - Test math operations for deterministic results
   - Verify vec3/angle operations produce identical results

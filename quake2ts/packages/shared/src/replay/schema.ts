@@ -15,6 +15,12 @@ export interface ReplayFrame {
      * The timestamp (in ms) relative to start of recording.
      */
     timestamp: number;
+
+    /**
+     * The hash of the game state AFTER this frame was executed.
+     * Optional for backward compatibility or lightweight recording.
+     */
+    stateHash?: number;
 }
 
 export interface ReplaySession {
@@ -26,6 +32,7 @@ export interface ReplaySession {
         date: string;
         version: string;
         seed?: number; // Random seed
+        gravity?: { x: number, y: number, z: number }; // Capture gravity
     };
 
     /**
