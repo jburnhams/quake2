@@ -1,9 +1,9 @@
 import type { GameStateSnapshot } from './index.js';
 
-const FNV_OFFSET_BASIS = 0x811c9dc5;
+export const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 
-function hashBytes(hash: number, bytes: ArrayLike<number>): number {
+export function hashBytes(hash: number, bytes: ArrayLike<number>): number {
   let h = hash >>> 0;
   for (let i = 0; i < bytes.length; i += 1) {
     h ^= bytes[i]! & 0xff;
@@ -12,7 +12,7 @@ function hashBytes(hash: number, bytes: ArrayLike<number>): number {
   return h >>> 0;
 }
 
-function hashNumber(hash: number, value: number): number {
+export function hashNumber(hash: number, value: number): number {
   const buffer = new ArrayBuffer(8);
   const view = new DataView(buffer);
   view.setFloat64(0, value, true);
@@ -20,7 +20,7 @@ function hashNumber(hash: number, value: number): number {
   return hashBytes(hash, bytes);
 }
 
-function hashString(hash: number, value: string): number {
+export function hashString(hash: number, value: string): number {
   const bytes = new Uint8Array(value.length);
   for (let i = 0; i < value.length; i += 1) {
     bytes[i] = value.charCodeAt(i) & 0xff;
