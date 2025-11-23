@@ -12,7 +12,7 @@ import { angleVectors } from '@quake2ts/shared';
 describe('Shotgun', () => {
     it('should consume 1 shell and fire 12 pellets', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
@@ -20,7 +20,7 @@ describe('Shotgun', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
