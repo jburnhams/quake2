@@ -25,6 +25,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Soldier variants (Shotgun Guard, Machinegun Guard) via spawnflags and unit tests.
 - ✅ Implemented Gunner unit tests covering dual attacks (chain/grenade).
 - ✅ Implemented Infantry (Enforcer) behaviors and unit tests.
+- ✅ Implemented Berserker behaviors and unit tests.
 
 ## Tasks Remaining
 
@@ -132,7 +133,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Choose based on range
 - [ ] **Infantry**
   - Machinegun, can dodge
-- [ ] **Berserker** (melee)
+- [x] **Berserker** (melee)
   - Strong melee attacks
   - Charge attack
   - High health
@@ -273,6 +274,7 @@ Recent work:
 - Implemented Soldier variants (Shotgun Guard, Machinegun Guard) via spawnflags and unit tests.
 - Implemented Gunner unit tests covering dual attacks (chain/grenade).
 - Implemented Infantry (Enforcer) behaviors and unit tests.
+- Implemented Berserker behaviors and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback
