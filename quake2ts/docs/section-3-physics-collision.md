@@ -42,7 +42,7 @@ This section covers the physics simulation and collision detection system that f
   - Test against entity bounding boxes (see Section 4 integration)
   - Find nearest collision (minimum fraction)
   - Record hit plane, surface flags, contents
-- [ ] Trace optimization
+- [x] Trace optimization
   - BSP node traversal to limit brush tests
   - Early-out when trace is blocked
   - Trace cache for repeated queries (optional)
@@ -133,7 +133,7 @@ This section covers the physics simulation and collision detection system that f
   - `clip(start, mins, maxs, end, passent, contentmask)` (alias for trace)
   - `inPVS(p1, p2)`
   - `inPHS(p1, p2)` (Potentially Hearable Set, for audio)
-- [ ] Add debugging/visualization hooks
+- [x] Add debugging/visualization hooks
   - Draw trace lines
   - Highlight hit planes
   - Display collision bounds
@@ -148,7 +148,7 @@ This section covers the physics simulation and collision detection system that f
 - [x] Stuck-in-solid recovery
   - `fixStuckObjectGeneric` in `shared/src/pmove/stuck.ts`
   - `snapPosition` in `shared/src/pmove/snap.ts`
-- [ ] Water/liquid transitions
+- [x] Water/liquid transitions
   - Detect when entering/exiting water
   - Trigger splash sounds/effects (via game layer)
   - Apply water physics (damping, altered gravity)
