@@ -169,6 +169,17 @@ function normalizeEntityFields(raw: JsonObject, label: string): SerializedEntity
         fields[name as keyof SerializedEntityState['fields']] = value;
         break;
       default:
+        if (name === 'inventory' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          const inventory: Record<string, number> = {};
+          const obj = value as Record<string, unknown>;
+          for (const [k, v] of Object.entries(obj)) {
+            if (typeof v === 'number') {
+              inventory[k] = v;
+            }
+          }
+          fields[name] = inventory;
+          break;
+        }
         throw new Error(`Unsupported field type for ${label}.${name}`);
     }
   }
