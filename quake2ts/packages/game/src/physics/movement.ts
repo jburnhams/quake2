@@ -1,4 +1,4 @@
-import { Entity, MoveType, Solid } from '../entities/entity.js';
+import { Entity, MoveType, Solid, EntityFlags } from '../entities/entity.js';
 import { GameImports } from '../imports.js';
 import {
   addVec3,
@@ -9,6 +9,7 @@ import {
   rotatePointAroundVector
 } from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
+import { CheckGround } from '../ai/movement.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
@@ -33,6 +34,78 @@ export function runBouncing(ent: Entity, imports: GameImports, frametime: number
     const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, 1.01);
     ent.velocity = scaleVec3(clipped, ent.bounce);
   }
+}
+
+export function runStep(
+  ent: Entity,
+  system: EntitySystem,
+  imports: GameImports,
+  gravity: Vec3,
+  frametime: number,
+): void {
+  // SV_Physics_Step
+
+  // If not flying or swimming, apply gravity
+  const isFlying = (ent.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0;
+  if (!isFlying) {
+    // SV_AddGravity
+    ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+  }
+
+  // Move velocity
+  // SV_CheckVelocity: if velocity is small, zero it out? Not implemented in Q2 rerelease for step?
+  // SV_FlyMove
+
+  // Q2 physics loop for step movement often clips against world
+  let timeLeft = frametime;
+  let velocity = { ...ent.velocity };
+
+  // We allow a few bounces/slides
+  for (let i = 0; i < 4; i++) {
+    const move = scaleVec3(velocity, timeLeft);
+    const end = addVec3(ent.origin, move);
+
+    const trace = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);
+
+    if (trace.allsolid) {
+      // Trapped?
+      ent.velocity = { x: 0, y: 0, z: 0 };
+      return;
+    }
+
+    if (trace.startsolid) {
+      // Move up?
+      ent.velocity = { x: 0, y: 0, z: 0 };
+      return;
+    }
+
+    ent.origin = trace.endpos;
+
+    if (trace.fraction === 1) {
+      break; // Moved the whole distance
+    }
+
+    // Hit something
+    // TODO: SV_Impact / G_TouchTriggers should be called here if trace.ent is valid
+    timeLeft -= timeLeft * trace.fraction;
+
+    if (trace.plane) {
+      velocity = clipVelocityVec3(velocity, trace.plane.normal, 1.0); // No overbounce for steps usually? Q2 uses OVERCLIP 1.01 usually
+      // Actually SV_FlyMove uses NO_OVERCLIP by default unless specified.
+    }
+
+    // If velocity is very small, stop?
+    const speed = velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z;
+    if (speed < 1) {
+      velocity = { x: 0, y: 0, z: 0 };
+      break;
+    }
+  }
+
+  ent.velocity = velocity;
+  imports.linkentity(ent);
+
+  CheckGround(ent, system);
 }
 
 export function runProjectileMovement(ent: Entity, imports: GameImports, frametime: number): void {
