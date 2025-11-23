@@ -90,7 +90,7 @@ describe('BFG10K', () => {
         bfgBall.touch!(bfgBall, game.entities.world!, null, null);
 
         // Expect primary radius damage
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, player, 200, expect.anything(), DamageMod.BFG_BLAST);
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, player, 200, expect.anything(), DamageMod.BFG_BLAST, expect.anything(), expect.any(Function));
 
         // Expect secondary laser damage
         // Target is within 1000 units (200 units away) and visible
@@ -104,7 +104,8 @@ describe('BFG10K', () => {
             10, // Laser damage
             10, // Kick
             expect.anything(), // Flags
-            DamageMod.BFG_LASER
+            DamageMod.BFG_LASER,
+            expect.any(Function)
         );
     });
 });

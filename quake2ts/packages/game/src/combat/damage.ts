@@ -2,6 +2,9 @@ import { addVec3, closestPointToBox, lengthVec3, normalizeVec3, scaleVec3, subtr
 import { applyPowerArmor, applyRegularArmor, type PowerArmorState, type RegularArmorState } from './armor.js';
 import { DamageFlags, hasAnyDamageFlag } from './damageFlags.js';
 import { DamageMod } from './damageMods.js';
+import { EntitySystem } from '../entities/system.js';
+import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
+import { MulticastType } from '../imports.js';
 
 export interface DamageableCallbacks {
   pain?: (self: Damageable, attacker: Damageable | null, knockback: number, take: number, mod: DamageMod) => void;
@@ -129,6 +132,7 @@ export function T_Damage(
   knockback: number,
   dflags: number,
   mod: DamageMod,
+  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
 ): DamageApplicationResult | null {
   if (!targ.takedamage || damage <= 0) {
     return null;
@@ -161,6 +165,25 @@ export function T_Damage(
 
   if (actualTake > 0) {
     targ.health -= actualTake;
+
+    // Spawn blood/sparks if multicast is available and we did damage
+    if (multicast && !hasAnyDamageFlag(dflags, DamageFlags.NO_DAMAGE_EFFECTS)) {
+        if ((targ as any).classname === 'player' || (targ as any).monsterinfo) {
+             // Bleed
+             // Quake 2: Check for MASK_SOLID vs MASK_SHOT
+             // Here we assume if it has health and is player/monster, it bleeds.
+             // gi.WriteByte (svc_temp_entity);
+             // gi.WriteByte (TE_BLOOD);
+             // gi.WritePosition (point);
+             // gi.WriteDir (normal);
+             // gi.multicast (point, MULTICAST_PVS);
+             multicast(point, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLOOD, point, normal);
+        } else {
+             // Sparks? If Bullet?
+             // Only for walls usually, but entities can spark too (like robots).
+             // Standard Quake 2 T_Damage doesn't spawn sparks for entities unless specific material.
+        }
+    }
   }
 
   const killed = targ.health <= 0;
@@ -187,6 +210,7 @@ export function T_RadiusDamage(
   dflags: number,
   mod: DamageMod,
   options: RadiusDamageOptions = {},
+  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
 ): RadiusDamageHit[] {
   const hits: RadiusDamageHit[] = [];
   const inflictorCenter = targetCenter(inflictor);
@@ -216,7 +240,7 @@ export function T_RadiusDamage(
     // We pass damage as both damage and knockback (or logic differs?)
     // Quake 2: T_Damage (ent, inflictor, attacker, dir, ent->s.origin, vec3_origin, points, points, DAMAGE_RADIUS, mod);
     // Yes, damage equals knockback for radius damage.
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod);
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, multicast);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 

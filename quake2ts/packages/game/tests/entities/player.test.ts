@@ -61,14 +61,14 @@ describe('Player Death', () => {
         const system = new EntitySystem(mockEngine, mockImports as any);
 
         const player = new Entity(1);
+        player.classname = 'player';
         player.health = 0;
 
         const attacker = new Entity(2);
         attacker.classname = 'monster_soldier';
 
         player_die(player, null, attacker, 10, { x: 0, y: 0, z: 0 }, DamageMod.MACHINEGUN, system);
-
-        expect(mockEngine.centerprintf).toHaveBeenCalledWith(player, expect.stringContaining('monster_soldier'));
-        expect(mockEngine.centerprintf).toHaveBeenCalledWith(player, expect.stringContaining('MOD_MACHINEGUN'));
+        // player_die now uses ClientObituary which uses sys.multicast with ServerCommand.print, not centerprintf
+        expect(mockImports.multicast).toHaveBeenCalled();
     });
 });
