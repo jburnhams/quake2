@@ -10,6 +10,12 @@ vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() 
 vi.mock('../../src/render/skybox.js', () => ({ SkyboxPipeline: vi.fn() }));
 vi.mock('../../src/render/md2Pipeline.js', () => ({ Md2Pipeline: vi.fn() }));
 vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
+vi.mock('../../src/render/collisionVis.js', () => ({
+    CollisionVisRenderer: vi.fn(() => ({
+        render: vi.fn(),
+        clear: vi.fn(),
+    })),
+}));
 
 const mockMd3Pipeline = {
     bind: vi.fn(),
