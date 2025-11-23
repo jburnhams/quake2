@@ -194,13 +194,19 @@ describe('Game save files', () => {
       gameState: { foo: 'bar' },
     });
 
-    const serialized = JSON.stringify({
+    // Simulate legacy or modified save without a valid checksum by removing it.
+    const modifiedSave = {
       ...save,
       gameState: undefined,
       configstrings: undefined,
       cvars: undefined,
       extraField: 'ignored',
-    });
+    };
+
+    const saveWithoutChecksum = { ...modifiedSave };
+    delete (saveWithoutChecksum as any).checksum;
+
+    const serialized = JSON.stringify(saveWithoutChecksum);
 
     const parsed = parseSaveFile(serialized);
     expect(parsed.version).toBe(SAVE_FORMAT_VERSION);
@@ -225,14 +231,17 @@ describe('Game save files', () => {
       rngState: rng.getState(),
     });
 
-    expect(parseSaveFile({ ...valid, version: 99 }).version).toBe(99);
-    expect(() => parseSaveFile({ ...valid, version: 99 }, { allowNewerVersion: false })).toThrow(
+    // Remove checksum to test structure validation independently of checksum validation
+    const { checksum, ...validNoChecksum } = valid;
+
+    expect(parseSaveFile({ ...validNoChecksum, version: 99 }).version).toBe(99);
+    expect(() => parseSaveFile({ ...validNoChecksum, version: 99 }, { allowNewerVersion: false })).toThrow(
       'newer than supported',
     );
-    expect(() => parseSaveFile({ ...valid, level: null as unknown as LevelFrameState })).toThrow();
+    expect(() => parseSaveFile({ ...validNoChecksum, level: null as unknown as LevelFrameState })).toThrow();
     expect(() =>
       parseSaveFile({
-        ...valid,
+        ...validNoChecksum,
         entities: { ...valid.entities, pool: { capacity: 'bad' } },
       }),
     ).toThrow();
