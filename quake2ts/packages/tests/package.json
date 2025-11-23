@@ -1,0 +1,20 @@
+{
+  "name": "@quake2ts/tests",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Integration tests and browser substitutes for Quake II TS",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.82",
+    "jsdom": "^24.0.0",
+    "node-web-audio-api": "^0.17.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*"
+  }
+}
