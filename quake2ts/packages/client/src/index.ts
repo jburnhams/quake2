@@ -20,6 +20,10 @@ import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
 import { ClientConfigStrings } from './configStrings.js';
 import { Cycle_Crosshair } from './hud/crosshair.js';
+import { MainMenuFactory, MainMenuOptions } from './ui/menu/main.js';
+import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
+import { MenuSystem } from './ui/menu/system.js';
+import { SaveStorage } from '@quake2ts/game';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -67,6 +71,9 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Demo Playback
   demoPlayback: DemoPlaybackController;
   demoHandler: ClientNetworkHandler;
+
+  // Menu System
+  createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
 
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
@@ -127,6 +134,13 @@ export function createClient(imports: ClientImports): ClientExports {
 
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
+    },
+
+    createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+        const menuSystem = new MenuSystem();
+        const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
+        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, options);
+        return { menuSystem, factory };
     },
 
     render(sample: GameRenderSample<PredictionState>): UserCommand {
