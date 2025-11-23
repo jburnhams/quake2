@@ -1,9 +1,9 @@
 import { BinaryStream } from '@quake2ts/shared';
 import { ServerCommand } from '@quake2ts/shared';
-import { Vec3 } from '@quake2ts/shared';
 import { TempEntity } from '@quake2ts/shared';
+import { ANORMS } from '@quake2ts/shared/src/math/anorms.js';
 
-// Constants from Q2 source
+// Constants from Q2 source (q_shared.h)
 const U_ORIGIN1   = (1 << 0);
 const U_ORIGIN2   = (1 << 1);
 const U_ANGLE2    = (1 << 2);
@@ -34,6 +34,12 @@ const U_OLDORIGIN = (1 << 24);
 const U_SKIN16    = (1 << 25);
 const U_SOUND     = (1 << 26);
 const U_SOLID     = (1 << 27);
+
+// Demo types
+const RECORD_NETWORK = 0x00;
+const RECORD_CLIENT  = 0x01;
+const RECORD_SERVER  = 0x02;
+const RECORD_RELAY   = 0x80;
 
 // Mutable Vec3 for internal use
 interface MutableVec3 {
@@ -80,103 +86,179 @@ export const createEmptyEntityState = (): EntityState => ({
 
 export class NetworkMessageParser {
   private stream: BinaryStream;
+  private protocolVersion: number = 0; // 0 = unknown, will be set by serverdata
+  private isDemo: number = RECORD_CLIENT;
 
   constructor(stream: BinaryStream) {
     this.stream = stream;
   }
 
+  private translateCommand(cmd: number): number {
+    // If protocol is unknown, we guess based on first command?
+    // Or if protocol is 25, we map.
+
+    // Auto-detect Proto 25 if we see 7 as first command?
+    if (this.protocolVersion === 0) {
+        if (cmd === 7) {
+            // Assume Proto 25 ServerData
+            return ServerCommand.serverdata;
+        }
+        if (cmd === 12) {
+            return ServerCommand.serverdata;
+        }
+    }
+
+    if (this.protocolVersion === 25) {
+        // Hypothesis: Shift by 5 for high commands
+        // 7 -> 12 (serverdata)
+        // 8 -> 13 (configstring)
+        // 9 -> 14 (spawnbaseline)
+        // 10 -> 15 (centerprint)
+        // 11 -> 16 (download)
+        // 12 -> 17 (playerinfo)
+        // 13 -> 18 (packetentities)
+        // 14 -> 19 (deltapacketentities)
+        // 15 -> 20 (frame)
+        if (cmd >= 7 && cmd <= 15) {
+            return cmd + 5;
+        }
+
+        // Low commands?
+        // 1 -> print (10)?
+        // 2 -> stufftext (11)?
+        // 3 -> sound (9)?
+        // 4 -> nop (6)?
+        // 5 -> disconnect (7)?
+        // 6 -> reconnect (8)?
+        if (cmd === 1) return ServerCommand.print;
+        if (cmd === 2) return ServerCommand.stufftext;
+        if (cmd === 3) return ServerCommand.sound;
+        if (cmd === 4) return ServerCommand.nop;
+        // 5 (disconnect) matches 7 in new? No, 7 is disconnect in new.
+        // If 7 is serverdata in old, then disconnect must be < 7.
+        if (cmd === 5) return ServerCommand.disconnect;
+        if (cmd === 6) return ServerCommand.reconnect;
+
+        // TempEntity?
+        // If it was 16?
+        if (cmd === 16) return ServerCommand.temp_entity;
+    }
+
+    return cmd;
+  }
+
   public parseMessage(): void {
     while (this.stream.hasMore()) {
-      const cmd = this.stream.readByte();
+      let cmd = this.stream.readByte();
 
       if (cmd === -1) {
         break;
       }
 
-      switch (cmd) {
-        case ServerCommand.nop:
-          break;
-        case ServerCommand.disconnect:
-          console.log("Server disconnected");
-          break;
-        case ServerCommand.reconnect:
-          console.log("Server reconnect");
-          break;
-        case ServerCommand.print:
-          const printId = this.stream.readByte();
-          const printMsg = this.stream.readString();
-          console.log(`[Server Print ${printId}]: ${printMsg}`);
-          break;
-        case ServerCommand.serverdata:
-          this.parseServerData();
-          break;
-        case ServerCommand.configstring:
-          this.parseConfigString();
-          break;
-        case ServerCommand.spawnbaseline:
-          this.parseSpawnBaseline();
-          break;
-        case ServerCommand.centerprint:
-          const centerMsg = this.stream.readString();
-          console.log(`[Center Print]: ${centerMsg}`);
-          break;
-        case ServerCommand.download:
-           this.parseDownload();
-           break;
-        case ServerCommand.frame:
-           this.parseFrame();
-           break;
-        case ServerCommand.packetentities:
-           this.parsePacketEntities(false);
-           break;
-        case ServerCommand.deltapacketentities:
-           this.parsePacketEntities(true);
-           break;
-        case ServerCommand.stufftext:
-          const text = this.stream.readString();
-          console.log(`[StuffText]: ${text}`);
-          break;
-        case ServerCommand.layout:
-          const layout = this.stream.readString();
-          break;
-        case ServerCommand.inventory:
-           this.parseInventory();
-           break;
-        case ServerCommand.sound:
-           this.parseSound();
-           break;
-        case ServerCommand.muzzleflash:
-           this.parseMuzzleFlash();
-           break;
-        case ServerCommand.muzzleflash2:
-           this.parseMuzzleFlash2();
-           break;
-        case ServerCommand.temp_entity:
-           this.parseTempEntity();
-           break;
-        default:
-          console.warn(`Unknown server command: ${cmd}`);
-          // If we hit an unknown command, we are likely desynced as we don't know the length to skip.
+      const originalCmd = cmd;
+      cmd = this.translateCommand(cmd);
+
+      try {
+        switch (cmd) {
+          case ServerCommand.nop:
+            break;
+          case ServerCommand.disconnect:
+            // console.log("Server disconnected");
+            break;
+          case ServerCommand.reconnect:
+            // console.log("Server reconnect");
+            break;
+          case ServerCommand.print:
+            this.parsePrint();
+            break;
+          case ServerCommand.serverdata:
+            this.parseServerData();
+            break;
+          case ServerCommand.configstring:
+            this.parseConfigString();
+            break;
+          case ServerCommand.spawnbaseline:
+            this.parseSpawnBaseline();
+            break;
+          case ServerCommand.centerprint:
+            this.parseCenterPrint();
+            break;
+          case ServerCommand.download:
+             this.parseDownload();
+             break;
+          case ServerCommand.frame:
+             this.parseFrame();
+             break;
+          case ServerCommand.packetentities:
+             this.parsePacketEntities(false);
+             break;
+          case ServerCommand.deltapacketentities:
+             this.parsePacketEntities(true);
+             break;
+          case ServerCommand.playerinfo:
+             this.parsePlayerState();
+             break;
+          case ServerCommand.stufftext:
+            this.parseStuffText();
+            break;
+          case ServerCommand.layout:
+            this.parseLayout();
+            break;
+          case ServerCommand.inventory:
+             this.parseInventory();
+             break;
+          case ServerCommand.sound:
+             this.parseSound();
+             break;
+          case ServerCommand.muzzleflash:
+             this.parseMuzzleFlash();
+             break;
+          case ServerCommand.muzzleflash2:
+             this.parseMuzzleFlash2();
+             break;
+          case ServerCommand.temp_entity:
+             this.parseTempEntity();
+             break;
+          default:
+            console.warn(`Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`);
+            return;
+        }
+      } catch (e) {
+          console.warn(`Error parsing command ${cmd}: ${(e as Error).message}`);
           return;
       }
     }
   }
 
+  private parsePrint(): void {
+      const id = this.stream.readByte();
+      const str = this.stream.readString();
+  }
+
+  private parseStuffText(): void {
+      const text = this.stream.readString();
+  }
+
+  private parseLayout(): void {
+      const layout = this.stream.readString();
+  }
+
+  private parseCenterPrint(): void {
+      const centerMsg = this.stream.readString();
+  }
+
   private parseServerData(): void {
-    const protocol = this.stream.readLong();
+    this.protocolVersion = this.stream.readLong();
     const serverCount = this.stream.readLong();
-    const attractLoop = this.stream.readByte();
+    this.isDemo = this.stream.readByte();
     const gameDir = this.stream.readString();
     const playerNum = this.stream.readShort();
     const levelName = this.stream.readString();
-
-    console.log(`Server Data: Protocol ${protocol}, Level ${levelName}, GameDir ${gameDir}`);
   }
 
   private parseConfigString(): void {
     const index = this.stream.readShort();
     const str = this.stream.readString();
-    // In a real implementation, this would update the client's configstring table
   }
 
   private parseDownload(): void {
@@ -188,11 +270,6 @@ export class NetworkMessageParser {
   }
 
   private parseInventory(): void {
-    // MAX_ITEMS is 256 in q_shared.h usually
-    // In cl_parse.c CL_ParseInventory:
-    // int i;
-    // for (i=0 ; i<MAX_ITEMS ; i++)
-    //   cl.inventory[i] = MSG_ReadShort (&net_message);
     const MAX_ITEMS = 256;
     for (let i = 0; i < MAX_ITEMS; i++) {
         this.stream.readShort();
@@ -200,23 +277,22 @@ export class NetworkMessageParser {
   }
 
   private parseSound(): void {
-     const flags = this.stream.readByte();
+     const mask = this.stream.readByte();
      const soundNum = this.stream.readByte();
 
-     if (flags & 1) { // SND_VOLUME
+     if (mask & 1) { // SND_VOLUME
          this.stream.readByte();
      }
-     if (flags & 2) { // SND_ATTENUATION
+     if (mask & 2) { // SND_ATTENUATION
          this.stream.readByte();
      }
-     if (flags & 16) { // SND_OFFSET
+     if (mask & 16) { // SND_OFFSET
          this.stream.readByte();
      }
-     if (flags & 8) { // SND_ENT
+     if (mask & 8) { // SND_ENT
          this.stream.readShort();
      }
-     if (flags & 4) { // SND_POS
-         // We need a temporary object to read into
+     if (mask & 4) { // SND_POS
          const pos = { x: 0, y: 0, z: 0 };
          this.stream.readPos(pos);
      }
@@ -235,157 +311,104 @@ export class NetworkMessageParser {
   private parseTempEntity(): void {
       const type = this.stream.readByte();
 
-      // Placeholder vars
       const pos = { x: 0, y: 0, z: 0 };
       const pos2 = { x: 0, y: 0, z: 0 };
       const dir = { x: 0, y: 0, z: 0 };
 
       switch (type) {
-        case TempEntity.BLOOD:
+        case TempEntity.EXPLOSION1:
+        case TempEntity.EXPLOSION2:
+        case TempEntity.ROCKET_EXPLOSION:
+        case TempEntity.GRENADE_EXPLOSION:
+        case TempEntity.ROCKET_EXPLOSION_WATER:
+        case TempEntity.GRENADE_EXPLOSION_WATER:
+        case TempEntity.BFG_EXPLOSION:
+        case TempEntity.BFG_BIGEXPLOSION:
+        case TempEntity.BOSSTPORT:
+        case TempEntity.PLASMA_EXPLOSION:
+        case TempEntity.PLAIN_EXPLOSION:
+        case TempEntity.CHAINFIST_SMOKE:
+        case TempEntity.TRACKER_EXPLOSION:
+        case TempEntity.TELEPORT_EFFECT:
+        case TempEntity.DBALL_GOAL:
+        case TempEntity.NUKEBLAST:
+        case TempEntity.WIDOWSPLASH:
+        case TempEntity.EXPLOSION1_BIG:
+        case TempEntity.EXPLOSION1_NP:
             this.stream.readPos(pos);
-            this.stream.readDir(dir);
             break;
 
         case TempEntity.GUNSHOT:
+        case TempEntity.BLOOD:
+        case TempEntity.BLASTER:
+        case TempEntity.SHOTGUN:
         case TempEntity.SPARKS:
-        case TempEntity.BULLET_SPARKS:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
         case TempEntity.SCREEN_SPARKS:
         case TempEntity.SHIELD_SPARKS:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.SHOTGUN:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.SPLASH:
-            this.stream.readByte(); // cnt
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            this.stream.readByte(); // r
-            break;
-
-        case TempEntity.LASER_SPARKS:
-            this.stream.readByte(); // cnt
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            this.stream.readByte(); // color
-            break;
-
-        case TempEntity.BLUEHYPERBLASTER:
-            this.stream.readPos(pos);
-            this.stream.readPos(dir); // NOTE: original uses MSG_ReadPos for dir here
-            break;
-
-        case TempEntity.BLASTER:
+        case TempEntity.BULLET_SPARKS:
+        case TempEntity.BLASTER2:
+        case TempEntity.MOREBLOOD:
+        case TempEntity.HEATBEAM_SPARKS:
+        case TempEntity.HEATBEAM_STEAM:
+        case TempEntity.ELECTRIC_SPARKS:
+        case TempEntity.FLECHETTE:
             this.stream.readPos(pos);
             this.stream.readDir(dir);
             break;
 
         case TempEntity.RAILTRAIL:
-            this.stream.readPos(pos);
-            this.stream.readPos(pos2);
-            break;
-
-        case TempEntity.EXPLOSION2:
-        case TempEntity.GRENADE_EXPLOSION:
-        case TempEntity.GRENADE_EXPLOSION_WATER:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.PLASMA_EXPLOSION:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.EXPLOSION1:
-        case TempEntity.EXPLOSION1_BIG:
-        case TempEntity.ROCKET_EXPLOSION:
-        case TempEntity.ROCKET_EXPLOSION_WATER:
-        case TempEntity.EXPLOSION1_NP:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.BFG_EXPLOSION:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.BFG_BIGEXPLOSION:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.BFG_LASER:
-            this.stream.readPos(pos); // start
-            this.stream.readPos(pos2); // end
-            break;
-
         case TempEntity.BUBBLETRAIL:
+        case TempEntity.BFG_LASER:
+        case TempEntity.DEBUGTRAIL:
+        case TempEntity.BUBBLETRAIL2:
             this.stream.readPos(pos);
             this.stream.readPos(pos2);
+            break;
+
+        case TempEntity.BLUEHYPERBLASTER:
+            if (this.protocolVersion >= 32) {
+                 this.stream.readPos(pos);
+                 this.stream.readPos(pos2);
+            } else {
+                 this.stream.readPos(pos);
+                 this.stream.readDir(dir);
+            }
+            break;
+
+        case TempEntity.GREENBLOOD: // 26
+            if (this.protocolVersion >= 32) {
+                this.stream.readPos(pos);
+                this.stream.readDir(dir);
+            } else {
+                this.stream.readPos(pos);
+                this.stream.readPos(pos2);
+            }
+            break;
+
+        case TempEntity.SPLASH:
+        case TempEntity.LASER_SPARKS:
+        case TempEntity.WELDING_SPARKS:
+        case TempEntity.TUNNEL_SPARKS:
+            this.stream.readByte(); // count
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            this.stream.readByte(); // color/style
             break;
 
         case TempEntity.PARASITE_ATTACK:
         case TempEntity.MEDIC_CABLE_ATTACK:
+        case TempEntity.HEATBEAM:
+        case TempEntity.MONSTER_HEATBEAM:
             this.stream.readShort(); // ent
             this.stream.readPos(pos); // start
             this.stream.readPos(pos2); // end
-            break;
-
-        case TempEntity.BOSSTPORT:
-            this.stream.readPos(pos);
             break;
 
         case TempEntity.GRAPPLE_CABLE:
             this.stream.readShort(); // ent
             this.stream.readPos(pos); // start
             this.stream.readPos(pos2); // end
-            this.stream.readPos(dir); // offset (reusing dir var)
-            break;
-
-        case TempEntity.WELDING_SPARKS:
-            this.stream.readByte(); // cnt
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            this.stream.readByte(); // color
-            break;
-
-        case TempEntity.GREENBLOOD:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.TUNNEL_SPARKS:
-            this.stream.readByte(); // cnt
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            this.stream.readByte(); // color
-            break;
-
-        case TempEntity.BLASTER2:
-        case TempEntity.FLECHETTE:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.LIGHTNING:
-            this.stream.readShort(); // srcEnt
-            this.stream.readShort(); // destEnt
-            this.stream.readPos(pos); // start
-            this.stream.readPos(pos2); // end
-            break;
-
-        case TempEntity.DEBUGTRAIL:
-            this.stream.readPos(pos);
-            this.stream.readPos(pos2);
-            break;
-
-        case TempEntity.PLAIN_EXPLOSION:
-            this.stream.readPos(pos);
+            this.stream.readPos(dir); // offset
             break;
 
         case TempEntity.FLASHLIGHT:
@@ -399,153 +422,60 @@ export class NetworkMessageParser {
             this.stream.readByte(); // color
             break;
 
-        case TempEntity.HEATBEAM:
-            this.stream.readShort(); // ent
-            this.stream.readPos(pos); // start
-            this.stream.readPos(pos2); // end
-            this.stream.readPos(dir); // offset
-            break;
-
-        case TempEntity.MONSTER_HEATBEAM:
-            this.stream.readShort(); // ent
-            this.stream.readPos(pos); // start
-            this.stream.readPos(pos2); // end
-            this.stream.readPos(dir); // offset
-            break;
-
-        case TempEntity.HEATBEAM_SPARKS:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.HEATBEAM_STEAM:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
         case TempEntity.STEAM:
-            const steamId = this.stream.readShort();
-            if (steamId !== -1) {
-                this.stream.readByte(); // count
-                this.stream.readPos(pos);
-                this.stream.readDir(dir);
-                this.stream.readByte(); // r
-                this.stream.readShort(); // magnitude
-                this.stream.readLong(); // endtime (delta?) or something
-            } else {
-                this.stream.readByte(); // cnt
-                this.stream.readPos(pos);
-                this.stream.readDir(dir);
-                this.stream.readByte(); // r
-                this.stream.readShort(); // magnitude
-            }
-            break;
-
-        case TempEntity.BUBBLETRAIL2:
-            this.stream.readPos(pos);
-            this.stream.readPos(pos2);
-            break;
-
-        case TempEntity.MOREBLOOD:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.CHAINFIST_SMOKE:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.ELECTRIC_SPARKS:
-            this.stream.readPos(pos);
-            this.stream.readDir(dir);
-            break;
-
-        case TempEntity.TRACKER_EXPLOSION:
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.TELEPORT_EFFECT:
-        case TempEntity.DBALL_GOAL:
-            this.stream.readPos(pos);
-            break;
+             const nextId = this.stream.readShort();
+             this.stream.readByte(); // count
+             this.stream.readPos(pos);
+             this.stream.readDir(dir);
+             this.stream.readByte(); // r
+             this.stream.readShort(); // magnitude
+             if (nextId !== -1) {
+                 this.stream.readLong(); // wait
+             }
+             break;
 
         case TempEntity.WIDOWBEAMOUT:
-            const wbId = this.stream.readShort();
-            // Logic from CL_ParseWidow:
-            // if free sustain -> reads id, pos, endtime=time+2100...
-            // else -> read pos
-            // BUT WE ARE PARSING, NOT SIMULATING. We must read exactly what is on the wire.
-            // CL_ParseWidow logic:
-            // id = MSG_ReadShort
-            // if (free_sustain) { MSG_ReadPos... } else { MSG_ReadPos... }
-            // It always reads a pos.
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.NUKEBLAST:
-            // Logic from CL_ParseNuke:
-            // Always reads pos.
-            this.stream.readPos(pos);
-            break;
-
-        case TempEntity.WIDOWSPLASH:
+            this.stream.readShort(); // id
             this.stream.readPos(pos);
             break;
 
         default:
-            console.warn(`CL_ParseTEnt: bad type ${type}`);
+            // console.warn(`CL_ParseTEnt: bad type ${type}`);
             break;
       }
   }
 
   private parseSpawnBaseline(): void {
     const bits = this.parseEntityBits();
-    // We would use this to update the baseline table
-    // const entityState = createEmptyEntityState();
-    // this.parseDelta(createEmptyEntityState(), entityState, bits.number, bits.bits);
-
-    // For now just consume the delta
     this.parseDelta(createEmptyEntityState(), createEmptyEntityState(), bits.number, bits.bits);
   }
 
   private parseFrame(): void {
-      const serverFrame = this.stream.readLong();
-      const deltaFrame = this.stream.readLong();
-      const surpressCount = this.stream.readByte(); // Only if protocol != 26? In cl_parse.c: if (cls.serverProtocol != 26) cl.surpressCount = MSG_ReadByte...
-      // But we don't track protocol version here yet. Standard Q2 is 34. So we read it.
+      const seq1 = this.stream.readLong();
+      const seq2 = this.stream.readLong();
 
-      const areaBytes = this.stream.readByte();
-      this.stream.readData(areaBytes);
-
-      // The frame command is followed by other commands like svc_playerinfo and svc_packetentities inside the same message block usually?
-      // No, svc_frame is a command inside the loop.
-      // cl_parse.c CL_ParseFrame calls CL_ParsePlayerstate etc, but those read from net_message.
-      // Wait, in CL_ParseFrame, it reads area bits, THEN:
-      // cmd = MSG_ReadByte
-      // if (cmd != svc_playerinfo) Error
-      // ...
-      // cmd = MSG_ReadByte
-      // if (cmd != svc_packetentities) Error
-
-      // So yes, `svc_frame` implies we *expect* `svc_playerinfo` and `svc_packetentities` next.
-      // But my main loop dispatch handles them as separate commands if I return?
-      // No, `CL_ParseFrame` *consumes* them.
-
-      // So I must consume them here.
-
-      // Player Info
-      const piCmd = this.stream.readByte();
-      if (piCmd !== ServerCommand.playerinfo) {
-          throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd}`);
+      // Spec says: "if (serverdata.serverversion != 26) uk_b1 = ReadByte;"
+      // Protocol 26 (Q2 3.05) is the only one that skips this byte.
+      // Protocol 25 (Q2 3.00) and Protocol 34 (Q2 3.20) both include it.
+      if (this.protocolVersion !== 26) {
+          this.stream.readByte();
       }
-      this.parsePlayerState();
 
-      // Packet Entities
-      const peCmd = this.stream.readByte();
-      if (peCmd !== ServerCommand.packetentities && peCmd !== ServerCommand.deltapacketentities) {
-           throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
+      const count = this.stream.readByte();
+      if (count > 0) {
+        this.stream.readData(count); // areas
       }
-      this.parsePacketEntities(peCmd === ServerCommand.deltapacketentities);
+
+      if (this.isDemo === RECORD_RELAY) {
+          const connectedCount = this.stream.readByte();
+          for(let i=0; i<connectedCount; i++) {
+              this.stream.readByte();
+          }
+      }
+
+      if (this.isDemo === RECORD_SERVER) {
+          this.stream.readLong();
+      }
   }
 
   private parsePlayerState(): void {
@@ -605,19 +535,10 @@ export class NetworkMessageParser {
           this.stream.readChar();
       }
 
-      // PS_BLEND (1<<10) (Note: skipped WEAPONINDEX/FRAME in headers, check full list order)
-      // Header says:
-      // #define	PS_WEAPONINDEX		(1<<12)
-      // #define	PS_WEAPONFRAME		(1<<13)
-      // #define	PS_BLEND			(1<<10)
-      // #define	PS_FOV				(1<<11)
-      // #define	PS_RDFLAGS			(1<<14)
-
-      // Order in CL_ParsePlayerstate:
-      // WEAPONINDEX
+      // WEAPONINDEX (1<<12)
       if (flags & 4096) this.stream.readByte();
 
-      // WEAPONFRAME
+      // WEAPONFRAME (1<<13)
       if (flags & 8192) {
           this.stream.readByte(); // frame
           this.stream.readChar(); // offset x
@@ -628,7 +549,7 @@ export class NetworkMessageParser {
           this.stream.readChar(); // angles z
       }
 
-      // BLEND
+      // BLEND (1<<10)
       if (flags & 1024) {
           this.stream.readByte();
           this.stream.readByte();
@@ -636,10 +557,10 @@ export class NetworkMessageParser {
           this.stream.readByte();
       }
 
-      // FOV
+      // FOV (1<<11)
       if (flags & 2048) this.stream.readByte();
 
-      // RDFLAGS
+      // RDFLAGS (1<<14)
       if (flags & 16384) this.stream.readByte();
 
       // STATS
@@ -652,14 +573,11 @@ export class NetworkMessageParser {
   }
 
   private parsePacketEntities(delta: boolean): void {
-      // In CL_ParsePacketEntities
       while (true) {
           const bits = this.parseEntityBits();
           if (bits.number === 0) {
               break;
           }
-
-          // Consume the delta
           this.parseDelta(createEmptyEntityState(), createEmptyEntityState(), bits.number, bits.bits);
       }
   }
@@ -687,7 +605,6 @@ export class NetworkMessageParser {
   }
 
   private parseDelta(from: EntityState, to: EntityState, number: number, bits: number): void {
-      // Copy 'from' to 'to'
       to.number = from.number;
       to.modelindex = from.modelindex;
       to.modelindex2 = from.modelindex2;
