@@ -14,6 +14,11 @@ export function checkWater(ent: Entity, system: EntitySystem, imports: GameImpor
   const mins = ent.mins;
   const maxs = ent.maxs;
 
+  // Guard against undefined origin/mins/maxs
+  if (!origin || !mins || !maxs) {
+      return;
+  }
+
   // Pick a point at the feet
   const point: Vec3 = {
     x: origin.x + (mins.x + maxs.x) * 0.5,

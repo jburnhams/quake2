@@ -82,7 +82,10 @@ export interface EntitySystemSnapshot {
 }
 
 
-function serializeVec3(vec: Vec3): SerializableVec3 {
+function serializeVec3(vec: Vec3 | undefined): SerializableVec3 {
+  if (!vec) {
+      return [0, 0, 0];
+  }
   return [vec.x, vec.y, vec.z];
 }
 

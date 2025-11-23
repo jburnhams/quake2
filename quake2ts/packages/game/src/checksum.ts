@@ -1,4 +1,5 @@
 import type { GameStateSnapshot } from './index.js';
+import type { EntitySystemSnapshot, SerializedEntityState } from './entities/system.js';
 
 export const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -52,4 +53,65 @@ export function hashGameState(state: GameStateSnapshot): number {
   hash = hashString(hash, state.entities.worldClassname);
 
   return hash >>> 0;
+}
+
+function hashEntityValue(hash: number, value: any): number {
+  if (value === null || value === undefined) {
+    return hashNumber(hash, 0);
+  }
+  if (typeof value === 'number') {
+    return hashNumber(hash, value);
+  }
+  if (typeof value === 'string') {
+    return hashString(hash, value);
+  }
+  if (typeof value === 'boolean') {
+    return hashNumber(hash, value ? 1 : 0);
+  }
+  if (Array.isArray(value)) {
+    // Vec3 or similar array
+    for (const v of value) {
+        if (typeof v === 'number') {
+            hash = hashNumber(hash, v);
+        }
+    }
+    return hash;
+  }
+  if (typeof value === 'object') {
+    // Inventory or other object
+    const keys = Object.keys(value).sort();
+    for (const key of keys) {
+      hash = hashString(hash, key);
+      hash = hashEntityValue(hash, value[key]);
+    }
+    return hash;
+  }
+  return hash;
+}
+
+function hashSerializedEntity(hash: number, entity: SerializedEntityState): number {
+    hash = hashNumber(hash, entity.index);
+    const keys = Object.keys(entity.fields).sort();
+    for (const key of keys) {
+        hash = hashString(hash, key);
+        hash = hashEntityValue(hash, (entity.fields as any)[key]);
+    }
+    return hash;
+}
+
+export function hashEntitySystem(snapshot: EntitySystemSnapshot): number {
+    let hash = FNV_OFFSET_BASIS;
+    hash = hashNumber(hash, snapshot.timeSeconds);
+
+    // Hash entities, assuming they are in stable order (index order)
+    // If not, we might need to sort them by index first
+    const sortedEntities = [...snapshot.entities].sort((a, b) => a.index - b.index);
+
+    for (const entity of sortedEntities) {
+        hash = hashSerializedEntity(hash, entity);
+    }
+
+    // Hash think scheduler if needed, but entity fields include nextthink
+
+    return hash >>> 0;
 }
