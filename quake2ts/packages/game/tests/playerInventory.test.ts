@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ArmorType } from '../src/combat/armor.js';
+import { AMMO_TYPE_COUNT } from '../src/inventory/ammo.js';
 import {
   AmmoItemId,
   AmmoType,
@@ -25,7 +26,7 @@ describe('player inventory creation', () => {
   it('seeds base ammo caps and empty counts', () => {
     const inventory = createPlayerInventory();
 
-    expect(inventory.ammo.counts).toHaveLength(6);
+    expect(inventory.ammo.counts).toHaveLength(AMMO_TYPE_COUNT);
     expect(inventory.ammo.caps[AmmoType.Bullets]).toBe(200);
     expect(inventory.ammo.caps[AmmoType.Shells]).toBe(100);
     expect(inventory.ammo.caps[AmmoType.Cells]).toBe(200);

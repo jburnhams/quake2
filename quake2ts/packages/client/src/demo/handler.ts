@@ -20,10 +20,17 @@ import {
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { PredictionState, defaultPredictionState } from '../prediction.js';
 import { PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
-import { PlayerInventory, WeaponId, PowerupId, KeyId } from '@quake2ts/game';
+import { PlayerInventory, WeaponId, PowerupId, KeyId, ArmorType } from '@quake2ts/game';
+import { DEMO_ITEM_MAPPING } from './itemMapping.js';
+import { ClientImports } from '../index.js';
 
 // Constants
 const MAX_CONFIGSTRINGS = 2048; // approximate
+
+export interface DemoHandlerCallbacks {
+    onCenterPrint?: (msg: string) => void;
+    onPrint?: (level: number, msg: string) => void;
+}
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
     public configstrings: string[] = new Array(MAX_CONFIGSTRINGS).fill('');
@@ -35,6 +42,22 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     // Stats for HUD
     public stats: number[] = new Array(32).fill(0);
     public inventory: number[] = new Array(256).fill(0);
+
+    private imports?: ClientImports;
+    private callbacks?: DemoHandlerCallbacks;
+
+    constructor(imports?: ClientImports, callbacks?: DemoHandlerCallbacks) {
+        this.imports = imports;
+        this.callbacks = callbacks;
+    }
+
+    setImports(imports: ClientImports) {
+        this.imports = imports;
+    }
+
+    setCallbacks(callbacks: DemoHandlerCallbacks) {
+        this.callbacks = callbacks;
+    }
 
     onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
         console.log(`Demo: Server Data - Protocol: ${protocol}, Level: ${levelName}`);
@@ -138,19 +161,31 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onCenterPrint(msg: string): void {
-        console.log(`[Center]: ${msg}`);
+        if (this.callbacks?.onCenterPrint) {
+            this.callbacks.onCenterPrint(msg);
+        } else {
+            console.log(`[Center]: ${msg}`);
+        }
     }
 
     onStuffText(msg: string): void {
+        // Should be handled by command buffer
     }
 
     onPrint(level: number, msg: string): void {
+        if (this.callbacks?.onPrint) {
+            this.callbacks.onPrint(level, msg);
+        } else {
+            console.log(`[Print ${level}]: ${msg}`);
+        }
     }
 
     onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {
+        // TODO: Implement sound playback using engine imports
     }
 
     onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
+        // TODO: Trigger temp entities in renderer
     }
 
     onLayout(layout: string): void {
@@ -167,9 +202,11 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onDisconnect(): void {
+        console.log("Demo disconnected");
     }
 
     onReconnect(): void {
+        console.log("Demo reconnect");
     }
 
     onDownload(size: number, percent: number, data?: Uint8Array): void {
@@ -180,7 +217,6 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
         const ps = this.latestFrame.playerState;
 
-        // TODO: Map inventory array to PlayerInventory correctly
         const inventory: PlayerInventory = {
             ammo: {
                 caps: [],
@@ -191,6 +227,43 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             powerups: new Map(),
             keys: new Set()
         };
+
+        // Map inventory array to PlayerInventory
+        for (let i = 0; i < this.inventory.length; i++) {
+            const count = this.inventory[i];
+            if (count <= 0) continue;
+
+            if (i >= DEMO_ITEM_MAPPING.length) break;
+
+            const mapping = DEMO_ITEM_MAPPING[i];
+
+            switch (mapping.type) {
+                case 'weapon':
+                    inventory.ownedWeapons.add(mapping.id);
+                    break;
+                case 'ammo':
+                    if (!inventory.ammo.counts[mapping.id]) {
+                        inventory.ammo.counts[mapping.id] = 0;
+                    }
+                    inventory.ammo.counts[mapping.id] = count;
+                    break;
+                case 'armor':
+                    inventory.armor = {
+                        armorType: mapping.id,
+                        armorCount: count
+                    };
+                    break;
+                case 'powerup':
+                    inventory.powerups.set(mapping.id, count);
+                    break;
+                case 'key':
+                    inventory.keys.add(mapping.id);
+                    break;
+                case 'health':
+                    // Ignore, health is in stats
+                    break;
+            }
+        }
 
         // Cast MutableVec3 to Vec3 (readonly)
         const origin: Vec3 = { ...ps.origin };

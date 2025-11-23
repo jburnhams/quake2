@@ -7,6 +7,7 @@ import {
   Renderer,
   DemoPlaybackController,
   PlaybackState,
+  EngineHost,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
@@ -42,6 +43,7 @@ export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } 
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
+  readonly host?: EngineHost;
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
@@ -62,7 +64,11 @@ export function createClient(imports: ClientImports): ClientExports {
   const view = new ViewEffects();
   const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
-  const demoHandler = new ClientNetworkHandler();
+  const demoHandler = new ClientNetworkHandler(imports);
+
+  // Hook up message system to demo handler
+  demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+  demoHandler.onPrint = (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
 
   demoPlayback.setHandler(demoHandler);
 
@@ -70,6 +76,19 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
+
+  if (imports.host?.commands) {
+    imports.host.commands.register('playdemo', (args) => {
+      if (args.length < 1) {
+        console.log('usage: playdemo <filename>');
+        return;
+      }
+      const filename = args[0];
+      console.log(`playdemo: ${filename}`);
+      console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
+      // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
+    }, 'Play a recorded demo');
+  }
 
   return {
     init(initial) {
@@ -85,16 +104,18 @@ export function createClient(imports: ClientImports): ClientExports {
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       const playbackState = demoPlayback.getState();
 
-      if (playbackState === PlaybackState.Playing) {
-          // If playing demo, use demo handler for state
-          // Note: demoPlayback needs to be updated.
-          // We assume the host loop calls this with 'nowMs' and 'accumulatorMs'.
-          // We can deduce delta time from the sample.
-          // Or we should rely on an explicit update.
-          // For now, let's just use the handler's latest state directly without interpolation (simpler for first pass).
+      if (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused) {
+          // Calculate delta time in seconds
+          const dtMs = sample.latest && sample.previous ? (sample.latest.timeMs - sample.previous.timeMs) : 16;
+          const dt = dtMs / 1000.0;
+
+          if (playbackState === PlaybackState.Playing) {
+            demoPlayback.update(dt);
+          }
 
           lastRendered = demoHandler.getPredictionState();
-
+          // Update latestFrame to match demo state for interpolation/HUD time?
+          // ideally we reconstruct a GameFrameResult from the demo frame data.
       } else {
           if (sample.latest?.state) {
             prediction.setAuthoritative(sample.latest);
@@ -144,7 +165,11 @@ export function createClient(imports: ClientImports): ClientExports {
             damageAlpha: 0,
             damageIndicators: [],
         };
-        const timeMs = sample.latest?.timeMs ?? 0;
+        // Use demo time if playing, else game time
+        const timeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
+            ? (demoHandler.latestFrame?.serverFrame || 0) * 100 // Approximate
+            : (sample.latest?.timeMs ?? 0);
+
         Draw_Hud(
           imports.engine.renderer,
           playerState,
@@ -184,9 +209,6 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     demoPlayback,
     ParseCenterPrint(msg: string) {
-      // We need current game time here.
-      // If called from networking parsing, we might not have 'now' easily without latestFrame.
-      // Use latestFrame.timeMs if available.
       const timeMs = latestFrame?.timeMs ?? 0;
       messageSystem.addCenterPrint(msg, timeMs);
     },
