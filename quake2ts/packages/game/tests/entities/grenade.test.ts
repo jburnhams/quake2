@@ -31,7 +31,7 @@ describe('Grenade Projectile', () => {
 
         const player = game.entities.find(e => e.classname === 'player')!;
 
-        createGrenade(game, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
+        createGrenade(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
 
         const grenade = game.entities.find(e => e.classname === 'grenade')!;
 
