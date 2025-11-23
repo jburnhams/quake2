@@ -7,6 +7,7 @@ export * from './bsp/contents.js';
 export * from './bsp/collision.js';
 export * from './protocol/cvar.js';
 export * from './protocol/configstrings.js';
+export * as Replay from './replay/index.js';
 export * from './protocol/contracts.js';
 export * from './pmove/types.js';
 export * from './pmove/constants.js';
