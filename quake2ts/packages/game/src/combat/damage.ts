@@ -213,6 +213,9 @@ export function T_RadiusDamage(
 
     const adjustedDamage = ent === attacker ? points * 0.5 : points;
     const dir = normalizeVec3(subtractVec3(ent.origin, inflictorCenter));
+    // We pass damage as both damage and knockback (or logic differs?)
+    // Quake 2: T_Damage (ent, inflictor, attacker, dir, ent->s.origin, vec3_origin, points, points, DAMAGE_RADIUS, mod);
+    // Yes, damage equals knockback for radius damage.
     const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }

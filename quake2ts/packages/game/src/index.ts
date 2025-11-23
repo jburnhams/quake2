@@ -16,11 +16,16 @@ export interface GameCreateOptions {
   gravity: Vec3;
 }
 
+import { ServerCommand } from '@quake2ts/shared';
+import { MulticastType } from './imports.js';
+
 export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
     centerprintf?(entity: Entity, message: string): void;
     modelIndex?(model: string): number;
+    multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
+    unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }
 
 export interface GameStateSnapshot {
@@ -35,11 +40,13 @@ export interface GameStateSnapshot {
 }
 
 import { findPlayerStart } from './entities/spawn.js';
+import { player_die } from './entities/player.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
 import { Entity, MoveType } from './entities/entity.js';
 
 import { GameTraceResult } from './imports.js';
+import { throwGibs } from './entities/gibs.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
@@ -48,6 +55,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
+  multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
+  unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }
 
 export { hashGameState } from './checksum.js';
@@ -61,7 +70,7 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export function createGame(
-  { trace, pointcontents }: GameImports,
+  { trace, pointcontents, multicast, unicast }: GameImports,
   engine: GameEngine,
   options: GameCreateOptions
 ): GameExports {
@@ -82,7 +91,7 @@ export function createGame(
     };
   };
 
-  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity }, gravity);
+  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity, multicast, unicast }, gravity);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
@@ -145,6 +154,7 @@ export function createGame(
       player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
       player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
       player.health = 100;
+      player.takedamage = true; // Players take damage!
       player.movetype = MoveType.Toss;
       player.mins = { x: -16, y: -16, z: -24 };
       player.maxs = { x: 16, y: 16, z: 32 };
@@ -152,6 +162,13 @@ export function createGame(
           inventory: createPlayerInventory(),
           weaponStates: createPlayerWeaponStates(),
       };
+
+      // Attach die callback
+      player.die = (self, inflictor, attacker, damage, point, mod) => {
+         // Use closure to access entities for gibs/obituaries
+         player_die(self, inflictor, attacker, damage, point, mod, entities);
+      };
+
       entities.finalizeSpawn(player);
       origin = { ...player.origin };
     },
@@ -194,6 +211,12 @@ export function createGame(
       engine.centerprintf?.(entity, message);
     },
     trace,
+    multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
+      multicast(origin, type, event, ...args);
+    },
+    unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
+      unicast(ent, reliable, event, ...args);
+    },
     get time() {
       return levelClock.current.timeSeconds;
     }

@@ -13,13 +13,16 @@ describe('Rocket Launcher', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
         const createRocket = vi.spyOn(projectiles, 'createRocket');
+        const multicast = vi.fn();
+        const unicast = vi.fn();
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';

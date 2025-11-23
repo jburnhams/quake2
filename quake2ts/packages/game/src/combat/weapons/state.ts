@@ -6,6 +6,7 @@ import { WeaponId } from '../../inventory/playerInventory.js';
 
 export interface WeaponState {
     lastFireTime: number;
+    shots?: number; // For Chaingun spin-up/flash cycling
 }
 
 export interface PlayerWeaponStates {

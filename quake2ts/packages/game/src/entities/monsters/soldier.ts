@@ -18,6 +18,7 @@ import {
 import { SpawnContext } from '../spawn.js';
 import { SpawnRegistry } from '../spawn.js';
 import { monster_fire_bullet } from './attack.js';
+import { throwGibs } from '../gibs.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -141,6 +142,7 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.health = 20;
   self.max_health = 20;
   self.mass = 100;
+  self.takedamage = true;
 
   self.pain = (self, other, kick, damage) => {
     // Pain logic
@@ -149,7 +151,22 @@ function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.die = (self, inflictor, attacker, damage, point) => {
     self.deadflag = DeadFlag.Dead;
     self.solid = Solid.Not;
+
+    if (self.health < -40) {
+        throwGibs(context.entities, self.origin, damage);
+        context.entities.free(self); // Remove entity if gibbed? Or keep invisible?
+        // Original Quake 2 behavior: if gibbed, ThrowGibs and free.
+        return;
+    }
+
     // Trigger death animation
+    // self.monsterinfo.current_move = death_move;
+
+    // For now, just remove after a delay
+    self.think = (self) => {
+        context.entities.free(self);
+    };
+    self.nextthink = context.entities.timeSeconds + 5;
   };
 
   self.monsterinfo.stand = soldier_stand;
