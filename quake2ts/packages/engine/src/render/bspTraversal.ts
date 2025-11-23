@@ -26,7 +26,7 @@ function distanceToPlane(plane: BspPlane, point: Vec3): number {
   return plane.normal[0] * point.x + plane.normal[1] * point.y + plane.normal[2] * point.z - plane.dist;
 }
 
-function isClusterVisible(visibility: BspVisibility | undefined, fromCluster: number, testCluster: number): boolean {
+export function isClusterVisible(visibility: BspVisibility | undefined, fromCluster: number, testCluster: number): boolean {
   if (!visibility) {
     return true;
   }

@@ -114,7 +114,7 @@ describe('MD2 geometry construction', () => {
 describe('MD2 frame interpolation', () => {
   it('lerps positions and renormalizes normals per vertex', () => {
     const geometry = buildMd2Geometry(baseMd2);
-    const data = buildMd2VertexData(baseMd2, geometry, { currentFrame: 0, nextFrame: 1, lerp: 0.5 });
+    const data = buildMd2VertexData(baseMd2, geometry, { frame0: 0, frame1: 1, lerp: 0.5 });
 
     const firstVertex = Array.from(data.slice(0, 8));
     expect(firstVertex[1]).toBeCloseTo(0.5);
@@ -132,7 +132,7 @@ describe('MD2 pipeline', () => {
     uniformNames.forEach((name) => gl.uniformLocations.set(name, {} as WebGLUniformLocation));
 
     const pipeline = new Md2Pipeline(gl as unknown as WebGL2RenderingContext);
-    const blend = { currentFrame: 0, nextFrame: 1, lerp: 0.25 } as const;
+    const blend = { frame0: 0, frame1: 1, lerp: 0.25 } as const;
     const mesh = new Md2MeshBuffers(gl as unknown as WebGL2RenderingContext, baseMd2, blend);
     const mvp = new Float32Array(16);
     mvp[0] = 1;
