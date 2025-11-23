@@ -6,6 +6,7 @@ import {
   Camera,
   Renderer,
   DemoPlaybackController,
+  PlaybackState,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
@@ -14,6 +15,8 @@ import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
 import { Draw_Hud, Init_Hud } from './hud.js';
 import { FrameRenderStats } from '@quake2ts/engine';
+import { ClientNetworkHandler } from './demo/handler.js';
+
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
   GamepadLike,
@@ -48,12 +51,17 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly lastView?: ViewSample;
   camera?: Camera;
   demoPlayback: DemoPlaybackController;
+  demoHandler: ClientNetworkHandler;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
+  const demoHandler = new ClientNetworkHandler();
+
+  demoPlayback.setHandler(demoHandler);
+
   let latestFrame: GameFrameResult<PredictionState> | undefined;
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
@@ -71,15 +79,29 @@ export function createClient(imports: ClientImports): ClientExports {
       return prediction.enqueueCommand(command);
     },
     render(sample: GameRenderSample<PredictionState>): UserCommand {
-      if (sample.latest?.state) {
-        prediction.setAuthoritative(sample.latest);
-        latestFrame = sample.latest;
-      }
+      const playbackState = demoPlayback.getState();
 
-      if (sample.previous?.state && sample.latest?.state) {
-        lastRendered = interpolatePredictionState(sample.previous.state, sample.latest.state, sample.alpha);
+      if (playbackState === PlaybackState.Playing) {
+          // If playing demo, use demo handler for state
+          // Note: demoPlayback needs to be updated.
+          // We assume the host loop calls this with 'nowMs' and 'accumulatorMs'.
+          // We can deduce delta time from the sample.
+          // Or we should rely on an explicit update.
+          // For now, let's just use the handler's latest state directly without interpolation (simpler for first pass).
+
+          lastRendered = demoHandler.getPredictionState();
+
       } else {
-        lastRendered = sample.latest?.state ?? sample.previous?.state ?? prediction.getPredictedState();
+          if (sample.latest?.state) {
+            prediction.setAuthoritative(sample.latest);
+            latestFrame = sample.latest;
+          }
+
+          if (sample.previous?.state && sample.latest?.state) {
+            lastRendered = interpolatePredictionState(sample.previous.state, sample.latest.state, sample.alpha);
+          } else {
+            lastRendered = sample.latest?.state ?? sample.previous?.state ?? prediction.getPredictedState();
+          }
       }
 
       const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
@@ -145,6 +167,7 @@ export function createClient(imports: ClientImports): ClientExports {
     get camera(): Camera | undefined {
       return camera;
     },
-    demoPlayback
+    demoPlayback,
+    demoHandler
   };
 }
