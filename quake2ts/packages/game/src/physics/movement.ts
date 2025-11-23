@@ -12,8 +12,39 @@ import type { EntitySystem } from '../entities/system.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
-    ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
-    ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    if (ent.waterlevel > 1) {
+      // In water, entities drift down slowly if dense, or up if buoyant?
+      // Quake 2 simply runs custom water physics and skips gravity.
+      // For now, let's assume they sink slowly or are neutrally buoyant.
+      // SV_Physics_Toss logic in Q2:
+      // if (ent->waterlevel > 1) G_RunObject (ent); else SV_AddGravity (ent);
+      // G_RunObject applies water friction and reduced gravity.
+
+      // We'll implement simple water drag here for now to prevent infinite acceleration
+      // and maybe slight gravity.
+      // Replicating full G_RunObject is complex, but we can do a simple version.
+
+      // Apply drag
+      const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
+      if (speed > 1) {
+        const newspeed = speed - frametime * speed * 2; // friction 2
+        if (newspeed < 0) {
+            ent.velocity = { x: 0, y: 0, z: 0 };
+        } else {
+            const scale = newspeed / speed;
+            ent.velocity = scaleVec3(ent.velocity, scale);
+        }
+      }
+
+      // Small gravity in water?
+      // Q2 G_RunObject applies 0.1 * gravity
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * 0.1));
+
+      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    } else {
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    }
   }
 }
 

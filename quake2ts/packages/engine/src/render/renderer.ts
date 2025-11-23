@@ -10,6 +10,7 @@ import { RenderableEntity } from './scene.js';
 import { SkyboxPipeline } from './skybox.js';
 import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
+import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 
 // A handle to a registered picture.
@@ -18,6 +19,7 @@ export type Pic = Texture2D;
 export interface Renderer {
     readonly width: number;
     readonly height: number;
+    readonly collisionVis: CollisionVisRenderer;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
 
     // HUD Methods
@@ -38,6 +40,7 @@ export const createRenderer = (
     const md2Pipeline = new Md2Pipeline(gl);
     const md3Pipeline = new Md3Pipeline(gl);
     const spriteRenderer = new SpriteRenderer(gl);
+    const collisionVis = new CollisionVisRenderer(gl);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
@@ -54,6 +57,11 @@ export const createRenderer = (
 
         const stats = frameRenderer.renderFrame(options);
         const viewProjection = options.camera.viewProjectionMatrix;
+
+        // Render collision vis debug lines (if any)
+        collisionVis.render(viewProjection as Float32Array);
+        // Clear the lines after rendering (immediate mode style)
+        collisionVis.clear();
 
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
@@ -215,6 +223,7 @@ export const createRenderer = (
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
+        get collisionVis() { return collisionVis; },
         renderFrame,
         registerPic,
         begin2D,
