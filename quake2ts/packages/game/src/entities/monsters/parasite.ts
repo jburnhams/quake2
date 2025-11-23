@@ -243,6 +243,14 @@ function parasite_drain_attack(self: Entity, context: EntitySystem): void {
     DamageFlags.NO_KNOCKBACK,
     DamageMod.UNKNOWN
   );
+
+  // Heal self
+  if (self.health < self.max_health) {
+    self.health += damage;
+    if (self.health > self.max_health) {
+      self.health = self.max_health;
+    }
+  }
 }
 
 function parasite_attack(self: Entity): void {

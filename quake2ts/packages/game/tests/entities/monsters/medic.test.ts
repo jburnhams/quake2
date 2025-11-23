@@ -74,6 +74,7 @@ describe('monster_medic', () => {
     expect(ent.monsterinfo.stand).toBeDefined();
     expect(ent.monsterinfo.walk).toBeDefined();
     expect(ent.monsterinfo.run).toBeDefined();
+    expect(ent.monsterinfo.attack).toBeDefined();
   });
 
   it('finds dead monsters to heal', () => {
@@ -81,8 +82,11 @@ describe('monster_medic', () => {
       registry.get('monster_medic')!(ent, context);
 
       const deadMonster = system.spawn();
+      deadMonster.classname = 'monster_soldier';
       deadMonster.deadflag = DeadFlag.Dead;
-      deadMonster.monsterinfo = {} as any; // Mark as monster
+      deadMonster.monsterinfo = {
+        stand: vi.fn()
+      } as any; // Mark as monster
       deadMonster.origin = { x: 100, y: 0, z: 0 }; // Nearby
       // Ensure it's not no-visible
       deadMonster.flags = 0;
@@ -93,17 +97,11 @@ describe('monster_medic', () => {
           callback(deadMonster);
       });
 
-      // Force visibility check to pass
-      // The import trace mock handles it with fraction 1.0
-
       // Force RNG to pass
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
       // Explicitly call the AI frame for standing, which triggers the check
-      // We need to access the AI function from the frame
       const standFrame = ent.monsterinfo.current_move?.frames[0];
-      expect(standFrame).toBeDefined();
-
       if (standFrame?.ai) {
           standFrame.ai(ent, 0, system);
       }
@@ -116,5 +114,75 @@ describe('monster_medic', () => {
       expect(ent.monsterinfo.current_move?.firstframe).toBe(70);
 
       randomSpy.mockRestore();
+  });
+
+  it('heals dead monster', () => {
+      const ent = system.spawn();
+      registry.get('monster_medic')!(ent, context);
+
+      const deadMonster = system.spawn();
+      deadMonster.classname = 'monster_soldier';
+      deadMonster.deadflag = DeadFlag.Dead;
+      deadMonster.health = -20;
+      deadMonster.max_health = 50;
+      deadMonster.solid = Solid.Not;
+      deadMonster.monsterinfo = {
+          stand: vi.fn()
+      } as any;
+
+      ent.enemy = deadMonster;
+
+      // Trigger attack
+      if (ent.monsterinfo.attack) {
+          ent.monsterinfo.attack(ent);
+      }
+
+      // Should be in cable attack move
+      expect(ent.monsterinfo.current_move?.firstframe).toBe(106); // attack_cable_move
+
+      // Find the frame with the heal logic (frame index 5)
+      const healFrame = ent.monsterinfo.current_move?.frames[5];
+      expect(healFrame).toBeDefined();
+      expect(healFrame?.think).toBeDefined();
+
+      // Execute heal
+      healFrame?.think!(ent, system);
+
+      expect(deadMonster.deadflag).toBe(DeadFlag.Alive);
+      expect(deadMonster.health).toBe(50);
+      expect(deadMonster.solid).toBe(Solid.BoundingBox);
+      expect(deadMonster.monsterinfo.stand).toHaveBeenCalled();
+      expect(ent.enemy).toBeNull();
+  });
+
+  it('fires blaster at living enemy', () => {
+    const ent = system.spawn();
+    registry.get('monster_medic')!(ent, context);
+    ent.viewheight = 24;
+
+    const enemy = system.spawn();
+    enemy.health = 100;
+    enemy.origin = { x: 200, y: 0, z: 0 };
+    ent.enemy = enemy;
+    ent.origin = { x: 0, y: 0, z: 0 };
+
+    // Trigger attack
+    if (ent.monsterinfo.attack) {
+        ent.monsterinfo.attack(ent);
+    }
+
+    // Should be in hyper blaster attack move
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(90);
+
+    // Find a firing frame (indices 4-13)
+    const fireFrame = ent.monsterinfo.current_move?.frames[4];
+    expect(fireFrame?.think).toBeDefined();
+
+    const spawnSpy = vi.spyOn(system, 'spawn');
+
+    // Execute fire
+    fireFrame?.think!(ent, system);
+
+    expect(spawnSpy).toHaveBeenCalled();
   });
 });
