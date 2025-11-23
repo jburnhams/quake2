@@ -243,7 +243,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             ownedWeapons: new Set(),
             armor: null,
             powerups: new Map(),
-            keys: new Set()
+            keys: new Set(),
+            items: new Set(),
         };
 
         // Map inventory array to PlayerInventory
@@ -279,6 +280,10 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                     break;
                 case 'health':
                     // Ignore, health is in stats
+                    break;
+                case 'item':
+                    // Map generic items (like power armor)
+                    inventory.items.add(mapping.id);
                     break;
             }
         }

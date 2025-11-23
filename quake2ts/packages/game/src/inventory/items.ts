@@ -35,6 +35,11 @@ export interface PowerupItem extends BaseItem {
     timer: number;
 }
 
+export interface PowerArmorItem extends BaseItem {
+    type: 'power_armor';
+    armorType: 'screen' | 'shield';
+}
+
 export interface KeyItem extends BaseItem {
     type: 'key';
 }
@@ -230,6 +235,21 @@ export const POWERUP_ITEMS: Record<string, PowerupItem> = {
         id: 'item_enviro',
         name: 'Enviro Suit',
         timer: 30,
+    },
+};
+
+export const POWER_ARMOR_ITEMS: Record<string, PowerArmorItem> = {
+    'item_power_screen': {
+        type: 'power_armor',
+        id: 'item_power_screen',
+        name: 'Power Screen',
+        armorType: 'screen',
+    },
+    'item_power_shield': {
+        type: 'power_armor',
+        id: 'item_power_shield',
+        name: 'Power Shield',
+        armorType: 'shield',
     },
 };
 
