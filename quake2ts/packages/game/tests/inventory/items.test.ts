@@ -3,9 +3,9 @@
 // =================================================================
 
 import { describe, expect, it } from 'vitest';
-import { createPlayerInventory, pickupWeapon, WEAPON_ITEMS } from '../src/inventory';
-import { WeaponId } from '../src/inventory/playerInventory';
-import { AmmoType } from '../src/inventory/ammo';
+import { createPlayerInventory, pickupWeapon, WEAPON_ITEMS } from '../../src/inventory';
+import { WeaponId } from '../../src/inventory/playerInventory';
+import { AmmoType } from '../../src/inventory/ammo';
 
 describe('Item Pickup', () => {
     it('should give weapon and initial ammo on first pickup', () => {

@@ -3,7 +3,7 @@
 // =================================================================
 
 import { describe, expect, it } from 'vitest';
-import { WEAPONS, WeaponType } from '../src/combat/weapon';
+import { WEAPONS, WeaponType } from '../../src/combat/weapon';
 
 describe('Weapon Definitions', () => {
   it('should have correct properties for Blaster', () => {
