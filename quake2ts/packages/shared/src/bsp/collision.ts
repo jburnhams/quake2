@@ -97,6 +97,23 @@ export enum PlaneSide {
   CROSS = 3,
 }
 
+export interface TraceDebugInfo {
+  nodesTraversed: number;
+  leafsReached: number;
+  brushesTested: number;
+}
+
+export let traceDebugInfo: TraceDebugInfo | null = null;
+
+export function enableTraceDebug(): void {
+  traceDebugInfo = { nodesTraversed: 0, leafsReached: 0, brushesTested: 0 };
+  // console.log('DEBUG: Trace debug enabled');
+}
+
+export function disableTraceDebug(): void {
+  traceDebugInfo = null;
+}
+
 export const DIST_EPSILON = 0.03125;
 
 const MAX_CHECKCOUNT = Number.MAX_SAFE_INTEGER - 1;
@@ -499,12 +516,20 @@ function recursiveHullCheck(params: {
 
       brush.checkcount = brushCheckCount;
 
+      if (traceDebugInfo) {
+        traceDebugInfo.brushesTested++;
+      }
+
       clipBoxToBrush({ start: traceStart, end: traceEnd, mins, maxs, brush, trace });
       if (trace.allsolid) {
         return;
       }
     }
     return;
+  }
+
+  if (traceDebugInfo) {
+    traceDebugInfo.nodesTraversed++;
   }
 
   const node = model.nodes[nodeIndex];
@@ -694,6 +719,9 @@ export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: Collisi
 
   function traverse(nodeIndex: number) {
     if (nodeIndex < 0) {
+    if (traceDebugInfo) {
+      traceDebugInfo.leafsReached++;
+    }
       const leafIndex = -1 - nodeIndex;
       const leaf = model.leaves[leafIndex];
 

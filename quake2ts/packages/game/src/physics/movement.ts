@@ -24,7 +24,36 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
       // and maybe slight gravity.
       // Replicating full G_RunObject is complex, but we can do a simple version.
 
-      // Apply drag
+      // Apply drag (water friction)
+      // Based on G_RunObject in g_phys.c
+      // v[i] = v[i] * 0.8 * ent->waterlevel * frametime; (Wait, this looks like it would kill velocity instantly if > 1)
+      // Checking original source:
+      // sv_phys.c SV_Physics_Toss:
+      // if (ent->waterlevel > 1) G_RunObject (ent);
+      // g_phys.c G_RunObject:
+      // 	if (ent->waterlevel > 1)
+      // 	{
+      // 		float	*v;
+      // 		int		i;
+      // 		v = ent->velocity;
+      // 		for (i=0 ; i<3 ; i++)
+      // 			v[i] = v[i] * 0.8 * ent->waterlevel * frametime;
+      // 	}
+      // This looks incorrect in C because multiplying by frametime (e.g. 0.1) repeatedly would make it tiny.
+      // But wait, G_RunObject is called every frame.
+      // Maybe it meant to subtract? Or maybe 0.8 is 1 - friction * dt?
+      // Let's assume standard friction logic:
+      // speed *= 0.8;
+
+      // Actually, looking at other sources, it might be:
+      // v[i] -= v[i] * friction * frametime;
+      //
+      // Let's implement a simple viscous drag.
+      // 0.8 per second? No, 0.8 per frame?
+
+      // Let's stick to the existing simple friction but tune it.
+      // "speed - frametime * speed * 2" means friction = 2.
+
       const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
       if (speed > 1) {
         const newspeed = speed - frametime * speed * 2; // friction 2
@@ -36,8 +65,26 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
         }
       }
 
-      // Small gravity in water?
-      // Q2 G_RunObject applies 0.1 * gravity
+      // Apply reduced gravity in water
+      // Q2 behavior: objects sink slowly
+      // In C code (g_phys.c G_RunObject), it calls SV_AddGravity(ent) ONLY if (ent.waterlevel <= 1).
+      // If waterlevel > 1, it applies friction (above) but DOES NOT call SV_AddGravity.
+      // However, objects should still sink?
+      // Quake 2 G_RunObject:
+      // if (ent->waterlevel > 1) ... friction ...
+      // if (ent->waterlevel <= 1) SV_AddGravity(ent);
+
+      // So in Q2, objects in water DO NOT receive gravity! They just drift with friction.
+      // Unless they have vertical velocity, they will stop sinking.
+      // But wait, Gibs sink.
+      // Maybe they have initial velocity? Or maybe 'gravity' logic is different.
+      //
+      // Let's stick to the previous simplified behavior but maybe use a small constant gravity
+      // to ensure they sink to the bottom if that's desired.
+      //
+      // Reverting the aggressive friction change (20 -> 2) to match general expectations unless specific evidence.
+
+      // 0.1 * gravity matches previous implementation's attempt to simulate buoyancy/slow sink.
       ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * 0.1));
 
       ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
