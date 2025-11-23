@@ -1,6 +1,7 @@
 import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
 import {
     ai_charge,
+    ai_move,
     ai_run,
     ai_stand,
     ai_walk,
@@ -18,6 +19,7 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { monster_fire_bullet } from './attack.js';
 import { createGrenade } from '../projectiles.js';
+import { throwGibs } from '../gibs.js';
 import type { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
@@ -39,12 +41,18 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
     ai_charge(self, dist, MONSTER_TICK);
 }
 
+function monster_ai_move(self: Entity, dist: number, context: any): void {
+    ai_move(self, dist);
+}
+
 // Forward declarations for moves
 let stand_move: MonsterMove;
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
 let attack_chain_move: MonsterMove;
 let attack_grenade_move: MonsterMove;
+let pain_move: MonsterMove;
+let death_move: MonsterMove;
 
 function gunner_stand(self: Entity): void {
     self.monsterinfo.current_move = stand_move;
@@ -101,6 +109,14 @@ function gunner_fire_grenade(self: Entity, context: any): void {
     const speed = 600;
 
     createGrenade(context as EntitySystem, self, start, forward, damage, speed);
+}
+
+function gunner_pain(self: Entity): void {
+    self.monsterinfo.current_move = pain_move;
+}
+
+function gunner_die(self: Entity): void {
+    self.monsterinfo.current_move = death_move;
 }
 
 // Frames
@@ -166,6 +182,35 @@ attack_grenade_move = {
     endfunc: gunner_run,
 };
 
+const pain_frames: MonsterFrame[] = Array.from({ length: 8 }, () => ({
+    ai: monster_ai_move,
+    dist: 0,
+}));
+
+pain_move = {
+    firstframe: 110,
+    lastframe: 117,
+    frames: pain_frames,
+    endfunc: gunner_run,
+};
+
+const death_frames: MonsterFrame[] = Array.from({ length: 15 }, () => ({
+    ai: monster_ai_move,
+    dist: 0,
+}));
+
+function gunner_dead(self: Entity): void {
+    self.monsterinfo.nextframe = death_move.lastframe;
+    self.nextthink = -1;
+}
+
+death_move = {
+    firstframe: 118,
+    lastframe: 132,
+    frames: death_frames,
+    endfunc: gunner_dead,
+};
+
 
 function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.model = 'models/monsters/gunner/tris.md2';
@@ -178,13 +223,22 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.mass = 200;
 
     self.pain = (self, other, kick, damage) => {
-        // Pain logic
+        if (self.health < (self.max_health / 2)) {
+            self.monsterinfo.current_move = pain_move;
+        }
     };
 
     self.die = (self, inflictor, attacker, damage, point) => {
         self.deadflag = DeadFlag.Dead;
         self.solid = Solid.Not;
-        // Trigger death animation
+
+        if (self.health < -40) {
+            throwGibs(context.entities, self.origin, damage);
+            context.entities.free(self);
+            return;
+        }
+
+        gunner_die(self);
     };
 
     self.monsterinfo.stand = gunner_stand;

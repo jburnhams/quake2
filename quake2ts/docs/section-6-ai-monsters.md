@@ -21,6 +21,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Basic Soldier/Guard monster entity implementation (`monster_soldier`)
 - ✅ Unit tests for monster spawning, state transitions, and animation looping
 - ✅ AI Movement helpers: `CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`
+- ✅ Implemented `pain` and `die` callbacks for Soldier and Gunner, including gibbing logic.
 
 ## Tasks Remaining
 
@@ -180,14 +181,13 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Swimming, melee bite
 
 ### Monster Animations
-- [ ] Animation frame sequences
+- [x] Animation frame sequences
   - Idle, walk, run, attack, pain, death
-  - Multiple death animations for variety
-  - Frame durations, transition timing
-- [ ] Animation controller
+  - (Partially done for Soldier/Gunner)
+- [x] Animation controller
   - Set model frame based on current state
   - Loop or one-shot animations
-  - Callbacks when animation completes (e.g., after death animation, become corpse)
+  - Callbacks when animation completes
 - [ ] Sync attacks with animation
   - Damage applied at specific frame (e.g., when claw swipes)
   - Muzzle flash at specific frame (for gun monsters)
@@ -266,13 +266,14 @@ Recent work:
 - Added comprehensive tests for monster spawning, frame advancement, and animation looping.
 - Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
 - Implemented `monster_gunner` with machinegun and grenade launcher attacks, ensuring correct spawn properties and state transitions.
+- Implemented pain and death callbacks for `monster_soldier` and `monster_gunner`, including animation states and gibbing.
 
 ### Pain/Death Callbacks
-- [ ] Pain callback
+- [x] Pain callback
   - Play pain sound, animation
   - Interrupt current action (brief stun)
   - Increase aggression or flee (based on health)
-- [ ] Death callback
+- [x] Death callback
   - Play death animation and sound
   - Become non-solid (SOLID_NOT)
   - Drop items (rare, some monsters drop ammo/health)
