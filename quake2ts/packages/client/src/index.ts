@@ -192,10 +192,13 @@ export function createClient(imports: ClientImports): ClientExports {
             damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
             damageIndicators: stateAsPlayerState.damageIndicators ?? [],
         };
+
+        const playbackState = demoPlayback.getState();
+
         // Use demo time if playing, else game time
-        const timeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
+        const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
             ? (demoHandler.latestFrame?.serverFrame || 0) * 100 // Approximate
-            : (sample.latest?.timeMs ?? 0);
+            : timeMs;
 
         Draw_Hud(
           imports.engine.renderer,
@@ -206,7 +209,7 @@ export function createClient(imports: ClientImports): ClientExports {
           lastRendered.ammo,
           stats,
           messageSystem,
-          timeMs
+          hudTimeMs
         );
     },
 

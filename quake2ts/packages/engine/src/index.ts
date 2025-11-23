@@ -20,10 +20,12 @@ export interface TraceResult extends PmoveTraceResult {
 }
 
 import { Renderer } from './render/renderer.js';
+import { AudioApi } from './audio/api.js';
 
 export interface EngineImports {
   trace(start: Vec3, end: Vec3): TraceResult;
   renderer?: Renderer;
+  audio?: AudioApi;
 }
 
 export interface EngineExports {

@@ -18,7 +18,7 @@ import {
     U_REMOVE
 } from '@quake2ts/engine';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
-import { PredictionState, defaultPredictionState } from '../prediction.js';
+import { PredictionState, defaultPredictionState, interpolatePredictionState } from '../prediction.js';
 import { PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
 import { PlayerInventory, WeaponId, PowerupId, KeyId, ArmorType } from '@quake2ts/game';
 import { DEMO_ITEM_MAPPING } from './itemMapping.js';
@@ -37,6 +37,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     public entities: Map<number, EntityState> = new Map(); // Current frame entities
     public baselines: Map<number, EntityState> = new Map();
 
+    public previousFrame: FrameData | null = null;
     public latestFrame: FrameData | null = null;
 
     // Stats for HUD
@@ -78,6 +79,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onFrame(frame: FrameData): void {
+        if (this.latestFrame) {
+            this.previousFrame = this.latestFrame;
+        }
         this.latestFrame = frame;
         this.stats = [...frame.playerState.stats];
 
@@ -181,11 +185,27 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {
-        // TODO: Implement sound playback using engine imports
+        if (!this.imports?.engine.audio) return;
+
+        // Ensure volume/attenuation defaults if missing
+        const vol = volume ?? 1.0;
+        const attn = attenuation ?? 1.0;
+        const timeofs = offset ?? 0;
+
+        if (ent && ent > 0) {
+             this.imports.engine.audio.sound(ent, 0, soundNum, vol, attn, timeofs);
+        } else if (pos) {
+             this.imports.engine.audio.positioned_sound(pos, soundNum, vol, attn);
+        } else {
+             // Global sound?
+             // this.imports.engine.audio.play_channel(...);
+        }
     }
 
     onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
         // TODO: Trigger temp entities in renderer
+        // The Renderer interface does not currently expose the particle system or generic temp entity spawning functions.
+        // Once Renderer is updated to support particles, this can be implemented.
     }
 
     onLayout(layout: string): void {
@@ -212,10 +232,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     onDownload(size: number, percent: number, data?: Uint8Array): void {
     }
 
-    public getPredictionState(): PredictionState {
-        if (!this.latestFrame) return defaultPredictionState();
-
-        const ps = this.latestFrame.playerState;
+    private convertFrameToPredictionState(frame: FrameData): PredictionState {
+        const ps = frame.playerState;
 
         const inventory: PlayerInventory = {
             ammo: {
@@ -265,13 +283,11 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             }
         }
 
-        // Cast MutableVec3 to Vec3 (readonly)
         const origin: Vec3 = { ...ps.origin };
         const velocity: Vec3 = { ...ps.velocity };
         const viewangles: Vec3 = { ...ps.viewangles };
         const deltaAngles: Vec3 = { ...ps.delta_angles };
 
-        // TODO: Implement interpolation for smooth playback
         return {
             origin,
             velocity,
@@ -291,5 +307,27 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             armor: ps.stats[4], // STAT_ARMOR
             ammo: ps.stats[2], // STAT_AMMO
         };
+    }
+
+    public getPredictionState(timeMs?: number): PredictionState {
+        if (!this.latestFrame) return defaultPredictionState();
+
+        const latestState = this.convertFrameToPredictionState(this.latestFrame);
+
+        // If we have a previous frame and a timeMs, try to interpolate
+        if (this.previousFrame && timeMs !== undefined) {
+             // Note: This assumes 10Hz (100ms) server frames as per standard Quake 2
+             // Ideally we'd have exact server times on frames
+             const latestServerTime = this.latestFrame.serverFrame * 100; // ms
+             const previousServerTime = this.previousFrame.serverFrame * 100; // ms
+
+             if (timeMs >= previousServerTime && timeMs <= latestServerTime) {
+                 const alpha = (timeMs - previousServerTime) / (latestServerTime - previousServerTime);
+                 const previousState = this.convertFrameToPredictionState(this.previousFrame);
+                 return interpolatePredictionState(previousState, latestState, Math.max(0, Math.min(1, alpha)));
+             }
+        }
+
+        return latestState;
     }
 }
