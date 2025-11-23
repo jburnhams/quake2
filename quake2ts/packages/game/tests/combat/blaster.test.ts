@@ -14,6 +14,8 @@ describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const engine = {
@@ -22,7 +24,7 @@ describe('Blaster', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';

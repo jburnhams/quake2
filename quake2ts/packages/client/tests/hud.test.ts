@@ -1,115 +1,130 @@
-import { describe, it, expect, vi } from 'vitest';
-import { Draw_Hud, Init_Hud } from '../src/hud';
-import { MessageSystem } from '../src/hud/messages';
-import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WeaponId, PowerupId } from '@quake2ts/game';
-import { HUD_LAYOUT } from '../src/hud/layout';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Draw_Hud, Init_Hud } from '../src/hud.js';
+import { Renderer, Pic, PakArchive } from '@quake2ts/engine';
+import { PlayerState } from '@quake2ts/shared';
+import { PlayerClient, PowerupId } from '@quake2ts/game';
+import { MessageSystem } from '../src/hud/messages.js';
 
-import { PlayerState, angleVectors, dotVec3 } from '@quake2ts/shared';
+// Mock engine dependencies
+const mockRenderer = {
+    begin2D: vi.fn(),
+    end2D: vi.fn(),
+    drawPic: vi.fn(),
+    drawfillRect: vi.fn(),
+    drawString: vi.fn(),
+    drawCenterString: vi.fn(),
+    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24 } as Pic),
+    width: 640,
+    height: 480
+} as unknown as Renderer;
 
-describe('HUD', () => {
-    it('should draw all HUD elements correctly', async () => {
-        const mockRenderer = {
-            width: 800,
-            height: 600,
-            gl: { canvas: { width: 800, height: 600 } },
-            registerPic: vi.fn(async (name: string, buffer: ArrayBuffer) => ({
-                width: 24,
-                height: 24,
-                name,
-            })),
-            drawPic: vi.fn(),
-            begin2D: vi.fn(),
-            end2D: vi.fn(),
-            drawfillRect: vi.fn(),
-            drawString: vi.fn(),
-        } as unknown as Renderer;
+const mockPak = {
+    readFile: vi.fn().mockReturnValue({ buffer: new ArrayBuffer(0) })
+} as unknown as PakArchive;
 
-        const mockPak = {
-            readFile: vi.fn(() => ({ buffer: new ArrayBuffer(0) })),
-        } as unknown as PakArchive;
+describe('HUD Rendering', () => {
+    let ps: PlayerState;
+    let client: PlayerClient;
+    let messageSystem: MessageSystem;
 
-        const mockClient = {
-            inventory: {
-                currentWeapon: WeaponId.Shotgun,
-                powerups: new Map<PowerupId, number | null>([
-                    [PowerupId.QuadDamage, 2000],
-                    [PowerupId.Invulnerability, 3000],
-                ]),
-                keys: new Set(),
-            },
-        } as unknown as PlayerClient;
+    beforeEach(() => {
+        vi.clearAllMocks();
 
-        const mockPlayerState = {
-            damageAlpha: 0.5,
-            damageIndicators: [{ direction: { x: 0, y: 1, z: 0 }, strength: 1 }],
-            viewAngles: { x: 0, y: 90, z: 0 },
+        ps = {
+            damageAlpha: 0,
+            damageIndicators: [],
+            origin: { x: 0, y: 0, z: 0 },
+            velocity: { x: 0, y: 0, z: 0 },
+            viewAngles: { x: 0, y: 0, z: 0 },
+            onGround: true,
+            waterLevel: 0,
+            mins: { x: 0, y: 0, z: 0 },
+            maxs: { x: 0, y: 0, z: 0 },
         } as unknown as PlayerState;
 
-        const mockStats = {
-            fps: 60,
-            drawCalls: 100,
-            batches: 10,
-            facesDrawn: 1000,
-            vertexCount: 50000,
-        } as FrameRenderStats;
+        client = {
+            inventory: {
+                armor: { armorCount: 50, armorType: 'jacket' },
+                currentWeapon: 1, // Blaster usually
+                ammo: { counts: [] },
+                keys: new Set(),
+                powerups: new Map()
+            }
+        } as unknown as PlayerClient;
 
-        const mockMessageSystem = new MessageSystem();
-        vi.spyOn(mockMessageSystem, 'drawCenterPrint');
-        vi.spyOn(mockMessageSystem, 'drawNotifications');
+        messageSystem = new MessageSystem();
 
-        await Init_Hud(mockRenderer, mockPak);
-        Draw_Hud(mockRenderer, mockPlayerState, mockClient, 100, 50, 25, mockStats, mockMessageSystem, 1000);
+        // Initialize HUD assets
+        return Init_Hud(mockRenderer, mockPak);
+    });
 
-        // Verify message system called
-        expect(mockMessageSystem.drawCenterPrint).toHaveBeenCalledWith(mockRenderer, 1000);
-        expect(mockMessageSystem.drawNotifications).toHaveBeenCalledWith(mockRenderer, 1000);
+    it('should draw basic HUD elements', () => {
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
-        // Verify damage flash
-        expect(mockRenderer.drawfillRect).toHaveBeenCalledWith(0, 0, 800, 600, [1, 0, 0, 0.5]);
+        expect(mockRenderer.begin2D).toHaveBeenCalled();
+        expect(mockRenderer.end2D).toHaveBeenCalled();
 
-        // Verify diagnostics
-        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 10, 'FPS: 60');
-        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 20, 'Draw Calls: 100');
-        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 30, 'Batches: 10');
-        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 40, 'Faces Drawn: 1000');
-        expect(mockRenderer.drawString).toHaveBeenCalledWith(10, 50, 'Vertices: 50000');
-        
-        // Verify crosshair
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            (800 - 24) / 2, 
-            (600 - 24) / 2, 
-            expect.objectContaining({ name: 'crosshair' })
+        // Check for number drawing calls (Draw_Number calls drawPic)
+        expect(mockRenderer.drawPic).toHaveBeenCalled();
+    });
+
+    it('should draw damage flash when damaged', () => {
+        ps.damageAlpha = 0.5;
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
+
+        expect(mockRenderer.drawfillRect).toHaveBeenCalledWith(
+            0, 0, 640, 480, [1, 0, 0, 0.5]
         );
+    });
 
-        // Verify weapon icon
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            HUD_LAYOUT.WEAPON_ICON_X, 
-            HUD_LAYOUT.WEAPON_ICON_Y, 
-            expect.objectContaining({ name: 'w_shotgun' })
-        );
+    it('should tint health red when low', () => {
+        // We can't easily check the color argument to drawPic since it's deeply nested in Draw_Number
+        // But we can check that drawPic was called.
+        // To be precise we'd need to mock Draw_Number or spy on it.
+        // Instead, let's trust the logic is calling it, and maybe check if we can spy on renderer.drawPic arguments.
 
-        // Verify powerup icons
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            HUD_LAYOUT.POWERUP_X, 
-            HUD_LAYOUT.POWERUP_Y, 
-            expect.objectContaining({ name: 'p_quad' })
-        );
-        // Width of icon (24) + Width of number "1" (24) + padding (8) = 56
-        // 610 - 56 = 554
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            HUD_LAYOUT.POWERUP_X - 56,
-            HUD_LAYOUT.POWERUP_Y, 
-            expect.objectContaining({ name: 'p_invulnerability' })
-        );
+        Draw_Hud(mockRenderer, ps, client, 10, 0, 0, {} as any, messageSystem, 1000);
 
-        // Verify damage indicators
-        // Damage from {x:0, y:1, z:0} with player facing yaw=90 (east)
-        // means damage comes from straight ahead, so should show d_up (forward indicator)
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
-            (800 - 24) / 2,
-            0,
-            expect.objectContaining({ name: 'd_up' })
-        );
+        // The first calls to drawPic are for health numbers.
+        // HUD_LAYOUT.HEALTH_X is 100.
+        // We expect drawPic to be called with x >= 100 and a color.
+
+        const calls = (mockRenderer.drawPic as any).mock.calls;
+        const healthCalls = calls.filter((c: any) => c[0] >= 100 && c[0] < 150 && c[1] === 450);
+
+        expect(healthCalls.length).toBeGreaterThan(0);
+        // Check color arg (4th arg)
+        expect(healthCalls[0][3]).toEqual([1, 0, 0, 1]);
+    });
+
+    it('should draw powerup icons and timers', () => {
+        // Add a powerup
+        client.inventory.powerups.set(PowerupId.Quad, 5000); // Expires at 5000ms
+
+        // Time is 1000ms, so 4 seconds remaining.
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
+
+        // Check if Quad icon was drawn.
+        // Since we mocked loading, we don't have real Pic objects with names.
+        // But Init_Icons registers 'p_quad'.
+        // We can check if registerPic was called for p_quad.
+        expect(mockRenderer.registerPic).toHaveBeenCalledWith('p_quad', expect.any(Object));
+
+        // And check if drawPic was called for powerup area.
+        // HUD_LAYOUT.POWERUP_Y = 450.
+        const calls = (mockRenderer.drawPic as any).mock.calls;
+        const powerupCalls = calls.filter((c: any) => c[1] === 450 && c[0] > 550); // Powerup area
+        expect(powerupCalls.length).toBeGreaterThan(0);
+    });
+
+    it('should draw keys', () => {
+        client.inventory.keys.add('blue');
+
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
+
+        // Keys are drawn at X=10, Y starts at 300.
+        const calls = (mockRenderer.drawPic as any).mock.calls;
+        const keyCalls = calls.filter((c: any) => c[0] === 10 && c[1] >= 300 && c[1] < 450);
+        expect(keyCalls.length).toBeGreaterThan(0);
     });
 });

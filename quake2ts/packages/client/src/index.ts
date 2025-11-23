@@ -18,6 +18,7 @@ import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
+import { ClientConfigStrings } from './configStrings.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -40,6 +41,7 @@ export {
   type PredictionState,
 } from './prediction.js';
 export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from './view-effects.js';
+export { ClientConfigStrings } from './configStrings.js';
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
@@ -47,16 +49,28 @@ export interface ClientImports {
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
+  // Core Engine Hooks
   predict(command: UserCommand): PredictionState;
+  ParseCenterPrint(msg: string): void;
+  ParseNotify(msg: string): void;
+  ParseConfigString(index: number, value: string): void;
+
+  // State Access
   readonly prediction: ClientPrediction;
   readonly lastRendered?: PredictionState;
   readonly view: ViewEffects;
   readonly lastView?: ViewSample;
+  readonly configStrings: ClientConfigStrings;
   camera?: Camera;
+
+  // Demo Playback
   demoPlayback: DemoPlaybackController;
-  ParseCenterPrint(msg: string): void;
-  ParseNotify(msg: string): void;
   demoHandler: ClientNetworkHandler;
+
+  // cgame_export_t equivalents (if explicit names required)
+  Init(initial?: GameFrameResult<PredictionState>): void;
+  Shutdown(): void;
+  DrawHUD(stats: FrameRenderStats, timeMs: number): void;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
@@ -69,6 +83,8 @@ export function createClient(imports: ClientImports): ClientExports {
   // Hook up message system to demo handler
   demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
   demoHandler.onPrint = (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+
+  const configStrings = new ClientConfigStrings();
 
   demoPlayback.setHandler(demoHandler);
 
@@ -90,32 +106,28 @@ export function createClient(imports: ClientImports): ClientExports {
     }, 'Play a recorded demo');
   }
 
-  return {
+  const clientExports: ClientExports = {
     init(initial) {
+      this.Init(initial);
+    },
+
+    Init(initial) {
       latestFrame = initial;
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
+
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
     },
+
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       const playbackState = demoPlayback.getState();
 
-      if (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused) {
-          // Calculate delta time in seconds
-          const dtMs = sample.latest && sample.previous ? (sample.latest.timeMs - sample.previous.timeMs) : 16;
-          const dt = dtMs / 1000.0;
-
-          if (playbackState === PlaybackState.Playing) {
-            demoPlayback.update(dt);
-          }
-
+      if (playbackState === PlaybackState.Playing) {
           lastRendered = demoHandler.getPredictionState();
-          // Update latestFrame to match demo state for interpolation/HUD time?
-          // ideally we reconstruct a GameFrameResult from the demo frame data.
       } else {
           if (sample.latest?.state) {
             prediction.setAuthoritative(sample.latest);
@@ -153,6 +165,21 @@ export function createClient(imports: ClientImports): ClientExports {
           fps: 0,
           vertexCount: 0,
         };
+        const timeMs = sample.latest?.timeMs ?? 0;
+
+        // Call DrawHUD
+        this.DrawHUD(stats, timeMs);
+      }
+
+      return command;
+    },
+
+    DrawHUD(stats: FrameRenderStats, timeMs: number) {
+        if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
+
+        // Use values from lastRendered if available (cast to PlayerState to access damage fields if they exist)
+        // If not, fall back to defaults.
+        const stateAsPlayerState = lastRendered as unknown as PlayerState;
 
         const playerState: PlayerState = {
             origin: lastRendered.origin,
@@ -162,8 +189,8 @@ export function createClient(imports: ClientImports): ClientExports {
             waterLevel: lastRendered.waterlevel,
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: 0,
-            damageIndicators: [],
+            damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
+            damageIndicators: stateAsPlayerState.damageIndicators ?? [],
         };
         // Use demo time if playing, else game time
         const timeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
@@ -181,17 +208,17 @@ export function createClient(imports: ClientImports): ClientExports {
           messageSystem,
           timeMs
         );
-      }
-
-      void imports;
-      void sample;
-
-      return command;
     },
+
     shutdown() {
+      this.Shutdown();
+    },
+
+    Shutdown() {
       latestFrame = undefined;
       lastRendered = undefined;
     },
+
     get prediction(): ClientPrediction {
       return prediction;
     },
@@ -216,6 +243,12 @@ export function createClient(imports: ClientImports): ClientExports {
       const timeMs = latestFrame?.timeMs ?? 0;
       messageSystem.addNotify(msg, timeMs);
     },
-    demoHandler
+    ParseConfigString(index: number, value: string) {
+      configStrings.set(index, value);
+    },
+    demoHandler,
+    configStrings
   };
+
+  return clientExports;
 }

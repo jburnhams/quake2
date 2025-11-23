@@ -15,6 +15,8 @@ describe('BFG10K', () => {
     it('should consume 50 cells and spawn a projectile', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
 
         const engine = {
@@ -23,7 +25,7 @@ describe('BFG10K', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -47,6 +49,8 @@ describe('BFG10K', () => {
     it('should deal secondary laser damage on impact', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
@@ -56,7 +60,7 @@ describe('BFG10K', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';

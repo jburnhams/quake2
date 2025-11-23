@@ -66,8 +66,14 @@ export class EngineHost<FrameState = unknown> {
   start(): void {
     if (this.started) return;
 
-    this.latestFrame = this.game.init(this.startTimeMs) ?? this.latestFrame;
-    this.client?.init(this.latestFrame);
+    try {
+      this.latestFrame = this.game.init(this.startTimeMs) ?? this.latestFrame;
+      this.client?.init(this.latestFrame);
+    } catch (error) {
+      this.game.shutdown();
+      this.client?.shutdown();
+      throw error;
+    }
 
     this.started = true;
     this.loop.start();

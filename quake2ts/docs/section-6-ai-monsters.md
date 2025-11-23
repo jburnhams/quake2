@@ -123,7 +123,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Faster machinegun fire
 - [ ] **Enforcer** (chaingun soldier)
   - Chaingun attack, high fire rate
-- [ ] **Gunner**
+- [x] **Gunner**
   - Dual attack: machinegun and grenade launcher
   - Choose based on range
 - [ ] **Infantry**
@@ -265,6 +265,7 @@ Recent work:
 - Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
 - Added comprehensive tests for monster spawning, frame advancement, and animation looping.
 - Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
+- Implemented `monster_gunner` with machinegun and grenade launcher attacks, ensuring correct spawn properties and state transitions.
 
 ### Pain/Death Callbacks
 - [ ] Pain callback
