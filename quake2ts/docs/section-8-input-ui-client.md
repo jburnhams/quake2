@@ -15,6 +15,10 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 - ✅ Fixed timestep loop with interpolation
 - ✅ ConfigString registry for HUD asset indexing
 - ✅ Cvar system for settings
+- ✅ View effects (bob, roll, kick)
+- ✅ Status bar HUD (health, armor, ammo, icons)
+- ✅ Crosshair rendering and customization
+- ✅ Damage indicators (directional and screen flash)
 
 ## Tasks Remaining
 
@@ -84,16 +88,16 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - Interpolate between previous and current frame
   - Smooth out 40Hz simulation to 60+ Hz render rate
   - Apply to player position, view angles
-- [ ] View effects
-  - View bob (up/down sway while walking)
-  - View roll (lean when strafing)
-  - View kick (recoil when firing)
-  - Damage angle indicators (screen flash from damage direction)
+- [x] View effects
+  - [x] View bob (up/down sway while walking)
+  - [x] View roll (lean when strafing)
+  - [x] View kick (recoil when firing)
+  - [x] Damage angle indicators (screen flash from damage direction)
 
 ### HUD (Heads-Up Display)
 All HUD elements use renderer Draw_* functions (Section 2).
 
-- [ ] **Status bar** (bottom of screen)
+- [x] **Status bar** (bottom of screen)
   - [x] Health number (large, red if low)
   - [x] Armor number and icon
   - [x] Ammo count for current weapon
@@ -102,10 +106,10 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Key icons (if keys collected)
   - [x] Powerup timers (quad damage, invulnerability, etc.)
   - Layout varies by HUD style (original, expanded)
-- [ ] **Crosshair**
+- [x] **Crosshair**
   - [x] Centered on screen
   - [x] Multiple styles selectable (via `crosshair` command)
-  - [ ] Color customizable
+  - [x] Color customizable
   - [ ] Size customizable
 - [x] **Center print messages**
   - [x] Large text in center of screen
@@ -117,7 +121,7 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Objective messages
   - [x] Obituaries (in multiplayer)
   - [x] Fade old messages
-- [ ] **Damage indicators**
+- [x] **Damage indicators**
   - [x] Screen flash when taking damage (basic)
   - [x] Directional: show which direction damage came from
   - Red tint for health loss

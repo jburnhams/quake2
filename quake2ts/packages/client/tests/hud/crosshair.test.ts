@@ -28,7 +28,8 @@ describe('Crosshair', () => {
         expect(mockRenderer.registerTexture).toHaveBeenCalled();
         expect(mockRenderer.drawPic).toHaveBeenCalledWith(
             312, 232, // (640-16)/2, (480-16)/2
-            expect.objectContaining({ name: 'ch1' })
+            expect.objectContaining({ name: 'ch1' }),
+            expect.anything() // Color argument
         );
     });
 
@@ -55,7 +56,8 @@ describe('Crosshair', () => {
         expect(mockRenderer.drawPic).toHaveBeenCalledWith(
             (640 - 16) / 2,
             (480 - 16) / 2,
-            expect.objectContaining({ name: 'ch1' })
+            expect.objectContaining({ name: 'ch1' }),
+            expect.anything() // Color argument
         );
     });
 });
