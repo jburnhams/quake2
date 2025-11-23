@@ -165,11 +165,11 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Text input fields (for save names)
 
 ### Configstring Parsing (Client Side)
-- [ ] Receive configstrings from engine
+- [x] Receive configstrings from engine
   - Model indices, sound indices, image indices
   - Player names, scores (multiplayer)
   - Level name, time limit, etc.
-- [ ] Update client state based on configstrings
+- [x] Update client state based on configstrings
   - Precache assets referenced by configstrings
   - Adjust HUD elements (show level name)
   - Update prediction physics settings (air accel, N64 mode)
@@ -201,14 +201,14 @@ All HUD elements use renderer Draw_* functions (Section 2).
 
 ### Client API (cgame_export_t interface)
 Expose from client package to engine:
-- [ ] `Init()`: Initialize client/HUD systems
-- [ ] `Shutdown()`: Clean up client resources
-- [ ] `DrawHUD()`: Render HUD for current frame
-- [ ] `TouchPics()`: Precache HUD images (called during load)
-- [ ] `LayoutFlags()`: Return HUD layout mode flags
-- [ ] `Pmove()`: Client-side prediction pmove callback
-- [ ] `ParseCenterPrint()`: Handle centerprint configstring updates
-- [ ] `ParseNotify()`: Handle notification messages
+- [x] `Init()`: Initialize client/HUD systems
+- [x] `Shutdown()`: Clean up client resources
+- [x] `DrawHUD()`: Render HUD for current frame
+- [x] `TouchPics()`: Precache HUD images (called during load)
+- [x] `LayoutFlags()`: Return HUD layout mode flags
+- [x] `Pmove()`: Client-side prediction pmove callback
+- [x] `ParseCenterPrint()`: Handle centerprint configstring updates
+- [x] `ParseNotify()`: Handle notification messages
 
 ### Interpolation & Smoothing
 - [x] Position interpolation

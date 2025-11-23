@@ -1,30 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Cycle_Crosshair, Init_Crosshair, Draw_Crosshair, Set_Crosshair } from '../../src/hud/crosshair.js';
-import { Renderer, PakArchive, Pic } from '@quake2ts/engine';
+import { Draw_Crosshair, Init_Crosshair, Set_Crosshair, Cycle_Crosshair } from '../../src/hud/crosshair.js';
+import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
+
+const mockRenderer = {
+    drawPic: vi.fn(),
+    registerPic: vi.fn().mockImplementation((name) => Promise.resolve({ width: 16, height: 16, name } as any)),
+    registerTexture: vi.fn().mockImplementation((name) => ({ width: 16, height: 16, name } as any)),
+    width: 640,
+    height: 480
+} as unknown as Renderer;
+
+const mockAssetManager = {
+    loadTexture: vi.fn().mockResolvedValue({ width: 16, height: 16, levels: [], source: 'pcx' } as PreparedTexture)
+} as unknown as AssetManager;
 
 describe('Crosshair', () => {
-    let renderer: Renderer;
-    let pak: PakArchive;
-
     beforeEach(() => {
-        renderer = {
-            registerPic: vi.fn().mockResolvedValue({ width: 16, height: 16 } as Pic),
-            drawPic: vi.fn(),
-        } as unknown as Renderer;
-        pak = {
-            readFile: vi.fn().mockReturnValue({ buffer: new ArrayBuffer(0) }),
-        } as unknown as PakArchive;
-        // Reset module state? Hard to do with globals.
-        // We rely on Init_Crosshair to reset.
+        vi.clearAllMocks();
+    });
+
+    it('should initialize and draw default crosshair', async () => {
+        await Init_Crosshair(mockRenderer, mockAssetManager);
+
+        Draw_Crosshair(mockRenderer, 640, 480);
+
+        expect(mockAssetManager.loadTexture).toHaveBeenCalled();
+        expect(mockRenderer.registerTexture).toHaveBeenCalled();
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
+            312, 232, // (640-16)/2, (480-16)/2
+            expect.objectContaining({ name: 'ch1' })
+        );
     });
 
     it('should cycle crosshairs', async () => {
-        await Init_Crosshair(renderer, pak);
+        await Init_Crosshair(mockRenderer, mockAssetManager);
 
         Set_Crosshair(0);
-
-        // Initial index 0
-        expect(renderer.registerPic).toHaveBeenCalled();
 
         let index = Cycle_Crosshair();
         expect(index).toBe(1);
@@ -37,17 +48,14 @@ describe('Crosshair', () => {
     });
 
     it('should draw the selected crosshair', async () => {
-        const mockPic = { width: 16, height: 16 } as Pic;
-        (renderer.registerPic as any).mockResolvedValue(mockPic);
-
-        await Init_Crosshair(renderer, pak);
+        await Init_Crosshair(mockRenderer, mockAssetManager);
         Set_Crosshair(0);
 
-        Draw_Crosshair(renderer, 640, 480);
-        expect(renderer.drawPic).toHaveBeenCalledWith(
+        Draw_Crosshair(mockRenderer, 640, 480);
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(
             (640 - 16) / 2,
             (480 - 16) / 2,
-            mockPic
+            expect.objectContaining({ name: 'ch1' })
         );
     });
 });
