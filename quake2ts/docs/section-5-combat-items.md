@@ -168,7 +168,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Breathe underwater for 30 seconds (no lava protection)
 - [x] Silencer
   - Enemies don't hear your weapon fire
-- [ ] Power Screen, Power Shield (advanced, defer)
+- [x] Power Screen, Power Shield (advanced, defer)
 - [x] Powerup timing
   - Countdown timer
   - Warning when about to expire
@@ -291,7 +291,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
 - **Projectiles**: Fire grenade/rocket, verify flight, collision, explosion
 - **Armor absorption**: Take damage with different armor types, verify reduction
 - **Powerups**: Pick up quad damage, verify 4x multiplier, verify expiration
-- **Key logic**: Pick up key, verify door unlocks (Section 4 integration)
+- **Key logic**: Pick up key, verify door unlocks (Section4 integration)
 
 ### Performance Tests
 - **Shotgun pellets**: 12 traces per shot, verify performance (60 FPS maintained)

@@ -10,7 +10,7 @@ import {
   createAmmoInventory,
   pickupAmmo,
 } from './ammo.js';
-import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
+import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, PowerArmorItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { Vec3 } from '@quake2ts/shared';
 
@@ -93,6 +93,7 @@ export interface PlayerInventoryOptions {
   readonly armor?: RegularArmorState | null;
   readonly powerups?: Iterable<[PowerupId, number | null]>;
   readonly keys?: readonly KeyId[];
+  readonly items?: Iterable<string>;
 }
 
 export interface PlayerInventory {
@@ -102,6 +103,7 @@ export interface PlayerInventory {
   armor: RegularArmorState | null;
   readonly powerups: Map<PowerupId, number | null>;
   readonly keys: Set<KeyId>;
+  readonly items: Set<string>;
   pickupItem?: string;
   pickupTime?: number;
 }
@@ -118,6 +120,7 @@ export function createPlayerInventory(options: PlayerInventoryOptions = {}): Pla
   const ownedWeapons = new Set(options.weapons ?? []);
   const powerups = new Map<PowerupId, number | null>(options.powerups ?? []);
   const keys = new Set(options.keys ?? []);
+  const items = new Set(options.items ?? []);
 
   return {
     ammo,
@@ -126,6 +129,7 @@ export function createPlayerInventory(options: PlayerInventoryOptions = {}): Pla
     armor: options.armor ?? null,
     powerups,
     keys,
+    items,
   };
 }
 
@@ -203,6 +207,10 @@ export function addKey(inventory: PlayerInventory, key: KeyId): boolean {
 
 export function hasKey(inventory: PlayerInventory, key: KeyId): boolean {
   return inventory.keys.has(key);
+}
+
+export function hasItem(inventory: PlayerInventory, item: string): boolean {
+    return inventory.items.has(item);
 }
 
 export function canPickupHealth(inventory: PlayerInventory, health: number, item: HealthItem): boolean {
@@ -297,6 +305,40 @@ export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, tim
     return false;
 }
 
+export function pickupPowerArmor(inventory: PlayerInventory, item: PowerArmorItem, time: number): boolean {
+    let icon = '';
+    if (item.armorType === 'screen') {
+        icon = 'i_powerscreen';
+    } else if (item.armorType === 'shield') {
+        icon = 'i_powershield';
+    }
+
+    // You can have both screen and shield in inventory?
+    // Q2 rerelease logic:
+    // If you pick up power screen, you get it.
+    // If you pick up power shield, you get it.
+    // T_Damage prioritizes shield if you have cells.
+
+    const hadIt = inventory.items.has(item.id);
+    inventory.items.add(item.id);
+
+    if (!hadIt) {
+        setPickup(inventory, icon, time);
+        return true;
+    }
+
+    // If already had it, give cells if applicable?
+    // In Q2, power armor item gives 50 cells?
+    // g_items.c:
+    // "Power Screen" -> pickup "You got the Power Screen" -> IT_ARMOR
+    // It doesn't seem to give cells by default unless specified.
+    // But usually power armor implies battery consumption.
+    // Rerelease might differ.
+    // Let's stick to "just sets the flag".
+
+    return false;
+}
+
 export function pickupKey(inventory: PlayerInventory, item: KeyItem, time: number): boolean {
     let keyId: KeyId | null = null;
     let icon = '';
@@ -361,6 +403,7 @@ export interface SerializedPlayerInventory {
   readonly armor: RegularArmorState | null;
   readonly powerups: readonly [PowerupId, number | null][];
   readonly keys: readonly KeyId[];
+  readonly items: readonly string[];
 }
 
 export function serializePlayerInventory(inventory: PlayerInventory): SerializedPlayerInventory {
@@ -371,6 +414,7 @@ export function serializePlayerInventory(inventory: PlayerInventory): Serialized
     armor: inventory.armor ? { ...inventory.armor } : null,
     powerups: [...inventory.powerups.entries()],
     keys: [...inventory.keys],
+    items: [...inventory.items],
   };
 }
 
@@ -391,5 +435,6 @@ export function deserializePlayerInventory(
     armor: serialized.armor ? { ...serialized.armor } : null,
     powerups: new Map(serialized.powerups),
     keys: new Set(serialized.keys),
+    items: new Set(serialized.items),
   };
 }
