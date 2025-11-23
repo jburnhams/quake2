@@ -2,6 +2,7 @@ import { Vec3 } from '@quake2ts/shared';
 import { Md2Model } from '../assets/md2.js';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
+import { DLight, MAX_DLIGHTS } from './dlight.js';
 
 export interface Md2DrawVertex {
   readonly vertexIndex: number;
@@ -25,6 +26,8 @@ export interface Md2BindOptions {
   readonly ambientLight?: number;
   readonly tint?: readonly [number, number, number, number];
   readonly diffuseSampler?: number;
+  readonly dlights?: readonly DLight[];
+  readonly modelMatrix?: Float32List; // Needed for dlight world position calculation
 }
 
 export const MD2_VERTEX_SHADER = `#version 300 es
@@ -34,17 +37,65 @@ layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
 layout(location = 2) in vec2 a_texCoord;
 
+struct DLight {
+  vec3 position;
+  vec3 color;
+  float intensity;
+};
+
+const int MAX_DLIGHTS = ${MAX_DLIGHTS};
+
 uniform mat4 u_modelViewProjection;
+uniform mat4 u_modelMatrix;
 uniform vec3 u_lightDir;
 uniform float u_ambient;
 
+uniform int u_numDlights;
+uniform DLight u_dlights[MAX_DLIGHTS];
+
 out vec2 v_texCoord;
-out float v_light;
+out vec3 v_lightColor;
 
 void main() {
   vec3 normal = normalize(a_normal);
-  float dot = max(dot(normal, normalize(u_lightDir)), 0.0);
-  v_light = min(1.0, u_ambient + dot);
+
+  // Directional Light (simple Lambert)
+  float dotL = max(dot(normal, normalize(u_lightDir)), 0.0);
+  vec3 lightAcc = vec3(min(1.0, u_ambient + dotL)); // White light assumed for directional/ambient
+
+  // Dynamic Lights
+  // Need world position of vertex to calculate distance
+  // Assuming a_position is local model space.
+  vec4 worldPos = u_modelMatrix * vec4(a_position, 1.0);
+
+  for (int i = 0; i < MAX_DLIGHTS; i++) {
+      if (i >= u_numDlights) break;
+      DLight dlight = u_dlights[i];
+
+      float dist = distance(worldPos.xyz, dlight.position);
+      if (dist < dlight.intensity) {
+         float intensity = (dlight.intensity - dist) / dlight.intensity;
+
+         // Calculate Lambertian term for point light?
+         // Q2 R_LightPoint is just distance based, but we have normals here, so let's use them for better visual.
+         vec3 dirToLight = normalize(dlight.position - worldPos.xyz);
+         // Convert dirToLight to local space? Or normal to world space?
+         // Normal is in local space. u_modelMatrix might include rotation.
+         // To be correct, we should transform normal to world space or light to local.
+         // Since u_modelMatrix is passed, let's assume u_modelMatrix handles rotation.
+         // But wait, MD2 normals are pre-calculated in local space.
+
+         // Simplifying: Q2 dlights on models are just distance based additions usually.
+         // But for modern look, dot product is nice.
+         // However, standard Q2 behavior (R_LightPoint) doesn't use normal for dlights on models AFAIK?
+         // Actually, R_LightPoint is just getting a light value at a point.
+         // Let's stick to distance based to match Q2 "glow" feel + basic directional.
+
+         lightAcc += dlight.color * intensity;
+      }
+  }
+
+  v_lightColor = lightAcc;
   v_texCoord = a_texCoord;
   gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
 }`;
@@ -53,7 +104,7 @@ export const MD2_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
 
 in vec2 v_texCoord;
-in float v_light;
+in vec3 v_lightColor;
 
 uniform sampler2D u_diffuseMap;
 uniform vec4 u_tint;
@@ -62,7 +113,7 @@ out vec4 o_color;
 
 void main() {
   vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-  o_color = vec4(albedo.rgb * v_light, albedo.a);
+  o_color = vec4(albedo.rgb * v_lightColor, albedo.a);
 }`;
 
 function normalizeVec3(v: Vec3): Vec3 {
@@ -232,10 +283,14 @@ export class Md2Pipeline {
   readonly program: ShaderProgram;
 
   private readonly uniformMvp: WebGLUniformLocation | null;
+  private readonly uniformModelMatrix: WebGLUniformLocation | null;
   private readonly uniformLightDir: WebGLUniformLocation | null;
   private readonly uniformAmbient: WebGLUniformLocation | null;
   private readonly uniformTint: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
+
+  private readonly uniformNumDlights: WebGLUniformLocation | null;
+  private readonly uniformDlights: { pos: WebGLUniformLocation | null, color: WebGLUniformLocation | null, intensity: WebGLUniformLocation | null }[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -246,22 +301,49 @@ export class Md2Pipeline {
     );
 
     this.uniformMvp = this.program.getUniformLocation('u_modelViewProjection');
+    this.uniformModelMatrix = this.program.getUniformLocation('u_modelMatrix');
     this.uniformLightDir = this.program.getUniformLocation('u_lightDir');
     this.uniformAmbient = this.program.getUniformLocation('u_ambient');
     this.uniformTint = this.program.getUniformLocation('u_tint');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
+
+    this.uniformNumDlights = this.program.getUniformLocation('u_numDlights');
+    for (let i = 0; i < MAX_DLIGHTS; i++) {
+      this.uniformDlights.push({
+        pos: this.program.getUniformLocation(`u_dlights[${i}].position`),
+        color: this.program.getUniformLocation(`u_dlights[${i}].color`),
+        intensity: this.program.getUniformLocation(`u_dlights[${i}].intensity`),
+      });
+    }
   }
 
   bind(options: Md2BindOptions): void {
-    const { modelViewProjection, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0 } = options;
+    const { modelViewProjection, modelMatrix, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0, dlights = [] } = options;
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
     this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
+    if (modelMatrix) {
+        this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, modelMatrix);
+    } else {
+        // Identity if not provided
+        this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]));
+    }
+
     this.gl.uniform3fv(this.uniformLightDir, lightVec);
     this.gl.uniform1f(this.uniformAmbient, ambientLight);
     this.gl.uniform4fv(this.uniformTint, tintVec);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
+
+    // Bind Dlights
+    const numDlights = Math.min(dlights.length, MAX_DLIGHTS);
+    this.gl.uniform1i(this.uniformNumDlights, numDlights);
+    for (let i = 0; i < numDlights; i++) {
+        const light = dlights[i];
+        this.gl.uniform3f(this.uniformDlights[i].pos, light.origin.x, light.origin.y, light.origin.z);
+        this.gl.uniform3f(this.uniformDlights[i].color, light.color.x, light.color.y, light.color.z);
+        this.gl.uniform1f(this.uniformDlights[i].intensity, light.intensity);
+    }
   }
 
   draw(mesh: Md2MeshBuffers): void {
