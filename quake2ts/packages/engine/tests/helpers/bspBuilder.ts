@@ -31,9 +31,9 @@ function encodeVertices(vertices: Vec3[]): Uint8Array {
 }
 
 function encodeNodes(nodes: BspNode[]): Uint8Array {
-  const view = allocBuffer(nodes.length * 36);
+  const view = allocBuffer(nodes.length * 28);
   nodes.forEach((node, index) => {
-    const base = index * 36;
+    const base = index * 28;
     view.setInt32(base, node.planeIndex, true);
     view.setInt32(base + 4, node.children[0], true);
     view.setInt32(base + 8, node.children[1], true);
@@ -139,9 +139,9 @@ function encodeBrushes(brushes: BspBrush[]): Uint8Array {
 }
 
 function encodeBrushSides(sides: BspBrushSide[]): Uint8Array {
-  const view = allocBuffer(sides.length * 8);
+  const view = allocBuffer(sides.length * 4);
   sides.forEach((side, index) => {
-    const base = index * 8;
+    const base = index * 4;
     view.setUint16(base, side.planeIndex, true);
     view.setInt16(base + 2, side.texInfo, true);
   });
