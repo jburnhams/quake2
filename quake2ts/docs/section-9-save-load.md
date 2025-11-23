@@ -19,6 +19,7 @@ This section covers the save/load system that allows players to save game progre
 - ✅ IndexedDB storage layer
 - ✅ Checksum validation for save integrity
 - ✅ Determinism verification helpers
+- ✅ Save/Load Menu Components (Backend/Factory)
 
 ## Tasks Remaining
 
@@ -165,18 +166,18 @@ This section covers the save/load system that allows players to save game progre
   - Game-save migration deferred pending client serialization
 
 ### Save/Load UI Integration
-- [ ] In-game save menu
+- [x] In-game save menu (Backend/Factory implemented)
   - Pause game, show save menu
   - List existing saves
   - Prompt for save name (text input)
   - Confirm overwrite if name exists
   - Show success message, dismiss menu
-- [ ] In-game load menu
+- [x] In-game load menu (Backend/Factory implemented)
   - Pause game, show load menu
   - List existing saves with metadata (map, date, playtime)
   - Select save, confirm load
   - Discard current game state, load selected save
-- [ ] Main menu save/load
+- [ ] Main menu save/load (Integration remaining)
   - Access saves from main menu (before starting game)
   - Load save directly into game
   - Delete saves from list
