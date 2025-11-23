@@ -200,8 +200,8 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
     z: self.origin.z + self.maxs.z,
   };
 
-  let start: Vec3 = { x: 0, y: 0, z: 0 };
-  let stop: Vec3 = { x: 0, y: 0, z: 0 };
+  let start: MutableVec3 = { x: 0, y: 0, z: 0 };
+  let stop: MutableVec3 = { x: 0, y: 0, z: 0 };
 
   for (let i = 0; i < 2; i++) {
     if (i === 1) start = { x: mins.x, y: mins.y, z: 0 };
