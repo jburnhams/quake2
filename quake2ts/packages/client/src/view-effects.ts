@@ -13,7 +13,7 @@ export interface ViewEffectSettings {
 
 const DEFAULT_SETTINGS: ViewEffectSettings = {
   runPitch: 0.002,
-  runRoll: 0.005,
+  runRoll: 0.01, // Changed from 0.005 to match Quake 2 slope (2.0 / 200.0)
   bobUp: 0.005,
   bobPitch: 0.002,
   bobRoll: 0.002,
@@ -117,8 +117,30 @@ export class ViewEffects {
     this.bobFracSin = bobValues.bobFracSin;
 
     // Velocity-based tilt
+    // V_CalcPitch: forward = dot(velocity, forward); pitch = forward * cl_pitchspeed->value;
     let pitchTilt = dotVec3(state.velocity, forward) * this.settings.runPitch;
-    let rollTilt = dotVec3(state.velocity, right) * this.settings.runRoll;
+
+    // V_CalcRoll: side = dot(velocity, right); sign = side < 0 ? -1 : 1; side = abs(side);
+    // if (side < cl_rollspeed->value) side = side * cl_rollangle->value / cl_rollspeed->value;
+    // else side = cl_rollangle->value;
+    // return side * sign;
+
+    // We approximate this. Quake 2 cl_rollspeed is 200, cl_rollangle is 2.0.
+    // Ratio is 2/200 = 0.01.
+    // Max roll is 2.0.
+
+    const side = dotVec3(state.velocity, right);
+    const sign = side < 0 ? -1 : 1;
+    const absSide = Math.abs(side);
+
+    // We use 200 as the cutoff speed implicitly by clamping the result to 2.0?
+    // 200 * 0.01 = 2.0. So if we clamp result to 2.0, it is equivalent.
+
+    let rollTilt = absSide * this.settings.runRoll; // 0.01
+    if (rollTilt > 2.0) {
+         rollTilt = 2.0;
+    }
+    rollTilt *= sign;
 
     // Bob tilt
     let pitchDelta = this.bobFracSin * this.settings.bobPitch * xyspeed;

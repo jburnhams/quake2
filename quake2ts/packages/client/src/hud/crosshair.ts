@@ -2,6 +2,7 @@ import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
 
 let crosshairPic: Pic | null = null;
 let crosshairIndex = 0; // Default to ch1
+let crosshairColor: [number, number, number, number] = [1, 1, 1, 1]; // Default white
 
 const CROSSHAIR_NAMES = ['ch1', 'ch2', 'ch3'];
 const crosshairPics: (Pic | null)[] = [null, null, null];
@@ -34,6 +35,10 @@ export const Set_Crosshair = (index: number) => {
     }
 };
 
+export const Set_CrosshairColor = (r: number, g: number, b: number, a: number = 1) => {
+    crosshairColor = [r, g, b, a];
+}
+
 export const Cycle_Crosshair = () => {
     crosshairIndex = (crosshairIndex + 1) % CROSSHAIR_NAMES.length;
     crosshairPic = crosshairPics[crosshairIndex];
@@ -57,6 +62,6 @@ export const Draw_Crosshair = (renderer: Renderer, width: number, height: number
     if (crosshairPic) {
         const x = (width - crosshairPic.width) / 2;
         const y = (height - crosshairPic.height) / 2;
-        renderer.drawPic(x, y, crosshairPic);
+        renderer.drawPic(x, y, crosshairPic, crosshairColor);
     }
 };
