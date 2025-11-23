@@ -151,11 +151,11 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Set origin, angles, model, target, targetname, etc.
   - Parse spawnflags (bitfield)
   - Convert string values to appropriate types (int, float, vec3)
-- [ ] Link entities into world
+- [x] Link entities into world
   - [x] Add to entity list
-  - [ ] For solid entities, link into BSP spatial areas **(Pending Section 3 Completion)**
+  - [x] For solid entities, link into BSP spatial areas **(Pending Section 3 Completion)**
   - [x] Build target->entity lookup table for scripting
-  - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking still pending
+  - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking uses CollisionEntityIndex.
 
 - [x] Integrate with GameFrameLoop
   - Register think/touch systems with sim stage
