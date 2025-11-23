@@ -66,9 +66,9 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Tag-based attachment system (weapons attached to hand tags)
   - [x] Per-surface texture/shader assignment
 - [x] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
-  - Vertex lighting based on current position (interpolate between BSP light samples)
-  - Optional dynamic lights (from weapon fire, explosions)
-  - Ambient + directional light from worldspawn
+  - [x] Vertex lighting based on current position (interpolate between BSP light samples or fallback to floor/worldspawn ambient)
+  - [ ] Optional dynamic lights (from weapon fire, explosions)
+  - [x] Ambient + directional light from worldspawn
 
 ### Particle System
 - [x] Particle emitter framework
@@ -122,7 +122,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Crosshair rendering
   - [x] Damage direction indicators
   - [x] Center print messages
-  - [ ] Notification area
+  - [x] Notification area
 
 ### Camera & View System
 - [x] Camera state management

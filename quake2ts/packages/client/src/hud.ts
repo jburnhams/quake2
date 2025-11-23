@@ -62,8 +62,13 @@ export const Draw_Hud = (
     Draw_Damage(renderer, ps);
     Draw_Diagnostics(renderer, stats);
 
-    messageSystem.drawCenterPrint(renderer, timeMs);
-    messageSystem.drawNotifications(renderer, timeMs);
+    if (ps.centerPrint) {
+        renderer.drawCenterString(renderer.height / 2 - 20, ps.centerPrint);
+    }
+
+    if (ps.notify) {
+        renderer.drawString(8, 8, ps.notify);
+    }
 
     Draw_Crosshair(renderer, renderer.width, renderer.height);
     renderer.end2D();
