@@ -1,6 +1,7 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { PlayerClient } from '../inventory/playerInventory.js';
+import type { EntitySystem } from './system.js';
 
 export enum MoveType {
   None = 0,
@@ -85,9 +86,9 @@ function copyVec3(): Vec3 {
   return { ...ZERO };
 }
 
-export type MonsterAction = (self: Entity) => void;
+export type MonsterAction = (self: Entity, context: EntitySystem) => void;
 export type MonsterSightCallback = (self: Entity, enemy: Entity) => void;
-export type AIAction = (self: Entity, dist: number) => void;
+export type AIAction = (self: Entity, dist: number, context: EntitySystem) => void;
 
 export interface MonsterFrame {
   ai: AIAction | null;

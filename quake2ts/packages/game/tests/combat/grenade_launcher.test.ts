@@ -17,8 +17,10 @@ describe('Grenade Launcher', () => {
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
@@ -47,8 +49,10 @@ describe('Grenade Launcher', () => {
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
@@ -62,7 +66,7 @@ describe('Grenade Launcher', () => {
         target.takedamage = 1;
         game.entities.finalizeSpawn(target);
 
-        projectiles.createGrenade(game, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
+        projectiles.createGrenade(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
         const grenade = game.entities.find(e => e.classname === 'grenade')!;
 
         expect(grenade).toBeDefined();

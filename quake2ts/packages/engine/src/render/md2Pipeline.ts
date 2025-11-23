@@ -22,6 +22,7 @@ export interface Md2FrameBlend {
 export interface Md2BindOptions {
   readonly modelViewProjection: Float32List;
   readonly lightDirection?: readonly [number, number, number];
+  readonly ambientLight?: number;
   readonly tint?: readonly [number, number, number, number];
   readonly diffuseSampler?: number;
 }
@@ -35,13 +36,15 @@ layout(location = 2) in vec2 a_texCoord;
 
 uniform mat4 u_modelViewProjection;
 uniform vec3 u_lightDir;
+uniform float u_ambient;
 
 out vec2 v_texCoord;
 out float v_light;
 
 void main() {
   vec3 normal = normalize(a_normal);
-  v_light = max(dot(normal, normalize(u_lightDir)), 0.0);
+  float dot = max(dot(normal, normalize(u_lightDir)), 0.0);
+  v_light = min(1.0, u_ambient + dot);
   v_texCoord = a_texCoord;
   gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
 }`;
@@ -230,6 +233,7 @@ export class Md2Pipeline {
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformLightDir: WebGLUniformLocation | null;
+  private readonly uniformAmbient: WebGLUniformLocation | null;
   private readonly uniformTint: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
 
@@ -243,17 +247,19 @@ export class Md2Pipeline {
 
     this.uniformMvp = this.program.getUniformLocation('u_modelViewProjection');
     this.uniformLightDir = this.program.getUniformLocation('u_lightDir');
+    this.uniformAmbient = this.program.getUniformLocation('u_ambient');
     this.uniformTint = this.program.getUniformLocation('u_tint');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
   }
 
   bind(options: Md2BindOptions): void {
-    const { modelViewProjection, lightDirection = [0, 0, 1], tint = [1, 1, 1, 1], diffuseSampler = 0 } = options;
+    const { modelViewProjection, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0 } = options;
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
     this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
     this.gl.uniform3fv(this.uniformLightDir, lightVec);
+    this.gl.uniform1f(this.uniformAmbient, ambientLight);
     this.gl.uniform4fv(this.uniformTint, tintVec);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
   }

@@ -82,6 +82,7 @@ const func_door: SpawnFunction = (entity, context) => {
     self.state = DoorState.Opening;
     self.think = door_go_up;
     context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+    context.entities.sound(self, 0, 'doors/dr1_strt.wav', 1, 1, 0); // Default sound
   };
 };
 
@@ -90,6 +91,7 @@ const func_button: SpawnFunction = (entity, context) => {
   entity.movetype = MoveType.Push;
   entity.use = (self) => {
     context.entities.useTargets(self, self);
+    context.entities.sound(self, 0, 'switches/butn2.wav', 1, 1, 0); // Default sound
   };
 };
 

@@ -12,6 +12,7 @@ import {
 } from './constants.js';
 import { RangeCategory, classifyRange, infront, rangeTo, visible, type TraceFunction } from './perception.js';
 import type { Entity } from '../entities/entity.js';
+import type { EntitySystem } from '../entities/system.js';
 import { ServerFlags } from '../entities/entity.js';
 
 export interface TargetAwarenessState {
@@ -44,16 +45,16 @@ function faceYawInstantly(self: Entity): void {
   (self.angles as { y: number }).y = angleMod(self.ideal_yaw);
 }
 
-export function huntTarget(self: Entity, level: TargetAwarenessState): void {
+export function huntTarget(self: Entity, level: TargetAwarenessState, context: EntitySystem): void {
   if (!self.enemy) return;
 
   self.goalentity = self.enemy;
   setIdealYawTowards(self, self.enemy);
   faceYawInstantly(self);
   if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
-    self.monsterinfo.stand?.(self);
+    self.monsterinfo.stand?.(self, context);
   } else {
-    self.monsterinfo.run?.(self);
+    self.monsterinfo.run?.(self, context);
     self.attack_finished_time = level.timeSeconds + 1;
   }
 }
@@ -65,6 +66,7 @@ export interface FoundTargetOptions {
 export function foundTarget(
   self: Entity,
   level: TargetAwarenessState,
+  context: EntitySystem,
   options?: FoundTargetOptions,
 ): void {
   if (!self.enemy) return;
@@ -84,7 +86,7 @@ export function foundTarget(
   self.monsterinfo.trail_time = level.timeSeconds;
 
   if (!self.combattarget) {
-    huntTarget(self, level);
+    huntTarget(self, level, context);
     return;
   }
 
@@ -98,7 +100,7 @@ export function foundTarget(
     self.movetarget.targetname = undefined;
   }
   self.monsterinfo.pausetime = 0;
-  self.monsterinfo.run?.(self);
+  self.monsterinfo.run?.(self, context);
 }
 
 function classifyClientVisibility(
@@ -193,6 +195,7 @@ function rejectNotargetEntity(client: Entity): boolean {
 export function findTarget(
   self: Entity,
   level: TargetAwarenessState,
+  context: EntitySystem,
   trace: TraceFunction,
   hearability: HearabilityHooks = {},
 ): boolean {
@@ -220,7 +223,7 @@ export function findTarget(
     return false;
   }
 
-  foundTarget(self, level);
+  foundTarget(self, level, context);
   if ((self.monsterinfo.aiflags & AIFlags.SoundTarget) === 0) {
     self.monsterinfo.sight?.(self, self.enemy!);
   }
