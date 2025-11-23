@@ -12,6 +12,7 @@ import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
+import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -20,6 +21,7 @@ export interface Renderer {
     readonly width: number;
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
+    readonly stats: GpuProfilerStats;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
 
     // HUD Methods
@@ -41,6 +43,7 @@ export const createRenderer = (
     const md3Pipeline = new Md3Pipeline(gl);
     const spriteRenderer = new SpriteRenderer(gl);
     const collisionVis = new CollisionVisRenderer(gl);
+    const gpuProfiler = new GpuProfiler(gl);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
@@ -50,6 +53,8 @@ export const createRenderer = (
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[]) => {
+        gpuProfiler.startFrame();
+
         // 1. Clear buffers, render world, sky, and viewmodel
         gl.disable(gl.BLEND);
         gl.enable(gl.DEPTH_TEST);
@@ -139,6 +144,8 @@ export const createRenderer = (
                     break;
             }
         }
+
+        gpuProfiler.endFrame();
     };
 
     const registerPic = async (name: string, data: ArrayBuffer): Promise<Pic> => {
@@ -224,6 +231,7 @@ export const createRenderer = (
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
+        get stats() { return gpuProfiler.stats; },
         renderFrame,
         registerPic,
         begin2D,
