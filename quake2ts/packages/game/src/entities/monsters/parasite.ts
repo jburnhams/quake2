@@ -51,11 +51,11 @@ function monster_ai_walk(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
-  ai_run(self, dist, MONSTER_TICK);
+  ai_run(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-  ai_charge(self, dist, MONSTER_TICK);
+  ai_charge(self, dist, MONSTER_TICK, context);
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
@@ -87,11 +87,6 @@ let sound_sight: number;
 let sound_tap: number;
 let sound_scratch: number;
 let sound_search: number;
-
-// We need to pass the engine or context to sound functions because EntitySystem doesn't expose `game`
-// and `Entity` doesn't expose `game`.
-// We will use the `context.engine` property if available, or `engine` from context.
-// EntitySystem has `engine` property which is `GameEngine`.
 
 function parasite_launch(self: Entity, context: EntitySystem): void {
   context.engine.sound?.(self, 0, 'parasite/paratck1.wav', 1, 1, 0);

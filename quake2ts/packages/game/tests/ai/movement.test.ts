@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   Entity,
   ai_face,
@@ -13,12 +13,29 @@ import {
   changeYaw,
   walkMove,
 } from '../../src/index.js';
+// Import EntityFlags directly to avoid potential circular dependency issues or undefined exports
+import { EntityFlags } from '../../src/entities/entity.js';
+import type { EntitySystem } from '../../src/entities/system.js';
 
 function createEntity(): Entity {
   const ent = new Entity(0);
   ent.inUse = true;
+  // Set FLY flag to bypass ground checks in M_walkmove during these pure math/logic tests
+  ent.flags |= EntityFlags.Fly;
   return ent;
 }
+
+// Mock context for M_walkmove
+const mockContext = {
+  trace: vi.fn().mockReturnValue({
+    fraction: 1.0,
+    allsolid: false,
+    startsolid: false,
+    ent: null
+  }),
+  pointcontents: vi.fn().mockReturnValue(0),
+  pickTarget: vi.fn(),
+} as unknown as EntitySystem;
 
 describe('walkMove', () => {
   it('translates along the yaw plane matching M_walkmove math', () => {
@@ -154,7 +171,7 @@ describe('ai_walk', () => {
     goal.origin = { x: 0, y: 10, z: 0 };
     ent.goalentity = goal;
 
-    ai_walk(ent, 4, 0.1);
+    ai_walk(ent, 4, 0.1, mockContext);
 
     expect(ent.ideal_yaw).toBeCloseTo(90, 6);
     expect(ent.angles.y).toBeCloseTo(90, 6);
@@ -170,7 +187,7 @@ describe('ai_run', () => {
     enemy.origin = { x: -10, y: 0, z: 0 };
     ent.enemy = enemy;
 
-    ai_run(ent, 6, 0.1);
+    ai_run(ent, 6, 0.1, mockContext);
 
     expect(ent.ideal_yaw).toBeCloseTo(180, 6);
     expect(ent.angles.y).toBeCloseTo(300, 6);
@@ -205,7 +222,7 @@ describe('ai_charge', () => {
     enemy.origin = { x: 0, y: -8, z: 0 };
     ent.enemy = enemy;
 
-    ai_charge(ent, 8, 0.1);
+    ai_charge(ent, 8, 0.1, mockContext);
 
     expect(ent.ideal_yaw).toBeCloseTo(270, 6);
     expect(ent.angles.y).toBeCloseTo(270, 6);

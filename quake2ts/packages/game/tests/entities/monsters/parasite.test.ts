@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SP_monster_parasite } from '../../../../src/entities/monsters/parasite.js';
+import { SP_monster_parasite } from '../../../src/entities/monsters/parasite.js';
 import {
   Entity,
   MonsterMove,
   MoveType,
   Solid,
   DeadFlag
-} from '../../../../src/entities/entity.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
-import { GameImports } from '../../../../src/game.js';
-import { GameEngine } from '../../../../src/index.js';
+} from '../../../src/entities/entity.js';
+import { SpawnContext } from '../../../src/entities/spawn.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { GameImports } from '../../../src/game.js';
+import { GameEngine } from '../../../src/index.js';
 import {
     ZERO_VEC3,
     copyVec3
@@ -63,7 +63,10 @@ describe('monster_parasite', () => {
         free: vi.fn(),
         spawn: spawnMock,
         multicast: vi.fn(),
-        modelIndex: vi.fn().mockReturnValue(1), // Add modelIndex mock
+        modelIndex: vi.fn().mockReturnValue(1),
+        scheduleThink: vi.fn(),
+        finalizeSpawn: vi.fn(),
+        timeSeconds: 100, // Needed for scheduleThink calculation in throwGibs
     } as unknown as EntitySystem;
 
     context = {
@@ -215,5 +218,12 @@ describe('monster_parasite', () => {
 
     expect(entities.trace).toHaveBeenCalled();
     expect(entities.multicast).toHaveBeenCalled();
+  });
+
+  it('should correctly use copyVec3 from shared package', () => {
+    const src = { x: 1, y: 2, z: 3 };
+    const dest = copyVec3(src);
+    expect(dest).toEqual(src);
+    expect(dest).not.toBe(src);
   });
 });

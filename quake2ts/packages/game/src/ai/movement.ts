@@ -125,12 +125,13 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
   changeYaw(self, deltaSeconds);
 }
 
-export function ai_run(self: Entity, distance: number, deltaSeconds: number): void {
+export function ai_run(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
   setIdealYawTowards(self, self.enemy ?? self.goalentity);
   changeYaw(self, deltaSeconds);
 
   if (distance !== 0) {
-    walkMove(self, self.angles.y, distance);
+    // Using M_walkmove logic equivalent
+    M_walkmove(self, self.angles.y, distance, context);
   }
 }
 
@@ -151,12 +152,12 @@ export function ai_face(
   }
 }
 
-export function ai_charge(self: Entity, distance: number, deltaSeconds: number): void {
+export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
   setIdealYawTowards(self, self.enemy);
   changeYaw(self, deltaSeconds);
 
   if (distance !== 0) {
-    walkMove(self, self.angles.y, distance);
+    M_walkmove(self, self.angles.y, distance, context);
   }
 }
 
