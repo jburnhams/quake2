@@ -214,10 +214,14 @@ describe('monster_parasite', () => {
     self.frame = 41;
 
     // Call think
+    self.health = 100;
     damageFrame.think!(self, entities);
 
     expect(entities.trace).toHaveBeenCalled();
     expect(entities.multicast).toHaveBeenCalled();
+
+    // Check healing (damage was 5 for frame 41)
+    expect(self.health).toBe(105);
   });
 
   it('should correctly use copyVec3 from shared package', () => {

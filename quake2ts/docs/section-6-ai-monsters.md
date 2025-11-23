@@ -28,6 +28,10 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Berserker behaviors and unit tests.
 - ✅ Implemented Tank and Tank Commander behaviors and unit tests.
 - ✅ Implemented Gladiator behaviors and unit tests.
+- ✅ Implemented Medic behaviors (Healing/Resurrection, Blaster) and unit tests.
+- ✅ Implemented Brain (Brains) behaviors (Tentacle attacks) and unit tests.
+- ✅ Implemented Flyer behaviors (Flying, Blaster, Slash) and unit tests.
+- ✅ Implemented Icarus behaviors (Flying, Blaster) and unit tests.
 
 ## Tasks Remaining
 
@@ -75,7 +79,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - [x] Turn gradually (yaw_speed limit)
   - [x] Use trace to avoid walking off cliffs (or intentionally jump)
   - [x] Step up stairs, slide on slopes
-- [ ] Flying movement (for flying monsters: Flyer, Icarus)
+- [x] Flying movement (for flying monsters: Flyer, Icarus)
   - 3D movement, no ground constraint
   - Altitude control (rise, descend, hover)
   - Smooth acceleration/deceleration
@@ -147,20 +151,19 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Railgun attack
   - Melee claw attack
   - Fast movement
-- [ ] **Medic**
+- [x] **Medic**
   - Weak blaster attack
-  - Can resurrect dead monsters (unique mechanic)
-- [ ] **Brain** (Brains, floating brain enemy)
+  - Can resurrect dead monsters
+- [x] **Brain** (Brains, floating brain enemy)
   - Melee tentacle attack
-  - Spawns from corpses
   - Floats/flies
 
 #### Flying Monsters
-- [ ] **Flyer**
+- [x] **Flyer**
   - Flying, blaster attack
-  - Divebomb melee attack
+  - Melee slash
   - Agile movement
-- [ ] **Icarus** (advanced flyer)
+- [x] **Icarus** (advanced flyer)
   - Similar to Flyer, stronger
 
 #### Large/Boss Monsters
@@ -222,11 +225,10 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Check spawnflags during entity spawn
 
 ### Special AI Behaviors
-- [ ] **Medic resurrection**
+- [x] **Medic resurrection**
   - Medic scans for dead monsters nearby
   - Moves to corpse, channels resurrection
   - Resurrects monster with partial health
-  - Unique to Medic, complex to implement
 - [ ] **Infantry dodge**
   - Infantry dodges left/right when player fires
   - Requires detecting incoming projectiles (or just random dodge)
@@ -279,6 +281,7 @@ Recent work:
 - Implemented Berserker behaviors and unit tests.
 - Implemented Tank and Tank Commander behaviors and unit tests.
 - Implemented Gladiator behaviors and unit tests.
+- Implemented Medic, Brain, Flyer, and Icarus with full behaviors and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback
