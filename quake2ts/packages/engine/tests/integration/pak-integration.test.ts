@@ -66,15 +66,9 @@ describe('PAK Integration Test', () => {
       try {
         switch (ext) {
           case '.bsp': {
-            // Some BSPs in the demo PAK might be invalid (e.g. demo1.bsp has IBSP header).
-            // We shouldn't fail the whole integration test for a bad asset in a 3rd party PAK.
-            try {
-              const bsp = parseBsp(buffer);
-              expect(bsp.header.version).toBe(38);
-              expect(bsp.header.lumps.size).toBeGreaterThan(0);
-            } catch (e) {
-              console.warn(`Skipping invalid BSP ${entry.name}: ${(e as Error).message}`);
-            }
+            const bsp = parseBsp(buffer);
+            expect(bsp.header.version).toBe(38);
+            expect(bsp.header.lumps.size).toBeGreaterThan(0);
             break;
           }
           case '.md2': {
