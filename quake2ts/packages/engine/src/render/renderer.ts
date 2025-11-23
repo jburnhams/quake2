@@ -23,7 +23,7 @@ export interface Renderer {
     registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
     begin2D(): void;
     end2D(): void;
-    drawPic(x: number, y: number, pic: Pic): void;
+    drawPic(x: number, y: number, pic: Pic, color?: [number, number, number, number]): void;
     drawString(x: number, y: number, text: string): void;
     drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
 }
@@ -130,9 +130,9 @@ export const createRenderer = (
         gl.depthMask(true);
     };
 
-    const drawPic = (x: number, y: number, pic: Pic) => {
+    const drawPic = (x: number, y: number, pic: Pic, color?: [number, number, number, number]) => {
         pic.bind(0);
-        spriteRenderer.draw(x, y, pic.width, pic.height);
+        spriteRenderer.draw(x, y, pic.width, pic.height, 0, 0, 1, 1, color);
     };
 
     const drawChar = (x: number, y: number, char: number) => {

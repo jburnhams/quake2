@@ -13,6 +13,7 @@ import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
 import { Draw_Hud, Init_Hud } from './hud.js';
+import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -48,11 +49,14 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly lastView?: ViewSample;
   camera?: Camera;
   demoPlayback: DemoPlaybackController;
+  ParseCenterPrint(msg: string): void;
+  ParseNotify(msg: string): void;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
+  const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
   let latestFrame: GameFrameResult<PredictionState> | undefined;
   let lastRendered: PredictionState | undefined;
@@ -118,7 +122,18 @@ export function createClient(imports: ClientImports): ClientExports {
             damageAlpha: 0,
             damageIndicators: [],
         };
-        Draw_Hud(imports.engine.renderer, playerState, lastRendered.client, lastRendered.health, lastRendered.armor, lastRendered.ammo, stats);
+        const timeMs = sample.latest?.timeMs ?? 0;
+        Draw_Hud(
+          imports.engine.renderer,
+          playerState,
+          lastRendered.client,
+          lastRendered.health,
+          lastRendered.armor,
+          lastRendered.ammo,
+          stats,
+          messageSystem,
+          timeMs
+        );
       }
 
       void imports;
@@ -145,6 +160,17 @@ export function createClient(imports: ClientImports): ClientExports {
     get camera(): Camera | undefined {
       return camera;
     },
-    demoPlayback
+    demoPlayback,
+    ParseCenterPrint(msg: string) {
+      // We need current game time here.
+      // If called from networking parsing, we might not have 'now' easily without latestFrame.
+      // Use latestFrame.timeMs if available.
+      const timeMs = latestFrame?.timeMs ?? 0;
+      messageSystem.addCenterPrint(msg, timeMs);
+    },
+    ParseNotify(msg: string) {
+      const timeMs = latestFrame?.timeMs ?? 0;
+      messageSystem.addNotify(msg, timeMs);
+    }
   };
 }
