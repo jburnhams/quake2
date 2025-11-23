@@ -21,7 +21,7 @@ export function createWeaponPickupEntity(game: GameExports, weaponItem: WeaponIt
                 return;
             }
 
-            if (pickupWeapon(other.client.inventory, weaponItem)) {
+            if (pickupWeapon(other.client.inventory, weaponItem, game.time * 1000)) {
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${weaponItem.name}`);
                 self.solid = Solid.Not;

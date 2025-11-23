@@ -98,13 +98,13 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Armor number and icon
   - [x] Ammo count for current weapon
   - [x] Weapon icon
-  - [ ] Pickup item icon (recently picked up item)
+  - [x] Pickup item icon (recently picked up item)
   - [x] Key icons (if keys collected)
   - [x] Powerup timers (quad damage, invulnerability, etc.)
   - Layout varies by HUD style (original, expanded)
 - [ ] **Crosshair**
   - [x] Centered on screen
-  - [ ] Multiple styles selectable
+  - [x] Multiple styles selectable (via `crosshair` command)
   - [ ] Color customizable
   - [ ] Size customizable
 - [x] **Center print messages**
@@ -118,8 +118,8 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Obituaries (in multiplayer)
   - [x] Fade old messages
 - [ ] **Damage indicators**
-  - Screen flash when taking damage
-  - Directional: show which direction damage came from
+  - [x] Screen flash when taking damage (basic)
+  - [x] Directional: show which direction damage came from
   - Red tint for health loss
   - Color varies by damage type (lava, slime, etc.)
 - [ ] **Weapon/item wheels** (optional, for gamepad)
@@ -240,13 +240,13 @@ Expose from client package to engine:
   - User-configurable (60-120 degrees typical)
   - Zoom effect (reduce FOV temporarily)
   - Separate FOV for viewmodel (weapon)
-- [ ] Screen blends (full-screen color tints)
-  - Damage flash (red)
-  - Pickup flash (green/blue)
-  - Underwater tint (blue)
-  - Lava/slime tint (red/green)
-  - Powerup tints (quad damage, invulnerability)
-  - Blend multiple colors using shared color blend math
+- [x] Screen blends (full-screen color tints)
+  - [x] Damage flash (red)
+  - [x] Pickup flash (green/blue)
+  - [x] Underwater tint (blue)
+  - [x] Lava/slime tint (red/green)
+  - [x] Powerup tints (quad damage, invulnerability)
+  - [x] Blend multiple colors using shared color blend math
 
 ### Accessibility & Quality of Life
 - [ ] Colorblind modes
