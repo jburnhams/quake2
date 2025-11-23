@@ -264,6 +264,8 @@ export function createGame(
           sidemove: command.sidemove,
           upmove: command.upmove,
           buttons: command.buttons,
+          msec: command.msec,
+          angles: command.angles,
         };
         // We really should use pmove state from the entity if possible
         const playerState = {

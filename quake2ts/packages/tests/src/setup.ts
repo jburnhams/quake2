@@ -16,11 +16,18 @@ export function setupBrowserEnvironment() {
 
   // Handle navigator assignment safely
   try {
+    // @ts-ignore
     global.navigator = dom.window.navigator;
   } catch (e) {
-     // If global.navigator is read-only, we define it on globalThis if possible
-     // or assume it's already sufficiently mocked by the environment
-     console.warn('Could not assign global.navigator, skipping.');
+    try {
+      Object.defineProperty(global, 'navigator', {
+        value: dom.window.navigator,
+        writable: true,
+        configurable: true
+      });
+    } catch (e2) {
+      console.warn('Could not assign global.navigator, skipping.');
+    }
   }
 
   global.HTMLElement = dom.window.HTMLElement;

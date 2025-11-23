@@ -27,13 +27,21 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm run test:integration && pnpm run test:unit:entities && pnpm run test:unit:combat && pnpm run test:unit:physics && pnpm run test:unit:ai && pnpm run test:unit:inventory && pnpm run test:unit:core",
+    "test:integration": "vitest run tests/integration/entitySystem.test.ts && vitest run tests/integration/combat.test.ts && vitest run tests/integration/gameplay.test.ts",
+    "test:unit:entities": "vitest run --passWithNoTests tests/entities",
+    "test:unit:combat": "vitest run --passWithNoTests tests/combat",
+    "test:unit:physics": "vitest run --passWithNoTests tests/physics",
+    "test:unit:ai": "vitest run --passWithNoTests tests/ai",
+    "test:unit:inventory": "vitest run --passWithNoTests tests/inventory",
+    "test:unit:core": "vitest run --passWithNoTests tests/*.test.ts src/save/tests"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
+    "@quake2ts/tests": "workspace:^",
     "fake-indexeddb": "^6.0.0",
     "tsup": "^8.1.0"
   }

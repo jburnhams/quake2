@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SV_StepDirection } from '../src/ai/movement.js';
-import type { Entity } from '../src/entities/entity.js';
-import type { EntitySystem } from '../src/entities/system.js';
-import { MoveType, Solid, EntityFlags } from '../src/entities/entity.js';
+import { SV_StepDirection } from '../../src/ai/movement.js';
+import type { Entity } from '../../src/entities/entity.js';
+import type { EntitySystem } from '../../src/entities/system.js';
+import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;

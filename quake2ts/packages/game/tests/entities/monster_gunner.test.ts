@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { DeadFlag, Entity, EntitySystem, MoveType, Solid } from '../src/index.js';
-import { registerGunnerSpawns } from '../src/entities/monsters/gunner.js';
-import { SpawnRegistry } from '../src/entities/spawn.js';
-import { throwGibs } from '../src/entities/gibs.js';
+import { DeadFlag, Entity, EntitySystem, MoveType, Solid } from '../../src/index.js';
+import { registerGunnerSpawns } from '../../src/entities/monsters/gunner.js';
+import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { throwGibs } from '../../src/entities/gibs.js';
 
 // Mock throwGibs
-vi.mock('../src/entities/gibs.js', () => ({
+vi.mock('../../src/entities/gibs.js', () => ({
     throwGibs: vi.fn(),
 }));
 
@@ -98,8 +98,13 @@ describe('monster_gunner', () => {
       registerGunnerSpawns(registry);
       const freeMock = vi.fn();
       // Mock EntitySystem to spy on free
+      const spawnMock = vi.fn().mockReturnValue({
+          origin: { x: 0, y: 0, z: 0 },
+          classname: 'mock_entity'
+      });
+
       const system = {
-          spawn: vi.fn(() => new Entity(0)),
+          spawn: spawnMock,
           free: freeMock,
           modelIndex: vi.fn(),
           scheduleThink: vi.fn(),

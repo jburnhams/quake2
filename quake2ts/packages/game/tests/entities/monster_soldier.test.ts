@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DeadFlag, Entity, MoveType, Solid } from '../src/entities/entity.js';
-import { EntitySystem } from '../src/entities/system.js';
-import { registerMonsterSpawns } from '../src/entities/monsters/soldier.js';
-import { SpawnRegistry } from '../src/entities/spawn.js';
-import { ai_stand, ai_walk, ai_run, ai_move } from '../src/ai/movement.js';
-import { throwGibs } from '../src/entities/gibs.js';
+import { DeadFlag, Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { EntitySystem } from '../../src/entities/system.js';
+import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';
+import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { ai_stand, ai_walk, ai_run, ai_move } from '../../src/ai/movement.js';
+import { throwGibs } from '../../src/entities/gibs.js';
 
 // Mock ai functions
-vi.mock('../src/ai/movement.js', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('../src/ai/movement.js')>();
+vi.mock('../../src/ai/movement.js', async (importOriginal) => {
+    const mod = await importOriginal<typeof import('../../src/ai/movement.js')>();
     return {
         ...mod,
         ai_stand: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('../src/ai/movement.js', async (importOriginal) => {
 });
 
 // Mock throwGibs
-vi.mock('../src/entities/gibs.js', () => ({
+vi.mock('../../src/entities/gibs.js', () => ({
     throwGibs: vi.fn(),
 }));
 
@@ -110,7 +110,12 @@ describe('monster_soldier', () => {
     it('should set run action that calls ai_run', () => {
         spawnFunc(entity, { entities: context });
 
-        entity.enemy = { health: 100 } as Entity; // Needs an enemy to run
+        entity.enemy = {
+          health: 100,
+          origin: { x: 100, y: 0, z: 0 },
+          absmin: { x: 90, y: -10, z: -10 },
+          absmax: { x: 110, y: 10, z: 10 }
+        } as Entity; // Needs an enemy to run
 
         // Switch to run
         entity.monsterinfo.run!(entity, context);

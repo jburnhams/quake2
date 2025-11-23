@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage, type Damageable } from '../src/combat/index.js';
+import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage, type Damageable } from '../../src/combat/index.js';
 
 type PartialEntity = Partial<Damageable> & Pick<Damageable, 'origin'>;
 
