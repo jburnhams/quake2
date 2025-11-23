@@ -174,11 +174,11 @@ This section covers the physics simulation and collision detection system that f
   - Test on stairs, ramps, ledges, corners
   - Verify no stuck-in-geometry bugs
   - Test crouch/uncrouch in tight spaces
-- **Projectile collision**: Fire projectile, verify it hits walls/enemies correctly
-- **Water detection**: Walk into water, verify pointcontents returns CONTENTS_WATER at correct height
-- **Trigger volumes**: Walk into trigger brush, verify collision detected
-- **Platform riding**: Stand on moving platform, verify player moves with it
-- **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection
+- [x] **Projectile collision**: Fire projectile, verify it hits walls/enemies correctly
+- [x] **Water detection**: Walk into water, verify pointcontents returns CONTENTS_WATER at correct height
+- [x] **Trigger volumes**: Walk into trigger brush, verify collision detected
+- [x] **Platform riding**: Stand on moving platform, verify player moves with it
+- [x] **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection (partially covered in shared/tests/bsp and game/tests/physics/integration.test.ts)
 
 ### Performance Tests
 - **Trace throughput**: Measure traces per second on complex maps
