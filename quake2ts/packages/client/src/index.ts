@@ -17,6 +17,7 @@ import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
+import { ClientConfigStrings } from './configStrings.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -39,22 +40,35 @@ export {
   type PredictionState,
 } from './prediction.js';
 export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from './view-effects.js';
+export { ClientConfigStrings } from './configStrings.js';
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
+  // Core Engine Hooks
   predict(command: UserCommand): PredictionState;
+  ParseCenterPrint(msg: string): void;
+  ParseNotify(msg: string): void;
+  ParseConfigString(index: number, value: string): void;
+
+  // State Access
   readonly prediction: ClientPrediction;
   readonly lastRendered?: PredictionState;
   readonly view: ViewEffects;
   readonly lastView?: ViewSample;
+  readonly configStrings: ClientConfigStrings;
   camera?: Camera;
+
+  // Demo Playback
   demoPlayback: DemoPlaybackController;
-  ParseCenterPrint(msg: string): void;
-  ParseNotify(msg: string): void;
   demoHandler: ClientNetworkHandler;
+
+  // cgame_export_t equivalents (if explicit names required)
+  Init(initial?: GameFrameResult<PredictionState>): void;
+  Shutdown(): void;
+  DrawHUD(stats: FrameRenderStats, timeMs: number): void;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
@@ -63,6 +77,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler();
+  const configStrings = new ClientConfigStrings();
 
   demoPlayback.setHandler(demoHandler);
 
@@ -71,30 +86,28 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
 
-  return {
+  const clientExports: ClientExports = {
     init(initial) {
+      this.Init(initial);
+    },
+
+    Init(initial) {
       latestFrame = initial;
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
+
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
     },
+
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       const playbackState = demoPlayback.getState();
 
       if (playbackState === PlaybackState.Playing) {
-          // If playing demo, use demo handler for state
-          // Note: demoPlayback needs to be updated.
-          // We assume the host loop calls this with 'nowMs' and 'accumulatorMs'.
-          // We can deduce delta time from the sample.
-          // Or we should rely on an explicit update.
-          // For now, let's just use the handler's latest state directly without interpolation (simpler for first pass).
-
           lastRendered = demoHandler.getPredictionState();
-
       } else {
           if (sample.latest?.state) {
             prediction.setAuthoritative(sample.latest);
@@ -132,6 +145,21 @@ export function createClient(imports: ClientImports): ClientExports {
           fps: 0,
           vertexCount: 0,
         };
+        const timeMs = sample.latest?.timeMs ?? 0;
+
+        // Call DrawHUD
+        this.DrawHUD(stats, timeMs);
+      }
+
+      return command;
+    },
+
+    DrawHUD(stats: FrameRenderStats, timeMs: number) {
+        if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
+
+        // Use values from lastRendered if available (cast to PlayerState to access damage fields if they exist)
+        // If not, fall back to defaults.
+        const stateAsPlayerState = lastRendered as unknown as PlayerState;
 
         const playerState: PlayerState = {
             origin: lastRendered.origin,
@@ -141,10 +169,10 @@ export function createClient(imports: ClientImports): ClientExports {
             waterLevel: lastRendered.waterlevel,
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: 0,
-            damageIndicators: [],
+            damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
+            damageIndicators: stateAsPlayerState.damageIndicators ?? [],
         };
-        const timeMs = sample.latest?.timeMs ?? 0;
+
         Draw_Hud(
           imports.engine.renderer,
           playerState,
@@ -156,17 +184,17 @@ export function createClient(imports: ClientImports): ClientExports {
           messageSystem,
           timeMs
         );
-      }
-
-      void imports;
-      void sample;
-
-      return command;
     },
+
     shutdown() {
+      this.Shutdown();
+    },
+
+    Shutdown() {
       latestFrame = undefined;
       lastRendered = undefined;
     },
+
     get prediction(): ClientPrediction {
       return prediction;
     },
@@ -184,9 +212,6 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     demoPlayback,
     ParseCenterPrint(msg: string) {
-      // We need current game time here.
-      // If called from networking parsing, we might not have 'now' easily without latestFrame.
-      // Use latestFrame.timeMs if available.
       const timeMs = latestFrame?.timeMs ?? 0;
       messageSystem.addCenterPrint(msg, timeMs);
     },
@@ -194,6 +219,12 @@ export function createClient(imports: ClientImports): ClientExports {
       const timeMs = latestFrame?.timeMs ?? 0;
       messageSystem.addNotify(msg, timeMs);
     },
-    demoHandler
+    ParseConfigString(index: number, value: string) {
+      configStrings.set(index, value);
+    },
+    demoHandler,
+    configStrings
   };
+
+  return clientExports;
 }
