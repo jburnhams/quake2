@@ -1,4 +1,3 @@
-
 import { Mat4, multiplyMat4, Vec3 } from '@quake2ts/shared';
 import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
@@ -184,7 +183,9 @@ export const createRenderer = (
 
                         md2Pipeline.bind({
                             modelViewProjection,
-                            ambientLight: light
+                            modelMatrix: entity.transform,
+                            ambientLight: light,
+                            dlights: options.dlights
                         });
                         md2Pipeline.draw(mesh);
                     }
@@ -192,10 +193,20 @@ export const createRenderer = (
                 case 'md3':
                     {
                         let mesh = md3MeshCache.get(entity.model);
+
+                        // Convert DLight to Md3DynamicLight
+                        const md3Dlights = options.dlights ? options.dlights.map(d => ({
+                            origin: d.origin,
+                            color: [d.color.x, d.color.y, d.color.z] as const,
+                            radius: d.intensity
+                        })) : undefined;
+
                         // Merge calculated light into lighting options if provided, or create new
                         const lighting = {
                             ...entity.lighting,
-                            ambient: [light, light, light] as const
+                            ambient: [light, light, light] as const,
+                            dynamicLights: md3Dlights,
+                            modelMatrix: entity.transform
                         };
 
                         if (!mesh) {

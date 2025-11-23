@@ -14,6 +14,7 @@ import {
 } from './skybox.js';
 import { mat4 } from 'gl-matrix';
 import { SURF_SKY } from '@quake2ts/shared';
+import { DLight } from './dlight.js';
 
 export { FrameRenderStats, FrameRenderOptions };
 
@@ -52,6 +53,7 @@ interface FrameRenderOptions {
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
   readonly viewModel?: ViewModelRenderState;
+  readonly dlights?: readonly DLight[];
   readonly timeSeconds?: number;
   readonly clearColor?: readonly [number, number, number, number];
 }
@@ -121,34 +123,8 @@ interface BatchKey {
 function resolveSurfaceTextures(geometry: BspSurfaceGeometry, world: WorldRenderState | undefined): ResolvedSurfaceTextures {
   let diffuse: Texture2D | undefined;
 
-  // Try to get texture from material system first (supports animation)
-  const material = world?.materials?.getMaterial(geometry.texture);
-  if (material) {
-    // Cast WebGLTexture from material to Texture2D?
-    // No, MaterialManager stores WebGLTexture directly or wraps it?
-    // `materials.ts`: Material stores `WebGLTexture`.
-    // Texture2D wraps a WebGLTexture.
-    // We need a way to get the Texture2D or just bind the raw GL texture.
-    // However, our `Texture2D.bind` method handles active texture state.
-
-    // For now, let's assume world.materials are not populated yet, OR
-    // we need to refactor Texture2D/Material interaction.
-    // But since the task is to refactor:
-    // If material has a texture, we use it.
-
-    // Wait, Texture2D is a wrapper. Material.texture returns WebGLTexture.
-    // We can't strictly assume it's a Texture2D object unless we change Material.
-    // But `resolveSurfaceTextures` expects `Texture2D`.
-
-    // WORKAROUND: For this step, if we find a material, we might need to look up the Texture2D wrapper
-    // that corresponds to it, OR simply rely on the fact that for now we are just setting up the structure.
-    // Since `world.textures` maps name -> Texture2D, let's stick to that for the diffuse.
-
-    // If we want animation, we need the CURRENT texture name or object.
-    // Material returns the current WebGLTexture.
-
-    // Let's defer strict type change and stick to `world.textures` for now unless we fully migrate.
-  }
+  // Note: Material texture resolution deferred for now to keep interface simple.
+  // In a full implementation, this would query world.materials.
 
   diffuse = world?.textures?.get(geometry.texture);
   const lightmapIndex = geometry.lightmap?.atlasIndex;
@@ -162,20 +138,6 @@ function bindSurfaceTextures(
   cache: TextureBindingCache,
   resolved?: ResolvedSurfaceTextures
 ): { diffuse?: number; lightmap?: number } {
-  // If we have a material, we should bind its current texture.
-  // But `Material` returns a raw WebGLTexture.
-  // We need to bind it to unit 0.
-
-  const material = world?.materials?.getMaterial(geometry.texture);
-  if (material && material.texture) {
-      // Direct GL bind? or wrap?
-      // Since we don't have access to GL context here easily (it's in pipeline),
-      // we usually rely on Texture2D.bind.
-
-      // FIXME: This mixing of abstractions (Texture2D vs raw WebGLTexture in Material) is messy.
-      // Ideally Material should hold Texture2D references.
-  }
-
   const diffuse = resolved?.diffuse ?? world?.textures?.get(geometry.texture);
   if (diffuse && cache.diffuse !== diffuse) {
     diffuse.bind(0);
@@ -250,7 +212,7 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel } = options;
+    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -287,20 +249,8 @@ export const createFrameRenderer = (
         }
 
         const faceStyles = world.map.faces[faceIndex]?.styles;
-
-        // Material Lookup
         const material = world.materials?.getMaterial(geometry.texture);
-
-        // If material exists, we need to bind ITS texture.
-        // Currently `resolveSurfaceTextures` uses `world.textures`.
-        // We need to inject the material's texture into the resolution/binding process.
-        // For now, to avoid breaking the Texture2D type contract, we'll continue using resolveSurfaceTextures
-        // but use material properties for scroll/warp overrides in the pipeline bind.
-
         const resolvedTextures = resolveSurfaceTextures(geometry, world);
-
-        // If we had a material with an animated texture, we would need to find the Texture2D for that frame.
-        // That requires `world.textures` to have entries for all frames, or Material to hold Texture2D.
 
         const batchKey: BatchKey = {
           diffuse: resolvedTextures.diffuse,
@@ -336,7 +286,8 @@ export const createFrameRenderer = (
             diffuseSampler: textures.diffuse ?? 0,
             lightmapSampler: textures.lightmap,
             texScroll,
-            warp
+            warp,
+            dlights
           });
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;

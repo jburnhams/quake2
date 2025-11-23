@@ -67,7 +67,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Per-surface texture/shader assignment
 - [x] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
   - [x] Vertex lighting based on current position (interpolate between BSP light samples or fallback to floor/worldspawn ambient)
-  - [ ] Optional dynamic lights (from weapon fire, explosions)
+  - [x] Optional dynamic lights (from weapon fire, explosions)
   - [x] Ambient + directional light from worldspawn
 
 ### Particle System
@@ -88,17 +88,16 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Trail effects (rocket, grenade)
 
 ### Dynamic Lighting
-- [ ] Point light data structure
-  - Position, color, intensity, radius
-  - Lifetime for temporary lights (weapon fire, explosions)
-- [ ] Dynamic light application
-  - Per-face dynamic light accumulation (expensive, consider simplified approach)
-  - Or per-vertex lighting in fragment shader
-  - Attenuation formula matching Quake II
-- [ ] Light rendering passes
-  - Base pass with lightmaps
-  - Additive passes for dynamic lights
-  - Or deferred lighting approach (advanced)
+- [x] Point light data structure
+  - [x] Position, color, intensity, radius
+  - [x] Lifetime for temporary lights (weapon fire, explosions)
+- [x] Dynamic light application
+  - [x] Per-face dynamic light accumulation (via additive lighting in fragment shader)
+  - [x] Or per-vertex lighting in fragment shader
+  - [x] Attenuation formula matching Quake II (linear falloff based on radius)
+- [x] Light rendering passes
+  - [x] Base pass with lightmaps
+  - [x] Additive passes for dynamic lights (integrated into single pass via uniforms)
 
 ### HUD & UI Rendering
 - [x] 2D orthographic rendering mode
