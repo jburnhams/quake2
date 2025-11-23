@@ -58,25 +58,29 @@ describe('Entity Collision Scaling', () => {
       index.link(makeEntity(i + 1, i * 50, 0, 0));
     }
 
+    const iterations = 100;
     const start = performance.now();
 
-    // Simulate 20 traces typical of a complex move frame (slide, step, etc.)
-    for (let i = 0; i < 20; i++) {
-       index.trace({
-        model: null as any,
-        start: { x: 0, y: 0, z: 0 },
-        end: { x: 100, y: 0, z: 0 },
-        mins: { x: -16, y: -16, z: -16 },
-        maxs: { x: 16, y: 16, z: 16 },
-        contentMask: MASK_SOLID
-      });
+    for (let j = 0; j < iterations; j++) {
+      // Simulate 20 traces typical of a complex move frame (slide, step, etc.)
+      for (let i = 0; i < 20; i++) {
+         index.trace({
+          model: null as any,
+          start: { x: 0, y: 0, z: 0 },
+          end: { x: 100, y: 0, z: 0 },
+          mins: { x: -16, y: -16, z: -16 },
+          maxs: { x: 16, y: 16, z: 16 },
+          contentMask: MASK_SOLID
+        });
+      }
     }
 
-    const duration = performance.now() - start;
-    console.log(`PMove Simulation: 20 traces took ${duration.toFixed(3)}ms`);
+    const totalDuration = performance.now() - start;
+    const avgDuration = totalDuration / iterations;
+    console.log(`PMove Simulation: 20 traces took avg ${avgDuration.toFixed(3)}ms (over ${iterations} runs)`);
 
     // Relaxed expectation for test environment (was 1ms, now 5ms)
     // The 1ms goal is for production/optimized builds.
-    expect(duration).toBeLessThan(6.0);
+    expect(avgDuration).toBeLessThan(6.0);
   });
 });
