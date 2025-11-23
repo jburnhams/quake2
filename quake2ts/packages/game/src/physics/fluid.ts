@@ -37,6 +37,16 @@ export function checkWater(ent: Entity, system: EntitySystem, imports: GameImpor
   ent.waterlevel = 1;
 
   // Check waist
+  const viewheight = ent.viewheight || (maxs.z - mins.z) * 0.8; // Approximation if viewheight not set
+  const waist = origin.z + (mins.z + maxs.z) * 0.5;
+
+  // Actually Quake 2 uses origin + mins + (maxs-mins)*0.5 for center/waist?
+  // p_client.c PM_CheckWater:
+  // feet = origin.z + mins.z + 1
+  // waist = origin.z + mins.z + (viewheight - mins.z) * 0.5
+  // head = origin.z + viewheight
+
+  // Let's stick to p_move logic for consistency if possible, but for generic entities:
   // G_Physics (g_phys.c) calls SV_CheckWater (sv_phys.c).
   // SV_CheckWater:
   // feet = absmin + 1
@@ -44,6 +54,7 @@ export function checkWater(ent: Entity, system: EntitySystem, imports: GameImpor
   // head = absmin + size[2] - 1 (or something near top)
 
   // Let's use:
+  const feetZ = origin.z + mins.z + 1;
   const waistZ = origin.z + mins.z + (maxs.z - mins.z) * 0.5;
   const headZ = origin.z + maxs.z - 1; // Just below top
 
