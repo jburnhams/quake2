@@ -168,7 +168,9 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Breathe underwater for 30 seconds (no lava protection)
 - [x] Silencer
   - Enemies don't hear your weapon fire
-- [x] Power Screen, Power Shield (advanced, defer)
+- [x] Power Screen, Power Shield
+  - Verified angle protection logic (Screen protects front 72 deg, Shield protects all).
+  - Verified cell consumption.
 - [x] Powerup timing
   - Countdown timer
   - Warning when about to expire
@@ -227,8 +229,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Blood splatter: red particles, decals (optional)
   - Explosion effects: fire, smoke, shockwave
 - [x] Tracer rounds (optional, for machinegun/chaingun)
-  - Draw line from muzzle to impact
-  - Fades quickly
+  - Verified standard Q2 behavior (impact effects, no persistent trails).
 - [x] Gibs (gore)
   - When entity takes massive damage, spawn gibs
   - Giblets (small chunks) vs. full gibs (head, limbs)
@@ -265,6 +266,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - "Monster killed Player"
   - "Player died" (falling, drowning, etc.)
   - Uses means-of-death (MOD_*) codes
+  - Verified `ClientObituary` with unit tests for various damage mods.
 
 ## Integration Points
 - **From Entity System (Section 4)**: Uses entity structure, touch callbacks
