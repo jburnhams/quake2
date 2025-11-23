@@ -964,10 +964,12 @@ export class CollisionEntityIndex {
         trace.contents = entity.contents;
       }
 
-      const candidate = finalizeTrace(trace, params.start, params.end);
-      if (pickBetterTrace(bestTrace, candidate)) {
-        bestTrace = candidate;
-        bestEntity = entity.id;
+      if (trace.startsolid || trace.allsolid || trace.fraction < bestTrace.fraction) {
+         const candidate = finalizeTrace(trace, params.start, params.end);
+         if (pickBetterTrace(bestTrace, candidate)) {
+           bestTrace = candidate;
+           bestEntity = entity.id;
+         }
       }
     }
 
