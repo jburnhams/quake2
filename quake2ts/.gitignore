@@ -6,3 +6,6 @@ dist
 *.tsbuildinfo
 .vite/
 __screenshots__
+test-results/
+results.json
+junit.xml
