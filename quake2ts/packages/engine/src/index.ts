@@ -274,3 +274,25 @@ export {
 export { Pic, Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions } from './render/frame.js';
 export { DemoPlaybackController, PlaybackState, DemoReader, NetworkMessageParser } from './demo/index.js';
+export {
+    createEmptyEntityState,
+    createEmptyProtocolPlayerState,
+    U_ORIGIN1, U_ORIGIN2, U_ORIGIN3,
+    U_ANGLE1, U_ANGLE2, U_ANGLE3,
+    U_MODEL, U_MODEL2, U_MODEL3, U_MODEL4,
+    U_FRAME8, U_FRAME16,
+    U_SKIN8, U_SKIN16,
+    U_EFFECTS8, U_EFFECTS16,
+    U_RENDERFX8, U_RENDERFX16,
+    U_OLDORIGIN,
+    U_SOUND,
+    U_EVENT,
+    U_SOLID,
+    U_REMOVE
+} from './demo/parser.js';
+export type {
+    NetworkMessageHandler,
+    EntityState,
+    FrameData,
+    ProtocolPlayerState
+} from './demo/parser.js';
