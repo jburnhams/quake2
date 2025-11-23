@@ -37,18 +37,15 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
                 damage,
                 0,
                 DamageFlags.NONE,
-                DamageMod.ROCKET
+                DamageMod.ROCKET,
+                sys.multicast.bind(sys)
             );
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, 120, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, 120, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, {}, sys.multicast.bind(sys));
 
         // Explosion effect
-        // gi.WriteByte (svc_temp_entity);
-        // gi.WriteByte (TE_ROCKET_EXPLOSION);
-        // gi.WritePosition (self->s.origin);
-        // gi.multicast (self->s.origin, MULTICAST_PHS);
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
 
         sys.free(self);
@@ -74,13 +71,9 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
     const explode = (self: Entity) => {
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE, {}, sys.multicast.bind(sys));
 
         // Explosion effect
-        // gi.WriteByte (svc_temp_entity);
-        // gi.WriteByte (TE_GRENADE_EXPLOSION);
-        // gi.WritePosition (self->s.origin);
-        // gi.multicast (self->s.origin, MULTICAST_PHS);
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, self.origin);
 
         sys.free(self);
@@ -124,15 +117,6 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     bolt.mins = { x: -2, y: -2, z: -2 };
     bolt.maxs = { x: 2, y: 2, z: 2 };
 
-    // Light and effects are client-side usually, but we might want to set EF_BLASTER flag?
-    // Quake 2 uses EF_BLASTER or EF_HYPERBLASTER on entity effects.
-    // if (weapon == WEAPON_HYPERBLASTER) bolt->s.effects |= EF_HYPERBLASTER;
-    // else bolt->s.effects |= EF_BLASTER;
-    // We need EntityEffects enum. Assuming it matches.
-    // 0x00000008 = EF_BLASTER
-    // 0x00001000 = EF_HYPERBLASTER (maybe?)
-    // Let's just use TempEntities on impact for now.
-
     bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
         if (other === self.owner) {
             return;
@@ -149,15 +133,11 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
                 damage,
                 1, // Kick
                 DamageFlags.NONE,
-                mod
+                mod,
+                sys.multicast.bind(sys)
             );
         } else {
             // Wall impact effect
-            // gi.WriteByte (svc_temp_entity);
-            // gi.WriteByte (TE_BLASTER);
-            // gi.WritePosition (self->s.origin);
-            // gi.WriteDir (plane->normal);
-            // gi.multicast (self->s.origin, MULTICAST_PVS);
             if (plane) {
                 sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLASTER, self.origin, plane.normal);
             }
@@ -190,7 +170,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
         // Primary splash damage
         const entities = sys.findByRadius(self.origin, 200);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, 200, DamageFlags.NONE, DamageMod.BFG_BLAST);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, 200, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);
@@ -223,15 +203,11 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
                     laserDamage,
                     10,
                     DamageFlags.ENERGY,
-                    DamageMod.BFG_LASER
+                    DamageMod.BFG_LASER,
+                    sys.multicast.bind(sys)
                 );
 
-                // Laser effect? TE_BFG_LASER
-                // gi.WriteByte (svc_temp_entity);
-                // gi.WriteByte (TE_BFG_LASER);
-                // gi.WritePosition (self->owner->s.origin);
-                // gi.WritePosition (ent->s.origin);
-                // gi.multicast (self->s.origin, MULTICAST_PHS);
+                // Laser effect
                 sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, playerOrigin, target.origin);
             }
         }

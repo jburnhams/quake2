@@ -55,7 +55,8 @@ function fireHitscan(game: GameExports, player: Entity, forward: any, damage: nu
             damage,
             knockback,
             DamageFlags.BULLET,
-            mod
+            mod,
+            game.multicast
         );
     } else {
         // Wall impact
@@ -94,7 +95,8 @@ function fireRailgun(game: GameExports, player: Entity, forward: any, damage: nu
                 damage,
                 knockback,
                 DamageFlags.ENERGY,
-                DamageMod.RAILGUN
+                DamageMod.RAILGUN,
+                game.multicast
             );
         }
 
@@ -176,13 +178,18 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                         4,
                         1,
                         DamageFlags.BULLET,
-                        DamageMod.SHOTGUN
+                        DamageMod.SHOTGUN,
+                        game.multicast
                     );
                 } else if (trace.plane) {
                      // Impact effect for shotgun pellets?
                      // Quake 2 doesn't spawn 12 sparks, maybe just some?
                      // Original: fire_shotgun calls fire_lead which calls fire_hit
                      // fire_hit calls CheckTrace -> if !takedamage, writes TE_GUNSHOT
+                     // Don't spam multicast for shotgun pellets
+                     if (random.frandom() > 0.8) {
+                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                     }
                 }
             }
             break;
@@ -219,8 +226,13 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                         6,
                         1,
                         DamageFlags.BULLET,
-                        DamageMod.SSHOTGUN
+                        DamageMod.SSHOTGUN,
+                        game.multicast
                     );
+                } else if (trace.plane) {
+                     if (random.frandom() > 0.9) {
+                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                     }
                 }
             }
             break;

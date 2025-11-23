@@ -118,8 +118,8 @@ describe('Railgun', () => {
 
         fire(game, player, WeaponId.Railgun);
 
-        expect(T_Damage).toHaveBeenCalledWith(target1, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything());
-        expect(T_Damage).toHaveBeenCalledWith(target2, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything());
+        expect(T_Damage).toHaveBeenCalledWith(target1, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything(), expect.any(Function));
+        expect(T_Damage).toHaveBeenCalledWith(target2, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything(), expect.any(Function));
         expect(trace).toHaveBeenCalledTimes(3);
     });
 });

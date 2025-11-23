@@ -17,17 +17,14 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number) {
         z: origin.z + (random.frandom() - 0.5) * 20
     };
     gib.velocity = {
-        x: (random.frandom() - 0.5) * 300, // Velocity based on damage?
+        x: (random.frandom() - 0.5) * 300,
         y: (random.frandom() - 0.5) * 300,
         z: 200 + random.frandom() * 100
     };
-    gib.movetype = MoveType.Bounce; // Or Toss? Gibs usually bounce/slide.
-    gib.solid = Solid.Not; // Gibs don't block players usually, but they collide with world.
-    // Wait, MOVETYPE_BOUNCE requires solidity to bounce off walls?
-    // Actually in Quake 2, gibs are MOVETYPE_BOUNCE and SOLID_NOT, but they do clip against world.
-    // The physics engine handles world clip even if SOLID_NOT?
-    // Usually SOLID_NOT means no interaction with other entities.
-    // But clipmask determines world collision.
+    gib.movetype = MoveType.Bounce;
+    gib.solid = Solid.Not;
+
+    // Gibs should clip against world but not other entities
     gib.clipmask = 0x00000001; // MASK_SOLID
     gib.avelocity = {
         x: random.crandom() * 600,
@@ -39,15 +36,17 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number) {
     // models/objects/gibs/bone/tris.md2
     // models/objects/gibs/meat/tris.md2
     // models/objects/gibs/sm_meat/tris.md2
+    // models/objects/gibs/arm/tris.md2 (optional, larger part)
     const models = [
         'models/objects/gibs/bone/tris.md2',
         'models/objects/gibs/meat/tris.md2',
         'models/objects/gibs/sm_meat/tris.md2',
-        'models/objects/gibs/arm/tris.md2', // larger parts?
     ];
+    // Add extra gibs if available
     const modelName = models[Math.floor(random.frandom() * models.length)];
     gib.modelindex = sys.modelIndex(modelName);
 
+    // Mins/Maxs for gibs
     gib.mins = { x: -2, y: -2, z: -2 };
     gib.maxs = { x: 2, y: 2, z: 2 };
 
@@ -60,10 +59,11 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number) {
 }
 
 export function throwGibs(sys: EntitySystem, origin: Vec3, damage: number) {
+    // Number of gibs depends on damage? or just random
     const count = 4 + Math.floor(random.frandom() * 4);
     for (let i = 0; i < count; i++) {
         spawnGib(sys, origin, damage);
     }
-    // Also spawn some blood particles?
-    // G_ThrowGibs calls ThrowGib which spawns the entity.
+    // TODO: Spawn blood effect via TE_BLOOD shower if desired?
+    // G_ThrowGibs in original just spawns models.
 }

@@ -4,6 +4,7 @@ import { createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { throwGibs } from './gibs.js';
 import { DamageMod, damageModName } from '../combat/damageMods.js';
 import { EntitySystem } from './system.js';
+import { ClientObituary } from '../combat/obituary.js';
 
 export function player_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: any, mod: DamageMod, sys?: EntitySystem) {
     self.deadflag = DeadFlag.Dead;
@@ -22,19 +23,7 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
 
     // Obituaries
     if (sys) {
-        // Generate death message
-        let message = "You died.";
-        if (attacker) {
-            if (attacker === self) {
-                message = "You killed yourself.";
-            } else {
-                // Use mod name or attacker classname
-                message = `You were killed by ${attacker.classname} (${damageModName(mod)})`;
-            }
-        } else {
-             message = `You died (${damageModName(mod)})`;
-        }
-        sys.engine.centerprintf?.(self, message);
+        ClientObituary(self, inflictor, attacker, mod, sys);
     }
 
     // Weapon drop (optional)
