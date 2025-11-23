@@ -1,4 +1,3 @@
-
 import { mat3 } from 'gl-matrix';
 
 export enum BlendMode {
@@ -7,40 +6,61 @@ export enum BlendMode {
   ADDITIVE,
 }
 
+export interface MaterialOptions {
+  readonly textures: WebGLTexture[];
+  readonly fps?: number;
+  readonly blendMode?: BlendMode;
+  readonly twoSided?: boolean;
+  readonly depthWrite?: boolean;
+  readonly scroll?: readonly [number, number];
+  readonly warp?: boolean;
+}
+
 export class Material {
-  blendMode: BlendMode = BlendMode.OPAQUE;
-  twoSided: boolean = false;
-  depthWrite: boolean = true;
+  readonly blendMode: BlendMode;
+  readonly twoSided: boolean;
+  readonly depthWrite: boolean;
+  readonly warp: boolean;
+  readonly scroll: readonly [number, number];
 
   private readonly textures: WebGLTexture[];
   private readonly fps: number;
   private currentIndex: number = 0;
   private lastAnimationTime: number = 0;
+  private lastTime: number = 0;
 
-  constructor(textures: WebGLTexture[], fps: number = 10) {
-    this.textures = textures;
-    this.fps = fps;
+  constructor(options: MaterialOptions) {
+    this.textures = options.textures;
+    this.fps = options.fps ?? 10;
+    this.blendMode = options.blendMode ?? BlendMode.OPAQUE;
+    this.twoSided = options.twoSided ?? false;
+    this.depthWrite = options.depthWrite ?? (this.blendMode === BlendMode.OPAQUE);
+    this.warp = options.warp ?? false;
+    this.scroll = options.scroll ?? [0, 0];
   }
 
-  public updateAnimation(time: number) {
-    if (this.textures.length <= 1) {
-      return;
+  update(time: number): void {
+    if (this.textures.length > 1) {
+      if (time - this.lastAnimationTime >= 1.0 / this.fps) {
+        this.currentIndex = (this.currentIndex + 1) % this.textures.length;
+        this.lastAnimationTime = time;
+      }
     }
-
-    if (time - this.lastAnimationTime >= 1.0 / this.fps) {
-      this.currentIndex = (this.currentIndex + 1) % this.textures.length;
-      this.lastAnimationTime = time;
-    }
+    this.lastTime = time;
   }
 
-  get texture(): WebGLTexture {
+  get texture(): WebGLTexture | null {
+    if (this.textures.length === 0) return null;
     return this.textures[this.currentIndex];
   }
 
-  // Placeholder for scrolling textures
-  getTexCoordTransform(time: number): mat3 {
-    // For now, return identity
-    return mat3.create();
+  get scrollOffset(): readonly [number, number] {
+    if (this.scroll[0] === 0 && this.scroll[1] === 0) {
+      return [0, 0];
+    }
+    // Match Quake II's negative scroll direction
+    const cycle = (this.lastTime * 0.25) % 1;
+    return [-cycle * this.scroll[0], -cycle * this.scroll[1]];
   }
 }
 
@@ -51,13 +71,19 @@ export class MaterialManager {
     return this.materials.get(name);
   }
 
-  registerMaterial(name: string, material: Material): void {
+  registerMaterial(name: string, options: MaterialOptions): Material {
+    const material = new Material(options);
     this.materials.set(name, material);
+    return material;
   }
 
-  updateAnimations(time: number): void {
+  update(time: number): void {
     for (const material of this.materials.values()) {
-        material.updateAnimation(time);
+        material.update(time);
     }
+  }
+
+  clear(): void {
+    this.materials.clear();
   }
 }

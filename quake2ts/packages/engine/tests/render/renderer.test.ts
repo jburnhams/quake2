@@ -54,6 +54,13 @@ describe('Renderer', () => {
             disable: vi.fn(),
             enable: vi.fn(),
             depthMask: vi.fn(),
+            getExtension: vi.fn().mockReturnValue({}), // Mock extension support for Profiler
+            createQuery: vi.fn().mockReturnValue({}),
+            beginQuery: vi.fn(),
+            endQuery: vi.fn(),
+            deleteQuery: vi.fn(),
+            getQueryParameter: vi.fn(),
+            getParameter: vi.fn(),
             canvas: { width: 640, height: 480 },
         } as unknown as WebGL2RenderingContext;
     });

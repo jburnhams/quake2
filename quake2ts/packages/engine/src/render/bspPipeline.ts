@@ -26,6 +26,9 @@ export interface BspSurfaceBindOptions {
   readonly lightmapSampler?: number;
   readonly surfaceFlags?: SurfaceFlag;
   readonly timeSeconds?: number;
+  readonly texScroll?: readonly [number, number];
+  readonly alpha?: number;
+  readonly warp?: boolean;
 }
 
 export const BSP_SURFACE_VERTEX_SOURCE = `#version 300 es
@@ -185,20 +188,28 @@ export class BspSurfacePipeline {
       lightmapSampler,
       surfaceFlags = SURF_NONE,
       timeSeconds = 0,
+      texScroll,
+      alpha,
+      warp,
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
     const styles = resolveLightStyles(styleIndices, styleValues);
 
+    const finalScrollX = texScroll ? texScroll[0] : state.flowOffset[0];
+    const finalScrollY = texScroll ? texScroll[1] : state.flowOffset[1];
+    const finalAlpha = alpha !== undefined ? alpha : state.alpha;
+    const finalWarp = warp !== undefined ? warp : state.warp;
+
     this.program.use();
     this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
-    this.gl.uniform2f(this.uniformTexScroll, state.flowOffset[0], state.flowOffset[1]);
-    this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]);
+    this.gl.uniform2f(this.uniformTexScroll, finalScrollX, finalScrollY);
+    this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]); // Lightmaps usually don't scroll with texture animation? Or do they? Quake 2: Only texture scrolls on conveyors.
     this.gl.uniform4fv(this.uniformLightStyles, styles);
-    this.gl.uniform1f(this.uniformAlpha, state.alpha);
+    this.gl.uniform1f(this.uniformAlpha, finalAlpha);
     const applyLightmap = !state.sky && lightmapSampler !== undefined;
     this.gl.uniform1i(this.uniformApplyLightmap, applyLightmap ? 1 : 0);
-    this.gl.uniform1i(this.uniformWarp, state.warp ? 1 : 0);
+    this.gl.uniform1i(this.uniformWarp, finalWarp ? 1 : 0);
     this.gl.uniform1f(this.uniformTime, timeSeconds);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
     this.gl.uniform1i(this.uniformLightmap, lightmapSampler ?? 0);
