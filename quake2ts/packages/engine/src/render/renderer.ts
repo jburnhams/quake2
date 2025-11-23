@@ -13,6 +13,7 @@ import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
+import { PreparedTexture } from '../assets/texture.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -26,6 +27,7 @@ export interface Renderer {
 
     // HUD Methods
     registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
+    registerTexture(name: string, texture: PreparedTexture): Pic;
     begin2D(): void;
     end2D(): void;
     drawPic(x: number, y: number, pic: Pic, color?: [number, number, number, number]): void;
@@ -167,6 +169,25 @@ export const createRenderer = (
         return texture;
     };
 
+    const registerTexture = (name: string, texture: PreparedTexture): Pic => {
+        if (picCache.has(name)) {
+            return picCache.get(name)!;
+        }
+
+        const tex = new Texture2D(gl);
+        // Assume level 0 for 2D drawing
+        const level = texture.levels[0];
+        tex.upload(level.width, level.height, level.rgba);
+
+        picCache.set(name, tex);
+
+        if (name.includes('conchars')) {
+            font = tex;
+        }
+
+        return tex;
+    };
+
     const begin2D = () => {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -234,6 +255,7 @@ export const createRenderer = (
         get stats() { return gpuProfiler.stats; },
         renderFrame,
         registerPic,
+        registerTexture,
         begin2D,
         end2D,
         drawPic,

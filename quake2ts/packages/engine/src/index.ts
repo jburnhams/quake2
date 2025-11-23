@@ -10,6 +10,7 @@ import {
 import { ConfigStringRegistry } from './configstrings.js';
 import { FixedTimestepLoop, type LoopCallbacks, type LoopOptions } from './loop.js';
 import { EngineRuntime, createEngineRuntime } from './runtime.js';
+import { AssetManager } from './assets/manager.js';
 
 import { PmoveTraceResult } from '@quake2ts/shared';
 
@@ -26,6 +27,7 @@ export interface EngineImports {
   trace(start: Vec3, end: Vec3): TraceResult;
   renderer?: Renderer;
   audio?: AudioApi;
+  assets?: AssetManager;
 }
 
 export interface EngineExports {

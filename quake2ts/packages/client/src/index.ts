@@ -9,7 +9,7 @@ import {
   PlaybackState,
   EngineHost,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
@@ -129,6 +129,12 @@ export function createClient(imports: ClientImports): ClientExports {
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
+
+      // Initialize HUD assets if asset manager is available
+      if (imports.engine.assets && imports.engine.renderer) {
+         Init_Hud(imports.engine.renderer, imports.engine.assets);
+      }
+
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
 
@@ -266,6 +272,34 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
+
+      // Precache assets
+      if (imports.engine.assets) {
+          const assets = imports.engine.assets;
+
+          if (index >= ConfigStringIndex.Models && index < ConfigStringIndex.Models + MAX_MODELS) {
+              const ext = value.split('.').pop()?.toLowerCase();
+              if (ext === 'md2') {
+                  // We don't have texture dependencies easily available here without parsing more,
+                  // or assuming a convention (like players). For now, just load geometry.
+                  assets.loadMd2Model(value).catch(e => console.warn(`Failed to precache MD2 ${value}`, e));
+              } else if (ext === 'sp2') {
+                  assets.loadSprite(value).catch(e => console.warn(`Failed to precache Sprite ${value}`, e));
+              } else if (ext === 'md3') {
+                  assets.loadMd3Model(value).catch(e => console.warn(`Failed to precache MD3 ${value}`, e));
+              }
+              // Inline BSP models (begins with *) are handled by map loader usually.
+          } else if (index >= ConfigStringIndex.Sounds && index < ConfigStringIndex.Sounds + MAX_SOUNDS) {
+               assets.loadSound(value).catch(e => console.warn(`Failed to precache sound ${value}`, e));
+          } else if (index >= ConfigStringIndex.Images && index < ConfigStringIndex.Images + MAX_IMAGES) {
+               assets.loadTexture(value).then(texture => {
+                   if (imports.engine.renderer) {
+                       // Register the texture with the renderer so it's ready for Draw_Pic
+                       imports.engine.renderer.registerTexture(value, texture);
+                   }
+               }).catch(e => console.warn(`Failed to precache image ${value}`, e));
+          }
+      }
     },
     demoHandler,
     configStrings

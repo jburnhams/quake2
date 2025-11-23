@@ -1,4 +1,4 @@
-import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
+import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
 import { PlayerState, angleVectors, dotVec3, Vec3 } from '@quake2ts/shared';
 
 const damagePics = new Map<string, Pic>();
@@ -7,11 +7,11 @@ const DAMAGE_INDICATOR_NAMES = [
     'd_left', 'd_right', 'd_up', 'd_down'
 ];
 
-export const Init_Damage = async (renderer: Renderer, pak: PakArchive) => {
+export const Init_Damage = async (renderer: Renderer, assets: AssetManager) => {
     for (const name of DAMAGE_INDICATOR_NAMES) {
         try {
-            const data = pak.readFile(`pics/${name}.pcx`);
-            const pic = await renderer.registerPic(name, data.buffer as ArrayBuffer);
+            const texture = await assets.loadTexture(`pics/${name}.pcx`);
+            const pic = renderer.registerTexture(name, texture);
             damagePics.set(name, pic);
         } catch (e) {
             console.error(`Failed to load HUD image: pics/${name}.pcx`);

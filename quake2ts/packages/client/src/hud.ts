@@ -1,4 +1,4 @@
-import { PakArchive, FrameRenderStats } from '@quake2ts/engine';
+import { FrameRenderStats, AssetManager } from '@quake2ts/engine';
 import { Pic, Renderer } from '@quake2ts/engine';
 import { PlayerClient } from '@quake2ts/game';
 import { PlayerState } from '@quake2ts/shared';
@@ -15,23 +15,23 @@ import { Draw_Pickup } from './hud/pickup.js';
 const hudNumberPics: Pic[] = [];
 let numberWidth = 0;
 
-export const Init_Hud = async (renderer: Renderer, pak: PakArchive) => {
+export const Init_Hud = async (renderer: Renderer, assets: AssetManager) => {
     for (let i = 0; i < 10; i++) {
         try {
-            const data = pak.readFile(`pics/hud/num_${i}.pcx`);
-            const pic = await renderer.registerPic(`hud_num_${i}`, data.buffer as ArrayBuffer);
+            const texture = await assets.loadTexture(`pics/hud/num_${i}.pcx`);
+            const pic = renderer.registerTexture(`hud_num_${i}`, texture);
             hudNumberPics.push(pic);
         } catch (e) {
-            console.error(`Failed to load HUD image: pics/hud/num_${i}.pcx`);
+            console.error(`Failed to load HUD image: pics/hud/num_${i}.pcx`, e);
         }
     }
-    if (hudNumberPics[0]) {
+    if (hudNumberPics.length > 0) {
         numberWidth = hudNumberPics[0].width;
     }
 
-    await Init_Crosshair(renderer, pak);
-    await Init_Icons(renderer, pak);
-    await Init_Damage(renderer, pak);
+    await Init_Crosshair(renderer, assets);
+    await Init_Icons(renderer, assets);
+    await Init_Damage(renderer, assets);
 };
 
 export const Draw_Hud = (
@@ -47,8 +47,6 @@ export const Draw_Hud = (
 ) => {
     renderer.begin2D();
 
-    // Draw blends first so they are behind text but over 3D scene (renderer.begin2D sets up overlay)
-    // Wait, blends should be fullscreen.
     Draw_Blends(renderer, ps);
 
     if (ps.damageAlpha > 0) {
@@ -59,9 +57,11 @@ export const Draw_Hud = (
         ? [1, 0, 0, 1] // Red for low health
         : undefined;
 
-    Draw_Number(renderer, HUD_LAYOUT.HEALTH_X, HUD_LAYOUT.HEALTH_Y, health, hudNumberPics, numberWidth, healthColor);
-    Draw_Number(renderer, HUD_LAYOUT.ARMOR_X, HUD_LAYOUT.ARMOR_Y, armor, hudNumberPics, numberWidth);
-    Draw_Number(renderer, HUD_LAYOUT.AMMO_X, HUD_LAYOUT.AMMO_Y, ammo, hudNumberPics, numberWidth);
+    if (hudNumberPics.length > 0) {
+        Draw_Number(renderer, HUD_LAYOUT.HEALTH_X, HUD_LAYOUT.HEALTH_Y, health, hudNumberPics, numberWidth, healthColor);
+        Draw_Number(renderer, HUD_LAYOUT.ARMOR_X, HUD_LAYOUT.ARMOR_Y, armor, hudNumberPics, numberWidth);
+        Draw_Number(renderer, HUD_LAYOUT.AMMO_X, HUD_LAYOUT.AMMO_Y, ammo, hudNumberPics, numberWidth);
+    }
 
     Draw_Icons(renderer, client, hudNumberPics, numberWidth, timeMs);
     Draw_Pickup(renderer, ps);

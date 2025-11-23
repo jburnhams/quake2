@@ -1,10 +1,11 @@
 import { normalizePath } from './pak.js';
-import { TextureCache, type PreparedTexture } from './texture.js';
+import { TextureCache, type PreparedTexture, parseWalTexture, preparePcxTexture } from './texture.js';
 import { AudioRegistry, type DecodedAudio } from './audio.js';
 import { Md2Loader, type Md2Model } from './md2.js';
 import { Md3Loader, type Md3Model } from './md3.js';
 import { SpriteLoader, type SpriteModel } from './sprite.js';
 import { VirtualFileSystem } from './vfs.js';
+import { parsePcx } from './pcx.js';
 
 type AssetType = 'texture' | 'model' | 'sound' | 'sprite';
 
@@ -91,6 +92,7 @@ export class AssetManager {
   private readonly md2: Md2Loader;
   private readonly md3: Md3Loader;
   private readonly sprite: SpriteLoader;
+  private palette: Uint8Array;
 
   constructor(private readonly vfs: VirtualFileSystem, options: AssetManagerOptions = {}) {
     this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
@@ -99,6 +101,32 @@ export class AssetManager {
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
     this.sprite = new SpriteLoader(vfs);
+
+    // Default grayscale palette until loaded
+    this.palette = new Uint8Array(768);
+    for (let i = 0; i < 256; i++) {
+        this.palette[i*3] = i;
+        this.palette[i*3+1] = i;
+        this.palette[i*3+2] = i;
+    }
+  }
+
+  /**
+   * Loads the global palette (pics/colormap.pcx) if available.
+   * This is required for loading WAL textures.
+   */
+  async loadPalette(path: string = 'pics/colormap.pcx'): Promise<void> {
+    try {
+        const buffer = await this.vfs.readFile(path);
+        // buffer from vfs.readFile returns ArrayBuffer | SharedArrayBuffer
+        // parsePcx expects ArrayBuffer.
+        const pcx = parsePcx(buffer as unknown as ArrayBuffer);
+        if (pcx.palette) {
+            this.palette = pcx.palette;
+        }
+    } catch (e) {
+        console.warn(`Failed to load palette from ${path}:`, e);
+    }
   }
 
   isAssetLoaded(type: AssetType, path: string): boolean {
@@ -110,6 +138,27 @@ export class AssetManager {
     const key = this.makeKey('texture', path);
     this.dependencyTracker.register(key);
     this.dependencyTracker.markLoaded(key);
+  }
+
+  async loadTexture(path: string): Promise<PreparedTexture> {
+    const cached = this.textures.get(path);
+    if (cached) return cached;
+
+    const buffer = await this.vfs.readFile(path);
+    const ext = path.split('.').pop()?.toLowerCase();
+
+    let texture: PreparedTexture;
+
+    if (ext === 'wal') {
+        texture = parseWalTexture(buffer as unknown as ArrayBuffer, this.palette);
+    } else if (ext === 'pcx') {
+        texture = preparePcxTexture(parsePcx(buffer as unknown as ArrayBuffer));
+    } else {
+        throw new Error(`Unsupported texture format for loadTexture: ${ext}`);
+    }
+
+    this.registerTexture(path, texture);
+    return texture;
   }
 
   async loadSound(path: string): Promise<DecodedAudio> {
