@@ -12,6 +12,7 @@ import {
 } from './ammo.js';
 import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
+import { Vec3 } from '@quake2ts/shared';
 
 export enum WeaponId {
   Blaster = 'blaster',
@@ -108,6 +109,8 @@ export interface PlayerInventory {
 export interface PlayerClient {
     inventory: PlayerInventory;
     weaponStates: PlayerWeaponStates;
+    kick_angles?: Vec3;
+    kick_origin?: Vec3;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {

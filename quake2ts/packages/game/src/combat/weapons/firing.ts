@@ -33,6 +33,13 @@ const MZ_SSHOTGUN = 11;
 const MZ_BFG = 12;
 const MZ_HYPERBLASTER = 13;
 
+function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
+    if (player.client) {
+        player.client.kick_angles = { x: pitch, y: yaw, z: 0 };
+        player.client.kick_origin = { x: kickOrigin, y: 0, z: 0 };
+    }
+}
+
 function fireHitscan(game: GameExports, player: Entity, forward: any, damage: number, knockback: number, mod: DamageMod) {
     const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
     const trace = game.trace(
@@ -153,6 +160,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_shotgun_fire
             inventory.ammo.counts[AmmoType.Shells]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SHOTGUN);
+            applyKick(player, -2, 0, -2);
 
             for (let i = 0; i < 12; i++) {
                 const spread = addVec3(scaleVec3(right, random.crandom() * 500), scaleVec3(up, random.crandom() * 500));
@@ -201,6 +209,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_sshotgun_fire
             inventory.ammo.counts[AmmoType.Shells] -= 2;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
+            applyKick(player, -4, 0, -4);
 
             for (let i = 0; i < 20; i++) {
                 const spread = addVec3(scaleVec3(right, random.crandom() * 700), scaleVec3(up, random.crandom() * 700));
@@ -244,6 +253,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_machinegun_fire
             inventory.ammo.counts[AmmoType.Bullets]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_MACHINEGUN);
+            applyKick(player, -1, random.crandom() * 0.5, 0);
             fireHitscan(game, player, forward, 8, 1, DamageMod.MACHINEGUN);
             break;
         }
@@ -261,6 +271,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
 
             const flash = MZ_CHAINGUN1 + (shots % 3);
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
+            applyKick(player, -0.5, random.crandom() * 0.5, 0);
             fireHitscan(game, player, forward, 8, 1, DamageMod.CHAINGUN);
             break;
         }
@@ -271,6 +282,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_railgun_fire
             inventory.ammo.counts[AmmoType.Slugs]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_RAILGUN);
+            applyKick(player, -3, 0, -3);
             fireRailgun(game, player, forward, 150, 1);
             break;
         }
@@ -281,12 +293,14 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_hyperblaster_fire
             inventory.ammo.counts[AmmoType.Cells]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
+            applyKick(player, -0.5, 0, 0);
             createBlasterBolt(game.entities, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
             break;
         }
         case WeaponId.Blaster: {
             // Ref: g_weapon.c -> weapon_blaster_fire
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
+            applyKick(player, -0.5, 0, 0);
             createBlasterBolt(game.entities, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
             break;
         }
@@ -298,6 +312,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_rocketlauncher_fire
             inventory.ammo.counts[AmmoType.Rockets]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET);
+            applyKick(player, -2, 0, -2);
             createRocket(game.entities, player, player.origin, forward, 100, 650);
             break;
         }
@@ -308,6 +323,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_grenadelauncher_fire
             inventory.ammo.counts[AmmoType.Grenades]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
+            applyKick(player, -2, 0, -2);
             createGrenade(game.entities, player, player.origin, forward, 120, 600);
             break;
         }
@@ -318,6 +334,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_bfg_fire
             inventory.ammo.counts[AmmoType.Cells] -= 50;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BFG);
+            applyKick(player, -5, 0, -2);
             createBfgBall(game.entities, player, player.origin, forward, 200, 400);
             break;
         }
