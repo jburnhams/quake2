@@ -55,6 +55,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - When entities overlap (via trace), call touch callbacks
   - Handle trigger volumes
   - Pickup items, teleporters, hurt triggers
+  - **Note**: Current implementation is O(N^2). Spatial optimization pending Section 3 completion.
 
 ### Spawn Registry
 - [x] Build spawn function registry (mirrors `g_spawn.cpp`)
@@ -96,9 +97,28 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `item_armor_*`: Shard, jacket, combat, body
   - [x] `key_*`: Base keys
   - [x] `item_quad`, `item_invulnerability`, etc.
-- [x] Monster spawns (monster_*)
-  - [x] `monster_soldier`: Full implementation
-  - [] Spawn or stub all other base monsters (to prevent map load errors)
+- [ ] Monster spawns (monster_*)
+  - [x] `monster_soldier`: Implemented
+  - [x] `monster_gunner`: Implemented
+  - [ ] `monster_berserk`: Pending
+  - [ ] `monster_gladiator`: Pending
+  - [ ] `monster_medic`: Pending
+  - [ ] `monster_mutant`: Pending
+  - [ ] `monster_parasite`: Pending
+  - [ ] `monster_tank`: Pending
+  - [ ] `monster_tank_commander`: Pending
+  - [ ] `monster_brain`: Pending
+  - [ ] `monster_flipper`: Pending
+  - [ ] `monster_chick` (Iron Maiden): Pending
+  - [ ] `monster_icarus`: Pending
+  - [ ] `monster_flyer`: Pending
+  - [ ] `monster_floater`: Pending
+  - [ ] `monster_hover`: Pending
+  - [ ] `monster_infantry`: Pending
+  - [ ] `monster_supertank`: Pending
+  - [ ] `monster_boss2` (Hornet): Pending
+  - [ ] `monster_jorg` (Boss3): Pending
+  - [ ] `monster_makron` (Boss3): Pending
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
@@ -132,9 +152,9 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Parse spawnflags (bitfield)
   - Convert string values to appropriate types (int, float, vec3)
 - [ ] Link entities into world
-  - Add to entity list
-  - For solid entities, link into BSP spatial areas
-  - Build target->entity lookup table for scripting
+  - [x] Add to entity list
+  - [ ] For solid entities, link into BSP spatial areas **(Pending Section 3 Completion)**
+  - [x] Build target->entity lookup table for scripting
   - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking still pending
 
 - [x] Integrate with GameFrameLoop
@@ -160,6 +180,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - After movement, check for entity overlaps
   - Call touch callbacks on both entities
   - Handle pickup, trigger, damage logic
+  - **Note**: Current implementation is O(N^2). Spatial optimization pending Section 3 completion.
 
 ### Entity Scripting & Targeting
 - [x] Target resolution
