@@ -46,6 +46,27 @@ export const Set_Crosshair = (index: number) => {
     }
 };
 
+export const Cycle_Crosshair = () => {
+    crosshairIndex = (crosshairIndex + 1) % CROSSHAIR_NAMES.length;
+    crosshairPic = crosshairPics[crosshairIndex];
+    // If the selected one is null (not loaded), try finding next valid one or fallback to null.
+    if (!crosshairPic) {
+        // Simple linear search for next valid
+        let found = false;
+        for (let i = 0; i < CROSSHAIR_NAMES.length; i++) {
+             const idx = (crosshairIndex + i) % CROSSHAIR_NAMES.length;
+             if (crosshairPics[idx]) {
+                 crosshairIndex = idx;
+                 crosshairPic = crosshairPics[idx];
+                 found = true;
+                 break;
+             }
+        }
+        if (!found) crosshairPic = null;
+    }
+    return crosshairIndex;
+};
+
 export const Draw_Crosshair = (renderer: Renderer, width: number, height: number) => {
     // Check cvars for crosshair enablement/style?
     // For now, just draw if loaded.

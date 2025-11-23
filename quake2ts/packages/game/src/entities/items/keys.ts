@@ -21,7 +21,7 @@ export function createKeyPickupEntity(game: GameExports, keyItem: KeyItem): Part
                 return;
             }
 
-            if (pickupKey(other.client.inventory, keyItem)) {
+            if (pickupKey(other.client.inventory, keyItem, game.time * 1000)) {
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${keyItem.name}`);
                 self.solid = Solid.Not;

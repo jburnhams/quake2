@@ -306,6 +306,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             health: ps.stats[1], // STAT_HEALTH
             armor: ps.stats[4], // STAT_ARMOR
             ammo: ps.stats[2], // STAT_AMMO
+            blend: [0, 0, 0, 0], // No blend from demo frame currently (need to parse svc_playerinfo more fully)
+            damageAlpha: 0, // Need to extract from renderfx/flash
+            damageIndicators: []
         };
     }
 

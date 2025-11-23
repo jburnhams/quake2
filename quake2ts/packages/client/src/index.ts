@@ -19,6 +19,7 @@ import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
 import { ClientConfigStrings } from './configStrings.js';
+import { Cycle_Crosshair } from './hud/crosshair.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -104,6 +105,11 @@ export function createClient(imports: ClientImports): ClientExports {
       console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
       // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
     }, 'Play a recorded demo');
+
+    imports.host.commands.register('crosshair', () => {
+        const index = Cycle_Crosshair();
+        console.log(`Crosshair changed to index ${index}`);
+    }, 'Cycle through available crosshairs');
   }
 
   const clientExports: ClientExports = {
@@ -177,10 +183,6 @@ export function createClient(imports: ClientImports): ClientExports {
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
         if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
 
-        // Use values from lastRendered if available (cast to PlayerState to access damage fields if they exist)
-        // If not, fall back to defaults.
-        const stateAsPlayerState = lastRendered as unknown as PlayerState;
-
         const playerState: PlayerState = {
             origin: lastRendered.origin,
             velocity: lastRendered.velocity,
@@ -189,8 +191,10 @@ export function createClient(imports: ClientImports): ClientExports {
             waterLevel: lastRendered.waterlevel,
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
-            damageIndicators: stateAsPlayerState.damageIndicators ?? [],
+            damageAlpha: lastRendered.damageAlpha ?? 0,
+            damageIndicators: lastRendered.damageIndicators ?? [],
+            blend: lastRendered.blend ?? [0, 0, 0, 0],
+            pickupIcon: lastRendered.pickupIcon
         };
 
         const playbackState = demoPlayback.getState();
