@@ -18,6 +18,8 @@ describe('T_Damage power armor integration', () => {
         target.health = 100;
         target.mass = 200;
         target.solid = Solid.Bsp;
+        target.angles = { x: 0, y: 0, z: 0 }; // Facing East (0 degrees yaw)
+        target.origin = { x: 0, y: 0, z: 0 };
         target.client = {
             inventory: createPlayerInventory(),
             weaponStates: createPlayerWeaponStates(),
@@ -29,15 +31,14 @@ describe('T_Damage power armor integration', () => {
         pickupPowerArmor(target.client!.inventory, POWER_ARMOR_ITEMS['item_power_screen'], 0);
         addAmmo(target.client!.inventory.ammo, AmmoType.Cells, 50);
 
-        // Angle check: attacker must be in front.
-        // Default target angles 0,0,0 (facing East).
-        // Attacker at 100,0,0 (East of target) -> direction from attacker to target is West.
-        // Wait, applyPowerArmor logic:
-        // const toImpact = hitPoint - origin.
-        // Screen protects front.
-        // If hitPoint is in front of player, it protects.
+        // Hit from front (attacker is East, target facing East, hitpoint in front?)
+        // Wait. If target faces East (0,0,0), their "Forward" is (+1, 0, 0).
+        // If they are hit at (50, 0, 0), the hit is IN FRONT.
+        // applyPowerArmor logic: dot(normalize(hitPoint - origin), forward).
+        // (50,0,0) - (0,0,0) = (50,0,0). Normalized = (1,0,0).
+        // Forward = (1,0,0). Dot = 1. 1 > 0.3. Protected.
 
-        const hitPoint = { x: 50, y: 0, z: 0 }; // In front
+        const hitPoint = { x: 50, y: 0, z: 0 };
         const dir = { x: -1, y: 0, z: 0 };
         const damage = 30;
 
@@ -54,13 +55,43 @@ describe('T_Damage power armor integration', () => {
             DamageMod.UNKNOWN
         );
 
-        // Power Screen: 1/3 damage absorbed. 30/3 = 10 saved.
-        // Cost: 10 cells.
-
         expect(result?.psave).toBe(10);
         expect(result?.take).toBe(20);
         expect(target.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(40);
         expect(target.health).toBe(80);
+    });
+
+    it('does NOT absorb damage with power screen from behind', () => {
+        // Give power screen and cells
+        pickupPowerArmor(target.client!.inventory, POWER_ARMOR_ITEMS['item_power_screen'], 0);
+        addAmmo(target.client!.inventory.ammo, AmmoType.Cells, 50);
+
+        // Hit from behind (attacker is West, target facing East).
+        // HitPoint at (-50, 0, 0).
+        // ( -50, 0, 0 ) - (0,0,0) = (-50,0,0). Normalized = (-1,0,0).
+        // Forward = (1,0,0). Dot = -1. -1 <= 0.3. NOT Protected.
+
+        const hitPoint = { x: -50, y: 0, z: 0 };
+        const dir = { x: 1, y: 0, z: 0 };
+        const damage = 30;
+
+        const result = T_Damage(
+            target,
+            null,
+            null,
+            dir,
+            hitPoint,
+            { x: -1, y: 0, z: 0 },
+            damage,
+            0,
+            0,
+            DamageMod.UNKNOWN
+        );
+
+        expect(result?.psave).toBe(0); // No protection
+        expect(result?.take).toBe(30);
+        expect(target.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(50); // No cells used
+        expect(target.health).toBe(70);
     });
 
     it('absorbs damage with power shield and consumes cells', () => {
@@ -85,12 +116,33 @@ describe('T_Damage power armor integration', () => {
             DamageMod.UNKNOWN
         );
 
-        // Power Shield: 2/3 damage absorbed. 30 * 2/3 = 20 saved.
-        // Cost: 20 cells * 2 = 40 cells?
-        // Wait, applyPowerArmor logic for shield (ctfMode false):
-        // damagePerCell = 2.
-        // saved = 20.
-        // powerUsed = saved / damagePerCell = 10 cells.
+        expect(result?.psave).toBe(20);
+        expect(result?.take).toBe(10);
+        expect(target.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(40);
+        expect(target.health).toBe(90);
+    });
+
+    it('absorbs damage with power shield even from behind', () => {
+        // Power shield protects all directions
+        pickupPowerArmor(target.client!.inventory, POWER_ARMOR_ITEMS['item_power_shield'], 0);
+        addAmmo(target.client!.inventory.ammo, AmmoType.Cells, 50);
+
+        const hitPoint = { x: -50, y: 0, z: 0 }; // Behind
+        const dir = { x: 1, y: 0, z: 0 };
+        const damage = 30;
+
+        const result = T_Damage(
+            target,
+            null,
+            null,
+            dir,
+            hitPoint,
+            { x: -1, y: 0, z: 0 },
+            damage,
+            0,
+            0,
+            DamageMod.UNKNOWN
+        );
 
         expect(result?.psave).toBe(20);
         expect(result?.take).toBe(10);
