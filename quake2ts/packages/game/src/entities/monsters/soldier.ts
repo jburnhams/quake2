@@ -41,7 +41,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist, MONSTER_TICK, context);
+  ai_move(self, dist);
 }
 
 // Forward declarations for moves
