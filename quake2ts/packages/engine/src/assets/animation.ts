@@ -1,6 +1,6 @@
 export interface FrameBlend {
-  readonly frame: number;
-  readonly nextFrame: number;
+  readonly frame0: number;
+  readonly frame1: number;
   readonly lerp: number;
 }
 
@@ -38,15 +38,15 @@ export function computeFrameBlend(state: AnimationState): FrameBlend {
   const framePosition = state.time / frameDuration;
 
   if (!loop && framePosition >= totalFrames) {
-    return { frame: state.sequence.end, nextFrame: state.sequence.end, lerp: 0 };
+    return { frame0: state.sequence.end, frame1: state.sequence.end, lerp: 0 };
   }
 
   const normalizedPosition = loop ? framePosition % totalFrames : Math.min(framePosition, totalFrames - 1);
   const baseFrame = Math.floor(normalizedPosition);
-  const frame = state.sequence.start + baseFrame;
-  const nextFrame = baseFrame + 1 >= totalFrames ? (loop ? state.sequence.start : state.sequence.end) : frame + 1;
+  const frame0 = state.sequence.start + baseFrame;
+  const frame1 = baseFrame + 1 >= totalFrames ? (loop ? state.sequence.start : state.sequence.end) : frame0 + 1;
   const lerp = !loop && baseFrame >= totalFrames - 1 ? 0 : normalizedPosition - baseFrame;
-  return { frame, nextFrame, lerp };
+  return { frame0, frame1, lerp };
 }
 
 export function createAnimationState(sequence: AnimationSequence): AnimationState {

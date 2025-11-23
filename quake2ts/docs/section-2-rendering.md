@@ -151,8 +151,8 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   8. Switch to 2D mode, render HUD
   - **Status**: All passes are now wired into the main render loop.
 - [x] Occlusion culling
-  - Use BSP leaf/PVS data to skip invisible geometry
-  - Frustum culling for models
+  - [x] Use BSP leaf/PVS data to skip invisible geometry
+  - [x] Frustum culling for models
 - [ ] Batching and draw call reduction
   - [x] Group faces by texture/lightmap
   - [x] Batch particle rendering

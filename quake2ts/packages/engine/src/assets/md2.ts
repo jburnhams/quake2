@@ -212,6 +212,8 @@ export interface Md2Vertex {
 export interface Md2Frame {
   readonly name: string;
   readonly vertices: readonly Md2Vertex[];
+  readonly minBounds: Vec3;
+  readonly maxBounds: Vec3;
 }
 
 export interface Md2GlCommandVertex {
@@ -387,13 +389,23 @@ function parseFrames(buffer: ArrayBuffer, header: Md2Header): Md2Frame[] {
     const name = readCString(view, 24, 16);
     const vertices: Md2Vertex[] = [];
 
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
     for (let v = 0; v < header.numVertices; v += 1) {
       const offset = 40 + v * 4;
-      const position: Vec3 = {
-        x: view.getUint8(offset) * scale.x + translate.x,
-        y: view.getUint8(offset + 1) * scale.y + translate.y,
-        z: view.getUint8(offset + 2) * scale.z + translate.z,
-      };
+      const x = view.getUint8(offset) * scale.x + translate.x;
+      const y = view.getUint8(offset + 1) * scale.y + translate.y;
+      const z = view.getUint8(offset + 2) * scale.z + translate.z;
+
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (z < minZ) minZ = z;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+      if (z > maxZ) maxZ = z;
+
+      const position: Vec3 = { x, y, z };
       const normalIndex = view.getUint8(offset + 3);
       const normal = MD2_NORMALS[normalIndex];
       if (!normal) {
@@ -402,7 +414,12 @@ function parseFrames(buffer: ArrayBuffer, header: Md2Header): Md2Frame[] {
       vertices.push({ position, normalIndex, normal });
     }
 
-    frames.push({ name, vertices });
+    frames.push({
+      name,
+      vertices,
+      minBounds: { x: minX, y: minY, z: minZ },
+      maxBounds: { x: maxX, y: maxY, z: maxZ },
+    });
   }
 
   return frames;

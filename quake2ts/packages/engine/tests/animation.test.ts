@@ -16,8 +16,8 @@ describe('Model animation helpers', () => {
     const state = createAnimationState({ name: 'attack', start: 5, end: 6, fps: 10 });
     const advanced = advanceAnimation(state, 0.075);
     const blend = computeFrameBlend(advanced);
-    expect(blend.frame).toBe(5);
-    expect(blend.nextFrame).toBe(6);
+    expect(blend.frame0).toBe(5);
+    expect(blend.frame1).toBe(6);
     expect(blend.lerp).toBeCloseTo(0.75);
   });
 
@@ -25,14 +25,14 @@ describe('Model animation helpers', () => {
     const once = createAnimationState({ name: 'pain', start: 2, end: 4, fps: 10, loop: false });
     const nearingEnd = advanceAnimation(once, 0.25);
     const nearingBlend = computeFrameBlend(nearingEnd);
-    expect(nearingBlend.frame).toBe(4);
-    expect(nearingBlend.nextFrame).toBe(4);
+    expect(nearingBlend.frame0).toBe(4);
+    expect(nearingBlend.frame1).toBe(4);
     expect(nearingBlend.lerp).toBe(0);
 
     const finished = advanceAnimation(once, 0.5);
     const finishedBlend = computeFrameBlend(finished);
-    expect(finishedBlend.frame).toBe(4);
-    expect(finishedBlend.nextFrame).toBe(4);
+    expect(finishedBlend.frame0).toBe(4);
+    expect(finishedBlend.frame1).toBe(4);
     expect(finishedBlend.lerp).toBe(0);
   });
 
