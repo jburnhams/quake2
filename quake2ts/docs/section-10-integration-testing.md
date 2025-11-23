@@ -148,9 +148,10 @@ This section covers the critical integration layer that ensures all subsystems w
   - Verify resource allocation
   - Test clean shutdown
   - Validate no resource leaks (memory, file handles, GPU resources)
-- [x] **Asset loading integration tests**
-  - Load real baseq2 PAK files (or test subset)
-  - Parse and cache BSP, models, textures, sounds
+- [] **Asset loading integration tests** (partially implemented)
+  - Load pak.pak
+  - Parse DM2 from within pak.pak successfully and process/validate content
+  - Parse BSP from within pak.pak successfully and process/validate content
   - Verify asset index registration in configstrings
   - Test cross-package asset lookup (game requests model, client renders it)
   - Validate missing asset fallbacks
@@ -221,7 +222,7 @@ This section covers the critical integration layer that ensures all subsystems w
   - Continue playing
   - Verify identical behavior after load
   - Test save file versioning
-- [x] **Full gameplay scenario tests**
+- [] **Full gameplay scenario tests**
   - **Scenario 1: Complete base1 level**
     - Load map, spawn player at start
     - Simulate input to navigate to first monster
