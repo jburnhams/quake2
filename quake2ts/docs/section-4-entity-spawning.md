@@ -100,7 +100,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 - [ ] Monster spawns (monster_*)
   - [x] `monster_soldier`: Implemented
   - [x] `monster_gunner`: Implemented
-  - [ ] `monster_berserk`: Pending
+  - [x] `monster_berserk`: Implemented
   - [ ] `monster_gladiator`: Pending
   - [x] `monster_medic`: Implemented
   - [x] `monster_mutant`: Implemented

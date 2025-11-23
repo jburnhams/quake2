@@ -117,12 +117,15 @@ export interface MonsterInfo {
   idle?: MonsterAction;
   search?: MonsterAction;
   attack?: MonsterAction;
+  melee?: MonsterAction;
   walk?: MonsterAction;
   checkattack?: (self: Entity) => boolean;
   attack_state?: number;
   lefty?: number;
   nextframe?: number;
   scale?: number;
+  melee_debounce_time?: number;
+  attack_finished?: number;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
@@ -209,6 +212,7 @@ export class Entity {
   search_time = 0;
   attack_finished_time = 0;
   pain_finished_time = 0;
+  pain_debounce_time = 0;
   trail_time = 0;
 
   groundentity: Entity | null = null;
@@ -317,6 +321,7 @@ export class Entity {
     this.search_time = 0;
     this.attack_finished_time = 0;
     this.pain_finished_time = 0;
+    this.pain_debounce_time = 0;
     this.trail_time = 0;
 
     this.groundentity = null;
@@ -406,6 +411,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'search_time', type: 'float', save: true },
   { name: 'attack_finished_time', type: 'float', save: true },
   { name: 'pain_finished_time', type: 'float', save: true },
+  { name: 'pain_debounce_time', type: 'float', save: true },
   { name: 'trail_time', type: 'float', save: true },
   { name: 'groundentity', type: 'entity', save: true },
   { name: 'groundentity_linkcount', type: 'int', save: true },

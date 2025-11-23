@@ -233,6 +233,10 @@ export class EntitySystem {
     return this.engine.modelIndex?.(model) || 0;
   }
 
+  linkentity(ent: Entity): void {
+    this.imports.linkentity(ent);
+  }
+
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
     this.imports.multicast(origin, type, event, ...args);
   }
