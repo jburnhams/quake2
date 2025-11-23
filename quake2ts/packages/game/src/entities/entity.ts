@@ -1,8 +1,10 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { PlayerClient } from '../inventory/playerInventory.js';
+import { PlayerClient, hasItem } from '../inventory/playerInventory.js';
 import type { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
+import type { RegularArmorState, PowerArmorState } from '../combat/armor.js';
+import { AmmoType } from '../inventory/ammo.js';
 
 export enum MoveType {
   None = 0,
@@ -240,6 +242,57 @@ export class Entity {
 
   client?: PlayerClient;
 
+  // Additions for combat integration
+  _regularArmor?: RegularArmorState;
+  _powerArmor?: PowerArmorState;
+
+  get regularArmor(): RegularArmorState | undefined {
+    if (this.client?.inventory.armor) {
+      // Return a proxy that writes back to inventory
+      const invArmor = this.client.inventory.armor;
+      return {
+        get armorType() { return invArmor.armorType; },
+        get armorCount() { return invArmor.armorCount; },
+        set armorCount(v) { invArmor.armorCount = v; }
+      };
+    }
+    return this._regularArmor;
+  }
+
+  set regularArmor(v: RegularArmorState | undefined) {
+      this._regularArmor = v;
+  }
+
+  get powerArmor(): PowerArmorState | undefined {
+    if (this.client) {
+        // Determine type from inventory
+        let type: 'screen' | 'shield' | null = null;
+        if (hasItem(this.client.inventory, 'item_power_shield')) {
+            type = 'shield';
+        } else if (hasItem(this.client.inventory, 'item_power_screen')) {
+            type = 'screen';
+        }
+
+        if (type) {
+             const ammo = this.client.inventory.ammo;
+             return {
+                 type,
+                 get cellCount() { return ammo.counts[AmmoType.Cells] || 0; },
+                 set cellCount(v) { ammo.counts[AmmoType.Cells] = v; },
+                 angles: this.angles,
+                 origin: this.origin,
+                 health: this.health
+             };
+        }
+        return undefined;
+    }
+    return this._powerArmor;
+  }
+
+  set powerArmor(v: PowerArmorState | undefined) {
+      this._powerArmor = v;
+  }
+
   constructor(index: number) {
     this.index = index;
   }
@@ -341,6 +394,9 @@ export class Entity {
     this.combattarget = undefined;
     this.show_hostile = 0;
     this.light_level = 0;
+
+    this._regularArmor = undefined;
+    this._powerArmor = undefined;
   }
 }
 

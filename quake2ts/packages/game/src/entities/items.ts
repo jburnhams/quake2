@@ -10,6 +10,7 @@ import {
     ARMOR_ITEMS,
     POWERUP_ITEMS,
     KEY_ITEMS,
+    POWER_ARMOR_ITEMS,
 } from '../inventory/items.js';
 import { createWeaponPickupEntity } from './items/weapons.js';
 export { createWeaponPickupEntity } from './items/weapons.js';
@@ -18,6 +19,7 @@ import { createArmorPickupEntity } from './items/armor.js';
 import { createPowerupPickupEntity } from './items/powerups.js';
 import { createKeyPickupEntity } from './items/keys.js';
 import { createAmmoPickupEntity } from './items/ammo.js';
+import { createPowerArmorPickupEntity } from './items/powerArmor.js';
 import { AmmoItemId } from '../inventory/ammo.js';
 import { Entity } from './entity.js';
 
@@ -43,6 +45,12 @@ export function registerItemSpawns(game: GameExports, registry: SpawnRegistry) {
     for (const powerupItem of Object.values(POWERUP_ITEMS)) {
         registry.register(powerupItem.id, (entity: Entity) => {
             Object.assign(entity, createPowerupPickupEntity(game, powerupItem));
+        });
+    }
+
+    for (const item of Object.values(POWER_ARMOR_ITEMS)) {
+        registry.register(item.id, (entity: Entity) => {
+            Object.assign(entity, createPowerArmorPickupEntity(game, item));
         });
     }
 

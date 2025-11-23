@@ -9,6 +9,7 @@ export type ItemMappingType =
   | { type: 'powerup'; id: PowerupId }
   | { type: 'key'; id: KeyId }
   | { type: 'health'; id: string } // Health is usually handled specially or just ignored in inventory listing
+  | { type: 'item'; id: string }
   | { type: 'null' };
 
 // Order based on item_id_t in g_local.h and itemlist in g_items.cpp
@@ -23,8 +24,8 @@ export const DEMO_ITEM_MAPPING: ItemMappingType[] = [
     { type: 'armor', id: ArmorType.JACKET },      // IT_ARMOR_SHARD (Handled as jacket in base game logic usually, or separate counter)
 
     // Power Armor
-    { type: 'powerup', id: PowerupId.PowerScreen }, // IT_ITEM_POWER_SCREEN
-    { type: 'powerup', id: PowerupId.PowerShield }, // IT_ITEM_POWER_SHIELD
+    { type: 'item', id: 'item_power_screen' }, // IT_ITEM_POWER_SCREEN
+    { type: 'item', id: 'item_power_shield' }, // IT_ITEM_POWER_SHIELD
 
     // Weapons
     { type: 'weapon', id: WeaponId.Grapple },     // IT_WEAPON_GRAPPLE
