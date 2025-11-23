@@ -1,8 +1,9 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
+import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
-import { GameImports } from '../imports.js';
+import { GameImports, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -14,7 +15,7 @@ import {
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
-import { lengthVec3, subtractVec3 } from '@quake2ts/shared';
+import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 
 interface Bounds {
@@ -121,9 +122,17 @@ export class EntitySystem {
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
-  private readonly engine: GameEngine;
+  readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
+
+  get trace(): TraceFunction {
+    return this.imports.trace;
+  }
+
+  get pointcontents(): PointContentsFunction {
+    return this.imports.pointcontents;
+  }
 
   constructor(
     engine: GameEngine,
@@ -159,6 +168,8 @@ export class EntitySystem {
           z: ent.origin.z + ent.maxs.z,
         };
       },
+      multicast: () => {},
+      unicast: () => {},
     };
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
@@ -220,6 +231,14 @@ export class EntitySystem {
 
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
+  }
+
+  multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
+    this.imports.multicast(origin, type, event, ...args);
+  }
+
+  unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
+    this.imports.unicast(ent, reliable, event, ...args);
   }
 
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {
@@ -327,6 +346,10 @@ export class EntitySystem {
         continue;
       }
 
+      if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
+        checkWater(ent, this, this.imports);
+      }
+
       const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
       switch (ent.movetype) {
         case MoveType.Toss:
@@ -344,6 +367,18 @@ export class EntitySystem {
           break;
         case MoveType.Push:
           runPush(ent, this, this.imports, frametime);
+          break;
+        case MoveType.Step:
+          runStep(ent, this, this.imports, this.gravity, frametime);
+          ent.timestamp = this.currentTimeSeconds;
+          break;
+        case MoveType.Walk:
+          // MOVETYPE_WALK is typically for clients or monsters behaving like clients
+          // If it has no client attached, treat it as STEP (Quake 2 logic)
+          if (!ent.client) {
+             runStep(ent, this, this.imports, this.gravity, frametime);
+             ent.timestamp = this.currentTimeSeconds;
+          }
           break;
       }
     }

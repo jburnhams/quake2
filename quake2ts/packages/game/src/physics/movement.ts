@@ -1,12 +1,99 @@
-import { Entity, MoveType, Solid } from '../entities/entity.js';
+import { Entity, MoveType, Solid, EntityFlags } from '../entities/entity.js';
 import { GameImports } from '../imports.js';
-import { addVec3, scaleVec3, clipVelocityVec3, Vec3 } from '@quake2ts/shared';
+import {
+  addVec3,
+  scaleVec3,
+  clipVelocityVec3,
+  Vec3,
+  subtractVec3,
+  rotatePointAroundVector
+} from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
+import { CheckGround } from '../ai/movement.js';
+import { resolveImpact, checkTriggers } from './collision.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
-    ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
-    ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    if (ent.waterlevel > 1) {
+      // In water, entities drift down slowly if dense, or up if buoyant?
+      // Quake 2 simply runs custom water physics and skips gravity.
+      // For now, let's assume they sink slowly or are neutrally buoyant.
+      // SV_Physics_Toss logic in Q2:
+      // if (ent->waterlevel > 1) G_RunObject (ent); else SV_AddGravity (ent);
+      // G_RunObject applies water friction and reduced gravity.
+
+      // We'll implement simple water drag here for now to prevent infinite acceleration
+      // and maybe slight gravity.
+      // Replicating full G_RunObject is complex, but we can do a simple version.
+
+      // Apply drag (water friction)
+      // Based on G_RunObject in g_phys.c
+      // v[i] = v[i] * 0.8 * ent->waterlevel * frametime; (Wait, this looks like it would kill velocity instantly if > 1)
+      // Checking original source:
+      // sv_phys.c SV_Physics_Toss:
+      // if (ent->waterlevel > 1) G_RunObject (ent);
+      // g_phys.c G_RunObject:
+      // 	if (ent->waterlevel > 1)
+      // 	{
+      // 		float	*v;
+      // 		int		i;
+      // 		v = ent->velocity;
+      // 		for (i=0 ; i<3 ; i++)
+      // 			v[i] = v[i] * 0.8 * ent->waterlevel * frametime;
+      // 	}
+      // This looks incorrect in C because multiplying by frametime (e.g. 0.1) repeatedly would make it tiny.
+      // But wait, G_RunObject is called every frame.
+      // Maybe it meant to subtract? Or maybe 0.8 is 1 - friction * dt?
+      // Let's assume standard friction logic:
+      // speed *= 0.8;
+
+      // Actually, looking at other sources, it might be:
+      // v[i] -= v[i] * friction * frametime;
+      //
+      // Let's implement a simple viscous drag.
+      // 0.8 per second? No, 0.8 per frame?
+
+      // Let's stick to the existing simple friction but tune it.
+      // "speed - frametime * speed * 2" means friction = 2.
+
+      const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
+      if (speed > 1) {
+        const newspeed = speed - frametime * speed * 2; // friction 2
+        if (newspeed < 0) {
+            ent.velocity = { x: 0, y: 0, z: 0 };
+        } else {
+            const scale = newspeed / speed;
+            ent.velocity = scaleVec3(ent.velocity, scale);
+        }
+      }
+
+      // Apply reduced gravity in water
+      // Q2 behavior: objects sink slowly
+      // In C code (g_phys.c G_RunObject), it calls SV_AddGravity(ent) ONLY if (ent.waterlevel <= 1).
+      // If waterlevel > 1, it applies friction (above) but DOES NOT call SV_AddGravity.
+      // However, objects should still sink?
+      // Quake 2 G_RunObject:
+      // if (ent->waterlevel > 1) ... friction ...
+      // if (ent->waterlevel <= 1) SV_AddGravity(ent);
+
+      // So in Q2, objects in water DO NOT receive gravity! They just drift with friction.
+      // Unless they have vertical velocity, they will stop sinking.
+      // But wait, Gibs sink.
+      // Maybe they have initial velocity? Or maybe 'gravity' logic is different.
+      //
+      // Let's stick to the previous simplified behavior but maybe use a small constant gravity
+      // to ensure they sink to the bottom if that's desired.
+      //
+      // Reverting the aggressive friction change (20 -> 2) to match general expectations unless specific evidence.
+
+      // 0.1 * gravity matches previous implementation's attempt to simulate buoyancy/slow sink.
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * 0.1));
+
+      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    } else {
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
+    }
   }
 }
 
@@ -26,6 +113,82 @@ export function runBouncing(ent: Entity, imports: GameImports, frametime: number
     const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, 1.01);
     ent.velocity = scaleVec3(clipped, ent.bounce);
   }
+}
+
+export function runStep(
+  ent: Entity,
+  system: EntitySystem,
+  imports: GameImports,
+  gravity: Vec3,
+  frametime: number,
+): void {
+  // SV_Physics_Step
+
+  // If not flying or swimming, apply gravity
+  const isFlying = (ent.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0;
+  if (!isFlying) {
+    // SV_AddGravity
+    ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+  }
+
+  // Move velocity
+  // SV_CheckVelocity: if velocity is small, zero it out? Not implemented in Q2 rerelease for step?
+  // SV_FlyMove
+
+  // Q2 physics loop for step movement often clips against world
+  let timeLeft = frametime;
+  let velocity = { ...ent.velocity };
+
+  // We allow a few bounces/slides
+  for (let i = 0; i < 4; i++) {
+    const move = scaleVec3(velocity, timeLeft);
+    const end = addVec3(ent.origin, move);
+
+    const trace = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);
+
+    if (trace.allsolid) {
+      // Trapped?
+      ent.velocity = { x: 0, y: 0, z: 0 };
+      return;
+    }
+
+    if (trace.startsolid) {
+      // Move up?
+      ent.velocity = { x: 0, y: 0, z: 0 };
+      return;
+    }
+
+    ent.origin = trace.endpos;
+
+    if (trace.fraction === 1) {
+      break; // Moved the whole distance
+    }
+
+    // Hit something
+    if (trace.ent) {
+      resolveImpact(ent, trace, system);
+    }
+
+    timeLeft -= timeLeft * trace.fraction;
+
+    if (trace.plane) {
+      velocity = clipVelocityVec3(velocity, trace.plane.normal, 1.0); // No overbounce for steps usually? Q2 uses OVERCLIP 1.01 usually
+      // Actually SV_FlyMove uses NO_OVERCLIP by default unless specified.
+    }
+
+    // If velocity is very small, stop?
+    const speed = velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z;
+    if (speed < 1) {
+      velocity = { x: 0, y: 0, z: 0 };
+      break;
+    }
+  }
+
+  ent.velocity = velocity;
+  imports.linkentity(ent);
+
+  checkTriggers(ent, system);
+  CheckGround(ent, system);
 }
 
 export function runProjectileMovement(ent: Entity, imports: GameImports, frametime: number): void {
@@ -183,7 +346,50 @@ export function runPush(
         z: ent.origin.z + move.z,
       };
 
-      // If standing on pusher, we might also rotate (TODO: amove support for riders)
+      // If standing on pusher, we might also rotate
+      if (ent.groundentity === pusher) {
+        // Rotation handling:
+        // 1. Calculate position relative to pusher's OLD origin
+        // 2. Rotate that relative vector by the angular move
+        // 3. Add to pusher's NEW origin (which is effectively doing translation + rotation)
+        // Note: We already applied translation (move) above, so ent.origin is currently
+        // (OldPos + move).
+        // We want: NewPos = PusherNewPos + Rotate(OldPos - PusherOldPos)
+        // Since PusherNewPos = PusherOldPos + move
+        // NewPos = PusherOldPos + move + Rotate(OldPos - PusherOldPos)
+        // Current ent.origin = OldPos + move
+        // So we need to adjust it.
+        // Let's recalculate from scratch to be safe.
+
+        const pusherOldOrigin = pushed[0].origin;
+        const pusherNewOrigin = pusher.origin; // Already moved
+        const entOldOrigin = pushed[pushed.length - 1].origin; // We just pushed it
+
+        let relPos = subtractVec3(entOldOrigin, pusherOldOrigin);
+
+        // Apply rotations. Order: Yaw (Z), Pitch (Y), Roll (X)
+        // Q2 angles are Pitch, Yaw, Roll.
+        // amove.x = pitch delta, amove.y = yaw delta, amove.z = roll delta.
+
+        if (amove.y !== 0) {
+          relPos = rotatePointAroundVector({ x: 0, y: 0, z: 1 }, relPos, amove.y);
+        }
+        if (amove.x !== 0) {
+          relPos = rotatePointAroundVector({ x: 0, y: 1, z: 0 }, relPos, amove.x);
+        }
+        if (amove.z !== 0) {
+          relPos = rotatePointAroundVector({ x: 1, y: 0, z: 0 }, relPos, amove.z);
+        }
+
+        ent.origin = addVec3(pusherNewOrigin, relPos);
+
+        // Also rotate the entity's facing angles
+        ent.angles = {
+          x: ent.angles.x + amove.x,
+          y: ent.angles.y + amove.y,
+          z: ent.angles.z + amove.z
+        };
+      }
 
       imports.linkentity(ent);
 

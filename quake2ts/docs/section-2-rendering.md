@@ -66,9 +66,9 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Tag-based attachment system (weapons attached to hand tags)
   - [x] Per-surface texture/shader assignment
 - [x] Model lighting (basic directional lighting supplied in MD2 pipeline; world samples TBD)
-  - Vertex lighting based on current position (interpolate between BSP light samples)
-  - Optional dynamic lights (from weapon fire, explosions)
-  - Ambient + directional light from worldspawn
+  - [x] Vertex lighting based on current position (interpolate between BSP light samples or fallback to floor/worldspawn ambient)
+  - [ ] Optional dynamic lights (from weapon fire, explosions)
+  - [x] Ambient + directional light from worldspawn
 
 ### Particle System
 - [x] Particle emitter framework
@@ -87,7 +87,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Muzzle flash
   - Trail effects (rocket, grenade)
 
-### Dynamic Lighting (Optional Enhancement)
+### Dynamic Lighting
 - [ ] Point light data structure
   - Position, color, intensity, radius
   - Lifetime for temporary lights (weapon fire, explosions)
@@ -122,7 +122,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] Crosshair rendering
   - [x] Damage direction indicators
   - [x] Center print messages
-  - [ ] Notification area
+  - [x] Notification area
 
 ### Camera & View System
 - [x] Camera state management
@@ -155,13 +155,13 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - Frustum culling for models
 - [ ] Batching and draw call reduction
   - [x] Group faces by texture/lightmap
-  - [ ] Batch particle rendering
+  - [x] Batch particle rendering
   - [x] Minimize state changes (state re-use, texture binding cache)
 - [x] Frame timing and diagnostics
   - [x] FPS counter
   - [x] Draw call counter (per-frame stats reported by renderer)
   - [x] Vertex/triangle counts
-  - [ ] GPU time profiling (if extensions available)
+  - [x] GPU time profiling using `EXT_disjoint_timer_query_webgl2`
 
 ### Material System
 - [ ] Material definition structure

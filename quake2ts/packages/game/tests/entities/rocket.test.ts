@@ -11,15 +11,18 @@ import * as damage from '../../src/combat/damage.js';
 describe('Rocket Projectile', () => {
     it('should have correct initial properties and explode on touch', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -31,7 +34,7 @@ describe('Rocket Projectile', () => {
 
         const player = game.entities.find(e => e.classname === 'player')!;
 
-        createRocket(game, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
+        createRocket(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
 
         const rocket = game.entities.find(e => e.classname === 'rocket')!;
         const target = game.entities.spawn();

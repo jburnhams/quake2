@@ -42,7 +42,7 @@ This section covers the physics simulation and collision detection system that f
   - Test against entity bounding boxes (see Section 4 integration)
   - Find nearest collision (minimum fraction)
   - Record hit plane, surface flags, contents
-- [ ] Trace optimization
+- [x] Trace optimization
   - BSP node traversal to limit brush tests
   - Early-out when trace is blocked
   - Trace cache for repeated queries (optional)
@@ -121,7 +121,7 @@ This section covers the physics simulation and collision detection system that f
   - Linear movement with trace per frame
   - Explode/remove on impact
   - Handle MOVETYPE_FLYMISSILE (no gravity, flies straight)
-- [ ] Platform/pusher movement
+- [x] Platform/pusher movement
   - Doors, elevators, rotating brushes
   - Push entities along with platform
   - Crush damage if blocked
@@ -133,7 +133,7 @@ This section covers the physics simulation and collision detection system that f
   - `clip(start, mins, maxs, end, passent, contentmask)` (alias for trace)
   - `inPVS(p1, p2)`
   - `inPHS(p1, p2)` (Potentially Hearable Set, for audio)
-- [ ] Add debugging/visualization hooks
+- [x] Add debugging/visualization hooks
   - Draw trace lines
   - Highlight hit planes
   - Display collision bounds
@@ -148,7 +148,7 @@ This section covers the physics simulation and collision detection system that f
 - [x] Stuck-in-solid recovery
   - `fixStuckObjectGeneric` in `shared/src/pmove/stuck.ts`
   - `snapPosition` in `shared/src/pmove/snap.ts`
-- [ ] Water/liquid transitions
+- [x] Water/liquid transitions
   - Detect when entering/exiting water
   - Trigger splash sounds/effects (via game layer)
   - Apply water physics (damping, altered gravity)
@@ -170,19 +170,20 @@ This section covers the physics simulation and collision detection system that f
 - Pointcontents with known BSP data
 
 ### Integration Tests
-- **Player movement**: Full pmove with real BSP, verify slide, jump, step climbing
+- [x] **Player movement**: Full pmove with real BSP, verify slide, jump, step climbing
   - Test on stairs, ramps, ledges, corners
   - Verify no stuck-in-geometry bugs
   - Test crouch/uncrouch in tight spaces
-- **Projectile collision**: Fire projectile, verify it hits walls/enemies correctly
-- **Water detection**: Walk into water, verify pointcontents returns CONTENTS_WATER at correct height
-- **Trigger volumes**: Walk into trigger brush, verify collision detected
-- **Platform riding**: Stand on moving platform, verify player moves with it
-- **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection
+- [x] **Projectile collision**: Fire projectile, verify it hits walls/enemies correctly
+- [x] **Water detection**: Walk into water, verify pointcontents returns CONTENTS_WATER at correct height
+- [x] **Trigger volumes**: Walk into trigger brush, verify collision detected
+- [x] **Platform riding**: Stand on moving platform, verify player moves with it
+- [x] **BSP tracing correctness**: Trace through complex BSP geometry, verify hit detection (partially covered in shared/tests/bsp and game/tests/physics/integration.test.ts)
 
 ### Performance Tests
-- **Trace throughput**: Measure traces per second on complex maps
+- [x] **Trace throughput**: Measure traces per second on complex maps
   - Target: 10,000+ traces/sec for real-time gameplay
+  - **Status**: Verified with `tests/bsp/trace.perf.test.ts`.
 - **Player movement frame time**: pmove with 20+ traces per frame should stay under 1ms
 - **Entity collision scaling**: Test with 100+ entities, measure trace overhead
 - **Spatial partitioning efficiency**: Verify BSP traversal reduces brush tests

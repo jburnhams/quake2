@@ -13,14 +13,18 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
+        const multicast = vi.fn();
+        const unicast = vi.fn();
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -43,14 +47,18 @@ describe('Grenade Launcher', () => {
 
     it('should explode on impact with an entity', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -62,7 +70,7 @@ describe('Grenade Launcher', () => {
         target.takedamage = 1;
         game.entities.finalizeSpawn(target);
 
-        projectiles.createGrenade(game, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
+        projectiles.createGrenade(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
         const grenade = game.entities.find(e => e.classname === 'grenade')!;
 
         expect(grenade).toBeDefined();
@@ -72,6 +80,6 @@ describe('Grenade Launcher', () => {
             grenade.touch(grenade, target, null, null);
         }
 
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), grenade, player, 120, player, 120, expect.anything(), DamageMod.GRENADE);
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), grenade, player, 120, player, 120, expect.anything(), DamageMod.GRENADE, expect.anything(), expect.any(Function));
     });
 });

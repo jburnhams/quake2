@@ -188,36 +188,36 @@ Expose to game layer:
 ## Testing Requirements
 
 ### Unit Tests (Standard)
-- Sound index registration and lookup
-- Volume calculation (per-sound * SFX * master)
-- Channel allocation and stealing logic
-- Attenuation mode to distance parameter mapping
+- [x] Sound index registration and lookup
+- [x] Volume calculation (per-sound * SFX * master)
+- [x] Channel allocation and stealing logic
+- [x] Attenuation mode to distance parameter mapping
 
 ### Integration Tests
-- **Sound playback**: Play sound, verify audible, correct duration
-- **Positioned sound**: Play at various positions, verify volume falloff with distance
-- **3D audio**: Move listener, verify panning (left/right) and volume changes
-- **Looping sound**: Start loop, verify continuous playback, stop, verify silent
-- **Music playback**: Start music, verify plays, stop, pause, resume
-- **Channel stealing**: Play 50 sounds simultaneously, verify oldest/lowest-priority stolen
-- **Entity tracking**: Spawn moving entity with looping sound, verify sound follows entity
-- **Volume controls**: Adjust master/SFX/music volumes, verify all sounds update
+- [x] **Sound playback**: Play sound, verify audible, correct duration
+- [x] **Positioned sound**: Play at various positions, verify volume falloff with distance
+- [x] **3D audio**: Move listener, verify panning (left/right) and volume changes
+- [x] **Looping sound**: Start loop, verify continuous playback, stop, verify silent
+- [x] **Music playback**: Start music, verify plays, stop, pause, resume
+- [x] **Channel stealing**: Play 50 sounds simultaneously, verify oldest/lowest-priority stolen
+- [x] **Entity tracking**: Spawn moving entity with looping sound, verify sound follows entity
+- [x] **Volume controls**: Adjust master/SFX/music volumes, verify all sounds update
 
 ### Performance Tests
-- **Many sounds**: 100+ simultaneous sounds, verify no crackling or distortion
-- **Memory usage**: Load all game sounds, measure memory footprint
-- **Latency**: Measure delay from `sound()` call to audible output (should be <50ms)
+- [x] **Many sounds**: 100+ simultaneous sounds, verify no crackling or distortion
+- [ ] **Memory usage**: Load all game sounds, measure memory footprint (Requires browser env)
+- [ ] **Latency**: Measure delay from `sound()` call to audible output (should be <50ms) (Requires browser env)
 
 ### Browser Compatibility Tests
-- **Autoplay policy**: Verify context resumes on user interaction (Chrome, Safari)
-- **Audio formats**: Verify WAV and OGG decode correctly on all browsers
-- **Context state**: Verify recovery from suspended/interrupted contexts (mobile)
+- [ ] **Autoplay policy**: Verify context resumes on user interaction (Chrome, Safari) (Manual)
+- [ ] **Audio formats**: Verify WAV and OGG decode correctly on all browsers (Manual)
+- [ ] **Context state**: Verify recovery from suspended/interrupted contexts (mobile) (Manual)
 
 ### Audio Quality Tests
-- **Attenuation accuracy**: Verify distance falloff matches expected curve
-- **Spatialization**: Verify 3D audio feels correct (left/right, front/back)
-- **No clipping**: Play loud sounds, verify no distortion or clipping
-- **Volume balance**: Verify weapons, monsters, ambient sounds have good relative volumes
+- [ ] **Attenuation accuracy**: Verify distance falloff matches expected curve
+- [ ] **Spatialization**: Verify 3D audio feels correct (left/right, front/back)
+- [ ] **No clipping**: Play loud sounds, verify no distortion or clipping
+- [ ] **Volume balance**: Verify weapons, monsters, ambient sounds have good relative volumes
 
 ## Notes
 - Web Audio has browser autoplay restrictions; must wait for user interaction before starting

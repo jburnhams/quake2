@@ -1,5 +1,6 @@
 import type { Vec3, CollisionPlane } from '@quake2ts/shared';
 import type { Entity } from './entities/entity.js';
+import type { ServerCommand } from '@quake2ts/shared';
 
 export interface GameTraceResult {
   allsolid: boolean;
@@ -12,17 +13,30 @@ export interface GameTraceResult {
   ent: Entity | null;
 }
 
-export interface GameImports {
-  trace(
-    start: Vec3,
-    mins: Vec3 | null,
-    maxs: Vec3 | null,
-    end: Vec3,
-    passent: Entity | null,
-    contentmask: number
-  ): GameTraceResult;
+export type TraceFunction = (
+  start: Vec3,
+  mins: Vec3 | null,
+  maxs: Vec3 | null,
+  end: Vec3,
+  passent: Entity | null,
+  contentmask: number
+) => GameTraceResult;
 
-  pointcontents(point: Vec3): number;
+export type PointContentsFunction = (point: Vec3) => number;
+
+export enum MulticastType {
+  All = 0,
+  Pvs = 1,
+  Phs = 2,
+}
+
+export interface GameImports {
+  trace: TraceFunction;
+
+  pointcontents: PointContentsFunction;
 
   linkentity(ent: Entity): void;
+
+  multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
+  unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }

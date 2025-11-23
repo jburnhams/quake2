@@ -11,15 +11,18 @@ import * as damage from '../../src/combat/damage.js';
 describe('Railgun', () => {
     it('should consume 1 slug and deal damage', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -55,15 +58,18 @@ describe('Railgun', () => {
 
     it('should penetrate entities', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -112,8 +118,8 @@ describe('Railgun', () => {
 
         fire(game, player, WeaponId.Railgun);
 
-        expect(T_Damage).toHaveBeenCalledWith(target1, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything());
-        expect(T_Damage).toHaveBeenCalledWith(target2, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything());
+        expect(T_Damage).toHaveBeenCalledWith(target1, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything(), expect.any(Function));
+        expect(T_Damage).toHaveBeenCalledWith(target2, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 150, expect.anything(), expect.anything(), expect.anything(), expect.any(Function));
         expect(trace).toHaveBeenCalledTimes(3);
     });
 });

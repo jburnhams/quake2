@@ -1,6 +1,9 @@
 import { angleMod, degToRad, vectorToYaw } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
+import type { EntitySystem } from '../entities/system.js';
+import { MoveType, EntityFlags } from '../entities/entity.js';
+import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
 import { AIFlags } from './constants.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
@@ -86,16 +89,32 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
   self.ideal_yaw = vectorToYaw(toTarget);
 }
 
+import { rangeTo } from './perception.js';
+
 export function ai_stand(self: Entity, deltaSeconds: number): void {
   changeYaw(self, deltaSeconds);
 }
 
-export function ai_walk(self: Entity, distance: number, deltaSeconds: number): void {
+export function ai_walk(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
   setIdealYawTowards(self, self.goalentity);
   changeYaw(self, deltaSeconds);
 
   if (distance !== 0) {
     walkMove(self, self.angles.y, distance);
+  }
+
+  // Check if we reached goal (path_corner logic)
+  if (self.goalentity && self.goalentity.classname === 'path_corner') {
+    const dist = rangeTo(self, self.goalentity);
+    if (dist < 64) {
+      if (self.goalentity.target) {
+        const next = context.pickTarget(self.goalentity.target);
+        if (next) {
+          self.goalentity = next;
+          self.ideal_yaw = self.angles.y;
+        }
+      }
+    }
   }
 }
 
@@ -139,4 +158,179 @@ export function ai_charge(self: Entity, distance: number, deltaSeconds: number):
   if (distance !== 0) {
     walkMove(self, self.angles.y, distance);
   }
+}
+
+export function CheckGround(self: Entity, context: EntitySystem): void {
+  if (self.movetype === MoveType.Noclip) {
+    return;
+  }
+
+  const point = {
+    x: self.origin.x,
+    y: self.origin.y,
+    z: self.origin.z + self.mins.z - 1
+  };
+
+  const trace = context.trace(self.origin, self.mins, self.maxs, point, self, MASK_MONSTERSOLID);
+
+  self.groundentity = trace.ent;
+
+  if (!self.groundentity && !trace.allsolid && !trace.startsolid && trace.fraction === 1.0) {
+      // check water
+      const content = context.pointcontents(point);
+      if (content & MASK_WATER) {
+          self.waterlevel = 1; // Simplification, real check is more complex
+          self.watertype = content;
+      } else {
+          self.waterlevel = 0;
+          self.watertype = 0;
+      }
+  }
+}
+
+export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
+  const mins = {
+    x: self.origin.x + self.mins.x,
+    y: self.origin.y + self.mins.y,
+    z: self.origin.z + self.mins.z,
+  };
+  const maxs = {
+    x: self.origin.x + self.maxs.x,
+    y: self.origin.y + self.maxs.y,
+    z: self.origin.z + self.maxs.z,
+  };
+
+  let start: MutableVec3 = { x: 0, y: 0, z: 0 };
+  let stop: MutableVec3 = { x: 0, y: 0, z: 0 };
+
+  for (let i = 0; i < 2; i++) {
+    if (i === 1) start = { x: mins.x, y: mins.y, z: 0 };
+    else start = { x: maxs.x, y: mins.y, z: 0 };
+
+    start.z = mins.z - 1;
+
+    if (context.pointcontents(start) !== 0) return true;
+
+    stop = { ...start };
+    stop.z = start.z - 60;
+
+    const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
+
+    if (trace.fraction < 1.0) return true;
+
+    if (i === 1) start = { x: mins.x, y: maxs.y, z: 0 };
+    else start = { x: maxs.x, y: maxs.y, z: 0 };
+
+    start.z = mins.z - 1;
+
+    if (context.pointcontents(start) !== 0) return true;
+
+    stop = { ...start };
+    stop.z = start.z - 60;
+
+    const trace2 = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
+
+    if (trace2.fraction < 1.0) return true;
+  }
+
+  return false;
+}
+
+export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
+  // If we're not step/toss/bounce/fly, we can't move normally
+  // but M_walkmove is usually called for monsters.
+  // Original Quake 2: M_walkmove
+
+  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
+      if (!self.groundentity && self.waterlevel === 0) {
+          return false;
+      }
+  }
+
+  const delta = yawVector(yawDegrees, distance);
+
+  if ((self.monsterinfo.aiflags & AIFlags.NoStep) !== 0 &&
+      (self.monsterinfo.aiflags & AIFlags.Pathing) !== 0) {
+      // In pathing mode with nostep, we just verify we can go there?
+      // Actually original code SV_StepDirection handles logic.
+  }
+
+  const dest = {
+      x: self.origin.x + delta.x,
+      y: self.origin.y + delta.y,
+      z: self.origin.z + delta.z
+  };
+
+  // Trace to destination
+  const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
+
+  if (trace.fraction < 1.0) {
+      return false;
+  }
+
+  // Set new position
+  const oldOrigin = { ...self.origin };
+  (self.origin as MutableVec3).x = dest.x;
+  (self.origin as MutableVec3).y = dest.y;
+  (self.origin as MutableVec3).z = dest.z;
+
+  // Check for ledges if not flying/swimming
+  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
+     if (!M_CheckBottom(self, context)) {
+         // Revert
+         (self.origin as MutableVec3).x = oldOrigin.x;
+         (self.origin as MutableVec3).y = oldOrigin.y;
+         (self.origin as MutableVec3).z = oldOrigin.z;
+         return false;
+     }
+  }
+
+  // Update ground status
+  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
+    CheckGround(self, context);
+  }
+
+  return true;
+}
+
+export function SV_StepDirection(self: Entity, yaw: number, dist: number, context: EntitySystem): boolean {
+  for (let i = 0; i <= 90; i += 45) {
+    if (M_walkmove(self, yaw + i, dist, context)) {
+      if (i !== 0) {
+        self.ideal_yaw = angleMod(yaw + i);
+      }
+      return true;
+    }
+    if (i !== 0) {
+      if (M_walkmove(self, yaw - i, dist, context)) {
+        self.ideal_yaw = angleMod(yaw - i);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function SV_NewChaseDir(self: Entity, enemy: Entity | null, dist: number, context: EntitySystem): void {
+  if (!enemy) return;
+
+  const olddir = angleMod((self.ideal_yaw - self.angles.y));
+  const turnaround = Math.abs(olddir - 180) < 20;
+
+  const dx = enemy.origin.x - self.origin.x;
+  const dy = enemy.origin.y - self.origin.y;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) self.ideal_yaw = 0;
+      else self.ideal_yaw = 180;
+  } else {
+      if (dy > 0) self.ideal_yaw = 90;
+      else self.ideal_yaw = 270;
+  }
+
+  if (turnaround) {
+      self.ideal_yaw = angleMod(self.ideal_yaw + 180);
+  }
+
+  SV_StepDirection(self, self.ideal_yaw, dist, context);
 }

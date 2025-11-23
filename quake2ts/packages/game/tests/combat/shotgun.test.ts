@@ -12,15 +12,18 @@ import { angleVectors } from '@quake2ts/shared';
 describe('Shotgun', () => {
     it('should consume 1 shell and fire 12 pellets', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -61,6 +64,6 @@ describe('Shotgun', () => {
         }
         expect(allSame).toBe(false);
 
-        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 4, 1, 16, 2);
+        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 4, 1, 16, 2, expect.any(Function));
     });
 });

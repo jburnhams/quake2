@@ -116,8 +116,8 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Play pickup sound
   - Show pickup message on HUD ("You got the Shotgun")
   - Remove item from world or set respawn timer (deathmatch)
-- [ ] Item respawn (for deathmatch, not needed for single-player initially)
-  - After pickup, set respawn timer
+- [x] Item respawn (for deathmatch, not needed for single-player initially)
+  - After pickup, set respawn timer (conditional on deathmatch flag)
   - Respawn item after delay
   - Respawn effect (particles, sound)
 
@@ -218,18 +218,18 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Play impact sound
 
 ### Combat Effects
-- [ ] Muzzle flash
+- [x] Muzzle flash
   - Temporary light at weapon position
   - Particle effect
   - Duration: 1-2 frames
-- [ ] Impact effects
+- [x] Impact effects
   - Bullet impacts: sparks, dust puff
   - Blood splatter: red particles, decals (optional)
   - Explosion effects: fire, smoke, shockwave
-- [ ] Tracer rounds (optional, for machinegun/chaingun)
+- [x] Tracer rounds (optional, for machinegun/chaingun)
   - Draw line from muzzle to impact
   - Fades quickly
-- [ ] Gibs (gore)
+- [x] Gibs (gore)
   - When entity takes massive damage, spawn gibs
   - Giblets (small chunks) vs. full gibs (head, limbs)
   - Gibs are physics entities (MOVETYPE_TOSS), bounce and slide
@@ -245,13 +245,13 @@ This section covers the combat system (damage, knockback, weapon firing), invent
 - [x] **Blaster**: Weak projectile, infinite ammo, last resort weapon
 
 ### Death & Respawn
-- [ ] Player death
+- [x] Player death
   - Trigger die callback
   - Drop weapon (optional, DM only)
   - Set deadflag, stop movement
   - Death animation
   - Respawn timer (or level end in SP)
-- [ ] Monster death
+- [x] Monster death
   - Trigger die callback
   - Death animation
   - Become non-solid (SOLID_NOT)
@@ -260,7 +260,7 @@ This section covers the combat system (damage, knockback, weapon firing), invent
   - Sink into ground after delay (optional cleanup)
 
 ### Obituaries (Messages)
-- [ ] Generate death messages
+- [x] Generate death messages
   - "Player killed Monster with Shotgun"
   - "Monster killed Player"
   - "Player died" (falling, drowning, etc.)

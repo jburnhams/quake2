@@ -18,6 +18,8 @@ describe('Callback Serialization', () => {
       trace: () => ({} as any),
       pointcontents: () => 0,
       linkentity: () => {},
+      multicast: () => {},
+      unicast: () => {},
     };
 
     const entitySystem = new EntitySystem(mockEngine, mockImports, { x: 0, y: 0, z: 0 }, 1, callbackRegistry);

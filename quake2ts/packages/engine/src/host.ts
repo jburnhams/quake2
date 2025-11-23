@@ -24,6 +24,7 @@ export interface GameRenderSample<FrameState = unknown> extends RenderContext {
 
 import { UserCommand } from '@quake2ts/shared';
 import { Camera } from './render/camera.js';
+import { CommandRegistry } from './commands.js';
 
 export interface ClientRenderer<FrameState = unknown> {
   init(initial?: GameFrameResult<FrameState>): void;
@@ -44,6 +45,7 @@ export class EngineHost<FrameState = unknown> {
   private latestFrame?: GameFrameResult<FrameState>;
   private started = false;
   private latestCommand?: UserCommand;
+  readonly commands = new CommandRegistry();
 
   constructor(
     private readonly game: GameSimulation<FrameState>,
@@ -64,8 +66,14 @@ export class EngineHost<FrameState = unknown> {
   start(): void {
     if (this.started) return;
 
-    this.latestFrame = this.game.init(this.startTimeMs) ?? this.latestFrame;
-    this.client?.init(this.latestFrame);
+    try {
+      this.latestFrame = this.game.init(this.startTimeMs) ?? this.latestFrame;
+      this.client?.init(this.latestFrame);
+    } catch (error) {
+      this.game.shutdown();
+      this.client?.shutdown();
+      throw error;
+    }
 
     this.started = true;
     this.loop.start();

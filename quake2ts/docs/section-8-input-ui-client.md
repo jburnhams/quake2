@@ -94,29 +94,29 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 All HUD elements use renderer Draw_* functions (Section 2).
 
 - [ ] **Status bar** (bottom of screen)
-  - Health number (large, red if low)
-  - Armor number and icon
-  - Ammo count for current weapon
-  - Weapon icon
-  - Pickup item icon (recently picked up item)
-  - Key icons (if keys collected)
-  - Powerup timers (quad damage, invulnerability, etc.)
+  - [x] Health number (large, red if low)
+  - [x] Armor number and icon
+  - [x] Ammo count for current weapon
+  - [x] Weapon icon
+  - [ ] Pickup item icon (recently picked up item)
+  - [x] Key icons (if keys collected)
+  - [x] Powerup timers (quad damage, invulnerability, etc.)
   - Layout varies by HUD style (original, expanded)
 - [ ] **Crosshair**
-  - Centered on screen
-  - Multiple styles selectable
-  - Color customizable
-  - Size customizable
-- [ ] **Center print messages**
-  - Large text in center of screen
-  - Used for important messages ("You need the blue key")
-  - Auto-fade after a few seconds
-- [ ] **Notification area** (top-right or chat area)
-  - Scrolling text messages
-  - Pickup messages ("You got the Shotgun")
-  - Objective messages
-  - Obituaries (in multiplayer)
-  - Fade old messages
+  - [x] Centered on screen
+  - [ ] Multiple styles selectable
+  - [ ] Color customizable
+  - [ ] Size customizable
+- [x] **Center print messages**
+  - [x] Large text in center of screen
+  - [x] Used for important messages ("You need the blue key")
+  - [x] Auto-fade after a few seconds
+- [x] **Notification area** (top-right or chat area)
+  - [x] Scrolling text messages
+  - [x] Pickup messages ("You got the Shotgun")
+  - [x] Objective messages
+  - [x] Obituaries (in multiplayer)
+  - [x] Fade old messages
 - [ ] **Damage indicators**
   - Screen flash when taking damage
   - Directional: show which direction damage came from

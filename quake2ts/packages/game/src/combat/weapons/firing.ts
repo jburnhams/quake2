@@ -9,12 +9,29 @@ import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import { T_Damage } from '../damage.js';
-import { ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator } from '@quake2ts/shared';
+import { ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity } from '@quake2ts/shared';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
+import { MulticastType } from '../../imports.js';
 
 const random = createRandomGenerator();
+
+// Quake 2 Muzzle Flash Constants (from g_local.h / q_shared.h)
+const MZ_BLASTER = 0;
+const MZ_MACHINEGUN = 1;
+const MZ_SHOTGUN = 2;
+const MZ_CHAINGUN1 = 3;
+const MZ_CHAINGUN2 = 4;
+const MZ_CHAINGUN3 = 5;
+const MZ_RAILGUN = 6;
+const MZ_ROCKET = 7;
+const MZ_GRENADE = 8;
+const MZ_LOGIN = 9;
+const MZ_LOGOUT = 10;
+const MZ_SSHOTGUN = 11;
+const MZ_BFG = 12;
+const MZ_HYPERBLASTER = 13;
 
 function fireHitscan(game: GameExports, player: Entity, forward: any, damage: number, knockback: number, mod: DamageMod) {
     const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
@@ -38,20 +55,30 @@ function fireHitscan(game: GameExports, player: Entity, forward: any, damage: nu
             damage,
             knockback,
             DamageFlags.BULLET,
-            mod
+            mod,
+            game.multicast
         );
+    } else {
+        // Wall impact
+        if (trace.plane) {
+            game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+        }
     }
 }
 
 function fireRailgun(game: GameExports, player: Entity, forward: any, damage: number, knockback: number) {
-    let start = { ...player.origin };
+    const start = { ...player.origin }; // Keep original start for trail
+    let currentStart = { ...player.origin };
     const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
     let ignore = player;
     let count = 0;
+    let finalEnd = end;
 
     while (count < 16) { // Safety break
         count++;
-        const trace = game.trace(start, null, null, end, ignore, 0);
+        const trace = game.trace(currentStart, null, null, end, ignore, 0);
+
+        finalEnd = trace.endpos;
 
         if (trace.fraction >= 1.0) {
             break;
@@ -68,21 +95,34 @@ function fireRailgun(game: GameExports, player: Entity, forward: any, damage: nu
                 damage,
                 knockback,
                 DamageFlags.ENERGY,
-                DamageMod.RAILGUN
+                DamageMod.RAILGUN,
+                game.multicast
             );
         }
 
         // Continue trace from hit point
         ignore = trace.ent as Entity;
-        start = trace.endpos;
+        currentStart = trace.endpos;
 
-        // If we hit the world or something we can't ignore properly, we might loop or stop.
-        // In Quake 2, it ignores the entity it just hit and continues.
-        // But if we hit world geometry (not an entity or ent 0), we stop.
+        // If we hit world geometry, we stop.
         if (!trace.ent || trace.ent === game.entities.world) {
             break;
         }
     }
+
+    // Railgun trail
+    // gi.WriteByte (svc_temp_entity);
+    // gi.WriteByte (TE_RAILTRAIL);
+    // gi.WritePosition (start);
+    // gi.WritePosition (tr.endpos);
+    // gi.multicast (start, MULTICAST_PHS);
+
+    // Adjust start to eye position? Usually gun height.
+    // Assuming player.origin is good enough for now or we should add viewheight.
+    const trailStart = { ...start };
+    trailStart.z += player.viewheight - 8; // Rough adjustment
+
+    game.multicast(start, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, trailStart, finalEnd);
 }
 
 export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
@@ -112,6 +152,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_shotgun_fire
             inventory.ammo.counts[AmmoType.Shells]--;
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SHOTGUN);
+
             for (let i = 0; i < 12; i++) {
                 const spread = addVec3(scaleVec3(right, random.crandom() * 500), scaleVec3(up, random.crandom() * 500));
                 const dir = addVec3(forward, spread);
@@ -136,8 +178,18 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                         4,
                         1,
                         DamageFlags.BULLET,
-                        DamageMod.SHOTGUN
+                        DamageMod.SHOTGUN,
+                        game.multicast
                     );
+                } else if (trace.plane) {
+                     // Impact effect for shotgun pellets?
+                     // Quake 2 doesn't spawn 12 sparks, maybe just some?
+                     // Original: fire_shotgun calls fire_lead which calls fire_hit
+                     // fire_hit calls CheckTrace -> if !takedamage, writes TE_GUNSHOT
+                     // Don't spam multicast for shotgun pellets
+                     if (random.frandom() > 0.8) {
+                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                     }
                 }
             }
             break;
@@ -148,6 +200,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_sshotgun_fire
             inventory.ammo.counts[AmmoType.Shells] -= 2;
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
+
             for (let i = 0; i < 20; i++) {
                 const spread = addVec3(scaleVec3(right, random.crandom() * 700), scaleVec3(up, random.crandom() * 700));
                 const dir = addVec3(forward, spread);
@@ -172,8 +226,13 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                         6,
                         1,
                         DamageFlags.BULLET,
-                        DamageMod.SSHOTGUN
+                        DamageMod.SSHOTGUN,
+                        game.multicast
                     );
+                } else if (trace.plane) {
+                     if (random.frandom() > 0.9) {
+                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                     }
                 }
             }
             break;
@@ -184,6 +243,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_machinegun_fire
             inventory.ammo.counts[AmmoType.Bullets]--;
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_MACHINEGUN);
             fireHitscan(game, player, forward, 8, 1, DamageMod.MACHINEGUN);
             break;
         }
@@ -193,6 +253,14 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_chaingun_fire
             inventory.ammo.counts[AmmoType.Bullets]--;
+            // Chaingun has rotating flash MZ_CHAINGUN1, 2, 3
+
+            const chaingunState = getWeaponState(player.client.weaponStates, WeaponId.Chaingun);
+            const shots = chaingunState.shots || 0;
+            chaingunState.shots = shots + 1;
+
+            const flash = MZ_CHAINGUN1 + (shots % 3);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
             fireHitscan(game, player, forward, 8, 1, DamageMod.CHAINGUN);
             break;
         }
@@ -202,6 +270,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_railgun_fire
             inventory.ammo.counts[AmmoType.Slugs]--;
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_RAILGUN);
             fireRailgun(game, player, forward, 150, 1);
             break;
         }
@@ -211,12 +280,14 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_hyperblaster_fire
             inventory.ammo.counts[AmmoType.Cells]--;
-            createBlasterBolt(game, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
+            createBlasterBolt(game.entities, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
             break;
         }
         case WeaponId.Blaster: {
             // Ref: g_weapon.c -> weapon_blaster_fire
-            createBlasterBolt(game, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
+            createBlasterBolt(game.entities, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
             break;
         }
 
@@ -226,7 +297,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_rocketlauncher_fire
             inventory.ammo.counts[AmmoType.Rockets]--;
-            createRocket(game, player, player.origin, forward, 100, 650);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET);
+            createRocket(game.entities, player, player.origin, forward, 100, 650);
             break;
         }
         case WeaponId.GrenadeLauncher: {
@@ -235,7 +307,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_grenadelauncher_fire
             inventory.ammo.counts[AmmoType.Grenades]--;
-            createGrenade(game, player, player.origin, forward, 120, 600);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
+            createGrenade(game.entities, player, player.origin, forward, 120, 600);
             break;
         }
         case WeaponId.BFG10K: {
@@ -244,7 +317,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             }
             // Ref: g_weapon.c -> weapon_bfg_fire
             inventory.ammo.counts[AmmoType.Cells] -= 50;
-            createBfgBall(game, player, player.origin, forward, 200, 400);
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BFG);
+            createBfgBall(game.entities, player, player.origin, forward, 200, 400);
             break;
         }
     }

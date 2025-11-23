@@ -10,6 +10,7 @@ export enum DamageFlags {
   NO_REG_ARMOR = 0x00000080,
   NO_POWER_ARMOR = 0x00000100,
   NO_INDICATOR = 0x00000200,
+  NO_DAMAGE_EFFECTS = 0x00000400, // Custom flag to suppress blood/sparks
 }
 
 export function hasAnyDamageFlag(flags: number, mask: DamageFlags): boolean {

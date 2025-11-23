@@ -10,6 +10,13 @@ vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() 
 vi.mock('../../src/render/skybox.js', () => ({ SkyboxPipeline: vi.fn() }));
 vi.mock('../../src/render/md2Pipeline.js', () => ({ Md2Pipeline: vi.fn() }));
 vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
+// Mock CollisionVisRenderer as it is also instantiated in createRenderer
+vi.mock('../../src/render/collisionVis.js', () => ({
+    CollisionVisRenderer: vi.fn(() => ({
+        render: vi.fn(),
+        clear: vi.fn(),
+    })),
+}));
 
 const mockMd3Pipeline = {
     bind: vi.fn(),
@@ -47,6 +54,13 @@ describe('Renderer', () => {
             disable: vi.fn(),
             enable: vi.fn(),
             depthMask: vi.fn(),
+            getExtension: vi.fn().mockReturnValue({}), // Mock extension support for Profiler
+            createQuery: vi.fn().mockReturnValue({}),
+            beginQuery: vi.fn(),
+            endQuery: vi.fn(),
+            deleteQuery: vi.fn(),
+            getQueryParameter: vi.fn(),
+            getParameter: vi.fn(),
             canvas: { width: 640, height: 480 },
         } as unknown as WebGL2RenderingContext;
     });

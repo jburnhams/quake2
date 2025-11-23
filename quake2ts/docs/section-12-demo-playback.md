@@ -16,6 +16,9 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
 - ✅ Implemented `DemoReader` in `packages/engine/src/demo/demoReader.ts` for `.dm2` container format.
 - ✅ Implemented `DemoPlaybackController` in `packages/engine/src/demo/playback.ts` for timing and loop control.
 - ✅ Exposed `DemoPlaybackController` in `packages/client` exports.
+- ✅ Implemented `ClientNetworkHandler` in `packages/client/src/demo/handler.ts` to handle parsed messages and update client state.
+- ✅ Implemented item inventory mapping in `packages/client/src/demo/itemMapping.ts`.
+- ✅ Implemented `CommandRegistry` in `packages/engine/src/commands.ts` and added `playdemo` command.
 
 ## Tasks Remaining
 
@@ -53,18 +56,18 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
     - Support playback speed control (0.5x, 1x, 2x, Max).
 
 ### 4. Client Integration (`packages/client`)
-- [ ] Abstract the "Network Source" in the client.
+- [x] Abstract the "Network Source" in the client.
   - Current client likely pulls from a simulated local server or future WebSocket.
   - Interface `NetworkSource` should support both "Live Connection" and "Demo Stream".
-- [ ] Hook up `DemoPlaybackController` as a `NetworkSource`.
-- [ ] Ensure `CL_ParseServerMessage` logic (or its TypeScript equivalent) effectively handles the parsed packets to update:
+- [x] Hook up `DemoPlaybackController` as a `NetworkSource` (via `ClientNetworkHandler` integration in `render` loop).
+- [x] Ensure `CL_ParseServerMessage` logic (or its TypeScript equivalent) effectively handles the parsed packets to update:
   - `cl.configstrings`
   - `cl.entities` (via delta decompression against baselines)
   - `cl.lightstyles`
   - `cl.sound_precache`
 
 ### 5. UI & Controls
-- [ ] Add `playdemo <filename>` console command.
+- [x] Add `playdemo <filename>` console command.
 - [ ] (Optional) Simple on-screen playback controls (Play/Pause/Stop/Scrub).
 
 ## Testing Requirements

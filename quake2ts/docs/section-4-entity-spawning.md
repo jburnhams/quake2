@@ -89,10 +89,16 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - `SP_misc_teleporter`, `SP_misc_teleporter_dest`
   - `SP_misc_explobox`, `SP_misc_banner`: Decorative items
   - `SP_misc_deadsoldier`, `SP_misc_gib_*`: Dead bodies, gibs
-- [ ] Item spawns (item_*, ammo_*, weapon_*)
-  - See Section 5 for details; stub here initially
-- [ ] Monster spawns (monster_*)
-  - See Section 6 for details; stub here initially
+- [x] Item spawns (item_*, ammo_*, weapon_*)
+  - [x] `ammo_*`: Shells, bullets, grenades, rockets, cells, slugs
+  - [x] `weapon_*`: All base weapons
+  - [x] `item_health_*`: Small, medium, large, mega
+  - [x] `item_armor_*`: Shard, jacket, combat, body
+  - [x] `key_*`: Base keys
+  - [x] `item_quad`, `item_invulnerability`, etc.
+- [x] Monster spawns (monster_*)
+  - [x] `monster_soldier`: Full implementation
+  - [] Spawn or stub all other base monsters (to prevent map load errors)
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
@@ -142,8 +148,8 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Apply velocity to origin (simple integration)
   - Handle different movetypes:
     - [x] MOVETYPE_NONE: Static, no movement
-    - [ ] MOVETYPE_WALK: Player/monster, uses pmove or AI movement
-    - [ ] MOVETYPE_STEP: Monster stepping (deprecated, use WALK)
+    - [x] MOVETYPE_WALK: Player/monster, uses pmove or AI movement (delegates to runStep if no client)
+    - [x] MOVETYPE_STEP: Monster stepping (uses runStep)
     - [x] MOVETYPE_TOSS: Gravity + bouncing (items, gibs)
     - [x] MOVETYPE_BOUNCE: Higher bounce (grenades)
     - [x] MOVETYPE_FLY: No gravity, flies straight (rockets)

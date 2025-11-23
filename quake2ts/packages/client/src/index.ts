@@ -6,6 +6,8 @@ import {
   Camera,
   Renderer,
   DemoPlaybackController,
+  PlaybackState,
+  EngineHost,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
@@ -13,7 +15,11 @@ import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
 import { Draw_Hud, Init_Hud } from './hud.js';
+import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
+import { ClientNetworkHandler } from './demo/handler.js';
+import { ClientConfigStrings } from './configStrings.js';
+
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
   GamepadLike,
@@ -35,51 +41,104 @@ export {
   type PredictionState,
 } from './prediction.js';
 export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from './view-effects.js';
+export { ClientConfigStrings } from './configStrings.js';
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
+  readonly host?: EngineHost;
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
+  // Core Engine Hooks
   predict(command: UserCommand): PredictionState;
+  ParseCenterPrint(msg: string): void;
+  ParseNotify(msg: string): void;
+  ParseConfigString(index: number, value: string): void;
+
+  // State Access
   readonly prediction: ClientPrediction;
   readonly lastRendered?: PredictionState;
   readonly view: ViewEffects;
   readonly lastView?: ViewSample;
+  readonly configStrings: ClientConfigStrings;
   camera?: Camera;
+
+  // Demo Playback
   demoPlayback: DemoPlaybackController;
+  demoHandler: ClientNetworkHandler;
+
+  // cgame_export_t equivalents (if explicit names required)
+  Init(initial?: GameFrameResult<PredictionState>): void;
+  Shutdown(): void;
+  DrawHUD(stats: FrameRenderStats, timeMs: number): void;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
+  const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
+  const demoHandler = new ClientNetworkHandler(imports);
+
+  // Hook up message system to demo handler
+  demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+  demoHandler.onPrint = (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
+
+  const configStrings = new ClientConfigStrings();
+
+  demoPlayback.setHandler(demoHandler);
+
   let latestFrame: GameFrameResult<PredictionState> | undefined;
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
 
-  return {
+  if (imports.host?.commands) {
+    imports.host.commands.register('playdemo', (args) => {
+      if (args.length < 1) {
+        console.log('usage: playdemo <filename>');
+        return;
+      }
+      const filename = args[0];
+      console.log(`playdemo: ${filename}`);
+      console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
+      // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
+    }, 'Play a recorded demo');
+  }
+
+  const clientExports: ClientExports = {
     init(initial) {
+      this.Init(initial);
+    },
+
+    Init(initial) {
       latestFrame = initial;
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
     },
+
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
     },
-    render(sample: GameRenderSample<PredictionState>): UserCommand {
-      if (sample.latest?.state) {
-        prediction.setAuthoritative(sample.latest);
-        latestFrame = sample.latest;
-      }
 
-      if (sample.previous?.state && sample.latest?.state) {
-        lastRendered = interpolatePredictionState(sample.previous.state, sample.latest.state, sample.alpha);
+    render(sample: GameRenderSample<PredictionState>): UserCommand {
+      const playbackState = demoPlayback.getState();
+
+      if (playbackState === PlaybackState.Playing) {
+          lastRendered = demoHandler.getPredictionState();
       } else {
-        lastRendered = sample.latest?.state ?? sample.previous?.state ?? prediction.getPredictedState();
+          if (sample.latest?.state) {
+            prediction.setAuthoritative(sample.latest);
+            latestFrame = sample.latest;
+          }
+
+          if (sample.previous?.state && sample.latest?.state) {
+            lastRendered = interpolatePredictionState(sample.previous.state, sample.latest.state, sample.alpha);
+          } else {
+            lastRendered = sample.latest?.state ?? sample.previous?.state ?? prediction.getPredictedState();
+          }
       }
 
       const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
@@ -106,6 +165,21 @@ export function createClient(imports: ClientImports): ClientExports {
           fps: 0,
           vertexCount: 0,
         };
+        const timeMs = sample.latest?.timeMs ?? 0;
+
+        // Call DrawHUD
+        this.DrawHUD(stats, timeMs);
+      }
+
+      return command;
+    },
+
+    DrawHUD(stats: FrameRenderStats, timeMs: number) {
+        if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
+
+        // Use values from lastRendered if available (cast to PlayerState to access damage fields if they exist)
+        // If not, fall back to defaults.
+        const stateAsPlayerState = lastRendered as unknown as PlayerState;
 
         const playerState: PlayerState = {
             origin: lastRendered.origin,
@@ -115,21 +189,39 @@ export function createClient(imports: ClientImports): ClientExports {
             waterLevel: lastRendered.waterlevel,
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: 0,
-            damageIndicators: [],
+            damageAlpha: stateAsPlayerState.damageAlpha ?? 0,
+            damageIndicators: stateAsPlayerState.damageIndicators ?? [],
         };
-        Draw_Hud(imports.engine.renderer, playerState, lastRendered.client, lastRendered.health, lastRendered.armor, lastRendered.ammo, stats);
-      }
 
-      void imports;
-      void sample;
+        const playbackState = demoPlayback.getState();
 
-      return command;
+        // Use demo time if playing, else game time
+        const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
+            ? (demoHandler.latestFrame?.serverFrame || 0) * 100 // Approximate
+            : timeMs;
+
+        Draw_Hud(
+          imports.engine.renderer,
+          playerState,
+          lastRendered.client,
+          lastRendered.health,
+          lastRendered.armor,
+          lastRendered.ammo,
+          stats,
+          messageSystem,
+          hudTimeMs
+        );
     },
+
     shutdown() {
+      this.Shutdown();
+    },
+
+    Shutdown() {
       latestFrame = undefined;
       lastRendered = undefined;
     },
+
     get prediction(): ClientPrediction {
       return prediction;
     },
@@ -145,6 +237,21 @@ export function createClient(imports: ClientImports): ClientExports {
     get camera(): Camera | undefined {
       return camera;
     },
-    demoPlayback
+    demoPlayback,
+    ParseCenterPrint(msg: string) {
+      const timeMs = latestFrame?.timeMs ?? 0;
+      messageSystem.addCenterPrint(msg, timeMs);
+    },
+    ParseNotify(msg: string) {
+      const timeMs = latestFrame?.timeMs ?? 0;
+      messageSystem.addNotify(msg, timeMs);
+    },
+    ParseConfigString(index: number, value: string) {
+      configStrings.set(index, value);
+    },
+    demoHandler,
+    configStrings
   };
+
+  return clientExports;
 }

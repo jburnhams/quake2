@@ -11,15 +11,18 @@ import * as damage from '../../src/combat/damage.js';
 describe('BFG Ball Projectile', () => {
     it('should have correct initial properties and deal damage on think', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -37,7 +40,7 @@ describe('BFG Ball Projectile', () => {
 
         trace.mockReturnValue({ ent: target });
 
-        createBfgBall(game, player, player.origin, { x: 1, y: 0, z: 0 }, 200, 400);
+        createBfgBall(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 200, 400);
 
         const bfgBall = game.entities.find(e => e.classname === 'bfg_ball')!;
 

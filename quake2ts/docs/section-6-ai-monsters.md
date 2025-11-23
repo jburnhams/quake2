@@ -20,6 +20,8 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ AI State Machine (`M_MoveFrame`, `monster_think`) implementation
 - ✅ Basic Soldier/Guard monster entity implementation (`monster_soldier`)
 - ✅ Unit tests for monster spawning, state transitions, and animation looping
+- ✅ AI Movement helpers: `CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`
+- ✅ Implemented `pain` and `die` callbacks for Soldier and Gunner, including gibbing logic.
 
 ## Tasks Remaining
 
@@ -62,11 +64,11 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - In future multiplayer: closest, weakest, or attacker
 
 ### Movement System
-- [ ] Ground movement
-  - Walk/run toward goal (enemy, waypoint)
-  - Turn gradually (yaw_speed limit)
-  - Use trace to avoid walking off cliffs (or intentionally jump)
-  - Step up stairs, slide on slopes
+- [x] Ground movement
+  - [x] Walk/run toward goal (enemy, waypoint)
+  - [x] Turn gradually (yaw_speed limit)
+  - [x] Use trace to avoid walking off cliffs (or intentionally jump)
+  - [x] Step up stairs, slide on slopes
 - [ ] Flying movement (for flying monsters: Flyer, Icarus)
   - 3D movement, no ground constraint
   - Altitude control (rise, descend, hover)
@@ -122,7 +124,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Faster machinegun fire
 - [ ] **Enforcer** (chaingun soldier)
   - Chaingun attack, high fire rate
-- [ ] **Gunner**
+- [x] **Gunner**
   - Dual attack: machinegun and grenade launcher
   - Choose based on range
 - [ ] **Infantry**
@@ -179,14 +181,13 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Swimming, melee bite
 
 ### Monster Animations
-- [ ] Animation frame sequences
+- [x] Animation frame sequences
   - Idle, walk, run, attack, pain, death
-  - Multiple death animations for variety
-  - Frame durations, transition timing
-- [ ] Animation controller
+  - (Partially done for Soldier/Gunner)
+- [x] Animation controller
   - Set model frame based on current state
   - Loop or one-shot animations
-  - Callbacks when animation completes (e.g., after death animation, become corpse)
+  - Callbacks when animation completes
 - [ ] Sync attacks with animation
   - Damage applied at specific frame (e.g., when claw swipes)
   - Muzzle flash at specific frame (for gun monsters)
@@ -245,6 +246,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] `visible`: Check if entity is visible
 - [x] `infront`: Check if entity is in front hemisphere
 - [x] `range`: Check distance to entity (melee, short, medium, long)
+- [x] `CheckGround`: Check if on ground
+- [x] `M_CheckBottom`: Check for ledges
+- [x] `M_walkmove`: Movement with collision
+- [x] `SV_StepDirection`: Try different step directions
+- [x] `SV_NewChaseDir`: Chase enemy
 
 Recent work:
 - Added perception coverage for rerelease LOS/FOV/range rules with unit tests that lock in ambush cones, viewheight trace masks,
@@ -258,13 +264,16 @@ Recent work:
 - Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
 - Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
 - Added comprehensive tests for monster spawning, frame advancement, and animation looping.
+- Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
+- Implemented `monster_gunner` with machinegun and grenade launcher attacks, ensuring correct spawn properties and state transitions.
+- Implemented pain and death callbacks for `monster_soldier` and `monster_gunner`, including animation states and gibbing.
 
 ### Pain/Death Callbacks
-- [ ] Pain callback
+- [x] Pain callback
   - Play pain sound, animation
   - Interrupt current action (brief stun)
   - Increase aggression or flee (based on health)
-- [ ] Death callback
+- [x] Death callback
   - Play death animation and sound
   - Become non-solid (SOLID_NOT)
   - Drop items (rare, some monsters drop ammo/health)

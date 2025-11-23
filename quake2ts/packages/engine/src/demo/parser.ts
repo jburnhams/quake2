@@ -3,37 +3,37 @@ import { ServerCommand } from '@quake2ts/shared';
 import { TempEntity } from '@quake2ts/shared';
 import { ANORMS } from '@quake2ts/shared/src/math/anorms.js';
 
-// Constants from Q2 source (q_shared.h)
-const U_ORIGIN1   = (1 << 0);
-const U_ORIGIN2   = (1 << 1);
-const U_ANGLE2    = (1 << 2);
-const U_ANGLE3    = (1 << 3);
-const U_FRAME8    = (1 << 4);
-const U_EVENT     = (1 << 5);
-const U_REMOVE    = (1 << 6);
-const U_MOREBITS1 = (1 << 7);
+// Constants from Q2 source
+export const U_ORIGIN1   = (1 << 0);
+export const U_ORIGIN2   = (1 << 1);
+export const U_ANGLE2    = (1 << 2);
+export const U_ANGLE3    = (1 << 3);
+export const U_FRAME8    = (1 << 4);
+export const U_EVENT     = (1 << 5);
+export const U_REMOVE    = (1 << 6);
+export const U_MOREBITS1 = (1 << 7);
 
-const U_NUMBER16  = (1 << 8);
-const U_ORIGIN3   = (1 << 9);
-const U_ANGLE1    = (1 << 10);
-const U_MODEL     = (1 << 11);
-const U_RENDERFX8 = (1 << 12);
-const U_EFFECTS8  = (1 << 14);
-const U_MOREBITS2 = (1 << 15);
+export const U_NUMBER16  = (1 << 8);
+export const U_ORIGIN3   = (1 << 9);
+export const U_ANGLE1    = (1 << 10);
+export const U_MODEL     = (1 << 11);
+export const U_RENDERFX8 = (1 << 12);
+export const U_EFFECTS8  = (1 << 14);
+export const U_MOREBITS2 = (1 << 15);
 
-const U_SKIN8     = (1 << 16);
-const U_FRAME16   = (1 << 17);
-const U_RENDERFX16 = (1 << 18);
-const U_EFFECTS16 = (1 << 19);
-const U_MODEL2    = (1 << 20);
-const U_MODEL3    = (1 << 21);
-const U_MODEL4    = (1 << 22);
-const U_MOREBITS3 = (1 << 23);
+export const U_SKIN8     = (1 << 16);
+export const U_FRAME16   = (1 << 17);
+export const U_RENDERFX16 = (1 << 18);
+export const U_EFFECTS16 = (1 << 19);
+export const U_MODEL2    = (1 << 20);
+export const U_MODEL3    = (1 << 21);
+export const U_MODEL4    = (1 << 22);
+export const U_MOREBITS3 = (1 << 23);
 
-const U_OLDORIGIN = (1 << 24);
-const U_SKIN16    = (1 << 25);
-const U_SOUND     = (1 << 26);
-const U_SOLID     = (1 << 27);
+export const U_OLDORIGIN = (1 << 24);
+export const U_SKIN16    = (1 << 25);
+export const U_SOUND     = (1 << 26);
+export const U_SOLID     = (1 << 27);
 
 // Demo types
 const RECORD_NETWORK = 0x00;
@@ -42,7 +42,7 @@ const RECORD_SERVER  = 0x02;
 const RECORD_RELAY   = 0x80;
 
 // Mutable Vec3 for internal use
-interface MutableVec3 {
+export interface MutableVec3 {
   x: number;
   y: number;
   z: number;
@@ -64,6 +64,7 @@ export interface EntityState {
   sound: number;
   event: number;
   solid: number;
+  bits: number; // Added for delta compression handling
 }
 
 export const createEmptyEntityState = (): EntityState => ({
@@ -81,16 +82,93 @@ export const createEmptyEntityState = (): EntityState => ({
   angles: { x: 0, y: 0, z: 0 },
   sound: 0,
   event: 0,
-  solid: 0
+  solid: 0,
+  bits: 0
 });
+
+export interface ProtocolPlayerState {
+  pm_type: number;
+  origin: MutableVec3;
+  velocity: MutableVec3;
+  pm_time: number;
+  pm_flags: number;
+  gravity: number;
+  delta_angles: MutableVec3;
+  viewoffset: MutableVec3;
+  viewangles: MutableVec3;
+  kick_angles: MutableVec3;
+  gun_index: number;
+  gun_frame: number;
+  gun_offset: MutableVec3;
+  gun_angles: MutableVec3;
+  blend: number[]; // [r,g,b,a]
+  fov: number;
+  rdflags: number;
+  stats: number[]; // array of 32 shorts
+}
+
+export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
+  pm_type: 0,
+  origin: { x: 0, y: 0, z: 0 },
+  velocity: { x: 0, y: 0, z: 0 },
+  pm_time: 0,
+  pm_flags: 0,
+  gravity: 0,
+  delta_angles: { x: 0, y: 0, z: 0 },
+  viewoffset: { x: 0, y: 0, z: 0 },
+  viewangles: { x: 0, y: 0, z: 0 },
+  kick_angles: { x: 0, y: 0, z: 0 },
+  gun_index: 0,
+  gun_frame: 0,
+  gun_offset: { x: 0, y: 0, z: 0 },
+  gun_angles: { x: 0, y: 0, z: 0 },
+  blend: [0, 0, 0, 0],
+  fov: 0,
+  rdflags: 0,
+  stats: new Array(32).fill(0)
+});
+
+export interface FrameData {
+    serverFrame: number;
+    deltaFrame: number;
+    surpressCount: number;
+    areaBytes: number;
+    areaBits: Uint8Array;
+    playerState: ProtocolPlayerState;
+    packetEntities: {
+        delta: boolean;
+        entities: EntityState[];
+    };
+}
+
+export interface NetworkMessageHandler {
+    onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void;
+    onConfigString(index: number, str: string): void;
+    onSpawnBaseline(entity: EntityState): void;
+    onFrame(frame: FrameData): void;
+    onCenterPrint(msg: string): void;
+    onStuffText(msg: string): void;
+    onPrint(level: number, msg: string): void;
+    onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void;
+    onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void;
+    onLayout(layout: string): void;
+    onInventory(inventory: number[]): void;
+    onMuzzleFlash(ent: number, weapon: number): void;
+    onMuzzleFlash2(ent: number, weapon: number): void;
+    onDisconnect(): void;
+    onReconnect(): void;
+    onDownload(size: number, percent: number, data?: Uint8Array): void;
+}
 
 export class NetworkMessageParser {
   private stream: BinaryStream;
   private protocolVersion: number = 0; // 0 = unknown, will be set by serverdata
   private isDemo: number = RECORD_CLIENT;
+  private handler?: NetworkMessageHandler;
 
-  constructor(stream: BinaryStream) {
+  constructor(stream: BinaryStream, handler?: NetworkMessageHandler) {
     this.stream = stream;
+    this.handler = handler;
   }
 
   private translateCommand(cmd: number): number {
@@ -254,58 +332,87 @@ export class NetworkMessageParser {
     const gameDir = this.stream.readString();
     const playerNum = this.stream.readShort();
     const levelName = this.stream.readString();
+
+    if (this.handler) {
+        this.handler.onServerData(protocol, serverCount, attractLoop, gameDir, playerNum, levelName);
+    } else {
+        console.log(`Server Data: Protocol ${protocol}, Level ${levelName}, GameDir ${gameDir}`);
+    }
   }
 
   private parseConfigString(): void {
     const index = this.stream.readShort();
     const str = this.stream.readString();
+    if (this.handler) {
+        this.handler.onConfigString(index, str);
+    }
   }
 
   private parseDownload(): void {
     const size = this.stream.readShort();
     const percent = this.stream.readByte();
+    let data: Uint8Array | undefined;
     if (size > 0) {
-        this.stream.readData(size);
+        data = this.stream.readData(size);
+    }
+    if (this.handler) {
+        this.handler.onDownload(size, percent, data);
     }
   }
 
   private parseInventory(): void {
     const MAX_ITEMS = 256;
+    const inventory = new Array(MAX_ITEMS);
     for (let i = 0; i < MAX_ITEMS; i++) {
-        this.stream.readShort();
+        inventory[i] = this.stream.readShort();
+    }
+    if (this.handler) {
+        this.handler.onInventory(inventory);
     }
   }
 
   private parseSound(): void {
      const mask = this.stream.readByte();
      const soundNum = this.stream.readByte();
+     let volume: number | undefined;
+     let attenuation: number | undefined;
+     let offset: number | undefined;
+     let ent: number | undefined;
+     let pos: Vec3 | undefined;
 
-     if (mask & 1) { // SND_VOLUME
-         this.stream.readByte();
+     if (flags & 1) { // SND_VOLUME
+         volume = this.stream.readByte();
      }
-     if (mask & 2) { // SND_ATTENUATION
-         this.stream.readByte();
+     if (flags & 2) { // SND_ATTENUATION
+         attenuation = this.stream.readByte();
      }
-     if (mask & 16) { // SND_OFFSET
-         this.stream.readByte();
+     if (flags & 16) { // SND_OFFSET
+         offset = this.stream.readByte();
      }
-     if (mask & 8) { // SND_ENT
-         this.stream.readShort();
+     if (flags & 8) { // SND_ENT
+         ent = this.stream.readShort();
      }
-     if (mask & 4) { // SND_POS
-         const pos = { x: 0, y: 0, z: 0 };
-         this.stream.readPos(pos);
+     if (flags & 4) { // SND_POS
+         const p = { x: 0, y: 0, z: 0 };
+         this.stream.readPos(p);
+         pos = p;
+     }
+
+     if (this.handler) {
+         this.handler.onSound(flags, soundNum, volume, attenuation, offset, ent, pos);
      }
   }
 
   private parseMuzzleFlash(): void {
      const ent = this.stream.readShort();
      const weapon = this.stream.readByte();
+     if (this.handler) this.handler.onMuzzleFlash(ent, weapon);
   }
 
   private parseMuzzleFlash2(): void {
      const ent = this.stream.readShort();
      const weapon = this.stream.readByte();
+     if (this.handler) this.handler.onMuzzleFlash2(ent, weapon);
   }
 
   private parseTempEntity(): void {
@@ -314,6 +421,11 @@ export class NetworkMessageParser {
       const pos = { x: 0, y: 0, z: 0 };
       const pos2 = { x: 0, y: 0, z: 0 };
       const dir = { x: 0, y: 0, z: 0 };
+      let cnt: number | undefined;
+      let color: number | undefined;
+      let ent: number | undefined;
+      let srcEnt: number | undefined;
+      let destEnt: number | undefined;
 
       switch (type) {
         case TempEntity.EXPLOSION1:
@@ -337,25 +449,38 @@ export class NetworkMessageParser {
         case TempEntity.EXPLOSION1_NP:
             this.stream.readPos(pos);
             break;
-
         case TempEntity.GUNSHOT:
         case TempEntity.BLOOD:
         case TempEntity.BLASTER:
         case TempEntity.SHOTGUN:
         case TempEntity.SPARKS:
+        case TempEntity.BULLET_SPARKS:
         case TempEntity.SCREEN_SPARKS:
         case TempEntity.SHIELD_SPARKS:
-        case TempEntity.BULLET_SPARKS:
-        case TempEntity.BLASTER2:
-        case TempEntity.MOREBLOOD:
-        case TempEntity.HEATBEAM_SPARKS:
-        case TempEntity.HEATBEAM_STEAM:
-        case TempEntity.ELECTRIC_SPARKS:
-        case TempEntity.FLECHETTE:
+        case TempEntity.SHOTGUN:
             this.stream.readPos(pos);
             this.stream.readDir(dir);
             break;
-
+        case TempEntity.SPLASH:
+            cnt = this.stream.readByte();
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            color = this.stream.readByte(); // r
+            break;
+        case TempEntity.LASER_SPARKS:
+            cnt = this.stream.readByte();
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            color = this.stream.readByte();
+            break;
+        case TempEntity.BLUEHYPERBLASTER:
+            this.stream.readPos(pos);
+            this.stream.readPos(dir);
+            break;
+        case TempEntity.BLASTER:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
         case TempEntity.RAILTRAIL:
         case TempEntity.BUBBLETRAIL:
         case TempEntity.BFG_LASER:
@@ -390,11 +515,28 @@ export class NetworkMessageParser {
         case TempEntity.WELDING_SPARKS:
         case TempEntity.TUNNEL_SPARKS:
             this.stream.readByte(); // count
+        case TempEntity.EXPLOSION2:
+        case TempEntity.GRENADE_EXPLOSION:
+        case TempEntity.GRENADE_EXPLOSION_WATER:
+        case TempEntity.PLASMA_EXPLOSION:
+        case TempEntity.EXPLOSION1:
+        case TempEntity.EXPLOSION1_BIG:
+        case TempEntity.ROCKET_EXPLOSION:
+        case TempEntity.ROCKET_EXPLOSION_WATER:
+        case TempEntity.EXPLOSION1_NP:
+        case TempEntity.BFG_EXPLOSION:
+        case TempEntity.BFG_BIGEXPLOSION:
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.BFG_LASER:
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            break;
+        case TempEntity.BUBBLETRAIL:
             this.stream.readPos(pos);
             this.stream.readDir(dir);
             this.stream.readByte(); // color/style
             break;
-
         case TempEntity.PARASITE_ATTACK:
         case TempEntity.MEDIC_CABLE_ATTACK:
         case TempEntity.HEATBEAM:
@@ -409,17 +551,61 @@ export class NetworkMessageParser {
             this.stream.readPos(pos); // start
             this.stream.readPos(pos2); // end
             this.stream.readPos(dir); // offset
+            ent = this.stream.readShort();
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
             break;
-
+        case TempEntity.BOSSTPORT:
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.GRAPPLE_CABLE:
+            ent = this.stream.readShort();
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            this.stream.readPos(dir);
+            break;
+        case TempEntity.WELDING_SPARKS:
+            cnt = this.stream.readByte();
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            color = this.stream.readByte();
+            break;
+        case TempEntity.GREENBLOOD:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
+        case TempEntity.TUNNEL_SPARKS:
+            cnt = this.stream.readByte();
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            color = this.stream.readByte();
+            break;
+        case TempEntity.BLASTER2:
+        case TempEntity.FLECHETTE:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
+        case TempEntity.LIGHTNING:
+            srcEnt = this.stream.readShort();
+            destEnt = this.stream.readShort();
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            break;
+        case TempEntity.DEBUGTRAIL:
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            break;
+        case TempEntity.PLAIN_EXPLOSION:
+            this.stream.readPos(pos);
+            break;
         case TempEntity.FLASHLIGHT:
             this.stream.readPos(pos);
-            this.stream.readShort(); // ent
+            ent = this.stream.readShort();
             break;
-
         case TempEntity.FORCEWALL:
             this.stream.readPos(pos);
             this.stream.readPos(pos2);
-            this.stream.readByte(); // color
+            color = this.stream.readByte();
             break;
 
         case TempEntity.STEAM:
@@ -436,30 +622,106 @@ export class NetworkMessageParser {
 
         case TempEntity.WIDOWBEAMOUT:
             this.stream.readShort(); // id
+        case TempEntity.HEATBEAM:
+            ent = this.stream.readShort();
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            this.stream.readPos(dir);
+            break;
+        case TempEntity.MONSTER_HEATBEAM:
+            ent = this.stream.readShort();
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            this.stream.readPos(dir);
+            break;
+        case TempEntity.HEATBEAM_SPARKS:
+        case TempEntity.HEATBEAM_STEAM:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
+        case TempEntity.STEAM:
+            const steamId = this.stream.readShort();
+            if (steamId !== -1) {
+                cnt = this.stream.readByte();
+                this.stream.readPos(pos);
+                this.stream.readDir(dir);
+                color = this.stream.readByte();
+                this.stream.readShort(); // magnitude
+                this.stream.readLong(); // endtime
+            } else {
+                cnt = this.stream.readByte();
+                this.stream.readPos(pos);
+                this.stream.readDir(dir);
+                color = this.stream.readByte();
+                this.stream.readShort(); // magnitude
+            }
+            break;
+        case TempEntity.BUBBLETRAIL2:
+            this.stream.readPos(pos);
+            this.stream.readPos(pos2);
+            break;
+        case TempEntity.MOREBLOOD:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
+        case TempEntity.CHAINFIST_SMOKE:
             this.stream.readPos(pos);
             break;
-
+        case TempEntity.ELECTRIC_SPARKS:
+            this.stream.readPos(pos);
+            this.stream.readDir(dir);
+            break;
+        case TempEntity.TRACKER_EXPLOSION:
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.TELEPORT_EFFECT:
+        case TempEntity.DBALL_GOAL:
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.WIDOWBEAMOUT:
+            this.stream.readShort(); // id
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.NUKEBLAST:
+            this.stream.readPos(pos);
+            break;
+        case TempEntity.WIDOWSPLASH:
+            this.stream.readPos(pos);
+            break;
         default:
             // console.warn(`CL_ParseTEnt: bad type ${type}`);
             break;
+      }
+
+      if (this.handler) {
+          this.handler.onTempEntity(type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt);
       }
   }
 
   private parseSpawnBaseline(): void {
     const bits = this.parseEntityBits();
-    this.parseDelta(createEmptyEntityState(), createEmptyEntityState(), bits.number, bits.bits);
+    const entity = createEmptyEntityState();
+    this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits);
+
+    if (this.handler) {
+        this.handler.onSpawnBaseline(entity);
+    }
   }
 
   private parseFrame(): void {
-      const seq1 = this.stream.readLong();
-      const seq2 = this.stream.readLong();
+      const serverFrame = this.stream.readLong();
+      const deltaFrame = this.stream.readLong();
+      const surpressCount = this.stream.readByte();
 
-      // Spec says: "if (serverdata.serverversion != 26) uk_b1 = ReadByte;"
-      // Protocol 26 (Q2 3.05) is the only one that skips this byte.
-      // Protocol 25 (Q2 3.00) and Protocol 34 (Q2 3.20) both include it.
-      if (this.protocolVersion !== 26) {
-          this.stream.readByte();
+      const areaBytes = this.stream.readByte();
+      const areaBits = this.stream.readData(areaBytes);
+
+      // Player Info
+      const piCmd = this.stream.readByte();
+      if (piCmd !== ServerCommand.playerinfo) {
+          throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd}`);
       }
+      const playerState = this.parsePlayerState();
 
       const count = this.stream.readByte();
       if (count > 0) {
@@ -476,110 +738,145 @@ export class NetworkMessageParser {
       if (this.isDemo === RECORD_SERVER) {
           this.stream.readLong();
       }
+      const isDelta = peCmd === ServerCommand.deltapacketentities;
+      const entities = this.collectPacketEntities();
+
+      if (this.handler) {
+          this.handler.onFrame({
+              serverFrame,
+              deltaFrame,
+              surpressCount,
+              areaBytes,
+              areaBits,
+              playerState,
+              packetEntities: {
+                  delta: isDelta,
+                  entities
+              }
+          });
+      }
   }
 
-  private parsePlayerState(): void {
+  private parsePlayerState(): ProtocolPlayerState {
+      const ps = createEmptyProtocolPlayerState();
       const flags = this.stream.readShort();
 
       // PS_M_TYPE (1<<0)
-      if (flags & 1) this.stream.readByte();
+      if (flags & 1) ps.pm_type = this.stream.readByte();
 
       // PS_M_ORIGIN (1<<1)
       if (flags & 2) {
-          this.stream.readShort();
-          this.stream.readShort();
-          this.stream.readShort();
+          ps.origin.x = this.stream.readShort() * 0.125;
+          ps.origin.y = this.stream.readShort() * 0.125;
+          ps.origin.z = this.stream.readShort() * 0.125;
       }
 
       // PS_M_VELOCITY (1<<2)
       if (flags & 4) {
-          this.stream.readShort();
-          this.stream.readShort();
-          this.stream.readShort();
+          ps.velocity.x = this.stream.readShort() * 0.125;
+          ps.velocity.y = this.stream.readShort() * 0.125;
+          ps.velocity.z = this.stream.readShort() * 0.125;
       }
 
       // PS_M_TIME (1<<3)
-      if (flags & 8) this.stream.readByte();
+      if (flags & 8) ps.pm_time = this.stream.readByte();
 
       // PS_M_FLAGS (1<<4)
-      if (flags & 16) this.stream.readByte();
+      if (flags & 16) ps.pm_flags = this.stream.readByte();
 
       // PS_M_GRAVITY (1<<5)
-      if (flags & 32) this.stream.readShort();
+      if (flags & 32) ps.gravity = this.stream.readShort();
 
       // PS_M_DELTA_ANGLES (1<<6)
       if (flags & 64) {
-          this.stream.readShort();
-          this.stream.readShort();
-          this.stream.readShort();
+          ps.delta_angles.x = this.stream.readShort() * (180 / 32768);
+          ps.delta_angles.y = this.stream.readShort() * (180 / 32768);
+          ps.delta_angles.z = this.stream.readShort() * (180 / 32768);
       }
 
       // PS_VIEWOFFSET (1<<7)
       if (flags & 128) {
-          this.stream.readChar();
-          this.stream.readChar();
-          this.stream.readChar();
+          ps.viewoffset.x = this.stream.readChar() * 0.25;
+          ps.viewoffset.y = this.stream.readChar() * 0.25;
+          ps.viewoffset.z = this.stream.readChar() * 0.25;
       }
 
       // PS_VIEWANGLES (1<<8)
       if (flags & 256) {
-          this.stream.readAngle16();
-          this.stream.readAngle16();
-          this.stream.readAngle16();
+          ps.viewangles.x = this.stream.readAngle16();
+          ps.viewangles.y = this.stream.readAngle16();
+          ps.viewangles.z = this.stream.readAngle16();
       }
 
       // PS_KICKANGLES (1<<9)
       if (flags & 512) {
-          this.stream.readChar();
-          this.stream.readChar();
-          this.stream.readChar();
+          ps.kick_angles.x = this.stream.readChar() * 0.25;
+          ps.kick_angles.y = this.stream.readChar() * 0.25;
+          ps.kick_angles.z = this.stream.readChar() * 0.25;
       }
 
-      // WEAPONINDEX (1<<12)
-      if (flags & 4096) this.stream.readByte();
+      // WEAPONINDEX
+      if (flags & 4096) ps.gun_index = this.stream.readByte();
 
       // WEAPONFRAME (1<<13)
       if (flags & 8192) {
-          this.stream.readByte(); // frame
-          this.stream.readChar(); // offset x
-          this.stream.readChar(); // offset y
-          this.stream.readChar(); // offset z
-          this.stream.readChar(); // angles x
-          this.stream.readChar(); // angles y
-          this.stream.readChar(); // angles z
+          ps.gun_frame = this.stream.readByte();
+          ps.gun_offset.x = this.stream.readChar() * 0.25;
+          ps.gun_offset.y = this.stream.readChar() * 0.25;
+          ps.gun_offset.z = this.stream.readChar() * 0.25;
+          ps.gun_angles.x = this.stream.readChar() * 0.25;
+          ps.gun_angles.y = this.stream.readChar() * 0.25;
+          ps.gun_angles.z = this.stream.readChar() * 0.25;
       }
 
       // BLEND (1<<10)
       if (flags & 1024) {
-          this.stream.readByte();
-          this.stream.readByte();
-          this.stream.readByte();
-          this.stream.readByte();
+          ps.blend[0] = this.stream.readByte();
+          ps.blend[1] = this.stream.readByte();
+          ps.blend[2] = this.stream.readByte();
+          ps.blend[3] = this.stream.readByte();
       }
 
-      // FOV (1<<11)
-      if (flags & 2048) this.stream.readByte();
+      // FOV
+      if (flags & 2048) ps.fov = this.stream.readByte();
 
-      // RDFLAGS (1<<14)
-      if (flags & 16384) this.stream.readByte();
+      // RDFLAGS
+      if (flags & 16384) ps.rdflags = this.stream.readByte();
 
       // STATS
       const statbits = this.stream.readLong();
       for (let i = 0; i < 32; i++) {
           if (statbits & (1 << i)) {
-              this.stream.readShort();
+              ps.stats[i] = this.stream.readShort();
           }
       }
+
+      return ps;
   }
 
   private parsePacketEntities(delta: boolean): void {
+      const entities = this.collectPacketEntities();
+      if (this.handler) {
+          this.handler.onFrame({
+              serverFrame: 0, deltaFrame: 0, surpressCount: 0, areaBytes: 0, areaBits: new Uint8Array(),
+              playerState: createEmptyProtocolPlayerState(),
+              packetEntities: { delta, entities }
+          });
+      }
+  }
+
+  private collectPacketEntities(): EntityState[] {
+      const entities: EntityState[] = [];
       while (true) {
           const bits = this.parseEntityBits();
           if (bits.number === 0) {
               break;
           }
-          this.parseDelta(createEmptyEntityState(), createEmptyEntityState(), bits.number, bits.bits);
+          const entity = createEmptyEntityState();
+          this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits);
+          entities.push(entity);
       }
+      return entities;
   }
 
   private parseEntityBits(): { number: number; bits: number } {
@@ -622,6 +919,7 @@ export class NetworkMessageParser {
       to.solid = from.solid;
 
       to.number = number;
+      to.bits = bits;
 
       if (bits & U_MODEL) to.modelindex = this.stream.readByte();
       if (bits & U_MODEL2) to.modelindex2 = this.stream.readByte();

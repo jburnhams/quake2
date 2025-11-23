@@ -12,7 +12,14 @@ import { SAVE_FORMAT_VERSION, applySaveFile, createSaveFile, parseSaveFile } fro
 import type { GameEngine } from '../src/index.js';
 
 const mockEngine: GameEngine = {
-  trace: () => ({}),
+  trace: () => ({
+    fraction: 1,
+    endpos: { x: 0, y: 0, z: 0 },
+    plane: null,
+    allsolid: false,
+    startsolid: false,
+    ent: null
+  }),
 };
 
 function collectSnapshot(system: EntitySystem): EntitySystemSnapshot {
@@ -21,7 +28,7 @@ function collectSnapshot(system: EntitySystem): EntitySystemSnapshot {
 
 describe('EntitySystem snapshots', () => {
   it('round-trips entity fields, references, and free list order', () => {
-    const system = new EntitySystem(mockEngine, 6);
+    const system = new EntitySystem(mockEngine, undefined, undefined, 6);
     system.beginFrame(0.25);
 
     const enemy = system.spawn();
@@ -44,7 +51,7 @@ describe('EntitySystem snapshots', () => {
 
     const snapshot = collectSnapshot(system);
 
-    const restored = new EntitySystem(mockEngine, 6);
+    const restored = new EntitySystem(mockEngine, undefined, undefined, 6);
     restored.restore(snapshot);
 
     expect(restored.activeCount).toBe(system.activeCount);
@@ -68,7 +75,7 @@ describe('EntitySystem snapshots', () => {
   });
 
   it('preserves inventory contents across snapshots', () => {
-    const system = new EntitySystem(mockEngine, 3);
+    const system = new EntitySystem(mockEngine, undefined, undefined, 3);
     system.beginFrame(0.1);
 
     const player = system.spawn();
@@ -78,7 +85,7 @@ describe('EntitySystem snapshots', () => {
 
     const snapshot = collectSnapshot(system);
 
-    const restored = new EntitySystem(mockEngine, 3);
+    const restored = new EntitySystem(mockEngine, undefined, undefined, 3);
     restored.restore(snapshot);
 
     let restoredPlayer: typeof player | null = null;
@@ -105,7 +112,7 @@ describe('Game save files', () => {
       deltaSeconds: 0.025,
     };
 
-    const entities = new EntitySystem(mockEngine, 5);
+    const entities = new EntitySystem(mockEngine, undefined, undefined, 5);
     entities.beginFrame(levelState.timeSeconds);
     const target = entities.spawn();
     target.classname = 'target_dummy';
@@ -143,7 +150,7 @@ describe('Game save files', () => {
     expect(save.configstrings).toEqual(['player.md2']);
     expect(save.gameState).toEqual({ note: 'checkpoint' });
 
-    const restoredEntities = new EntitySystem(mockEngine, 5);
+    const restoredEntities = new EntitySystem(mockEngine, undefined, undefined, 5);
     const restoredLevel = new LevelClock();
     restoredLevel.start(0);
     const restoredRng = new RandomGenerator({ seed: 999 });
@@ -174,7 +181,7 @@ describe('Game save files', () => {
       deltaSeconds: 0.025,
     };
 
-    const entities = new EntitySystem(mockEngine, 3);
+    const entities = new EntitySystem(mockEngine, undefined, undefined, 3);
     entities.beginFrame(levelState.timeSeconds);
     const first = entities.spawn();
     first.classname = 'worldspawn';
@@ -194,13 +201,19 @@ describe('Game save files', () => {
       gameState: { foo: 'bar' },
     });
 
-    const serialized = JSON.stringify({
+    // Simulate legacy or modified save without a valid checksum by removing it.
+    const modifiedSave = {
       ...save,
       gameState: undefined,
       configstrings: undefined,
       cvars: undefined,
       extraField: 'ignored',
-    });
+    };
+
+    const saveWithoutChecksum = { ...modifiedSave };
+    delete (saveWithoutChecksum as any).checksum;
+
+    const serialized = JSON.stringify(saveWithoutChecksum);
 
     const parsed = parseSaveFile(serialized);
     expect(parsed.version).toBe(SAVE_FORMAT_VERSION);
@@ -212,7 +225,7 @@ describe('Game save files', () => {
   });
 
   it('rejects unsupported versions and malformed structures', () => {
-    const entities = new EntitySystem(mockEngine, 2);
+    const entities = new EntitySystem(mockEngine, undefined, undefined, 2);
     entities.beginFrame(0);
     const rng = new RandomGenerator({ seed: 5 });
 
@@ -225,14 +238,17 @@ describe('Game save files', () => {
       rngState: rng.getState(),
     });
 
-    expect(parseSaveFile({ ...valid, version: 99 }).version).toBe(99);
-    expect(() => parseSaveFile({ ...valid, version: 99 }, { allowNewerVersion: false })).toThrow(
+    // Remove checksum to test structure validation independently of checksum validation
+    const { checksum, ...validNoChecksum } = valid;
+
+    expect(parseSaveFile({ ...validNoChecksum, version: 99 }).version).toBe(99);
+    expect(() => parseSaveFile({ ...validNoChecksum, version: 99 }, { allowNewerVersion: false })).toThrow(
       'newer than supported',
     );
-    expect(() => parseSaveFile({ ...valid, level: null as unknown as LevelFrameState })).toThrow();
+    expect(() => parseSaveFile({ ...validNoChecksum, level: null as unknown as LevelFrameState })).toThrow();
     expect(() =>
       parseSaveFile({
-        ...valid,
+        ...validNoChecksum,
         entities: { ...valid.entities, pool: { capacity: 'bad' } },
       }),
     ).toThrow();

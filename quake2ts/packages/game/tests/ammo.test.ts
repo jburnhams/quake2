@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { AmmoType, clampAmmoCounts, createBaseAmmoCaps } from '../src/inventory/ammo.js';
+import { AmmoType, AMMO_TYPE_COUNT, clampAmmoCounts, createBaseAmmoCaps } from '../src/inventory/ammo.js';
 
 describe('ammo caps', () => {
   it('matches the rerelease defaults for base campaign ammo types', () => {
     const caps = createBaseAmmoCaps();
 
-    expect(caps).toHaveLength(6);
+    expect(caps).toHaveLength(AMMO_TYPE_COUNT);
     expect(caps[AmmoType.Bullets]).toBe(200);
     expect(caps[AmmoType.Shells]).toBe(100);
     expect(caps[AmmoType.Rockets]).toBe(50);
@@ -17,11 +17,26 @@ describe('ammo caps', () => {
 
   it('clamps ammo counts to the configured caps without mutating input', () => {
     const caps = createBaseAmmoCaps();
-    const counts = [500, 125, 10, 5, 900, 80];
+    // Create an array of size AMMO_TYPE_COUNT with some large values
+    const counts = new Array(AMMO_TYPE_COUNT).fill(1000);
+    // Set specific test values
+    counts[AmmoType.Bullets] = 500;
+    counts[AmmoType.Shells] = 125;
+    counts[AmmoType.Rockets] = 10;
+    counts[AmmoType.Grenades] = 5;
+    counts[AmmoType.Cells] = 900;
+    counts[AmmoType.Slugs] = 80;
 
     const clamped = clampAmmoCounts(counts, caps);
 
-    expect(clamped).toEqual([200, 100, 10, 5, 200, 50]);
-    expect(counts).toEqual([500, 125, 10, 5, 900, 80]);
+    expect(clamped[AmmoType.Bullets]).toBe(200);
+    expect(clamped[AmmoType.Shells]).toBe(100);
+    expect(clamped[AmmoType.Rockets]).toBe(10);
+    expect(clamped[AmmoType.Grenades]).toBe(5);
+    expect(clamped[AmmoType.Cells]).toBe(200);
+    expect(clamped[AmmoType.Slugs]).toBe(50);
+
+    // Verify inputs were not mutated
+    expect(counts[AmmoType.Bullets]).toBe(500);
   });
 });

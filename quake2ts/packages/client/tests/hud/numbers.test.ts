@@ -21,8 +21,8 @@ describe('Draw_Number', () => {
         Draw_Number(mockRenderer, 10, 20, 123, pics, 10);
 
         expect(mockRenderer.drawPic).toHaveBeenCalledTimes(3);
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(10, 20, pics[1]);
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(20, 20, pics[2]);
-        expect(mockRenderer.drawPic).toHaveBeenCalledWith(30, 20, pics[3]);
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(10, 20, pics[1], undefined);
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(20, 20, pics[2], undefined);
+        expect(mockRenderer.drawPic).toHaveBeenCalledWith(30, 20, pics[3], undefined);
     });
 });

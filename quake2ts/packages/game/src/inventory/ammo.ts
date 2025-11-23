@@ -5,6 +5,14 @@ export enum AmmoType {
   Grenades,
   Cells,
   Slugs,
+  // New additions
+  Trap,
+  Tesla,
+  MagSlugs,
+  Flechettes,
+  Prox,
+  Nuke,
+  Rounds,
 }
 
 export const AMMO_TYPE_COUNT = Object.keys(AmmoType).length / 2;
@@ -33,6 +41,8 @@ export enum AmmoItemId {
   Grenades = 'ammo_grenades',
   Cells = 'ammo_cells',
   Slugs = 'ammo_slugs',
+  // We might need new IDs here too but ItemMapping uses AmmoType directly for logic usually
+  // Adding placeholders if needed but AmmoType is what matters for inventory indexing.
 }
 
 export interface AmmoItemDefinition {
@@ -74,6 +84,7 @@ export function createBaseAmmoCaps(): number[] {
   caps[AmmoType.Bullets] = 200;
   caps[AmmoType.Shells] = 100;
   caps[AmmoType.Cells] = 200;
+  // TODO: Add caps for new ammo types if known, defaulting to 50 is safe for now.
   return caps;
 }
 

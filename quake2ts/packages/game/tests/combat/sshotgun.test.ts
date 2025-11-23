@@ -11,14 +11,18 @@ import * as damage from '../../src/combat/damage.js';
 describe('Super Shotgun', () => {
     it('should consume 2 shells and fire 20 pellets', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -48,6 +52,6 @@ describe('Super Shotgun', () => {
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
         expect(trace).toHaveBeenCalledTimes(20);
         // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
-        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3);
+        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, expect.any(Function));
     });
 });

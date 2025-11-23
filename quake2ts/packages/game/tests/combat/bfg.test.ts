@@ -14,15 +14,18 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 describe('BFG10K', () => {
     it('should consume 50 cells and spawn a projectile', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -45,16 +48,19 @@ describe('BFG10K', () => {
 
     it('should deal secondary laser damage on impact', () => {
         const trace = vi.fn();
-        const pointContents = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const engine = {
+            trace: vi.fn(),
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointContents }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -70,7 +76,7 @@ describe('BFG10K', () => {
         game.entities.finalizeSpawn(target);
 
         // Manually create BFG ball to test its touch function
-        projectiles.createBfgBall(game, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400);
+        projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400);
         const bfgBall = game.entities.find(e => e.classname === 'bfg_ball')!;
 
         // Mock trace for visibility check (from player to target)
@@ -84,7 +90,7 @@ describe('BFG10K', () => {
         bfgBall.touch!(bfgBall, game.entities.world!, null, null);
 
         // Expect primary radius damage
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, player, 200, expect.anything(), DamageMod.BFG_BLAST);
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, player, 200, expect.anything(), DamageMod.BFG_BLAST, expect.anything(), expect.any(Function));
 
         // Expect secondary laser damage
         // Target is within 1000 units (200 units away) and visible
@@ -98,7 +104,8 @@ describe('BFG10K', () => {
             10, // Laser damage
             10, // Kick
             expect.anything(), // Flags
-            DamageMod.BFG_LASER
+            DamageMod.BFG_LASER,
+            expect.any(Function)
         );
     });
 });
