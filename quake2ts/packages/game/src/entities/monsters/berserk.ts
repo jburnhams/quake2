@@ -1,13 +1,4 @@
-import {
-  angleVectors,
-  normalizeVec3,
-  subtractVec3,
-  Vec3,
-  ZERO_VEC3,
-  lengthVec3,
-  addVec3,
-  scaleVec3
-} from '@quake2ts/shared';
+import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
 import {
   ai_charge,
   ai_move,
@@ -15,11 +6,7 @@ import {
   ai_stand,
   ai_walk,
   monster_think,
-  rangeTo,
-  RangeCategory,
-  infront
 } from '../../ai/index.js';
-import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
   Entity,
@@ -29,9 +16,10 @@ import {
   Solid,
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
+import { T_Damage } from '../../combat/damage.js';
+import { DamageMod } from '../../combat/damageMods.js';
 import { throwGibs } from '../gibs.js';
-import type { EntitySystem } from '../system.js';
-import { T_Damage, Damageable } from '../../combat/damage.js';
+import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -83,6 +71,7 @@ function berserk_run(self: Entity): void {
 }
 
 function berserk_attack(self: Entity): void {
+  // Randomly choose an attack, potentially weighted by distance or RNG
   const r = Math.random();
   if (r < 0.33) {
     self.monsterinfo.current_move = attack_punch_move;
@@ -93,36 +82,50 @@ function berserk_attack(self: Entity): void {
   }
 }
 
-function berserk_swing(self: Entity, context: EntitySystem, damage: number, kick: number): void {
+function berserk_swing(self: Entity, damage: number, context: any): void {
   if (!self.enemy) return;
 
-  if (!self.enemy.inUse || self.enemy.health <= 0) return;
+  if (!infront(self, self.enemy)) {
+      return;
+  }
 
-  // Check if enemy is in melee range
-  // Original uses M_damage which checks range and infront
-  // We can approximate range check with distance
-  const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
-  if (dist > 100) return; // Approximate melee range + size
+  const dist = rangeTo(self, self.enemy);
+  if (classifyRange(dist) !== RangeCategory.Melee) {
+      return;
+  }
 
-  // Check if infront
-  if (!infront(self, self.enemy)) return;
+  // Calculate direction
+  const start: Vec3 = {
+      x: self.origin.x,
+      y: self.origin.y,
+      z: self.origin.z + self.viewheight,
+  };
+  const dir = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
-  // Apply damage
-  // Original: M_damage(self, self->enemy, damage, kick);
-  const dir = normalizeVec3(subtractVec3(self.enemy.origin, self.origin));
+  // Inflict damage
+  // Use 'any' cast to satisfy T_Damage/Damageable interface mismatch
+  T_Damage(self.enemy as any, self as any, self as any, dir, self.origin, { x: 0, y: 0, z: 0 }, damage, 5, 0, DamageMod.UNKNOWN);
+}
 
-  T_Damage(
-    self.enemy as unknown as Damageable,
-    self as unknown as Damageable,
-    self as unknown as Damageable,
-    dir,
-    self.enemy.origin,
-    ZERO_VEC3,
-    damage,
-    kick,
-    0,
-    DamageMod.UNKNOWN // Should be specific melee mod?
-  );
+// Helper to classify range inside the module if not imported
+function classifyRange(distance: number): RangeCategory {
+  if (distance <= 80) return RangeCategory.Melee; // Approximated
+  if (distance <= 500) return RangeCategory.Near;
+  if (distance <= 1000) return RangeCategory.Mid;
+  return RangeCategory.Far;
+}
+
+
+function berserk_punch(self: Entity, context: any): void {
+  berserk_swing(self, 10, context);
+}
+
+function berserk_slash(self: Entity, context: any): void {
+  berserk_swing(self, 15, context);
+}
+
+function berserk_smash(self: Entity, context: any): void {
+    berserk_swing(self, 20, context);
 }
 
 function berserk_pain(self: Entity): void {
@@ -133,122 +136,107 @@ function berserk_die(self: Entity): void {
   self.monsterinfo.current_move = death_move;
 }
 
-// Frames
+function berserk_dead(self: Entity): void {
+  self.monsterinfo.nextframe = death_move.lastframe;
+  self.nextthink = -1;
+}
 
-// Stand: 0-4
-const stand_frames: MonsterFrame[] = Array.from({ length: 5 }, () => ({
+// Frame definitions (approximated frame counts)
+const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, () => ({
   ai: monster_ai_stand,
   dist: 0,
 }));
 
 stand_move = {
   firstframe: 0,
-  lastframe: 4,
+  lastframe: 29,
   frames: stand_frames,
   endfunc: berserk_stand,
 };
 
-// Walk: 5-17
-const walk_frames: MonsterFrame[] = Array.from({ length: 13 }, () => ({
+const walk_frames: MonsterFrame[] = Array.from({ length: 40 }, () => ({
   ai: monster_ai_walk,
-  dist: 9, // Tuned for speed
+  dist: 4,
 }));
 
 walk_move = {
-  firstframe: 5,
-  lastframe: 17,
+  firstframe: 30,
+  lastframe: 69,
   frames: walk_frames,
   endfunc: berserk_walk,
 };
 
-// Run: 18-23
-const run_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
+const run_frames: MonsterFrame[] = Array.from({ length: 20 }, () => ({
   ai: monster_ai_run,
-  dist: 18, // Faster than walk
+  dist: 15,
 }));
 
 run_move = {
-  firstframe: 18,
-  lastframe: 23,
+  firstframe: 70,
+  lastframe: 89,
   frames: run_frames,
   endfunc: berserk_run,
 };
 
-// Attack Punch: 24-30. Hit at 27 (frame index 3 relative to start)
-const attack_punch_frames: MonsterFrame[] = Array.from({ length: 7 }, (_, i) => ({
-  ai: monster_ai_charge,
-  dist: 0,
-  think: (i === 3) ? (self, context) => {
-    berserk_swing(self, context, 10 + Math.random() * 10, 5);
-  } : null
+const attack_punch_frames: MonsterFrame[] = Array.from({ length: 8 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: i === 4 ? berserk_punch : null
 }));
 
 attack_punch_move = {
-  firstframe: 24,
-  lastframe: 30,
-  frames: attack_punch_frames,
-  endfunc: berserk_run,
+    firstframe: 90,
+    lastframe: 97,
+    frames: attack_punch_frames,
+    endfunc: berserk_run
 };
 
-// Attack Slash: 31-41. Hit at 33 (frame index 2 relative to start)
-const attack_slash_frames: MonsterFrame[] = Array.from({ length: 11 }, (_, i) => ({
-  ai: monster_ai_charge,
-  dist: 0,
-  think: (i === 2) ? (self, context) => {
-    berserk_swing(self, context, 15 + Math.random() * 10, 5);
-  } : null
+const attack_slash_frames: MonsterFrame[] = Array.from({ length: 8 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: i === 4 ? berserk_slash : null
 }));
 
 attack_slash_move = {
-  firstframe: 31,
-  lastframe: 41,
-  frames: attack_slash_frames,
-  endfunc: berserk_run,
+    firstframe: 98,
+    lastframe: 105,
+    frames: attack_slash_frames,
+    endfunc: berserk_run
 };
 
-// Attack Smash: 42-50. Hit at 46 (frame index 4 relative to start)
-const attack_smash_frames: MonsterFrame[] = Array.from({ length: 9 }, (_, i) => ({
-  ai: monster_ai_charge,
-  dist: 0,
-  think: (i === 4) ? (self, context) => {
-    berserk_swing(self, context, 20 + Math.random() * 10, 10);
-  } : null
+const attack_smash_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: i === 6 ? berserk_smash : null
 }));
 
 attack_smash_move = {
-  firstframe: 42,
-  lastframe: 50,
-  frames: attack_smash_frames,
-  endfunc: berserk_run,
+    firstframe: 106,
+    lastframe: 115,
+    frames: attack_smash_frames,
+    endfunc: berserk_run
 };
 
-// Pain: 51-54
-const pain_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({
+const pain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
   ai: monster_ai_move,
   dist: 0,
 }));
 
 pain_move = {
-  firstframe: 51,
-  lastframe: 54,
+  firstframe: 116,
+  lastframe: 121,
   frames: pain_frames,
   endfunc: berserk_run,
 };
 
-// Death: 55-67
-const death_frames: MonsterFrame[] = Array.from({ length: 13 }, () => ({
+const death_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
   ai: monster_ai_move,
   dist: 0,
 }));
 
-function berserk_dead(self: Entity): void {
-  self.monsterinfo.nextframe = death_move.lastframe;
-  self.nextthink = -1;
-}
-
 death_move = {
-  firstframe: 55,
-  lastframe: 67,
+  firstframe: 122,
+  lastframe: 131,
   frames: death_frames,
   endfunc: berserk_dead,
 };
@@ -265,8 +253,9 @@ export function SP_monster_berserk(self: Entity, context: SpawnContext): void {
   self.takedamage = true;
 
   self.pain = (self, other, kick, damage) => {
+    // Cast to any to avoid strict interface mismatch with Entity vs Damageable
     if (self.health < (self.max_health / 2)) {
-        self.monsterinfo.current_move = pain_move;
+      self.monsterinfo.current_move = pain_move;
     }
   };
 
@@ -275,9 +264,9 @@ export function SP_monster_berserk(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -40) {
-      throwGibs(context.entities, self.origin, damage);
-      context.entities.free(self);
-      return;
+        throwGibs(context.entities, self.origin, damage);
+        context.entities.free(self);
+        return;
     }
 
     berserk_die(self);
