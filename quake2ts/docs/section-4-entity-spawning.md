@@ -98,7 +98,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `item_quad`, `item_invulnerability`, etc.
 - [x] Monster spawns (monster_*)
   - [x] `monster_soldier`: Full implementation
-  - [x] Stubs for all other base monsters (to prevent map load errors)
+  - [] Spawn or stub all other base monsters (to prevent map load errors)
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
