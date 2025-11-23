@@ -242,6 +242,7 @@ death_move = {
 };
 
 export function SP_monster_berserk(self: Entity, context: SpawnContext): void {
+  self.classname = 'monster_berserk';
   self.model = 'models/monsters/berserk/tris.md2';
   self.mins = { x: -16, y: -16, z: -24 };
   self.maxs = { x: 16, y: 16, z: 32 };

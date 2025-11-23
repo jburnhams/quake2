@@ -233,6 +233,7 @@ death_move = {
 
 
 export function SP_monster_gladiator(self: Entity, context: SpawnContext): void {
+  self.classname = 'monster_gladiator';
   self.model = 'models/monsters/gladiatr/tris.md2';
   self.mins = { x: -32, y: -32, z: -24 };
   self.maxs = { x: 32, y: 32, z: 64 };
