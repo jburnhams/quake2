@@ -40,7 +40,7 @@ describe('Monster Spawning', () => {
     { classname: 'monster_mutant', expectedHealth: 300 },
     { classname: 'monster_parasite', expectedHealth: 175 },
     { classname: 'monster_tank', expectedHealth: 750 },
-    { classname: 'monster_tank_commander', expectedHealth: 750 },
+    { classname: 'monster_tank_commander', expectedHealth: 1000 },
     { classname: 'monster_brain', expectedHealth: 300 },
     { classname: 'monster_flipper', expectedHealth: 50 },
     { classname: 'monster_chick', expectedHealth: 175 },

@@ -26,6 +26,8 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Gunner unit tests covering dual attacks (chain/grenade).
 - ✅ Implemented Infantry (Enforcer) behaviors and unit tests.
 - ✅ Implemented Berserker behaviors and unit tests.
+- ✅ Implemented Tank and Tank Commander behaviors and unit tests.
+- ✅ Implemented Gladiator behaviors and unit tests.
 
 ## Tasks Remaining
 
@@ -137,11 +139,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Strong melee attacks
   - Charge attack
   - High health
-- [ ] **Tank / Tank Commander**
+- [x] **Tank / Tank Commander**
   - Heavy armor, slow movement
   - Blaster, machinegun, rocket attacks
   - Boss-tier enemy
-- [ ] **Gladiator**
+- [x] **Gladiator**
   - Railgun attack
   - Melee claw attack
   - Fast movement
@@ -275,6 +277,8 @@ Recent work:
 - Implemented Gunner unit tests covering dual attacks (chain/grenade).
 - Implemented Infantry (Enforcer) behaviors and unit tests.
 - Implemented Berserker behaviors and unit tests.
+- Implemented Tank and Tank Commander behaviors and unit tests.
+- Implemented Gladiator behaviors and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback

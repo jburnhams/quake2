@@ -1,10 +1,11 @@
-import { angleVectors, addVec3, scaleVec3, normalizeVec3, Vec3, ZERO_VEC3, vectorToAngles } from '@quake2ts/shared';
+import { angleVectors, addVec3, scaleVec3, normalizeVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity } from '@quake2ts/shared';
 import { Entity } from '../entity.js';
 import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket } from '../projectiles.js';
+import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
   return 2 * Math.random() - 1;
@@ -105,4 +106,47 @@ export function monster_fire_grenade(
     context: EntitySystem
 ): void {
     createGrenade(context, self, start, aim, damage, speed);
+}
+
+export function monster_fire_rocket(
+    self: Entity,
+    start: Vec3,
+    dir: Vec3,
+    damage: number,
+    speed: number,
+    flashtype: number,
+    context: EntitySystem
+): void {
+    createRocket(context, self, start, dir, damage, speed);
+}
+
+export function monster_fire_railgun(
+    self: Entity,
+    start: Vec3,
+    aim: Vec3,
+    damage: number,
+    kick: number,
+    flashtype: number,
+    context: EntitySystem
+): void {
+    const end = addVec3(start, scaleVec3(aim, 8192));
+    const tr = context.trace(start, null, null, end, self, 0x1 | 0x20000000); // MASK_SHOT
+
+    // Create rail trail
+    context.multicast(start, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, start, tr.endpos);
+
+    if (tr.ent && tr.ent.takedamage) {
+        T_Damage(
+            tr.ent as unknown as Damageable,
+            self as unknown as Damageable,
+            self as unknown as Damageable,
+            aim,
+            tr.endpos,
+            ZERO_VEC3,
+            damage,
+            kick,
+            DamageFlags.ENERGY | DamageFlags.NO_ARMOR,
+            DamageMod.RAILGUN
+        );
+    }
 }
