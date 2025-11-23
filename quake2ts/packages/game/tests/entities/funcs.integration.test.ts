@@ -9,7 +9,12 @@ describe('Funcs Integration', () => {
 
 
   it('should open a door when a button is used', () => {
-    const entities = new EntitySystem(null, null, null, 2048);
+    // Mock engine to handle sound
+    const mockEngine = {
+      sound: vi.fn(),
+    } as any;
+
+    const entities = new EntitySystem(mockEngine, null, null, 2048);
     // Note: We set angle to 90 to ensure the door moves in the Y direction.
     // We also set mins/maxs because func_door calculates travel distance based on size.
     const map = `
@@ -40,6 +45,7 @@ describe('Funcs Integration', () => {
     button.use(button, null, null);
 
     expect(door.state).toBe(DoorState.Opening);
+    expect(mockEngine.sound).toHaveBeenCalledTimes(2); // Button sound + Door start sound
 
     // Simulate some time passing.
     entities.beginFrame(0.1);
