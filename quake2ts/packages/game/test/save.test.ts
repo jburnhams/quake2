@@ -12,7 +12,14 @@ import { SAVE_FORMAT_VERSION, applySaveFile, createSaveFile, parseSaveFile } fro
 import type { GameEngine } from '../src/index.js';
 
 const mockEngine: GameEngine = {
-  trace: () => ({}),
+  trace: () => ({
+    fraction: 1,
+    endpos: { x: 0, y: 0, z: 0 },
+    plane: null,
+    allsolid: false,
+    startsolid: false,
+    ent: null
+  }),
 };
 
 function collectSnapshot(system: EntitySystem): EntitySystemSnapshot {

@@ -148,8 +148,8 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Apply velocity to origin (simple integration)
   - Handle different movetypes:
     - [x] MOVETYPE_NONE: Static, no movement
-    - [ ] MOVETYPE_WALK: Player/monster, uses pmove or AI movement
-    - [ ] MOVETYPE_STEP: Monster stepping (deprecated, use WALK)
+    - [x] MOVETYPE_WALK: Player/monster, uses pmove or AI movement (delegates to runStep if no client)
+    - [x] MOVETYPE_STEP: Monster stepping (uses runStep)
     - [x] MOVETYPE_TOSS: Gravity + bouncing (items, gibs)
     - [x] MOVETYPE_BOUNCE: Higher bounce (grenades)
     - [x] MOVETYPE_FLY: No gravity, flies straight (rockets)

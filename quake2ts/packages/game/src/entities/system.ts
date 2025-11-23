@@ -1,6 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement, runPush } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
 import { GameImports, TraceFunction, PointContentsFunction } from '../imports.js';
@@ -357,6 +357,18 @@ export class EntitySystem {
           break;
         case MoveType.Push:
           runPush(ent, this, this.imports, frametime);
+          break;
+        case MoveType.Step:
+          runStep(ent, this, this.imports, this.gravity, frametime);
+          ent.timestamp = this.currentTimeSeconds;
+          break;
+        case MoveType.Walk:
+          // MOVETYPE_WALK is typically for clients or monsters behaving like clients
+          // If it has no client attached, treat it as STEP (Quake 2 logic)
+          if (!ent.client) {
+             runStep(ent, this, this.imports, this.gravity, frametime);
+             ent.timestamp = this.currentTimeSeconds;
+          }
           break;
       }
     }
