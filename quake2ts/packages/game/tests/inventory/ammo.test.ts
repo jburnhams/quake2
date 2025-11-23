@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AmmoType, AMMO_TYPE_COUNT, clampAmmoCounts, createBaseAmmoCaps } from '../src/inventory/ammo.js';
+import { AmmoType, AMMO_TYPE_COUNT, clampAmmoCounts, createBaseAmmoCaps } from '../../src/inventory/ammo.js';
 
 describe('ammo caps', () => {
   it('matches the rerelease defaults for base campaign ammo types', () => {

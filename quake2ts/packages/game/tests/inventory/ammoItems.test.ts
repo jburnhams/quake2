@@ -8,7 +8,7 @@ import {
   createAmmoInventory,
   getAmmoItemDefinition,
   pickupAmmo,
-} from '../src/inventory/ammo.js';
+} from '../../src/inventory/ammo.js';
 
 function makeInventory(starting?: Partial<Record<AmmoType, number>>) {
   const inventory = createAmmoInventory();

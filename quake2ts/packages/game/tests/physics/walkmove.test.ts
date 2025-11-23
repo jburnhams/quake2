@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { M_walkmove } from '../src/ai/movement.js';
-import type { Entity } from '../src/entities/entity.js';
-import type { EntitySystem } from '../src/entities/system.js';
-import { MoveType, Solid, EntityFlags } from '../src/entities/entity.js';
-import { AIFlags } from '../src/ai/constants.js';
+import { M_walkmove } from '../../src/ai/movement.js';
+import type { Entity } from '../../src/entities/entity.js';
+import type { EntitySystem } from '../../src/entities/system.js';
+import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { AIFlags } from '../../src/ai/constants.js';
 
 describe('M_walkmove', () => {
   let entity: Entity;

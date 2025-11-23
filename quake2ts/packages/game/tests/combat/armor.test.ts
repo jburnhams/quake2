@@ -6,7 +6,7 @@ import {
   DamageFlags,
   type PowerArmorState,
   type RegularArmorState,
-} from '../src/combat/index.js';
+} from '../../src/combat/index.js';
 
 const ORIGIN = { x: 0, y: 0, z: 0 } as const;
 const FORWARD_ANGLES = { x: 0, y: 0, z: 0 } as const;

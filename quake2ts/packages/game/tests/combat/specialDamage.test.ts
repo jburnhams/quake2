@@ -11,9 +11,9 @@ import {
   killBox,
   type Damageable,
   EnvironmentalFlags,
-} from '../src/combat/index.js';
-import { MoveType, Solid } from '../src/entities/entity.js';
-import { EntityDamageFlags } from '../src/combat/damage.js';
+} from '../../src/combat/index.js';
+import { MoveType, Solid } from '../../src/entities/entity.js';
+import { EntityDamageFlags } from '../../src/combat/damage.js';
 
 function makeTarget(extra: Partial<Damageable> = {}) {
   return {

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CheckGround } from '../src/ai/movement.js';
-import type { Entity } from '../src/entities/entity.js';
-import type { EntitySystem } from '../src/entities/system.js';
-import { MoveType } from '../src/entities/entity.js';
+import { CheckGround } from '../../src/ai/movement.js';
+import type { Entity } from '../../src/entities/entity.js';
+import type { EntitySystem } from '../../src/entities/system.js';
+import { MoveType } from '../../src/entities/entity.js';
 
 describe('CheckGround', () => {
   let entity: Entity;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DamageMod, ORDERED_DAMAGE_MODS, damageModName } from '../src/combat/index.js';
+import { DamageMod, ORDERED_DAMAGE_MODS, damageModName } from '../../src/combat/index.js';
 
 describe('DamageMod enumeration', () => {
   it('retains the rerelease MOD_* ordering', () => {
