@@ -42,7 +42,7 @@ const random = () => Math.random();
 
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: any): void {

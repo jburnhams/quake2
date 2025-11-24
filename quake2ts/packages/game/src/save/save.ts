@@ -6,6 +6,7 @@ import type {
   EntitySystem,
   EntitySystemSnapshot,
   SerializedEntityState,
+  SerializedTargetAwareness,
 } from '../entities/index.js';
 import {
   type PlayerInventory,
@@ -155,6 +156,40 @@ function parseThinkEntries(raw: unknown): EntitySystemSnapshot['thinks'] {
   });
 }
 
+function parseAwareness(raw: unknown): SerializedTargetAwareness {
+  if (raw === undefined) {
+    // Return default empty awareness for older saves or missing data
+    return {
+      frameNumber: 0,
+      sightEntityIndex: null,
+      sightEntityFrame: 0,
+      soundEntityIndex: null,
+      soundEntityFrame: 0,
+      sound2EntityIndex: null,
+      sound2EntityFrame: 0,
+      sightClientIndex: null,
+    };
+  }
+  const awareness = ensureObject(raw, 'awareness');
+
+  // Helper to allow null or number
+  const ensureIndex = (val: unknown, lbl: string): number | null => {
+      if (val === null) return null;
+      return ensureNumber(val, lbl);
+  };
+
+  return {
+    frameNumber: ensureNumber(awareness.frameNumber, 'awareness.frameNumber'),
+    sightEntityIndex: ensureIndex(awareness.sightEntityIndex, 'awareness.sightEntityIndex'),
+    sightEntityFrame: ensureNumber(awareness.sightEntityFrame, 'awareness.sightEntityFrame'),
+    soundEntityIndex: ensureIndex(awareness.soundEntityIndex, 'awareness.soundEntityIndex'),
+    soundEntityFrame: ensureNumber(awareness.soundEntityFrame, 'awareness.soundEntityFrame'),
+    sound2EntityIndex: ensureIndex(awareness.sound2EntityIndex, 'awareness.sound2EntityIndex'),
+    sound2EntityFrame: ensureNumber(awareness.sound2EntityFrame, 'awareness.sound2EntityFrame'),
+    sightClientIndex: ensureIndex(awareness.sightClientIndex, 'awareness.sightClientIndex'),
+  };
+}
+
 function parseEntityFields(raw: unknown): SerializedEntityState['fields'] {
   if (raw === undefined) {
     return {};
@@ -231,6 +266,7 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
     pool: parsePool(snapshot.pool),
     entities: parseEntities(snapshot.entities),
     thinks: parseThinkEntries(snapshot.thinks),
+    awareness: parseAwareness(snapshot.awareness),
   };
 }
 

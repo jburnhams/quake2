@@ -11,6 +11,7 @@ import { createSaveFile, applySaveFile, GameSaveFile } from './save/index.js';
 import { RandomGenerator } from '@quake2ts/shared';
 export * from './entities/index.js';
 export * from './ai/index.js';
+export * from './ai/noise.js';
 
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 

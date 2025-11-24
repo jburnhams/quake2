@@ -60,12 +60,13 @@ describe('Monster AI - Soldier', () => {
     // Initially self.frame is 0.
 
     // Run think
-    const thinkContext = { timeSeconds: 1.0 }; // Mock context
+    // Mock context needs targetAwareness now
+    system.beginFrame(1.0);
 
     expect(soldier.frame).toBe(0);
 
     if (soldier.think) {
-        soldier.think(soldier, thinkContext);
+        soldier.think(soldier, system);
     }
 
     // M_MoveFrame increments frame
@@ -85,9 +86,9 @@ describe('Monster AI - Soldier', () => {
     // Set frame to last frame
     soldier.frame = move.lastframe;
 
-    const thinkContext = { timeSeconds: 1.0 };
+    system.beginFrame(1.0);
     if (soldier.think) {
-        soldier.think(soldier, thinkContext);
+        soldier.think(soldier, system);
     }
 
     // In Q2 logic, frame increments to lastframe + 1 (overshoot)
@@ -95,7 +96,7 @@ describe('Monster AI - Soldier', () => {
 
     // Run think again
     if (soldier.think) {
-        soldier.think(soldier, thinkContext);
+        soldier.think(soldier, system);
     }
 
     // Now it should have reset to firstframe, run AI for frame 0, and incremented to 1

@@ -90,12 +90,21 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
 }
 
 import { rangeTo } from './perception.js';
+import { findTarget } from './targeting.js';
 
-export function ai_stand(self: Entity, deltaSeconds: number): void {
+export function ai_stand(self: Entity, deltaSeconds: number, context: EntitySystem): void {
+  if (findTarget(self, context.targetAwareness, context, context.trace)) {
+     return;
+  }
   changeYaw(self, deltaSeconds);
 }
 
 export function ai_walk(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
+  // Check for enemy
+  if (findTarget(self, context.targetAwareness, context, context.trace)) {
+    return;
+  }
+
   setIdealYawTowards(self, self.goalentity);
   changeYaw(self, deltaSeconds);
 
@@ -126,6 +135,21 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
 }
 
 export function ai_run(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
+  if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
+    self.monsterinfo.stand?.(self, context);
+    return;
+  }
+
+  if (findTarget(self, context.targetAwareness, context, context.trace)) {
+      // In original code, ai_run calls FindTarget, if found and it's a new enemy (or we are not fighting), we might switch.
+      // Actually FindTarget usually returns true if it found a valid target.
+      // If we already have an enemy, FindTarget might check for better one or just return.
+      // But typically we rely on self.enemy being set.
+
+      // If we found a target and it's DIFFERENT or we didn't have one?
+      // For now, assume findTarget handles the switching/activation.
+  }
+
   setIdealYawTowards(self, self.enemy ?? self.goalentity);
   changeYaw(self, deltaSeconds);
 

@@ -2,7 +2,7 @@ import { SAVE_FORMAT_VERSION, type GameSaveFile } from './save.js';
 import type { RandomGeneratorState } from '@quake2ts/shared';
 import { RandomGenerator } from '@quake2ts/shared';
 import { ENTITY_FIELD_METADATA } from '../entities/entity.js';
-import type { EntitySystemSnapshot, SerializedEntityState } from '../entities/system.js';
+import type { EntitySystemSnapshot, SerializedEntityState, SerializedTargetAwareness } from '../entities/system.js';
 import type { LevelFrameState } from '../level.js';
 
 export type JsonObject = Record<string, unknown>;
@@ -227,11 +227,23 @@ function buildEntitySnapshot(
     }
   }
 
+  const dummyAwareness: SerializedTargetAwareness = {
+    frameNumber: 0,
+    sightEntityIndex: null,
+    sightEntityFrame: 0,
+    soundEntityIndex: null,
+    soundEntityFrame: 0,
+    sound2EntityIndex: null,
+    sound2EntityFrame: 0,
+    sightClientIndex: null,
+  };
+
   return {
     timeSeconds: levelTimeSeconds,
     pool: { capacity, activeOrder, freeList, pendingFree: [] },
     entities: serialized,
     thinks: [],
+    awareness: dummyAwareness,
   };
 }
 

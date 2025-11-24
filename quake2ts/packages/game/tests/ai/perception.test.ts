@@ -85,13 +85,13 @@ describe('infront', () => {
 });
 
 describe('visible', () => {
-  function createTracer(result: { fraction: number; entity: Entity | null; expectedMask?: TraceMask }): TraceFunction {
-    return (start, end, ignore, mask) => {
+  function createTracer(result: { fraction: number; ent: Entity | null; expectedMask?: TraceMask }): TraceFunction {
+    return (start, mins, maxs, end, ignore, mask) => {
       expect(ignore).toBeDefined();
       if (result.expectedMask !== undefined) {
         expect(mask).toBe(result.expectedMask);
       }
-      return result;
+      return { ...result, entity: result.ent };
     };
   }
 
@@ -100,7 +100,7 @@ describe('visible', () => {
     const other = createEntity();
     other.flags |= FL_NOVISIBLE;
 
-    const tracer = createTracer({ fraction: 0, entity: null });
+    const tracer = createTracer({ fraction: 0, ent: null });
     expect(visible(self, other, tracer)).toBe(false);
   });
 
@@ -112,17 +112,17 @@ describe('visible', () => {
 
     let capturedStart: { x: number; y: number; z: number } | undefined;
     let capturedEnd: { x: number; y: number; z: number } | undefined;
-    const tracer: TraceFunction = (start, end) => {
+    const tracer: TraceFunction = (start, mins, maxs, end) => {
       capturedStart = start;
       capturedEnd = end;
-      return { fraction: 1, entity: null };
+      return { fraction: 1, ent: null, entity: null };
     };
 
     expect(visible(self, other, tracer)).toBe(true);
     expect(capturedStart).toEqual({ x: 0, y: 0, z: 24 });
     expect(capturedEnd).toEqual({ x: 0, y: 0, z: 16 });
 
-    const hitTracer = createTracer({ fraction: 0.25, entity: other });
+    const hitTracer = createTracer({ fraction: 0.25, ent: other });
     expect(visible(self, other, hitTracer)).toBe(true);
   });
 
@@ -130,10 +130,10 @@ describe('visible', () => {
     const self = createEntity();
     const other = createEntity();
 
-    const opaqueTracer = createTracer({ fraction: 0, entity: null, expectedMask: TraceMask.Opaque | TraceMask.Window });
+    const opaqueTracer = createTracer({ fraction: 0, ent: null, expectedMask: TraceMask.Opaque | TraceMask.Window });
     visible(self, other, opaqueTracer);
 
-    const glassTracer = createTracer({ fraction: 1, entity: null, expectedMask: TraceMask.Opaque });
+    const glassTracer = createTracer({ fraction: 1, ent: null, expectedMask: TraceMask.Opaque });
     visible(self, other, glassTracer, { throughGlass: true });
   });
 });

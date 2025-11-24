@@ -288,7 +288,7 @@ export function findPlayerStart(entities: EntitySystem): Entity | undefined {
   );
 }
 
-export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void {
+export function registerDefaultSpawns(registry: SpawnRegistry, game?: any): void {
   registerWorldSpawn(registry);
 
   registry.register('info_player_start', () => {
@@ -318,7 +318,9 @@ export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void 
   registerTriggerSpawns(registry);
   registerTargetSpawns(registry);
   registerMiscSpawns(registry);
-  registerItemSpawns(game, registry);
+  if (game) {
+    registerItemSpawns(game, registry);
+  }
   registerFuncSpawns(registry);
   registerPathSpawns(registry);
   registerLightSpawns(registry);
@@ -327,6 +329,6 @@ export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void 
 
 export function createDefaultSpawnRegistry(game: any): SpawnRegistry {
   const registry = new SpawnRegistry();
-  registerDefaultSpawns(game, registry);
+  registerDefaultSpawns(registry, game);
   return registry;
 }

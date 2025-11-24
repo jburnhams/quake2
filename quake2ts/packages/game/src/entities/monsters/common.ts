@@ -16,7 +16,7 @@ export interface MonsterConfig {
 
 // Generic moves for monsters that don't have full animation tables yet
 function generic_ai_stand(self: Entity, dist: number, context: any): void {
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function generic_ai_walk(self: Entity, dist: number, context: any): void {

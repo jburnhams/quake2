@@ -29,11 +29,22 @@ function createEntity(): Entity {
 const mockTraceFn = vi.fn();
 const mockPointcontentsFn = vi.fn();
 const mockPickTargetFn = vi.fn();
+const mockTargetAwareness = {
+  frameNumber: 0,
+  sightEntity: null,
+  sightEntityFrame: 0,
+  soundEntity: null,
+  soundEntityFrame: 0,
+  sound2Entity: null,
+  sound2EntityFrame: 0,
+  sightClient: null,
+};
 
 const mockContext = {
   trace: mockTraceFn,
   pointcontents: mockPointcontentsFn,
   pickTarget: mockPickTargetFn,
+  targetAwareness: mockTargetAwareness,
 } as unknown as EntitySystem;
 
 beforeEach(() => {
@@ -46,6 +57,8 @@ beforeEach(() => {
   });
   mockPointcontentsFn.mockReturnValue(0);
   mockPickTargetFn.mockReturnValue(undefined);
+  mockTargetAwareness.frameNumber = 0;
+  mockTargetAwareness.sightEntity = null;
 });
 
 describe('walkMove', () => {
@@ -167,7 +180,7 @@ describe('ai_stand', () => {
     ent.ideal_yaw = 10;
     ent.yaw_speed = 90;
 
-    ai_stand(ent, 0.1);
+    ai_stand(ent, 0.1, mockContext);
 
     expect(ent.origin).toEqual({ x: 0, y: 0, z: 0 });
     expect(ent.angles.y).toBeCloseTo(10, 6);
