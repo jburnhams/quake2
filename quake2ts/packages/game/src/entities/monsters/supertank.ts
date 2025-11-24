@@ -199,7 +199,7 @@ function supertank_reattack1(self: Entity, context: any): void {
     }
 }
 
-function supertank_pain(self: Entity): void {
+function supertank_pain(self: Entity, context: any): void {
     if (self.monsterinfo.current_move === pain1_move ||
         self.monsterinfo.current_move === pain2_move ||
         self.monsterinfo.current_move === pain3_move) return;
@@ -212,7 +212,8 @@ function supertank_pain(self: Entity): void {
   else self.monsterinfo.current_move = pain3_move;
 }
 
-function supertank_die(self: Entity): void {
+function supertank_die(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'boss1/b1deth1.wav', 1, 1, 0);
   self.monsterinfo.current_move = death_move;
 }
 
@@ -327,13 +328,13 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
     if (self.monsterinfo.current_move === attack_rocket_move && (self.monsterinfo.nextframe || 0) < attack_rocket_move.firstframe + 14) return;
 
     if (damage <= 10) {
-        // play pain1 sound
+        context.entities.sound?.(self, 0, 'boss1/b1pain1.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain1_move;
     } else if (damage <= 25) {
-        // play pain3 sound
+        context.entities.sound?.(self, 0, 'boss1/b1pain3.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain3_move;
     } else {
-        // play pain2 sound
+        context.entities.sound?.(self, 0, 'boss1/b1pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain2_move;
     }
   };
@@ -343,18 +344,22 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
     self.solid = Solid.Not;
 
     if (self.health < -80) { // Big boss needs big damage to gib
+        context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
         throwGibs(context.entities, self.origin, damage);
         context.entities.free(self);
         return;
     }
 
-    supertank_die(self);
+    supertank_die(self, context.entities);
   };
 
   self.monsterinfo.stand = supertank_stand;
   self.monsterinfo.walk = supertank_walk;
   self.monsterinfo.run = supertank_run;
   self.monsterinfo.attack = supertank_attack;
+  self.monsterinfo.sight = (self, other) => {
+      context.entities.sound?.(self, 0, 'boss1/sight1.wav', 1, 1, 0);
+  };
 
   self.think = monster_think;
 

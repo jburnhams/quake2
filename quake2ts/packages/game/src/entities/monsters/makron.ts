@@ -112,6 +112,8 @@ function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
 function makron_fire_bfg(self: Entity, context: any): void {
     if (!self.enemy) return;
 
+    context.engine.sound?.(self, 0, 'makron/bfg_fire.wav', 1, 1, 0);
+
     const start = getProjectedOffset(self, MAKRON_BFG_OFFSET);
     const target = { ...self.enemy.origin };
     target.z += (self.enemy.viewheight || 0);
@@ -122,6 +124,8 @@ function makron_fire_bfg(self: Entity, context: any): void {
 
 function makron_fire_railgun(self: Entity, context: any): void {
     if (!self.pos1) return; // Need saved aim pos
+
+    context.engine.sound?.(self, 0, 'makron/rail_fire.wav', 1, 1, 0);
 
     const start = getProjectedOffset(self, MAKRON_RAILGUN_OFFSET);
     const dir = normalizeVec3(subtractVec3(self.pos1, start));
@@ -138,31 +142,94 @@ function makron_save_loc(self: Entity): void {
 }
 
 function makron_fire_hyperblaster(self: Entity, context: any): void {
-    // Dynamic flash offset based on frame?
-    // C code: flash_number = MZ2_MAKRON_BLASTER_1 + (self->s.frame - FRAME_attak405);
-    // attak405 corresponds to 5th frame of attack4 (index 4)
-    // We can approximate or just use a fixed offset that moves slightly
-
-    // Just use a fixed offset for now or compute based on frame index if we had it easily accessible
-    // Let's use MAKRON_BLASTER_OFFSET_1 but vary angle?
+    context.engine.sound?.(self, 0, 'makron/blaster.wav', 1, 1, 0);
 
     const start = getProjectedOffset(self, MAKRON_BLASTER_OFFSET_1);
 
-    // C logic for direction:
-    // It calculates direction based on angle + sweep
+    // C logic:
+    // if (self->s.frame <= FRAME_attak413) (index 12)
+    //   dir[1] = self->s.angles[1] - 10 * (self->s.frame - FRAME_attak404); (index 3)
+    // else
+    //   dir[1] = self->s.angles[1] + 10 * (self->s.frame - FRAME_attak413);
+
+    // Frame indices in attack_hyperblaster_move:
+    // frames: 78-103 (26 frames)
+    // indices in move: 0 to 25.
+    // Fire is called for i >= 4 && i <= 20.
+    // attak404 is first fire frame (index 3 in move? no, indices 4 to 20 call this).
+    // Let's align with C.
+    // Start firing at index 4.
+    // C: FRAME_attak404 is start.
+    // Sweep left until 413 (9 frames later, index 12).
+    // Sweep right after.
+
+    // We need current frame index relative to move start.
+    const currentFrame = (self.monsterinfo.nextframe || 0) - attack_hyperblaster_move.firstframe;
+    // Current frame when this is called is 'i' from the array creation logic, but that's static.
+    // We need dynamic frame index.
+    // Wait, `monster_fire_hyperblaster` doesn't receive `i`.
+    // We can calculate it from `self.monsterinfo.nextframe` (which is about to be shown?)
+    // Actually `think` is called during `M_MoveFrame`, before `nextframe` logic advances fully?
+    // `M_MoveFrame` calls think, then sets frame.
+    // So `self.frame` (or `s.frame`) should be the *current* frame.
+    // But `Entity` doesn't have `frame` directly exposed easily synced with animation state always in this port?
+    // `self.monsterinfo.current_move` is set. `self.monsterinfo.nextframe` tracks progress.
+    // Let's assume `currentFrame` is `self.monsterinfo.nextframe - move.firstframe`.
+
+    // Wait, `M_MoveFrame` logic:
+    // `const frame = move.frames[self.monsterinfo.nextframe - move.firstframe];`
+    // `if (frame.think) frame.think(self, context);`
+    // So `self.monsterinfo.nextframe` is the frame index being processed.
+
+    const relFrame = (self.monsterinfo.nextframe || 0) - attack_hyperblaster_move.firstframe;
+
+    // C Logic Mapping:
+    // attak404 is relative index 3?
+    // The frames array creation: `think: (i >= 4 && i <= 20) ? ...`
+    // So firing starts at relative index 4.
+    // Let's say index 4 corresponds to 'attak405' (since C usually 0-indexed but names might be 1-based or offset).
+    // Let's trust the loop range.
+    // 4 to 12: sweep left?
+    // 13 to 20: sweep right?
+
+    let yawDelta = 0;
+    if (relFrame <= 13) {
+        yawDelta = -10 * (relFrame - 4); // 4 is start
+    } else {
+        yawDelta = -90 + 10 * (relFrame - 13); // Continue from -90?
+        // C: dir[1] = angle - 10 * (frame - 3) -> range 3 to 12: 0 to -90.
+        // else dir[1] = angle + 10 * (frame - 12) -> wait, C says `angle + 10 ...`?
+        // Let's look at `rerelease/g_monster.c` or similar if we had it.
+        // Based on comment `dir[1] = self.angles[1] - 10 * (frame - 13)` in memory/previous thought?
+        // No, simplified thought.
+
+        // Let's implement a simple sweep:
+        // Center -> Left -> Right -> Center
+        // Or just spread.
+        // -10 degrees per frame seems aggressive but Makron is big.
+
+        // Let's try:
+        // Frames 4-12: -10 * (i - 4) => 0 to -80
+        // Frames 13-20: -80 + 10 * (i - 12) => -70 to 0?
+        // Actually let's just use the enemy direction if available, but add the sweep offset to IT.
+    }
 
     let dir: Vec3;
     if (self.enemy) {
         const target = { ...self.enemy.origin };
         target.z += (self.enemy.viewheight || 0);
         const vec = subtractVec3(target, start);
+        const enemyAngles = vectorToAngles(vec);
 
-        // Sweep logic
-        // if frame <= 13 (index 12): dir[1] = self.angles[1] - 10 * (frame - 13)
-        // else dir[1] = self.angles[1] + 10 * (frame - 21)
+        // Apply sweep to yaw
+        if (relFrame <= 12) {
+             enemyAngles.y -= 5 * (relFrame - 4);
+        } else {
+             enemyAngles.y -= 40 - 5 * (relFrame - 12);
+        }
 
-        // Simplified: Just aim at enemy
-        dir = normalizeVec3(vec);
+        const forward = angleVectors(enemyAngles).forward;
+        dir = forward;
     } else {
         const { forward } = angleVectors(self.angles);
         dir = forward;
@@ -172,7 +239,7 @@ function makron_fire_hyperblaster(self: Entity, context: any): void {
 }
 
 
-function makron_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function makron_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
     if (self.health < (self.max_health / 2)) {
       self.skin = 1;
     }
@@ -184,17 +251,21 @@ function makron_pain(self: Entity, other: Entity | null, kick: number, damage: n
     self.pain_finished_time = self.timestamp + 3.0;
 
     if (damage <= 40) {
+        context.engine.sound?.(self, 0, 'makron/pain1.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain4_move;
     } else if (damage <= 110) {
+        context.engine.sound?.(self, 0, 'makron/pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain5_move;
     } else {
         if (Math.random() <= 0.45) {
+             context.engine.sound?.(self, 0, 'makron/pain3.wav', 1, 1, 0);
              self.monsterinfo.current_move = pain6_move;
         }
     }
 }
 
-function makron_die(self: Entity): void {
+function makron_die(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'makron/death.wav', 1, 1, 0);
     // Spawn torso gib?
     self.monsterinfo.current_move = death_move;
 }
@@ -280,7 +351,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.takedamage = true;
   self.viewheight = 90; // Guess? C code uses viewheight for aiming
 
-  self.pain = makron_pain;
+  self.pain = (ent, other, kick, dmg) => makron_pain(ent, other, kick, dmg, context.entities);
   self.die = (self, inflictor, attacker, damage, point) => {
     // Check for gib
     if (self.health <= -2000) {
@@ -291,7 +362,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
 
     self.deadflag = DeadFlag.Dead;
     self.solid = Solid.Not;
-    makron_die(self);
+    makron_die(self, context.entities);
   };
 
   self.monsterinfo.stand = makron_stand;
@@ -299,6 +370,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = makron_run;
   self.monsterinfo.attack = makron_attack;
   self.monsterinfo.sight = (self, other) => {
+      context.entities.sound?.(self, 0, 'makron/sight.wav', 1, 1, 0);
       self.monsterinfo.current_move = sight_move;
   };
 
