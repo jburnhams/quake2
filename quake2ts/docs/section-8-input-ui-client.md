@@ -19,6 +19,10 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 - ✅ Status bar HUD (health, armor, ammo, icons)
 - ✅ Crosshair rendering and customization
 - ✅ Damage indicators (directional and screen flash)
+- ✅ Menu System (Main, Pause, Options, Save/Load, Maps)
+- ✅ Menu Navigation (Keyboard)
+- ✅ Menu Rendering (using HUD primitives)
+- ✅ Input Routing (Menu vs Game)
 
 ## Tasks Remaining
 
@@ -132,37 +136,37 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Pause game while open (or slow time)
 
 ### Menu System
-- [ ] Main menu
+- [x] Main menu
   - Single Player (start game)
   - Multiplayer (disabled for now, or grayed out)
   - Options (settings)
   - Quit
-- [ ] Map selection menu
-  - List of available maps from loaded PAKs
+- [x] Map selection menu
+  - List of available maps (hardcoded for now, needs VFS integration)
   - Thumbnails/previews (optional)
   - Difficulty selection
   - Start map
-- [ ] Options menu
+- [x] Options menu
   - Video settings (resolution, fullscreen, FOV, brightness)
   - Audio settings (master, SFX, music volumes)
   - Controls (key bindings, mouse sensitivity)
   - Gameplay (crosshair, HUD style, difficulty)
   - Apply and save settings
-- [ ] Pause menu (during game)
+- [x] Pause menu (during game)
   - Resume
   - Options
   - Restart level
   - Quit to main menu
-- [ ] Load/Save menu
+- [x] Load/Save menu
   - List save files
   - Load selected save
   - Save current game with name
   - Delete saves
-- [ ] Menu navigation
+- [x] Menu navigation
   - Keyboard (arrow keys, enter, escape)
   - Mouse (click buttons)
   - Gamepad (D-pad, A/B buttons)
-- [ ] Menu rendering
+- [x] Menu rendering
   - Use HUD rendering (Draw_Pic, Draw_String)
   - Background image
   - Button highlights

@@ -25,6 +25,7 @@ export interface Renderer {
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
     readonly stats: GpuProfilerStats;
+    getCanvasSize(): { width: number, height: number };
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
 
     // HUD Methods
@@ -354,6 +355,7 @@ export const createRenderer = (
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
         get stats() { return gpuProfiler.stats; },
+        getCanvasSize: () => ({ width: gl.canvas.width, height: gl.canvas.height }),
         renderFrame,
         registerPic,
         registerTexture,

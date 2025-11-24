@@ -15,6 +15,7 @@ import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
 import { Draw_Hud, Init_Hud } from './hud.js';
+import { Draw_Menu } from './ui/menu/render.js';
 import { MessageSystem } from './hud/messages.js';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
@@ -25,6 +26,9 @@ import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
 import { MenuSystem } from './ui/menu/system.js';
 import { SaveStorage } from '@quake2ts/game';
 import { OptionsMenuFactory } from './ui/menu/options.js';
+import { PauseMenuFactory } from './ui/menu/pause.js';
+import { MapMenuFactory } from './ui/menu/maps.js';
+import { InputController, InputControllerOptions } from './input/controller.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -52,6 +56,8 @@ export { ClientConfigStrings } from './configStrings.js';
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
   readonly host?: EngineHost;
+  readonly storage: SaveStorage; // Required for save/load menus
+  readonly inputOptions?: InputControllerOptions;
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
@@ -73,8 +79,13 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   demoPlayback: DemoPlaybackController;
   demoHandler: ClientNetworkHandler;
 
-  // Menu System
-  createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+  // Menu & Input
+  readonly menuSystem: MenuSystem;
+  readonly inputController: InputController;
+
+  handleInput(code: string, down: boolean, key?: string): boolean;
+  toggleMenu(): void;
+  openMainMenu(): void;
 
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
@@ -88,6 +99,10 @@ export function createClient(imports: ClientImports): ClientExports {
   const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
+
+  // Input & Menu
+  const inputController = new InputController(imports.inputOptions);
+  const menuSystem = new MenuSystem();
 
   // Hook up message system to demo handler
   demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
@@ -106,6 +121,73 @@ export function createClient(imports: ClientImports): ClientExports {
   let fovValue = 90;
   let isZooming = false;
 
+  // Menu Factories
+  let mainMenuFactory: MainMenuFactory;
+  let pauseMenuFactory: PauseMenuFactory;
+  let optionsFactory: OptionsMenuFactory;
+  let saveLoadFactory: SaveLoadMenuFactory;
+  let mapMenuFactory: MapMenuFactory;
+
+  // Initialize Factories
+  if (imports.host) {
+      optionsFactory = new OptionsMenuFactory(menuSystem, imports.host);
+
+      saveLoadFactory = new SaveLoadMenuFactory(
+          menuSystem,
+          imports.storage,
+          async (name) => {
+              // Save callback
+              if (imports.host) {
+                  imports.host.commands.execute(`save "${name}"`);
+              }
+          },
+          async (slot) => {
+             if (imports.host) {
+                 imports.host.commands.execute(`load "${slot}"`);
+             }
+          },
+          async (slot) => {
+             await imports.storage.delete(slot);
+          }
+      );
+
+      mainMenuFactory = new MainMenuFactory(menuSystem, saveLoadFactory, {
+          onNewGame: () => {
+              // Open Map Menu or start new game directly
+              menuSystem.pushMenu(mapMenuFactory.createMapMenu());
+          },
+          onQuit: () => {
+              // Browser can't really quit, maybe reload or show "Thanks for playing"
+              window.location.reload();
+          },
+          optionsFactory,
+          showSaveOption: false
+      });
+
+      pauseMenuFactory = new PauseMenuFactory(menuSystem, {
+          onResume: () => {
+              menuSystem.closeAll();
+              inputController.setPointerLocked(true); // Re-lock
+          },
+          onRestart: () => {
+              imports.host?.commands.execute('restart');
+              menuSystem.closeAll();
+          },
+          onQuit: () => {
+              imports.host?.commands.execute('disconnect');
+              menuSystem.closeAll();
+              menuSystem.pushMenu(mainMenuFactory.createMainMenu());
+          },
+          optionsFactory,
+          saveLoadFactory // Pass factory to enable Save/Load in Pause Menu
+      });
+
+      mapMenuFactory = new MapMenuFactory(menuSystem, (map) => {
+          imports.host?.commands.execute(`map ${map}`);
+      });
+  }
+
+  // Register commands
   if (imports.host?.commands) {
     imports.host.commands.register('playdemo', (args) => {
       if (args.length < 1) {
@@ -130,6 +212,10 @@ export function createClient(imports: ClientImports): ClientExports {
     imports.host.commands.register('-zoom', () => {
         isZooming = false;
     }, 'Reset zoom');
+
+    imports.host.commands.register('togglemenu', () => {
+        clientExports.toggleMenu();
+    }, 'Toggle main/pause menu');
 
     if (imports.host.cvars) {
       imports.host.cvars.register({
@@ -173,18 +259,97 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
+
+      // Open main menu on startup if valid
+      if (imports.host && mainMenuFactory) {
+         // Maybe not auto-open if it's a reload?
+         // For now, let's leave it closed or controlled by shell.
+      }
     },
 
     predict(command: UserCommand): PredictionState {
       return prediction.enqueueCommand(command);
     },
 
-    createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
-        const menuSystem = new MenuSystem();
-        const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
-        const optionsFactory = new OptionsMenuFactory(menuSystem, imports.host!);
-        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, { ...options, optionsFactory });
-        return { menuSystem, factory };
+    menuSystem,
+    inputController,
+
+    handleInput(code: string, down: boolean, key?: string): boolean {
+        // If menu is active, consume all input (don't pass to game)
+        if (menuSystem.isActive()) {
+            if (down) {
+                let action: 'up' | 'down' | 'left' | 'right' | 'select' | 'back' | 'char' | undefined;
+
+                if (code === 'ArrowUp') action = 'up';
+                else if (code === 'ArrowDown') action = 'down';
+                else if (code === 'ArrowLeft') action = 'left';
+                else if (code === 'ArrowRight') action = 'right';
+                else if (code === 'Enter' || code === 'Space') action = 'select';
+                else if (code === 'Escape') action = 'back';
+
+                // If no specific action matched, and we have a char key, pass it
+                if (!action && key && key.length === 1) {
+                    action = 'char';
+                } else if (!action && code === 'Backspace') {
+                    action = 'left'; // Backspace maps to left/delete for input in simple implementation
+                }
+
+                // Also map WASD for navigation if not typing in input field?
+                // Difficult to know if input field focused without peeking menu state details.
+                // For now, prioritize char input if provided.
+                // If we want WASD nav, we should check if current item is input.
+                // MenuSystem knows. Let's try to map WASD to nav as fallback if not consumed as char?
+                // But 'char' action is generic.
+
+                // For now: Arrow keys = Nav. WASD = Char (if char provided).
+                // If key is undefined (e.g. not provided by caller), we can't do char input easily.
+
+                if (action) {
+                    menuSystem.handleInput(action, key);
+                }
+            }
+            return true;
+        } else if (code === 'Escape' && down) {
+            this.toggleMenu();
+            return true;
+        }
+
+        // Pass to InputController
+        if (down) {
+            inputController.handleKeyDown(code);
+        } else {
+            inputController.handleKeyUp(code);
+        }
+        return false;
+    },
+
+    toggleMenu() {
+        if (menuSystem.isActive()) {
+            // Close menu
+            menuSystem.closeAll();
+            // Re-request pointer lock if needed
+            inputController.setPointerLocked(true);
+        } else {
+            // Open menu
+            // Determine which menu (Pause vs Main)
+            // If in-game (connected), Pause Menu. Else Main Menu.
+            // For now, assume Main Menu if not connected logic available, or Pause if running.
+            // Simplified: Always Pause Menu if factories exist, let it handle "Quit to Main".
+            if (pauseMenuFactory) {
+                 inputController.reset(); // Clear any held keys so player doesn't get stuck moving
+                 menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
+                 inputController.setPointerLocked(false);
+            }
+        }
+    },
+
+    openMainMenu() {
+        if (mainMenuFactory) {
+            menuSystem.closeAll();
+            inputController.reset();
+            menuSystem.pushMenu(mainMenuFactory.createMainMenu());
+            inputController.setPointerLocked(false);
+        }
     },
 
     render(sample: GameRenderSample<PredictionState>): UserCommand {
@@ -216,7 +381,7 @@ export function createClient(imports: ClientImports): ClientExports {
         camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
         camera.angles = vec3.fromValues(viewangles.x, viewangles.y, viewangles.z);
         camera.fov = isZooming ? 40 : fovValue;
-        camera.aspect = 4 / 3;
+        camera.aspect = 4 / 3; // Should be updated by renderer aspect ratio
       }
 
       if (imports.engine.renderer && lastRendered && lastRendered.client) {
@@ -235,7 +400,22 @@ export function createClient(imports: ClientImports): ClientExports {
         this.DrawHUD(stats, timeMs);
       }
 
-      return command;
+      // Generate Command
+      // If menu is active, return neutral command
+      if (menuSystem.isActive()) {
+          return {
+              msec: Math.min(Math.max(Math.round(frameTimeMs), 1), 250),
+              buttons: 0,
+              angles: { x: 0, y: 0, z: 0 },
+              forwardmove: 0,
+              sidemove: 0,
+              upmove: 0
+          };
+      }
+
+      // Build command from InputController
+      const serverFrame = sample.latest?.frame ?? 0;
+      return inputController.buildCommand(frameTimeMs, performance.now(), serverFrame);
     },
 
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
@@ -273,6 +453,12 @@ export function createClient(imports: ClientImports): ClientExports {
           messageSystem,
           hudTimeMs
         );
+
+        // Draw Menu
+        if (menuSystem.isActive()) {
+            const { width, height } = imports.engine.renderer.getCanvasSize ? { width: imports.engine.renderer.getCanvasSize().width, height: imports.engine.renderer.getCanvasSize().height } : { width: 640, height: 480 };
+            Draw_Menu(imports.engine.renderer, menuSystem.getState(), width, height);
+        }
     },
 
     shutdown() {

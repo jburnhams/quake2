@@ -91,6 +91,13 @@ class KeyButton {
 
     return { active: this.activeCodes.size > 0, wasPressed, fraction };
   }
+
+  reset(): void {
+      this.activeCodes.clear();
+      this.pressed = false;
+      this.downTime = 0;
+      this.msec = 0;
+  }
 }
 
 export interface InputControllerOptions {
@@ -262,6 +269,17 @@ export class InputController {
 
   setTouchState(state: TouchInputState): void {
     this.pendingTouchState = state;
+  }
+
+  reset(): void {
+      for (const button of this.buttons.values()) {
+          button.reset();
+      }
+      this.mouseDelta = { deltaX: 0, deltaY: 0 };
+      this.commandQueue = [];
+      this.anyPressed = false;
+      this.gamepadButtons.clear();
+      this.touchButtons.clear();
   }
 
   buildCommand(frameMsec: number, now: number = nowMs(), serverFrame?: number): UserCommand {
@@ -580,4 +598,3 @@ export class InputController {
     return Math.max(-max, Math.min(max, value));
   }
 }
-
