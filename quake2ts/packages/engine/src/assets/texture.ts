@@ -1,12 +1,13 @@
 import { LruCache } from './cache.js';
 import { pcxToRgba, type PcxImage } from './pcx.js';
 import { parseWal, type WalTexture } from './wal.js';
+import { TgaImage } from './tga.js';
 
 export interface PreparedTexture {
   readonly width: number;
   readonly height: number;
   readonly levels: readonly TextureLevel[];
-  readonly source: 'pcx' | 'wal';
+  readonly source: 'pcx' | 'wal' | 'tga';
 }
 
 export interface TextureLevel {
@@ -67,6 +68,11 @@ export function preparePcxTexture(pcx: PcxImage): PreparedTexture {
   const rgba = pcxToRgba(pcx);
   const level: TextureLevel = { level: 0, width: pcx.width, height: pcx.height, rgba };
   return { width: pcx.width, height: pcx.height, levels: [level], source: 'pcx' };
+}
+
+export function prepareTgaTexture(tga: TgaImage): PreparedTexture {
+  const level: TextureLevel = { level: 0, width: tga.width, height: tga.height, rgba: tga.pixels };
+  return { width: tga.width, height: tga.height, levels: [level], source: 'tga' };
 }
 
 export function parseWalTexture(buffer: ArrayBuffer, palette: Uint8Array): PreparedTexture {
