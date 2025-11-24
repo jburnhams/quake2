@@ -103,8 +103,10 @@
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.82",
     "@quake2ts/tests": "workspace:^",
+    "@types/node": "^24.10.1",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.4.5",
     "vitest": "^1.5.3"
   },
