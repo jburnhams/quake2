@@ -194,16 +194,16 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Delay support (trigger after N seconds)
 - [x] Multi-target support
   - One entity can target multiple others (comma-separated or repeated triggers)
-- [ ] Trigger conditions
-  - Some triggers require keys, specific conditions
-  - Counter triggers (activate after N triggers)
+- [x] Trigger conditions
+  - [x] Some triggers require keys, specific conditions
+  - [x] Counter triggers (activate after N triggers)
 
 ### Entity State for Rendering/Audio
-- [ ] Update render state
+- [x] Update render state
   - Set modelindex, frame, skin based on entity state
   - Set effects flags (muzzle flash, teleport, etc.)
   - Set renderfx (glow, IR goggles, etc.)
-- [ ] Emit sounds
+- [x] Emit sounds
   - Call engine sound API (Section 7) for entity sounds
   - Positioned at entity origin
   - Attenuation based on distance
