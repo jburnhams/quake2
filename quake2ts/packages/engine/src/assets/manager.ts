@@ -1,11 +1,12 @@
 import { normalizePath } from './pak.js';
-import { TextureCache, type PreparedTexture, parseWalTexture, preparePcxTexture } from './texture.js';
+import { TextureCache, type PreparedTexture, parseWalTexture, preparePcxTexture, prepareTgaTexture } from './texture.js';
 import { AudioRegistry, type DecodedAudio } from './audio.js';
 import { Md2Loader, type Md2Model } from './md2.js';
 import { Md3Loader, type Md3Model } from './md3.js';
 import { SpriteLoader, type SpriteModel } from './sprite.js';
 import { VirtualFileSystem } from './vfs.js';
 import { parsePcx } from './pcx.js';
+import { parseTga } from './tga.js';
 
 type AssetType = 'texture' | 'model' | 'sound' | 'sprite';
 
@@ -153,6 +154,8 @@ export class AssetManager {
         texture = parseWalTexture(buffer as unknown as ArrayBuffer, this.palette);
     } else if (ext === 'pcx') {
         texture = preparePcxTexture(parsePcx(buffer as unknown as ArrayBuffer));
+    } else if (ext === 'tga') {
+        texture = prepareTgaTexture(parseTga(buffer as unknown as ArrayBuffer));
     } else {
         throw new Error(`Unsupported texture format for loadTexture: ${ext}`);
     }
