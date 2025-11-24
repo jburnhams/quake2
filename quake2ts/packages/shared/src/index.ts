@@ -28,4 +28,5 @@ export * from './pmove/snap.js';
 export * from './pmove/view.js';
 export * from './protocol/index.js';
 export * from './pmove/apply.js';
-export * from './io/binaryStream.js';
+export * from './io/index.js';
+export * from './net/index.js';

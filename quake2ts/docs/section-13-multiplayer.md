@@ -36,10 +36,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 ## Implementation Tasks
 
 ### Phase 1: Network Plumbing
-- [ ] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
-- [ ] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
+- [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
+- [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
   - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
-- [ ] **Transport Layer**:
+- [x] **Transport Layer**:
   - Create `NetDriver` interface.
   - Implement `WebSocketNetDriver` for Node.js (Server).
   - Implement `BrowserWebSocketNetDriver` for Client.

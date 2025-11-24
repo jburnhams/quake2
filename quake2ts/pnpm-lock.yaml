@@ -103,6 +103,34 @@ importers:
         specifier: ^8.1.0
         version: 8.5.1(tsx@4.20.6)(typescript@5.9.3)
 
+  packages/server:
+    dependencies:
+      '@quake2ts/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@quake2ts/game':
+        specifier: workspace:*
+        version: link:../game
+      '@quake2ts/shared':
+        specifier: workspace:*
+        version: link:../shared
+      ws:
+        specifier: ^8.18.0
+        version: 8.18.3
+    devDependencies:
+      '@types/ws':
+        specifier: ^8.5.12
+        version: 8.18.1
+      tsup:
+        specifier: ^8.0.2
+        version: 8.5.1(tsx@4.20.6)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@24.10.1)(jsdom@27.2.0)
+
   packages/shared:
     devDependencies:
       tsup:
@@ -1251,6 +1279,12 @@ packages:
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
     dependencies:
       undici-types: 7.16.0
+    dev: true
+
+  /@types/ws@8.18.1:
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+    dependencies:
+      '@types/node': 24.10.1
     dev: true
 
   /@vitest/expect@1.6.1:
@@ -2737,7 +2771,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-    dev: true
 
   /xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
