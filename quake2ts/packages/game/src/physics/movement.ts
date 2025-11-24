@@ -14,6 +14,10 @@ import { resolveImpact, checkTriggers } from './collision.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss) {
+    // Basic null checks before using vectors
+    if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
+    if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
+
     if (ent.waterlevel > 1) {
       // In water, entities drift down slowly if dense, or up if buoyant?
       // Quake 2 simply runs custom water physics and skips gravity.
@@ -102,6 +106,10 @@ export function runBouncing(ent: Entity, imports: GameImports, frametime: number
     return;
   }
 
+  // Basic null checks
+  if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
+  if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
+
   const end = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
   const traceResult = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);
 
@@ -123,6 +131,10 @@ export function runStep(
   frametime: number,
 ): void {
   // SV_Physics_Step
+
+  // Basic null checks
+  if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
+  if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
 
   // If not flying or swimming, apply gravity
   const isFlying = (ent.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0;
@@ -195,6 +207,10 @@ export function runProjectileMovement(ent: Entity, imports: GameImports, frameti
   if (ent.movetype !== MoveType.FlyMissile) {
     return;
   }
+
+  // Basic null checks
+  if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
+  if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
 
   const end = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
   const traceResult = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);

@@ -1,11 +1,25 @@
 import {
+  angleVectors,
+  normalizeVec3,
+  subtractVec3,
+  Vec3,
+  ZERO_VEC3,
+  lengthVec3,
+  addVec3,
+  scaleVec3,
+  MASK_SHOT,
+} from '@quake2ts/shared';
+import {
   ai_charge,
   ai_move,
   ai_run,
   ai_stand,
   ai_walk,
   monster_think,
+  ai_turn,
+  ai_face
 } from '../../ai/index.js';
+import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
   Entity,

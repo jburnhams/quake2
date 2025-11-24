@@ -17,10 +17,12 @@ export const PRINT_MEDIUM = 1; // death messages
 export const PRINT_HIGH = 2;   // critical messages
 export const PRINT_CHAT = 3;   // chat messages
 
-function getGender(ent: Entity): string {
-    // Basic gender check based on model or properties?
-    // Quake 2 defaults to "male" for player usually.
-    // If we had a 'gender' property on client info.
+export function getGender(ent: Entity): string {
+    // Try to get gender from client userinfo if available
+    // Assuming userinfo is stored in client property, but structure might vary.
+    // For now, default to "male" as in original.
+    // Ideally: return ent.client?.userinfo?.gender || "male";
+    // But PlayerClient interface needs to be checked.
     return "male";
 }
 
@@ -29,10 +31,6 @@ export function ClientObituary(self: Entity, inflictor: Entity | null, attacker:
 
     // Check if player
     if (self.classname !== 'player') {
-        // In unit tests, we might test with entities that don't have 'player' classname but we still want to test logic.
-        // But for gameplay, it should be player.
-        // For now, let's stick to strict player check.
-        // Wait, unit test uses "player" classname for self.
         return;
     }
 
@@ -162,7 +160,7 @@ export function ClientObituary(self: Entity, inflictor: Entity | null, attacker:
     } else {
         // PvE Death (killed by monster or world)
         if (attacker) {
-             const attackerName = attacker.classname; // Simplify for now (e.g. monster_soldier -> Soldier) (TODO)
+             const attackerName = attacker.classname;
 
              // Generic monster death messages
              message = `${friendlyName} was killed by ${attackerName}.`;
