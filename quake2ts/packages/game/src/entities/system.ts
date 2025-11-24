@@ -125,6 +125,10 @@ export class EntitySystem {
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
+
+  get rng() {
+    return this.random;
+  }
   readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
