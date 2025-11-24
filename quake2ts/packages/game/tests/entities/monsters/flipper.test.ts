@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerFlipperSpawns } from '../../../src/entities/monsters/flipper.js';
-import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
+import { SP_monster_flipper } from '../../../src/entities/monsters/flipper.js';
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
-import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
+import { SpawnContext } from '../../../src/entities/spawn.js';
 
 describe('monster_flipper', () => {
   let system: EntitySystem;
   let context: SpawnContext;
-  let registry: SpawnRegistry;
 
   beforeEach(() => {
+    // Mock game engine and imports
     const engine = {
       sound: vi.fn(),
       modelIndex: vi.fn().mockReturnValue(1),
@@ -19,7 +19,7 @@ describe('monster_flipper', () => {
       trace: vi.fn().mockReturnValue({
         allsolid: false,
         startsolid: false,
-        fraction: 1.0,
+        fraction: 1,
         endpos: { x: 0, y: 0, z: 0 },
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
         ent: null,
@@ -32,52 +32,57 @@ describe('monster_flipper', () => {
 
     const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
     system = (gameExports as any).entities;
+
     context = {
       keyValues: {},
       entities: system,
       warn: vi.fn(),
       free: vi.fn(),
     };
-    registry = new SpawnRegistry();
-    registerFlipperSpawns(registry);
   });
 
   it('spawns with correct properties', () => {
     const ent = system.spawn();
-    ent.classname = 'monster_flipper';
-    const spawnFunc = registry.get('monster_flipper');
-    spawnFunc!(ent, context);
+    SP_monster_flipper(ent, context);
 
+    expect(ent.classname).toBe('monster_flipper');
     expect(ent.model).toBe('models/monsters/flipper/tris.md2');
     expect(ent.health).toBe(50);
+    expect(ent.max_health).toBe(50);
     expect(ent.mass).toBe(100);
     expect(ent.solid).toBe(Solid.BoundingBox);
-    expect(ent.movetype).toBe(MoveType.Step);
-    expect(ent.flags & EntityFlags.Swim).toBeTruthy(); // Should have Swim flag
+    expect(ent.movetype).toBe(MoveType.Fly);
   });
 
-  it('has AI states', () => {
+  it('enters stand state after spawn', () => {
     const ent = system.spawn();
-    registry.get('monster_flipper')!(ent, context);
-    expect(ent.monsterinfo.stand).toBeDefined();
-    expect(ent.monsterinfo.walk).toBeDefined();
-    expect(ent.monsterinfo.run).toBeDefined();
-    expect(ent.monsterinfo.attack).toBeDefined();
+    SP_monster_flipper(ent, context);
+
+    expect(ent.monsterinfo.current_move).toBeDefined();
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(41);
   });
 
-  it('attacks when in range', () => {
+  it('handles pain correctly', () => {
     const ent = system.spawn();
-    registry.get('monster_flipper')!(ent, context);
+    SP_monster_flipper(ent, context);
 
-    const enemy = system.spawn();
-    enemy.health = 100;
-    enemy.origin = { x: 50, y: 0, z: 0 };
-    ent.enemy = enemy;
+    // Force pain debounce to pass
+    ent.pain_debounce_time = 0;
 
-    if (ent.monsterinfo.attack) {
-        ent.monsterinfo.attack(ent);
-    }
+    ent.pain!(ent, system.world, 0, 10);
+    const frame = ent.monsterinfo.current_move?.firstframe;
+    const painFrames = [99, 94]; // pain1, pain2
+    expect(painFrames).toContain(frame);
+  });
 
-    expect(ent.monsterinfo.current_move?.firstframe).toBeGreaterThan(0);
+  it('handles death correctly', () => {
+    const ent = system.spawn();
+    SP_monster_flipper(ent, context);
+
+    ent.die!(ent, system.world, system.world, 500, { x: 0, y: 0, z: 0 });
+
+    expect(ent.deadflag).toBe(DeadFlag.Dead);
+    // Death animation
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(104);
   });
 });

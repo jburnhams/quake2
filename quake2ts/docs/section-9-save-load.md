@@ -177,7 +177,7 @@ This section covers the save/load system that allows players to save game progre
   - List existing saves with metadata (map, date, playtime)
   - Select save, confirm load
   - Discard current game state, load selected save
-- [x] Main menu save/load (Integration remaining)
+- [x] Main menu save/load (Verified via integration tests)
   - Access saves from main menu (before starting game)
   - Load save directly into game
   - Delete saves from list

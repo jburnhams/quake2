@@ -8,6 +8,7 @@ import {
   addVec3,
   scaleVec3,
   MASK_SHOT,
+  vectorToAngles,
 } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -30,15 +31,17 @@ import {
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
-import type { EntitySystem } from '../system.js';
+import { EntitySystem } from '../system.js';
 import { T_Damage, Damageable } from '../../combat/damage.js';
-import { createRocket } from '../projectiles/rocket.js';
-import { M_CheckBottom } from '../../ai/movement.js';
+import { monster_fire_rocket, monster_fire_hit, monster_fire_heat } from './attack.js';
 
 const MONSTER_TICK = 0.1;
+const MELEE_DISTANCE = 80;
 
-const random = () => Math.random();
+// Helper to access deterministic RNG or Math.random
+const random = Math.random;
 
+// Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK);
 }
@@ -59,261 +62,395 @@ function monster_ai_move(self: Entity, dist: number, context: any): void {
   ai_move(self, dist);
 }
 
-function monster_ai_face(self: Entity, dist: number, context: any): void {
-  ai_face(self, null, dist, MONSTER_TICK);
-}
-
+// Forward declarations
 let stand_move: MonsterMove;
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
 let start_attack1_move: MonsterMove;
 let attack1_move: MonsterMove;
 let end_attack1_move: MonsterMove;
-let misc_move: MonsterMove; // Attack 2 slash?
+let start_slash_move: MonsterMove;
+let slash_move: MonsterMove;
+let end_slash_move: MonsterMove;
 let pain1_move: MonsterMove;
 let pain2_move: MonsterMove;
 let pain3_move: MonsterMove;
 let death1_move: MonsterMove;
 let death2_move: MonsterMove;
 let duck_move: MonsterMove;
+let fidget_move: MonsterMove;
 
 function chick_stand(self: Entity): void {
-    self.monsterinfo.current_move = stand_move;
+  self.monsterinfo.current_move = stand_move;
+}
+
+function chick_walk(self: Entity): void {
+  self.monsterinfo.current_move = walk_move;
 }
 
 function chick_run(self: Entity): void {
-    self.monsterinfo.current_move = run_move;
+  // Clear blindfire flag
+  // monster_done_dodge(self) omitted
+
+  if (self.monsterinfo.aiflags & 4) { // AI_STAND_GROUND
+    self.monsterinfo.current_move = stand_move;
+    return;
+  }
+
+  self.monsterinfo.current_move = run_move;
 }
 
 function chick_sight(self: Entity, other: Entity): void {
-   // Sound handled by context if not stored on self
-   // We can't access context easily here without modifying the signature of MonsterSightCallback
-   // But existing monsters do `context.entities.engine.sound` inside SpawnContext closures or via passing context.
-   // The `MonsterSightCallback` is `(self: Entity, enemy: Entity) => void`.
-   // We can use `self.monsterinfo.current_move`'s context? No.
-   // We'll skip sound here or rely on the spawn closure if needed,
-   // but spawn closure can't be easily assigned to a static function unless defined inline.
-   // Reverting to inline definition in spawn function for now to match other monsters or accept no sound here.
+   // Sound logic needs context, skipped or handled externally
 }
 
-function chick_attack1(self: Entity, context: EntitySystem): void {
-    if (!self.enemy) return;
+// Fidget
+function chick_fidget(self: Entity): void {
+  if (self.monsterinfo.aiflags & 4) return; // AI_STAND_GROUND
+  if (self.enemy) return;
 
-    const forward = angleVectors(self.angles).forward;
-    const start = addVec3(self.origin, addVec3(scaleVec3(forward, 0), {x:0, y:0, z: 36})); // Height approx
-
-    // Calculate direction to enemy
-    const dir = normalizeVec3(subtractVec3(self.enemy.origin, start));
-
-    createRocket(context, self, start, dir, 50, 500, 50); // Damage 50, speed 500, radius damage 50? Check values.
-    // C code: monster_fire_rocket (self, start, dir, 50, 600, 50);
-
-    context.engine.sound?.(self, 0, 'chick/chkatck2.wav', 1, 1, 0);
+  if (random() <= 0.3) {
+    self.monsterinfo.current_move = fidget_move;
+  }
 }
 
-function chick_rerocket(self: Entity, context: EntitySystem): void {
-    if (self.enemy && self.enemy.health > 0) {
-        if (lengthVec3(subtractVec3(self.enemy.origin, self.origin)) > 512) return;
-        if (random() > 0.9) return; // Continue attack
-
-        // Loop back to fire another rocket
-        if (self.monsterinfo.current_move === attack1_move) {
-             self.monsterinfo.nextframe = 33; // index of fire frame?
-             // Need to check frame indices precisely.
-             // attack1_move frames start at 30.
-             // 30: ai_charge
-             // 31: ai_charge
-             // 32: ai_charge
-             // 33: chick_attack1
-             // 34: ai_charge
-             // 35: ai_charge
-             // 36: ai_charge, think: chick_rerocket
-             // If we set nextframe to 32 (which will advance to 33), it refires.
-             self.monsterinfo.nextframe = 32;
-        }
-    }
+function ChickMoan(self: Entity, context: EntitySystem): void {
+  if (random() < 0.5) {
+     context.engine.sound?.(self, 2, 'chick/chkidle1.wav', 1, 0, 0);
+  } else {
+     context.engine.sound?.(self, 2, 'chick/chkidle2.wav', 1, 0, 0);
+  }
 }
 
-function chick_attack1_wrapper(self: Entity): void {
-    self.monsterinfo.current_move = attack1_move;
+// Attacks
+
+function chick_slash(self: Entity, context: any): void {
+  const aim = { x: MELEE_DISTANCE, y: self.mins.x, z: 10 };
+  context.engine.sound?.(self, 0, 'chick/chkatck3.wav', 1, 1, 0);
+  monster_fire_hit(self, aim, 10 + Math.floor(random() * 6), 100, context);
 }
 
-function chick_slash(self: Entity, context: EntitySystem): void {
-    context.engine.sound?.(self, 0, 'chick/chkatck1.wav', 1, 1, 0);
-    if (!self.enemy) return;
+function chick_rocket(self: Entity, context: any): void {
+  const { forward, right } = angleVectors(self.angles);
 
-    const aim = subtractVec3(self.enemy.origin, self.origin);
-    if (lengthVec3(aim) > 100) return;
+  // Approximate offset for rocket launcher on shoulder
+  // monster_flash_offset[MZ2_CHICK_ROCKET_1] = { 0, 20, 40 } roughly?
+  const offset = { x: 0, y: 20, z: 40 };
 
-    const dir = normalizeVec3(aim);
-    T_Damage(
-        self.enemy as unknown as Damageable,
-        self as unknown as Damageable,
-        self as unknown as Damageable,
-        dir,
-        self.enemy.origin,
-        ZERO_VEC3,
-        25, // Damage
-        0,
-        0,
-        DamageMod.UNKNOWN
-    );
+  const start = addVec3(self.origin, scaleVec3(forward, offset.x));
+  const scaledRight = scaleVec3(right, offset.y);
+  const start2 = addVec3(start, scaledRight);
+  const finalStart = { ...start2, z: start2.z + offset.z };
+
+  const rocketSpeed = (self.skin > 1) ? 500 : 650;
+
+  const blindfire = !!self.monsterinfo.blindfire;
+  let target = ZERO_VEC3;
+
+  if (blindfire && self.monsterinfo.blind_fire_target) {
+    target = self.monsterinfo.blind_fire_target;
+  } else if (self.enemy) {
+    target = self.enemy.origin;
+  } else {
+    return;
+  }
+
+  let dir = subtractVec3(target, finalStart);
+
+  if (!blindfire && self.enemy) {
+     if (random() < 0.33 || finalStart.z < self.enemy.absmin.z) {
+         const tempDir = { ...dir, z: dir.z + self.enemy.viewheight };
+         dir = tempDir;
+     } else {
+         const tempDir = { ...dir, z: self.enemy.absmin.z + 1 - finalStart.z };
+         dir = tempDir;
+     }
+  }
+
+  const finalDir = normalizeVec3(dir);
+
+  // Predict aim omitted for brevity
+
+  if (self.skin > 1) {
+    monster_fire_heat(self, finalStart, finalDir, 50, rocketSpeed, 0, 0.075, context);
+  } else {
+    monster_fire_rocket(self, finalStart, finalDir, 50, rocketSpeed, 0, context);
+  }
 }
 
-function chick_attack2(self: Entity): void {
-    self.monsterinfo.current_move = misc_move;
+function chick_preattack1(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'chick/chkatck1.wav', 1, 1, 0);
+  if (self.monsterinfo.blindfire && self.monsterinfo.blind_fire_target) {
+     const aim = subtractVec3(self.monsterinfo.blind_fire_target, self.origin);
+     self.ideal_yaw = vectorToAngles(aim).y;
+  }
 }
 
-
-function chick_pain_func(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
-    if (self.health < (self.max_health / 2)) {
-        self.skin = 1;
-    }
-
-    if (self.timestamp < (self.pain_finished_time || 0)) return;
-    self.pain_finished_time = self.timestamp + 3;
-
-    const r = random();
-    if (r < 0.33) {
-        context.engine.sound?.(self, 0, 'chick/chkpain1.wav', 1, 1, 0);
-        self.monsterinfo.current_move = pain1_move;
-    } else if (r < 0.66) {
-        context.engine.sound?.(self, 0, 'chick/chkpain2.wav', 1, 1, 0);
-        self.monsterinfo.current_move = pain2_move;
-    } else {
-        context.engine.sound?.(self, 0, 'chick/chkpain3.wav', 1, 1, 0);
-        self.monsterinfo.current_move = pain3_move;
-    }
+function chick_reload(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'chick/chkatck5.wav', 1, 1, 0);
 }
 
-function chick_die(self: Entity): void {
-    self.monsterinfo.current_move = death1_move;
-    // Should randomly pick death1 or death2
-    if (random() < 0.5) {
-        self.monsterinfo.current_move = death2_move;
-    }
+function chick_attack1(self: Entity): void {
+  self.monsterinfo.current_move = attack1_move;
 }
+
+function chick_rerocket(self: Entity): void {
+  if (self.monsterinfo.blindfire) {
+    self.monsterinfo.blindfire = false;
+    self.monsterinfo.current_move = end_attack1_move;
+    return;
+  }
+
+  if (self.enemy && self.enemy.health > 0) {
+      if (random() <= 0.6) { // Simplified range check
+          self.monsterinfo.current_move = attack1_move;
+          return;
+      }
+  }
+  self.monsterinfo.current_move = end_attack1_move;
+}
+
+function chick_reslash(self: Entity): void {
+  if (self.enemy && self.enemy.health > 0) {
+      // melee range check omitted
+      if (random() <= 0.9) {
+          self.monsterinfo.current_move = slash_move;
+          return;
+      }
+  }
+  self.monsterinfo.current_move = end_slash_move;
+}
+
+function chick_slash_start(self: Entity): void {
+    self.monsterinfo.current_move = slash_move;
+}
+
+function chick_attack(self: Entity): void {
+  // Blindfire logic
+  if (self.monsterinfo.attack_state === 4) { // AS_BLIND
+     // Logic simplified
+     self.monsterinfo.blindfire = true;
+     self.monsterinfo.current_move = start_attack1_move;
+     return;
+  }
+
+  self.monsterinfo.current_move = start_attack1_move;
+}
+
+function chick_melee(self: Entity): void {
+  self.monsterinfo.current_move = start_slash_move;
+}
+
+// Frames
+
+// FIDGET
+const fidget_frames: MonsterFrame[] = Array.from({ length: 30 }, (_, i) => ({
+  ai: monster_ai_stand,
+  dist: 0,
+  think: (i === 8) ? (s: Entity, c: EntitySystem) => ChickMoan(s, c) : null
+}));
+fidget_move = {
+  firstframe: 201,
+  lastframe: 230,
+  frames: fidget_frames,
+  endfunc: chick_stand
+};
+
+
+// STAND
+const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, (_, i) => ({
+  ai: monster_ai_stand,
+  dist: 0,
+  think: (i === 29) ? chick_fidget : null
+}));
+stand_move = {
+  firstframe: 101, // FRAME_stand101
+  lastframe: 130,
+  frames: stand_frames,
+  endfunc: chick_stand
+};
+
+// WALK
+const walk_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
+  ai: monster_ai_walk,
+  dist: 6
+}));
+walk_move = {
+  firstframe: 171, // FRAME_walk11 (171)
+  lastframe: 180, // FRAME_walk20 (180)
+  frames: walk_frames,
+  endfunc: chick_walk
+};
+
+// RUN
+const run_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
+  ai: monster_ai_run,
+  dist: 12
+}));
+run_move = {
+  firstframe: 171,
+  lastframe: 180,
+  frames: run_frames,
+  endfunc: chick_run
+};
+
+// PAIN
+const pain1_frames: MonsterFrame[] = Array.from({ length: 5 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain1_move = { firstframe: 90, lastframe: 94, frames: pain1_frames, endfunc: chick_run }; // FRAME_pain101 = 90 ?
+
+const pain2_frames: MonsterFrame[] = Array.from({ length: 5 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain2_move = { firstframe: 95, lastframe: 99, frames: pain2_frames, endfunc: chick_run };
+
+const pain3_frames: MonsterFrame[] = Array.from({ length: 21 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain3_move = { firstframe: 100, lastframe: 120, frames: pain3_frames, endfunc: chick_run };
+
+function chick_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
+  if (self.health < (self.max_health / 2)) {
+    self.skin |= 1;
+  }
+
+  if (self.timestamp < (self.pain_debounce_time || 0)) return;
+
+  self.pain_debounce_time = self.timestamp + 3;
+
+  const r = random();
+  if (r < 0.33) context.engine.sound?.(self, 0, 'chick/chkpain1.wav', 1, 1, 0);
+  else if (r < 0.66) context.engine.sound?.(self, 0, 'chick/chkpain2.wav', 1, 1, 0);
+  else context.engine.sound?.(self, 0, 'chick/chkpain3.wav', 1, 1, 0);
+
+  // Clear blindfire
+  self.monsterinfo.blindfire = false;
+
+  if (damage <= 10) self.monsterinfo.current_move = pain1_move;
+  else if (damage <= 25) self.monsterinfo.current_move = pain2_move;
+  else self.monsterinfo.current_move = pain3_move;
+}
+
+// DEATH
+const death1_frames: MonsterFrame[] = Array.from({ length: 12 }, () => ({ ai: monster_ai_move, dist: 0 }));
+death1_move = { firstframe: 48, lastframe: 59, frames: death1_frames, endfunc: chick_dead };
+
+const death2_frames: MonsterFrame[] = Array.from({ length: 23 }, () => ({ ai: monster_ai_move, dist: 0 }));
+death2_move = { firstframe: 60, lastframe: 82, frames: death2_frames, endfunc: chick_dead };
 
 function chick_dead(self: Entity): void {
-    self.monsterinfo.nextframe = self.monsterinfo.current_move?.lastframe || 0;
-    self.nextthink = -1;
-    self.mins = { x: -16, y: -16, z: -24 };
-    self.maxs = { x: 16, y: 16, z: -8 };
+  self.mins = { x: -16, y: -16, z: 0 };
+  self.maxs = { x: 16, y: 16, z: 16 };
+  self.movetype = MoveType.Toss;
+  self.nextthink = -1;
+  // linkentity
 }
 
+function chick_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: any): void {
+  if (self.health <= -70) { // gib_health
+    context.engine.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
+    throwGibs(context.entities, self.origin, damage);
+    context.entities.free(self);
+    return;
+  }
 
-// ----------------------------------------------------------------------
-// FRAMES & MOVES
-// ----------------------------------------------------------------------
+  if (self.deadflag === DeadFlag.Dead) return;
 
-const stand_frames: MonsterFrame[] = Array(30).fill({ ai: monster_ai_stand, dist: 0 });
-stand_move = {
-    firstframe: 0,
-    lastframe: 29,
-    frames: stand_frames,
-    endfunc: chick_stand
-};
+  self.deadflag = DeadFlag.Dead;
+  self.takedamage = true;
 
-const walk_frames: MonsterFrame[] = [
-    { ai: monster_ai_walk, dist: 6 },
-    { ai: monster_ai_walk, dist: 8 },
-    { ai: monster_ai_walk, dist: 13 },
-    { ai: monster_ai_walk, dist: 5 },
-    { ai: monster_ai_walk, dist: 7 },
-    { ai: monster_ai_walk, dist: 4 },
-    { ai: monster_ai_walk, dist: 11 },
-    { ai: monster_ai_walk, dist: 5 },
-    { ai: monster_ai_walk, dist: 9 },
-    { ai: monster_ai_walk, dist: 7 }
+  if (random() <= 0.5) {
+    self.monsterinfo.current_move = death1_move;
+    context.engine.sound?.(self, 0, 'chick/chkdeth1.wav', 1, 1, 0);
+  } else {
+    self.monsterinfo.current_move = death2_move;
+    context.engine.sound?.(self, 0, 'chick/chkdeth2.wav', 1, 1, 0);
+  }
+}
+
+// ATTACK 1 (Rocket)
+const start_attack1_frames: MonsterFrame[] = [
+    { ai: monster_ai_charge, dist: 0, think: chick_preattack1 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 4 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: -3 },
+    { ai: monster_ai_charge, dist: 3 },
+    { ai: monster_ai_charge, dist: 5 },
+    { ai: monster_ai_charge, dist: 7 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 0, think: chick_attack1 },
 ];
-walk_move = {
-    firstframe: 103,
-    lastframe: 112,
-    frames: walk_frames,
-    endfunc: chick_stand // Should be walk loop? Usually run_move handles looping via logic or just resetting.
-    // Wait, chick_run calls current_move = run_move.
-};
-// Override to loop? Standard logic often sets next frame implicitly if endfunc calls move again.
-walk_move.endfunc = (self: Entity) => { self.monsterinfo.current_move = walk_move; };
-
-
-const run_frames: MonsterFrame[] = [
-    { ai: monster_ai_run, dist: 10 },
-    { ai: monster_ai_run, dist: 11 },
-    { ai: monster_ai_run, dist: 11 },
-    { ai: monster_ai_run, dist: 16 },
-    { ai: monster_ai_run, dist: 10 },
-    { ai: monster_ai_run, dist: 15 },
-    { ai: monster_ai_run, dist: 12 },
-    { ai: monster_ai_run, dist: 12 },
-    { ai: monster_ai_run, dist: 8 },
-    { ai: monster_ai_run, dist: 12 }
-];
-run_move = {
-    firstframe: 113,
-    lastframe: 122,
-    frames: run_frames,
-    endfunc: chick_run
-};
+start_attack1_move = { firstframe: 0, lastframe: 12, frames: start_attack1_frames, endfunc: null };
 
 const attack1_frames: MonsterFrame[] = [
-    { ai: monster_ai_charge, dist: 19 },
+    { ai: monster_ai_charge, dist: 19, think: chick_rocket },
     { ai: monster_ai_charge, dist: -6 },
     { ai: monster_ai_charge, dist: -5 },
-    { ai: monster_ai_charge, dist: -2, think: chick_attack1 },
-    { ai: monster_ai_charge, dist: -1 },
-    { ai: monster_ai_charge, dist: 0 },
-    { ai: monster_ai_charge, dist: 0, think: chick_rerocket },
-    { ai: monster_ai_charge, dist: -6 },
-    { ai: monster_ai_charge, dist: -1 },
-    { ai: monster_ai_charge, dist: -9 },
-    { ai: monster_ai_charge, dist: -6 },
-    { ai: monster_ai_charge, dist: -13 },
-    { ai: monster_ai_charge, dist: -6 }
-];
-attack1_move = {
-    firstframe: 30,
-    lastframe: 42,
-    frames: attack1_frames,
-    endfunc: chick_run
-};
-
-const misc_frames: MonsterFrame[] = [
     { ai: monster_ai_charge, dist: -2 },
-    { ai: monster_ai_charge, dist: -1 },
-    { ai: monster_ai_charge, dist: 4 },
-    { ai: monster_ai_charge, dist: 6, think: chick_slash },
-    { ai: monster_ai_charge, dist: 1 },
-    { ai: monster_ai_charge, dist: 2 },
-    { ai: monster_ai_charge, dist: 7, think: chick_slash },
-    { ai: monster_ai_charge, dist: 10 },
-    { ai: monster_ai_charge, dist: 13 },
+    { ai: monster_ai_charge, dist: -7 },
     { ai: monster_ai_charge, dist: 0 },
-    { ai: monster_ai_charge, dist: 0 }
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: 10, think: chick_reload },
+    { ai: monster_ai_charge, dist: 4 },
+    { ai: monster_ai_charge, dist: 5 },
+    { ai: monster_ai_charge, dist: 6 },
+    { ai: monster_ai_charge, dist: 6 },
+    { ai: monster_ai_charge, dist: 4 },
+    { ai: monster_ai_charge, dist: 3, think: chick_rerocket },
 ];
-misc_move = {
-    firstframe: 43,
-    lastframe: 53,
-    frames: misc_frames,
-    endfunc: chick_run
-};
+attack1_move = { firstframe: 13, lastframe: 26, frames: attack1_frames, endfunc: null };
 
-// Define pain/death frames minimally for now as strict animation data is tedious
-const pain1_frames: MonsterFrame[] = Array(5).fill({ ai: monster_ai_move, dist: 0 });
-pain1_move = { firstframe: 54, lastframe: 58, frames: pain1_frames, endfunc: chick_run };
+const end_attack1_frames: MonsterFrame[] = [
+    { ai: monster_ai_charge, dist: -3 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: -6 },
+    { ai: monster_ai_charge, dist: -4 },
+    { ai: monster_ai_charge, dist: -2 },
+];
+end_attack1_move = { firstframe: 27, lastframe: 31, frames: end_attack1_frames, endfunc: chick_run };
 
-const pain2_frames: MonsterFrame[] = Array(13).fill({ ai: monster_ai_move, dist: 0 });
-pain2_move = { firstframe: 59, lastframe: 71, frames: pain2_frames, endfunc: chick_run };
+// SLASH
+const start_slash_frames: MonsterFrame[] = [
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: 8 },
+    { ai: monster_ai_charge, dist: 3 },
+];
+start_slash_move = { firstframe: 32, lastframe: 34, frames: start_slash_frames, endfunc: chick_slash_start };
 
-const pain3_frames: MonsterFrame[] = Array(21).fill({ ai: monster_ai_move, dist: 0 });
-pain3_move = { firstframe: 72, lastframe: 92, frames: pain3_frames, endfunc: chick_run };
+const slash_frames: MonsterFrame[] = [
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: 7, think: chick_slash },
+    { ai: monster_ai_charge, dist: -7 },
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: -1 },
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: 0 },
+    { ai: monster_ai_charge, dist: 1 },
+    { ai: monster_ai_charge, dist: -2, think: chick_reslash },
+];
+slash_move = { firstframe: 35, lastframe: 43, frames: slash_frames, endfunc: null };
 
-const death1_frames: MonsterFrame[] = Array(12).fill({ ai: monster_ai_move, dist: 0 });
-death1_move = { firstframe: 123, lastframe: 134, frames: death1_frames, endfunc: chick_dead };
+const end_slash_frames: MonsterFrame[] = [
+    { ai: monster_ai_charge, dist: -6 },
+    { ai: monster_ai_charge, dist: -1 },
+    { ai: monster_ai_charge, dist: -6 },
+    { ai: monster_ai_charge, dist: 0 },
+];
+end_slash_move = { firstframe: 44, lastframe: 47, frames: end_slash_frames, endfunc: chick_run };
 
-const death2_frames: MonsterFrame[] = Array(11).fill({ ai: monster_ai_move, dist: 0 });
-death2_move = { firstframe: 135, lastframe: 145, frames: death2_frames, endfunc: chick_dead };
+// DUCK
+const duck_frames: MonsterFrame[] = Array.from({ length: 7 }, () => ({ ai: monster_ai_move, dist: 0 }));
+duck_move = { firstframe: 83, lastframe: 89, frames: duck_frames, endfunc: chick_run };
 
+function chick_dodge(self: Entity, attacker: Entity, eta: number): void {
+    if (self.monsterinfo.current_move === start_attack1_move || self.monsterinfo.current_move === attack1_move) {
+        return;
+    }
+    self.monsterinfo.current_move = duck_move;
+}
+
+function chick_blocked(self: Entity, other: Entity | null): void {
+   // blocked checkplat logic omitted
+}
 
 export function SP_monster_chick(self: Entity, context: SpawnContext): void {
   self.classname = 'monster_chick';
@@ -327,39 +464,23 @@ export function SP_monster_chick(self: Entity, context: SpawnContext): void {
   self.mass = 200;
   self.takedamage = true;
 
-  self.pain = (ent, other, kick, dmg) => {
-    chick_pain_func(ent, other, kick, dmg, context.entities);
-  };
-
-  self.die = (ent, inflictor, attacker, damage, point) => {
-    ent.deadflag = DeadFlag.Dead;
-    ent.solid = Solid.Not;
-
-    if (ent.health < -40) {
-        throwGibs(context.entities, ent.origin, damage);
-        context.entities.free(ent);
-        return;
-    }
-
-    context.entities.engine.sound?.(ent, 0, 'chick/chkdeth1.wav', 1, 1, 0);
-    ent.takedamage = true;
-    chick_die(ent);
-  };
+  self.pain = (ent, other, kick, dmg) => chick_pain(ent, other, kick, dmg, context.entities);
+  self.die = (ent, infl, att, dmg, pt) => chick_die(ent, infl, att, dmg, pt, context.entities);
 
   self.monsterinfo.stand = chick_stand;
-  self.monsterinfo.walk = (ent) => { ent.monsterinfo.current_move = walk_move; };
+  self.monsterinfo.walk = chick_walk;
   self.monsterinfo.run = chick_run;
-  self.monsterinfo.attack = chick_attack1_wrapper;
-  self.monsterinfo.melee = chick_attack2;
-  self.monsterinfo.sight = (ent, other) => {
-    context.entities.engine.sound?.(ent, 0, 'chick/chksght1.wav', 1, 1, 0);
+  self.monsterinfo.dodge = chick_dodge;
+  self.monsterinfo.attack = chick_attack;
+  self.monsterinfo.melee = chick_melee;
+  self.monsterinfo.sight = (s, o) => {
+      context.entities.sound?.(s, 0, 'chick/chksght1.wav', 1, 1, 0);
   };
-  self.monsterinfo.idle = chick_stand;
-
-  // CheckAttack? Standard check works usually.
-  // Chick uses basic range check: melee if close, rocket if far.
+  self.monsterinfo.blocked = chick_blocked;
 
   self.think = monster_think;
+
+  context.entities.linkentity(self);
 
   chick_stand(self);
   self.nextthink = self.timestamp + MONSTER_TICK;

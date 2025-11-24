@@ -7,6 +7,8 @@ import type { Vec3 } from '@quake2ts/shared';
 import { EntitySystem } from './entities/index.js';
 import { GameFrameLoop } from './loop.js';
 import { LevelClock, type LevelFrameState } from './level.js';
+import { createSaveFile, applySaveFile, GameSaveFile } from './save/index.js';
+import { RandomGenerator } from '@quake2ts/shared';
 export * from './entities/index.js';
 export * from './ai/index.js';
 
@@ -72,6 +74,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
+  createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
+  loadSave(save: GameSaveFile): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -95,6 +99,7 @@ export function createGame(
   const deathmatch = options.deathmatch ?? false;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
+  const rng = new RandomGenerator(); // Main game RNG
 
   const linkentity = (ent: Entity) => {
     ent.absmin = {
@@ -320,6 +325,31 @@ export function createGame(
     },
     get time() {
       return levelClock.current.timeSeconds;
+    },
+    createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile {
+      const player = entities.find((e) => e.classname === 'player');
+      return createSaveFile({
+        map: mapName,
+        difficulty,
+        playtimeSeconds,
+        levelState: levelClock.snapshot(),
+        entitySystem: entities,
+        rngState: rng.getState(),
+        player: player?.client?.inventory
+      });
+    },
+    loadSave(save: GameSaveFile): void {
+      const player = entities.find((e) => e.classname === 'player');
+      applySaveFile(save, {
+        levelClock,
+        entitySystem: entities,
+        rng,
+        player: player?.client?.inventory
+      });
+      // After load, sync engine state
+      origin = player ? { ...player.origin } : { ...ZERO_VEC3 };
+      velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
+      frameLoop.reset(save.level.timeSeconds * 1000);
     }
   };
 }

@@ -103,6 +103,9 @@ export function hashEntitySystem(snapshot: EntitySystemSnapshot): number {
     let hash = FNV_OFFSET_BASIS;
     hash = hashNumber(hash, snapshot.timeSeconds);
 
+    // Snapshot entity list might be just the active ones, or include nulls.
+    // EntitySystemSnapshot in system.ts returns SerializedEntityState[].
+
     // Hash entities, assuming they are in stable order (index order)
     // If not, we might need to sort them by index first
     const sortedEntities = [...snapshot.entities].sort((a, b) => a.index - b.index);
@@ -111,7 +114,14 @@ export function hashEntitySystem(snapshot: EntitySystemSnapshot): number {
         hash = hashSerializedEntity(hash, entity);
     }
 
-    // Hash think scheduler if needed, but entity fields include nextthink
-
     return hash >>> 0;
+}
+
+// Support hashing the EntitySystem instance directly for convenience in tests
+// by extracting the snapshot first.
+// This is a bit of a hack to support the test code without changing it,
+// checking if the argument is an EntitySystem class instance instead of a snapshot.
+import { EntitySystem } from './entities/system.js';
+export function hashEntitySystemInstance(system: EntitySystem): number {
+   return hashEntitySystem(system.createSnapshot());
 }

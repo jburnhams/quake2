@@ -101,24 +101,24 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `monster_soldier`: Implemented
   - [x] `monster_gunner`: Implemented
   - [x] `monster_berserk`: Implemented
-  - [ ] `monster_gladiator`: Pending
+  - [x] `monster_gladiator`: Implemented
   - [x] `monster_medic`: Implemented
   - [x] `monster_mutant`: Implemented
-  - [ ] `monster_parasite`: Pending
-  - [ ] `monster_tank`: Pending
-  - [ ] `monster_tank_commander`: Pending
-  - [ ] `monster_brain`: Pending
-  - [ ] `monster_flipper`: Pending
-  - [ ] `monster_chick` (Iron Maiden): Pending
-  - [ ] `monster_icarus`: Pending
-  - [ ] `monster_flyer`: Pending
-  - [ ] `monster_floater`: Pending
-  - [ ] `monster_hover`: Pending
-  - [ ] `monster_infantry`: Pending
-  - [ ] `monster_supertank`: Pending
-  - [ ] `monster_boss2` (Hornet): Pending
-  - [ ] `monster_jorg` (Boss3): Pending
-  - [ ] `monster_makron` (Boss3): Pending
+  - [x] `monster_parasite`: Implemented
+  - [x] `monster_tank`: Implemented
+  - [x] `monster_tank_commander`: Implemented
+  - [x] `monster_infantry`: Implemented
+  - [x] `monster_brain`: Implemented
+  - [x] `monster_flipper`: Implemented
+  - [x] `monster_chick` (Iron Maiden): Implemented
+  - [x] `monster_icarus`: Implemented
+  - [x] `monster_flyer`: Implemented
+  - [x] `monster_floater`: Implemented
+  - [x] `monster_hover`: Implemented
+  - [x] `monster_supertank`: Implemented
+  - [x] `monster_boss2` (Hornet): Implemented
+  - [x] `monster_jorg` (Boss3): Implemented
+  - [x] `monster_makron` (Boss3): Implemented
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
@@ -212,10 +212,10 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Screen blends (Section 8)
 
 ### Special Entity Types (Functional Implementation)
-- [ ] **Worldspawn**
+- [x] **Worldspawn**
   - Parse world keys (message, sky, skyrotate, skyaxis, etc.)
   - Set global level state
-  - Precache common assets
+  - Precache common assets (Partial)
 - [x] **func_door** (example of complex func_ entity)
   - Parse movement direction, speed, wait time, sounds
   - Think function: move to open position, wait, close

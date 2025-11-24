@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -15,5 +16,8 @@ export default defineConfig({
     mockReset: true,
     restoreMocks: true,
     teardownTimeout: 1000,
+    alias: {
+      '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+    },
   },
 });
