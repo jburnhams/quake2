@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseMd3 } from '../src/assets/md3.js';
 import {
   MD3_FRAGMENT_SHADER,
@@ -231,7 +231,13 @@ describe('MD3 tags', () => {
 describe('MD3 pipeline', () => {
   it('binds MVP and draws each surface with materials', () => {
     const gl = createMockGL();
-    const uniformNames = ['u_modelViewProjection', 'u_tint', 'u_diffuseMap'];
+
+    // Ensure uniform4f is mocked
+    if (!gl.uniform4f) {
+        (gl as any).uniform4f = vi.fn();
+    }
+
+    const uniformNames = ['u_modelViewProjection', 'u_tint', 'u_diffuseMap', 'u_renderMode', 'u_solidColor'];
     uniformNames.forEach((name) => gl.uniformLocations.set(name, {} as WebGLUniformLocation));
 
     const pipeline = new Md3Pipeline(gl as unknown as WebGL2RenderingContext);

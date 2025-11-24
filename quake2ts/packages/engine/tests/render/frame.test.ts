@@ -46,6 +46,7 @@ describe('FrameRenderer', () => {
         flowOffset: [0, 0],
         sky: false,
       })),
+      draw: vi.fn(), // Mock draw method
     } as unknown as BspSurfacePipeline;
 
     const skyboxPipeline = {
@@ -131,12 +132,8 @@ describe('FrameRenderer', () => {
     expect(callOrder).toEqual([
       'diffuse',
       'lightmap',
-      'first-vao',
-      'first-ibo',
       'diffuse',
       'lightmap',
-      'second-vao',
-      'second-ibo',
     ]);
 
     const bindCalls = (bspPipeline.bind as any).mock.calls;
@@ -146,7 +143,7 @@ describe('FrameRenderer', () => {
 
     expect(diffuse.bind).toHaveBeenCalledTimes(2);
     expect(lightmapTexture.bind).toHaveBeenCalled();
-    expect(gl.drawElements).toHaveBeenCalledTimes(2);
+    expect(bspPipeline.draw).toHaveBeenCalledTimes(2);
     expect(stats.facesDrawn).toBe(2);
     expect(stats.drawCalls).toBe(2);
     expect(stats.batches).toBe(2);
@@ -177,13 +174,13 @@ describe('FrameRenderer', () => {
     const stats = renderer.renderFrame({ camera, world });
 
     expect(deps.gatherVisibleFaces).toHaveBeenCalled();
-    expect(callOrder).toEqual(['diffuse', 'nolight-vao', 'nolight-ibo']);
+    expect(callOrder).toEqual(['diffuse']);
     expect((bspPipeline.bind as any).mock.calls[0][0].lightmapSampler).toBeUndefined();
     expect(stats.facesDrawn).toBe(1);
   });
 
   it('skips drawing sky surfaces that were gathered from visibility', () => {
-    const { gl, renderer, deps } = makeRenderer({
+    const { gl, renderer, deps, bspPipeline } = makeRenderer({
       gatherVisibleFaces: vi.fn(() => [
         { faceIndex: 0, leafIndex: 0, sortKey: -1 },
         { faceIndex: 1, leafIndex: 0, sortKey: -2 },
@@ -208,8 +205,8 @@ describe('FrameRenderer', () => {
     const stats = renderer.renderFrame({ camera, world });
 
     expect(deps.gatherVisibleFaces).toHaveBeenCalled();
-    expect(gl.drawElements).toHaveBeenCalledTimes(1);
-    expect(callOrder).toEqual(['floor-tex', 'lm', 'floor-vao', 'floor-ibo']);
+    expect(bspPipeline.draw).toHaveBeenCalledTimes(1);
+    expect(callOrder).toEqual(['floor-tex', 'lm']);
     expect(stats.facesDrawn).toBe(1);
     expect(stats.batches).toBe(1);
   });

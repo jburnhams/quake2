@@ -25,6 +25,8 @@ const mockLocations = {
   u_diffuseMap: { id: 8 },
   u_lightmapAtlas: { id: 9 },
   u_time: { id: 10 },
+  u_renderMode: { id: 11 },
+  u_solidColor: { id: 12 },
 };
 
 vi.mock('../../src/render/shaderProgram.js', () => {
@@ -114,6 +116,8 @@ describe('bspPipeline', () => {
         uniform4fv: vi.fn(),
         uniform1f: vi.fn(),
         uniform1i: vi.fn(),
+        uniform4f: vi.fn(),
+        uniform3f: vi.fn(), // Added for dlights
       } as any);
 
     const mockMvp = new Float32Array(16);

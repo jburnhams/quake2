@@ -48,6 +48,15 @@ export interface WorldRenderState {
   readonly lightStyles?: ReadonlyArray<number>;
 }
 
+export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted';
+
+export interface RenderModeConfig {
+  readonly mode: RenderMode;
+  readonly applyToAll: boolean; // if false, only applies to missing textures
+  readonly color?: readonly [number, number, number, number]; // Global override color
+  readonly generateRandomColor?: boolean; // If true, generates color from entity ID
+}
+
 interface FrameRenderOptions {
   readonly camera: Camera;
   readonly world?: WorldRenderState;
@@ -56,6 +65,7 @@ interface FrameRenderOptions {
   readonly dlights?: readonly DLight[];
   readonly timeSeconds?: number;
   readonly clearColor?: readonly [number, number, number, number];
+  readonly renderMode?: RenderModeConfig;
 }
 
 interface FrameRendererDependencies {
@@ -212,7 +222,7 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights } = options;
+    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -252,6 +262,20 @@ export const createFrameRenderer = (
         const material = world.materials?.getMaterial(geometry.texture);
         const resolvedTextures = resolveSurfaceTextures(geometry, world);
 
+        // Determine effective render mode for this surface
+        let activeRenderMode: RenderModeConfig | undefined = renderMode;
+        if (renderMode && !renderMode.applyToAll && resolvedTextures.diffuse) {
+          // If fallback mode and texture exists, don't use override
+          activeRenderMode = undefined;
+        }
+
+        // If texture is missing and no render mode override, maybe we should default to something?
+        // But the request implies we only override if the flag is set or globally set.
+        // If "fallback" is active and texture is missing, we use the override.
+        if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
+             activeRenderMode = renderMode;
+        }
+
         const batchKey: BatchKey = {
           diffuse: resolvedTextures.diffuse,
           lightmap: resolvedTextures.lightmap,
@@ -265,6 +289,10 @@ export const createFrameRenderer = (
           lastBatchKey.lightmap === batchKey.lightmap &&
           lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
           lastBatchKey.styleKey === batchKey.styleKey;
+
+        // TODO: Batching logic needs to account for renderMode changes if we want to batch correctly with mix.
+        // For now, let's just break batch if renderMode is present, or update logic.
+        // Since activeRenderMode can change per face (e.g. missing texture), we should include it in batch key implicitly or check it.
 
         if (!isSameBatch) {
           stats.batches += 1;
@@ -287,7 +315,8 @@ export const createFrameRenderer = (
             lightmapSampler: textures.lightmap,
             texScroll,
             warp,
-            dlights
+            dlights,
+            renderMode: activeRenderMode
           });
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;
@@ -298,9 +327,10 @@ export const createFrameRenderer = (
           }
         }
 
-        geometry.vao.bind();
-        geometry.indexBuffer.bind();
-        gl.drawElements(gl.TRIANGLES, geometry.indexCount, gl.UNSIGNED_SHORT, 0);
+        // Handle Wireframe logic inside pipeline or here.
+        // bspPipeline.draw(geometry, activeRenderMode);
+        bspPipeline.draw(geometry, activeRenderMode);
+
         stats.facesDrawn += 1;
         stats.drawCalls += 1;
         stats.vertexCount += geometry.vertexCount;

@@ -9,6 +9,10 @@ import {
 } from '@quake2ts/shared';
 import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
+import { RenderModeConfig, RenderMode } from './frame.js';
+import { BspSurfaceGeometry } from './bsp.js';
+import { IndexBuffer } from './resources.js';
+import { generateWireframeIndices } from './geometry.js';
 
 export interface SurfaceRenderState {
   readonly alpha: number;
@@ -31,6 +35,7 @@ export interface BspSurfaceBindOptions {
   readonly alpha?: number;
   readonly warp?: boolean;
   readonly dlights?: readonly DLight[];
+  readonly renderMode?: RenderModeConfig;
 }
 
 export const BSP_SURFACE_VERTEX_SOURCE = `#version 300 es
@@ -82,6 +87,9 @@ uniform bool u_applyLightmap;
 uniform bool u_warp;
 uniform float u_time;
 
+uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
+uniform vec4 u_solidColor;
+
 uniform int u_numDlights;
 uniform DLight u_dlights[MAX_DLIGHTS];
 
@@ -97,37 +105,53 @@ vec2 warpCoords(vec2 uv) {
 }
 
 void main() {
-  vec2 warpedTex = warpCoords(v_texCoord);
-  vec4 base = texture(u_diffuseMap, warpedTex);
+  vec4 finalColor;
 
-  vec3 totalLight = vec3(1.0);
+  if (u_renderMode == 0) {
+      // TEXTURED MODE
+      vec2 warpedTex = warpCoords(v_texCoord);
+      vec4 base = texture(u_diffuseMap, warpedTex);
 
-  if (u_applyLightmap) {
-    vec3 light = texture(u_lightmapAtlas, warpCoords(v_lightmapCoord)).rgb;
-    float styleScale = dot(u_lightStyleFactors, vec4(1.0));
-    totalLight = light * styleScale;
+      vec3 totalLight = vec3(1.0);
 
-    // Add dynamic lights
-    for (int i = 0; i < MAX_DLIGHTS; i++) {
-      if (i >= u_numDlights) break;
-      DLight dlight = u_dlights[i];
+      if (u_applyLightmap) {
+        vec3 light = texture(u_lightmapAtlas, warpCoords(v_lightmapCoord)).rgb;
+        float styleScale = dot(u_lightStyleFactors, vec4(1.0));
+        totalLight = light * styleScale;
 
-      float dist = distance(v_position, dlight.position);
-      if (dist < dlight.intensity) {
-         // Linear attenuation based on radius (intensity)
-         // R_LightPoint in Q2:
-         // float add = (r_dlightframecount - d->frame) * d->intensity;
-         // This is just simple linear falloff
-         float intensity = (dlight.intensity - dist) / dlight.intensity;
+        // Add dynamic lights
+        for (int i = 0; i < MAX_DLIGHTS; i++) {
+          if (i >= u_numDlights) break;
+          DLight dlight = u_dlights[i];
 
-         // Q2 dlights are additive
-         totalLight += dlight.color * intensity;
+          float dist = distance(v_position, dlight.position);
+          if (dist < dlight.intensity) {
+             float intensity = (dlight.intensity - dist) / dlight.intensity;
+             totalLight += dlight.color * intensity;
+          }
+        }
       }
-    }
+
+      base.rgb *= totalLight;
+      finalColor = vec4(base.rgb, base.a * u_alpha);
+  } else {
+      // SOLID / WIREFRAME / FACETED
+      vec3 color = u_solidColor.rgb;
+      if (u_renderMode == 2) {
+          // FACETED: simple lighting based on face normal
+          vec3 fdx = dFdx(v_position);
+          vec3 fdy = dFdy(v_position);
+          vec3 faceNormal = normalize(cross(fdx, fdy));
+
+          // Simple directional light from "camera" or fixed
+          vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
+          float diff = max(dot(faceNormal, lightDir), 0.2); // Ambient 0.2
+          color *= diff;
+      }
+      finalColor = vec4(color, u_solidColor.a * u_alpha);
   }
 
-  base.rgb *= totalLight;
-  o_color = vec4(base.rgb, base.a * u_alpha);
+  o_color = finalColor;
 }`;
 
 const DEFAULT_STYLE_INDICES: readonly number[] = [0, 255, 255, 255];
@@ -179,6 +203,14 @@ export function deriveSurfaceRenderState(
   };
 }
 
+// Extend BspSurfaceGeometry to include wireframe index buffer
+declare module './bsp.js' {
+    interface BspSurfaceGeometry {
+        wireframeIndexBuffer?: IndexBuffer;
+        wireframeIndexCount?: number;
+    }
+}
+
 export class BspSurfacePipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
@@ -193,6 +225,9 @@ export class BspSurfacePipeline {
   private readonly uniformDiffuse: WebGLUniformLocation | null;
   private readonly uniformLightmap: WebGLUniformLocation | null;
   private readonly uniformTime: WebGLUniformLocation | null;
+
+  private readonly uniformRenderMode: WebGLUniformLocation | null;
+  private readonly uniformSolidColor: WebGLUniformLocation | null;
 
   private readonly uniformNumDlights: WebGLUniformLocation | null;
   private readonly uniformDlights: { pos: WebGLUniformLocation | null, color: WebGLUniformLocation | null, intensity: WebGLUniformLocation | null }[] = [];
@@ -217,6 +252,9 @@ export class BspSurfacePipeline {
     this.uniformLightmap = this.program.getUniformLocation('u_lightmapAtlas');
     this.uniformTime = this.program.getUniformLocation('u_time');
 
+    this.uniformRenderMode = this.program.getUniformLocation('u_renderMode');
+    this.uniformSolidColor = this.program.getUniformLocation('u_solidColor');
+
     this.uniformNumDlights = this.program.getUniformLocation('u_numDlights');
     for (let i = 0; i < MAX_DLIGHTS; i++) {
       this.uniformDlights.push({
@@ -239,7 +277,8 @@ export class BspSurfacePipeline {
       texScroll,
       alpha,
       warp,
-      dlights = []
+      dlights = [],
+      renderMode
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
@@ -263,6 +302,30 @@ export class BspSurfacePipeline {
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
     this.gl.uniform1i(this.uniformLightmap, lightmapSampler ?? 0);
 
+    // Render Mode Logic
+    let modeInt = 0; // Textured
+    let color = [1, 1, 1, 1];
+
+    if (renderMode) {
+      if (renderMode.mode === 'solid' || renderMode.mode === 'wireframe') {
+          modeInt = 1; // Solid
+      } else if (renderMode.mode === 'solid-faceted') {
+          modeInt = 2; // Faceted
+      }
+
+      if (renderMode.color) {
+          color = [...renderMode.color];
+      } else if (renderMode.generateRandomColor) {
+         // Generate based on something? For map surfaces, we don't have a unique ID passed here easily yet.
+         // Maybe just white default if not specified.
+         color = [1, 1, 1, 1];
+      }
+    }
+
+    this.gl.uniform1i(this.uniformRenderMode, modeInt);
+    this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
+
+
     // Bind Dlights
     const numDlights = Math.min(dlights.length, MAX_DLIGHTS);
     this.gl.uniform1i(this.uniformNumDlights, numDlights);
@@ -274,6 +337,28 @@ export class BspSurfacePipeline {
     }
 
     return state;
+  }
+
+  draw(geometry: BspSurfaceGeometry, renderMode?: RenderModeConfig): void {
+      geometry.vao.bind();
+
+      if (renderMode && renderMode.mode === 'wireframe') {
+          // Lazy init wireframe buffer
+          if (!geometry.wireframeIndexBuffer) {
+              // We need to cast back to mutable because we are augmenting the object at runtime
+              const mutableGeometry = geometry as any;
+              mutableGeometry.wireframeIndexBuffer = new IndexBuffer(this.gl, this.gl.STATIC_DRAW);
+              const wireIndices = generateWireframeIndices(geometry.indexData);
+              mutableGeometry.wireframeIndexBuffer.upload(wireIndices as unknown as BufferSource);
+              mutableGeometry.wireframeIndexCount = wireIndices.length;
+          }
+
+          geometry.wireframeIndexBuffer!.bind();
+          this.gl.drawElements(this.gl.LINES, geometry.wireframeIndexCount!, this.gl.UNSIGNED_SHORT, 0);
+      } else {
+          geometry.indexBuffer.bind();
+          this.gl.drawElements(this.gl.TRIANGLES, geometry.indexCount, this.gl.UNSIGNED_SHORT, 0);
+      }
   }
 
   dispose(): void {

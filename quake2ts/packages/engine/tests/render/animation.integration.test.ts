@@ -44,6 +44,7 @@ function createMockWebGL2Context() {
     uniform2f: vi.fn(),
     uniform3f: vi.fn(),
     uniform3fv: vi.fn(),
+    uniform4f: vi.fn(), // Added for u_solidColor
     uniform4fv: vi.fn(),
     uniformMatrix4fv: vi.fn(),
     drawElements: vi.fn(),

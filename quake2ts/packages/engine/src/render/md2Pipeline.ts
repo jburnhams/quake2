@@ -3,6 +3,8 @@ import { Md2Model } from '../assets/md2.js';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
+import { generateWireframeIndices } from './geometry.js';
+import { RenderModeConfig } from './frame.js';
 
 export interface Md2DrawVertex {
   readonly vertexIndex: number;
@@ -28,6 +30,7 @@ export interface Md2BindOptions {
   readonly diffuseSampler?: number;
   readonly dlights?: readonly DLight[];
   readonly modelMatrix?: Float32List; // Needed for dlight world position calculation
+  readonly renderMode?: RenderModeConfig;
 }
 
 export const MD2_VERTEX_SHADER = `#version 300 es
@@ -55,6 +58,7 @@ uniform DLight u_dlights[MAX_DLIGHTS];
 
 out vec2 v_texCoord;
 out vec3 v_lightColor;
+out vec3 v_position; // For faceted shading
 
 void main() {
   vec3 normal = normalize(a_normal);
@@ -64,8 +68,6 @@ void main() {
   vec3 lightAcc = vec3(min(1.0, u_ambient + dotL)); // White light assumed for directional/ambient
 
   // Dynamic Lights
-  // Need world position of vertex to calculate distance
-  // Assuming a_position is local model space.
   vec4 worldPos = u_modelMatrix * vec4(a_position, 1.0);
 
   for (int i = 0; i < MAX_DLIGHTS; i++) {
@@ -75,28 +77,13 @@ void main() {
       float dist = distance(worldPos.xyz, dlight.position);
       if (dist < dlight.intensity) {
          float intensity = (dlight.intensity - dist) / dlight.intensity;
-
-         // Calculate Lambertian term for point light?
-         // Q2 R_LightPoint is just distance based, but we have normals here, so let's use them for better visual.
-         vec3 dirToLight = normalize(dlight.position - worldPos.xyz);
-         // Convert dirToLight to local space? Or normal to world space?
-         // Normal is in local space. u_modelMatrix might include rotation.
-         // To be correct, we should transform normal to world space or light to local.
-         // Since u_modelMatrix is passed, let's assume u_modelMatrix handles rotation.
-         // But wait, MD2 normals are pre-calculated in local space.
-
-         // Simplifying: Q2 dlights on models are just distance based additions usually.
-         // But for modern look, dot product is nice.
-         // However, standard Q2 behavior (R_LightPoint) doesn't use normal for dlights on models AFAIK?
-         // Actually, R_LightPoint is just getting a light value at a point.
-         // Let's stick to distance based to match Q2 "glow" feel + basic directional.
-
          lightAcc += dlight.color * intensity;
       }
   }
 
   v_lightColor = lightAcc;
   v_texCoord = a_texCoord;
+  v_position = worldPos.xyz;
   gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
 }`;
 
@@ -105,15 +92,37 @@ precision highp float;
 
 in vec2 v_texCoord;
 in vec3 v_lightColor;
+in vec3 v_position;
 
 uniform sampler2D u_diffuseMap;
 uniform vec4 u_tint;
 
+uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
+uniform vec4 u_solidColor;
+
 out vec4 o_color;
 
 void main() {
-  vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-  o_color = vec4(albedo.rgb * v_lightColor, albedo.a);
+  vec4 finalColor;
+
+  if (u_renderMode == 0) {
+      vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
+      finalColor = vec4(albedo.rgb * v_lightColor, albedo.a);
+  } else {
+      vec3 color = u_solidColor.rgb;
+      if (u_renderMode == 2) {
+           // FACETED
+           vec3 fdx = dFdx(v_position);
+           vec3 fdy = dFdy(v_position);
+           vec3 faceNormal = normalize(cross(fdx, fdy));
+           vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
+           float diff = max(dot(faceNormal, lightDir), 0.2);
+           color *= diff;
+      }
+      finalColor = vec4(color, u_solidColor.a * u_tint.a);
+  }
+
+  o_color = finalColor;
 }`;
 
 function normalizeVec3(v: Vec3): Vec3 {
@@ -238,6 +247,9 @@ export class Md2MeshBuffers {
   readonly vertexArray: VertexArray;
   readonly indexCount: number;
 
+  wireframeIndexBuffer?: IndexBuffer;
+  wireframeIndexCount?: number;
+
   constructor(gl: WebGL2RenderingContext, model: Md2Model, blend: Md2FrameBlend) {
     this.gl = gl;
     this.geometry = buildMd2Geometry(model);
@@ -275,6 +287,7 @@ export class Md2MeshBuffers {
     this.vertexBuffer.dispose();
     this.indexBuffer.dispose();
     this.vertexArray.dispose();
+    this.wireframeIndexBuffer?.dispose();
   }
 }
 
@@ -288,6 +301,9 @@ export class Md2Pipeline {
   private readonly uniformAmbient: WebGLUniformLocation | null;
   private readonly uniformTint: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
+
+  private readonly uniformRenderMode: WebGLUniformLocation | null;
+  private readonly uniformSolidColor: WebGLUniformLocation | null;
 
   private readonly uniformNumDlights: WebGLUniformLocation | null;
   private readonly uniformDlights: { pos: WebGLUniformLocation | null, color: WebGLUniformLocation | null, intensity: WebGLUniformLocation | null }[] = [];
@@ -307,6 +323,9 @@ export class Md2Pipeline {
     this.uniformTint = this.program.getUniformLocation('u_tint');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
 
+    this.uniformRenderMode = this.program.getUniformLocation('u_renderMode');
+    this.uniformSolidColor = this.program.getUniformLocation('u_solidColor');
+
     this.uniformNumDlights = this.program.getUniformLocation('u_numDlights');
     for (let i = 0; i < MAX_DLIGHTS; i++) {
       this.uniformDlights.push({
@@ -318,7 +337,7 @@ export class Md2Pipeline {
   }
 
   bind(options: Md2BindOptions): void {
-    const { modelViewProjection, modelMatrix, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0, dlights = [] } = options;
+    const { modelViewProjection, modelMatrix, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0, dlights = [], renderMode } = options;
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
@@ -326,7 +345,6 @@ export class Md2Pipeline {
     if (modelMatrix) {
         this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, modelMatrix);
     } else {
-        // Identity if not provided
         this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]));
     }
 
@@ -334,6 +352,23 @@ export class Md2Pipeline {
     this.gl.uniform1f(this.uniformAmbient, ambientLight);
     this.gl.uniform4fv(this.uniformTint, tintVec);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
+
+    // Render Mode
+    let modeInt = 0;
+    let color = [1, 1, 1, 1];
+    if (renderMode) {
+        if (renderMode.mode === 'solid' || renderMode.mode === 'wireframe') modeInt = 1;
+        else if (renderMode.mode === 'solid-faceted') modeInt = 2;
+
+        if (renderMode.color) {
+            color = [...renderMode.color];
+        } else if (renderMode.generateRandomColor) {
+            // Will be handled by caller passing specific color, or white here
+        }
+    }
+    this.gl.uniform1i(this.uniformRenderMode, modeInt);
+    this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
+
 
     // Bind Dlights
     const numDlights = Math.min(dlights.length, MAX_DLIGHTS);
@@ -346,9 +381,22 @@ export class Md2Pipeline {
     }
   }
 
-  draw(mesh: Md2MeshBuffers): void {
-    mesh.bind();
-    this.gl.drawElements(this.gl.TRIANGLES, mesh.indexCount, this.gl.UNSIGNED_SHORT, 0);
+  draw(mesh: Md2MeshBuffers, renderMode?: RenderModeConfig): void {
+    mesh.vertexArray.bind();
+
+    if (renderMode && renderMode.mode === 'wireframe') {
+         if (!mesh.wireframeIndexBuffer) {
+             mesh.wireframeIndexBuffer = new IndexBuffer(this.gl, this.gl.STATIC_DRAW);
+             const wireIndices = generateWireframeIndices(mesh.geometry.indices);
+             mesh.wireframeIndexBuffer.upload(wireIndices as unknown as BufferSource);
+             mesh.wireframeIndexCount = wireIndices.length;
+         }
+         mesh.wireframeIndexBuffer.bind();
+         this.gl.drawElements(this.gl.LINES, mesh.wireframeIndexCount!, this.gl.UNSIGNED_SHORT, 0);
+    } else {
+         mesh.indexBuffer.bind();
+         this.gl.drawElements(this.gl.TRIANGLES, mesh.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    }
   }
 
   dispose(): void {

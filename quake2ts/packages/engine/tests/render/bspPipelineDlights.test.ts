@@ -24,6 +24,7 @@ const gl = {
   uniform2f: vi.fn(),
   uniform3f: vi.fn(),
   uniform4fv: vi.fn(),
+  uniform4f: vi.fn(), // Added for u_solidColor
   uniform1f: vi.fn(),
   uniform1i: vi.fn(),
   deleteProgram: vi.fn(),

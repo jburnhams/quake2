@@ -2,6 +2,8 @@ import { Mat4, Vec3, mat4FromBasis, normalizeVec3, transformPointMat4 } from '@q
 import { Md3Model, Md3Surface } from '../assets/md3.js';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
+import { RenderModeConfig } from './frame.js';
+import { generateWireframeIndices } from './geometry.js';
 
 export interface Md3DrawVertex {
   readonly vertexIndex: number;
@@ -35,6 +37,7 @@ export interface Md3LightingOptions {
 export interface Md3SurfaceMaterial {
   readonly diffuseSampler?: number;
   readonly tint?: readonly [number, number, number, number];
+  readonly renderMode?: RenderModeConfig;
 }
 
 export interface Md3TagTransform {
@@ -219,10 +222,12 @@ uniform mat4 u_modelViewProjection;
 
 out vec2 v_texCoord;
 out vec4 v_color;
+out vec3 v_position;
 
 void main() {
   v_texCoord = a_texCoord;
   v_color = a_color;
+  v_position = a_position; // Model space, assuming single mesh pass
   gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
 }`;
 
@@ -231,15 +236,37 @@ precision highp float;
 
 in vec2 v_texCoord;
 in vec4 v_color;
+in vec3 v_position;
 
 uniform sampler2D u_diffuseMap;
 uniform vec4 u_tint;
 
+uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
+uniform vec4 u_solidColor;
+
 out vec4 o_color;
 
 void main() {
-  vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-  o_color = vec4(albedo.rgb * v_color.rgb, albedo.a * v_color.a);
+  vec4 finalColor;
+
+  if (u_renderMode == 0) {
+      vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
+      finalColor = vec4(albedo.rgb * v_color.rgb, albedo.a * v_color.a);
+  } else {
+      vec3 color = u_solidColor.rgb;
+      if (u_renderMode == 2) {
+           // FACETED
+           vec3 fdx = dFdx(v_position);
+           vec3 fdy = dFdy(v_position);
+           vec3 faceNormal = normalize(cross(fdx, fdy));
+           vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
+           float diff = max(dot(faceNormal, lightDir), 0.2);
+           color *= diff;
+      }
+      finalColor = vec4(color, u_solidColor.a * u_tint.a);
+  }
+
+  o_color = finalColor;
 }`;
 
 export class Md3SurfaceMesh {
@@ -249,6 +276,9 @@ export class Md3SurfaceMesh {
   readonly indexBuffer: IndexBuffer;
   readonly vertexArray: VertexArray;
   readonly indexCount: number;
+
+  wireframeIndexBuffer?: IndexBuffer;
+  wireframeIndexCount?: number;
 
   constructor(gl: WebGL2RenderingContext, surface: Md3Surface, blend: Md3FrameBlend, lighting?: Md3LightingOptions) {
     this.gl = gl;
@@ -288,6 +318,7 @@ export class Md3SurfaceMesh {
     this.vertexBuffer.dispose();
     this.indexBuffer.dispose();
     this.vertexArray.dispose();
+    this.wireframeIndexBuffer?.dispose();
   }
 }
 
@@ -334,6 +365,9 @@ export class Md3Pipeline {
   private readonly uniformTint: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
 
+  private readonly uniformRenderMode: WebGLUniformLocation | null;
+  private readonly uniformSolidColor: WebGLUniformLocation | null;
+
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
     this.program = ShaderProgram.create(
@@ -345,6 +379,9 @@ export class Md3Pipeline {
     this.uniformMvp = this.program.getUniformLocation('u_modelViewProjection');
     this.uniformTint = this.program.getUniformLocation('u_tint');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
+
+    this.uniformRenderMode = this.program.getUniformLocation('u_renderMode');
+    this.uniformSolidColor = this.program.getUniformLocation('u_solidColor');
   }
 
   bind(modelViewProjection: Float32List, tint: readonly [number, number, number, number] = [1, 1, 1, 1], sampler = 0): void {
@@ -352,15 +389,49 @@ export class Md3Pipeline {
     this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
     this.gl.uniform4fv(this.uniformTint, new Float32Array(tint));
     this.gl.uniform1i(this.uniformDiffuse, sampler);
+
+    // Default mode for simple bind
+    this.gl.uniform1i(this.uniformRenderMode, 0);
+    this.gl.uniform4f(this.uniformSolidColor, 1, 1, 1, 1);
   }
 
   drawSurface(mesh: Md3SurfaceMesh, material?: Md3SurfaceMaterial): void {
     const sampler = material?.diffuseSampler ?? 0;
     const tint = material?.tint ?? [1, 1, 1, 1];
+    const renderMode = material?.renderMode;
+
     this.gl.uniform4fv(this.uniformTint, new Float32Array(tint));
     this.gl.uniform1i(this.uniformDiffuse, sampler);
-    mesh.bind();
-    this.gl.drawElements(this.gl.TRIANGLES, mesh.indexCount, this.gl.UNSIGNED_SHORT, 0);
+
+    // Render Mode
+    let modeInt = 0;
+    let color = [1, 1, 1, 1];
+    if (renderMode) {
+        if (renderMode.mode === 'solid' || renderMode.mode === 'wireframe') modeInt = 1;
+        else if (renderMode.mode === 'solid-faceted') modeInt = 2;
+
+        if (renderMode.color) {
+            color = [...renderMode.color];
+        }
+    }
+    this.gl.uniform1i(this.uniformRenderMode, modeInt);
+    this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
+
+    mesh.vertexArray.bind();
+
+    if (renderMode && renderMode.mode === 'wireframe') {
+         if (!mesh.wireframeIndexBuffer) {
+             mesh.wireframeIndexBuffer = new IndexBuffer(this.gl, this.gl.STATIC_DRAW);
+             const wireIndices = generateWireframeIndices(mesh.geometry.indices);
+             mesh.wireframeIndexBuffer.upload(wireIndices as unknown as BufferSource);
+             mesh.wireframeIndexCount = wireIndices.length;
+         }
+         mesh.wireframeIndexBuffer.bind();
+         this.gl.drawElements(this.gl.LINES, mesh.wireframeIndexCount!, this.gl.UNSIGNED_SHORT, 0);
+    } else {
+         mesh.indexBuffer.bind();
+         this.gl.drawElements(this.gl.TRIANGLES, mesh.indexCount, this.gl.UNSIGNED_SHORT, 0);
+    }
   }
 
   dispose(): void {
