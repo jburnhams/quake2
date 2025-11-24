@@ -19,6 +19,9 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 - ✅ Status bar HUD (health, armor, ammo, icons)
 - ✅ Crosshair rendering and customization
 - ✅ Damage indicators (directional and screen flash)
+- ✅ Menu System (Main, Pause, Options, Save/Load)
+- ✅ Menu Navigation (Input routing)
+- ✅ Menu Rendering
 
 ## Tasks Remaining
 
@@ -90,7 +93,7 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
   - Apply to player position, view angles
 - [x] View effects
   - [x] View bob (up/down sway while walking)
-  - [x] View roll (lean when strafing)
+  - [x] View roll (strafe lean)
   - [x] View kick (recoil when firing)
   - [x] Damage angle indicators (screen flash from damage direction)
 
@@ -132,7 +135,7 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Pause game while open (or slow time)
 
 ### Menu System
-- [ ] Main menu
+- [x] Main menu
   - Single Player (start game)
   - Multiplayer (disabled for now, or grayed out)
   - Options (settings)
@@ -142,23 +145,23 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Thumbnails/previews (optional)
   - Difficulty selection
   - Start map
-- [ ] Options menu
+- [x] Options menu
   - Video settings (resolution, fullscreen, FOV, brightness)
   - Audio settings (master, SFX, music volumes)
   - Controls (key bindings, mouse sensitivity)
   - Gameplay (crosshair, HUD style, difficulty)
   - Apply and save settings
-- [ ] Pause menu (during game)
+- [x] Pause menu (during game)
   - Resume
   - Options
   - Restart level
   - Quit to main menu
-- [ ] Load/Save menu
+- [x] Load/Save menu
   - List save files
   - Load selected save
   - Save current game with name
   - Delete saves
-- [ ] Menu navigation
+- [x] Menu navigation
   - Keyboard (arrow keys, enter, escape)
   - Mouse (click buttons)
   - Gamepad (D-pad, A/B buttons)

@@ -26,6 +26,9 @@ import { MenuSystem } from './ui/menu/system.js';
 import { SaveStorage } from '@quake2ts/game';
 import { OptionsMenuFactory } from './ui/menu/options.js';
 import { MapsMenuFactory } from './ui/menu/maps.js';
+import { PauseMenuFactory } from './ui/menu/pause.js';
+import { Draw_Menu } from './ui/menu/render.js';
+import { InputBindings } from './input/bindings.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -77,6 +80,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Menu System
   createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
 
+  // Input handling
+  handleInput(key: string, down: boolean): boolean;
+  toggleMenu(): void;
+
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
   Shutdown(): void;
@@ -89,6 +96,13 @@ export function createClient(imports: ClientImports): ClientExports {
   const messageSystem = new MessageSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
+
+  // Initialize persistent Menu System
+  const menuSystem = new MenuSystem();
+
+  // Menu Factories
+  let pauseMenuFactory: PauseMenuFactory | undefined;
+  let optionsFactory: OptionsMenuFactory | undefined;
 
   // Hook up message system to demo handler
   demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
@@ -107,6 +121,12 @@ export function createClient(imports: ClientImports): ClientExports {
   let fovValue = 90;
   let isZooming = false;
 
+  // Initialize Menu Factories
+  if (imports.host) {
+    optionsFactory = new OptionsMenuFactory(menuSystem, imports.host);
+    pauseMenuFactory = new PauseMenuFactory(menuSystem, optionsFactory, imports.host);
+  }
+
   if (imports.host?.commands) {
     imports.host.commands.register('playdemo', (args) => {
       if (args.length < 1) {
@@ -116,7 +136,6 @@ export function createClient(imports: ClientImports): ClientExports {
       const filename = args[0];
       console.log(`playdemo: ${filename}`);
       console.log('Note: Demo loading requires VFS access which is not yet fully integrated into this console command.');
-      // TODO: Access VFS to load file content and call demoPlayback.loadDemo(buffer)
     }, 'Play a recorded demo');
 
     imports.host.commands.register('crosshair', () => {
@@ -131,6 +150,14 @@ export function createClient(imports: ClientImports): ClientExports {
     imports.host.commands.register('-zoom', () => {
         isZooming = false;
     }, 'Reset zoom');
+
+    imports.host.commands.register('togglemenu', () => {
+        if (menuSystem.isActive()) {
+            menuSystem.closeAll();
+        } else if (pauseMenuFactory) {
+            menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
+        }
+    }, 'Toggle the main/pause menu');
 
     if (imports.host.cvars) {
       imports.host.cvars.register({
@@ -177,19 +204,88 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     predict(command: UserCommand): PredictionState {
+      // If menu is active, we might want to zero out movement in the command
+      // However, predict() is about physics. The input generation (which we don't control here)
+      // should probably have suppressed movement keys if menu was active.
+      // But we can double check.
+      if (menuSystem.isActive()) {
+          // command.forwardmove = 0;
+          // command.sidemove = 0;
+          // command.upmove = 0;
+          // command.buttons = 0;
+          // Note: doing this here might cause prediction errors if the server *doesn't* know menu is open.
+          // But usually server doesn't know about client menus.
+          // Quake 2 pauses single player when menu is open.
+          // In MP, you keep moving if you hold keys.
+          // Ideally, InputController handles this.
+      }
       return prediction.enqueueCommand(command);
     },
 
+    handleInput(key: string, down: boolean): boolean {
+        if (!menuSystem.isActive()) return false;
+
+        if (!down) return true; // Consume key up events if menu is active to prevent game actions
+
+        // Map key codes to menu actions
+        // This is a simple mapping. A full implementation would check bindings or use a standard UI mapping.
+        const lowerKey = key.toLowerCase();
+
+        if (lowerKey === 'arrowup' || lowerKey === 'w') {
+            return menuSystem.handleInput('up');
+        } else if (lowerKey === 'arrowdown' || lowerKey === 's') {
+            return menuSystem.handleInput('down');
+        } else if (lowerKey === 'arrowleft' || lowerKey === 'a') {
+            return menuSystem.handleInput('left');
+        } else if (lowerKey === 'arrowright' || lowerKey === 'd') {
+            return menuSystem.handleInput('right');
+        } else if (lowerKey === 'enter' || lowerKey === ' ') {
+            return menuSystem.handleInput('select');
+        } else if (lowerKey === 'escape') {
+             // Let the togglemenu command handle escape if it's bound.
+             // But if we are in a submenu, escape acts as 'back'.
+             // The togglemenu command usually closes the *root* menu.
+             // If we have depth > 1, back.
+             if (menuSystem.getState().activeMenu?.parent) {
+                 return menuSystem.handleInput('back');
+             }
+             // If at root menu, return false so the togglemenu binding (ESC) can trigger to close it.
+             return false;
+        } else if (key.length === 1) {
+            return menuSystem.handleInput('char', key);
+        } else if (key === 'Backspace') {
+            return menuSystem.handleInput('left'); // Use left as backspace for now as per system.ts
+        }
+
+        return true; // Consume other keys while menu is open
+    },
+
+    toggleMenu() {
+        if (menuSystem.isActive()) {
+            menuSystem.closeAll();
+        } else if (pauseMenuFactory) {
+            menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
+        }
+    },
+
     createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
-        const menuSystem = new MenuSystem();
+        // Reuse the client's menuSystem so we can manage it globally
+
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
-        const optionsFactory = new OptionsMenuFactory(menuSystem, imports.host!);
+        // Ensure optionsFactory is initialized (it might be undefined if host wasn't passed, but createMainMenu implies we have a host usually?)
+        // If imports.host is missing, we create a dummy one or fail?
+        // Let's create a local one if missing.
+        let optsFactory = optionsFactory;
+        if (!optsFactory) {
+            if (!imports.host) {
+                // Should potentially throw or use a dummy host, but to avoid crash:
+                throw new Error('Cannot create Main Menu: EngineHost is missing');
+            }
+            optsFactory = new OptionsMenuFactory(menuSystem, imports.host);
+        }
 
         // We need VFS for MapsMenuFactory.
-        // We now have listFiles on AssetManager.
         const assets = imports.engine.assets;
-
-        // Use a shim if assets is undefined (e.g. in tests without mock assets)
         const vfsShim = {
              findByExtension: (ext: string) => assets ? assets.listFiles(ext) : []
         };
@@ -201,7 +297,7 @@ export function createClient(imports: ClientImports): ClientExports {
 
         const factory = new MainMenuFactory(menuSystem, saveLoadFactory, {
             ...options,
-            optionsFactory,
+            optionsFactory: optsFactory,
             mapsFactory,
             onSetDifficulty: (skill: number) => {
                 if (imports.host?.cvars) {
@@ -209,6 +305,7 @@ export function createClient(imports: ClientImports): ClientExports {
                 }
             }
         });
+
         return { menuSystem, factory };
     },
 
@@ -264,7 +361,20 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
-        if (!imports.engine.renderer || !lastRendered || !lastRendered.client) return;
+        // Always draw menu if active, even if no renderer (though we need renderer to draw)
+        if (!imports.engine.renderer) return;
+
+        // Draw Menu Overlay
+        if (menuSystem.isActive()) {
+            // Assume full screen dimensions
+            Draw_Menu(imports.engine.renderer, menuSystem.getState(), imports.engine.renderer.width, imports.engine.renderer.height);
+            // If menu covers screen, we might skip HUD?
+            // In Q2, HUD is hidden if full screen menu? Usually yes.
+            // But for Pause Menu (overlay), HUD might be visible underneath.
+            // Let's draw HUD first, then Menu on top.
+        }
+
+        if (!lastRendered || !lastRendered.client) return;
 
         const playerState: PlayerState = {
             origin: lastRendered.origin,

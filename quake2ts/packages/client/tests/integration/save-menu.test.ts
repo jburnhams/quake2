@@ -64,7 +64,8 @@ describe('Save/Load Menu Integration', () => {
     } as any;
 
     const imports: ClientImports = {
-      engine: mockEngine
+      engine: mockEngine,
+      host: { commands: { register: vi.fn() }, cvars: { register: vi.fn(), get: vi.fn() } } as any
     };
 
     client = createClient(imports);
