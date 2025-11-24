@@ -42,6 +42,10 @@ describe('monster_soldier', () => {
 
         // Create a mock context with all necessary properties
         const freeMock = vi.fn();
+        const soundMock = vi.fn();
+        const engineMock = {
+            sound: soundMock,
+        };
         context = {
             timeSeconds: 0,
             free: freeMock,
@@ -49,17 +53,13 @@ describe('monster_soldier', () => {
             spawn: vi.fn(),
             scheduleThink: vi.fn(),
             finalizeSpawn: vi.fn(),
+            engine: engineMock, // Attach engine mock
+            sound: soundMock,   // Attach sound method
             entities: { // Recursively reference itself or mocks if accessed via entities property
                 free: freeMock,
                 timeSeconds: 0,
             }
         } as unknown as EntitySystem;
-
-        // Ensure context.entities refers correctly if used in spawn
-        // In the code: context.entities.free(self) implies context passed to spawn has entities prop.
-        // We will pass { entities: context } to spawn function.
-        // But if context IS EntitySystem, then context.entities refers to the list/manager?
-        // Let's match what SP_monster_soldier expects: SpawnContext { entities: EntitySystem }
 
         entity = new Entity(0);
         entity.timestamp = 0;

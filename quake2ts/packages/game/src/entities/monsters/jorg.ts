@@ -81,7 +81,7 @@ function jorg_run(self: Entity): void {
   }
 }
 
-function jorg_attack(self: Entity): void {
+function jorg_attack(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     // Attack 1: Dual Machineguns
@@ -89,11 +89,11 @@ function jorg_attack(self: Entity): void {
 
     if (Math.random() <= 0.75) {
         // Attack 1
-        // Play sound
+        context.sound(self, 0, 'boss3/bs3atck1.wav', 1, 1, 0);
         self.monsterinfo.current_move = attack1_move; // Using start_attack1 logic from C
     } else {
         // Attack 2
-        // Play sound
+        context.sound(self, 0, 'boss3/bs3atck2.wav', 1, 1, 0);
         self.monsterinfo.current_move = attack2_move;
     }
 }
@@ -151,7 +151,7 @@ function jorg_fire_bfg(self: Entity, context: any): void {
     (monster_fire_bfg as any)(self, start, dir, 50, 300, 100, 200, 0, context);
 }
 
-function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
     if (self.health < (self.max_health / 2)) {
       self.skin = 1;
     }
@@ -169,17 +169,21 @@ function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: num
     self.pain_finished_time = self.timestamp + 3.0;
 
     if (damage <= 50) {
+        context.engine.sound?.(self, 0, 'boss3/bs3pain1.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain1_move;
     } else if (damage <= 100) {
+        context.engine.sound?.(self, 0, 'boss3/bs3pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain2_move;
     } else {
         if (Math.random() <= 0.3) {
+            context.engine.sound?.(self, 0, 'boss3/bs3pain3.wav', 1, 1, 0);
             self.monsterinfo.current_move = pain3_move;
         }
     }
 }
 
-function jorg_die(self: Entity): void {
+function jorg_die(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'boss3/bs3deth1.wav', 1, 1, 0);
   self.monsterinfo.current_move = death_move;
 }
 
@@ -261,8 +265,10 @@ death_move = { firstframe: 127, lastframe: 176, frames: death_frames, endfunc: j
 
 export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
   self.classname = 'monster_jorg';
-  self.model = 'models/monsters/boss3/rider/tris.md2'; // Jorg is the rider
-  // self.model2 = 'models/monsters/boss3/jorg/tris.md2'; // The mech
+  // Jorg is the mech, Rider is the attachment. Main entity uses Mech model?
+  // C code: self->s.modelindex = gi.modelindex ("models/monsters/boss3/jorg/tris.md2");
+  self.model = 'models/monsters/boss3/jorg/tris.md2';
+  // self.model2 = 'models/monsters/boss3/rider/tris.md2'; // The rider
 
   // context.precacheModel('models/monsters/boss3/jorg/tris.md2');
   // ... remove precacheModel ...
@@ -277,7 +283,7 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
   self.takedamage = true;
   self.viewheight = 90; // Guess
 
-  self.pain = jorg_pain;
+  self.pain = (ent, other, kick, dmg) => jorg_pain(ent, other, kick, dmg, context.entities);
   self.die = (self, inflictor, attacker, damage, point) => {
     self.deadflag = DeadFlag.Dead;
     self.solid = Solid.Not;
@@ -289,13 +295,16 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
         return;
     }
 
-    jorg_die(self);
+    jorg_die(self, context.entities);
   };
 
   self.monsterinfo.stand = jorg_stand;
   self.monsterinfo.walk = jorg_walk;
   self.monsterinfo.run = jorg_run;
-  self.monsterinfo.attack = jorg_attack;
+  self.monsterinfo.attack = (ent) => jorg_attack(ent, context.entities);
+  self.monsterinfo.sight = (self, other) => {
+      context.entities.sound?.(self, 0, 'boss3/sight1.wav', 1, 1, 0);
+  };
 
   self.think = monster_think;
 

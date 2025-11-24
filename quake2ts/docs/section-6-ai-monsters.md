@@ -35,6 +35,23 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - ✅ Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - ✅ Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- ✅ Implemented Flipper (Barracuda Shark) behaviors and unit tests.
+- ✅ Implemented Supertank (Boss1) behaviors and unit tests.
+- ✅ Implemented Boss2 (Hornet/Carrier) behaviors and unit tests.
+- ✅ Implemented Jorg (Boss3 Rider/Mech) behaviors and unit tests.
+- ✅ Implemented Makron (Boss3 Pilot) behaviors and unit tests.
+- ✅ Implemented Turret behaviors and unit tests.
+- ✅ Added sound events (Sight, Pain, Death, Attack) for Soldier, Gunner, Flipper, Supertank, Boss2, Jorg, Makron, Turret.
+
+## Future Tasks / Known Simplifications
+The following features are partially implemented or use placeholder logic and should be refined in future iterations:
+
+- **Supertank Heat Seeker**: The heat-seeking rocket attack (`monster_fire_heat`) currently fires a standard rocket. Requires steering physics implementation for projectiles.
+- **Medic Cable Effect**: The healing/resurrection beam lacks the visual cable effect.
+- **Model Offsets**: Weapon fire offsets for several monsters (Jorg, Chick, Supertank) are approximated based on model size rather than precise vertex/tag data.
+- **Brain Duck Interface**: The ducking behavior for the Brain monster uses an approximate interface.
+- **Berserker Range Check**: The distance check for some Berserker attacks is simplified.
+- **Physics/Pathfinding**: Full A* pathfinding is deferred. Monsters currently use direct line movement with obstacle avoidance (`SV_StepDirection`).
 
 ## Tasks Remaining
 
@@ -104,18 +121,18 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - Check if jump is safe before leaping
 
 ### Combat Behaviors
-- [ ] Ranged attacks
+- [x] Ranged attacks
   - Stop moving, face enemy
   - Fire projectile or instant-hit attack
   - Cooldown between shots
   - Lead target (predict player movement)
   - Accuracy varies by monster and difficulty
-- [ ] Melee attacks
+- [x] Melee attacks
   - Move close to enemy
   - Trigger melee attack animation
   - Damage player when in range and animation hits
   - Knockback
-- [ ] Special attacks
+- [x] Special attacks
   - Some monsters have multiple attack types (e.g., Gunner: machinegun and grenade)
   - Choose attack based on range, situation
   - Some monsters have charge attacks (Berserker)
@@ -140,7 +157,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Gunner**
   - Dual attack: machinegun and grenade launcher
   - Choose based on range
-- [ ] **Infantry**
+- [x] **Infantry**
   - Machinegun, can dodge
 - [x] **Berserker** (melee)
   - Strong melee attacks
@@ -170,11 +187,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Similar to Flyer, stronger
 
 #### Large/Boss Monsters
-- [ ] **Supertank**
+- [x] **Supertank**
   - Very high health
   - Rocket launcher, machinegun
   - Slow movement
-- [ ] **Jorg / Makron** (final bosses)
+- [x] **Jorg / Makron** (final bosses)
   - Complex attack patterns
   - Multiple phases
   - Scripted sequences (may defer complex scripting)
@@ -189,7 +206,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Mutant**
   - Jumping melee attack
   - Agile, unpredictable movement
-- [ ] **Barracuda Shark** (water monster)
+- [x] **Barracuda Shark** (water monster)
   - Swimming, melee bite
 
 ### Monster Animations
@@ -288,6 +305,9 @@ Recent work:
 - Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- Implemented Flipper (Barracuda Shark) behaviors and unit tests.
+- Implemented Supertank, Boss2, Jorg, Makron, Turret behaviors and unit tests.
+- Added sound integration for key monsters (Soldier, Gunner, Flipper, Supertank, Boss2, Jorg, Makron, Turret).
 
 ### Pain/Death Callbacks
 - [x] Pain callback

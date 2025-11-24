@@ -4,6 +4,11 @@ import type { SpawnContext } from '../src/entities/spawn.js';
 import type { EntitySystem } from '../src/entities/system.js';
 
 export function createTestContext(): SpawnContext {
+  const engine = {
+    sound: vi.fn(),
+    modelIndex: vi.fn(() => 0),
+  };
+
   const entities = {
     spawn: () => new Entity(1),
     free: vi.fn(),
@@ -26,6 +31,10 @@ export function createTestContext(): SpawnContext {
     pointcontents: vi.fn(() => 0),
     multicast: vi.fn(),
     unicast: vi.fn(),
+    engine, // Attach mocked engine
+    sound: (ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
+      engine.sound(ent, chan, sound, vol, attn, timeofs);
+    }
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
       // Basic mock implementation of useTargets to facilitate testing
       if (entity.target) {
@@ -36,7 +45,6 @@ export function createTestContext(): SpawnContext {
         // Unless we mock findByTargetName too.
       }
     }),
-    sound: vi.fn(),
     findByTargetName: vi.fn(() => []),
     pickTarget: vi.fn(() => null),
   } as unknown as EntitySystem;

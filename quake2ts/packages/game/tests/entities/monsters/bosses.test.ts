@@ -11,6 +11,10 @@ describe('Boss/Monster Spawns', () => {
 
   beforeEach(() => {
     entity = new Entity(1);
+    const engine = {
+        sound: vi.fn(),
+        modelIndex: vi.fn(() => 0),
+    };
     context = {
       keyValues: {},
       entities: {
@@ -21,7 +25,9 @@ describe('Boss/Monster Spawns', () => {
         timeSeconds: 10,
         modelIndex: vi.fn(() => 0),
         scheduleThink: vi.fn(),
-        linkentity: vi.fn()
+        linkentity: vi.fn(),
+        engine, // Attach mocked engine
+        sound: engine.sound,
       } as any,
       warn: vi.fn(),
       free: vi.fn(),

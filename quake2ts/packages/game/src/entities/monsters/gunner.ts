@@ -92,6 +92,8 @@ function gunner_fire_chain(self: Entity, context: any): void {
     const damage = 10;
     const kick = 2;
 
+    context.engine.sound?.(self, 0, 'gunner/gunatck2.wav', 1, 1, 0);
+
     monster_fire_bullet(self, start, forward, damage, kick, 0, 0, 0, context, DamageMod.CHAINGUN);
 }
 
@@ -108,14 +110,22 @@ function gunner_fire_grenade(self: Entity, context: any): void {
     const damage = 50;
     const speed = 600;
 
+    context.engine.sound?.(self, 0, 'gunner/gunatck3.wav', 1, 1, 0);
+
     createGrenade(context as EntitySystem, self, start, forward, damage, speed);
 }
 
-function gunner_pain(self: Entity): void {
+function gunner_pain(self: Entity, context: any): void {
+    if (Math.random() < 0.5) {
+        context.engine.sound?.(self, 0, 'gunner/gunpain1.wav', 1, 1, 0);
+    } else {
+        context.engine.sound?.(self, 0, 'gunner/gunpain2.wav', 1, 1, 0);
+    }
     self.monsterinfo.current_move = pain_move;
 }
 
-function gunner_die(self: Entity): void {
+function gunner_die(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'gunner/death1.wav', 1, 1, 0);
     self.monsterinfo.current_move = death_move;
 }
 
@@ -225,7 +235,9 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
 
     self.pain = (self, other, kick, damage) => {
         if (self.health < (self.max_health / 2)) {
-            self.monsterinfo.current_move = pain_move;
+            gunner_pain(self, context.entities);
+        } else if (Math.random() < 0.2) {
+             gunner_pain(self, context.entities);
         }
     };
 
@@ -234,18 +246,22 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
         self.solid = Solid.Not;
 
         if (self.health < -40) {
+            context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
             throwGibs(context.entities, self.origin, damage);
             context.entities.free(self);
             return;
         }
 
-        gunner_die(self);
+        gunner_die(self, context.entities);
     };
 
     self.monsterinfo.stand = gunner_stand;
     self.monsterinfo.walk = gunner_walk;
     self.monsterinfo.run = gunner_run;
     self.monsterinfo.attack = gunner_attack;
+    self.monsterinfo.sight = (self, other) => {
+        context.entities.sound?.(self, 0, 'gunner/sight1.wav', 1, 1, 0);
+    };
 
     self.think = monster_think;
 

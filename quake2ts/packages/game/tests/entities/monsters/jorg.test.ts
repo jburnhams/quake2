@@ -18,7 +18,7 @@ describe('monster_jorg', () => {
     expect(entity.health).toBe(3000);
     expect(entity.movetype).toBe(MoveType.Step);
     expect(entity.solid).toBe(Solid.BoundingBox);
-    expect(entity.model).toBe('models/monsters/boss3/rider/tris.md2');
+    expect(entity.model).toBe('models/monsters/boss3/jorg/tris.md2');
   });
 
   it('changes skin on pain', () => {
