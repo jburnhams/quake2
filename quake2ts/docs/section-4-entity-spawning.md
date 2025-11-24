@@ -261,34 +261,34 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 ## Testing Requirements
 
 ### Unit Tests (Standard)
-- Entity allocation and freeing
-- Think queue scheduling and execution
-- Target resolution and use activation
-- Entity key-value parsing
-- Spawn registry lookup
+- [x] Entity allocation and freeing
+- [x] Think queue scheduling and execution
+- [x] Target resolution and use activation
+- [x] Entity key-value parsing
+- [x] Spawn registry lookup
 
 ### Integration Tests
-- **Full level spawn**: Load BSP entity lump, spawn all entities, verify counts and types
-- **Entity lifecycle**: Spawn, think, die, free; verify no leaks
-- **Trigger activation**: Walk into trigger, verify target entities activate
-- **Door functionality**: Trigger door, verify open/close cycle
-- **Button functionality**: Use button, verify it moves and triggers targets
-- **Teleporter**: Walk into teleporter trigger, verify player moves to destination
-- **Item pickup**: Walk over item, verify touch callback and item removal
-- **Monster spawn**: Spawn monster, verify AI initialization (see Section 6)
+- [x] **Full level spawn**: Load BSP entity lump, spawn all entities, verify counts and types
+- [x] **Entity lifecycle**: Spawn, think, die, free; verify no leaks
+- [x] **Trigger activation**: Walk into trigger, verify target entities activate
+- [x] **Door functionality**: Trigger door, verify open/close cycle
+- [x] **Button functionality**: Use button, verify it moves and triggers targets
+- [x] **Teleporter**: Walk into teleporter trigger, verify player moves to destination
+- [x] **Item pickup**: Walk over item, verify touch callback and item removal
+- [x] **Monster spawn**: Spawn monster, verify AI initialization (see Section 6)
 
 ### Performance Tests
-- **Entity count scaling**: Spawn 1000+ entities, measure frame time impact
-- **Think queue performance**: Schedule 100+ entities with same nextthink
-- **Touch detection**: Many overlapping entities, verify performance
-- **Spawn time**: Time to spawn all entities in large map (e.g., boss3.bsp)
+- [x] **Entity count scaling**: Spawn 1000+ entities, measure frame time impact
+- [x] **Think queue performance**: Schedule 100+ entities with same nextthink
+- [x] **Touch detection**: Many overlapping entities, verify performance
+- [ ] **Spawn time**: Time to spawn all entities in large map (e.g., boss3.bsp)
 
 ### Edge Case Tests
-- **Missing spawn function**: Entity with unknown classname
-- **Invalid key-values**: Malformed entity data
-- **Circular targets**: Entity A targets B, B targets A
-- **Entity limit**: Try to spawn >2048 entities
-- **Instant think**: Set nextthink to current time or past
+- [x] **Missing spawn function**: Entity with unknown classname
+- [x] **Invalid key-values**: Malformed entity data
+- [x] **Circular targets**: Entity A targets B, B targets A
+- [x] **Entity limit**: Try to spawn >2048 entities
+- [x] **Instant think**: Set nextthink to current time or past
 
 ## Notes
 - Entity system is central to game logic; get this right first
