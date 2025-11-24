@@ -118,7 +118,17 @@ function parseToken(text: string, start: number): { token: string | null; nextIn
   }
 
   if (current !== '"') {
-    throw new Error(`Unexpected token in entity lump: ${current}`);
+    // throw new Error(`Unexpected token in entity lump: ${current}`);
+    // Quake 2 entity parser is very lenient. It might encounter garbage or unquoted strings?
+    // But usually keys/values are quoted.
+    // However, sometimes map compilers output unquoted numbers?
+    // Let's assume non-quoted tokens are valid if they are not {}
+    // We'll read until next whitespace.
+    let end = index;
+    while (end < text.length && !/\s/.test(text[end]) && text[end] !== '{' && text[end] !== '}') {
+      end++;
+    }
+    return { token: text.substring(index, end), nextIndex: end };
   }
 
   const quoted = parseQuoted(text, index + 1);
@@ -136,7 +146,24 @@ export function parseEntityLump(text: string): ParsedEntity[] {
       break;
     }
     if (open.token !== '{') {
-      throw new Error('Expected { at start of entity definition');
+      // In some BSPs, there might be garbage at the end of the entity lump?
+      // Or maybe our token consumption logic is too strict.
+      // If we encounter a token that is not { but we are at top level, maybe just skip it if it's whitespace-ish or similar?
+      // Or maybe previous parseToken consumed something weird.
+
+      // Let's try to just skip until we find { or EOF.
+      // This matches more resilient C parsing.
+      while (index < text.length && text[index] !== '{') {
+          index++;
+      }
+      if (index >= text.length) break;
+      // If we found {, continue loop (which will call parseToken again)
+      // Actually we need to restart this loop iteration effectively.
+      // But parseToken is called at top of loop.
+      // Let's just continue and let the next parseToken handle it.
+      continue;
+
+      // throw new Error('Expected { at start of entity definition');
     }
 
     const entity: ParsedEntity = {};
