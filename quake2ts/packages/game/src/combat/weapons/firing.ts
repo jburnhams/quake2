@@ -335,7 +335,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Cells] -= 50;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BFG);
             applyKick(player, -5, 0, -2);
-            createBfgBall(game.entities, player, player.origin, forward, 200, 400);
+            createBfgBall(game.entities, player, player.origin, forward, 200, 400, 200);
             break;
         }
     }

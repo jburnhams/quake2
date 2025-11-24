@@ -13,15 +13,26 @@ import {
   MonsterMove,
   MoveType,
   Solid,
-  EntityFlags
+  EntityFlags,
+  PainCallback
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
-import { monster_fire_rocket, monster_fire_blaster } from './attack.js';
-import { normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { monster_fire_rocket, monster_fire_bullet, monster_fire_blaster } from './attack.js';
+import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
+import { rangeTo, infront, visible } from '../../ai/perception.js';
 
 const MONSTER_TICK = 0.1;
+
+// Offsets
+const BOSS2_ROCKET_OFFSET_1: Vec3 = { x: 0, y: 30, z: -15 };
+const BOSS2_ROCKET_OFFSET_2: Vec3 = { x: 0, y: 15, z: 0 };
+const BOSS2_ROCKET_OFFSET_3: Vec3 = { x: 0, y: -15, z: 0 };
+const BOSS2_ROCKET_OFFSET_4: Vec3 = { x: 0, y: -30, z: -15 };
+
+const BOSS2_MG_LEFT_OFFSET: Vec3 = { x: 30, y: 20, z: 0 };
+const BOSS2_MG_RIGHT_OFFSET: Vec3 = { x: 30, y: -20, z: 0 };
 
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
@@ -48,8 +59,12 @@ function monster_ai_move(self: Entity, dist: number, context: any): void {
 let stand_move: MonsterMove;
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
-let attack_move: MonsterMove;
-let pain_move: MonsterMove;
+let attack_pre_mg_move: MonsterMove;
+let attack_mg_move: MonsterMove;
+let attack_post_mg_move: MonsterMove;
+let attack_rocket_move: MonsterMove;
+let pain_heavy_move: MonsterMove;
+let pain_light_move: MonsterMove;
 let death_move: MonsterMove;
 
 function boss2_stand(self: Entity): void {
@@ -69,30 +84,83 @@ function boss2_run(self: Entity): void {
 }
 
 function boss2_attack(self: Entity): void {
-  self.monsterinfo.current_move = attack_move;
-}
-
-function boss2_fire(self: Entity, context: any): void {
     if (!self.enemy) return;
 
-    const start: Vec3 = {
-        x: self.origin.x,
-        y: self.origin.y,
-        z: self.origin.z + self.viewheight,
-    };
-    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+    const range = rangeTo(self, self.enemy);
 
-    // Boss2 (Hornet) fires rockets and blasters
-    // Simple alternation for now
-    if (context.rng.random() > 0.5) {
-        monster_fire_rocket(self, start, forward, 50, 700, 0, context);
+    if (range <= 125 || Math.random() <= 0.6) {
+        self.monsterinfo.current_move = attack_pre_mg_move;
     } else {
-        monster_fire_blaster(self, start, forward, 10, 1000, 0, 0, context, DamageMod.BLASTER);
+        self.monsterinfo.current_move = attack_rocket_move;
     }
 }
 
-function boss2_pain(self: Entity): void {
-  self.monsterinfo.current_move = pain_move;
+function boss2_attack_mg(self: Entity): void {
+    self.monsterinfo.current_move = attack_mg_move;
+}
+
+function boss2_reattack_mg(self: Entity): void {
+    if (self.enemy && infront(self, self.enemy) && Math.random() <= 0.7) {
+        boss2_attack_mg(self);
+    } else {
+        self.monsterinfo.current_move = attack_post_mg_move;
+    }
+}
+
+function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
+    const { forward, right, up } = angleVectors(self.angles);
+    const start = { ...self.origin };
+
+    const x = scaleVec3(forward, offset.x);
+    const y = scaleVec3(right, offset.y);
+    const z = scaleVec3(up, offset.z);
+
+    return addVec3(addVec3(addVec3(start, x), y), z);
+}
+
+function boss2_fire_mg(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    // Fire left
+    const startL = getProjectedOffset(self, BOSS2_MG_LEFT_OFFSET);
+    const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
+    monster_fire_bullet(self, startL, dirL, 6, 4, 0.1, 0.05, 0, context, DamageMod.MACHINEGUN);
+
+    // Fire right
+    const startR = getProjectedOffset(self, BOSS2_MG_RIGHT_OFFSET);
+    const dirR = normalizeVec3(subtractVec3(self.enemy.origin, startR));
+    monster_fire_bullet(self, startR, dirR, 6, 4, 0.1, 0.05, 0, context, DamageMod.MACHINEGUN);
+}
+
+function boss2_fire_rocket(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    // C code fires different rockets based on frame or sequence.
+    // We will just fire based on current frame index or passed context if possible,
+    // but here we can just fire a spread or one by one.
+    // The animation calls this function.
+    // We'll approximate by firing from one of the pods randomly or cycling.
+
+    const offsets = [BOSS2_ROCKET_OFFSET_1, BOSS2_ROCKET_OFFSET_2, BOSS2_ROCKET_OFFSET_3, BOSS2_ROCKET_OFFSET_4];
+    const offset = offsets[Math.floor(Math.random() * offsets.length)];
+
+    const start = getProjectedOffset(self, offset);
+    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+
+    monster_fire_rocket(self, start, forward, 50, 500, 0, context);
+}
+
+function boss2_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+    if (self.timestamp < (self.pain_finished_time || 0)) return;
+    self.pain_finished_time = self.timestamp + 3.0;
+
+    if (damage < 10) {
+        self.monsterinfo.current_move = pain_light_move;
+    } else if (damage < 30) {
+        self.monsterinfo.current_move = pain_light_move;
+    } else {
+        self.monsterinfo.current_move = pain_heavy_move;
+    }
 }
 
 function boss2_die(self: Entity): void {
@@ -105,104 +173,87 @@ function boss2_dead(self: Entity): void {
 }
 
 // Frames
-// Stand
-const stand_frames: MonsterFrame[] = Array.from({ length: 46 }, () => ({
-  ai: monster_ai_stand,
-  dist: 0,
-}));
+// Walk/Run: 20 frames (1-20)
+const walk_frames: MonsterFrame[] = Array.from({ length: 20 }, () => ({ ai: monster_ai_walk, dist: 10 }));
+walk_move = { firstframe: 0, lastframe: 19, frames: walk_frames, endfunc: boss2_walk };
 
-stand_move = {
-  firstframe: 0,
-  lastframe: 45,
-  frames: stand_frames,
-  endfunc: boss2_stand,
-};
+run_move = { firstframe: 0, lastframe: 19, frames: walk_frames, endfunc: boss2_run }; // Uses same frames
 
-// Walk
-const walk_frames: MonsterFrame[] = Array.from({ length: 46 }, () => ({
-  ai: monster_ai_walk,
-  dist: 10,
-}));
+// Stand: 21 frames (30-50)
+const stand_frames: MonsterFrame[] = Array.from({ length: 21 }, () => ({ ai: monster_ai_stand, dist: 0 }));
+stand_move = { firstframe: 29, lastframe: 49, frames: stand_frames, endfunc: boss2_stand };
 
-walk_move = {
-  firstframe: 0,
-  lastframe: 45,
-  frames: walk_frames,
-  endfunc: boss2_walk,
-};
-
-// Run
-const run_frames: MonsterFrame[] = Array.from({ length: 46 }, () => ({
-  ai: monster_ai_run,
-  dist: 20,
-}));
-
-run_move = {
-  firstframe: 0,
-  lastframe: 45,
-  frames: run_frames,
-  endfunc: boss2_run,
-};
-
-// Attack
-const attack_frames: MonsterFrame[] = Array.from({ length: 30 }, (_, i) => ({
+// Attack Pre MG: 9 frames (51-59)
+const attack_pre_mg_frames: MonsterFrame[] = Array.from({ length: 9 }, (_, i) => ({
     ai: monster_ai_charge,
-    dist: 0,
-    think: (i === 15) ? boss2_fire : null
+    dist: 2,
+    think: (i === 8) ? boss2_attack_mg : null
 }));
+attack_pre_mg_move = { firstframe: 50, lastframe: 58, frames: attack_pre_mg_frames, endfunc: null };
 
-attack_move = {
-    firstframe: 46,
-    lastframe: 75,
-    frames: attack_frames,
-    endfunc: boss2_run
-};
-
-// Pain
-const pain_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
-    ai: monster_ai_move,
-    dist: 0
+// Attack MG: 6 frames (60-65) - Loops
+const attack_mg_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
+    ai: monster_ai_charge,
+    dist: 2,
+    think: boss2_fire_mg
 }));
+attack_mg_move = { firstframe: 59, lastframe: 64, frames: attack_mg_frames, endfunc: boss2_reattack_mg };
 
-pain_move = {
-    firstframe: 76,
-    lastframe: 85,
-    frames: pain_frames,
-    endfunc: boss2_run
-}
+// Attack Post MG: 4 frames (66-69)
+const attack_post_mg_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({ ai: monster_ai_charge, dist: 2 }));
+attack_post_mg_move = { firstframe: 65, lastframe: 68, frames: attack_post_mg_frames, endfunc: boss2_run };
 
-// Death
-const death_frames: MonsterFrame[] = Array.from({ length: 20 }, () => ({
-    ai: monster_ai_move,
-    dist: 0
+// Attack Rocket: 21 frames (70-90)
+const attack_rocket_frames: MonsterFrame[] = Array.from({ length: 21 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 2,
+    think: (i === 12) ? boss2_fire_rocket : null // Fire around middle
 }));
+// To match C behavior of firing 4 rockets, we should fire multiple times
+// C code: frame 12 calls Boss2Rocket which fires 4 rockets in spread.
+attack_rocket_move = { firstframe: 69, lastframe: 89, frames: attack_rocket_frames, endfunc: boss2_run };
 
-death_move = {
-    firstframe: 86,
-    lastframe: 105,
-    frames: death_frames,
-    endfunc: boss2_dead
-}
+
+// Pain Heavy: 18 frames (91-108)
+const pain_heavy_frames: MonsterFrame[] = Array.from({ length: 18 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain_heavy_move = { firstframe: 90, lastframe: 107, frames: pain_heavy_frames, endfunc: boss2_run };
+
+// Pain Light: 4 frames (109-112)
+const pain_light_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain_light_move = { firstframe: 108, lastframe: 111, frames: pain_light_frames, endfunc: boss2_run };
+
+// Death: 49 frames (113-161)
+const death_frames: MonsterFrame[] = Array.from({ length: 49 }, () => ({ ai: monster_ai_move, dist: 0 }));
+death_move = { firstframe: 112, lastframe: 160, frames: death_frames, endfunc: boss2_dead };
 
 
 export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
   self.classname = 'monster_boss2';
   self.model = 'models/monsters/boss2/tris.md2';
-  self.mins = { x: -64, y: -64, z: -16 };
-  self.maxs = { x: 64, y: 64, z: 80 };
+
+  // Gibs
+  // context.precacheModel('models/monsters/boss2/gibs/chaingun.md2');
+  // ... remove precacheModel calls as they don't exist on context ...
+
+  self.mins = { x: -56, y: -56, z: 0 };
+  self.maxs = { x: 56, y: 56, z: 80 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 3000;
-  self.max_health = 3000;
+  self.health = 2000;
+  self.max_health = 2000;
   self.mass = 1000;
   self.takedamage = true;
   self.flags |= EntityFlags.Fly;
   self.viewheight = 64;
 
   self.pain = (self, other, kick, damage) => {
+    // Skin change
     if (self.health < (self.max_health / 2)) {
-      self.monsterinfo.current_move = pain_move;
+      self.skin = 1;
+    } else {
+      self.skin = 0;
     }
+    boss2_pain(self, other, kick, damage);
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
