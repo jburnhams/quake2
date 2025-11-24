@@ -20,7 +20,7 @@ import {
 import type { EntitySystem } from '../system.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
-import { monster_fire_bullet, monster_fire_bfg } from './attack.js';
+import { monster_fire_bullet_v2, monster_fire_bfg } from './attack.js';
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { visible, rangeTo } from '../../ai/perception.js';
@@ -98,8 +98,13 @@ function jorg_attack(self: Entity): void {
     }
 }
 
-function jorg_reattack1(self: Entity): void {
-    if (visible(self, self.enemy)) {
+function jorg_reattack1(self: Entity, context: EntitySystem): void {
+    const traceFn = (start: Vec3, end: Vec3, ignore: Entity, mask: number) => {
+        const tr = context.trace(start, null, null, end, ignore, mask);
+        return { fraction: tr.fraction, entity: tr.ent };
+    };
+
+    if (self.enemy && visible(self, self.enemy, traceFn)) {
         if (Math.random() < 0.9) {
             self.monsterinfo.current_move = attack1_move; // Re-loop attack1
         } else {
@@ -127,12 +132,12 @@ function jorg_fire_bullet(self: Entity, context: any): void {
     // Fire left
     const startL = getProjectedOffset(self, JORG_MACHINEGUN_L1_OFFSET);
     const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
-    (monster_fire_bullet as any)(self, startL, dirL, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet_v2(self, startL, dirL, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 
     // Fire right
     const startR = getProjectedOffset(self, JORG_MACHINEGUN_R1_OFFSET);
     const dirR = normalizeVec3(subtractVec3(self.enemy.origin, startR));
-    (monster_fire_bullet as any)(self, startR, dirR, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet_v2(self, startR, dirR, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 }
 
 function jorg_fire_bfg(self: Entity, context: any): void {
