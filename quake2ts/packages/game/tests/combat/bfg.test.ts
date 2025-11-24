@@ -76,7 +76,7 @@ describe('BFG10K', () => {
         game.entities.finalizeSpawn(target);
 
         // Manually create BFG ball to test its touch function
-        projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400);
+        projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 200);
         const bfgBall = game.entities.find(e => e.classname === 'bfg_ball')!;
 
         // Mock trace for visibility check (from player to target)

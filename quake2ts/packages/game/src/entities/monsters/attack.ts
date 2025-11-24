@@ -4,14 +4,15 @@ import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/dama
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
   return 2 * Math.random() - 1;
 }
 
-export function monster_fire_bullet(
+// Renamed to force cache invalidation/TS resolution
+export function monster_fire_bullet_v2(
   self: Entity,
   start: Vec3,
   dir: Vec3,
@@ -63,6 +64,9 @@ export function monster_fire_bullet(
       mod
   );
 }
+
+// Alias for existing code
+export const monster_fire_bullet = monster_fire_bullet_v2;
 
 export function monster_fire_shotgun(
   self: Entity,
@@ -118,6 +122,22 @@ export function monster_fire_rocket(
     context: EntitySystem
 ): void {
     createRocket(context, self, start, dir, damage, speed);
+}
+
+export function monster_fire_bfg(
+    self: Entity,
+    start: Vec3,
+    dir: Vec3,
+    damage: number,
+    speed: number,
+    kick: number,
+    damage_radius: number,
+    flashtype: number,
+    context: EntitySystem
+): void {
+    // BFG ball logic from createBfgBall signature:
+    // createBfgBall(context: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, damageRadius: number)
+    createBfgBall(context, self, start, dir, damage, speed, damage_radius);
 }
 
 export function monster_fire_railgun(
