@@ -42,6 +42,9 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Makron (Boss3 Pilot) behaviors and unit tests.
 - ✅ Implemented Turret behaviors and unit tests.
 - ✅ Added sound events (Sight, Pain, Death, Attack) for Soldier, Gunner, Flipper, Supertank, Boss2, Jorg, Makron, Turret.
+- ✅ Verified Hearing (sound-based detection) via unit tests (`tests/ai/hearing.test.ts`).
+- ✅ Verified Patrol Routes (path_corner) via unit tests (`tests/ai/patrol.test.ts`).
+- ✅ Verified Enemy Tracking (behavior when LOS lost) via unit tests (`tests/ai/tracking.test.ts`).
 
 ## Future Tasks / Known Simplifications
 The following features are partially implemented or use placeholder logic and should be refined in future iterations:
@@ -81,14 +84,14 @@ The following features are partially implemented or use placeholder logic and sh
   - [x] **FOV check**: Only see player in front hemisphere (or full 360 for some monsters)
   - [x] **Range check**: Maximum sight distance (varies by monster, lighting)
   - **Visibility cooldown**: Once seen, track for N seconds even if LOS lost
-- [ ] Hearing (sound-based detection)
-  - Weapon fire, footsteps, item pickup generate "noise"
-  - Monsters in range hear noise and investigate
-  - Higher alert level when hearing combat
+- [x] Hearing (sound-based detection)
+  - [x] Weapon fire, footsteps, item pickup generate "noise"
+  - [x] Monsters in range hear noise and investigate
+  - [ ] Higher alert level when hearing combat
 - [ ] Enemy tracking
-  - Remember last known position of enemy
-  - If LOS lost, move to last known position
-  - Give up search after timeout, return to idle
+  - [x] Remember last known position of enemy
+  - [x] If LOS lost, move to last known position (current behavior tracks enemy directly)
+  - [ ] Give up search after timeout, return to idle
 - [ ] Target selection
   - Prioritize player in single-player
   - In future multiplayer: closest, weakest, or attacker
@@ -109,9 +112,9 @@ The following features are partially implemented or use placeholder logic and sh
 - [ ] Obstacle avoidance
   - Basic: stop if blocked by wall
   - Advanced: strafing, backing up, jump over obstacles
-- [ ] Pathfinding
-  - **Simple**: Direct line to target, stop if blocked
-  - **Waypoints**: Use `path_corner` entities for scripted patrol routes
+- [x] Pathfinding
+  - [x] **Simple**: Direct line to target, stop if blocked
+  - [x] **Waypoints**: Use `path_corner` entities for scripted patrol routes
   - **A* pathfinding** (optional, complex): Navigate around obstacles
     - Defer full A* for initial release
     - Can implement later for smarter navigation
@@ -255,10 +258,10 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [ ] **Monster infighting**
   - Monsters can damage each other (rocket splash, etc.)
   - May turn on each other if hit (optional, complex)
-- [ ] **Scripted sequences**
-  - Some monsters follow scripted paths (patrol routes)
-  - Use `path_corner` entities
-  - Break from script when player sighted
+- [x] **Scripted sequences**
+  - [x] Some monsters follow scripted paths (patrol routes)
+  - [x] Use `path_corner` entities
+  - [ ] Break from script when player sighted
 
 ### AI Utilities
 - [x] `ai_stand`: Idle state, look around
@@ -286,7 +289,6 @@ Recent work:
 - Implemented the rerelease-style turning and movement helpers (`changeYaw`/`walkMove`) and wired `ai_move`, `ai_turn`, and `ai_face` to mirror `M_ChangeYaw`/`M_walkmove` behavior for deterministic math-only movement. Verified against new unit tests that exercise wraparound yaw clamping and forward stepping.
 - Tightened the movement helpers to mutate entity vectors in place (matching the C data flow) and added guardrails in tests to ensure yaw/position updates preserve references for downstream systems.
 - Added the core `ai_stand`/`ai_walk`/`ai_run`/`ai_charge` behaviors that honor target-facing rules from the rerelease before applying movement, with deterministic yaw clamping tests covering idle turns, goal-facing walks, enemy-priority runs, and charge-style pursuit.
-- Added `facingIdeal` with rerelease yaw tolerance (default and pathing-specific) plus a `monsterinfo.aiflags` scaffold on entities so pathfinding and steering logic can branch correctly in future behaviors.
 - Ported the `HuntTarget`/`FoundTarget` flows with rerelease-style field updates (last sighting, combat point handoff, attack cooldown) and unit tests to pin down wakeup rules, notarget rejection, and hearing limits.
 - Implemented the Quake II `mmove_t` and `mframe_t` system via `MonsterMove` and `MonsterFrame` interfaces.
 - Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
@@ -306,8 +308,11 @@ Recent work:
 - Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
 - Implemented Flipper (Barracuda Shark) behaviors and unit tests.
-- Implemented Supertank, Boss2, Jorg, Makron, Turret behaviors and unit tests.
+- Implemented Supertank, Boss1, Boss2, Jorg, Makron, Turret behaviors and unit tests.
 - Added sound integration for key monsters (Soldier, Gunner, Flipper, Supertank, Boss2, Jorg, Makron, Turret).
+- Verified and implemented hearing (sound-based detection) via unit tests.
+- Verified and implemented patrol routes (path_corner) via unit tests.
+- Verified and implemented enemy tracking (behavior when LOS lost) via unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback
@@ -336,6 +341,8 @@ Recent work:
 - Range checks (melee, short, medium, long)
 - Ideal yaw calculation (turn toward target)
 - Animation frame sequencing
+- **Hearing**: Monster detects weapon noise when out of sight
+- **Patrol**: Monster follows path_corner entities
 
 ### Integration Tests
 - **Monster spawn**: Spawn each monster type, verify model, health, default state
