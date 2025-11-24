@@ -35,6 +35,8 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - ✅ Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - ✅ Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- ✅ Implemented Supertank behaviors (Chaingun, Rocket, Grenade) and unit tests.
+- ✅ Implemented Barracuda Shark behaviors (Swimming, Melee bite) and unit tests.
 
 ## Tasks Remaining
 
@@ -86,7 +88,7 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - 3D movement, no ground constraint
   - Altitude control (rise, descend, hover)
   - Smooth acceleration/deceleration
-- [ ] Swimming movement (rare, but some monsters swim)
+- [x] Swimming movement (rare, but some monsters swim)
   - 3D movement in water
   - Surface for air if needed
 - [ ] Obstacle avoidance
@@ -170,7 +172,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Similar to Flyer, stronger
 
 #### Large/Boss Monsters
-- [ ] **Supertank**
+- [x] **Supertank**
   - Very high health
   - Rocket launcher, machinegun
   - Slow movement
@@ -189,7 +191,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Mutant**
   - Jumping melee attack
   - Agile, unpredictable movement
-- [ ] **Barracuda Shark** (water monster)
+- [x] **Barracuda Shark** (water monster)
   - Swimming, melee bite
 
 ### Monster Animations
@@ -284,10 +286,15 @@ Recent work:
 - Implemented Berserker behaviors and unit tests.
 - Implemented Tank and Tank Commander behaviors and unit tests.
 - Implemented Gladiator behaviors and unit tests.
-- Implemented Medic, Brain, Flyer, and Icarus with full behaviors and unit tests.
+- Implemented Medic behaviors (Healing/Resurrection, Blaster) and unit tests.
+- Implemented Brain (Brains) behaviors (Tentacle attacks) and unit tests.
+- Implemented Flyer behaviors (Flying, Blaster, Slash) and unit tests.
+- Implemented Icarus behaviors (Flying, Blaster) and unit tests.
 - Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- Implemented Supertank behaviors (Chaingun, Rocket, Grenade) and unit tests.
+- Implemented Barracuda Shark behaviors (Swimming, Melee bite) and unit tests.
 
 ### Pain/Death Callbacks
 - [x] Pain callback
