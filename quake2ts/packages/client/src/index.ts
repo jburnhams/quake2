@@ -24,6 +24,7 @@ import { MainMenuFactory, MainMenuOptions } from './ui/menu/main.js';
 import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
 import { MenuSystem } from './ui/menu/system.js';
 import { SaveStorage } from '@quake2ts/game';
+import { OptionsMenuFactory } from './ui/menu/options.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -101,6 +102,10 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
 
+  // Default FOV
+  let fovValue = 90;
+  let isZooming = false;
+
   if (imports.host?.commands) {
     imports.host.commands.register('playdemo', (args) => {
       if (args.length < 1) {
@@ -117,6 +122,38 @@ export function createClient(imports: ClientImports): ClientExports {
         const index = Cycle_Crosshair();
         console.log(`Crosshair changed to index ${index}`);
     }, 'Cycle through available crosshairs');
+
+    imports.host.commands.register('+zoom', () => {
+        isZooming = true;
+    }, 'Zoom in view');
+
+    imports.host.commands.register('-zoom', () => {
+        isZooming = false;
+    }, 'Reset zoom');
+
+    if (imports.host.cvars) {
+      imports.host.cvars.register({
+        name: 'fov',
+        defaultValue: '90',
+        flags: 0, // CvarFlags.None
+        onChange: (cvar) => {
+          const f = cvar.number; // Use helper getter
+          if (!isNaN(f)) {
+            fovValue = Math.max(1, Math.min(179, f));
+          }
+        },
+        description: 'Field of view'
+      });
+
+      // Initialize fovValue from cvar
+      const initialFov = imports.host.cvars.get('fov');
+      if (initialFov) {
+        const f = initialFov.number; // Use helper getter
+         if (!isNaN(f)) {
+          fovValue = Math.max(1, Math.min(179, f));
+        }
+      }
+    }
   }
 
   const clientExports: ClientExports = {
@@ -145,7 +182,8 @@ export function createClient(imports: ClientImports): ClientExports {
     createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const menuSystem = new MenuSystem();
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
-        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, options);
+        const optionsFactory = new OptionsMenuFactory(menuSystem, imports.host!);
+        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, { ...options, optionsFactory });
         return { menuSystem, factory };
     },
 
@@ -170,16 +208,16 @@ export function createClient(imports: ClientImports): ClientExports {
       const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
       lastView = view.sample(lastRendered, frameTimeMs);
 
+      const command = {} as UserCommand;
+
       if (lastRendered) {
         const { origin, viewangles } = lastRendered;
         camera = new Camera();
         camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
         camera.angles = vec3.fromValues(viewangles.x, viewangles.y, viewangles.z);
-        camera.fov = 90;
+        camera.fov = isZooming ? 40 : fovValue;
         camera.aspect = 4 / 3;
       }
-
-      const command = {} as UserCommand;
 
       if (imports.engine.renderer && lastRendered && lastRendered.client) {
         const stats: FrameRenderStats = {

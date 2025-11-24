@@ -25,6 +25,7 @@ export interface GameRenderSample<FrameState = unknown> extends RenderContext {
 import { UserCommand } from '@quake2ts/shared';
 import { Camera } from './render/camera.js';
 import { CommandRegistry } from './commands.js';
+import { CvarRegistry } from './cvars.js';
 
 export interface ClientRenderer<FrameState = unknown> {
   init(initial?: GameFrameResult<FrameState>): void;
@@ -46,6 +47,7 @@ export class EngineHost<FrameState = unknown> {
   private started = false;
   private latestCommand?: UserCommand;
   readonly commands = new CommandRegistry();
+  readonly cvars = new CvarRegistry();
 
   constructor(
     private readonly game: GameSimulation<FrameState>,
