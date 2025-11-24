@@ -16,7 +16,9 @@ export function createTestContext(): SpawnContext {
     freeImmediate: vi.fn(),
     timeSeconds: 10,
     modelIndex: vi.fn(() => 0),
-    scheduleThink: vi.fn(),
+    scheduleThink: vi.fn((entity: Entity, time: number) => {
+      entity.nextthink = time;
+    }),
     linkentity: vi.fn(),
     trace: vi.fn(() => ({
         fraction: 1.0,
@@ -33,6 +35,18 @@ export function createTestContext(): SpawnContext {
     sound: (ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
     }
+    useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
+      // Basic mock implementation of useTargets to facilitate testing
+      if (entity.target) {
+        // In a real system we would look up by targetname.
+        // Here we rely on the test setting up the connection manually if needed?
+        // But wait, the test registers the target entity but the mock system doesn't store them in a map.
+        // So we can't really look them up.
+        // Unless we mock findByTargetName too.
+      }
+    }),
+    findByTargetName: vi.fn(() => []),
+    pickTarget: vi.fn(() => null),
   } as unknown as EntitySystem;
 
   return {
