@@ -114,7 +114,15 @@ describe('Draw_Menu', () => {
 
         expect(renderer.drawfillRect).toHaveBeenCalled();
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Test Menu');
-        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), '> Item 1 <');
+
+        // Item 1 is selected, so it should have a cursor drawn separately,
+        // and the text should be drawn normally.
+        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 1');
+
+        // Check for cursor
+        // Since drawChar isn't mocked but drawString is used in implementation:
+        expect(renderer.drawString).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), '\r'); // char 13 is \r
+
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 2');
     });
 
@@ -124,6 +132,9 @@ describe('Draw_Menu', () => {
             drawCenterString: vi.fn(),
             drawString: vi.fn(),
         } as unknown as Renderer;
+
+        // Mock Date.now to control blinking cursor
+        vi.spyOn(Date, 'now').mockReturnValue(1000); // Even number * 500 -> show cursor
 
         const menu: Menu = {
             title: 'Test Menu',
@@ -135,6 +146,12 @@ describe('Draw_Menu', () => {
 
         Draw_Menu(renderer, state, 800, 600);
 
-        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), '> Item 1: Value_ <');
+        // Expect text with appended underscore for blinking cursor
+        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 1: Value_');
+
+        // Also the menu cursor
+        expect(renderer.drawString).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), '\r');
+
+        vi.restoreAllMocks();
     });
 });

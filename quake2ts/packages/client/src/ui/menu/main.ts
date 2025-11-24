@@ -2,11 +2,14 @@ import { Menu, MenuItem } from './types.js';
 import { MenuSystem } from './system.js';
 import { SaveLoadMenuFactory } from './saveLoad.js';
 import { OptionsMenuFactory } from './options.js';
+import { MapsMenuFactory } from './maps.js';
 
 export interface MainMenuOptions {
   onNewGame: () => void;
   onQuit: () => void;
   optionsFactory: OptionsMenuFactory;
+  mapsFactory: MapsMenuFactory;
+  onSetDifficulty?: (skill: number) => void;
 }
 
 export class MainMenuFactory {
@@ -21,7 +24,7 @@ export class MainMenuFactory {
       {
         label: 'New Game',
         action: () => {
-          this.options.onNewGame();
+          this.menuSystem.pushMenu(this.createDifficultyMenu());
         },
       },
       {
@@ -58,5 +61,42 @@ export class MainMenuFactory {
       title: 'Main Menu',
       items,
     };
+  }
+
+  private createDifficultyMenu(): Menu {
+      return {
+          title: 'Select Difficulty',
+          items: [
+              {
+                  label: 'Easy',
+                  action: () => this.startNewGame(0)
+              },
+              {
+                  label: 'Medium',
+                  action: () => this.startNewGame(1)
+              },
+              {
+                  label: 'Hard',
+                  action: () => this.startNewGame(2)
+              },
+              {
+                  label: 'Map Select...',
+                  action: () => {
+                      this.menuSystem.pushMenu(this.options.mapsFactory.createMapsMenu());
+                  }
+              },
+              {
+                  label: 'Back',
+                  action: () => this.menuSystem.popMenu()
+              }
+          ]
+      };
+  }
+
+  private startNewGame(difficulty: number) {
+      if (this.options.onSetDifficulty) {
+          this.options.onSetDifficulty(difficulty);
+      }
+      this.options.onNewGame();
   }
 }
