@@ -31,7 +31,7 @@ function monster_ai_stand(self: Entity, dist: number, context: any): void {
       self.monsterinfo.current_move = run_move;
       return;
   }
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: any): void {
@@ -155,11 +155,11 @@ function medic_find_dead(self: Entity, context: EntitySystem): boolean {
     let best: Entity | null = null;
     let bestDist = 1024; // Healing range limit
 
-    const traceWrapper = (start: Vec3, end: Vec3, ignore: Entity, mask: number): TraceResult => {
-        const res = context.trace(start, null, null, end, ignore, mask);
+    const traceWrapper = (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, ignore: Entity | null, mask: number): TraceResult => {
+        const res = context.trace(start, mins, maxs, end, ignore, mask);
         return {
             fraction: res.fraction,
-            entity: res.ent
+            ent: res.ent
         };
     };
 

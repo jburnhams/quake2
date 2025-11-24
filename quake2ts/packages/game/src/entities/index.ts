@@ -14,7 +14,7 @@ export {
   DeadFlag,
   ENTITY_FIELD_METADATA,
 } from './entity.js';
-export { EntitySystem, type EntitySystemSnapshot, type SerializedEntityState } from './system.js';
+export { EntitySystem, type EntitySystemSnapshot, type SerializedEntityState, type SerializedTargetAwareness } from './system.js';
 export { type EntityPoolSnapshot } from './pool.js';
 export { type ThinkScheduleEntry } from './thinkScheduler.js';
 export {

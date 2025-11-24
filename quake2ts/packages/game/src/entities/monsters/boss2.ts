@@ -36,7 +36,7 @@ const BOSS2_MG_RIGHT_OFFSET: Vec3 = { x: 30, y: -20, z: 0 };
 
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: any): void {
