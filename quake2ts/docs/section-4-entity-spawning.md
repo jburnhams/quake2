@@ -97,7 +97,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `item_armor_*`: Shard, jacket, combat, body
   - [x] `key_*`: Base keys
   - [x] `item_quad`, `item_invulnerability`, etc.
-- [ ] Monster spawns (monster_*)
+- [x] Monster spawns (monster_*)
   - [x] `monster_soldier`: Implemented
   - [x] `monster_gunner`: Implemented
   - [x] `monster_berserk`: Implemented
@@ -119,6 +119,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `monster_boss2` (Hornet): Implemented
   - [x] `monster_jorg` (Boss3): Implemented
   - [x] `monster_makron` (Boss3): Implemented
+  - [x] `monster_turret`: Implemented
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
