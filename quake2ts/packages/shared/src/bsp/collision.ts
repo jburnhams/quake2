@@ -501,6 +501,10 @@ function recursiveHullCheck(params: {
   }
 
   if (nodeIndex < 0) {
+    if (traceDebugInfo) {
+      traceDebugInfo.leafsReached++;
+    }
+
     const leafIndex = -1 - nodeIndex;
     const leaf = model.leaves[leafIndex];
 

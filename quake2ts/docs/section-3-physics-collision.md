@@ -207,6 +207,8 @@ This section covers the physics simulation and collision detection system that f
   - Covered in `tests/bsp/trace.simple.test.ts`.
 - [x] **Epsilon handling**: Trace that stops exactly on surface (within epsilon)
   - Covered in `tests/bsp/trace.epsilon.test.ts`.
+- [x] **Debug Visualization**: Verified debug counters are correctly incremented during traversal
+  - Covered in `tests/physics/advanced_collision.test.ts`.
 
 ## Notes
 - Trace system is performance-critical; optimize heavily with spatial partitioning
