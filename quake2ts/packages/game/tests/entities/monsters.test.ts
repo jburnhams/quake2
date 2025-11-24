@@ -51,7 +51,7 @@ describe('Monster Spawning', () => {
     { classname: 'monster_infantry', expectedHealth: 100 },
     { classname: 'monster_supertank', expectedHealth: 1500 },
     { classname: 'monster_boss2', expectedHealth: 3000 },
-    { classname: 'monster_jorg', expectedHealth: 3000 },
+    { classname: 'monster_jorg', expectedHealth: 8000 }, // Updated health
     { classname: 'monster_makron', expectedHealth: 3000 },
   ];
 

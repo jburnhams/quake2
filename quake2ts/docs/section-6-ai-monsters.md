@@ -35,6 +35,10 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - ✅ Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - ✅ Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- ✅ Implemented Supertank behaviors (Rocket, Machinegun, Grenade) and unit tests.
+- ✅ Implemented Jorg behaviors (Mech, Machinegun, BFG) and unit tests.
+- ✅ Implemented Makron behaviors (Blaster, Railgun, BFG, Torso spawn) and unit tests.
+- ✅ Implemented Barracuda Shark (Flipper) behaviors and unit tests.
 
 ## Tasks Remaining
 
@@ -170,11 +174,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Similar to Flyer, stronger
 
 #### Large/Boss Monsters
-- [ ] **Supertank**
+- [x] **Supertank**
   - Very high health
   - Rocket launcher, machinegun
   - Slow movement
-- [ ] **Jorg / Makron** (final bosses)
+- [x] **Jorg / Makron** (final bosses)
   - Complex attack patterns
   - Multiple phases
   - Scripted sequences (may defer complex scripting)
@@ -189,7 +193,7 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Mutant**
   - Jumping melee attack
   - Agile, unpredictable movement
-- [ ] **Barracuda Shark** (water monster)
+- [x] **Barracuda Shark** (water monster)
   - Swimming, melee bite
 
 ### Monster Animations
@@ -264,30 +268,11 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] `SV_NewChaseDir`: Chase enemy
 
 Recent work:
-- Added perception coverage for rerelease LOS/FOV/range rules with unit tests that lock in ambush cones, viewheight trace masks,
-  and bounding-box distance buckets for melee/near/mid/far ranges.
-- Implemented the rerelease-style turning and movement helpers (`changeYaw`/`walkMove`) and wired `ai_move`, `ai_turn`, and `ai_face` to mirror `M_ChangeYaw`/`M_walkmove` behavior for deterministic math-only movement. Verified against new unit tests that exercise wraparound yaw clamping and forward stepping.
-- Tightened the movement helpers to mutate entity vectors in place (matching the C data flow) and added guardrails in tests to ensure yaw/position updates preserve references for downstream systems.
-- Added the core `ai_stand`/`ai_walk`/`ai_run`/`ai_charge` behaviors that honor target-facing rules from the rerelease before applying movement, with deterministic yaw clamping tests covering idle turns, goal-facing walks, enemy-priority runs, and charge-style pursuit.
-- Added `facingIdeal` with rerelease yaw tolerance (default and pathing-specific) plus a `monsterinfo.aiflags` scaffold on entities so pathfinding and steering logic can branch correctly in future behaviors.
-- Ported the `HuntTarget`/`FoundTarget` flows with rerelease-style field updates (last sighting, combat point handoff, attack cooldown) and unit tests to pin down wakeup rules, notarget rejection, and hearing limits.
-- Implemented the Quake II `mmove_t` and `mframe_t` system via `MonsterMove` and `MonsterFrame` interfaces.
-- Created `monster_think` and `M_MoveFrame` to drive monster AI and animations.
-- Implemented the `monster_soldier` (Guard) entity with placeholder moves for stand, walk, run, and attack.
-- Added comprehensive tests for monster spawning, state transitions, and animation looping.
-- Implemented detailed AI movement helpers (`CheckGround`, `M_CheckBottom`, `M_walkmove`, `SV_StepDirection`, `SV_NewChaseDir`) to support ground movement, ledge checking, and enemy chasing.
-- Implemented `monster_gunner` with machinegun and grenade launcher attacks, ensuring correct spawn properties and state transitions.
-- Implemented pain and death callbacks for `monster_soldier` and `monster_gunner`, including animation states and gibbing.
-- Implemented Soldier variants (Shotgun Guard, Machinegun Guard) via spawnflags and unit tests.
-- Implemented Gunner unit tests covering dual attacks (chain/grenade).
-- Implemented Infantry (Enforcer) behaviors and unit tests.
-- Implemented Berserker behaviors and unit tests.
-- Implemented Tank and Tank Commander behaviors and unit tests.
-- Implemented Gladiator behaviors and unit tests.
-- Implemented Medic, Brain, Flyer, and Icarus with full behaviors and unit tests.
-- Implemented Parasite behaviors (Drain attack, healing) and unit tests.
-- Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
-- Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+- Implemented Supertank behaviors (Rocket, Machinegun, Grenade) and unit tests.
+- Implemented Jorg behaviors (Mech, Machinegun, BFG) and unit tests.
+- Implemented Makron behaviors (Blaster, Railgun, BFG, Torso spawn) and unit tests.
+- Verified Barracuda Shark (Flipper) behaviors and unit tests.
+- Created `MuzzleFlash` enum and `MONSTER_FLASH_OFFSETS` table for accurate weapon firing positions.
 
 ### Pain/Death Callbacks
 - [x] Pain callback

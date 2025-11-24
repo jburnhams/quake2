@@ -4,7 +4,7 @@ import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/dama
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
@@ -149,4 +149,18 @@ export function monster_fire_railgun(
             DamageMod.RAILGUN
         );
     }
+}
+
+export function monster_fire_bfg(
+    self: Entity,
+    start: Vec3,
+    dir: Vec3,
+    damage: number,
+    speed: number,
+    damage_radius: number,
+    radius: number, // for radiation damage?
+    flashtype: number,
+    context: EntitySystem
+): void {
+    createBfgBall(context, self, start, dir, damage, speed); // createBfgBall takes 6 args
 }
