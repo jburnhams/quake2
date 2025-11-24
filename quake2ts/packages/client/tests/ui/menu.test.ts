@@ -114,7 +114,25 @@ describe('Draw_Menu', () => {
 
         expect(renderer.drawfillRect).toHaveBeenCalled();
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Test Menu');
+<<<<<<< HEAD
+<<<<<<< HEAD
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), '> Item 1 <');
+=======
+=======
+>>>>>>> origin/main
+
+        // Item 1 is selected, so it should have a cursor drawn separately,
+        // and the text should be drawn normally.
+        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 1');
+
+        // Check for cursor
+        // Since drawChar isn't mocked but drawString is used in implementation:
+        expect(renderer.drawString).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), '\r'); // char 13 is \r
+
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 2');
     });
 
@@ -125,6 +143,18 @@ describe('Draw_Menu', () => {
             drawString: vi.fn(),
         } as unknown as Renderer;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        // Mock Date.now to control blinking cursor
+        vi.spyOn(Date, 'now').mockReturnValue(1000); // Even number * 500 -> show cursor
+
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+        // Mock Date.now to control blinking cursor
+        vi.spyOn(Date, 'now').mockReturnValue(1000); // Even number * 500 -> show cursor
+
+>>>>>>> origin/main
         const menu: Menu = {
             title: 'Test Menu',
             items: [
@@ -135,6 +165,22 @@ describe('Draw_Menu', () => {
 
         Draw_Menu(renderer, state, 800, 600);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
         expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), '> Item 1: Value_ <');
+=======
+=======
+>>>>>>> origin/main
+        // Expect text with appended underscore for blinking cursor
+        expect(renderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), 'Item 1: Value_');
+
+        // Also the menu cursor
+        expect(renderer.drawString).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), '\r');
+
+        vi.restoreAllMocks();
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     });
 });

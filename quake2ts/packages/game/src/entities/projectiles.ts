@@ -10,7 +10,7 @@ import { DamageMod } from '../combat/damageMods.js';
 import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
-export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, flashtype: number = 0) {
     const rocket = sys.spawn();
     rocket.classname = 'rocket';
     rocket.movetype = MoveType.FlyMissile;
@@ -149,7 +149,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     sys.finalizeSpawn(bolt);
 }
 
-export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, damageRadius: number) {
     const bfgBall = sys.spawn();
     bfgBall.classname = 'bfg_ball';
     bfgBall.owner = owner;
@@ -169,8 +169,8 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
         }
 
         // Primary splash damage
-        const entities = sys.findByRadius(self.origin, 200);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, 200, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
+        const entities = sys.findByRadius(self.origin, damageRadius);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, damageRadius, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);

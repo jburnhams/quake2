@@ -137,7 +137,15 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Multiplayer (disabled for now, or grayed out)
   - Options (settings)
   - Quit
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] Map selection menu
+=======
+- [x] Map selection menu
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [x] Map selection menu
+>>>>>>> origin/main
   - List of available maps from loaded PAKs
   - Thumbnails/previews (optional)
   - Difficulty selection
@@ -162,7 +170,15 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Keyboard (arrow keys, enter, escape)
   - Mouse (click buttons)
   - Gamepad (D-pad, A/B buttons)
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] Menu rendering
+=======
+- [x] Menu rendering
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [x] Menu rendering
+>>>>>>> origin/main
   - Use HUD rendering (Draw_Pic, Draw_String)
   - Background image
   - Button highlights
@@ -179,7 +195,15 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Update prediction physics settings (air accel, N64 mode)
 
 ### Browser Integration & UI
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [ ] PAK file loading interface
+=======
+- [x] PAK file loading interface
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [x] PAK file loading interface
+>>>>>>> origin/main
   - File input or drag-and-drop area
   - "Load Quake II Data Files" button/screen
   - Show loaded PAKs (baseq2, mods)

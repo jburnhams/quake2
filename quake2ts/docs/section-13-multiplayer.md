@@ -36,16 +36,37 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 ## Implementation Tasks
 
 ### Phase 1: Network Plumbing
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
 - [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
   - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
 - [x] **Transport Layer**:
+=======
+=======
+>>>>>>> origin/main
+- [ ] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
+- [ ] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
+  - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
+- [ ] **Transport Layer**:
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
   - Create `NetDriver` interface.
   - Implement `WebSocketNetDriver` for Node.js (Server).
   - Implement `BrowserWebSocketNetDriver` for Client.
 
 ### Phase 2: The Dedicated Server
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [x] **Package Setup**: Initialize `packages/server`.
+=======
+- [ ] **Package Setup**: Initialize `packages/server`.
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [ ] **Package Setup**: Initialize `packages/server`.
+>>>>>>> origin/main
 - [ ] **Server Loop**: Implement `SV_Frame` logic:
   - Read packets (`SV_ReadPackets`).
   - Run game frame (`ge->RunFrame`).
@@ -71,7 +92,21 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 2.  **Prediction**: Reconciling client prediction with server authoritative updates without "snapping".
 3.  **Headless Physics**: Ensuring the physics engine runs identically on Node.js (Server) and Browser (Client) without float divergence.
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 ## Notes
 - `packages/server/tests/net/network.test.ts` is currently hanging due to WebSocket cleanup issues in the test environment.
 - `packages/server` package initialized with `ws` and `isomorphic-ws` support.
 - `BinaryWriter` and `NetworkMessageBuilder` implemented in `@quake2ts/shared`.
+=======
+=======
+>>>>>>> origin/main
+## References
+- `qcommon/qcommon.h`: Protocol definitions.
+- `server/sv_*.c`: Server loop and client management.
+- `client/cl_*.c`: Client loop and prediction.
+- `rerelease/cg_*.cpp`: Rerelease client game logic.
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main

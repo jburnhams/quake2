@@ -35,8 +35,14 @@ This section covers the artificial intelligence system for monsters and NPCs in 
 - ✅ Implemented Parasite behaviors (Drain attack, healing) and unit tests.
 - ✅ Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
 - ✅ Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+<<<<<<< HEAD
+<<<<<<< HEAD
 - ✅ Implemented Supertank behaviors (Chaingun, Rocket, Grenade) and unit tests.
 - ✅ Implemented Barracuda Shark behaviors (Swimming, Melee bite) and unit tests.
+=======
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 
 ## Tasks Remaining
 
@@ -88,7 +94,15 @@ This section covers the artificial intelligence system for monsters and NPCs in 
   - 3D movement, no ground constraint
   - Altitude control (rise, descend, hover)
   - Smooth acceleration/deceleration
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [x] Swimming movement (rare, but some monsters swim)
+=======
+- [ ] Swimming movement (rare, but some monsters swim)
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [ ] Swimming movement (rare, but some monsters swim)
+>>>>>>> origin/main
   - 3D movement in water
   - Surface for air if needed
 - [ ] Obstacle avoidance
@@ -172,7 +186,15 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
   - Similar to Flyer, stronger
 
 #### Large/Boss Monsters
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [x] **Supertank**
+=======
+- [ ] **Supertank**
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [ ] **Supertank**
+>>>>>>> origin/main
   - Very high health
   - Rocket launcher, machinegun
   - Slow movement
@@ -191,7 +213,15 @@ All monsters need spawn, idle, sight, attack, pain, death behaviors. Attack patt
 - [x] **Mutant**
   - Jumping melee attack
   - Agile, unpredictable movement
+<<<<<<< HEAD
+<<<<<<< HEAD
 - [x] **Barracuda Shark** (water monster)
+=======
+- [ ] **Barracuda Shark** (water monster)
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+- [ ] **Barracuda Shark** (water monster)
+>>>>>>> origin/main
   - Swimming, melee bite
 
 ### Monster Animations
@@ -286,6 +316,8 @@ Recent work:
 - Implemented Berserker behaviors and unit tests.
 - Implemented Tank and Tank Commander behaviors and unit tests.
 - Implemented Gladiator behaviors and unit tests.
+<<<<<<< HEAD
+<<<<<<< HEAD
 - Implemented Medic behaviors (Healing/Resurrection, Blaster) and unit tests.
 - Implemented Brain (Brains) behaviors (Tentacle attacks) and unit tests.
 - Implemented Flyer behaviors (Flying, Blaster, Slash) and unit tests.
@@ -295,6 +327,17 @@ Recent work:
 - Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
 - Implemented Supertank behaviors (Chaingun, Rocket, Grenade) and unit tests.
 - Implemented Barracuda Shark behaviors (Swimming, Melee bite) and unit tests.
+=======
+=======
+>>>>>>> origin/main
+- Implemented Medic, Brain, Flyer, and Icarus with full behaviors and unit tests.
+- Implemented Parasite behaviors (Drain attack, healing) and unit tests.
+- Implemented Mutant behaviors (Jumping attack, melee) and unit tests.
+- Implemented Chick (Iron Maiden) behaviors (Rocket, Slash) and unit tests.
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 
 ### Pain/Death Callbacks
 - [x] Pain callback

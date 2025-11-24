@@ -123,6 +123,7 @@ export {
 } from './assets/animation.js';
 export { parseWal, type WalTexture } from './assets/wal.js';
 export { parsePcx, pcxToRgba, type PcxImage } from './assets/pcx.js';
+export * from './assets/tga.js';
 export {
   parseWalTexture,
   preparePcxTexture,

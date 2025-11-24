@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_flipper } from '../../../src/entities/monsters/flipper.js';
+<<<<<<< HEAD
+<<<<<<< HEAD
 import { Entity, MoveType, Solid, DeadFlag, EntityFlags } from '../../../src/entities/entity.js';
+=======
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
+>>>>>>> origin/main
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
@@ -14,7 +22,13 @@ describe('monster_flipper', () => {
     const engine = {
       sound: vi.fn(),
       modelIndex: vi.fn().mockReturnValue(1),
+<<<<<<< HEAD
+<<<<<<< HEAD
       time: 10,
+=======
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     };
     const imports = {
       trace: vi.fn().mockReturnValue({
@@ -34,14 +48,28 @@ describe('monster_flipper', () => {
     const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
     system = (gameExports as any).entities;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
     // Spy on free directly on the system instance created by createGame
     vi.spyOn(system, 'free');
 
+=======
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     context = {
       keyValues: {},
       entities: system,
       warn: vi.fn(),
+<<<<<<< HEAD
+<<<<<<< HEAD
       free: system.free, // Pass the spy
+=======
+      free: vi.fn(),
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+      free: vi.fn(),
+>>>>>>> origin/main
     };
   });
 
@@ -56,14 +84,26 @@ describe('monster_flipper', () => {
     expect(ent.mass).toBe(100);
     expect(ent.solid).toBe(Solid.BoundingBox);
     expect(ent.movetype).toBe(MoveType.Fly);
+<<<<<<< HEAD
+<<<<<<< HEAD
     expect(ent.flags & EntityFlags.Swim).toBe(EntityFlags.Swim);
+=======
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
   });
 
   it('enters stand state after spawn', () => {
     const ent = system.spawn();
     SP_monster_flipper(ent, context);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
     // Stand frame 41
+=======
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     expect(ent.monsterinfo.current_move).toBeDefined();
     expect(ent.monsterinfo.current_move?.firstframe).toBe(41);
   });
@@ -71,6 +111,8 @@ describe('monster_flipper', () => {
   it('handles pain correctly', () => {
     const ent = system.spawn();
     SP_monster_flipper(ent, context);
+<<<<<<< HEAD
+<<<<<<< HEAD
     ent.health = 20; // Low health
 
     // Pain 1: 99
@@ -80,12 +122,29 @@ describe('monster_flipper', () => {
 
     ent.pain!(ent, system.world, 0, 10);
     expect(ent.monsterinfo.current_move?.firstframe).toBe(94);
+=======
+=======
+>>>>>>> origin/main
+
+    // Force pain debounce to pass
+    ent.pain_debounce_time = 0;
+
+    ent.pain!(ent, system.world, 0, 10);
+    const frame = ent.monsterinfo.current_move?.firstframe;
+    const painFrames = [99, 94]; // pain1, pain2
+    expect(painFrames).toContain(frame);
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
   });
 
   it('handles death correctly', () => {
     const ent = system.spawn();
     SP_monster_flipper(ent, context);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
     ent.die!(ent, system.world, system.world, 60, { x: 0, y: 0, z: 0 });
 
     expect(ent.deadflag).toBe(DeadFlag.Dead);
@@ -104,4 +163,17 @@ describe('monster_flipper', () => {
 
     expect(system.free).toHaveBeenCalledWith(ent);
   });
+=======
+=======
+>>>>>>> origin/main
+    ent.die!(ent, system.world, system.world, 500, { x: 0, y: 0, z: 0 });
+
+    expect(ent.deadflag).toBe(DeadFlag.Dead);
+    // Death animation
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(104);
+  });
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 });
