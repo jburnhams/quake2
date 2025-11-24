@@ -6,3 +6,4 @@ export * from './usercmd.js';
 export * from './player-state.js';
 export * from './ops.js';
 export * from './tempEntity.js';
+export * from './builder.js';

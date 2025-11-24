@@ -29,3 +29,6 @@ export * from './pmove/view.js';
 export * from './protocol/index.js';
 export * from './pmove/apply.js';
 export * from './io/binaryStream.js';
+export * from './io/binaryWriter.js';
+export * from './network/types.js';
+export * from './network/ws-connection.js';
