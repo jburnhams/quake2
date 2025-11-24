@@ -87,9 +87,17 @@ function flipper_bite(self: Entity, context: any): void {
 }
 
 function flipper_preattack(self: Entity, context: any): void {
+<<<<<<< HEAD
+<<<<<<< HEAD
     if (context.entities?.sound) {
          context.entities.sound(self, 0, 'flipper/flpatck1.wav', 1, 1, 0);
     }
+=======
+  context.engine.sound?.(self, 0, 'flipper/flpatck1.wav', 1, 1, 0);
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+  context.engine.sound?.(self, 0, 'flipper/flpatck1.wav', 1, 1, 0);
+>>>>>>> origin/main
 }
 
 function flipper_melee(self: Entity): void {
@@ -167,7 +175,15 @@ pain2_move = {
   endfunc: flipper_run
 };
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
+=======
+function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
+>>>>>>> origin/main
   if (self.health < (self.max_health / 2)) {
     self.skin = 1;
   }
@@ -179,10 +195,23 @@ function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: 
   self.pain_debounce_time = self.timestamp + 3;
 
   if (random() < 0.5) {
+<<<<<<< HEAD
+<<<<<<< HEAD
     if (context.sound) context.sound(self, 0, 'flipper/flppain1.wav', 1, 1, 0);
     self.monsterinfo.current_move = pain1_move;
   } else {
     if (context.sound) context.sound(self, 0, 'flipper/flppain2.wav', 1, 1, 0);
+=======
+=======
+>>>>>>> origin/main
+    context.engine.sound?.(self, 0, 'flipper/flppain1.wav', 1, 1, 0);
+    self.monsterinfo.current_move = pain1_move;
+  } else {
+    context.engine.sound?.(self, 0, 'flipper/flppain2.wav', 1, 1, 0);
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     self.monsterinfo.current_move = pain2_move;
   }
 }
@@ -236,19 +265,41 @@ death_move = {
   endfunc: flipper_dead
 };
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 function flipper_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: EntitySystem): void {
   if (self.health <= -30) { // gib_health
     if (context.sound)
         context.sound(self, 0, 'misc/udeath.wav', 1, 1, 0);
     throwGibs(context, self.origin, damage);
     context.free(self);
+=======
+=======
+>>>>>>> origin/main
+function flipper_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: any): void {
+  if (self.health <= -30) { // gib_health
+    context.engine.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
+    throwGibs(context.entities, self.origin, damage);
+    context.entities.free(self);
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
     return;
   }
 
   if (self.deadflag === DeadFlag.Dead) return;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
   if (context.sound)
     context.sound(self, 0, 'flipper/flpdeth1.wav', 1, 1, 0);
+=======
+  context.engine.sound?.(self, 0, 'flipper/flpdeth1.wav', 1, 1, 0);
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+  context.engine.sound?.(self, 0, 'flipper/flpdeth1.wav', 1, 1, 0);
+>>>>>>> origin/main
   self.deadflag = DeadFlag.Dead;
   self.takedamage = true;
   self.monsterinfo.current_move = death_move;
@@ -284,8 +335,16 @@ export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = flipper_start_run;
   self.monsterinfo.melee = flipper_melee;
   self.monsterinfo.sight = (s, o) => {
+<<<<<<< HEAD
+<<<<<<< HEAD
       if (context.entities.sound)
           context.entities.sound(s, 0, 'flipper/flpsght1.wav', 1, 1, 0);
+=======
+      context.entities.sound?.(s, 0, 'flipper/flpsght1.wav', 1, 1, 0);
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+      context.entities.sound?.(s, 0, 'flipper/flpsght1.wav', 1, 1, 0);
+>>>>>>> origin/main
   };
   self.monsterinfo.setskin = (s) => {
       if (s.health < s.max_health / 2) s.skin = 1;

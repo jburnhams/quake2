@@ -25,6 +25,14 @@ import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
 import { MenuSystem } from './ui/menu/system.js';
 import { SaveStorage } from '@quake2ts/game';
 import { OptionsMenuFactory } from './ui/menu/options.js';
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import { MapsMenuFactory } from './ui/menu/maps.js';
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+import { MapsMenuFactory } from './ui/menu/maps.js';
+>>>>>>> origin/main
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -74,7 +82,15 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   demoHandler: ClientNetworkHandler;
 
   // Menu System
+<<<<<<< HEAD
+<<<<<<< HEAD
   createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+=======
+  createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+  createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+>>>>>>> origin/main
 
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
@@ -179,11 +195,49 @@ export function createClient(imports: ClientImports): ClientExports {
       return prediction.enqueueCommand(command);
     },
 
+<<<<<<< HEAD
+<<<<<<< HEAD
     createMainMenu(options: MainMenuOptions, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const menuSystem = new MenuSystem();
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
         const optionsFactory = new OptionsMenuFactory(menuSystem, imports.host!);
         const factory = new MainMenuFactory(menuSystem, saveLoadFactory, { ...options, optionsFactory });
+=======
+=======
+>>>>>>> origin/main
+    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+        const menuSystem = new MenuSystem();
+        const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
+        const optionsFactory = new OptionsMenuFactory(menuSystem, imports.host!);
+
+        // We need VFS for MapsMenuFactory.
+        // We now have listFiles on AssetManager.
+        const assets = imports.engine.assets;
+
+        // Use a shim if assets is undefined (e.g. in tests without mock assets)
+        const vfsShim = {
+             findByExtension: (ext: string) => assets ? assets.listFiles(ext) : []
+        };
+
+        const mapsFactory = new MapsMenuFactory(menuSystem, vfsShim as any, (map) => {
+             console.log(`Starting map: ${map}`);
+             imports.host?.commands.execute(`map ${map}`);
+        });
+
+        const factory = new MainMenuFactory(menuSystem, saveLoadFactory, {
+            ...options,
+            optionsFactory,
+            mapsFactory,
+            onSetDifficulty: (skill: number) => {
+                if (imports.host?.cvars) {
+                    imports.host.cvars.setValue('skill', skill.toString());
+                }
+            }
+        });
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
         return { menuSystem, factory };
     },
 

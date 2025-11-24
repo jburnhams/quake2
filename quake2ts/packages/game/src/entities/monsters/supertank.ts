@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, lengthVec3, scaleVec3, addVec3, angleVectors } from '@quake2ts/shared';
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, lengthVec3, scaleVec3, addVec3, angleVectors } from '@quake2ts/shared';
+>>>>>>> origin/main
 import {
   ai_charge,
   ai_move,
@@ -17,6 +25,8 @@ import {
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
+<<<<<<< HEAD
+<<<<<<< HEAD
 import { monster_fire_rocket, monster_fire_bullet, monster_fire_grenade } from './attack.js';
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, addVec3, scaleVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -38,6 +48,23 @@ const MZ2_SUPERTANK_GRENADE_2 = 2;
 // For Supertank, it has multiple hardpoints.
 // We'll calculate them dynamically based on frame or just use approximations.
 // C code uses monster_flash_offset array.
+=======
+=======
+>>>>>>> origin/main
+import { rangeTo, RangeCategory, infront, visible } from '../../ai/perception.js';
+import { monster_fire_bullet_v2, monster_fire_rocket, monster_fire_grenade, monster_fire_heat } from './attack.js';
+import { DamageMod } from '../../combat/damageMods.js';
+
+const MONSTER_TICK = 0.1;
+
+// Flash offsets (Approximate based on model size)
+const SUPERTANK_MACHINEGUN_OFFSET: Vec3 = { x: 30, y: 30, z: 40 }; // Forward, Right, Up
+const SUPERTANK_ROCKET_OFFSET: Vec3 = { x: 30, y: -30, z: 40 };
+const SUPERTANK_GRENADE_OFFSET: Vec3 = { x: 20, y: 0, z: 70 };
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
@@ -49,7 +76,21 @@ function monster_ai_walk(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
+<<<<<<< HEAD
+<<<<<<< HEAD
   ai_run(self, dist, MONSTER_TICK, context);
+=======
+=======
+>>>>>>> origin/main
+  if (self.enemy && self.enemy.health > 0) {
+    self.monsterinfo.current_move = run_move;
+  } else {
+    self.monsterinfo.current_move = stand_move;
+  }
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
@@ -62,12 +103,26 @@ function monster_ai_move(self: Entity, dist: number, context: any): void {
 
 // Forward declarations
 let stand_move: MonsterMove;
+<<<<<<< HEAD
+<<<<<<< HEAD
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
 let attack1_move: MonsterMove; // Chaingun
 let attack2_move: MonsterMove; // Rocket
 let attack4_move: MonsterMove; // Grenade
 let end_attack1_move: MonsterMove;
+=======
+=======
+>>>>>>> origin/main
+let run_move: MonsterMove;
+let attack_rocket_move: MonsterMove;
+let attack_grenade_move: MonsterMove;
+let attack_chain_move: MonsterMove;
+let attack_chain_end_move: MonsterMove;
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 let pain1_move: MonsterMove;
 let pain2_move: MonsterMove;
 let pain3_move: MonsterMove;
@@ -78,7 +133,15 @@ function supertank_stand(self: Entity): void {
 }
 
 function supertank_walk(self: Entity): void {
+<<<<<<< HEAD
+<<<<<<< HEAD
   self.monsterinfo.current_move = walk_move;
+=======
+  self.monsterinfo.current_move = run_move; // Supertank uses run frames for walk
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+  self.monsterinfo.current_move = run_move; // Supertank uses run frames for walk
+>>>>>>> origin/main
 }
 
 function supertank_run(self: Entity): void {
@@ -89,6 +152,8 @@ function supertank_run(self: Entity): void {
   }
 }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 function get_time(self: Entity, context: any): number {
     return context.timeSeconds ?? self.timestamp ?? 0;
 }
@@ -189,6 +254,145 @@ function supertank_pain(self: Entity, other: Entity | null, kick: number, damage
   } else {
       self.monsterinfo.current_move = pain3_move;
   }
+=======
+=======
+>>>>>>> origin/main
+function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
+    const { forward, right, up } = angleVectors(self.angles);
+    const start = { ...self.origin };
+
+    // Project offset: forward * x + right * y + up * z
+    const x = scaleVec3(forward, offset.x);
+    const y = scaleVec3(right, offset.y); // y is right
+    const z = scaleVec3(up, offset.z);
+
+    return addVec3(addVec3(addVec3(start, x), y), z);
+}
+
+function checkClearShot(self: Entity, offset: Vec3, context: any): boolean {
+    if (!self.enemy) return false;
+
+    const start = getProjectedOffset(self, offset);
+    const end = { ...self.enemy.origin };
+    end.z += (self.enemy.viewheight || 0);
+
+    const tr = context.trace(start, end, ZERO_VEC3, ZERO_VEC3, self, 1 | 0x80); // MASK_OPAQUE roughly
+
+    if (tr.fraction === 1.0 || tr.ent === self.enemy) {
+        return true;
+    }
+    return false;
+}
+
+function supertank_attack(self: Entity): void {
+    if (!self.enemy) return;
+
+    const vec = subtractVec3(self.enemy.origin, self.origin);
+    const range = lengthVec3(vec);
+
+    // Using simple logic to mimic C check
+    // In C, it checks clear shot for each weapon
+    // Since we don't have the context here easily for trace, we'll assume clear if visible for now,
+    // or rely on the firing function to check, but for selection we might just random.
+    // However, better to assume we can fire if we are here.
+
+    // Logic from C:
+    // fire rockets more often at distance
+    // prefer grenade if enemy is above
+
+    const isAbove = (self.enemy.origin.z - self.origin.z) > 120;
+    const isFar = range > 540;
+
+    const rng = Math.random();
+
+    // Simplify:
+    // 1. If far or random, try rocket
+    // 2. If close, try chaingun
+    // 3. If above, try grenade
+
+    if (isAbove && rng < 0.7) {
+        self.monsterinfo.current_move = attack_grenade_move;
+        return;
+    }
+
+    if (isFar) {
+         if (rng < 0.3) self.monsterinfo.current_move = attack_chain_move;
+         else if (rng < 0.8) self.monsterinfo.current_move = attack_rocket_move;
+         else self.monsterinfo.current_move = attack_grenade_move;
+    } else {
+        if (rng < 0.5) self.monsterinfo.current_move = attack_chain_move;
+        else if (rng < 0.9) self.monsterinfo.current_move = attack_rocket_move;
+        else self.monsterinfo.current_move = attack_grenade_move;
+    }
+}
+
+function supertank_fire_rocket(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    const start = getProjectedOffset(self, SUPERTANK_ROCKET_OFFSET);
+    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+
+    // If powershield spawnflag (8), fire heat seeker? Not implemented yet.
+    // Just fire normal rocket for now.
+
+    monster_fire_rocket(self, start, forward, 50, 650, 0, context);
+}
+
+function supertank_fire_grenade(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    const start = getProjectedOffset(self, SUPERTANK_GRENADE_OFFSET);
+
+    // Predict aim not fully implemented, just aim at enemy
+    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+
+    // Try to calculate pitch?
+    // For now, simple direct fire logic used in monster_fire_grenade
+    monster_fire_grenade(self, start, forward, 50, 600, 0, context);
+}
+
+function supertank_fire_machinegun(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    const start = getProjectedOffset(self, SUPERTANK_MACHINEGUN_OFFSET);
+    const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+
+    monster_fire_bullet_v2(self, start, forward, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+}
+
+
+function supertank_reattack1(self: Entity, context: any): void {
+    const traceFn = (start: Vec3, end: Vec3, ignore: Entity, mask: number) => {
+        const tr = context.trace(start, null, null, end, ignore, mask);
+        return { fraction: tr.fraction, entity: tr.ent };
+    };
+
+    if (self.enemy && visible(self, self.enemy, traceFn) && (Math.random() < 0.3 || (self.timestamp && self.timestamp >= (Date.now() / 1000)))) {
+        self.monsterinfo.current_move = attack_chain_move;
+    } else {
+        self.monsterinfo.current_move = attack_chain_end_move;
+    }
+}
+
+function supertank_pain(self: Entity): void {
+    if (self.monsterinfo.current_move === pain1_move ||
+        self.monsterinfo.current_move === pain2_move ||
+        self.monsterinfo.current_move === pain3_move) return;
+
+  // Logic to choose pain animation based on damage?
+  // Just random for now or sequential
+  const r = Math.random();
+  if (r < 0.33) self.monsterinfo.current_move = pain1_move;
+  else if (r < 0.66) self.monsterinfo.current_move = pain2_move;
+  else self.monsterinfo.current_move = pain3_move;
+}
+
+function supertank_die(self: Entity): void {
+  self.monsterinfo.current_move = death_move;
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 }
 
 function supertank_dead(self: Entity): void {
@@ -196,6 +400,8 @@ function supertank_dead(self: Entity): void {
   self.nextthink = -1;
 }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 function supertank_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: EntitySystem): void {
     // Check for gibbing
     if (self.health <= -80) { // Big boss gib health
@@ -327,30 +533,181 @@ pain3_move = { firstframe: 172, lastframe: 175, frames: pain3_frames, endfunc: s
 // Stand: 194-253
 const stand_frames: MonsterFrame[] = Array.from({ length: 60 }, () => ({ ai: monster_ai_stand, dist: 0 }));
 stand_move = { firstframe: 194, lastframe: 253, frames: stand_frames, endfunc: supertank_stand };
+=======
+=======
+>>>>>>> origin/main
+// Frame Definitions matching C++ lengths roughly
+
+// Stand: 60 frames
+const stand_frames: MonsterFrame[] = Array.from({ length: 60 }, () => ({
+  ai: monster_ai_stand,
+  dist: 0,
+}));
+
+stand_move = {
+  firstframe: 0,
+  lastframe: 59,
+  frames: stand_frames,
+  endfunc: supertank_stand,
+};
+
+// Run: 18 frames
+const run_frames: MonsterFrame[] = Array.from({ length: 18 }, () => ({
+  ai: monster_ai_run,
+  dist: 12, // Approx from C
+}));
+
+run_move = {
+  firstframe: 60,
+  lastframe: 77,
+  frames: run_frames,
+  endfunc: supertank_run,
+};
+
+// Pain 3: 4 frames
+const pain3_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain3_move = { firstframe: 78, lastframe: 81, frames: pain3_frames, endfunc: supertank_run };
+
+// Pain 2: 4 frames
+const pain2_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain2_move = { firstframe: 82, lastframe: 85, frames: pain2_frames, endfunc: supertank_run };
+
+// Pain 1: 4 frames
+const pain1_frames: MonsterFrame[] = Array.from({ length: 4 }, () => ({ ai: monster_ai_move, dist: 0 }));
+pain1_move = { firstframe: 86, lastframe: 89, frames: pain1_frames, endfunc: supertank_run };
+
+// Death: 24 frames
+const death_frames: MonsterFrame[] = Array.from({ length: 24 }, () => ({ ai: monster_ai_move, dist: 0 }));
+death_move = { firstframe: 90, lastframe: 113, frames: death_frames, endfunc: supertank_dead };
+
+// Attack 4 (Grenade): 6 frames
+const attack_grenade_frames: MonsterFrame[] = Array.from({ length: 6 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: (i === 0 || i === 3) ? supertank_fire_grenade : null
+}));
+attack_grenade_move = { firstframe: 114, lastframe: 119, frames: attack_grenade_frames, endfunc: supertank_run };
+
+// Attack 2 (Rocket): 27 frames
+const attack_rocket_frames: MonsterFrame[] = Array.from({ length: 27 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: (i === 7 || i === 10 || i === 13) ? supertank_fire_rocket : null // Indices 7, 10, 13 (frame 8, 11, 14)
+}));
+attack_rocket_move = { firstframe: 120, lastframe: 146, frames: attack_rocket_frames, endfunc: supertank_run };
+
+// Attack 1 (Chaingun): 6 frames (fire loop)
+const attack_chain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: supertank_fire_machinegun
+}));
+attack_chain_move = { firstframe: 147, lastframe: 152, frames: attack_chain_frames, endfunc: supertank_reattack1 };
+
+// Attack 1 End: 14 frames
+const attack_chain_end_frames: MonsterFrame[] = Array.from({ length: 14 }, () => ({ ai: monster_ai_move, dist: 0 }));
+attack_chain_end_move = { firstframe: 153, lastframe: 166, frames: attack_chain_end_frames, endfunc: supertank_run };
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 
 
 export function SP_monster_supertank(self: Entity, context: SpawnContext): void {
   self.classname = 'monster_supertank';
   self.model = 'models/monsters/boss1/tris.md2';
+<<<<<<< HEAD
+<<<<<<< HEAD
   self.mins = { x: -64, y: -64, z: 0 }; // C code: -64, -64, 0
   self.maxs = { x: 64, y: 64, z: 112 }; // C code: 64, 64, 112
+=======
+=======
+>>>>>>> origin/main
+
+  // Gibs
+  // ... remove precacheModel calls ...
+
+  self.mins = { x: -64, y: -64, z: 0 };
+  self.maxs = { x: 64, y: 64, z: 112 }; // From C
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
   self.health = 1500;
   self.max_health = 1500;
   self.mass = 800;
   self.takedamage = true;
+<<<<<<< HEAD
+<<<<<<< HEAD
   self.viewheight = 64; // Approximation
 
   self.pain = (ent, other, kick, dmg) => supertank_pain(ent, other, kick, dmg, context.entities);
 
   self.die = (ent, inflictor, attacker, damage, point) => supertank_die(ent, inflictor, attacker, damage, point, context.entities);
+=======
+=======
+>>>>>>> origin/main
+  self.viewheight = 64; // Guess, maybe higher?
+
+  self.pain = (self, other, kick, damage) => {
+    // Skin change on damage
+    if (self.health < (self.max_health / 2)) {
+      self.skin = (self.skin || 0) | 1;
+    } else {
+      self.skin = (self.skin || 0) & ~1;
+    }
+
+    if (self.timestamp < (self.pain_finished_time || 0)) return;
+    self.pain_finished_time = self.timestamp + 3.0;
+
+    // Don't pain if firing rockets (Attak2 frames 1-14? approx)
+    // Check frame number vs absolute, assuming current_move
+    if (self.monsterinfo.current_move === attack_rocket_move && (self.monsterinfo.nextframe || 0) < attack_rocket_move.firstframe + 14) return;
+
+    if (damage <= 10) {
+        // play pain1 sound
+        self.monsterinfo.current_move = pain1_move;
+    } else if (damage <= 25) {
+        // play pain3 sound
+        self.monsterinfo.current_move = pain3_move;
+    } else {
+        // play pain2 sound
+        self.monsterinfo.current_move = pain2_move;
+    }
+  };
+
+  self.die = (self, inflictor, attacker, damage, point) => {
+    self.deadflag = DeadFlag.Dead;
+    self.solid = Solid.Not;
+
+    if (self.health < -80) { // Big boss needs big damage to gib
+        throwGibs(context.entities, self.origin, damage);
+        context.entities.free(self);
+        return;
+    }
+
+    supertank_die(self);
+  };
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
 
   self.monsterinfo.stand = supertank_stand;
   self.monsterinfo.walk = supertank_walk;
   self.monsterinfo.run = supertank_run;
+<<<<<<< HEAD
+<<<<<<< HEAD
   self.monsterinfo.attack = (ent) => supertank_attack(ent, context.entities);
   self.monsterinfo.checkattack = undefined; // Use default
+=======
+  self.monsterinfo.attack = supertank_attack;
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+  self.monsterinfo.attack = supertank_attack;
+>>>>>>> origin/main
 
   self.think = monster_think;
 
@@ -360,11 +717,27 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
 
 export function registerSupertankSpawns(registry: SpawnRegistry): void {
   registry.register('monster_supertank', SP_monster_supertank);
+<<<<<<< HEAD
+<<<<<<< HEAD
   // boss5 is the same but with power armor and different skin
   registry.register('monster_boss5', (self, ctx) => {
       SP_monster_supertank(self, ctx);
       self.classname = 'monster_boss5';
       self.skin = 2;
       // Power shield logic would go here
+=======
+=======
+>>>>>>> origin/main
+
+  // Boss5 uses same entity but with powershield and skin 2
+  registry.register('monster_boss5', (self, ctx) => {
+      SP_monster_supertank(self, ctx);
+      self.spawnflags |= 8; // SPAWNFLAG_SUPERTANK_POWERSHIELD
+      self.skin = 2;
+      self.classname = 'monster_boss5';
+<<<<<<< HEAD
+>>>>>>> 40ca6857d501c73b890d6872b901150001e7151e
+=======
+>>>>>>> origin/main
   });
 }
