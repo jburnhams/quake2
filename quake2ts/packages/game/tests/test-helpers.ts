@@ -38,7 +38,7 @@ export function createTestContext(): SpawnContext {
     }),
     sound: vi.fn(),
     findByTargetName: vi.fn(() => []),
-    pickTarget: vi.fn(() => null),
+    pickTarget: vi.fn(() => null)
   } as unknown as EntitySystem;
 
   return {
