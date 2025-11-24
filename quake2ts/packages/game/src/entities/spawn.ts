@@ -14,6 +14,7 @@ import { registerFuncSpawns } from './funcs.js';
 import { registerPathSpawns } from './paths.js';
 import { registerLightSpawns } from './lights.js';
 import { registerMonsterSpawns } from './monsters/index.js';
+import { registerWorldSpawn } from './worldspawn.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
@@ -288,11 +289,7 @@ export function findPlayerStart(entities: EntitySystem): Entity | undefined {
 }
 
 export function registerDefaultSpawns(game: any, registry: SpawnRegistry): void {
-  registry.register('worldspawn', (entity) => {
-    entity.movetype = MoveType.Push;
-    entity.solid = Solid.Bsp;
-    entity.modelindex = entity.modelindex || 1;
-  });
+  registerWorldSpawn(registry);
 
   registry.register('info_player_start', () => {
     // No-op spawn point

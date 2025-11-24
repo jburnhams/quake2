@@ -111,14 +111,14 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - [x] `monster_brain`: Implemented
   - [x] `monster_flipper`: Implemented
   - [x] `monster_chick` (Iron Maiden): Implemented
-  - [ ] `monster_icarus`: Stubbed (createMonsterSpawn)
-  - [ ] `monster_flyer`: Stubbed (createMonsterSpawn)
-  - [ ] `monster_floater`: Stubbed (createMonsterSpawn)
-  - [ ] `monster_hover`: Stubbed (createMonsterSpawn)
-  - [ ] `monster_supertank`: Stubbed (createMonsterSpawn)
-  - [ ] `monster_boss2` (Hornet): Stubbed (createMonsterSpawn)
-  - [ ] `monster_jorg` (Boss3): Stubbed (createMonsterSpawn)
-  - [ ] `monster_makron` (Boss3): Stubbed (createMonsterSpawn)
+  - [x] `monster_icarus`: Implemented
+  - [x] `monster_flyer`: Implemented
+  - [x] `monster_floater`: Implemented
+  - [x] `monster_hover`: Implemented
+  - [x] `monster_supertank`: Implemented
+  - [x] `monster_boss2` (Hornet): Implemented
+  - [x] `monster_jorg` (Boss3): Implemented
+  - [x] `monster_makron` (Boss3): Implemented
 - [x] Func spawns (func_* brush entities)
   - [x] `SP_func_wall`: Static geometry
   - [x] `SP_func_door`: Doors
@@ -212,10 +212,10 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Screen blends (Section 8)
 
 ### Special Entity Types (Functional Implementation)
-- [ ] **Worldspawn**
+- [x] **Worldspawn**
   - Parse world keys (message, sky, skyrotate, skyaxis, etc.)
   - Set global level state
-  - Precache common assets
+  - Precache common assets (Partial)
 - [x] **func_door** (example of complex func_ entity)
   - Parse movement direction, speed, wait time, sounds
   - Think function: move to open position, wait, close
