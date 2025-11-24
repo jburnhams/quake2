@@ -59,7 +59,7 @@ describe('monster_chick', () => {
     SP_monster_chick(ent, context);
 
     expect(ent.monsterinfo.current_move).toBeDefined();
-    expect(ent.monsterinfo.current_move?.firstframe).toBe(121);
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(101);
   });
 
   it('handles pain correctly', () => {

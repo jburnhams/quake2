@@ -13,6 +13,7 @@ import {
   MonsterMove,
   MoveType,
   Solid,
+  EntityFlags,
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
@@ -249,12 +250,22 @@ function flipper_die(self: Entity, inflictor: Entity | null, attacker: Entity | 
   self.monsterinfo.current_move = death_move;
 }
 
+function flipper_set_fly_parameters(self: Entity): void {
+    self.monsterinfo.fly_thrusters = false;
+    self.monsterinfo.fly_acceleration = 30;
+    self.monsterinfo.fly_speed = 110;
+    self.monsterinfo.fly_min_distance = 10;
+    self.monsterinfo.fly_max_distance = 10;
+}
+
+
 export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
   self.classname = 'monster_flipper';
   self.model = 'models/monsters/flipper/tris.md2';
   self.mins = { x: -16, y: -16, z: 0 };
   self.maxs = { x: 16, y: 16, z: 32 };
-  self.movetype = MoveType.Step;
+  self.movetype = MoveType.Fly; // Use Fly for swimming/flying in Q2TS
+  self.flags |= EntityFlags.Swim;
   self.solid = Solid.BoundingBox;
   self.health = 50;
   self.max_health = 50;
@@ -271,8 +282,14 @@ export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
   self.monsterinfo.sight = (s, o) => {
       context.entities.sound?.(s, 0, 'flipper/flpsght1.wav', 1, 1, 0);
   };
+  self.monsterinfo.setskin = (s) => {
+      if (s.health < s.max_health / 2) s.skin = 1;
+      else s.skin = 0;
+  }
 
   self.think = monster_think;
+
+  flipper_set_fly_parameters(self);
 
   context.entities.linkentity(self);
 

@@ -51,7 +51,7 @@ describe('monster_flipper', () => {
     expect(ent.max_health).toBe(50);
     expect(ent.mass).toBe(100);
     expect(ent.solid).toBe(Solid.BoundingBox);
-    expect(ent.movetype).toBe(MoveType.Step);
+    expect(ent.movetype).toBe(MoveType.Fly);
   });
 
   it('enters stand state after spawn', () => {

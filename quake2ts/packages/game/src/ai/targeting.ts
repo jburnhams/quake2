@@ -15,6 +15,8 @@ import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { ServerFlags } from '../entities/entity.js';
 
+export { rangeTo as range, RangeCategory as Range } from './perception.js';
+
 export interface TargetAwarenessState {
   timeSeconds: number;
   frameNumber: number;
