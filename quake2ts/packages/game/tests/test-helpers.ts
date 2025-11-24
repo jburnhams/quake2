@@ -32,9 +32,9 @@ export function createTestContext(): SpawnContext {
     multicast: vi.fn(),
     unicast: vi.fn(),
     engine, // Attach mocked engine
-    sound: (ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
+    sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
-    }
+    }),
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
       // Basic mock implementation of useTargets to facilitate testing
       if (entity.target) {
