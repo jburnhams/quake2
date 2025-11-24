@@ -193,10 +193,10 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 - Frame renderer batching/state caching and viewmodel depth range handling
 
 ### Integration Tests
-- **Full frame render**: Load a map, render a complete frame with world, models, HUD
-- **PVS culling correctness**: Verify invisible geometry is skipped
-- **Multi-lightmap styles**: Test animated lighting (flickering, pulsing)
-- **Model animation**: Render MD2 model through full animation sequence, verify smooth interpolation
+- [x] **Full frame render**: Load a map, render a complete frame with world, models, HUD
+- **PVS culling correctness**: Verify invisible geometry is skipped (Test implemented but skipped pending fixes)
+- **Multi-lightmap styles**: Test animated lighting (flickering, pulsing) (Test implemented but skipped pending fixes)
+- [x] **Model animation**: Render MD2 model through full animation sequence, verify smooth interpolation
 - **Particle system**: Spawn 1000+ particles, verify performance and visual correctness
 - **HUD rendering**: Render complete status bar, verify text and images align correctly
 - **Special surfaces**: Test sky, water warp, transparent surfaces
