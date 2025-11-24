@@ -234,18 +234,17 @@ This section covers the critical integration layer that ensures all subsystems w
     - ✅ Verifies collision trace against map geometry.
     - *Note: Requires `pak.pak` to be present in project root. Uses soft warnings if missing or map unloadable.*
   - **Scenario 2: Combat gauntlet**
-    - Spawn player in room with multiple monsters
-    - Simulate combat until all monsters dead
-    - Verify ammunition consumption
-    - Validate damage taken
+    - ✅ Created `scenario_gauntlet.test.ts` using synthetic arena and mocked monsters/projectiles.
+    - Verified combat loop: spawn, fire, hit confirmation (via trace), damage application, kill.
+    - Uses synthetic CollisionModel to ensure test reliability without PAK requirement.
   - **Scenario 3: Platforming challenge**
-    - Navigate complex geometry (jumps, elevators, moving platforms)
-    - Verify physics determinism
-    - Test fall damage
+    - ✅ Created `scenario_platforming.test.ts` with synthetic stair/platform geometry.
+    - Verified jump mechanics and movement across gaps.
+    - Validates interaction between `applyPmove` and synthetic environment.
   - **Scenario 4: Save/Load mid-level**
-    - Play halfway through level
-    - Save, reload, continue
-    - Verify completion time matches
+    - ✅ Created `scenario_saveload.test.ts` verifying full round-trip serialization.
+    - Validates player state restoration (health, origin) and time synchronization.
+    - Ensures game state continuity across save/load.
 
 ### Determinism Validation Framework
 - [x] Game state serialization for comparison
