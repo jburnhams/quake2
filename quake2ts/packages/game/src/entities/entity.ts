@@ -128,6 +128,22 @@ export interface MonsterInfo {
   scale?: number;
   melee_debounce_time?: number;
   attack_finished?: number;
+  // Added fields
+  power_armor_type?: number;
+  power_armor_power?: number;
+  blind_fire_target?: Vec3;
+  fly_thrusters?: boolean;
+  fly_acceleration?: number;
+  fly_speed?: number;
+  fly_min_distance?: number;
+  fly_max_distance?: number;
+  blindfire?: boolean;
+  dodge?: (self: Entity, attacker: Entity, eta: number) => void;
+  unduck?: (self: Entity) => void;
+  duck?: (self: Entity, eta: number) => boolean;
+  sidestep?: (self: Entity) => boolean;
+  blocked?: BlockedCallback;
+  setskin?: (self: Entity) => void;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
@@ -229,6 +245,7 @@ export class Entity {
   blocked?: BlockedCallback;
   pain?: PainCallback;
   die?: DieCallback;
+  postthink?: ThinkCallback; // Added for beam updates
   activator: Entity | null = null;
 
   solid: Solid = Solid.Not;
@@ -243,6 +260,8 @@ export class Entity {
   light_level = 0;
 
   owner: Entity | null = null;
+  beam: Entity | null = null; // Added
+  beam2: Entity | null = null; // Added
 
   client?: PlayerClient;
 
@@ -389,6 +408,7 @@ export class Entity {
     this.blocked = undefined;
     this.pain = undefined;
     this.die = undefined;
+    this.postthink = undefined;
     this.activator = null;
 
     this.solid = Solid.Not;
@@ -399,6 +419,10 @@ export class Entity {
     this.combattarget = undefined;
     this.show_hostile = 0;
     this.light_level = 0;
+
+    this.owner = null;
+    this.beam = null;
+    this.beam2 = null;
 
     this._regularArmor = undefined;
     this._powerArmor = undefined;
@@ -483,4 +507,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'blocked', type: 'callback', save: false },
   { name: 'pain', type: 'callback', save: false },
   { name: 'die', type: 'callback', save: false },
+  { name: 'postthink', type: 'callback', save: false }, // Added
+  { name: 'beam', type: 'entity', save: true }, // Added
+  { name: 'beam2', type: 'entity', save: true }, // Added
 ];
