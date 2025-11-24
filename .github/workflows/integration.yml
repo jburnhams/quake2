@@ -32,6 +32,18 @@ jobs:
       - name: Build workspace
         run: pnpm run build
 
-      # Run tests specifically for the integration test package
-      - name: Run Integration Tests
-        run: pnpm --filter @quake2ts/tests test
+      - name: Validate Dependencies
+        run: pnpm exec tsx packages/tools/src/validate-deps.ts
+
+      # Run all tests, including unit and integration tests across the workspace
+      # We use 'vitest run' to ensure single pass execution
+      - name: Run Full Test Suite
+        run: pnpm run test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: quake2ts/test-results/
+          retention-days: 7
