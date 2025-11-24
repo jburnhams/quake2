@@ -112,6 +112,8 @@ function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
 function makron_fire_bfg(self: Entity, context: any): void {
     if (!self.enemy) return;
 
+    context.engine.sound?.(self, 0, 'makron/bfg_fire.wav', 1, 1, 0);
+
     const start = getProjectedOffset(self, MAKRON_BFG_OFFSET);
     const target = { ...self.enemy.origin };
     target.z += (self.enemy.viewheight || 0);
@@ -122,6 +124,8 @@ function makron_fire_bfg(self: Entity, context: any): void {
 
 function makron_fire_railgun(self: Entity, context: any): void {
     if (!self.pos1) return; // Need saved aim pos
+
+    context.engine.sound?.(self, 0, 'makron/rail_fire.wav', 1, 1, 0);
 
     const start = getProjectedOffset(self, MAKRON_RAILGUN_OFFSET);
     const dir = normalizeVec3(subtractVec3(self.pos1, start));
@@ -138,31 +142,42 @@ function makron_save_loc(self: Entity): void {
 }
 
 function makron_fire_hyperblaster(self: Entity, context: any): void {
-    // Dynamic flash offset based on frame?
-    // C code: flash_number = MZ2_MAKRON_BLASTER_1 + (self->s.frame - FRAME_attak405);
-    // attak405 corresponds to 5th frame of attack4 (index 4)
-    // We can approximate or just use a fixed offset that moves slightly
-
-    // Just use a fixed offset for now or compute based on frame index if we had it easily accessible
-    // Let's use MAKRON_BLASTER_OFFSET_1 but vary angle?
+    context.engine.sound?.(self, 0, 'makron/blaster.wav', 1, 1, 0);
 
     const start = getProjectedOffset(self, MAKRON_BLASTER_OFFSET_1);
 
-    // C logic for direction:
-    // It calculates direction based on angle + sweep
+    const relFrame = (self.monsterinfo.nextframe || 0) - attack_hyperblaster_move.firstframe;
+
+    // C Logic Mapping for sweep:
+    // 4 to 12: sweep left
+    // 13 to 20: sweep right
+
+    let yawDelta = 0;
+    // if (relFrame <= 13) { // Not used for now, just commented logic
+    //     yawDelta = -10 * (relFrame - 4);
+    // } else {
+    //     yawDelta = -90 + 10 * (relFrame - 13);
+    // }
 
     let dir: Vec3;
     if (self.enemy) {
         const target = { ...self.enemy.origin };
         target.z += (self.enemy.viewheight || 0);
         const vec = subtractVec3(target, start);
+        const baseAngles = vectorToAngles(vec);
 
-        // Sweep logic
-        // if frame <= 13 (index 12): dir[1] = self.angles[1] - 10 * (frame - 13)
-        // else dir[1] = self.angles[1] + 10 * (frame - 21)
+        // Create a mutable copy
+        const enemyAngles = { ...baseAngles };
 
-        // Simplified: Just aim at enemy
-        dir = normalizeVec3(vec);
+        // Apply sweep to yaw
+        if (relFrame <= 12) {
+             enemyAngles.y -= 5 * (relFrame - 4);
+        } else {
+             enemyAngles.y -= 40 - 5 * (relFrame - 12);
+        }
+
+        const forward = angleVectors(enemyAngles).forward;
+        dir = forward;
     } else {
         const { forward } = angleVectors(self.angles);
         dir = forward;
@@ -172,7 +187,7 @@ function makron_fire_hyperblaster(self: Entity, context: any): void {
 }
 
 
-function makron_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function makron_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
     if (self.health < (self.max_health / 2)) {
       self.skin = 1;
     }
@@ -184,17 +199,21 @@ function makron_pain(self: Entity, other: Entity | null, kick: number, damage: n
     self.pain_finished_time = self.timestamp + 3.0;
 
     if (damage <= 40) {
+        context.engine.sound?.(self, 0, 'makron/pain1.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain4_move;
     } else if (damage <= 110) {
+        context.engine.sound?.(self, 0, 'makron/pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain5_move;
     } else {
         if (Math.random() <= 0.45) {
+             context.engine.sound?.(self, 0, 'makron/pain3.wav', 1, 1, 0);
              self.monsterinfo.current_move = pain6_move;
         }
     }
 }
 
-function makron_die(self: Entity): void {
+function makron_die(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'makron/death.wav', 1, 1, 0);
     // Spawn torso gib?
     self.monsterinfo.current_move = death_move;
 }
@@ -280,7 +299,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.takedamage = true;
   self.viewheight = 90; // Guess? C code uses viewheight for aiming
 
-  self.pain = makron_pain;
+  self.pain = (ent, other, kick, dmg) => makron_pain(ent, other, kick, dmg, context.entities);
   self.die = (self, inflictor, attacker, damage, point) => {
     // Check for gib
     if (self.health <= -2000) {
@@ -291,7 +310,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
 
     self.deadflag = DeadFlag.Dead;
     self.solid = Solid.Not;
-    makron_die(self);
+    makron_die(self, context.entities);
   };
 
   self.monsterinfo.stand = makron_stand;
@@ -299,6 +318,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = makron_run;
   self.monsterinfo.attack = makron_attack;
   self.monsterinfo.sight = (self, other) => {
+      context.entities.sound?.(self, 0, 'makron/sight.wav', 1, 1, 0);
       self.monsterinfo.current_move = sight_move;
   };
 

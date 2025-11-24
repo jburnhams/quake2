@@ -121,6 +121,8 @@ function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
 function boss2_fire_mg(self: Entity, context: any): void {
     if (!self.enemy) return;
 
+    context.engine.sound?.(self, 1, 'boss2/machgun.wav', 1, 1, 0);
+
     // Fire left
     const startL = getProjectedOffset(self, BOSS2_MG_LEFT_OFFSET);
     const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
@@ -150,9 +152,11 @@ function boss2_fire_rocket(self: Entity, context: any): void {
     monster_fire_rocket(self, start, forward, 50, 500, 0, context);
 }
 
-function boss2_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function boss2_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
     if (self.timestamp < (self.pain_finished_time || 0)) return;
     self.pain_finished_time = self.timestamp + 3.0;
+
+    context.engine.sound?.(self, 0, 'boss2/bs2pain1.wav', 1, 1, 0);
 
     if (damage < 10) {
         self.monsterinfo.current_move = pain_light_move;
@@ -163,7 +167,8 @@ function boss2_pain(self: Entity, other: Entity | null, kick: number, damage: nu
     }
 }
 
-function boss2_die(self: Entity): void {
+function boss2_die(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'boss2/bs2deth1.wav', 1, 1, 0);
   self.monsterinfo.current_move = death_move;
 }
 
@@ -253,7 +258,7 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
     } else {
       self.skin = 0;
     }
-    boss2_pain(self, other, kick, damage);
+    boss2_pain(self, other, kick, damage, context.entities);
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -261,18 +266,22 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -80) {
+        context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
         throwGibs(context.entities, self.origin, damage);
         context.entities.free(self);
         return;
     }
 
-    boss2_die(self);
+    boss2_die(self, context.entities);
   };
 
   self.monsterinfo.stand = boss2_stand;
   self.monsterinfo.walk = boss2_walk;
   self.monsterinfo.run = boss2_run;
   self.monsterinfo.attack = boss2_attack;
+  self.monsterinfo.sight = (self, other) => {
+      context.entities.sound?.(self, 0, 'boss2/sight.wav', 1, 1, 0);
+  };
 
   self.think = monster_think;
 
