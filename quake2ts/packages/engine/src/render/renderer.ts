@@ -15,6 +15,7 @@ import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
+import { parseColorString } from './colors.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -32,7 +33,7 @@ export interface Renderer {
     begin2D(): void;
     end2D(): void;
     drawPic(x: number, y: number, pic: Pic, color?: [number, number, number, number]): void;
-    drawString(x: number, y: number, text: string): void;
+    drawString(x: number, y: number, text: string, color?: [number, number, number, number]): void;
     drawCenterString(y: number, text: string): void;
     drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
 }
@@ -302,7 +303,7 @@ export const createRenderer = (
         spriteRenderer.draw(x, y, pic.width, pic.height, 0, 0, 1, 1, color);
     };
 
-    const drawChar = (x: number, y: number, char: number) => {
+    const drawChar = (x: number, y: number, char: number, color?: [number, number, number, number]) => {
         if (!font) {
             return;
         }
@@ -318,19 +319,28 @@ export const createRenderer = (
         const v1 = v0 + charHeight / font.height;
 
         font.bind(0);
-        spriteRenderer.draw(x, y, charWidth, charHeight, u0, v0, u1, v1);
+        spriteRenderer.draw(x, y, charWidth, charHeight, u0, v0, u1, v1, color);
     }
 
-    const drawString = (x: number, y: number, text: string) => {
+    const drawString = (x: number, y: number, text: string, color?: [number, number, number, number]) => {
+        const segments = parseColorString(text);
+        let currentX = x;
         const charWidth = 8;
-        for (let i = 0; i < text.length; i++) {
-            drawChar(x + i * charWidth, y, text.charCodeAt(i));
+
+        for (const segment of segments) {
+            const segmentColor = segment.color || color;
+            for (let i = 0; i < segment.text.length; i++) {
+                drawChar(currentX, y, segment.text.charCodeAt(i), segmentColor);
+                currentX += charWidth;
+            }
         }
     };
 
     const drawCenterString = (y: number, text: string) => {
         const charWidth = 8;
-        const width = text.length * charWidth;
+        // Strip color codes for width calculation
+        const stripped = text.replace(/\^[0-9]/g, '');
+        const width = stripped.length * charWidth;
         const x = (gl.canvas.width - width) / 2;
         drawString(x, y, text);
     };

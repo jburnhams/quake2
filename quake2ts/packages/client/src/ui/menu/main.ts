@@ -1,11 +1,12 @@
 import { Menu, MenuItem } from './types.js';
 import { MenuSystem } from './system.js';
 import { SaveLoadMenuFactory } from './saveLoad.js';
+import { OptionsMenuFactory } from './options.js';
 
 export interface MainMenuOptions {
   onNewGame: () => void;
   onQuit: () => void;
-  // TODO: Add options handler
+  optionsFactory: OptionsMenuFactory;
 }
 
 export class MainMenuFactory {
@@ -34,12 +35,6 @@ export class MainMenuFactory {
       {
         label: 'Save Game',
         action: () => {
-           // Should this be available in Main Menu? Typically only when paused.
-           // Quake 2 Main Menu usually only has Load, unless you are "in game" and brought up the menu.
-           // For now, I'll include it but maybe it should be conditional.
-           // Since this factory creates "The Main Menu", the caller can decide to use a different factory or method for "Pause Menu".
-           // But often they are the same.
-           // I'll add it for now.
            void this.saveLoadFactory.createSaveMenu().then((menu) => {
              this.menuSystem.pushMenu(menu);
            });
@@ -48,8 +43,7 @@ export class MainMenuFactory {
       {
         label: 'Options',
         action: () => {
-            // TODO: Implement options
-            console.log('Options clicked');
+            this.menuSystem.pushMenu(this.options.optionsFactory.createOptionsMenu());
         }
       },
       {
