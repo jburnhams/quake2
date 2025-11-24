@@ -34,11 +34,13 @@ describe('OptionsMenuFactory', () => {
   it('should create options menu', () => {
     const menu = optionsFactory.createOptionsMenu();
     expect(menu.title).toBe('Options');
-    expect(menu.items).toHaveLength(4);
+    // Video, Audio, Controls, Gameplay, Back = 5
+    expect(menu.items).toHaveLength(5);
     expect(menu.items[0].label).toBe('Video Options');
     expect(menu.items[1].label).toBe('Audio Options');
     expect(menu.items[2].label).toBe('Controls');
-    expect(menu.items[3].label).toBe('Back');
+    expect(menu.items[3].label).toBe('Gameplay');
+    expect(menu.items[4].label).toBe('Back');
   });
 
   it('should navigate to video options', () => {

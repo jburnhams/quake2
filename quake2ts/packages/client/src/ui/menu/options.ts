@@ -31,6 +31,12 @@ export class OptionsMenuFactory {
           }
         },
         {
+          label: 'Gameplay',
+          action: () => {
+            this.menuSystem.pushMenu(this.createGameplayMenu());
+          }
+        },
+        {
           label: 'Back',
           action: () => this.menuSystem.popMenu()
         }
@@ -48,12 +54,25 @@ export class OptionsMenuFactory {
           type: 'input',
           getValue: () => cvars?.get('fov')?.string ?? '90',
           onUpdate: (val) => {
-             // Basic validation
              const f = parseFloat(val);
              if (!isNaN(f)) {
                  cvars?.setValue('fov', val);
              }
           }
+        },
+        {
+            label: 'Fullscreen',
+            type: 'toggle',
+            getValue: () => (document.fullscreenElement ? 'On' : 'Off'),
+            onUpdate: () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            }
         },
         {
           label: 'Back',
@@ -64,15 +83,27 @@ export class OptionsMenuFactory {
   }
 
   private createAudioMenu(): Menu {
-    // Placeholder until audio cvars are confirmed
+    const cvars = this.host.cvars;
     return {
       title: 'Audio Options',
       items: [
         {
-          label: 'Volume',
-          type: 'slider', // Slider not fully implemented in system.ts yet, but structural support
-          getValue: () => '0.7', // Mock
-          onUpdate: (val) => console.log('Set volume', val)
+          label: 'Master Volume',
+          type: 'input',
+          getValue: () => cvars?.get('s_volume')?.string ?? '0.7',
+          onUpdate: (val) => {
+             const f = parseFloat(val);
+             if (!isNaN(f)) cvars?.setValue('s_volume', val);
+          }
+        },
+        {
+            label: 'Music Volume',
+            type: 'input',
+            getValue: () => cvars?.get('ogg_volume')?.string ?? '0.7',
+            onUpdate: (val) => {
+                const f = parseFloat(val);
+                if (!isNaN(f)) cvars?.setValue('ogg_volume', val);
+            }
         },
         {
           label: 'Back',
@@ -100,13 +131,18 @@ export class OptionsMenuFactory {
                   label: 'Invert Mouse',
                   type: 'toggle',
                   getValue: () => (cvars?.get('m_pitch')?.string.startsWith('-') ? 'Yes' : 'No'),
-                  onUpdate: (val) => {
-                      // Simple toggle logic: if currently negative, make positive, etc.
-                      // Typically m_pitch is 0.022. Invert is -0.022.
-                      // But for a generic toggle, we might just swap signs or use a boolean cvar if one existed.
-                      // Assuming standard Quake 2 m_pitch behavior.
+                  onUpdate: () => {
                       const current = parseFloat(cvars?.get('m_pitch')?.string ?? '0.022');
                       cvars?.setValue('m_pitch', (-current).toString());
+                  }
+              },
+              {
+                  label: 'Always Run',
+                  type: 'toggle',
+                  getValue: () => (cvars?.get('cl_run')?.integer ? 'Yes' : 'No'),
+                  onUpdate: () => {
+                      const current = cvars?.get('cl_run')?.integer ?? 1;
+                      cvars?.setValue('cl_run', current ? '0' : '1');
                   }
               },
               {
@@ -115,5 +151,37 @@ export class OptionsMenuFactory {
               }
           ]
       };
+  }
+
+  private createGameplayMenu(): Menu {
+      const cvars = this.host.cvars;
+      return {
+          title: 'Gameplay Options',
+          items: [
+              {
+                  label: 'Crosshair',
+                  type: 'toggle',
+                  getValue: () => (cvars?.get('crosshair')?.integer ? 'On' : 'Off'),
+                  onUpdate: () => {
+                      const current = cvars?.get('crosshair')?.integer ?? 1;
+                      cvars?.setValue('crosshair', current ? '0' : '1');
+                  }
+              },
+              {
+                  label: 'Handedness',
+                  type: 'toggle',
+                  getValue: () => (cvars?.get('hand')?.integer === 1 ? 'Left' : (cvars?.get('hand')?.integer === 2 ? 'Center' : 'Right')),
+                  onUpdate: () => {
+                      const current = cvars?.get('hand')?.integer ?? 0;
+                      const next = (current + 1) % 3;
+                      cvars?.setValue('hand', next.toString());
+                  }
+              },
+              {
+                  label: 'Back',
+                  action: () => this.menuSystem.popMenu()
+              }
+          ]
+      }
   }
 }
