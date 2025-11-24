@@ -7,6 +7,7 @@ export interface MainMenuOptions {
   onNewGame: () => void;
   onQuit: () => void;
   optionsFactory: OptionsMenuFactory;
+  showSaveOption?: boolean;
 }
 
 export class MainMenuFactory {
@@ -32,14 +33,20 @@ export class MainMenuFactory {
           });
         },
       },
-      {
+    ];
+
+    if (this.options.showSaveOption !== false) {
+      items.push({
         label: 'Save Game',
         action: () => {
            void this.saveLoadFactory.createSaveMenu().then((menu) => {
              this.menuSystem.pushMenu(menu);
            });
         },
-      },
+      });
+    }
+
+    items.push(
       {
         label: 'Options',
         action: () => {
@@ -52,7 +59,7 @@ export class MainMenuFactory {
           this.options.onQuit();
         },
       },
-    ];
+    );
 
     return {
       title: 'Main Menu',
