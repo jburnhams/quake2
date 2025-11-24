@@ -34,7 +34,7 @@ const JORG_BFG_OFFSET: Vec3 = { x: 30, y: 0, z: 40 };
 
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: any): void {
@@ -99,9 +99,9 @@ function jorg_attack(self: Entity, context: EntitySystem): void {
 }
 
 function jorg_reattack1(self: Entity, context: EntitySystem): void {
-    const traceFn = (start: Vec3, end: Vec3, ignore: Entity, mask: number) => {
-        const tr = context.trace(start, null, null, end, ignore, mask);
-        return { fraction: tr.fraction, entity: tr.ent };
+    const traceFn = (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, ignore: Entity | null, mask: number) => {
+        const tr = context.trace(start, mins, maxs, end, ignore, mask);
+        return { fraction: tr.fraction, ent: tr.ent };
     };
 
     if (self.enemy && visible(self, self.enemy, traceFn)) {

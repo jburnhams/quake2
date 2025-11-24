@@ -17,6 +17,7 @@ import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
+import type { TargetAwarenessState } from '../ai/targeting.js';
 
 interface Bounds {
   min: Vec3;
@@ -74,11 +75,23 @@ export interface SerializedEntityState {
   readonly fields: Partial<Record<SerializableFieldName, SerializableEntityFieldValue>>;
 }
 
+export interface SerializedTargetAwareness {
+  readonly frameNumber: number;
+  readonly sightEntityIndex: number | null;
+  readonly sightEntityFrame: number;
+  readonly soundEntityIndex: number | null;
+  readonly soundEntityFrame: number;
+  readonly sound2EntityIndex: number | null;
+  readonly sound2EntityFrame: number;
+  readonly sightClientIndex: number | null;
+}
+
 export interface EntitySystemSnapshot {
   readonly timeSeconds: number;
   readonly pool: EntityPoolSnapshot;
   readonly entities: SerializedEntityState[];
   readonly thinks: ThinkScheduleEntry[];
+  readonly awareness: SerializedTargetAwareness;
 }
 
 
@@ -125,6 +138,9 @@ export class EntitySystem {
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private currentTimeSeconds = 0;
+  private frameNumber = 0;
+
+  readonly targetAwareness: TargetAwarenessState;
 
   get rng() {
     return this.random;
@@ -185,6 +201,18 @@ export class EntitySystem {
         this.callbackToName.set(fn, name);
       }
     }
+
+    this.targetAwareness = {
+      timeSeconds: 0,
+      frameNumber: 0,
+      sightEntity: null,
+      sightEntityFrame: 0,
+      soundEntity: null,
+      soundEntityFrame: 0,
+      sound2Entity: null,
+      sound2EntityFrame: 0,
+      sightClient: null,
+    };
   }
 
   get world(): Entity {
@@ -258,6 +286,9 @@ export class EntitySystem {
 
   beginFrame(timeSeconds: number): void {
     this.currentTimeSeconds = timeSeconds;
+    this.frameNumber++;
+    this.targetAwareness.timeSeconds = timeSeconds;
+    this.targetAwareness.frameNumber = this.frameNumber;
   }
 
   finalizeSpawn(entity: Entity): void {
@@ -433,6 +464,16 @@ export class EntitySystem {
       pool: this.pool.createSnapshot(),
       entities,
       thinks: this.thinkScheduler.snapshot(),
+      awareness: {
+        frameNumber: this.targetAwareness.frameNumber,
+        sightEntityIndex: this.targetAwareness.sightEntity?.index ?? null,
+        sightEntityFrame: this.targetAwareness.sightEntityFrame,
+        soundEntityIndex: this.targetAwareness.soundEntity?.index ?? null,
+        soundEntityFrame: this.targetAwareness.soundEntityFrame,
+        sound2EntityIndex: this.targetAwareness.sound2Entity?.index ?? null,
+        sound2EntityFrame: this.targetAwareness.sound2EntityFrame,
+        sightClientIndex: this.targetAwareness.sightClient?.index ?? null,
+      },
     };
   }
 
@@ -443,6 +484,19 @@ export class EntitySystem {
     const indexToEntity = new Map<number, Entity>();
     for (const entity of this.pool) {
       indexToEntity.set(entity.index, entity);
+    }
+
+    // Restore awareness
+    if (snapshot.awareness) {
+      this.frameNumber = snapshot.awareness.frameNumber;
+      this.targetAwareness.frameNumber = snapshot.awareness.frameNumber;
+      this.targetAwareness.sightEntity = snapshot.awareness.sightEntityIndex !== null ? indexToEntity.get(snapshot.awareness.sightEntityIndex) || null : null;
+      this.targetAwareness.sightEntityFrame = snapshot.awareness.sightEntityFrame;
+      this.targetAwareness.soundEntity = snapshot.awareness.soundEntityIndex !== null ? indexToEntity.get(snapshot.awareness.soundEntityIndex) || null : null;
+      this.targetAwareness.soundEntityFrame = snapshot.awareness.soundEntityFrame;
+      this.targetAwareness.sound2Entity = snapshot.awareness.sound2EntityIndex !== null ? indexToEntity.get(snapshot.awareness.sound2EntityIndex) || null : null;
+      this.targetAwareness.sound2EntityFrame = snapshot.awareness.sound2EntityFrame;
+      this.targetAwareness.sightClient = snapshot.awareness.sightClientIndex !== null ? indexToEntity.get(snapshot.awareness.sightClientIndex) || null : null;
     }
 
     const pendingEntityRefs: Array<{ entity: Entity; name: SerializableFieldName; targetIndex: number | null }>

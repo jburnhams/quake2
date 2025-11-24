@@ -13,10 +13,17 @@ export enum RangeCategory {
 
 export interface TraceResult {
   readonly fraction: number;
-  readonly entity: Entity | null;
+  readonly ent: Entity | null;
 }
 
-export type TraceFunction = (start: Vec3, end: Vec3, ignore: Entity, mask: TraceMask) => TraceResult;
+export type TraceFunction = (
+  start: Vec3,
+  mins: Vec3 | null,
+  maxs: Vec3 | null,
+  end: Vec3,
+  passent: Entity | null,
+  contentmask: number
+) => TraceResult;
 
 function absBounds(entity: Entity): { mins: Vec3; maxs: Vec3 } {
   return {
@@ -83,6 +90,6 @@ export function visible(
   const end: Vec3 = { x: other.origin.x, y: other.origin.y, z: other.origin.z + other.viewheight };
 
   const mask = options?.throughGlass ? TraceMask.Opaque : TraceMask.Opaque | TraceMask.Window;
-  const result = trace(start, end, self, mask);
-  return result.fraction === 1 || result.entity === other;
+  const result = trace(start, null, null, end, self, mask);
+  return result.fraction === 1 || result.ent === other;
 }

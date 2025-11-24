@@ -55,7 +55,7 @@ function irandom(min: number, max: number): number {
 
 // Wrappers to match function signatures
 function monster_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
-  ai_stand(self, MONSTER_TICK);
+  ai_stand(self, MONSTER_TICK, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: EntitySystem): void {
