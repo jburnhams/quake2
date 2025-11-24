@@ -5,6 +5,8 @@
 import { AmmoType } from './ammo.js';
 import { WeaponId } from './playerInventory.js';
 
+export { AmmoType };
+
 export interface BaseItem {
     id: string; // classname
     name: string; // pickup name
