@@ -2,7 +2,7 @@ import { Mat4, multiplyMat4, Vec3 } from '@quake2ts/shared';
 import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
-import { createFrameRenderer, FrameRenderOptions } from './frame.js';
+import { createFrameRenderer, FrameRenderOptions, RenderModeConfig } from './frame.js';
 import { Md2MeshBuffers, Md2Pipeline } from './md2Pipeline.js';
 import { Md3ModelMesh, Md3Pipeline } from './md3Pipeline.js';
 import { RenderableEntity } from './scene.js';
@@ -36,6 +36,15 @@ export interface Renderer {
     drawString(x: number, y: number, text: string, color?: [number, number, number, number]): void;
     drawCenterString(y: number, text: string): void;
     drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
+}
+
+// Helper to generate a stable pseudo-random color from a number
+function colorFromId(id: number): [number, number, number, number] {
+    // Simple hash function to generate RGB
+    const r = ((id * 1664525 + 1013904223) >>> 0) / 4294967296;
+    const g = ((id * 25214903917 + 11) >>> 0) / 4294967296;
+    const b = ((id * 69069 + 1) >>> 0) / 4294967296;
+    return [r, g, b, 1.0];
 }
 
 export const createRenderer = (
@@ -182,13 +191,29 @@ export const createRenderer = (
                             lastTexture = texture;
                         }
 
+                        // Determine render mode
+                        let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
+                        if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
+                            activeRenderMode = undefined;
+                        } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
+                            // Apply default override for missing texture
+                        }
+
+                        // Handle Random Color Generation logic
+                        if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
+                            const randColor = colorFromId(entity.id);
+                            // Clone and override color
+                            activeRenderMode = { ...activeRenderMode, color: randColor };
+                        }
+
                         md2Pipeline.bind({
                             modelViewProjection,
                             modelMatrix: entity.transform,
                             ambientLight: light,
-                            dlights: options.dlights
+                            dlights: options.dlights,
+                            renderMode: activeRenderMode
                         });
-                        md2Pipeline.draw(mesh);
+                        md2Pipeline.draw(mesh, activeRenderMode);
                     }
                     break;
                 case 'md3':
@@ -231,7 +256,21 @@ export const createRenderer = (
                                     lastTexture = texture;
                                 }
 
-                                md3Pipeline.drawSurface(surfaceMesh);
+                                // Determine render mode
+                                let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
+                                if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
+                                    activeRenderMode = undefined;
+                                } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
+                                    // Apply default override for missing texture
+                                }
+
+                                // Handle Random Color Generation logic
+                                if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
+                                    const randColor = colorFromId(entity.id);
+                                    activeRenderMode = { ...activeRenderMode, color: randColor };
+                                }
+
+                                md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
                             }
                         }
                     }

@@ -1,5 +1,5 @@
 import { createRenderer } from '../../src/render/renderer.js';
-import { FrameRenderer } from '../../src/render/frame.js';
+import { FrameRenderer, RenderModeConfig } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
 import { SpriteRenderer } from '../../src/render/sprite.js';
@@ -72,6 +72,7 @@ describe('Renderer', () => {
             deleteQuery: vi.fn(),
             getQueryParameter: vi.fn(),
             getParameter: vi.fn(),
+            createTexture: vi.fn().mockReturnValue({}),
             canvas: { width: 640, height: 480 },
         } as unknown as WebGL2RenderingContext;
     });
@@ -141,5 +142,69 @@ describe('Renderer', () => {
         renderer.renderFrame(options, entities);
 
         expect(mockTexture.bind).toHaveBeenCalledWith(0);
+    });
+
+    it('should pass RenderMode configuration to pipeline when textures are missing and not applyToAll', () => {
+        const renderer = createRenderer(mockGl);
+        const renderMode: RenderModeConfig = { mode: 'wireframe', applyToAll: false };
+        const options = {
+            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
+            renderMode
+        } as any;
+
+        const entities = [{
+            type: 'md3',
+            model: {
+                surfaces: [{ name: 'test' }],
+                frames: [{ minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }]
+            },
+            blend: { frame0: 0, frame1: 0, lerp: 0 },
+            transform: new Float32Array(16),
+            // Missing skins
+        }] as any;
+
+        renderer.renderFrame(options, entities);
+
+        // Verify drawSurface is called with options containing renderMode
+        expect(mockMd3Pipeline.drawSurface).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+            renderMode: renderMode
+        }));
+    });
+
+    it('should generate random color when configured for entity with ID', () => {
+         const renderer = createRenderer(mockGl);
+        const renderMode: RenderModeConfig = {
+            mode: 'solid',
+            applyToAll: true,
+            generateRandomColor: true
+        };
+        const options = {
+            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
+            renderMode
+        } as any;
+
+        const entities = [{
+            type: 'md3',
+            id: 12345,
+            model: {
+                surfaces: [{ name: 'test' }],
+                frames: [{ minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }]
+            },
+            blend: { frame0: 0, frame1: 0, lerp: 0 },
+            transform: new Float32Array(16),
+        }] as any;
+
+        renderer.renderFrame(options, entities);
+
+        expect(mockMd3Pipeline.drawSurface).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+            renderMode: expect.objectContaining({
+                mode: 'solid',
+                color: expect.any(Array) // Should have generated a color array
+            })
+        }));
+
+        const callArgs = mockMd3Pipeline.drawSurface.mock.calls[0][1];
+        expect(callArgs.renderMode.color).toHaveLength(4);
+        // Different ID should produce different color (conceptually, but hard to test randomness stability without copying algorithm here)
     });
 });
