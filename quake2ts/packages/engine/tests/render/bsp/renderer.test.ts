@@ -33,7 +33,9 @@ const mockGL = {
   getUniformLocation: vi.fn(() => ({})),
   uniformMatrix4fv: vi.fn(),
   uniform2f: vi.fn(),
+  uniform3f: vi.fn(),
   uniform4fv: vi.fn(),
+  uniform4f: vi.fn(), // Added
   uniform1f: vi.fn(),
   uniform1i: vi.fn(),
   drawElements: vi.fn(),

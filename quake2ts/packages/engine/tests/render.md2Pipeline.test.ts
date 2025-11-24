@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseMd2 } from '../src/assets/md2.js';
 import {
   MD2_FRAGMENT_SHADER,
@@ -128,7 +128,12 @@ describe('MD2 frame interpolation', () => {
 describe('MD2 pipeline', () => {
   it('binds uniforms and draws the mesh', () => {
     const gl = createMockGL();
-    const uniformNames = ['u_modelViewProjection', 'u_lightDir', 'u_tint', 'u_diffuseMap'];
+    // Ensure uniform4f is mocked
+    if (!gl.uniform4f) {
+        (gl as any).uniform4f = vi.fn();
+    }
+
+    const uniformNames = ['u_modelViewProjection', 'u_lightDir', 'u_tint', 'u_diffuseMap', 'u_renderMode', 'u_solidColor', 'u_modelMatrix'];
     uniformNames.forEach((name) => gl.uniformLocations.set(name, {} as WebGLUniformLocation));
 
     const pipeline = new Md2Pipeline(gl as unknown as WebGL2RenderingContext);

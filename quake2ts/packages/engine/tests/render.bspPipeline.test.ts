@@ -1,5 +1,5 @@
 import { SURF_FLOWING, SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   applySurfaceState,
   BspSurfacePipeline,
@@ -34,6 +34,12 @@ describe('deriveSurfaceRenderState', () => {
 describe('BspSurfacePipeline', () => {
   it('binds shader uniforms and returns the render state', () => {
     const gl = createMockGL();
+
+    // Ensure uniform4f is mocked
+    if (!gl.uniform4f) {
+        (gl as any).uniform4f = vi.fn();
+    }
+
     const uniformNames = [
       'u_modelViewProjection',
       'u_texScroll',
@@ -45,6 +51,8 @@ describe('BspSurfacePipeline', () => {
       'u_time',
       'u_diffuseMap',
       'u_lightmapAtlas',
+      'u_renderMode',
+      'u_solidColor',
     ];
     for (const name of uniformNames) {
       gl.uniformLocations.set(name, {} as WebGLUniformLocation);
