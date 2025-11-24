@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserSettings } from '../../src/ui/settings.js';
+import { CvarFlags } from '@quake2ts/shared';
 
 describe('BrowserSettings', () => {
   let storage: any;
@@ -14,10 +15,12 @@ describe('BrowserSettings', () => {
   });
 
   it('should save archive cvars', () => {
-    const cvars = new Map<string, any>();
-    cvars.set('fov', { value: '100', archive: true });
-    cvars.set('sensitivity', { value: '5', archive: true });
-    cvars.set('temp_cvar', { value: '1', archive: false });
+    // The new signature expects an array of Cvar-like objects
+    const cvars = [
+        { name: 'fov', value: '100', flags: CvarFlags.Archive },
+        { name: 'sensitivity', value: '5', flags: CvarFlags.Archive },
+        { name: 'temp_cvar', value: '1', flags: CvarFlags.None }
+    ];
 
     settings.saveCvars(cvars);
 
