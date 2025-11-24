@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SP_monster_supertank } from '../../../../src/entities/monsters/supertank.js';
-import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../../src/entities/entity.js';
+import { SP_monster_supertank } from '../../../src/entities/monsters/supertank.js';
+import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { createTestContext } from '../../test-helpers.js';
 import { Vec3 } from '@quake2ts/shared';
 

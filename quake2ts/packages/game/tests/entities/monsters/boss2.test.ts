@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SP_monster_boss2 } from '../../../../src/entities/monsters/boss2.js';
-import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../../src/entities/entity.js';
+import { SP_monster_boss2 } from '../../../src/entities/monsters/boss2.js';
+import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_boss2', () => {
@@ -15,7 +15,7 @@ describe('monster_boss2', () => {
 
   it('initializes with correct properties', () => {
     expect(entity.classname).toBe('monster_boss2');
-    expect(entity.health).toBe(2000);
+    expect(entity.health).toBe(3000);
     expect(entity.flags & EntityFlags.Fly).toBe(EntityFlags.Fly);
     expect(entity.movetype).toBe(MoveType.Step);
     expect(entity.solid).toBe(Solid.BoundingBox);

@@ -19,7 +19,7 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront, visible } from '../../ai/perception.js';
-import { monster_fire_bullet, monster_fire_rocket, monster_fire_grenade, monster_fire_heat } from './attack.js';
+import { monster_fire_bullet_v2, monster_fire_rocket, monster_fire_grenade, monster_fire_heat } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
 
 const MONSTER_TICK = 0.1;
@@ -182,12 +182,17 @@ function supertank_fire_machinegun(self: Entity, context: any): void {
     const start = getProjectedOffset(self, SUPERTANK_MACHINEGUN_OFFSET);
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
-    (monster_fire_bullet as any)(self, start, forward, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet_v2(self, start, forward, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 }
 
 
-function supertank_reattack1(self: Entity): void {
-    if (self.enemy && visible(self, self.enemy) && (Math.random() < 0.3 || (self.timestamp && self.timestamp >= (Date.now() / 1000)))) {
+function supertank_reattack1(self: Entity, context: any): void {
+    const traceFn = (start: Vec3, end: Vec3, ignore: Entity, mask: number) => {
+        const tr = context.trace(start, null, null, end, ignore, mask);
+        return { fraction: tr.fraction, entity: tr.ent };
+    };
+
+    if (self.enemy && visible(self, self.enemy, traceFn) && (Math.random() < 0.3 || (self.timestamp && self.timestamp >= (Date.now() / 1000)))) {
         self.monsterinfo.current_move = attack_chain_move;
     } else {
         self.monsterinfo.current_move = attack_chain_end_move;

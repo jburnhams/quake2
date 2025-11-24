@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SP_monster_makron } from '../../../../src/entities/monsters/makron.js';
-import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../../src/entities/entity.js';
+import { SP_monster_makron } from '../../../src/entities/monsters/makron.js';
+import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_makron', () => {
