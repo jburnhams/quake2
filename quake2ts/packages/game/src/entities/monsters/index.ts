@@ -20,6 +20,7 @@ import { registerMonsterSpawns as registerSoldierSpawns } from './soldier.js';
 import { registerSupertankSpawns } from './supertank.js';
 import { registerTankSpawns } from './tank.js';
 import { registerTankCommanderSpawns } from './tankCommander.js';
+import { registerTurretSpawns } from './turret.js';
 
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerSoldierSpawns(registry);
@@ -31,6 +32,7 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerParasiteSpawns(registry);
   registerTankSpawns(registry);
   registerTankCommanderSpawns(registry);
+  registerTurretSpawns(registry);
   registerBrainSpawns(registry);
   registerFlipperSpawns(registry);
   registerChickSpawns(registry);
