@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MessageSystem } from '../../src/hud/messages.js';
 import { Renderer } from '@quake2ts/engine';
+import { getHudLayout } from '../../src/hud/layout.js';
 
 describe('MessageSystem', () => {
   let mockRenderer: Renderer;
@@ -11,33 +12,36 @@ describe('MessageSystem', () => {
       width: 640,
       height: 480,
       drawString: vi.fn(),
+      drawCenterString: vi.fn(),
       drawPic: vi.fn(),
       renderFrame: vi.fn(),
       registerPic: vi.fn(),
       begin2D: vi.fn(),
       end2D: vi.fn(),
       drawfillRect: vi.fn(),
-    };
+    } as unknown as Renderer;
 
     messageSystem = new MessageSystem();
   });
 
   it('should draw center print message', () => {
     const now = 1000;
+    const layout = getHudLayout(640, 480);
     messageSystem.addCenterPrint("Test Message", now);
 
-    messageSystem.drawCenterPrint(mockRenderer, now + 100);
+    messageSystem.drawCenterPrint(mockRenderer, now + 100, layout);
 
-    expect(mockRenderer.drawString).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), "Test Message");
+    expect(mockRenderer.drawCenterString).toHaveBeenCalledWith(expect.any(Number), "Test Message");
   });
 
   it('should not draw expired center print message', () => {
     const now = 1000;
+    const layout = getHudLayout(640, 480);
     messageSystem.addCenterPrint("Test Message", now);
 
-    messageSystem.drawCenterPrint(mockRenderer, now + 4000); // Duration is 3000
+    messageSystem.drawCenterPrint(mockRenderer, now + 4000, layout); // Duration is 3000
 
-    expect(mockRenderer.drawString).not.toHaveBeenCalled();
+    expect(mockRenderer.drawCenterString).not.toHaveBeenCalled();
   });
 
   it('should draw notifications', () => {

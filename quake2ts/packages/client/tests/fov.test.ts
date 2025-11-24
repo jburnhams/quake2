@@ -32,6 +32,7 @@ const mockTrace = vi.fn().mockReturnValue({
 const mockCvars = {
   register: vi.fn(),
   get: vi.fn(),
+  list: vi.fn().mockReturnValue([]), // Added list method
 };
 
 const mockCommands = {
@@ -55,6 +56,9 @@ describe('Client FOV and View', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Ensure list returns empty array by default
+    (mockCvars.list as any).mockReturnValue([]);
 
     // Capture the callback for 'fov' cvar registration
     (mockCvars.register as any).mockImplementation((def: any) => {

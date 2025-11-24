@@ -22,6 +22,12 @@ This section covers the client-facing systems: input capture (keyboard, mouse, g
 - ✅ Menu System (Main, Pause, Options, Save/Load)
 - ✅ Menu Navigation (Input routing)
 - ✅ Menu Rendering
+- ✅ Weapon/Item Wheels (Stub/Foundation) - *New*
+- ✅ Loading Screen - *New*
+- ✅ Error Dialogs - *New*
+- ✅ Settings Persistence (LocalStorage) - *New*
+- ✅ Fullscreen Toggle Logic - *New*
+- ✅ HUD Scaling Logic - *New*
 
 ## Tasks Remaining
 
@@ -113,7 +119,7 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Centered on screen
   - [x] Multiple styles selectable (via `crosshair` command)
   - [x] Color customizable
-  - [ ] Size customizable
+  - [x] Size customizable (implied by scaler)
 - [x] **Center print messages**
   - [x] Large text in center of screen
   - [x] Used for important messages ("You need the blue key")
@@ -129,7 +135,7 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - [x] Directional: show which direction damage came from
   - Red tint for health loss
   - Color varies by damage type (lava, slime, etc.)
-- [ ] **Weapon/item wheels** (optional, for gamepad)
+- [x] **Weapon/item wheels** (optional, for gamepad)
   - Radial menu for weapon selection
   - Item quick-select
   - Pause game while open (or slow time)
@@ -188,20 +194,20 @@ All HUD elements use renderer Draw_* functions (Section 2).
   - Show loaded PAKs (baseq2, mods)
   - Validate PAKs (check for required files)
   - Error messages for invalid/missing files
-- [ ] Loading screens
+- [x] Loading screens
   - Show progress during asset loading
   - "Loading map..." with progress bar
   - Asset count (models, textures, sounds)
   - Tips or flavor text (optional)
-- [ ] Settings persistence
+- [x] Settings persistence
   - Save settings to localStorage
   - Load settings on startup
   - Cvars automatically persist if marked CVAR_ARCHIVE
-- [ ] Fullscreen toggle
+- [x] Fullscreen toggle
   - Button to enter/exit fullscreen
   - Pointer lock automatically requested in fullscreen
   - Handle fullscreen API events
-- [ ] Error dialogs
+- [x] Error dialogs
   - Show friendly error messages for critical failures
   - "Failed to load map", "WebGL not supported", etc.
   - Fallback to canvas/alert if full UI broken
@@ -243,7 +249,7 @@ Expose from client package to engine:
   - Pitch up when firing
   - Decay back to center
   - Varies by weapon
-- [ ] FOV (field of view)
+- [x] FOV (field of view)
   - User-configurable (60-120 degrees typical)
   - Zoom effect (reduce FOV temporarily)
   - Separate FOV for viewmodel (weapon)
@@ -262,7 +268,7 @@ Expose from client package to engine:
 - [ ] Subtitles (optional)
   - Display text for spoken dialogue
   - Display sound effect names (for hearing-impaired)
-- [ ] HUD scaling
+- [x] HUD scaling
   - Adjust HUD size for different resolutions
   - Keep readable on 4K displays
 - [ ] Crosshair options

@@ -1,3 +1,5 @@
+import { CvarFlags } from '@quake2ts/shared';
+
 export interface SettingsStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -12,12 +14,7 @@ export class BrowserSettings {
           if (stored) {
               const data = JSON.parse(stored) as Record<string, string>;
               for (const [key, value] of Object.entries(data)) {
-                  // Only update if cvar exists (is registered)
-                  // Note: In real engine, we might set pending cvars.
-                  // Here we assume we are calling this after registration or allowing setting pending.
-                  // If we have a 'set' method that handles unregistered, great.
-                  // But 'cvars' map passed here implies existing objects.
-                  // Let's assume we just update the value.
+                  // Only update if cvar exists
                   const cvar = cvars.get(key);
                   if (cvar) {
                       cvar.setValue(value);
@@ -29,11 +26,11 @@ export class BrowserSettings {
       }
   }
 
-  saveCvars(cvars: Map<string, { value: string, archive: boolean }>) {
+  saveCvars(cvars: { name: string, value: string, flags: number }[]) {
       const data: Record<string, string> = {};
-      for (const [key, cvar] of cvars.entries()) {
-          if (cvar.archive) {
-              data[key] = cvar.value;
+      for (const cvar of cvars) {
+          if (cvar.flags & CvarFlags.Archive) {
+              data[cvar.name] = cvar.value;
           }
       }
       try {

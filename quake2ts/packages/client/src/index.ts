@@ -9,7 +9,7 @@ import {
   PlaybackState,
   EngineHost,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
@@ -23,12 +23,16 @@ import { Cycle_Crosshair } from './hud/crosshair.js';
 import { MainMenuFactory, MainMenuOptions } from './ui/menu/main.js';
 import { SaveLoadMenuFactory } from './ui/menu/saveLoad.js';
 import { MenuSystem } from './ui/menu/system.js';
-import { SaveStorage } from '@quake2ts/game';
+import { SaveStorage, PlayerClient } from '@quake2ts/game';
 import { OptionsMenuFactory } from './ui/menu/options.js';
 import { MapsMenuFactory } from './ui/menu/maps.js';
 import { PauseMenuFactory } from './ui/menu/pause.js';
 import { Draw_Menu } from './ui/menu/render.js';
 import { InputBindings } from './input/bindings.js';
+import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
+import { LoadingScreen } from './ui/loading/screen.js';
+import { ErrorDialog } from './ui/error.js';
+import { WheelMenuSystem } from './ui/wheels/index.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -88,6 +92,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   Init(initial?: GameFrameResult<PredictionState>): void;
   Shutdown(): void;
   DrawHUD(stats: FrameRenderStats, timeMs: number): void;
+
+  // New UI components
+  readonly loadingScreen: LoadingScreen;
+  readonly errorDialog: ErrorDialog;
 }
 
 export function createClient(imports: ClientImports): ClientExports {
@@ -99,6 +107,12 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
+
+  // Initialize UI components
+  const loadingScreen = new LoadingScreen();
+  const errorDialog = new ErrorDialog();
+  const wheelMenuSystem = new WheelMenuSystem();
+  const settings = new BrowserSettings(new LocalStorageSettings());
 
   // Menu Factories
   let pauseMenuFactory: PauseMenuFactory | undefined;
@@ -125,6 +139,18 @@ export function createClient(imports: ClientImports): ClientExports {
   if (imports.host) {
     optionsFactory = new OptionsMenuFactory(menuSystem, imports.host);
     pauseMenuFactory = new PauseMenuFactory(menuSystem, optionsFactory, imports.host);
+
+    // Load Settings
+    const cvarsMap = new Map<string, { value: string, setValue: (v: string) => void }>();
+    if (imports.host.cvars) {
+        for (const cvar of imports.host.cvars.list()) {
+            cvarsMap.set(cvar.name, {
+                value: cvar.string,
+                setValue: (v) => imports.host!.cvars.setValue(cvar.name, v)
+            });
+        }
+        settings.loadCvars(cvarsMap);
+    }
   }
 
   if (imports.host?.commands) {
@@ -163,9 +189,9 @@ export function createClient(imports: ClientImports): ClientExports {
       imports.host.cvars.register({
         name: 'fov',
         defaultValue: '90',
-        flags: 0, // CvarFlags.None
+        flags: CvarFlags.Archive,
         onChange: (cvar) => {
-          const f = cvar.number; // Use helper getter
+          const f = cvar.number;
           if (!isNaN(f)) {
             fovValue = Math.max(1, Math.min(179, f));
           }
@@ -176,7 +202,7 @@ export function createClient(imports: ClientImports): ClientExports {
       // Initialize fovValue from cvar
       const initialFov = imports.host.cvars.get('fov');
       if (initialFov) {
-        const f = initialFov.number; // Use helper getter
+        const f = initialFov.number;
          if (!isNaN(f)) {
           fovValue = Math.max(1, Math.min(179, f));
         }
@@ -185,6 +211,9 @@ export function createClient(imports: ClientImports): ClientExports {
   }
 
   const clientExports: ClientExports = {
+    loadingScreen,
+    errorDialog,
+
     init(initial) {
       this.Init(initial);
     },
@@ -197,27 +226,31 @@ export function createClient(imports: ClientImports): ClientExports {
 
       // Initialize HUD assets if asset manager is available
       if (imports.engine.assets && imports.engine.renderer) {
-         Init_Hud(imports.engine.renderer, imports.engine.assets);
+         loadingScreen.start(100, 'Loading assets...'); // Mock total
+         // Actually Init_Hud is async. We should await it or handle promise.
+         // ClientExports.Init is void.
+         Init_Hud(imports.engine.renderer, imports.engine.assets).then(() => {
+             loadingScreen.finish();
+         });
       }
 
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
+
+      // Setup global events
+      if (typeof document !== 'undefined') {
+          document.addEventListener('fullscreenchange', () => {
+              if (document.fullscreenElement) {
+                   if (!menuSystem.isActive()) {
+                       document.body.requestPointerLock?.();
+                   }
+              }
+          });
+      }
     },
 
     predict(command: UserCommand): PredictionState {
-      // If menu is active, we might want to zero out movement in the command
-      // However, predict() is about physics. The input generation (which we don't control here)
-      // should probably have suppressed movement keys if menu was active.
-      // But we can double check.
       if (menuSystem.isActive()) {
-          // command.forwardmove = 0;
-          // command.sidemove = 0;
-          // command.upmove = 0;
-          // command.buttons = 0;
-          // Note: doing this here might cause prediction errors if the server *doesn't* know menu is open.
-          // But usually server doesn't know about client menus.
-          // Quake 2 pauses single player when menu is open.
-          // In MP, you keep moving if you hold keys.
-          // Ideally, InputController handles this.
+          // Suppress movement if desired
       }
       return prediction.enqueueCommand(command);
     },
@@ -225,10 +258,8 @@ export function createClient(imports: ClientImports): ClientExports {
     handleInput(key: string, down: boolean): boolean {
         if (!menuSystem.isActive()) return false;
 
-        if (!down) return true; // Consume key up events if menu is active to prevent game actions
+        if (!down) return true;
 
-        // Map key codes to menu actions
-        // This is a simple mapping. A full implementation would check bindings or use a standard UI mapping.
         const lowerKey = key.toLowerCase();
 
         if (lowerKey === 'arrowup' || lowerKey === 'w') {
@@ -242,49 +273,46 @@ export function createClient(imports: ClientImports): ClientExports {
         } else if (lowerKey === 'enter' || lowerKey === ' ') {
             return menuSystem.handleInput('select');
         } else if (lowerKey === 'escape') {
-             // Let the togglemenu command handle escape if it's bound.
-             // But if we are in a submenu, escape acts as 'back'.
-             // The togglemenu command usually closes the *root* menu.
-             // If we have depth > 1, back.
              if (menuSystem.getState().activeMenu?.parent) {
                  return menuSystem.handleInput('back');
              }
-             // If at root menu, return false so the togglemenu binding (ESC) can trigger to close it.
              return false;
         } else if (key.length === 1) {
             return menuSystem.handleInput('char', key);
         } else if (key === 'Backspace') {
-            return menuSystem.handleInput('left'); // Use left as backspace for now as per system.ts
+            return menuSystem.handleInput('left');
         }
 
-        return true; // Consume other keys while menu is open
+        return true;
     },
 
     toggleMenu() {
         if (menuSystem.isActive()) {
             menuSystem.closeAll();
+            // Save settings when closing menu
+            if (imports.host?.cvars) {
+                 const list = imports.host.cvars.list().map(c => ({
+                     name: c.name,
+                     value: c.string,
+                     flags: c.flags
+                 }));
+                 settings.saveCvars(list);
+            }
         } else if (pauseMenuFactory) {
             menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
         }
     },
 
     createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
-        // Reuse the client's menuSystem so we can manage it globally
-
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
-        // Ensure optionsFactory is initialized (it might be undefined if host wasn't passed, but createMainMenu implies we have a host usually?)
-        // If imports.host is missing, we create a dummy one or fail?
-        // Let's create a local one if missing.
         let optsFactory = optionsFactory;
         if (!optsFactory) {
             if (!imports.host) {
-                // Should potentially throw or use a dummy host, but to avoid crash:
                 throw new Error('Cannot create Main Menu: EngineHost is missing');
             }
             optsFactory = new OptionsMenuFactory(menuSystem, imports.host);
         }
 
-        // We need VFS for MapsMenuFactory.
         const assets = imports.engine.assets;
         const vfsShim = {
              findByExtension: (ext: string) => assets ? assets.listFiles(ext) : []
@@ -338,7 +366,12 @@ export function createClient(imports: ClientImports): ClientExports {
         camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
         camera.angles = vec3.fromValues(viewangles.x, viewangles.y, viewangles.z);
         camera.fov = isZooming ? 40 : fovValue;
-        camera.aspect = 4 / 3;
+        camera.aspect = 4 / 3; // Default aspect
+
+        // Update aspect from renderer
+        if (imports.engine.renderer) {
+            camera.aspect = imports.engine.renderer.width / imports.engine.renderer.height;
+        }
       }
 
       if (imports.engine.renderer && lastRendered && lastRendered.client) {
@@ -353,7 +386,6 @@ export function createClient(imports: ClientImports): ClientExports {
         };
         const timeMs = sample.latest?.timeMs ?? 0;
 
-        // Call DrawHUD
         this.DrawHUD(stats, timeMs);
       }
 
@@ -361,53 +393,53 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
-        // Always draw menu if active, even if no renderer (though we need renderer to draw)
         if (!imports.engine.renderer) return;
 
-        // Draw Menu Overlay
-        if (menuSystem.isActive()) {
-            // Assume full screen dimensions
-            Draw_Menu(imports.engine.renderer, menuSystem.getState(), imports.engine.renderer.width, imports.engine.renderer.height);
-            // If menu covers screen, we might skip HUD?
-            // In Q2, HUD is hidden if full screen menu? Usually yes.
-            // But for Pause Menu (overlay), HUD might be visible underneath.
-            // Let's draw HUD first, then Menu on top.
+        if (lastRendered && lastRendered.client) {
+             const playerState: PlayerState = {
+                origin: lastRendered.origin,
+                velocity: lastRendered.velocity,
+                viewAngles: lastRendered.viewangles,
+                onGround: hasPmFlag(lastRendered.pmFlags, PmFlag.OnGround),
+                waterLevel: lastRendered.waterlevel,
+                mins: { x: -16, y: -16, z: -24 },
+                maxs: { x: 16, y: 16, z: 32 },
+                damageAlpha: lastRendered.damageAlpha ?? 0,
+                damageIndicators: lastRendered.damageIndicators ?? [],
+                blend: lastRendered.blend ?? [0, 0, 0, 0],
+                pickupIcon: lastRendered.pickupIcon,
+                centerPrint: messageSystem['centerPrintMsg']?.text, // Hack to get text for legacy state? No, Draw_Hud uses messageSystem directly now.
+                notify: undefined
+            };
+
+            const playbackState = demoPlayback.getState();
+            const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
+                ? (demoHandler.latestFrame?.serverFrame || 0) * 100
+                : timeMs;
+
+            Draw_Hud(
+              imports.engine.renderer,
+              playerState,
+              lastRendered.client,
+              lastRendered.health,
+              lastRendered.armor,
+              lastRendered.ammo,
+              stats,
+              messageSystem,
+              hudTimeMs
+            );
         }
 
-        if (!lastRendered || !lastRendered.client) return;
+        if (menuSystem.isActive()) {
+            Draw_Menu(imports.engine.renderer, menuSystem.getState(), imports.engine.renderer.width, imports.engine.renderer.height);
+        }
 
-        const playerState: PlayerState = {
-            origin: lastRendered.origin,
-            velocity: lastRendered.velocity,
-            viewAngles: lastRendered.viewangles,
-            onGround: hasPmFlag(lastRendered.pmFlags, PmFlag.OnGround),
-            waterLevel: lastRendered.waterlevel,
-            mins: { x: -16, y: -16, z: -24 },
-            maxs: { x: 16, y: 16, z: 32 },
-            damageAlpha: lastRendered.damageAlpha ?? 0,
-            damageIndicators: lastRendered.damageIndicators ?? [],
-            blend: lastRendered.blend ?? [0, 0, 0, 0],
-            pickupIcon: lastRendered.pickupIcon
-        };
+        if (lastRendered && lastRendered.client) {
+            wheelMenuSystem.render(imports.engine.renderer, imports.engine.renderer.width, imports.engine.renderer.height, lastRendered.client as PlayerClient);
+        }
 
-        const playbackState = demoPlayback.getState();
-
-        // Use demo time if playing, else game time
-        const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
-            ? (demoHandler.latestFrame?.serverFrame || 0) * 100 // Approximate
-            : timeMs;
-
-        Draw_Hud(
-          imports.engine.renderer,
-          playerState,
-          lastRendered.client,
-          lastRendered.health,
-          lastRendered.armor,
-          lastRendered.ammo,
-          stats,
-          messageSystem,
-          hudTimeMs
-        );
+        errorDialog.render(imports.engine.renderer);
+        loadingScreen.render(imports.engine.renderer);
     },
 
     shutdown() {
@@ -417,6 +449,15 @@ export function createClient(imports: ClientImports): ClientExports {
     Shutdown() {
       latestFrame = undefined;
       lastRendered = undefined;
+      // Save settings on shutdown
+       if (imports.host?.cvars) {
+             const list = imports.host.cvars.list().map(c => ({
+                 name: c.name,
+                 value: c.string,
+                 flags: c.flags
+             }));
+             settings.saveCvars(list);
+        }
     },
 
     get prediction(): ClientPrediction {
@@ -446,28 +487,23 @@ export function createClient(imports: ClientImports): ClientExports {
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
 
-      // Precache assets
       if (imports.engine.assets) {
           const assets = imports.engine.assets;
 
           if (index >= ConfigStringIndex.Models && index < ConfigStringIndex.Models + MAX_MODELS) {
               const ext = value.split('.').pop()?.toLowerCase();
               if (ext === 'md2') {
-                  // We don't have texture dependencies easily available here without parsing more,
-                  // or assuming a convention (like players). For now, just load geometry.
                   assets.loadMd2Model(value).catch(e => console.warn(`Failed to precache MD2 ${value}`, e));
               } else if (ext === 'sp2') {
                   assets.loadSprite(value).catch(e => console.warn(`Failed to precache Sprite ${value}`, e));
               } else if (ext === 'md3') {
                   assets.loadMd3Model(value).catch(e => console.warn(`Failed to precache MD3 ${value}`, e));
               }
-              // Inline BSP models (begins with *) are handled by map loader usually.
           } else if (index >= ConfigStringIndex.Sounds && index < ConfigStringIndex.Sounds + MAX_SOUNDS) {
                assets.loadSound(value).catch(e => console.warn(`Failed to precache sound ${value}`, e));
           } else if (index >= ConfigStringIndex.Images && index < ConfigStringIndex.Images + MAX_IMAGES) {
                assets.loadTexture(value).then(texture => {
                    if (imports.engine.renderer) {
-                       // Register the texture with the renderer so it's ready for Draw_Pic
                        imports.engine.renderer.registerTexture(value, texture);
                    }
                }).catch(e => console.warn(`Failed to precache image ${value}`, e));

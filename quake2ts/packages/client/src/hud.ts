@@ -10,6 +10,7 @@ import { MessageSystem } from './hud/messages.js';
 import { Draw_Blends } from './hud/blends.js';
 import { Draw_Pickup } from './hud/pickup.js';
 import { Draw_StatusBar } from './hud/statusbar.js';
+import { getHudLayout } from './hud/layout.js';
 
 const hudNumberPics: Pic[] = [];
 let numberWidth = 0;
@@ -52,17 +53,22 @@ export const Draw_Hud = (
         renderer.drawfillRect(0, 0, renderer.width, renderer.height, [1, 0, 0, ps.damageAlpha]);
     }
 
-    Draw_StatusBar(renderer, client, health, armor, ammo, hudNumberPics, numberWidth, timeMs);
+    const layout = getHudLayout(renderer.width, renderer.height);
+
+    Draw_StatusBar(renderer, client, health, armor, ammo, hudNumberPics, numberWidth, timeMs, layout);
 
     Draw_Pickup(renderer, ps);
 
     Draw_Damage(renderer, ps);
     Draw_Diagnostics(renderer, stats);
 
-    messageSystem.drawCenterPrint(renderer, timeMs);
+    messageSystem.drawCenterPrint(renderer, timeMs, layout);
     messageSystem.drawNotifications(renderer, timeMs);
 
     if (ps.centerPrint) {
+        // Use layout for position?
+        // Or keep hardcoded logic relative to layout.
+        // Assuming renderer.height/2 is always center.
         renderer.drawCenterString(renderer.height / 2 - 20, ps.centerPrint);
     }
 

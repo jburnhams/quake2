@@ -1,5 +1,5 @@
 import { Renderer } from '@quake2ts/engine';
-import { HUD_LAYOUT } from './layout.js';
+import { getHudLayout } from './layout.js';
 
 interface Message {
   text: string;
@@ -35,13 +35,8 @@ export class MessageSystem {
     }
   }
 
-  drawCenterPrint(renderer: Renderer, now: number) {
+  drawCenterPrint(renderer: Renderer, now: number, layout: ReturnType<typeof getHudLayout>) {
     if (!this.centerPrintMsg) return;
-
-    // NOTE: Using a simple time check here.
-    // In original Quake 2, centerprint messages persist until explicitly cleared or replaced?
-    // Actually, `scr_center_time` controls it.
-    // We stick to duration for now as per previous implementation logic.
 
     if (now > this.centerPrintMsg.startTime + this.centerPrintMsg.duration) {
       this.centerPrintMsg = null;
@@ -49,12 +44,11 @@ export class MessageSystem {
     }
 
     // Draw centered text
-    // Assuming default font size is 8x8
     const width = this.centerPrintMsg.text.length * 8;
-    const x = (renderer.width - width) / 2;
-    const y = HUD_LAYOUT.CENTER_PRINT_Y;
+    // We ignore layout.CENTER_PRINT_X because drawCenterString calculates X automatically
+    const y = layout.CENTER_PRINT_Y;
 
-    renderer.drawString(x, y, this.centerPrintMsg.text);
+    renderer.drawCenterString(y, this.centerPrintMsg.text);
   }
 
   drawNotifications(renderer: Renderer, now: number) {
