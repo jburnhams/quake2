@@ -4,6 +4,12 @@ import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
 
+let colorblindMode = false;
+
+export const Set_ColorblindMode = (enabled: boolean) => {
+    colorblindMode = enabled;
+};
+
 export const Draw_StatusBar = (
     renderer: Renderer,
     client: PlayerClient,
@@ -16,9 +22,16 @@ export const Draw_StatusBar = (
     layout: ReturnType<typeof getHudLayout>
 ) => {
     // Draw Health
-    const healthColor: [number, number, number, number] | undefined = health <= 25
-        ? [1, 0, 0, 1] // Red for low health
-        : undefined;
+    let healthColor: [number, number, number, number] | undefined = undefined;
+
+    if (health <= 25) {
+        if (colorblindMode) {
+            // Use Blue/Cyan for low health in colorblind mode instead of Red
+            healthColor = [0.2, 0.6, 1, 1];
+        } else {
+            healthColor = [1, 0, 0, 1]; // Red for low health
+        }
+    }
 
     if (hudNumberPics.length > 0) {
         Draw_Number(renderer, layout.HEALTH_X, layout.HEALTH_Y, health, hudNumberPics, numberWidth, healthColor);

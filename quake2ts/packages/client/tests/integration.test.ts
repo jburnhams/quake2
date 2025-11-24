@@ -12,6 +12,7 @@ const mockRenderer = {
     drawString: vi.fn(),
     drawCenterString: vi.fn(),
     registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24 } as any),
+    renderFrame: vi.fn(),
     width: 640,
     height: 480
 } as unknown as Renderer;
@@ -108,6 +109,7 @@ describe('Client Integration', () => {
         client.render(sample as any);
 
         // HUD drawing should be triggered
+        expect(mockRenderer.renderFrame).toHaveBeenCalled();
         expect(mockRenderer.begin2D).toHaveBeenCalled();
         expect(mockRenderer.end2D).toHaveBeenCalled();
         // Since we mocked registerPic to resolve, but we haven't loaded assets in this test context explicitly via Init_Hud,

@@ -7,8 +7,9 @@ import { SpriteLoader, type SpriteModel } from './sprite.js';
 import { VirtualFileSystem, VirtualFileHandle } from './vfs.js';
 import { parsePcx } from './pcx.js';
 import { parseTga } from './tga.js';
+import { BspLoader, type BspMap } from './bsp.js';
 
-type AssetType = 'texture' | 'model' | 'sound' | 'sprite';
+type AssetType = 'texture' | 'model' | 'sound' | 'sprite' | 'map';
 
 interface DependencyNode {
   readonly dependencies: Set<string>;
@@ -93,7 +94,9 @@ export class AssetManager {
   private readonly md2: Md2Loader;
   private readonly md3: Md3Loader;
   private readonly sprite: SpriteLoader;
+  private readonly bsp: BspLoader;
   private palette: Uint8Array;
+  private readonly maps = new Map<string, BspMap>();
 
   constructor(private readonly vfs: VirtualFileSystem, options: AssetManagerOptions = {}) {
     this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
@@ -102,6 +105,7 @@ export class AssetManager {
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
     this.sprite = new SpriteLoader(vfs);
+    this.bsp = new BspLoader(vfs);
 
     // Default grayscale palette until loaded
     this.palette = new Uint8Array(768);
@@ -185,6 +189,10 @@ export class AssetManager {
     return model;
   }
 
+  getMd2Model(path: string): Md2Model | undefined {
+      return this.md2.get(path);
+  }
+
   async loadMd3Model(path: string, textureDependencies: readonly string[] = []): Promise<Md3Model> {
     const modelKey = this.makeKey('model', path);
     const dependencyKeys = textureDependencies.map((dep) => this.makeKey('texture', dep));
@@ -198,12 +206,32 @@ export class AssetManager {
     return model;
   }
 
+  getMd3Model(path: string): Md3Model | undefined {
+      return this.md3.get(path);
+  }
+
   async loadSprite(path: string): Promise<SpriteModel> {
     const spriteKey = this.makeKey('sprite', path);
     this.dependencyTracker.register(spriteKey);
     const sprite = await this.sprite.load(path);
     this.dependencyTracker.markLoaded(spriteKey);
     return sprite;
+  }
+
+  async loadMap(path: string): Promise<BspMap> {
+      const mapKey = this.makeKey('map', path);
+      if (this.maps.has(path)) {
+          return this.maps.get(path)!;
+      }
+      this.dependencyTracker.register(mapKey);
+      const map = await this.bsp.load(path);
+      this.maps.set(path, map);
+      this.dependencyTracker.markLoaded(mapKey);
+      return map;
+  }
+
+  getMap(path: string): BspMap | undefined {
+      return this.maps.get(path);
   }
 
   listFiles(extension: string): VirtualFileHandle[] {
@@ -214,6 +242,11 @@ export class AssetManager {
     this.textures.clear();
     this.audio.clearAll();
     this.dependencyTracker.reset();
+    // Maps are heavy, maybe clear them or cache strategically?
+    // For now, let's keep them cached as VFS is already heavy.
+    // Actually, level change implies new map, old map memory can be freed?
+    // Let's clear maps on level change to be safe with memory.
+    this.maps.clear();
   }
 
   private makeKey(type: AssetType, path: string): string {

@@ -18,6 +18,7 @@ const mockRenderer = {
   drawfillRect: vi.fn(),
   drawCenterString: vi.fn(),
   drawString: vi.fn(),
+  renderFrame: vi.fn(),
   width: 800,
   height: 600,
 } as unknown as Renderer;

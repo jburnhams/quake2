@@ -17,6 +17,7 @@ export interface Md3Header {
   readonly ofsTags: number;
   readonly ofsSurfaces: number;
   readonly ofsEnd: number;
+  readonly magic?: number; // Compatibility shim
 }
 
 export interface Md3Frame {
@@ -138,6 +139,7 @@ function parseHeader(view: DataView): Md3Header {
     ofsTags,
     ofsSurfaces,
     ofsEnd,
+    magic: ident
   };
 }
 
@@ -313,10 +315,21 @@ export function parseMd3(buffer: ArrayBufferLike): Md3Model {
 }
 
 export class Md3Loader {
+  private readonly cache = new Map<string, Md3Model>();
+
   constructor(private readonly vfs: VirtualFileSystem) {}
 
   async load(path: string): Promise<Md3Model> {
+    if (this.cache.has(path)) {
+        return this.cache.get(path)!;
+    }
     const data = await this.vfs.readFile(path);
-    return parseMd3(data.slice().buffer);
+    const model = parseMd3(data.slice().buffer);
+    this.cache.set(path, model);
+    return model;
+  }
+
+  get(path: string): Md3Model | undefined {
+      return this.cache.get(path);
   }
 }

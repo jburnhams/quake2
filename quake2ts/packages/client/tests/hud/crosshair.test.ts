@@ -45,7 +45,10 @@ describe('Crosshair', () => {
         expect(index).toBe(2);
 
         index = Cycle_Crosshair();
-        expect(index).toBe(0);
+        expect(index).toBe(-1); // Disabled state
+
+        index = Cycle_Crosshair();
+        expect(index).toBe(0); // Back to first
     });
 
     it('should draw the selected crosshair', async () => {
