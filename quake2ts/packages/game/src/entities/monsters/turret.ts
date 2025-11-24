@@ -67,6 +67,8 @@ function turret_fire(self: Entity, context: any): void {
     // Aim at enemy
     const enemyDir = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
+    context.engine.sound?.(self, 0, 'turret/fire.wav', 1, 1, 0);
+
     // Fire blaster
     monster_fire_blaster(self, start, enemyDir, 2, 1000, 1, 0, context);
 }
@@ -79,7 +81,8 @@ function turret_pain(self: Entity): void {
     self.monsterinfo.current_move = pain_move;
 }
 
-function turret_die(self: Entity): void {
+function turret_die(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'turret/death.wav', 1, 1, 0);
     self.monsterinfo.current_move = death_move;
 }
 
@@ -175,6 +178,8 @@ export function SP_monster_turret(self: Entity, context: SpawnContext): void {
         if (context.entities.timeSeconds < self.pain_debounce_time) return;
         self.pain_debounce_time = context.entities.timeSeconds + 3;
 
+        context.entities.sound?.(self, 0, 'turret/pain.wav', 1, 1, 0);
+
         // Play pain animation
         self.monsterinfo.current_move = pain_move;
     };
@@ -185,6 +190,7 @@ export function SP_monster_turret(self: Entity, context: SpawnContext): void {
         if (self.health <= -40) {
             self.deadflag = DeadFlag.Dead;
             self.solid = Solid.Not;
+            context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
             throwGibs(context.entities, self.origin, damage);
             context.entities.free(self);
             return;
@@ -192,13 +198,16 @@ export function SP_monster_turret(self: Entity, context: SpawnContext): void {
 
         self.deadflag = DeadFlag.Dying;
         self.solid = Solid.Not;
-        turret_die(self);
+        turret_die(self, context.entities);
     };
 
     self.monsterinfo.stand = turret_stand;
     self.monsterinfo.walk = turret_run;
     self.monsterinfo.run = turret_run;
     self.monsterinfo.attack = turret_attack;
+    self.monsterinfo.sight = (self, other) => {
+        context.entities.sound?.(self, 0, 'turret/sight.wav', 1, 1, 0);
+    }
 
     self.think = monster_think;
 

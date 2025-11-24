@@ -86,7 +86,8 @@ function soldier_pain(self: Entity): void {
   self.monsterinfo.current_move = pain_move;
 }
 
-function soldier_die(self: Entity): void {
+function soldier_die(self: Entity, context: any): void {
+  context.engine.sound?.(self, 0, 'soldier/death1.wav', 1, 1, 0);
   self.monsterinfo.current_move = death_move;
 }
 
@@ -122,6 +123,8 @@ function soldier_fire_blaster(self: Entity, context: any): void {
   const damage = 5;
   const speed = 600;
 
+  // context.engine.sound?.(self, 0, 'soldier/solatck1.wav', 1, 1, 0); // Blaster sound usually on projectile spawn?
+
   monster_fire_blaster(self, start, forward, damage, speed, 0, 0, context, DamageMod.BLASTER);
 }
 
@@ -136,6 +139,8 @@ function soldier_fire_ssg(self: Entity, context: any): void {
   const hspread = 0.15;
   const vspread = 0.15;
 
+  context.engine.sound?.(self, 0, 'soldier/solatck2.wav', 1, 1, 0);
+
   monster_fire_shotgun(self, start, forward, damage, kick, hspread, vspread, count, 0, context, DamageMod.SSHOTGUN);
 }
 
@@ -148,6 +153,8 @@ function soldier_fire_machinegun(self: Entity, context: any): void {
   // Little spread
   const hspread = 0.05;
   const vspread = 0.05;
+
+  context.engine.sound?.(self, 0, 'soldier/solatck3.wav', 1, 1, 0);
 
   monster_fire_bullet(self, start, forward, damage, kick, hspread, vspread, 0, context, DamageMod.MACHINEGUN);
 }
@@ -296,6 +303,12 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }
+
+    if (Math.random() < 0.5) {
+        context.entities.sound?.(self, 0, 'soldier/pain1.wav', 1, 1, 0);
+    } else {
+        context.entities.sound?.(self, 0, 'soldier/pain2.wav', 1, 1, 0);
+    }
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -303,18 +316,26 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -40) {
+        context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
         throwGibs(context.entities, self.origin, damage);
         context.entities.free(self);
         return;
     }
 
-    soldier_die(self);
+    soldier_die(self, context.entities);
   };
 
   self.monsterinfo.stand = soldier_stand;
   self.monsterinfo.walk = soldier_walk;
   self.monsterinfo.run = soldier_run;
   self.monsterinfo.attack = soldier_attack;
+  self.monsterinfo.sight = (self, other) => {
+      if (Math.random() < 0.5) {
+          context.entities.sound?.(self, 0, 'soldier/sight1.wav', 1, 1, 0);
+      } else {
+          context.entities.sound?.(self, 0, 'soldier/sight2.wav', 1, 1, 0);
+      }
+  };
 
   self.think = monster_think;
 

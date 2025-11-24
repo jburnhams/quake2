@@ -22,12 +22,15 @@ describe('monster_turret', () => {
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
+    const soundMock = vi.fn();
     sys = {
         spawn: () => new Entity(1),
         modelIndex: (s: string) => 1,
         timeSeconds: 10,
         multicast: vi.fn(),
         free: vi.fn(),
+        engine: { sound: soundMock },
+        sound: soundMock,
     } as unknown as EntitySystem;
 
     context = {

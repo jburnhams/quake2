@@ -23,6 +23,7 @@ describe('monster_gunner', () => {
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
+    const soundMock = vi.fn();
     sys = {
         spawn: () => new Entity(1),
         modelIndex: (s: string) => 1,
@@ -30,6 +31,8 @@ describe('monster_gunner', () => {
         multicast: vi.fn(),
         scheduleThink: vi.fn(),
         finalizeSpawn: vi.fn(),
+        engine: { sound: soundMock },
+        sound: soundMock,
     } as unknown as EntitySystem;
 
     context = {

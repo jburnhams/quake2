@@ -24,8 +24,10 @@ describe('monster_soldier', () => {
 
   beforeEach(() => {
     // Basic mock of EntitySystem and SpawnContext
+    const soundMock = vi.fn();
     const engineMock = {
         modelIndex: vi.fn().mockReturnValue(1),
+        sound: soundMock,
     } as unknown as GameEngine;
 
     sys = {
@@ -33,6 +35,8 @@ describe('monster_soldier', () => {
         modelIndex: (s: string) => 1,
         timeSeconds: 10,
         multicast: vi.fn(),
+        engine: engineMock,
+        sound: soundMock,
     } as unknown as EntitySystem;
 
     context = {
