@@ -51,7 +51,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - Run game frame (`ge->RunFrame`).
   - Send updates (`SV_SendClientMessages`).
 - [x] **Client Management**: Implement `client_t` structure, connection handshakes, and `SV_DirectConnect`.
-- [ ] **Delta Compression**: Implement `MSG_WriteDeltaEntity` to send only changed entity fields (crucial for bandwidth).
+- [x] **Delta Compression**: Implement `MSG_WriteDeltaEntity` to send only changed entity fields (crucial for bandwidth).
 
 ### Phase 3: Client Refactoring (CGame)
 - [ ] **CGame Interface**: Define `cgame_export_t` and `cgame_import_t` interfaces in TypeScript.
