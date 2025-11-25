@@ -149,6 +149,42 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     sys.finalizeSpawn(bolt);
 }
 
+// =================================================================
+// BFG Explosion Laser Spawner (g_weapon.c: bfg_explode)
+// =================================================================
+function bfg_laser_think(self: Entity, sys: EntitySystem) {
+    if (!self.owner) {
+        sys.free(self);
+        return;
+    }
+
+    const targets = sys.findByRadius(self.origin, 1000);
+    for (const target of targets) {
+        if (target === self.owner || !target.takedamage) {
+            continue;
+        }
+
+        const trace = sys.trace(self.origin, null, null, target.origin, self, 0x10020002);
+        if (trace.fraction < 1.0 && trace.ent !== target) {
+            continue;
+        }
+
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, self.origin, target.origin);
+
+        T_Damage(
+            target as any, self as any, self.owner as any, self.velocity, target.origin, ZERO_VEC3,
+            5 + Math.floor(Math.random() * 6), 1, DamageFlags.ENERGY, DamageMod.BFG_LASER, sys.multicast.bind(sys)
+        );
+    }
+
+    self.count = (self.count || 0) + 1;
+    if (self.count >= 5) {
+        sys.free(self);
+    } else {
+        self.nextthink = sys.timeSeconds + 0.1;
+    }
+}
+
 export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, damageRadius: number) {
     const bfgBall = sys.spawn();
     bfgBall.classname = 'bfg_ball';
@@ -177,47 +213,37 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
         // Secondary lasers
         if (self.owner) {
-            const targets = sys.findByRadius(self.origin, 1000);
-            const playerOrigin = self.owner.origin; // Ideally use eye position
-
-            for (const target of targets) {
-                if (target === self.owner || !target.takedamage) continue;
-
-                const tr = sys.trace(playerOrigin, null, null, target.origin, self.owner, 0x00000001 | 0x00000002);
-
-                if (tr.ent !== target && tr.fraction < 1.0) {
-                     continue; // Blocked
-                }
-
-                // Deal damage
-                 const dir = normalizeVec3(subtractVec3(target.origin, self.origin));
-                 let laserDamage = 10;
-
-                 T_Damage(
-                    target as any,
-                    self as any,
-                    self.owner as any,
-                    dir,
-                    target.origin,
-                    ZERO_VEC3,
-                    laserDamage,
-                    10,
-                    DamageFlags.ENERGY,
-                    DamageMod.BFG_LASER,
-                    sys.multicast.bind(sys)
-                );
-
-                // Laser effect
-                sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, playerOrigin, target.origin);
-            }
+            const laser = sys.spawn();
+            laser.owner = self.owner;
+            laser.origin = self.origin;
+            laser.think = (self: Entity) => bfg_laser_think(self, sys);
+            sys.scheduleThink(laser, 0.1);
         }
 
         sys.free(self);
     };
 
-    // BFG animation think
     bfgBall.think = (self: Entity) => {
-        // Just visual effects or sound updates here
+        const targets = sys.findByRadius(self.origin, 256);
+        let selectedTarget = null;
+        for (const target of targets) {
+            if (target !== self.owner && target.takedamage) {
+                selectedTarget = target;
+                break;
+            }
+        }
+
+        if (selectedTarget) {
+            const trace = sys.trace(self.origin, null, null, selectedTarget.origin, self, 0x10020002);
+            if (trace.fraction >= 1.0 || trace.ent === selectedTarget) {
+                sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BFG_LASER, self.origin, selectedTarget.origin);
+                T_Damage(
+                    selectedTarget as any, self as any, self.owner as any, self.velocity, selectedTarget.origin, ZERO_VEC3,
+                    5, 1, DamageFlags.ENERGY, DamageMod.BFG_LASER, sys.multicast.bind(sys)
+                );
+            }
+        }
+
         self.nextthink = sys.timeSeconds + 0.1;
     };
     sys.scheduleThink(bfgBall, sys.timeSeconds + 0.1);
