@@ -25,7 +25,11 @@ describe('EngineRuntime', () => {
       shutdown: vi.fn(),
     };
 
-    const runtime = createEngineRuntime(engine, game, client, {
+    const audioOptions = {
+      registry: {} as any,
+      system: {} as any,
+    };
+    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
       loop: { schedule: (cb) => scheduled.push(cb), fixedDeltaMs: 25, now: () => 100 },
     });
 
@@ -61,7 +65,11 @@ describe('EngineRuntime', () => {
       shutdown: vi.fn(),
     };
 
-    const runtime = createEngineRuntime(engine, game, client, {
+    const audioOptions = {
+      registry: {} as any,
+      system: {} as any,
+    };
+    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
       loop: { schedule: () => {}, fixedDeltaMs: 25, now: () => timeMs },
     });
 

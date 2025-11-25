@@ -17,6 +17,7 @@ import type { PredictionState } from './prediction.js';
 import { ViewEffects, type ViewSample } from './view-effects.js';
 import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
+import { SubtitleSystem } from './hud/subtitles.js';
 import { FrameRenderStats, WorldRenderState } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
 import { ClientConfigStrings } from './configStrings.js';
@@ -70,6 +71,7 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   ParseCenterPrint(msg: string): void;
   ParseNotify(msg: string): void;
   ParseConfigString(index: number, value: string): void;
+  showSubtitle(text: string, soundName: string): void;
 
   // State Access
   readonly prediction: ClientPrediction;
@@ -189,6 +191,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
   const messageSystem = new MessageSystem();
+  const subtitleSystem = new SubtitleSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
 
@@ -597,6 +600,7 @@ export function createClient(imports: ClientImports): ClientExports {
               lastRendered.ammo,
               stats,
               messageSystem,
+              subtitleSystem,
               hudTimeMs
             );
         }
@@ -654,6 +658,11 @@ export function createClient(imports: ClientImports): ClientExports {
     ParseNotify(msg: string) {
       const timeMs = latestFrame?.timeMs ?? 0;
       messageSystem.addNotify(msg, timeMs);
+    },
+    showSubtitle(text: string, soundName: string) {
+      const timeMs = latestFrame?.timeMs ?? 0;
+      // TODO: Filter based on soundName or user settings
+      subtitleSystem.addSubtitle(text, timeMs);
     },
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);

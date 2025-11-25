@@ -39,7 +39,11 @@ describe('EngineRuntime + game integration determinism', () => {
       },
     };
 
-    const runtime = createEngineRuntime(
+    const audioOptions = {
+      registry: {} as any,
+      system: {} as any,
+    };
+    const { runtime } = createEngineRuntime(
       engine,
       createGame(
         { trace: trace as any, pointcontents: () => 0 },
@@ -47,6 +51,7 @@ describe('EngineRuntime + game integration determinism', () => {
         { gravity: GRAVITY },
       ),
       client,
+      audioOptions,
       { loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25 }, startTimeMs: 0 },
     );
 
@@ -86,7 +91,11 @@ describe('EngineRuntime + game integration determinism', () => {
       },
     };
 
-    const runtime = createEngineRuntime(
+    const audioOptions = {
+      registry: {} as any,
+      system: {} as any,
+    };
+    const { runtime } = createEngineRuntime(
       engine,
       createGame(
         { trace: trace as any, pointcontents: () => 0 },
@@ -94,6 +103,7 @@ describe('EngineRuntime + game integration determinism', () => {
         { gravity: GRAVITY },
       ),
       client,
+      audioOptions,
       {
         loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25, maxSubSteps: 5 },
         startTimeMs: 0,

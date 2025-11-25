@@ -27,4 +27,8 @@ export class SoundRegistry {
   has(index: number): boolean {
     return this.buffers.has(index);
   }
+
+  getName(index: number): string | undefined {
+    return this.configStrings.getName(index);
+  }
 }
