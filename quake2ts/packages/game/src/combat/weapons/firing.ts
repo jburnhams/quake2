@@ -240,10 +240,13 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                 if (spinupCount === 1) {
                     game.sound(player, 0, "weapons/chngnu1a.wav", 1, 0, 0);
                 }
-            } else if (spinupCount <= 10) { // Frames 10-14 in original
-                shots = 2;
-            } else { // Frames 15+
-                shots = 3;
+            } else {
+                if (spinupCount <= 10) { // Frames 10-14 in original
+                    shots = 2;
+                } else { // Frames 15+
+                    shots = 3;
+                }
+                game.sound(player, 0, "weapons/chngnl1a.wav", 1, 0, 0);
             }
 
             if (inventory.ammo.counts[AmmoType.Bullets] < shots) {
