@@ -56,6 +56,7 @@ describe('Weapon Firing Logic', () => {
             deathmatch: false,
             multicast: vi.fn(),
             trace: vi.fn(),
+            sound: vi.fn(),
             entities: {
                 world: new Entity(999)
             }
