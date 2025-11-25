@@ -187,6 +187,7 @@ export interface Md2Header {
   readonly offsetFrames: number;
   readonly offsetGlCommands: number;
   readonly offsetEnd: number;
+  readonly magic?: number; // Compatibility shim
 }
 
 export interface Md2Skin {
@@ -245,13 +246,24 @@ export interface Md2Animation {
 export class Md2ParseError extends Error {}
 
 export class Md2Loader {
+  private readonly cache = new Map<string, Md2Model>();
+
   constructor(private readonly vfs: VirtualFileSystem) {}
 
   async load(path: string): Promise<Md2Model> {
+    if (this.cache.has(path)) {
+      return this.cache.get(path)!;
+    }
     const bytes = await this.vfs.readFile(path);
     const copy = new Uint8Array(bytes.byteLength);
     copy.set(bytes);
-    return parseMd2(copy.buffer);
+    const model = parseMd2(copy.buffer);
+    this.cache.set(path, model);
+    return model;
+  }
+
+  get(path: string): Md2Model | undefined {
+    return this.cache.get(path);
   }
 }
 
@@ -306,6 +318,7 @@ function parseHeader(buffer: ArrayBuffer): Md2Header {
     offsetFrames: view.getInt32(56, true),
     offsetGlCommands: view.getInt32(60, true),
     offsetEnd: view.getInt32(64, true),
+    magic: ident
   };
 
   const expectedFrameSize = 40 + header.numVertices * 4;

@@ -20,7 +20,7 @@ export interface GameCreateOptions {
   deathmatch?: boolean;
 }
 
-import { ServerCommand } from '@quake2ts/shared';
+import { ServerCommand, EntityState } from '@quake2ts/shared';
 import { MulticastType } from './imports.js';
 
 export interface GameEngine {
@@ -36,14 +36,15 @@ export interface GameStateSnapshot {
   readonly gravity: Vec3;
   readonly origin: Vec3;
   readonly velocity: Vec3;
-  readonly viewangles: Vec3; // Added
+  readonly viewangles: Vec3;
   readonly level: LevelFrameState;
   readonly entities: {
     readonly activeCount: number;
     readonly worldClassname: string;
   };
-  readonly pmFlags: number; // PmFlags
-  readonly pmType: number; // PmType
+  readonly packetEntities: EntityState[];
+  readonly pmFlags: number;
+  readonly pmType: number;
   readonly waterlevel: number;
   readonly deltaAngles: Vec3;
   readonly client?: PlayerClient;
@@ -60,7 +61,7 @@ import { findPlayerStart } from './entities/spawn.js';
 import { player_die, player_think } from './entities/player.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
-import { Entity, MoveType } from './entities/entity.js';
+import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
 
 import { GameTraceResult } from './imports.js';
 import { throwGibs } from './entities/gibs.js';
@@ -185,6 +186,28 @@ export function createGame(
         }
     }
 
+    // Collect packet entities
+    const packetEntities: EntityState[] = [];
+    entities.forEachEntity((ent) => {
+        if (!ent.inUse || ent === player) return; // Skip player in this list if handled separately (or keep if needed for 3rd person?)
+        // Usually player is sent as entity 1, but also has dedicated state.
+        // For now let's include all non-player entities that have a model.
+        if (ent.modelindex > 0 || ent.solid === Solid.Bsp) {
+             packetEntities.push({
+                 number: ent.index,
+                 origin: { ...ent.origin },
+                 angles: { ...ent.angles },
+                 modelIndex: ent.modelindex,
+                 frame: ent.frame,
+                 skinNum: ent.skin,
+                 effects: ent.effects,
+                 renderfx: ent.renderfx,
+                 solid: ent.solid,
+                 sound: ent.sounds
+             });
+        }
+    });
+
     return {
       frame,
       timeMs: frameLoop.time,
@@ -198,6 +221,7 @@ export function createGame(
           activeCount: entities.activeCount,
           worldClassname: entities.world.classname,
         },
+        packetEntities,
         pmFlags: 0, // TODO: get from player
         pmType: 0,
         waterlevel: player ? player.waterlevel : 0,

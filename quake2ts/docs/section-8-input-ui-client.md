@@ -232,7 +232,7 @@ Expose from client package to engine:
   - Slerp or shortest-path angle lerp
   - Smooth view rotation
   - Apply view bob/roll on top
-- [ ] Animation interpolation
+- [x] Animation interpolation
   - Lerp model frames for smooth animations
   - Blend between animation frames based on time
 
@@ -262,7 +262,7 @@ Expose from client package to engine:
   - [x] Blend multiple colors using shared color blend math
 
 ### Accessibility & Quality of Life
-- [ ] Colorblind modes
+- [x] Colorblind modes
   - Adjust HUD colors for colorblind players
   - Adjust damage indicator colors
 - [ ] Subtitles (optional)
@@ -271,7 +271,7 @@ Expose from client package to engine:
 - [x] HUD scaling
   - Adjust HUD size for different resolutions
   - Keep readable on 4K displays
-- [ ] Crosshair options
+- [x] Crosshair options
   - Multiple styles, colors, sizes
   - Disable crosshair option
 

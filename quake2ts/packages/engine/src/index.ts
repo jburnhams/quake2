@@ -278,7 +278,8 @@ export {
   type ParticleSpawnOptions,
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
-export { FrameRenderStats, FrameRenderOptions } from './render/frame.js';
+export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render/frame.js';
+export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, NetworkMessageParser } from './demo/index.js';
 export {
     createEmptyEntityState,
