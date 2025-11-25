@@ -171,13 +171,6 @@ describe('Combat and Items', () => {
       });
   });
 
-  describe('BFG Secondary Lasers', () => {
-      it.skip('BFG secondary lasers are now fired during flight, not on impact - test needs restructuring', () => {
-         // NOTE: This test was testing the old incorrect behavior where lasers were fired on impact.
-         // In the correct implementation (matching original Quake 2), lasers are fired during flight
-         // via the think function that runs every 100ms. The explosion does BFG_EFFECT damage, not laser damage.
-         // This test would need to be restructured to call the think function during flight to properly
-         // test the laser mechanics. See tests/entities/bfg_ball.test.ts for proper laser tests.
-      });
-  });
+  // Note: BFG in-flight laser tests are in tests/entities/bfg_ball.test.ts
+  // Those tests properly verify the think function that fires lasers during flight
 });
