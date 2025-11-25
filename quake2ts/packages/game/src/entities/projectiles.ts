@@ -180,62 +180,64 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
     const piercedSolidities: Solid[] = [];
     let currentStart = { ...start };
 
-    for (let i = 0; i < MAX_PIERCE; i++) {
-        const tr = sys.trace(currentStart, null, null, end, bfg,
-            CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER
-        );
-
-        // Nothing hit, we're done
-        if (!tr.ent || tr.fraction >= 1.0) {
-            break;
-        }
-
-        // Damage the entity if it can take damage
-        // Based on rerelease/g_weapon.cpp:1046-1048
-        if (tr.ent.takedamage && tr.ent !== bfg.owner) {
-            T_Damage(
-                tr.ent as any,
-                bfg as any,
-                bfg.owner as any,
-                dir,
-                tr.endpos,
-                ZERO_VEC3,
-                damage,
-                1, // kick
-                DamageFlags.ENERGY,
-                DamageMod.BFG_LASER,
-                sys.multicast.bind(sys)
+    try {
+        for (let i = 0; i < MAX_PIERCE; i++) {
+            const tr = sys.trace(currentStart, null, null, end, bfg,
+                CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER
             );
+
+            // Nothing hit, we're done
+            if (!tr.ent || tr.fraction >= 1.0) {
+                break;
+            }
+
+            // Damage the entity if it can take damage
+            // Based on rerelease/g_weapon.cpp:1046-1048
+            if (tr.ent.takedamage && tr.ent !== bfg.owner) {
+                T_Damage(
+                    tr.ent as any,
+                    bfg as any,
+                    bfg.owner as any,
+                    dir,
+                    tr.endpos,
+                    ZERO_VEC3,
+                    damage,
+                    1, // kick
+                    DamageFlags.ENERGY,
+                    DamageMod.BFG_LASER,
+                    sys.multicast.bind(sys)
+                );
+            }
+
+            // Stop if we hit something that's not a monster/player/client
+            // Based on rerelease/g_weapon.cpp:1050-1061
+            if (!(tr.ent.svflags & ServerFlags.Monster) &&
+                !(tr.ent.client) &&
+                tr.ent.classname !== 'misc_explobox') {
+                // Laser sparks effect for wall hits (would need TE_LASER_SPARKS if available)
+                break;
+            }
+
+            // Mark entity as pierced by temporarily making it non-solid
+            pierced.push(tr.ent);
+            piercedSolidities.push(tr.ent.solid);
+            tr.ent.solid = Solid.Not;
+
+            // Continue from hit point
+            currentStart = { ...tr.endpos };
         }
 
-        // Stop if we hit something that's not a monster/player/client
-        // Based on rerelease/g_weapon.cpp:1050-1061
-        if (!(tr.ent.svflags & ServerFlags.Monster) &&
-            !(tr.ent.client) &&
-            tr.ent.classname !== 'misc_explobox') {
-            // Laser sparks effect for wall hits (would need TE_LASER_SPARKS if available)
-            break;
+        // Visual laser effect
+        // Based on rerelease/g_weapon.cpp:1130-1134
+        const finalTrace = sys.trace(start, null, null, end, bfg, CONTENTS_SOLID);
+        sys.multicast(bfg.origin, MulticastType.Phs, ServerCommand.temp_entity,
+            TempEntity.BFG_LASER, start, finalTrace.endpos);
+    } finally {
+        // Always restore solidities, even if an error occurred
+        for (let i = 0; i < pierced.length; i++) {
+            pierced[i].solid = piercedSolidities[i];
         }
-
-        // Mark entity as pierced by temporarily making it non-solid
-        pierced.push(tr.ent);
-        piercedSolidities.push(tr.ent.solid);
-        tr.ent.solid = Solid.Not;
-
-        // Continue from hit point
-        currentStart = { ...tr.endpos };
     }
-
-    // Restore solidities
-    for (let i = 0; i < pierced.length; i++) {
-        pierced[i].solid = piercedSolidities[i];
-    }
-
-    // Visual laser effect
-    // Based on rerelease/g_weapon.cpp:1130-1134
-    const finalTrace = sys.trace(start, null, null, end, bfg, CONTENTS_SOLID);
-    sys.multicast(bfg.origin, MulticastType.Phs, ServerCommand.temp_entity,
-        TempEntity.BFG_LASER, start, finalTrace.endpos);
 }
 
 /**
