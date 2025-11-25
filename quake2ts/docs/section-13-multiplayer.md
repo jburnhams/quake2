@@ -36,21 +36,21 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 ## Implementation Tasks
 
 ### Phase 1: Network Plumbing
-- [ ] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
-- [ ] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
+- [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
+- [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
   - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
-- [ ] **Transport Layer**:
+- [x] **Transport Layer**:
   - Create `NetDriver` interface.
   - Implement `WebSocketNetDriver` for Node.js (Server).
   - Implement `BrowserWebSocketNetDriver` for Client.
 
 ### Phase 2: The Dedicated Server
-- [ ] **Package Setup**: Initialize `packages/server`.
-- [ ] **Server Loop**: Implement `SV_Frame` logic:
+- [x] **Package Setup**: Initialize `packages/server`.
+- [x] **Server Loop**: Implement `SV_Frame` logic:
   - Read packets (`SV_ReadPackets`).
   - Run game frame (`ge->RunFrame`).
   - Send updates (`SV_SendClientMessages`).
-- [ ] **Client Management**: Implement `client_t` structure, connection handshakes, and `SV_DirectConnect`.
+- [x] **Client Management**: Implement `client_t` structure, connection handshakes, and `SV_DirectConnect`.
 - [ ] **Delta Compression**: Implement `MSG_WriteDeltaEntity` to send only changed entity fields (crucial for bandwidth).
 
 ### Phase 3: Client Refactoring (CGame)
