@@ -301,7 +301,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Ref: g_weapon.c -> weapon_blaster_fire
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
             applyKick(player, -0.5, 0, 0);
-            createBlasterBolt(game.entities, player, player.origin, forward, 15, 1000, DamageMod.BLASTER);
+            // Ref: p_weapon.cpp:1340 - BLASTER_SPEED 1500
+            createBlasterBolt(game.entities, player, player.origin, forward, 15, 1500, DamageMod.BLASTER);
             break;
         }
 
