@@ -39,7 +39,7 @@ describe('Rocket Launcher', () => {
             ammo: { [AmmoType.Rockets]: 10 },
         });
 
-        vi.spyOn(firingRandom, 'irandom').mockReturnValue(17);
+        vi.spyOn(firingRandom, 'irandomRange').mockReturnValue(17);
 
         fire(game, player, WeaponId.RocketLauncher);
 

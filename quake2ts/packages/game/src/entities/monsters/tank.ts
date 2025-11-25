@@ -128,7 +128,7 @@ function tank_fire_machinegun(self: Entity, context: any): void {
        z: self.origin.z + (self.viewheight || 0),
    };
    const dir = normalizeVec3(subtractVec3(self.enemy.origin, start));
-   const damage = 10;
+   const damage = 20;
    const kick = 2;
 
    monster_fire_bullet(self, start, dir, damage, kick, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
@@ -316,6 +316,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.walk = tank_walk;
   self.monsterinfo.run = tank_run;
   self.monsterinfo.attack = tank_attack;
+  self.monsterinfo.attack_machinegun = attack_machinegun_move;
 
   self.think = monster_think;
 

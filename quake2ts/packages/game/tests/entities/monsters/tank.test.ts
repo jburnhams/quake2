@@ -4,6 +4,7 @@ import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
+import * as attack from '../../../src/entities/monsters/attack.js';
 
 describe('monster_tank', () => {
   let system: EntitySystem;
@@ -84,5 +85,33 @@ describe('monster_tank', () => {
     expect(ent.deadflag).toBe(DeadFlag.Dead);
     expect(ent.solid).toBe(Solid.Not);
     expect(ent.monsterinfo.current_move?.firstframe).toBe(122);
+  });
+
+  it('fires machinegun with correct damage', () => {
+    const ent = system.spawn();
+    SP_monster_tank(ent, context);
+
+    const enemy = system.spawn();
+    enemy.health = 100;
+    ent.enemy = enemy;
+
+    const monster_fire_bullet = vi.spyOn(attack, 'monster_fire_bullet');
+
+    // Manually set the attack move
+    ent.monsterinfo.current_move = ent.monsterinfo.attack_machinegun;
+    ent.monsterinfo.current_move.frames[6].think(ent, system);
+
+    expect(monster_fire_bullet).toHaveBeenCalledWith(
+      ent,
+      expect.anything(),
+      expect.anything(),
+      20, // damage
+      2, // kick
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      system,
+      expect.anything()
+    );
   });
 });
