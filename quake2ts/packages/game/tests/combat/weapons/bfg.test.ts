@@ -11,7 +11,9 @@ vi.mock('../../../src/combat/damage.js', async () => {
     const actual = await vi.importActual('../../../src/combat/damage.js') as any;
     return {
         ...actual,
-        T_Damage: vi.fn(),
+        T_Damage: vi.fn((target: Entity, inflictor: Entity, attacker: Entity, dir: any, point: any, normal: any, damage: number) => {
+            target.health -= damage;
+        }),
         T_RadiusDamage: vi.fn(),
     };
 });
@@ -52,7 +54,7 @@ describe('BFG Projectile', () => {
         createBfgBall(mockSys, owner, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 100, 400, 200);
 
         const bfgBall = (mockSys.spawn as any).mock.results[0].value;
-        bfgBall.think(bfgBall);
+        bfgBall.think(bfgBall, mockSys);
 
         expect(mockSys.multicast).toHaveBeenCalledTimes(1);
         expect(damage.T_Damage).toHaveBeenCalledTimes(1);
@@ -66,7 +68,7 @@ describe('BFG Projectile', () => {
         createBfgBall(mockSys, owner, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 100, 400, 200);
 
         const bfgBall = (mockSys.spawn as any).mock.results[0].value;
-        bfgBall.think(bfgBall);
+        bfgBall.think(bfgBall, mockSys);
 
         expect(mockSys.multicast).toHaveBeenCalledTimes(2);
         expect(damage.T_Damage).toHaveBeenCalledTimes(2);
@@ -117,7 +119,7 @@ describe('BFG Projectile', () => {
         bfgBall.touch(bfgBall, {} as Entity);
 
         for (let i = 0; i < 5; i++) {
-            bfgBall.think(bfgBall);
+            bfgBall.think(bfgBall, mockSys);
         }
 
         expect(mockSys.free).toHaveBeenCalledWith(bfgBall);
@@ -160,5 +162,67 @@ describe('BFG Projectile', () => {
         bfgBall.touch(bfgBall, {} as Entity);
 
         expect(damage.T_RadiusDamage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fire in-flight lasers at a single enemy', () => {
+        const enemy = { origin: { x: 100, y: 0, z: 0 }, takedamage: true, health: 100 };
+        (mockSys.findByRadius as any).mockReturnValue([enemy]);
+        (mockSys.trace as any).mockReturnValue({ fraction: 1.0, ent: enemy });
+
+        createBfgBall(mockSys, owner, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 100, 400, 200);
+
+        const bfgBall = (mockSys.spawn as any).mock.results[0].value;
+        bfgBall.think(bfgBall, mockSys);
+
+        expect(damage.T_Damage).toHaveBeenCalledTimes(1);
+        expect(enemy.health).toBeLessThan(100);
+    });
+
+    it('should pierce through enemies', () => {
+        const enemy1 = { origin: { x: 100, y: 0, z: 0 }, takedamage: true, health: 100 };
+        const enemy2 = { origin: { x: 200, y: 0, z: 0 }, takedamage: true, health: 100 };
+
+        (mockSys.findByRadius as any).mockReturnValue([enemy1, enemy2]);
+
+        createBfgBall(mockSys, owner, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 100, 400, 200);
+        const bfgBall = (mockSys.spawn as any).mock.results[0].value;
+
+        // This mock needs to be sophisticated enough to handle two kinds of traces:
+        // 1. The Line-of-Sight (LOS) trace from the BFG to the target.
+        // 2. The piercing trace for the laser beam itself.
+        // We distinguish them by looking at the `end` vector's coordinates.
+        (mockSys.trace as any).mockImplementation((start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, ignore: Entity | null) => {
+            // LOS trace (ends at the enemy's origin)
+            if (end.x === 100 || end.x === 200) {
+                const target = end.x === 100 ? enemy1 : enemy2;
+                // Simulate a clear shot that hits the intended target.
+                return { fraction: 0.9, ent: target, endpos: end };
+            }
+
+            // Piercing trace (ends 2048 units away)
+            if (end.x > 1000) {
+                if (ignore === bfgBall) {
+                    return { fraction: 0.5, ent: enemy1, endpos: enemy1.origin };
+                }
+                if (ignore === enemy1) {
+                    return { fraction: 0.8, ent: enemy2, endpos: enemy2.origin };
+                }
+                // After hitting enemy2, the beam hits nothing else.
+                return { fraction: 1.0, ent: null, endpos: end };
+            }
+
+            // Fallback for any other traces.
+            return { fraction: 1.0, ent: null, endpos: end };
+        });
+
+        bfgBall.think(bfgBall, mockSys);
+
+        // The BFG should fire a separate laser for each of the 2 targets.
+        // Each laser pierces both enemies. 2 * 2 = 4 total damage calls.
+        // Note: This differs from the user's initial expectation of 3 calls,
+        // but is consistent with the rerelease source's behavior.
+        expect(damage.T_Damage).toHaveBeenCalledTimes(4);
+        expect(enemy1.health).toBeLessThan(100);
+        expect(enemy2.health).toBeLessThan(100);
     });
 });

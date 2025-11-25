@@ -119,9 +119,9 @@ function fireRailgun(game: GameExports, player: Entity, start: any, forward: any
     game.multicast(start, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, start, finalEnd);
 }
 
-export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Entity | null {
+export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
     if (!player.client) {
-        return null;
+        return;
     }
 
     const inventory = player.client.inventory;
@@ -143,7 +143,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
     switch (weaponId) {
         case WeaponId.Shotgun: {
             if (inventory.ammo.counts[AmmoType.Shells] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_shotgun_fire
             inventory.ammo.counts[AmmoType.Shells]--;
@@ -192,7 +192,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.SuperShotgun: {
             if (inventory.ammo.counts[AmmoType.Shells] < 2) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_sshotgun_fire
             inventory.ammo.counts[AmmoType.Shells] -= 2;
@@ -236,7 +236,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.Machinegun: {
             if (inventory.ammo.counts[AmmoType.Bullets] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_machinegun_fire
             inventory.ammo.counts[AmmoType.Bullets]--;
@@ -247,7 +247,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.Chaingun: {
             if (inventory.ammo.counts[AmmoType.Bullets] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_chaingun_fire
             inventory.ammo.counts[AmmoType.Bullets]--;
@@ -265,7 +265,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.Railgun: {
             if (inventory.ammo.counts[AmmoType.Slugs] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_railgun_fire
             inventory.ammo.counts[AmmoType.Slugs]--;
@@ -276,7 +276,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.HyperBlaster: {
             if (inventory.ammo.counts[AmmoType.Cells] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_hyperblaster_fire
             inventory.ammo.counts[AmmoType.Cells]--;
@@ -293,7 +293,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
 
         case WeaponId.RocketLauncher: {
             if (inventory.ammo.counts[AmmoType.Rockets] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_rocketlauncher_fire
             inventory.ammo.counts[AmmoType.Rockets]--;
@@ -303,7 +303,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.GrenadeLauncher: {
             if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_grenadelauncher_fire
             inventory.ammo.counts[AmmoType.Grenades]--;
@@ -313,7 +313,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
         }
         case WeaponId.BFG10K: {
             if (inventory.ammo.counts[AmmoType.Cells] < 50) {
-                return null;
+                return;
             }
             // Ref: g_weapon.c -> weapon_bfg_fire
             inventory.ammo.counts[AmmoType.Cells] -= 50;
@@ -324,6 +324,4 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId): Ent
     }
 
     weaponState.lastFireTime = game.time + weaponItem.fireRate;
-
-    return null;
 }
