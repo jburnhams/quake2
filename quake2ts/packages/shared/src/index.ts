@@ -28,6 +28,7 @@ export * from './pmove/snap.js';
 export * from './pmove/view.js';
 export * from './protocol/index.js';
 export * from './protocol/entityState.js';
+export * as EntityFlags from './protocol/entityFlags.js';
 export * from './pmove/apply.js';
 export * from './io/index.js';
 export * from './net/index.js';
