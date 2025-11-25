@@ -34,9 +34,13 @@ describe('Integration Point Smoke Tests', () => {
       receiveConfigString: vi.fn(),
     };
 
-    runtime = createEngineRuntime(engine, game, client, {
+    const audioOptions = {
+      registry: {} as any,
+      system: {} as any,
+    };
+    ({ runtime } = createEngineRuntime(engine, game, client, audioOptions, {
       loop: { schedule: () => {}, fixedDeltaMs: 25, now: () => 100 },
-    });
+    }));
   });
 
   it('verifies game/client entrypoint invocation order', () => {

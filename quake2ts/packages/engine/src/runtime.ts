@@ -33,11 +33,17 @@ export class EngineRuntime<FrameState = unknown> {
   }
 }
 
+import { AudioApi, AudioApiOptions, SubtitleClient } from './audio/api.js';
+
 export function createEngineRuntime<FrameState = unknown>(
   engine: EngineExports,
   game: GameSimulation<FrameState>,
-  client?: ClientRenderer<FrameState>,
+  client: ClientRenderer<FrameState> & SubtitleClient,
+  audioOptions: AudioApiOptions,
   options?: EngineHostOptions,
-): EngineRuntime<FrameState> {
-  return new EngineRuntime(engine, new EngineHost(game, client, options));
+): { runtime: EngineRuntime<FrameState>, audio: AudioApi } {
+  const audio = new AudioApi({ ...audioOptions, client });
+  const host = new EngineHost(game, client, options);
+  const runtime = new EngineRuntime(engine, host);
+  return { runtime, audio };
 }

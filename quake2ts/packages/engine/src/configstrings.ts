@@ -59,6 +59,10 @@ export class ConfigStringRegistry {
     return this.values.get(index);
   }
 
+  getName(index: number): string | undefined {
+    return this.get(index);
+  }
+
   getAll(): string[] {
     const result: string[] = new Array(MAX_CONFIGSTRINGS).fill('');
     for (const [index, value] of this.values.entries()) {

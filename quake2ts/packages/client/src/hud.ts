@@ -7,6 +7,7 @@ import { Init_Icons } from './hud/icons.js';
 import { Draw_Damage, Init_Damage } from './hud/damage.js';
 import { Draw_Diagnostics } from './hud/diagnostics.js';
 import { MessageSystem } from './hud/messages.js';
+import { SubtitleSystem } from './hud/subtitles.js';
 import { Draw_Blends } from './hud/blends.js';
 import { Draw_Pickup } from './hud/pickup.js';
 import { Draw_StatusBar } from './hud/statusbar.js';
@@ -43,6 +44,7 @@ export const Draw_Hud = (
     ammo: number,
     stats: FrameRenderStats,
     messageSystem: MessageSystem,
+    subtitleSystem: SubtitleSystem,
     timeMs: number
 ) => {
     renderer.begin2D();
@@ -64,6 +66,7 @@ export const Draw_Hud = (
 
     messageSystem.drawCenterPrint(renderer, timeMs, layout);
     messageSystem.drawNotifications(renderer, timeMs);
+    subtitleSystem.drawSubtitles(renderer, timeMs);
 
     if (ps.centerPrint) {
         // Use layout for position?
