@@ -258,23 +258,59 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             break;
         }
         case WeaponId.Chaingun: {
-            if (inventory.ammo.counts[AmmoType.Bullets] < 1) {
-                return;
-            }
-            // Ref: g_weapon.c -> weapon_chaingun_fire
-            inventory.ammo.counts[AmmoType.Bullets]--;
-            // Chaingun has rotating flash MZ_CHAINGUN1, 2, 3
+            // Source: rerelease/p_weapon.cpp -> Chaingun_Fire
 
             const chaingunState = getWeaponState(player.client.weaponStates, WeaponId.Chaingun);
-            const shots = chaingunState.shots || 0;
-            chaingunState.shots = shots + 1;
 
-            const flash = MZ_CHAINGUN1 + (shots % 3);
-            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
-            applyKick(player, -0.5, random.crandom() * 0.5, 0);
-            // Source: ../rerelease/p_weapon.cpp:1556-1559
+            // Reset spin-up if the player hasn't fired in a while (original uses animation frames)
+            // 200ms is a bit more than the time between shots, acting as a debounce.
+            if (game.time - weaponState.lastFireTime > 200) {
+                chaingunState.spinupCount = 0;
+            }
+
+            const spinupCount = (chaingunState.spinupCount || 0) + 1;
+            chaingunState.spinupCount = spinupCount;
+
+            let shots;
+            if (spinupCount <= 5) { // Frames 5-9 in original
+                shots = 1;
+                if (spinupCount === 1) {
+                    game.sound(player, 0, "weapons/chngnu1a.wav", 1, 0, 0);
+                }
+            } else if (spinupCount <= 10) { // Frames 10-14 in original
+                shots = 2;
+            } else { // Frames 15+
+                shots = 3;
+            }
+
+            if (inventory.ammo.counts[AmmoType.Bullets] < shots) {
+                shots = inventory.ammo.counts[AmmoType.Bullets];
+            }
+
+            if (shots === 0) {
+                // TODO: NoAmmoWeaponChange
+                return;
+            }
+
+            inventory.ammo.counts[AmmoType.Bullets] -= shots;
+
             const damage = game.deathmatch ? 6 : 8;
-            fireHitscan(game, player, forward, damage, 1, DamageMod.CHAINGUN);
+            const knockback = 1;
+
+            // Apply kick that scales with number of shots
+            applyKick(player, -0.5, random.crandom() * (0.5 + (shots * 0.15)), 0);
+
+            for (let i = 0; i < shots; i++) {
+                // Add spread, similar to original C
+                const spread = addVec3(scaleVec3(right, random.crandom() * 4), scaleVec3(up, random.crandom() * 4));
+                const dir = addVec3(forward, spread);
+                fireHitscan(game, player, dir, damage, knockback, DamageMod.CHAINGUN);
+            }
+
+            // Muzzle flash scales with number of shots
+            const flash = MZ_CHAINGUN1 + shots - 1;
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
+
             break;
         }
         case WeaponId.Railgun: {
