@@ -163,19 +163,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
     bfgBall.mins = { x: -10, y: -10, z: -10 };
     bfgBall.maxs = { x: 10, y: 10, z: 10 };
 
-    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
-        if (other === self.owner) {
-            return;
-        }
-
-        // Primary splash damage
-        const entities = sys.findByRadius(self.origin, damageRadius);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, damageRadius, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
-
-        // Explosion effect
-        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);
-
-        // Secondary lasers
+    const bfgExplode = (self: Entity) => {
         if (self.owner) {
             const targets = sys.findByRadius(self.origin, 1000);
             const playerOrigin = self.owner.origin; // Ideally use eye position
@@ -186,14 +174,14 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
                 const tr = sys.trace(playerOrigin, null, null, target.origin, self.owner, 0x00000001 | 0x00000002);
 
                 if (tr.ent !== target && tr.fraction < 1.0) {
-                     continue; // Blocked
+                    continue; // Blocked
                 }
 
                 // Deal damage
-                 const dir = normalizeVec3(subtractVec3(target.origin, self.origin));
-                 let laserDamage = 10;
+                const dir = normalizeVec3(subtractVec3(target.origin, self.origin));
+                let laserDamage = 10;
 
-                 T_Damage(
+                T_Damage(
                     target as any,
                     self as any,
                     self.owner as any,
@@ -212,14 +200,82 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
             }
         }
 
-        sys.free(self);
+        self.frame++;
+        if (self.frame === 5) {
+            sys.free(self);
+        } else {
+            sys.scheduleThink(self, sys.timeSeconds + 0.1);
+        }
     };
 
-    // BFG animation think
+    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) {
+            return;
+        }
+
+        // Primary splash damage
+        T_RadiusDamage(sys.findByRadius(self.origin, damageRadius) as any[], self as any, self.owner as any, damage, self.owner as any, damageRadius, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
+
+        // Explosion effect
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);
+
+        self.solid = Solid.Not;
+        self.touch = undefined;
+        self.velocity = ZERO_VEC3;
+        self.think = bfgExplode;
+        self.frame = 0;
+        sys.scheduleThink(self, sys.timeSeconds + 0.1);
+    };
+
+    // BFG in-flight laser think
     bfgBall.think = (self: Entity) => {
-        // Just visual effects or sound updates here
-        self.nextthink = sys.timeSeconds + 0.1;
+        const damage = 10; // TODO: Check deathmatch flag for 5 damage
+        const BFG_LASER_RADIUS = 256;
+
+        // Find nearby entities
+        const targets = sys.findByRadius(self.origin, BFG_LASER_RADIUS);
+
+        for (const target of targets) {
+            if (target === self || target === self.owner || !target.takedamage) {
+                continue;
+            }
+
+            // Check line of sight to the center of the target
+            const targetCenter = {
+                x: target.origin.x,
+                y: target.origin.y,
+                z: target.origin.z + (target.mins.z + target.maxs.z) / 2
+            };
+
+            const tr = sys.trace(self.origin, null, null, targetCenter, self, 0x00000001 /* MASK_SOLID */);
+
+            if (tr.fraction < 1.0 && tr.ent !== target) {
+                continue; // Blocked by world or another entity
+            }
+
+            // Deal damage
+            const dir = normalizeVec3(subtractVec3(target.origin, self.origin));
+            T_Damage(
+                target as any,
+                self as any,
+                self.owner as any,
+                dir,
+                target.origin,
+                ZERO_VEC3,
+                damage,
+                1, // knockback
+                DamageFlags.ENERGY,
+                DamageMod.BFG_LASER,
+                sys.multicast.bind(sys)
+            );
+
+            // Laser effect from BFG ball to target
+            sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, self.origin, target.origin);
+        }
+
+        sys.scheduleThink(self, sys.timeSeconds + 0.1);
     };
     sys.scheduleThink(bfgBall, sys.timeSeconds + 0.1);
     sys.finalizeSpawn(bfgBall);
+    return bfgBall;
 }
