@@ -207,6 +207,8 @@ export class Entity {
   max_health = 0;
   takedamage = false;
   dmg = 0;
+  radius_dmg = 0; // Damage amount for radius damage (used by BFG, rockets, etc.)
+  dmg_radius = 0; // Radius for damage effects
   speed = 0;
   accel = 0;
   decel = 0;

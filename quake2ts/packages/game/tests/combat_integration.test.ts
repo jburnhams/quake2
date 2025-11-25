@@ -171,37 +171,6 @@ describe('Combat and Items', () => {
       });
   });
 
-  describe('BFG Secondary Lasers', () => {
-      it('should damage enemies within line of sight of player', () => {
-         const enemy = game.entities.spawn();
-         enemy.takedamage = true;
-         enemy.health = 200;
-         enemy.origin = { x: 200, y: 100, z: 0 };
-
-         // Mock findByRadius to return enemy
-         const findByRadiusSpy = vi.spyOn(game.entities, 'findByRadius').mockReturnValue([enemy]);
-
-         // Mock trace for LoS check (successful)
-         mockImports.trace.mockReturnValue({
-             fraction: 1.0,
-             ent: null // clear path
-         });
-
-         createBfgBall(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 200, 400);
-
-         // Find the spawned BFG ball
-         const ball = game.entities.find(e => e.classname === 'bfg_ball')!;
-         expect(ball).toBeDefined();
-
-         // Trigger touch (explosion)
-         ball.touch!(ball, null);
-
-         // Verify secondary damage logic was attempted
-         // The secondary damage logic calls T_Damage on targets.
-         // Since enemy has health 200, it should take some damage.
-         // Laser damage is 10 per hit usually.
-
-         expect(enemy.health).toBeLessThan(200);
-      });
-  });
+  // Note: BFG in-flight laser tests are in tests/entities/bfg_ball.test.ts
+  // Those tests properly verify the think function that fires lasers during flight
 });

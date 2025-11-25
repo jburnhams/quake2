@@ -148,6 +148,7 @@ export class EntitySystem {
   readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
+  readonly deathmatch: boolean;
 
   get trace(): TraceFunction {
     return this.imports.trace;
@@ -162,11 +163,13 @@ export class EntitySystem {
     imports?: GameImports,
     gravity?: Vec3,
     maxEntities?: number,
-    callbackRegistry?: CallbackRegistry
+    callbackRegistry?: CallbackRegistry,
+    deathmatch?: boolean
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
+    this.deathmatch = deathmatch ?? false;
     this.imports = imports || {
       trace: () => ({
         allsolid: false,

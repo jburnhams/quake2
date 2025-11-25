@@ -123,7 +123,7 @@ export function createGame(
     };
   };
 
-  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity, multicast, unicast }, gravity);
+  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity, multicast, unicast }, gravity, undefined, undefined, deathmatch);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
