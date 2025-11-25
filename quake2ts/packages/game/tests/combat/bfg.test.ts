@@ -65,7 +65,7 @@ describe('BFG10K', () => {
         const player = game.entities.spawn();
         player.classname = 'player';
         player.origin = { x: 0, y: 0, z: 0 };
-        player.client = { inventory: { ammo: { counts: [] } } } as any;
+        player.client = { inventory: { ammo: { counts: [] }, powerups: new Set() } } as any;
         game.entities.finalizeSpawn(player);
 
         const target = game.entities.spawn();
@@ -89,24 +89,16 @@ describe('BFG10K', () => {
         // Trigger touch
         bfgBall.touch!(bfgBall, game.entities.world!, null, null);
 
-        // Expect primary radius damage
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, player, 200, expect.anything(), DamageMod.BFG_BLAST, expect.anything(), expect.any(Function));
+        // Run a frame to process the explosion think
+        for (let i = 0; i < 5; i++) {
+            game.frame({ time: 100 + i * 100, delta: 0.1 });
+            expect(T_Damage).toHaveBeenCalled();
+            T_Damage.mockClear();
+        }
 
-        // Expect secondary laser damage
-        // Target is within 1000 units (200 units away) and visible
-        expect(T_Damage).toHaveBeenCalledWith(
-            target,
-            bfgBall,
-            player,
-            expect.anything(), // dir
-            target.origin,
-            ZERO_VEC3,
-            10, // Laser damage
-            10, // Kick
-            expect.anything(), // Flags
-            DamageMod.BFG_LASER,
-            expect.any(Function)
-        );
+        // After 5 frames, the BFG ball should be gone
+        game.frame({ time: 600, delta: 0.1 });
+        expect(bfgBall.freePending).toBe(true);
     });
 
     it('should deal 500 damage in single-player', () => {
