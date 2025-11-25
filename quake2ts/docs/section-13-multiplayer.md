@@ -45,12 +45,12 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - Implement `BrowserWebSocketNetDriver` for Client.
 
 ### Phase 2: The Dedicated Server
-- [ ] **Package Setup**: Initialize `packages/server`.
-- [ ] **Server Loop**: Implement `SV_Frame` logic:
+- [x] **Package Setup**: Initialize `packages/server`.
+- [x] **Server Loop**: Implement `SV_Frame` logic:
   - Read packets (`SV_ReadPackets`).
   - Run game frame (`ge->RunFrame`).
   - Send updates (`SV_SendClientMessages`).
-- [ ] **Client Management**: Implement `client_t` structure, connection handshakes, and `SV_DirectConnect`.
+- [x] **Client Management**: Implement `client_t` structure, connection handshakes, and `SV_DirectConnect`.
 - [ ] **Delta Compression**: Implement `MSG_WriteDeltaEntity` to send only changed entity fields (crucial for bandwidth).
 
 ### Phase 3: Client Refactoring (CGame)

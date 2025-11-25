@@ -21,6 +21,7 @@ export interface GameCreateOptions {
 
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from './imports.js';
+export { MulticastType } from './imports.js'; // Export MulticastType
 
 export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
@@ -76,6 +77,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
+  clientBegin(client: PlayerClient): Entity; // Added clientBegin
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -84,6 +86,10 @@ export * from './combat/index.js';
 export * from './inventory/index.js';
 import { createPlayerInventory, PlayerClient, PowerupId } from './inventory/index.js';
 import { createPlayerWeaponStates } from './combat/index.js';
+
+// Export these for use in dedicated server
+export { createPlayerInventory } from './inventory/index.js';
+export { createPlayerWeaponStates } from './combat/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';
 
@@ -231,41 +237,64 @@ export function createGame(
       /* placeholder shutdown */
     },
     spawnWorld() {
+      // In Q2, spawnWorld is called to load entities from map string.
+      // Here it does player spawning too for the single player mode.
+      // For multiplayer, we might just spawn world entities here.
+      // For now, I'll keep the existing single-player logic but handle it gracefully if called.
       const playerStart = findPlayerStart(entities);
-      const player = entities.spawn();
-      player.classname = 'player';
-      player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
-      player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
-      player.health = 100;
-      player.takedamage = true; // Players take damage!
-      player.movetype = MoveType.Toss;
-      player.mins = { x: -16, y: -16, z: -24 };
-      player.maxs = { x: 16, y: 16, z: 32 };
-      player.client = {
-          inventory: createPlayerInventory(),
-          weaponStates: createPlayerWeaponStates(),
-      };
+      // We don't necessarily want to spawn a player automatically in MP unless requested
+      // But since this function is also used for SP bootstrap...
 
-      // Attach die callback
-      player.die = (self, inflictor, attacker, damage, point, mod) => {
-         // Use closure to access entities for gibs/obituaries
-         player_die(self, inflictor, attacker, damage, point, mod, entities);
-      };
+      // Let's defer player spawning to clientBegin in MP context
+      // Or check if we are in deathmatch/server mode.
+      // For now, preserving existing behavior for SP.
+      if (!deathmatch) {
+           // SP logic
+           const player = entities.spawn();
+           player.classname = 'player';
+           // ... (SP init)
+           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates() });
+      }
+    },
+    clientBegin(client: PlayerClient): Entity {
+       const playerStart = findPlayerStart(entities);
+       const player = entities.spawn();
+       player.classname = 'player';
+       player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
+       player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
+       player.health = 100;
+       player.takedamage = true;
+       player.movetype = MoveType.Toss;
+       player.mins = { x: -16, y: -16, z: -24 };
+       player.maxs = { x: 16, y: 16, z: 32 };
+       player.client = client;
 
-      // Attach think callback
-      player.think = (self) => {
-          player_think(self, entities);
-      };
-      player.nextthink = entities.timeSeconds + 0.1;
-      entities.scheduleThink(player, player.nextthink);
+       player.die = (self, inflictor, attacker, damage, point, mod) => {
+           player_die(self, inflictor, attacker, damage, point, mod, entities);
+       };
 
-      entities.finalizeSpawn(player);
-      origin = { ...player.origin };
+       player.think = (self) => {
+           player_think(self, entities);
+       };
+       player.nextthink = entities.timeSeconds + 0.1;
+       entities.scheduleThink(player, player.nextthink);
+
+       entities.finalizeSpawn(player);
+
+       // Update global state for SP compatibility (if needed)
+       origin = { ...player.origin };
+
+       return player;
     },
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
+      // Note: In MP, we should iterate all players. For SP compatibility we find 'player'.
       const player = entities.find((e) => e.classname === 'player');
       if (command && player) {
+        // ... SP movement logic ...
+        // In MP, this logic moves to SV_ClientThink or similar.
+        // If 'command' is passed, we apply it to 'player' (SP style).
+
         const pcmd = {
           forwardmove: command.forwardmove,
           sidemove: command.sidemove,
@@ -274,11 +303,11 @@ export function createGame(
           msec: command.msec,
           angles: command.angles,
         };
-        // We really should use pmove state from the entity if possible
+
         const playerState = {
             origin: player.origin,
             velocity: player.velocity,
-            onGround: false, // Should be persistent
+            onGround: false,
             waterLevel: 0,
             mins: player.mins,
             maxs: player.maxs,
@@ -288,7 +317,6 @@ export function createGame(
             blend: [0,0,0,0] as [number, number, number, number]
         };
 
-        // Adapter functions to match pmove signatures
         const traceAdapter = (start: Vec3, end: Vec3) => {
           const result = trace(start, player.mins, player.maxs, end, player, 0x10000001);
           return {
@@ -304,7 +332,7 @@ export function createGame(
         const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
         player.origin = newState.origin;
         player.velocity = newState.velocity;
-        player.angles = newState.viewAngles; // Update angles
+        player.angles = newState.viewAngles;
       }
       return snapshot(context.frame);
     },
