@@ -272,7 +272,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             const flash = MZ_CHAINGUN1 + (shots % 3);
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
             applyKick(player, -0.5, random.crandom() * 0.5, 0);
-            fireHitscan(game, player, forward, 8, 1, DamageMod.CHAINGUN);
+            // Source: ../rerelease/p_weapon.cpp:1556-1559
+            const damage = game.deathmatch ? 6 : 8;
+            fireHitscan(game, player, forward, damage, 1, DamageMod.CHAINGUN);
             break;
         }
         case WeaponId.Railgun: {
@@ -283,7 +285,11 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Slugs]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_RAILGUN);
             applyKick(player, -3, 0, -3);
-            fireRailgun(game, player, forward, 150, 1);
+
+            // Source: ../rerelease/p_weapon.cpp:1788-1797
+            const damage = game.deathmatch ? 100 : 125;
+            const knockback = game.deathmatch ? 200 : 225;
+            fireRailgun(game, player, forward, damage, knockback);
             break;
         }
         case WeaponId.HyperBlaster: {
