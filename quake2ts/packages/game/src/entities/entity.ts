@@ -121,6 +121,7 @@ export interface MonsterInfo {
   attack?: MonsterAction;
   melee?: MonsterAction;
   walk?: MonsterAction;
+  attack_machinegun?: MonsterMove;
   checkattack?: (self: Entity) => boolean;
   attack_state?: number;
   lefty?: number;
