@@ -249,7 +249,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
     // Determine damage based on deathmatch mode
     // In deathmatch: 5 damage, single player: 10 damage
     // Based on rerelease/g_weapon.cpp:1080-1083
-    const dmg = 10; // TODO: Check deathmatch cvar when available
+    const dmg = sys.deathmatch ? 5 : 10;
 
     // Find all entities within 256 units
     // Based on rerelease/g_weapon.cpp:1088

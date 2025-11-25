@@ -232,6 +232,108 @@ describe('BFG Ball Projectile', () => {
         );
     });
 
+    it('should use correct damage in deathmatch mode', () => {
+        const trace = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
+        const T_Damage = vi.spyOn(damage, 'T_Damage');
+
+        const engine = {
+            trace: vi.fn(),
+            sound: vi.fn(),
+            centerprintf: vi.fn(),
+            modelIndex: vi.fn().mockReturnValue(1),
+        };
+        // Create game in deathmatch mode
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        game.init(0);
+
+        const playerStart = game.entities.spawn();
+        playerStart.classname = 'info_player_start';
+        playerStart.origin = { x: 0, y: 0, z: 0 };
+        playerStart.angles = { x: 0, y: 0, z: 0 };
+        game.entities.finalizeSpawn(playerStart);
+        game.spawnWorld();
+
+        const player = game.entities.find(e => e.classname === 'player')!;
+
+        // Create target monster within 256 units
+        const target = game.entities.spawn();
+        target.classname = 'monster_soldier';
+        target.origin = { x: 200, y: 0, z: 0 };
+        target.absmin = { x: 195, y: -16, z: -24 };
+        target.absmax = { x: 205, y: 16, z: 32 };
+        target.takedamage = true;
+        target.health = 100;
+        target.svflags = ServerFlags.Monster;
+        game.entities.finalizeSpawn(target);
+
+        // Mock trace for line-of-sight and laser
+        let traceCallCount = 0;
+        trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
+            traceCallCount++;
+            if (traceCallCount === 1) {
+                return {
+                    ent: null,
+                    fraction: 1.0,
+                    endpos: { x: 200, y: 0, z: 0 },
+                    allsolid: false,
+                    startsolid: false,
+                    plane: null,
+                    surfaceFlags: 0,
+                    contents: 0,
+                };
+            }
+            if (traceCallCount === 2) {
+                return {
+                    ent: target,
+                    fraction: 0.5,
+                    endpos: target.origin,
+                    allsolid: false,
+                    startsolid: false,
+                    plane: { normal: { x: -1, y: 0, z: 0 } },
+                    surfaceFlags: 0,
+                    contents: 0x02000000,
+                };
+            }
+            return {
+                ent: null,
+                fraction: 1.0,
+                endpos: end,
+                allsolid: false,
+                startsolid: false,
+                plane: null,
+                surfaceFlags: 0,
+                contents: 0,
+            };
+        });
+
+        createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 100);
+
+        const bfgBall = game.entities.find(e => e.classname === 'bfg blast')!;
+
+        T_Damage.mockClear();
+
+        // Trigger think
+        bfgBall.think!(bfgBall, game.entities);
+
+        // Should have fired laser with 5 damage (deathmatch mode)
+        expect(T_Damage).toHaveBeenCalledWith(
+            target,
+            bfgBall,
+            player,
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            5, // damage in deathmatch
+            1,
+            expect.anything(),
+            DamageMod.BFG_LASER,
+            expect.any(Function)
+        );
+    });
+
     it('should restore entity solidity after piercing', () => {
         const trace = vi.fn();
         const pointcontents = vi.fn();
