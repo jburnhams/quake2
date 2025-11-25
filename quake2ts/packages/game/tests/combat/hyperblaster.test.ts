@@ -43,4 +43,34 @@ describe('HyperBlaster', () => {
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
         expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
     });
+
+    it('should deal 20 damage in single-player', () => {
+        const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
+        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        game.deathmatch = false;
+        const player = game.entities.spawn();
+        player.client = {
+            inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
+            weaponStates: { states: new Map() }
+        } as any;
+
+        fire(game, player, WeaponId.HyperBlaster);
+
+        expect(createBlasterBolt).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
+    });
+
+    it('should deal 15 damage in deathmatch', () => {
+        const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
+        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        game.deathmatch = true;
+        const player = game.entities.spawn();
+        player.client = {
+            inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
+            weaponStates: { states: new Map() }
+        } as any;
+
+        fire(game, player, WeaponId.HyperBlaster);
+
+        expect(createBlasterBolt).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 15, 1000, DamageMod.HYPERBLASTER);
+    });
 });

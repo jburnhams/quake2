@@ -108,4 +108,34 @@ describe('BFG10K', () => {
             expect.any(Function)
         );
     });
+
+    it('should deal 500 damage in single-player', () => {
+        const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
+        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        game.deathmatch = false;
+        const player = game.entities.spawn();
+        player.client = {
+            inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+            weaponStates: { states: new Map() }
+        } as any;
+
+        fire(game, player, WeaponId.BFG10K);
+
+        expect(createBfgBall).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 500, 400, 200);
+    });
+
+    it('should deal 200 damage in deathmatch', () => {
+        const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
+        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        game.deathmatch = true;
+        const player = game.entities.spawn();
+        player.client = {
+            inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+            weaponStates: { states: new Map() }
+        } as any;
+
+        fire(game, player, WeaponId.BFG10K);
+
+        expect(createBfgBall).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 200, 400, 200);
+    });
 });
