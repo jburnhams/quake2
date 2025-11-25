@@ -13,36 +13,14 @@ import {
   type PmFlags,
   type UserCommand,
   DamageIndicator,
+  PmoveTraceFn,
 } from '@quake2ts/shared';
 import {
   applyPmoveAccelerate,
   applyPmoveAirAccelerate,
   applyPmoveFriction,
 } from '@quake2ts/shared';
-import type { GameFrameResult } from '@quake2ts/engine';
-
-import { PlayerClient } from '@quake2ts/game';
-
-export interface PredictionState {
-  readonly origin: Vec3;
-  readonly velocity: Vec3;
-  readonly viewangles: Vec3;
-  readonly pmFlags: PmFlags;
-  readonly pmType: PmType;
-  readonly waterlevel: WaterLevel;
-  readonly gravity: number;
-  readonly deltaAngles?: Vec3;
-  readonly client?: PlayerClient;
-  readonly health: number;
-  readonly armor: number;
-  readonly ammo: number;
-  readonly centerPrint?: string;
-  readonly notify?: string;
-  readonly blend: [number, number, number, number];
-  readonly pickupIcon?: string;
-  readonly damageAlpha: number;
-  readonly damageIndicators: DamageIndicator[];
-}
+import { GameFrameResult, PlayerClient, PredictionState } from '@quake2ts/shared/dist/cgame/interfaces';
 
 export interface PredictionSettings {
   readonly pmFriction: number;
@@ -239,8 +217,6 @@ function simulateCommand(
     viewangles,
   } satisfies PredictionState;
 }
-
-import { PmoveTraceFn } from '@quake2ts/shared';
 
 export class ClientPrediction {
   private readonly settings: PredictionSettings;

@@ -1,4 +1,4 @@
-import { Renderer } from '@quake2ts/engine';
+import { Renderer } from '@quake2ts/shared/dist/cgame/interfaces';
 
 interface Subtitle {
   text: string;

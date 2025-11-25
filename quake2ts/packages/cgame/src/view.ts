@@ -1,7 +1,7 @@
-import { Camera } from '@quake2ts/engine';
 import { ViewSample } from './view-effects.js';
 import { vec3 } from 'gl-matrix';
 import { Vec3 } from '@quake2ts/shared';
+import { Camera } from '@quake2ts/shared/dist/cgame/interfaces';
 
 const toGlMatrixVec3 = (v: Vec3): vec3 => {
     return vec3.fromValues(v.x, v.y, v.z);

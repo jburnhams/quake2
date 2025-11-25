@@ -1,4 +1,4 @@
-import { Pic, Renderer } from '@quake2ts/engine';
+import { Pic, Renderer } from '@quake2ts/shared/dist/cgame/interfaces';
 
 export const Draw_Number = (renderer: Renderer, x: number, y: number, value: number, pics: readonly Pic[], width: number, color?: [number, number, number, number]) => {
     const s = Math.abs(value).toString();

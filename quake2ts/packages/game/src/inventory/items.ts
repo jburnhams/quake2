@@ -3,7 +3,7 @@
 // =================================================================
 
 import { AmmoType } from './ammo.js';
-import { WeaponId } from './playerInventory.js';
+import { WeaponId } from '@quake2ts/shared';
 
 export { AmmoType };
 

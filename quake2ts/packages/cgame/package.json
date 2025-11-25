@@ -1,0 +1,21 @@
+{
+    "name": "@quake2ts/cgame",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Quake II client-side game logic",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsup src/index.ts --format esm,cjs --dts",
+        "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+        "test": "vitest",
+        "test:ui": "vitest --ui"
+    },
+    "dependencies": {
+        "@quake2ts/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "tsup": "^6.7.0",
+        "typescript": "^5.0.4",
+        "vitest": "^0.31.0"
+    }
+}

@@ -1,5 +1,5 @@
-import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
+import { Pic, Renderer } from '@quake2ts/shared/dist/cgame/interfaces';
 import { iconPics } from './icons.js'; // Reuse loaded icons
 
 export const Draw_Pickup = (renderer: Renderer, ps: PlayerState) => {
