@@ -7,7 +7,7 @@ import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity } from '@quake2ts/shared';
+import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
 export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number, flashtype: number = 0) {
@@ -182,10 +182,7 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
 
     for (let i = 0; i < MAX_PIERCE; i++) {
         const tr = sys.trace(currentStart, null, null, end, bfg,
-            0x00000001 | // CONTENTS_SOLID
-            0x02000000 | // CONTENTS_MONSTER
-            0x40000000 | // CONTENTS_PLAYER
-            0x04000000   // CONTENTS_DEADMONSTER
+            CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER
         );
 
         // Nothing hit, we're done
@@ -236,7 +233,7 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
 
     // Visual laser effect
     // Based on rerelease/g_weapon.cpp:1130-1134
-    const finalTrace = sys.trace(start, null, null, end, bfg, 0x00000001);
+    const finalTrace = sys.trace(start, null, null, end, bfg, CONTENTS_SOLID);
     sys.multicast(bfg.origin, MulticastType.Phs, ServerCommand.temp_entity,
         TempEntity.BFG_LASER, start, finalTrace.endpos);
 }
@@ -287,7 +284,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
         // Check line of sight from BFG to entity center
         // Don't fire laser if blocked by world
         // Based on rerelease/g_weapon.cpp:1116-1120
-        const sightTrace = sys.trace(self.origin, null, null, point, null, 0x00000001); // MASK_SOLID
+        const sightTrace = sys.trace(self.origin, null, null, point, null, MASK_SOLID);
         if (sightTrace.fraction < 1.0) {
             continue; // Blocked by world
         }
