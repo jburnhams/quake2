@@ -9,13 +9,14 @@ import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import { T_Damage } from '../damage.js';
-import { ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity } from '@quake2ts/shared';
+import { ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3 } from '@quake2ts/shared';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 const random = createRandomGenerator();
+export { random as firingRandom };
 
 // Quake 2 Muzzle Flash Constants (from g_local.h / q_shared.h)
 const MZ_BLASTER = 0;
@@ -69,6 +70,35 @@ function fireHitscan(game: GameExports, player: Entity, forward: any, damage: nu
         // Wall impact
         if (trace.plane) {
             game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+        }
+    }
+}
+
+function fireMultiplePellets(game: GameExports, player: Entity, forward: Vec3, right: Vec3, up: Vec3, count: number, damage: number, knockback: number, hspread: number, vspread: number, mod: DamageMod) {
+    for (let i = 0; i < count; i++) {
+        const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
+        const dir = addVec3(forward, spread);
+        const end = { x: player.origin.x + dir.x * 8192, y: player.origin.y + dir.y * 8192, z: player.origin.z + dir.z * 8192 };
+        const trace = game.trace(player.origin, null, null, end, player, 0);
+
+        if (trace.ent && trace.ent.takedamage) {
+            T_Damage(
+                trace.ent as any,
+                player as any,
+                player as any,
+                ZERO_VEC3,
+                trace.endpos,
+                trace.plane ? trace.plane.normal : ZERO_VEC3,
+                damage,
+                knockback,
+                DamageFlags.BULLET,
+                mod,
+                game.multicast
+            );
+        } else if (trace.plane) {
+            if (random.frandom() > 0.9) {
+                game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+            }
         }
     }
 }
@@ -161,45 +191,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Shells]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SHOTGUN);
             applyKick(player, -2, 0, -2);
-
-            for (let i = 0; i < 12; i++) {
-                const spread = addVec3(scaleVec3(right, random.crandom() * 500), scaleVec3(up, random.crandom() * 500));
-                const dir = addVec3(forward, spread);
-                const end = { x: player.origin.x + dir.x * 8192, y: player.origin.y + dir.y * 8192, z: player.origin.z + dir.z * 8192 };
-                const trace = game.trace(
-                    player.origin,
-                    null,
-                    null,
-                    end,
-                    player,
-                    0
-                );
-
-                if (trace.ent && trace.ent.takedamage) {
-                    T_Damage(
-                        trace.ent as any,
-                        player as any,
-                        player as any,
-                        ZERO_VEC3,
-                        trace.endpos,
-                        trace.plane ? trace.plane.normal : ZERO_VEC3,
-                        4,
-                        1,
-                        DamageFlags.BULLET,
-                        DamageMod.SHOTGUN,
-                        game.multicast
-                    );
-                } else if (trace.plane) {
-                     // Impact effect for shotgun pellets?
-                     // Quake 2 doesn't spawn 12 sparks, maybe just some?
-                     // Original: fire_shotgun calls fire_lead which calls fire_hit
-                     // fire_hit calls CheckTrace -> if !takedamage, writes TE_GUNSHOT
-                     // Don't spam multicast for shotgun pellets
-                     if (random.frandom() > 0.8) {
-                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
-                     }
-                }
-            }
+            fireMultiplePellets(game, player, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
             break;
         }
         case WeaponId.SuperShotgun: {
@@ -210,40 +202,11 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Shells] -= 2;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
             applyKick(player, -4, 0, -4);
-
-            for (let i = 0; i < 20; i++) {
-                const spread = addVec3(scaleVec3(right, random.crandom() * 700), scaleVec3(up, random.crandom() * 700));
-                const dir = addVec3(forward, spread);
-                const end = { x: player.origin.x + dir.x * 8192, y: player.origin.y + dir.y * 8192, z: player.origin.z + dir.z * 8192 };
-                const trace = game.trace(
-                    player.origin,
-                    null,
-                    null,
-                    end,
-                    player,
-                    0
-                );
-
-                if (trace.ent && trace.ent.takedamage) {
-                    T_Damage(
-                        trace.ent as any,
-                        player as any,
-                        player as any,
-                        ZERO_VEC3,
-                        trace.endpos,
-                        trace.plane ? trace.plane.normal : ZERO_VEC3,
-                        6,
-                        1,
-                        DamageFlags.BULLET,
-                        DamageMod.SSHOTGUN,
-                        game.multicast
-                    );
-                } else if (trace.plane) {
-                     if (random.frandom() > 0.9) {
-                        game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
-                     }
-                }
-            }
+            // Source: ../rerelease/p_weapon.cpp:1745-1752
+            const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
+            fireMultiplePellets(game, player, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+            const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
+            fireMultiplePellets(game, player, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
             break;
         }
         case WeaponId.Machinegun: {
@@ -336,7 +299,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Cells]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
             applyKick(player, -0.5, 0, 0);
-            createBlasterBolt(game.entities, player, player.origin, forward, 20, 1000, DamageMod.HYPERBLASTER);
+            // Source: ../rerelease/p_weapon.cpp:1419-1422
+            const damage = game.deathmatch ? 15 : 20;
+            createBlasterBolt(game.entities, player, player.origin, forward, damage, 1000, DamageMod.HYPERBLASTER);
             break;
         }
         case WeaponId.Blaster: {
@@ -356,7 +321,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Rockets]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET);
             applyKick(player, -2, 0, -2);
-            createRocket(game.entities, player, player.origin, forward, 100, 650);
+            // Source: ../rerelease/p_weapon.cpp:1284-1291
+            const damage = 100 + random.irandom(21);
+            createRocket(game.entities, player, player.origin, forward, damage, 120, 650);
             break;
         }
         case WeaponId.GrenadeLauncher: {
@@ -378,7 +345,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Cells] -= 50;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BFG);
             applyKick(player, -5, 0, -2);
-            createBfgBall(game.entities, player, player.origin, forward, 200, 400, 200);
+            // Source: ../rerelease/p_weapon.cpp:1845-1848
+            const damage = game.deathmatch ? 200 : 500;
+            createBfgBall(game.entities, player, player.origin, forward, damage, 400, 200);
             break;
         }
     }

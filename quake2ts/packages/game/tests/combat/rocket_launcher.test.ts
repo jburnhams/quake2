@@ -3,7 +3,7 @@
 // =================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { fire } from '../../src/combat/weapons/firing.js';
+import { fire, firingRandom } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
@@ -22,7 +22,9 @@ describe('Rocket Launcher', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, random: firingRandom });
+
+        firingRandom.seed(12345);
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -37,9 +39,22 @@ describe('Rocket Launcher', () => {
             ammo: { [AmmoType.Rockets]: 10 },
         });
 
+        vi.spyOn(firingRandom, 'irandom').mockReturnValue(17);
+
         fire(game, player, WeaponId.RocketLauncher);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Rockets]).toBe(9);
-        expect(createRocket).toHaveBeenCalled();
+
+        const expectedDamage = 117;
+
+        expect(createRocket).toHaveBeenCalledWith(
+            game.entities,
+            player,
+            expect.anything(),
+            expect.anything(),
+            expectedDamage,
+            120, // radiusDamage
+            650
+        );
     });
 });

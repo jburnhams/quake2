@@ -93,6 +93,10 @@ export class RandomGenerator {
     this.mt = new MersenneTwister19937(options.seed);
   }
 
+  seed(seed: number): void {
+    this.mt.seed(seed);
+  }
+
   /** Uniform float in [0, 1). */
   frandom(): number {
     return this.mt.nextUint32() / TWO_POW_32;

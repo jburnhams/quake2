@@ -10,7 +10,7 @@ import { DamageMod } from '../combat/damageMods.js';
 import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
-export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, flashtype: number = 0) {
+export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number, flashtype: number = 0) {
     const rocket = sys.spawn();
     rocket.classname = 'rocket';
     rocket.movetype = MoveType.FlyMissile;
@@ -43,7 +43,7 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, 120, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, {}, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
@@ -170,7 +170,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
         // Primary splash damage
         const entities = sys.findByRadius(self.origin, damageRadius);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, self.owner as any, damageRadius, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, damageRadius, DamageFlags.NONE, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_EXPLOSION, self.origin);

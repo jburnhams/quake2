@@ -18,6 +18,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 export interface GameCreateOptions {
   gravity: Vec3;
   deathmatch?: boolean;
+  random?: RandomGenerator;
 }
 
 import { ServerCommand, EntityState } from '@quake2ts/shared';
@@ -107,7 +108,7 @@ export function createGame(
   const deathmatch = options.deathmatch ?? false;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
-  const rng = new RandomGenerator(); // Main game RNG
+  const rng = options.random ?? new RandomGenerator(); // Main game RNG
 
   const linkentity = (ent: Entity) => {
     ent.absmin = {

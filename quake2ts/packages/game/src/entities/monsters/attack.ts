@@ -121,7 +121,7 @@ export function monster_fire_rocket(
     flashtype: number,
     context: EntitySystem
 ): void {
-    createRocket(context, self, start, dir, damage, speed);
+    createRocket(context, self, start, dir, damage, 120, speed);
 }
 
 export function monster_fire_bfg(
