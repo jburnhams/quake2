@@ -1,7 +1,8 @@
-import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WEAPON_ITEMS, WeaponItem, PowerupId } from '@quake2ts/game';
+import { Pic, Renderer, PlayerClient } from '@quake2ts/shared/dist/cgame/interfaces';
+import { AssetManager } from '../hud.js';
 import { HUD_LAYOUT } from './layout.js';
 import { Draw_Number } from './numbers.js';
+import { WeaponId, PowerupId, KeyId, WeaponItem, WEAPON_ITEMS } from '@quake2ts/shared';
 
 export const iconPics = new Map<string, Pic>();
 
@@ -44,8 +45,10 @@ export const Draw_Icons = (
         return;
     }
 
+    const inventory = (client.inventory as any);
+
     // Draw armor icon
-    const armor = client.inventory.armor;
+    const armor = inventory.armor;
     if (armor && armor.armorCount > 0) {
         const iconName = `i_${armor.armorType}armor`;
         const icon = iconPics.get(iconName);
@@ -55,7 +58,7 @@ export const Draw_Icons = (
     }
 
     // Draw current weapon icon
-    const currentWeapon = client.inventory.currentWeapon;
+    const currentWeapon = inventory.currentWeapon;
     if (currentWeapon) {
         const weaponDef = Object.values(WEAPON_ITEMS).find((w: WeaponItem) => w.weaponId === currentWeapon);
         if (weaponDef) {
@@ -69,7 +72,7 @@ export const Draw_Icons = (
 
     // Draw powerup icons
     let powerupX = HUD_LAYOUT.POWERUP_X;
-    for (const [powerup, expiresAt] of client.inventory.powerups.entries()) {
+    for (const [powerup, expiresAt] of inventory.powerups.entries()) {
         if (expiresAt && expiresAt > timeMs) {
             const iconName = `p_${powerup}`;
             const icon = iconPics.get(iconName);
@@ -85,7 +88,7 @@ export const Draw_Icons = (
         }
     }
 
-    const keys = Array.from(client.inventory.keys).sort();
+    const keys = Array.from(inventory.keys).sort();
     let keyY = 300;
 
     for (const key of keys) {

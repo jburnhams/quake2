@@ -1,5 +1,6 @@
-import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
 import { PlayerState, angleVectors, dotVec3, Vec3 } from '@quake2ts/shared';
+import { Pic, Renderer } from '@quake2ts/shared/dist/cgame/interfaces';
+import { AssetManager } from '../hud';
 
 const damagePics = new Map<string, Pic>();
 

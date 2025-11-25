@@ -1,5 +1,5 @@
-import { Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WeaponItem, WEAPON_ITEMS } from '@quake2ts/game';
+import { Pic, Renderer, PlayerClient } from '@quake2ts/shared/dist/cgame/interfaces';
+import { WeaponItem, WEAPON_ITEMS } from './icons.js';
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
@@ -39,8 +39,10 @@ export const Draw_StatusBar = (
         Draw_Number(renderer, layout.AMMO_X, layout.AMMO_Y, ammo, hudNumberPics, numberWidth);
     }
 
+    const inventory = (client.inventory as any);
+
     // Draw Armor Icon
-    const armorItem = client.inventory.armor;
+    const armorItem = inventory.armor;
     if (armorItem && armorItem.armorCount > 0) {
         const iconName = `i_${armorItem.armorType}armor`;
         const icon = iconPics.get(iconName);
@@ -50,7 +52,7 @@ export const Draw_StatusBar = (
     }
 
     // Draw Weapon Icon
-    const currentWeapon = client.inventory.currentWeapon;
+    const currentWeapon = inventory.currentWeapon;
     if (currentWeapon) {
         const weaponDef = Object.values(WEAPON_ITEMS).find((w: WeaponItem) => w.weaponId === currentWeapon);
         if (weaponDef) {
@@ -63,7 +65,7 @@ export const Draw_StatusBar = (
     }
 
     // Draw Keys
-    const keys = Array.from(client.inventory.keys).sort();
+    const keys = Array.from(inventory.keys).sort();
     let keyY = layout.WEAPON_ICON_Y - 150 * layout.scale; // Stack above weapon icon?
 
     for (const key of keys) {
@@ -86,7 +88,7 @@ export const Draw_StatusBar = (
 
     // Draw Powerups
     let powerupX = layout.POWERUP_X;
-    for (const [powerup, expiresAt] of client.inventory.powerups.entries()) {
+    for (const [powerup, expiresAt] of inventory.powerups.entries()) {
         if (expiresAt && expiresAt > timeMs) {
             const iconName = `p_${powerup}`;
             const icon = iconPics.get(iconName);

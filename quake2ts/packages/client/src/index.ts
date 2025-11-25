@@ -11,6 +11,8 @@ import {
   RenderableEntity,
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis } from '@quake2ts/shared';
+import { CGameExports, CGameImports, PlayerClient as CGamePlayerClient } from '@quake2ts/shared/dist/cgame/interfaces';
+import * as cgame from '@quake2ts/cgame';
 import { vec3, mat4 } from 'gl-matrix';
 import { ClientPrediction, interpolatePredictionState } from './prediction.js';
 import type { PredictionState } from './prediction.js';
@@ -66,6 +68,8 @@ export interface ClientImports {
 }
 
 export interface ClientExports extends ClientRenderer<PredictionState> {
+  cgame: CGameExports;
+
   // Core Engine Hooks
   predict(command: UserCommand): PredictionState;
   ParseCenterPrint(msg: string): void;
@@ -188,6 +192,13 @@ function buildRenderableEntities(
 }
 
 export function createClient(imports: ClientImports): ClientExports {
+  const cgameImports: CGameImports = {
+    renderer: imports.engine.renderer,
+    assets: imports.engine.assets,
+    trace: imports.engine.trace as any,
+  } as any;
+  const cgameExports = cgame.Init(cgameImports);
+
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
   const messageSystem = new MessageSystem();
@@ -301,6 +312,7 @@ export function createClient(imports: ClientImports): ClientExports {
   }
 
   const clientExports: ClientExports = {
+    cgame: cgameExports,
     loadingScreen,
     errorDialog,
 
@@ -546,31 +558,11 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       if (imports.engine.renderer && lastRendered && lastRendered.client) {
-        const stats: FrameRenderStats = imports.engine.renderer.stats ? {
-             ...imports.engine.renderer.stats,
-             batches: 0, facesDrawn: 0, drawCalls: 0, skyDrawn: false, viewModelDrawn: false, fps: 0, vertexCount: 0
-        } : {
-          batches: 0,
-          facesDrawn: 0,
-          drawCalls: 0,
-          skyDrawn: false,
-          viewModelDrawn: false,
-          fps: 0,
-          vertexCount: 0,
-        };
+        const stats: FrameRenderStats = imports.engine.renderer.stats;
         const timeMs = sample.latest?.timeMs ?? 0;
 
-        this.DrawHUD(stats, timeMs);
-      }
-
-      return command;
-    },
-
-    DrawHUD(stats: FrameRenderStats, timeMs: number) {
-        if (!imports.engine.renderer) return;
-
         if (lastRendered && lastRendered.client) {
-             const playerState: PlayerState = {
+            const playerState: PlayerState = {
                 origin: lastRendered.origin,
                 velocity: lastRendered.velocity,
                 viewAngles: lastRendered.viewangles,
@@ -582,27 +574,11 @@ export function createClient(imports: ClientImports): ClientExports {
                 damageIndicators: lastRendered.damageIndicators ?? [],
                 blend: lastRendered.blend ?? [0, 0, 0, 0],
                 pickupIcon: lastRendered.pickupIcon,
-                centerPrint: messageSystem['centerPrintMsg']?.text, // Hack to get text for legacy state? No, Draw_Hud uses messageSystem directly now.
-                notify: undefined
+                centerPrint: lastRendered.centerPrint,
+                notify: lastRendered.notify
             };
 
-            const playbackState = demoPlayback.getState();
-            const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
-                ? (demoHandler.latestFrame?.serverFrame || 0) * 100
-                : timeMs;
-
-            Draw_Hud(
-              imports.engine.renderer,
-              playerState,
-              lastRendered.client,
-              lastRendered.health,
-              lastRendered.armor,
-              lastRendered.ammo,
-              stats,
-              messageSystem,
-              subtitleSystem,
-              hudTimeMs
-            );
+            cgameExports.DrawActiveFrame(timeMs, false, false, lastRendered.client as CGamePlayerClient, playerState, lastRendered, frameTimeMs);
         }
 
         if (menuSystem.isActive()) {

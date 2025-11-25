@@ -1,4 +1,5 @@
-import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
+import { Pic, Renderer } from '@quake2ts/shared/dist/cgame/interfaces';
+import { AssetManager } from '../hud';
 
 let crosshairPic: Pic | null = null;
 let crosshairIndex = 0; // Default to ch1
