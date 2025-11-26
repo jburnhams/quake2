@@ -75,6 +75,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
   readonly deathmatch: boolean;
+  readonly random: RandomGenerator;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
@@ -380,6 +381,7 @@ export function createGame(
     get time() {
       return levelClock.current.timeSeconds;
     },
+    random: rng,
     createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile {
       const player = entities.find((e) => e.classname === 'player');
       return createSaveFile({

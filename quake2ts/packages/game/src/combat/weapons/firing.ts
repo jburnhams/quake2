@@ -325,8 +325,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET);
             applyKick(player, -2, 0, -2);
             // Source: ../rerelease/p_weapon.cpp:1284-1291
-            const damage = 100 + random.irandom(21);
-            createRocket(game.entities, player, player.origin, forward, damage, 120, 650);
+            const damage = 100 + game.random.irandom(21); // 100-120 damage
+            const radiusDamage = 120;
+            createRocket(game.entities, player, player.origin, forward, damage, radiusDamage, 650);
             break;
         }
         case WeaponId.GrenadeLauncher: {
