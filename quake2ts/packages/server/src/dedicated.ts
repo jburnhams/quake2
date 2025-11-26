@@ -7,6 +7,7 @@ import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, Colli
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
+import { Server, ServerStatic } from './server.js';
 
 const MAX_CLIENTS = 16;
 const FRAME_RATE = 10; // 10Hz dedicated server loop (Q2 standard)
@@ -14,19 +15,27 @@ const FRAME_TIME_MS = 1000 / FRAME_RATE;
 
 export class DedicatedServer implements GameEngine {
     private wss: WebSocketServer | null = null;
-    private clients: (Client | null)[] = new Array(MAX_CLIENTS).fill(null);
+    private svs: ServerStatic;
+    private sv: Server;
     private game: GameExports | null = null;
     private frameInterval: NodeJS.Timeout | null = null;
-    private startTime: number = 0;
-    private frameCount: number = 0;
 
-    // Physics
-    private collisionModel: CollisionModel | null = null;
-
-    constructor(private port: number = 27910) {}
+    constructor(private port: number = 27910) {
+        this.svs = {
+            clients: new Array(MAX_CLIENTS).fill(null)
+        };
+        this.sv = {
+            startTime: 0,
+            time: 0,
+            frame: 0,
+            mapName: '',
+            collisionModel: null
+        };
+    }
 
     public async start(mapName: string) {
         console.log(`Starting Dedicated Server on port ${this.port}...`);
+        this.sv.mapName = mapName;
 
         // 1. Initialize Network
         this.wss = new WebSocketServer({ port: this.port });
@@ -37,14 +46,14 @@ export class DedicatedServer implements GameEngine {
 
         // 2. Load Map
         try {
-            console.log(`Loading map ${mapName}...`);
+            console.log(`Loading map ${this.sv.mapName}...`);
             // Assuming maps are local files for now. In production this would use VFS.
             // For tests/dev, we try to load relative path.
             // If file doesn't exist, we might fail or warn.
             // Note: parseBsp expects ArrayBuffer.
 
             // NOTE: Ideally we check if file exists. For now, try/catch.
-            const mapData = await fs.readFile(mapName);
+            const mapData = await fs.readFile(this.sv.mapName);
             // Buffer to ArrayBuffer
             const arrayBuffer = mapData.buffer.slice(mapData.byteOffset, mapData.byteOffset + mapData.byteLength);
             const bspMap = parseBsp(arrayBuffer);
@@ -53,7 +62,7 @@ export class DedicatedServer implements GameEngine {
             // Ideally we need a converter, but BspMap has nodes, planes, brushes etc.
             // traceBox expects { nodes, planes, brushes, leafBrushes, visibility? }
             // parseBsp returns BspMap which has these fields matching BspModel interface.
-            this.collisionModel = bspMap as unknown as CollisionModel;
+            this.sv.collisionModel = bspMap as unknown as CollisionModel;
             console.log(`Map loaded successfully.`);
         } catch (e) {
             console.warn('Failed to load map:', e);
@@ -61,10 +70,10 @@ export class DedicatedServer implements GameEngine {
         }
 
         // 3. Initialize Game
-        this.startTime = Date.now();
+        this.sv.startTime = Date.now();
         const imports: GameImports = {
             trace: (start, mins, maxs, end, passent, contentmask) => {
-                if (!this.collisionModel) {
+                if (!this.sv.collisionModel) {
                     return {
                         fraction: 1.0,
                         endpos: { ...end },
@@ -82,7 +91,7 @@ export class DedicatedServer implements GameEngine {
                    end,
                    mins: mins || undefined,
                    maxs: maxs || undefined,
-                   model: this.collisionModel
+                   model: this.sv.collisionModel
                 });
 
                 // Wrap result to match GameTraceResult
@@ -126,7 +135,7 @@ export class DedicatedServer implements GameEngine {
         // Find free client slot
         let clientIndex = -1;
         for (let i = 0; i < MAX_CLIENTS; i++) {
-            if (this.clients[i] === null || this.clients[i]!.state === ClientState.Free) {
+            if (this.svs.clients[i] === null || this.svs.clients[i]!.state === ClientState.Free) {
                 clientIndex = i;
                 break;
             }
@@ -141,7 +150,7 @@ export class DedicatedServer implements GameEngine {
         driver.attach(ws);
 
         const client = createClient(clientIndex, driver);
-        this.clients[clientIndex] = client;
+        this.svs.clients[clientIndex] = client;
 
         driver.onMessage((data) => this.onClientMessage(client, data));
         driver.onClose(() => this.onClientDisconnect(client));
@@ -168,7 +177,7 @@ export class DedicatedServer implements GameEngine {
 
     private onClientDisconnect(client: Client) {
         console.log(`Client ${client.index} disconnected`);
-        this.clients[client.index] = null;
+        this.svs.clients[client.index] = null;
     }
 
     private handleMove(client: Client, cmd: UserCommand) {
@@ -210,7 +219,7 @@ export class DedicatedServer implements GameEngine {
        const writer = new BinaryWriter();
        writer.writeByte(ServerCommand.serverdata);
        writer.writeLong(34); // Protocol version
-       writer.writeLong(this.frameCount);
+       writer.writeLong(this.sv.frame);
        writer.writeByte(0); // Attract loop
        writer.writeString("baseq2");
        writer.writeShort(client.index);
@@ -218,35 +227,50 @@ export class DedicatedServer implements GameEngine {
        client.net.send(writer.getData());
     }
 
+    private SV_ReadPackets() {
+        // This will eventually poll the NetDriver for all clients.
+        // For now, messages are pushed directly to onClientMessage.
+    }
+
     private runFrame() {
         if (!this.game) return;
-        this.frameCount++;
+        this.sv.frame++;
 
-        // Run simulation
+        // 1. Read network packets
+        this.SV_ReadPackets();
+
+        // 2. Run client commands
+        for (const client of this.svs.clients) {
+            if (client && client.state === ClientState.Active && client.edict) {
+                this.game.clientThink(client.edict, client.lastCmd);
+            }
+        }
+
+        // 3. Run simulation
         this.game.frame({
-            frame: this.frameCount,
+            frame: this.sv.frame,
             deltaMs: FRAME_TIME_MS,
             nowMs: Date.now()
         });
 
-        // 2. Send Updates
-        this.sendClientMessages();
+        // 4. Send Updates
+        this.SV_SendClientMessages();
     }
 
-    private sendClientMessages() {
+    private SV_SendClientMessages() {
         // Build snapshot
         // Send to all clients
-        for (const client of this.clients) {
+        for (const client of this.svs.clients) {
             if (client && client.state === ClientState.Active) {
-                this.sendClientFrame(client);
+                this.SV_SendClientFrame(client);
             }
         }
     }
 
-    private sendClientFrame(client: Client) {
+    private SV_SendClientFrame(client: Client) {
         const writer = new BinaryWriter();
         writer.writeByte(ServerCommand.frame);
-        writer.writeLong(this.frameCount);
+        writer.writeLong(this.sv.frame);
         writer.writeLong(0); // Delta frame
         writer.writeByte(0); // Suppress
         writer.writeByte(0); // Area bytes
@@ -271,7 +295,7 @@ export class DedicatedServer implements GameEngine {
 
     unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
         // Find client for ent
-        const client = this.clients.find(c => c?.edict === ent);
+        const client = this.svs.clients.find(c => c?.edict === ent);
         if (client) {
              // Send
         }
