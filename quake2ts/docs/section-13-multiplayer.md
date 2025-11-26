@@ -1,5 +1,7 @@
 # Section 13: Multiplayer & Network Support
 
+**CURRENT STATUS (2025-11-26):** The initial implementation of the dedicated server is underway. The core logic for the client connection handshake, client input processing, and entity state serialization is in place. However, there are known build and test failures that need to be resolved before the server is fully functional.
+
 ## Overview
 This section covers the transition from a local-only "listen server" architecture to a true Client-Server model, enabling multiplayer support over the network.
 
@@ -58,13 +60,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.2 Server Main Loop (`SV_Frame`)
 - [x] **Frame Structure**: Basic loop exists in `packages/server/src/dedicated.ts`.
-- [ ] **Frame Steps** (enhance existing loop):
+- [x] **Frame Steps** (enhance existing loop):
   1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets.
      - Parse `clc_*` messages (stringcmd, move, userinfo, etc.).
      - Update `client_t.lastmessage` timestamp (for timeout detection).
      - Process `clc_move`: Extract `usercmd_t`, store in client command buffer for `ge->ClientThink()`.
   2. **`SV_RunGameFrame()`**:
-     - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
+     - [x] For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
      - Call `ge->G_RunFrame()` to advance game simulation (physics, AI, triggers).
      - Increment `sv.framenum`.
   3. **`SV_SendClientMessages()`**:
@@ -75,22 +77,22 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.
-- [ ] **Connection Flow** (verify/complete):
-  1. Client sends `clc_stringcmd("connect")` with userinfo (name, model, skin, etc.).
-  2. Server validates, calls `ge->ClientConnect(edict, userinfo)` (game can reject).
-  3. Server responds with `svc_serverdata` (protocol version, server frame, map name, player slot).
-  4. Server sends all configstrings (`svc_configstring` for CS_NAME, CS_MODELS[], CS_SOUNDS[], CS_IMAGES[], CS_LIGHTS[], etc.).
-  5. Server sends spawn baselines (`svc_spawnbaseline`) for all entities (initial state for delta compression).
-  6. Server sends `svc_stufftext("precache\n")` to signal client to load assets.
-  7. Client responds with `clc_stringcmd("begin")` when ready.
-  8. Server calls `ge->ClientBegin(edict)`, sets `client_t.state = cs_spawned`, starts sending frames.
+- [x] **Connection Flow** (verify/complete):
+  1. [x] Client sends `clc_stringcmd("connect")` with userinfo (name, model, skin, etc.).
+  2. [x] Server validates, calls `ge->ClientConnect(edict, userinfo)` (game can reject).
+  3. [x] Server responds with `svc_serverdata` (protocol version, server frame, map name, player slot).
+  4. [x] Server sends all configstrings (`svc_configstring` for CS_NAME, CS_MODELS[], CS_SOUNDS[], CS_IMAGES[], CS_LIGHTS[], etc.).
+  5. [x] Server sends spawn baselines (`svc_spawnbaseline`) for all entities (initial state for delta compression).
+  6. [x] Server sends `svc_stufftext("precache\n")` to signal client to load assets.
+  7. [x] Client responds with `clc_stringcmd("begin")` when ready.
+  8. [x] Server calls `ge->ClientBegin(edict)`, sets `client_t.state = cs_spawned`, starts sending frames.
 - [ ] **Reconnection**: If client disconnects/reconnects, reuse slot if same userinfo (for seamless reconnect).
 
 #### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
 - [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts`.
-- [ ] **Baseline Management**: Each client tracks `lastframe` (last `svc_frame` acked). Server maintains baselines:
-  - **Initial Baseline**: Sent via `svc_spawnbaseline` on connect (entity's state when it first spawns).
-  - **Frame Baseline**: Last entity state sent to this client in previous frame.
+- [x] **Baseline Management**: Each client tracks `lastframe` (last `svc_frame` acked). Server maintains baselines:
+  - [x] **Initial Baseline**: Sent via `svc_spawnbaseline` on connect (entity's state when it first spawns).
+  - [ ] **Frame Baseline**: Last entity state sent to this client in previous frame.
 - **Delta Calculation**: Compares current state with baseline. Only send changed fields (bitflags indicate which fields).
   - Reference `server/sv_ents.c:200-400` for `SV_EmitPacketEntities()` logic.
 - [ ] **Field Encoding**: Each entity field (origin, angles, modelindex, frame, skin, effects, etc.) has specific encoding:
@@ -103,9 +105,9 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.5 Game Module Interface (`game_export_t`)
 - [ ] **Loading Game DLL**: In original Quake II, server loads `game.dll` via `dlopen()`. In TypeScript, import `@quake2ts/game` package and call `GetGameAPI(game_import)`.
-- [ ] **`game_import_t`**: Server provides to game:
+- [x] **`game_import_t`**: Server provides to game:
   - Console: `dprintf()`, `cprintf()`, `centerprintf()`, `error()`
-  - Entities: `linkentity()`, `unlinkentity()`, `setmodel()`, `trace()`, `pointcontents()`
+  - Entities: [x] `linkentity()`, [x] `unlinkentity()`, `setmodel()`, [x] `trace()`, [x] `pointcontents()`
   - Configstrings: `configstring()` (set CS_* strings)
   - Sound/FX: `sound()`, `positioned_sound()`, `WriteByte/Short/Long/Angle/Dir/String()` (for temp entities)
   - Cvars, commands, filesystem, etc.

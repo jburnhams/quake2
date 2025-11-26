@@ -3,7 +3,9 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel } from '@quake2ts/shared';
+import { writeDeltaEntity, writeBaselineEntity } from './protocol/entity.js';
+import { writePlayerState } from './protocol/player.js';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, CollisionEntityIndex, pointContents } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
@@ -16,12 +18,14 @@ export class DedicatedServer implements GameEngine {
     private wss: WebSocketServer | null = null;
     private clients: (Client | null)[] = new Array(MAX_CLIENTS).fill(null);
     private game: GameExports | null = null;
+    private configstrings: string[] = [];
     private frameInterval: NodeJS.Timeout | null = null;
     private startTime: number = 0;
     private frameCount: number = 0;
 
     // Physics
     private collisionModel: CollisionModel | null = null;
+    private entityIndex: CollisionEntityIndex = new CollisionEntityIndex();
 
     constructor(private port: number = 27910) {}
 
@@ -64,25 +68,14 @@ export class DedicatedServer implements GameEngine {
         this.startTime = Date.now();
         const imports: GameImports = {
             trace: (start, mins, maxs, end, passent, contentmask) => {
-                if (!this.collisionModel) {
-                    return {
-                        fraction: 1.0,
-                        endpos: { ...end },
-                        allsolid: false,
-                        startsolid: false,
-                        plane: null,
-                        surfaceFlags: 0,
-                        contents: 0,
-                        ent: null
-                    };
-                }
-
-                const result = traceBox({
+                const result = this.entityIndex.trace({
                    start,
                    end,
                    mins: mins || undefined,
                    maxs: maxs || undefined,
-                   model: this.collisionModel
+                   model: this.collisionModel ?? undefined,
+                   passId: passent?.id,
+                   contentMask: contentmask
                 });
 
                 // Wrap result to match GameTraceResult
@@ -94,11 +87,29 @@ export class DedicatedServer implements GameEngine {
                     plane: result.plane || null, // Ensure null if undefined
                     surfaceFlags: result.surfaceFlags || 0,
                     contents: result.contents || 0,
-                    ent: null // TODO: resolve entity hit
+                    ent: result.entityId ? this.game?.entities.get(result.entityId) ?? null : null
                 };
             },
-            pointcontents: (p) => 0, // Empty
-            linkentity: (ent) => {}, // No-op for now or handle in game
+            pointcontents: (p) => {
+                if (!this.collisionModel) return 0;
+                return pointContents(p, this.collisionModel);
+            },
+            linkentity: (ent) => {
+                this.entityIndex.link({
+                    id: ent.id,
+                    origin: ent.origin,
+                    mins: ent.mins,
+                    maxs: ent.maxs,
+                    contents: ent.solid,
+                });
+            },
+            unlinkentity: (ent) => {
+                this.entityIndex.unlink(ent.id);
+            },
+            configstring: (index: number, value: string) => {
+                this.configstrings[index] = value;
+                // TODO: broadcast to clients if it changes mid-game
+            },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
             unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args)
         };
@@ -143,6 +154,9 @@ export class DedicatedServer implements GameEngine {
         const client = createClient(clientIndex, driver);
         this.clients[clientIndex] = client;
 
+        // Create a player edict for this client
+        client.edict = this.game!.spawn();
+
         driver.onMessage((data) => this.onClientMessage(client, data));
         driver.onClose(() => this.onClientDisconnect(client));
     }
@@ -168,68 +182,123 @@ export class DedicatedServer implements GameEngine {
 
     private onClientDisconnect(client: Client) {
         console.log(`Client ${client.index} disconnected`);
+        this.game?.clientDisconnect(client.edict!);
         this.clients[client.index] = null;
     }
 
     private handleMove(client: Client, cmd: UserCommand) {
         client.lastCmd = cmd;
         client.lastPacketTime = Date.now();
-        // If client is not spawned, maybe spawn them?
-        if (client.state === ClientState.Connected) {
-             this.spawnClient(client);
-        }
     }
 
     private handleUserInfo(client: Client, info: string) {
         client.userInfo = info;
+
+        // If client is connected, let game module know
+        if (client.state === ClientState.Connected && this.game) {
+            this.game.clientConnect(client.edict!, info);
+        }
     }
 
     private handleStringCmd(client: Client, cmd: string) {
-        // Handle console commands
+        const parts = cmd.split(' ');
+        const command = parts[0];
+
+        switch (command) {
+            case 'connect':
+                // Client is connecting, send them the initial gamestate
+                this.sendInitialGamestate(client);
+                break;
+            case 'begin':
+                // Client is ready to spawn
+                this.spawnClient(client);
+                break;
+        }
     }
 
     private spawnClient(client: Client) {
         if (!this.game) return;
 
         // Use Game Exports to spawn player properly
-        const ent = this.game.clientBegin({
-            inventory: createPlayerInventory(),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 0,
-        });
-
-        client.edict = ent;
+        this.game.clientBegin(client.edict!);
         client.state = ClientState.Active;
-
-        // Send baseline/gamestate
-        this.sendServerData(client);
     }
 
-    private sendServerData(client: Client) {
-       // Send svc_serverdata
-       const writer = new BinaryWriter();
-       writer.writeByte(ServerCommand.serverdata);
-       writer.writeLong(34); // Protocol version
-       writer.writeLong(this.frameCount);
-       writer.writeByte(0); // Attract loop
-       writer.writeString("baseq2");
-       writer.writeShort(client.index);
-       writer.writeString("maps/test.bsp");
-       client.net.send(writer.getData());
+    private sendInitialGamestate(client: Client) {
+        const writer = new BinaryWriter();
+
+        // 1. Serverdata
+        writer.writeByte(ServerCommand.serverdata);
+        writer.writeLong(34); // Protocol version
+        writer.writeLong(this.frameCount);
+        writer.writeByte(0); // Attract loop
+        writer.writeString("baseq2");
+        writer.writeShort(client.index);
+        writer.writeString("maps/test.bsp"); // TODO: use actual map name
+        client.net.send(writer.getData());
+
+        // 2. Configstrings
+        for (let i = 0; i < this.configstrings.length; i++) {
+            if (this.configstrings[i]) {
+                const csWriter = new BinaryWriter();
+                csWriter.writeByte(ServerCommand.configstring);
+                csWriter.writeShort(i);
+                csWriter.writeString(this.configstrings[i]);
+                client.net.send(csWriter.getData());
+            }
+        }
+
+        // 3. Baselines
+        this.game?.entities.forEach(ent => {
+            const baselineWriter = new BinaryWriter();
+            baselineWriter.writeByte(ServerCommand.spawnbaseline);
+            const toState = {
+                number: ent.id,
+                origin: ent.origin,
+                angles: ent.angles,
+                modelIndex: ent.modelindex,
+                frame: ent.frame,
+                skinNum: ent.skinnum,
+                effects: ent.effects,
+                renderfx: ent.renderfx,
+                solid: ent.solid,
+                sound: ent.sound,
+                event: 0, // TODO
+            };
+            writeBaselineEntity(toState, baselineWriter);
+            client.net.send(baselineWriter.getData());
+        });
+
+
+        // 4. Stufftext for precache
+        const precacheWriter = new BinaryWriter();
+        precacheWriter.writeByte(ServerCommand.stufftext);
+        precacheWriter.writeString('precache\n');
+        client.net.send(precacheWriter.getData());
+
+
+        client.state = ClientState.Primed;
     }
 
     private runFrame() {
         if (!this.game) return;
         this.frameCount++;
 
-        // Run simulation
+        // 1. Process client commands
+        for (const client of this.clients) {
+            if (client && client.state === ClientState.Active && client.edict) {
+                this.game.clientThink(client.edict, client.lastCmd);
+            }
+        }
+
+        // 2. Run simulation
         this.game.frame({
             frame: this.frameCount,
             deltaMs: FRAME_TIME_MS,
             nowMs: Date.now()
         });
 
-        // 2. Send Updates
+        // 3. Send Updates
         this.sendClientMessages();
     }
 
@@ -247,15 +316,47 @@ export class DedicatedServer implements GameEngine {
         const writer = new BinaryWriter();
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(this.frameCount);
-        writer.writeLong(0); // Delta frame
+        writer.writeLong(client.lastFrame); // Delta frame
         writer.writeByte(0); // Suppress
         writer.writeByte(0); // Area bytes
 
-        // Player info
+        // Update player state
+        if (client.edict && client.edict.client) {
+            client.ps.pmove.origin = client.edict.origin;
+            client.ps.viewangles = client.edict.angles;
+            // client.ps.stats[PlayerStat.HEALTH] = client.edict.health;
+        }
+
+        // Write player state
         writer.writeByte(ServerCommand.playerinfo);
-        // ... Write player state ...
-        writer.writeShort(0); // flags (empty)
-        writer.writeLong(0); // stats
+        writePlayerState(client.ps, writer);
+
+        // Write entities
+        const newFrameEntities: { [entityId: number]: any } = {};
+        this.game?.entities.forEach(ent => {
+            if (ent.id === 0) return; // skip worldspawn
+
+            const toState = {
+                number: ent.id,
+                origin: ent.origin,
+                angles: ent.angles,
+                modelIndex: ent.modelindex,
+                frame: ent.frame,
+                skinNum: ent.skinnum,
+                effects: ent.effects,
+                renderfx: ent.renderfx,
+                solid: ent.solid,
+                sound: ent.sound,
+                event: 0, // TODO
+            };
+
+            const fromState = client.frame_entities[ent.id];
+            writeDeltaEntity(fromState, toState, writer, false, !fromState);
+            newFrameEntities[ent.id] = toState;
+        });
+
+        client.frame_entities = newFrameEntities;
+        client.lastFrame = this.frameCount;
 
         client.net.send(writer.getData());
     }

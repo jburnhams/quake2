@@ -29,6 +29,13 @@ const NULL_STATE: EntityState = {
  * @param newEntity If true, the `from` state is ignored and treated as null,
  * forcing all fields of the `to` state to be written.
  */
+export function writeBaselineEntity(
+    to: EntityState,
+    writer: BinaryWriter
+): void {
+    writeDeltaEntity(NULL_STATE, to, writer, true, true);
+}
+
 export function writeDeltaEntity(
   from: EntityState,
   to: EntityState,

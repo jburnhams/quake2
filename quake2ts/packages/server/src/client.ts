@@ -1,12 +1,11 @@
-import { NetDriver, UserCommand } from '@quake2ts/shared';
+import { NetDriver, UserCommand, PlayerState, EntityState } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 
 export enum ClientState {
   Free,
   Connected, // Connection established, waiting for challenge/info
   Primed,    // Sent info, waiting for gamestate
-  Active,    // In game
-  Spawned    // Spawned in world
+  Active    // In game
 }
 
 export interface Client {
@@ -19,13 +18,17 @@ export interface Client {
   // Game state
   edict: Entity | null; // The player entity
   lastCmd: UserCommand;
+  ps: PlayerState; // Player state sent to client each frame
 
   // Network stats
   lastPacketTime: number;
 
-  // For delta compression (TODO)
+  // For delta compression
   lastFrame: number;
+  frame_entities: { [entityId: number]: EntityState };
 }
+
+import { createPlayerState } from '@quake2ts/shared';
 
 export function createClient(index: number, net: NetDriver): Client {
     return {
@@ -43,7 +46,9 @@ export function createClient(index: number, net: NetDriver): Client {
             sidemove: 0,
             upmove: 0
         },
+        ps: createPlayerState(),
         lastPacketTime: Date.now(),
-        lastFrame: 0
+        lastFrame: 0,
+        frame_entities: {}
     };
 }
