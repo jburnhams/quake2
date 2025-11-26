@@ -55,7 +55,11 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 ### Phase 3: Client Refactoring (CGame)
 - [ ] **CGame Interface**: Define `cgame_export_t` and `cgame_import_t` interfaces in TypeScript.
-- [ ] **Module Split**: Move HUD, View, and Prediction logic from `packages/client` to `packages/cgame` (or a sub-module).
+- [ ] **Module Split**: - refer to original source code (favouring rerelease) as to the ideal structure
+  - [ ] Move code into shared as appropriate.
+  - [ ] Move HUD from `packages/client` to `packages/cgame` (or a sub-module).
+  - [ ] Move View logic from `packages/client` to `packages/cgame` (or a sub-module).
+  - [ ] Move Prediction logic from `packages/client` to `packages/cgame` (or a sub-module).
 - [ ] **Network Loop**: Update `CL_Frame` to:
   - Read server packets.
   - Run prediction (`CG_Predict`).
