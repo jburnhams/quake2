@@ -279,7 +279,7 @@ export function createGame(
            const player = entities.spawn();
            player.classname = 'player';
            // ... (SP init)
-           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates() });
+           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates(), buttons: 0 });
       }
     },
     clientBegin(client: PlayerClient): Entity {
