@@ -366,7 +366,7 @@ Do **not** move to shared:
 **Problem**: With 100+ entities, sending full state every frame = ~50 KB/s per client. Delta compression reduces to ~5 KB/s but requires complex baseline tracking.
 **Solution**:
 - Each client stores `entity_state_t` baseline per entity.
-- Server XORs current state with baseline, sends only changed fields (bitfield indicates which).
+- Server compares current state with baseline, sends only changed fields (bitfield indicates which).
 - Entity fields have specific encoding (quantized floats, variable-length ints).
 - Reference `server/sv_ents.c:200-400` (`SV_EmitPacketEntities`) for exact logic.
 **Testing**: Log bytes sent per frame. Target: < 1500 bytes/frame (10Hz = 15 KB/s).
