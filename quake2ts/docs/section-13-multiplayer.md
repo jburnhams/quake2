@@ -91,7 +91,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [ ] **Baseline Management**: Each client tracks `lastframe` (last `svc_frame` acked). Server maintains baselines:
   - **Initial Baseline**: Sent via `svc_spawnbaseline` on connect (entity's state when it first spawns).
   - **Frame Baseline**: Last entity state sent to this client in previous frame.
-  - **Delta Calculation**: XOR current state with baseline. Only send changed fields (bitflags indicate which fields).
+- **Delta Calculation**: Compares current state with baseline. Only send changed fields (bitflags indicate which fields).
   - Reference `server/sv_ents.c:200-400` for `SV_EmitPacketEntities()` logic.
 - [ ] **Field Encoding**: Each entity field (origin, angles, modelindex, frame, skin, effects, etc.) has specific encoding:
   - `origin`: 3 floats, quantized to 1/8 unit precision, sent as shorts (delta from baseline).
