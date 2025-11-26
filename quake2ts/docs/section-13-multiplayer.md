@@ -50,28 +50,19 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.1 Server Architecture (Reference: original `server/sv_*.c`)
 - [x] **Package Setup**: `packages/server` created with basic structure.
-- [ ] **Server State**: Define core structures (TypeScript equivalents):
-  - `server_static_t` (`svs`): Global server state - port, client array, challenge list, etc.
-  - `server_t` (`sv`): Per-level state - map name, BSP data, entity baselines, configstrings.
+- [ ] **Server State**: Define core structures (TypeScript equivalents): **(In Progress)**
+  - `server_static_t` (`svs`): Global server state - port, client array, challenge list, etc. (Basic `svs` with `clients` array implemented).
+  - `server_t` (`sv`): Per-level state - map name, BSP data, entity baselines, configstrings. (Basic `sv` with time, frame, and map info implemented).
   - `client_t`: Per-client state - connection state, reliable/unreliable messages, last frame acked, user info, name, rate.
   - Reference `server/server.h` for full structure definitions.
 
 #### 2.2 Server Main Loop (`SV_Frame`)
 - [x] **Frame Structure**: Basic loop exists in `packages/server/src/dedicated.ts`.
-- [ ] **Frame Steps** (enhance existing loop):
-  1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets.
-     - Parse `clc_*` messages (stringcmd, move, userinfo, etc.).
-     - Update `client_t.lastmessage` timestamp (for timeout detection).
-     - Process `clc_move`: Extract `usercmd_t`, store in client command buffer for `ge->ClientThink()`.
-  2. **`SV_RunGameFrame()`**:
-     - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
-     - Call `ge->G_RunFrame()` to advance game simulation (physics, AI, triggers).
-     - Increment `sv.framenum`.
-  3. **`SV_SendClientMessages()`**:
-     - For each client: Build `svc_frame` with delta-compressed entity snapshot.
-     - Call `SV_WriteFrameToClient()` (see Phase 2.4).
-     - Send via `client.netchan.Transmit()`.
-  4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early.
+- [ ] **Frame Steps** (enhance existing loop): **(In Progress)**
+  1. **`SV_ReadPackets()`**: Stubbed out. Message handling is currently done directly in `onClientMessage`.
+  2. **`SV_RunGameFrame()`**: Implemented. The loop now iterates active clients, calls `game.clientThink()` with their latest command, then calls `game.frame()` to advance the simulation.
+  3. **`SV_SendClientMessages()`**: Stubbed out. Contains placeholder logic to send a basic frame update, but lacks delta compression.
+  4. **Rate Limiting**: Implemented via `setInterval` in `DedicatedServer.start()`.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.
