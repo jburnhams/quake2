@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage, type Damageable } from '../../src/combat/index.js';
 
 type PartialEntity = Partial<Damageable> & Pick<Damageable, 'origin'>;
@@ -22,7 +22,7 @@ describe('T_Damage', () => {
       regularArmor: { armorType: ArmorType.BODY, armorCount: 100 },
     });
 
-    const result = T_Damage(target, null, null, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 60, 0, DamageFlags.NONE, MOD_UNKNOWN);
+    const result = T_Damage(target, null, null, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 60, 0, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(result).toEqual({
       take: 8,
@@ -40,7 +40,7 @@ describe('T_Damage', () => {
 
   it('scales knockback for self damage', () => {
     const target = makeEntity({ origin: { x: 0, y: 0, z: 0 }, mass: 100 });
-    const result = T_Damage(target, target, target, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 10, 50, DamageFlags.NONE, MOD_UNKNOWN);
+    const result = T_Damage(target, target, target, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 10, 50, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(result?.knocked).toEqual({ x: 800, y: 0, z: 0 });
     expect(target.velocity).toEqual({ x: 800, y: 0, z: 0 });
@@ -48,7 +48,7 @@ describe('T_Damage', () => {
 
   it('ignores damage when godmode is active without NO_PROTECTION', () => {
     const target = makeEntity({ origin: { x: 0, y: 0, z: 0 }, flags: EntityDamageFlags.GODMODE });
-    const result = T_Damage(target, null, null, { x: 0, y: 1, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 25, 0, DamageFlags.NONE, MOD_UNKNOWN);
+    const result = T_Damage(target, null, null, { x: 0, y: 1, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 25, 0, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(result).toEqual({
       take: 0,
@@ -64,7 +64,7 @@ describe('T_Damage', () => {
     const pain = vi.fn();
     const target = makeEntity({ origin: { x: 0, y: 0, z: 0 }, pain });
 
-    const result = T_Damage(target, null, null, { x: 0, y: 1, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 30, 0, DamageFlags.NONE, MOD_UNKNOWN);
+    const result = T_Damage(target, null, null, { x: 0, y: 1, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 30, 0, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(result?.take).toBe(30);
     expect(pain).toHaveBeenCalledWith(target, null, 0, 30, MOD_UNKNOWN);
@@ -77,7 +77,7 @@ describe('T_RadiusDamage', () => {
     const attacker = makeEntity({ origin: { x: 10, y: 0, z: 0 } });
     const victim = makeEntity({ origin: { x: 120, y: 0, z: 0 } });
 
-    const hits = T_RadiusDamage([attacker, victim], inflictor, attacker, 120, null, 200, DamageFlags.NONE, MOD_UNKNOWN);
+    const hits = T_RadiusDamage([attacker, victim], inflictor, attacker, 120, null, 200, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(hits).toHaveLength(2);
     const attackerHit = hits.find((hit) => hit.target === attacker)!;
@@ -95,7 +95,7 @@ describe('T_RadiusDamage', () => {
     const untouchable = makeEntity({ origin: { x: 50, y: 0, z: 0 }, takedamage: false });
     const victim = makeEntity({ origin: { x: 50, y: 0, z: 0 } });
 
-    const hits = T_RadiusDamage([ignored, untouchable, victim], inflictor, null, 80, ignored, 100, DamageFlags.NONE, MOD_UNKNOWN);
+    const hits = T_RadiusDamage([ignored, untouchable, victim], inflictor, null, 80, ignored, 100, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(hits.map((hit) => hit.target)).toEqual([victim]);
     expect(victim.health).toBeLessThan(100);
@@ -115,6 +115,7 @@ describe('T_RadiusDamage', () => {
       100,
       DamageFlags.NONE,
       MOD_UNKNOWN,
+      0,
       {
         canDamage: (ent) => ent === visible,
       },
@@ -131,7 +132,7 @@ describe('T_RadiusDamage', () => {
     const close = makeEntity({ origin: { x: 10, y: 0, z: 0 } });
     const far = makeEntity({ origin: { x: 80, y: 0, z: 0 } });
 
-    const hits = T_RadiusDamage([close, far], inflictor, null, 200, null, 30, DamageFlags.NONE, MOD_UNKNOWN);
+    const hits = T_RadiusDamage([close, far], inflictor, null, 200, null, 30, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(hits.map((hit) => hit.target)).toEqual([close]);
     expect(close.health).toBeLessThan(100);
@@ -142,9 +143,52 @@ describe('T_RadiusDamage', () => {
     const inflictor = { origin: { x: 0, y: 0, z: 0 } };
     const tallBox = makeEntity({ origin: { x: 100, y: 0, z: 0 }, mins: { x: -16, y: -16, z: 0 }, maxs: { x: 16, y: 16, z: 56 } });
 
-    const hits = T_RadiusDamage([tallBox], inflictor, null, 120, null, 50, DamageFlags.NONE, MOD_UNKNOWN);
+    const hits = T_RadiusDamage([tallBox], inflictor, null, 120, null, 50, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(hits).toHaveLength(0);
     expect(tallBox.health).toBe(100);
   });
+});
+
+describe('Damage Modifiers', () => {
+    const time = 10;
+    const attacker = makeEntity({ origin: { x: 0, y: 0, z: 0 }, client: {} as any });
+    const target = makeEntity({ origin: { x: 50, y: 0, z: 0 } });
+    const damage = 10;
+
+    beforeEach(() => {
+        (attacker as any).client.quad_time = 0;
+        (attacker as any).client.double_time = 0;
+    });
+    const knockback = 20;
+
+    it('applies no modifier when no powerups are active', () => {
+        const result = T_Damage(target, attacker, attacker, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, damage, knockback, DamageFlags.NONE, MOD_UNKNOWN, time);
+        expect(result?.take).toBe(damage);
+    });
+
+    it('applies quad damage modifier', () => {
+        (attacker as any).client.quad_time = time + 5;
+        const result = T_Damage(target, attacker, attacker, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, damage, knockback, DamageFlags.NONE, MOD_UNKNOWN, time);
+        expect(result?.take).toBe(damage * 4);
+    });
+
+    it('applies double damage modifier', () => {
+        (attacker as any).client.double_time = time + 5;
+        const result = T_Damage(target, attacker, attacker, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, damage, knockback, DamageFlags.NONE, MOD_UNKNOWN, time);
+        expect(result?.take).toBe(damage * 2);
+    });
+
+    it('applies both quad and double damage modifiers', () => {
+        (attacker as any).client.quad_time = time + 5;
+        (attacker as any).client.double_time = time + 5;
+        const result = T_Damage(target, attacker, attacker, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, damage, knockback, DamageFlags.NONE, MOD_UNKNOWN, time);
+        expect(result?.take).toBe(damage * 8);
+    });
+
+    it('does not apply expired powerups', () => {
+        (attacker as any).client.quad_time = time - 5;
+        const result = T_Damage(target, attacker, attacker, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, damage, knockback, DamageFlags.NONE, MOD_UNKNOWN, time);
+        expect(result?.take).toBe(damage);
+    });
 });

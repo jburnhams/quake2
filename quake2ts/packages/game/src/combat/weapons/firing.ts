@@ -64,6 +64,7 @@ function fireHitscan(game: GameExports, player: Entity, forward: any, damage: nu
             knockback,
             DamageFlags.BULLET,
             mod,
+            game.time,
             game.multicast
         );
     } else {
@@ -93,6 +94,7 @@ function fireMultiplePellets(game: GameExports, player: Entity, forward: Vec3, r
                 knockback,
                 DamageFlags.BULLET,
                 mod,
+                game.time,
                 game.multicast
             );
         } else if (trace.plane) {
@@ -133,6 +135,7 @@ function fireRailgun(game: GameExports, player: Entity, forward: any, damage: nu
                 knockback,
                 DamageFlags.ENERGY,
                 DamageMod.RAILGUN,
+                game.time,
                 game.multicast
             );
         }

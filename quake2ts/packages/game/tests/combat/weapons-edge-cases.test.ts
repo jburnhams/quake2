@@ -74,6 +74,7 @@ describe('Weapon Firing - Edge Cases', () => {
                 225, // knockback
                 expect.anything(),
                 expect.anything(),
+                game.time,
                 expect.anything()
             );
         });
@@ -92,6 +93,7 @@ describe('Weapon Firing - Edge Cases', () => {
                 200, // knockback
                 expect.anything(),
                 expect.anything(),
+                game.time,
                 expect.anything()
             );
         });

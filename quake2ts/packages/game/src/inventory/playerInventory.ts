@@ -114,6 +114,9 @@ export interface PlayerClient {
     buttons: number;
     kick_angles?: Vec3;
     kick_origin?: Vec3;
+    // Powerup timers (from rerelease/g_local.h)
+    quad_time?: number;
+    double_time?: number;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
@@ -265,7 +268,8 @@ export function pickupArmor(inventory: PlayerInventory, item: ArmorItem, time: n
     return false;
 }
 
-export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, time: number): boolean {
+export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: number): boolean {
+    const inventory = client.inventory;
     let powerupId: PowerupId | null = null;
     let icon = '';
 
@@ -294,11 +298,15 @@ export function pickupPowerup(inventory: PlayerInventory, item: PowerupItem, tim
 
     if (powerupId) {
         const expiresAt = inventory.powerups.get(powerupId);
-        if (expiresAt && expiresAt > time) {
-            inventory.powerups.set(powerupId, expiresAt + item.timer);
-        } else {
-            inventory.powerups.set(powerupId, time + item.timer);
+        const newExpiresAt = (expiresAt && expiresAt > time) ? expiresAt + item.timer * 1000 : time + item.timer * 1000;
+        inventory.powerups.set(powerupId, newExpiresAt);
+
+        if (powerupId === PowerupId.QuadDamage) {
+            client.quad_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.DoubleDamage) {
+            client.double_time = newExpiresAt / 1000;
         }
+
         setPickup(inventory, icon, time);
         return true;
     }

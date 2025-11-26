@@ -73,6 +73,7 @@ describe('Chaingun', () => {
             expect.anything(),
             expect.anything(),
             DamageMod.CHAINGUN,
+            game.time,
             expect.anything()
         );
     });
@@ -95,6 +96,7 @@ describe('Chaingun', () => {
             expect.anything(),
             expect.anything(),
             DamageMod.CHAINGUN,
+            game.time,
             expect.anything()
         );
     });
