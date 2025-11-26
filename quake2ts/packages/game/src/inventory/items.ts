@@ -4,6 +4,9 @@
 
 import { AmmoType } from './ammo.js';
 import { WeaponId } from './playerInventory.js';
+import { Entity } from '../entities/entity.js';
+import { EntitySystem } from '../entities/system.js';
+import { chaingunThink } from '../combat/weapons/chaingun.js';
 
 export { AmmoType };
 
@@ -15,6 +18,7 @@ export interface BaseItem {
 export interface WeaponItem extends BaseItem {
     type: 'weapon';
     weaponId: WeaponId;
+    think?: (player: Entity, sys: EntitySystem) => void;
     ammoType: AmmoType | null;
     initialAmmo: number;
     pickupAmmo: number;
@@ -86,6 +90,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 50,
         pickupAmmo: 50,
         fireRate: 0.1,
+        think: chaingunThink,
     },
     'weapon_chaingun': {
         type: 'weapon',

@@ -111,6 +111,7 @@ export interface PlayerInventory {
 export interface PlayerClient {
     inventory: PlayerInventory;
     weaponStates: PlayerWeaponStates;
+    buttons: number;
     kick_angles?: Vec3;
     kick_origin?: Vec3;
 }

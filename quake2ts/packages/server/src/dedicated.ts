@@ -194,7 +194,8 @@ export class DedicatedServer implements GameEngine {
         // Use Game Exports to spawn player properly
         const ent = this.game.clientBegin({
             inventory: createPlayerInventory(),
-            weaponStates: createPlayerWeaponStates()
+            weaponStates: createPlayerWeaponStates(),
+            buttons: 0,
         });
 
         client.edict = ent;

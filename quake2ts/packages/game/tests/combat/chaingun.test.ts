@@ -191,3 +191,51 @@ describe('Chaingun', () => {
         });
     });
 });
+
+import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
+import { getWeaponState } from '../../src/combat/weapons/state.js';
+import { EntitySystem } from '../../src/entities/system.js';
+
+describe('Chaingun Spin-down', () => {
+    let game: GameExports;
+    let player: Entity;
+
+    beforeEach(() => {
+        const sound = vi.fn();
+        const engine = {
+            sound,
+            centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
+        };
+
+        game = createGame({ trace: vi.fn(), multicast: vi.fn(), pointcontents: vi.fn(), unicast: vi.fn(), linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        game.sound = sound;
+
+        game.spawnWorld();
+
+        player = game.entities.spawn();
+        player.classname = 'player';
+        player.client = {
+            inventory: createPlayerInventory({
+                weapons: [WeaponId.Chaingun],
+                ammo: { [AmmoType.Bullets]: 50 },
+            }),
+            weaponStates: { states: new Map() },
+            buttons: 0,
+        } as any;
+        game.entities.finalizeSpawn(player);
+    });
+
+    it('should play spin-down sound when fire button is released', () => {
+        // Arrange
+        const weaponState = getWeaponState(player.client.weaponStates, WeaponId.Chaingun);
+        weaponState.spinupCount = 1;
+
+        // Act
+        chaingunThink(player, game as unknown as EntitySystem);
+
+        // Assert
+        expect(game.sound).toHaveBeenCalledWith(player, 0, 'weapons/chngnd1a.wav', 1, 0, 0);
+        expect(weaponState.spinupCount).toBe(0);
+    });
+});

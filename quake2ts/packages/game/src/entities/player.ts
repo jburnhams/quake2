@@ -1,6 +1,7 @@
 import { Entity, MoveType, Solid, DeadFlag } from './entity.js';
 import { createPlayerInventory, WeaponId, clearExpiredPowerups, PowerupId } from '../inventory/playerInventory.js';
 import { createPlayerWeaponStates } from '../combat/weapons/state.js';
+import { WEAPON_ITEMS } from '../inventory/items.js';
 import { throwGibs } from './gibs.js';
 import { DamageMod, damageModName } from '../combat/damageMods.js';
 import { EntitySystem } from './system.js';
@@ -59,6 +60,15 @@ export function player_think(self: Entity, sys: EntitySystem) {
     }
 
     clearExpiredPowerups(self.client.inventory, nowMs);
+
+    // Weapon think
+    const weaponId = self.client.inventory.currentWeapon;
+    if (weaponId) {
+        const weaponItem = Object.values(WEAPON_ITEMS).find(item => item.weaponId === weaponId);
+        if (weaponItem && weaponItem.think) {
+            weaponItem.think(self, sys);
+        }
+    }
 
     self.nextthink = sys.timeSeconds + 0.1;
     sys.scheduleThink(self, self.nextthink);

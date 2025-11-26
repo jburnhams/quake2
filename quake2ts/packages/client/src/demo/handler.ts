@@ -306,7 +306,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 inventory,
                 weaponStates: {
                     states: new Map()
-                }
+                },
+                buttons: 0,
             },
             health: ps.stats[1], // STAT_HEALTH
             armor: ps.stats[4], // STAT_ARMOR
