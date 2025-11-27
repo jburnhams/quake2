@@ -13,7 +13,13 @@ describe('Collision Physics', () => {
 
   beforeEach(() => {
     engine = {} as GameEngine;
+    // Default imports include areaEdicts mock returning empty array
+    // We need to override areaEdicts for checkTriggers tests to return candidates
     system = new EntitySystem(engine);
+
+    // Spy on findInBox to control what checkTriggers sees
+    vi.spyOn(system, 'findInBox').mockImplementation(() => []);
+
     ent = system.spawn();
     ent.inUse = true;
     other = system.spawn();
@@ -75,6 +81,9 @@ describe('Collision Physics', () => {
       trigger.absmax = { x: 15, y: 15, z: 15 };
       trigger.touch = vi.fn();
 
+      // Mock findInBox to return the trigger
+      vi.mocked(system.findInBox).mockReturnValue([trigger]);
+
       checkTriggers(ent, system);
 
       expect(trigger.touch).toHaveBeenCalledWith(trigger, ent);
@@ -92,6 +101,9 @@ describe('Collision Physics', () => {
       solid.absmax = { x: 15, y: 15, z: 15 };
       solid.touch = vi.fn();
 
+      // Mock findInBox to return the solid
+      vi.mocked(system.findInBox).mockReturnValue([solid]);
+
       checkTriggers(ent, system);
 
       expect(solid.touch).not.toHaveBeenCalled();
@@ -108,6 +120,10 @@ describe('Collision Physics', () => {
       trigger.absmin = { x: 20, y: 20, z: 20 };
       trigger.absmax = { x: 30, y: 30, z: 30 };
       trigger.touch = vi.fn();
+
+      // Mock findInBox to return the trigger even if not intersecting (as findInBox is broad phase)
+      // checkTriggers should filter it out
+      vi.mocked(system.findInBox).mockReturnValue([trigger]);
 
       checkTriggers(ent, system);
 

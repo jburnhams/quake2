@@ -37,6 +37,8 @@ export interface GameImports {
 
   linkentity(ent: Entity): void;
 
+  areaEdicts(mins: Vec3, maxs: Vec3): number[] | null;
+
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 }

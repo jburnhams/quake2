@@ -171,7 +171,7 @@ export class EntitySystem {
 
   constructor(
     engine: GameEngine,
-    imports?: GameImports,
+    imports?: Partial<GameImports>,
     gravity?: Vec3,
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry,
@@ -181,7 +181,9 @@ export class EntitySystem {
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
-    this.imports = imports || {
+
+    // Default imports
+    const defaultImports: GameImports = {
       trace: () => ({
         allsolid: false,
         startsolid: false,
@@ -205,9 +207,14 @@ export class EntitySystem {
           z: ent.origin.z + ent.maxs.z,
         };
       },
+      areaEdicts: () => null, // Default to null to signal fallback
       multicast: () => {},
       unicast: () => {},
     };
+
+    // Merge defaults with provided imports
+    this.imports = { ...defaultImports, ...imports };
+
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
     if (callbackRegistry) {
@@ -330,15 +337,44 @@ export class EntitySystem {
     return Array.from(matches).filter((entity) => entity.inUse && !entity.freePending);
   }
 
+  findInBox(mins: Vec3, maxs: Vec3): Entity[] {
+    const indices = this.imports.areaEdicts(mins, maxs);
+    if (indices === null) {
+      // Fallback: iterate all entities
+      const results: Entity[] = [];
+      const bounds = { min: mins, max: maxs };
+      for (const entity of this.pool) {
+        if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;
+        if (boundsIntersect(bounds, computeBounds(entity))) {
+          results.push(entity);
+        }
+      }
+      return results;
+    }
+
+    const results: Entity[] = [];
+    for (const index of indices) {
+      const entity = this.pool.getByIndex(index);
+      if (entity && entity.inUse && !entity.freePending) {
+        results.push(entity);
+      }
+    }
+    return results;
+  }
+
   findByRadius(origin: Vec3, radius: number): Entity[] {
+    const mins = { x: origin.x - radius, y: origin.y - radius, z: origin.z - radius };
+    const maxs = { x: origin.x + radius, y: origin.y + radius, z: origin.z + radius };
+
+    // Use findInBox (which handles fallback)
+    const candidates = this.findInBox(mins, maxs);
     const matches: Entity[] = [];
-    for (const entity of this.pool) {
-      if (entity.inUse && !entity.freePending) {
+
+    for (const entity of candidates) {
         const distance = lengthVec3(subtractVec3(origin, entity.origin));
         if (distance <= radius) {
           matches.push(entity);
         }
-      }
     }
     return matches;
   }
@@ -572,40 +608,32 @@ export class EntitySystem {
   }
 
   private runTouches(): void {
+    // Spatial optimization using areaEdicts
     const world = this.pool.world;
     const activeEntities: Entity[] = [];
+
+    // Collect active entities that can touch or be touched
     for (const entity of this.pool) {
-      if (entity === world) {
-        continue;
-      }
-      if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) {
-        continue;
-      }
+      if (entity === world) continue;
+      if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;
       activeEntities.push(entity);
     }
 
-    for (let i = 0; i < activeEntities.length; i += 1) {
-      const first = activeEntities[i];
-      let firstBounds: Bounds | null = null;
-      for (let j = i + 1; j < activeEntities.length; j += 1) {
-        const second = activeEntities[j];
-        if (!first.touch && !second.touch) {
-          continue;
-        }
-        if (!firstBounds) {
-          firstBounds = computeBounds(first);
-        }
-        const secondBounds = computeBounds(second);
-        if (!boundsIntersect(firstBounds, secondBounds)) {
-          continue;
-        }
-        if (first.touch) {
-          first.touch(first, second);
-        }
-        if (second.touch) {
-          second.touch(second, first);
-        }
-      }
+    // New optimized approach
+    for (const first of activeEntities) {
+       const candidates = this.findInBox(first.absmin, first.absmax);
+       const firstBounds = computeBounds(first);
+
+       for (const second of candidates) {
+         if (first === second) continue;
+         if (!first.touch) continue; // Only process if first has a touch callback
+         // AABB check again just in case areaEdicts is coarse
+         const secondBounds = computeBounds(second);
+         if (!boundsIntersect(firstBounds, secondBounds)) continue;
+
+         first.touch(first, second);
+         // Do not call second.touch(second, first) here; it will be called when the outer loop reaches 'second'.
+       }
     }
   }
 

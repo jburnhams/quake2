@@ -18,6 +18,7 @@ describe('Callback Serialization', () => {
       trace: () => ({} as any),
       pointcontents: () => 0,
       linkentity: () => {},
+      areaEdicts: () => null, // default
       multicast: () => {},
       unicast: () => {},
     };

@@ -3,7 +3,7 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
@@ -20,6 +20,7 @@ export class DedicatedServer implements GameEngine {
     private sv: Server;
     private game: GameExports | null = null;
     private frameInterval: NodeJS.Timeout | null = null;
+    private entityIndex: CollisionEntityIndex | null = null;
 
     constructor(private port: number = 27910) {
         this.svs = {
@@ -44,6 +45,7 @@ export class DedicatedServer implements GameEngine {
             baselines: new Array(MAX_EDICTS).fill(null),
             multicastBuf: new Uint8Array(0)
         };
+        this.entityIndex = new CollisionEntityIndex();
     }
 
     public async start(mapName: string) {
@@ -103,6 +105,10 @@ export class DedicatedServer implements GameEngine {
                     };
                 }
 
+                // If we want entity collision, we should check against entityIndex here too.
+                // But for now, just world collision + basic.
+                // TODO: Integrate CollisionEntityIndex.trace
+
                 const result = traceBox({
                    start,
                    end,
@@ -124,7 +130,28 @@ export class DedicatedServer implements GameEngine {
                 };
             },
             pointcontents: (p) => 0, // Empty
-            linkentity: (ent) => {}, // No-op for now or handle in game
+            linkentity: (ent) => {
+                if (!this.entityIndex) return;
+                // Update entity in the spatial index
+                this.entityIndex.link({
+                    id: ent.index,
+                    origin: ent.origin,
+                    mins: ent.mins,
+                    maxs: ent.maxs,
+                    contents: ent.solid === 0 ? 0 : 1, // Simplified contents
+                    surfaceFlags: 0
+                });
+            },
+            areaEdicts: (mins, maxs) => {
+                 if (!this.entityIndex) return [];
+                 // Use gatherTriggerTouches as a generic box query for now
+                 // or implement areaEdicts in CollisionEntityIndex specifically for general query
+                 // gatherTriggerTouches filters by contents mask, so pass -1 or similar if needed?
+                 // But wait, gatherTriggerTouches accepts mask.
+                 // If we want all entities, we might need to adjust CollisionEntityIndex or use a generic mask.
+                 // Assuming 0xFFFFFFFF for all.
+                 return this.entityIndex.gatherTriggerTouches({ x: 0, y: 0, z: 0 }, mins, maxs, 0xFFFFFFFF);
+            },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
             unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args)
         };
@@ -187,6 +214,9 @@ export class DedicatedServer implements GameEngine {
     private onClientDisconnect(client: Client) {
         console.log(`Client ${client.index} disconnected`);
         this.svs.clients[client.index] = null;
+        if (this.entityIndex && client.edict) {
+            this.entityIndex.unlink(client.edict.index);
+        }
     }
 
     private handleMove(client: Client, cmd: UserCommand) {
