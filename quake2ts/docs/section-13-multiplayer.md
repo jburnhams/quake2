@@ -534,11 +534,19 @@ Do **not** move to shared:
   - Implemented `GetCGameAPI()` in `packages/cgame/src/index.ts` with all required `cgame_export_t` functions
   - Added `LayoutFlags` and stat-related exports to `packages/shared/src/protocol/index.ts`
   - Added parsing support methods (`setCenterPrint`, `addNotification`, `clearNotifications`, `clearCenterPrint`) to MessageSystem
-  - **Status**: Core structure in place with placeholder implementations. ESM and CJS builds succeed.
-  - **Known Issue**: TypeScript declaration (DTS) build fails due to tsconfig file listing requirements. This is a build configuration issue, not a code issue. The actual TypeScript compilation succeeds and type checking passes. DTS generation can be addressed separately or the declarations can be generated via tsc directly.
+  - **Refactoring Complete**: Moved `WeaponId`, `AmmoType`, `AmmoItemId`, and `PowerupId` enums to `packages/shared/src/items/`
+    - Game package now imports these from shared instead of defining locally
+    - CGame HUD components use local type definitions (`ClientState`, `WEAPON_ICON_MAP`) to avoid game package dependency
+    - Eliminated all circular dependencies between game and cgame packages
+  - **Build Fixed**: Properly configured TypeScript declaration generation using tsup with `tsconfig.build.json`
+    - DTS files (`dist/index.d.ts`, `dist/index.d.cts`) correctly generated
+    - Single `tsup` command for both bundling and declarations
+    - Package properly consumable by TypeScript projects
+  - **Status**: Core structure complete. All builds succeed. All tests passing (879 total).
   - **Next Steps**:
-    1. Fix DTS build configuration (consider using tsc for declarations or adjusting tsup config)
-    2. Adapt HUD component drawing functions to use `cgi` imports instead of direct renderer access
-    3. Implement stat reading from `ps.stats[]` array using `STAT_*` constants
-    4. Complete view effects and prediction modules migration
+    1. ~~Fix DTS build configuration~~ ✅ **COMPLETE**
+    2. ~~Move shared enums to appropriate package~~ ✅ **COMPLETE**
+    3. Adapt HUD component drawing functions to use `cgi` imports instead of direct renderer access
+    4. Implement stat reading from `ps.stats[]` array using `STAT_*` constants
+    5. Complete view effects and prediction modules migration
 - [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Adapt HUD components to use cgame_import_t functions, implement stat reading, and complete view/prediction migration.
