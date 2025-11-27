@@ -18,6 +18,7 @@ import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
 import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
+import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 
 interface Bounds {
   min: Vec3;
@@ -137,6 +138,7 @@ export class EntitySystem {
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
+  private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
   private frameNumber = 0;
 
@@ -145,6 +147,15 @@ export class EntitySystem {
   get rng() {
     return this.random;
   }
+
+  setSpawnRegistry(registry: SpawnRegistry): void {
+    this.spawnRegistry = registry;
+  }
+
+  getSpawnFunction(classname: string): SpawnFunction | undefined {
+    return this.spawnRegistry?.get(classname);
+  }
+
   readonly engine: GameEngine;
   private readonly imports: GameImports;
   private readonly gravity: Vec3;
