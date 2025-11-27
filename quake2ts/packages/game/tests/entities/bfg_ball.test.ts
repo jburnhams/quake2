@@ -155,6 +155,7 @@ describe('BFG Ball Projectile', () => {
             1, // kick
             expect.anything(), // flags
             DamageMod.BFG_LASER,
+            game.time,
             expect.any(Function)
         );
     });
@@ -228,6 +229,7 @@ describe('BFG Ball Projectile', () => {
             expect.anything(),
             expect.anything(),
             DamageMod.BFG_LASER,
+            game.time,
             expect.anything()
         );
     });
@@ -330,6 +332,7 @@ describe('BFG Ball Projectile', () => {
             1,
             expect.anything(),
             DamageMod.BFG_LASER,
+            game.time,
             expect.any(Function)
         );
     });

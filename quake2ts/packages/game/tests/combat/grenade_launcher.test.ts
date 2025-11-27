@@ -80,6 +80,6 @@ describe('Grenade Launcher', () => {
             grenade.touch(grenade, target, null, null);
         }
 
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), grenade, player, 120, player, 120, expect.anything(), DamageMod.GRENADE, expect.anything(), expect.any(Function));
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), grenade, player, 120, player, 120, expect.anything(), DamageMod.GRENADE, game.time, expect.anything(), expect.any(Function));
     });
 });

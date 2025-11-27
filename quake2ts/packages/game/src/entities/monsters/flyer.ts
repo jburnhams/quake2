@@ -98,7 +98,7 @@ function flyer_slash(self: Entity, context: any): void {
     if (dist <= 80 && infront(self, self.enemy)) {
         T_Damage(self.enemy as any, self as any, self as any,
              normalizeVec3(subtractVec3(self.enemy.origin, self.origin)),
-             self.enemy.origin, ZERO_VEC3, damage, 5, DamageFlags.NO_ARMOR, DamageMod.UNKNOWN);
+             self.enemy.origin, ZERO_VEC3, damage, 5, DamageFlags.NO_ARMOR, DamageMod.UNKNOWN, context.timeSeconds);
     }
 }
 

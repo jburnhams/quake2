@@ -109,7 +109,7 @@ function gladiator_melee(self: Entity, context: any): void {
   const dir = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
   // Cleaver attack
-  T_Damage(self.enemy as any, self as any, self as any, dir, self.origin, { x: 0, y: 0, z: 0 }, 20, 10, 0, DamageMod.UNKNOWN);
+  T_Damage(self.enemy as any, self as any, self as any, dir, self.origin, { x: 0, y: 0, z: 0 }, 20, 10, 0, DamageMod.UNKNOWN, context.timeSeconds);
 }
 
 function gladiator_fire_railgun(self: Entity, context: any): void {

@@ -241,7 +241,8 @@ function parasite_drain_attack(self: Entity, context: EntitySystem): void {
     damage,
     0,
     DamageFlags.NO_KNOCKBACK,
-    DamageMod.UNKNOWN
+    DamageMod.UNKNOWN,
+    context.timeSeconds,
   );
 
   // Heal self

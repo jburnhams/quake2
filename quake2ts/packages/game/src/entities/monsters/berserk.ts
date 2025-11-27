@@ -253,6 +253,7 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
     kick,
     DamageFlags.NONE,
     DamageMod.UNKNOWN,
+    context.timeSeconds,
     context.multicast.bind(context)
   );
   return true;
@@ -362,7 +363,7 @@ function berserk_attack_slam(self: Entity, context: EntitySystem): void {
 
       const dir = normalizeVec3(subtractVec3(ent.origin, tr.endpos));
 
-      T_Damage(ent as any, self as any, self as any, dir, ent.origin, dir, points, k, DamageFlags.RADIUS, DamageMod.UNKNOWN, context.multicast.bind(context));
+      T_Damage(ent as any, self as any, self as any, dir, ent.origin, dir, points, k, DamageFlags.RADIUS, DamageMod.UNKNOWN, context.timeSeconds, context.multicast.bind(context));
 
       if (ent.client) {
           // ent.velocity.z = Math.max(270, ent.velocity.z);

@@ -294,6 +294,10 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             powerupId = PowerupId.EnviroSuit;
             icon = 'p_envirosuit';
             break;
+        case 'item_double':
+            powerupId = PowerupId.DoubleDamage;
+            icon = 'p_double';
+            break;
     }
 
     if (powerupId) {
