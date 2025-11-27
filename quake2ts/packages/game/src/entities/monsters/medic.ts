@@ -1,4 +1,4 @@
-import { normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { normalizeVec3, subtractVec3, Vec3, TempEntity, ServerCommand, angleVectors, addVec3, scaleVec3 } from '@quake2ts/shared';
 import {
   ai_charge,
   ai_move,
@@ -22,6 +22,7 @@ import { throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront, visible, TraceResult } from '../../ai/perception.js';
 import { monster_fire_blaster } from './attack.js';
 import { EntitySystem } from '../system.js';
+import { MulticastType } from '../../imports.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -114,31 +115,114 @@ function medic_fire_blaster(self: Entity, context: any): void {
     monster_fire_blaster(self, start, forward, 2, 1000, 0, 0, context, DamageMod.HYPERBLASTER);
 }
 
-function medic_heal(self: Entity, context: EntitySystem): void {
-    if (!self.enemy || self.enemy.deadflag !== DeadFlag.Dead) {
-        return;
-    }
+function medic_cable_attack(self: Entity, context: EntitySystem): void {
+  if (!self.enemy || self.enemy.deadflag !== DeadFlag.Dead) {
+    return;
+  }
 
-    // Resurrection logic
-    const ent = self.enemy;
+  const dist = rangeTo(self, self.enemy);
+  if (dist > 400) {
+    // Too far, stop healing
+    self.monsterinfo.current_move = run_move;
+    return;
+  }
 
-    // Spawn cable effect (TODO: visual effect)
-    // context.multicast(self.origin, ... TempEntity.MEDIC_CABLE_ATTACK ...)
+  // Calculate muzzle position (medic's weapon/hand)
+  const vectors = angleVectors(self.angles);
+  const f = vectors.forward;
+  const r = vectors.right;
+  const u = vectors.up;
 
-    // Revive
-    ent.deadflag = DeadFlag.Alive;
-    ent.health = ent.max_health;
-    ent.takedamage = true;
-    ent.solid = Solid.BoundingBox; // Restore solid
-    ent.nextthink = context.timeSeconds + 0.1;
+  const offset = { x: 24, y: 0, z: 6 }; // Approximate muzzle offset
+  const start = addVec3(
+      self.origin,
+      addVec3(
+          scaleVec3(f, offset.x),
+          addVec3(scaleVec3(r, offset.y), scaleVec3(u, offset.z))
+      )
+  );
 
-    // Reset monster state
-    if (ent.monsterinfo && ent.monsterinfo.stand) {
-        ent.monsterinfo.stand(ent, context);
-    }
+  const end = self.enemy.origin;
 
-    // Stop chasing this one
-    self.enemy = null;
+  // Visual effect
+  // Payload structure for MEDIC_CABLE_ATTACK: entId of medic, target entId? Or coords?
+  // Based on parasite, it passes an object.
+  // Original Q2 sends: write_short(medic_index), write_short(target_index or origin).
+  // But wait, our TE impl might be different.
+  // If we follow Parasite pattern:
+  context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, {
+      te: TempEntity.MEDIC_CABLE_ATTACK,
+      entId: self.index,
+      targetId: self.enemy.index, // Assuming targetId for the beam target
+      start: start,
+      end: end
+  } as any);
+}
+
+function medic_hook_launch(self: Entity, context: EntitySystem): void {
+  context.engine.sound?.(self, 0, 'medic/medatck2.wav', 1, 1, 0);
+  medic_cable_attack(self, context);
+}
+
+function medic_hook_retract(self: Entity, context: EntitySystem): void {
+  if (!self.enemy || self.enemy.deadflag !== DeadFlag.Dead) {
+      return;
+  }
+
+  const ent = self.enemy;
+  const spawnFunc = context.getSpawnFunction(ent.classname);
+
+  // Also check distance one last time to be sure
+  if (rangeTo(self, ent) > 400) {
+      // Too far, abort and maybe mark bad?
+      // For now just abort.
+      self.enemy = null;
+      return;
+  }
+
+  if (!spawnFunc) {
+      // Fallback if no spawn function found
+      ent.deadflag = DeadFlag.Alive;
+      ent.health = ent.max_health;
+      ent.takedamage = true;
+      ent.solid = Solid.BoundingBox;
+      ent.nextthink = context.timeSeconds + 0.1;
+      if (ent.monsterinfo && ent.monsterinfo.stand) {
+          ent.monsterinfo.stand(ent, context);
+      }
+      // If we couldn't properly spawn, maybe mark as bad?
+      // (ent as any).bad_medic = self;
+  } else {
+      // Re-spawn the monster to reset state
+      // We need a SpawnContext.
+      const spawnContext: SpawnContext = {
+          entities: context,
+          keyValues: { classname: ent.classname }, // Minimal keyvalues
+          warn: (msg) => {}, // Suppress warnings
+          free: (e) => context.free(e)
+      };
+
+      // Reset basic properties before spawn (some might be additive?)
+      // Actually spawn function usually overwrites everything.
+      // But we should keep origin and angles.
+      const origin = { ...ent.origin };
+      const angles = { ...ent.angles };
+
+      spawnFunc(ent, spawnContext);
+
+      ent.origin = origin;
+      ent.angles = angles;
+      // Link entity to ensure physics updated
+      context.linkentity(ent);
+
+      // Ensure it is active
+      ent.deadflag = DeadFlag.Alive;
+      ent.takedamage = true;
+      context.finalizeSpawn(ent);
+  }
+
+  // Stop chasing
+  self.enemy = null;
 }
 
 function medic_find_dead(self: Entity, context: EntitySystem): boolean {
@@ -168,6 +252,7 @@ function medic_find_dead(self: Entity, context: EntitySystem): boolean {
         if (ent.deadflag !== DeadFlag.Dead) return;
         if (!ent.monsterinfo) return; // Only heal monsters
         if (ent.classname === 'monster_medic') return; // Don't heal other medics (usually)
+        if ((ent as any).bad_medic === self) return; // Don't retry failures
 
         // Must be visible and reachable
         if (!visible(self, ent, traceWrapper)) return;
@@ -252,15 +337,22 @@ attack_hyper_move = {
     endfunc: medic_run
 };
 
-const attack_cable_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
-    ai: monster_ai_charge,
-    dist: 0,
-    think: i === 5 ? medic_heal : null
-}));
+const attack_cable_frames: MonsterFrame[] = [
+  { ai: monster_ai_charge, dist: 0, think: medic_hook_launch },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_cable_attack },
+  { ai: monster_ai_charge, dist: 0, think: medic_hook_retract }
+];
 
 attack_cable_move = {
-    firstframe: 106, // Assume frames come after hyper attack
-    lastframe: 115,
+    firstframe: 106, // FRAME_attack42 (starts at 0+30+40+20+16 = 106) ... wait, check original counts.
+    // stand=30, walk=40, run=20, hyper=16. 30+40+20+16 = 106. Correct.
+    lastframe: 114,
     frames: attack_cable_frames,
     endfunc: medic_run
 };

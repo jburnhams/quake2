@@ -100,6 +100,7 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export type { GameImports }; // Export GameImports type
+import { createDefaultSpawnRegistry } from './entities/spawn.js';
 
 export function createGame(
   { trace, pointcontents, multicast, unicast }: GameImports,
@@ -298,7 +299,7 @@ export function createGame(
     player.angles = newState.viewAngles;
   };
 
-  return {
+  const gameExports: GameExports = {
     init(startTimeMs: number) {
       resetState(startTimeMs);
       return snapshot(0);
@@ -416,4 +417,9 @@ export function createGame(
       frameLoop.reset(save.level.timeSeconds * 1000);
     }
   };
+
+  const spawnRegistry = createDefaultSpawnRegistry(gameExports);
+  entities.setSpawnRegistry(spawnRegistry);
+
+  return gameExports;
 }
