@@ -1,5 +1,9 @@
 import { Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WeaponItem, WEAPON_ITEMS } from '@quake2ts/game';
+// TODO: Remove game dependency - use player state and shared types instead
+// import { PlayerClient, WeaponItem, WEAPON_ITEMS } from '@quake2ts/game';
+type PlayerClient = any; // Temporary placeholder
+type WeaponItem = any; // Temporary placeholder
+const WEAPON_ITEMS: any[] = []; // Temporary placeholder
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';

@@ -2,12 +2,13 @@
   "name": "@quake2ts/cgame",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "build": "tsup src/index.ts --format esm,cjs && tsc --emitDeclarationOnly --declaration --outDir dist src/**/*.ts",
+    "dev": "tsup src/index.ts --format esm,cjs --watch",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

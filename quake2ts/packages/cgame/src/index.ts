@@ -74,7 +74,7 @@ function TouchPics(): void {
 function GetLayoutFlags(ps: PlayerState): LayoutFlags {
     // TODO: Implement proper layout flag calculation
     // Based on inventory state, help state, intermission, etc.
-    return 0; // No flags set by default
+    return 0 as LayoutFlags; // No flags set by default
 }
 
 /**
