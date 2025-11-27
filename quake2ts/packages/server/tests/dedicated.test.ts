@@ -35,7 +35,7 @@ describe('DedicatedServer', () => {
       spawnWorld: vi.fn(),
       clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
       clientThink: vi.fn(),
-      frame: vi.fn(),
+      frame: vi.fn().mockReturnValue({ state: { packetEntities: [] } }),
     } as unknown as GameExports;
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
@@ -67,7 +67,8 @@ describe('DedicatedServer', () => {
       state: ClientState.Active,
       edict: { id: 1, classname: 'player' },
       lastCmd: fakeCmd,
-      net: { send: vi.fn() }
+      net: { send: vi.fn() },
+      messageQueue: [] // Added messageQueue
     } as unknown as Client;
 
     // @ts-ignore - Access private property for testing
@@ -95,7 +96,8 @@ describe('DedicatedServer', () => {
       state: ClientState.Connected, // Not Active
       edict: { id: 1, classname: 'player' },
       lastCmd: {} as UserCommand,
-      net: { send: vi.fn() }
+      net: { send: vi.fn() },
+      messageQueue: [] // Added messageQueue
     } as unknown as Client;
 
     // @ts-ignore - Access private property for testing

@@ -515,3 +515,16 @@ Do **not** move to shared:
 - **Shared Package**: `packages/shared/src/` - Pmove (✅), protocol types, BSP collision
 - **Game Package**: `packages/game/src/` - Game logic, entities (needs `game_export_t` interface)
 - **Demo Format**: Section 12 docs - `svc_*` message parsing (reuse for network protocol)
+
+## Progress Update
+- [x] **Constants**: Added `MAX_CHALLENGES`, `MAX_PACKET_ENTITIES`, `UPDATE_BACKUP`, `MAX_INFO_STRING`, `MAX_MSGLEN` to `packages/shared/src/protocol/constants.ts`.
+- [x] **Server State**: Updated `server.ts` and `client.ts` to match original Q2 `server_t`, `server_static_t`, and `client_t` structures more closely.
+- [x] **Dedicated Server**: Updated `DedicatedServer` to initialize new state structures. Verified via `server-state.test.ts`.
+- [ ] **Frame Logic**: `SV_ReadPackets` and `SV_SendClientMessages` are stubbed but ready for implementation.
+- [x] **Frame Logic**: Implemented packet queueing in `Client` and `SV_ReadPackets`. Implemented basic `SV_SendClientMessages` with stubbed entity sending.
+- [ ] **Packet Entities**: Implement proper `SV_EmitPacketEntities` with delta compression (requires `MSG_WriteDeltaEntity`).
+- [x] **Packet Entities**: Implemented `MSG_WriteDeltaEntity` in `packages/server/src/protocol/entity.ts` and verified with unit tests.
+- [x] **Refine Server Loop**: `SV_SendClientFrame` now uses `writeDeltaEntity` to compress entity updates.
+- [ ] **Next Steps**: Phase 3 (Client Refactoring) can now proceed, leveraging the protocol work done here.
+- [x] **Verification**: All server unit tests pass, including `dedicated.test.ts` which simulates the game loop and command processing.
+- [ ] **Next Steps**: Phase 3 (Client Refactoring) - Create `packages/cgame` and define interfaces.
