@@ -1,8 +1,9 @@
 import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
-import { HUD_LAYOUT } from './layout.js';
-import { Draw_Number } from './numbers.js';
-import { ClientState, WEAPON_ICON_MAP } from './types.js';
 
+/**
+ * Global map of loaded HUD icons.
+ * This is imported and used by statusbar.ts for rendering.
+ */
 export const iconPics = new Map<string, Pic>();
 
 const ICON_NAMES = [
@@ -21,6 +22,10 @@ const ICON_NAMES = [
     'k_datacd', 'k_powercube', 'k_pyramid', 'k_dataspin', 'k_security', 'k_bluekey', 'k_redkey'
 ];
 
+/**
+ * Initialize and precache all HUD icon images.
+ * Called during level load via CG_TouchPics().
+ */
 export const Init_Icons = async (renderer: Renderer, assets: AssetManager) => {
     for (const name of ICON_NAMES) {
         try {
@@ -29,79 +34,6 @@ export const Init_Icons = async (renderer: Renderer, assets: AssetManager) => {
             iconPics.set(name, pic);
         } catch (e) {
             console.error(`Failed to load HUD image: pics/${name}.pcx`);
-        }
-    }
-};
-
-export const Draw_Icons = (
-    renderer: Renderer,
-    client: ClientState,
-    hudNumberPics: readonly Pic[],
-    numberWidth: number,
-    timeMs: number
-) => {
-    if (!client) {
-        return;
-    }
-
-    // Draw armor icon
-    const armor = client.inventory.armor;
-    if (armor && armor.armorCount > 0) {
-        const iconName = `i_${armor.armorType}armor`;
-        const icon = iconPics.get(iconName);
-        if (icon) {
-            renderer.drawPic(HUD_LAYOUT.ARMOR_X - 24, HUD_LAYOUT.ARMOR_Y - 2, icon);
-        }
-    }
-
-    // Draw current weapon icon
-    const currentWeapon = client.inventory.currentWeapon;
-    if (currentWeapon) {
-        const iconName = WEAPON_ICON_MAP[currentWeapon];
-        if (iconName) {
-            const icon = iconPics.get(iconName);
-            if (icon) {
-                renderer.drawPic(HUD_LAYOUT.WEAPON_ICON_X, HUD_LAYOUT.WEAPON_ICON_Y, icon);
-            }
-        }
-    }
-
-    // Draw powerup icons
-    let powerupX = HUD_LAYOUT.POWERUP_X;
-    for (const [powerup, expiresAt] of Array.from(client.inventory.powerups.entries())) {
-        if (expiresAt && expiresAt > timeMs) {
-            const iconName = `p_${powerup}`;
-            const icon = iconPics.get(iconName);
-            if (icon) {
-                renderer.drawPic(powerupX, HUD_LAYOUT.POWERUP_Y, icon);
-
-                // Draw remaining time
-                const remainingSeconds = Math.ceil((expiresAt - timeMs) / 1000);
-                Draw_Number(renderer, powerupX + icon.width + 2, HUD_LAYOUT.POWERUP_Y, remainingSeconds, hudNumberPics, numberWidth);
-
-                powerupX -= (icon.width + numberWidth * remainingSeconds.toString().length + 8);
-            }
-        }
-    }
-
-    const keys = Array.from(client.inventory.keys).sort();
-    let keyY = 300;
-
-    for (const key of keys) {
-        let iconName = '';
-        switch (key) {
-            case 'blue': iconName = 'k_bluekey'; break;
-            case 'red': iconName = 'k_redkey'; break;
-            case 'green': iconName = 'k_security'; break;
-            case 'yellow': iconName = 'k_pyramid'; break;
-        }
-
-        if (iconName) {
-            const icon = iconPics.get(iconName);
-            if (icon) {
-                renderer.drawPic(HUD_LAYOUT.WEAPON_ICON_X, keyY, icon);
-                keyY += icon.height + 2;
-            }
         }
     }
 };

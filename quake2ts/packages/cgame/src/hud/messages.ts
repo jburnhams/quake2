@@ -36,18 +36,18 @@ export class MessageSystem {
   }
 
   // Additional methods for cgame API
-  setCenterPrint(text: string) {
+  setCenterPrint(text: string, now: number) {
     this.centerPrintMsg = {
       text,
-      startTime: Date.now(),
+      startTime: now,
       duration: CENTER_PRINT_DURATION,
     };
   }
 
-  addNotification(text: string, is_chat: boolean) {
+  addNotification(text: string, is_chat: boolean, now: number) {
     this.notifyMessages.push({
       text,
-      startTime: Date.now(),
+      startTime: now,
       duration: NOTIFY_DURATION,
     });
 

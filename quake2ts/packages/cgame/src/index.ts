@@ -113,14 +113,16 @@ function ParseConfigString(i: number, s: string): void {
 }
 
 function ParseCenterPrint(str: string, isplit: number, instant: boolean): void {
+    if (!cgi) return;
     const messageSystem = CG_GetMessageSystem();
     // TODO: Parse layout strings and handle key bindings
-    messageSystem.setCenterPrint(str);
+    messageSystem.setCenterPrint(str, cgi.CL_ClientTime());
 }
 
 function NotifyMessage(isplit: number, msg: string, is_chat: boolean): void {
+    if (!cgi) return;
     const messageSystem = CG_GetMessageSystem();
-    messageSystem.addNotification(msg, is_chat);
+    messageSystem.addNotification(msg, is_chat, cgi.CL_ClientTime());
 }
 
 function ClearNotify(isplit: number): void {
