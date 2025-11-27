@@ -32,6 +32,9 @@ describe('Physics: runStep', () => {
       }),
       pointcontents: vi.fn().mockReturnValue(0),
       linkentity: vi.fn(),
+      areaEdicts: vi.fn().mockReturnValue(null), // Default null for fallback
+      multicast: vi.fn(),
+      unicast: vi.fn(),
     };
 
     system = {
@@ -39,6 +42,7 @@ describe('Physics: runStep', () => {
       trace: (...args: any[]) => (imports.trace as any)(...args),
       pointcontents: (...args: any[]) => (imports.pointcontents as any)(...args),
       forEachEntity: vi.fn(),
+      findInBox: vi.fn().mockReturnValue([]), // Mock findInBox
     } as unknown as EntitySystem;
   });
 

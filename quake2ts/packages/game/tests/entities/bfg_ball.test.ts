@@ -63,6 +63,7 @@ describe('BFG Ball Projectile', () => {
             centerprintf: vi.fn(),
             modelIndex: vi.fn().mockReturnValue(1),
         };
+        // NOTE: areaEdicts default is null, meaning fallback to full scan, which is what we want here
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
@@ -84,6 +85,7 @@ describe('BFG Ball Projectile', () => {
         target.takedamage = true;
         target.health = 100;
         target.svflags = ServerFlags.Monster;
+        target.solid = Solid.Bsp; // Must be solid for findByRadius/findInBox fallback
         game.entities.finalizeSpawn(target);
 
         // Mock trace for both line-of-sight check and piercing laser
@@ -194,6 +196,7 @@ describe('BFG Ball Projectile', () => {
         target.takedamage = true;
         target.health = 100;
         target.svflags = ServerFlags.Monster;
+        target.solid = Solid.Bsp;
         game.entities.finalizeSpawn(target);
 
         // Mock trace to return obstruction (blocked by wall)
@@ -269,6 +272,7 @@ describe('BFG Ball Projectile', () => {
         target.takedamage = true;
         target.health = 100;
         target.svflags = ServerFlags.Monster;
+        target.solid = Solid.Bsp;
         game.entities.finalizeSpawn(target);
 
         // Mock trace for line-of-sight and laser

@@ -103,7 +103,7 @@ export type { GameImports }; // Export GameImports type
 import { createDefaultSpawnRegistry } from './entities/spawn.js';
 
 export function createGame(
-  { trace, pointcontents, multicast, unicast }: GameImports,
+  imports: Partial<GameImports>,
   engine: GameEngine,
   options: GameCreateOptions
 ): GameExports {
@@ -113,7 +113,24 @@ export function createGame(
   const frameLoop = new GameFrameLoop();
   const rng = options.random ?? new RandomGenerator(); // Main game RNG
 
-  const linkentity = (ent: Entity) => {
+  // Default trace function if not provided
+  const trace = imports.trace || (() => ({
+    allsolid: false,
+    startsolid: false,
+    fraction: 1,
+    endpos: { x: 0, y: 0, z: 0 },
+    plane: null,
+    surfaceFlags: 0,
+    contents: 0,
+    ent: null,
+  }));
+  const pointcontents = imports.pointcontents || (() => 0);
+  const multicast = imports.multicast || (() => {});
+  const unicast = imports.unicast || (() => {});
+  const linkentity = imports.linkentity; // optional, handled in wrappedLinkEntity
+
+  const wrappedLinkEntity = (ent: Entity) => {
+    // Game-side logic: update AABB from origin/mins/maxs
     ent.absmin = {
       x: ent.origin.x + ent.mins.x,
       y: ent.origin.y + ent.mins.y,
@@ -124,9 +141,24 @@ export function createGame(
       y: ent.origin.y + ent.maxs.y,
       z: ent.origin.z + ent.maxs.z,
     };
+
+    // Call engine linkentity if provided
+    if (linkentity) {
+        linkentity(ent);
+    }
   };
 
-  const entities = new EntitySystem(engine, { trace, pointcontents, linkentity, multicast, unicast }, gravity, undefined, undefined, deathmatch);
+  // Merge provided imports with defaults and our wrappers
+  const systemImports: Partial<GameImports> = {
+      ...imports,
+      trace,
+      pointcontents,
+      linkentity: wrappedLinkEntity,
+      multicast,
+      unicast
+  };
+
+  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch);
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);

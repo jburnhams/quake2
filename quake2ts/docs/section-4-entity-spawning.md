@@ -51,11 +51,11 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Register entity in think queue
   - Execute think callbacks at scheduled time
   - Sort by nextthink for efficient processing
-- [ ] Touch detection
+- [x] Touch detection
   - When entities overlap (via trace), call touch callbacks
   - Handle trigger volumes
   - Pickup items, teleporters, hurt triggers
-  - **Note**: Current implementation in `EntitySystem.runTouches` and `checkTriggers` uses an O(N^2) brute-force iteration. It does not yet utilize the efficient spatial partitioning (BSP area nodes / `BoxEdicts`) now available in Section 3. **Action Required**: Update game loop to use spatial queries from `game.collision` or expose `BoxEdicts` in `GameImports`.
+  - **Status**: Implemented using optimized spatial queries (`GameImports.areaEdicts` / `EntitySystem.findInBox`) with O(N^2) fallback for compatibility.
 
 ### Spawn Registry
 - [x] Build spawn function registry (mirrors `g_spawn.cpp`)
@@ -177,11 +177,11 @@ This section covers the entity system that forms the backbone of Quake II gamepl
     - [x] MOVETYPE_FLYMISSILE: Fly with clipping
     - [x] MOVETYPE_PUSH: Doors, platforms (push other entities)
   - For each movetype, trace and resolve collisions (requires Section 3)
-- [ ] Touch detection
+- [x] Touch detection
   - After movement, check for entity overlaps
   - Call touch callbacks on both entities
   - Handle pickup, trigger, damage logic
-  - **Note**: Current implementation is O(N^2). Spatial optimization pending integration.
+  - **Note**: Optimized with `areaEdicts` spatial partitioning.
 
 ### Entity Scripting & Targeting
 - [x] Target resolution

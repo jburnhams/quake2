@@ -52,6 +52,10 @@ export class EntityPool implements Iterable<Entity> {
     return count;
   }
 
+  getByIndex(index: number): Entity | undefined {
+    return this.entities[index];
+  }
+
   [Symbol.iterator](): Iterator<Entity> {
     let current = this.activeHead;
     return {
