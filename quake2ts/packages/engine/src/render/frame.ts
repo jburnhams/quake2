@@ -131,14 +131,26 @@ interface BatchKey {
 }
 
 function resolveSurfaceTextures(geometry: BspSurfaceGeometry, world: WorldRenderState | undefined): ResolvedSurfaceTextures {
+  // Try to resolve the texture from the material system first (handling animations)
+  const material = world?.materials?.getMaterial(geometry.texture);
   let diffuse: Texture2D | undefined;
 
-  // Note: Material texture resolution deferred for now to keep interface simple.
-  // In a full implementation, this would query world.materials.
+  if (material) {
+    const matTex = material.texture;
+    if (matTex) {
+      // Cast is safe because we updated Material to hold Texture2D objects
+      diffuse = matTex as unknown as Texture2D;
+    }
+  }
 
-  diffuse = world?.textures?.get(geometry.texture);
+  // Fallback to static texture lookup if material didn't provide one
+  if (!diffuse) {
+    diffuse = world?.textures?.get(geometry.texture);
+  }
+
   const lightmapIndex = geometry.lightmap?.atlasIndex;
   const lightmap = lightmapIndex !== undefined ? world?.lightmaps?.[lightmapIndex]?.texture : undefined;
+
   return { diffuse, lightmap };
 }
 
@@ -146,16 +158,16 @@ function bindSurfaceTextures(
   geometry: BspSurfaceGeometry,
   world: WorldRenderState | undefined,
   cache: TextureBindingCache,
-  resolved?: ResolvedSurfaceTextures
+  resolved: ResolvedSurfaceTextures
 ): { diffuse?: number; lightmap?: number } {
-  const diffuse = resolved?.diffuse ?? world?.textures?.get(geometry.texture);
+  const diffuse = resolved.diffuse;
+
   if (diffuse && cache.diffuse !== diffuse) {
     diffuse.bind(0);
     cache.diffuse = diffuse;
   }
 
-  const lightmapPlacement = geometry.lightmap;
-  const lightmap = resolved?.lightmap ?? (lightmapPlacement && world?.lightmaps?.[lightmapPlacement.atlasIndex]?.texture);
+  const lightmap = resolved.lightmap;
   if (lightmap && cache.lightmap !== lightmap) {
     lightmap.bind(1);
     cache.lightmap = lightmap;
@@ -265,15 +277,11 @@ export const createFrameRenderer = (
         // Determine effective render mode for this surface
         let activeRenderMode: RenderModeConfig | undefined = renderMode;
         if (renderMode && !renderMode.applyToAll && resolvedTextures.diffuse) {
-          // If fallback mode and texture exists, don't use override
+          // If fallback mode is active but texture exists, use textured mode (disable override)
           activeRenderMode = undefined;
-        }
-
-        // If texture is missing and no render mode override, maybe we should default to something?
-        // But the request implies we only override if the flag is set or globally set.
-        // If "fallback" is active and texture is missing, we use the override.
-        if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
-             activeRenderMode = renderMode;
+        } else if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
+           // If fallback mode is active and texture is missing, enforce the override
+           activeRenderMode = renderMode;
         }
 
         const batchKey: BatchKey = {
@@ -290,9 +298,9 @@ export const createFrameRenderer = (
           lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
           lastBatchKey.styleKey === batchKey.styleKey;
 
-        // TODO: Batching logic needs to account for renderMode changes if we want to batch correctly with mix.
-        // For now, let's just break batch if renderMode is present, or update logic.
-        // Since activeRenderMode can change per face (e.g. missing texture), we should include it in batch key implicitly or check it.
+        // Note: Batching logic doesn't strictly account for renderMode changes per-face
+        // (e.g. mixed missing/present textures). However, breaking batch on texture change
+        // implicitly handles this for now.
 
         if (!isSameBatch) {
           stats.batches += 1;
@@ -321,14 +329,13 @@ export const createFrameRenderer = (
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;
         } else {
+          // Even if batch is same, ensure texture units are active
           bindSurfaceTextures(geometry, world, cache, resolvedTextures);
           if (cachedState) {
             applySurfaceState(gl, cachedState);
           }
         }
 
-        // Handle Wireframe logic inside pipeline or here.
-        // bspPipeline.draw(geometry, activeRenderMode);
         bspPipeline.draw(geometry, activeRenderMode);
 
         stats.facesDrawn += 1;
