@@ -183,7 +183,7 @@ function mutant_jump_takeoff(self: Entity, context: EntitySystem): void {
     context.engine.sound?.(self, 0, 'mutant/mutatck2.wav', 1, 1, 0);
 }
 
-function mutant_check_attack(self: Entity): boolean {
+function mutant_check_attack(self: Entity, context: EntitySystem): boolean {
     if (self.enemy && self.enemy.health > 0) {
         // If close and in front, melee
         // If mid range, jump?

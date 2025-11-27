@@ -1,4 +1,4 @@
-import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { angleVectors, normalizeVec3, subtractVec3, lengthVec3, Vec3 } from '@quake2ts/shared';
 import {
     ai_charge,
     ai_move,
@@ -6,6 +6,7 @@ import {
     ai_stand,
     ai_walk,
     monster_think,
+    visible
 } from '../../ai/index.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
@@ -197,11 +198,53 @@ const duck_frames: MonsterFrame[] = Array.from({ length: 5 }, () => ({
 }));
 
 duck_move = {
-    firstframe: 90, // Hypothetical start for duck
+    firstframe: 90,
     lastframe: 94,
     frames: duck_frames,
-    endfunc: infantry_run, // Return to run
+    endfunc: infantry_run,
 };
+
+function infantry_dodge(self: Entity, context: EntitySystem): boolean {
+    if (!self.enemy) return false;
+    // Don't dodge if already dodging, dying, or in pain
+    if (self.monsterinfo.current_move === duck_move ||
+        self.monsterinfo.current_move === death_move ||
+        self.monsterinfo.current_move === pain_move) {
+        return false;
+    }
+
+    // 30% chance to duck
+    if (Math.random() > 0.3) return false;
+
+    // Trigger duck
+    infantry_duck(self);
+    return true;
+}
+
+function infantry_checkattack(self: Entity, context: EntitySystem): boolean {
+    if (!self.enemy || self.enemy.health <= 0) return false;
+
+    // Try Dodge first
+    if (infantry_dodge(self, context)) return true;
+
+    // Try Attack
+    const diff = subtractVec3(self.enemy.origin, self.origin);
+    const dist = lengthVec3(diff);
+
+    // Logic: Attack if visible and close enough (machinegun range is effective at mid range)
+    // 600 units seems reasonable for machinegun engagement
+    if (dist < 600 && visible(self, self.enemy, context.trace)) {
+         // 50% chance to attack if possible, to avoid instant reaction every frame?
+         // Actually in ai_run it checks every frame.
+         // Let's make it likely but not guaranteed to allow closing distance
+         if (Math.random() < 0.2) {
+             self.monsterinfo.attack?.(self, context);
+             return true;
+         }
+    }
+
+    return false;
+}
 
 export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.model = 'models/monsters/infantry/tris.md2';
@@ -237,11 +280,7 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.monsterinfo.walk = infantry_walk;
     self.monsterinfo.run = infantry_run;
     self.monsterinfo.attack = infantry_attack;
-
-    // Infantry special: dodge
-    // This could be hooked up in monster_think or specific logic
-    // For now, we expose a custom method if needed?
-    // self.monsterinfo.dodge = infantry_duck; // If we add dodge to MonsterInfo interface
+    self.monsterinfo.checkattack = infantry_checkattack;
 
     self.think = monster_think;
 

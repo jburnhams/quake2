@@ -89,7 +89,7 @@ describe('monster_mutant', () => {
       // Mock random to trigger jump ( < 0.3 )
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-      const result = mutant.monsterinfo.checkattack!(mutant);
+      const result = mutant.monsterinfo.checkattack!(mutant, mockContext as unknown as EntitySystem);
 
       expect(result).toBe(true);
       // Jump move firstframe 93
@@ -106,7 +106,7 @@ describe('monster_mutant', () => {
       // Mock random to trigger attack ( < 0.5 )
       const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
-      const result = mutant.monsterinfo.checkattack!(mutant);
+      const result = mutant.monsterinfo.checkattack!(mutant, mockContext as unknown as EntitySystem);
 
       expect(result).toBe(true);
       // Attack move firstframe 70

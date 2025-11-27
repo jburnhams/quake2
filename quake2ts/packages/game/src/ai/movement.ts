@@ -153,6 +153,10 @@ export function ai_run(self: Entity, distance: number, deltaSeconds: number, con
   setIdealYawTowards(self, self.enemy ?? self.goalentity);
   changeYaw(self, deltaSeconds);
 
+  if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {
+    return;
+  }
+
   if (distance !== 0) {
     // Using M_walkmove logic equivalent
     M_walkmove(self, self.angles.y, distance, context);
@@ -179,6 +183,10 @@ export function ai_face(
 export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
   setIdealYawTowards(self, self.enemy);
   changeYaw(self, deltaSeconds);
+
+  if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {
+    return;
+  }
 
   if (distance !== 0) {
     M_walkmove(self, self.angles.y, distance, context);
