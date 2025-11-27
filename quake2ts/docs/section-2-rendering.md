@@ -163,19 +163,19 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
   - [x] GPU time profiling using `EXT_disjoint_timer_query_webgl2`
 
 ### Material System
-- [ ] Material definition structure
+- [x] Material definition structure
   - [x] Texture bindings
   - [x] Shader selection
   - [x] Blend mode (opaque, alpha, additive)
   - [x] Render flags (two-sided, depth write, etc.)
-- [ ] Special material handling
+- [x] Special material handling
   - [x] Animated textures (texture cycling)
   - [x] Scrolling textures (conveyor belts)
   - [x] Warping (water, lava)
   - [x] Transparency levels (TRANS33, TRANS66)
-- [ ] Material precache and lookup
-  - Match material to surface by texinfo/surface flags
-  - Runtime material switching for effects
+- [x] Material precache and lookup
+  - [x] Match material to surface by texinfo/surface flags
+  - [x] Runtime material switching for effects
 
 ## Integration Points
 - **From Asset Loading (Section 1)**: Receives BSP geometry, lightmaps, model data, textures
@@ -191,6 +191,7 @@ This section covers the complete WebGL2 rendering pipeline for Quake II, includi
 - Texture upload and binding
 - Buffer creation and updates
 - Frame renderer batching/state caching and viewmodel depth range handling
+- Material creation and properties derivation from BSP
 
 ### Integration Tests
 - [x] **Full frame render**: Load a map, render a complete frame with world, models, HUD

@@ -1,4 +1,5 @@
 import { mat3 } from 'gl-matrix';
+import { Texture2D } from './resources.js';
 
 export enum BlendMode {
   OPAQUE,
@@ -7,7 +8,7 @@ export enum BlendMode {
 }
 
 export interface MaterialOptions {
-  readonly textures: WebGLTexture[];
+  readonly textures: (WebGLTexture | Texture2D)[];
   readonly fps?: number;
   readonly blendMode?: BlendMode;
   readonly twoSided?: boolean;
@@ -23,7 +24,7 @@ export class Material {
   readonly warp: boolean;
   readonly scroll: readonly [number, number];
 
-  private readonly textures: WebGLTexture[];
+  private readonly textures: (WebGLTexture | Texture2D)[];
   private readonly fps: number;
   private currentIndex: number = 0;
   private lastAnimationTime: number = 0;
@@ -49,7 +50,7 @@ export class Material {
     this.lastTime = time;
   }
 
-  get texture(): WebGLTexture | null {
+  get texture(): WebGLTexture | Texture2D | null {
     if (this.textures.length === 0) return null;
     return this.textures[this.currentIndex];
   }
