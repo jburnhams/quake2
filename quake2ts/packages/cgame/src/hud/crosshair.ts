@@ -1,0 +1,99 @@
+import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
+
+let crosshairPic: Pic | null = null;
+let crosshairIndex = 0; // Default to ch1
+let crosshairColor: [number, number, number, number] = [1, 1, 1, 1]; // Default white
+let crosshairEnabled = true;
+
+const CROSSHAIR_NAMES = ['ch1', 'ch2', 'ch3'];
+const crosshairPics: (Pic | null)[] = [null, null, null];
+
+export const Init_Crosshair = async (renderer: Renderer, assets: AssetManager) => {
+    for (let i = 0; i < CROSSHAIR_NAMES.length; i++) {
+        const name = CROSSHAIR_NAMES[i];
+        try {
+            const texture = await assets.loadTexture(`pics/${name}.pcx`);
+            crosshairPics[i] = renderer.registerTexture(name, texture);
+        } catch (e) {
+            if (i === 0) {
+                 try {
+                    const texture = await assets.loadTexture('pics/crosshair.pcx');
+                    crosshairPics[i] = renderer.registerTexture('crosshair', texture);
+                } catch (e2) {
+                    console.error('Failed to load crosshair image');
+                }
+            }
+        }
+    }
+
+    crosshairPic = crosshairPics[0];
+}
+
+export const Set_Crosshair = (index: number) => {
+    // If index is 0, we treat it as disabled if we want to follow Q2 convention strictly,
+    // but here index maps to CROSSHAIR_NAMES.
+    // If we want a "None" option, we can check for that.
+
+    // For now, let's keep index pointing to textures.
+    // We can add a separate enable/disable function or make index -1 disable it.
+
+    if (index === -1) {
+        crosshairEnabled = false;
+        return;
+    }
+
+    crosshairEnabled = true;
+    if (index >= 0 && index < crosshairPics.length) {
+        crosshairIndex = index;
+        crosshairPic = crosshairPics[index];
+    }
+};
+
+export const Set_CrosshairColor = (r: number, g: number, b: number, a: number = 1) => {
+    crosshairColor = [r, g, b, a];
+}
+
+export const Cycle_Crosshair = () => {
+    // Cycle includes a "None" state (represented by index -1 or just disabling)
+    // 0 -> 1 -> 2 -> ... -> Disabled -> 0
+
+    if (!crosshairEnabled) {
+        crosshairEnabled = true;
+        crosshairIndex = 0;
+    } else {
+        crosshairIndex++;
+        if (crosshairIndex >= CROSSHAIR_NAMES.length) {
+            crosshairEnabled = false;
+            crosshairIndex = 0; // Reset for next cycle
+        }
+    }
+
+    if (crosshairEnabled) {
+        crosshairPic = crosshairPics[crosshairIndex];
+        if (!crosshairPic) {
+            let found = false;
+            for (let i = 0; i < CROSSHAIR_NAMES.length; i++) {
+                 const idx = (crosshairIndex + i) % CROSSHAIR_NAMES.length;
+                 if (crosshairPics[idx]) {
+                     crosshairIndex = idx;
+                     crosshairPic = crosshairPics[idx];
+                     found = true;
+                     break;
+                 }
+            }
+            if (!found) crosshairPic = null;
+        }
+    } else {
+        crosshairPic = null;
+    }
+
+    return crosshairEnabled ? crosshairIndex : -1;
+};
+
+export const Draw_Crosshair = (renderer: Renderer, width: number, height: number) => {
+    if (crosshairEnabled && crosshairPic) {
+        const x = (width - crosshairPic.width) / 2;
+        const y = (height - crosshairPic.height) / 2;
+        renderer.drawPic(x, y, crosshairPic, crosshairColor);
+    }
+};

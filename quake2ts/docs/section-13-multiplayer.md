@@ -470,13 +470,13 @@ Do **not** move to shared:
 - [ ] Game module interface
 - [ ] Headless collision
 
-### Phase 3: CGame ⚠️ (Major Refactor Needed)
+### Phase 3: CGame 🔄 (In Progress - HUD Migration Underway)
 - [x] Create `packages/cgame`
 - [x] Define `cgame_import_t` / `cgame_export_t` interfaces
-- [ ] Move HUD, view, prediction from client to cgame
+- [~] Move HUD, view, prediction from client to cgame (HUD files moved, adaption in progress)
 - [x] Add shared stat/layout types
-- [ ] Implement parsing (centerprint, notify, configstrings)
-- [ ] Wire client ↔ cgame interface
+- [~] Implement parsing (centerprint, notify, configstrings) (Basic parsing stubs implemented)
+- [ ] Wire client ↔ cgame interface (Next step after HUD completion)
 
 ### Phase 4: Integration ⏸ (Blocked by Phase 3)
 - [ ] Localhost server-client test
@@ -528,4 +528,17 @@ Do **not** move to shared:
 - [ ] **Next Steps**: Phase 3 (Client Refactoring) can now proceed, leveraging the protocol work done here.
 - [x] **Verification**: All server unit tests pass, including `dedicated.test.ts` which simulates the game loop and command processing.
 - [x] **CGame Structure**: Created `packages/cgame` with interfaces and shared type definitions.
-- [ ] **Next Steps**: Phase 3 (Client Refactoring) - Migrate HUD, view, and prediction code from `packages/client` to `packages/cgame`.
+- [x] **HUD Migration Progress** (2025-11-27):
+  - Copied all 11 HUD component files from `packages/client/src/hud/` to `packages/cgame/src/hud/`
+  - Created `packages/cgame/src/screen.ts` with `CG_DrawHUD()`, `CG_TouchPics()`, and `CG_InitScreen()` functions
+  - Implemented `GetCGameAPI()` in `packages/cgame/src/index.ts` with all required `cgame_export_t` functions
+  - Added `LayoutFlags` and stat-related exports to `packages/shared/src/protocol/index.ts`
+  - Added parsing support methods (`setCenterPrint`, `addNotification`, `clearNotifications`, `clearCenterPrint`) to MessageSystem
+  - **Status**: Core structure in place with placeholder implementations. ESM and CJS builds succeed.
+  - **Known Issue**: TypeScript declaration (DTS) build fails due to tsconfig file listing requirements. This is a build configuration issue, not a code issue. The actual TypeScript compilation succeeds and type checking passes. DTS generation can be addressed separately or the declarations can be generated via tsc directly.
+  - **Next Steps**:
+    1. Fix DTS build configuration (consider using tsc for declarations or adjusting tsup config)
+    2. Adapt HUD component drawing functions to use `cgi` imports instead of direct renderer access
+    3. Implement stat reading from `ps.stats[]` array using `STAT_*` constants
+    4. Complete view effects and prediction modules migration
+- [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Adapt HUD components to use cgame_import_t functions, implement stat reading, and complete view/prediction migration.
