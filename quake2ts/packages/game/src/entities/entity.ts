@@ -122,7 +122,7 @@ export interface MonsterInfo {
   melee?: MonsterAction;
   walk?: MonsterAction;
   attack_machinegun?: MonsterMove;
-  checkattack?: (self: Entity) => boolean;
+  checkattack?: (self: Entity, context: EntitySystem) => boolean;
   attack_state?: number;
   lefty?: number;
   nextframe?: number;
