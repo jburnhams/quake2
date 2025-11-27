@@ -43,13 +43,14 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
                 0,
                 damageFlag,
                 DamageMod.ROCKET,
+                sys.timeSeconds,
                 sys.multicast.bind(sys)
             );
         }
 
         const damageRadius = radiusDamage || 120;
         const entities = sys.findByRadius(self.origin, damageRadius);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damageRadius, self.owner as any, damageRadius, damageFlag, DamageMod.R_SPLASH, {}, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damageRadius, self.owner as any, damageRadius, damageFlag, DamageMod.R_SPLASH, sys.timeSeconds, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);

@@ -90,7 +90,7 @@ describe('BFG10K', () => {
         bfgBall.touch!(bfgBall, game.entities.world!, null, null);
 
         // Expect primary radius damage (200 damage, 100 radius based on new implementation)
-        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, expect.anything(), 100, expect.anything(), DamageMod.BFG_BLAST, expect.anything(), expect.any(Function));
+        expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, expect.anything(), 100, expect.anything(), DamageMod.BFG_BLAST, game.time, expect.anything(), expect.any(Function));
 
         // Note: Secondary lasers are no longer fired on impact in the new implementation
         // They are fired during flight via the think function
