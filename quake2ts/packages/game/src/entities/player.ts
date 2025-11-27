@@ -40,6 +40,19 @@ export function player_think(self: Entity, sys: EntitySystem) {
     // Check powerups
     const nowMs = sys.timeSeconds * 1000;
 
+    // Quad/Double Damage Sound
+    // Ref: rerelease/p_weapon.cpp:656 Weapon_PowerupSound
+    const quadTime = self.client.quad_time || 0;
+    const doubleTime = self.client.double_time || 0;
+    const soundTime = self.client.quadsound_time || 0;
+
+    if ((quadTime > sys.timeSeconds) || (doubleTime > sys.timeSeconds)) {
+        if (soundTime < sys.timeSeconds) {
+            self.client.quadsound_time = sys.timeSeconds + 1.0;
+            sys.sound(self, 2, 'items/damage3.wav', 1, 1, 0); // CHAN_ITEM = 2
+        }
+    }
+
     // Warn about expiration
     for (const [id, expiresAt] of self.client.inventory.powerups.entries()) {
         if (expiresAt === null) continue;
