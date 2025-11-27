@@ -1,3 +1,4 @@
+import { BspMap } from '../../assets/bsp.js';
 import { VertexArray, VertexBuffer, IndexBuffer, Texture2D } from '../resources.js';
 
 export interface BspSurfaceLightmap {
@@ -71,15 +72,48 @@ class LightmapPacker {
   }
 }
 
-export function buildBspGeometry(gl: WebGL2RenderingContext, surfaces: BspSurfaceInput[]): BspGeometry {
-  // 1. Pack Lightmaps
+export function buildBspGeometry(
+  gl: WebGL2RenderingContext,
+  surfaces: BspSurfaceInput[],
+  map?: BspMap,
+  options?: {
+    hiddenClassnames?: Set<string>;
+  },
+): BspGeometry {
+  // 1. Filter surfaces based on hidden classnames
+  let filteredSurfaces = surfaces;
+
+  if (map && options?.hiddenClassnames && options.hiddenClassnames.size > 0) {
+    const hiddenFaces = new Set<number>();
+
+    for (const entity of map.entities.entities) {
+      if (entity.classname && options.hiddenClassnames.has(entity.classname)) {
+        const modelProp = entity.properties['model'];
+        if (modelProp && modelProp.startsWith('*')) {
+          const modelIndex = parseInt(modelProp.substring(1), 10);
+          if (!isNaN(modelIndex) && modelIndex >= 0 && modelIndex < map.models.length) {
+            const model = map.models[modelIndex];
+            for (let i = 0; i < model.numFaces; i++) {
+              hiddenFaces.add(model.firstFace + i);
+            }
+          }
+        }
+      }
+    }
+
+    if (hiddenFaces.size > 0) {
+      filteredSurfaces = surfaces.filter((s) => !hiddenFaces.has(s.faceIndex));
+    }
+  }
+
+  // 2. Pack Lightmaps
   // We'll use a fixed size atlas for now, say 2048x2048 or 4096.
   // Quake 2 lightmaps are small but there are many.
   const ATLAS_SIZE = 2048;
   const packer = new LightmapPacker(ATLAS_SIZE, ATLAS_SIZE);
 
   // Collect all surfaces with lightmaps
-  const lightmappedSurfaces = surfaces.filter(s => s.lightmap);
+  const lightmappedSurfaces = filteredSurfaces.filter((s) => s.lightmap);
 
   // Sort by height for better packing? (Naive shelf packing doesn't strictly require it but helps)
   lightmappedSurfaces.sort((a, b) => (b.lightmap!.height - a.lightmap!.height));
@@ -122,8 +156,9 @@ export function buildBspGeometry(gl: WebGL2RenderingContext, surfaces: BspSurfac
   // But here we are building a single big buffer.
   // Let's sort surfaces by texture first to create contiguous batches.
 
-  // Note: Modifying the input array order.
-  surfaces.sort((a, b) => a.textureName.localeCompare(b.textureName));
+  // Note: Modifying the input array order (copy).
+  const surfacesToProcess = [...filteredSurfaces];
+  surfacesToProcess.sort((a, b) => a.textureName.localeCompare(b.textureName));
 
   let currentTexture = '';
   let batchStart = 0;
@@ -132,7 +167,7 @@ export function buildBspGeometry(gl: WebGL2RenderingContext, surfaces: BspSurfac
 
   let vertexOffset = 0; // Base vertex index for current surface
 
-  for (const surf of surfaces) {
+  for (const surf of surfacesToProcess) {
     if (surf.textureName !== currentTexture) {
       if (batchCount > 0) {
         batches.push({
