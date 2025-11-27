@@ -470,13 +470,13 @@ Do **not** move to shared:
 - [ ] Game module interface
 - [ ] Headless collision
 
-### Phase 3: CGame ⚠️ (Major Refactor Needed)
+### Phase 3: CGame 🔄 (In Progress - HUD Migration Underway)
 - [x] Create `packages/cgame`
 - [x] Define `cgame_import_t` / `cgame_export_t` interfaces
-- [ ] Move HUD, view, prediction from client to cgame
+- [~] Move HUD, view, prediction from client to cgame (HUD files moved, adaption in progress)
 - [x] Add shared stat/layout types
-- [ ] Implement parsing (centerprint, notify, configstrings)
-- [ ] Wire client ↔ cgame interface
+- [~] Implement parsing (centerprint, notify, configstrings) (Basic parsing stubs implemented)
+- [ ] Wire client ↔ cgame interface (Next step after HUD completion)
 
 ### Phase 4: Integration ⏸ (Blocked by Phase 3)
 - [ ] Localhost server-client test
@@ -528,4 +528,25 @@ Do **not** move to shared:
 - [ ] **Next Steps**: Phase 3 (Client Refactoring) can now proceed, leveraging the protocol work done here.
 - [x] **Verification**: All server unit tests pass, including `dedicated.test.ts` which simulates the game loop and command processing.
 - [x] **CGame Structure**: Created `packages/cgame` with interfaces and shared type definitions.
-- [ ] **Next Steps**: Phase 3 (Client Refactoring) - Migrate HUD, view, and prediction code from `packages/client` to `packages/cgame`.
+- [x] **HUD Migration Progress** (2025-11-27):
+  - Copied all 11 HUD component files from `packages/client/src/hud/` to `packages/cgame/src/hud/`
+  - Created `packages/cgame/src/screen.ts` with `CG_DrawHUD()`, `CG_TouchPics()`, and `CG_InitScreen()` functions
+  - Implemented `GetCGameAPI()` in `packages/cgame/src/index.ts` with all required `cgame_export_t` functions
+  - Added `LayoutFlags` and stat-related exports to `packages/shared/src/protocol/index.ts`
+  - Added parsing support methods (`setCenterPrint`, `addNotification`, `clearNotifications`, `clearCenterPrint`) to MessageSystem
+  - **Refactoring Complete**: Moved `WeaponId`, `AmmoType`, `AmmoItemId`, and `PowerupId` enums to `packages/shared/src/items/`
+    - Game package now imports these from shared instead of defining locally
+    - CGame HUD components use local type definitions (`ClientState`, `WEAPON_ICON_MAP`) to avoid game package dependency
+    - Eliminated all circular dependencies between game and cgame packages
+  - **Build Fixed**: Properly configured TypeScript declaration generation using tsup with `tsconfig.build.json`
+    - DTS files (`dist/index.d.ts`, `dist/index.d.cts`) correctly generated
+    - Single `tsup` command for both bundling and declarations
+    - Package properly consumable by TypeScript projects
+  - **Status**: Core structure complete. All builds succeed. All tests passing (879 total).
+  - **Next Steps**:
+    1. ~~Fix DTS build configuration~~ ✅ **COMPLETE**
+    2. ~~Move shared enums to appropriate package~~ ✅ **COMPLETE**
+    3. Adapt HUD component drawing functions to use `cgi` imports instead of direct renderer access
+    4. Implement stat reading from `ps.stats[]` array using `STAT_*` constants
+    5. Complete view effects and prediction modules migration
+- [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Adapt HUD components to use cgame_import_t functions, implement stat reading, and complete view/prediction migration.

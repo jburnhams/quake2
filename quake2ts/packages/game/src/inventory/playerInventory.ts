@@ -12,57 +12,9 @@ import {
 } from './ammo.js';
 import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, PowerArmorItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
-import { Vec3 } from '@quake2ts/shared';
+import { Vec3, WeaponId, PowerupId } from '@quake2ts/shared';
 
-export enum WeaponId {
-  Blaster = 'blaster',
-  Shotgun = 'shotgun',
-  SuperShotgun = 'super_shotgun',
-  Machinegun = 'machinegun',
-  Chaingun = 'chaingun',
-  GrenadeLauncher = 'grenade_launcher',
-  RocketLauncher = 'rocket_launcher',
-  HyperBlaster = 'hyperblaster',
-  Railgun = 'railgun',
-  BFG10K = 'bfg10k',
-  // New additions for demo playback and extended support
-  Grapple = 'grapple',
-  ChainFist = 'chainfist',
-  EtfRifle = 'etf_rifle',
-  ProxLauncher = 'prox_launcher',
-  IonRipper = 'ionripper',
-  PlasmaBeam = 'plasmabeam',
-  Phalanx = 'phalanx',
-  Disruptor = 'disruptor',
-}
-
-export enum PowerupId {
-  QuadDamage = 'quad',
-  Invulnerability = 'invulnerability',
-  EnviroSuit = 'enviro_suit',
-  Rebreather = 'rebreather',
-  Silencer = 'silencer',
-  // New additions for demo playback and extended support
-  PowerScreen = 'power_screen',
-  PowerShield = 'power_shield',
-  QuadFire = 'quad_fire',
-  Invisibility = 'invisibility',
-  Bandolier = 'bandolier',
-  AmmoPack = 'ammo_pack',
-  IRGoggles = 'ir_goggles',
-  DoubleDamage = 'double_damage',
-  SphereVengeance = 'sphere_vengeance',
-  SphereHunter = 'sphere_hunter',
-  SphereDefender = 'sphere_defender',
-  Doppelganger = 'doppelganger',
-  TagToken = 'tag_token',
-  TechResistance = 'tech_resistance',
-  TechStrength = 'tech_strength',
-  TechHaste = 'tech_haste',
-  TechRegeneration = 'tech_regeneration',
-  Flashlight = 'flashlight',
-  Compass = 'compass',
-}
+export { WeaponId, PowerupId };
 
 export enum KeyId {
   Blue = 'blue',

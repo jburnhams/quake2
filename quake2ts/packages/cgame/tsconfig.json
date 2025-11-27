@@ -4,11 +4,14 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
+    "downlevelIteration": true,
     "paths": {
       "@quake2ts/shared": ["../shared/src"],
-      "@quake2ts/engine": ["../engine/src"]
+      "@quake2ts/shared/*": ["../shared/src/*"],
+      "@quake2ts/engine": ["../engine/src"],
+      "@quake2ts/engine/*": ["../engine/src/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

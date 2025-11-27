@@ -1,21 +1,6 @@
-export enum AmmoType {
-  Bullets = 0,
-  Shells,
-  Rockets,
-  Grenades,
-  Cells,
-  Slugs,
-  // New additions
-  Trap,
-  Tesla,
-  MagSlugs,
-  Flechettes,
-  Prox,
-  Nuke,
-  Rounds,
-}
+import { AmmoType, AMMO_TYPE_COUNT, AmmoItemId } from '@quake2ts/shared';
 
-export const AMMO_TYPE_COUNT = Object.keys(AmmoType).length / 2;
+export { AmmoType, AMMO_TYPE_COUNT, AmmoItemId };
 
 export type AmmoCaps = readonly number[];
 
@@ -32,17 +17,6 @@ export interface AmmoAdjustmentResult {
   readonly newCount: number;
   readonly capped: number;
   readonly pickedUp: boolean;
-}
-
-export enum AmmoItemId {
-  Shells = 'ammo_shells',
-  Bullets = 'ammo_bullets',
-  Rockets = 'ammo_rockets',
-  Grenades = 'ammo_grenades',
-  Cells = 'ammo_cells',
-  Slugs = 'ammo_slugs',
-  // We might need new IDs here too but ItemMapping uses AmmoType directly for logic usually
-  // Adding placeholders if needed but AmmoType is what matters for inventory indexing.
 }
 
 export interface AmmoItemDefinition {

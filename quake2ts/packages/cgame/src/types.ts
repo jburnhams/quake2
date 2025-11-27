@@ -1,7 +1,4 @@
-import type { Vec3 } from '@quake2ts/shared/math/vec3.js';
-import type { PlayerState } from '@quake2ts/shared/protocol/player-state.js';
-import type { PmoveCmd, PmoveTraceResult } from '@quake2ts/shared/pmove/types.js';
-import type { LayoutFlags } from '@quake2ts/shared/protocol/layout.js';
+import type { Vec3, PlayerState, PmoveCmd, PmoveTraceResult, LayoutFlags } from '@quake2ts/shared';
 
 /**
  * Interface provided by the Engine to the CGame module.
