@@ -117,6 +117,7 @@ export interface PlayerClient {
     // Powerup timers (from rerelease/g_local.h)
     quad_time?: number;
     double_time?: number;
+    quadsound_time?: number;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
