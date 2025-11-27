@@ -30,7 +30,7 @@ describe('buildBspGeometry', () => {
       },
     ];
 
-    const result = buildBspGeometry(gl as unknown as WebGL2RenderingContext, surfaces, {
+    const result = buildBspGeometry(gl as unknown as WebGL2RenderingContext, surfaces, undefined, {
       atlasSize: 8,
       lightmapPadding: 1,
     });
@@ -66,7 +66,7 @@ describe('buildBspGeometry', () => {
       lightmap: { width: 2, height: 2, samples: makeLightmap(2, 2) },
     };
 
-    const { surfaces, lightmaps } = buildBspGeometry(gl as unknown as WebGL2RenderingContext, [surface], {
+    const { surfaces, lightmaps } = buildBspGeometry(gl as unknown as WebGL2RenderingContext, [surface], undefined, {
       atlasSize: 4,
       lightmapPadding: 1,
     });

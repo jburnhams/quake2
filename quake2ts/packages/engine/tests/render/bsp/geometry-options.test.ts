@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildBspGeometry, BspSurfaceInput } from '../../../src/render/bsp/geometry.js';
+import { buildBspGeometry, BspSurfaceInput } from '../../../src/render/bsp.js';
 import { BspMap } from '../../../src/assets/bsp.js';
 
 // Mock WebGL context
@@ -23,13 +23,13 @@ const gl = {
 
 describe('buildBspGeometry', () => {
   it('should include all surfaces by default', () => {
-     const createSurf = (faceIndex: number, vertexCount: number, textureName: string): BspSurfaceInput => ({
+     const createSurf = (faceIndex: number, vertexCount: number, texture: string): BspSurfaceInput => ({
        faceIndex,
-       textureName,
-       flags: 0,
-       vertices: new Float32Array(vertexCount * 7),
-       vertexCount,
-       styles: [0,0,0,0]
+       texture,
+       surfaceFlags: 0,
+       vertices: new Float32Array(vertexCount * 3),
+       textureCoords: new Float32Array(vertexCount * 2),
+       indices: new Uint16Array([0, 1, 2]),
      });
 
     const surfaces: BspSurfaceInput[] = [
@@ -38,8 +38,8 @@ describe('buildBspGeometry', () => {
     ];
 
     const result = buildBspGeometry(gl, surfaces);
-    // 2 batches assuming sorting by texture
-    expect(result.batches.length).toBe(2);
+    // result.surfaces is array of BspSurfaceGeometry
+    expect(result.surfaces.length).toBe(2);
   });
 
   it('should filter surfaces based on hidden classnames', () => {
@@ -62,13 +62,13 @@ describe('buildBspGeometry', () => {
       ]
     } as unknown as BspMap;
 
-     const createSurf = (faceIndex: number, vertexCount: number, textureName: string): BspSurfaceInput => ({
+     const createSurf = (faceIndex: number, vertexCount: number, texture: string): BspSurfaceInput => ({
        faceIndex,
-       textureName,
-       flags: 0,
-       vertices: new Float32Array(vertexCount * 7),
-       vertexCount,
-       styles: [0,0,0,0]
+       texture,
+       surfaceFlags: 0,
+       vertices: new Float32Array(vertexCount * 3),
+       textureCoords: new Float32Array(vertexCount * 2),
+       indices: new Uint16Array([0, 1, 2]),
      });
 
     const surfaces: BspSurfaceInput[] = [
@@ -82,16 +82,11 @@ describe('buildBspGeometry', () => {
       hiddenClassnames: new Set(['func_hide_me'])
     });
 
-    // Should contain World (face 0) and func_show_me (face 2, 3)
-    // func_hide_me (face 1) should be filtered out.
-    // Total indices: 3 + 3 + 3 = 9.
+    // Expecting 3 surfaces to remain (0, 2, 3)
+    expect(result.surfaces.length).toBe(3);
 
-    expect(result.indexCount).toBe(9);
-    // Batch count depends on texture sorting.
-    // tex1 (1), tex2 (hidden), tex3 (2).
-    // tex1 (count 3), tex3 (count 6).
-    expect(result.batches.length).toBe(2);
-    expect(result.batches[0].textureName).toBe('tex1');
-    expect(result.batches[1].textureName).toBe('tex3');
+    expect(result.surfaces[0].texture).toBe('tex1');
+    expect(result.surfaces[1].texture).toBe('tex3');
+    expect(result.surfaces[2].texture).toBe('tex3');
   });
 });
