@@ -7,8 +7,8 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs && tsc --emitDeclarationOnly --declaration --outDir dist src/**/*.ts",
-    "dev": "tsup src/index.ts --format esm,cjs --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

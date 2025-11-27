@@ -3,9 +3,11 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm', 'cjs'],
-  dts: false, // Using tsc for declaration generation
+  dts: {
+    resolve: true,
+  },
   sourcemap: true,
   clean: true,
   treeshake: true,
-  tsconfig: './tsconfig.json',
+  tsconfig: './tsconfig.build.json',
 });
