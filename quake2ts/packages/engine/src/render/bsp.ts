@@ -393,9 +393,10 @@ export function buildBspGeometry(
     }
   }
 
-  const resolved: Required<Omit<BspBuildOptions, 'hiddenClassnames'>> = {
+  const resolved: Required<BspBuildOptions> = {
     atlasSize: options.atlasSize ?? 1024,
     lightmapPadding: options.lightmapPadding ?? 1,
+    hiddenClassnames: options.hiddenClassnames ?? new Set(),
   };
 
   const atlasBuilders: AtlasBuilder[] = [];
