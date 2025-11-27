@@ -15,7 +15,7 @@ import {
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
-import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
+import { lengthVec3, subtractVec3, ServerCommand, CollisionEntityIndex, CollisionEntityLink, CONTENTS_SOLID, CONTENTS_TRIGGER, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
@@ -49,6 +49,36 @@ function boundsIntersect(a: Bounds, b: Bounds): boolean {
     a.min.z > b.max.z ||
     a.max.z < b.min.z
   );
+}
+
+// Map Entity.solid to contents flags
+function getEntityContents(entity: Entity): number {
+  if (entity.solid === Solid.Not) return 0;
+
+  // If clipmask is set, use it as a hint, but primarily we derive contents from type
+  // Actually clipmask defines what this entity HITS, not what it IS.
+
+  // Base content
+  let contents = 0;
+
+  // Map Solid type to basic contents
+  switch (entity.solid) {
+    case Solid.Bsp:
+      contents = CONTENTS_SOLID; // Usually implies brush model, which has its own contents, but as a box proxy we say solid.
+      break;
+    case Solid.BoundingBox:
+      contents = CONTENTS_SOLID;
+      // Monsters and players get specific contents
+      if (entity.svflags & ServerFlags.Monster) contents |= CONTENTS_MONSTER;
+      if (entity.svflags & ServerFlags.DeadMonster) contents |= CONTENTS_DEADMONSTER;
+      if (entity.classname === 'player') contents |= CONTENTS_PLAYER;
+      break;
+    case Solid.Trigger:
+      contents = CONTENTS_TRIGGER;
+      break;
+  }
+
+  return contents;
 }
 
 type SerializableVec3 = readonly [number, number, number];
@@ -138,6 +168,10 @@ export class EntitySystem {
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
+
+  // Spatial partitioning index for efficient collision queries
+  readonly collisionIndex: CollisionEntityIndex;
+
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
   private frameNumber = 0;
@@ -179,6 +213,7 @@ export class EntitySystem {
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
+    this.collisionIndex = new CollisionEntityIndex(); // Initialize spatial index
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
     this.imports = imports || {
@@ -265,12 +300,14 @@ export class EntitySystem {
   free(entity: Entity): void {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
+    this.collisionIndex.unlink(entity.index); // Remove from spatial index
     this.pool.deferFree(entity);
   }
 
   freeImmediate(entity: Entity): void {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
+    this.collisionIndex.unlink(entity.index); // Remove from spatial index
     this.pool.freeImmediate(entity);
   }
 
@@ -284,6 +321,22 @@ export class EntitySystem {
 
   linkentity(ent: Entity): void {
     this.imports.linkentity(ent);
+
+    // Update spatial index if the entity is solid or a trigger
+    // We link even if solid is Not IF it was previously linked, but generally we only link things that can interact
+    if (ent.solid !== Solid.Not) {
+      const link: CollisionEntityLink = {
+        id: ent.index,
+        origin: ent.origin,
+        mins: ent.mins,
+        maxs: ent.maxs,
+        contents: getEntityContents(ent)
+      };
+      this.collisionIndex.link(link);
+    } else {
+      // If it's not solid, ensure it's not in the index (e.g. if it changed from solid to not)
+      this.collisionIndex.unlink(ent.index);
+    }
   }
 
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
@@ -310,6 +363,7 @@ export class EntitySystem {
       return;
     }
     this.registerTarget(entity);
+    this.linkentity(entity); // Ensure entity is linked upon spawn completion
   }
 
   findByClassname(classname: string): Entity[] {
@@ -357,22 +411,25 @@ export class EntitySystem {
 
   killBox(entity: Entity): void {
     const targetBounds = computeBounds(entity);
-    for (const other of this.pool) {
-      if (other === entity || other === this.pool.world) {
-        continue;
-      }
-      if (!other.inUse || other.freePending || other.solid === Solid.Not) {
-        continue;
-      }
-      if (other.svflags & ServerFlags.DeadMonster) {
-        continue;
-      }
-      if (!boundsIntersect(targetBounds, computeBounds(other))) {
-        continue;
-      }
-      other.health = 0;
-      other.deadflag = DeadFlag.Dead;
-      this.free(other);
+
+    // Optimization: Use spatial index
+    // We are looking for entities overlapping 'entity'.
+    // gatherTriggerTouches returns entities overlapping the box.
+    const candidates = this.collisionIndex.gatherTriggerTouches(entity.origin, entity.mins, entity.maxs, -1);
+
+    for (const id of candidates) {
+        const other = this.pool.get(id);
+        if (!other || other === entity || other === this.pool.world) continue;
+
+        if (!other.inUse || other.freePending || other.solid === Solid.Not) continue;
+        if (other.svflags & ServerFlags.DeadMonster) continue;
+
+        // Precise check (already done by gatherTriggerTouches roughly, but let's be sure)
+        if (!boundsIntersect(targetBounds, computeBounds(other))) continue;
+
+        other.health = 0;
+        other.deadflag = DeadFlag.Dead;
+        this.free(other);
     }
   }
 
@@ -437,6 +494,9 @@ export class EntitySystem {
           }
           break;
       }
+
+      // Update link after movement
+      this.linkentity(ent);
     }
 
     this.runTouches();
@@ -561,6 +621,8 @@ export class EntitySystem {
             break;
         }
       }
+      // Re-link entity to spatial tree after restore
+      this.linkentity(entity);
     }
 
     for (const ref of pendingEntityRefs) {
@@ -574,6 +636,8 @@ export class EntitySystem {
   private runTouches(): void {
     const world = this.pool.world;
     const activeEntities: Entity[] = [];
+
+    // 1. Collect potential touchers (solid entities)
     for (const entity of this.pool) {
       if (entity === world) {
         continue;
@@ -584,27 +648,44 @@ export class EntitySystem {
       activeEntities.push(entity);
     }
 
-    for (let i = 0; i < activeEntities.length; i += 1) {
-      const first = activeEntities[i];
-      let firstBounds: Bounds | null = null;
-      for (let j = i + 1; j < activeEntities.length; j += 1) {
-        const second = activeEntities[j];
-        if (!first.touch && !second.touch) {
-          continue;
-        }
-        if (!firstBounds) {
-          firstBounds = computeBounds(first);
-        }
-        const secondBounds = computeBounds(second);
-        if (!boundsIntersect(firstBounds, secondBounds)) {
-          continue;
-        }
-        if (first.touch) {
-          first.touch(first, second);
-        }
-        if (second.touch) {
-          second.touch(second, first);
-        }
+    // 2. For each active entity, query the spatial index for potential collisions
+    for (const first of activeEntities) {
+      // If the entity has no touch function and isn't a solid/trigger that others might want to touch, skip?
+      // Actually Q2 checks if (ent->solid == SOLID_NOT) continue; which we did in step 1.
+      // Then it intersects.
+
+      // Query spatial index for everything overlapping 'first'
+      // mask -1 gets all solid/trigger types
+      const candidates = this.collisionIndex.gatherTriggerTouches(first.origin, first.mins, first.maxs, -1);
+
+      const firstBounds = computeBounds(first);
+
+      for (const id of candidates) {
+          if (id === first.index) continue;
+
+          const second = this.pool.get(id);
+          if (!second || !second.inUse || second.freePending) continue;
+
+          if (!first.touch && !second.touch) continue;
+
+          // Avoid double processing (e.g. A vs B, then B vs A)
+          // We enforce processing only when first.index < second.index.
+          // This assumes both entities are in the 'activeEntities' list (which they are, as both are Solid/Trigger).
+          if (first.index >= second.index) continue;
+
+          const secondBounds = computeBounds(second);
+          if (!boundsIntersect(firstBounds, secondBounds)) {
+            continue;
+          }
+
+          if (first.touch) {
+            first.touch(first, second);
+          }
+          // Ensure entities are still valid before the second callback
+          // (The first callback might have freed one of them)
+          if (second.touch && first.inUse && second.inUse) {
+            second.touch(second, first);
+          }
       }
     }
   }
