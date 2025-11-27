@@ -46,8 +46,9 @@ function applyDamageEvent(
   target: EnvironmentalDamageTarget,
   amount: number,
   mod: DamageMod,
+  time: number,
 ): DamageApplicationResult | null {
-  return T_Damage(target, null, null, ZERO, target.origin, ZERO, amount, 0, DamageFlags.NO_ARMOR, mod);
+  return T_Damage(target, null, null, ZERO, target.origin, ZERO, amount, 0, DamageFlags.NO_ARMOR, mod, time);
 }
 
 export function applyEnvironmentalDamage(
@@ -68,7 +69,7 @@ export function applyEnvironmentalDamage(
     if (target.airFinished < nowMs && target.painDebounceTime <= nowMs) {
       const elapsedSeconds = Math.floor((nowMs - target.airFinished) / 1000);
       const amount = Math.min(15, 2 + 2 * elapsedSeconds);
-      const result = applyDamageEvent(target, amount, DamageMod.WATER);
+      const result = applyDamageEvent(target, amount, DamageMod.WATER, nowMs / 1000);
       target.painDebounceTime = nowMs + 1000;
       events.push({ mod: DamageMod.WATER, amount, result });
     }
@@ -83,12 +84,12 @@ export function applyEnvironmentalDamage(
     if (target.damageDebounceTime <= nowMs) {
       if ((target.watertype & CONTENTS_LAVA) !== 0 && (flags & EnvironmentalFlags.IMMUNE_LAVA) === 0) {
         const amount = 10 * target.waterlevel;
-        const result = applyDamageEvent(target, amount, DamageMod.LAVA);
+        const result = applyDamageEvent(target, amount, DamageMod.LAVA, nowMs / 1000);
         target.damageDebounceTime = nowMs + 100;
         events.push({ mod: DamageMod.LAVA, amount, result });
       } else if ((target.watertype & CONTENTS_SLIME) !== 0 && (flags & EnvironmentalFlags.IMMUNE_SLIME) === 0) {
         const amount = 4 * target.waterlevel;
-        const result = applyDamageEvent(target, amount, DamageMod.SLIME);
+        const result = applyDamageEvent(target, amount, DamageMod.SLIME, nowMs / 1000);
         target.damageDebounceTime = nowMs + 100;
         events.push({ mod: DamageMod.SLIME, amount, result });
       }
@@ -196,6 +197,7 @@ export function applyFallingDamage(
       0,
       DamageFlags.NO_ARMOR,
       DamageMod.FALLING,
+      0,
     );
   }
 
@@ -228,7 +230,7 @@ export function applyCrushDamage(
   const baseDamage = options.baseDamage ?? (crusher as any).dmg ?? 10;
 
   const amount = !target.isMonster && !target.isClient ? nonLivingDamage : target.health < 1 ? gibDamage : baseDamage;
-  const result = T_Damage(target, crusher, crusher, ZERO, target.origin, ZERO, amount, 1, DamageFlags.NONE, DamageMod.CRUSH);
+  const result = T_Damage(target, crusher, crusher, ZERO, target.origin, ZERO, amount, 1, DamageFlags.NONE, DamageMod.CRUSH, 0);
 
   return { amount, result };
 }
@@ -300,7 +302,7 @@ export function killBox(
       continue;
     }
 
-    const result = T_Damage(target, teleporter, teleporter, ZERO, target.origin, ZERO, 100_000, 0, DamageFlags.NO_PROTECTION, mod);
+    const result = T_Damage(target, teleporter, teleporter, ZERO, target.origin, ZERO, 100_000, 0, DamageFlags.NO_PROTECTION, mod, 0);
     events.push({ target, result });
 
     if (!result || !result.killed || target.health > 0) {

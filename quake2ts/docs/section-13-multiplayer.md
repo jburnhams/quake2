@@ -50,28 +50,28 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.1 Server Architecture (Reference: original `server/sv_*.c`)
 - [x] **Package Setup**: `packages/server` created with basic structure.
-- [ ] **Server State**: Define core structures (TypeScript equivalents):
-  - `server_static_t` (`svs`): Global server state - port, client array, challenge list, etc.
-  - `server_t` (`sv`): Per-level state - map name, BSP data, entity baselines, configstrings.
+- [ ] **Server State**: Define core structures (TypeScript equivalents): **(In Progress)**
+  - `server_static_t` (`svs`): Global server state - port, client array, challenge list, etc. *(Note: Basic `svs` with a `clients` array is implemented in `server.ts`)*.
+  - `server_t` (`sv`): Per-level state - map name, BSP data, entity baselines, configstrings. *(Note: Basic `sv` with time, frame, and map info is implemented in `server.ts`)*.
   - `client_t`: Per-client state - connection state, reliable/unreliable messages, last frame acked, user info, name, rate.
   - Reference `server/server.h` for full structure definitions.
 
 #### 2.2 Server Main Loop (`SV_Frame`)
 - [x] **Frame Structure**: Basic loop exists in `packages/server/src/dedicated.ts`.
 - [ ] **Frame Steps** (enhance existing loop):
-  1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets.
+  1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets. *(Note: Stubbed out in `dedicated.ts`; current logic is handled directly in `onClientMessage`)*.
      - Parse `clc_*` messages (stringcmd, move, userinfo, etc.).
      - Update `client_t.lastmessage` timestamp (for timeout detection).
      - Process `clc_move`: Extract `usercmd_t`, store in client command buffer for `ge->ClientThink()`.
-  2. **`SV_RunGameFrame()`**:
-     - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
-     - Call `ge->G_RunFrame()` to advance game simulation (physics, AI, triggers).
-     - Increment `sv.framenum`.
+  2. **`SV_RunGameFrame()`**: *(Note: Implemented in `dedicated.ts`)*.
+     - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command. *(Note: Implemented)*.
+     - Call `ge->G_RunFrame()` to advance game simulation (physics, AI, triggers). *(Note: Implemented as `game.frame()`)*.
+     - Increment `sv.framenum`. *(Note: Implemented)*.
   3. **`SV_SendClientMessages()`**:
-     - For each client: Build `svc_frame` with delta-compressed entity snapshot.
+     - For each client: Build `svc_frame` with delta-compressed entity snapshot. *(Note: Stubbed out in `dedicated.ts` with basic, non-delta frame sending)*.
      - Call `SV_WriteFrameToClient()` (see Phase 2.4).
      - Send via `client.netchan.Transmit()`.
-  4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early.
+  4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early. *(Note: Implemented via `setInterval`)*.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.

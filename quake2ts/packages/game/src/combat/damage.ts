@@ -2,7 +2,7 @@ import { addVec3, closestPointToBox, lengthVec3, normalizeVec3, scaleVec3, subtr
 import { applyPowerArmor, applyRegularArmor, type PowerArmorState, type RegularArmorState } from './armor.js';
 import { DamageFlags, hasAnyDamageFlag } from './damageFlags.js';
 import { DamageMod } from './damageMods.js';
-import { EntitySystem } from '../entities/system.js';
+import type { Entity } from '../entities/entity.js';
 import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
@@ -57,6 +57,30 @@ export interface RadiusDamageHit {
 
 export interface RadiusDamageOptions {
   readonly canDamage?: (ent: Damageable, inflictor: DamageSource) => boolean;
+}
+
+function getDamageModifier(attacker: Damageable | null, time: number): number {
+  // Based on rerelease/p_weapon.cpp:35-57 P_DamageModifier
+  if (!attacker) {
+    return 1;
+  }
+
+  const client = (attacker as Entity).client;
+  if (!client) {
+    return 1;
+  }
+
+  let modifier = 1;
+
+  if (client.quad_time && client.quad_time > time) {
+    modifier *= 4;
+  }
+
+  if (client.double_time && client.double_time > time) {
+    modifier *= 2;
+  }
+
+  return modifier;
 }
 
 function applyKnockback(
@@ -132,27 +156,32 @@ export function T_Damage(
   knockback: number,
   dflags: number,
   mod: DamageMod,
+  time: number,
   multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
 ): DamageApplicationResult | null {
-  if (!targ.takedamage || damage <= 0) {
+  if (!targ.takedamage) {
     return null;
   }
 
+  const modifier = getDamageModifier(attacker, time);
+  const modifiedDamage = damage * modifier;
+  const modifiedKnockback = knockback * modifier;
+
   const protectedByGod =
-    !hasAnyDamageFlag(dflags, DamageFlags.NO_PROTECTION) && ((targ.flags ?? 0) & EntityDamageFlags.GODMODE) !== 0;
+    !hasAnyDamageFlag(dflags, DamageFlags.NO_PROTECTION) && ((targ.flags ?? 0) & EntityDamageFlags.GODMODE) !== 0 && modifiedDamage > 0;
 
   if (protectedByGod) {
     return {
       take: 0,
       psave: 0,
-      asave: damage,
+      asave: modifiedDamage,
       knocked: { x: 0, y: 0, z: 0 },
       killed: false,
     };
   }
 
-  const knocked = applyKnockback(targ, attacker, dir, knockback, dflags);
-  const [take, psave, asave, remainingCells, remainingArmor] = applyProtection(targ, point, normal, damage, dflags);
+  const knocked = applyKnockback(targ, attacker, dir, modifiedKnockback, dflags);
+  const [take, psave, asave, remainingCells, remainingArmor] = applyProtection(targ, point, normal, modifiedDamage, dflags);
 
   if (targ.powerArmor && remainingCells !== undefined) {
     (targ.powerArmor as PowerArmorState).cellCount = remainingCells;
@@ -209,6 +238,7 @@ export function T_RadiusDamage(
   radius: number,
   dflags: number,
   mod: DamageMod,
+  time: number,
   options: RadiusDamageOptions = {},
   multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
 ): RadiusDamageHit[] {
@@ -240,7 +270,7 @@ export function T_RadiusDamage(
     // We pass damage as both damage and knockback (or logic differs?)
     // Quake 2: T_Damage (ent, inflictor, attacker, dir, ent->s.origin, vec3_origin, points, points, DAMAGE_RADIUS, mod);
     // Yes, damage equals knockback for radius damage.
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, multicast);
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, time, multicast);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 

@@ -110,7 +110,8 @@ function mutant_swing(self: Entity, damage: number, context: EntitySystem): void
       damage,
       0,
       0,
-      DamageMod.UNKNOWN
+      DamageMod.UNKNOWN,
+      context.timeSeconds,
   );
 }
 
@@ -158,7 +159,8 @@ function mutant_jump_touch(self: Entity, other: Entity | null, plane?: any, surf
             50,
             0,
             0,
-            DamageMod.UNKNOWN
+            DamageMod.UNKNOWN,
+            0,
         );
     }
 

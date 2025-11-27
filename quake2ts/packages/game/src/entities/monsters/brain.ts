@@ -170,7 +170,7 @@ function brain_tounge_attack(self: Entity, context: EntitySystem): void {
   context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.PARASITE_ATTACK, self, start, end);
 
   const dir = subtractVec3(start, end);
-  T_Damage(self.enemy as unknown as Damageable, self as unknown as Damageable, self as unknown as Damageable, dir, self.enemy.origin, ZERO_VEC3, 5, 0, 0, DamageMod.BRAINTENTACLE);
+  T_Damage(self.enemy as unknown as Damageable, self as unknown as Damageable, self as unknown as Damageable, dir, self.enemy.origin, ZERO_VEC3, 5, 0, 0, DamageMod.BRAINTENTACLE, context.timeSeconds);
 
   // Pull enemy
   self.origin = { ...self.origin, z: self.origin.z + 1 }; // hack to trigger physics?

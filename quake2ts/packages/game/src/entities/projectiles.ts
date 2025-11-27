@@ -38,12 +38,13 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
                 0,
                 DamageFlags.NONE,
                 DamageMod.ROCKET,
+                sys.timeSeconds,
                 sys.multicast.bind(sys)
             );
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, {}, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
@@ -71,7 +72,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
     const explode = (self: Entity) => {
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE, {}, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE, sys.timeSeconds, {}, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, self.origin);
@@ -134,6 +135,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
                 1, // Kick
                 DamageFlags.NONE,
                 mod,
+                sys.timeSeconds,
                 sys.multicast.bind(sys)
             );
         } else {
@@ -205,6 +207,7 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
                     1, // kick
                     DamageFlags.ENERGY,
                     DamageMod.BFG_LASER,
+                    sys.timeSeconds,
                     sys.multicast.bind(sys)
                 );
             }
@@ -351,6 +354,7 @@ function bfgExplode(self: Entity, sys: EntitySystem): void {
                     0,
                     DamageFlags.ENERGY,
                     DamageMod.BFG_EFFECT,
+                    sys.timeSeconds,
                     sys.multicast.bind(sys)
                 );
 
@@ -411,6 +415,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
                 0,
                 DamageFlags.ENERGY,
                 DamageMod.BFG_BLAST,
+                sys.timeSeconds,
                 sys.multicast.bind(sys)
             );
         }
@@ -418,7 +423,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
         // Radius damage from initial impact
         const entities = sys.findByRadius(self.origin, 100);
         T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, other as any, 100,
-            DamageFlags.ENERGY, DamageMod.BFG_BLAST, {}, sys.multicast.bind(sys));
+            DamageFlags.ENERGY, DamageMod.BFG_BLAST, sys.timeSeconds, {}, sys.multicast.bind(sys));
 
         // Big explosion effect
         // Based on rerelease/g_weapon.cpp:1021-1024

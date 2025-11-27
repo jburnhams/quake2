@@ -27,10 +27,7 @@ describe('buildBspGeometry', () => {
        faceIndex,
        texture,
        surfaceFlags: 0,
-       vertices: new Float32Array(vertexCount * 3), // Just positions? No, bsp.ts buildVertexData expects interleaved?
-       // Wait, bsp.ts BspSurfaceInput has `vertices`, `textureCoords`, etc. separate.
-       // buildVertexData interleaves them.
-       // I need to provide separate arrays.
+       vertices: new Float32Array(vertexCount * 3),
        textureCoords: new Float32Array(vertexCount * 2),
        indices: new Uint16Array([0, 1, 2]),
      });
