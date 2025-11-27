@@ -51,11 +51,11 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Register entity in think queue
   - Execute think callbacks at scheduled time
   - Sort by nextthink for efficient processing
-- [x] Touch detection
+- [ ] Touch detection
   - When entities overlap (via trace), call touch callbacks
   - Handle trigger volumes
   - Pickup items, teleporters, hurt triggers
-  - **Note**: Current implementation is O(N^2). Spatial optimization pending Section 3 completion.
+  - **Note**: Current implementation in `EntitySystem.runTouches` and `checkTriggers` uses an O(N^2) brute-force iteration. It does not yet utilize the efficient spatial partitioning (BSP area nodes / `BoxEdicts`) now available in Section 3. **Action Required**: Update game loop to use spatial queries from `game.collision` or expose `BoxEdicts` in `GameImports`.
 
 ### Spawn Registry
 - [x] Build spawn function registry (mirrors `g_spawn.cpp`)
@@ -154,7 +154,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Convert string values to appropriate types (int, float, vec3)
 - [x] Link entities into world
   - [x] Add to entity list
-  - [x] For solid entities, link into BSP spatial areas **(Pending Section 3 Completion)**
+  - [x] For solid entities, link into BSP spatial areas **(Pending Section 3 Completion - now available, needs integration)**
   - [x] Build target->entity lookup table for scripting
   - **Progress**: Targetname indexing now occurs during spawn and cleans up on free; BSP area linking uses CollisionEntityIndex.
 
@@ -181,7 +181,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - After movement, check for entity overlaps
   - Call touch callbacks on both entities
   - Handle pickup, trigger, damage logic
-  - **Note**: Current implementation is O(N^2). Spatial optimization pending Section 3 completion.
+  - **Note**: Current implementation is O(N^2). Spatial optimization pending integration.
 
 ### Entity Scripting & Targeting
 - [x] Target resolution
