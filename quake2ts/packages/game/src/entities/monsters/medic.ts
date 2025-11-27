@@ -23,14 +23,17 @@ import { rangeTo, RangeCategory, infront, visible, TraceResult } from '../../ai/
 import { monster_fire_blaster } from './attack.js';
 import { EntitySystem } from '../system.js';
 import { MulticastType } from '../../imports.js';
+import { CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_DEADMONSTER } from '@quake2ts/shared';
 
 const MONSTER_TICK = 0.1;
 
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-  if (medic_find_dead(self, context as EntitySystem)) {
-      self.monsterinfo.current_move = run_move;
-      return;
+  if (self.classname === 'monster_medic') {
+    if (medic_find_dead(self, context as EntitySystem)) {
+        self.monsterinfo.current_move = run_move;
+        return;
+    }
   }
   ai_stand(self, MONSTER_TICK, context);
 }
@@ -40,11 +43,16 @@ function monster_ai_walk(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
-  // Medic custom run logic to find dead monsters
-  if (medic_find_dead(self, context as EntitySystem)) {
-      self.monsterinfo.current_move = run_move;
+  if (self.classname === 'monster_medic') {
+    // Medic custom run logic to find dead monsters
+    if (medic_find_dead(self, context as EntitySystem)) {
+        self.monsterinfo.current_move = run_move;
+    } else {
+        ai_run(self, dist, MONSTER_TICK, context);
+    }
   } else {
-      ai_run(self, dist, MONSTER_TICK, context);
+    // Medic Commander just runs
+    ai_run(self, dist, MONSTER_TICK, context);
   }
 }
 
@@ -62,6 +70,7 @@ let walk_move: MonsterMove;
 let run_move: MonsterMove;
 let attack_hyper_move: MonsterMove;
 let attack_cable_move: MonsterMove; // Healing animation
+let spawn_move: MonsterMove; // Commander reinforcement spawn
 let pain_move: MonsterMove;
 let death_move: MonsterMove;
 
@@ -74,15 +83,17 @@ function medic_walk(self: Entity): void {
 }
 
 function medic_run(self: Entity): void {
-  // Check if we have a goalentity that is a dead monster
-  if (self.enemy && self.enemy.deadflag === DeadFlag.Dead) {
-      // We are chasing a dead monster to heal it
-      const dist = rangeTo(self, self.enemy);
-      if (dist < 80) {
-          // Close enough to heal
-          self.monsterinfo.current_move = attack_cable_move;
-          return;
-      }
+  if (self.classname === 'monster_medic') {
+    // Check if we have a goalentity that is a dead monster
+    if (self.enemy && self.enemy.deadflag === DeadFlag.Dead) {
+        // We are chasing a dead monster to heal it
+        const dist = rangeTo(self, self.enemy);
+        if (dist < 80) {
+            // Close enough to heal
+            self.monsterinfo.current_move = attack_cable_move;
+            return;
+        }
+    }
   }
 
   if (self.enemy && self.enemy.health > 0) {
@@ -94,9 +105,18 @@ function medic_run(self: Entity): void {
 
 function medic_attack(self: Entity): void {
   // If enemy is dead (and is a monster), heal it
-  if (self.enemy && self.enemy.deadflag === DeadFlag.Dead) {
+  if (self.classname === 'monster_medic' && self.enemy && self.enemy.deadflag === DeadFlag.Dead) {
       self.monsterinfo.current_move = attack_cable_move;
       return;
+  }
+
+  // Commander spawning check
+  if (self.classname === 'monster_medic_commander') {
+    // Chance to spawn reinforcements if not already doing so
+    if (Math.random() < 0.2) { // 20% chance to spawn instead of attacking
+       self.monsterinfo.current_move = spawn_move;
+       return;
+    }
   }
 
   self.monsterinfo.current_move = attack_hyper_move;
@@ -144,16 +164,10 @@ function medic_cable_attack(self: Entity, context: EntitySystem): void {
 
   const end = self.enemy.origin;
 
-  // Visual effect
-  // Payload structure for MEDIC_CABLE_ATTACK: entId of medic, target entId? Or coords?
-  // Based on parasite, it passes an object.
-  // Original Q2 sends: write_short(medic_index), write_short(target_index or origin).
-  // But wait, our TE impl might be different.
-  // If we follow Parasite pattern:
   context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, {
       te: TempEntity.MEDIC_CABLE_ATTACK,
       entId: self.index,
-      targetId: self.enemy.index, // Assuming targetId for the beam target
+      targetId: self.enemy.index,
       start: start,
       end: end
   } as any);
@@ -174,14 +188,11 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
 
   // Also check distance one last time to be sure
   if (rangeTo(self, ent) > 400) {
-      // Too far, abort and maybe mark bad?
-      // For now just abort.
       self.enemy = null;
       return;
   }
 
   if (!spawnFunc) {
-      // Fallback if no spawn function found
       ent.deadflag = DeadFlag.Alive;
       ent.health = ent.max_health;
       ent.takedamage = true;
@@ -191,20 +202,15 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
           ent.monsterinfo.stand(ent, context);
       }
       // If we couldn't properly spawn, maybe mark as bad?
-      // (ent as any).bad_medic = self;
+      (ent as any).bad_medic = self;
   } else {
-      // Re-spawn the monster to reset state
-      // We need a SpawnContext.
       const spawnContext: SpawnContext = {
           entities: context,
-          keyValues: { classname: ent.classname }, // Minimal keyvalues
-          warn: (msg) => {}, // Suppress warnings
+          keyValues: { classname: ent.classname },
+          warn: (msg) => {},
           free: (e) => context.free(e)
       };
 
-      // Reset basic properties before spawn (some might be additive?)
-      // Actually spawn function usually overwrites everything.
-      // But we should keep origin and angles.
       const origin = { ...ent.origin };
       const angles = { ...ent.angles };
 
@@ -212,10 +218,8 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
 
       ent.origin = origin;
       ent.angles = angles;
-      // Link entity to ensure physics updated
       context.linkentity(ent);
 
-      // Ensure it is active
       ent.deadflag = DeadFlag.Alive;
       ent.takedamage = true;
       context.finalizeSpawn(ent);
@@ -226,18 +230,14 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
 }
 
 function medic_find_dead(self: Entity, context: EntitySystem): boolean {
-    // If we already have a dead enemy target, keep it
     if (self.enemy && self.enemy.deadflag === DeadFlag.Dead) {
         return true;
     }
 
-    // Occasional check only
     if (Math.random() > 0.2) return false;
 
-    // Search for dead bodies
-    // Iterating all entities is expensive, but standard for Q2 AI
     let best: Entity | null = null;
-    let bestDist = 1024; // Healing range limit
+    let bestDist = 1024;
 
     const traceWrapper = (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, ignore: Entity | null, mask: number): TraceResult => {
         const res = context.trace(start, mins, maxs, end, ignore, mask);
@@ -250,11 +250,10 @@ function medic_find_dead(self: Entity, context: EntitySystem): boolean {
     context.forEachEntity((ent) => {
         if (ent === self) return;
         if (ent.deadflag !== DeadFlag.Dead) return;
-        if (!ent.monsterinfo) return; // Only heal monsters
-        if (ent.classname === 'monster_medic') return; // Don't heal other medics (usually)
-        if ((ent as any).bad_medic === self) return; // Don't retry failures
+        if (!ent.monsterinfo) return;
+        if (ent.classname === 'monster_medic') return;
+        if ((ent as any).bad_medic === self) return;
 
-        // Must be visible and reachable
         if (!visible(self, ent, traceWrapper)) return;
 
         const dist = rangeTo(self, ent);
@@ -272,6 +271,60 @@ function medic_find_dead(self: Entity, context: EntitySystem): boolean {
     return false;
 }
 
+function medic_call_reinforcements(self: Entity, context: EntitySystem): void {
+  // Weighted random spawn logic
+  const r = Math.random();
+  let chosenClass = 'monster_soldier_light'; // 50%
+  if (r > 0.8) {
+      chosenClass = 'monster_soldier_ssg'; // 20%
+  } else if (r > 0.5) {
+      chosenClass = 'monster_soldier'; // 30%
+  }
+
+  const spawnFunc = context.getSpawnFunction(chosenClass);
+
+  if (spawnFunc) {
+      // Find a spot in front of the medic
+      const vectors = angleVectors(self.angles);
+      const forwardDist = scaleVec3(vectors.forward, 64);
+      const spawnOrigin = addVec3(self.origin, forwardDist);
+
+      // Vectors are readonly, create new object for modification
+      const adjustedOrigin = { ...spawnOrigin, z: spawnOrigin.z + 8 }; // Slight lift
+
+      // Check if spot is clear
+      const tr = context.trace(self.origin, { x: -16, y: -16, z: -24 }, { x: 16, y: 16, z: 32 }, adjustedOrigin, self, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_DEADMONSTER);
+
+      if (tr.fraction < 1.0 || tr.startsolid || tr.allsolid) {
+          // Blocked, don't spawn
+          return;
+      }
+
+      const ent = context.spawn();
+      ent.origin = adjustedOrigin;
+      ent.angles = { ...self.angles };
+
+      const spawnContext: SpawnContext = {
+        entities: context,
+        keyValues: { classname: chosenClass },
+        warn: () => {},
+        free: (e) => context.free(e)
+      };
+
+      spawnFunc(ent, spawnContext);
+
+      // Make the new monster angry at the medic's enemy
+      ent.enemy = self.enemy;
+
+      // Visual effect for spawn?
+      context.multicast(adjustedOrigin, MulticastType.Pvs, ServerCommand.muzzleflash, {
+        entId: ent.index,
+        flash_number: 0 // generic flash
+      } as any);
+
+      context.engine.sound?.(self, 0, 'medic/medatck2.wav', 1, 1, 0); // Reuse sound
+  }
+}
 
 function medic_pain(self: Entity): void {
   self.monsterinfo.current_move = pain_move;
@@ -350,13 +403,11 @@ const attack_cable_frames: MonsterFrame[] = [
 ];
 
 attack_cable_move = {
-    firstframe: 106, // FRAME_attack42 (starts at 0+30+40+20+16 = 106) ... wait, check original counts.
-    // stand=30, walk=40, run=20, hyper=16. 30+40+20+16 = 106. Correct.
+    firstframe: 106,
     lastframe: 114,
     frames: attack_cable_frames,
     endfunc: medic_run
 };
-
 
 const pain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
   ai: monster_ai_move,
@@ -370,14 +421,31 @@ pain_move = {
   endfunc: medic_run,
 };
 
-const death_frames: MonsterFrame[] = Array.from({ length: 10 }, () => ({
+// Reinforcement spawn frames (FRAME_attack33-55: 122-144)
+const spawn_frames: MonsterFrame[] = Array.from({ length: 23 }, (_, i) => ({
+    ai: monster_ai_move,
+    dist: 0,
+    think: (i === 11) ? medic_call_reinforcements : null // Trigger halfway
+}));
+
+spawn_move = {
+    firstframe: 122,
+    lastframe: 144,
+    frames: spawn_frames,
+    endfunc: medic_run
+};
+
+// Death frames should be 161-190.
+// But we need to make sure we don't break existing medic if it relies on old frames.
+// Assuming standard model has > 161 frames.
+const death_frames: MonsterFrame[] = Array.from({ length: 30 }, () => ({
   ai: monster_ai_move,
   dist: 0,
 }));
 
 death_move = {
-  firstframe: 122,
-  lastframe: 131,
+  firstframe: 161,
+  lastframe: 190,
   frames: death_frames,
   endfunc: medic_dead,
 };
@@ -398,6 +466,13 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
   self.pain = (self, other, kick, damage) => {
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
+      // Pain sound logic
+      if (Math.random() < 0.5) {
+          const sound = self.classname === 'monster_medic_commander'
+              ? 'medic/medpain2.wav'
+              : 'medic/medpain1.wav';
+          context.entities.sound?.(self, 0, sound, 1, 1, 0);
+      }
     }
   };
 
@@ -425,6 +500,18 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
   self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
+export function SP_monster_medic_commander(self: Entity, context: SpawnContext): void {
+    SP_monster_medic(self, context);
+    self.classname = 'monster_medic_commander';
+    self.health = 600;
+    self.max_health = 600;
+    self.skin = 1; // Commander skin
+
+    // Commander doesn't heal, it spawns.
+    // Logic is handled in medic_attack and medic_run via classname check.
+}
+
 export function registerMedicSpawns(registry: SpawnRegistry): void {
   registry.register('monster_medic', SP_monster_medic);
+  registry.register('monster_medic_commander', SP_monster_medic_commander);
 }
