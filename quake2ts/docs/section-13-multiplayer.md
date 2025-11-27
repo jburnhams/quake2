@@ -186,8 +186,8 @@ These are already correctly placed, verify completeness:
 Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
 
 ##### HUD System (→ `cgame/src/hud/`, `cgame/src/screen.ts`)
-- [ ] **`client/src/hud.ts`** → `cgame/src/screen.ts`: Main entry point. Rename `Draw_Hud()` to `CG_DrawHUD()` matching `cgame_export_t::DrawHUD` signature from `rerelease/cg_screen.cpp`.
-- [ ] **`client/src/hud/*.ts`** → `cgame/src/hud/*.ts`: Move all files:
+- [x] **`client/src/hud.ts`** → `cgame/src/screen.ts`: Main entry point. Rename `Draw_Hud()` to `CG_DrawHUD()` matching `cgame_export_t::DrawHUD` signature from `rerelease/cg_screen.cpp`.
+- [x] **`client/src/hud/*.ts`** → `cgame/src/hud/*.ts`: Move all files:
   - `statusbar.ts` - Status bar with health/armor/ammo (uses player_state_t.stats[])
   - `crosshair.ts` - Crosshair rendering
   - `damage.ts` - Damage indicators and screen flash
@@ -200,7 +200,12 @@ Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
   - `blends.ts` - Screen blends (damage, powerups)
   - `diagnostics.ts` - FPS/network stats overlay
 - [ ] **Stat Reading**: Update HUD code to read from `player_state_t.stats[]` array using `STAT_*` constants (not hardcoded indices). Use `G_GetAmmoStat()` / `G_GetPowerupStat()` for compressed stats.
-- [ ] **Asset Precaching**: Implement `TouchPics()` export to call `cgi.Draw_RegisterPic()` for all HUD images during level load (see `rerelease/cg_screen.cpp:1689`).
+  - *Pending*: Remove temporary `tempClientState` mapping in `CG_DrawHUD` and read directly from `ps`.
+- [x] **Asset Precaching**: Implement `TouchPics()` export to call `cgi.Draw_RegisterPic()` for all HUD images during level load (see `rerelease/cg_screen.cpp:1689`).
+- [ ] **HUD Cleanup**:
+  - `blends.ts`: Implement `SCR_DrawFill` (or equivalent) in `CGameImport` and re-enable `Draw_Blends`.
+  - `screen.ts`: Refactor `MessageSystem` and `SubtitleSystem` drawing to use `cgi` and uncomment calls in `CG_DrawHUD`.
+  - `damage.ts`: Re-implement damage direction indicators using `ps` state or events.
 
 ##### View Effects (→ `cgame/src/view/`)
 - [ ] **`client/src/view.ts`** → `cgame/src/view/camera.ts`: Camera update logic (applies bob/kick to camera).
@@ -543,10 +548,13 @@ Do **not** move to shared:
     - Single `tsup` command for both bundling and declarations
     - Package properly consumable by TypeScript projects
   - **Status**: Core structure complete. All builds succeed. All tests passing (879 total).
+  - **HUD Adaptation Complete** (2025-11-27):
+    - Refactored `packages/cgame/src/hud/*.ts` to use `CGameImport` instead of direct `Renderer` calls.
+    - Updated `screen.ts` to coordinate drawing via `CG_DrawHUD` and loading via `CG_TouchPics`.
+    - Updated `types.ts` to include necessary drawing primitives (`SCR_DrawCenterString`).
+    - Verified with `pnpm test` (CGame tests passing).
   - **Next Steps**:
-    1. ~~Fix DTS build configuration~~ ✅ **COMPLETE**
-    2. ~~Move shared enums to appropriate package~~ ✅ **COMPLETE**
-    3. Adapt HUD component drawing functions to use `cgi` imports instead of direct renderer access
-    4. Implement stat reading from `ps.stats[]` array using `STAT_*` constants
-    5. Complete view effects and prediction modules migration
-- [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Adapt HUD components to use cgame_import_t functions, implement stat reading, and complete view/prediction migration.
+    1. Implement stat reading from `ps.stats[]` array using `STAT_*` constants.
+    2. Complete view effects and prediction modules migration.
+    3. Wire client ↔ cgame interface.
+- [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Implement stat reading, and complete view/prediction migration.

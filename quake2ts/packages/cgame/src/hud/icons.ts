@@ -1,10 +1,10 @@
-import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
+import { CGameImport } from '../types.js';
 
 /**
  * Global map of loaded HUD icons.
  * This is imported and used by statusbar.ts for rendering.
  */
-export const iconPics = new Map<string, Pic>();
+export const iconPics = new Map<string, unknown>();
 
 const ICON_NAMES = [
     // Weapons
@@ -26,14 +26,13 @@ const ICON_NAMES = [
  * Initialize and precache all HUD icon images.
  * Called during level load via CG_TouchPics().
  */
-export const Init_Icons = async (renderer: Renderer, assets: AssetManager) => {
+export const Init_Icons = (cgi: CGameImport) => {
     for (const name of ICON_NAMES) {
         try {
-            const texture = await assets.loadTexture(`pics/${name}.pcx`);
-            const pic = renderer.registerTexture(name, texture);
+            const pic = cgi.Draw_RegisterPic(`pics/${name}.pcx`);
             iconPics.set(name, pic);
         } catch (e) {
-            console.error(`Failed to load HUD image: pics/${name}.pcx`);
+            cgi.Com_Print(`Failed to load HUD image: pics/${name}.pcx\n`);
         }
     }
 };

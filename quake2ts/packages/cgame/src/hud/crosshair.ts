@@ -1,26 +1,24 @@
-import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
+import { CGameImport } from '../types.js';
 
-let crosshairPic: Pic | null = null;
+let crosshairPic: unknown | null = null;
 let crosshairIndex = 0; // Default to ch1
 let crosshairColor: [number, number, number, number] = [1, 1, 1, 1]; // Default white
 let crosshairEnabled = true;
 
 const CROSSHAIR_NAMES = ['ch1', 'ch2', 'ch3'];
-const crosshairPics: (Pic | null)[] = [null, null, null];
+const crosshairPics: (unknown | null)[] = [null, null, null];
 
-export const Init_Crosshair = async (renderer: Renderer, assets: AssetManager) => {
+export const Init_Crosshair = (cgi: CGameImport) => {
     for (let i = 0; i < CROSSHAIR_NAMES.length; i++) {
         const name = CROSSHAIR_NAMES[i];
         try {
-            const texture = await assets.loadTexture(`pics/${name}.pcx`);
-            crosshairPics[i] = renderer.registerTexture(name, texture);
+            crosshairPics[i] = cgi.Draw_RegisterPic(`pics/${name}.pcx`);
         } catch (e) {
             if (i === 0) {
                  try {
-                    const texture = await assets.loadTexture('pics/crosshair.pcx');
-                    crosshairPics[i] = renderer.registerTexture('crosshair', texture);
+                    crosshairPics[i] = cgi.Draw_RegisterPic('pics/crosshair.pcx');
                 } catch (e2) {
-                    console.error('Failed to load crosshair image');
+                    cgi.Com_Print('Failed to load crosshair image\n');
                 }
             }
         }
@@ -90,10 +88,12 @@ export const Cycle_Crosshair = () => {
     return crosshairEnabled ? crosshairIndex : -1;
 };
 
-export const Draw_Crosshair = (renderer: Renderer, width: number, height: number) => {
+export const Draw_Crosshair = (cgi: CGameImport, width: number, height: number) => {
     if (crosshairEnabled && crosshairPic) {
-        const x = (width - crosshairPic.width) / 2;
-        const y = (height - crosshairPic.height) / 2;
-        renderer.drawPic(x, y, crosshairPic, crosshairColor);
+        const size = cgi.Draw_GetPicSize(crosshairPic);
+        const x = (width - size.width) / 2;
+        const y = (height - size.height) / 2;
+        // Draw with color
+        cgi.SCR_DrawColorPic(x, y, crosshairPic, { x: crosshairColor[0], y: crosshairColor[1], z: crosshairColor[2] }, crosshairColor[3]);
     }
 };

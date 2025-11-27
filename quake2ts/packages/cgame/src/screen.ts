@@ -12,7 +12,7 @@
  */
 
 import type { PlayerState } from '@quake2ts/shared';
-import type { CGameImport } from './types.js';
+import type { CGameImport, ClientState } from './types.js';
 
 // HUD component imports
 import { Draw_Crosshair, Init_Crosshair } from './hud/crosshair.js';
@@ -67,9 +67,9 @@ export function CG_TouchPics(): void {
         }
     }
 
-    // TODO: Call Init functions for other HUD components
-    // These will need to be adapted to use cgi.Draw_RegisterPic()
-    // instead of direct asset manager access
+    Init_Crosshair(cgi);
+    Init_Icons(cgi);
+    Init_Damage(cgi);
 }
 
 /**
@@ -100,40 +100,52 @@ export function CG_DrawHUD(
         return;
     }
 
-    // TODO: Implement full HUD rendering using cgi drawing functions
-    // For now, this is a placeholder structure
-
-    // The full implementation will need to:
-    // 1. Read stats from ps.stats[] array using STAT_* constants
-    // 2. Use cgi.SCR_DrawPic(), cgi.SCR_DrawChar(), etc. for rendering
-    // 3. Calculate layout based on hud_vrect and hud_safe
-    // 4. Draw all HUD components in correct order:
-    //    - Screen blends (damage, powerups)
-    //    - Status bar
-    //    - Pickup messages
-    //    - Damage indicators
-    //    - Center print
-    //    - Notifications
-    //    - Subtitles
-    //    - Crosshair
-
     const timeMs = cgi.CL_ClientTime();
     const layout = getHudLayout(hud_vrect.width, hud_vrect.height);
 
-    // Basic placeholder rendering
-    // TODO: Adapt each Draw_* function to use cgi instead of renderer
+    // Screen blends (damage, powerups)
+    Draw_Blends(cgi, ps, hud_vrect.width, hud_vrect.height);
 
+    // Status bar
+    // Temporary mapping until ps.stats is implemented
+    // This ClientState construction is temporary to support the current Draw_StatusBar signature
+    // Eventually Draw_StatusBar should just take `ps` and read stats directly.
+    const tempClientState: ClientState = {
+        inventory: {
+            armor: null, // TODO: Map from ps.stats
+            powerups: new Map(), // TODO: Map from ps.stats
+            keys: new Set(), // TODO: Map from ps.stats
+            currentWeapon: undefined // TODO: Map from ps.stats/gunindex
+        }
+    };
+
+    // TODO: Pass real health/armor/ammo from ps.stats
+    Draw_StatusBar(cgi, tempClientState, 100, 0, 0, hudNumberPics, numberWidth, timeMs, layout);
+
+    // Pickup messages
+    Draw_Pickup(cgi, ps, hud_vrect.width, hud_vrect.height);
+
+    // Damage indicators
+    Draw_Damage(cgi, ps, hud_vrect.width, hud_vrect.height);
+
+    // Center print
     if (ps.centerPrint) {
-        cgi.SCR_DrawFontString(
-            hud_vrect.width / 2,
-            hud_vrect.height / 2 - 20,
-            ps.centerPrint
-        );
+        const lines = ps.centerPrint.split('\n');
+        let y = hud_vrect.height / 2 - (lines.length * 10); // Approximation
+        for (const line of lines) {
+             cgi.SCR_DrawCenterString(y, line);
+             y += 16;
+        }
     }
 
-    if (ps.notify) {
-        cgi.SCR_DrawFontString(8, 8, ps.notify);
-    }
+    // Notifications (Chat/Messages)
+    // messageSystem.draw(cgi, ...); // TODO: MessageSystem needs refactoring to use cgi
+
+    // Subtitles
+    // subtitleSystem.draw(cgi, ...); // TODO: SubtitleSystem needs refactoring to use cgi
+
+    // Crosshair
+    Draw_Crosshair(cgi, hud_vrect.width, hud_vrect.height);
 }
 
 /**

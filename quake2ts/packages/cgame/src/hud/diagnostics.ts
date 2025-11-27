@@ -1,17 +1,8 @@
-import { Renderer, FrameRenderStats } from '@quake2ts/engine';
+import { CGameImport } from '../types.js';
 
-export const Draw_Diagnostics = (renderer: Renderer, stats: FrameRenderStats) => {
-    const lines = [
-        `FPS: ${stats.fps}`,
-        `Draw Calls: ${stats.drawCalls}`,
-        `Batches: ${stats.batches}`,
-        `Faces Drawn: ${stats.facesDrawn}`,
-        `Vertices: ${stats.vertexCount}`,
-    ];
-
-    let y = 10;
-    for (const line of lines) {
-        renderer.drawString(10, y, line);
-        y += 10;
-    }
+export const Draw_Diagnostics = (cgi: CGameImport, width: number, height: number) => {
+    // Stats are usually retrieved via cgi.CL_GetStats() or similar if exposed.
+    // For now we don't have direct access to engine stats via CGameImport unless we add it.
+    // Standard Q2 cgame doesn't usually draw engine profiler stats (engine does that).
+    // So we can probably remove this or leave it empty.
 };

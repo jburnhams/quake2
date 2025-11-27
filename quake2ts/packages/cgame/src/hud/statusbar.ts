@@ -1,4 +1,4 @@
-import { Pic, Renderer } from '@quake2ts/engine';
+import { CGameImport } from '../types.js';
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
@@ -11,12 +11,12 @@ export const Set_ColorblindMode = (enabled: boolean) => {
 };
 
 export const Draw_StatusBar = (
-    renderer: Renderer,
+    cgi: CGameImport,
     client: ClientState,
     health: number,
     armor: number,
     ammo: number,
-    hudNumberPics: readonly Pic[],
+    hudNumberPics: readonly unknown[],
     numberWidth: number,
     timeMs: number,
     layout: ReturnType<typeof getHudLayout>
@@ -34,9 +34,9 @@ export const Draw_StatusBar = (
     }
 
     if (hudNumberPics.length > 0) {
-        Draw_Number(renderer, layout.HEALTH_X, layout.HEALTH_Y, health, hudNumberPics, numberWidth, healthColor);
-        Draw_Number(renderer, layout.ARMOR_X, layout.ARMOR_Y, armor, hudNumberPics, numberWidth);
-        Draw_Number(renderer, layout.AMMO_X, layout.AMMO_Y, ammo, hudNumberPics, numberWidth);
+        Draw_Number(cgi, layout.HEALTH_X, layout.HEALTH_Y, health, hudNumberPics, numberWidth, healthColor);
+        Draw_Number(cgi, layout.ARMOR_X, layout.ARMOR_Y, armor, hudNumberPics, numberWidth);
+        Draw_Number(cgi, layout.AMMO_X, layout.AMMO_Y, ammo, hudNumberPics, numberWidth);
     }
 
     // Draw Armor Icon
@@ -45,7 +45,7 @@ export const Draw_StatusBar = (
         const iconName = `i_${armorItem.armorType}armor`;
         const icon = iconPics.get(iconName);
         if (icon) {
-            renderer.drawPic(layout.ARMOR_X - 24, layout.ARMOR_Y - 2, icon);
+            cgi.SCR_DrawPic(layout.ARMOR_X - 24, layout.ARMOR_Y - 2, icon);
         }
     }
 
@@ -56,7 +56,7 @@ export const Draw_StatusBar = (
         if (iconName) {
             const icon = iconPics.get(iconName);
             if (icon) {
-                renderer.drawPic(layout.WEAPON_ICON_X, layout.WEAPON_ICON_Y, icon);
+                cgi.SCR_DrawPic(layout.WEAPON_ICON_X, layout.WEAPON_ICON_Y, icon);
             }
         }
     }
@@ -70,8 +70,9 @@ export const Draw_StatusBar = (
         if (iconName) {
             const icon = iconPics.get(iconName);
             if (icon) {
-                renderer.drawPic(layout.WEAPON_ICON_X, keyY, icon);
-                keyY += (icon.height + 2);
+                const size = cgi.Draw_GetPicSize(icon);
+                cgi.SCR_DrawPic(layout.WEAPON_ICON_X, keyY, icon);
+                keyY += (size.height + 2);
             }
         }
     }
@@ -83,13 +84,14 @@ export const Draw_StatusBar = (
             const iconName = `p_${powerup}`;
             const icon = iconPics.get(iconName);
             if (icon) {
-                renderer.drawPic(powerupX, layout.POWERUP_Y, icon);
+                const size = cgi.Draw_GetPicSize(icon);
+                cgi.SCR_DrawPic(powerupX, layout.POWERUP_Y, icon);
 
                 // Draw remaining time
                 const remainingSeconds = Math.ceil((expiresAt - timeMs) / 1000);
-                Draw_Number(renderer, powerupX + icon.width + 2, layout.POWERUP_Y, remainingSeconds, hudNumberPics, numberWidth);
+                Draw_Number(cgi, powerupX + size.width + 2, layout.POWERUP_Y, remainingSeconds, hudNumberPics, numberWidth);
 
-                powerupX -= (icon.width + numberWidth * remainingSeconds.toString().length + 8);
+                powerupX -= (size.width + numberWidth * remainingSeconds.toString().length + 8);
             }
         }
     }
