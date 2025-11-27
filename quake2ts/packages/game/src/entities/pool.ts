@@ -36,6 +36,10 @@ export class EntityPool implements Iterable<Entity> {
     this.activeHead = world;
   }
 
+  get(index: number): Entity | undefined {
+    return this.entities[index];
+  }
+
   get world(): Entity {
     return this.entities[WORLD_INDEX];
   }

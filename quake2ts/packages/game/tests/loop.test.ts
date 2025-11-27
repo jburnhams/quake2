@@ -127,6 +127,9 @@ const mockTraceFn = (result: GameTraceResult) => {
 const mockImports = (result: GameTraceResult): GameImports => ({
   trace: mockTraceFn(result),
   pointcontents: () => 0,
+  linkentity: () => {},
+  multicast: () => {},
+  unicast: () => {},
 });
 
 describe('GameFrameLoop Physics Integration', () => {
