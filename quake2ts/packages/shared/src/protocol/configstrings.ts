@@ -36,6 +36,11 @@ export enum ConfigStringIndex {
   SkyRotate = 4,
   StatusBar = 5,
 
+  // Matching bg_local.h:55-76
+  CONFIG_N64_PHYSICS = 56,
+  CONFIG_CTF_TEAMS = 57,
+  CONFIG_COOP_RESPAWN_STRING = 58,
+
   AirAccel = 59,
   MaxClients = 60,
   MapChecksum = 61,
