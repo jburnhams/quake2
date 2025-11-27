@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
+    "downlevelIteration": true,
     "paths": {
       "@quake2ts/shared": ["../shared/src"],
       "@quake2ts/shared/*": ["../shared/src/*"],

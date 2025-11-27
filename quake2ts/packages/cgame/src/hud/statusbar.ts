@@ -1,12 +1,8 @@
 import { Pic, Renderer } from '@quake2ts/engine';
-// TODO: Remove game dependency - use player state and shared types instead
-// import { PlayerClient, WeaponItem, WEAPON_ITEMS } from '@quake2ts/game';
-type PlayerClient = any; // Temporary placeholder
-type WeaponItem = any; // Temporary placeholder
-const WEAPON_ITEMS: any[] = []; // Temporary placeholder
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
+import { ClientState, WEAPON_ICON_MAP } from './types.js';
 
 let colorblindMode = false;
 
@@ -16,7 +12,7 @@ export const Set_ColorblindMode = (enabled: boolean) => {
 
 export const Draw_StatusBar = (
     renderer: Renderer,
-    client: PlayerClient,
+    client: ClientState,
     health: number,
     armor: number,
     ammo: number,
@@ -56,9 +52,8 @@ export const Draw_StatusBar = (
     // Draw Weapon Icon
     const currentWeapon = client.inventory.currentWeapon;
     if (currentWeapon) {
-        const weaponDef = Object.values(WEAPON_ITEMS).find((w: WeaponItem) => w.weaponId === currentWeapon);
-        if (weaponDef) {
-            const iconName = `w_${weaponDef.id.substring(7)}`;
+        const iconName = WEAPON_ICON_MAP[currentWeapon];
+        if (iconName) {
             const icon = iconPics.get(iconName);
             if (icon) {
                 renderer.drawPic(layout.WEAPON_ICON_X, layout.WEAPON_ICON_Y, icon);
@@ -90,7 +85,7 @@ export const Draw_StatusBar = (
 
     // Draw Powerups
     let powerupX = layout.POWERUP_X;
-    for (const [powerup, expiresAt] of client.inventory.powerups.entries()) {
+    for (const [powerup, expiresAt] of Array.from(client.inventory.powerups.entries())) {
         if (expiresAt && expiresAt > timeMs) {
             const iconName = `p_${powerup}`;
             const icon = iconPics.get(iconName);

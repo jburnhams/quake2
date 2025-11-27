@@ -1,12 +1,7 @@
 import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
-// TODO: Remove game dependency - use player state and shared types instead
-// import { PlayerClient, WEAPON_ITEMS, WeaponItem, PowerupId } from '@quake2ts/game';
-type PlayerClient = any; // Temporary placeholder
-type WeaponItem = any; // Temporary placeholder
-type PowerupId = any; // Temporary placeholder
-const WEAPON_ITEMS: any[] = []; // Temporary placeholder
 import { HUD_LAYOUT } from './layout.js';
 import { Draw_Number } from './numbers.js';
+import { ClientState, WEAPON_ICON_MAP } from './types.js';
 
 export const iconPics = new Map<string, Pic>();
 
@@ -40,7 +35,7 @@ export const Init_Icons = async (renderer: Renderer, assets: AssetManager) => {
 
 export const Draw_Icons = (
     renderer: Renderer,
-    client: PlayerClient,
+    client: ClientState,
     hudNumberPics: readonly Pic[],
     numberWidth: number,
     timeMs: number
@@ -62,9 +57,8 @@ export const Draw_Icons = (
     // Draw current weapon icon
     const currentWeapon = client.inventory.currentWeapon;
     if (currentWeapon) {
-        const weaponDef = Object.values(WEAPON_ITEMS).find((w: WeaponItem) => w.weaponId === currentWeapon);
-        if (weaponDef) {
-            const iconName = `w_${weaponDef.id.substring(7)}`;
+        const iconName = WEAPON_ICON_MAP[currentWeapon];
+        if (iconName) {
             const icon = iconPics.get(iconName);
             if (icon) {
                 renderer.drawPic(HUD_LAYOUT.WEAPON_ICON_X, HUD_LAYOUT.WEAPON_ICON_Y, icon);
@@ -74,7 +68,7 @@ export const Draw_Icons = (
 
     // Draw powerup icons
     let powerupX = HUD_LAYOUT.POWERUP_X;
-    for (const [powerup, expiresAt] of client.inventory.powerups.entries()) {
+    for (const [powerup, expiresAt] of Array.from(client.inventory.powerups.entries())) {
         if (expiresAt && expiresAt > timeMs) {
             const iconName = `p_${powerup}`;
             const icon = iconPics.get(iconName);
