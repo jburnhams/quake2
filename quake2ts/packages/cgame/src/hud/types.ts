@@ -46,3 +46,14 @@ export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
   [WeaponId.Phalanx]: 'w_phalanx',
   [WeaponId.Disruptor]: 'w_disruptor',
 };
+
+/**
+ * Mapping from key names to HUD icon names.
+ * Provides O(1) lookup for key icon rendering.
+ */
+export const KEY_ICON_MAP: Record<string, string> = {
+  'blue': 'k_bluekey',
+  'red': 'k_redkey',
+  'green': 'k_security',
+  'yellow': 'k_pyramid',
+};

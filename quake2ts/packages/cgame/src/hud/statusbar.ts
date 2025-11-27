@@ -2,7 +2,7 @@ import { Pic, Renderer } from '@quake2ts/engine';
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
-import { ClientState, WEAPON_ICON_MAP } from './types.js';
+import { ClientState, WEAPON_ICON_MAP, KEY_ICON_MAP } from './types.js';
 
 let colorblindMode = false;
 
@@ -66,14 +66,7 @@ export const Draw_StatusBar = (
     let keyY = layout.WEAPON_ICON_Y - 150 * layout.scale; // Stack above weapon icon?
 
     for (const key of keys) {
-        let iconName = '';
-        switch (key) {
-            case 'blue': iconName = 'k_bluekey'; break;
-            case 'red': iconName = 'k_redkey'; break;
-            case 'green': iconName = 'k_security'; break;
-            case 'yellow': iconName = 'k_pyramid'; break;
-        }
-
+        const iconName = KEY_ICON_MAP[key];
         if (iconName) {
             const icon = iconPics.get(iconName);
             if (icon) {

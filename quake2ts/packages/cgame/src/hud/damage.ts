@@ -1,5 +1,5 @@
 import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
-import { PlayerState, angleVectors, dotVec3, Vec3 } from '@quake2ts/shared';
+import { PlayerState, angleVectors, dotVec3, normalizeVec3, Vec3 } from '@quake2ts/shared';
 
 const damagePics = new Map<string, Pic>();
 
@@ -32,13 +32,7 @@ export const Draw_Damage = (renderer: Renderer, ps: PlayerState) => {
     for (const indicator of ps.damageIndicators) {
         const { direction, strength } = indicator;
 
-        const normalizedDirection = { ...direction };
-        const len = Math.sqrt(normalizedDirection.x * normalizedDirection.x + normalizedDirection.y * normalizedDirection.y + normalizedDirection.z * normalizedDirection.z);
-        if (len > 0) {
-            normalizedDirection.x /= len;
-            normalizedDirection.y /= len;
-            normalizedDirection.z /= len;
-        }
+        const normalizedDirection = normalizeVec3(direction);
 
         const rightDot = dotVec3(normalizedDirection, right);
         const forwardDot = dotVec3(normalizedDirection, forward);
