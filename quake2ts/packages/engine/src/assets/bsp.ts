@@ -24,6 +24,10 @@ export interface BspEntities {
   readonly raw: string;
   readonly entities: BspEntity[];
   readonly worldspawn: BspEntity | undefined;
+  /**
+   * Returns a sorted array of unique entity classnames present in the map.
+   */
+  getUniqueClassnames(): string[];
 }
 
 export interface BspEntity {
@@ -151,6 +155,18 @@ export interface BspMap {
   readonly brushes: readonly BspBrush[];
   readonly brushSides: readonly BspBrushSide[];
   readonly visibility: BspVisibility | undefined;
+
+  /**
+   * Finds the closest brush-based entity that intersects with the given ray.
+   * @param ray An object defining the origin and direction of the ray.
+   * @returns An object containing the intersected entity, its model, and the
+   *          distance from the ray's origin, or null if no intersection occurs.
+   */
+  pickEntity(ray: { origin: Vec3; direction: Vec3 }): {
+    entity: BspEntity;
+    model: BspModel;
+    distance: number;
+  } | null;
 }
 
 export enum BspLump {
@@ -231,7 +247,7 @@ export function parseBsp(buffer: ArrayBuffer): BspMap {
   const leafLists = parseLeafLists(buffer, lumps.get(BspLump.LeafFaces)!, lumps.get(BspLump.LeafBrushes)!, leafs);
   const visibility = parseVisibility(buffer, lumps.get(BspLump.Visibility)!);
 
-  return {
+  const map: BspMap = {
     header,
     entities,
     planes,
@@ -249,14 +265,84 @@ export function parseBsp(buffer: ArrayBuffer): BspMap {
     brushes,
     brushSides,
     visibility,
+    pickEntity(ray) {
+      let closest: { entity: BspEntity; model: BspModel; distance: number } | null = null;
+      let minDistance = Infinity;
+
+      for (const entity of entities.entities) {
+        const modelKey = entity.properties['model'];
+        if (!modelKey || !modelKey.startsWith('*')) {
+          continue;
+        }
+
+        const modelIndex = parseInt(modelKey.substring(1), 10);
+        if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= models.length) {
+          continue;
+        }
+
+        const model = models[modelIndex];
+        const dist = intersectRayAabb(ray.origin, ray.direction, model.mins, model.maxs);
+
+        if (dist !== null && dist < minDistance) {
+          minDistance = dist;
+          closest = { entity, model, distance: dist };
+        }
+      }
+
+      return closest;
+    },
   };
+
+  return map;
+}
+
+function intersectRayAabb(origin: Vec3, direction: Vec3, mins: Vec3, maxs: Vec3): number | null {
+  let tmin = 0;
+  let tmax = Infinity;
+
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(direction[i]) < 1e-8) {
+      if (origin[i] < mins[i] || origin[i] > maxs[i]) {
+        return null;
+      }
+    } else {
+      const invD = 1.0 / direction[i];
+      let t0 = (mins[i] - origin[i]) * invD;
+      let t1 = (maxs[i] - origin[i]) * invD;
+      if (t0 > t1) {
+        const temp = t0;
+        t0 = t1;
+        t1 = temp;
+      }
+      tmin = Math.max(tmin, t0);
+      tmax = Math.min(tmax, t1);
+      if (tmin > tmax) {
+        return null;
+      }
+    }
+  }
+
+  return tmin;
 }
 
 function parseEntities(buffer: ArrayBuffer, info: BspLumpInfo): BspEntities {
   const raw = new TextDecoder().decode(new Uint8Array(buffer, info.offset, info.length));
   const entities = parseEntityString(raw);
   const worldspawn = entities.find((ent) => ent.classname === 'worldspawn');
-  return { raw, entities, worldspawn };
+  return {
+    raw,
+    entities,
+    worldspawn,
+    getUniqueClassnames() {
+      const classnames = new Set<string>();
+      for (const entity of entities) {
+        if (entity.classname) {
+          classnames.add(entity.classname);
+        }
+      }
+      return Array.from(classnames).sort();
+    },
+  };
 }
 
 function parseEntityString(text: string): BspEntity[] {

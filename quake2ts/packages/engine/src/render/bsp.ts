@@ -22,6 +22,7 @@ export interface BspSurfaceInput {
   readonly texture: string;
   readonly surfaceFlags?: SurfaceFlag;
   readonly lightmap?: BspLightmapData;
+  readonly faceIndex: number;
 }
 
 export interface LightmapPlacement {
@@ -54,6 +55,7 @@ export interface LightmapAtlas {
 export interface BspBuildOptions {
   readonly atlasSize?: number;
   readonly lightmapPadding?: number;
+  readonly hiddenClassnames?: Set<string>;
 }
 
 export interface BspGeometryBuildResult {
@@ -354,7 +356,8 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       indices: new Uint16Array(indices),
       texture: texInfo.texture,
       surfaceFlags: texInfo.flags,
-      lightmap: lightmapData
+      lightmap: lightmapData,
+      faceIndex,
     });
   }
 
@@ -364,9 +367,33 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
 export function buildBspGeometry(
   gl: WebGL2RenderingContext,
   surfaces: readonly BspSurfaceInput[],
+  map?: BspMap,
   options: BspBuildOptions = {}
 ): BspGeometryBuildResult {
-  const resolved: Required<BspBuildOptions> = {
+  // Filter surfaces based on hidden classnames
+  let filteredSurfaces = surfaces;
+  if (map && options.hiddenClassnames && options.hiddenClassnames.size > 0) {
+    const hiddenFaces = new Set<number>();
+    for (const entity of map.entities.entities) {
+      if (entity.classname && options.hiddenClassnames.has(entity.classname)) {
+        const modelProp = entity.properties['model'];
+        if (modelProp && modelProp.startsWith('*')) {
+          const modelIndex = parseInt(modelProp.substring(1), 10);
+          if (!isNaN(modelIndex) && modelIndex >= 0 && modelIndex < map.models.length) {
+            const model = map.models[modelIndex];
+            for (let i = 0; i < model.numFaces; i++) {
+              hiddenFaces.add(model.firstFace + i);
+            }
+          }
+        }
+      }
+    }
+    if (hiddenFaces.size > 0) {
+      filteredSurfaces = surfaces.filter((s) => !hiddenFaces.has(s.faceIndex));
+    }
+  }
+
+  const resolved: Required<Omit<BspBuildOptions, 'hiddenClassnames'>> = {
     atlasSize: options.atlasSize ?? 1024,
     lightmapPadding: options.lightmapPadding ?? 1,
   };
@@ -374,7 +401,7 @@ export function buildBspGeometry(
   const atlasBuilders: AtlasBuilder[] = [];
   const placements = new Map<number, LightmapPlacement>();
 
-  surfaces.forEach((surface, index) => {
+  filteredSurfaces.forEach((surface, index) => {
     if (!surface.lightmap) {
       return;
     }
@@ -402,7 +429,7 @@ export function buildBspGeometry(
     return { texture, width: builder.width, height: builder.height, pixels: builder.data };
   });
 
-  const results: BspSurfaceGeometry[] = surfaces.map((surface, index) => {
+  const results: BspSurfaceGeometry[] = filteredSurfaces.map((surface, index) => {
     const placement = placements.get(index);
     const vertexData = buildVertexData(surface, placement);
     const indexData = ensureIndexArray(surface.indices, vertexData.length / 7);
