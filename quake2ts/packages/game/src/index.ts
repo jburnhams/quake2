@@ -81,7 +81,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
-  clientBegin(client: PlayerClient): Entity; // Added clientBegin
+  clientBegin(client: PlayerClient): Entity;
+  clientThink(ent: Entity, cmd: UserCommand): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -255,6 +256,48 @@ export function createGame(
     entities.runFrame();
   };
 
+  const runPlayerMove = (player: Entity, command: UserCommand) => {
+    const pcmd = {
+      forwardmove: command.forwardmove,
+      sidemove: command.sidemove,
+      upmove: command.upmove,
+      buttons: command.buttons,
+      msec: command.msec,
+      angles: command.angles,
+    };
+
+    const playerState = {
+        origin: player.origin,
+        velocity: player.velocity,
+        onGround: false, // This will be calculated by pmove
+        waterLevel: player.waterlevel, // Pass waterlevel
+        mins: player.mins,
+        maxs: player.maxs,
+        damageAlpha: 0,
+        damageIndicators: [],
+        viewAngles: player.angles,
+        blend: [0,0,0,0] as [number, number, number, number]
+    };
+
+    const traceAdapter = (start: Vec3, end: Vec3) => {
+      // Use passed-in entity for trace, not just 'player'
+      const result = trace(start, player.mins, player.maxs, end, player, 0x10000001);
+      return {
+        fraction: result.fraction,
+        endpos: result.endpos,
+        allsolid: result.allsolid,
+        startsolid: result.startsolid,
+        planeNormal: result.plane?.normal,
+      };
+    };
+    const pointContentsAdapter = (point: Vec3) => pointcontents(point);
+
+    const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
+    player.origin = newState.origin;
+    player.velocity = newState.velocity;
+    player.angles = newState.viewAngles;
+  };
+
   return {
     init(startTimeMs: number) {
       resetState(startTimeMs);
@@ -313,6 +356,9 @@ export function createGame(
 
        return player;
     },
+    clientThink(ent: Entity, cmd: UserCommand) {
+        runPlayerMove(ent, cmd);
+    },
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
       // Note: In MP, we should iterate all players. For SP compatibility we find 'player'.
@@ -321,45 +367,7 @@ export function createGame(
         // ... SP movement logic ...
         // In MP, this logic moves to SV_ClientThink or similar.
         // If 'command' is passed, we apply it to 'player' (SP style).
-
-        const pcmd = {
-          forwardmove: command.forwardmove,
-          sidemove: command.sidemove,
-          upmove: command.upmove,
-          buttons: command.buttons,
-          msec: command.msec,
-          angles: command.angles,
-        };
-
-        const playerState = {
-            origin: player.origin,
-            velocity: player.velocity,
-            onGround: false,
-            waterLevel: 0,
-            mins: player.mins,
-            maxs: player.maxs,
-            damageAlpha: 0,
-            damageIndicators: [],
-            viewAngles: player.angles,
-            blend: [0,0,0,0] as [number, number, number, number]
-        };
-
-        const traceAdapter = (start: Vec3, end: Vec3) => {
-          const result = trace(start, player.mins, player.maxs, end, player, 0x10000001);
-          return {
-            fraction: result.fraction,
-            endpos: result.endpos,
-            allsolid: result.allsolid,
-            startsolid: result.startsolid,
-            planeNormal: result.plane?.normal,
-          };
-        };
-        const pointContentsAdapter = (point: Vec3) => pointcontents(point);
-
-        const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
-        player.origin = newState.origin;
-        player.velocity = newState.velocity;
-        player.angles = newState.viewAngles;
+        runPlayerMove(player, command);
       }
       return snapshot(context.frame);
     },
