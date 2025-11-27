@@ -138,7 +138,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 **Background**: In the rerelease, the cgame module (`cg_main.cpp`, `cg_screen.cpp`) handles client-side presentation, prediction, and HUD. The client becomes a thin network/input layer that delegates to cgame via defined interfaces.
 
 #### 3.1 Create CGame Package Structure
-- [ ] **Package Setup**: Create `packages/cgame` with structure:
+- [x] **Package Setup**: Create `packages/cgame` with structure:
   - `src/index.ts` - Main entry point, exports `GetCGameAPI()`
   - `src/hud/` - HUD rendering (from `client/src/hud/`)
   - `src/view/` - View effects, bob, kick (from `client/src/view*.ts`)
@@ -148,7 +148,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - `src/types.ts` - CGame-specific types
 
 #### 3.2 Define CGame Interfaces (TypeScript translation of `rerelease/game.h:2179-2315`)
-- [ ] **cgame_import_t** (`packages/cgame/src/types.ts`):
+- [x] **cgame_import_t** (`packages/cgame/src/types.ts`):
   - Frame timing: `tick_rate`, `frame_time_s`, `frame_time_ms`
   - Console: `Com_Print()`, `Com_Error()`
   - Config strings: `get_configstring(num: number): string`
@@ -160,7 +160,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - Localization: `Localize()`
   - State queries: `CL_GetTextInput()`, `CL_GetWarnAmmoCount()`, `CL_InAutoDemoLoop()`
 
-- [ ] **cgame_export_t** (`packages/cgame/src/types.ts`):
+- [x] **cgame_export_t** (`packages/cgame/src/types.ts`):
   - Lifecycle: `Init()`, `Shutdown()`
   - Rendering: `DrawHUD(isplit, data, hud_vrect, hud_safe, scale, playernum, ps)` (from `cg_screen.cpp`)
   - Asset loading: `TouchPics()` (precache HUD images)
@@ -176,11 +176,11 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 #### 3.3 Move Shared Code (`packages/shared`)
 These are already correctly placed, verify completeness:
 - [x] **Player Movement** (`pmove/`): Already in `packages/shared/src/pmove/` - matches `rerelease/p_move.cpp`. Verify `Pmove()` signature matches both server (`game_export_t::Pmove`) and cgame (`cgame_export_t::Pmove`).
-- [ ] **Movement Config** (`pmove/config.ts`): Add `pm_config_t` structure from `rerelease/bg_local.h:18-24` (airaccel, n64_physics flags).
-- [ ] **Player Stats** (`protocol/stats.ts`): Add `player_stat_t` enum from `rerelease/bg_local.h:196-262` (STAT_HEALTH, STAT_AMMO, STAT_WEAPONS_OWNED_1/2, STAT_AMMO_INFO_START, etc.). These are read by cgame for HUD.
-- [ ] **Stat Helpers** (`protocol/stats.ts`): Add compressed stat functions from `bg_local.h:169-193`: `G_SetAmmoStat()`, `G_GetAmmoStat()`, `G_SetPowerupStat()`, `G_GetPowerupStat()` (9-bit ammo packing, 2-bit powerup packing).
-- [ ] **Layout Flags** (`protocol/layout.ts`): Add `layout_flags_t` enum from `rerelease/game.h:1584-1593` (LAYOUTS_LAYOUT, LAYOUTS_INVENTORY, LAYOUTS_HIDE_HUD, LAYOUTS_INTERMISSION, LAYOUTS_HELP, LAYOUTS_HIDE_CROSSHAIR).
-- [ ] **Config String Indices** (`protocol/configstrings.ts`): Add `CONFIG_N64_PHYSICS`, `CONFIG_CTF_*`, `CONFIG_COOP_RESPAWN_STRING` from `bg_local.h:55-76` (these are in CS_GENERAL range and used by both server and cgame).
+- [x] **Movement Config** (`pmove/config.ts`): Add `pm_config_t` structure from `rerelease/bg_local.h:18-24` (airaccel, n64_physics flags).
+- [x] **Player Stats** (`protocol/stats.ts`): Add `player_stat_t` enum from `rerelease/bg_local.h:196-262` (STAT_HEALTH, STAT_AMMO, STAT_WEAPONS_OWNED_1/2, STAT_AMMO_INFO_START, etc.). These are read by cgame for HUD.
+- [x] **Stat Helpers** (`protocol/stats.ts`): Add compressed stat functions from `bg_local.h:169-193`: `G_SetAmmoStat()`, `G_GetAmmoStat()`, `G_SetPowerupStat()`, `G_GetPowerupStat()` (9-bit ammo packing, 2-bit powerup packing).
+- [x] **Layout Flags** (`protocol/layout.ts`): Add `layout_flags_t` enum from `rerelease/game.h:1584-1593` (LAYOUTS_LAYOUT, LAYOUTS_INVENTORY, LAYOUTS_HIDE_HUD, LAYOUTS_INTERMISSION, LAYOUTS_HELP, LAYOUTS_HIDE_CROSSHAIR).
+- [x] **Config String Indices** (`protocol/configstrings.ts`): Add `CONFIG_N64_PHYSICS`, `CONFIG_CTF_*`, `CONFIG_COOP_RESPAWN_STRING` from `bg_local.h:55-76` (these are in CS_GENERAL range and used by both server and cgame).
 
 #### 3.4 Migrate Client Code to CGame
 Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
@@ -471,10 +471,10 @@ Do **not** move to shared:
 - [ ] Headless collision
 
 ### Phase 3: CGame ⚠️ (Major Refactor Needed)
-- [ ] Create `packages/cgame`
-- [ ] Define `cgame_import_t` / `cgame_export_t` interfaces
+- [x] Create `packages/cgame`
+- [x] Define `cgame_import_t` / `cgame_export_t` interfaces
 - [ ] Move HUD, view, prediction from client to cgame
-- [ ] Add shared stat/layout types
+- [x] Add shared stat/layout types
 - [ ] Implement parsing (centerprint, notify, configstrings)
 - [ ] Wire client ↔ cgame interface
 
@@ -527,4 +527,5 @@ Do **not** move to shared:
 - [x] **Refine Server Loop**: `SV_SendClientFrame` now uses `writeDeltaEntity` to compress entity updates.
 - [ ] **Next Steps**: Phase 3 (Client Refactoring) can now proceed, leveraging the protocol work done here.
 - [x] **Verification**: All server unit tests pass, including `dedicated.test.ts` which simulates the game loop and command processing.
-- [ ] **Next Steps**: Phase 3 (Client Refactoring) - Create `packages/cgame` and define interfaces.
+- [x] **CGame Structure**: Created `packages/cgame` with interfaces and shared type definitions.
+- [ ] **Next Steps**: Phase 3 (Client Refactoring) - Migrate HUD, view, and prediction code from `packages/client` to `packages/cgame`.
