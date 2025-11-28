@@ -4,8 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { traceBox } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs, makeLeaf, makeLeafModel, makePlane, makeNode, makeBspModel } from './test-helpers.js';
-import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
+import { makeBrushFromMinsMaxs, makeLeafModel } from './test-helpers.js';
 
 describe('traceBox corner collisions', () => {
   describe('external corners (convex geometry)', () => {
@@ -131,6 +130,63 @@ describe('traceBox corner collisions', () => {
 
       // Should collide - bbox corner will hit brush corner
       expect(result.fraction).toBeLessThan(1);
+    });
+  });
+
+  describe('augmented edge cases', () => {
+    it('should handle internal corners (concave geometry) correctly', () => {
+      // Create an L-shaped structure (concave corner)
+      // Brush 1: -32 to 0 on X, -32 to 32 on Y
+      const brush1 = makeBrushFromMinsMaxs(
+        { x: -32, y: -32, z: -32 },
+        { x: 0, y: 32, z: 32 }
+      );
+      // Brush 2: 0 to 32 on X, 0 to 32 on Y (creates internal corner at 0,0)
+      const brush2 = makeBrushFromMinsMaxs(
+        { x: 0, y: 0, z: -32 },
+        { x: 32, y: 32, z: 32 }
+      );
+
+      const model = makeLeafModel([brush1, brush2]);
+
+      // Trace into the internal corner from (32, -32) towards (0, 0)
+      // This is aiming at the "empty" quadrant, but we want to test hitting the walls
+
+      // Let's trace from inside the "empty" space (positive X, negative Y)
+      // towards the internal corner where brush1 and brush2 meet.
+      // Brush 1 face is at X=0 (for Y in -32..32)
+      // Brush 2 face is at Y=0 (for X in 0..32)
+
+      const start = { x: 16, y: -16, z: 0 };
+      const end = { x: -16, y: 16, z: 0 }; // Goes through (0,0)
+
+      const result = traceBox({ model, start, end, headnode: -1 });
+
+      // Should hit one of the walls near the origin
+      expect(result.fraction).toBeLessThan(1);
+      expect(result.plane).not.toBeNull();
+      // Should hit either X=0 or Y=0 plane
+      const isXPlane = result.plane?.normal.x === 1 || result.plane?.normal.x === -1; // Normal might be facing out
+      const isYPlane = result.plane?.normal.y === 1 || result.plane?.normal.y === -1;
+      expect(isXPlane || isYPlane).toBe(true);
+    });
+
+    it('should handle glancing hit exactly on the corner edge', () => {
+      const brush = makeBrushFromMinsMaxs(
+        { x: 0, y: 0, z: 0 },
+        { x: 32, y: 32, z: 32 }
+      );
+      const model = makeLeafModel([brush]);
+
+      // Trace aiming exactly at the edge (0,0,z) from negative space
+      const start = { x: -32, y: -32, z: 16 };
+      const end = { x: 32, y: 32, z: 16 };
+
+      const result = traceBox({ model, start, end, headnode: -1 });
+
+      // Should hit the corner
+      expect(result.fraction).toBeLessThan(1);
+      expect(result.plane).toBeDefined();
     });
   });
 });
