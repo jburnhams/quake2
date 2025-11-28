@@ -11,6 +11,11 @@ import type { PlayerState, Vec3 } from '@quake2ts/shared';
 import { LayoutFlags } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
 
+// Re-export new modules
+export * from './view/camera.js';
+export * from './view/effects.js';
+export * from './prediction/index.js';
+
 // Module-level state
 let cgi: CGameImport | null = null;
 

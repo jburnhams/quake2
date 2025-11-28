@@ -12,6 +12,7 @@
   "references": [
     { "path": "../shared" },
     { "path": "../engine" },
-    { "path": "../game" }
+    { "path": "../game" },
+    { "path": "../cgame" }
   ]
 }

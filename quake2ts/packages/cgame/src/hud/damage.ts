@@ -1,5 +1,5 @@
 import { CGameImport } from '../types.js';
-import { PlayerState, angleVectors, dotVec3, normalizeVec3 } from '@quake2ts/shared';
+import { PlayerState } from '@quake2ts/shared';
 
 const damagePics = new Map<string, unknown>();
 
@@ -19,17 +19,13 @@ export const Init_Damage = (cgi: CGameImport) => {
 };
 
 export const Draw_Damage = (cgi: CGameImport, ps: PlayerState, width: number, height: number) => {
-    // Basic placeholder check, ps structure needs damageIndicators support properly added
-    // if using new PlayerState from shared. Assuming it matches for now.
-    // If not, we need to add damage tracking to client/cgame state from events.
-    if (!ps.damage_yaw && !ps.damage_pitch && !ps.damage_alpha) {
-        // The original Q2 uses view angles and damage direction to pick quadrant.
-        // It's event based usually. For now keeping structure but relying on
-        // whatever ps has. Rerelease likely has fields or events.
+    // Check if we have damage to show
+    // Use proper fields from PlayerState
+    if ((!ps.damageAlpha || ps.damageAlpha <= 0) && (!ps.damageIndicators || ps.damageIndicators.length === 0)) {
         return;
     }
 
-    // TODO: Implement damage indicator logic based on damage events or state
-    // The previous implementation assumed a `damageIndicators` array which might not exist on PlayerState.
-    // We will revisit this when implementing the damage event handling.
+    // TODO: Implement damage indicator drawing using ps.damageIndicators
+    // Original implementation relied on fields that are not in the current PlayerState.
+    // For now we just compile.
 };
