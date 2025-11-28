@@ -13,8 +13,9 @@ import {
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
-import { ClientPrediction, interpolatePredictionState, PredictionState } from '@quake2ts/cgame';
+import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
 import { ViewEffects, ViewSample } from '@quake2ts/cgame';
+import { createCGameImport } from './cgameBridge.js';
 
 import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
@@ -56,10 +57,11 @@ export {
 export {
   ClientPrediction,
   interpolatePredictionState,
-  type PredictionSettings,
-  type PredictionState,
 } from '@quake2ts/cgame';
-export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from '@quake2ts/cgame';
+export type { PredictionSettings, PredictionState } from '@quake2ts/cgame';
+
+export { ViewEffects } from '@quake2ts/cgame';
+export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
 
@@ -226,6 +228,10 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
 
+  // CGame Interface
+  const cgameImport = createCGameImport(imports);
+  const cg: CGameExport = GetCGameAPI(cgameImport);
+
   // Default FOV
   let fovValue = 90;
   let isZooming = false;
@@ -318,6 +324,9 @@ export function createClient(imports: ClientImports): ClientExports {
       if (initial?.state) {
         prediction.setAuthoritative(initial);
       }
+
+      // Initialize CGame
+      cg.Init();
 
       // Initialize HUD assets if asset manager is available
       if (imports.engine.assets && imports.engine.renderer) {
@@ -634,6 +643,9 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     Shutdown() {
+      // Shutdown CGame
+      cg.Shutdown();
+
       latestFrame = undefined;
       lastRendered = undefined;
       // Save settings on shutdown

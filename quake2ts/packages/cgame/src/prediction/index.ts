@@ -26,7 +26,7 @@ import { PmoveTraceFn } from '@quake2ts/shared';
 
 // PredictionState extends PlayerState with fields needed for physics simulation
 // that might not be in the base PlayerState interface yet or are client-side specific.
-export type PredictionState = PlayerState & {
+export interface PredictionState extends PlayerState {
     deltaAngles?: Vec3;
     pmFlags: PmFlags;
     pmType: PmType;
