@@ -46,17 +46,17 @@ function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity 
 }
 
 function useTargetTempEntity(self: Entity, context: any) {
-  const imports = context.imports;
+  const entities = context.entities;
   const type = self.style as TempEntity;
 
   // Generic target_temp_entity behavior (mirrors g_target.c)
-  imports.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, type, self.origin);
+  entities.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, type, self.origin);
 }
 
 function useTargetSplash(self: Entity, context: any) {
-  const imports = context.imports;
+  const entities = context.entities;
   // TE_SPLASH: count, origin, movedir, color
-  imports.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SPLASH, self.count, self.origin, self.movedir, self.sounds);
+  entities.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SPLASH, self.count, self.origin, self.movedir, self.sounds);
 }
 
 export function registerTargetSpawns(registry: SpawnRegistry) {
@@ -94,9 +94,9 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     entity.solid = Solid.Not;
   });
 
-  registry.register('target_explosion', (entity, { imports }) => {
+  registry.register('target_explosion', (entity, { entities }) => {
     entity.use = (self) => {
-        imports.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.EXPLOSION1, self.origin);
+        entities.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.EXPLOSION1, self.origin);
     };
     entity.svflags |= ServerFlags.NoClient;
   });
