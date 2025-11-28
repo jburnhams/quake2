@@ -67,6 +67,7 @@ export interface GameStateSnapshot {
 
 import { findPlayerStart } from './entities/spawn.js';
 import { player_die, player_think } from './entities/player.js';
+import { populatePlayerStats } from './entities/playerStats.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
@@ -284,7 +285,7 @@ export function createGame(
         damageIndicators: [],
 
         // Stubs for new PlayerState fields
-        stats: [],
+        stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
         kick_angles: ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,
@@ -324,7 +325,7 @@ export function createGame(
         viewAngles: player.angles,
         blend: [0,0,0,0] as [number, number, number, number],
         // Stubs
-        stats: [],
+        stats: populatePlayerStats(player, levelClock.current.timeSeconds),
         kick_angles: ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,

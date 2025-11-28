@@ -564,6 +564,9 @@ Do **not** move to shared:
     - Updated `index.ts` to initialize `GetCGameAPI` with the bridge and provider.
     - Updated `EngineImports` to support full `trace` signature.
     - Added `latestServerFrame` accessor to `ClientNetworkHandler` to feed CGame time.
-  - **Next Steps**:
-    1. Implement `ps.stats` population on the Server side (`packages/game`) to make HUD functional.
-- [ ] **Next Steps**: Implement `ps.stats` population on the Server side.
+  - **Server Stats Implementation** (Current):
+    - Created `packages/game/src/entities/playerStats.ts` to populate `PlayerState.stats`.
+    - Implemented logic for Health, Armor, Weapon Bitmask, Ammo Counts, and Powerup Timers.
+    - Updated `packages/game/src/index.ts` to call `populatePlayerStats` during snapshot generation.
+    - *Note*: `STAT_*_ICON` fields are currently set to 0. Dynamic icon indices rely on `ConfigStrings` (CS_IMAGES) which are not yet fully populated. This should be addressed when asset indexing is finalized.
+- [x] **Next Steps**: Implement `ps.stats` population on the Server side.
