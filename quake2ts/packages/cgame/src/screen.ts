@@ -12,7 +12,7 @@
  */
 
 import type { PlayerState } from '@quake2ts/shared';
-import type { CGameImport, ClientState } from './types.js';
+import type { CGameImport } from './types.js';
 
 // HUD component imports
 import { Draw_Crosshair, Init_Crosshair } from './hud/crosshair.js';
@@ -107,20 +107,8 @@ export function CG_DrawHUD(
     Draw_Blends(cgi, ps, hud_vrect.width, hud_vrect.height);
 
     // Status bar
-    // Temporary mapping until ps.stats is implemented
-    // This ClientState construction is temporary to support the current Draw_StatusBar signature
-    // Eventually Draw_StatusBar should just take `ps` and read stats directly.
-    const tempClientState: ClientState = {
-        inventory: {
-            armor: null, // TODO: Map from ps.stats
-            powerups: new Map(), // TODO: Map from ps.stats
-            keys: new Set(), // TODO: Map from ps.stats
-            currentWeapon: undefined // TODO: Map from ps.stats/gunindex
-        }
-    };
-
-    // TODO: Pass real health/armor/ammo from ps.stats
-    Draw_StatusBar(cgi, tempClientState, 100, 0, 0, hudNumberPics, numberWidth, timeMs, layout);
+    // Now directly using ps.stats via Draw_StatusBar
+    Draw_StatusBar(cgi, ps, hudNumberPics, numberWidth, timeMs, layout);
 
     // Pickup messages
     Draw_Pickup(cgi, ps, hud_vrect.width, hud_vrect.height);

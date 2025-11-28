@@ -1,5 +1,5 @@
 import { ZERO_VEC3, angleVectors, clampViewAngles, dotVec3, hasPmFlag, PmFlag, type PmFlags, type Vec3 } from '@quake2ts/shared';
-import type { PredictionState } from './prediction.js';
+import type { PredictionState } from '../prediction/index.js';
 
 export interface ViewEffectSettings {
   readonly runPitch: number;
@@ -104,7 +104,7 @@ export class ViewEffects {
 
   sample(state: PredictionState, frameTimeMs: number): ViewSample {
     const { forward, right } = angleVectors(
-      clampViewAngles({ pmFlags: state.pmFlags, cmdAngles: state.viewangles, deltaAngles: state.deltaAngles ?? ZERO_VEC3 }).viewangles,
+      clampViewAngles({ pmFlags: state.pmFlags, cmdAngles: state.viewAngles, deltaAngles: state.deltaAngles ?? ZERO_VEC3 }).viewangles,
     );
 
     const xyspeed = Math.sqrt(state.velocity.x * state.velocity.x + state.velocity.y * state.velocity.y);

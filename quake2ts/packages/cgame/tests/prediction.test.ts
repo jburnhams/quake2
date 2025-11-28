@@ -9,7 +9,7 @@ import {
   WaterLevel,
   type UserCommand,
 } from '@quake2ts/shared';
-import { ClientPrediction, defaultPredictionState, interpolatePredictionState } from '../src/index.js';
+import { ClientPrediction, defaultPredictionState, interpolatePredictionState, PredictionState } from '../src/index.js';
 import { PmoveTraceResult } from '@quake2ts/shared';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 } as const;
@@ -21,17 +21,18 @@ const mockTrace = (start, end) => ({
     startsolid: false,
 } as PmoveTraceResult);
 
-function createGroundState() {
+function createGroundState(): PredictionState {
   return {
+    ...defaultPredictionState(), // Must use default to fill all fields including stubs
     origin: ZERO_VEC,
     velocity: { x: 50, y: 0, z: 0 },
-    viewangles: ZERO_VEC,
+    viewAngles: ZERO_VEC,
     pmFlags: PmFlag.OnGround,
     pmType: PmType.Normal,
-    waterlevel: WaterLevel.None,
+    waterLevel: WaterLevel.None,
     gravity: 800,
     deltaAngles: ZERO_VEC,
-  } as const;
+  } as PredictionState;
 }
 
 describe('ClientPrediction', () => {
@@ -43,7 +44,7 @@ describe('ClientPrediction', () => {
     const cmd: UserCommand = {
       msec: 25,
       buttons: 0,
-      angles: base.viewangles,
+      angles: base.viewAngles,
       forwardmove: 200,
       sidemove: 0,
       upmove: 0,
@@ -61,7 +62,7 @@ describe('ClientPrediction', () => {
       onGround: true,
       groundIsSlick: false,
       onLadder: false,
-      waterlevel: base.waterlevel,
+      waterlevel: base.waterLevel,
       pmFriction: 6,
       pmStopSpeed: 100,
       pmWaterFriction: 1,
@@ -126,10 +127,10 @@ describe('ClientPrediction', () => {
     };
 
     const first = prediction.enqueueCommand({ ...cmd, serverFrame: 2 });
-    expect(first.viewangles).toEqual(cmdAngles);
+    expect(first.viewAngles).toEqual(cmdAngles);
 
     const second = prediction.enqueueCommand({ ...cmd, serverFrame: 3 });
-    expect(second.viewangles).toEqual(cmdAngles);
+    expect(second.viewAngles).toEqual(cmdAngles);
   });
 
   it('stops movement on collision', () => {
@@ -146,7 +147,7 @@ describe('ClientPrediction', () => {
     const cmd: UserCommand = {
       msec: 25,
       buttons: 0,
-      angles: base.viewangles,
+      angles: base.viewAngles,
       forwardmove: 200,
       sidemove: 0,
       upmove: 0,
@@ -160,24 +161,24 @@ describe('ClientPrediction', () => {
 
 describe('interpolatePredictionState', () => {
   it('wraps angles while interpolating frame samples', () => {
-    const previous = {
+    const previous: PredictionState = {
       ...defaultPredictionState(),
       origin: ZERO_VEC,
       velocity: ZERO_VEC,
-      viewangles: { x: 0, y: 350, z: 0 },
+      viewAngles: { x: 0, y: 350, z: 0 },
     };
 
-    const latest = {
+    const latest: PredictionState = {
       ...defaultPredictionState(),
       origin: { x: 10, y: 0, z: 0 },
       velocity: { x: 1, y: 0, z: 0 },
-      viewangles: { x: 0, y: 10, z: 0 },
+      viewAngles: { x: 0, y: 10, z: 0 },
     };
 
     const interpolated = interpolatePredictionState(previous, latest, 0.5);
 
     expect(interpolated.origin.x).toBeCloseTo(5);
     expect(interpolated.velocity.x).toBeCloseTo(0.5);
-    expect(interpolated.viewangles.y).toBeCloseTo(0);
+    expect(interpolated.viewAngles.y).toBeCloseTo(0);
   });
 });
