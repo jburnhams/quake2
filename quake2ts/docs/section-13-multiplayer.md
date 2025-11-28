@@ -481,7 +481,7 @@ Do **not** move to shared:
 - [~] Move HUD, view, prediction from client to cgame (HUD files moved, adaption in progress)
 - [x] Add shared stat/layout types
 - [~] Implement parsing (centerprint, notify, configstrings) (Basic parsing stubs implemented)
-- [ ] Wire client ↔ cgame interface (Next step after HUD completion)
+- [~] Wire client ↔ cgame interface (Bridge implemented, Init/Shutdown connected)
 
 ### Phase 4: Integration ⏸ (Blocked by Phase 3)
 - [ ] Localhost server-client test
