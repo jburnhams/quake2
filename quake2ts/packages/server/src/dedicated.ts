@@ -92,41 +92,65 @@ export class DedicatedServer implements GameEngine {
         this.sv.startTime = Date.now();
         const imports: GameImports = {
             trace: (start, mins, maxs, end, passent, contentmask) => {
-                if (!this.sv.collisionModel) {
+                // Check against entity spatial index if available.
+                // CollisionEntityIndex.trace will internally perform the world trace if the model is provided,
+                // merging results to return the closest hit.
+                if (this.entityIndex) {
+                    const result = this.entityIndex.trace({
+                        start,
+                        end,
+                        mins: mins || undefined,
+                        maxs: maxs || undefined,
+                        model: this.sv.collisionModel as CollisionModel,
+                        passId: passent ? passent.index : undefined,
+                        contentMask: contentmask
+                    });
+
+                    // Resolve entity ID to Entity object
+                    let hitEntity: Entity | null = null;
+                    if (result.entityId !== null && result.entityId !== undefined && this.game) {
+                        hitEntity = this.game.entities.getByIndex(result.entityId) ?? null;
+                    }
+
                     return {
-                        fraction: 1.0,
-                        endpos: { ...end },
-                        allsolid: false,
-                        startsolid: false,
-                        plane: null,
-                        surfaceFlags: 0,
-                        contents: 0,
-                        ent: null
+                        allsolid: result.allsolid,
+                        startsolid: result.startsolid,
+                        fraction: result.fraction,
+                        endpos: result.endpos,
+                        plane: result.plane || null,
+                        surfaceFlags: result.surfaceFlags || 0,
+                        contents: result.contents || 0,
+                        ent: hitEntity
                     };
                 }
 
-                // If we want entity collision, we should check against entityIndex here too.
-                // But for now, just world collision + basic.
-                // TODO: Integrate CollisionEntityIndex.trace
-
-                const result = traceBox({
+                // Fallback: world trace only (e.g. if entity index is not initialized)
+                const worldResult = this.sv.collisionModel ? traceBox({
                    start,
                    end,
                    mins: mins || undefined,
                    maxs: maxs || undefined,
-                   model: this.sv.collisionModel
-                });
+                   model: this.sv.collisionModel,
+                   contentMask: contentmask
+                }) : {
+                    fraction: 1.0,
+                    endpos: { ...end },
+                    allsolid: false,
+                    startsolid: false,
+                    plane: null,
+                    surfaceFlags: 0,
+                    contents: 0
+                };
 
-                // Wrap result to match GameTraceResult
                 return {
-                    allsolid: result.allsolid,
-                    startsolid: result.startsolid,
-                    fraction: result.fraction,
-                    endpos: result.endpos,
-                    plane: result.plane || null, // Ensure null if undefined
-                    surfaceFlags: result.surfaceFlags || 0,
-                    contents: result.contents || 0,
-                    ent: null // TODO: resolve entity hit
+                    allsolid: worldResult.allsolid,
+                    startsolid: worldResult.startsolid,
+                    fraction: worldResult.fraction,
+                    endpos: worldResult.endpos,
+                    plane: worldResult.plane || null,
+                    surfaceFlags: worldResult.surfaceFlags || 0,
+                    contents: worldResult.contents || 0,
+                    ent: null
                 };
             },
             pointcontents: (p) => 0, // Empty
