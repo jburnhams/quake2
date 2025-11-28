@@ -12,6 +12,6 @@
       "@quake2ts/engine/*": ["../engine/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

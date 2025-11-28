@@ -22,4 +22,13 @@ export interface PlayerState {
   pickupIcon?: string; // Name of the icon to draw (e.g. 'w_railgun')
   centerPrint?: string;
   notify?: string;
+
+  // Stats array (STAT_HEALTH, STAT_AMMO, etc.)
+  stats: number[];
+
+  // View effects
+  kick_angles: Vec3;
+  gunoffset: Vec3;
+  gunangles: Vec3;
+  gunindex: number;
 }

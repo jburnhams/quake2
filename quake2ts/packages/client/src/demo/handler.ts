@@ -18,7 +18,8 @@ import {
     U_REMOVE
 } from '@quake2ts/engine';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
-import { PredictionState, defaultPredictionState, interpolatePredictionState } from '../prediction.js';
+// Import from cgame
+import { PredictionState, defaultPredictionState, interpolatePredictionState } from '@quake2ts/cgame';
 import { PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
 import { PlayerInventory, WeaponId, PowerupId, KeyId, ArmorType } from '@quake2ts/game';
 import { DEMO_ITEM_MAPPING } from './itemMapping.js';
@@ -290,16 +291,16 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
         const origin: Vec3 = { ...ps.origin };
         const velocity: Vec3 = { ...ps.velocity };
-        const viewangles: Vec3 = { ...ps.viewangles };
+        const viewAngles: Vec3 = { ...ps.viewangles };
         const deltaAngles: Vec3 = { ...ps.delta_angles };
 
         return {
             origin,
             velocity,
-            viewangles,
+            viewAngles,
             pmFlags: ps.pm_flags,
             pmType: ps.pm_type,
-            waterlevel: WaterLevel.None,
+            waterLevel: WaterLevel.None,
             gravity: ps.gravity,
             deltaAngles,
             client: {
@@ -314,7 +315,17 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             ammo: ps.stats[2], // STAT_AMMO
             blend: [0, 0, 0, 0], // No blend from demo frame currently (need to parse svc_playerinfo more fully)
             damageAlpha: 0, // Need to extract from renderfx/flash
-            damageIndicators: []
+            damageIndicators: [],
+
+            // Stubs
+            stats: [...ps.stats],
+            kick_angles: ZERO_VEC3,
+            gunoffset: ZERO_VEC3,
+            gunangles: ZERO_VEC3,
+            gunindex: 0,
+            onGround: false, // Infer from pmFlags?
+            mins: { x: -16, y: -16, z: -24 },
+            maxs: { x: 16, y: 16, z: 32 },
         };
     }
 

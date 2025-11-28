@@ -42,6 +42,9 @@ importers:
       '@quake2ts/engine':
         specifier: workspace:*
         version: link:../engine
+      '@quake2ts/game':
+        specifier: workspace:^
+        version: link:../game
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
@@ -61,6 +64,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@quake2ts/cgame':
+        specifier: workspace:^
+        version: link:../cgame
       '@quake2ts/engine':
         specifier: workspace:*
         version: link:../engine
