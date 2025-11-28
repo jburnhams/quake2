@@ -207,7 +207,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
   - Call engine sound API (Section 7) for entity sounds
   - Positioned at entity origin
   - Attenuation based on distance
-- [ ] Emit temporary effects
+- [x] Emit temporary effects
   - Particles (Section 2)
   - Lights (Section 2)
   - Screen blends (Section 8)
@@ -281,7 +281,7 @@ This section covers the entity system that forms the backbone of Quake II gamepl
 - [x] **Entity count scaling**: Spawn 1000+ entities, measure frame time impact
 - [x] **Think queue performance**: Schedule 100+ entities with same nextthink
 - [x] **Touch detection**: Many overlapping entities, verify performance
-- [ ] **Spawn time**: Time to spawn all entities in large map (e.g., boss3.bsp)
+- [x] **Spawn time**: Time to spawn all entities in large map (e.g., boss3.bsp)
 
 ### Edge Case Tests
 - [x] **Missing spawn function**: Entity with unknown classname
