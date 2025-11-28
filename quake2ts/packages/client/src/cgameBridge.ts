@@ -1,42 +1,38 @@
 import { CGameImport, CGameExport } from '@quake2ts/cgame';
 import { ClientImports } from './index.js';
 import { PmoveTraceResult, Vec3 } from '@quake2ts/shared';
+import { ClientConfigStrings } from './configStrings.js';
+import { Pic } from '@quake2ts/engine';
+
+export interface ClientStateProvider {
+  tickRate: number;
+  frameTimeMs: number;
+  serverFrame: number;
+  serverProtocol: number;
+  configStrings: ClientConfigStrings;
+  getClientName(num: number): string;
+  getKeyBinding(key: string): string;
+  inAutoDemo: boolean;
+}
 
 // Stub implementation of CGameImport using existing client/engine state
-export function createCGameImport(imports: ClientImports): CGameImport {
-    // Helper to access renderer safely
+export function createCGameImport(imports: ClientImports, state: ClientStateProvider): CGameImport {
+    // Local cache for texture handles to Pic objects
+    // CGame uses handles (unknown), we use strings as handles.
+    const picCache = new Map<string, Pic>();
+    const pendingPics = new Set<string>();
+
     const getRenderer = () => imports.engine.renderer;
 
-    // Helper to access optional components that might not be on ClientImports directly yet
-    // depending on how index.ts constructs things.
-    // In index.ts:
-    // const clientExports = { ... }
-    // return clientExports;
-    //
-    // However, imports passed to createClient only has `engine` and `host`.
-    // The `client` instance (ClientExports) holds `lastRendered`, `configStrings`, etc.
-    // We need access to the *client instance* or the state it holds.
-    // But `createCGameImport` is called *during* `createClient`.
-    // So we need a way to look up the state lazily or pass a state accessor.
-
-    // Solution: We'll attach a reference to the client exports *after* creation,
-    // or use a closure that can access the variables inside `createClient`.
-    // BUT `createCGameImport` is external.
-
-    // Let's modify the signature to accept a context getter.
-    // For now, we will assume `imports` is extended OR we accept getters.
-
-    // Actually, `createClient` has local variables `lastRendered`, `configStrings`.
-    // We can't access them from `imports`.
-    // We should change `createCGameImport` to accept a `ClientStateProvider`.
     return {
-        // Frame timing - stubbed for now until we fix the access pattern
-        get tick_rate() { return 10; },
-        get frame_time_s() { return 0; },
-        get frame_time_ms() { return 0; },
+        // Frame timing
+        get tick_rate() { return state.tickRate; },
+        get frame_time_s() { return state.frameTimeMs / 1000.0; },
+        get frame_time_ms() { return state.frameTimeMs; },
 
         // Console
         Com_Print: (msg: string) => {
+             // TODO: Route to console system if exists
             console.log(`[CGAME] ${msg}`);
         },
         Com_Error: (msg: string) => {
@@ -45,7 +41,7 @@ export function createCGameImport(imports: ClientImports): CGameImport {
 
         // Config strings
         get_configstring: (num: number) => {
-            return ''; // Stub
+            return state.configStrings.get(num) || '';
         },
 
         // Memory (No-op in JS)
@@ -55,101 +51,107 @@ export function createCGameImport(imports: ClientImports): CGameImport {
 
         // Cvars
         cvar: (name: string, value: string, flags: number) => {
-            // Register if not exists?
-            // For now, return a handle or null
-            return null;
+             // TODO: Proper cvar registration via host
+             // For now, return stub or existing
+             const existing = imports.host?.cvars?.get(name);
+             if (existing) return existing;
+
+             // If not exists, register?
+             // CGame typically registers its own cvars.
+             // We can't synchronously register and return the object if host doesn't support it well.
+             return null;
         },
         cvar_set: (name: string, value: string) => {
-            if (imports.host?.cvars) {
-                imports.host.cvars.setValue(name, value);
-            }
+            imports.host?.cvars?.setValue(name, value);
         },
         cvar_forceset: (name: string, value: string) => {
-            if (imports.host?.cvars) {
-                // TODO: Force set ignoring flags
-                imports.host.cvars.setValue(name, value);
-            }
+             // Force set ignoring flags (if API supported)
+            imports.host?.cvars?.setValue(name, value);
         },
 
         // Client state
-        CL_FrameValid: () => true,
-        CL_FrameTime: () => 0,
-        CL_ClientTime: () => 0,
-        CL_ServerFrame: () => 0,
-        CL_ServerProtocol: () => 34,
+        CL_FrameValid: () => true, // Always assume valid for now
+        CL_FrameTime: () => state.frameTimeMs,
+        CL_ClientTime: () => state.frameTimeMs, // Use frame time as client time
+        CL_ServerFrame: () => state.serverFrame,
+        CL_ServerProtocol: () => state.serverProtocol,
 
         // Client info
         CL_GetClientName: (playerNum: number) => {
-            // TODO: Parse CS_PLAYERS
-            return `Player ${playerNum}`;
+            return state.getClientName(playerNum);
         },
         CL_GetClientPic: (playerNum: number) => {
-            // TODO: Parse CS_PLAYERS for skin/icon
+            // TODO: Skin/icon logic
             return '';
         },
         CL_GetClientDogtag: (playerNum: number) => {
              return '';
         },
         CL_GetKeyBinding: (key: string) => {
-            // TODO: Access InputBindings
-            return `[${key}]`;
+            return state.getKeyBinding(key);
         },
 
         // Drawing
         Draw_RegisterPic: (name: string) => {
-            // This is async in our engine :(
-            // But cgame expects synchronous handle?
-            // Or maybe it triggers load and returns handle that is ready later.
-            // Our renderer uses `Pic` (Texture2D).
-            // We'll return a placeholder string or object for now if needed,
-            // but ideally we should trigger the load.
-            if (imports.engine.assets) {
-                // If it's a texture path
-                // We assume it's preloaded or we trigger load.
-                // The renderer.registerPic is async.
-                // We might need to verify how CGame uses the result.
-                // It likely passes it back to SCR_DrawPic.
-                // So we can return the name string as the handle.
+            if (picCache.has(name)) {
                 return name;
             }
+            if (pendingPics.has(name)) {
+                return name;
+            }
+
+            // Initiate load
+            pendingPics.add(name);
+
+            // We need to find the asset.
+            // CGame passes names like "pics/something.pcx" or just "w_shotgun".
+            // AssetManager expects specific paths usually.
+            // But we can try loading as texture.
+
+            // NOTE: CGame often registers simple names that map to paths.
+            // We assume the name is a path or resolvable by AssetManager.
+            if (imports.engine.assets) {
+                imports.engine.assets.loadTexture(name).then(texture => {
+                     // Register with renderer
+                     if (imports.engine.renderer) {
+                         const pic = imports.engine.renderer.registerTexture(name, texture);
+                         picCache.set(name, pic);
+                     }
+                     pendingPics.delete(name);
+                }).catch(err => {
+                    console.warn(`[CGameImport] Failed to load pic: ${name}`, err);
+                    pendingPics.delete(name);
+                });
+            }
+
             return name;
         },
-        Draw_GetPicSize: (pic: unknown) => {
-            // 'pic' is likely the name string we returned above.
-            // We need to look it up in renderer cache or asset manager.
-            // This is hard without direct access to internal cache.
-            // However, `renderer.registerPic` might have cached it.
-            // NOTE: This might be a blocker if CGame logic depends on size immediately.
-            // For now, return stub.
-            return { width: 32, height: 32 };
+        Draw_GetPicSize: (picHandle: unknown) => {
+            const name = picHandle as string;
+            const pic = picCache.get(name);
+            if (pic) {
+                return { width: pic.width, height: pic.height };
+            }
+            return { width: 0, height: 0 };
         },
         SCR_DrawChar: (x: number, y: number, char: number) => {
-             // Not exposed directly in Renderer interface, but `drawString` uses it internally.
-             // We can use drawString for a single char if needed, or expose drawChar in Renderer.
-             // Using drawString for now.
+             // Not directly exposed, use drawString hack or expose it
+             // Using single char string
              getRenderer()?.drawString(x, y, String.fromCharCode(char));
         },
-        SCR_DrawPic: (x: number, y: number, pic: unknown) => {
-            const name = pic as string;
-            // We need the Pic object.
-            // The renderer has `drawPic` taking `Pic`.
-            // But `picCache` is private in `createRenderer`.
-            // However, `registerPic` returns the Pic.
-            // If we didn't store it, we can't get it.
-            // TODO: Fix this architectural mismatch.
-            // For now, we assume `pic` IS the `Pic` object if we could pass it,
-            // but we returned a string name above.
-            //
-            // Hack: If we cannot get the Pic object synchronously, we can't draw immediately.
-            // BUT: `registerPic` in renderer returns `Promise<Pic>`.
-            // `Init` in client does `Init_Hud` which handles loading.
-            // CGame `TouchPics` calls `Draw_RegisterPic`.
-            //
-            // We might need to change `Draw_RegisterPic` to return `Promise` or handle async loading
-            // within CGame, OR maintain a map here in the bridge.
+        SCR_DrawPic: (x: number, y: number, picHandle: unknown) => {
+            const name = picHandle as string;
+            const pic = picCache.get(name);
+            if (pic) {
+                getRenderer()?.drawPic(x, y, pic);
+            }
         },
-        SCR_DrawColorPic: (x: number, y: number, pic: unknown, color: Vec3, alpha: number) => {
-             // Stub
+        SCR_DrawColorPic: (x: number, y: number, picHandle: unknown, color: Vec3, alpha: number) => {
+             const name = picHandle as string;
+            const pic = picCache.get(name);
+            if (pic) {
+                getRenderer()?.drawPic(x, y, pic, [color.x, color.y, color.z, alpha]);
+            }
         },
         SCR_DrawFontString: (x: number, y: number, str: string) => {
             getRenderer()?.drawString(x, y, str);
@@ -158,7 +160,6 @@ export function createCGameImport(imports: ClientImports): CGameImport {
             getRenderer()?.drawCenterString(y, str);
         },
         SCR_MeasureFontString: (str: string) => {
-            // Assuming 8x8 chars
             const stripped = str.replace(/\^[0-9]/g, '');
             return stripped.length * 8;
         },
@@ -167,8 +168,13 @@ export function createCGameImport(imports: ClientImports): CGameImport {
             // Stub
         },
         SCR_DrawBind: (x: number, y: number, command: string) => {
-            // Stub - normally looks up key binding and draws text
-            getRenderer()?.drawString(x, y, `[${command}]`);
+             // Look up binding and draw
+             const key = state.getKeyBinding(command); // command is actually command name, we need key?
+             // Wait, SCR_DrawBind usually takes a command and finds the key bound to it.
+             // We only implemented `getKeyBinding` which takes a key.
+             // We need `getBindingForKey` or `getKeysForCommand`.
+             // For now, draw command name
+             getRenderer()?.drawString(x, y, `[${command}]`);
         },
 
         // Localization
@@ -176,14 +182,12 @@ export function createCGameImport(imports: ClientImports): CGameImport {
 
         // State queries
         CL_GetTextInput: () => '',
-        CL_GetWarnAmmoCount: () => 5, // Low ammo threshold
-        CL_InAutoDemoLoop: () => false,
+        CL_GetWarnAmmoCount: () => 5,
+        CL_InAutoDemoLoop: () => state.inAutoDemo,
 
         // Prediction Trace
         PM_Trace: (start: Vec3, end: Vec3, mins: Vec3, maxs: Vec3): PmoveTraceResult => {
-             // Call engine trace
-             // Engine trace signature: (start, end, mins, maxs) -> TraceResult
-             return imports.engine.trace(start, end);
+             return imports.engine.trace(start, end, mins, maxs);
         }
     };
 }

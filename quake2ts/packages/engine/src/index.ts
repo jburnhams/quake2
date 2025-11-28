@@ -24,7 +24,7 @@ import { Renderer } from './render/renderer.js';
 import { AudioApi } from './audio/api.js';
 
 export interface EngineImports {
-  trace(start: Vec3, end: Vec3): TraceResult;
+  trace(start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3): TraceResult;
   renderer?: Renderer;
   audio?: AudioApi;
   assets?: AssetManager;

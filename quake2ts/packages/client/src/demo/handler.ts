@@ -350,4 +350,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
         return latestState;
     }
+
+    public get latestServerFrame(): number {
+        return this.latestFrame?.serverFrame ?? 0;
+    }
 }

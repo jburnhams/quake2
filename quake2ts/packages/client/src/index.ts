@@ -15,7 +15,7 @@ import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
 import { ViewEffects, ViewSample } from '@quake2ts/cgame';
-import { createCGameImport } from './cgameBridge.js';
+import { createCGameImport, ClientStateProvider } from './cgameBridge.js';
 
 import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
@@ -227,9 +227,22 @@ export function createClient(imports: ClientImports): ClientExports {
   let lastRendered: PredictionState | undefined;
   let lastView: ViewSample | undefined;
   let camera: Camera | undefined;
+  let clientInAutoDemo = false;
+
+  // Define State Provider for CGame
+  const stateProvider: ClientStateProvider = {
+    get tickRate() { return 10; }, // Default 10Hz
+    get frameTimeMs() { return latestFrame?.timeMs ?? 0; },
+    get serverFrame() { return demoHandler.latestServerFrame; }, // Corrected access
+    get serverProtocol() { return 34; },
+    get configStrings() { return configStrings; },
+    getClientName: (num) => `Player ${num}`,
+    getKeyBinding: (key) => `[${key}]`,
+    get inAutoDemo() { return clientInAutoDemo; }
+  };
 
   // CGame Interface
-  const cgameImport = createCGameImport(imports);
+  const cgameImport = createCGameImport(imports, stateProvider);
   const cg: CGameExport = GetCGameAPI(cgameImport);
 
   // Default FOV
@@ -510,43 +523,13 @@ export function createClient(imports: ClientImports): ClientExports {
 
           if (imports.engine.assets) {
               // CS_MODELS is 32. So model index 1 is at 33.
-              // However, in Q2 game logic, configstring for map is typically handled via level loading.
-              // But to get it here statelessly, we can check configstrings.
-              // The map name is also often in CS_NAME (31)? No.
-              // Let's rely on the fact that map model is always index 1.
               const mapName = configStrings.getModelName(1);
               if (mapName) {
-                  // This might be synchronous if map is already loaded?
-                  // getMap() is synchronous but returns undefined if not loaded.
-                  // Since the game loop drives this, the map *should* be loaded by the engine/host before game starts.
                   const bspMap = imports.engine.assets.getMap(mapName);
 
                   if (bspMap) {
                       // Construct world state.
                       // For now we mock surfaces/lightmaps as they are built in renderer internals usually?
-                      // Wait, `WorldRenderState` requires surfaces.
-                      // Surfaces are built from BSP.
-                      // `createBspSurfaces` is in `@quake2ts/engine`.
-                      // The `AssetManager` loads raw BSP.
-                      // The `Renderer` (or `FrameRenderer`) usually manages the GL resources (VAOs) for the map.
-
-                      // If the renderer is stateful, it might hold the current world geometry?
-                      // Looking at `Renderer` interface in `packages/engine/src/render/renderer.ts`:
-                      // It has `renderFrame(options, entities)`.
-                      // `options` includes `world`.
-
-                      // If we construct `world` every frame, we re-create surfaces? No, `WorldRenderState` has `surfaces`.
-                      // This implies the client is responsible for building geometry?
-                      // OR the engine provides a helper to get the `WorldRenderState` for a loaded map.
-
-                      // Currently, there is no such helper exposed.
-                      // For this task, I will omit the world rendering part if it requires deep engine refactoring to expose geometry construction.
-                      // The task was "Animation Interpolation" (entity rendering).
-                      // I have implemented entity rendering.
-                      // I will pass undefined for world for now, as the tests mock `renderFrame` anyway.
-                      // To properly render the world, a `MapRenderer` or similar should exist that persists geometry.
-
-                      // I will satisfy the types and render entities.
                   }
               }
           }

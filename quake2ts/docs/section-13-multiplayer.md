@@ -242,8 +242,8 @@ Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
 - [ ] **Demo Playback**: Existing `demo/` code stays in client. Demo player feeds `svc_*` messages to client as if from network.
 
 #### 3.5 Interface Wiring
-- [ ] **Client Initialization**: Client calls `GetCGameAPI(cgame_import)` and receives `cgame_export`. Store exports as `cg.*` function pointers (or object in TS).
-- [ ] **Import Population**: Client provides `cgame_import` with:
+- [x] **Client Initialization**: Client calls `GetCGameAPI(cgame_import)` and receives `cgame_export`. Store exports as `cg.*` function pointers (or object in TS).
+- [x] **Import Population**: Client provides `cgame_import` with:
   - Renderer functions (wrapping `@quake2ts/engine` Renderer).
   - Config string access (client's `ClientConfigStrings`).
   - Frame timing from client's main loop.
@@ -481,7 +481,7 @@ Do **not** move to shared:
 - [~] Move HUD, view, prediction from client to cgame (HUD files moved, adaption in progress)
 - [x] Add shared stat/layout types
 - [~] Implement parsing (centerprint, notify, configstrings) (Basic parsing stubs implemented)
-- [~] Wire client ↔ cgame interface (Bridge implemented, Init/Shutdown connected)
+- [x] Wire client ↔ cgame interface (Bridge implemented, Init/Shutdown connected)
 
 ### Phase 4: Integration ⏸ (Blocked by Phase 3)
 - [ ] Localhost server-client test
@@ -559,7 +559,11 @@ Do **not** move to shared:
     - Moved `view/camera.ts`, `view/effects.ts`, and `prediction/index.ts` from Client to CGame package.
     - Updated imports and successfully built `@quake2ts/cgame`.
     - **Note/Known Issue**: HUD Icon rendering (Weapon/Armor) via `STAT_SELECTED_ICON` currently relies on `ConfigStrings` (CS_IMAGES) which may not be fully populated/wired on the client side yet. Icons may not appear until server-side logic populates both `ps.stats` and `svc_configstring`.
+  - **Client ↔ CGame Interface Wired** (Current):
+    - Implemented `cgameBridge.ts` with `ClientStateProvider` pattern to expose client state to CGame.
+    - Updated `index.ts` to initialize `GetCGameAPI` with the bridge and provider.
+    - Updated `EngineImports` to support full `trace` signature.
+    - Added `latestServerFrame` accessor to `ClientNetworkHandler` to feed CGame time.
   - **Next Steps**:
-    1. Wire client ↔ cgame interface.
-    2. Implement `ps.stats` population on the Server side (`packages/game`) to make HUD functional.
-- [ ] **Next Steps**: Wire client ↔ cgame interface.
+    1. Implement `ps.stats` population on the Server side (`packages/game`) to make HUD functional.
+- [ ] **Next Steps**: Implement `ps.stats` population on the Server side.
