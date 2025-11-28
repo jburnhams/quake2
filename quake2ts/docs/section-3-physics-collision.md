@@ -81,15 +81,14 @@ This section covers the physics simulation and collision detection system that f
   - Store mins/maxs per entity (world-space)
   - Update when entity moves or changes model
   - Support for rotating bounding boxes (optional, Quake II uses axis-aligned)
-- [ ] **Full Trace Integration** (TODO: Integrate `CollisionEntityIndex.trace` into main trace)
-  - **Context**: Currently, `GameImports.trace` (in `DedicatedServer` and `EngineHost`) typically traces only against the world BSP (`sv.collisionModel`).
-  - **Requirement**: Update the main trace function implementation to also call `CollisionEntityIndex.trace`.
+- [x] **Full Trace Integration** (Integrate `CollisionEntityIndex.trace` into main trace)
+  - **Context**: `GameImports.trace` (in `DedicatedServer`) checks both world geometry and the spatial entity index.
+  - **Status**: Implemented in `DedicatedServer`.
   - **Details**:
-    - The trace should check both world geometry and the spatial entity index.
-    - It needs to respect the `contentmask` to filter which entities can be hit (e.g., shooting through dead bodies vs hitting live monsters).
-    - It must properly handle `passent` (the entity initiating the trace) to prevent self-collision.
-    - Return the nearest hit (smallest fraction) between world and entity traces.
-    - **Impact**: Essential for combat (weapons hitting monsters), line-of-sight checks blocked by entities, and movement collision against other entities.
+    - The trace delegates to `CollisionEntityIndex.trace`, which handles both world and entity checks optimally.
+    - Respects `contentmask` for entity filtering.
+    - Handles `passent` to prevent self-collision.
+    - Returns nearest hit, resolving entity ID to game Entity object.
 - [x] Entity trace tests
   - `clipToEntities`: trace against all entities in region
   - Filter by contentmask (CONTENTS_SOLID, CONTENTS_MONSTER, etc.)

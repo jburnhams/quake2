@@ -263,6 +263,10 @@ export class EntitySystem {
     return undefined;
   }
 
+  getByIndex(index: number): Entity | undefined {
+    return this.pool.getByIndex(index);
+  }
+
   spawn(): Entity {
     const ent = this.pool.spawn();
     ent.timestamp = this.currentTimeSeconds;
