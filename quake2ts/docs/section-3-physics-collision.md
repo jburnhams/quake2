@@ -51,8 +51,8 @@ This section covers the physics simulation and collision detection system that f
   - [x] Trace starting in solid (set startsolid, allsolid flags)
   - [x] Signed bbox offsets when traversing BSP splits to preserve startsolid detection
   - [x] Epsilon handling for surface snapping
-  - [x] Grazing hits (comprehensive tests in `tests/bsp/trace.grazing.test.ts`)
-  - [x] Corner collisions (comprehensive tests in `tests/bsp/trace.corners.test.ts`)
+  - [x] Grazing hits (comprehensive tests in `tests/bsp/trace.grazing.test.ts`, including parallel and corner edge cases)
+  - [x] Corner collisions (comprehensive tests in `tests/bsp/trace.corners.test.ts`, including internal corners)
 
 ### Point Queries
 - [x] Implement `pointcontents` function
@@ -206,9 +206,9 @@ This section covers the physics simulation and collision detection system that f
 
 ### Edge Case Tests
 - [x] **Grazing hits**: Trace parallel to surface, verify fraction accuracy
-  - Covered in `tests/bsp/trace.grazing.test.ts`.
+  - Covered in `tests/bsp/trace.grazing.test.ts` (augmented with additional edge/parallel cases).
 - [x] **Internal corners**: Trace into corner where 3+ planes meet
-  - Covered in `tests/bsp/trace.corners.test.ts`.
+  - Covered in `tests/bsp/trace.corners.test.ts` (augmented with concave geometry tests).
 - [x] **Starting in solid**: Trace with start point inside brush, verify startsolid/allsolid flags
   - Covered in `tests/bsp/trace.solid.test.ts` and `collision.test.ts`.
 - [x] **Zero-length trace**: Point containment query via trace

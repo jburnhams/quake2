@@ -185,4 +185,57 @@ describe('traceBox grazing hit scenarios', () => {
       expect(result.fraction).toBeLessThanOrEqual(1);
     });
   });
+
+  describe('augmented edge cases', () => {
+    it('should stay startsolid when tracing parallel inside a brush', () => {
+      const brush = makeBrushFromMinsMaxs(
+        { x: -32, y: -32, z: -32 },
+        { x: 32, y: 32, z: 32 }
+      );
+      const model = makeLeafModel([brush]);
+
+      // Trace parallel to +X face, but inside (y=0, z=0)
+      const start = { x: -20, y: 0, z: 0 };
+      const end = { x: 20, y: 0, z: 0 };
+
+      const result = traceBox({ model, start, end, headnode: -1 });
+
+      expect(result.startsolid).toBe(true);
+      expect(result.allsolid).toBe(true);
+      expect(result.fraction).toBe(0);
+    });
+
+    it('should handle start point exactly on a corner', () => {
+      const brush = makeBrushFromMinsMaxs(
+        { x: -32, y: -32, z: -32 },
+        { x: 32, y: 32, z: 32 }
+      );
+      const model = makeLeafModel([brush]);
+
+      // Start exactly at the corner (32, 32, 32)
+      const start = { x: 32, y: 32, z: 32 };
+      const end = { x: 64, y: 64, z: 64 }; // Moving away
+
+      const result = traceBox({ model, start, end, headnode: -1 });
+
+      // Should be startsolid because it's on the boundary (epsilon)
+      expect(result.startsolid).toBe(true);
+    });
+
+    it('should handle start point on corner moving into the brush', () => {
+       const brush = makeBrushFromMinsMaxs(
+        { x: -32, y: -32, z: -32 },
+        { x: 32, y: 32, z: 32 }
+      );
+      const model = makeLeafModel([brush]);
+
+      // Start exactly at the corner (32, 32, 32)
+      const start = { x: 32, y: 32, z: 32 };
+      const end = { x: 0, y: 0, z: 0 }; // Moving in
+
+      const result = traceBox({ model, start, end, headnode: -1 });
+
+      expect(result.startsolid).toBe(true);
+    });
+  });
 });
