@@ -82,13 +82,19 @@ describe('Client FOV and Zoom', () => {
     const frame = {
       state: {
         origin: { x: 0, y: 0, z: 0 },
-        viewangles: { x: 0, y: 0, z: 0 },
+        viewAngles: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
         pmFlags: 0,
-        waterlevel: 0,
+        waterLevel: 0,
         health: 100,
         armor: 0,
         ammo: 0,
+        blend: [0, 0, 0, 0],
+        stats: [],
+        kick_angles: { x: 0, y: 0, z: 0 },
+        gunoffset: { x: 0, y: 0, z: 0 },
+        gunangles: { x: 0, y: 0, z: 0 },
+        gunindex: 0,
         client: {
             inventory: {
                 armor: null,

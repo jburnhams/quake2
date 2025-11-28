@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Camera } from '@quake2ts/engine';
-import { ViewSample } from '../src/view-effects';
-import { updateCamera } from '../src/view';
+import { ViewSample } from '../src/view/effects.js';
+import { updateCamera } from '../src/view/camera.js';
 import { vec3 } from 'gl-matrix';
 import { Vec3 } from '@quake2ts/shared';
 

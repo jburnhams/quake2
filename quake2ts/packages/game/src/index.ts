@@ -57,6 +57,12 @@ export interface GameStateSnapshot {
   readonly pickupIcon?: string;
   readonly damageAlpha: number;
   readonly damageIndicators: any[];
+  // PlayerState fields stubbed for now
+  readonly stats: number[];
+  readonly kick_angles: Vec3;
+  readonly gunoffset: Vec3;
+  readonly gunangles: Vec3;
+  readonly gunindex: number;
 }
 
 import { findPlayerStart } from './entities/spawn.js';
@@ -275,7 +281,14 @@ export function createGame(
         blend: calculateBlend(player, frameLoop.time),
         pickupIcon,
         damageAlpha: 0, // TODO
-        damageIndicators: []
+        damageIndicators: [],
+
+        // Stubs for new PlayerState fields
+        stats: [],
+        kick_angles: ZERO_VEC3,
+        gunoffset: ZERO_VEC3,
+        gunangles: ZERO_VEC3,
+        gunindex: 0
       },
     };
   };
@@ -309,7 +322,13 @@ export function createGame(
         damageAlpha: 0,
         damageIndicators: [],
         viewAngles: player.angles,
-        blend: [0,0,0,0] as [number, number, number, number]
+        blend: [0,0,0,0] as [number, number, number, number],
+        // Stubs
+        stats: [],
+        kick_angles: ZERO_VEC3,
+        gunoffset: ZERO_VEC3,
+        gunangles: ZERO_VEC3,
+        gunindex: 0
     };
 
     const traceAdapter = (start: Vec3, end: Vec3) => {

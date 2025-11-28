@@ -12,9 +12,10 @@ import {
 } from '@quake2ts/engine';
 import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
-import { ClientPrediction, interpolatePredictionState } from './prediction.js';
-import type { PredictionState } from './prediction.js';
-import { ViewEffects, type ViewSample } from './view-effects.js';
+// Updated imports to use @quake2ts/cgame
+import { ClientPrediction, interpolatePredictionState, PredictionState } from '@quake2ts/cgame';
+import { ViewEffects, ViewSample } from '@quake2ts/cgame';
+
 import { Draw_Hud, Init_Hud } from './hud.js';
 import { MessageSystem } from './hud/messages.js';
 import { SubtitleSystem } from './hud/subtitles.js';
@@ -50,15 +51,19 @@ export {
   InputCommandBuffer,
   type QueuedFrameCommands,
 } from './input/command-buffer.js';
+
+// Re-export from cgame if needed, or consumers should import directly
 export {
   ClientPrediction,
-  defaultPredictionState,
   interpolatePredictionState,
   type PredictionSettings,
   type PredictionState,
-} from './prediction.js';
-export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from './view-effects.js';
+} from '@quake2ts/cgame';
+export { ViewEffects, type ViewEffectSettings, type ViewKick, type ViewSample } from '@quake2ts/cgame';
+
 export { ClientConfigStrings } from './configStrings.js';
+
+const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer };
@@ -467,7 +472,7 @@ export function createClient(imports: ClientImports): ClientExports {
       const command = {} as UserCommand;
 
       if (lastRendered) {
-        const { origin, viewangles } = lastRendered;
+        const { origin, viewAngles } = lastRendered;
         camera = new Camera();
         camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
         // Add view offset
@@ -476,7 +481,7 @@ export function createClient(imports: ClientImports): ClientExports {
 
         // Add view effects angles
         const effectAngles = lastView?.angles ?? { x: 0, y: 0, z: 0 };
-        camera.angles = vec3.fromValues(viewangles.x + effectAngles.x, viewangles.y + effectAngles.y, viewangles.z + effectAngles.z);
+        camera.angles = vec3.fromValues(viewAngles.x + effectAngles.x, viewAngles.y + effectAngles.y, viewAngles.z + effectAngles.z);
 
         camera.fov = isZooming ? 40 : fovValue;
         camera.aspect = 4 / 3; // Default aspect
@@ -573,9 +578,9 @@ export function createClient(imports: ClientImports): ClientExports {
              const playerState: PlayerState = {
                 origin: lastRendered.origin,
                 velocity: lastRendered.velocity,
-                viewAngles: lastRendered.viewangles,
+                viewAngles: lastRendered.viewAngles,
                 onGround: hasPmFlag(lastRendered.pmFlags, PmFlag.OnGround),
-                waterLevel: lastRendered.waterlevel,
+                waterLevel: lastRendered.waterLevel,
                 mins: { x: -16, y: -16, z: -24 },
                 maxs: { x: 16, y: 16, z: 32 },
                 damageAlpha: lastRendered.damageAlpha ?? 0,
@@ -583,7 +588,14 @@ export function createClient(imports: ClientImports): ClientExports {
                 blend: lastRendered.blend ?? [0, 0, 0, 0],
                 pickupIcon: lastRendered.pickupIcon,
                 centerPrint: messageSystem['centerPrintMsg']?.text, // Hack to get text for legacy state? No, Draw_Hud uses messageSystem directly now.
-                notify: undefined
+                notify: undefined,
+
+                // Stubs for new fields
+                stats: [],
+                kick_angles: ZERO_VEC3,
+                gunoffset: ZERO_VEC3,
+                gunangles: ZERO_VEC3,
+                gunindex: 0
             };
 
             const playbackState = demoPlayback.getState();
@@ -595,9 +607,9 @@ export function createClient(imports: ClientImports): ClientExports {
               imports.engine.renderer,
               playerState,
               lastRendered.client,
-              lastRendered.health,
-              lastRendered.armor,
-              lastRendered.ammo,
+              lastRendered.health ?? 0,
+              lastRendered.armor ?? 0,
+              lastRendered.ammo ?? 0,
               stats,
               messageSystem,
               subtitleSystem,
