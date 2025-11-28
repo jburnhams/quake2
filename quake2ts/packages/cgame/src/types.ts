@@ -1,4 +1,52 @@
 import type { Vec3, PlayerState, PmoveCmd, PmoveTraceResult, LayoutFlags } from '@quake2ts/shared';
+import { WeaponId, PowerupId } from '@quake2ts/shared';
+
+// Local types for HUD state (matching packages/cgame/src/hud/types.ts needs)
+export interface ArmorState {
+  armorType: string;
+  armorCount: number;
+}
+
+export interface InventoryState {
+  armor: ArmorState | null;
+  currentWeapon?: WeaponId;
+  powerups: Map<PowerupId, number | null>;
+  keys: Set<string>;
+}
+
+export interface ClientState {
+  inventory: InventoryState;
+}
+
+// Local mapping types
+export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
+  [WeaponId.Blaster]: 'w_blaster',
+  [WeaponId.Shotgun]: 'w_shotgun',
+  [WeaponId.SuperShotgun]: 'w_sshotgun',
+  [WeaponId.Machinegun]: 'w_machinegun',
+  [WeaponId.Chaingun]: 'w_chaingun',
+  [WeaponId.GrenadeLauncher]: 'w_glauncher',
+  [WeaponId.RocketLauncher]: 'w_rlauncher',
+  [WeaponId.HyperBlaster]: 'w_hyperblaster',
+  [WeaponId.Railgun]: 'w_railgun',
+  [WeaponId.BFG10K]: 'w_bfg',
+  [WeaponId.Grapple]: 'w_grapple',
+  [WeaponId.ChainFist]: 'w_chainfist',
+  [WeaponId.EtfRifle]: 'w_etf_rifle',
+  [WeaponId.ProxLauncher]: 'w_prox_launcher',
+  [WeaponId.IonRipper]: 'w_ionripper',
+  [WeaponId.PlasmaBeam]: 'w_plasmabeam',
+  [WeaponId.Phalanx]: 'w_phalanx',
+  [WeaponId.Disruptor]: 'w_disruptor',
+};
+
+export const KEY_ICON_MAP: Record<string, string> = {
+  'blue': 'k_bluekey',
+  'red': 'k_redkey',
+  'green': 'k_security',
+  'yellow': 'k_pyramid',
+};
+
 
 /**
  * Interface provided by the Engine to the CGame module.
@@ -47,6 +95,7 @@ export interface CGameImport {
   SCR_DrawPic(x: number, y: number, pic: unknown): void;
   SCR_DrawColorPic(x: number, y: number, pic: unknown, color: Vec3, alpha: number): void; // assuming vec3 color
   SCR_DrawFontString(x: number, y: number, str: string): void;
+  SCR_DrawCenterString(y: number, str: string): void; // Added for HUD
   SCR_MeasureFontString(str: string): number;
   SCR_FontLineHeight(): number;
   SCR_SetAltTypeface(alt: boolean): void;

@@ -1,14 +1,15 @@
-import { PakArchive, Pic, Renderer } from '@quake2ts/engine';
+import { CGameImport } from '../types.js';
 import { PlayerState } from '@quake2ts/shared';
 import { iconPics } from './icons.js'; // Reuse loaded icons
 
-export const Draw_Pickup = (renderer: Renderer, ps: PlayerState) => {
+export const Draw_Pickup = (cgi: CGameImport, ps: PlayerState, width: number, height: number) => {
     if (!ps.pickupIcon) return;
 
     const icon = iconPics.get(ps.pickupIcon);
     if (icon) {
-        const x = renderer.width - icon.width - 10;
-        const y = renderer.height - icon.height - 10;
-        renderer.drawPic(x, y, icon);
+        const size = cgi.Draw_GetPicSize(icon);
+        const x = width - size.width - 10;
+        const y = height - size.height - 10;
+        cgi.SCR_DrawPic(x, y, icon);
     }
 };
