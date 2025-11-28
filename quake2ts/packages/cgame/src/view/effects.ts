@@ -1,5 +1,5 @@
 import { ZERO_VEC3, angleVectors, clampViewAngles, dotVec3, hasPmFlag, PmFlag, type PmFlags, type Vec3 } from '@quake2ts/shared';
-import type { PredictionState } from './prediction.js';
+import type { PredictionState } from '../prediction/index.js';
 
 export interface ViewEffectSettings {
   readonly runPitch: number;
