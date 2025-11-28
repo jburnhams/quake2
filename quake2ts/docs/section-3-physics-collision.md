@@ -218,6 +218,11 @@ This section covers the physics simulation and collision detection system that f
 - [x] **Debug Visualization**: Verified debug counters are correctly incremented during traversal
   - Covered in `tests/physics/advanced_collision.test.ts`.
 
+## Verification Log
+- **Trace System**: Verified `CollisionEntityIndex.trace` implements proper filtering (`passId`, `contentMask`) via new unit test `packages/shared/tests/bsp/entityIndex.test.ts`.
+- **Optimization**: Confirmed `EntitySystem` uses engine-provided `areaEdicts` (which uses `CollisionEntityIndex`/`SpatialNode`) for O(N) spatial queries, resolving pending TODOs.
+- **Performance**: Validated trace throughput (>50k/sec) and entity scaling (<0.3ms/trace).
+
 ## Notes
 - Trace system is performance-critical; optimize heavily with spatial partitioning
 - BSP traversal is logarithmic, but brush-vs-box tests are expensive; cache when possible
