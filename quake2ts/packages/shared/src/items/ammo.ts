@@ -10,12 +10,17 @@ export enum AmmoType {
   Grenades,
   Cells,
   Slugs,
-  // New additions
-  Trap,
-  Tesla,
+  // RAFAEL
   MagSlugs,
+  Trap,
+  // RAFAEL
+  // ROGUE
   Flechettes,
+  Tesla,
+  Disruptor, // Was missing or named differently?
   Prox,
+  // ROGUE
+  // Custom or Extras?
   Nuke,
   Rounds,
 }

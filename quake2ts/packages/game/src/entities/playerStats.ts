@@ -1,7 +1,6 @@
 import { Entity } from './entity.js';
-import { PlayerStat, G_SetAmmoStat } from '@quake2ts/shared';
+import { PlayerStat, G_SetAmmoStat, G_SetPowerupStat, AmmoType, AMMO_TYPE_COUNT, AMMO_MAX } from '@quake2ts/shared';
 import { WeaponId, PowerupId } from '../inventory/playerInventory.js';
-import { AmmoType } from '../inventory/ammo.js';
 import { WEAPON_ITEMS } from '../inventory/items.js';
 
 // Order matches Q2 original weapon wheel index order for bitmask generation
@@ -18,15 +17,6 @@ const WEAPON_WHEEL_ORDER: WeaponId[] = [
     WeaponId.BFG10K
 ];
 
-// Order matches Q2 original ammo wheel index order
-const AMMO_WHEEL_ORDER: AmmoType[] = [
-    AmmoType.Shells,
-    AmmoType.Bullets,
-    AmmoType.Cells,
-    AmmoType.Rockets,
-    AmmoType.Slugs
-];
-
 // Powerup wheel mapping (based on original game)
 // Used for finding the active timer
 const POWERUP_TIMERS: { id: PowerupId, priority: number }[] = [
@@ -41,7 +31,8 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
     if (!player.client) return [];
 
     const inventory = player.client.inventory;
-    const statArray: number[] = new Array(32).fill(0);
+    // Increased size to 64 to accommodate new STAT_ indices (max ~54)
+    const statArray: number[] = new Array(64).fill(0);
 
     // Health
     statArray[PlayerStat.STAT_HEALTH] = player.health;
@@ -66,24 +57,35 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
     statArray[PlayerStat.STAT_AMMO] = 0;
     if (inventory.currentWeapon) {
         const weaponItem = Object.values(WEAPON_ITEMS).find(item => item.weaponId === inventory.currentWeapon);
-        if (weaponItem && weaponItem.ammoType) {
+        if (weaponItem && weaponItem.ammoType !== undefined) {
+             // STAT_AMMO is simple int
             statArray[PlayerStat.STAT_AMMO] = inventory.ammo.counts[weaponItem.ammoType] || 0;
         }
     }
 
     // Ammo Info (All Types)
-    for (let i = 0; i < AMMO_WHEEL_ORDER.length; i++) {
-        const ammoType = AMMO_WHEEL_ORDER[i];
-        const count = inventory.ammo.counts[ammoType] || 0;
-        // STAT_AMMO_INFO_START is 20 in shared definitions
-        statArray[PlayerStat.STAT_AMMO_INFO_START + i] = G_SetAmmoStat(count);
+    // We only need to iterate up to AMMO_MAX (C++ protocol limit), as G_SetAmmoStat rejects higher IDs anyway.
+    // This avoids iterating over custom/extra ammo types that are not part of the standard protocol.
+    for (let i = 0; i < AMMO_MAX; i++) {
+        // Safe access since inventory.ammo.counts is usually larger (AMMO_TYPE_COUNT)
+        const count = inventory.ammo.counts[i] || 0;
+        G_SetAmmoStat(statArray, i, count);
     }
 
-    // Timer (Powerups)
+    // Powerups Info
+    // Set powerup stats (active/timer bits)
+    const nowMs = timeSeconds * 1000;
+
+    for (const [id, expiresAt] of inventory.powerups) {
+        if (expiresAt && expiresAt > nowMs) {
+             // Active
+             G_SetPowerupStat(statArray, id, 1);
+        }
+    }
+
+    // Timer (HUD Timer for best powerup)
     let bestTime = Infinity;
     let bestPowerup: PowerupId | null = null;
-
-    const nowMs = timeSeconds * 1000;
 
     for (const { id } of POWERUP_TIMERS) {
         const expiresAt = inventory.powerups.get(id);
@@ -98,7 +100,7 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
     if (bestPowerup && bestTime !== Infinity) {
         const remainingSeconds = Math.ceil((bestTime - nowMs) / 1000);
         statArray[PlayerStat.STAT_TIMER] = remainingSeconds;
-        // statArray[PlayerStat.STAT_TIMER_ICON] = ... // Skipped
+        // statArray[PlayerStat.STAT_TIMER_ICON] = ...
     }
 
     return statArray;

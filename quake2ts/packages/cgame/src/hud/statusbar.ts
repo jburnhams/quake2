@@ -1,7 +1,7 @@
 import { CGameImport } from '../types.js';
 import { Draw_Number } from './numbers.js';
 import { getHudLayout } from './layout.js';
-import { PlayerState, PlayerStat, G_GetAmmoStat, G_GetPowerupStat } from '@quake2ts/shared';
+import { PlayerState, PlayerStat } from '@quake2ts/shared';
 
 let colorblindMode = false;
 
@@ -30,7 +30,8 @@ export const Draw_StatusBar = (
     // Stat Indices
     const health = ps.stats[PlayerStat.STAT_HEALTH] || 0;
     const armor = ps.stats[PlayerStat.STAT_ARMOR] || 0;
-    const ammo = ps.stats[PlayerStat.STAT_AMMO] ? G_GetAmmoStat(ps.stats[PlayerStat.STAT_AMMO]) : 0;
+    // STAT_AMMO is no longer packed, it's just the integer count of the current ammo.
+    const ammo = ps.stats[PlayerStat.STAT_AMMO] || 0;
 
     // Icon Indices (into ConfigStrings or predefined map)
     const armorIconIdx = ps.stats[PlayerStat.STAT_ARMOR_ICON] || 0;
