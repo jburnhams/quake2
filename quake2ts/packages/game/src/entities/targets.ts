@@ -1,5 +1,8 @@
 import { Entity, ServerFlags, Solid } from './entity.js';
 import type { SpawnRegistry } from './spawn.js';
+import { TempEntity, ServerCommand } from '@quake2ts/shared';
+import { MulticastType } from '../imports.js';
+import { setMovedir } from './utils.js';
 
 const ATTN_NONE = 0;
 const ATTN_NORM = 1;
@@ -21,24 +24,12 @@ function useChangeLevel(self: Entity) {
 function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
   let noiseIndex = self.noise_index;
   const channel = 2; // CHAN_VOICE or similar
-  // Note: we don't have direct access to 'sound' via EntitySystem context in 'use'
-  // But wait, the context is usually passed to spawn, not use.
-  // We need to store 'sound' function or access it via global/closure if possible.
-  // Actually, EntitySystem instance is not passed to use callback by default type definition in entity.ts
-  // Wait, EntitySystem.useTargets calls use(target, entity, activator).
-  // It does NOT pass context.
-
-  // However, targets.ts spawn functions have access to context.
-  // We can capture it in closure.
-
   const entities = context.entities;
 
   if (self.spawnflags & 3) { // Looped
     if (self.spawnflags & SPEAKER_SPAWNFLAGS.LoopedOn) {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOn;
       self.spawnflags |= SPEAKER_SPAWNFLAGS.LoopedOff;
-      // Stop sound?
-      // Q2 sets s.sound = 0
       self.sounds = 0;
     } else {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOff;
@@ -47,9 +38,6 @@ function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity 
     }
   } else { // Normal one-shot
     if (noiseIndex) {
-        // We need the sound name string, but noise_index is an int.
-        // We probably stored the string in self.message?
-        // Or we rely on self.message being the sound name.
         if (self.message) {
             entities.sound(self, channel, self.message, self.volume, self.attenuation, 0);
         }
@@ -57,18 +45,31 @@ function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity 
   }
 }
 
+function useTargetTempEntity(self: Entity, context: any) {
+  const entities = context.entities;
+  const type = self.style as TempEntity;
+
+  // Generic target_temp_entity behavior (mirrors g_target.c)
+  entities.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, type, self.origin);
+}
+
+function useTargetSplash(self: Entity, context: any) {
+  const entities = context.entities;
+  // TE_SPLASH: count, origin, movedir, color
+  entities.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SPLASH, self.count, self.origin, self.movedir, self.sounds);
+}
+
 export function registerTargetSpawns(registry: SpawnRegistry) {
-  registry.register('target_temp_entity', () => {
-    // Implementation deferred pending effects system (Section 2)
+  registry.register('target_temp_entity', (entity, context) => {
+    entity.style = context.keyValues.style ? parseInt(context.keyValues.style) : 0;
+    entity.use = (self) => useTargetTempEntity(self, context);
+    entity.svflags |= ServerFlags.NoClient;
   });
 
   registry.register('target_speaker', (entity, context) => {
     const noise = context.keyValues.noise;
     if (noise) {
         entity.message = noise;
-        // In a real engine we would precache and get an index.
-        // For now we just store the string in message.
-        // And maybe a mock index.
         entity.noise_index = 1;
     }
 
@@ -90,18 +91,21 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     }
 
     entity.use = (self, other, activator) => targetSpeakerUse(self, other, activator ?? null, context);
-
-    // Must be non-solid to not block
     entity.solid = Solid.Not;
   });
 
-  registry.register('target_explosion', (entity) => {
-    entity.use = () => { /* Simplified */ };
+  registry.register('target_explosion', (entity, { entities }) => {
+    entity.use = (self) => {
+        entities.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.EXPLOSION1, self.origin);
+    };
     entity.svflags |= ServerFlags.NoClient;
   });
 
-  registry.register('target_splash', (entity) => {
-    entity.use = () => { /* Simplified */ };
+  registry.register('target_splash', (entity, context) => {
+    entity.count = context.keyValues.count ? parseInt(context.keyValues.count) : 0;
+    entity.sounds = context.keyValues.sounds ? parseInt(context.keyValues.sounds) : 0;
+    entity.movedir = setMovedir(entity.angles);
+    entity.use = (self) => useTargetSplash(self, context);
     entity.svflags |= ServerFlags.NoClient;
   });
 

@@ -220,6 +220,7 @@ export class Entity {
   timestamp = 0;
   lip = 0;
   state = 0;
+  style = 0;
   sounds = 0;
   noise_index = 0;
   attenuation = 0;
@@ -484,6 +485,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'timestamp', type: 'float', save: true },
   { name: 'lip', type: 'int', save: true },
   { name: 'state', type: 'int', save: true },
+  { name: 'style', type: 'int', save: true },
   { name: 'sounds', type: 'int', save: true },
   { name: 'noise_index', type: 'int', save: true },
   { name: 'attenuation', type: 'float', save: true },
