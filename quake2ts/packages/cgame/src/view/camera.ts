@@ -1,5 +1,5 @@
 import { Camera } from '@quake2ts/engine';
-import { ViewSample } from './view-effects.js';
+import { ViewSample } from './effects.js';
 import { vec3 } from 'gl-matrix';
 import { Vec3 } from '@quake2ts/shared';
 

@@ -49,12 +49,17 @@ describe('Client Integration', () => {
             state: {
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },
-                viewangles: { x: 0, y: 0, z: 0 },
+                viewAngles: { x: 0, y: 0, z: 0 },
                 pmFlags: 0,
-                waterlevel: 0,
+                waterLevel: 0,
                 health: 100,
                 armor: 0,
                 ammo: 50,
+                stats: [],
+                kick_angles: { x: 0, y: 0, z: 0 },
+                gunoffset: { x: 0, y: 0, z: 0 },
+                gunangles: { x: 0, y: 0, z: 0 },
+                gunindex: 0,
                 client: {
                     inventory: {
                         armor: { armorCount: 0, armorType: 'jacket' },
@@ -87,12 +92,17 @@ describe('Client Integration', () => {
                 state: {
                     origin: { x: 0, y: 0, z: 0 },
                     velocity: { x: 0, y: 0, z: 0 },
-                    viewangles: { x: 0, y: 0, z: 0 },
+                    viewAngles: { x: 0, y: 0, z: 0 },
                     pmFlags: 0,
-                    waterlevel: 0,
+                    waterLevel: 0,
                     health: 100,
                     armor: 0,
                     ammo: 50,
+                    stats: [],
+                    kick_angles: { x: 0, y: 0, z: 0 },
+                    gunoffset: { x: 0, y: 0, z: 0 },
+                    gunangles: { x: 0, y: 0, z: 0 },
+                    gunindex: 0,
                     client: {
                         inventory: {
                             armor: { armorCount: 0, armorType: 'jacket' },

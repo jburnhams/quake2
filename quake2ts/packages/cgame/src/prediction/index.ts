@@ -12,7 +12,7 @@ import {
   WaterLevel,
   type PmFlags,
   type UserCommand,
-  DamageIndicator,
+  PlayerState,
 } from '@quake2ts/shared';
 import {
   applyPmoveAccelerate,
@@ -20,28 +20,24 @@ import {
   applyPmoveFriction,
 } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
+import type { PlayerClient } from '@quake2ts/game';
 
-import { PlayerClient } from '@quake2ts/game';
+import { PmoveTraceFn } from '@quake2ts/shared';
 
-export interface PredictionState {
-  readonly origin: Vec3;
-  readonly velocity: Vec3;
-  readonly viewangles: Vec3;
-  readonly pmFlags: PmFlags;
-  readonly pmType: PmType;
-  readonly waterlevel: WaterLevel;
-  readonly gravity: number;
-  readonly deltaAngles?: Vec3;
-  readonly client?: PlayerClient;
-  readonly health: number;
-  readonly armor: number;
-  readonly ammo: number;
-  readonly centerPrint?: string;
-  readonly notify?: string;
-  readonly blend: [number, number, number, number];
-  readonly pickupIcon?: string;
-  readonly damageAlpha: number;
-  readonly damageIndicators: DamageIndicator[];
+// PredictionState extends PlayerState with fields needed for physics simulation
+// that might not be in the base PlayerState interface yet or are client-side specific.
+export type PredictionState = PlayerState & {
+    deltaAngles?: Vec3;
+    pmFlags: PmFlags;
+    pmType: PmType;
+    gravity?: number;
+    waterLevel: WaterLevel;
+
+    // Client-side fields for HUD/rendering, added to satisfy client package usage
+    client?: PlayerClient;
+    health?: number;
+    armor?: number;
+    ammo?: number;
 }
 
 export interface PredictionSettings {
@@ -78,19 +74,39 @@ export function defaultPredictionState(): PredictionState {
   return {
     origin: ZERO_VEC3,
     velocity: ZERO_VEC3,
-    viewangles: ZERO_VEC3,
+    viewAngles: ZERO_VEC3,
+    onGround: false,
+
+    // Physics fields
     pmFlags: PmFlag.OnGround,
     pmType: PmType.Normal,
-    waterlevel: WaterLevel.None,
+    waterLevel: WaterLevel.None,
     gravity: DEFAULT_GRAVITY,
     deltaAngles: ZERO_VEC3,
-    health: 0,
-    armor: 0,
-    ammo: 0,
-    blend: [0, 0, 0, 0],
+
+    // Bounds
+    mins: { x: -16, y: -16, z: -24 },
+    maxs: { x: 16, y: 16, z: 32 },
+
+    // Visual/Game fields
     damageAlpha: 0,
     damageIndicators: [],
-  } satisfies PredictionState;
+    blend: [0, 0, 0, 0],
+    stats: [],
+    kick_angles: ZERO_VEC3,
+    gunoffset: ZERO_VEC3,
+    gunangles: ZERO_VEC3,
+    gunindex: 0,
+
+    // Optional fields
+    pickupIcon: undefined,
+    centerPrint: undefined,
+    notify: undefined,
+    client: undefined,
+    health: 0,
+    armor: 0,
+    ammo: 0
+  };
 }
 
 function normalizeState(state: PredictionState | undefined): PredictionState {
@@ -101,10 +117,11 @@ function normalizeState(state: PredictionState | undefined): PredictionState {
     ...state,
     origin: { ...state.origin },
     velocity: { ...state.velocity },
-    viewangles: { ...state.viewangles },
+    viewAngles: { ...state.viewAngles },
     deltaAngles: state.deltaAngles ? { ...state.deltaAngles } : ZERO_VEC3,
     blend: state.blend ? [...state.blend] : [0, 0, 0, 0],
     damageIndicators: state.damageIndicators ? [...state.damageIndicators] : [],
+    stats: state.stats ? [...state.stats] : [],
   } satisfies PredictionState;
 }
 
@@ -126,7 +143,9 @@ export function interpolatePredictionState(
   alpha: number,
 ): PredictionState {
   const clamped = Math.max(0, Math.min(alpha, 1));
+
   return {
+    ...latest, // Default to latest for discrete fields
     origin: {
       x: lerp(previous.origin.x, latest.origin.x, clamped),
       y: lerp(previous.origin.y, latest.origin.y, clamped),
@@ -137,26 +156,22 @@ export function interpolatePredictionState(
       y: lerp(previous.velocity.y, latest.velocity.y, clamped),
       z: lerp(previous.velocity.z, latest.velocity.z, clamped),
     },
-    viewangles: {
-      x: lerpAngle(previous.viewangles.x, latest.viewangles.x, clamped),
-      y: lerpAngle(previous.viewangles.y, latest.viewangles.y, clamped),
-      z: lerpAngle(previous.viewangles.z, latest.viewangles.z, clamped),
+    viewAngles: {
+      x: lerpAngle(previous.viewAngles.x, latest.viewAngles.x, clamped),
+      y: lerpAngle(previous.viewAngles.y, latest.viewAngles.y, clamped),
+      z: lerpAngle(previous.viewAngles.z, latest.viewAngles.z, clamped),
     },
-    pmFlags: latest.pmFlags,
-    pmType: latest.pmType,
-    waterlevel: latest.waterlevel,
-    gravity: latest.gravity,
-    deltaAngles: latest.deltaAngles,
-    client: latest.client,
-    health: lerp(previous.health, latest.health, clamped),
-    armor: lerp(previous.armor, latest.armor, clamped),
-    ammo: lerp(previous.ammo, latest.ammo, clamped),
-    centerPrint: latest.centerPrint,
-    notify: latest.notify,
-    blend: latest.blend,
-    pickupIcon: latest.pickupIcon,
-    damageAlpha: latest.damageAlpha,
-    damageIndicators: latest.damageIndicators,
+    damageAlpha: lerp(previous.damageAlpha, latest.damageAlpha, clamped),
+    blend: [
+        lerp(previous.blend[0], latest.blend[0], clamped),
+        lerp(previous.blend[1], latest.blend[1], clamped),
+        lerp(previous.blend[2], latest.blend[2], clamped),
+        lerp(previous.blend[3], latest.blend[3], clamped),
+    ],
+    // Interpolate health/armor for smooth HUD? Usually step.
+    health: lerp(previous.health || 0, latest.health || 0, clamped),
+    armor: lerp(previous.armor || 0, latest.armor || 0, clamped),
+    ammo: lerp(previous.ammo || 0, latest.ammo || 0, clamped)
   } satisfies PredictionState;
 }
 
@@ -167,6 +182,7 @@ function simulateCommand(
   trace: PmoveTraceFn,
 ): PredictionState {
   const frametime = Math.min(Math.max(cmd.msec, 0), MSEC_MAX) / 1000;
+
   const onGround = hasPmFlag(state.pmFlags, PmFlag.OnGround);
   const onLadder = hasPmFlag(state.pmFlags, PmFlag.OnLadder);
 
@@ -176,7 +192,7 @@ function simulateCommand(
     onGround,
     groundIsSlick: settings.groundIsSlick,
     onLadder,
-    waterlevel: state.waterlevel,
+    waterlevel: state.waterLevel,
     pmFriction: settings.pmFriction,
     pmStopSpeed: settings.pmStopSpeed,
     pmWaterFriction: settings.pmWaterFriction,
@@ -189,11 +205,11 @@ function simulateCommand(
   });
 
   const wish =
-    state.waterlevel > WaterLevel.None
+    state.waterLevel > WaterLevel.None
       ? buildWaterWish({ forward, right, cmd, maxSpeed: settings.pmWaterSpeed })
       : buildAirGroundWish({ forward, right, cmd, maxSpeed: settings.pmMaxSpeed });
 
-  if (state.waterlevel > WaterLevel.None) {
+  if (state.waterLevel > WaterLevel.None) {
     velocity = applyPmoveAccelerate({
       velocity,
       wishdir: wish.wishdir,
@@ -226,7 +242,7 @@ function simulateCommand(
       accel: settings.pmAirAccelerate,
       frametime,
     });
-    velocity = { ...velocity, z: velocity.z - state.gravity * frametime };
+    velocity = { ...velocity, z: velocity.z - (state.gravity ?? DEFAULT_GRAVITY) * frametime };
   }
 
   const traceResult = trace(state.origin, addVec3(state.origin, scaleVec3(velocity, frametime)));
@@ -236,11 +252,9 @@ function simulateCommand(
     ...state,
     origin,
     velocity,
-    viewangles,
+    viewAngles: viewangles,
   } satisfies PredictionState;
 }
-
-import { PmoveTraceFn } from '@quake2ts/shared';
 
 export class ClientPrediction {
   private readonly settings: PredictionSettings;

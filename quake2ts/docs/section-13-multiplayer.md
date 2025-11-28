@@ -199,8 +199,8 @@ Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
   - `subtitles.ts` - Sound subtitles
   - `blends.ts` - Screen blends (damage, powerups)
   - `diagnostics.ts` - FPS/network stats overlay
-- [ ] **Stat Reading**: Update HUD code to read from `player_state_t.stats[]` array using `STAT_*` constants (not hardcoded indices). Use `G_GetAmmoStat()` / `G_GetPowerupStat()` for compressed stats.
-  - *Pending*: Remove temporary `tempClientState` mapping in `CG_DrawHUD` and read directly from `ps`.
+- [x] **Stat Reading**: Update HUD code to read from `player_state_t.stats[]` array using `STAT_*` constants (not hardcoded indices). Use `G_GetAmmoStat()` / `G_GetPowerupStat()` for compressed stats.
+  - *Completed*: Removed temporary `tempClientState` mapping in `CG_DrawHUD` and read directly from `ps`.
 - [x] **Asset Precaching**: Implement `TouchPics()` export to call `cgi.Draw_RegisterPic()` for all HUD images during level load (see `rerelease/cg_screen.cpp:1689`).
 - [ ] **HUD Cleanup**:
   - `blends.ts`: Implement `SCR_DrawFill` (or equivalent) in `CGameImport` and re-enable `Draw_Blends`.
@@ -208,13 +208,13 @@ Map existing `client/src` files to `cgame/src` based on `rerelease` structure:
   - `damage.ts`: Re-implement damage direction indicators using `ps` state or events.
 
 ##### View Effects (→ `cgame/src/view/`)
-- [ ] **`client/src/view.ts`** → `cgame/src/view/camera.ts`: Camera update logic (applies bob/kick to camera).
-- [ ] **`client/src/view-effects.ts`** → `cgame/src/view/effects.ts`: View bob, roll, kick calculations. Reference `rerelease/p_view.cpp:45-66` (`SV_CalcRoll`) for roll calculation based on velocity dot right vector.
+- [x] **`client/src/view.ts`** → `cgame/src/view/camera.ts`: Camera update logic (applies bob/kick to camera).
+- [x] **`client/src/view-effects.ts`** → `cgame/src/view/effects.ts`: View bob, roll, kick calculations. Reference `rerelease/p_view.cpp:45-66` (`SV_CalcRoll`) for roll calculation based on velocity dot right vector.
 - [ ] **View Angles**: Implement view angle clamping and kick angles from `p_view.cpp`. Update `ViewEffects` to read `ps.kick_angles` from server and apply to camera.
 - [ ] **Gun Offset**: Calculate gun position/angles from `ps.gunoffset` / `ps.gunangles` (for future weapon viewmodel rendering).
 
 ##### Prediction (→ `cgame/src/prediction/`)
-- [ ] **`client/src/prediction.ts`** → `cgame/src/prediction/index.ts`: Client-side movement prediction.
+- [x] **`client/src/prediction.ts`** → `cgame/src/prediction/index.ts`: Client-side movement prediction.
 - [ ] **Pmove Integration**: Replace custom prediction with calls to `Pmove()` from `packages/shared/pmove`. Prediction should call the same `Pmove()` function as the server.
 - [ ] **Trace Function**: CGame prediction needs a trace function. Client must provide `cgi.PM_Trace()` in `cgame_import_t` that performs client-side collision (against BSP + predicted entities).
 - [ ] **Command Replay**: When `svc_frame` arrives, reconcile predicted state:
@@ -553,8 +553,13 @@ Do **not** move to shared:
     - Updated `screen.ts` to coordinate drawing via `CG_DrawHUD` and loading via `CG_TouchPics`.
     - Updated `types.ts` to include necessary drawing primitives (`SCR_DrawCenterString`).
     - Verified with `pnpm test` (CGame tests passing).
+  - **Stats & View Migration Complete** (Current):
+    - Updated `PlayerState` in `@quake2ts/shared` to include `stats: number[]` and view/gun properties.
+    - Refactored `Draw_StatusBar` to read directly from `ps.stats`, supporting `STAT_HEALTH`, `STAT_ARMOR`, `STAT_AMMO`, etc.
+    - Moved `view/camera.ts`, `view/effects.ts`, and `prediction/index.ts` from Client to CGame package.
+    - Updated imports and successfully built `@quake2ts/cgame`.
+    - **Note/Known Issue**: HUD Icon rendering (Weapon/Armor) via `STAT_SELECTED_ICON` currently relies on `ConfigStrings` (CS_IMAGES) which may not be fully populated/wired on the client side yet. Icons may not appear until server-side logic populates both `ps.stats` and `svc_configstring`.
   - **Next Steps**:
-    1. Implement stat reading from `ps.stats[]` array using `STAT_*` constants.
-    2. Complete view effects and prediction modules migration.
-    3. Wire client ↔ cgame interface.
-- [ ] **Next Steps**: Continue Phase 3.4 (HUD System Migration) - Implement stat reading, and complete view/prediction migration.
+    1. Wire client ↔ cgame interface.
+    2. Implement `ps.stats` population on the Server side (`packages/game`) to make HUD functional.
+- [ ] **Next Steps**: Wire client ↔ cgame interface.

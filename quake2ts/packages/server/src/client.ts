@@ -129,6 +129,12 @@ function createEmptyPlayerState(): PlayerState {
         maxs: { x: 16, y: 16, z: 32 },
         damageAlpha: 0,
         damageIndicators: [],
-        blend: [0, 0, 0, 0]
+        blend: [0, 0, 0, 0],
+        // Stubs for new fields
+        stats: [],
+        kick_angles: { x: 0, y: 0, z: 0 },
+        gunoffset: { x: 0, y: 0, z: 0 },
+        gunangles: { x: 0, y: 0, z: 0 },
+        gunindex: 0
     };
 }
