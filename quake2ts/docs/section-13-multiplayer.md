@@ -111,10 +111,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **HUD System**: Fully migrated to `cgame/src/hud`.
 - [x] **Stat Reading**: Updated HUD to read `ps.stats` array.
 - [x] **Asset Precaching**: Implemented `CG_TouchPics`.
-- [ ] **Parsing**:
-  - [ ] **Config String Parsing**: Implement `ParseConfigString(i, s)` in `cgame`.
-  - [ ] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
-  - [ ] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
+- [x] **Parsing**:
+  - [x] **Config String Parsing**: Implement `ParseConfigString(i, s)` in `cgame`.
+  - [x] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
+  - [x] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
 
 ### Phase 4: Integration & Testing
 
@@ -127,12 +127,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Server Stats**: `packages/game` populates `PlayerState.stats` with health, armor, ammo, and active powerups.
 - [x] **Protocol**: `MSG_WriteDeltaEntity` implemented and used by server.
 - [x] **Server Config Strings**: Implemented `configstring` in `GameImports` and `DedicatedServer`. Server now broadcasts config string updates and sends full list on client connect.
+- [x] **Client Parsing**: Implemented `ParseConfigString`, `ParseCenterPrint`, and `NotifyMessage` in CGame. Wired up via `ClientExports`.
+- [x] **HUD Rendering**: Client now delegates main HUD rendering to `cg.DrawHUD`, including status bar via `ps.stats`.
 
 ## Next Steps
-1.  **Client Parsing**:
-    - Implement `ParseConfigString` in `cgame` to handle incoming updates.
-    - Wire `svc_configstring` in client to call `cg.ParseConfigString`.
-    - Verify `STAT_*_ICON` dynamic indices work with populated CS_IMAGES.
-2.  **CGame Networking**:
-    - Implement `ParseCenterPrint` and `NotifyMessage`.
-    - Handle `svc_print` and `svc_centerprint` in client.
+1.  **CGame Refinements**:
+    - **Subtitles**: Currently handled locally in `Client` (fallback). Move logic to `CGame` when possible.
+    - **Cvar Registration**: Fully implement `cvar` registration in `CGameImport` bridge.
+2.  **Full Networking**:
+    - Complete Client Connection Handshake (`connect` stringcmd, `client_connect` etc.).
+    - Implement `svc_stufftext` handling.

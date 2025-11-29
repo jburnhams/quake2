@@ -116,7 +116,7 @@ export function CG_DrawHUD(
     // Damage indicators
     Draw_Damage(cgi, ps, hud_vrect.width, hud_vrect.height);
 
-    // Center print
+    // Center print (Legacy PS support)
     if (ps.centerPrint) {
         const lines = ps.centerPrint.split('\n');
         let y = hud_vrect.height / 2 - (lines.length * 10); // Approximation
@@ -126,8 +126,9 @@ export function CG_DrawHUD(
         }
     }
 
-    // Notifications (Chat/Messages)
-    // messageSystem.draw(cgi, ...); // TODO: MessageSystem needs refactoring to use cgi
+    // Message System (CenterPrint & Notifications)
+    messageSystem.drawCenterPrint(cgi, timeMs, layout);
+    messageSystem.drawNotifications(cgi, timeMs);
 
     // Subtitles
     // subtitleSystem.draw(cgi, ...); // TODO: SubtitleSystem needs refactoring to use cgi
