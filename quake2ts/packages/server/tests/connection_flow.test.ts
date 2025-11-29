@@ -36,6 +36,9 @@ describe('DedicatedServer Connection Flow', () => {
       clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
       clientThink: vi.fn(),
       frame: vi.fn().mockReturnValue({ state: {} }),
+      entities: {
+          forEachEntity: vi.fn()
+      }
     } as unknown as GameExports;
 
     (createGame as vi.Mock).mockReturnValue(mockGame);

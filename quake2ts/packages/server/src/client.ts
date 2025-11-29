@@ -56,6 +56,7 @@ export interface Client {
     challenge: number;
 
     messageQueue: Uint8Array[]; // Queue for incoming packets
+    lastPacketEntities: number[]; // List of entity numbers sent in the last packet
 }
 
 export function createClient(index: number, net: NetDriver): Client {
@@ -103,7 +104,8 @@ export function createClient(index: number, net: NetDriver): Client {
         lastConnect: Date.now(),
         challenge: 0,
 
-        messageQueue: []
+        messageQueue: [],
+        lastPacketEntities: []
     };
 }
 

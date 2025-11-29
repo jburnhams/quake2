@@ -84,8 +84,8 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 #### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
 - [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts`.
 - [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
-- [ ] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
-- [ ] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
+- [x] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
+- [x] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
 - [ ] **Overflow Handling**: Handle MTU limits.
 
 #### 2.5 Game Module Interface (`game_export_t`)
@@ -137,8 +137,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Subtitles**: Moved subtitle logic to `CGame` and exposed via `ShowSubtitle`.
 - [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
 - [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s.
+- [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
 
 ## Next Steps
 1.  **Full Networking**:
     - Continue testing and refining the dedicated server implementation.
     - Verify entity interpolation and delta compression in a real networked scenario.
+    - Implement MTU overflow handling.

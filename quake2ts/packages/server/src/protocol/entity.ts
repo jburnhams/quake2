@@ -45,6 +45,38 @@ const NULL_STATE: EntityState = {
 };
 
 /**
+ * Writes the remove bit for an entity.
+ */
+export function writeRemoveEntity(
+    number: number,
+    writer: BinaryWriter
+): void {
+    let bits = U_REMOVE;
+
+    if (number >= 256) {
+        bits |= U_NUMBER16;
+    }
+
+    // Determine needed bytes for header (U_NUMBER16 is in bits 8-15)
+    if (bits & 0xFF00) {
+        bits |= U_MOREBITS1;
+    }
+
+    // Write Header
+    writer.writeByte(bits & 0xFF);
+    if (bits & U_MOREBITS1) {
+        writer.writeByte((bits >> 8) & 0xFF);
+    }
+
+    // Write Number
+    if (bits & U_NUMBER16) {
+        writer.writeShort(number);
+    } else {
+        writer.writeByte(number);
+    }
+}
+
+/**
  * Writes the delta between two entity states to a binary writer.
  */
 export function writeDeltaEntity(

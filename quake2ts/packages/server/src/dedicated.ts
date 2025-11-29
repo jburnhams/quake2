@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { WebSocketNetDriver } from './net/nodeWsDriver.js';
-import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot } from '@quake2ts/game';
+import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
 import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS } from '@quake2ts/shared';
@@ -8,7 +8,7 @@ import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
-import { writeDeltaEntity } from './protocol/entity.js';
+import { writeDeltaEntity, writeRemoveEntity } from './protocol/entity.js';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
 import { writeServerCommand } from './protocol/write.js';
 
@@ -190,11 +190,40 @@ export class DedicatedServer implements GameEngine {
 
         this.game.init(0);
         this.game.spawnWorld();
+
+        // Populate baselines after world spawn
+        this.populateBaselines();
+
         this.sv.state = ServerState.Game;
 
         // 4. Start Loop
         this.frameInterval = setInterval(() => this.runFrame(), FRAME_TIME_MS);
         console.log('Server started.');
+    }
+
+    private populateBaselines() {
+        if (!this.game) return;
+
+        this.game.entities.forEachEntity((ent) => {
+            if (ent.index >= MAX_EDICTS) return;
+            // Create baseline state
+            // Only for entities with model or solid
+            if (ent.modelindex > 0 || ent.solid !== Solid.Not) {
+                this.sv.baselines[ent.index] = {
+                    number: ent.index,
+                    origin: { ...ent.origin },
+                    angles: { ...ent.angles },
+                    modelIndex: ent.modelindex,
+                    frame: ent.frame,
+                    skinNum: ent.skin,
+                    effects: ent.effects,
+                    renderfx: ent.renderfx,
+                    solid: ent.solid,
+                    sound: ent.sounds, // Assuming ent.sounds maps to 'sound' field in EntityState
+                    event: 0
+                };
+            }
+        });
     }
 
     public stop() {
@@ -480,12 +509,12 @@ export class DedicatedServer implements GameEngine {
         // Packet entities
         writer.writeByte(ServerCommand.packetentities);
 
-        // Use proper delta compression via writeDeltaEntity
-        // For now, we compare against NULL state (force full update)
-        // TODO: Use client.frames to find a baseline
         const entities = snapshot.packetEntities || [];
+        const currentEntityIds: number[] = [];
 
+        // 1. Write current frame entities
         for (const entity of entities) {
+            currentEntityIds.push(entity.number);
             // Write delta
             // from = null (for now), to = entity, force = false, newEntity = true
             // If newEntity is true, from is ignored anyway.
@@ -496,6 +525,14 @@ export class DedicatedServer implements GameEngine {
             writeDeltaEntity({} as EntityState, entity, writer, false, true);
         }
 
+        // 2. Identify and write removals
+        // Check entities that were in last packet but are NOT in this packet
+        for (const oldId of client.lastPacketEntities) {
+            if (!currentEntityIds.includes(oldId)) {
+                writeRemoveEntity(oldId, writer);
+            }
+        }
+
         // Write 0 to signal end of entities
         writer.writeShort(0);
 
@@ -503,6 +540,7 @@ export class DedicatedServer implements GameEngine {
 
         // Update client history
         client.lastFrame = this.sv.frame;
+        client.lastPacketEntities = currentEntityIds;
     }
 
     // GameEngine Implementation
