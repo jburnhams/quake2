@@ -4,7 +4,6 @@ import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 import { PlayerClient, PowerupId } from '@quake2ts/game';
 import { MessageSystem } from '../src/hud/messages.js';
-import { SubtitleSystem } from '../src/hud/subtitles.js';
 
 // Mock engine dependencies
 const mockRenderer = {
@@ -28,7 +27,6 @@ describe('HUD Rendering', () => {
     let ps: PlayerState;
     let client: PlayerClient;
     let messageSystem: MessageSystem;
-    let subtitleSystem: SubtitleSystem;
 
     beforeEach(async () => {
         vi.clearAllMocks();
@@ -56,14 +54,13 @@ describe('HUD Rendering', () => {
         } as unknown as PlayerClient;
 
         messageSystem = new MessageSystem();
-        subtitleSystem = new SubtitleSystem();
 
         // Initialize HUD assets with mock asset manager
         await Init_Hud(mockRenderer, mockAssetManager);
     });
 
     it('should draw basic HUD elements', () => {
-        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, subtitleSystem, 1000);
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
         expect(mockRenderer.begin2D).toHaveBeenCalled();
         expect(mockRenderer.end2D).toHaveBeenCalled();
@@ -74,7 +71,7 @@ describe('HUD Rendering', () => {
 
     it('should draw damage flash when damaged', () => {
         ps.damageAlpha = 0.5;
-        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, subtitleSystem, 1000);
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
         expect(mockRenderer.drawfillRect).toHaveBeenCalledWith(
             0, 0, 640, 480, [1, 0, 0, 0.5]
@@ -82,7 +79,7 @@ describe('HUD Rendering', () => {
     });
 
     it('should tint health red when low', () => {
-        Draw_Hud(mockRenderer, ps, client, 10, 0, 0, {} as any, messageSystem, subtitleSystem, 1000);
+        Draw_Hud(mockRenderer, ps, client, 10, 0, 0, {} as any, messageSystem, 1000);
 
         const calls = (mockRenderer.drawPic as any).mock.calls;
         const healthCalls = calls.filter((c: any) => c[0] >= 100 && c[0] < 150 && c[1] === 450);
@@ -95,7 +92,7 @@ describe('HUD Rendering', () => {
     it('should draw powerup icons and timers', () => {
         client.inventory.powerups.set(PowerupId.Quad, 5000);
 
-        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, subtitleSystem, 1000);
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
         const calls = (mockRenderer.drawPic as any).mock.calls;
         // Check if any call is for the powerup icon.
@@ -110,7 +107,7 @@ describe('HUD Rendering', () => {
     it('should draw keys', () => {
         client.inventory.keys.add('blue');
 
-        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, subtitleSystem, 1000);
+        Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
         const calls = (mockRenderer.drawPic as any).mock.calls;
         const keyCalls = calls.filter((c: any) => c[0] === 10 && c[1] >= 300 && c[1] < 450);

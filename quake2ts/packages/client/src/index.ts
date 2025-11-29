@@ -18,7 +18,6 @@ import { ViewEffects, ViewSample } from '@quake2ts/cgame';
 import { createCGameImport, ClientStateProvider } from './cgameBridge.js';
 
 import { Draw_Hud, Init_Hud } from './hud.js';
-import { SubtitleSystem } from './hud/subtitles.js';
 import { FrameRenderStats, WorldRenderState } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
 import { ClientConfigStrings } from './configStrings.js';
@@ -196,8 +195,6 @@ function buildRenderableEntities(
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
-  // MessageSystem moved to CGame
-  const subtitleSystem = new SubtitleSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
 
@@ -620,9 +617,6 @@ export function createClient(imports: ClientImports): ClientExports {
                 0, // playernum
                 playerState
             );
-
-            // Draw Subtitles locally (since CGame is not yet handling them)
-            subtitleSystem.drawSubtitles(renderer, timeMs);
             renderer.end2D();
         }
 
@@ -682,9 +676,7 @@ export function createClient(imports: ClientImports): ClientExports {
       cg.NotifyMessage(0, msg, false);
     },
     showSubtitle(text: string, soundName: string) {
-      const timeMs = latestFrame?.timeMs ?? 0;
-      // TODO: Filter based on soundName or user settings
-      subtitleSystem.addSubtitle(text, timeMs);
+      cg.ShowSubtitle(text, soundName);
     },
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);

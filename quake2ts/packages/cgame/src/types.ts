@@ -159,6 +159,7 @@ export interface CGameExport {
   ParseConfigString(i: number, s: string): void;
   ParseCenterPrint(str: string, isplit: number, instant: boolean): void;
   NotifyMessage(isplit: number, msg: string, is_chat: boolean): void;
+  ShowSubtitle(text: string, soundName: string): void;
 
   // State management
   ClearNotify(isplit: number): void;
