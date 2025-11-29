@@ -229,7 +229,6 @@ function gunner_dodge(self: Entity, attacker: Entity, eta: number, context: any)
     self.monsterinfo.current_move = duck_move;
 }
 
-
 // --- Frames ---
 
 // Stand
@@ -425,7 +424,6 @@ duck_move = {
     frames: duck_frames,
     endfunc: gunner_run,
 };
-
 
 function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.model = 'models/monsters/gunner/tris.md2';
