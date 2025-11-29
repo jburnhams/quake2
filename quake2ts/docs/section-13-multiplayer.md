@@ -91,7 +91,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 #### 2.5 Game Module Interface (`game_export_t`)
 - [x] **Game Stats**: `ps.stats` population implemented in `packages/game/src/entities/playerStats.ts`.
 - [x] **Config Strings**: Add `configstring(index, value)` to `GameImports` so game can set strings (models, sounds).
-- [ ] **Sound/FX**: `multicast` / `unicast` implemented.
+- [x] **Sound/FX**: `multicast` / `unicast` implemented.
 
 ### Phase 3: Client Refactoring (CGame)
 
@@ -136,6 +136,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Integration Test**: Added `configstring_sync.test.ts` to verify config string and stats synchronization.
 - [x] **Subtitles**: Moved subtitle logic to `CGame` and exposed via `ShowSubtitle`.
 - [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
+- [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s.
 
 ## Next Steps
 1.  **Full Networking**:
