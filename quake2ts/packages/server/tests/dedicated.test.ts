@@ -29,13 +29,31 @@ describe('DedicatedServer', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
+    // Setup mock game with complete snapshot return to avoid errors in DedicatedServer
     mockGame = {
       init: vi.fn(),
       shutdown: vi.fn(),
       spawnWorld: vi.fn(),
       clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
       clientThink: vi.fn(),
-      frame: vi.fn().mockReturnValue({ state: { packetEntities: [] } }),
+      frame: vi.fn().mockReturnValue({
+        state: {
+          packetEntities: [],
+          gravity: { x: 0, y: 0, z: -800 },
+          origin: { x: 0, y: 0, z: 0 },
+          velocity: { x: 0, y: 0, z: 0 },
+          viewangles: { x: 0, y: 0, z: 0 },
+          deltaAngles: { x: 0, y: 0, z: 0 },
+          kick_angles: { x: 0, y: 0, z: 0 },
+          gunoffset: { x: 0, y: 0, z: 0 },
+          gunangles: { x: 0, y: 0, z: 0 },
+          blend: [0, 0, 0, 0],
+          stats: new Array(32).fill(0),
+          pmFlags: 0,
+          pmType: 0,
+          gunindex: 0
+        }
+      }),
     } as unknown as GameExports;
 
     (createGame as vi.Mock).mockReturnValue(mockGame);

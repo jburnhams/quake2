@@ -9,6 +9,7 @@ import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity } from './protocol/entity.js';
+import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
 
 const MAX_CLIENTS = 16;
 const FRAME_RATE = 10; // 10Hz dedicated server loop (Q2 standard)
@@ -368,10 +369,30 @@ export class DedicatedServer implements GameEngine {
 
         // Player info
         writer.writeByte(ServerCommand.playerinfo);
-        // ... Write player state ...
-        // Placeholder for now
-        writer.writeShort(0); // flags (empty)
-        writer.writeLong(0); // stats
+
+        // Map GameStateSnapshot to ProtocolPlayerState
+        const ps: ProtocolPlayerState = {
+            pm_type: snapshot.pmType,
+            origin: snapshot.origin,
+            velocity: snapshot.velocity,
+            pm_time: 0, // Not explicitly in snapshot yet
+            pm_flags: snapshot.pmFlags,
+            gravity: Math.abs(snapshot.gravity.z), // Usually only Z is relevant for gravity value
+            delta_angles: snapshot.deltaAngles,
+            viewoffset: { x: 0, y: 0, z: 22 }, // Default view offset if not in snapshot
+            viewangles: snapshot.viewangles,
+            kick_angles: snapshot.kick_angles,
+            gun_index: snapshot.gunindex,
+            gun_frame: 0, // snapshot doesn't track gun frame yet?
+            gun_offset: snapshot.gunoffset,
+            gun_angles: snapshot.gunangles,
+            blend: snapshot.blend,
+            fov: 90, // Default FOV
+            rdflags: 0, // Not tracked
+            stats: snapshot.stats
+        };
+
+        writePlayerState(writer, ps);
 
         // Packet entities
         writer.writeByte(ServerCommand.packetentities);
