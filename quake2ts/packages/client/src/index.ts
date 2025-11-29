@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -18,7 +18,6 @@ import { ViewEffects, ViewSample } from '@quake2ts/cgame';
 import { createCGameImport, ClientStateProvider } from './cgameBridge.js';
 
 import { Draw_Hud, Init_Hud } from './hud.js';
-import { MessageSystem } from './hud/messages.js';
 import { SubtitleSystem } from './hud/subtitles.js';
 import { FrameRenderStats, WorldRenderState } from '@quake2ts/engine';
 import { ClientNetworkHandler } from './demo/handler.js';
@@ -197,7 +196,7 @@ function buildRenderableEntities(
 export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace);
   const view = new ViewEffects();
-  const messageSystem = new MessageSystem();
+  // MessageSystem moved to CGame
   const subtitleSystem = new SubtitleSystem();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
@@ -217,29 +216,14 @@ export function createClient(imports: ClientImports): ClientExports {
 
   const configStrings = new ClientConfigStrings();
 
-  // Hook up message system to demo handler
-  demoHandler.setCallbacks({
-    onCenterPrint: (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0),
-    onPrint: (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0),
-    onConfigString: (index: number, str: string) => {
-      configStrings.set(index, str);
-      cg.ParseConfigString(index, str);
-    }
-  });
-
-  demoPlayback.setHandler(demoHandler);
-
+  // Define State Provider for CGame first
   let latestFrame: GameFrameResult<PredictionState> | undefined;
-  let lastRendered: PredictionState | undefined;
-  let lastView: ViewSample | undefined;
-  let camera: Camera | undefined;
   let clientInAutoDemo = false;
 
-  // Define State Provider for CGame
   const stateProvider: ClientStateProvider = {
     get tickRate() { return 10; }, // Default 10Hz
     get frameTimeMs() { return latestFrame?.timeMs ?? 0; },
-    get serverFrame() { return demoHandler.latestServerFrame; }, // Corrected access
+    get serverFrame() { return demoHandler.latestServerFrame; },
     get serverProtocol() { return 34; },
     get configStrings() { return configStrings; },
     getClientName: (num) => `Player ${num}`,
@@ -250,6 +234,22 @@ export function createClient(imports: ClientImports): ClientExports {
   // CGame Interface
   const cgameImport = createCGameImport(imports, stateProvider);
   const cg: CGameExport = GetCGameAPI(cgameImport);
+
+  // Hook up message system to demo handler via CG
+  demoHandler.setCallbacks({
+    onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
+    onPrint: (level: number, msg: string) => cg.NotifyMessage(0, msg, false),
+    onConfigString: (index: number, str: string) => {
+      configStrings.set(index, str);
+      cg.ParseConfigString(index, str);
+    }
+  });
+
+  demoPlayback.setHandler(demoHandler);
+
+  let lastRendered: PredictionState | undefined;
+  let lastView: ViewSample | undefined;
+  let camera: Camera | undefined;
 
   // Default FOV
   let fovValue = 90;
@@ -572,6 +572,10 @@ export function createClient(imports: ClientImports): ClientExports {
     DrawHUD(stats: FrameRenderStats, timeMs: number) {
         if (!imports.engine.renderer) return;
 
+        const renderer = imports.engine.renderer;
+        const width = renderer.width;
+        const height = renderer.height;
+
         if (lastRendered && lastRendered.client) {
              const playerState: PlayerState = {
                 origin: lastRendered.origin,
@@ -585,34 +589,41 @@ export function createClient(imports: ClientImports): ClientExports {
                 damageIndicators: lastRendered.damageIndicators ?? [],
                 blend: lastRendered.blend ?? [0, 0, 0, 0],
                 pickupIcon: lastRendered.pickupIcon,
-                centerPrint: messageSystem['centerPrintMsg']?.text, // Hack to get text for legacy state? No, Draw_Hud uses messageSystem directly now.
+                centerPrint: undefined, // Handled by CGame MessageSystem now
                 notify: undefined,
 
                 // Stubs for new fields
-                stats: [],
+                // Ensure stats are safely initialized
+                stats: lastRendered.stats ? [...lastRendered.stats] : new Array(32).fill(0),
                 kick_angles: ZERO_VEC3,
                 gunoffset: ZERO_VEC3,
                 gunangles: ZERO_VEC3,
                 gunindex: 0
             };
 
-            const playbackState = demoPlayback.getState();
-            const hudTimeMs = (playbackState === PlaybackState.Playing || playbackState === PlaybackState.Paused)
-                ? (demoHandler.latestFrame?.serverFrame || 0) * 100
-                : timeMs;
+            // Populate stats for status bar (Health, Armor, Ammo) if not already populated by server
+            playerState.stats[PlayerStat.STAT_HEALTH] = lastRendered.health ?? 0;
+            playerState.stats[PlayerStat.STAT_AMMO] = lastRendered.ammo ?? 0;
+            playerState.stats[PlayerStat.STAT_ARMOR] = lastRendered.armor ?? 0;
 
-            Draw_Hud(
-              imports.engine.renderer,
-              playerState,
-              lastRendered.client,
-              lastRendered.health ?? 0,
-              lastRendered.armor ?? 0,
-              lastRendered.ammo ?? 0,
-              stats,
-              messageSystem,
-              subtitleSystem,
-              hudTimeMs
+            // Call CGame DrawHUD wrapper
+            // Note: client.ts's DrawHUD calls Draw_Hud from hud.ts
+            // But we should use cg.DrawHUD eventually.
+
+            renderer.begin2D();
+            cg.DrawHUD(
+                0, // isplit
+                null, // data
+                { x: 0, y: 0, width, height }, // hud_vrect
+                { x: 0, y: 0, width, height }, // hud_safe
+                1.0, // scale
+                0, // playernum
+                playerState
             );
+
+            // Draw Subtitles locally (since CGame is not yet handling them)
+            subtitleSystem.drawSubtitles(renderer, timeMs);
+            renderer.end2D();
         }
 
         if (menuSystem.isActive()) {
@@ -665,12 +676,10 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     demoPlayback,
     ParseCenterPrint(msg: string) {
-      const timeMs = latestFrame?.timeMs ?? 0;
-      messageSystem.addCenterPrint(msg, timeMs);
+      cg.ParseCenterPrint(msg, 0, false);
     },
     ParseNotify(msg: string) {
-      const timeMs = latestFrame?.timeMs ?? 0;
-      messageSystem.addNotify(msg, timeMs);
+      cg.NotifyMessage(0, msg, false);
     },
     showSubtitle(text: string, soundName: string) {
       const timeMs = latestFrame?.timeMs ?? 0;
