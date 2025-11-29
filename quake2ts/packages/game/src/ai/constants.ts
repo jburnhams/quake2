@@ -22,7 +22,16 @@ export enum AIFlags {
   CombatPoint = 1 << 12,
   Medic = 1 << 13,
   Resurrecting = 1 << 14,
+  ManualSteering = 1 << 15,
   Pathing = 1 << 30,
+}
+
+export enum AttackState {
+  Straight = 0,
+  Sliding = 1,
+  Melee = 2,
+  Missile = 3,
+  Blind = 4,
 }
 
 export enum TraceMask {
