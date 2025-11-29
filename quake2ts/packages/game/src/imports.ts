@@ -41,4 +41,6 @@ export interface GameImports {
 
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
+
+  configstring(index: number, value: string): void;
 }
