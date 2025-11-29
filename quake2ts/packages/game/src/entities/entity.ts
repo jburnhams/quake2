@@ -17,6 +17,7 @@ export enum MoveType {
   Toss = 7,
   FlyMissile = 8,
   Bounce = 9,
+  WallBounce = 10,
 }
 
 export enum Solid {

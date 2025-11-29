@@ -113,7 +113,7 @@ describe('runBouncing', () => {
     ent.movetype = MoveType.Bounce;
     ent.velocity = { x: 100, y: 0, z: -100 };
     ent.origin = { x: 0, y: 0, z: 10 };
-    ent.bounce = 1.5;
+    ent.bounce = 1.5; // This property is now ignored in favor of Q2 standard behavior (1.6 backoff)
 
     const mockTrace: GameTraceResult = {
       fraction: 0.5,
@@ -133,12 +133,55 @@ describe('runBouncing', () => {
 
     runBouncing(ent, mockImports(mockTrace), 0.1);
 
-    // See derivation in thought block.
-    expect(ent.velocity.x).toBeCloseTo(150);
+    // Q2 Logic: ClipVelocity with backoff 1.6
+    // v = (100, 0, -100)
+    // n = (0, 0, 1)
+    // backoff = 1.6
+    // v_new = v - backoff * dot(v, n) * n
+    // dot = -100
+    // v_new = (100, 0, -100) - 1.6 * (-100) * (0, 0, 1)
+    // v_new = (100, 0, -100) + 160 * (0, 0, 1)
+    // v_new = (100, 0, 60)
+
+    expect(ent.velocity.x).toBeCloseTo(100);
     expect(ent.velocity.y).toBeCloseTo(0);
-    expect(ent.velocity.z).toBeCloseTo(1.5);
+    expect(ent.velocity.z).toBeCloseTo(60);
     expect(ent.origin.x).toBe(50);
     expect(ent.origin.y).toBe(0);
     expect(ent.origin.z).toBe(5);
+  });
+
+  it('should reflect velocity perfectly with WallBounce', () => {
+    const ent = new Entity(0);
+    ent.movetype = MoveType.WallBounce;
+    ent.velocity = { x: 100, y: 0, z: -100 };
+    ent.origin = { x: 0, y: 0, z: 10 };
+
+    const mockTrace: GameTraceResult = {
+      fraction: 0.5,
+      plane: {
+        normal: { x: 0, y: 0, z: 1 }, // Hit the floor
+        dist: 0,
+        type: 0,
+        signbits: 0,
+      },
+      contents: 0,
+      surfaceFlags: 0,
+      startsolid: false,
+      allsolid: false,
+      endpos: { x: 50, y: 0, z: 5 },
+      ent: null,
+    };
+
+    runBouncing(ent, mockImports(mockTrace), 0.1);
+
+    // Q2 Logic: ClipVelocity with backoff 2.0 (Elastic)
+    // v_new = (100, 0, -100) - 2.0 * (-100) * (0, 0, 1)
+    // v_new = (100, 0, -100) + 200 * (0, 0, 1)
+    // v_new = (100, 0, 100)
+
+    expect(ent.velocity.x).toBeCloseTo(100);
+    expect(ent.velocity.y).toBeCloseTo(0);
+    expect(ent.velocity.z).toBeCloseTo(100);
   });
 });

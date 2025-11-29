@@ -6,14 +6,15 @@ import {
   clipVelocityVec3,
   Vec3,
   subtractVec3,
-  rotatePointAroundVector
+  rotatePointAroundVector,
+  vectorToAngles
 } from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
 import { resolveImpact, checkTriggers } from './collision.js';
 
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
-  if (ent.movetype === MoveType.Toss) {
+  if (ent.movetype === MoveType.Toss || ent.movetype === MoveType.Bounce || ent.movetype === MoveType.WallBounce) {
     // Basic null checks before using vectors
     if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
     if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
@@ -22,43 +23,6 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
       // In water, entities drift down slowly if dense, or up if buoyant?
       // Quake 2 simply runs custom water physics and skips gravity.
       // For now, let's assume they sink slowly or are neutrally buoyant.
-      // SV_Physics_Toss logic in Q2:
-      // if (ent->waterlevel > 1) G_RunObject (ent); else SV_AddGravity (ent);
-      // G_RunObject applies water friction and reduced gravity.
-
-      // We'll implement simple water drag here for now to prevent infinite acceleration
-      // and maybe slight gravity.
-      // Replicating full G_RunObject is complex, but we can do a simple version.
-
-      // Apply drag (water friction)
-      // Based on G_RunObject in g_phys.c
-      // v[i] = v[i] * 0.8 * ent->waterlevel * frametime; (Wait, this looks like it would kill velocity instantly if > 1)
-      // Checking original source:
-      // sv_phys.c SV_Physics_Toss:
-      // if (ent->waterlevel > 1) G_RunObject (ent);
-      // g_phys.c G_RunObject:
-      // 	if (ent->waterlevel > 1)
-      // 	{
-      // 		float	*v;
-      // 		int		i;
-      // 		v = ent->velocity;
-      // 		for (i=0 ; i<3 ; i++)
-      // 			v[i] = v[i] * 0.8 * ent->waterlevel * frametime;
-      // 	}
-      // This looks incorrect in C because multiplying by frametime (e.g. 0.1) repeatedly would make it tiny.
-      // But wait, G_RunObject is called every frame.
-      // Maybe it meant to subtract? Or maybe 0.8 is 1 - friction * dt?
-      // Let's assume standard friction logic:
-      // speed *= 0.8;
-
-      // Actually, looking at other sources, it might be:
-      // v[i] -= v[i] * friction * frametime;
-      //
-      // Let's implement a simple viscous drag.
-      // 0.8 per second? No, 0.8 per frame?
-
-      // Let's stick to the existing simple friction but tune it.
-      // "speed - frametime * speed * 2" means friction = 2.
 
       const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
       if (speed > 1) {
@@ -70,25 +34,6 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
             ent.velocity = scaleVec3(ent.velocity, scale);
         }
       }
-
-      // Apply reduced gravity in water
-      // Q2 behavior: objects sink slowly
-      // In C code (g_phys.c G_RunObject), it calls SV_AddGravity(ent) ONLY if (ent.waterlevel <= 1).
-      // If waterlevel > 1, it applies friction (above) but DOES NOT call SV_AddGravity.
-      // However, objects should still sink?
-      // Quake 2 G_RunObject:
-      // if (ent->waterlevel > 1) ... friction ...
-      // if (ent->waterlevel <= 1) SV_AddGravity(ent);
-
-      // So in Q2, objects in water DO NOT receive gravity! They just drift with friction.
-      // Unless they have vertical velocity, they will stop sinking.
-      // But wait, Gibs sink.
-      // Maybe they have initial velocity? Or maybe 'gravity' logic is different.
-      //
-      // Let's stick to the previous simplified behavior but maybe use a small constant gravity
-      // to ensure they sink to the bottom if that's desired.
-      //
-      // Reverting the aggressive friction change (20 -> 2) to match general expectations unless specific evidence.
 
       // 0.1 * gravity matches previous implementation's attempt to simulate buoyancy/slow sink.
       ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * 0.1));
@@ -102,7 +47,7 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
 }
 
 export function runBouncing(ent: Entity, imports: GameImports, frametime: number): void {
-  if (ent.movetype !== MoveType.Bounce) {
+  if (ent.movetype !== MoveType.Bounce && ent.movetype !== MoveType.WallBounce) {
     return;
   }
 
@@ -118,8 +63,29 @@ export function runBouncing(ent: Entity, imports: GameImports, frametime: number
   }
 
   if (traceResult.fraction > 0 && traceResult.fraction < 1 && traceResult.plane) {
-    const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, 1.01);
-    ent.velocity = scaleVec3(clipped, ent.bounce);
+    let overbounce = 1.01; // Default clipping (slide mostly, slightly bounce if ent.bounce > 1?)
+    // Note: Quake 2 logic uses 1.5/1.6 for Bounce, 2.0 for WallBounce.
+    // The previous implementation used 1.01 in `clipVelocityVec3` and then multiplied by `ent.bounce`.
+    // If we want to be faithful to Q2 `SV_Physics_Toss`:
+    // It calls ClipVelocity(ent->velocity, trace.plane.normal, backoff);
+    // where backoff is 1.6 (Bounce) or 2.0 (WallBounce).
+
+    if (ent.movetype === MoveType.WallBounce) {
+      overbounce = 2.0;
+    } else {
+      overbounce = 1.6;
+    }
+
+    const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, overbounce);
+    ent.velocity = clipped;
+    // ent.velocity = scaleVec3(clipped, ent.bounce); // Removing this multiplication to match Q2 logic unless ent.bounce is explicitly desired.
+    // Given the previous code had it, maybe `ent.bounce` is used as restitution.
+    // However, for WallBounce, we want explicit behavior.
+
+    // WallBounce also updates angles
+    if (ent.movetype === MoveType.WallBounce) {
+      ent.angles = vectorToAngles(ent.velocity);
+    }
   }
 }
 
