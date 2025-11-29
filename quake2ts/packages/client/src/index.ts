@@ -673,29 +673,7 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
-
-      if (imports.engine.assets) {
-          const assets = imports.engine.assets;
-
-          if (index >= ConfigStringIndex.Models && index < ConfigStringIndex.Models + MAX_MODELS) {
-              const ext = value.split('.').pop()?.toLowerCase();
-              if (ext === 'md2') {
-                  assets.loadMd2Model(value).catch(e => console.warn(`Failed to precache MD2 ${value}`, e));
-              } else if (ext === 'sp2') {
-                  assets.loadSprite(value).catch(e => console.warn(`Failed to precache Sprite ${value}`, e));
-              } else if (ext === 'md3') {
-                  assets.loadMd3Model(value).catch(e => console.warn(`Failed to precache MD3 ${value}`, e));
-              }
-          } else if (index >= ConfigStringIndex.Sounds && index < ConfigStringIndex.Sounds + MAX_SOUNDS) {
-               assets.loadSound(value).catch(e => console.warn(`Failed to precache sound ${value}`, e));
-          } else if (index >= ConfigStringIndex.Images && index < ConfigStringIndex.Images + MAX_IMAGES) {
-               assets.loadTexture(value).then(texture => {
-                   if (imports.engine.renderer) {
-                       imports.engine.renderer.registerTexture(value, texture);
-                   }
-               }).catch(e => console.warn(`Failed to precache image ${value}`, e));
-          }
-      }
+      cg.ParseConfigString(index, value);
     },
     demoHandler,
     configStrings

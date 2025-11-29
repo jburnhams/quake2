@@ -10,6 +10,7 @@ import type { CGameImport, CGameExport } from './types.js';
 import type { PlayerState, Vec3 } from '@quake2ts/shared';
 import { LayoutFlags } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
+import { CG_ParseConfigString } from './parse.js';
 
 export type { CGameImport, CGameExport } from './types.js';
 
@@ -115,8 +116,8 @@ function Pmove(pmove: unknown): void {
 }
 
 function ParseConfigString(i: number, s: string): void {
-    // TODO: Implement config string parsing
-    // Handle CONFIG_N64_PHYSICS, CS_AIRACCEL, etc.
+    if (!cgi) return;
+    CG_ParseConfigString(cgi, i, s);
 }
 
 function ParseCenterPrint(str: string, isplit: number, instant: boolean): void {

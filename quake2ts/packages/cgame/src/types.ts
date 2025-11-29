@@ -88,6 +88,10 @@ export interface CGameImport {
   CL_GetClientDogtag(playerNum: number): string;
   CL_GetKeyBinding(key: string): string;
 
+  // Asset Registration
+  RegisterModel(name: string): void;
+  RegisterSound(name: string): void;
+
   // Drawing
   Draw_RegisterPic(name: string): unknown; // Returns handle/object
   Draw_GetPicSize(pic: unknown): { width: number, height: number };
