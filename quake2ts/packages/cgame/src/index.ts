@@ -143,6 +143,12 @@ function ClearCenterprint(isplit: number): void {
     messageSystem.clearCenterPrint();
 }
 
+function ShowSubtitle(text: string, soundName: string): void {
+  if (!cgi) return;
+  const subtitleSystem = CG_GetSubtitleSystem();
+  subtitleSystem.addSubtitle(text, cgi.CL_ClientTime());
+}
+
 function GetMonsterFlashOffset(id: number): Vec3 {
     return { x: 0, y: 0, z: 0 };
 }
@@ -189,6 +195,7 @@ export function GetCGameAPI(imports: CGameImport): CGameExport {
         ParseConfigString,
         ParseCenterPrint,
         NotifyMessage,
+        ShowSubtitle,
 
         // State management
         ClearNotify,

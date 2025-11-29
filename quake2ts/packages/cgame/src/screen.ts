@@ -131,7 +131,7 @@ export function CG_DrawHUD(
     messageSystem.drawNotifications(cgi, timeMs);
 
     // Subtitles
-    // subtitleSystem.draw(cgi, ...); // TODO: SubtitleSystem needs refactoring to use cgi
+    subtitleSystem.drawSubtitles(cgi, timeMs);
 
     // Crosshair
     Draw_Crosshair(cgi, hud_vrect.width, hud_vrect.height);
