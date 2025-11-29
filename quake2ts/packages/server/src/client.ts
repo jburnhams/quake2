@@ -139,6 +139,12 @@ function createEmptyPlayerState(): PlayerState {
         kick_angles: { x: 0, y: 0, z: 0 },
         gunoffset: { x: 0, y: 0, z: 0 },
         gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0
+        gunindex: 0,
+        pm_type: 0,
+        pm_time: 0,
+        pm_flags: 0,
+        gun_frame: 0,
+        rdflags: 0,
+        fov: 90
     };
 }

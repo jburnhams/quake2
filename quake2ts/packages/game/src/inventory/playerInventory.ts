@@ -70,6 +70,14 @@ export interface PlayerClient {
     quad_time?: number;
     double_time?: number;
     quadsound_time?: number;
+
+    // Persistent player state fields for network sync
+    pm_type: number;
+    pm_time: number;
+    pm_flags: number;
+    gun_frame: number;
+    rdflags: number;
+    fov: number;
 }
 
 export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {

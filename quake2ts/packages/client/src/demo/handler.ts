@@ -315,6 +315,12 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                     states: new Map()
                 },
                 buttons: 0,
+                pm_type: ps.pm_type,
+                pm_time: ps.pm_time,
+                pm_flags: ps.pm_flags,
+                gun_frame: ps.gun_frame,
+                rdflags: ps.rdflags,
+                fov: ps.fov
             },
             health: ps.stats[1], // STAT_HEALTH
             armor: ps.stats[4], // STAT_ARMOR
@@ -332,6 +338,14 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             onGround: false, // Infer from pmFlags?
             mins: { x: -16, y: -16, z: -24 },
             maxs: { x: 16, y: 16, z: 32 },
+
+            // New fields
+            pm_time: ps.pm_time,
+            pm_type: ps.pm_type,
+            pm_flags: ps.pm_flags,
+            gun_frame: ps.gun_frame,
+            rdflags: ps.rdflags,
+            fov: ps.fov
         };
     }
 

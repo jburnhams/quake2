@@ -98,6 +98,14 @@ export function defaultPredictionState(): PredictionState {
     gunangles: ZERO_VEC3,
     gunindex: 0,
 
+    // New fields
+    pm_time: 0,
+    pm_type: PmType.Normal,
+    pm_flags: PmFlag.OnGround,
+    gun_frame: 0,
+    rdflags: 0,
+    fov: 90,
+
     // Optional fields
     pickupIcon: undefined,
     centerPrint: undefined,
