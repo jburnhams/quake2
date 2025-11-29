@@ -1,4 +1,4 @@
-import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS } from '@quake2ts/shared';
+import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 
 export enum ClientState {
@@ -16,6 +16,7 @@ export interface ClientFrame {
     numEntities: number;
     firstEntity: number; // into the circular sv_packet_entities[]
     sentTime: number;    // for ping calculations
+    entities: EntityState[];
 }
 
 export interface Client {
@@ -69,7 +70,8 @@ export function createClient(index: number, net: NetDriver): Client {
             playerState: createEmptyPlayerState(),
             numEntities: 0,
             firstEntity: 0,
-            sentTime: 0
+            sentTime: 0,
+            entities: []
         });
     }
 

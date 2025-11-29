@@ -209,21 +209,25 @@ export class DedicatedServer implements GameEngine {
             // Create baseline state
             // Only for entities with model or solid
             if (ent.modelindex > 0 || ent.solid !== Solid.Not) {
-                this.sv.baselines[ent.index] = {
-                    number: ent.index,
-                    origin: { ...ent.origin },
-                    angles: { ...ent.angles },
-                    modelIndex: ent.modelindex,
-                    frame: ent.frame,
-                    skinNum: ent.skin,
-                    effects: ent.effects,
-                    renderfx: ent.renderfx,
-                    solid: ent.solid,
-                    sound: ent.sounds, // Assuming ent.sounds maps to 'sound' field in EntityState
-                    event: 0
-                };
+                this.sv.baselines[ent.index] = this.entityToState(ent);
             }
         });
+    }
+
+    private entityToState(ent: Entity): EntityState {
+        return {
+            number: ent.index,
+            origin: { ...ent.origin },
+            angles: { ...ent.angles },
+            modelIndex: ent.modelindex,
+            frame: ent.frame,
+            skinNum: ent.skin,
+            effects: ent.effects,
+            renderfx: ent.renderfx,
+            solid: ent.solid,
+            sound: ent.sounds, // Assuming ent.sounds maps to 'sound' field in EntityState
+            event: 0
+        };
     }
 
     public stop() {
@@ -491,7 +495,15 @@ export class DedicatedServer implements GameEngine {
         const writer = new BinaryWriter(MTU);
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(this.sv.frame);
-        writer.writeLong(0); // Delta frame (0 = full update)
+
+        // Calculate delta frame
+        // If client.lastFrame is valid and recent, we use it for delta compression
+        let deltaFrame = 0;
+        if (client.lastFrame && client.lastFrame < this.sv.frame && client.lastFrame >= this.sv.frame - UPDATE_BACKUP) {
+            deltaFrame = client.lastFrame;
+        }
+
+        writer.writeLong(deltaFrame); // Delta frame
         writer.writeByte(0); // Suppress
         writer.writeByte(0); // Area bytes
 
@@ -528,8 +540,21 @@ export class DedicatedServer implements GameEngine {
         const entities = snapshot.packetEntities || [];
         const currentEntityIds: number[] = [];
 
+        // Store current frame entities in client history
+        const frameIdx = this.sv.frame % UPDATE_BACKUP;
+        const currentFrame = client.frames[frameIdx];
+        // FIX: entities is already EntityState[], so we don't need to convert them
+        currentFrame.entities = entities;
+
+        // Get old frame entities if delta compression is active
+        let oldEntities: EntityState[] = [];
+        if (deltaFrame > 0) {
+            const oldFrameIdx = deltaFrame % UPDATE_BACKUP;
+            oldEntities = client.frames[oldFrameIdx].entities;
+        }
+
         // 1. Write current frame entities
-        for (const entity of entities) {
+        for (const entityState of currentFrame.entities) {
             // Check for overflow before writing
             // A conservative estimate for a delta entity is ~32 bytes
             // We need to leave room for removals and footer (0 short)
@@ -538,15 +563,16 @@ export class DedicatedServer implements GameEngine {
                 break;
             }
 
-            currentEntityIds.push(entity.number);
-            // Write delta
-            // from = null (for now), to = entity, force = false, newEntity = true
-            // If newEntity is true, from is ignored anyway.
+            currentEntityIds.push(entityState.number);
 
-            // Note: In real delta compression, we'd look up old state from client.frames
-            // based on client.lastFrame.
+            // Try to find old entity state
+            const oldState = oldEntities.find(e => e.number === entityState.number);
 
-            writeDeltaEntity({} as EntityState, entity, writer, false, true);
+            if (oldState) {
+                 writeDeltaEntity(oldState, entityState, writer, false, false);
+            } else {
+                 writeDeltaEntity({} as EntityState, entityState, writer, false, true);
+            }
         }
 
         // 2. Identify and write removals
