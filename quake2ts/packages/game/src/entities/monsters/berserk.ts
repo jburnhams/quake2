@@ -38,6 +38,7 @@ import { rangeTo } from '../../ai/perception.js';
 
 const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
+const SPAWNFLAG_BERSERK_NOJUMPING = 16;
 
 const random = createRandomGenerator();
 
@@ -229,10 +230,6 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
     z: start.z + forward.z + aim.z
   };
 
-  // Correct logic: aim is relative offset?
-  // "constexpr vec3_t aim = { MELEE_DISTANCE, 0, -24 };"
-  // The implementation in m_berserk.cpp passes this to fire_hit.
-  // We'll assume simplified forward trace for now.
   const endTrace: Vec3 = {
       x: start.x + forward.x * MELEE_DISTANCE,
       y: start.y + forward.y * MELEE_DISTANCE,
@@ -317,6 +314,37 @@ berserk_move_attack_club = {
 
 // SLAM / JUMP ATTACK
 
+function T_SlamRadiusDamage(inflictor: Entity, attacker: Entity, damage: number, radius: number, kick: number, context: EntitySystem): void {
+  const entities = context.findByRadius(inflictor.origin, radius);
+
+  for (const ent of entities) {
+    if (ent === inflictor) continue;
+    if (!ent.takedamage) continue;
+
+    // Distance calculation
+    const dist = Math.sqrt(
+      Math.pow(ent.origin.x - inflictor.origin.x, 2) +
+      Math.pow(ent.origin.y - inflictor.origin.y, 2) +
+      Math.pow(ent.origin.z - inflictor.origin.z, 2)
+    );
+
+    const amount = Math.max(0, 1.0 - (dist / radius));
+    if (amount <= 0) continue;
+
+    const points = Math.max(1, damage * amount * amount);
+    const k = kick * amount * amount;
+
+    const dir = normalizeVec3(subtractVec3(ent.origin, inflictor.origin));
+
+    T_Damage(ent as any, inflictor as any, attacker as any, dir, ent.origin, dir, points, k, DamageFlags.RADIUS, DamageMod.UNKNOWN, context.timeSeconds, context.multicast.bind(context));
+
+    // Kick upwards
+    if (ent.client) {
+      ent.velocity = { ...ent.velocity, z: Math.max(270, ent.velocity.z) };
+    }
+  }
+}
+
 function berserk_attack_slam(self: Entity, context: EntitySystem): void {
   context.sound(self, 1, SOUNDS.thud, 1, 1, 0);
   context.sound(self, 2, SOUNDS.explod, 0.75, 1, 0);
@@ -336,42 +364,8 @@ function berserk_attack_slam(self: Entity, context: EntitySystem): void {
   self.gravity = 1.0;
   self.velocity = {x:0, y:0, z:0};
 
-  // Custom radius damage to knock entities up
-  const damage = 8;
-  const kick = 300;
-  const radius = 165;
-
-  // Find entities in radius
-  const entities = context.findByRadius(tr.endpos, radius * 2);
-  for (const ent of entities) {
-      if (ent === self) continue;
-      if (!ent.takedamage) continue;
-
-      // Closest point on bbox
-      // Simplified distance check
-      const dist = Math.sqrt(
-          Math.pow(ent.origin.x - tr.endpos.x, 2) +
-          Math.pow(ent.origin.y - tr.endpos.y, 2) +
-          Math.pow(ent.origin.z - tr.endpos.z, 2)
-      );
-
-      const amount = Math.max(0, 1.0 - (dist / radius));
-      if (amount <= 0) continue;
-
-      const points = Math.max(1, damage * amount * amount);
-      const k = kick * amount * amount;
-
-      const dir = normalizeVec3(subtractVec3(ent.origin, tr.endpos));
-
-      T_Damage(ent as any, self as any, self as any, dir, ent.origin, dir, points, k, DamageFlags.RADIUS, DamageMod.UNKNOWN, context.timeSeconds, context.multicast.bind(context));
-
-      if (ent.client) {
-          // ent.velocity.z = Math.max(270, ent.velocity.z);
-          const currentVel = { ...ent.velocity };
-          currentVel.z = Math.max(270, currentVel.z);
-          ent.velocity = currentVel;
-      }
-  }
+  // Use the new radius damage function
+  T_SlamRadiusDamage(self, self, 8, 165, 300, context);
 }
 
 function berserk_jump_touch(self: Entity, other: Entity | null, plane: any, surf: any, context: EntitySystem): void {
@@ -380,7 +374,11 @@ function berserk_jump_touch(self: Entity, other: Entity | null, plane: any, surf
     return;
   }
 
-  // Logic triggered via closure binding in jump_takeoff
+  // If we hit something while jumping, do slam damage immediately if appropriate
+  if (other && other.takedamage) {
+     self.touch = undefined;
+     berserk_attack_slam(self, context);
+  }
 }
 
 function berserk_high_gravity(self: Entity, context: EntitySystem): void {
@@ -496,6 +494,9 @@ function berserk_attack(self: Entity, context: EntitySystem): void {
   if ((self.monsterinfo.melee_debounce_time || 0) <= context.timeSeconds && dist < MELEE_DISTANCE) {
     berserk_melee(self, context);
   } else if (self.timestamp < context.timeSeconds && brandom() && dist > 150) {
+    // Check for NOJUMPING flag
+    if (self.spawnflags & SPAWNFLAG_BERSERK_NOJUMPING) return;
+
     M_SetAnimation(self, berserk_move_attack_strike);
     context.sound(self, 1, SOUNDS.jump, 1, 1, 0);
     self.timestamp = context.timeSeconds + 5.0;
