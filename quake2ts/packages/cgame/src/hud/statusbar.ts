@@ -1,7 +1,7 @@
 import { CGameImport } from '../types.js';
 import { Draw_Number } from './numbers.js';
 import { getHudLayout } from './layout.js';
-import { PlayerState, PlayerStat } from '@quake2ts/shared';
+import { PlayerState, PlayerStat, ConfigStringIndex } from '@quake2ts/shared';
 
 let colorblindMode = false;
 
@@ -35,16 +35,7 @@ export const Draw_StatusBar = (
 
     // Icon Indices (into ConfigStrings or predefined map)
     const armorIconIdx = ps.stats[PlayerStat.STAT_ARMOR_ICON] || 0;
-    const ammoIconIdx = ps.stats[PlayerStat.STAT_AMMO_ICON] || 0;
-    // const selectedIconIdx = ps.stats[PlayerStat.STAT_SELECTED_ICON] || 0;
-
-    // NOTE: In Q2, STAT_SELECTED_ICON is an index into CS_IMAGES (configstrings).
-    // We currently might lack the ConfigString system fully wired to resolve this index
-    // to a path like "pics/w_railgun.pcx".
-    //
-    // For now, if the server passes us `ps.pickupIcon` (a temporary Q2TS field) or
-    // we have a way to resolve it, we draw it.
-    // Original Q2 used: cgi.configstring(CS_IMAGES + ps.stats[STAT_SELECTED_ICON])
+    // const ammoIconIdx = ps.stats[PlayerStat.STAT_AMMO_ICON] || 0; // Unused in standard Q2 HUD?
 
     // Draw Health
     let healthColor: [number, number, number, number] | undefined = undefined;
@@ -65,15 +56,14 @@ export const Draw_StatusBar = (
     }
 
     // Draw Armor Icon
-    // Ideally: const iconName = cgi.get_configstring(CS_IMAGES + armorIconIdx);
-    // But we need to make sure we have that constant available.
-    // For now, if we can't resolve it, we skip.
-    // If the server hasn't sent configstrings yet, this will be skipped.
     if (armorIconIdx > 0) {
-         // TODO: Implement proper configstring lookup for icons
-         // const iconName = cgi.get_configstring(CS_IMAGES + armorIconIdx);
-         // const icon = cgi.Draw_RegisterPic(iconName);
-         // if (icon) cgi.SCR_DrawPic(layout.ARMOR_X - 24, layout.ARMOR_Y - 2, icon);
+         const iconName = cgi.get_configstring(ConfigStringIndex.Images + armorIconIdx);
+         if (iconName) {
+             const icon = cgi.Draw_RegisterPic(iconName);
+             if (icon) {
+                 cgi.SCR_DrawPic(layout.ARMOR_X - 24, layout.ARMOR_Y - 2, icon);
+             }
+         }
     }
 
     // Draw Weapon Icon
@@ -86,14 +76,16 @@ export const Draw_StatusBar = (
          }
     } else {
         // Standard Q2 path via STAT_SELECTED_ICON
-        /*
-        const selectedIconIdx = ps.stats[PlayerStat.STAT_SELECTED_ICON];
+        const selectedIconIdx = ps.stats[PlayerStat.STAT_SELECTED_ICON] || 0;
         if (selectedIconIdx > 0) {
-             // const iconName = cgi.get_configstring(CS_IMAGES + selectedIconIdx);
-             // const icon = cgi.Draw_RegisterPic(iconName);
-             // if (icon) cgi.SCR_DrawPic(layout.WEAPON_ICON_X, layout.WEAPON_ICON_Y, icon);
+             const iconName = cgi.get_configstring(ConfigStringIndex.Images + selectedIconIdx);
+             if (iconName) {
+                 const icon = cgi.Draw_RegisterPic(iconName);
+                 if (icon) {
+                     cgi.SCR_DrawPic(layout.WEAPON_ICON_X, layout.WEAPON_ICON_Y, icon);
+                 }
+             }
         }
-        */
     }
 
     // Draw Keys
