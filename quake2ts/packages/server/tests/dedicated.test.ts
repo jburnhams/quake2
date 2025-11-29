@@ -54,6 +54,9 @@ describe('DedicatedServer', () => {
           gunindex: 0
         }
       }),
+      entities: {
+          forEachEntity: vi.fn()
+      }
     } as unknown as GameExports;
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
@@ -86,7 +89,8 @@ describe('DedicatedServer', () => {
       edict: { id: 1, classname: 'player' },
       lastCmd: fakeCmd,
       net: { send: vi.fn() },
-      messageQueue: [] // Added messageQueue
+      messageQueue: [], // Added messageQueue
+      lastPacketEntities: [] // Added lastPacketEntities
     } as unknown as Client;
 
     // @ts-ignore - Access private property for testing
@@ -115,7 +119,8 @@ describe('DedicatedServer', () => {
       edict: { id: 1, classname: 'player' },
       lastCmd: {} as UserCommand,
       net: { send: vi.fn() },
-      messageQueue: [] // Added messageQueue
+      messageQueue: [], // Added messageQueue
+      lastPacketEntities: []
     } as unknown as Client;
 
     // @ts-ignore - Access private property for testing

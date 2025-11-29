@@ -27,7 +27,8 @@ vi.mock('@quake2ts/game', async (importOriginal) => {
             clientDisconnect: vi.fn(),
             clientThink: vi.fn(),
             entities: {
-                getByIndex: vi.fn()
+                getByIndex: vi.fn(),
+                forEachEntity: vi.fn()
             }
         })),
         createPlayerInventory: vi.fn(() => ({
@@ -95,7 +96,7 @@ describe('Integration: Config String & Stats Sync', () => {
 
         const clients = (server as any).svs.clients;
         // Find client with our mock driver
-        mockClient = clients.find((c: Client | null) => c && c.driver === mockDriver);
+        mockClient = clients.find((c: Client | null) => c && c.net === mockDriver);
 
         if (!mockClient) {
             // Fallback: if finding by driver fails (e.g. if mockImplementation behavior is different),
