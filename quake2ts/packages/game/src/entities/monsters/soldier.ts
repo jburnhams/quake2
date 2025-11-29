@@ -1,4 +1,4 @@
-import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { angleVectors, normalizeVec3, subtractVec3, Vec3, addVec3, scaleVec3, vectorToAngles } from '@quake2ts/shared';
 import {
   ai_charge,
   ai_move,
@@ -18,8 +18,9 @@ import {
 } from '../entity.js';
 import { SpawnContext } from '../spawn.js';
 import { SpawnRegistry } from '../spawn.js';
-import { monster_fire_bullet, monster_fire_blaster, monster_fire_shotgun } from './attack.js';
+import { monster_fire_bullet, monster_fire_blaster, monster_fire_shotgun, monster_fire_ionripper, monster_fire_blueblaster, monster_fire_dabeam } from './attack.js';
 import { throwGibs } from '../gibs.js';
+import { TempEntity } from '@quake2ts/shared';
 
 const MONSTER_TICK = 0.1;
 
@@ -74,8 +75,11 @@ function soldier_run(self: Entity): void {
 }
 
 function soldier_attack(self: Entity): void {
-  // Choose attack move based on spawnflags
+  // Choose attack move based on spawnflags or skin/count
   if (self.spawnflags & SOLDIER_MACHINEGUN) {
+    self.monsterinfo.current_move = attack_move_mg;
+  } else if (self.style === 1 && self.count >= 4) {
+    // Lasergun soldier uses machinegun frames (attack4)
     self.monsterinfo.current_move = attack_move_mg;
   } else {
     self.monsterinfo.current_move = attack_move;
@@ -101,12 +105,10 @@ function get_fire_start(self: Entity): Vec3 {
 
 function get_fire_dir(self: Entity, start: Vec3): Vec3 {
   if (!self.enemy) {
-    // Should not happen during attack usually, but fallback
     const { forward } = angleVectors(self.angles);
     return forward;
   }
 
-  // Aim at enemy eye level (or center) if possible, not feet
   const target = {
     x: self.enemy.origin.x,
     y: self.enemy.origin.y,
@@ -123,8 +125,6 @@ function soldier_fire_blaster(self: Entity, context: any): void {
   const damage = 5;
   const speed = 600;
 
-  // context.engine.sound?.(self, 0, 'soldier/solatck1.wav', 1, 1, 0); // Blaster sound usually on projectile spawn?
-
   monster_fire_blaster(self, start, forward, damage, speed, 0, 0, context, DamageMod.BLASTER);
 }
 
@@ -135,7 +135,6 @@ function soldier_fire_ssg(self: Entity, context: any): void {
   const damage = 2;
   const kick = 4;
   const count = 20;
-  // Spread: Approx 0.12-0.15 for shotgun at range
   const hspread = 0.15;
   const vspread = 0.15;
 
@@ -150,7 +149,6 @@ function soldier_fire_machinegun(self: Entity, context: any): void {
   const forward = get_fire_dir(self, start);
   const damage = 4;
   const kick = 4;
-  // Little spread
   const hspread = 0.05;
   const vspread = 0.05;
 
@@ -159,10 +157,94 @@ function soldier_fire_machinegun(self: Entity, context: any): void {
   monster_fire_bullet(self, start, forward, damage, kick, hspread, vspread, 0, context, DamageMod.MACHINEGUN);
 }
 
+// Xatrix Variants Logic
+
+function soldierh_laser_update(beam: Entity, context: any): void {
+  const self = beam.owner;
+  if (!self || !self.enemy) return;
+
+  const { forward, right, up } = angleVectors(self.angles);
+  let start = { ...self.origin };
+  // monster_flash_offset[flash_index] equivalent needed?
+  // C++ uses monster_flash_offset table. We approximate.
+  // Standard offset for soldier gun?
+  // x=16, y=0, z=viewheight?
+  start = addVec3(start, scaleVec3(forward, 16));
+  start.z += self.viewheight;
+
+  // Aim logic with some jitter
+  // PredictAim(self, self->enemy, start, 0, false, frandom(0.1f, 0.2f), &forward, NULL);
+  // Simplified: aim at enemy
+  const enemyCenter = { ...self.enemy.origin };
+  enemyCenter.z += (self.enemy.viewheight || 0);
+  const dir = normalizeVec3(subtractVec3(enemyCenter, start));
+
+  beam.origin = start;
+  beam.movedir = dir;
+  context.linkentity(beam);
+}
+
+function soldier_fire_ripper(self: Entity, context: any): void {
+    if (!self.enemy) return;
+    const start = get_fire_start(self);
+    const forward = get_fire_dir(self, start);
+
+    // Damage dropped from 15 to 5 in C++
+    const damage = 5;
+    const speed = 600;
+
+    monster_fire_ionripper(self, start, forward, damage, speed, 0, 0, context);
+}
+
+function soldier_fire_hypergun(self: Entity, context: any): void {
+    if (!self.enemy) return;
+    const start = get_fire_start(self);
+    const forward = get_fire_dir(self, start);
+
+    const damage = 1; // 1 damage? C++ says 1? Or 5?
+    // C++: monster_fire_blueblaster(self, start, aim, 1, 600, ...);
+    const speed = 600;
+
+    context.engine.sound?.(self, 0, 'weapons/hyprbl1a.wav', 1, 1, 0);
+    monster_fire_blueblaster(self, start, forward, damage, speed, 0, 0, context);
+}
+
+function soldier_fire_laser(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    // C++: soldierh_laserbeam(self, flash_index);
+    // Calls monster_fire_dabeam(self, 1, false, soldierh_laser_update);
+    // Damage = 1? Actually monster_fire_dabeam(self, 1, ...).
+
+    monster_fire_dabeam(self, 1, false, soldierh_laser_update, context);
+}
+
+function soldier_fire_xatrix(self: Entity, context: any): void {
+    // Dispatch based on count (derived from skin)
+    // count < 2: Ripper (Skin 6)
+    // count < 4: Hypergun (Skin 8)
+    // else: Laser (Skin 10)
+
+    if (self.count < 2) {
+        soldier_fire_ripper(self, context);
+    } else if (self.count < 4) {
+        soldier_fire_hypergun(self, context);
+    } else {
+        soldier_fire_laser(self, context);
+    }
+}
+
 function soldier_fire(self: Entity, context: any): void {
+  if (self.style === 1) {
+      soldier_fire_xatrix(self, context);
+      return;
+  }
+
   // Dispatch based on flags
   if (self.spawnflags & SOLDIER_SSG) {
     soldier_fire_ssg(self, context);
+  } else if (self.spawnflags & SOLDIER_MACHINEGUN) {
+    soldier_fire_machinegun(self, context);
   } else {
     // Default is Blaster (Light or normal)
     soldier_fire_blaster(self, context);
@@ -206,7 +288,7 @@ run_move = {
   endfunc: soldier_run,
 };
 
-// Attack 1 (Blaster/SSG) - Fire once at frame 5
+// Attack 1 (Blaster/SSG/Ripper/Hypergun) - Fire once at frame 5
 const attack_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
   ai: monster_ai_charge,
   dist: 0,
@@ -220,12 +302,15 @@ attack_move = {
   endfunc: soldier_run,
 };
 
-// Attack MG - Fire burst
+// Attack MG/Laser - Fire burst
 const attack_frames_mg: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
   ai: monster_ai_charge,
   dist: 0,
   // Fire on frames 4, 5, 6, 7, 8
-  think: (i >= 4 && i <= 8) ? soldier_fire_machinegun : null,
+  // Note: Laser soldier fires continuously?
+  // C++: soldierh_hyperripper8 called on frames 11, 13, 18?
+  // Actually laser soldier (machinegun equivalent) fires on frames 4-8.
+  think: (i >= 4 && i <= 8) ? soldier_fire : null,
 }));
 
 attack_move_mg = {
@@ -304,6 +389,10 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
       self.monsterinfo.current_move = pain_move;
     }
 
+    // Set skin for pain/damage indication if needed (e.g. bloody)
+    // C++ soldier_setskin sets bit 1 if health < max/2.
+    // self.skin |= 1;
+
     if (Math.random() < 0.5) {
         context.entities.sound?.(self, 0, 'soldier/pain1.wav', 1, 1, 0);
     } else {
@@ -353,8 +442,37 @@ export function SP_monster_soldier_ssg(self: Entity, context: SpawnContext): voi
   SP_monster_soldier(self, context);
 }
 
+// Xatrix Spawns
+
+function SP_monster_soldier_x(self: Entity, context: SpawnContext, skin: number, health: number): void {
+    SP_monster_soldier(self, context);
+    self.style = 1; // Mark as Xatrix variant
+    self.skin = skin;
+    self.count = skin - 6; // Set count for attack dispatch logic
+    self.health = health;
+    self.max_health = health;
+}
+
+export function SP_monster_soldier_ripper(self: Entity, context: SpawnContext): void {
+    SP_monster_soldier_x(self, context, 6, 50);
+    self.model = 'models/monsters/soldier/tris.md2'; // Ensure correct model
+}
+
+export function SP_monster_soldier_hypergun(self: Entity, context: SpawnContext): void {
+    SP_monster_soldier_x(self, context, 8, 60);
+    self.model = 'models/monsters/soldier/tris.md2';
+}
+
+export function SP_monster_soldier_lasergun(self: Entity, context: SpawnContext): void {
+    SP_monster_soldier_x(self, context, 10, 70);
+    self.model = 'models/monsters/soldier/tris.md2';
+}
+
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registry.register('monster_soldier', SP_monster_soldier);
   registry.register('monster_soldier_light', SP_monster_soldier_light);
   registry.register('monster_soldier_ssg', SP_monster_soldier_ssg);
+  registry.register('monster_soldier_ripper', SP_monster_soldier_ripper);
+  registry.register('monster_soldier_hypergun', SP_monster_soldier_hypergun);
+  registry.register('monster_soldier_lasergun', SP_monster_soldier_lasergun);
 }

@@ -7,7 +7,7 @@ import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID } from '@quake2ts/shared';
+import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID, vectorToAngles } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
 export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number, flashtype: number = 0) {
@@ -107,7 +107,19 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
 export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, mod: DamageMod) {
     const bolt = sys.spawn();
-    bolt.classname = mod === DamageMod.HYPERBLASTER ? 'hyperblaster_bolt' : 'blaster_bolt';
+    if (mod === DamageMod.HYPERBLASTER) {
+        bolt.classname = 'hyperblaster_bolt';
+    } else if (mod === DamageMod.BLUEBLASTER) {
+        bolt.classname = 'blueblaster_bolt';
+        bolt.modelindex = sys.modelIndex('models/objects/laser/tris.md2');
+        bolt.skin = 1;
+        // Effect for blue blaster (e.g. EF_BLUEHYPERBLASTER) should be set if available in engine effects
+        // Or renderfx?
+        // Using TempEntity.BLUEHYPERBLASTER for impact.
+    } else {
+        bolt.classname = 'blaster_bolt';
+    }
+
     bolt.owner = owner;
     bolt.origin = { ...start };
     bolt.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
@@ -141,7 +153,11 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
         } else {
             // Wall impact effect
             if (plane) {
-                sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLASTER, self.origin, plane.normal);
+                let impactEffect = TempEntity.BLASTER;
+                if (mod === DamageMod.BLUEBLASTER) {
+                    impactEffect = TempEntity.BLUEHYPERBLASTER;
+                }
+                sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, impactEffect, self.origin, plane.normal);
             }
         }
 
@@ -149,6 +165,78 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     };
 
     sys.finalizeSpawn(bolt);
+}
+
+export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+    const ion = sys.spawn();
+    ion.classname = 'ionripper';
+    ion.owner = owner;
+    ion.origin = { ...start };
+    ion.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    ion.movetype = MoveType.WallBounce;
+    ion.solid = Solid.BoundingBox;
+    ion.modelindex = sys.modelIndex('models/objects/boomrang/tris.md2');
+
+    // Set up collision box (same as rocket/blaster size usually?)
+    // C++ source doesn't explicitly set mins/maxs for ionripper in fire_ionripper snippet,
+    // but G_Spawn clears them. Defaults are often 0.
+    // However, for reliable physics, a small box is good.
+    ion.mins = { x: -2, y: -2, z: -2 };
+    ion.maxs = { x: 2, y: 2, z: 2 };
+
+    // Effects
+    // ion.effects |= EF_IONRIPPER? No such flag in standard Q2.
+    // Likely handled by model or renderfx.
+    // m_soldier.cpp uses EF_IONRIPPER. This might be a rogue/xatrix specific flag.
+    // We'll skip setting unknown flags and rely on model.
+
+    ion.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) {
+            return;
+        }
+
+        // C++: if (other->takedamage) T_Damage... G_FreeEdict...
+        if (other && other.takedamage) {
+             T_Damage(
+                other as any,
+                self as any,
+                self.owner as any,
+                self.velocity,
+                self.origin,
+                plane ? plane.normal : ZERO_VEC3,
+                damage,
+                1,
+                DamageFlags.ENERGY,
+                DamageMod.RIPPER,
+                sys.timeSeconds,
+                sys.multicast.bind(sys)
+            );
+            sys.free(self);
+            return;
+        }
+
+        // Hit wall/sky?
+        // C++: if (tr.surface && (tr.surface->flags & SURF_SKY)) G_FreeEdict...
+        // We don't have surface flags easily accessible in touch yet, but physics might handle sky.
+        // For now, if it hits a wall, WallBounce physics will reflect it.
+
+        // Play bounce sound? C++ doesn't show explicit bounce sound in touch,
+        // but it might play on impact if handled by engine or configured.
+        // We can add a sound here if needed.
+    };
+
+    ion.think = (self: Entity) => {
+        // C++: ionripper_sparks (TE_WELDING_SPARKS)
+        sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.WELDING_SPARKS, self.origin, ZERO_VEC3, 0xe4); // 0xe4 is typical color byte?
+        sys.free(self);
+    };
+
+    sys.scheduleThink(ion, sys.timeSeconds + 3.0); // 3 seconds lifetime
+    sys.finalizeSpawn(ion);
+}
+
+export function createBlueBlaster(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+    createBlasterBolt(sys, owner, start, dir, damage, speed, DamageMod.BLUEBLASTER);
 }
 
 /**

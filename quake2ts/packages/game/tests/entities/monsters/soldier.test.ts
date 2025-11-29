@@ -4,13 +4,23 @@ import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameEngine } from '../../../src/index.js';
-import { monster_fire_bullet, monster_fire_blaster, monster_fire_shotgun } from '../../../src/entities/monsters/attack.js';
+import {
+    monster_fire_bullet,
+    monster_fire_blaster,
+    monster_fire_shotgun,
+    monster_fire_ionripper,
+    monster_fire_blueblaster,
+    monster_fire_dabeam
+} from '../../../src/entities/monsters/attack.js';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
   monster_fire_bullet: vi.fn(),
   monster_fire_blaster: vi.fn(),
   monster_fire_shotgun: vi.fn(),
+  monster_fire_ionripper: vi.fn(),
+  monster_fire_blueblaster: vi.fn(),
+  monster_fire_dabeam: vi.fn(),
 }));
 
 describe('monster_soldier', () => {
@@ -18,9 +28,14 @@ describe('monster_soldier', () => {
   let context: SpawnContext;
   let soldier: Entity;
 
-  console.log('Soldier Module Exports:', Object.keys(soldierModule));
-
-  const { SP_monster_soldier, SP_monster_soldier_light, SP_monster_soldier_ssg } = soldierModule;
+  const {
+      SP_monster_soldier,
+      SP_monster_soldier_light,
+      SP_monster_soldier_ssg,
+      SP_monster_soldier_ripper,
+      SP_monster_soldier_hypergun,
+      SP_monster_soldier_lasergun
+  } = soldierModule;
 
   beforeEach(() => {
     // Basic mock of EntitySystem and SpawnContext
@@ -37,6 +52,7 @@ describe('monster_soldier', () => {
         multicast: vi.fn(),
         engine: engineMock,
         sound: soundMock,
+        linkentity: vi.fn(),
     } as unknown as EntitySystem;
 
     context = {
@@ -79,6 +95,32 @@ describe('monster_soldier', () => {
     SP_monster_soldier(soldier, context);
     expect(soldier.skin).toBe(4);
     expect(soldier.health).toBe(30);
+  });
+
+  // New Variant Tests
+
+  it('SP_monster_soldier_ripper sets correct properties', () => {
+    SP_monster_soldier_ripper(soldier, context);
+    expect(soldier.style).toBe(1);
+    expect(soldier.skin).toBe(6);
+    expect(soldier.count).toBe(0); // 6 - 6
+    expect(soldier.health).toBe(50);
+  });
+
+  it('SP_monster_soldier_hypergun sets correct properties', () => {
+    SP_monster_soldier_hypergun(soldier, context);
+    expect(soldier.style).toBe(1);
+    expect(soldier.skin).toBe(8);
+    expect(soldier.count).toBe(2); // 8 - 6
+    expect(soldier.health).toBe(60);
+  });
+
+  it('SP_monster_soldier_lasergun sets correct properties', () => {
+    SP_monster_soldier_lasergun(soldier, context);
+    expect(soldier.style).toBe(1);
+    expect(soldier.skin).toBe(10);
+    expect(soldier.count).toBe(4); // 10 - 6
+    expect(soldier.health).toBe(70);
   });
 
   it('attack initiates correctly', () => {
@@ -155,5 +197,54 @@ describe('monster_soldier', () => {
         fireFrame.think(soldier, sys);
     }
     expect(monster_fire_bullet).toHaveBeenCalled();
+  });
+
+  it('soldier ripper fires ionripper', () => {
+    SP_monster_soldier_ripper(soldier, context);
+    soldier.enemy = new Entity(2);
+    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+
+    soldier.monsterinfo.attack!(soldier, context as any);
+    const attackMove = soldier.monsterinfo.current_move;
+
+    // Frame 5
+    const fireFrame = attackMove!.frames[5];
+    if (fireFrame.think) {
+        fireFrame.think(soldier, sys);
+    }
+    expect(monster_fire_ionripper).toHaveBeenCalled();
+  });
+
+  it('soldier hypergun fires blue blaster', () => {
+    SP_monster_soldier_hypergun(soldier, context);
+    soldier.enemy = new Entity(2);
+    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+
+    soldier.monsterinfo.attack!(soldier, context as any);
+    const attackMove = soldier.monsterinfo.current_move;
+
+    // Frame 5
+    const fireFrame = attackMove!.frames[5];
+    if (fireFrame.think) {
+        fireFrame.think(soldier, sys);
+    }
+    expect(monster_fire_blueblaster).toHaveBeenCalled();
+  });
+
+  it('soldier lasergun fires beam', () => {
+    SP_monster_soldier_lasergun(soldier, context);
+    soldier.enemy = new Entity(2);
+    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+
+    // Should use machinegun/burst frames (attack_move_mg)
+    soldier.monsterinfo.attack!(soldier, context as any);
+    const attackMove = soldier.monsterinfo.current_move;
+
+    // Check it uses the burst frames (frame 4)
+    const fireFrame = attackMove!.frames[4];
+    if (fireFrame.think) {
+        fireFrame.think(soldier, sys);
+    }
+    expect(monster_fire_dabeam).toHaveBeenCalled();
   });
 });

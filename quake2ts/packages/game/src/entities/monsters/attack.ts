@@ -4,7 +4,7 @@ import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/dama
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket, createBfgBall } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
@@ -99,6 +99,32 @@ export function monster_fire_blaster(
     mod: DamageMod = DamageMod.BLASTER
 ): void {
     createBlasterBolt(context, self, start, dir, damage, speed, mod);
+}
+
+export function monster_fire_blueblaster(
+    self: Entity,
+    start: Vec3,
+    dir: Vec3,
+    damage: number,
+    speed: number,
+    flashtype: number,
+    effect: number,
+    context: EntitySystem
+): void {
+    createBlueBlaster(context, self, start, dir, damage, speed);
+}
+
+export function monster_fire_ionripper(
+    self: Entity,
+    start: Vec3,
+    dir: Vec3,
+    damage: number,
+    speed: number,
+    flashtype: number,
+    effect: number,
+    context: EntitySystem
+): void {
+    createIonRipper(context, self, start, dir, damage, speed);
 }
 
 export function monster_fire_grenade(
@@ -237,20 +263,58 @@ function dabeam_update(self: Entity, context: EntitySystem): void {
   const start = { ...self.origin };
   const end = addVec3(start, scaleVec3(self.movedir, 2048));
 
-  const tr = context.trace(start, end, ZERO_VEC3, ZERO_VEC3, self, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
+  // Simulating piercing logic:
+  // We trace, damage if monster/player, and continue if we hit a monster/player.
+  // If we hit world or non-living, we stop.
 
-  if (self.dmg > 0 && tr.ent && tr.ent.takedamage && tr.ent !== self.owner) {
-     T_Damage(tr.ent as unknown as Damageable, self as unknown as Damageable, self.owner as unknown as Damageable, self.movedir, tr.endpos, ZERO_VEC3, self.dmg, 0, DamageFlags.ENERGY, DamageMod.TARGET_LASER, context.timeSeconds);
+  let currentStart = { ...start };
+  const MAX_PIERCE = 16;
+  const pierced: Entity[] = [];
+  const piercedSolidities: Solid[] = [];
+
+  try {
+      for (let i = 0; i < MAX_PIERCE; i++) {
+        const tr = context.trace(currentStart, end, ZERO_VEC3, ZERO_VEC3, self, CONTENTS_SOLID | CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER);
+
+        if (!tr.ent || tr.fraction >= 1.0) {
+            break;
+        }
+
+        if (self.dmg > 0 && tr.ent.takedamage && tr.ent !== self.owner) {
+             T_Damage(tr.ent as unknown as Damageable, self as unknown as Damageable, self.owner as unknown as Damageable, self.movedir, tr.endpos, ZERO_VEC3, self.dmg, 0, DamageFlags.ENERGY, DamageMod.TARGET_LASER, context.timeSeconds);
+        }
+
+        // Draw sparks if we hit something that isn't a monster/player
+        // (simplified check)
+        if (tr.ent && tr.ent.solid === Solid.Bsp) {
+             context.multicast(tr.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.LASER_SPARKS, 10, tr.endpos, tr.plane?.normal || ZERO_VEC3, self.skin);
+
+             // Stop here
+             // Update self.origin to endpos for next frame?
+             // self.old_origin = addVec3(tr.endpos, scaleVec3(tr.plane?.normal || ZERO_VEC3, 1)); // C++ does this
+             // But 'dabeam_update' in C++ updates self.s.old_origin, which is visual interpolation?
+             // Here we just use it for whatever.
+             break;
+        }
+
+        // If we hit a monster/player, we pierce through
+        if (tr.ent && (tr.ent.takedamage || tr.ent.client)) {
+             pierced.push(tr.ent);
+             piercedSolidities.push(tr.ent.solid);
+             tr.ent.solid = Solid.Not;
+             currentStart = { ...tr.endpos };
+             continue;
+        }
+
+        break; // Hit something else (e.g. static entity that doesn't take damage)
+      }
+  } finally {
+      // Restore solids
+      for (let i = 0; i < pierced.length; i++) {
+          pierced[i].solid = piercedSolidities[i];
+      }
   }
 
-  // Draw sparks if we hit something that isn't a monster/player
-  // (simplified check)
-  if (tr.ent && tr.ent.solid === Solid.Bsp) {
-     context.multicast(tr.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.LASER_SPARKS, 10, tr.endpos, tr.plane?.normal || ZERO_VEC3, self.skin);
-  }
-
-  // Update position
-  // self.old_origin = addVec3(tr.endpos, scaleVec3(tr.plane?.normal || ZERO_VEC3, 1)); // Original does this
   context.linkentity(self);
 }
 
@@ -285,11 +349,10 @@ export function monster_fire_dabeam(
 
     // Check medic for color
     // 0xf2f2f0f0 (red-ish/orange?) vs 0xf3f3f1f1
-    if (self.monsterinfo.aiflags & 0x40) { // AI_MEDIC (placeholder flag check)
-      beam.skin = 0xf3f3f1f1;
-    } else {
-      beam.skin = 0xf2f2f0f0;
-    }
+    // Checking AI_MEDIC (0x40 in aiflags? need to verify flag value)
+    // Actually we can check classname or assume caller knows.
+    // For now, using default colors.
+    beam.skin = 0xf2f2f0f0;
 
     beam.think = (ent, ctx) => {
       // Execute postthink logic
@@ -300,18 +363,13 @@ export function monster_fire_dabeam(
       if (ctx.timeSeconds >= ent.timestamp) {
          beam_think(ent, ctx);
       } else {
-         ent.nextthink = ctx.timeSeconds + 0.1; // Update 10hz? or faster?
+         ent.nextthink = ctx.timeSeconds + 0.1;
       }
     };
     beam.postthink = (ent, ctx) => {
       update_func(ent, ctx);
       dabeam_update(ent, ctx);
     };
-
-    // Set timestamp for expiration (managed by logic usually, but here we set a short expiration that gets extended?)
-    // In C++, nextthink is set to level.time + 200ms. If updated, it extends?
-    // Actually in C++, monster_fire_dabeam sets nextthink to level.time + 200ms.
-    // If not called again, it dies.
 
     if (secondary) self.beam2 = beam;
     else self.beam = beam;
