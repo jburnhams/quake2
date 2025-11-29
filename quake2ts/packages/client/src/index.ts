@@ -215,11 +215,17 @@ export function createClient(imports: ClientImports): ClientExports {
   let pauseMenuFactory: PauseMenuFactory | undefined;
   let optionsFactory: OptionsMenuFactory | undefined;
 
-  // Hook up message system to demo handler
-  demoHandler.onCenterPrint = (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
-  demoHandler.onPrint = (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0); // Approx time
-
   const configStrings = new ClientConfigStrings();
+
+  // Hook up message system to demo handler
+  demoHandler.setCallbacks({
+    onCenterPrint: (msg: string) => messageSystem.addCenterPrint(msg, demoHandler.latestFrame?.serverFrame ?? 0),
+    onPrint: (level: number, msg: string) => messageSystem.addNotify(msg, demoHandler.latestFrame?.serverFrame ?? 0),
+    onConfigString: (index: number, str: string) => {
+      configStrings.set(index, str);
+      cg.ParseConfigString(index, str);
+    }
+  });
 
   demoPlayback.setHandler(demoHandler);
 
