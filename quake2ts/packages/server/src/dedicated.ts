@@ -269,7 +269,8 @@ export class DedicatedServer implements GameEngine {
     private handleConnect(client: Client, userInfo: string) {
         if (!this.game) return;
 
-        const result = this.game.clientConnect(userInfo);
+        // client.edict is likely null here, but we pass it to match Q2 signature
+        const result = this.game.clientConnect(client.edict || null, userInfo);
         if (result === true) {
             client.state = ClientState.Connected;
             client.userInfo = userInfo;
@@ -335,7 +336,12 @@ export class DedicatedServer implements GameEngine {
        }
 
        // Send baselines
-       // TODO: Implement baseline sending (svc_spawnbaseline)
+       for (let i = 0; i < MAX_EDICTS; i++) {
+           if (this.sv.baselines[i]) {
+               writer.writeByte(ServerCommand.spawnbaseline);
+               writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, writer, true, true);
+           }
+       }
 
        client.net.send(writer.getData());
     }
