@@ -239,6 +239,9 @@ export class DedicatedServer implements GameEngine {
 
     private onClientDisconnect(client: Client) {
         console.log(`Client ${client.index} disconnected`);
+        if (client.edict && this.game) {
+            this.game.clientDisconnect(client.edict);
+        }
         this.svs.clients[client.index] = null;
         if (this.entityIndex && client.edict) {
             this.entityIndex.unlink(client.edict.index);
@@ -248,10 +251,6 @@ export class DedicatedServer implements GameEngine {
     private handleMove(client: Client, cmd: UserCommand) {
         client.lastCmd = cmd;
         client.lastMessage = this.sv.frame;
-        // If client is not spawned, maybe spawn them?
-        if (client.state === ClientState.Connected) {
-             this.spawnClient(client);
-        }
     }
 
     private handleUserInfo(client: Client, info: string) {
@@ -259,7 +258,44 @@ export class DedicatedServer implements GameEngine {
     }
 
     private handleStringCmd(client: Client, cmd: string) {
-        // Handle console commands
+        if (cmd.startsWith('connect ')) {
+            const userInfo = cmd.substring(8); // "connect ".length
+            this.handleConnect(client, userInfo);
+        } else if (cmd === 'begin') {
+            this.handleBegin(client);
+        }
+    }
+
+    private handleConnect(client: Client, userInfo: string) {
+        if (!this.game) return;
+
+        const result = this.game.clientConnect(userInfo);
+        if (result === true) {
+            client.state = ClientState.Connected;
+            client.userInfo = userInfo;
+            console.log(`Client ${client.index} connected: ${userInfo}`);
+            this.sendServerData(client);
+            // Q2 sends "precache\n" via stufftext here
+            const writer = new BinaryWriter();
+            writer.writeByte(ServerCommand.stufftext);
+            writer.writeString("precache\n");
+            client.net.send(writer.getData());
+        } else {
+            console.log(`Client ${client.index} rejected: ${result}`);
+            // Send rejection message?
+            const writer = new BinaryWriter();
+            writer.writeByte(ServerCommand.print);
+            writer.writeByte(2); // PRINT_HIGH
+            writer.writeString(`Connection rejected: ${result}\n`);
+            client.net.send(writer.getData());
+            // TODO: Disconnect client after delay?
+        }
+    }
+
+    private handleBegin(client: Client) {
+        if (client.state === ClientState.Connected) {
+            this.spawnClient(client);
+        }
     }
 
     private spawnClient(client: Client) {
@@ -275,8 +311,9 @@ export class DedicatedServer implements GameEngine {
         client.edict = ent;
         client.state = ClientState.Active;
 
-        // Send baseline/gamestate
-        this.sendServerData(client);
+        // In Q2, we don't resend serverdata on begin, but we might ensure client knows it's active.
+        // The game logic will now include this entity in snapshots.
+        console.log(`Client ${client.index} entered game`);
     }
 
     private sendServerData(client: Client) {
@@ -296,6 +333,9 @@ export class DedicatedServer implements GameEngine {
                this.SV_WriteConfigString(writer, i, this.sv.configStrings[i]);
            }
        }
+
+       // Send baselines
+       // TODO: Implement baseline sending (svc_spawnbaseline)
 
        client.net.send(writer.getData());
     }

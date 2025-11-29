@@ -90,7 +90,9 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   configstring(index: number, value: string): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
+  clientConnect(userInfo: string): string | true;
   clientBegin(client: PlayerClient): Entity;
+  clientDisconnect(ent: Entity): void;
   clientThink(ent: Entity, cmd: UserCommand): void;
 }
 
@@ -383,6 +385,10 @@ export function createGame(
            this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates(), buttons: 0 });
       }
     },
+    clientConnect(userInfo: string): string | true {
+        // Basic check
+        return true;
+    },
     clientBegin(client: PlayerClient): Entity {
        const playerStart = findPlayerStart(entities);
        const player = entities.spawn();
@@ -412,6 +418,12 @@ export function createGame(
        origin = { ...player.origin };
 
        return player;
+    },
+    clientDisconnect(ent: Entity): void {
+        if (ent && ent.inUse) {
+            // Free entity
+            entities.free(ent);
+        }
     },
     clientThink(ent: Entity, cmd: UserCommand) {
         runPlayerMove(ent, cmd);
