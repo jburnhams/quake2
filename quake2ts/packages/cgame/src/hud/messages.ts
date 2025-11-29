@@ -1,4 +1,4 @@
-import { Renderer } from '@quake2ts/engine';
+import type { CGameImport } from '../types.js';
 import { getHudLayout } from './layout.js';
 
 interface Message {
@@ -64,7 +64,7 @@ export class MessageSystem {
     this.centerPrintMsg = null;
   }
 
-  drawCenterPrint(renderer: Renderer, now: number, layout: ReturnType<typeof getHudLayout>) {
+  drawCenterPrint(cgi: CGameImport, now: number, layout: ReturnType<typeof getHudLayout>) {
     if (!this.centerPrintMsg) return;
 
     if (now > this.centerPrintMsg.startTime + this.centerPrintMsg.duration) {
@@ -73,14 +73,12 @@ export class MessageSystem {
     }
 
     // Draw centered text
-    const width = this.centerPrintMsg.text.length * 8;
-    // We ignore layout.CENTER_PRINT_X because drawCenterString calculates X automatically
     const y = layout.CENTER_PRINT_Y;
 
-    renderer.drawCenterString(y, this.centerPrintMsg.text);
+    cgi.SCR_DrawCenterString(y, this.centerPrintMsg.text);
   }
 
-  drawNotifications(renderer: Renderer, now: number) {
+  drawNotifications(cgi: CGameImport, now: number) {
     // Remove expired messages
     while (this.notifyMessages.length > 0 && now > this.notifyMessages[0].startTime + this.notifyMessages[0].duration) {
       this.notifyMessages.shift();
@@ -88,8 +86,8 @@ export class MessageSystem {
 
     let y = 10; // Start near top-left
     for (const msg of this.notifyMessages) {
-      renderer.drawString(10, y, msg.text);
-      y += 10; // Line height
+      cgi.SCR_DrawFontString(10, y, msg.text); // Use SCR_DrawFontString instead of drawString
+      y += 10; // Line height - TODO: use cgi.SCR_FontLineHeight()
     }
   }
 }
