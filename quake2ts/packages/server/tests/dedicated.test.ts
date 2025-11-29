@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState, Client } from '../src/client';
-import { UserCommand } from '@quake2ts/shared';
+import { UserCommand, UPDATE_BACKUP } from '@quake2ts/shared';
 
 // Mock dependencies
 vi.mock('ws');
@@ -21,6 +21,34 @@ vi.mock('@quake2ts/game', () => ({
 }));
 
 const FRAME_TIME_MS = 100; // 10Hz
+
+// Helper to create a proper mock client with frames structure
+const createMockClient = (index: number): Client => {
+  const frames = [];
+  for (let i = 0; i < UPDATE_BACKUP; i++) {
+    frames.push({
+      areaBytes: 0,
+      areaBits: new Uint8Array(0),
+      playerState: {},
+      numEntities: 0,
+      firstEntity: 0,
+      sentTime: 0,
+      entities: []
+    });
+  }
+
+  return {
+    index,
+    state: ClientState.Active,
+    edict: { id: 1, classname: 'player' },
+    lastCmd: { msec: 0, angles: {x: 0, y: 0, z: 0}, buttons: 0, forwardmove: 0, sidemove: 0, upmove: 0 },
+    net: { send: vi.fn() },
+    messageQueue: [],
+    lastPacketEntities: [],
+    frames: frames,
+    lastFrame: 0
+  } as unknown as Client;
+};
 
 describe('DedicatedServer', () => {
   let server: DedicatedServer;
@@ -85,16 +113,8 @@ describe('DedicatedServer', () => {
   });
 
   it('should run the main game loop and process client commands', () => {
-    const fakeCmd: UserCommand = { msec: 100, angles: {x: 0, y: 90, z: 0}, buttons: 1, forwardmove: 200, sidemove: 0, upmove: 0 };
-    const fakeClient: Client = {
-      index: 0,
-      state: ClientState.Active,
-      edict: { id: 1, classname: 'player' },
-      lastCmd: fakeCmd,
-      net: { send: vi.fn() },
-      messageQueue: [],
-      lastPacketEntities: []
-    } as unknown as Client;
+    const fakeClient = createMockClient(0);
+    fakeClient.lastCmd = { msec: 100, angles: {x: 0, y: 90, z: 0}, buttons: 1, forwardmove: 200, sidemove: 0, upmove: 0 };
 
     // @ts-ignore - Access private property for testing
     server.svs.clients[0] = fakeClient;
@@ -121,15 +141,8 @@ describe('DedicatedServer', () => {
   });
 
   it('should not process commands for clients that are not active', () => {
-    const fakeClient: Client = {
-      index: 0,
-      state: ClientState.Connected, // Not Active
-      edict: { id: 1, classname: 'player' },
-      lastCmd: {} as UserCommand,
-      net: { send: vi.fn() },
-      messageQueue: [],
-      lastPacketEntities: []
-    } as unknown as Client;
+    const fakeClient = createMockClient(0);
+    fakeClient.state = ClientState.Connected; // Not Active
 
     // @ts-ignore - Access private property for testing
     server.svs.clients[0] = fakeClient;
