@@ -88,7 +88,8 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
 - [x] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
 - [x] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
-- [ ] **Overflow Handling**: Handle MTU limits.
+- [x] **Overflow Handling**: Handle MTU limits.
+  - Implemented check in `SV_SendClientFrame` to stop writing entities/removals if 1400 byte limit is reached.
 
 #### 2.5 Game Module Interface (`game_export_t`)
 - [x] **Game Stats**: `ps.stats` population implemented in `packages/game/src/entities/playerStats.ts`.
@@ -141,9 +142,9 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s.
 - [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
 - [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
+- [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
 
 ## Next Steps
 1.  **Full Networking**:
     - Continue testing and refining the dedicated server implementation.
     - Verify entity interpolation and delta compression in a real networked scenario.
-    - Implement MTU overflow handling.

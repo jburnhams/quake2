@@ -485,7 +485,10 @@ export class DedicatedServer implements GameEngine {
     }
 
     private SV_SendClientFrame(client: Client, snapshot: GameStateSnapshot) {
-        const writer = new BinaryWriter();
+        // Use a buffer starting at 1400 bytes.
+        // We manually enforce MTU by checking writer.getOffset() before adding entities.
+        const MTU = 1400;
+        const writer = new BinaryWriter(MTU);
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(this.sv.frame);
         writer.writeLong(0); // Delta frame (0 = full update)
@@ -527,6 +530,14 @@ export class DedicatedServer implements GameEngine {
 
         // 1. Write current frame entities
         for (const entity of entities) {
+            // Check for overflow before writing
+            // A conservative estimate for a delta entity is ~32 bytes
+            // We need to leave room for removals and footer (0 short)
+            if (writer.getOffset() > MTU - 200) {
+                console.warn('Packet MTU limit reached, dropping remaining entities');
+                break;
+            }
+
             currentEntityIds.push(entity.number);
             // Write delta
             // from = null (for now), to = entity, force = false, newEntity = true
@@ -541,6 +552,12 @@ export class DedicatedServer implements GameEngine {
         // 2. Identify and write removals
         // Check entities that were in last packet but are NOT in this packet
         for (const oldId of client.lastPacketEntities) {
+            // Check for overflow
+            if (writer.getOffset() > MTU - 10) {
+                console.warn('Packet MTU limit reached, dropping remaining removals');
+                break;
+            }
+
             if (!currentEntityIds.includes(oldId)) {
                 writeRemoveEntity(oldId, writer);
             }
