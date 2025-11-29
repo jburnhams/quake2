@@ -3,13 +3,14 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity } from './protocol/entity.js';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
+import { writeServerCommand } from './protocol/write.js';
 
 const MAX_CLIENTS = 16;
 const FRAME_RATE = 10; // 10Hz dedicated server loop (Q2 standard)
@@ -510,14 +511,56 @@ export class DedicatedServer implements GameEngine {
     }
 
     multicast(origin: any, type: MulticastType, event: ServerCommand, ...args: any[]): void {
-        // Send to relevant clients
+        const writer = new BinaryWriter();
+
+        // Write the command
+        writeServerCommand(writer, event, ...args);
+
+        const data = writer.getData();
+        const reliable = event === ServerCommand.print || event === ServerCommand.configstring; // Basic heuristic
+
+        for (const client of this.svs.clients) {
+            if (!client || client.state < ClientState.Active || !client.edict) {
+                continue;
+            }
+
+            // Filter based on MulticastType
+            let send = false;
+            switch (type) {
+                case MulticastType.All:
+                    send = true;
+                    break;
+                case MulticastType.Pvs:
+                    if (this.sv.collisionModel) {
+                        send = inPVS(origin, client.edict.origin, this.sv.collisionModel);
+                    } else {
+                        send = true; // Fallback
+                    }
+                    break;
+                case MulticastType.Phs:
+                    if (this.sv.collisionModel) {
+                        send = inPHS(origin, client.edict.origin, this.sv.collisionModel);
+                    } else {
+                        send = true; // Fallback
+                    }
+                    break;
+            }
+
+            if (send) {
+                // TODO: Differentiate between reliable and unreliable stream
+                // For now, simple send
+                client.net.send(data);
+            }
+        }
     }
 
     unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
         // Find client for ent
         const client = this.svs.clients.find(c => c?.edict === ent);
-        if (client) {
-             // Send
+        if (client && client.state >= ClientState.Connected) {
+            const writer = new BinaryWriter();
+            writeServerCommand(writer, event, ...args);
+            client.net.send(writer.getData());
         }
     }
 
