@@ -68,6 +68,8 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
      - Call `SV_WriteFrameToClient()` (uses `writeDeltaEntity`).
      - Send via `client.netchan.Transmit()`.
   4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early.
+     - [x] Implemented drift-correcting loop in `DedicatedServer.runFrame`.
+     - [x] Verified with integration tests in `tests/dedicated.test.ts`.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.
@@ -138,6 +140,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
 - [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s.
 - [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
+- [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
 
 ## Next Steps
 1.  **Full Networking**:

@@ -21,7 +21,7 @@ export class DedicatedServer implements GameEngine {
     private svs: ServerStatic;
     private sv: Server;
     private game: GameExports | null = null;
-    private frameInterval: NodeJS.Timeout | null = null;
+    private frameTimeout: NodeJS.Timeout | null = null;
     private entityIndex: CollisionEntityIndex | null = null;
 
     constructor(private port: number = 27910) {
@@ -197,7 +197,7 @@ export class DedicatedServer implements GameEngine {
         this.sv.state = ServerState.Game;
 
         // 4. Start Loop
-        this.frameInterval = setInterval(() => this.runFrame(), FRAME_TIME_MS);
+        this.runFrame();
         console.log('Server started.');
     }
 
@@ -227,7 +227,7 @@ export class DedicatedServer implements GameEngine {
     }
 
     public stop() {
-        if (this.frameInterval) clearInterval(this.frameInterval);
+        if (this.frameTimeout) clearTimeout(this.frameTimeout);
         if (this.wss) this.wss.close();
         this.game?.shutdown();
         this.sv.state = ServerState.Dead;
@@ -434,6 +434,9 @@ export class DedicatedServer implements GameEngine {
 
     private runFrame() {
         if (!this.game) return;
+
+        const startTime = Date.now();
+
         this.sv.frame++;
         this.sv.time += 100; // 100ms per frame
 
@@ -458,6 +461,16 @@ export class DedicatedServer implements GameEngine {
         // 4. Send Updates
         if (snapshot && snapshot.state) {
             this.SV_SendClientMessages(snapshot.state);
+        }
+
+        // Calculate sleep time
+        const endTime = Date.now();
+        const elapsed = endTime - startTime;
+        const sleepTime = Math.max(0, FRAME_TIME_MS - elapsed);
+
+        // Schedule next frame
+        if (this.sv.state === ServerState.Game) {
+            this.frameTimeout = setTimeout(() => this.runFrame(), sleepTime);
         }
     }
 
