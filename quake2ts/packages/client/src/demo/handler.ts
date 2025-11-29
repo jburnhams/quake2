@@ -178,7 +178,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onStuffText(msg: string): void {
-        // Should be handled by command buffer
+        if (this.imports?.engine.cmd) {
+            this.imports.engine.cmd.executeText(msg);
+        }
     }
 
     onPrint(level: number, msg: string): void {

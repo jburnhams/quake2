@@ -116,24 +116,29 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - [x] **Config String Parsing**: Implement `ParseConfigString(i, s)` in `cgame`.
   - [x] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
   - [x] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
+  - [x] **StuffText**: Implement `svc_stufftext` handling in Client (redirects to console commands).
 
 ### Phase 4: Integration & Testing
 
 #### 4.1 Localhost Server-Client Test
-- [ ] **Config String Sync**: Verify server sends strings, client receives and updates registries.
-- [ ] **Icon Sync**: Verify `STAT_*_ICON` works (requires correct config strings).
+- [x] **Config String Sync**: Verify server sends strings, client receives and updates registries.
+  - Verified by `packages/server/tests/integration/configstring_sync.test.ts`.
+- [x] **Icon Sync**: Verify `STAT_*_ICON` works (requires correct config strings).
+  - Verified by `packages/server/tests/integration/configstring_sync.test.ts`.
 
 ## Progress Update
 - [x] **HUD Migration Complete**: `packages/cgame` is fully populated and builds. Client-CGame bridge is wired.
 - [x] **Server Stats**: `packages/game` populates `PlayerState.stats` with health, armor, ammo, and active powerups.
 - [x] **Protocol**: `MSG_WriteDeltaEntity` implemented and used by server.
 - [x] **Server Config Strings**: Implemented `configstring` in `GameImports` and `DedicatedServer`. Server now broadcasts config string updates and sends full list on client connect.
-- [x] **Client Parsing**: Implemented `ParseConfigString`, `ParseCenterPrint`, and `NotifyMessage` in CGame. Wired up via `ClientExports`.
+- [x] **Client Parsing**: Implemented `ParseConfigString`, `ParseCenterPrint`, `NotifyMessage`, and `svc_stufftext` handling. Wired up via `ClientExports`.
 - [x] **HUD Rendering**: Client now delegates main HUD rendering to `cg.DrawHUD`, including status bar via `ps.stats`.
+- [x] **Integration Test**: Added `configstring_sync.test.ts` to verify config string and stats synchronization.
 
 ## Next Steps
 1.  **CGame Refinements**:
     - **Subtitles**: Currently handled locally in `Client` (fallback). Move logic to `CGame` when possible.
     - **Cvar Registration**: Fully implement `cvar` registration in `CGameImport` bridge.
 2.  **Full Networking**:
-    - Implement `svc_stufftext` handling.
+    - Continue testing and refining the dedicated server implementation.
+    - Verify entity interpolation and delta compression in a real networked scenario.
