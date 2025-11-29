@@ -131,7 +131,11 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
   if (distance !== 0) {
     walkMove(self, self.angles.y, distance);
   }
-  changeYaw(self, deltaSeconds);
+
+  // ROGUE
+  if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
+    changeYaw(self, deltaSeconds);
+  }
 }
 
 export function ai_run(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
@@ -150,7 +154,10 @@ export function ai_run(self: Entity, distance: number, deltaSeconds: number, con
       // For now, assume findTarget handles the switching/activation.
   }
 
-  setIdealYawTowards(self, self.enemy ?? self.goalentity);
+  // ROGUE
+  if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
+    setIdealYawTowards(self, self.enemy ?? self.goalentity);
+  }
   changeYaw(self, deltaSeconds);
 
   if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {
@@ -169,7 +176,8 @@ export function ai_face(
   distance: number,
   deltaSeconds: number,
 ): void {
-  if (enemy) {
+  // ROGUE
+  if (enemy && (self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, enemy);
   }
 
@@ -181,7 +189,10 @@ export function ai_face(
 }
 
 export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
-  setIdealYawTowards(self, self.enemy);
+  // ROGUE
+  if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
+    setIdealYawTowards(self, self.enemy);
+  }
   changeYaw(self, deltaSeconds);
 
   if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {

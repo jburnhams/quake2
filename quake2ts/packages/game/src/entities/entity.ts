@@ -134,6 +134,7 @@ export interface MonsterInfo {
   power_armor_type?: number;
   power_armor_power?: number;
   blind_fire_target?: Vec3;
+  blind_fire_delay?: number;
   fly_thrusters?: boolean;
   fly_acceleration?: number;
   fly_speed?: number;
