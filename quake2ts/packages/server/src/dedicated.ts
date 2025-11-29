@@ -543,7 +543,8 @@ export class DedicatedServer implements GameEngine {
         // Store current frame entities in client history
         const frameIdx = this.sv.frame % UPDATE_BACKUP;
         const currentFrame = client.frames[frameIdx];
-        currentFrame.entities = entities.map(e => this.entityToState(e));
+        // FIX: entities is already EntityState[], so we don't need to convert them
+        currentFrame.entities = entities;
 
         // Get old frame entities if delta compression is active
         let oldEntities: EntityState[] = [];
