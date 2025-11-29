@@ -71,7 +71,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.
-- [ ] **Connection Flow** (verify/complete):
+- [x] **Connection Flow** (verify/complete):
   1. Client sends `clc_stringcmd("connect")` with userinfo (name, model, skin, etc.).
   2. Server validates, calls `ge->ClientConnect(edict, userinfo)` (game can reject).
   3. Server responds with `svc_serverdata` (protocol version, server frame, map name, player slot).
@@ -84,6 +84,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 #### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
 - [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts`.
 - [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
+- [ ] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
 - [ ] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
 - [ ] **Overflow Handling**: Handle MTU limits.
 
@@ -135,5 +136,4 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
     - **Subtitles**: Currently handled locally in `Client` (fallback). Move logic to `CGame` when possible.
     - **Cvar Registration**: Fully implement `cvar` registration in `CGameImport` bridge.
 2.  **Full Networking**:
-    - Complete Client Connection Handshake (`connect` stringcmd, `client_connect` etc.).
     - Implement `svc_stufftext` handling.
