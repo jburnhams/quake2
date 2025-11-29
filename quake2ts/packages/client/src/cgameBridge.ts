@@ -91,6 +91,24 @@ export function createCGameImport(imports: ClientImports, state: ClientStateProv
             return state.getKeyBinding(key);
         },
 
+        // Asset Registration
+        RegisterModel: (name: string) => {
+            if (!imports.engine.assets) return;
+            const ext = name.split('.').pop()?.toLowerCase();
+            if (ext === 'md2') {
+                imports.engine.assets.loadMd2Model(name).catch(e => console.warn(`Failed to precache MD2 ${name}`, e));
+            } else if (ext === 'sp2') {
+                imports.engine.assets.loadSprite(name).catch(e => console.warn(`Failed to precache Sprite ${name}`, e));
+            } else if (ext === 'md3') {
+                imports.engine.assets.loadMd3Model(name).catch(e => console.warn(`Failed to precache MD3 ${name}`, e));
+            }
+        },
+        RegisterSound: (name: string) => {
+             if (imports.engine.assets) {
+                 imports.engine.assets.loadSound(name).catch(e => console.warn(`Failed to precache sound ${name}`, e));
+             }
+        },
+
         // Drawing
         Draw_RegisterPic: (name: string) => {
             if (picCache.has(name)) {
