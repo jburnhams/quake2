@@ -11,6 +11,7 @@ import { DamageMod } from '../../combat/damageMods.js';
 import {
     DeadFlag,
     Entity,
+    EntityFlags,
     MonsterFrame,
     MonsterMove,
     MoveType,
@@ -21,6 +22,8 @@ import { monster_fire_bullet } from './attack.js';
 import { createGrenade } from '../projectiles.js';
 import { throwGibs } from '../gibs.js';
 import type { EntitySystem } from '../system.js';
+import { AIFlags } from '../../ai/constants.js';
+import { visible } from '../../ai/perception.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -47,15 +50,36 @@ function monster_ai_move(self: Entity, dist: number, context: any): void {
 
 // Forward declarations for moves
 let stand_move: MonsterMove;
+let fidget_move: MonsterMove; // Fidget
 let walk_move: MonsterMove;
 let run_move: MonsterMove;
+let runandshoot_move: MonsterMove; // Run and Shoot
 let attack_chain_move: MonsterMove;
 let attack_grenade_move: MonsterMove;
-let pain_move: MonsterMove;
+let fire_chain_move: MonsterMove;
+let endfire_chain_move: MonsterMove;
+let pain1_move: MonsterMove; // Pain 1
+let pain2_move: MonsterMove; // Pain 2
+let pain3_move: MonsterMove; // Pain 3
 let death_move: MonsterMove;
+let duck_move: MonsterMove; // Duck
+
+// Gunner specific functions
+function gunner_idlesound(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'gunner/gunidle1.wav', 1, 1, 0);
+}
 
 function gunner_stand(self: Entity): void {
     self.monsterinfo.current_move = stand_move;
+}
+
+function gunner_fidget(self: Entity): void {
+    if (self.monsterinfo.aiflags & AIFlags.StandGround) {
+        return;
+    }
+    if (Math.random() <= 0.05) {
+        self.monsterinfo.current_move = fidget_move;
+    }
 }
 
 function gunner_walk(self: Entity): void {
@@ -63,15 +87,18 @@ function gunner_walk(self: Entity): void {
 }
 
 function gunner_run(self: Entity): void {
-    if (self.enemy && self.enemy.health > 0) {
-        self.monsterinfo.current_move = run_move;
-    } else {
+    if (self.monsterinfo.aiflags & AIFlags.StandGround) {
         self.monsterinfo.current_move = stand_move;
+    } else {
+        self.monsterinfo.current_move = run_move;
     }
 }
 
-function gunner_attack(self: Entity): void {
-    // Choose attack based on range or random
+function gunner_runandshoot(self: Entity): void {
+    self.monsterinfo.current_move = runandshoot_move;
+}
+
+function gunner_attack(self: Entity, context: any): void {
     if (Math.random() > 0.5) {
         self.monsterinfo.current_move = attack_chain_move;
     } else {
@@ -79,7 +106,28 @@ function gunner_attack(self: Entity): void {
     }
 }
 
+function gunner_opengun(self: Entity, context: any): void {
+    context.engine.sound?.(self, 0, 'gunner/gunatck1.wav', 1, 1, 0);
+}
+
 function gunner_fire_chain(self: Entity, context: any): void {
+    self.monsterinfo.current_move = fire_chain_move;
+}
+
+function gunner_refire_chain(self: Entity, context: any): void {
+    if (self.enemy && self.enemy.health > 0) {
+        // Correct behavior: don't keep firing if blocked
+        if (visible(self, self.enemy, context.trace)) {
+            if (Math.random() <= 0.5) {
+                self.monsterinfo.current_move = fire_chain_move;
+                return;
+            }
+        }
+    }
+    self.monsterinfo.current_move = endfire_chain_move;
+}
+
+function gunner_fire_bullet_logic(self: Entity, context: any): void {
     if (!self.enemy) return;
 
     const start: Vec3 = {
@@ -89,12 +137,14 @@ function gunner_fire_chain(self: Entity, context: any): void {
     };
 
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
-    const damage = 10;
-    const kick = 2;
+    const damage = 3;
+    const kick = 4;
 
     context.engine.sound?.(self, 0, 'gunner/gunatck2.wav', 1, 1, 0);
 
-    monster_fire_bullet(self, start, forward, damage, kick, 0, 0, 0, context, DamageMod.CHAINGUN);
+    // DEFAULT_BULLET_HSPREAD = 300
+    // DEFAULT_BULLET_VSPREAD = 500
+    monster_fire_bullet(self, start, forward, damage, kick, 300, 500, 0, context, DamageMod.CHAINGUN);
 }
 
 function gunner_fire_grenade(self: Entity, context: any): void {
@@ -116,12 +166,27 @@ function gunner_fire_grenade(self: Entity, context: any): void {
 }
 
 function gunner_pain(self: Entity, context: any): void {
+    if (self.health < (self.max_health / 2)) {
+         // self.s.skinnum = 1;
+    }
+
+    if (self.pain_debounce_time && context.timeSeconds < self.pain_debounce_time) return;
+    self.pain_debounce_time = context.timeSeconds + 3;
+
     if (Math.random() < 0.5) {
         context.engine.sound?.(self, 0, 'gunner/gunpain1.wav', 1, 1, 0);
     } else {
         context.engine.sound?.(self, 0, 'gunner/gunpain2.wav', 1, 1, 0);
     }
-    self.monsterinfo.current_move = pain_move;
+
+    const r = Math.random();
+    if (r < 0.33) {
+        self.monsterinfo.current_move = pain3_move;
+    } else if (r < 0.66) {
+        self.monsterinfo.current_move = pain2_move;
+    } else {
+        self.monsterinfo.current_move = pain1_move;
+    }
 }
 
 function gunner_die(self: Entity, context: any): void {
@@ -129,96 +194,236 @@ function gunner_die(self: Entity, context: any): void {
     self.monsterinfo.current_move = death_move;
 }
 
-// Frames
-const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, () => ({
+function gunner_duck_down(self: Entity, context: any): void {
+    if (self.monsterinfo.aiflags & AIFlags.Ducked) return;
+    self.monsterinfo.aiflags |= AIFlags.Ducked;
+
+    if (Math.random() > 0.5) {
+         gunner_fire_grenade(self, context);
+    }
+
+    self.maxs = { ...self.maxs, z: self.maxs.z - 32 };
+    self.takedamage = true;
+    self.monsterinfo.pausetime = context.timeSeconds + 1;
+}
+
+function gunner_duck_hold(self: Entity, context: any): void {
+    if (context.timeSeconds >= self.monsterinfo.pausetime) {
+        self.monsterinfo.aiflags &= ~AIFlags.HoldFrame;
+    } else {
+        self.monsterinfo.aiflags |= AIFlags.HoldFrame;
+    }
+}
+
+function gunner_duck_up(self: Entity, context: any): void {
+    self.monsterinfo.aiflags &= ~AIFlags.Ducked;
+    self.maxs = { ...self.maxs, z: self.maxs.z + 32 };
+    self.takedamage = true;
+}
+
+function gunner_dodge(self: Entity, attacker: Entity, eta: number, context: any): void {
+    if (Math.random() > 0.25) return;
+
+    if (!self.enemy) self.enemy = attacker;
+
+    self.monsterinfo.current_move = duck_move;
+}
+
+
+// --- Frames ---
+
+// Stand
+const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, (_, i) => ({
     ai: monster_ai_stand,
     dist: 0,
+    think: i === 29 ? gunner_fidget : null,
 }));
-
 stand_move = {
     firstframe: 0,
     lastframe: 29,
     frames: stand_frames,
-    endfunc: gunner_stand,
+    endfunc: null,
 };
 
-const walk_frames: MonsterFrame[] = Array.from({ length: 40 }, () => ({
-    ai: monster_ai_walk,
-    dist: 2,
+// Fidget (30-69)
+const fidget_frames: MonsterFrame[] = Array.from({ length: 40 }, (_, i) => ({
+    ai: monster_ai_stand,
+    dist: 0,
+    think: i === 7 ? gunner_idlesound : null
 }));
-
-walk_move = {
+fidget_move = {
     firstframe: 30,
     lastframe: 69,
+    frames: fidget_frames,
+    endfunc: gunner_stand
+};
+
+// Walk (70-88) - corrected frame range from source
+const walk_dists = [0, 3, 4, 5, 7, 2, 6, 4, 2, 7, 5, 7, 4]; // 13 frames
+const walk_frames: MonsterFrame[] = walk_dists.map(d => ({
+    ai: monster_ai_walk,
+    dist: d,
+}));
+walk_move = {
+    firstframe: 76,
+    lastframe: 88,
     frames: walk_frames,
-    endfunc: gunner_walk,
+    endfunc: null,
 };
 
-const run_frames: MonsterFrame[] = Array.from({ length: 20 }, () => ({
+
+// Run (94-101) - Source: FRAME_run01 to FRAME_run08
+const run_dists = [26, 9, 9, 9, 15, 10, 13, 6];
+const run_frames: MonsterFrame[] = run_dists.map(d => ({
     ai: monster_ai_run,
-    dist: 10,
+    dist: d,
 }));
-
 run_move = {
-    firstframe: 70,
-    lastframe: 89,
+    firstframe: 94,
+    lastframe: 101,
     frames: run_frames,
-    endfunc: gunner_run,
+    endfunc: null,
 };
 
-const attack_chain_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
-    ai: monster_ai_charge,
-    dist: 0,
-    think: (i >= 2 && i <= 8) ? gunner_fire_chain : null,
+// Run and Shoot (102-107) - Source: FRAME_runs01 to FRAME_runs06
+const runshoot_dists = [32, 15, 10, 18, 8, 20];
+const runshoot_frames: MonsterFrame[] = runshoot_dists.map(d => ({
+    ai: monster_ai_run,
+    dist: d,
 }));
-
-attack_chain_move = {
-    firstframe: 90,
-    lastframe: 99,
-    frames: attack_chain_frames,
-    endfunc: gunner_run,
+runandshoot_move = {
+    firstframe: 102,
+    lastframe: 107,
+    frames: runshoot_frames,
+    endfunc: null,
 };
 
-const attack_grenade_frames: MonsterFrame[] = Array.from({ length: 10 }, (_, i) => ({
+// Attack Grenade (108-128) - Source: FRAME_attak101 to FRAME_attak121
+const attack_grenade_frames: MonsterFrame[] = Array.from({ length: 21 }, (_, i) => ({
     ai: monster_ai_charge,
     dist: 0,
-    think: i === 5 ? gunner_fire_grenade : null,
+    think: [4, 7, 10, 13].includes(i) ? gunner_fire_grenade : null,
 }));
-
 attack_grenade_move = {
-    firstframe: 100,
-    lastframe: 109,
+    firstframe: 108,
+    lastframe: 128,
     frames: attack_grenade_frames,
     endfunc: gunner_run,
 };
 
-const pain_frames: MonsterFrame[] = Array.from({ length: 8 }, () => ({
-    ai: monster_ai_move,
+// Attack Chain (137-143) - Source: FRAME_attak209 to FRAME_attak215
+const attack_chain_frames: MonsterFrame[] = Array.from({ length: 7 }, (_, i) => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: i === 0 ? gunner_opengun : null,
+}));
+attack_chain_move = {
+    firstframe: 137,
+    lastframe: 143,
+    frames: attack_chain_frames,
+    endfunc: gunner_fire_chain,
+};
+
+// Fire Chain (144-151) - Source: FRAME_attak216 to FRAME_attak223
+const fire_chain_frames: MonsterFrame[] = Array.from({ length: 8 }, () => ({
+    ai: monster_ai_charge,
+    dist: 0,
+    think: gunner_fire_bullet_logic,
+}));
+fire_chain_move = {
+    firstframe: 144,
+    lastframe: 151,
+    frames: fire_chain_frames,
+    endfunc: gunner_refire_chain,
+};
+
+// End Fire Chain (152-158) - Source: FRAME_attak224 to FRAME_attak230
+const endfire_chain_frames: MonsterFrame[] = Array.from({ length: 7 }, () => ({
+    ai: monster_ai_charge,
     dist: 0,
 }));
-
-pain_move = {
-    firstframe: 110,
-    lastframe: 117,
-    frames: pain_frames,
+endfire_chain_move = {
+    firstframe: 152,
+    lastframe: 158,
+    frames: endfire_chain_frames,
     endfunc: gunner_run,
 };
 
-const death_frames: MonsterFrame[] = Array.from({ length: 15 }, () => ({
+// Pain 1 (159-176) - Source: FRAME_pain101 to FRAME_pain118
+const pain1_dists = [2, 0, -5, 3, -1, 0, 0, 0, 0, 1, 1, 2, 1, 0, -2, -2, 0, 0];
+const pain1_frames: MonsterFrame[] = pain1_dists.map(d => ({
     ai: monster_ai_move,
-    dist: 0,
+    dist: d
+}));
+pain1_move = {
+    firstframe: 159,
+    lastframe: 176,
+    frames: pain1_frames,
+    endfunc: gunner_run,
+};
+
+// Pain 2 (177-184) - Source: FRAME_pain201 to FRAME_pain208
+const pain2_dists = [-2, 11, 6, 2, -1, -7, -2, -7];
+const pain2_frames: MonsterFrame[] = pain2_dists.map(d => ({
+    ai: monster_ai_move,
+    dist: d
+}));
+pain2_move = {
+    firstframe: 177,
+    lastframe: 184,
+    frames: pain2_frames,
+    endfunc: gunner_run,
+};
+
+// Pain 3 (185-189) - Source: FRAME_pain301 to FRAME_pain305
+const pain3_dists = [-3, 1, 1, 0, 1];
+const pain3_frames: MonsterFrame[] = pain3_dists.map(d => ({
+    ai: monster_ai_move,
+    dist: d
+}));
+pain3_move = {
+    firstframe: 185,
+    lastframe: 189,
+    frames: pain3_frames,
+    endfunc: gunner_run,
+};
+
+// Death (190-200) - Source: FRAME_death01 to FRAME_death11
+const death_dists = [0, 0, 0, -7, -3, -5, 8, 6, 0, 0, 0];
+const death_frames: MonsterFrame[] = death_dists.map(d => ({
+    ai: monster_ai_move,
+    dist: d,
 }));
 
 function gunner_dead(self: Entity): void {
     self.monsterinfo.nextframe = death_move.lastframe;
     self.nextthink = -1;
+    self.solid = Solid.Not;
 }
 
 death_move = {
-    firstframe: 118,
-    lastframe: 132,
+    firstframe: 190,
+    lastframe: 200,
     frames: death_frames,
     endfunc: gunner_dead,
+};
+
+// Duck (201-208) - Source: FRAME_duck01 to FRAME_duck08
+const duck_frames: MonsterFrame[] = [
+    { ai: monster_ai_move, dist: 1, think: gunner_duck_down },
+    { ai: monster_ai_move, dist: 1 },
+    { ai: monster_ai_move, dist: 1, think: gunner_duck_hold },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: -1 },
+    { ai: monster_ai_move, dist: -1 },
+    { ai: monster_ai_move, dist: 0, think: gunner_duck_up },
+    { ai: monster_ai_move, dist: -1 },
+];
+duck_move = {
+    firstframe: 201,
+    lastframe: 208,
+    frames: duck_frames,
+    endfunc: gunner_run,
 };
 
 
@@ -234,11 +439,7 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.takedamage = true;
 
     self.pain = (self, other, kick, damage) => {
-        if (self.health < (self.max_health / 2)) {
-            gunner_pain(self, context.entities);
-        } else if (Math.random() < 0.2) {
-             gunner_pain(self, context.entities);
-        }
+        gunner_pain(self, context.entities);
     };
 
     self.die = (self, inflictor, attacker, damage, point) => {
@@ -259,6 +460,7 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.monsterinfo.walk = gunner_walk;
     self.monsterinfo.run = gunner_run;
     self.monsterinfo.attack = gunner_attack;
+    self.monsterinfo.dodge = (self, attacker, eta) => gunner_dodge(self, attacker, eta, context.entities);
     self.monsterinfo.sight = (self, other) => {
         context.entities.sound?.(self, 0, 'gunner/sight1.wav', 1, 1, 0);
     };

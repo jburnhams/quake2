@@ -6,6 +6,7 @@ import { EntitySystem } from '../../../src/entities/system.js';
 import { GameEngine } from '../../../src/index.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
 import { createGrenade } from '../../../src/entities/projectiles.js';
+import { AIFlags } from '../../../src/ai/constants.js';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -81,30 +82,19 @@ describe('monster_gunner', () => {
     gunner.monsterinfo.attack!(gunner, context as any);
     const moveChain = gunner.monsterinfo.current_move;
     expect(moveChain).toBeDefined();
-    expect(moveChain?.frames.length).toBe(10); // Chain frames length
+    // Chain frames length is 7 now (attack_chain_frames) + 8 (fire_chain) + 7 (endfire_chain) technically,
+    // but the initial move `attack_chain_move` has 7 frames.
+    expect(moveChain?.frames.length).toBe(7);
 
     // Case 2: <= 0.5 -> Grenade
     vi.spyOn(Math, 'random').mockReturnValue(0.4);
     gunner.monsterinfo.attack!(gunner, context as any);
     const moveGrenade = gunner.monsterinfo.current_move;
     expect(moveGrenade).toBeDefined();
-    expect(moveGrenade?.frames.length).toBe(10); // Grenade frames length
-
-    // They should be different moves (or at least different think logic)
-    // Chain fires multiple times (frames 2-8), Grenade fires once (frame 5)
-
-    // Verify chain firing
-    const chainFrame = moveChain!.frames[2];
-    expect(chainFrame.think).toBeDefined(); // gunner_fire_chain
-
-    // Verify grenade firing
-    const grenadeFrame = moveGrenade!.frames[5];
-    expect(grenadeFrame.think).toBeDefined(); // gunner_fire_grenade
-    const grenadeFrameOther = moveGrenade!.frames[4];
-    expect(grenadeFrameOther.think).toBeNull(); // Should be null
+    expect(moveGrenade?.frames.length).toBe(21); // Grenade frames length
   });
 
-  it('gunner_fire_chain fires bullets', () => {
+  it('gunner_fire_bullet_logic fires bullets', () => {
     registerGunnerSpawns(spawnRegistry);
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
@@ -113,24 +103,37 @@ describe('monster_gunner', () => {
     gunner.enemy.origin = { x: 100, y: 0, z: 0 };
     gunner.origin = { x: 0, y: 0, z: 0 };
 
-    // Manually call the fire function (we need access or simulate frame)
-    // We can access it via the move frames
-    vi.spyOn(Math, 'random').mockReturnValue(0.6); // Chain
-    gunner.monsterinfo.attack!(gunner, context as any);
-    const move = gunner.monsterinfo.current_move!;
-    const fireFn = move.frames[2].think!;
+    // We need to access the logic function used in fire_chain_frames
+    // It is not exported, so we simulate the move transition.
 
+    // Transition to fire chain move
+    vi.spyOn(Math, 'random').mockReturnValue(0.6);
+    gunner.monsterinfo.attack!(gunner, context as any);
+
+    // attack_chain_move ends with gunner_fire_chain
+    const attackMove = gunner.monsterinfo.current_move!;
+    const endFunc = attackMove.endfunc!;
+
+    // Simulate end of attack_chain -> triggers gunner_fire_chain -> sets fire_chain_move
+    endFunc(gunner, sys);
+
+    const fireMove = gunner.monsterinfo.current_move!;
+    expect(fireMove).toBeDefined();
+    expect(fireMove.frames.length).toBe(8);
+
+    // Now call the think function of one of the frames
+    const fireFn = fireMove.frames[0].think!;
     fireFn(gunner, sys);
 
     expect(monster_fire_bullet).toHaveBeenCalled();
-    // Check damage arg (10)
+    // Check damage arg (3)
     expect(monster_fire_bullet).toHaveBeenCalledWith(
         gunner,
         expect.anything(), // start
         expect.anything(), // forward
-        10, // damage
-        2, // kick
-        0, 0, 0, // spread
+        3, // damage
+        4, // kick
+        300, 500, 0, // spread (Updated to match C source: HSPREAD 300, VSPREAD 500)
         sys,
         expect.anything() // mod
     );
@@ -148,10 +151,94 @@ describe('monster_gunner', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.4); // Grenade
     gunner.monsterinfo.attack!(gunner, context as any);
     const move = gunner.monsterinfo.current_move!;
-    const fireFn = move.frames[5].think!;
+
+    // Find a frame with gunner_fire_grenade (e.g. index 4)
+    const fireFn = move.frames[4].think!;
+    expect(fireFn).toBeDefined();
 
     fireFn(gunner, sys);
 
     expect(createGrenade).toHaveBeenCalled();
   });
+
+  it('gunner_pain selects random pain animation', () => {
+      registerGunnerSpawns(spawnRegistry);
+      const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
+      spawnFn(gunner, context);
+
+      const spy = vi.spyOn(Math, 'random');
+
+      // Pain 3 (< 0.33)
+      spy.mockReturnValue(0.1);
+      gunner.pain!(gunner, null, 0, 10);
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(185); // pain3 start
+
+      // Pain 2 (< 0.66)
+      spy.mockReturnValue(0.4);
+      // Reset debounce
+      gunner.pain_debounce_time = 0;
+      gunner.pain!(gunner, null, 0, 10);
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(177); // pain2 start
+
+       // Pain 1 (else)
+      spy.mockReturnValue(0.8);
+      // Reset debounce
+      gunner.pain_debounce_time = 0;
+      gunner.pain!(gunner, null, 0, 10);
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(159); // pain1 start
+  });
+
+  it('gunner_fidget triggers randomly during stand', () => {
+      registerGunnerSpawns(spawnRegistry);
+      const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
+      spawnFn(gunner, context);
+
+      gunner.monsterinfo.current_move = undefined; // clear
+      gunner.monsterinfo.stand!(gunner, context as any);
+
+      const standMove = gunner.monsterinfo.current_move!;
+      expect(standMove.firstframe).toBe(0);
+
+      // Last frame of stand has check for fidget
+      const checkFidget = standMove.frames[29].think!;
+      expect(checkFidget).toBeDefined();
+
+      // Mock random <= 0.05
+      vi.spyOn(Math, 'random').mockReturnValue(0.01);
+      checkFidget(gunner, sys);
+
+      // Should switch to fidget move (start frame 30)
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(30);
+  });
+
+  it('duck behavior flags', () => {
+      registerGunnerSpawns(spawnRegistry);
+      const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
+      spawnFn(gunner, context);
+
+      gunner.monsterinfo.dodge!(gunner, new Entity(2), 0);
+
+      // Should invoke duck if random allows (mock it)
+      // Actually dodge uses random > 0.25 return, so <= 0.25 to proceed
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      gunner.monsterinfo.dodge!(gunner, new Entity(2), 0);
+
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(201); // Duck start
+
+      // Test duck_down logic
+      const downFn = gunner.monsterinfo.current_move?.frames[0].think!;
+      const originalMaxsZ = gunner.maxs.z;
+      downFn(gunner, sys);
+
+      expect(gunner.maxs.z).toBeLessThan(originalMaxsZ); // Should have crouched
+      expect(gunner.monsterinfo.aiflags & AIFlags.Ducked).toBeTruthy(); // AI_DUCKED
+
+      // Test duck_up logic (frame 6)
+      const upFn = gunner.monsterinfo.current_move?.frames[6].think!;
+      upFn(gunner, sys);
+
+      expect(gunner.maxs.z).toBe(originalMaxsZ); // Should be back
+      expect(gunner.monsterinfo.aiflags & AIFlags.Ducked).toBeFalsy();
+  });
+
 });
