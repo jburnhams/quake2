@@ -210,6 +210,7 @@ export class EntitySystem {
       areaEdicts: () => null, // Default to null to signal fallback
       multicast: () => {},
       unicast: () => {},
+      configstring: () => {},
     };
 
     // Merge defaults with provided imports

@@ -178,7 +178,8 @@ export class DedicatedServer implements GameEngine {
                  return this.entityIndex.gatherTriggerTouches({ x: 0, y: 0, z: 0 }, mins, maxs, 0xFFFFFFFF);
             },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
-            unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args)
+            unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args),
+            configstring: (index, value) => this.SV_SetConfigString(index, value)
         };
 
         this.game = createGame(imports, this, {
@@ -288,7 +289,42 @@ export class DedicatedServer implements GameEngine {
        writer.writeString("baseq2");
        writer.writeShort(client.index);
        writer.writeString("maps/test.bsp");
+
+       // Send all configstrings
+       for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
+           if (this.sv.configStrings[i]) {
+               this.SV_WriteConfigString(writer, i, this.sv.configStrings[i]);
+           }
+       }
+
        client.net.send(writer.getData());
+    }
+
+    private SV_SetConfigString(index: number, value: string) {
+        if (index < 0 || index >= MAX_CONFIGSTRINGS) return;
+
+        // Update server state
+        this.sv.configStrings[index] = value;
+
+        // Broadcast to all active clients
+        // TODO: Handle reliable messaging properly. For now, we send it immediately.
+        // In a real implementation, this should go into a reliable message buffer.
+
+        const writer = new BinaryWriter();
+        this.SV_WriteConfigString(writer, index, value);
+        const data = writer.getData();
+
+        for (const client of this.svs.clients) {
+            if (client && client.state >= ClientState.Connected) {
+                client.net.send(data);
+            }
+        }
+    }
+
+    private SV_WriteConfigString(writer: BinaryWriter, index: number, value: string) {
+        writer.writeByte(ServerCommand.configstring);
+        writer.writeShort(index);
+        writer.writeString(value);
     }
 
     private SV_ReadPackets() {
@@ -437,5 +473,9 @@ export class DedicatedServer implements GameEngine {
         if (client) {
              // Send
         }
+    }
+
+    configstring(index: number, value: string): void {
+        this.SV_SetConfigString(index, value);
     }
 }

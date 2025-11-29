@@ -32,6 +32,7 @@ export interface GameEngine {
     modelIndex?(model: string): number;
     multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
+    configstring?(index: number, value: string): void;
 }
 
 export interface GameStateSnapshot {
@@ -86,6 +87,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
+  configstring(index: number, value: string): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
   clientBegin(client: PlayerClient): Entity;
@@ -134,6 +136,7 @@ export function createGame(
   const pointcontents = imports.pointcontents || (() => 0);
   const multicast = imports.multicast || (() => {});
   const unicast = imports.unicast || (() => {});
+  const configstring = imports.configstring || (() => {});
   const linkentity = imports.linkentity; // optional, handled in wrappedLinkEntity
 
   const wrappedLinkEntity = (ent: Entity) => {
@@ -162,7 +165,8 @@ export function createGame(
       pointcontents,
       linkentity: wrappedLinkEntity,
       multicast,
-      unicast
+      unicast,
+      configstring
   };
 
   const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch);
@@ -438,6 +442,9 @@ export function createGame(
     },
     unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
       unicast(ent, reliable, event, ...args);
+    },
+    configstring(index: number, value: string): void {
+      configstring(index, value);
     },
     get time() {
       return levelClock.current.timeSeconds;
