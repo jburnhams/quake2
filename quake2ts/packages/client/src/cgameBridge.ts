@@ -51,21 +51,31 @@ export function createCGameImport(imports: ClientImports, state: ClientStateProv
 
         // Cvars
         cvar: (name: string, value: string, flags: number) => {
-             // TODO: Proper cvar registration via host
-             // For now, return stub or existing
-             const existing = imports.host?.cvars?.get(name);
-             if (existing) return existing;
+            if (!imports.host || !imports.host.cvars) {
+                return null;
+            }
 
-             // If not exists, register?
-             // CGame typically registers its own cvars.
-             // We can't synchronously register and return the object if host doesn't support it well.
-             return null;
+            // Check if existing
+            const existing = imports.host.cvars.get(name);
+            if (existing) {
+                return existing;
+            }
+
+            // Register new cvar
+            return imports.host.cvars.register({
+                name,
+                defaultValue: value,
+                flags,
+            });
         },
         cvar_set: (name: string, value: string) => {
             imports.host?.cvars?.setValue(name, value);
         },
         cvar_forceset: (name: string, value: string) => {
-             // Force set ignoring flags (if API supported)
+            // Force set ignoring flags (if API supported)
+            // For now, CvarRegistry.setValue doesn't strictly enforce flags like LATCH internally for every call,
+            // but usually ForceSet implies overriding read-only or similar.
+            // Our CvarRegistry.setValue is basic.
             imports.host?.cvars?.setValue(name, value);
         },
 

@@ -135,10 +135,9 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **HUD Rendering**: Client now delegates main HUD rendering to `cg.DrawHUD`, including status bar via `ps.stats`.
 - [x] **Integration Test**: Added `configstring_sync.test.ts` to verify config string and stats synchronization.
 - [x] **Subtitles**: Moved subtitle logic to `CGame` and exposed via `ShowSubtitle`.
+- [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
 
 ## Next Steps
-1.  **CGame Refinements**:
-    - **Cvar Registration**: Fully implement `cvar` registration in `CGameImport` bridge.
-2.  **Full Networking**:
+1.  **Full Networking**:
     - Continue testing and refining the dedicated server implementation.
     - Verify entity interpolation and delta compression in a real networked scenario.
