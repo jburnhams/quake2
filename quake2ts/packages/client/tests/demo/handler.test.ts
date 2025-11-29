@@ -3,8 +3,24 @@ import { ClientNetworkHandler } from '../../src/demo/handler.js';
 import { DEMO_ITEM_MAPPING } from '../../src/demo/itemMapping.js';
 import { WeaponId, PowerupId, AmmoType } from '@quake2ts/game';
 import { FrameData, createEmptyProtocolPlayerState } from '@quake2ts/engine';
+import { vi } from 'vitest';
 
 describe('ClientNetworkHandler', () => {
+    it('should trigger onConfigString callback when receiving config string update', () => {
+        const handler = new ClientNetworkHandler();
+        const callback = vi.fn();
+        handler.setCallbacks({
+            onConfigString: callback
+        });
+
+        const index = 123;
+        const value = 'test_string';
+        handler.onConfigString(index, value);
+
+        expect(callback).toHaveBeenCalledWith(index, value);
+        expect(handler.configstrings[index]).toBe(value);
+    });
+
     it('should map inventory array to PlayerInventory correctly', () => {
         const handler = new ClientNetworkHandler();
 

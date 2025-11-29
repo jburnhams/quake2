@@ -31,6 +31,7 @@ const MAX_CONFIGSTRINGS = 2048; // approximate
 export interface DemoHandlerCallbacks {
     onCenterPrint?: (msg: string) => void;
     onPrint?: (level: number, msg: string) => void;
+    onConfigString?: (index: number, str: string) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -72,6 +73,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
     onConfigString(index: number, str: string): void {
         this.configstrings[index] = str;
+        if (this.callbacks?.onConfigString) {
+            this.callbacks.onConfigString(index, str);
+        }
     }
 
     onSpawnBaseline(entity: EntityState): void {
