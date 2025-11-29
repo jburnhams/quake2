@@ -67,7 +67,7 @@ export { ClientConfigStrings } from './configStrings.js';
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
 export interface ClientImports {
-  readonly engine: EngineImports & { renderer: Renderer };
+  readonly engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
   readonly host?: EngineHost;
 }
 
