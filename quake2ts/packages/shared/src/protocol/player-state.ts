@@ -39,4 +39,10 @@ export interface PlayerState {
   gun_frame: number;
   rdflags: number;
   fov: number;
+
+  // Rerelease fields
+  gunskin?: number;
+  gunrate?: number;
+  damage_blend?: [number, number, number, number];
+  team_id?: number;
 }

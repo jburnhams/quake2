@@ -295,7 +295,8 @@ export {
     U_SOUND,
     U_EVENT,
     U_SOLID,
-    U_REMOVE
+    U_REMOVE,
+    U_ALPHA
 } from './demo/parser.js';
 export type {
     NetworkMessageHandler,
