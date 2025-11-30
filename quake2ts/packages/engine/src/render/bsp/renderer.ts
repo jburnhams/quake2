@@ -23,7 +23,7 @@ export class BspRenderer {
       geometry.lightmapAtlas.bind(1); // Unit 1 for lightmap
     }
 
-    // Bind shader pipeline
+    // Bind shader pipeline (Global Bind)
     pipeline.bind({
       modelViewProjection,
       lightmapSampler: geometry.lightmapAtlas ? 1 : undefined,
@@ -42,6 +42,7 @@ export class BspRenderer {
         surfaceFlags: batch.flags,
         styleValues: lightStyles.getValues() as unknown as number[],
         styleIndices: batch.styleIndices,
+        styleLayers: batch.styleLayers
       });
 
       // Draw elements
