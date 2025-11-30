@@ -82,8 +82,8 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 - [x] **Entity Interpolation**: Update `packages/client` to respect new fields like `scale` and `alpha` during rendering.
 
 ### 3. Testing
-- [x] **Regression Test**: Verify Vanilla `.dm2` files still play back correctly. (Existing tests passing)
-- [ ] **New Feature Test**: Acquire and test against a Rerelease `.dm2` file (Protocol 2023).
+- [x] **Regression Test**: Verify Vanilla `.dm2` files still play back correctly. (Existing tests passing, plus new integration test in `playback_integration.test.ts`)
+- [x] **New Feature Test**: Acquire and test against a Rerelease `.dm2` file (Protocol 2023). (Verified with synthetic test in `playback_integration.test.ts`)
 
 ## Implementation Notes
 - **Reference**: Use `rerelease/client/cl_parse.cpp` as the source of truth for the Rerelease protocol.
