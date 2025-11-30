@@ -32,6 +32,19 @@ const writeString = (arr: number[], str: string) => {
 const writeCoord = (arr: number[], val: number) => writeShort(arr, Math.floor(val * 8));
 const writeAngle = (arr: number[], val: number) => writeByte(arr, Math.floor(val * 256 / 360));
 const writeAngle16 = (arr: number[], val: number) => writeShort(arr, Math.floor(val * 65536 / 360));
+const writeFloat = (arr: number[], val: number) => {
+    const view = new DataView(new ArrayBuffer(4));
+    view.setFloat32(0, val, true);
+    for (let i = 0; i < 4; i++) {
+        arr.push(view.getUint8(i));
+    }
+};
+const writeDir = (arr: number[], val: {x:number, y:number, z:number}) => {
+    // Simplified: just write 0 (up) for tests unless we need precision.
+    // The parser just looks up ANORMS index.
+    // Let's write 0.
+    arr.push(0);
+};
 
 describe('NetworkMessageParser', () => {
 
@@ -286,6 +299,100 @@ describe('NetworkMessageParser', () => {
     // I will verify this assumption by reading parser.ts again.
 
     expect(stream.hasMore()).toBe(false);
+  });
+
+  it('should parse svc_fog', () => {
+      const data: number[] = [];
+      writeByte(data, ServerCommand.fog);
+      // bits: BIT_DENSITY(1) | BIT_R(2) = 3.
+      // Not writing 0x80 (BIT_MORE_BITS), so single byte.
+      writeByte(data, 3);
+
+      // BIT_DENSITY: float density, byte skyfactor
+      writeFloat(data, 0.5);
+      writeByte(data, 128); // skyfactor
+
+      // BIT_R: byte red
+      writeByte(data, 255);
+
+      const stream = createStream(data);
+      const handlerMock = {
+          onFog: vi.fn(),
+      } as unknown as NetworkMessageHandler;
+
+      const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.parseMessage();
+
+      expect(handlerMock.onFog).toHaveBeenCalledWith(expect.objectContaining({
+          density: expect.closeTo(0.5),
+          skyfactor: 128,
+          red: 255
+      }));
+      expect(stream.hasMore()).toBe(false);
+  });
+
+  it('should parse svc_fog with more bits', () => {
+      const data: number[] = [];
+      writeByte(data, ServerCommand.fog);
+      // Low byte with 0x80 (MORE_BITS) | BIT_DENSITY(1) = 129
+      writeByte(data, 129);
+      // High byte: BIT_HEIGHTFOG_START_R (1<<0 of high byte -> 1<<8 total) = 1
+      writeByte(data, 1);
+
+      // Total bits: BIT_DENSITY | BIT_HEIGHTFOG_START_R | BIT_MORE_BITS
+
+      // BIT_DENSITY fields
+      writeFloat(data, 0.1);
+      writeByte(data, 50);
+
+      // BIT_HEIGHTFOG_START_R fields
+      writeByte(data, 100);
+
+      const stream = createStream(data);
+      const handlerMock = {
+          onFog: vi.fn(),
+      } as unknown as NetworkMessageHandler;
+
+      const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.parseMessage();
+
+      expect(handlerMock.onFog).toHaveBeenCalledWith(expect.objectContaining({
+          density: expect.closeTo(0.1),
+          skyfactor: 50,
+          hf_start_r: 100
+      }));
+      expect(stream.hasMore()).toBe(false);
+  });
+
+  it('should parse svc_damage', () => {
+      const data: number[] = [];
+      writeByte(data, ServerCommand.damage);
+      writeByte(data, 1); // 1 indicator
+
+      // Indicator 1
+      // damage=10 (0x0A), health=true (0x20) -> 0x2A
+      writeByte(data, 0x2A);
+      writeDir(data, {x:0, y:0, z:1}); // Up
+
+      const stream = createStream(data);
+      const handlerMock = {
+          onDamage: vi.fn(),
+      } as unknown as NetworkMessageHandler;
+
+      const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.parseMessage();
+
+      expect(handlerMock.onDamage).toHaveBeenCalledTimes(1);
+      const indicators = (handlerMock.onDamage as any).mock.calls[0][0];
+      expect(indicators).toHaveLength(1);
+      expect(indicators[0]).toEqual(expect.objectContaining({
+          damage: 10,
+          health: true,
+          armor: false,
+          power: false,
+          // dir checked roughly
+      }));
+      expect(stream.hasMore()).toBe(false);
   });
 
 });
