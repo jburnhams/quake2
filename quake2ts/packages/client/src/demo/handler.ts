@@ -35,7 +35,7 @@ import { DEMO_ITEM_MAPPING } from './itemMapping.js';
 import { ClientImports } from '../index.js';
 
 // Constants
-const MAX_CONFIGSTRINGS = 2048; // approximate
+const MAX_CONFIGSTRINGS = 32768; // Rerelease increased limits
 
 export interface DemoHandlerCallbacks {
     onCenterPrint?: (msg: string) => void;
@@ -46,6 +46,7 @@ export interface DemoHandlerCallbacks {
     onMuzzleFlash3?: (ent: number, weapon: number) => void;
     onFog?: (data: FogData) => void;
     onDamage?: (indicators: DamageIndicator[]) => void;
+    onServerData?: (protocol: number, tickRate?: number) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -82,14 +83,18 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.view = view;
     }
 
-    onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
-        console.log(`Demo: Server Data - Protocol: ${protocol}, Level: ${levelName}`);
+    onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string, tickRate?: number, demoType?: number): void {
+        console.log(`Demo: Server Data - Protocol: ${protocol}, Level: ${levelName}, Tick: ${tickRate ?? 10}`);
         // Reset state on new server connection
         this.configstrings.fill('');
         this.entities.clear();
         this.baselines.clear();
         this.latestFrame = null;
         this.playerNum = playerNum;
+
+        if (this.callbacks?.onServerData) {
+            this.callbacks.onServerData(protocol, tickRate);
+        }
     }
 
     onConfigString(index: number, str: string): void {

@@ -262,11 +262,12 @@ describe('NetworkMessageParser', () => {
     const data: number[] = [];
     writeByte(data, ServerCommand.serverdata);
     writeLong(data, 2023); // Protocol 2023 (Rerelease)
-    writeLong(data, 456); // Server count
-    writeByte(data, 1); // isDemo
-    writeString(data, "baseq2");
+    writeLong(data, 456); // Spawn count
+    writeByte(data, 1); // DemoType (1=demo)
+    writeByte(data, 40); // TickRate
+    writeString(data, "baseq2"); // GameDir
     writeShort(data, 2); // Player num
-    writeString(data, "q2dm1");
+    writeString(data, "q2dm1"); // Level Name
 
     const stream = createStream(data);
     const handlerMock = {

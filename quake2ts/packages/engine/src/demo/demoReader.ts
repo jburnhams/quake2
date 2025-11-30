@@ -38,7 +38,7 @@ export class DemoReader {
     const length = this.view.getInt32(this.offset, true);
     this.offset += 4;
 
-    if (length < 0 || length > 0x40000) { // 256k sanity check (MAX_MSGLEN is usually 1400, but demo blocks can be large)
+    if (length < 0 || length > 0x200000) { // 2MB sanity check (Rerelease frames can be large)
        // Sanity check failed or negative length
        console.warn(`DemoReader: Invalid block length ${length} at offset ${this.offset - 4}`);
        return null;
