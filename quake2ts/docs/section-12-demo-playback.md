@@ -77,7 +77,7 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 
 ### 2. Client Integration
 - [ ] **Demo Playback**: Ensure `DemoPlaybackController` can handle the potentially larger Rerelease frames.
-- [ ] **Entity Interpolation**: Update `packages/client` to respect new fields like `scale` and `alpha` during rendering.
+- [x] **Entity Interpolation**: Update `packages/client` to respect new fields like `scale` and `alpha` during rendering.
 
 ### 3. Testing
 - [x] **Regression Test**: Verify Vanilla `.dm2` files still play back correctly. (Existing tests passing)
