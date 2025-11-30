@@ -17,7 +17,9 @@ import {
     U_SOLID,
     U_REMOVE,
     // New Rerelease Flags (if available) - assuming standard delta reuse for now
-    U_ALPHA
+    U_ALPHA,
+    FogData,
+    DamageIndicator
 } from '@quake2ts/engine';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 // Import from cgame
@@ -37,6 +39,8 @@ export interface DemoHandlerCallbacks {
     onLevelRestart?: () => void;
     onWaitingForPlayers?: () => void;
     onMuzzleFlash3?: (ent: number, weapon: number) => void;
+    onFog?: (data: FogData) => void;
+    onDamage?: (indicators: DamageIndicator[]) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -248,6 +252,18 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     onMuzzleFlash3(ent: number, weapon: number): void {
         if (this.callbacks?.onMuzzleFlash3) {
             this.callbacks.onMuzzleFlash3(ent, weapon);
+        }
+    }
+
+    onFog(data: FogData): void {
+        if (this.callbacks?.onFog) {
+            this.callbacks.onFog(data);
+        }
+    }
+
+    onDamage(indicators: DamageIndicator[]): void {
+        if (this.callbacks?.onDamage) {
+            this.callbacks.onDamage(indicators);
         }
     }
 

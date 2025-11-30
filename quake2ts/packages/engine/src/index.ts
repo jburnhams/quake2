@@ -302,5 +302,7 @@ export type {
     NetworkMessageHandler,
     EntityState,
     FrameData,
-    ProtocolPlayerState
+    ProtocolPlayerState,
+    FogData,
+    DamageIndicator
 } from './demo/parser.js';

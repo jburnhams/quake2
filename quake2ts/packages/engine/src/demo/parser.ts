@@ -183,6 +183,33 @@ export interface FrameData {
     };
 }
 
+export interface FogData {
+    density?: number;
+    skyfactor?: number;
+    red?: number;
+    green?: number;
+    blue?: number;
+    time?: number;
+    hf_falloff?: number;
+    hf_density?: number;
+    hf_start_r?: number;
+    hf_start_g?: number;
+    hf_start_b?: number;
+    hf_start_dist?: number;
+    hf_end_r?: number;
+    hf_end_g?: number;
+    hf_end_b?: number;
+    hf_end_dist?: number;
+}
+
+export interface DamageIndicator {
+    damage: number;
+    health: boolean;
+    armor: boolean;
+    power: boolean;
+    dir: Vec3;
+}
+
 export interface NetworkMessageHandler {
     onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void;
     onConfigString(index: number, str: string): void;
@@ -206,9 +233,9 @@ export interface NetworkMessageHandler {
     onConfigBlast?(index: number, data: Uint8Array): void;
     onSpawnBaselineBlast?(entity: EntityState): void; // Likely similar to SpawnBaseline but compressed?
     onLevelRestart?(): void;
-    onDamage?(damage: number, pos: Vec3): void; // Check signature
+    onDamage?(indicators: DamageIndicator[]): void;
     onLocPrint?(id: number, msg: string): void;
-    onFog?(data: any): void; // Placeholder
+    onFog?(data: FogData): void;
     onWaitingForPlayers?(): void;
     onBotChat?(msg: string): void;
     onPoi?(type: number, pos: Vec3): void;
@@ -343,13 +370,13 @@ export class NetworkMessageParser {
              if (this.handler && this.handler.onLevelRestart) this.handler.onLevelRestart();
              break;
           case ServerCommand.damage:
-             // TODO: implement
+             this.parseDamage();
              break;
           case ServerCommand.locprint:
              // TODO: implement
              break;
           case ServerCommand.fog:
-             // TODO: implement
+             this.parseFog();
              break;
           case ServerCommand.waitingforplayers:
              if (this.handler && this.handler.onWaitingForPlayers) this.handler.onWaitingForPlayers();
@@ -507,6 +534,99 @@ export class NetworkMessageParser {
      const ent = this.stream.readShort();
      const weapon = this.stream.readShort(); // MuzzleFlash3 uses short for weapon
      if (this.handler && this.handler.onMuzzleFlash3) this.handler.onMuzzleFlash3(ent, weapon);
+  }
+
+  private parseFog(): void {
+      let bits = this.stream.readByte();
+      // If bit 7 (0x80) is set, it means the bits were actually a short, and we just read the low byte.
+      // We need to read the high byte.
+      if (bits & 0x80) {
+          const high = this.stream.readByte();
+          bits |= (high << 8);
+      }
+
+      const fog: FogData = {};
+
+      if (bits & 1) { // BIT_DENSITY (1<<0)
+          fog.density = this.stream.readFloat();
+          fog.skyfactor = this.stream.readByte();
+      }
+      if (bits & 2) { // BIT_R (1<<1)
+          fog.red = this.stream.readByte();
+      }
+      if (bits & 4) { // BIT_G (1<<2)
+          fog.green = this.stream.readByte();
+      }
+      if (bits & 8) { // BIT_B (1<<3)
+          fog.blue = this.stream.readByte();
+      }
+      if (bits & 16) { // BIT_TIME (1<<4)
+          fog.time = this.stream.readShort();
+      }
+
+      if (bits & 32) { // BIT_HEIGHTFOG_FALLOFF (1<<5)
+          fog.hf_falloff = this.stream.readFloat();
+      }
+      if (bits & 64) { // BIT_HEIGHTFOG_DENSITY (1<<6)
+          fog.hf_density = this.stream.readFloat();
+      }
+
+      // Check remaining bits (High byte)
+      // BIT_HEIGHTFOG_START_R = (1<<8) = 256
+      if (bits & 256) {
+          fog.hf_start_r = this.stream.readByte();
+      }
+      if (bits & 512) { // BIT_HEIGHTFOG_START_G (1<<9)
+          fog.hf_start_g = this.stream.readByte();
+      }
+      if (bits & 1024) { // BIT_HEIGHTFOG_START_B (1<<10)
+          fog.hf_start_b = this.stream.readByte();
+      }
+      if (bits & 2048) { // BIT_HEIGHTFOG_START_DIST (1<<11)
+          fog.hf_start_dist = this.stream.readLong();
+      }
+
+      if (bits & 4096) { // BIT_HEIGHTFOG_END_R (1<<12)
+          fog.hf_end_r = this.stream.readByte();
+      }
+      if (bits & 8192) { // BIT_HEIGHTFOG_END_G (1<<13)
+          fog.hf_end_g = this.stream.readByte();
+      }
+      if (bits & 16384) { // BIT_HEIGHTFOG_END_B (1<<14)
+          fog.hf_end_b = this.stream.readByte();
+      }
+      if (bits & 32768) { // BIT_HEIGHTFOG_END_DIST (1<<15)
+          fog.hf_end_dist = this.stream.readLong();
+      }
+
+      if (this.handler && this.handler.onFog) {
+          this.handler.onFog(fog);
+      }
+  }
+
+  private parseDamage(): void {
+      const num = this.stream.readByte();
+      const indicators: DamageIndicator[] = [];
+
+      for (let i = 0; i < num; i++) {
+          const encoded = this.stream.readByte();
+          const dir = { x: 0, y: 0, z: 0 };
+          this.stream.readDir(dir);
+
+          // Decode:
+          // damage = encoded & 0x1F (5 bits)
+          // types = bits 5,6,7
+          const damage = encoded & 0x1F;
+          const health = (encoded & 0x20) !== 0;
+          const armor = (encoded & 0x40) !== 0;
+          const power = (encoded & 0x80) !== 0;
+
+          indicators.push({ damage, health, armor, power, dir });
+      }
+
+      if (this.handler && this.handler.onDamage) {
+          this.handler.onDamage(indicators);
+      }
   }
 
   private parseTempEntity(): void {
