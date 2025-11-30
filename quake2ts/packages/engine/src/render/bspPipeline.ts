@@ -27,6 +27,7 @@ export interface BspSurfaceBindOptions {
   readonly modelViewProjection: Float32List;
   readonly styleIndices?: readonly number[];
   readonly styleValues?: ReadonlyArray<number>;
+  readonly styleLayers?: readonly number[];
   readonly diffuseSampler?: number;
   readonly lightmapSampler?: number;
   readonly surfaceFlags?: SurfaceFlag;
@@ -44,6 +45,7 @@ precision highp float;
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec2 a_texCoord;
 layout(location = 2) in vec2 a_lightmapCoord;
+layout(location = 3) in float a_lightmapStep;
 
 uniform mat4 u_modelViewProjection;
 uniform vec2 u_texScroll;
@@ -51,6 +53,7 @@ uniform vec2 u_lightmapScroll;
 
 out vec2 v_texCoord;
 out vec2 v_lightmapCoord;
+out float v_lightmapStep;
 out vec3 v_position;
 
 vec2 applyScroll(vec2 uv, vec2 scroll) {
@@ -60,6 +63,7 @@ vec2 applyScroll(vec2 uv, vec2 scroll) {
 void main() {
   v_texCoord = applyScroll(a_texCoord, u_texScroll);
   v_lightmapCoord = applyScroll(a_lightmapCoord, u_lightmapScroll);
+  v_lightmapStep = a_lightmapStep;
   v_position = a_position;
   gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
 }`;
@@ -77,11 +81,13 @@ const int MAX_DLIGHTS = ${MAX_DLIGHTS};
 
 in vec2 v_texCoord;
 in vec2 v_lightmapCoord;
+in float v_lightmapStep;
 in vec3 v_position;
 
 uniform sampler2D u_diffuseMap;
 uniform sampler2D u_lightmapAtlas;
 uniform vec4 u_lightStyleFactors;
+uniform vec4 u_styleLayerMapping; // 0, 1, 2... or -1 if invalid
 uniform float u_alpha;
 uniform bool u_applyLightmap;
 uniform bool u_warp;
@@ -115,9 +121,35 @@ void main() {
       vec3 totalLight = vec3(1.0);
 
       if (u_applyLightmap) {
-        vec3 light = texture(u_lightmapAtlas, warpCoords(v_lightmapCoord)).rgb;
-        float styleScale = dot(u_lightStyleFactors, vec4(1.0));
-        totalLight = light * styleScale;
+        // Multi-style lightmap accumulation
+        vec3 light = vec3(0.0);
+        bool hasLight = false;
+
+        vec2 lmBase = warpCoords(v_lightmapCoord);
+
+        // Loop unrolled-ish
+        for (int i = 0; i < 4; i++) {
+             // We can access vec4 components by index in newer GLSL ES, or use direct access
+             float layer = u_styleLayerMapping[i];
+             float factor = u_lightStyleFactors[i];
+
+             if (layer >= -0.5) { // Valid layer (check >= 0 approx)
+                  // Offset V by layer * step
+                  // Since we packed vertically
+                  vec2 offset = vec2(0.0, layer * v_lightmapStep);
+                  light += texture(u_lightmapAtlas, lmBase + offset).rgb * factor;
+                  hasLight = true;
+             }
+        }
+
+        // If no valid lightmaps found (e.g. unlit surface?), default to full bright?
+        // Or if u_applyLightmap is true, there should be at least one style.
+        // Fallback to 1.0 if accumulator is empty?
+        // In Q2, unlit surfs are fullbright (or use minlight).
+        // If hasLight is false, it means no styles are active.
+        if (!hasLight) light = vec3(1.0);
+
+        totalLight = light; // Dynamic lights add on top or multiply? Q2 adds.
 
         // Add dynamic lights
         for (int i = 0; i < MAX_DLIGHTS; i++) {
@@ -155,6 +187,7 @@ void main() {
 }`;
 
 const DEFAULT_STYLE_INDICES: readonly number[] = [0, 255, 255, 255];
+const DEFAULT_STYLE_LAYERS: readonly number[] = [0, -1, -1, -1];
 
 export function resolveLightStyles(
   styleIndices: readonly number[] = DEFAULT_STYLE_INDICES,
@@ -219,6 +252,7 @@ export class BspSurfacePipeline {
   private readonly uniformTexScroll: WebGLUniformLocation | null;
   private readonly uniformLmScroll: WebGLUniformLocation | null;
   private readonly uniformLightStyles: WebGLUniformLocation | null;
+  private readonly uniformStyleLayerMapping: WebGLUniformLocation | null;
   private readonly uniformAlpha: WebGLUniformLocation | null;
   private readonly uniformApplyLightmap: WebGLUniformLocation | null;
   private readonly uniformWarp: WebGLUniformLocation | null;
@@ -238,13 +272,14 @@ export class BspSurfacePipeline {
     this.program = ShaderProgram.create(
       gl,
       { vertex: BSP_SURFACE_VERTEX_SOURCE, fragment: BSP_SURFACE_FRAGMENT_SOURCE },
-      { a_position: 0, a_texCoord: 1, a_lightmapCoord: 2 }
+      { a_position: 0, a_texCoord: 1, a_lightmapCoord: 2, a_lightmapStep: 3 }
     );
 
     this.uniformMvp = this.program.getUniformLocation('u_modelViewProjection');
     this.uniformTexScroll = this.program.getUniformLocation('u_texScroll');
     this.uniformLmScroll = this.program.getUniformLocation('u_lightmapScroll');
     this.uniformLightStyles = this.program.getUniformLocation('u_lightStyleFactors');
+    this.uniformStyleLayerMapping = this.program.getUniformLocation('u_styleLayerMapping');
     this.uniformAlpha = this.program.getUniformLocation('u_alpha');
     this.uniformApplyLightmap = this.program.getUniformLocation('u_applyLightmap');
     this.uniformWarp = this.program.getUniformLocation('u_warp');
@@ -269,6 +304,7 @@ export class BspSurfacePipeline {
     const {
       modelViewProjection,
       styleIndices = DEFAULT_STYLE_INDICES,
+      styleLayers = DEFAULT_STYLE_LAYERS,
       styleValues = [],
       diffuseSampler = 0,
       lightmapSampler,
@@ -294,6 +330,7 @@ export class BspSurfacePipeline {
     this.gl.uniform2f(this.uniformTexScroll, finalScrollX, finalScrollY);
     this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]);
     this.gl.uniform4fv(this.uniformLightStyles, styles);
+    this.gl.uniform4fv(this.uniformStyleLayerMapping, styleLayers as number[]);
     this.gl.uniform1f(this.uniformAlpha, finalAlpha);
     const applyLightmap = !state.sky && lightmapSampler !== undefined;
     this.gl.uniform1i(this.uniformApplyLightmap, applyLightmap ? 1 : 0);

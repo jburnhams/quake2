@@ -3,6 +3,8 @@ import {
   BspSurfacePipeline,
   deriveSurfaceRenderState,
   resolveLightStyles,
+  BSP_SURFACE_VERTEX_SOURCE,
+  BSP_SURFACE_FRAGMENT_SOURCE
 } from '../../src/render/bspPipeline.js';
 import {
   SURF_FLOWING,
@@ -27,11 +29,20 @@ const mockLocations = {
   u_time: { id: 10 },
   u_renderMode: { id: 11 },
   u_solidColor: { id: 12 },
+  u_styleLayerMapping: { id: 13 },
+  u_numDlights: { id: 14 },
+  'u_dlights[0].position': { id: 15 },
+  'u_dlights[0].color': { id: 16 },
+  'u_dlights[0].intensity': { id: 17 },
+  // ... can add more if needed
 };
 
 vi.mock('../../src/render/shaderProgram.js', () => {
   const getUniformLocation = vi.fn(
-    (name: keyof typeof mockLocations) => mockLocations[name]
+    (name: string) => {
+        // Handle array access for dlights or simple lookup
+        return (mockLocations as any)[name] || { id: 999 };
+    }
   );
   const use = vi.fn();
   const dispose = vi.fn();
@@ -117,7 +128,7 @@ describe('bspPipeline', () => {
         uniform1f: vi.fn(),
         uniform1i: vi.fn(),
         uniform4f: vi.fn(),
-        uniform3f: vi.fn(), // Added for dlights
+        uniform3f: vi.fn(),
       } as any);
 
     const mockMvp = new Float32Array(16);
@@ -214,6 +225,49 @@ describe('bspPipeline', () => {
         expect(lmScrollCall[2]).toBe(0);
       }
     );
+
+    it('should bind style layer mapping and factors', () => {
+        const gl = createMockGl();
+        const pipeline = new BspSurfacePipeline(gl);
+
+        pipeline.bind({
+          modelViewProjection: mockMvp,
+          styleIndices: [0, 255, 2, 255],
+          styleLayers: [0, -1, 1, -1],
+          styleValues: [1.0, 0.5, 0.5], // Style 0=1.0, Style 2=0.5
+        });
+
+        // Check u_styleLayerMapping
+        const layerCall = (gl.uniform4fv as any).mock.calls.find(
+            (call: any) => call[0] === mockLocations.u_styleLayerMapping
+        );
+        expect(layerCall).toBeDefined();
+        expect(layerCall[1]).toEqual([0, -1, 1, -1]);
+
+        // Check u_lightStyleFactors
+        // Float32Array [1, 0, 0.5, 0]
+        const factorsCall = (gl.uniform4fv as any).mock.calls.find(
+             (call: any) => call[0] === mockLocations.u_lightStyleFactors
+        );
+        expect(factorsCall).toBeDefined();
+        // Compare with Float32Array values
+        expect(factorsCall[1][0]).toBe(1);
+        expect(factorsCall[1][1]).toBe(0);
+        expect(factorsCall[1][2]).toBe(0.5);
+        expect(factorsCall[1][3]).toBe(0);
+    });
+
+    it('should contain new attributes in vertex shader source', () => {
+        expect(BSP_SURFACE_VERTEX_SOURCE).toContain('layout(location = 3) in float a_lightmapStep;');
+        expect(BSP_SURFACE_VERTEX_SOURCE).toContain('out float v_lightmapStep;');
+    });
+
+    it('should use new uniforms in fragment shader source', () => {
+        expect(BSP_SURFACE_FRAGMENT_SOURCE).toContain('uniform vec4 u_styleLayerMapping;');
+        expect(BSP_SURFACE_FRAGMENT_SOURCE).toContain('in float v_lightmapStep;');
+        expect(BSP_SURFACE_FRAGMENT_SOURCE).toContain('layer * v_lightmapStep');
+    });
+
   });
 
   describe('warpCoords GLSL logic', () => {

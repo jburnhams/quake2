@@ -88,11 +88,34 @@ export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
       if (data) {
         // Validation: data length should be roughly w * h * 3 (or close, due to alignment?)
         // Q2 lightmaps might strictly be w * h * 3.
-        lightmap = {
-          width,
-          height,
-          data
-        };
+
+        let numStyles = 0;
+        for (const style of face.styles) {
+            if (style !== 255) numStyles++;
+        }
+
+        const requiredLength = width * height * 3 * numStyles;
+
+        // Ensure we have enough data and slice it exactly
+        if (data.byteLength >= requiredLength) {
+            lightmap = {
+              width,
+              height,
+              data: data.subarray(0, requiredLength)
+            };
+        } else {
+             console.warn(`Insufficient lightmap data for face ${faceIndex}. Expected ${requiredLength}, got ${data.byteLength}`);
+             // Fallback? Use what we have, or null?
+             // If we have at least one map, maybe use it?
+             // But geometry builder expects integrity.
+             if (data.byteLength >= width * height * 3) {
+                 lightmap = {
+                   width,
+                   height,
+                   data: data.subarray(0, width * height * 3)
+                 };
+             }
+        }
       }
     }
 
