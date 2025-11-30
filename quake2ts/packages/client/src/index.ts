@@ -261,6 +261,13 @@ export function createClient(imports: ClientImports): ClientExports {
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
+    },
+    onServerData: (protocol: number, tickRate?: number) => {
+        if (tickRate && tickRate > 0) {
+            demoPlayback.setFrameDuration(1000 / tickRate);
+        } else {
+            demoPlayback.setFrameDuration(100); // 10Hz fallback
+        }
     }
   });
 
@@ -680,8 +687,8 @@ export function createClient(imports: ClientImports): ClientExports {
                  value: c.string,
                  flags: c.flags
                  }));
-             settings.saveCvars(list);
-        }
+                 settings.saveCvars(list);
+            }
     },
 
     get prediction(): ClientPrediction {

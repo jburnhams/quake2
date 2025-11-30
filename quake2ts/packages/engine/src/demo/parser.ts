@@ -199,7 +199,7 @@ export interface DamageIndicator {
 }
 
 export interface NetworkMessageHandler {
-    onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void;
+    onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string, tickRate?: number, demoType?: number): void;
     onConfigString(index: number, str: string): void;
     onSpawnBaseline(entity: EntityState): void;
     onFrame(frame: FrameData): void;
@@ -428,17 +428,53 @@ export class NetworkMessageParser {
 
   private parseServerData(): void {
     this.protocolVersion = this.stream.readLong();
-    const serverCount = this.stream.readLong();
-    this.isDemo = this.stream.readByte();
-    const attractLoop = 0;
-    const gameDir = this.stream.readString();
-    const playerNum = this.stream.readShort();
-    const levelName = this.stream.readString();
 
-    if (this.handler) {
-        this.handler.onServerData(this.protocolVersion, serverCount, attractLoop, gameDir, playerNum, levelName);
+    if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
+        // Rerelease Protocol
+        const spawnCount = this.stream.readLong();
+        const demoType = this.stream.readByte(); // 0=game, 1=demo, 2=server demo
+        this.isDemo = demoType;
+        const tickRate = this.stream.readByte();
+        const gameDir = this.stream.readString();
+
+        // Rerelease playernums complex logic
+        let playerNum = this.stream.readShort();
+        if (playerNum === -2) {
+             const numSplits = this.stream.readShort();
+             for (let i = 0; i < numSplits; i++) {
+                 this.stream.readShort(); // consume split screen player nums
+             }
+             // We can maybe assume the first one (implicitly) or use a default?
+             // Since we're just setting up initial state, assuming we are one of them or using a fallback.
+             // If playerNum was -2, it means we are a splitscreen client.
+             // We'll set playerNum to 0 for now as 'primary'.
+             playerNum = 0;
+        } else if (playerNum === -1) {
+            // Cinematics, no entity
+            playerNum = -1;
+        }
+
+        const levelName = this.stream.readString();
+
+        if (this.handler) {
+            this.handler.onServerData(this.protocolVersion, spawnCount, 0, gameDir, playerNum, levelName, tickRate, demoType);
+        } else {
+             console.log(`Server Data (Rerelease): Protocol ${this.protocolVersion}, Level ${levelName}, Tick ${tickRate}`);
+        }
     } else {
-        console.log(`Server Data: Protocol ${this.protocolVersion}, Level ${levelName}, GameDir ${gameDir}`);
+        // Vanilla Protocol
+        const serverCount = this.stream.readLong();
+        this.isDemo = this.stream.readByte(); // attractLoop/isDemo
+        const attractLoop = 0;
+        const gameDir = this.stream.readString();
+        const playerNum = this.stream.readShort();
+        const levelName = this.stream.readString();
+
+        if (this.handler) {
+            this.handler.onServerData(this.protocolVersion, serverCount, attractLoop, gameDir, playerNum, levelName);
+        } else {
+            console.log(`Server Data: Protocol ${this.protocolVersion}, Level ${levelName}, GameDir ${gameDir}`);
+        }
     }
   }
 
