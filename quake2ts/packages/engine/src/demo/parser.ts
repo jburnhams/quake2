@@ -1,5 +1,7 @@
 import { BinaryStream, Vec3, ServerCommand, TempEntity, ANORMS } from '@quake2ts/shared';
 
+export const PROTOCOL_VERSION_RERELEASE = 2023;
+
 // Constants from Q2 source
 export const U_ORIGIN1   = (1 << 0);
 export const U_ORIGIN2   = (1 << 1);
@@ -243,8 +245,12 @@ export class NetworkMessageParser {
         if (cmd === 16) return ServerCommand.temp_entity;
     }
 
-    // Rerelease Protocol 2023+?
-    // Assuming standard 1-1 mapping for now as per updated enum
+    // Rerelease Protocol 2023+
+    // Mapping matches the ServerCommand enum directly, but we explicitly handle it
+    // to be clear about support.
+    if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
+      return cmd;
+    }
 
     return cmd;
   }
