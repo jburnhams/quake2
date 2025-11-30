@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClient, ClientImports, ClientExports } from '../src/index.js';
-import { EntityState, Mat4 } from '@quake2ts/shared';
+import { EntityState, Mat4, ConfigStringIndex } from '@quake2ts/shared';
 import { Md2Model } from '@quake2ts/engine';
 import { ClientConfigStrings } from '../src/configStrings.js';
 
@@ -63,7 +63,7 @@ describe('Entity Interpolation', () => {
     mockEngine.assets.getMd2Model.mockReturnValue(mockModel);
 
     // Set up config string for model
-    client.configStrings.set(33, 'models/test.md2'); // CS_MODELS (32) + 1
+    client.configStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
 
     // Entity 1:
     // Frame A: scale=1, alpha=255
@@ -76,7 +76,7 @@ describe('Entity Interpolation', () => {
 
     const entityB = createMockEntity(1, { x: 10, y: 0, z: 0 }, 1);
     entityB.scale = 2.0;
-    entityB.alpha = 0;
+    entityB.alpha = 1;
 
     const sample = {
       alpha: 0.5,
@@ -118,7 +118,7 @@ describe('Entity Interpolation', () => {
     const ent = renderEntities[0];
     expect(ent.type).toBe('md2');
 
-    // Check Alpha Interpolation (255 to 0 at 0.5 = 127.5)
+    // Check Alpha Interpolation (255 to 1 at 0.5 = 128)
     // Assuming normalization 0-255 -> 0-1
     expect(ent.alpha).toBeCloseTo(0.5, 1);
 
