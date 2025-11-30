@@ -203,26 +203,47 @@ export function pickupArmor(inventory: PlayerInventory, item: ArmorItem, time: n
     if (armorType) {
         const armorInfo = ARMOR_INFO[armorType];
         if (!inventory.armor || inventory.armor.armorType !== armorType) {
-            inventory.armor = { armorType, armorCount: item.amount };
+            // Logic based on g_items.c: Pickup_Armor
+            // If we have different armor, only take if new armor is better (higher protection).
+            // This prevents replacing Body Armor (0.8) with Jacket Armor (0.3).
+            let take = true;
+            if (inventory.armor) {
+                const oldInfo = ARMOR_INFO[inventory.armor.armorType!];
+                if (oldInfo.normalProtection > armorInfo.normalProtection) {
+                    take = false;
+                }
+            }
+
+            if (take) {
+                inventory.armor = { armorType, armorCount: item.amount };
+                setPickup(inventory, icon, time);
+                return true;
+            } else {
+                return false;
+            }
         } else {
+            // Same type, add count up to max
             inventory.armor.armorCount += item.amount;
             if (inventory.armor.armorCount > armorInfo.maxCount) {
                 inventory.armor.armorCount = armorInfo.maxCount;
             }
+            setPickup(inventory, icon, time);
+            return true;
         }
-        setPickup(inventory, icon, time);
-        return true;
     }
 
     if (item.id === 'item_armor_shard') {
         if (!inventory.armor) {
-            return false;
+            // Shards give Jacket Armor (2) if player has no armor
+            inventory.armor = { armorType: ArmorType.JACKET, armorCount: item.amount };
+        } else {
+            inventory.armor.armorCount += item.amount;
+            const armorInfo = ARMOR_INFO[inventory.armor.armorType!];
+            if (inventory.armor.armorCount > armorInfo.maxCount) {
+                inventory.armor.armorCount = armorInfo.maxCount;
+            }
         }
-        inventory.armor.armorCount += item.amount;
-        const armorInfo = ARMOR_INFO[inventory.armor.armorType!];
-        if (inventory.armor.armorCount > armorInfo.maxCount) {
-            inventory.armor.armorCount = armorInfo.maxCount;
-        }
+        // Shards do not trigger a pickup icon/timer in inventory slot
         return true;
     }
 
@@ -287,11 +308,9 @@ export function pickupPowerArmor(inventory: PlayerInventory, item: PowerArmorIte
         icon = 'i_powershield';
     }
 
-    // You can have both screen and shield in inventory?
-    // Q2 rerelease logic:
-    // If you pick up power screen, you get it.
-    // If you pick up power shield, you get it.
-    // T_Damage prioritizes shield if you have cells.
+    // Power Armor logic mirrors Quake 2:
+    // Picking up screen/shield always gives the item.
+    // T_Damage logic (damage.ts) handles priority and cell consumption.
 
     const hadIt = inventory.items.has(item.id);
     inventory.items.add(item.id);
@@ -300,15 +319,6 @@ export function pickupPowerArmor(inventory: PlayerInventory, item: PowerArmorIte
         setPickup(inventory, icon, time);
         return true;
     }
-
-    // If already had it, give cells if applicable?
-    // In Q2, power armor item gives 50 cells?
-    // g_items.c:
-    // "Power Screen" -> pickup "You got the Power Screen" -> IT_ARMOR
-    // It doesn't seem to give cells by default unless specified.
-    // But usually power armor implies battery consumption.
-    // Rerelease might differ.
-    // Let's stick to "just sets the flag".
 
     return false;
 }
