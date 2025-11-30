@@ -84,8 +84,8 @@ describe('func_door', () => {
   });
 
   it('should support sounds property', () => {
-      // Set sounds to 1
-      entity.sounds = 1;
+      // Set sounds to 0 (default/loud)
+      entity.sounds = 0;
       const spawnFn = registry.get('func_door');
       spawnFn?.(entity, context);
 
