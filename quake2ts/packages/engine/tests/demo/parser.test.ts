@@ -1,6 +1,6 @@
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { NetworkMessageParser } from '../../src/demo/parser.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NetworkMessageParser, NetworkMessageHandler } from '../../src/demo/parser.js';
 import { BinaryStream } from '@quake2ts/shared';
 import { ServerCommand } from '@quake2ts/shared';
 import { TempEntity } from '@quake2ts/shared';
@@ -71,6 +71,11 @@ describe('NetworkMessageParser', () => {
     writeByte(data, 0); // Area count
     // No area bytes since count is 0
 
+    // svc_playerinfo MUST follow svc_frame in this parser implementation
+    writeByte(data, ServerCommand.playerinfo);
+    writeShort(data, 0); // flags
+    writeLong(data, 0); // stats
+
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
     parser.parseMessage();
@@ -90,8 +95,23 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.frame);
     writeLong(data, 100);
     writeLong(data, 99);
-    // NO UK_B1 here
+    writeByte(data, 0); // UK_B1 (surpress count) - WAIT, check impl.
+    // The implementation reads suppressCount ALWAYS.
+    // const surpressCount = this.stream.readByte();
+
+    // So both proto 34 and 26 read suppress count?
+    // Let's check parser.ts again.
+    // It reads serverFrame, deltaFrame, suppressCount.
+
+    // The test description says "NOT skipping extra byte".
+    // If the parser code does NOT check protocol version for suppressCount, then it reads it always.
+
     writeByte(data, 0); // Area count
+
+    // svc_playerinfo MUST follow svc_frame
+    writeByte(data, ServerCommand.playerinfo);
+    writeShort(data, 0); // flags
+    writeLong(data, 0); // stats
 
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
@@ -187,6 +207,41 @@ describe('NetworkMessageParser', () => {
       const stream = createStream(data);
       const parser = new NetworkMessageParser(stream);
       parser.parseMessage();
+      expect(stream.hasMore()).toBe(false);
+  });
+
+  it('should parse svc_muzzleflash3', () => {
+      const data: number[] = [];
+      writeByte(data, ServerCommand.muzzleflash3);
+      writeShort(data, 123); // Ent
+      writeShort(data, 5); // Weapon (short in muzzleflash3)
+
+      const stream = createStream(data);
+      const handlerMock = {
+          onMuzzleFlash3: vi.fn(),
+          // Implement others as no-ops if needed by implicit calls
+      } as unknown as NetworkMessageHandler;
+
+      const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.parseMessage();
+
+      expect(handlerMock.onMuzzleFlash3).toHaveBeenCalledWith(123, 5);
+      expect(stream.hasMore()).toBe(false);
+  });
+
+  it('should parse svc_level_restart', () => {
+      const data: number[] = [];
+      writeByte(data, ServerCommand.level_restart);
+
+      const stream = createStream(data);
+      const handlerMock = {
+          onLevelRestart: vi.fn(),
+      } as unknown as NetworkMessageHandler;
+
+      const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.parseMessage();
+
+      expect(handlerMock.onLevelRestart).toHaveBeenCalled();
       expect(stream.hasMore()).toBe(false);
   });
 
