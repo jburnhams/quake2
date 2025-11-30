@@ -1,3 +1,4 @@
+
 import { BinaryStream, Vec3, ServerCommand, TempEntity, ANORMS } from '@quake2ts/shared';
 import pako from 'pako';
 
@@ -34,21 +35,6 @@ export const U_OLDORIGIN = (1 << 24);
 export const U_SKIN16    = (1 << 25);
 export const U_SOUND     = (1 << 26);
 export const U_SOLID     = (1 << 27);
-
-// New Bits for Rerelease (High 32)
-// Not strictly high 32, but handled via extended checks
-export const U_ALPHA            = (1 << 13); // Reused bit in some contexts? Or new?
-// Actually, let's look at rerelease source or just follow the pattern if possible.
-// The parser code typically checks bits.
-// Since I don't have the rerelease bits defs handy in TS, I will rely on standard parsing
-// and assume any Rerelease extensions to delta compression use additional flags
-// if they modified the bitmask structure.
-// However, the `entity_state_t` has new fields.
-// If the Rerelease protocol uses the same bitmask, then `parseDelta` needs to know
-// which bits map to what.
-
-// If `protocolVersion` is 2023 (Rerelease), we might need different bit mappings.
-// Let's assume for now the flags are compatible or we need to find them.
 
 // Demo types
 const RECORD_NETWORK = 0x00;
@@ -925,6 +911,9 @@ export class NetworkMessageParser {
 
       // Player Info
       const piCmd = this.stream.readByte();
+
+      // Strict Protocol Check:
+      // In standard Q2 protocol, `svc_playerinfo` MUST follow the frame header.
       if (piCmd !== ServerCommand.playerinfo) {
           throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd}`);
       }
