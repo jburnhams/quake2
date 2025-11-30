@@ -18,6 +18,8 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 export interface GameCreateOptions {
   gravity: Vec3;
   deathmatch?: boolean;
+  rogue?: boolean;
+  xatrix?: boolean;
   random?: RandomGenerator;
 }
 
@@ -93,6 +95,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
   readonly deathmatch: boolean;
+  readonly rogue: boolean;
+  readonly xatrix: boolean;
   readonly random: RandomGenerator;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
@@ -130,6 +134,8 @@ export function createGame(
 ): GameExports {
   const gravity = options.gravity;
   const deathmatch = options.deathmatch ?? false;
+  const rogue = options.rogue ?? false;
+  const xatrix = options.xatrix ?? false;
   const levelClock = new LevelClock();
   const frameLoop = new GameFrameLoop();
   const rng = options.random ?? new RandomGenerator(); // Main game RNG
@@ -474,6 +480,8 @@ export function createGame(
     },
     trace,
     deathmatch,
+    rogue,
+    xatrix,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
       multicast(origin, type, event, ...args);
     },

@@ -46,7 +46,7 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
   }
 }
 
-export function runBouncing(ent: Entity, imports: GameImports, frametime: number): void {
+export function runBouncing(ent: Entity, system: EntitySystem, imports: GameImports, frametime: number): void {
   if (ent.movetype !== MoveType.Bounce && ent.movetype !== MoveType.WallBounce) {
     return;
   }
@@ -60,6 +60,14 @@ export function runBouncing(ent: Entity, imports: GameImports, frametime: number
 
   if (traceResult.fraction < 1.0) {
     ent.origin = traceResult.endpos;
+    if (traceResult.ent) {
+      resolveImpact(ent, traceResult, system);
+    } else {
+      // Hit world
+      if (ent.touch) {
+        ent.touch(ent, system.world, traceResult.plane, undefined);
+      }
+    }
   }
 
   if (traceResult.fraction > 0 && traceResult.fraction < 1 && traceResult.plane) {

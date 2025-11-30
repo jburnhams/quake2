@@ -38,4 +38,9 @@ export enum AmmoItemId {
   Grenades = 'ammo_grenades',
   Cells = 'ammo_cells',
   Slugs = 'ammo_slugs',
+  MagSlugs = 'ammo_magslug',
+  Flechettes = 'ammo_flechettes',
+  Disruptor = 'ammo_disruptor',
+  Tesla = 'ammo_tesla',
+  Trap = 'ammo_trap',
 }

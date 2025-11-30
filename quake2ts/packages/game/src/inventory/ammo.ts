@@ -33,6 +33,11 @@ const AMMO_ITEM_DEFINITIONS: Record<AmmoItemId, AmmoItemDefinition> = {
   [AmmoItemId.Grenades]: { id: AmmoItemId.Grenades, ammoType: AmmoType.Grenades, quantity: 5, weaponAmmo: true },
   [AmmoItemId.Cells]: { id: AmmoItemId.Cells, ammoType: AmmoType.Cells, quantity: 50, weaponAmmo: false },
   [AmmoItemId.Slugs]: { id: AmmoItemId.Slugs, ammoType: AmmoType.Slugs, quantity: 10, weaponAmmo: false },
+  [AmmoItemId.MagSlugs]: { id: AmmoItemId.MagSlugs, ammoType: AmmoType.MagSlugs, quantity: 10, weaponAmmo: false },
+  [AmmoItemId.Flechettes]: { id: AmmoItemId.Flechettes, ammoType: AmmoType.Flechettes, quantity: 50, weaponAmmo: false },
+  [AmmoItemId.Disruptor]: { id: AmmoItemId.Disruptor, ammoType: AmmoType.Disruptor, quantity: 15, weaponAmmo: false },
+  [AmmoItemId.Tesla]: { id: AmmoItemId.Tesla, ammoType: AmmoType.Tesla, quantity: 5, weaponAmmo: false },
+  [AmmoItemId.Trap]: { id: AmmoItemId.Trap, ammoType: AmmoType.Trap, quantity: 5, weaponAmmo: false },
 };
 
 export function getAmmoItemDefinition(id: AmmoItemId): AmmoItemDefinition {
@@ -58,7 +63,11 @@ export function createBaseAmmoCaps(): number[] {
   caps[AmmoType.Bullets] = 200;
   caps[AmmoType.Shells] = 100;
   caps[AmmoType.Cells] = 200;
-  // TODO: Add caps for new ammo types if known, defaulting to 50 is safe for now.
+  caps[AmmoType.MagSlugs] = 50;
+  caps[AmmoType.Flechettes] = 200;
+  caps[AmmoType.Disruptor] = 200; // Assuming similar to cells/bullets
+  caps[AmmoType.Tesla] = 50;
+  caps[AmmoType.Trap] = 50;
   return caps;
 }
 
