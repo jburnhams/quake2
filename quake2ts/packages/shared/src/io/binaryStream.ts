@@ -49,8 +49,20 @@ export class BinaryStream {
     return value;
   }
 
+  public readUShort(): number {
+    const value = this.view.getUint16(this.offset, true);
+    this.offset += 2;
+    return value;
+  }
+
   public readLong(): number {
     const value = this.view.getInt32(this.offset, true);
+    this.offset += 4;
+    return value;
+  }
+
+  public readULong(): number {
+    const value = this.view.getUint32(this.offset, true);
     this.offset += 4;
     return value;
   }

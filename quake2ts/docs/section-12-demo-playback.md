@@ -3,7 +3,7 @@
 ## Overview
 This section covers the implementation of Quake II demo (`.dm2`) playback in the browser. The goal is to parse and render standard Quake II demo files, which record the server-to-client network stream. This involves implementing a strict parser for the Quake II network protocol (`svc_*` commands), a demo file container reader, and a playback controller that feeds these messages into the engine's state machine, simulating a live connection.
 
-**Current Status:** The system partially implements Vanilla Quake II (v3.20) demo playback. Support for "Quake II Rerelease" (Protocol 2023) demos is currently missing and requires significant updates to the protocol layer.
+**Current Status:** The system implements both Vanilla Quake II (v3.20) and Rerelease (Protocol 2023) network protocol parsing. Support for "Quake II Rerelease" demos is now largely complete in the protocol layer.
 
 ## Dependencies
 - **Shared Protocol**: Requires complete definition of `svc_ops_e` and `clc_ops_e` opcodes for both Vanilla and Rerelease protocols.
@@ -22,6 +22,8 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
 - ✅ Implemented basic parsing hooks for new `svc_*` commands in `NetworkMessageParser`.
 - ✅ Updated `ClientNetworkHandler` to support the updated parser interface.
 - ✅ Added unit tests for Rerelease command parsing (`svc_muzzleflash3`, `svc_level_restart`).
+- ✅ Implemented full parsing logic for all Rerelease `svc_*` commands, including Zlib decompression for `svc_configblast` and `svc_spawnbaselineblast`.
+- ✅ Verified new commands with comprehensive unit tests in `packages/engine/tests/demo/`.
 
 ## Protocol Gaps (Rerelease / Protocol 2023)
 
@@ -32,20 +34,20 @@ To support modern "Rerelease" demos and servers, the following extensions must b
 - **Target:** Must default to Protocol 2023 (Rerelease), while maintaining legacy support for Protocol 34.
 
 ### 2. Missing Server Commands (`svc_*`)
-The following Rerelease commands are partially implemented (stubbed or basic parsing) in `packages/engine/src/demo/parser.ts`. Full logic needs to be fleshed out:
-- [ ] `svc_splitclient`
-- [ ] `svc_configblast` (Compressed configstrings)
-- [ ] `svc_spawnbaselineblast` (Compressed baselines)
-- [ ] `svc_level_restart` (Stubbed)
-- [ ] `svc_damage` (Damage indicators)
-- [ ] `svc_locprint` (Localized print)
-- [ ] `svc_fog` (Fog settings)
-- [ ] `svc_waitingforplayers` (Stubbed)
-- [ ] `svc_bot_chat`
-- [ ] `svc_poi` (Point of Interest)
-- [ ] `svc_help_path`
-- [ ] `svc_muzzleflash3` (Implemented)
-- [ ] `svc_achievement`
+The following Rerelease commands are fully implemented in `packages/engine/src/demo/parser.ts`:
+- [x] `svc_splitclient`
+- [x] `svc_configblast` (Compressed configstrings)
+- [x] `svc_spawnbaselineblast` (Compressed baselines)
+- [x] `svc_level_restart`
+- [x] `svc_damage` (Damage indicators)
+- [x] `svc_locprint` (Localized print)
+- [x] `svc_fog` (Fog settings)
+- [x] `svc_waitingforplayers`
+- [x] `svc_bot_chat`
+- [x] `svc_poi` (Point of Interest)
+- [x] `svc_help_path`
+- [x] `svc_muzzleflash3`
+- [x] `svc_achievement`
 
 ### 3. Entity State Extensions
 The `EntityState` interface in `packages/shared/src/protocol/entityState.ts` now includes Rerelease fields:
@@ -68,7 +70,7 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 - [x] **Refactor `NetworkMessageParser`**:
     - [ ] Update `parseFrame` to handle the "atomic frame" concept correctly (reading packet entities immediately within the frame command if the protocol dictates, or verifying the Vanilla split behavior).
     - [x] Add support for detecting Protocol 2023 in `parseServerData`.
-    - [x] Implement parsers for all missing Rerelease `svc_*` commands. (Stubs/Logic added)
+    - [x] Implement parsers for all missing Rerelease `svc_*` commands.
 - [x] **Update Shared Types**:
     - [x] Update `EntityState` and `PlayerState` interfaces to include Rerelease fields.
     - [x] Update `ServerCommand` enum with new opcodes.
