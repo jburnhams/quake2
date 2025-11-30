@@ -4,16 +4,16 @@
 
 import { Entity } from '../../entities/entity.js';
 import { GameExports } from '../../index.js';
-import { getWeaponState } from './state.js';
+import { getWeaponState, WeaponState } from './state.js';
 import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
-import { T_Damage } from '../damage.js';
 import {
     ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
     MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
 } from '@quake2ts/shared';
+import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
@@ -151,6 +151,83 @@ function fireRailgun(game: GameExports, player: Entity, forward: any, damage: nu
     trailStart.z += player.viewheight - 8; // Rough adjustment
 
     game.multicast(start, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, trailStart, finalEnd);
+}
+
+function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+    if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
+        // TODO: NoAmmoWeaponChange
+        return;
+    }
+
+    // Check if player is holding the attack button
+    const buttons = player.client?.buttons || 0;
+    const isAttacking = (buttons & 1) !== 0; // BUTTON_ATTACK = 1
+
+    // If not already cooking, start cooking
+    if (weaponState.grenadeTimer === undefined) {
+        if (!isAttacking) {
+            // Button not held, do nothing (wait for press)
+            return;
+        }
+
+        // Start cooking
+        weaponState.grenadeTimer = game.time;
+        game.sound(player, 0, "weapons/hgrent1a.wav", 1, 1, 0);
+
+        // Don't fire yet, just set timer
+        // We set lastFireTime to now so we don't re-enter this block immediately if we were polling faster than frames,
+        // but real firing happens on release or timeout.
+        return;
+    }
+
+    // We are cooking.
+    const heldTime = (game.time - weaponState.grenadeTimer) / 1000.0;
+
+    // Check for held too long (3.0 seconds max) -> blow up in hand
+    // Source: p_weapon.cpp:1016 "if ((level.time - ent->client->grenade_time) > 3.2)" - using 3.0 + extra buffer
+    if (heldTime >= 3.0) {
+        inventory.ammo.counts[AmmoType.Grenades]--;
+
+        // Explode in hand
+        const dmg = 120; // Same as grenade damage
+        T_RadiusDamage([player] as any, player as any, player as any, dmg, player as any, 120, DamageFlags.NONE, DamageMod.GRENADE, game.time / 1000, {}, game.multicast);
+        game.multicast(player.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, player.origin);
+
+        // Reset state
+        weaponState.grenadeTimer = undefined;
+        weaponState.lastFireTime = game.time + 1000; // Delay next attack
+        return;
+    }
+
+    // Check for release (throw)
+    if (!isAttacking) {
+        inventory.ammo.counts[AmmoType.Grenades]--;
+
+        // Calculate throw strength
+        // Source: p_weapon.cpp:1034-1046
+        // 400 to 800 based on hold time
+        // hold time is in seconds.
+        // Original logic: (timer - level.time) related.
+        // Here we track elapsed time.
+        // Let's map 0..3s to 400..800
+        let speed = 400 + (heldTime * 200); // 400 + 3*200 = 1000? No, original clamps.
+        if (speed > 800) speed = 800;
+
+        // Timer for explosion. Grenade always explodes 2.5s after throw?
+        // No, "The grenade timer is set to 2.5 seconds minus the time held."
+        // Source: p_weapon.cpp:1107: "timer = 2.5 - (level.time - ent->client->grenade_time);"
+        let timer = 2.5 - heldTime;
+        if (timer < 0.5) timer = 0.5; // Minimum 0.5s fuse
+
+        game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
+        applyKick(player, -2, 0, -2); // Using similar kick to launcher
+
+        createGrenade(game.entities, player, player.origin, forward, 120, speed, timer);
+
+        // Reset state
+        weaponState.grenadeTimer = undefined;
+        weaponState.lastFireTime = game.time + 1000; // 1s refire rate? "Put away" animation time
+    }
 }
 
 export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
@@ -331,6 +408,13 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             applyKick(player, -2, 0, -2);
             createGrenade(game.entities, player, player.origin, forward, 120, 600);
             break;
+        }
+        case WeaponId.HandGrenade: {
+            // Source: rerelease/p_weapon.cpp:988-1213
+            // Logic handled in a separate function because it's stateful (hold to throw)
+            fireHandGrenade(game, player, inventory, weaponState, forward);
+            // Return early because fireHandGrenade manages lastFireTime based on throw state
+            return;
         }
         case WeaponId.BFG10K: {
             if (inventory.ammo.counts[AmmoType.Cells] < 50) {
