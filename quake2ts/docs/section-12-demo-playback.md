@@ -68,7 +68,7 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 
 ### 1. Protocol Audit & Upgrade
 - [x] **Refactor `NetworkMessageParser`**:
-    - [ ] Update `parseFrame` to handle the "atomic frame" concept correctly (reading packet entities immediately within the frame command if the protocol dictates, or verifying the Vanilla split behavior).
+    - [x] Update `parseFrame` to handle the "atomic frame" concept correctly (reading packet entities immediately within the frame command if the protocol dictates, or verifying the Vanilla split behavior). Verified that atomic frame handling (embedded packet entities) is not standard Q2 behavior and `svc_playerinfo` is strictly expected after frame header.
     - [x] Add support for detecting Protocol 2023 in `parseServerData`.
     - [x] Implement parsers for all missing Rerelease `svc_*` commands.
 - [x] **Update Shared Types**:
