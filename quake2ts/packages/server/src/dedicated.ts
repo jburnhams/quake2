@@ -341,6 +341,12 @@ export class DedicatedServer implements GameEngine {
             inventory: createPlayerInventory(),
             weaponStates: createPlayerWeaponStates(),
             buttons: 0,
+            pm_type: 0,
+            pm_time: 0,
+            pm_flags: 0,
+            gun_frame: 0,
+            rdflags: 0,
+            fov: 90
         });
 
         client.edict = ent;
@@ -515,7 +521,7 @@ export class DedicatedServer implements GameEngine {
             pm_type: snapshot.pmType,
             origin: snapshot.origin,
             velocity: snapshot.velocity,
-            pm_time: 0, // Not explicitly in snapshot yet
+            pm_time: snapshot.pm_time,
             pm_flags: snapshot.pmFlags,
             gravity: Math.abs(snapshot.gravity.z), // Usually only Z is relevant for gravity value
             delta_angles: snapshot.deltaAngles,
@@ -523,12 +529,12 @@ export class DedicatedServer implements GameEngine {
             viewangles: snapshot.viewangles,
             kick_angles: snapshot.kick_angles,
             gun_index: snapshot.gunindex,
-            gun_frame: 0, // snapshot doesn't track gun frame yet?
+            gun_frame: snapshot.gun_frame,
             gun_offset: snapshot.gunoffset,
             gun_angles: snapshot.gunangles,
             blend: snapshot.blend,
-            fov: 90, // Default FOV
-            rdflags: 0, // Not tracked
+            fov: snapshot.fov,
+            rdflags: snapshot.rdflags,
             stats: snapshot.stats
         };
 

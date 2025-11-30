@@ -95,6 +95,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Game Stats**: `ps.stats` population implemented in `packages/game/src/entities/playerStats.ts`.
 - [x] **Config Strings**: Add `configstring(index, value)` to `GameImports` so game can set strings (models, sounds).
 - [x] **Sound/FX**: `multicast` / `unicast` implemented.
+- [x] **Player State**: Added missing fields (`pm_time`, `gun_frame`, `rdflags`, `fov`) to `PlayerClient`, `GameStateSnapshot`, and `PlayerState` to ensure correct network synchronization.
 
 ### Phase 3: Client Refactoring (CGame)
 
@@ -143,6 +144,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
 - [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
 - [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
+- [x] **Player State Completeness**: Added `pm_type`, `pm_time`, `pm_flags`, `gun_frame`, `rdflags`, and `fov` to `PlayerState` and wired them through from `PlayerClient` to `DedicatedServer` output.
 
 ## Next Steps
 1.  **Full Networking**:

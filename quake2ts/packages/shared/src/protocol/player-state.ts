@@ -31,4 +31,12 @@ export interface PlayerState {
   gunoffset: Vec3;
   gunangles: Vec3;
   gunindex: number;
+
+  // New fields for Q2 network compatibility
+  pm_type: number;
+  pm_time: number;
+  pm_flags: number;
+  gun_frame: number;
+  rdflags: number;
+  fov: number;
 }

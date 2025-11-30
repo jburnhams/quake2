@@ -58,12 +58,21 @@ export interface GameStateSnapshot {
   readonly pickupIcon?: string;
   readonly damageAlpha: number;
   readonly damageIndicators: any[];
-  // PlayerState fields stubbed for now
   readonly stats: number[];
   readonly kick_angles: Vec3;
   readonly gunoffset: Vec3;
   readonly gunangles: Vec3;
   readonly gunindex: number;
+
+  // New fields - using snake_case for consistency with Client/Protocol usage now
+  readonly pm_time: number;
+  readonly gun_frame: number;
+  readonly rdflags: number;
+  readonly fov: number;
+
+  // Compatibility fields for snake_case protocol
+  readonly pm_type: number;
+  readonly pm_flags: number;
 }
 
 import { findPlayerStart } from './entities/spawn.js';
@@ -277,8 +286,9 @@ export function createGame(
           worldClassname: entities.world.classname,
         },
         packetEntities,
-        pmFlags: 0, // TODO: get from player
-        pmType: 0,
+        pmFlags: player?.client?.pm_flags ?? 0,
+        pmType: player?.client?.pm_type ?? 0,
+        pm_time: player?.client?.pm_time ?? 0,
         waterlevel: player ? player.waterlevel : 0,
         deltaAngles: { x: 0, y: 0, z: 0 },
         client: player?.client,
@@ -290,12 +300,18 @@ export function createGame(
         damageAlpha: 0, // TODO
         damageIndicators: [],
 
-        // Stubs for new PlayerState fields
         stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
-        kick_angles: ZERO_VEC3,
+        kick_angles: player?.client?.kick_angles ?? ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,
-        gunindex: 0
+        gunindex: 0,
+        gun_frame: player?.client?.gun_frame ?? 0,
+        rdflags: player?.client?.rdflags ?? 0,
+        fov: player?.client?.fov ?? 90,
+
+        // Populate new compatibility fields
+        pm_type: player?.client?.pm_type ?? 0,
+        pm_flags: player?.client?.pm_flags ?? 0
       },
     };
   };
@@ -335,7 +351,13 @@ export function createGame(
         kick_angles: ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,
-        gunindex: 0
+        gunindex: 0,
+        pm_type: 0,
+        pm_time: 0,
+        pm_flags: 0,
+        gun_frame: 0,
+        rdflags: 0,
+        fov: 90
     };
 
     const traceAdapter = (start: Vec3, end: Vec3) => {
@@ -382,7 +404,7 @@ export function createGame(
            const player = entities.spawn();
            player.classname = 'player';
            // ... (SP init)
-           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates(), buttons: 0 });
+           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates(), buttons: 0, pm_type: 0, pm_time: 0, pm_flags: 0, gun_frame: 0, rdflags: 0, fov: 90 });
       }
     },
     clientConnect(ent: Entity | null, userInfo: string): string | true {

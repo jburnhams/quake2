@@ -595,7 +595,15 @@ export function createClient(imports: ClientImports): ClientExports {
                 kick_angles: ZERO_VEC3,
                 gunoffset: ZERO_VEC3,
                 gunangles: ZERO_VEC3,
-                gunindex: 0
+                gunindex: 0,
+
+                // New fields for Q2 network compatibility
+                pm_type: lastRendered.pm_type ?? 0,
+                pm_time: lastRendered.pm_time ?? 0,
+                pm_flags: lastRendered.pmFlags,
+                gun_frame: lastRendered.gun_frame ?? 0,
+                rdflags: lastRendered.rdflags ?? 0,
+                fov: lastRendered.fov ?? 90
             };
 
             // Populate stats for status bar (Health, Armor, Ammo) if not already populated by server
@@ -648,7 +656,7 @@ export function createClient(imports: ClientImports): ClientExports {
                  name: c.name,
                  value: c.string,
                  flags: c.flags
-             }));
+                 }));
              settings.saveCvars(list);
         }
     },
