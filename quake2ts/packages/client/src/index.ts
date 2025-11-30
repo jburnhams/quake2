@@ -155,11 +155,30 @@ function buildRenderableEntities(
         const frame = ent.frame;
         const prevFrame = prev.frame;
 
+        // Scale interpolation
+        // Default to 1.0 if not set (or 0 means 1 in legacy, but new field implies explicit)
+        // If scale is 0 in both, use 1. If 0 in one, interpolate from 0?
+        // Usually 0 means default 1.
+        const scaleA: number = (prev.scale !== undefined) ? prev.scale : 1.0;
+        const scaleB: number = (ent.scale !== undefined) ? ent.scale : 1.0;
+        const scale = lerp(scaleA, scaleB, alpha);
+
+        // Alpha interpolation
+        // Alpha is typically 0-255. 0 means opaque/default usually?
+        // Or 255 opaque. Rerelease behavior: 0 might be "default" (255).
+        // If undefined/0, assume 255 (opaque).
+        const getAlpha = (val: number | undefined) => (val === undefined || val === 0) ? 255 : val;
+        const alphaA = getAlpha(prev.alpha);
+        const alphaB = getAlpha(ent.alpha);
+        const alphaVal = lerp(alphaA, alphaB, alpha);
+        const normalizedAlpha = alphaVal / 255.0;
+
         const mat = mat4.create();
         mat4.translate(mat, mat, [origin.x, origin.y, origin.z]);
         mat4.rotateZ(mat, mat, angles.z * Math.PI / 180);
         mat4.rotateY(mat, mat, angles.y * Math.PI / 180);
         mat4.rotateX(mat, mat, angles.x * Math.PI / 180);
+        mat4.scale(mat, mat, [scale, scale, scale]);
 
 
         if (model.header.magic === 844121161) { // IDP2 (MD2)
@@ -172,7 +191,8 @@ function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
-                skin: ent.skinNum > 0 ? configStrings.getImageName(ent.skinNum) : undefined
+                skin: ent.skinNum > 0 ? configStrings.getImageName(ent.skinNum) : undefined,
+                alpha: normalizedAlpha
              });
         } else if (model.header.magic === 860898377) { // IDP3 (MD3)
              renderables.push({
@@ -184,6 +204,7 @@ function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
+                alpha: normalizedAlpha
                 // Lighting? Skins?
              });
         }
