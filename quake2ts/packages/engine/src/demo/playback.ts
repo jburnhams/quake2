@@ -50,6 +50,10 @@ export class DemoPlaybackController {
     this.accumulatedTime = 0;
   }
 
+  public setFrameDuration(ms: number) {
+      this.frameDuration = ms;
+  }
+
   public update(dt: number) {
     if (this.state !== PlaybackState.Playing || !this.reader) {
       return;
