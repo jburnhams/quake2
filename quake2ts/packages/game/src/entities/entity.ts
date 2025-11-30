@@ -147,6 +147,7 @@ export interface MonsterInfo {
   sidestep?: (self: Entity) => boolean;
   blocked?: BlockedCallback;
   setskin?: (self: Entity) => void;
+  freeze_time?: number; // For ETF Rifle freeze effect
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({

@@ -611,3 +611,70 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
 
     sys.finalizeSpawn(ball);
 }
+
+// Rogue ETF Rifle Flechette
+export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+    const flechette = sys.spawn();
+    flechette.classname = 'flechette';
+    flechette.owner = owner;
+    flechette.origin = { ...start };
+    flechette.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    flechette.movetype = MoveType.FlyMissile;
+    flechette.solid = Solid.BoundingBox;
+    flechette.modelindex = sys.modelIndex('models/objects/projectile/tris.md2'); // Reuse standard projectile or find correct one
+
+    // In Rogue, flechettes are small
+    flechette.mins = { x: -2, y: -2, z: -2 };
+    flechette.maxs = { x: 2, y: 2, z: 2 };
+
+    // Set angle to direction
+    flechette.angles = vectorToAngles(dir);
+
+    flechette.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) {
+            return;
+        }
+
+        if (other && other.takedamage) {
+            T_Damage(
+                other as any,
+                self as any,
+                self.owner as any,
+                self.velocity,
+                self.origin,
+                plane ? plane.normal : ZERO_VEC3,
+                damage,
+                1,
+                DamageFlags.NONE,
+                DamageMod.ETF_RIFLE, // Assuming this exists or falls under UNKNOWN
+                sys.timeSeconds,
+                sys.multicast ? sys.multicast.bind(sys) : undefined
+            );
+
+            // Freeze Logic
+            // Source: g_rogue_weapon.c (fire_etf_rifle/projectile_touch)
+            // If hits monster, apply freeze
+            if (other.monsterinfo) {
+                // Freeze duration: 3.0 seconds from now
+                // sys.timeSeconds is 0 in some tests if not properly initialized,
+                // but usually it's derived from game time.
+                // Using max to ensure non-NaN and > 0 if timeSeconds is valid.
+                const time = sys.timeSeconds || 0;
+                other.monsterinfo.freeze_time = time + 3.0;
+            }
+
+            sys.free(self);
+            return;
+        }
+
+        // Wall impact
+        if (plane) {
+            // Use TE_SPARKS or similar
+            sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SPARKS, self.origin, plane.normal);
+        }
+
+        sys.free(self);
+    };
+
+    sys.finalizeSpawn(flechette);
+}

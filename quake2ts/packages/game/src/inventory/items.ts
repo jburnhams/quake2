@@ -193,6 +193,16 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
     },
+    'weapon_etf_rifle': {
+        type: 'weapon',
+        id: 'weapon_etf_rifle',
+        name: 'ETF Rifle',
+        weaponId: WeaponId.EtfRifle,
+        ammoType: AmmoType.Flechettes,
+        initialAmmo: 50,
+        pickupAmmo: 50,
+        fireRate: 0.1,
+    },
     // ... add others as we implement them
 };
 
