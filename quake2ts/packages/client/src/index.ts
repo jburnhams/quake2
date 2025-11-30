@@ -197,6 +197,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
+  demoHandler.setView(view);
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
@@ -593,6 +594,7 @@ export function createClient(imports: ClientImports): ClientExports {
                 // Ensure stats are safely initialized
                 stats: lastRendered.stats ? [...lastRendered.stats] : new Array(32).fill(0),
                 kick_angles: ZERO_VEC3,
+                kick_origin: ZERO_VEC3,
                 gunoffset: ZERO_VEC3,
                 gunangles: ZERO_VEC3,
                 gunindex: 0,

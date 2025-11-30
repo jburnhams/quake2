@@ -60,6 +60,7 @@ export interface GameStateSnapshot {
   readonly damageIndicators: any[];
   readonly stats: number[];
   readonly kick_angles: Vec3;
+  readonly kick_origin: Vec3;
   readonly gunoffset: Vec3;
   readonly gunangles: Vec3;
   readonly gunindex: number;
@@ -302,6 +303,7 @@ export function createGame(
 
         stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
         kick_angles: player?.client?.kick_angles ?? ZERO_VEC3,
+        kick_origin: player?.client?.kick_origin ?? ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,
         gunindex: 0,
@@ -349,6 +351,7 @@ export function createGame(
         // Stubs
         stats: populatePlayerStats(player, levelClock.current.timeSeconds),
         kick_angles: ZERO_VEC3,
+        kick_origin: ZERO_VEC3,
         gunoffset: ZERO_VEC3,
         gunangles: ZERO_VEC3,
         gunindex: 0,

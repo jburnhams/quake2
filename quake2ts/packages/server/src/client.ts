@@ -137,6 +137,7 @@ function createEmptyPlayerState(): PlayerState {
         // Stubs for new fields
         stats: [],
         kick_angles: { x: 0, y: 0, z: 0 },
+        kick_origin: { x: 0, y: 0, z: 0 },
         gunoffset: { x: 0, y: 0, z: 0 },
         gunangles: { x: 0, y: 0, z: 0 },
         gunindex: 0,

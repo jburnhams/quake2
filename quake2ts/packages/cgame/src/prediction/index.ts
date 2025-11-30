@@ -94,6 +94,7 @@ export function defaultPredictionState(): PredictionState {
     blend: [0, 0, 0, 0],
     stats: [],
     kick_angles: ZERO_VEC3,
+    kick_origin: ZERO_VEC3,
     gunoffset: ZERO_VEC3,
     gunangles: ZERO_VEC3,
     gunindex: 0,
