@@ -162,6 +162,38 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 1,
     },
+    // Rogue Weapons
+    'weapon_boomer': {
+        type: 'weapon',
+        id: 'weapon_boomer', // Ion Ripper
+        name: 'Ion Ripper',
+        weaponId: WeaponId.IonRipper,
+        ammoType: AmmoType.Cells,
+        initialAmmo: 50,
+        pickupAmmo: 50,
+        fireRate: 0.1,
+    },
+    'weapon_phalanx': {
+        type: 'weapon',
+        id: 'weapon_phalanx',
+        name: 'Phalanx',
+        weaponId: WeaponId.Phalanx,
+        ammoType: AmmoType.MagSlugs,
+        initialAmmo: 50,
+        pickupAmmo: 50,
+        fireRate: 1,
+    },
+     'weapon_beam': {
+        type: 'weapon',
+        id: 'weapon_beam',
+        name: 'Plasma Beam',
+        weaponId: WeaponId.PlasmaBeam,
+        ammoType: AmmoType.Cells,
+        initialAmmo: 50,
+        pickupAmmo: 50,
+        fireRate: 0.1,
+    },
+    // ... add others as we implement them
 };
 
 export const HEALTH_ITEMS: Record<string, HealthItem> = {

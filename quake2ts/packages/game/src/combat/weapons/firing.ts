@@ -18,6 +18,7 @@ import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
+import { firePlasmaBeam, fireIonRipper, firePhalanx } from './rogue.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -427,6 +428,18 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Source: ../rerelease/p_weapon.cpp:1845-1848
             const damage = game.deathmatch ? 200 : 500;
             createBfgBall(game.entities, player, player.origin, forward, damage, 400, 200);
+            break;
+        }
+        case WeaponId.PlasmaBeam: {
+            firePlasmaBeam(game, player, inventory, weaponState, forward);
+            break;
+        }
+        case WeaponId.IonRipper: {
+            fireIonRipper(game, player, inventory, weaponState, forward);
+            break;
+        }
+        case WeaponId.Phalanx: {
+            firePhalanx(game, player, inventory, weaponState, forward);
             break;
         }
     }

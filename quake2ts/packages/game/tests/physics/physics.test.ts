@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { runGravity, runBouncing, runProjectileMovement } from '../../src/physics/movement.js';
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
+import { EntitySystem } from '../../src/entities/system.js';
 
 const mockTraceFn = (result: GameTraceResult) => {
   return (
@@ -19,6 +20,13 @@ const mockImports = (result: GameTraceResult): GameImports => ({
   trace: mockTraceFn(result),
   pointcontents: () => 0,
 });
+
+const createMockSystem = (): EntitySystem => {
+    return {
+        world: new Entity(0),
+        // Add other properties if needed
+    } as unknown as EntitySystem;
+};
 
 
 describe('runGravity', () => {
@@ -114,6 +122,7 @@ describe('runBouncing', () => {
     ent.velocity = { x: 100, y: 0, z: -100 };
     ent.origin = { x: 0, y: 0, z: 10 };
     ent.bounce = 1.5; // This property is now ignored in favor of Q2 standard behavior (1.6 backoff)
+    ent.touch = vi.fn(); // Mock touch callback
 
     const mockTrace: GameTraceResult = {
       fraction: 0.5,
@@ -131,7 +140,8 @@ describe('runBouncing', () => {
       ent: null,
     };
 
-    runBouncing(ent, mockImports(mockTrace), 0.1);
+    const system = createMockSystem();
+    runBouncing(ent, system, mockImports(mockTrace), 0.1);
 
     // Q2 Logic: ClipVelocity with backoff 1.6
     // v = (100, 0, -100)
@@ -149,6 +159,9 @@ describe('runBouncing', () => {
     expect(ent.origin.x).toBe(50);
     expect(ent.origin.y).toBe(0);
     expect(ent.origin.z).toBe(5);
+
+    // Verify touch was called
+    expect(ent.touch).toHaveBeenCalled();
   });
 
   it('should reflect velocity perfectly with WallBounce', () => {
@@ -156,6 +169,7 @@ describe('runBouncing', () => {
     ent.movetype = MoveType.WallBounce;
     ent.velocity = { x: 100, y: 0, z: -100 };
     ent.origin = { x: 0, y: 0, z: 10 };
+    ent.touch = vi.fn();
 
     const mockTrace: GameTraceResult = {
       fraction: 0.5,
@@ -173,7 +187,8 @@ describe('runBouncing', () => {
       ent: null,
     };
 
-    runBouncing(ent, mockImports(mockTrace), 0.1);
+    const system = createMockSystem();
+    runBouncing(ent, system, mockImports(mockTrace), 0.1);
 
     // Q2 Logic: ClipVelocity with backoff 2.0 (Elastic)
     // v_new = (100, 0, -100) - 2.0 * (-100) * (0, 0, 1)
@@ -183,5 +198,7 @@ describe('runBouncing', () => {
     expect(ent.velocity.x).toBeCloseTo(100);
     expect(ent.velocity.y).toBeCloseTo(0);
     expect(ent.velocity.z).toBeCloseTo(100);
+
+    expect(ent.touch).toHaveBeenCalled();
   });
 });

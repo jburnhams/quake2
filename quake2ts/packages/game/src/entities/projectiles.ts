@@ -223,14 +223,25 @@ export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, d
             return;
         }
 
-        // Hit wall/sky?
-        // C++: if (tr.surface && (tr.surface->flags & SURF_SKY)) G_FreeEdict...
-        // We don't have surface flags easily accessible in touch yet, but physics might handle sky.
-        // For now, if it hits a wall, WallBounce physics will reflect it.
+        // Hit wall
+        // Increment bounce count
+        self.count = (self.count || 0) + 1;
 
-        // Play bounce sound? C++ doesn't show explicit bounce sound in touch,
-        // but it might play on impact if handled by engine or configured.
-        // We can add a sound here if needed.
+        if (self.count > 5) {
+             // Too many bounces, fizzle out
+             sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.WELDING_SPARKS, self.origin, ZERO_VEC3, 0xe4);
+             sys.free(self);
+             return;
+        }
+
+        // Play bounce sound
+        // "weapons/ripphit.wav"
+        sys.sound(self, 0, 'weapons/ripphit.wav', 1, 1, 0);
+
+        // Wall effect (sparks)
+        if (plane) {
+            sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.WELDING_SPARKS, self.origin, plane.normal, 0xe4);
+        }
     };
 
     ion.think = (self: Entity) => {
@@ -549,4 +560,54 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
     sys.scheduleThink(bfgBall, sys.timeSeconds + 0.016); // ~1 frame
 
     sys.finalizeSpawn(bfgBall);
+}
+
+export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number) {
+    const ball = sys.spawn();
+    ball.classname = 'phalanx_ball';
+    ball.owner = owner;
+    ball.origin = { ...start };
+    ball.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    ball.movetype = MoveType.FlyMissile;
+    ball.solid = Solid.BoundingBox;
+    ball.modelindex = sys.modelIndex('models/objects/phalanx/tris.md2'); // Assume model exists
+
+    ball.mins = { x: -2, y: -2, z: -2 };
+    ball.maxs = { x: 2, y: 2, z: 2 };
+
+    ball.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) {
+            return;
+        }
+
+        // Direct damage
+        if (other && other.takedamage) {
+            T_Damage(
+                other as any,
+                self as any,
+                self.owner as any,
+                self.velocity,
+                self.origin,
+                plane ? plane.normal : ZERO_VEC3,
+                damage,
+                1,
+                DamageFlags.ENERGY,
+                DamageMod.PHALANX,
+                sys.timeSeconds,
+                sys.multicast.bind(sys)
+            );
+        }
+
+        // Radius damage
+        const entities = sys.findByRadius(self.origin, 120);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.ENERGY, DamageMod.PHALANX, sys.timeSeconds, {}, sys.multicast.bind(sys));
+
+        // Explosion effect
+        // Using TE_PLASMA_EXPLOSION or similar
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.PLASMA_EXPLOSION, self.origin);
+
+        sys.free(self);
+    };
+
+    sys.finalizeSpawn(ball);
 }

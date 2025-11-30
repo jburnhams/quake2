@@ -451,11 +451,11 @@ export class EntitySystem {
       switch (ent.movetype) {
         case MoveType.Toss:
           runGravity(ent, this.gravity, frametime);
-          runBouncing(ent, this.imports, frametime);
+          runBouncing(ent, this, this.imports, frametime);
           ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.Bounce:
-          runBouncing(ent, this.imports, frametime);
+          runBouncing(ent, this, this.imports, frametime);
           ent.timestamp = this.currentTimeSeconds;
           break;
         case MoveType.FlyMissile:
