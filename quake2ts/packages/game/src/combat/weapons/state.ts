@@ -7,6 +7,7 @@ import { WeaponId } from '../../inventory/playerInventory.js';
 export interface WeaponState {
     lastFireTime: number;
     spinupCount?: number; // For Chaingun spin-up
+    grenadeTimer?: number; // For Hand Grenade cooking start time
 }
 
 export interface PlayerWeaponStates {

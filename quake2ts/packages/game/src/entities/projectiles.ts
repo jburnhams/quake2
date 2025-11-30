@@ -55,7 +55,7 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
     sys.finalizeSpawn(rocket);
 }
 
-export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, timer: number = 2.5) {
     const grenade = sys.spawn();
     grenade.classname = 'grenade';
     grenade.owner = owner;
@@ -69,6 +69,9 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
     // Add mins/maxs for physics
     grenade.mins = { x: -4, y: -4, z: -4 };
     grenade.maxs = { x: 4, y: 4, z: 4 };
+
+    // Rerelease: p_weapon.cpp:1083 - random spin
+    grenade.avelocity = { x: 300, y: 300, z: 300 };
 
     const explode = (self: Entity) => {
         const entities = sys.findByRadius(self.origin, 120);
@@ -94,14 +97,19 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
             return;
         }
 
+        // Rerelease: p_weapon.cpp:1071 - Bounce sound
+        if (!self.groundentity) {
+             sys.sound(self, 0, 'weapons/grenlb1b.wav', 1, 1, 0);
+        }
+
         // Grenades bounce on walls
         // Physics engine handles bounce if movetype is BOUNCE.
-        // We might play a sound here.
     };
     grenade.think = (self: Entity) => {
         explode(self);
     };
-    sys.scheduleThink(grenade, sys.timeSeconds + 2.5);
+
+    sys.scheduleThink(grenade, sys.timeSeconds + timer);
     sys.finalizeSpawn(grenade);
 }
 

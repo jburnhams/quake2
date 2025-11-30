@@ -25,6 +25,7 @@ export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
   [WeaponId.SuperShotgun]: 'w_sshotgun',
   [WeaponId.Machinegun]: 'w_machinegun',
   [WeaponId.Chaingun]: 'w_chaingun',
+  [WeaponId.HandGrenade]: 'w_grenade',
   [WeaponId.GrenadeLauncher]: 'w_glauncher',
   [WeaponId.RocketLauncher]: 'w_rlauncher',
   [WeaponId.HyperBlaster]: 'w_hyperblaster',

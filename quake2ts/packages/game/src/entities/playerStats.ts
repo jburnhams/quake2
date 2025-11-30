@@ -12,6 +12,7 @@ const WEAPON_WHEEL_ORDER: WeaponId[] = [
     WeaponId.Chaingun,
     WeaponId.GrenadeLauncher,
     WeaponId.RocketLauncher,
+    WeaponId.HandGrenade,
     WeaponId.HyperBlaster,
     WeaponId.Railgun,
     WeaponId.BFG10K

@@ -102,6 +102,16 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
     },
+    'weapon_grenades': {
+        type: 'weapon',
+        id: 'weapon_grenades',
+        name: 'Hand Grenade',
+        weaponId: WeaponId.HandGrenade,
+        ammoType: AmmoType.Grenades,
+        initialAmmo: 5,
+        pickupAmmo: 5,
+        fireRate: 1.0,
+    },
     'weapon_grenadelauncher': {
         type: 'weapon',
         id: 'weapon_grenadelauncher',
