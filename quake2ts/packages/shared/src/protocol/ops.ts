@@ -24,7 +24,20 @@ export enum ServerCommand {
   playerinfo = 17,      // variable
   packetentities = 18,  // [...]
   deltapacketentities = 19, // [...]
-  frame = 20
+  frame = 20,
+  splitclient = 21,
+  configblast = 22,
+  spawnbaselineblast = 23,
+  level_restart = 24,
+  damage = 25,
+  locprint = 26,
+  fog = 27,
+  waitingforplayers = 28,
+  bot_chat = 29,
+  poi = 30,
+  help_path = 31,
+  muzzleflash3 = 32,
+  achievement = 33
 }
 
 export enum ClientCommand {
