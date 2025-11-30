@@ -77,13 +77,63 @@ const func_door: SpawnFunction = (entity, context) => {
                entity.movedir.y * (Math.abs(entity.maxs.y - entity.mins.y) - entity.lip) +
                entity.movedir.z * (Math.abs(entity.maxs.z - entity.mins.z) - entity.lip);
   entity.pos2 = addVec3(entity.pos1, scaleVec3(entity.movedir, move));
-  entity.use = (self) => {
+
+  if (entity.spawnflags & 1) { // START_OPEN
+      entity.origin = { ...entity.pos2 };
+      entity.state = DoorState.Open;
+  }
+
+  // Handle shootable doors
+  if (entity.health > 0) {
+      entity.takedamage = true;
+      entity.max_health = entity.health;
+      entity.die = (self, inflictor, attacker, damage) => {
+          self.health = self.max_health;
+          self.takedamage = false;
+          self.use?.(self, attacker, attacker);
+      };
+  }
+
+  entity.use = (self, other, activator) => {
+    if (entity.spawnflags & 32) { // TOGGLE
+         if (self.state === DoorState.Closed) {
+             self.state = DoorState.Opening;
+             self.think = door_go_up;
+             context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+         } else if (self.state === DoorState.Open) {
+             self.state = DoorState.Closing;
+             self.think = door_go_down;
+             context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+         }
+         return;
+    }
+
     if (self.state !== DoorState.Closed) return;
     self.state = DoorState.Opening;
     self.think = door_go_up;
     context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
-    context.entities.sound(self, 0, 'doors/dr1_strt.wav', 1, 1, 0); // Default sound
+
+    // Sound selection
+    let soundName = 'doors/dr1_strt.wav';
+    if (entity.sounds) {
+        // Basic mapping for now, can be expanded
+        switch (entity.sounds) {
+            case 1: soundName = 'doors/dr1_strt.wav'; break;
+            case 2: soundName = 'doors/dr2_strt.wav'; break;
+            case 3: soundName = 'doors/dr3_strt.wav'; break;
+            case 4: soundName = 'doors/dr4_strt.wav'; break;
+            default: soundName = 'doors/dr1_strt.wav';
+        }
+    }
+    context.entities.sound(self, 0, soundName, 1, 1, 0);
   };
+
+  if (entity.health <= 0 && !entity.targetname) {
+      entity.touch = (self, other) => {
+          if (!other || other.classname !== 'player') return;
+          self.use?.(self, other, other);
+      }
+  }
 };
 
 const func_button: SpawnFunction = (entity, context) => {
