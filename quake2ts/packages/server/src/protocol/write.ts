@@ -19,6 +19,55 @@ export function writeServerCommand(writer: BinaryWriter, event: ServerCommand, .
             break;
         }
 
+        case ServerCommand.centerprint: {
+            // args: [text: string]
+            const text = args[0] as string;
+            writer.writeString(text);
+            break;
+        }
+
+        case ServerCommand.stufftext: {
+            // args: [text: string]
+            const text = args[0] as string;
+            writer.writeString(text);
+            break;
+        }
+
+        case ServerCommand.sound: {
+            // args: [flags, soundNum, volume?, attenuation?, offset?, ent?, pos?]
+            const flags = args[0] as number;
+            const soundNum = args[1] as number;
+            const volume = args[2] as number | undefined;
+            const attenuation = args[3] as number | undefined;
+            const offset = args[4] as number | undefined;
+            const ent = args[5] as number | undefined;
+            const pos = args[6] as Vec3 | undefined;
+
+            writer.writeByte(flags);
+            writer.writeByte(soundNum);
+
+            if (flags & 1) { // SND_VOLUME
+                writer.writeByte(volume || 0);
+            }
+            if (flags & 2) { // SND_ATTENUATION
+                writer.writeByte(attenuation || 0);
+            }
+            if (flags & 16) { // SND_OFFSET
+                writer.writeByte(offset || 0);
+            }
+            if (flags & 8) { // SND_ENT
+                writer.writeShort(ent || 0);
+            }
+            if (flags & 4) { // SND_POS
+                if (pos) {
+                    writer.writePos(pos);
+                } else {
+                    writer.writePos({x:0, y:0, z:0});
+                }
+            }
+            break;
+        }
+
         case ServerCommand.muzzleflash: {
             // args: [entityIndex: number, flashType: number]
             const entIndex = args[0] as number;

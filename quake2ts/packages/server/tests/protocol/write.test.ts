@@ -62,4 +62,46 @@ describe('writeServerCommand', () => {
         expect(data[2]).toBe(99);
         expect(data[3]).toBe(0);
     });
+
+    it('writes ServerCommand.centerprint', () => {
+        const writer = new BinaryWriter();
+        writeServerCommand(writer, ServerCommand.centerprint, "Center Msg");
+        const data = writer.getData();
+
+        expect(data[0]).toBe(ServerCommand.centerprint);
+        // "Center Msg" is 10 chars + null terminator = 11 bytes
+        expect(data.length).toBe(1 + 11);
+        expect(String.fromCharCode(data[1])).toBe('C');
+    });
+
+    it('writes ServerCommand.stufftext', () => {
+        const writer = new BinaryWriter();
+        writeServerCommand(writer, ServerCommand.stufftext, "cmd\n");
+        const data = writer.getData();
+
+        expect(data[0]).toBe(ServerCommand.stufftext);
+        expect(data.length).toBe(1 + 5);
+        expect(String.fromCharCode(data[1])).toBe('c');
+    });
+
+    it('writes ServerCommand.sound', () => {
+        const writer = new BinaryWriter();
+        const flags = 1 | 8; // SND_VOLUME | SND_ENT
+        const soundNum = 5;
+        const volume = 255;
+        const ent = 10;
+
+        // args: flags, soundNum, volume, attenuation, offset, ent, pos
+        writeServerCommand(writer, ServerCommand.sound, flags, soundNum, volume, undefined, undefined, ent, undefined);
+        const data = writer.getData();
+
+        // Format: [cmd, flags, soundNum, volume (if flag), ent (short, if flag)]
+        let idx = 0;
+        expect(data[idx++]).toBe(ServerCommand.sound);
+        expect(data[idx++]).toBe(flags);
+        expect(data[idx++]).toBe(soundNum);
+        expect(data[idx++]).toBe(volume);
+        expect(data[idx++]).toBe(10); // ent low byte
+        expect(data[idx++]).toBe(0); // ent high byte
+    });
 });
