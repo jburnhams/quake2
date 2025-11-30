@@ -15,7 +15,9 @@ import {
     U_SOUND,
     U_EVENT,
     U_SOLID,
-    U_REMOVE
+    U_REMOVE,
+    // New Rerelease Flags (if available) - assuming standard delta reuse for now
+    U_ALPHA
 } from '@quake2ts/engine';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 // Import from cgame
@@ -32,6 +34,9 @@ export interface DemoHandlerCallbacks {
     onCenterPrint?: (msg: string) => void;
     onPrint?: (level: number, msg: string) => void;
     onConfigString?: (index: number, str: string) => void;
+    onLevelRestart?: () => void;
+    onWaitingForPlayers?: () => void;
+    onMuzzleFlash3?: (ent: number, weapon: number) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -167,6 +172,18 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         if (bits & U_EVENT) to.event = from.event;
 
         if (bits & U_SOLID) to.solid = from.solid;
+
+        // Rerelease fields (simple copy if present in partial)
+        // Since the parser already handled the bit reading into the fields,
+        // we just need to ensure we copy the property if it was updated.
+        // For now, simple copy.
+        if (from.alpha !== 0) to.alpha = from.alpha;
+        if (from.scale !== 0) to.scale = from.scale;
+        if (from.instanceBits !== 0) to.instanceBits = from.instanceBits;
+        if (from.loopVolume !== 0) to.loopVolume = from.loopVolume;
+        if (from.loopAttenuation !== 0) to.loopAttenuation = from.loopAttenuation;
+        if (from.owner !== 0) to.owner = from.owner;
+        if (from.oldFrame !== 0) to.oldFrame = from.oldFrame;
     }
 
     onCenterPrint(msg: string): void {
@@ -226,6 +243,21 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onMuzzleFlash2(ent: number, weapon: number): void {
+    }
+
+    onMuzzleFlash3(ent: number, weapon: number): void {
+        if (this.callbacks?.onMuzzleFlash3) {
+            this.callbacks.onMuzzleFlash3(ent, weapon);
+        }
+    }
+
+    // New Rerelease Handlers (Stubbed)
+    onLevelRestart(): void {
+        if (this.callbacks?.onLevelRestart) this.callbacks.onLevelRestart();
+    }
+
+    onWaitingForPlayers(): void {
+        if (this.callbacks?.onWaitingForPlayers) this.callbacks.onWaitingForPlayers();
     }
 
     onDisconnect(): void {
