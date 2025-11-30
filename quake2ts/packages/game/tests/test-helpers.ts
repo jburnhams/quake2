@@ -7,6 +7,7 @@ export function createTestContext(): SpawnContext {
   const engine = {
     sound: vi.fn(),
     modelIndex: vi.fn(() => 0),
+    centerprintf: vi.fn(),
   };
 
   const entities = {
@@ -36,14 +37,6 @@ export function createTestContext(): SpawnContext {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
     }),
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
-      // Basic mock implementation of useTargets to facilitate testing
-      if (entity.target) {
-        // In a real system we would look up by targetname.
-        // Here we rely on the test setting up the connection manually if needed?
-        // But wait, the test registers the target entity but the mock system doesn't store them in a map.
-        // So we can't really look them up.
-        // Unless we mock findByTargetName too.
-      }
     }),
     findByTargetName: vi.fn(() => []),
     pickTarget: vi.fn(() => null)
@@ -54,8 +47,9 @@ export function createTestContext(): SpawnContext {
     entities,
     warn: vi.fn(),
     free: vi.fn(),
+    // Legacy support for tests that might check precache
     precacheModel: vi.fn(),
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),
-  };
+  } as unknown as SpawnContext;
 }

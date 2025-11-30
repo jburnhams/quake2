@@ -1,10 +1,65 @@
-import { distance, vec3Equals, normalizeVec3, subtractVec3, scaleVec3, addVec3 } from '@quake2ts/shared';
+import { distance, vec3Equals, normalizeVec3, subtractVec3, scaleVec3, addVec3, lengthVec3, Vec3 } from '@quake2ts/shared';
 import { Entity, MoveType, Solid } from './entity.js';
 import type { SpawnContext, SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
 
-// ... (imports and existing func_door/train/plat/rotating code) ...
+// ============================================================================
+// MOVEMENT HELPERS
+// ============================================================================
+
+function move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (ent: Entity, ctx: EntitySystem) => void) {
+  const dt = 0.1;
+  const vec = subtractVec3(dest, ent.origin);
+  const dist = lengthVec3(vec);
+  const dir = normalizeVec3(vec);
+
+  const speed = ent.speed || 100;
+
+  // Current speed from velocity (approximate)
+  let currentSpeed = lengthVec3(ent.velocity);
+
+  // Accel
+  if (ent.accel) {
+      currentSpeed += ent.accel * dt;
+  } else {
+      currentSpeed = speed;
+  }
+
+  // Decel
+  if (ent.decel) {
+      const distToStop = (currentSpeed * currentSpeed) / (2 * ent.decel);
+      if (dist <= distToStop) {
+          currentSpeed -= ent.decel * dt;
+          if (currentSpeed < 10) currentSpeed = 10;
+      }
+  }
+
+  // Clamp
+  if (currentSpeed > speed) currentSpeed = speed;
+
+  const move = currentSpeed * dt;
+
+  if (dist <= move) {
+      // Finish this frame
+      ent.velocity = scaleVec3(dir, dist / dt); // Reach exactly dest
+      ent.think = (e) => {
+          e.velocity = {x: 0, y: 0, z: 0};
+          e.origin = {...dest};
+          context.linkentity(e);
+          done(e, context);
+      };
+      context.scheduleThink(ent, context.timeSeconds + dt);
+  } else {
+      // Continue
+      ent.velocity = scaleVec3(dir, currentSpeed);
+      context.scheduleThink(ent, context.timeSeconds + dt);
+  }
+}
+
+// ============================================================================
+// FUNC DOOR
+// ============================================================================
 
 export enum DoorState {
   Open,
@@ -13,7 +68,6 @@ export enum DoorState {
   Closing,
 }
 
-// ... (door code) ...
 function door_blocked(self: Entity, other: Entity | null) {
   if (other && other.takedamage) {
     const damage = self.dmg || 2;
@@ -28,37 +82,30 @@ function door_blocked(self: Entity, other: Entity | null) {
   }
 }
 
-function door_go_down(door: Entity, context: EntitySystem) {
-  if (vec3Equals(door.origin, door.pos1)) {
-    door.state = DoorState.Closed;
-    door.velocity = { x: 0, y: 0, z: 0 };
-    return;
+function door_hit_top(ent: Entity, context: EntitySystem) {
+  ent.state = DoorState.Open;
+  if (ent.spawnflags & 32) { // TOGGLE
+       // Don't auto close
+       return;
   }
-  const move = distance(door.origin, door.pos1);
-  const speed = Math.min(door.speed, move);
-  door.velocity = scaleVec3(normalizeVec3(subtractVec3(door.pos1, door.origin)), speed);
+  if (ent.wait === -1) {
+       // Stay open
+       return;
+  }
+  ent.think = door_go_down;
+  context.scheduleThink(ent, context.timeSeconds + ent.wait);
+}
 
-  if (move <= door.speed * 0.1) {
-       door.velocity = scaleVec3(subtractVec3(door.pos1, door.origin), 10);
-  }
-  context?.scheduleThink(door, context.timeSeconds + 0.1);
+function door_hit_bottom(ent: Entity, context: EntitySystem) {
+  ent.state = DoorState.Closed;
+}
+
+function door_go_down(door: Entity, context: EntitySystem) {
+  move_calc(door, door.pos1, context, door_hit_bottom);
 }
 
 function door_go_up(door: Entity, context: EntitySystem) {
-  if (vec3Equals(door.origin, door.pos2)) {
-    door.state = DoorState.Open;
-    door.velocity = { x: 0, y: 0, z: 0 };
-    context?.scheduleThink(door, context.timeSeconds + door.wait);
-    door.think = door_go_down;
-    return;
-  }
-  const move = distance(door.origin, door.pos2);
-  door.velocity = scaleVec3(normalizeVec3(subtractVec3(door.pos2, door.origin)), door.speed);
-
-  if (move <= door.speed * 0.1) {
-       door.velocity = scaleVec3(subtractVec3(door.pos2, door.origin), 10);
-  }
-  context?.scheduleThink(door, context.timeSeconds + 0.1);
+  move_calc(door, door.pos2, context, door_hit_top);
 }
 
 const func_door: SpawnFunction = (entity, context) => {
@@ -145,7 +192,10 @@ const func_button: SpawnFunction = (entity, context) => {
   };
 };
 
-// ... (func_train code) ...
+// ============================================================================
+// FUNC TRAIN
+// ============================================================================
+
 const TRAIN_START_ON = 1;
 const TRAIN_TOGGLE = 2;
 const TRAIN_BLOCK_STOPS = 4;
@@ -169,6 +219,14 @@ function train_wait(self: Entity, context: EntitySystem) {
     const next = context.pickTarget(self.target_ent.target);
     if (!next) return;
     self.target_ent = next;
+
+    // Use move_calc logic for trains?
+    // Trains usually have path corners with "speed" property override?
+    // And standard trains just move at constant speed.
+    // If we want accel/decel on trains, we need to adapt it.
+    // But func_train implementation here is basic.
+    // Let's stick to existing train implementation for now unless requested.
+
     const dist = distance(self.origin, next.origin);
     const speed = self.speed || 100;
     const time = dist / speed;
@@ -218,7 +276,10 @@ const func_train: SpawnFunction = (entity, context) => {
   context.entities.scheduleThink(entity, context.entities.timeSeconds + 0.1);
 };
 
-// ... (func_plat code) ...
+// ============================================================================
+// FUNC PLAT
+// ============================================================================
+
 enum PlatState {
     Up,
     Down,
@@ -226,36 +287,27 @@ enum PlatState {
     GoingDown,
 }
 
+// TODO: Update plats to use move_calc too?
+// Plats have accel/decel properties by default.
+
+function plat_hit_top(ent: Entity, context: EntitySystem) {
+    ent.state = PlatState.Up;
+    if (!(ent.spawnflags & 1)) {
+         ent.think = plat_wait_top;
+         context.scheduleThink(ent, context.timeSeconds + ent.wait);
+    }
+}
+
+function plat_hit_bottom(ent: Entity, context: EntitySystem) {
+    ent.state = PlatState.Down;
+}
+
 function plat_go_down(ent: Entity, context: EntitySystem) {
-    if (vec3Equals(ent.origin, ent.pos2)) {
-        ent.state = PlatState.Down;
-        ent.velocity = { x: 0, y: 0, z: 0 };
-        return;
-    }
-    const move = distance(ent.origin, ent.pos2);
-    ent.velocity = scaleVec3(normalizeVec3(subtractVec3(ent.pos2, ent.origin)), ent.speed);
-    if (move <= ent.speed * 0.1) {
-         ent.velocity = scaleVec3(subtractVec3(ent.pos2, ent.origin), 10);
-    }
-    context.scheduleThink(ent, context.timeSeconds + 0.1);
+    move_calc(ent, ent.pos2, context, plat_hit_bottom);
 }
 
 function plat_go_up(ent: Entity, context: EntitySystem) {
-    if (vec3Equals(ent.origin, ent.pos1)) {
-        ent.state = PlatState.Up;
-        ent.velocity = { x: 0, y: 0, z: 0 };
-        if (!(ent.spawnflags & 1)) {
-             ent.think = plat_wait_top;
-             context.scheduleThink(ent, context.timeSeconds + ent.wait);
-        }
-        return;
-    }
-    const move = distance(ent.origin, ent.pos1);
-    ent.velocity = scaleVec3(normalizeVec3(subtractVec3(ent.pos1, ent.origin)), ent.speed);
-    if (move <= ent.speed * 0.1) {
-        ent.velocity = scaleVec3(subtractVec3(ent.pos1, ent.origin), 10);
-    }
-    context.scheduleThink(ent, context.timeSeconds + 0.1);
+    move_calc(ent, ent.pos1, context, plat_hit_top);
 }
 
 function plat_wait_top(ent: Entity, context: EntitySystem) {
@@ -323,7 +375,10 @@ const func_plat: SpawnFunction = (entity, context) => {
     };
 };
 
-// ... (func_rotating code) ...
+// ============================================================================
+// FUNC ROTATING
+// ============================================================================
+
 const func_rotating: SpawnFunction = (entity, context) => {
     entity.solid = Solid.Bsp;
     entity.movetype = MoveType.Push;
