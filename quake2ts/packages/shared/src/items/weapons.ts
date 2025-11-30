@@ -9,6 +9,7 @@ export enum WeaponId {
   SuperShotgun = 'super_shotgun',
   Machinegun = 'machinegun',
   Chaingun = 'chaingun',
+  HandGrenade = 'hand_grenade',
   GrenadeLauncher = 'grenade_launcher',
   RocketLauncher = 'rocket_launcher',
   HyperBlaster = 'hyperblaster',
