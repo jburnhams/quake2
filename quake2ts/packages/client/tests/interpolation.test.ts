@@ -30,16 +30,16 @@ describe('Entity Interpolation', () => {
     modelIndex3: 0,
     modelIndex4: 0,
     frame,
-    skinnum: 0,
+    skinNum: 0, // FIXED: skinnum -> skinNum
     effects: 0,
     renderfx: 0,
     origin,
-    old_origin: origin,
+    oldOrigin: origin, // FIXED: old_origin -> oldOrigin
     angles: { x: 0, y: 0, z: 0 },
     sound: 0,
     event: 0,
     solid: 0,
-    bits: 0,
+    // bits: 0, // Removed extra field
     alpha: 0,
     scale: 0,
     instanceBits: 0,
