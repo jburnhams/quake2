@@ -18,7 +18,7 @@ import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
-import { firePlasmaBeam, fireIonRipper, firePhalanx } from './rogue.js';
+import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -440,6 +440,10 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
         }
         case WeaponId.Phalanx: {
             firePhalanx(game, player, inventory, weaponState, forward);
+            break;
+        }
+        case WeaponId.EtfRifle: {
+            fireEtfRifle(game, player, inventory, weaponState, forward);
             break;
         }
     }

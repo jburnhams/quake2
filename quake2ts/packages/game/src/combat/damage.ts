@@ -5,6 +5,7 @@ import { DamageMod } from './damageMods.js';
 import type { Entity } from '../entities/entity.js';
 import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
+import { throwGibs } from '../entities/gibs.js';
 
 export interface DamageableCallbacks {
   pain?: (self: Damageable, attacker: Damageable | null, knockback: number, take: number, mod: DamageMod) => void;
@@ -181,7 +182,19 @@ export function T_Damage(
   }
 
   const knocked = applyKnockback(targ, attacker, dir, modifiedKnockback, dflags);
-  const [take, psave, asave, remainingCells, remainingArmor] = applyProtection(targ, point, normal, modifiedDamage, dflags);
+  let [take, psave, asave, remainingCells, remainingArmor] = applyProtection(targ, point, normal, modifiedDamage, dflags);
+
+  // Freeze Shatter Override
+  if ((targ as any).monsterinfo && (targ as any).monsterinfo.freeze_time > time && modifiedDamage > 0) {
+       // If frozen, any damage destroys it.
+       take = targ.health + 100;
+       psave = 0;
+       asave = 0;
+
+       // Visual effect?
+       // We can trigger glass shatter sound/particles here via multicast if we had sys?
+       // We will rely on die() to handle visual gibs.
+  }
 
   if (targ.powerArmor && remainingCells !== undefined) {
     (targ.powerArmor as PowerArmorState).cellCount = remainingCells;

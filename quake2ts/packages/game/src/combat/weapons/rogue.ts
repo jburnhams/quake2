@@ -17,7 +17,7 @@ import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { MulticastType } from '../../imports.js';
 import { firingRandom } from './firing.js';
-import { createIonRipper, createPhalanxBall } from '../../entities/projectiles.js';
+import { createIonRipper, createPhalanxBall, createFlechette } from '../../entities/projectiles.js';
 
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {
@@ -133,4 +133,25 @@ export function firePhalanx(game: GameExports, player: Entity, inventory: Player
     angles2.y += 2.5;
     const { forward: dir2 } = angleVectors(angles2);
     createPhalanxBall(game.entities, player, start, dir2, damage, radiusDamage, speed);
+}
+
+// Rogue ETF Rifle (Flechette Gun)
+// Source: g_rogue_weapon.c
+export function fireEtfRifle(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+    if (inventory.ammo.counts[AmmoType.Flechettes] < 1) {
+        return;
+    }
+
+    inventory.ammo.counts[AmmoType.Flechettes]--;
+
+    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_MACHINEGUN); // Placeholder
+    applyKick(player, -1, 0, 0);
+
+    const damage = 10;
+    const speed = 900;
+
+    const start = { ...player.origin };
+    start.z += player.viewheight - 8;
+
+    createFlechette(game.entities, player, start, forward, damage, speed);
 }
