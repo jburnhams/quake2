@@ -114,6 +114,28 @@ function multiTrigger(self: Entity, entities: EntitySystem): void {
     return;
   }
 
+  // Trigger sounds
+  let noise = '';
+  switch (self.sounds) {
+      case 1: noise = 'misc/secret.wav'; break;
+      case 2: noise = 'misc/talk.wav'; break;
+      case 3: noise = 'misc/trigger1.wav'; break;
+      case 4: noise = 'switches/butn2.wav'; break; // Default or custom
+  }
+  if (noise) {
+      entities.sound(self, 0, noise, 1, 1, 0);
+  }
+
+  // Trigger message
+  if (self.message && self.activator && self.activator.client) {
+      // Send centerprint to activator
+      entities.engine.centerprintf?.(self.activator, self.message);
+      // Play talk sound if sound 2 was selected, Q2 behavior
+      if (self.sounds === 2) {
+          entities.sound(self.activator, 0, 'misc/talk.wav', 1, 1, 0);
+      }
+  }
+
   entities.useTargets(self, self.activator);
 
   if (self.wait > 0) {
@@ -161,6 +183,11 @@ function registerTriggerMultiple(registry: SpawnRegistry): void {
       entity.wait = 0.2;
     }
 
+    // Parse CLIP spawnflag
+    if (entity.spawnflags & TRIGGER_SPAWNFLAGS.Clip) {
+         entity.solid = Solid.Bsp;
+    }
+
     if (entity.spawnflags & TRIGGER_SPAWNFLAGS.Latched) {
       // Latched triggers rely on area queries; fall back to touch behaviour for now.
     }
@@ -193,6 +220,12 @@ function registerTriggerRelay(registry: SpawnRegistry): void {
     }
 
     entity.use = (self, _other, activator) => {
+      if (!(self.spawnflags & RELAY_SPAWNFLAGS.NoSound)) {
+          context.entities.sound(self, 0, 'misc/trigger1.wav', 1, 1, 0);
+      }
+      if (self.message && activator && activator.client) {
+           context.entities.engine.centerprintf?.(activator, self.message);
+      }
       context.entities.useTargets(self, activator ?? self);
     };
   });
