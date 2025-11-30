@@ -22,6 +22,7 @@ export interface BspBatch {
   offset: number;
   count: number;
   flags: number;
+  styleIndices: readonly number[];
   lightmapOffset?: number; // Offset into lightmap atlas if we had one?
   // Actually, BspPipeline has u_lightmapAtlas.
 }
@@ -151,40 +152,59 @@ export function buildBspGeometry(
   const allIndices: number[] = [];
   const batches: BspBatch[] = [];
 
-  // Group by texture for batches?
+  // Group by texture AND light styles for batches
   // Ideally we sort by texture to minimize draw calls, but `renderBsp` might handle sorting.
   // But here we are building a single big buffer.
   // Let's sort surfaces by texture first to create contiguous batches.
 
   // Note: Modifying the input array order (copy).
   const surfacesToProcess = [...filteredSurfaces];
-  surfacesToProcess.sort((a, b) => a.textureName.localeCompare(b.textureName));
+  surfacesToProcess.sort((a, b) => {
+    const texDiff = a.textureName.localeCompare(b.textureName);
+    if (texDiff !== 0) return texDiff;
+    // Secondary sort by styles
+    for (let i = 0; i < 4; i++) {
+      if (a.styles[i] !== b.styles[i]) return a.styles[i] - b.styles[i];
+    }
+    return 0;
+  });
 
   let currentTexture = '';
+  let currentStyles: number[] = [];
   let batchStart = 0;
   let batchCount = 0;
-  let batchFlags = 0; // Assuming flags match per texture group roughly
+  let batchFlags = 0;
 
   let vertexOffset = 0; // Base vertex index for current surface
 
   for (const surf of surfacesToProcess) {
+    let newBatch = false;
     if (surf.textureName !== currentTexture) {
+      newBatch = true;
+    } else {
+      for (let i = 0; i < 4; i++) {
+        if (surf.styles[i] !== currentStyles[i]) {
+          newBatch = true;
+          break;
+        }
+      }
+    }
+
+    if (newBatch) {
       if (batchCount > 0) {
         batches.push({
           textureName: currentTexture,
           offset: batchStart,
           count: batchCount,
-          flags: batchFlags
+          flags: batchFlags,
+          styleIndices: [...currentStyles],
         });
       }
       currentTexture = surf.textureName;
-      batchStart = allIndices.length * 2; // Wait, indices are 2 bytes? No, index count.
+      currentStyles = [...surf.styles];
       batchStart = allIndices.length; // Offset in element count
       batchCount = 0;
       batchFlags = surf.flags;
-    } else {
-        // Flags check? If flags differ significantly maybe split batch.
-        // For Q2, usually texture implies flags.
     }
 
     // Add Vertices
@@ -242,7 +262,8 @@ export function buildBspGeometry(
       textureName: currentTexture,
       offset: batchStart,
       count: batchCount,
-      flags: batchFlags
+      flags: batchFlags,
+      styleIndices: [...currentStyles],
     });
   }
 

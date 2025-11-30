@@ -1,17 +1,21 @@
 import { BspGeometry } from './geometry.js';
 import { BspSurfacePipeline } from '../bspPipeline.js';
+import { LightStyleManager } from '../lightStyles.js';
 
 export class BspRenderer {
   readonly gl: WebGL2RenderingContext;
   readonly pipeline: BspSurfacePipeline;
+  readonly lightStyles: LightStyleManager;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
     this.pipeline = new BspSurfacePipeline(gl);
+    this.lightStyles = new LightStyleManager();
   }
 
   render(geometry: BspGeometry, modelViewProjection: Float32List, timeSeconds: number, diffuseTextureUnit = 0): void {
-    const { gl, pipeline } = this;
+    const { gl, pipeline, lightStyles } = this;
+    lightStyles.update(timeSeconds);
 
     // Bind common resources
     geometry.vao.bind();
@@ -24,28 +28,20 @@ export class BspRenderer {
       modelViewProjection,
       lightmapSampler: geometry.lightmapAtlas ? 1 : undefined,
       diffuseSampler: diffuseTextureUnit,
-      timeSeconds
+      timeSeconds,
+      styleValues: lightStyles.getValues() as unknown as number[],
     });
 
     // Draw batches
     for (const batch of geometry.batches) {
-      // Setup state based on batch flags/texture
-      // For now, we assume diffuse texture is bound externally or we need a texture manager to bind it here.
-      // The current interface assumes 'diffuseTextureUnit' is already set up.
-      // But we have batch.textureName. We should ideally ask a texture manager to bind it.
-      // For this simplified implementation, we'll assume the caller handles texture binding
-      // OR we just verify the draw calls.
-
-      // We need to re-bind pipeline with specific surface flags for this batch if they differ?
-      // BspSurfacePipeline.bind() sets uniforms.
-      // We might want a lightweight 'updateState' or just call bind again.
-
       pipeline.bind({
         modelViewProjection,
         lightmapSampler: geometry.lightmapAtlas ? 1 : undefined,
         diffuseSampler: diffuseTextureUnit,
         timeSeconds,
-        surfaceFlags: batch.flags
+        surfaceFlags: batch.flags,
+        styleValues: lightStyles.getValues() as unknown as number[],
+        styleIndices: batch.styleIndices,
       });
 
       // Draw elements
