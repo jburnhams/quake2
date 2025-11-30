@@ -181,7 +181,7 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
     }
 
     // We are cooking.
-    const heldTime = (game.time - weaponState.grenadeTimer) / 1000.0;
+    const heldTime = game.time - weaponState.grenadeTimer;
 
     // Check for held too long (3.0 seconds max) -> blow up in hand
     // Source: p_weapon.cpp:1016 "if ((level.time - ent->client->grenade_time) > 3.2)" - using 3.0 + extra buffer
@@ -190,12 +190,12 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
 
         // Explode in hand
         const dmg = 120; // Same as grenade damage
-        T_RadiusDamage([player] as any, player as any, player as any, dmg, player as any, 120, DamageFlags.NONE, DamageMod.GRENADE, game.time / 1000, {}, game.multicast);
+        T_RadiusDamage([player] as any, player as any, player as any, dmg, player as any, 120, DamageFlags.NONE, DamageMod.GRENADE, game.time, {}, game.multicast);
         game.multicast(player.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, player.origin);
 
         // Reset state
         weaponState.grenadeTimer = undefined;
-        weaponState.lastFireTime = game.time + 1000; // Delay next attack
+        weaponState.lastFireTime = game.time + 1.0; // Delay next attack
         return;
     }
 
@@ -226,7 +226,7 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
 
         // Reset state
         weaponState.grenadeTimer = undefined;
-        weaponState.lastFireTime = game.time + 1000; // 1s refire rate? "Put away" animation time
+        weaponState.lastFireTime = game.time + 1.0; // 1s refire rate? "Put away" animation time
     }
 }
 
