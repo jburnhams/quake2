@@ -1,6 +1,6 @@
-import { distance, vec3Equals, normalizeVec3, subtractVec3, scaleVec3, addVec3, lengthVec3, Vec3 } from '@quake2ts/shared';
-import { Entity, MoveType, Solid } from './entity.js';
-import type { SpawnContext, SpawnFunction, SpawnRegistry } from './spawn.js';
+import { angleVectors, distance, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, addVec3, Vec3 } from '@quake2ts/shared';
+import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entity.js';
+import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
 
@@ -68,11 +68,43 @@ export enum DoorState {
   Closing,
 }
 
+const SPAWNFLAG_DOOR_START_OPEN = 1;
+const SPAWNFLAG_DOOR_CRUSHER = 4;
+const SPAWNFLAG_DOOR_NOMONSTER = 8;
+const SPAWNFLAG_DOOR_ANIMATED = 16;
+const SPAWNFLAG_DOOR_TOGGLE = 32;
+const SPAWNFLAG_DOOR_ANIMATED_FAST = 64;
+
+// Effects constants from q_shared.h/g_local.h
+const EF_ANIM_ALL = 4;
+const EF_ANIM_ALLFAST = 8;
+
+interface MoveInfo {
+    sound_start: string | null;
+    sound_middle: string | null;
+    sound_end: string | null;
+}
+
+function getMoveInfo(ent: Entity): MoveInfo | undefined {
+    return (ent as any).moveinfo;
+}
+
 function door_blocked(self: Entity, other: Entity | null) {
   if (other && other.takedamage) {
     const damage = self.dmg || 2;
-    other.health -= damage;
+    // CRUSHER does heavy damage
+    if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) {
+        other.health -= damage;
+    } else {
+        other.health -= damage;
+    }
   }
+
+  // If CRUSHER, we don't reverse.
+  if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) {
+      return;
+  }
+
   if (self.state === DoorState.Opening) {
     self.state = DoorState.Closing;
     self.think = door_go_down;
@@ -83,8 +115,14 @@ function door_blocked(self: Entity, other: Entity | null) {
 }
 
 function door_hit_top(ent: Entity, context: EntitySystem) {
+  const moveinfo = getMoveInfo(ent);
+  // Play end sound
+  if (moveinfo && moveinfo.sound_end) {
+      context.sound(ent, 0, moveinfo.sound_end, 1, 1, 0);
+  }
+
   ent.state = DoorState.Open;
-  if (ent.spawnflags & 32) { // TOGGLE
+  if (ent.spawnflags & SPAWNFLAG_DOOR_TOGGLE) { // TOGGLE
        // Don't auto close
        return;
   }
@@ -97,14 +135,30 @@ function door_hit_top(ent: Entity, context: EntitySystem) {
 }
 
 function door_hit_bottom(ent: Entity, context: EntitySystem) {
+  const moveinfo = getMoveInfo(ent);
+  // Play end sound
+  if (moveinfo && moveinfo.sound_end) {
+      context.sound(ent, 0, moveinfo.sound_end, 1, 1, 0);
+  }
   ent.state = DoorState.Closed;
 }
 
 function door_go_down(door: Entity, context: EntitySystem) {
+  const moveinfo = getMoveInfo(door);
+  // Play start sound
+  if (moveinfo && moveinfo.sound_start) {
+      context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
+  }
   move_calc(door, door.pos1, context, door_hit_bottom);
 }
 
 function door_go_up(door: Entity, context: EntitySystem) {
+  const moveinfo = getMoveInfo(door);
+  // Play start sound
+  if (moveinfo && moveinfo.sound_start) {
+      context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
+  }
+
   move_calc(door, door.pos2, context, door_hit_top);
 }
 
@@ -125,9 +179,31 @@ const func_door: SpawnFunction = (entity, context) => {
                entity.movedir.z * (Math.abs(entity.maxs.z - entity.mins.z) - entity.lip);
   entity.pos2 = addVec3(entity.pos1, scaleVec3(entity.movedir, move));
 
-  if (entity.spawnflags & 1) { // START_OPEN
+  // Handle sounds
+  const moveinfo: MoveInfo = {
+      sound_start: null,
+      sound_middle: null,
+      sound_end: null
+  };
+  if (entity.sounds !== 1) {
+      // Default set 1
+      moveinfo.sound_start = 'doors/dr1_strt.wav';
+      moveinfo.sound_middle = 'doors/dr1_mid.wav';
+      moveinfo.sound_end = 'doors/dr1_end.wav';
+  }
+  (entity as any).moveinfo = moveinfo;
+
+
+  if (entity.spawnflags & SPAWNFLAG_DOOR_START_OPEN) { // START_OPEN
       entity.origin = { ...entity.pos2 };
       entity.state = DoorState.Open;
+  }
+
+  if (entity.spawnflags & SPAWNFLAG_DOOR_ANIMATED) {
+      entity.effects |= EF_ANIM_ALL;
+  }
+  if (entity.spawnflags & SPAWNFLAG_DOOR_ANIMATED_FAST) {
+      entity.effects |= EF_ANIM_ALLFAST;
   }
 
   // Handle shootable doors
@@ -142,42 +218,31 @@ const func_door: SpawnFunction = (entity, context) => {
   }
 
   entity.use = (self, other, activator) => {
-    if (entity.spawnflags & 32) { // TOGGLE
+    if (entity.spawnflags & SPAWNFLAG_DOOR_TOGGLE) { // TOGGLE
          if (self.state === DoorState.Closed) {
              self.state = DoorState.Opening;
-             self.think = door_go_up;
-             context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+             door_go_up(self, context.entities);
          } else if (self.state === DoorState.Open) {
              self.state = DoorState.Closing;
-             self.think = door_go_down;
-             context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+             door_go_down(self, context.entities);
          }
          return;
     }
 
     if (self.state !== DoorState.Closed) return;
     self.state = DoorState.Opening;
-    self.think = door_go_up;
-    context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
-
-    // Sound selection
-    let soundName = 'doors/dr1_strt.wav';
-    if (entity.sounds) {
-        // Basic mapping for now, can be expanded
-        switch (entity.sounds) {
-            case 1: soundName = 'doors/dr1_strt.wav'; break;
-            case 2: soundName = 'doors/dr2_strt.wav'; break;
-            case 3: soundName = 'doors/dr3_strt.wav'; break;
-            case 4: soundName = 'doors/dr4_strt.wav'; break;
-            default: soundName = 'doors/dr1_strt.wav';
-        }
-    }
-    context.entities.sound(self, 0, soundName, 1, 1, 0);
+    door_go_up(self, context.entities);
   };
 
   if (entity.health <= 0 && !entity.targetname) {
       entity.touch = (self, other) => {
-          if (!other || other.classname !== 'player') return;
+          if (!other) return;
+          // NOMONSTER check
+          if (self.spawnflags & SPAWNFLAG_DOOR_NOMONSTER) {
+              if (other.svflags & ServerFlags.Monster) return;
+          }
+          if (other.classname !== 'player' && !(other.svflags & ServerFlags.Monster)) return;
+
           self.use?.(self, other, other);
       }
   }
