@@ -262,11 +262,12 @@ describe('NetworkMessageParser', () => {
     const data: number[] = [];
     writeByte(data, ServerCommand.serverdata);
     writeLong(data, 2023); // Protocol 2023 (Rerelease)
-    writeLong(data, 456); // Server count
-    writeByte(data, 1); // isDemo
-    writeString(data, "baseq2");
+    writeLong(data, 456); // Spawn count
+    writeByte(data, 1); // DemoType (1=demo)
+    writeByte(data, 40); // TickRate
+    writeString(data, "baseq2"); // GameDir
     writeShort(data, 2); // Player num
-    writeString(data, "q2dm1");
+    writeString(data, "q2dm1"); // Level Name
 
     const stream = createStream(data);
     const handlerMock = {
@@ -276,28 +277,7 @@ describe('NetworkMessageParser', () => {
     const parser = new NetworkMessageParser(stream, handlerMock);
     parser.parseMessage();
 
-    expect(handlerMock.onServerData).toHaveBeenCalledWith(2023, 456, 0, "baseq2", 2, "q2dm1");
-    // Wait, the parser implementation does:
-    // const attractLoop = 0;
-    // this.isDemo = this.stream.readByte();
-    // handler.onServerData(..., attractLoop, ...);
-    // So the 3rd argument is ALWAYS 0 in the current implementation of parseServerData.
-    // The byte read is assigned to this.isDemo, but NOT passed as the 3rd argument.
-    // The 3rd argument is hardcoded to 0.
-
-    // Let's check parser.ts:
-    // const attractLoop = 0;
-    // const gameDir = this.stream.readString();
-    // ...
-    // this.handler.onServerData(this.protocolVersion, serverCount, attractLoop, gameDir, playerNum, levelName);
-
-    // So my test expectation of 0 IS CORRECT based on the code.
-    // The reviewer might have assumed the byte read was passed through.
-
-    // However, I should probably pass isDemo/attractLoop correctly if that was the intention.
-    // But for now, let's stick to what the code does.
-    // I will verify this assumption by reading parser.ts again.
-
+    expect(handlerMock.onServerData).toHaveBeenCalledWith(2023, 456, 0, "baseq2", 2, "q2dm1", 40, 1);
     expect(stream.hasMore()).toBe(false);
   });
 
