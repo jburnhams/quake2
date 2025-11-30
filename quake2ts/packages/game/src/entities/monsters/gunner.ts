@@ -1,4 +1,4 @@
-import { angleVectors, normalizeVec3, subtractVec3, Vec3 } from '@quake2ts/shared';
+import { angleVectors, normalizeVec3, subtractVec3, Vec3, vectorToAngles } from '@quake2ts/shared';
 import {
     ai_charge,
     ai_move,
@@ -63,6 +63,7 @@ let pain2_move: MonsterMove; // Pain 2
 let pain3_move: MonsterMove; // Pain 3
 let death_move: MonsterMove;
 let duck_move: MonsterMove; // Duck
+let jump_move: MonsterMove; // Jump
 
 // Gunner specific functions
 function gunner_idlesound(self: Entity, context: any): void {
@@ -229,6 +230,66 @@ function gunner_dodge(self: Entity, attacker: Entity, eta: number, context: any)
     self.monsterinfo.current_move = duck_move;
 }
 
+// Jump
+function gunner_jump_takeoff(self: Entity, context: any): void {
+    if (!self.enemy) return;
+
+    const diff = subtractVec3(self.enemy.origin, self.origin);
+    const dist = Math.sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+    // speed 600
+    const fwd_speed = 600;
+
+    const forward = normalizeVec3({x: diff.x, y: diff.y, z: 0});
+    const angles = vectorToAngles(forward);
+    self.angles = { x: self.angles.x, y: angles.y, z: self.angles.z };
+
+    const origin = { ...self.origin };
+    origin.z += 1;
+    self.origin = origin;
+
+    self.velocity = {
+      x: forward.x * fwd_speed,
+      y: forward.y * fwd_speed,
+      z: 270
+    };
+    self.groundentity = null;
+    self.monsterinfo.aiflags |= AIFlags.Ducked;
+    self.monsterinfo.attack_finished = context.timeSeconds + 3.0;
+  }
+
+  function gunner_check_landing(self: Entity, context: any): void {
+    if (self.groundentity) {
+      context.engine.sound?.(self, 0, 'mutant/thud1.wav', 1, 1, 0);
+      self.monsterinfo.attack_finished = 0;
+      self.monsterinfo.aiflags &= ~AIFlags.Ducked;
+      // Transitions to run via endfunc
+      return;
+    }
+
+    if (context.timeSeconds > (self.monsterinfo.attack_finished || 0)) {
+      self.monsterinfo.nextframe = 209 + 5;
+    } else {
+      self.monsterinfo.nextframe = 209 + 3;
+    }
+  }
+
+  function gunner_jump(self: Entity, context: any): void {
+     if (self.spawnflags & 16) return; // NO JUMPING
+     if (!self.enemy) return;
+     if (!self.groundentity) return;
+
+     const dist = Math.sqrt(
+         Math.pow(self.enemy.origin.x - self.origin.x, 2) +
+         Math.pow(self.enemy.origin.y - self.origin.y, 2)
+     );
+
+     // Jump if far away and random chance
+     // Match rerelease logic if possible, or reasonable approx
+     if (dist > 256 && Math.random() < 0.02) {
+         context.engine.sound?.(self, 0, 'gunner/gunatck3.wav', 1, 1, 0);
+         self.monsterinfo.current_move = jump_move;
+     }
+  }
 
 // --- Frames ---
 
@@ -273,10 +334,12 @@ walk_move = {
 
 
 // Run (94-101) - Source: FRAME_run01 to FRAME_run08
+// Inject gunner_jump check into run frames (e.g. every 4 frames or so)
 const run_dists = [26, 9, 9, 9, 15, 10, 13, 6];
-const run_frames: MonsterFrame[] = run_dists.map(d => ({
+const run_frames: MonsterFrame[] = run_dists.map((d, i) => ({
     ai: monster_ai_run,
     dist: d,
+    think: (i % 4 === 0) ? gunner_jump : null // Check jump periodically
 }));
 run_move = {
     firstframe: 94,
@@ -426,6 +489,24 @@ duck_move = {
     endfunc: gunner_run,
 };
 
+// Jump (Assuming frames 209-216, 8 frames)
+const jump_frames: MonsterFrame[] = [
+    { ai: monster_ai_move, dist: 0, think: gunner_jump_takeoff },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: 0, think: gunner_check_landing },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: 0 },
+    { ai: monster_ai_move, dist: 0 }
+];
+
+jump_move = {
+    firstframe: 209,
+    lastframe: 216,
+    frames: jump_frames,
+    endfunc: gunner_run
+};
 
 function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.model = 'models/monsters/gunner/tris.md2';
