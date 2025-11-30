@@ -140,7 +140,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Integration Test**: Added `configstring_sync.test.ts` to verify config string and stats synchronization.
 - [x] **Subtitles**: Moved subtitle logic to `CGame` and exposed via `ShowSubtitle`.
 - [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
-- [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s.
+- [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s (`centerprint`, `stufftext`, `sound`).
 - [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
 - [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
 - [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
