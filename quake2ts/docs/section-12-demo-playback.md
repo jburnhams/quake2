@@ -3,7 +3,7 @@
 ## Overview
 This section covers the implementation of Quake II demo (`.dm2`) playback in the browser. The goal is to parse and render standard Quake II demo files, which record the server-to-client network stream. This involves implementing a strict parser for the Quake II network protocol (`svc_*` commands), a demo file container reader, and a playback controller that feeds these messages into the engine's state machine, simulating a live connection.
 
-**Current Status:** The system implements both Vanilla Quake II (v3.20) and Rerelease (Protocol 2023) network protocol parsing. Support for "Quake II Rerelease" demos is now largely complete in the protocol layer.
+**Current Status:** The system implements both Vanilla Quake II (v3.20) and Rerelease (Protocol 2023) network protocol parsing. Support for "Quake II Rerelease" demos is now largely complete in the protocol layer and client integration.
 
 ## Dependencies
 - **Shared Protocol**: Requires complete definition of `svc_ops_e` and `clc_ops_e` opcodes for both Vanilla and Rerelease protocols.
@@ -24,6 +24,8 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
 - ✅ Added unit tests for Rerelease command parsing (`svc_muzzleflash3`, `svc_level_restart`).
 - ✅ Implemented full parsing logic for all Rerelease `svc_*` commands, including Zlib decompression for `svc_configblast` and `svc_spawnbaselineblast`.
 - ✅ Verified new commands with comprehensive unit tests in `packages/engine/tests/demo/`.
+- ✅ Verified `DemoPlaybackController` can handle larger Rerelease frames (up to 2MB).
+- ✅ Updated `packages/client` to respect new entity fields `scale` and `alpha` during rendering, with unit tests in `packages/client/tests/entities.test.ts`.
 
 ## Protocol Gaps (Rerelease / Protocol 2023)
 
@@ -76,7 +78,7 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
     - [x] Update `ServerCommand` enum with new opcodes.
 
 ### 2. Client Integration
-- [ ] **Demo Playback**: Ensure `DemoPlaybackController` can handle the potentially larger Rerelease frames.
+- [x] **Demo Playback**: Ensure `DemoPlaybackController` can handle the potentially larger Rerelease frames.
 - [x] **Entity Interpolation**: Update `packages/client` to respect new fields like `scale` and `alpha` during rendering.
 
 ### 3. Testing
