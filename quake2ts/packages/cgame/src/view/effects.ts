@@ -13,7 +13,7 @@ export interface ViewEffectSettings {
 
 const DEFAULT_SETTINGS: ViewEffectSettings = {
   runPitch: 0.002,
-  runRoll: 0.01, // Changed from 0.005 to match Quake 2 slope (2.0 / 200.0)
+  runRoll: 0.01,
   bobUp: 0.005,
   bobPitch: 0.002,
   bobRoll: 0.002,
@@ -25,6 +25,7 @@ export interface ViewKick {
   readonly pitch: number;
   readonly roll: number;
   readonly durationMs: number;
+  readonly origin?: Vec3; // Optional origin offset (weapon recoil)
 }
 
 export interface ActiveKick extends ViewKick {
@@ -117,26 +118,13 @@ export class ViewEffects {
     this.bobFracSin = bobValues.bobFracSin;
 
     // Velocity-based tilt
-    // V_CalcPitch: forward = dot(velocity, forward); pitch = forward * cl_pitchspeed->value;
     let pitchTilt = dotVec3(state.velocity, forward) * this.settings.runPitch;
-
-    // V_CalcRoll: side = dot(velocity, right); sign = side < 0 ? -1 : 1; side = abs(side);
-    // if (side < cl_rollspeed->value) side = side * cl_rollangle->value / cl_rollspeed->value;
-    // else side = cl_rollangle->value;
-    // return side * sign;
-
-    // We approximate this. Quake 2 cl_rollspeed is 200, cl_rollangle is 2.0.
-    // Ratio is 2/200 = 0.01.
-    // Max roll is 2.0.
 
     const side = dotVec3(state.velocity, right);
     const sign = side < 0 ? -1 : 1;
     const absSide = Math.abs(side);
 
-    // We use 200 as the cutoff speed implicitly by clamping the result to 2.0?
-    // 200 * 0.01 = 2.0. So if we clamp result to 2.0, it is equivalent.
-
-    let rollTilt = absSide * this.settings.runRoll; // 0.01
+    let rollTilt = absSide * this.settings.runRoll;
     if (rollTilt > 2.0) {
          rollTilt = 2.0;
     }
@@ -160,18 +148,32 @@ export class ViewEffects {
 
     let kickPitch = 0;
     let kickRoll = 0;
+    let kickX = 0;
+    let kickY = 0;
+    let kickZ = 0;
 
     // Apply active kick
+    // Reference: rerelease/p_view.cpp CalcKickOffset
+    // Matches the "interpolation" requested in the task
     if (this.kick && this.kick.remainingMs > 0) {
+      // ratio goes from 1.0 (start) to 0.0 (end)
       const ratio = Math.max(0, Math.min(1, this.kick.remainingMs / this.kick.durationMs));
+
       kickPitch += ratio * this.kick.pitch;
       kickRoll += ratio * this.kick.roll;
+
+      if (this.kick.origin) {
+        kickX += ratio * this.kick.origin.x;
+        kickY += ratio * this.kick.origin.y;
+        kickZ += ratio * this.kick.origin.z;
+      }
+
       this.kick.remainingMs = Math.max(0, this.kick.remainingMs - frameTimeMs);
       if (this.kick.remainingMs === 0) this.kick = undefined;
     }
 
     const angles: Vec3 = { x: pitchTilt + kickPitch, y: 0, z: rollTilt + kickRoll };
-    const offset: Vec3 = { x: 0, y: 0, z: bobHeight };
+    const offset: Vec3 = { x: kickX, y: kickY, z: bobHeight + kickZ };
 
     const sample: ViewSample = {
       angles,

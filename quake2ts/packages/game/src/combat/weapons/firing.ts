@@ -9,7 +9,11 @@ import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import { T_Damage } from '../damage.js';
-import { ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3 } from '@quake2ts/shared';
+import {
+    ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
+    MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+} from '@quake2ts/shared';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
@@ -17,22 +21,6 @@ import { MulticastType } from '../../imports.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
-
-// Quake 2 Muzzle Flash Constants (from g_local.h / q_shared.h)
-const MZ_BLASTER = 0;
-const MZ_MACHINEGUN = 1;
-const MZ_SHOTGUN = 2;
-const MZ_CHAINGUN1 = 3;
-const MZ_CHAINGUN2 = 4;
-const MZ_CHAINGUN3 = 5;
-const MZ_RAILGUN = 6;
-const MZ_ROCKET = 7;
-const MZ_GRENADE = 8;
-const MZ_LOGIN = 9;
-const MZ_LOGOUT = 10;
-const MZ_SSHOTGUN = 11;
-const MZ_BFG = 12;
-const MZ_HYPERBLASTER = 13;
 
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {

@@ -28,6 +28,7 @@ export interface PlayerState {
 
   // View effects
   kick_angles: Vec3;
+  kick_origin: Vec3;
   gunoffset: Vec3;
   gunangles: Vec3;
   gunindex: number;

@@ -21,11 +21,16 @@ import {
     FogData,
     DamageIndicator
 } from '@quake2ts/engine';
-import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
+import {
+    Vec3, ZERO_VEC3,
+    G_GetPowerupStat, PowerupId,
+    MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+} from '@quake2ts/shared';
 // Import from cgame
-import { PredictionState, defaultPredictionState, interpolatePredictionState } from '@quake2ts/cgame';
+import { PredictionState, defaultPredictionState, interpolatePredictionState, ViewEffects } from '@quake2ts/cgame';
 import { PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
-import { PlayerInventory, WeaponId, PowerupId, KeyId, ArmorType } from '@quake2ts/game';
+import { PlayerInventory, WeaponId, KeyId, ArmorType } from '@quake2ts/game';
 import { DEMO_ITEM_MAPPING } from './itemMapping.js';
 import { ClientImports } from '../index.js';
 
@@ -57,6 +62,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
     private imports?: ClientImports;
     private callbacks?: DemoHandlerCallbacks;
+    private view?: ViewEffects;
+    private playerNum: number = 0;
 
     constructor(imports?: ClientImports, callbacks?: DemoHandlerCallbacks) {
         this.imports = imports;
@@ -71,6 +78,10 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.callbacks = callbacks;
     }
 
+    setView(view: ViewEffects) {
+        this.view = view;
+    }
+
     onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
         console.log(`Demo: Server Data - Protocol: ${protocol}, Level: ${levelName}`);
         // Reset state on new server connection
@@ -78,6 +89,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.entities.clear();
         this.baselines.clear();
         this.latestFrame = null;
+        this.playerNum = playerNum;
     }
 
     onConfigString(index: number, str: string): void {
@@ -250,6 +262,73 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onMuzzleFlash3(ent: number, weapon: number): void {
+        // EV_MUZZLEFLASH broadcast includes entity number.
+        // We only want to add view kick if this is the local player.
+        // ent is 1-based index (usually) or raw number.
+        // playerNum is 0-based.
+        // In Q2 server: player entities are at index `playernum + 1`.
+        const isLocalPlayer = ent === (this.playerNum + 1);
+
+        if (isLocalPlayer && this.view) {
+             let pitch = 0;
+             let yaw = 0;
+             let roll = 0; // Not used often
+             let kickOrigin: Vec3 = ZERO_VEC3;
+
+             // Check Quad Damage scaling
+             const quad = G_GetPowerupStat(this.stats, PowerupId.QuadDamage);
+             const scale = quad ? 4 : 1;
+
+             switch (weapon) {
+                 case MZ_SHOTGUN:
+                     pitch = -2;
+                     kickOrigin = { x: -2, y: 0, z: 0 };
+                     break;
+                 case MZ_SSHOTGUN:
+                     pitch = -4;
+                     kickOrigin = { x: -4, y: 0, z: 0 };
+                     break;
+                 case MZ_MACHINEGUN:
+                     pitch = -1;
+                     yaw = (Math.random() - 0.5); // crandom
+                     break;
+                 case MZ_CHAINGUN1:
+                 case MZ_CHAINGUN2:
+                 case MZ_CHAINGUN3:
+                     pitch = -0.5;
+                     yaw = (Math.random() - 0.5);
+                     break;
+                 case MZ_RAILGUN:
+                     pitch = -3;
+                     kickOrigin = { x: -3, y: 0, z: 0 };
+                     break;
+                 case MZ_ROCKET:
+                 case MZ_GRENADE:
+                     pitch = -2;
+                     kickOrigin = { x: -2, y: 0, z: 0 };
+                     break;
+                 case MZ_BFG:
+                     pitch = -5;
+                     kickOrigin = { x: -2, y: 0, z: 0 };
+                     break;
+                 case MZ_HYPERBLASTER:
+                 case MZ_BLASTER:
+                     pitch = -0.5;
+                     break;
+             }
+
+             if (pitch !== 0 || yaw !== 0 || roll !== 0) {
+                 this.view.addKick({
+                     pitch: pitch * scale,
+                     roll: roll * scale,
+                     durationMs: 200,
+                     origin: kickOrigin // Should origin be scaled? Q2 source P_AddWeaponKick only scales angles.
+                     // But we have origin kick logic now. Let's assume origin kick is physical recoil and maybe doesn't scale with quad (magic damage)?
+                     // P_AddWeaponKick only scales kick_angles.
+                 });
+             }
+        }
+
         if (this.callbacks?.onMuzzleFlash3) {
             this.callbacks.onMuzzleFlash3(ent, weapon);
         }
@@ -380,6 +459,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             // Stubs
             stats: [...ps.stats],
             kick_angles: ZERO_VEC3,
+            kick_origin: ZERO_VEC3,
             gunoffset: ZERO_VEC3,
             gunangles: ZERO_VEC3,
             gunindex: 0,
