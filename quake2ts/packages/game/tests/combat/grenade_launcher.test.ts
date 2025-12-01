@@ -26,6 +26,9 @@ describe('Grenade Launcher', () => {
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
+        // Default mock for P_ProjectSource check
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
         playerStart.origin = { x: 0, y: 0, z: 0 };

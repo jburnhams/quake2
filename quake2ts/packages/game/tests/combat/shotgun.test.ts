@@ -51,13 +51,16 @@ describe('Shotgun', () => {
         fire(game, player, WeaponId.Shotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(9);
-        expect(trace).toHaveBeenCalledTimes(12);
+        expect(trace).toHaveBeenCalledTimes(13); // 1 for P_ProjectSource + 12 pellets
 
         const calls = trace.mock.calls;
-        const firstEnd = calls[0][3];
+        // calls[0] is P_ProjectSource trace.
+        // calls[1] to calls[12] are pellets.
+
+        const firstPelletEnd = calls[1][3];
         let allSame = true;
-        for (let i = 1; i < calls.length; i++) {
-            if (calls[i][3].x !== firstEnd.x || calls[i][3].y !== firstEnd.y || calls[i][3].z !== firstEnd.z) {
+        for (let i = 2; i < 13; i++) {
+            if (calls[i][3].x !== firstPelletEnd.x || calls[i][3].y !== firstPelletEnd.y || calls[i][3].z !== firstPelletEnd.z) {
                 allSame = false;
                 break;
             }

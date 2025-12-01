@@ -4,6 +4,13 @@
 
 import { WeaponId } from '../../inventory/playerInventory.js';
 
+export enum WeaponStateEnum {
+    WEAPON_READY,      // Idle, can fire or switch
+    WEAPON_ACTIVATING, // Raising/drawing weapon
+    WEAPON_DROPPING,   // Lowering weapon
+    WEAPON_FIRING      // Currently firing
+}
+
 export interface WeaponState {
     lastFireTime: number;
     spinupCount?: number; // For Chaingun spin-up

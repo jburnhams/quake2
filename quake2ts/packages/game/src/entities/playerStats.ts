@@ -81,7 +81,8 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
     for (const [id, expiresAt] of inventory.powerups) {
         if (expiresAt && expiresAt > nowMs) {
              // Active
-             G_SetPowerupStat(statArray, id, 1);
+             // Cast to any because PowerupId from playerInventory (game) matches PowerupId from shared
+             G_SetPowerupStat(statArray, id as any, 1);
         }
     }
 

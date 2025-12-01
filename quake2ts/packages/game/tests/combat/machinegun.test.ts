@@ -50,7 +50,7 @@ describe('Machinegun', () => {
         fire(game, player, WeaponId.Machinegun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(1);
+        expect(trace).toHaveBeenCalledTimes(2); // 1 source + 1 bullet
         expect(T_Damage).toHaveBeenCalled();
     });
 });

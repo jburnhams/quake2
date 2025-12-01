@@ -54,7 +54,7 @@ describe('HUD Icons', () => {
                 armor: null,
                 currentWeapon: undefined,
                 powerups: new Map(),
-                keys: new Set(['blue', 'red']),
+                keys: new Set([KeyId.Blue, KeyId.Red]),
             }
         } as unknown as PlayerClient;
 

@@ -50,7 +50,7 @@ describe('Super Shotgun', () => {
         fire(game, player, WeaponId.SuperShotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
-        expect(trace).toHaveBeenCalledTimes(20);
+        expect(trace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
         // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
         expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, game.time, expect.any(Function));
     });
@@ -95,12 +95,15 @@ describe('Super Shotgun', () => {
 
         fire(game, player, WeaponId.SuperShotgun);
 
-        expect(trace).toHaveBeenCalledTimes(20);
+        expect(trace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
 
         // Check the trace calls to verify the spread pattern
         const calls = trace.mock.calls;
-        const firstVolleyDirections = calls.slice(0, 10).map(call => call[3].x);
-        const secondVolleyDirections = calls.slice(10, 20).map(call => call[3].x);
+        // calls[0] is source
+        // 1-10 is first volley
+        // 11-20 is second volley
+        const firstVolleyDirections = calls.slice(1, 11).map(call => call[3].x);
+        const secondVolleyDirections = calls.slice(11, 21).map(call => call[3].x);
 
         // Check that the two volleys are distinct
         const firstVolleyAverage = firstVolleyDirections.reduce((a, b) => a + b, 0) / firstVolleyDirections.length;

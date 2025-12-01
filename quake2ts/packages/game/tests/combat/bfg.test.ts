@@ -26,6 +26,7 @@ describe('BFG10K', () => {
             modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -99,7 +100,8 @@ describe('BFG10K', () => {
 
     it('should deal 500 damage in single-player', () => {
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
-        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
         const player = game.entities.spawn();
         player.client = {
@@ -114,7 +116,8 @@ describe('BFG10K', () => {
 
     it('should deal 200 damage in deathmatch', () => {
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
-        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
         const player = game.entities.spawn();
         player.client = {

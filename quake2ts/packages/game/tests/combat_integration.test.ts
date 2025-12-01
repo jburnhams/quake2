@@ -90,8 +90,14 @@ describe('Combat and Items', () => {
        target2.maxs = { x: 10, y: 10, z: 10 };
 
        // Mock trace sequence for Railgun loop
-       // 1. Hit target1
+       // 0. P_ProjectSource Check (Eye to Muzzle) -> No hit
        mockImports.trace.mockReturnValueOnce({
+          fraction: 1.0,
+          endpos: { x: 0, y: 0, z: 0 },
+          ent: null
+       })
+       // 1. Hit target1
+       .mockReturnValueOnce({
           fraction: 0.1,
           endpos: target1.origin,
           ent: target1,

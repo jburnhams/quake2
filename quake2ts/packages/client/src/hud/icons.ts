@@ -1,5 +1,5 @@
 import { AssetManager, Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WEAPON_ITEMS, WeaponItem, PowerupId } from '@quake2ts/game';
+import { PlayerClient, WEAPON_ITEMS, WeaponItem, PowerupId, KeyId } from '@quake2ts/game';
 import { HUD_LAYOUT } from './layout.js';
 import { Draw_Number } from './numbers.js';
 
@@ -91,10 +91,10 @@ export const Draw_Icons = (
     for (const key of keys) {
         let iconName = '';
         switch (key) {
-            case 'blue': iconName = 'k_bluekey'; break;
-            case 'red': iconName = 'k_redkey'; break;
-            case 'green': iconName = 'k_security'; break;
-            case 'yellow': iconName = 'k_pyramid'; break;
+            case KeyId.Blue: iconName = 'k_bluekey'; break;
+            case KeyId.Red: iconName = 'k_redkey'; break;
+            case KeyId.Green: iconName = 'k_security'; break;
+            case KeyId.Yellow: iconName = 'k_pyramid'; break;
         }
 
         if (iconName) {

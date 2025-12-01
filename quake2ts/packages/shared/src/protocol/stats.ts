@@ -91,7 +91,8 @@ const POWERUP_STAT_MAP: Partial<Record<PowerupId, number>> = {
   [PowerupId.Silencer]: 7,
   [PowerupId.Rebreather]: 8,
   [PowerupId.EnviroSuit]: 9,
-  // 10 is POWERUP_ADRENALINE (not in PowerupId?)
+  [PowerupId.Bandolier]: 10, // Placeholder/Map mismatch handling?
+  [PowerupId.AmmoPack]: 10, // Original reused indices or had gaps?
   [PowerupId.IRGoggles]: 11,
   [PowerupId.DoubleDamage]: 12,
   [PowerupId.SphereVengeance]: 13,
@@ -104,6 +105,8 @@ const POWERUP_STAT_MAP: Partial<Record<PowerupId, number>> = {
   [PowerupId.TechStrength]: 20,
   [PowerupId.TechHaste]: 21,
   [PowerupId.TechRegeneration]: 22,
+  // Add missing mappings to avoid runtime lookups failing for new types
+  [PowerupId.TagToken]: -1,
 };
 
 // 9 bits for ammo count

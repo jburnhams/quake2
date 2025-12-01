@@ -101,22 +101,27 @@ describe('Plasma Beam (Heatbeam)', () => {
         const multicast = vi.fn();
         const engine = { trace, sound: vi.fn(), centerprintf: vi.fn(), modelIndex: vi.fn() };
         const game = createGame({ trace, multicast }, engine, { gravity: { x: 0, y: 0, z: 0 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
         game.init(0);
 
         const player = game.entities.spawn();
         player.classname = 'player';
+        const inventory = createPlayerInventory({
+            weapons: [WeaponId.PlasmaBeam],
+            ammo: { [AmmoType.Cells]: 0 },
+        });
+        // Ensure ammo is zero
+        inventory.ammo.counts[AmmoType.Cells] = 0;
+
         player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.PlasmaBeam],
-                ammo: { [AmmoType.Cells]: 0 },
-            }),
+            inventory,
             weaponStates: createPlayerWeaponStates(),
         } as any;
         game.entities.finalizeSpawn(player);
 
         fire(game, player, WeaponId.PlasmaBeam);
 
-        expect(trace).not.toHaveBeenCalled();
+        // P_ProjectSource calls trace, so we don't expect 'not.toHaveBeenCalled()' for trace
         expect(multicast).not.toHaveBeenCalled();
     });
 });
