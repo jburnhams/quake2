@@ -38,6 +38,17 @@ export const U_SKIN16    = (1 << 25);
 export const U_SOUND     = (1 << 26);
 export const U_SOLID     = (1 << 27);
 
+// Protocol 2023 Extension Bits (Byte 4)
+export const U_SCALE         = (1 << 28);
+export const U_INSTANCE_BITS = (1 << 29);
+export const U_LOOP_VOLUME   = (1 << 30);
+export const U_MOREBITS4     = 0x80000000 | 0; // Bit 31 (sign bit)
+
+// Protocol 2023 Extension Bits (Byte 5 - High Bits)
+export const U_LOOP_ATTENUATION_HIGH = (1 << 0);
+export const U_OWNER_HIGH            = (1 << 1);
+export const U_OLD_FRAME_HIGH        = (1 << 2);
+
 // Demo types
 const RECORD_NETWORK = 0x00;
 const RECORD_CLIENT  = 0x01;
@@ -68,6 +79,7 @@ export interface EntityState {
   event: number;
   solid: number;
   bits: number; // Added for delta compression handling
+  bitsHigh: number; // For extension flags > 31
 
   // Rerelease fields
   alpha: number;
@@ -96,6 +108,7 @@ export const createEmptyEntityState = (): EntityState => ({
   event: 0,
   solid: 0,
   bits: 0,
+  bitsHigh: 0,
 
   alpha: 0,
   scale: 0,
@@ -223,9 +236,9 @@ export interface NetworkMessageHandler {
     onSpawnBaselineBlast?(entity: EntityState): void; // Likely similar to SpawnBaseline but compressed?
     onLevelRestart?(): void;
     onDamage?(indicators: DamageIndicator[]): void;
-    onLocPrint?(flags: number, msg: string): void;
+    onLocPrint?(flags: number, base: string, args: string[]): void;
     onFog?(data: FogData): void;
-    onWaitingForPlayers?(): void;
+    onWaitingForPlayers?(count: number): void;
     onBotChat?(msg: string): void;
     onPoi?(flags: number, pos: Vec3): void;
     onHelpPath?(pos: Vec3): void;
@@ -550,17 +563,15 @@ export class NetworkMessageParser {
       for(let i=0; i<numArgs; i++) {
           args.push(this.stream.readString());
       }
-      // TODO: Handler for locprint?
       if (this.handler && this.handler.onLocPrint) {
-          // For now, pass basic info or formatted string if we implement format
-          this.handler.onLocPrint(flags, base);
+          this.handler.onLocPrint(flags, base, args);
       }
   }
 
   private parseWaitingForPlayers(): void {
       const count = this.stream.readByte();
       if (this.handler && this.handler.onWaitingForPlayers) {
-          this.handler.onWaitingForPlayers(); // Should we pass count?
+          this.handler.onWaitingForPlayers(count);
       }
   }
 
@@ -599,11 +610,9 @@ export class NetworkMessageParser {
 
   private parseAchievement(): void {
       const idStr = this.stream.readString();
-      // Handler expects number?
-      // onAchievement?(id: number): void;
-      // But svc_achievement reads a STRING id.
-      // We should update the interface.
-      // For now, parse but maybe don't call if type mismatch.
+      if (this.handler && this.handler.onAchievement) {
+          this.handler.onAchievement(idStr);
+      }
   }
 
   private parseDownload(): void {
@@ -932,7 +941,7 @@ export class NetworkMessageParser {
   private parseSpawnBaseline(): void {
     const bits = this.parseEntityBits();
     const entity = createEmptyEntityState();
-    this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits);
+    this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
 
     if (this.handler) {
         this.handler.onSpawnBaseline(entity);
@@ -1100,13 +1109,13 @@ export class NetworkMessageParser {
               break;
           }
           const entity = createEmptyEntityState();
-          this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits);
+          this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
           entities.push(entity);
       }
       return entities;
   }
 
-  private parseEntityBits(): { number: number; bits: number } {
+  private parseEntityBits(): { number: number; bits: number; bitsHigh: number } {
       let total = this.stream.readByte();
       if (total & U_MOREBITS1) {
           total |= (this.stream.readByte() << 8);
@@ -1118,6 +1127,13 @@ export class NetworkMessageParser {
           total |= (this.stream.readByte() << 24);
       }
 
+      let bitsHigh = 0;
+      if (total & U_MOREBITS4) {
+          const byte5 = this.stream.readByte();
+          bitsHigh = byte5;
+          // If U_MOREBITS5 (0x80) would be here, we could read byte 6...
+      }
+
       let number: number;
       if (total & U_NUMBER16) {
           number = this.stream.readShort();
@@ -1125,10 +1141,10 @@ export class NetworkMessageParser {
           number = this.stream.readByte();
       }
 
-      return { number, bits: total };
+      return { number, bits: total, bitsHigh };
   }
 
-  private parseDelta(from: EntityState, to: EntityState, number: number, bits: number): void {
+  private parseDelta(from: EntityState, to: EntityState, number: number, bits: number, bitsHigh: number = 0): void {
       to.number = from.number;
       to.modelindex = from.modelindex;
       to.modelindex2 = from.modelindex2;
@@ -1145,8 +1161,17 @@ export class NetworkMessageParser {
       to.event = from.event;
       to.solid = from.solid;
 
+      to.alpha = from.alpha;
+      to.scale = from.scale;
+      to.instanceBits = from.instanceBits;
+      to.loopVolume = from.loopVolume;
+      to.loopAttenuation = from.loopAttenuation;
+      to.owner = from.owner;
+      to.oldFrame = from.oldFrame;
+
       to.number = number;
       to.bits = bits;
+      to.bitsHigh = bitsHigh;
 
       if (bits & U_MODEL) to.modelindex = this.stream.readByte();
       if (bits & U_MODEL2) to.modelindex2 = this.stream.readByte();
@@ -1201,5 +1226,15 @@ export class NetworkMessageParser {
       }
 
       if (bits & U_SOLID) to.solid = this.stream.readShort();
+
+      // Rerelease Fields
+      if (bits & U_ALPHA) to.alpha = this.stream.readByte() / 255.0;
+      if (bits & U_SCALE) to.scale = this.stream.readFloat();
+      if (bits & U_INSTANCE_BITS) to.instanceBits = this.stream.readLong();
+      if (bits & U_LOOP_VOLUME) to.loopVolume = this.stream.readByte() / 255.0;
+
+      if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = this.stream.readByte() / 255.0;
+      if (bitsHigh & U_OWNER_HIGH) to.owner = this.stream.readShort();
+      if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = this.stream.readShort();
   }
 }

@@ -40,7 +40,7 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
       };
       const parser = new NetworkMessageParser(stream, handler);
       parser.parseMessage();
-      expect(handler.onLocPrint).toHaveBeenCalledWith(flags, base);
+      expect(handler.onLocPrint).toHaveBeenCalledWith(flags, base, [arg1]);
   });
 
   it('should parse svc_waitingforplayers', () => {
@@ -53,7 +53,7 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
       };
       const parser = new NetworkMessageParser(stream, handler);
       parser.parseMessage();
-      expect(handler.onWaitingForPlayers).toHaveBeenCalled();
+      expect(handler.onWaitingForPlayers).toHaveBeenCalledWith(count);
   });
 
   it('should parse svc_bot_chat', () => {
