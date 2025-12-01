@@ -11,10 +11,43 @@ This section documents features present in the original Quake II rerelease that 
 ## Feature Categories
 
 This section is organized by where missing features should be integrated:
-- **Section 4 Extensions**: Missing entity types
-- **Section 5 Extensions**: Missing weapons and items
-- **Section 6 Extensions**: Missing monsters
-- **New Sections Required**: Major system gaps
+- **Section 15.0**: Foundational animation and weapon systems (CRITICAL BLOCKERS)
+- **Section 15.1**: Missing weapons (base game + mission packs)
+- **Section 15.2**: Missing monsters
+- **Section 15.3**: Missing entities
+- **Section 15.4**: Missing game systems
+
+---
+
+## 0. FOUNDATIONAL SYSTEMS (Critical Blockers)
+
+**See Section 15.0 for complete details**
+
+### Overview
+The implementation is missing **entire foundational systems** that are required for proper weapon functionality. These are not small features - they are architectural gaps that affect all weapons.
+
+### Critical Missing Systems (Section 15.0)
+
+1. **P_ProjectSource System** (15.0.1 - 2 days, P0)
+   - All weapons fire from player center, not hand
+   - Can shoot through walls by standing against them
+   - Railgun doesn't work correctly
+   - **Status**: BROKEN - needs immediate fix
+
+2. **Weapon Animation System** (15.0.2 - 2 weeks, P1)
+   - NO weapon state machine (ACTIVATING/READY/FIRING/DROPPING)
+   - NO gun frame animations (ps.gunframe)
+   - NO raise/lower/fire/idle sequences
+   - NO animation timing system
+   - **Status**: COMPLETELY MISSING - blocks hand grenade and all weapon polish
+
+3. **Player Body Animation System** (15.0.3 - 1 week, P2)
+   - NO player body animations
+   - NO throw gestures
+   - NO attack animations
+   - **Status**: COMPLETELY MISSING - visual polish only
+
+**Total Effort for Foundations**: ~3 weeks sequential work
 
 ---
 
@@ -22,30 +55,23 @@ This section is organized by where missing features should be integrated:
 
 ### Hand Grenade (Throwable Weapon)
 **Original**: `p_weapon.cpp` lines 988-1011, `Throw_Generic` lines 1013-1213
-**Status**: Completely absent from plan and implementation
+**Status**: ~20% complete - Basic mechanics work, but NO animation system
 **Priority**: HIGH - Core base game weapon
+**Blockers**: Section 15.0 (all three subsections)
 
-**Features**:
-- Hold-to-cook grenade timer
-- Variable throw speed: `GRENADE_MINSPEED` (400) to `GRENADE_MAXSPEED` (800)
-- Explodes in hand if held too long (3 seconds)
-- Dedicated throw animation with FRAME_THROW_HOLD and FRAME_THROW_FIRE
-- Prime sound ("weapons/hgrent1a.wav") and primed loop sound
-- Different from grenade launcher projectiles
+**Current Status** (See Section 15.1 for details):
+- ✓ Basic throw mechanics (simplified, wrong architecture)
+- ✓ Hold-to-cook timer (not frame-based)
+- ✓ Variable throw speed calculation
+- ✓ In-hand explosion logic
+- ✗ Throw_Generic animation system (MISSING)
+- ✗ Weapon state machine (MISSING)
+- ✗ Gun frame animations (MISSING)
+- ✗ Primed loop sound (MISSING)
+- ✗ Player throw gesture (MISSING)
+- ✗ P_ProjectSource for proper origin (MISSING)
 
-**Implementation Tasks**:
-- [ ] Add throwable weapon type to inventory
-- [ ] Implement hold-time tracking
-- [ ] Add cook timer (3 sec max)
-- [ ] Variable velocity calculation
-- [ ] Throw animation sequences
-- [ ] Prime/primed sound effects
-- [ ] In-hand explosion logic
-
-**Testing**:
-- Throw at various hold times, verify speed variation
-- Hold until explosion, verify self-damage
-- Verify grenade physics match launcher grenades after throw
+**Previous Documentation Was Misleading**: The hand grenade is NOT "nearly complete". The basic physics work, but the entire animation framework is missing. This is like having a car engine without a transmission, steering, or wheels.
 
 ---
 
