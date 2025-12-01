@@ -190,9 +190,11 @@ function registerTriggerMultiple(registry: SpawnRegistry): void {
 
     if (entity.spawnflags & TRIGGER_SPAWNFLAGS.Latched) {
       // Latched triggers rely on area queries; fall back to touch behaviour for now.
-    }
-
-    if (entity.spawnflags & (TRIGGER_SPAWNFLAGS.Triggered | TRIGGER_SPAWNFLAGS.Toggle)) {
+      entity.solid = Solid.Not;
+      entity.movetype = MoveType.None;
+      // Latched triggers are manually enabled by other entities
+      entity.use = triggerEnable;
+    } else if (entity.spawnflags & (TRIGGER_SPAWNFLAGS.Triggered | TRIGGER_SPAWNFLAGS.Toggle)) {
       entity.solid = Solid.Not;
       entity.use = (self, other, activator) => {
         triggerEnable(self);
