@@ -1,4 +1,5 @@
 
+// Rerelease Protocol Impl
 import { BinaryStream, Vec3, ServerCommand, TempEntity, ANORMS } from '@quake2ts/shared';
 import pako from 'pako';
 

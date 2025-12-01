@@ -26,6 +26,8 @@ This section covers the implementation of Quake II demo (`.dm2`) playback in the
 - ✅ Verified new commands with comprehensive unit tests in `packages/engine/tests/demo/`.
 - ✅ Verified `DemoPlaybackController` can handle larger Rerelease frames (up to 2MB).
 - ✅ Updated `packages/client` to respect new entity fields `scale` and `alpha` during rendering, with unit tests in `packages/client/tests/entities.test.ts`.
+- ✅ Audited Protocol 2023 implementation, confirming full coverage of new commands in `NetworkMessageParser`.
+- ✅ Added explicit unit tests for Protocol 2023 detection, splitscreen handling, and new Rerelease commands (`svc_bot_chat`, `svc_poi`, `svc_help_path`) in `packages/engine/tests/demo/rerelease_protocol.test.ts`.
 
 ## Protocol Gaps (Rerelease / Protocol 2023)
 
@@ -84,6 +86,7 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 ### 3. Testing
 - [x] **Regression Test**: Verify Vanilla `.dm2` files still play back correctly. (Existing tests passing, plus new integration test in `playback_integration.test.ts`)
 - [x] **New Feature Test**: Acquire and test against a Rerelease `.dm2` file (Protocol 2023). (Verified with synthetic test in `playback_integration.test.ts`)
+- [x] **Protocol Coverage**: Added specific unit tests for Protocol 2023 handshake and new commands.
 
 ## Implementation Notes
 - **Reference**: Use `rerelease/client/cl_parse.cpp` as the source of truth for the Rerelease protocol.
