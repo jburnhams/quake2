@@ -66,6 +66,7 @@ export interface PlayerClient {
     buttons: number;
     kick_angles?: Vec3;
     kick_origin?: Vec3;
+    v_angle?: Vec3; // View angles (Pitch, Yaw, Roll)
     // Powerup timers (from rerelease/g_local.h)
     quad_time?: number;
     double_time?: number;

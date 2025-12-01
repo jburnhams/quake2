@@ -95,6 +95,7 @@ export interface PowerArmorResult {
   readonly remainingCells: number;
 }
 
+// Implements CheckPowerArmor from rerelease/g_combat.cpp
 export function applyPowerArmor(
   damage: number,
   flags: number,
@@ -115,6 +116,11 @@ export function applyPowerArmor(
     return { saved: 0, remainingCells: state.cellCount };
   }
 
+  // Quake 2 Power Screen direction check:
+  // "if (dot < 0.3) return 0;"
+  // where dot is DotProduct(dir, forward)
+  // dir is direction from player origin to impact point.
+  // forward is player's view direction.
   const { forward } = angleVectors(state.angles);
   const toImpact = {
     x: hitPoint.x - state.origin.x,
