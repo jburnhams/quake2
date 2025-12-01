@@ -43,4 +43,5 @@ export enum AmmoItemId {
   Disruptor = 'ammo_disruptor',
   Tesla = 'ammo_tesla',
   Trap = 'ammo_trap',
+  Prox = 'ammo_prox',
 }

@@ -38,6 +38,7 @@ const AMMO_ITEM_DEFINITIONS: Record<AmmoItemId, AmmoItemDefinition> = {
   [AmmoItemId.Disruptor]: { id: AmmoItemId.Disruptor, ammoType: AmmoType.Disruptor, quantity: 15, weaponAmmo: false },
   [AmmoItemId.Tesla]: { id: AmmoItemId.Tesla, ammoType: AmmoType.Tesla, quantity: 5, weaponAmmo: false },
   [AmmoItemId.Trap]: { id: AmmoItemId.Trap, ammoType: AmmoType.Trap, quantity: 5, weaponAmmo: false },
+  [AmmoItemId.Prox]: { id: AmmoItemId.Prox, ammoType: AmmoType.Prox, quantity: 5, weaponAmmo: false },
 };
 
 export function getAmmoItemDefinition(id: AmmoItemId): AmmoItemDefinition {
@@ -68,6 +69,7 @@ export function createBaseAmmoCaps(): number[] {
   caps[AmmoType.Disruptor] = 200; // Assuming similar to cells/bullets
   caps[AmmoType.Tesla] = 50;
   caps[AmmoType.Trap] = 50;
+  caps[AmmoType.Prox] = 50;
   return caps;
 }
 

@@ -203,6 +203,16 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
     },
+    'weapon_proxlauncher': {
+        type: 'weapon',
+        id: 'weapon_proxlauncher',
+        name: 'Prox Launcher',
+        weaponId: WeaponId.ProxLauncher,
+        ammoType: AmmoType.Prox,
+        initialAmmo: 5,
+        pickupAmmo: 5,
+        fireRate: 0.8, // Guessing fire rate, refine if needed
+    },
     // ... add others as we implement them
 };
 

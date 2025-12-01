@@ -16,7 +16,7 @@ import {
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
-import { createRocket, createGrenade, createBfgBall, createBlasterBolt } from '../../entities/projectiles.js';
+import { createRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
 
@@ -444,6 +444,20 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
         }
         case WeaponId.EtfRifle: {
             fireEtfRifle(game, player, inventory, weaponState, forward);
+            break;
+        }
+        case WeaponId.ProxLauncher: {
+             if (inventory.ammo.counts[AmmoType.Prox] < 1) {
+                // TODO: NoAmmoWeaponChange
+                return;
+            }
+            inventory.ammo.counts[AmmoType.Prox]--;
+
+            game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE); // Use grenade flash for now
+            applyKick(player, -2, 0, -2);
+
+            // Speed 600
+            createProxMine(game.entities, player, player.origin, forward, 600);
             break;
         }
     }

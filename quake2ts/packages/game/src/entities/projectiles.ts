@@ -678,3 +678,5 @@ export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, d
 
     sys.finalizeSpawn(flechette);
 }
+
+export * from './projectiles/prox.js';
