@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Draw_Hud, Init_Hud } from '../src/hud.js';
 import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
-import { PlayerClient, PowerupId } from '@quake2ts/game';
+import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
 import { MessageSystem } from '../src/hud/messages.js';
 
 // Mock engine dependencies
@@ -105,7 +105,7 @@ describe('HUD Rendering', () => {
     });
 
     it('should draw keys', () => {
-        client.inventory.keys.add('blue');
+        client.inventory.keys.add(KeyId.Blue);
 
         Draw_Hud(mockRenderer, ps, client, 100, 50, 20, {} as any, messageSystem, 1000);
 
