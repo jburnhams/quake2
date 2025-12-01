@@ -1,4 +1,4 @@
-import { angleVectors, distance, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, addVec3, Vec3 } from '@quake2ts/shared';
+import { angleVectors, distance, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, addVec3, Vec3, dotVec3 } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entity.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
@@ -257,6 +257,167 @@ const func_button: SpawnFunction = (entity, context) => {
     context.entities.sound(self, 0, 'switches/butn2.wav', 1, 1, 0); // Default sound
   };
 };
+
+// ============================================================================
+// FUNC DOOR SECRET
+// ============================================================================
+
+const SPAWNFLAG_SECRET_ALWAYS_SHOOT = 1;
+const SPAWNFLAG_SECRET_1ST_LEFT = 2;
+const SPAWNFLAG_SECRET_1ST_DOWN = 4;
+
+function door_secret_move1(ent: Entity, context: EntitySystem) {
+    ent.nextthink = context.timeSeconds + 1.0;
+    ent.think = (e) => door_secret_move2(e, context);
+}
+
+function door_secret_move2(ent: Entity, context: EntitySystem) {
+    move_calc(ent, ent.pos2, context, door_secret_move3);
+}
+
+function door_secret_move3(ent: Entity, context: EntitySystem) {
+    if (ent.wait === -1) {
+        return;
+    }
+    ent.nextthink = context.timeSeconds + ent.wait;
+    ent.think = (e) => door_secret_move4(e, context);
+}
+
+function door_secret_move4(ent: Entity, context: EntitySystem) {
+    move_calc(ent, ent.pos1, context, door_secret_move5);
+}
+
+function door_secret_move5(ent: Entity, context: EntitySystem) {
+    ent.nextthink = context.timeSeconds + 1.0;
+    ent.think = (e) => door_secret_move6(e, context);
+}
+
+function door_secret_move6(ent: Entity, context: EntitySystem) {
+    // Return to start_origin if available, otherwise 0,0,0 (as in C but safer)
+    const dest: Vec3 = (ent as any).start_origin || { x: 0, y: 0, z: 0 };
+    move_calc(ent, dest, context, door_secret_done);
+}
+
+function door_secret_done(ent: Entity, context: EntitySystem) {
+    if (!ent.targetname || (ent.spawnflags & SPAWNFLAG_SECRET_ALWAYS_SHOOT)) {
+        ent.health = 0;
+        ent.takedamage = true;
+    }
+    // Real implementation would update PVS visibility here
+}
+
+function door_secret_blocked(self: Entity, other: Entity | null) {
+    if (!other || !self.dmg) return;
+
+    if (!(other.svflags & ServerFlags.Monster) && other.classname !== 'player') {
+        // Gib/nuke non-monsters/players
+        if (other.takedamage) {
+            other.health = -1000; // Force gib
+            // Call damage to handle gibbing logic if needed, or just let it be
+        }
+        return;
+    }
+
+    if (other.takedamage) {
+        other.health -= self.dmg;
+    }
+}
+
+const func_door_secret: SpawnFunction = (entity, context) => {
+    // Handle sounds
+    const moveinfo: MoveInfo = {
+        sound_start: 'doors/dr1_strt.wav',
+        sound_middle: 'doors/dr1_mid.wav',
+        sound_end: 'doors/dr1_end.wav'
+    };
+    (entity as any).moveinfo = moveinfo;
+
+    entity.movetype = MoveType.Push;
+    entity.solid = Solid.Bsp;
+    entity.svflags |= ServerFlags.Door;
+
+    entity.blocked = door_secret_blocked;
+
+    entity.use = (self, other, activator) => {
+        // make sure we're not already moving
+        // Check if current origin is different from start_origin (assuming start is closed)
+        const start = (self as any).start_origin || { x: 0, y: 0, z: 0 };
+        // Simple check: if velocity is zero and we are at start, go.
+        const d = distance(self.origin, start);
+        if (d > 0.1) return; // Already moving or open
+
+        move_calc(self, self.pos1, context.entities, door_secret_move1);
+        // Real implementation would update PVS visibility here
+    };
+
+    if (!entity.targetname || (entity.spawnflags & SPAWNFLAG_SECRET_ALWAYS_SHOOT)) {
+        entity.health = 0;
+        entity.takedamage = true;
+        entity.die = (self, inflictor, attacker, damage) => {
+            self.takedamage = false;
+            self.use?.(self, attacker, attacker);
+        };
+    }
+
+    if (!entity.dmg) entity.dmg = 2;
+    if (!entity.wait) entity.wait = 5;
+
+    // Use speed, accel, decel from entity or defaults
+    if (!entity.speed) entity.speed = 50;
+    if (!entity.accel) entity.accel = 50;
+    if (!entity.decel) entity.decel = 50;
+
+    // Calculate positions
+    const start_origin = { ...entity.origin };
+    (entity as any).start_origin = start_origin;
+
+    const forward = { x: 0, y: 0, z: 0 };
+    const right = { x: 0, y: 0, z: 0 };
+    const up = { x: 0, y: 0, z: 0 };
+    angleVectors(entity.angles, forward, right, up);
+    entity.angles = { x: 0, y: 0, z: 0 };
+
+    const side = 1.0 - ((entity.spawnflags & SPAWNFLAG_SECRET_1ST_LEFT) ? 2 : 0);
+    let width = 0;
+    if (entity.spawnflags & SPAWNFLAG_SECRET_1ST_DOWN) {
+        width = Math.abs(dotVec3(up, entity.size));
+    } else {
+        width = Math.abs(dotVec3(right, entity.size));
+    }
+
+    const length = Math.abs(dotVec3(forward, entity.size));
+
+    // pos1 = start + (right * side * width) OR (up * -1 * width)
+    if (entity.spawnflags & SPAWNFLAG_SECRET_1ST_DOWN) {
+        const move = scaleVec3(up, -1 * width);
+        entity.pos1 = addVec3(start_origin, move);
+    } else {
+        const move = scaleVec3(right, side * width);
+        entity.pos1 = addVec3(start_origin, move);
+    }
+
+    // ent->pos2 = ent->pos1 + (forward * length);
+    const forwardMove = scaleVec3(forward, length);
+    entity.pos2 = addVec3(entity.pos1, forwardMove);
+
+    if (entity.health) {
+        entity.takedamage = true;
+        entity.max_health = entity.health;
+        entity.die = (self, inflictor, attacker, damage) => {
+             self.takedamage = false;
+             self.use?.(self, attacker, attacker);
+        };
+    } else if (entity.targetname && (entity as any).message) {
+         entity.touch = (self, other) => {
+            if (!other || !other.client) return;
+             // Should print message
+             // context.centerprintf(other, self.message);
+         };
+    }
+
+    // Link entity (already done by spawn system generally, but ensuring solid/movetype set above)
+};
+
 
 // ============================================================================
 // FUNC TRAIN
@@ -518,6 +679,7 @@ const func_areaportal: SpawnFunction = (entity, context) => {
 
 export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_door', func_door);
+  registry.register('func_door_secret', func_door_secret);
   registry.register('func_button', func_button);
   registry.register('func_train', func_train);
   registry.register('func_plat', func_plat);
