@@ -292,10 +292,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Drop excessive commands from suspicious clients
    - Log rate violations
 
-3. **Implement Client Timeout** (line 326)
+3. [x] **Implement Client Timeout** (line 326)
    - Track last packet time per client
    - Disconnect clients that haven't sent packets in 30+ seconds
-   - Send timeout warning before disconnect
+   - [ ] Send timeout warning before disconnect (Optional/Enhancement)
    - Clean up client state on timeout
 
 4. **Separate Reliable/Unreliable Streams** (line 650)
