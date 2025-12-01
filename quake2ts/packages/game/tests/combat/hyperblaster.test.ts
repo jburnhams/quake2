@@ -24,6 +24,7 @@ describe('HyperBlaster', () => {
             modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -41,12 +42,14 @@ describe('HyperBlaster', () => {
         fire(game, player, WeaponId.HyperBlaster);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
-        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
+        // source is now offset, not player.origin
+        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, expect.anything(), expect.anything(), 20, 1000, DamageMod.HYPERBLASTER);
     });
 
     it('should deal 20 damage in single-player', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
-        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
         const player = game.entities.spawn();
         player.client = {
@@ -61,7 +64,8 @@ describe('HyperBlaster', () => {
 
     it('should deal 15 damage in deathmatch', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
-        const game = createGame({ multicast: vi.fn() } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
         const player = game.entities.spawn();
         player.client = {

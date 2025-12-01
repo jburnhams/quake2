@@ -1,51 +1,92 @@
-import { ARMOR_INFO, ArmorType, type RegularArmorState } from '../combat/armor.js';
-import {
-  AmmoInventory,
-  AmmoItemId,
-  AmmoType,
-  AmmoAdjustmentResult,
-  AmmoCaps,
-  AmmoSeed,
-  addAmmo,
-  createAmmoInventory,
-  pickupAmmo,
-} from './ammo.js';
-import { ArmorItem, HealthItem, WeaponItem, PowerupItem, KeyItem, PowerArmorItem, ARMOR_ITEMS, WEAPON_ITEMS } from './items.js';
-import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
-import { Vec3, WeaponId, PowerupId } from '@quake2ts/shared';
-
-export { WeaponId, PowerupId };
-
-export enum KeyId {
-  Blue = 'blue',
-  Red = 'red',
-  Green = 'green',
-  Yellow = 'yellow',
-  // New additions for demo playback and extended support
-  DataCD = 'data_cd',
-  PowerCube = 'power_cube',
-  ExplosiveCharges = 'explosive_charges',
-  PowerCore = 'power_core',
-  Pyramid = 'pyramid',
-  DataSpinner = 'data_spinner',
-  Pass = 'pass',
-  CommanderHead = 'commander_head',
-  Airstrike = 'airstrike',
-  NukeContainer = 'nuke_container',
-  Nuke = 'nuke',
-  RedFlag = 'red_flag',
-  BlueFlag = 'blue_flag',
+export enum WeaponId {
+  Blaster = 'blaster',
+  Shotgun = 'shotgun',
+  SuperShotgun = 'supershotgun',
+  Machinegun = 'machinegun',
+  Chaingun = 'chaingun',
+  GrenadeLauncher = 'grenadelauncher',
+  RocketLauncher = 'rocketlauncher',
+  HyperBlaster = 'hyperblaster',
+  Railgun = 'railgun',
+  BFG10K = 'bfg10k',
+  HandGrenade = 'grenades',
+  Grapple = 'grapple', // Missing
+  // Rogue
+  IonRipper = 'ionripper',
+  Phalanx = 'phalanx',
+  Trap = 'trap',
+  PlasmaBeam = 'plasmabeam', // Heatbeam
+  EtfRifle = 'etfrifle',
+  ProxLauncher = 'proxlauncher',
+  ChainFist = 'chainfist',
+  Disruptor = 'disruptor',
 }
 
+import {
+  type AmmoInventory,
+  createAmmoInventory,
+  type AmmoItemId,
+  addAmmo,
+  pickupAmmo,
+  type AmmoAdjustmentResult,
+  AmmoType,
+} from './ammo.js';
+import { ArmorType, ARMOR_INFO, type RegularArmorState } from '../combat/armor.js';
+import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem } from './items.js';
+import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
+import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
+import { WeaponStateEnum } from '../combat/weapons/state.js';
+
 export interface PlayerInventoryOptions {
-  readonly ammoCaps?: AmmoCaps;
-  readonly ammo?: AmmoSeed;
   readonly weapons?: readonly WeaponId[];
+  readonly ammo?: Record<number, number>;
+  readonly ammoCaps?: readonly number[];
   readonly currentWeapon?: WeaponId;
-  readonly armor?: RegularArmorState | null;
-  readonly powerups?: Iterable<[PowerupId, number | null]>;
-  readonly keys?: readonly KeyId[];
-  readonly items?: Iterable<string>;
+}
+
+export enum PowerupId {
+  QuadDamage = 'quad',
+  Invulnerability = 'invulnerability',
+  Silencer = 'silencer',
+  Rebreather = 'rebreather',
+  EnviroSuit = 'enviro',
+  DoubleDamage = 'double', // Rogue
+  QuadFire = 'quadfire', // Xatrix?
+  Invisibility = 'invisibility', // TF? or other mod
+  Bandolier = 'bandolier',
+  AmmoPack = 'pack',
+  IRGoggles = 'goggles',
+  SphereVengeance = 'vengeance', // Rogue
+  SphereHunter = 'hunter', // Rogue
+  SphereDefender = 'defender', // Rogue
+  Doppelganger = 'doppelganger', // Rogue
+  TagToken = 'tagtoken',
+  TechResistance = 'tech_resistance',
+  TechStrength = 'tech_strength',
+  TechHaste = 'tech_haste',
+  TechRegeneration = 'tech_regeneration',
+  Flashlight = 'flashlight',
+  Compass = 'compass',
+}
+
+export enum KeyId {
+  Blue = 'key_blue',
+  Red = 'key_red',
+  Green = 'key_green', // Data CD / Security Pass
+  Yellow = 'key_yellow', // Power Cube / Pyramid Key
+  DataCD = 'key_data_cd',
+  PowerCube = 'key_power_cube',
+  ExplosiveCharges = 'key_explosive_charges',
+  PowerCore = 'key_power_core',
+  Pyramid = 'key_pyramid',
+  DataSpinner = 'key_data_spinner',
+  Pass = 'key_pass',
+  CommanderHead = 'key_commander_head',
+  Airstrike = 'key_airstrike',
+  NukeContainer = 'key_nuke_container',
+  Nuke = 'key_nuke',
+  RedFlag = 'key_red_flag',
+  BlueFlag = 'key_blue_flag',
 }
 
 export interface PlayerInventory {
@@ -53,9 +94,10 @@ export interface PlayerInventory {
   readonly ownedWeapons: Set<WeaponId>;
   currentWeapon?: WeaponId;
   armor: RegularArmorState | null;
-  readonly powerups: Map<PowerupId, number | null>;
+  readonly powerups: Map<PowerupId, number | null>; // id -> expiration time
   readonly keys: Set<KeyId>;
-  readonly items: Set<string>;
+  readonly items: Set<string>; // Generic items like Power Screen/Shield
+  // Pickup state
   pickupItem?: string;
   pickupTime?: number;
 }
@@ -64,48 +106,72 @@ export interface PlayerClient {
     inventory: PlayerInventory;
     weaponStates: PlayerWeaponStates;
     buttons: number;
-    kick_angles?: Vec3;
-    kick_origin?: Vec3;
-    v_angle?: Vec3; // View angles (Pitch, Yaw, Roll)
-    // Powerup timers (from rerelease/g_local.h)
-    quad_time?: number;
-    double_time?: number;
-    quadsound_time?: number;
-
-    // Persistent player state fields for network sync
+    // Movement
     pm_type: number;
     pm_time: number;
     pm_flags: number;
     gun_frame: number;
-    rdflags: number;
+    rdflags: number; // View flags
     fov: number;
+    // View kick
+    kick_angles?: Vec3;
+    kick_origin?: Vec3;
+    v_angle?: Vec3; // Actual view angles (including kick?)
+    // Powerups
+    quad_time?: number;
+    double_time?: number;
+    invincible_time?: number;
+    breather_time?: number;
+    enviro_time?: number;
+    quadsound_time?: number;
+    // Weapon Animation System
+    weaponstate?: WeaponStateEnum;
+    weapon_think_time?: number;
+    weapon_fire_finished?: number;
+    weapon_sound?: number;
+    // Grenade specific
+    grenade_time?: number | null;
+    grenade_finished_time?: number | null;
+    grenade_blew_up?: boolean;
+    // Animation
+    anim_priority?: number;
+    anim_end?: number;
+    anim_time?: number;
 }
 
-export function createPlayerInventory(options: PlayerInventoryOptions = {}): PlayerInventory {
-  const ammo = createAmmoInventory(options.ammoCaps, options.ammo);
-  const ownedWeapons = new Set(options.weapons ?? []);
-  const powerups = new Map<PowerupId, number | null>(options.powerups ?? []);
-  const keys = new Set(options.keys ?? []);
-  const items = new Set(options.items ?? []);
-
-  return {
-    ammo,
-    ownedWeapons,
-    currentWeapon: options.currentWeapon,
-    armor: options.armor ?? null,
-    powerups,
-    keys,
-    items,
+export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {
+  const ammoCaps = init.ammoCaps;
+  const inv: PlayerInventory = {
+    ammo: createAmmoInventory(ammoCaps),
+    ownedWeapons: new Set(init.weapons ?? [WeaponId.Blaster]),
+    armor: null,
+    powerups: new Map(),
+    keys: new Set(),
+    items: new Set(),
   };
+
+  if (init.ammo) {
+    for (const [type, count] of Object.entries(init.ammo)) {
+      inv.ammo.counts[Number(type)] = count;
+    }
+  }
+
+  // Set default weapon if we have any
+  if (init.currentWeapon) {
+      inv.currentWeapon = init.currentWeapon;
+  } else if (inv.ownedWeapons.size > 0) {
+      // Prefer blaster, then shotgun, then first avail
+      if (inv.ownedWeapons.has(WeaponId.Blaster)) inv.currentWeapon = WeaponId.Blaster;
+      else if (inv.ownedWeapons.has(WeaponId.Shotgun)) inv.currentWeapon = WeaponId.Shotgun;
+      else inv.currentWeapon = [...inv.ownedWeapons][0];
+  }
+
+  return inv;
 }
 
-export function setPickup(inventory: PlayerInventory, item: string, time: number) {
+function setPickup(inventory: PlayerInventory, item: string, time: number) {
     inventory.pickupItem = item;
     inventory.pickupTime = time;
-}
-
-export function giveAmmo(inventory: PlayerInventory, ammoType: AmmoType, amount: number): AmmoAdjustmentResult {
-  return addAmmo(inventory.ammo, ammoType, amount);
 }
 
 export function giveAmmoItem(

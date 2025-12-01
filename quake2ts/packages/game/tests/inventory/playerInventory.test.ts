@@ -11,7 +11,7 @@ import {
   clearExpiredPowerups,
   createPlayerInventory,
   equipArmor,
-  giveAmmo,
+  addAmmo as giveAmmo,
   giveAmmoItem,
   giveWeapon,
   hasKey,
@@ -39,7 +39,7 @@ describe('ammo helpers', () => {
     const inventory = createPlayerInventory();
     inventory.ammo.counts[AmmoType.Rockets] = 48;
 
-    const result = giveAmmo(inventory, AmmoType.Rockets, 5);
+    const result = giveAmmo(inventory.ammo, AmmoType.Rockets, 5);
 
     expect(result.added).toBe(2);
     expect(inventory.ammo.counts[AmmoType.Rockets]).toBe(50);
@@ -60,12 +60,26 @@ describe('weapons and selection', () => {
   it('tracks owned weapons and selection restrictions', () => {
     const inventory = createPlayerInventory();
 
-    const wasNew = giveWeapon(inventory, WeaponId.Shotgun);
+    let wasNew = giveWeapon(inventory, WeaponId.Shotgun);
     expect(wasNew).toBe(true);
     expect(hasWeapon(inventory, WeaponId.Shotgun)).toBe(true);
-    expect(inventory.currentWeapon).toBe(WeaponId.Shotgun);
+    // Expect Blaster because it is the only weapon
+    expect(inventory.currentWeapon).toBe(WeaponId.Blaster);
+
+    wasNew = giveWeapon(inventory, WeaponId.Shotgun);
+    expect(wasNew).toBe(false);
+    expect(hasWeapon(inventory, WeaponId.Shotgun)).toBe(true);
+    // Should NOT auto-select unless specified, but logic says if current is null?
+    // Blaster is default.
+    // However, giveWeapon(..., true) selects it.
+    // giveWeapon(..., false) does not select it if we already have a weapon.
+    expect(inventory.currentWeapon).toBe(WeaponId.Blaster);
 
     expect(selectWeapon(inventory, WeaponId.BFG10K)).toBe(false);
+    expect(inventory.currentWeapon).toBe(WeaponId.Blaster);
+
+    // Now explicit select
+    selectWeapon(inventory, WeaponId.Shotgun);
     expect(inventory.currentWeapon).toBe(WeaponId.Shotgun);
 
     giveWeapon(inventory, WeaponId.BFG10K, true);

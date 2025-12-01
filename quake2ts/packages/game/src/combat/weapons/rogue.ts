@@ -28,7 +28,7 @@ function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: n
 
 // Rogue Heatbeam (Plasma Beam)
 // Source: g_rogue_weapon.c / p_rogue_weapon.c
-export function firePlasmaBeam(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+export function firePlasmaBeam(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
     // Ammo check
     if (inventory.ammo.counts[AmmoType.Cells] < 1) {
         // TODO: Switch weapon
@@ -39,10 +39,6 @@ export function firePlasmaBeam(game: GameExports, player: Entity, inventory: Pla
 
     const damage = 15; // Base damage
     const kick = 2; // Kickback
-
-    // Trace
-    const start = { ...player.origin };
-    start.z += player.viewheight - 8;
 
     const end = addVec3(start, scaleVec3(forward, 8192));
 
@@ -82,7 +78,7 @@ export function firePlasmaBeam(game: GameExports, player: Entity, inventory: Pla
 
 // Rogue Ion Ripper
 // Source: g_rogue_weapon.c
-export function fireIonRipper(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+export function fireIonRipper(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
     const ammoCost = 2;
     if (inventory.ammo.counts[AmmoType.Cells] < ammoCost) {
         // TODO: Switch weapon
@@ -98,15 +94,12 @@ export function fireIonRipper(game: GameExports, player: Entity, inventory: Play
     const damage = 30;
     const speed = 500;
 
-    const start = { ...player.origin };
-    start.z += player.viewheight - 8;
-
     createIonRipper(game.entities, player, start, forward, damage, speed);
 }
 
 // Rogue Phalanx (Mag Slug)
 // Source: g_rogue_weapon.c
-export function firePhalanx(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+export function firePhalanx(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
     if (inventory.ammo.counts[AmmoType.MagSlugs] < 1) {
         return;
     }
@@ -119,9 +112,6 @@ export function firePhalanx(game: GameExports, player: Entity, inventory: Player
     const damage = 70; // Damage + 120 radius
     const radiusDamage = 120;
     const speed = 700;
-
-    const start = { ...player.origin };
-    start.z += player.viewheight - 8;
 
     // Fire 2 balls with slight spread (+/- 2.5 degrees)
     const angles1 = { ...player.angles };
@@ -137,7 +127,7 @@ export function firePhalanx(game: GameExports, player: Entity, inventory: Player
 
 // Rogue ETF Rifle (Flechette Gun)
 // Source: g_rogue_weapon.c
-export function fireEtfRifle(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+export function fireEtfRifle(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
     if (inventory.ammo.counts[AmmoType.Flechettes] < 1) {
         return;
     }
@@ -149,9 +139,6 @@ export function fireEtfRifle(game: GameExports, player: Entity, inventory: Playe
 
     const damage = 10;
     const speed = 900;
-
-    const start = { ...player.origin };
-    start.z += player.viewheight - 8;
 
     createFlechette(game.entities, player, start, forward, damage, speed);
 }

@@ -1,5 +1,5 @@
 import { Pic, Renderer } from '@quake2ts/engine';
-import { PlayerClient, WeaponItem, WEAPON_ITEMS } from '@quake2ts/game';
+import { PlayerClient, WeaponItem, WEAPON_ITEMS, KeyId } from '@quake2ts/game';
 import { Draw_Number } from './numbers.js';
 import { iconPics } from './icons.js';
 import { getHudLayout } from './layout.js';
@@ -69,10 +69,10 @@ export const Draw_StatusBar = (
     for (const key of keys) {
         let iconName = '';
         switch (key) {
-            case 'blue': iconName = 'k_bluekey'; break;
-            case 'red': iconName = 'k_redkey'; break;
-            case 'green': iconName = 'k_security'; break;
-            case 'yellow': iconName = 'k_pyramid'; break;
+            case KeyId.Blue: iconName = 'k_bluekey'; break;
+            case KeyId.Red: iconName = 'k_redkey'; break;
+            case KeyId.Green: iconName = 'k_security'; break;
+            case KeyId.Yellow: iconName = 'k_pyramid'; break;
         }
 
         if (iconName) {

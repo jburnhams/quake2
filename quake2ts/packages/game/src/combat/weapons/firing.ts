@@ -19,6 +19,7 @@ import { DamageMod } from '../damageMods.js';
 import { createRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
+import { P_ProjectSource } from './projectSource.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -30,10 +31,10 @@ function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: n
     }
 }
 
-function fireHitscan(game: GameExports, player: Entity, forward: any, damage: number, knockback: number, mod: DamageMod) {
-    const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
+function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: any, damage: number, knockback: number, mod: DamageMod) {
+    const end = { x: start.x + forward.x * 8192, y: start.y + forward.y * 8192, z: start.z + forward.z * 8192 };
     const trace = game.trace(
-        player.origin,
+        start,
         null,
         null,
         end,
@@ -64,12 +65,12 @@ function fireHitscan(game: GameExports, player: Entity, forward: any, damage: nu
     }
 }
 
-function fireMultiplePellets(game: GameExports, player: Entity, forward: Vec3, right: Vec3, up: Vec3, count: number, damage: number, knockback: number, hspread: number, vspread: number, mod: DamageMod) {
+function fireMultiplePellets(game: GameExports, player: Entity, start: Vec3, forward: Vec3, right: Vec3, up: Vec3, count: number, damage: number, knockback: number, hspread: number, vspread: number, mod: DamageMod) {
     for (let i = 0; i < count; i++) {
         const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
         const dir = addVec3(forward, spread);
-        const end = { x: player.origin.x + dir.x * 8192, y: player.origin.y + dir.y * 8192, z: player.origin.z + dir.z * 8192 };
-        const trace = game.trace(player.origin, null, null, end, player, 0);
+        const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
+        const trace = game.trace(start, null, null, end, player, 0);
 
         if (trace.ent && trace.ent.takedamage) {
             T_Damage(
@@ -94,10 +95,10 @@ function fireMultiplePellets(game: GameExports, player: Entity, forward: Vec3, r
     }
 }
 
-function fireRailgun(game: GameExports, player: Entity, forward: any, damage: number, knockback: number) {
-    const start = { ...player.origin }; // Keep original start for trail
-    let currentStart = { ...player.origin };
-    const end = { x: player.origin.x + forward.x * 8192, y: player.origin.y + forward.y * 8192, z: player.origin.z + forward.z * 8192 };
+function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: any, damage: number, knockback: number) {
+    const originalStart = { ...start }; // Keep original start for trail
+    let currentStart = { ...start };
+    const end = { x: start.x + forward.x * 8192, y: start.y + forward.y * 8192, z: start.z + forward.z * 8192 };
     let ignore = player;
     let count = 0;
     let finalEnd = end;
@@ -139,22 +140,10 @@ function fireRailgun(game: GameExports, player: Entity, forward: any, damage: nu
         }
     }
 
-    // Railgun trail
-    // gi.WriteByte (svc_temp_entity);
-    // gi.WriteByte (TE_RAILTRAIL);
-    // gi.WritePosition (start);
-    // gi.WritePosition (tr.endpos);
-    // gi.multicast (start, MULTICAST_PHS);
-
-    // Adjust start to eye position? Usually gun height.
-    // Assuming player.origin is good enough for now or we should add viewheight.
-    const trailStart = { ...start };
-    trailStart.z += player.viewheight - 8; // Rough adjustment
-
-    game.multicast(start, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, trailStart, finalEnd);
+    game.multicast(originalStart, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, originalStart, finalEnd);
 }
 
-function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, forward: Vec3) {
+function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
     if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
         // TODO: NoAmmoWeaponChange
         return;
@@ -223,7 +212,28 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
         game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
         applyKick(player, -2, 0, -2); // Using similar kick to launcher
 
-        createGrenade(game.entities, player, player.origin, forward, 120, speed, timer);
+        // Angle limiting for Hand Grenade
+        // Source: p_weapon.cpp:1001 "if (ent->client->ps.viewangles[0] >= -45) ..."
+        // Actually, logic is in Throw_Generic (p_weapon.cpp:1120 approx)
+        // We use fresh angles here.
+        let throwAngles = { ...player.angles };
+
+        // "Limit upward pitch to -62.5° (prevents throwing behind you)"
+        if (throwAngles.x < -62.5) {
+            throwAngles.x = -62.5;
+        }
+
+        // "Kill sideways roll angle"
+        throwAngles.z = 0;
+
+        const { forward } = angleVectors(throwAngles);
+        const { right, up } = angleVectors(player.angles); // Need right/up for offset
+
+        // Hand grenade offset: {2, 0, -14} relative to eyes
+        // Using P_ProjectSource logic
+        const source = P_ProjectSource(game, player, { x: 2, y: 0, z: -14 }, forward, right, up);
+
+        createGrenade(game.entities, player, source, forward, 120, speed, timer);
 
         // Reset state
         weaponState.grenadeTimer = undefined;
@@ -251,6 +261,14 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
 
     const { forward, right, up } = angleVectors(player.angles);
 
+    // Default offset for most weapons: {8, 8, -8} (approx gun height)
+    // Note: original source logic uses 'viewheight-8' in Z offset and adds to origin.
+    // Our P_ProjectSource logic adds to (origin + viewheight).
+    // So if we want Z to be 'viewheight-8' above origin, then Z offset should be -8.
+    // (origin + viewheight) + (-8) = origin + viewheight - 8. Correct.
+    const defaultOffset = { x: 8, y: 8, z: -8 };
+    const source = P_ProjectSource(game, player, defaultOffset, forward, right, up);
+
     switch (weaponId) {
         case WeaponId.Shotgun: {
             if (inventory.ammo.counts[AmmoType.Shells] < 1) {
@@ -260,7 +278,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Shells]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SHOTGUN);
             applyKick(player, -2, 0, -2);
-            fireMultiplePellets(game, player, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
+            fireMultiplePellets(game, player, source, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
             break;
         }
         case WeaponId.SuperShotgun: {
@@ -272,10 +290,11 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
             applyKick(player, -4, 0, -4);
             // Source: ../rerelease/p_weapon.cpp:1745-1752
+            // We need new vectors but same source point (approx)
             const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
-            fireMultiplePellets(game, player, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+            fireMultiplePellets(game, player, source, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
             const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
-            fireMultiplePellets(game, player, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+            fireMultiplePellets(game, player, source, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
             break;
         }
         case WeaponId.Machinegun: {
@@ -286,7 +305,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Bullets]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_MACHINEGUN);
             applyKick(player, -1, random.crandom() * 0.5, 0);
-            fireHitscan(game, player, forward, 8, 1, DamageMod.MACHINEGUN);
+            fireHitscan(game, player, source, forward, 8, 1, DamageMod.MACHINEGUN);
             break;
         }
         case WeaponId.Chaingun: {
@@ -339,7 +358,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
                 // Add spread, similar to original C
                 const spread = addVec3(scaleVec3(right, random.crandom() * 4), scaleVec3(up, random.crandom() * 4));
                 const dir = addVec3(forward, spread);
-                fireHitscan(game, player, dir, damage, knockback, DamageMod.CHAINGUN);
+                fireHitscan(game, player, source, dir, damage, knockback, DamageMod.CHAINGUN);
             }
 
             // Muzzle flash scales with number of shots
@@ -360,7 +379,9 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Source: ../rerelease/p_weapon.cpp:1788-1797
             const damage = game.deathmatch ? 100 : 125;
             const knockback = game.deathmatch ? 200 : 225;
-            fireRailgun(game, player, forward, damage, knockback);
+            // Railgun often uses {0, 0, -8} or {8, 8, -8}?
+            // Stick with standard defaultOffset for now.
+            fireRailgun(game, player, source, forward, damage, knockback);
             break;
         }
         case WeaponId.HyperBlaster: {
@@ -373,7 +394,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             applyKick(player, -0.5, 0, 0);
             // Source: ../rerelease/p_weapon.cpp:1419-1422
             const damage = game.deathmatch ? 15 : 20;
-            createBlasterBolt(game.entities, player, player.origin, forward, damage, 1000, DamageMod.HYPERBLASTER);
+            createBlasterBolt(game.entities, player, source, forward, damage, 1000, DamageMod.HYPERBLASTER);
             break;
         }
         case WeaponId.Blaster: {
@@ -381,7 +402,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
             applyKick(player, -0.5, 0, 0);
             // Ref: p_weapon.cpp:1340 - BLASTER_SPEED 1500
-            createBlasterBolt(game.entities, player, player.origin, forward, 15, 1500, DamageMod.BLASTER);
+            createBlasterBolt(game.entities, player, source, forward, 15, 1500, DamageMod.BLASTER);
             break;
         }
 
@@ -396,7 +417,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             // Source: ../rerelease/p_weapon.cpp:1284-1291
             const damage = 100 + game.random.irandom(21); // 100-120 damage
             const radiusDamage = 120;
-            createRocket(game.entities, player, player.origin, forward, damage, radiusDamage, 650);
+            createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
             break;
         }
         case WeaponId.GrenadeLauncher: {
@@ -407,13 +428,13 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Grenades]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
             applyKick(player, -2, 0, -2);
-            createGrenade(game.entities, player, player.origin, forward, 120, 600);
+            createGrenade(game.entities, player, source, forward, 120, 600);
             break;
         }
         case WeaponId.HandGrenade: {
             // Source: rerelease/p_weapon.cpp:988-1213
             // Logic handled in a separate function because it's stateful (hold to throw)
-            fireHandGrenade(game, player, inventory, weaponState, forward);
+            fireHandGrenade(game, player, inventory, weaponState);
             // Return early because fireHandGrenade manages lastFireTime based on throw state
             return;
         }
@@ -427,23 +448,23 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             applyKick(player, -5, 0, -2);
             // Source: ../rerelease/p_weapon.cpp:1845-1848
             const damage = game.deathmatch ? 200 : 500;
-            createBfgBall(game.entities, player, player.origin, forward, damage, 400, 200);
+            createBfgBall(game.entities, player, source, forward, damage, 400, 200);
             break;
         }
         case WeaponId.PlasmaBeam: {
-            firePlasmaBeam(game, player, inventory, weaponState, forward);
+            firePlasmaBeam(game, player, inventory, weaponState, source, forward);
             break;
         }
         case WeaponId.IonRipper: {
-            fireIonRipper(game, player, inventory, weaponState, forward);
+            fireIonRipper(game, player, inventory, weaponState, source, forward);
             break;
         }
         case WeaponId.Phalanx: {
-            firePhalanx(game, player, inventory, weaponState, forward);
+            firePhalanx(game, player, inventory, weaponState, source, forward);
             break;
         }
         case WeaponId.EtfRifle: {
-            fireEtfRifle(game, player, inventory, weaponState, forward);
+            fireEtfRifle(game, player, inventory, weaponState, source, forward);
             break;
         }
         case WeaponId.ProxLauncher: {
@@ -457,7 +478,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             applyKick(player, -2, 0, -2);
 
             // Speed 600
-            createProxMine(game.entities, player, player.origin, forward, 600);
+            createProxMine(game.entities, player, source, forward, 600);
             break;
         }
     }

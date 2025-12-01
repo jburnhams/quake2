@@ -96,7 +96,9 @@ export function addAmmo(inventory: AmmoInventory, ammoType: AmmoType, amount: nu
   }
 
   const uncapped = current + amount;
-  const newCount = cap === undefined ? uncapped : Math.min(uncapped, cap);
+  // If cap is undefined, we shouldn't really have infinite ammo, but let's assume uncapped.
+  // Actually cap might be undefined if we access out of bounds, but AMMO_TYPE_COUNT should cover it.
+  const newCount = (cap === undefined) ? uncapped : Math.min(uncapped, cap);
   const added = newCount - current;
 
   inventory.counts[ammoType] = newCount;

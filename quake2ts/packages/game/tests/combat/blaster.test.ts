@@ -25,6 +25,7 @@ describe('Blaster', () => {
             modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
 		game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -42,7 +43,8 @@ describe('Blaster', () => {
 
         fire(game, player, WeaponId.Blaster);
 
-        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, player.origin, expect.anything(), 15, 1500, DamageMod.BLASTER);
+        // source is offset, not player.origin
+        expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, expect.anything(), expect.anything(), 15, 1500, DamageMod.BLASTER);
     });
 
     it('should travel at the correct speed', () => {

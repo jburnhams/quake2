@@ -25,6 +25,7 @@ describe('Prox Launcher', () => {
             modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -59,6 +60,7 @@ describe('Prox Launcher', () => {
             modelIndex: vi.fn(),
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
         game.init(0);
 
         const player = game.entities.spawn();

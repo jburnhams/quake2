@@ -24,6 +24,8 @@ describe('Rocket Launcher', () => {
         };
         const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, random: firingRandom });
 
+        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+
         firingRandom.seed(12345);
 
         const playerStart = game.entities.spawn();

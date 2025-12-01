@@ -72,8 +72,9 @@ describe('Rogue Weapons: ETF Rifle', () => {
     const flechette = new Entity(2);
     sys.spawn = vi.fn().mockReturnValue(flechette);
 
+    const start = { x: 100, y: 100, z: 122 };
     const forward = { x: 0, y: 1, z: 0 };
-    fireEtfRifle(game, player, player.client!.inventory, getWeaponState(player.client!.weaponStates, WeaponId.EtfRifle), forward);
+    fireEtfRifle(game, player, player.client!.inventory, getWeaponState(player.client!.weaponStates, WeaponId.EtfRifle), start, forward);
 
     // Verify ammo consumption
     expect(player.client!.inventory.ammo.counts[AmmoType.Flechettes]).toBe(9);
