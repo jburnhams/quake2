@@ -12,6 +12,7 @@ import { registerHoverSpawns } from './hover.js';
 import { registerIcarusSpawns } from './icarus.js';
 import { registerInfantrySpawns } from './infantry.js';
 import { registerJorgSpawns } from './jorg.js';
+import { registerInsaneSpawns } from './insane.js';
 import { registerMakronSpawns } from './makron.js';
 import { registerMedicSpawns } from './medic.js';
 import { registerMutantSpawns } from './mutant.js';
@@ -45,4 +46,5 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerBoss2Spawns(registry);
   registerJorgSpawns(registry);
   registerMakronSpawns(registry);
+  registerInsaneSpawns(registry);
 }
