@@ -307,11 +307,16 @@ export class Entity {
 
         if (type) {
              const ammo = this.client.inventory.ammo;
+             // Use v_angle (view angles) for player if available, as they represent where player is looking
+             // This matches Quake 2's use of ent->client->v_angle for Power Screen direction check.
+             // If v_angle is missing, fall back to entity angles.
+             const angles = this.client.v_angle || this.angles;
+
              return {
                  type,
                  get cellCount() { return ammo.counts[AmmoType.Cells] || 0; },
                  set cellCount(v) { ammo.counts[AmmoType.Cells] = v; },
-                 angles: this.angles,
+                 angles: angles,
                  origin: this.origin,
                  health: this.health
              };

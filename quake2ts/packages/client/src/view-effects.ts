@@ -1,6 +1,7 @@
 import { ViewEffects } from '@quake2ts/cgame';
 import { Vec3 } from '@quake2ts/shared';
 
+// Implements P_AddWeaponKick from rerelease/p_weapon.cpp
 export function applyWeaponKick(view: ViewEffects, quad: boolean): void {
     let kickPitch = -2;
     if (quad) {
