@@ -5,7 +5,7 @@ import pako from 'pako';
 
 export const PROTOCOL_VERSION_RERELEASE = 2023;
 
-// Constants from Q2 source
+// Constants from Q2 source (qcommon/qcommon.h)
 export const U_ORIGIN1   = (1 << 0);
 export const U_ORIGIN2   = (1 << 1);
 export const U_ANGLE2    = (1 << 2);
@@ -20,7 +20,8 @@ export const U_ORIGIN3   = (1 << 9);
 export const U_ANGLE1    = (1 << 10);
 export const U_MODEL     = (1 << 11);
 export const U_RENDERFX8 = (1 << 12);
-export const U_ALPHA     = (1 << 13); // Added U_ALPHA back
+// U_ALPHA is 1<<13 in Rerelease, but was unused in Vanilla
+export const U_ALPHA     = (1 << 13);
 export const U_EFFECTS8  = (1 << 14);
 export const U_MOREBITS2 = (1 << 15);
 
@@ -38,13 +39,13 @@ export const U_SKIN16    = (1 << 25);
 export const U_SOUND     = (1 << 26);
 export const U_SOLID     = (1 << 27);
 
-// Protocol 2023 Extension Bits (Byte 4)
+// Protocol 2023 Extension Bits (Byte 4) - Rerelease specific
 export const U_SCALE         = (1 << 28);
 export const U_INSTANCE_BITS = (1 << 29);
 export const U_LOOP_VOLUME   = (1 << 30);
 export const U_MOREBITS4     = 0x80000000 | 0; // Bit 31 (sign bit)
 
-// Protocol 2023 Extension Bits (Byte 5 - High Bits)
+// Protocol 2023 Extension Bits (Byte 5 - High Bits) - Rerelease specific
 export const U_LOOP_ATTENUATION_HIGH = (1 << 0);
 export const U_OWNER_HIGH            = (1 << 1);
 export const U_OLD_FRAME_HIGH        = (1 << 2);
@@ -273,6 +274,11 @@ export class NetworkMessageParser {
         if (cmd === 6) return ServerCommand.reconnect;
         if (cmd === 16) return ServerCommand.temp_entity;
     }
+
+    // Vanilla Q2 (Protocol 34) doesn't need translation for base commands,
+    // but we need to ensure we don't fall through if the protocol is just unknown/default 0
+    // and we've already parsed serverdata.
+    // If protocol is 34, mapping is 1:1 for the commands we support.
 
     // Rerelease Protocol 2023+
     // Mapping matches the ServerCommand enum directly, but we explicitly handle it

@@ -53,7 +53,7 @@ export interface DemoHandlerCallbacks {
     onFog?: (data: FogData) => void;
     onDamage?: (indicators: DamageIndicator[]) => void;
     onServerData?: (protocol: number, tickRate?: number) => void;
-    onLocPrint?: (flags: number, base: string) => void; // Simplified for now
+    onLocPrint?: (flags: number, base: string, args: string[]) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -359,9 +359,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
     onLocPrint(flags: number, base: string, args: string[]): void {
         if (this.callbacks?.onLocPrint) {
-            // For now, we only pass the raw flags and msg (base) as that is what the interface supports currently.
-            // TODO: Update DemoHandlerCallbacks to support args array
-            this.callbacks.onLocPrint(flags, base);
+            this.callbacks.onLocPrint(flags, base, args);
         }
     }
 
