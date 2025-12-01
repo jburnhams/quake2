@@ -5,6 +5,8 @@ import {
   UserCommand,
   BinaryStream,
   NetworkMessageBuilder,
+  writeUserCommand,
+  BinaryWriter,
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -93,13 +95,28 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   public sendCommand(cmd: UserCommand): void {
       if (this.state !== ConnectionState.Active) return;
 
-      const builder = new NetworkMessageBuilder();
+      const writer = new BinaryWriter();
 
-      // Use NOP for now to keep connection alive without sending malformed clc_move packets
-      // until full UserCommand serialization is implemented.
-      builder.writeByte(ClientCommand.nop);
+      // Sequence number handling would go here, but for now we write header (seq/ack) if needed
+      // Assuming simple framing for now where we just send the command.
+      // NOTE: Q2 uses clc_move which includes checksum and loss.
+      // Standard Q2 Client packet:
+      // [Sequence] [Ack Sequence] [Command] [Args...]
 
-      this.driver.send(builder.getData());
+      // Let's implement full packet structure for WebSocket transport (Sequence + Ack + Command)
+      // This mirrors what we expect in handleMessage (seq, ack).
+      // We are not tracking sequence numbers properly yet, using 0 placeholder.
+
+      writer.writeLong(0); // Sequence
+      writer.writeLong(0); // Ack Sequence
+
+      writer.writeByte(ClientCommand.move);
+      writer.writeByte(0); // checksum (crc8 of last server frame) - TODO
+      writer.writeLong(0); // lastframe (ack) - TODO: Track last received server frame
+
+      writeUserCommand(writer, cmd);
+
+      this.driver.send(writer.getData());
   }
 
   private handleMessage(data: Uint8Array): void {
