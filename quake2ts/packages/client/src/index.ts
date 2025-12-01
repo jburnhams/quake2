@@ -29,6 +29,7 @@ import { SaveStorage, PlayerClient } from '@quake2ts/game';
 import { OptionsMenuFactory } from './ui/menu/options.js';
 import { MapsMenuFactory } from './ui/menu/maps.js';
 import { PauseMenuFactory } from './ui/menu/pause.js';
+import { MultiplayerMenuFactory } from './ui/menu/multiplayer.js';
 import { Draw_Menu } from './ui/menu/render.js';
 import { InputBindings } from './input/bindings.js';
 import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
@@ -37,6 +38,7 @@ import { ErrorDialog } from './ui/error.js';
 import { WheelMenuSystem } from './ui/wheels/index.js';
 import { angleVectors } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
+import { MultiplayerConnection } from './net/connection.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -91,8 +93,11 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   demoPlayback: DemoPlaybackController;
   demoHandler: ClientNetworkHandler;
 
+  // Networking
+  multiplayer: MultiplayerConnection;
+
   // Menu System
-  createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+  createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
 
   // Input handling
   handleInput(key: string, down: boolean): boolean;
@@ -157,6 +162,16 @@ export function createClient(imports: ClientImports): ClientExports {
   // CGame Interface
   const cgameImport = createCGameImport(imports, stateProvider);
   const cg: CGameExport = GetCGameAPI(cgameImport);
+
+  // Networking
+  const multiplayer = new MultiplayerConnection({
+      get username() { return imports.host?.cvars?.get('name')?.string || 'Player'; },
+      get model() { return imports.host?.cvars?.get('model')?.string || 'male'; },
+      get skin() { return imports.host?.cvars?.get('skin')?.string || 'grunt'; },
+      get fov() { return fovValue; }
+  });
+
+  const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
 
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
@@ -235,6 +250,24 @@ export function createClient(imports: ClientImports): ClientExports {
         }
     }, 'Toggle the main/pause menu');
 
+    imports.host.commands.register('connect', (args) => {
+        if (args.length < 1) {
+            console.log('usage: connect <address>');
+            return;
+        }
+        const address = args[0];
+        console.log(`Connecting to ${address}...`);
+        multiplayer.connect(address).catch(e => {
+            console.error('Failed to connect:', e);
+            errorDialog.show('Connection Failed', e instanceof Error ? e.message : 'Unknown error');
+        });
+    }, 'Connect to a multiplayer server');
+
+    imports.host.commands.register('disconnect', () => {
+        multiplayer.disconnect();
+        console.log('Disconnected.');
+    }, 'Disconnect from server');
+
     if (imports.host.cvars) {
       imports.host.cvars.register({
         name: 'fov',
@@ -305,6 +338,12 @@ export function createClient(imports: ClientImports): ClientExports {
       if (menuSystem.isActive()) {
           // Suppress movement if desired
       }
+
+      // If connected to multiplayer, send command to server
+      if (multiplayer.isConnected()) {
+          multiplayer.sendCommand(command);
+      }
+
       return prediction.enqueueCommand(command);
     },
 
@@ -356,7 +395,7 @@ export function createClient(imports: ClientImports): ClientExports {
         }
     },
 
-    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
         let optsFactory = optionsFactory;
         if (!optsFactory) {
@@ -380,6 +419,7 @@ export function createClient(imports: ClientImports): ClientExports {
             ...options,
             optionsFactory: optsFactory,
             mapsFactory,
+            multiplayerFactory,
             onSetDifficulty: (skill: number) => {
                 if (imports.host?.cvars) {
                     imports.host.cvars.setValue('skill', skill.toString());
@@ -625,6 +665,7 @@ export function createClient(imports: ClientImports): ClientExports {
       cg.ParseConfigString(index, value);
     },
     demoHandler,
+    multiplayer,
     configStrings
   };
 

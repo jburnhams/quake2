@@ -282,6 +282,7 @@ export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, NetworkMessageParser } from './demo/index.js';
 export {
+    PROTOCOL_VERSION_RERELEASE,
     createEmptyEntityState,
     createEmptyProtocolPlayerState,
     U_ORIGIN1, U_ORIGIN2, U_ORIGIN3,
