@@ -105,6 +105,8 @@ function door_hit_top(ent: Entity, context: EntitySystem) {
        // Stay open
        return;
   }
+  // Reuse door_go_down logic but handle sound carefully
+  // door_go_down handles initiating the move.
   ent.think = (e) => door_go_down(e, context);
   context.scheduleThink(ent, context.timeSeconds + ent.wait);
 }
@@ -119,49 +121,21 @@ function door_hit_bottom(ent: Entity, context: EntitySystem) {
 }
 
 function door_go_down(door: Entity, context: EntitySystem) {
-  // We need to set think to something that calls door_go_down again for move_calc
-  // But move_calc doesn't call think, scheduleThink does.
-  // And scheduleThink calls entity.think.
-  // To avoid re-creating closure every frame, we could check if existing think is already the correct wrapper.
-  // But checking function equality on closures is hard.
-  // However, JS engines are good at optimizing small closures.
-  // For now, let's keep it simple but clean.
-  door.think = (e) => door_go_down(e, context);
-
   const moveinfo = getMoveInfo(door);
-  // Play start sound (only if starting move?)
-  // Original logic played sound every frame? No, door_go_down called once usually.
-  // But move_calc is called every frame.
-  // Wait, door_go_down IS the think function. It IS called every frame.
-  // So sound would play every frame?
-  // In Q2 C code, door_go_down calls move_calc.
-  // And move_calc handles movement.
-  // Sound should only play at start.
-  // But if door_go_down is the think, it repeats.
-  // The sound logic should probably be guarded or only called when initiating move.
-  // However, I will preserve existing logic for now to avoid breaking changes, assuming context.sound handles dedup or it's fine.
-
   if (moveinfo && moveinfo.sound_start) {
-      // Check if we are at start position? Or rely on sound system to not restart looping sound?
-      // For one-shot sounds, this would spam.
-      // But typically door sounds are looped or long.
-      // If it's a "start" sound, it should play once.
-      // The current implementation calls it every frame. This seems wrong compared to original Q2.
-      // In Q2: door_go_down calls T_MoveCalc.
-      // If it's starting, it plays sound.
-      // Here, let's assume sound() handles it or it's a known issue I shouldn't fix right now to minimize scope.
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
+  door.think = (e) => move_calc(e, e.pos1, context, door_hit_bottom);
   move_calc(door, door.pos1, context, door_hit_bottom);
 }
 
 function door_go_up(door: Entity, context: EntitySystem) {
-  door.think = (e) => door_go_up(e, context);
   const moveinfo = getMoveInfo(door);
   if (moveinfo && moveinfo.sound_start) {
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
 
+  door.think = (e) => move_calc(e, e.pos2, context, door_hit_top);
   move_calc(door, door.pos2, context, door_hit_top);
 }
 
