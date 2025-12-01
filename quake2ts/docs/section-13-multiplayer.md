@@ -41,10 +41,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
 - [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
   - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
-- ⚠️ **Transport Layer**:
+- [x] **Transport Layer**:
   - [x] Create `NetDriver` interface.
   - [x] Implement `WebSocketNetDriver` for Node.js (Server).
-  - [ ] **`BrowserWebSocketNetDriver` created but never used** - No client code instantiates or uses this class
+  - [x] **`BrowserWebSocketNetDriver` created but never used** - No client code instantiates or uses this class
 
 ### Phase 2: The Dedicated Server
 
@@ -217,7 +217,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 **Location:** `packages/client/src/network/` (needs to be created)
 
-1. **Create Network Manager** (`client/src/network/connection.ts`)
+1. [x] **Create Network Manager** (`client/src/network/connection.ts`)
    ```typescript
    class MultiplayerConnection {
        private driver: BrowserWebSocketNetDriver;
@@ -230,13 +230,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    }
    ```
 
-2. **Add Connection UI** (`client/src/ui/multiplayer-menu.ts`)
+2. [x] **Add Connection UI** (`client/src/ui/multiplayer-menu.ts`)
    - Server address input field
    - Connect/Disconnect button
    - Connection status display
    - Player name/config input
 
-3. **Implement Connection Handshake** (`connection.ts`)
+3. [x] **Implement Connection Handshake** (`connection.ts`)
    - Send `clc_stringcmd("connect")` with userinfo
    - Handle `svc_serverdata` response
    - Receive and process all `svc_configstring` commands
@@ -244,7 +244,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Send `clc_stringcmd("begin")` when ready
    - Transition to active gameplay state
 
-4. **Wire Up to Game Loop**
+4. [x] **Wire Up to Game Loop**
    - Integrate `MultiplayerConnection` into main client
    - Process incoming packets each frame
    - Send user commands at appropriate rate

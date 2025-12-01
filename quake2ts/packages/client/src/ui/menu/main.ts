@@ -3,6 +3,7 @@ import { MenuSystem } from './system.js';
 import { SaveLoadMenuFactory } from './saveLoad.js';
 import { OptionsMenuFactory } from './options.js';
 import { MapsMenuFactory } from './maps.js';
+import { MultiplayerMenuFactory } from './multiplayer.js';
 
 export interface MainMenuOptions {
   onNewGame: () => void;
@@ -11,6 +12,7 @@ export interface MainMenuOptions {
   mapsFactory: MapsMenuFactory;
   onSetDifficulty?: (skill: number) => void;
   showSaveOption?: boolean;
+  multiplayerFactory?: MultiplayerMenuFactory;
 }
 
 export class MainMenuFactory {
@@ -27,6 +29,16 @@ export class MainMenuFactory {
         action: () => {
           this.menuSystem.pushMenu(this.createDifficultyMenu());
         },
+      },
+      {
+        label: 'Multiplayer',
+        action: () => {
+            if (this.options.multiplayerFactory) {
+                this.menuSystem.pushMenu(this.options.multiplayerFactory.createMultiplayerMenu());
+            } else {
+                console.warn('Multiplayer factory not configured');
+            }
+        }
       },
       {
         label: 'Load Game',
