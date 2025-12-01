@@ -253,7 +253,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 **Location:** `packages/cgame/src/index.ts`
 
-1. **Implement Pmove Function** (lines 113-116)
+1. [x] **Implement Pmove Function** (lines 113-116)
    - Import shared `Pmove()` from `@quake2ts/shared`
    - Set up `pmove_t` structure from `PlayerState`
    - Call shared physics simulation

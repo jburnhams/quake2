@@ -1,4 +1,4 @@
-import type { Vec3, PlayerState, PmoveCmd, PmoveTraceResult, LayoutFlags } from '@quake2ts/shared';
+import type { Vec3, PlayerState, PmoveCmd, PmoveTraceResult, LayoutFlags, UserCommand } from '@quake2ts/shared';
 import { WeaponId, PowerupId } from '@quake2ts/shared';
 
 // Local types for HUD state (matching packages/cgame/src/hud/types.ts needs)
@@ -16,6 +16,11 @@ export interface InventoryState {
 
 export interface ClientState {
   inventory: InventoryState;
+}
+
+export interface PmoveInfo {
+  s: PlayerState;
+  cmd: UserCommand; // or PmoveCmd
 }
 
 // Local mapping types
