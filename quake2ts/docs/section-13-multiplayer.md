@@ -5,7 +5,7 @@ This section covers the transition from a local-only "listen server" architectur
 
 Following the **Quake II Rerelease** architecture, we will split the engine into distinct `Server` and `Client` components. The Client will utilize a `cgame` module for prediction and rendering, while the Server will run the authoritative game logic.
 
-**Current Status:** Server architecture and protocol foundations are approximately **40% complete**. The dedicated server framework exists and can run game logic, but **client-server networking is not yet functional** - no client connection code has been implemented, client-side prediction is stubbed, and true integration testing has not occurred (see Known Gaps below).
+**Current Status:** Server architecture and protocol foundations are approximately **45% complete**. The dedicated server framework exists and can run game logic. **Client-server networking basics are implemented**, including handshake and command sending, but reliability features and client-side prediction are still missing.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Transport Layer**:
   - [x] Create `NetDriver` interface.
   - [x] Implement `WebSocketNetDriver` for Node.js (Server).
-  - [x] **`BrowserWebSocketNetDriver` created but never used** - No client code instantiates or uses this class
+  - [x] **`BrowserWebSocketNetDriver` created and used** - Instantiated in `MultiplayerConnection`.
 
 ### Phase 2: The Dedicated Server
 
@@ -151,19 +151,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
 - [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
 - [x] **Player State Completeness**: Added `pm_type`, `pm_time`, `pm_flags`, `gun_frame`, `rdflags`, and `fov` to `PlayerState` and wired them through from `PlayerClient` to `DedicatedServer` output.
+- [x] **Client-Server Connection**: Implemented basic WebSocket connection, handshake, and `clc_move` command sending in `packages/client`.
 
 ## Known Gaps and Required Work
 
 ### Critical Issues (Blocks Multiplayer Functionality)
 
-1. **No Client-Server Connection Code** (`packages/client`)
-   - `BrowserWebSocketNetDriver` exists but is never instantiated or used
-   - No UI for entering server address
-   - No connection initiation logic
-   - No code to send `clc_stringcmd("connect")`
-   - **Impact:** Client cannot connect to dedicated server at all
-
-2. **Client-Side Prediction Not Implemented** (`packages/cgame/src/index.ts:113-116`)
+1. **Client-Side Prediction Not Implemented** (`packages/cgame/src/index.ts:113-116`)
    ```typescript
    function Pmove(pmove: unknown): void {
        // TODO: Implement client-side movement prediction
@@ -174,7 +168,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Without this, multiplayer would have severe input lag
    - **Impact:** Unplayable multiplayer experience even if connection worked
 
-3. **CGame Stubs - Multiple Weapon/UI Functions** (`packages/cgame/src/index.ts:89-111`)
+2. **CGame Stubs - Multiple Weapon/UI Functions** (`packages/cgame/src/index.ts:89-111`)
    - `GetActiveWeaponWheelWeapon` - returns 0
    - `GetOwnedWeaponWheelWeapons` - returns []
    - `GetWeaponWheelAmmoCount` - returns 0
@@ -182,12 +176,16 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - `GetHitMarkerDamage` - returns 0
    - **Impact:** Weapon wheel and hit markers non-functional in multiplayer
 
-4. **Server Incomplete Features** (`packages/server/src/dedicated.ts`)
+3. **Server Incomplete Features** (`packages/server/src/dedicated.ts`)
    - **Line 326:** Client timeout/disconnect handling not implemented
    - **Line 396:** Reliable messaging not properly queued (sent immediately)
    - **Line 459:** Command rate limiting not implemented
    - **Line 650:** Reliable/unreliable stream separation incomplete
    - **Impact:** Unreliable network behavior, potential exploits, poor performance
+
+4. **Incomplete Protocol Reliability**
+    - `clc_move` packets are sent with placeholder sequence numbers (0) and checksums (0).
+    - No packet loss detection or retransmission logic (NetChan) over WebSocket.
 
 5. **Rerelease Protocol Incomplete on Both Ends**
    - **Server:** `writeDeltaEntity` doesn't write Rerelease fields (alpha, scale, etc.)
@@ -215,7 +213,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 ### Phase 1: Implement Client-Server Connection (Critical)
 **Priority: HIGHEST** - Nothing works without this
 
-**Location:** `packages/client/src/network/` (needs to be created)
+**Location:** `packages/client/src/network/`
 
 1. [x] **Create Network Manager** (`client/src/network/connection.ts`)
    ```typescript
