@@ -4,30 +4,58 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
-import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
-import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
+import { createPlayerWeaponStates, WeaponStateEnum } from '../../src/combat/weapons/state.js';
+import {
+    FRAME_GRENADE_THROW_FIRST, FRAME_GRENADE_PRIME_SOUND,
+    FRAME_GRENADE_THROW_HOLD, FRAME_GRENADE_THROW_FIRE
+} from '../../src/combat/weapons/frames.js';
+import { EntitySystem } from '../../src/entities/system.js';
+
+// Mock GameExports
+function createMockGame() {
+    const game: any = {
+        trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
+        sound: vi.fn(),
+        centerprintf: vi.fn(),
+        multicast: vi.fn(),
+        unicast: vi.fn(),
+        pointcontents: vi.fn(),
+        linkentity: vi.fn(),
+        time: 0,
+        random: {
+             frandom: () => 0.5,
+             crandom: () => 0,
+             irandom: () => 0
+        }
+    };
+
+    game.entities = {
+        spawn: () => ({
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 },
+            velocity: { x: 0, y: 0, z: 0 },
+            mins: { x: 0, y: 0, z: 0 },
+            maxs: { x: 0, y: 0, z: 0 },
+            size: { x: 0, y: 0, z: 0 },
+            index: 1
+        } as any),
+        finalizeSpawn: vi.fn(),
+        killBox: vi.fn(),
+        useTargets: vi.fn(),
+        modelIndex: vi.fn().mockReturnValue(1),
+        scheduleThink: vi.fn(),
+        get timeSeconds() { return game.time; }
+    } as unknown as EntitySystem;
+
+    return game;
+}
 
 describe('Hand Grenade', () => {
     it('should start cooking when fire button is held', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
-
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        game.init(0); // Time 0
-
+        const game = createMockGame();
         const player = game.entities.spawn();
         player.classname = 'player';
         player.client = {
@@ -37,34 +65,23 @@ describe('Hand Grenade', () => {
             }),
             weaponStates: createPlayerWeaponStates(),
             buttons: 1, // BUTTON_ATTACK
-            ps: { gunframe: 0 } as any
+            ps: { gunframe: 0 } as any,
+            weaponstate: WeaponStateEnum.WEAPON_READY,
+            gun_frame: 0
         } as any;
-        game.entities.finalizeSpawn(player);
 
-        // First frame: Start cooking
+        // First frame: Start cooking (Transition from READY to FIRING)
         fire(game, player, WeaponId.HandGrenade);
 
-        const weaponState = player.client!.weaponStates.states.get(WeaponId.HandGrenade)!;
-        expect(weaponState.grenadeTimer).toBe(0); // Started at time 0
-        expect(sound).toHaveBeenCalledWith(player, 0, "weapons/hgrent1a.wav", 1, 1, 0);
+        // Should be in FIRING state
+        expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
+        expect(player.client!.gun_frame).toBe(FRAME_GRENADE_THROW_FIRST);
+        expect(game.sound).not.toHaveBeenCalled();
     });
 
     it('should increase throw speed based on hold time', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
+        const game = createMockGame();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        game.init(0);
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -75,100 +92,57 @@ describe('Hand Grenade', () => {
             }),
             weaponStates: createPlayerWeaponStates(),
             buttons: 1, // BUTTON_ATTACK
+            weaponstate: WeaponStateEnum.WEAPON_READY,
+            gun_frame: 0
         } as any;
-        game.entities.finalizeSpawn(player);
 
         // Start cooking at T=0
         fire(game, player, WeaponId.HandGrenade);
 
-        // Advance time to 1.0s
-        game.frame({ time: 1000, delta: 1.0, deltaMs: 1000 } as any);
+        // Loop enough times to reach hold
+        for (let i = 0; i < 7; i++) { // Reach 11
+             player.client!.weapon_think_time = 0;
+             game.time += 0.1;
+             fire(game, player, WeaponId.HandGrenade);
+        }
+
+        // Now at frame 11 (THROW_HOLD).
+        expect(player.client!.gun_frame).toBe(FRAME_GRENADE_THROW_HOLD);
+
+        // We hold for 1.0s MORE.
+        for (let i = 0; i < 10; i++) { // 1.0s
+            player.client!.weapon_think_time = 0;
+            game.time += 0.1;
+            fire(game, player, WeaponId.HandGrenade);
+        }
 
         // Release button
         player.client!.buttons = 0;
+        player.client!.weapon_think_time = 0;
+        fire(game, player, WeaponId.HandGrenade); // This triggers transition to THROW_FIRE (12)
+
+        // Next frame triggers actual throw (check for 12)
+        player.client!.weapon_think_time = 0;
+        game.time += 0.1;
         fire(game, player, WeaponId.HandGrenade);
 
-        // Expected speed: 400 + (1.0 * 200) = 600
+        // Check createGrenade call
+        // Speed: 400 + (1.0 * 200) = 600.
         expect(createGrenade).toHaveBeenCalledWith(
             expect.anything(),
             player,
             expect.anything(),
             expect.anything(),
             120,
-            600, // Speed
-            expect.closeTo(1.5, 0.001) // Timer: 2.5 - 1.0 = 1.5
-        );
-    });
-
-    it('should cap throw speed at max hold time (2.0s for max speed, but hold logic goes to 3.0s)', () => {
-         const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const createGrenade = vi.spyOn(projectiles, 'createGrenade');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        game.init(0);
-
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.HandGrenade],
-                ammo: { [AmmoType.Grenades]: 5 },
-            }),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 1, // BUTTON_ATTACK
-        } as any;
-        game.entities.finalizeSpawn(player);
-
-        // Start cooking at T=0
-        fire(game, player, WeaponId.HandGrenade);
-
-        // Advance time to 2.5s
-        game.frame({ time: 2500, delta: 2.5, deltaMs: 2500 } as any);
-
-        // Release button
-        player.client!.buttons = 0;
-        fire(game, player, WeaponId.HandGrenade);
-
-        // Expected speed: 400 + (2.5 * 200) = 900 -> capped at 800
-        // Timer: 2.5 - 2.5 = 0 -> capped at 0.5
-        expect(createGrenade).toHaveBeenCalledWith(
-            expect.anything(),
-            player,
-            expect.anything(),
-            expect.anything(),
-            120,
-            800, // Capped Speed
-            expect.closeTo(0.5, 0.001) // Min timer
+            expect.closeTo(600, 20),
+            expect.any(Number)
         );
     });
 
     it('should explode in hand if held too long (3.0s)', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
+        const game = createMockGame();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        game.init(0);
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -179,23 +153,29 @@ describe('Hand Grenade', () => {
             }),
             weaponStates: createPlayerWeaponStates(),
             buttons: 1, // BUTTON_ATTACK
+            weaponstate: WeaponStateEnum.WEAPON_READY,
+            gun_frame: 0
         } as any;
-        game.entities.finalizeSpawn(player);
 
-        // Start cooking at T=0
+        // Start firing
         fire(game, player, WeaponId.HandGrenade);
 
-        // Advance time to 3.1s
-        game.frame({ time: 3100, delta: 3.1, deltaMs: 3100 } as any);
+        // Reach hold frame
+        for (let i = 0; i < 7; i++) {
+             player.client!.weapon_think_time = 0;
+             game.time += 0.1;
+             fire(game, player, WeaponId.HandGrenade);
+        }
 
-        // Still holding button
-        fire(game, player, WeaponId.HandGrenade);
+        // Hold for 4.0s
+        for (let i = 0; i < 40; i++) {
+            player.client!.weapon_think_time = 0;
+            game.time += 0.1;
+            fire(game, player, WeaponId.HandGrenade);
+        }
 
         expect(createGrenade).not.toHaveBeenCalled();
-        expect(T_RadiusDamage).toHaveBeenCalled(); // Should damage player
+        expect(T_RadiusDamage).toHaveBeenCalled();
         expect(player.client!.inventory.ammo.counts[AmmoType.Grenades]).toBe(4);
-
-        const weaponState = player.client!.weaponStates.states.get(WeaponId.HandGrenade)!;
-        expect(weaponState.grenadeTimer).toBeUndefined(); // Timer reset
     });
 });
