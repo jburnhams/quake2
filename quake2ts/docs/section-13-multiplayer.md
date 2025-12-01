@@ -5,6 +5,8 @@ This section covers the transition from a local-only "listen server" architectur
 
 Following the **Quake II Rerelease** architecture, we will split the engine into distinct `Server` and `Client` components. The Client will utilize a `cgame` module for prediction and rendering, while the Server will run the authoritative game logic.
 
+**Current Status:** Server architecture and protocol foundations are approximately **40% complete**. The dedicated server framework exists and can run game logic, but **client-server networking is not yet functional** - no client connection code has been implemented, client-side prediction is stubbed, and true integration testing has not occurred (see Known Gaps below).
+
 ## Architecture
 
 ### 1. Networking Transport (WebSockets)
@@ -39,10 +41,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
 - [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
   - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
-- [x] **Transport Layer**:
-  - Create `NetDriver` interface.
-  - Implement `WebSocketNetDriver` for Node.js (Server).
-  - Implement `BrowserWebSocketNetDriver` for Client.
+- ⚠️ **Transport Layer**:
+  - [x] Create `NetDriver` interface.
+  - [x] Implement `WebSocketNetDriver` for Node.js (Server).
+  - [ ] **`BrowserWebSocketNetDriver` created but never used** - No client code instantiates or uses this class
 
 ### Phase 2: The Dedicated Server
 
@@ -57,7 +59,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.2 Server Main Loop (`SV_Frame`)
 - [x] **Frame Structure**: Basic loop exists in `packages/server/src/dedicated.ts`.
-- [x] **Frame Steps**:
+- ⚠️ **Frame Steps** (partial implementation with TODOs):
   1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets. (Packet queue implemented).
   2. **`SV_RunGameFrame()`**:
      - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
@@ -67,9 +69,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
      - For each client: Build `svc_frame` with delta-compressed entity snapshot.
      - Call `SV_WriteFrameToClient()` (uses `writeDeltaEntity`).
      - Send via `client.netchan.Transmit()`.
+     - [ ] **TODO (line 326):** "Disconnect client after delay?" - Timeout handling incomplete
+     - [ ] **TODO (line 396):** "Handle reliable messaging properly" - Currently sends immediately without proper queuing
+     - [ ] **TODO (line 459):** "Process command queue, apply rate limiting" - Command rate limiting not implemented
+     - [ ] **TODO (line 650):** "Differentiate between reliable and unreliable stream" - Message type separation incomplete
   4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early.
      - [x] Implemented drift-correcting loop in `DedicatedServer.runFrame`.
-     - [x] Verified with integration tests in `tests/dedicated.test.ts`.
+     - ⚠️ Tested with mocked integration tests (not true network tests) in `tests/dedicated.test.ts`.
 
 #### 2.3 Client Connection Handshake
 - [x] **Challenge System**: Basic implementation exists.
@@ -84,7 +90,8 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   8. Server calls `ge->ClientBegin(edict)`.
 
 #### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
-- [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts`.
+- [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts` (Vanilla fields only).
+- [ ] **Rerelease Fields Not Written**: `writeDeltaEntity` does not serialize `alpha`, `scale`, `instanceBits`, `loopVolume`, `loopAttenuation`, `owner`, or `oldFrame` fields. Server cannot send Rerelease entity state.
 - [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
 - [x] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
 - [x] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
@@ -102,11 +109,11 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 #### 3.1 Create CGame Package Structure
 - [x] **Package Setup**: Created `packages/cgame`.
 - [x] **HUD Migration**: Moved all HUD code (`hud/*.ts`, `screen.ts`) to `cgame`.
-- [x] **View/Prediction**: Moved `view/camera.ts`, `view/effects.ts`, `prediction/index.ts` to `cgame`.
+- ⚠️ **View/Prediction**: Moved `view/camera.ts`, `view/effects.ts`, `prediction/index.ts` to `cgame` - **BUT prediction is not implemented**.
 
 #### 3.2 Define CGame Interfaces
 - [x] **cgame_import_t**: Defined in `packages/cgame/src/types.ts`.
-- [x] **cgame_export_t**: Defined in `packages/cgame/src/types.ts`.
+- ⚠️ **cgame_export_t**: Defined in `packages/cgame/src/types.ts` - **Multiple functions are placeholder stubs**.
 
 #### 3.3 Move Shared Code (`packages/shared`)
 - [x] **Stats**: Added `PlayerStat` enums and helpers (`G_SetAmmoStat`).
@@ -121,14 +128,13 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - [x] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
   - [x] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
   - [x] **StuffText**: Implement `svc_stufftext` handling in Client (redirects to console commands).
+- [ ] **Client-Side Prediction** - **NOT IMPLEMENTED** (see Known Gaps)
 
 ### Phase 4: Integration & Testing
 
 #### 4.1 Localhost Server-Client Test
-- [x] **Config String Sync**: Verify server sends strings, client receives and updates registries.
-  - Verified by `packages/server/tests/integration/configstring_sync.test.ts`.
-- [x] **Icon Sync**: Verify `STAT_*_ICON` works (requires correct config strings).
-  - Verified by `packages/server/tests/integration/configstring_sync.test.ts`.
+- ⚠️ **Config String Sync**: `packages/server/tests/integration/configstring_sync.test.ts` - **NOT a true integration test**. Uses extensive mocking (WebSocket, file system, BSP parser). No actual client connects.
+- ⚠️ **Icon Sync**: Tested in same mocked test file - **NOT validated with real network connection**.
 
 ## Progress Update
 - [x] **HUD Migration Complete**: `packages/cgame` is fully populated and builds. Client-CGame bridge is wired.
@@ -146,7 +152,267 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 - [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
 - [x] **Player State Completeness**: Added `pm_type`, `pm_time`, `pm_flags`, `gun_frame`, `rdflags`, and `fov` to `PlayerState` and wired them through from `PlayerClient` to `DedicatedServer` output.
 
-## Next Steps
-1.  **Full Networking**:
-    - Continue testing and refining the dedicated server implementation.
-    - Verify entity interpolation and delta compression in a real networked scenario.
+## Known Gaps and Required Work
+
+### Critical Issues (Blocks Multiplayer Functionality)
+
+1. **No Client-Server Connection Code** (`packages/client`)
+   - `BrowserWebSocketNetDriver` exists but is never instantiated or used
+   - No UI for entering server address
+   - No connection initiation logic
+   - No code to send `clc_stringcmd("connect")`
+   - **Impact:** Client cannot connect to dedicated server at all
+
+2. **Client-Side Prediction Not Implemented** (`packages/cgame/src/index.ts:113-116`)
+   ```typescript
+   function Pmove(pmove: unknown): void {
+       // TODO: Implement client-side movement prediction
+       // Should call shared Pmove() function
+   }
+   ```
+   - Core multiplayer feature for smooth gameplay
+   - Without this, multiplayer would have severe input lag
+   - **Impact:** Unplayable multiplayer experience even if connection worked
+
+3. **CGame Stubs - Multiple Weapon/UI Functions** (`packages/cgame/src/index.ts:89-111`)
+   - `GetActiveWeaponWheelWeapon` - returns 0
+   - `GetOwnedWeaponWheelWeapons` - returns []
+   - `GetWeaponWheelAmmoCount` - returns 0
+   - `GetPowerupWheelCount` - returns 0
+   - `GetHitMarkerDamage` - returns 0
+   - **Impact:** Weapon wheel and hit markers non-functional in multiplayer
+
+4. **Server Incomplete Features** (`packages/server/src/dedicated.ts`)
+   - **Line 326:** Client timeout/disconnect handling not implemented
+   - **Line 396:** Reliable messaging not properly queued (sent immediately)
+   - **Line 459:** Command rate limiting not implemented
+   - **Line 650:** Reliable/unreliable stream separation incomplete
+   - **Impact:** Unreliable network behavior, potential exploits, poor performance
+
+5. **Rerelease Protocol Incomplete on Both Ends**
+   - **Server:** `writeDeltaEntity` doesn't write Rerelease fields (alpha, scale, etc.)
+   - **Client:** `parseDelta` doesn't read Rerelease fields (see Section 12)
+   - **Impact:** Cannot support Rerelease features even if protocol version negotiated
+
+### Testing Gaps
+
+1. **No True Integration Tests**
+   - All "integration" tests use extensive mocking
+   - No actual WebSocket communication tested
+   - No end-to-end client-server connection tested
+   - **Cannot verify multiplayer actually works**
+
+2. **Missing Test Scenarios**
+   - Client connects to server
+   - Client sends user commands
+   - Server sends entity updates
+   - Client interpolates entities
+   - Client predicts movement
+   - Multiple clients interact
+
+## Subtasks to Complete Multiplayer
+
+### Phase 1: Implement Client-Server Connection (Critical)
+**Priority: HIGHEST** - Nothing works without this
+
+**Location:** `packages/client/src/network/` (needs to be created)
+
+1. **Create Network Manager** (`client/src/network/connection.ts`)
+   ```typescript
+   class MultiplayerConnection {
+       private driver: BrowserWebSocketNetDriver;
+       private parser: NetworkMessageParser;
+
+       async connect(serverAddress: string): Promise<void>
+       disconnect(): void
+       sendCommand(cmd: UserCommand): void
+       private handleServerMessage(data: Uint8Array): void
+   }
+   ```
+
+2. **Add Connection UI** (`client/src/ui/multiplayer-menu.ts`)
+   - Server address input field
+   - Connect/Disconnect button
+   - Connection status display
+   - Player name/config input
+
+3. **Implement Connection Handshake** (`connection.ts`)
+   - Send `clc_stringcmd("connect")` with userinfo
+   - Handle `svc_serverdata` response
+   - Receive and process all `svc_configstring` commands
+   - Receive and process all `svc_spawnbaseline` commands
+   - Send `clc_stringcmd("begin")` when ready
+   - Transition to active gameplay state
+
+4. **Wire Up to Game Loop**
+   - Integrate `MultiplayerConnection` into main client
+   - Process incoming packets each frame
+   - Send user commands at appropriate rate
+   - Handle connection loss/timeout
+
+### Phase 2: Implement Client-Side Prediction (Critical)
+**Priority: HIGH** - Required for playable multiplayer
+
+**Location:** `packages/cgame/src/index.ts`
+
+1. **Implement Pmove Function** (lines 113-116)
+   - Import shared `Pmove()` from `@quake2ts/shared`
+   - Set up `pmove_t` structure from `PlayerState`
+   - Call shared physics simulation
+   - Apply results to local player state
+   - Store command history for server reconciliation
+
+2. **Add Command Buffering**
+   - Buffer last 64 user commands (CMD_BACKUP)
+   - Associate each command with frame number
+   - Use for prediction rewind/replay
+
+3. **Implement Prediction Correction**
+   - When server snapshot arrives, compare to predicted state
+   - If mismatch detected, rewind to server state
+   - Replay buffered commands from that point forward
+   - Smooth correction over multiple frames if error is small
+
+4. **Add Prediction Variables**
+   - `cg_predict` cvar to enable/disable prediction
+   - `cg_showmiss` cvar to debug prediction errors
+   - Track prediction error magnitude for debugging
+
+### Phase 3: Complete Server Features
+
+**Location:** `packages/server/src/dedicated.ts`
+
+1. **Implement Reliable Messaging** (line 396)
+   - Create reliable message queue per client
+   - Track which messages have been acknowledged
+   - Retransmit unacknowledged messages
+   - Implement acknowledgment system
+
+2. **Implement Command Rate Limiting** (line 459)
+   - Process command queue instead of oldest command only
+   - Apply configurable rate limit (sv_maxrate)
+   - Drop excessive commands from suspicious clients
+   - Log rate violations
+
+3. **Implement Client Timeout** (line 326)
+   - Track last packet time per client
+   - Disconnect clients that haven't sent packets in 30+ seconds
+   - Send timeout warning before disconnect
+   - Clean up client state on timeout
+
+4. **Separate Reliable/Unreliable Streams** (line 650)
+   - Maintain two message buffers per client
+   - Reliable: Configstrings, critical events
+   - Unreliable: Entity updates, temp entities
+   - Send reliable messages with acknowledgment
+   - Send unreliable messages without acknowledgment
+
+### Phase 4: Implement Rerelease Protocol Support
+
+**Location:** `packages/server/src/protocol/entity.ts` and `packages/engine/src/demo/parser.ts`
+
+1. **Server: Add Rerelease Entity Writing**
+   - Define Rerelease bit flags (U_SCALE, U_INSTANCE_BITS, etc.)
+   - Update `writeDeltaEntity` to write new fields when flags set
+   - Match bit positions to reference source
+   - Test that written stream matches expected format
+
+2. **Client: Add Rerelease Entity Parsing**
+   - See Section 12 subtasks (this is the same work)
+   - Ensure client and server use identical bit flag definitions
+
+3. **Negotiate Protocol Version**
+   - Server sends protocol version in `svc_serverdata`
+   - Client accepts or rejects based on supported versions
+   - Both sides switch to appropriate parsing mode
+
+### Phase 5: Complete CGame Stubs
+
+**Location:** `packages/cgame/src/index.ts` (lines 89-111)
+
+1. **Implement Weapon Wheel Functions**
+   - `GetActiveWeaponWheelWeapon`: Return current active weapon from player state
+   - `GetOwnedWeaponWheelWeapons`: Query player inventory for owned weapons
+   - `GetWeaponWheelAmmoCount`: Return ammo count for specified weapon
+
+2. **Implement Powerup Functions**
+   - `GetPowerupWheelCount`: Return count of active powerups from player stats
+
+3. **Implement Hit Marker**
+   - `GetHitMarkerDamage`: Track recent damage events, return for UI display
+   - Add damage event tracking system
+   - Expire hit markers after short duration
+
+### Phase 6: True Integration Testing
+
+**Location:** `packages/e2e-tests/` (create new package)
+
+1. **Set Up E2E Test Infrastructure**
+   - Create dedicated test package
+   - Use Playwright or Puppeteer for browser automation
+   - Start real dedicated server on test port
+   - Launch headless browser client
+
+2. **Write E2E Test: Basic Connection**
+   ```typescript
+   test('client connects to server', async () => {
+       const server = await startDedicatedServer();
+       const client = await launchClient();
+       await client.connect('localhost:27910');
+       expect(await client.isConnected()).toBe(true);
+       await client.disconnect();
+       await server.stop();
+   });
+   ```
+
+3. **Write E2E Test: Entity Synchronization**
+   - Spawn entity on server
+   - Verify client receives entity in snapshot
+   - Move entity on server
+   - Verify client sees updated position
+
+4. **Write E2E Test: User Commands**
+   - Client sends movement commands
+   - Server processes commands
+   - Verify player entity moves on server
+   - Verify client receives updated player state
+
+5. **Write E2E Test: Multi-Client**
+   - Connect two clients to same server
+   - Each client sees the other's entity
+   - Movement/shooting visible to both clients
+
+### Phase 7: Polish and Optimization
+
+1. **Add Client Interpolation**
+   - Buffer last 2-3 server snapshots
+   - Interpolate entity positions between snapshots
+   - Result in smooth 60fps rendering from 10Hz server updates
+
+2. **Add Network Statistics UI**
+   - Display ping (round-trip time)
+   - Display packet loss percentage
+   - Display prediction errors
+   - Display bandwidth usage
+
+3. **Optimize Bandwidth**
+   - Implement PVS (Potentially Visible Set) filtering
+   - Only send entities visible to each client
+   - Reduce update rate for distant entities
+   - Compress configstrings and baselines
+
+4. **Add Cheat Protection**
+   - Validate all client commands on server
+   - Clamp movement speed to legal values
+   - Verify weapon fire rate limits
+   - Log suspicious behavior
+
+## Next Steps Summary
+**To achieve working multiplayer, complete phases in order:**
+1. Phase 1 (Client-Server Connection) - **BLOCKS EVERYTHING**
+2. Phase 2 (Client-Side Prediction) - **REQUIRED FOR PLAYABLE EXPERIENCE**
+3. Phase 3 (Server Features) - **REQUIRED FOR RELIABILITY**
+4. Phase 6 (Integration Testing) - **REQUIRED TO VERIFY IT WORKS**
+5. Phase 4 (Rerelease Protocol) - Optional for vanilla MP, required for Rerelease
+6. Phase 5 (CGame Stubs) - Optional, improves UX
+7. Phase 7 (Polish) - Optional, improves experience
