@@ -16,8 +16,14 @@ import {
     U_EVENT,
     U_SOLID,
     U_REMOVE,
-    // New Rerelease Flags (if available) - assuming standard delta reuse for now
+    // New Rerelease Flags
     U_ALPHA,
+    U_SCALE,
+    U_INSTANCE_BITS,
+    U_LOOP_VOLUME,
+    U_LOOP_ATTENUATION_HIGH,
+    U_OWNER_HIGH,
+    U_OLD_FRAME_HIGH,
     FogData,
     DamageIndicator
 } from '@quake2ts/engine';
@@ -47,6 +53,7 @@ export interface DemoHandlerCallbacks {
     onFog?: (data: FogData) => void;
     onDamage?: (indicators: DamageIndicator[]) => void;
     onServerData?: (protocol: number, tickRate?: number) => void;
+    onLocPrint?: (flags: number, base: string) => void; // Simplified for now
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -158,6 +165,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
     private applyDelta(to: EntityState, from: EntityState): void {
         const bits = from.bits;
+        const bitsHigh = from.bitsHigh;
         to.number = from.number; // Should match
 
         if (bits & U_MODEL) to.modelindex = from.modelindex;
@@ -194,17 +202,15 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
         if (bits & U_SOLID) to.solid = from.solid;
 
-        // Rerelease fields (simple copy if present in partial)
-        // Since the parser already handled the bit reading into the fields,
-        // we just need to ensure we copy the property if it was updated.
-        // For now, simple copy.
-        if (from.alpha !== 0) to.alpha = from.alpha;
-        if (from.scale !== 0) to.scale = from.scale;
-        if (from.instanceBits !== 0) to.instanceBits = from.instanceBits;
-        if (from.loopVolume !== 0) to.loopVolume = from.loopVolume;
-        if (from.loopAttenuation !== 0) to.loopAttenuation = from.loopAttenuation;
-        if (from.owner !== 0) to.owner = from.owner;
-        if (from.oldFrame !== 0) to.oldFrame = from.oldFrame;
+        // Rerelease fields
+        if (bits & U_ALPHA) to.alpha = from.alpha;
+        if (bits & U_SCALE) to.scale = from.scale;
+        if (bits & U_INSTANCE_BITS) to.instanceBits = from.instanceBits;
+        if (bits & U_LOOP_VOLUME) to.loopVolume = from.loopVolume;
+
+        if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = from.loopAttenuation;
+        if (bitsHigh & U_OWNER_HIGH) to.owner = from.owner;
+        if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = from.oldFrame;
     }
 
     onCenterPrint(msg: string): void {
@@ -351,12 +357,20 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         }
     }
 
-    // New Rerelease Handlers (Stubbed)
+    onLocPrint(flags: number, base: string, args: string[]): void {
+        if (this.callbacks?.onLocPrint) {
+            // For now, we only pass the raw flags and msg (base) as that is what the interface supports currently.
+            // TODO: Update DemoHandlerCallbacks to support args array
+            this.callbacks.onLocPrint(flags, base);
+        }
+    }
+
+    // New Rerelease Handlers
     onLevelRestart(): void {
         if (this.callbacks?.onLevelRestart) this.callbacks.onLevelRestart();
     }
 
-    onWaitingForPlayers(): void {
+    onWaitingForPlayers(count: number): void {
         if (this.callbacks?.onWaitingForPlayers) this.callbacks.onWaitingForPlayers();
     }
 

@@ -296,7 +296,13 @@ export {
     U_EVENT,
     U_SOLID,
     U_REMOVE,
-    U_ALPHA
+    U_ALPHA,
+    U_SCALE,
+    U_INSTANCE_BITS,
+    U_LOOP_VOLUME,
+    U_LOOP_ATTENUATION_HIGH,
+    U_OWNER_HIGH,
+    U_OLD_FRAME_HIGH
 } from './demo/parser.js';
 export type {
     NetworkMessageHandler,
