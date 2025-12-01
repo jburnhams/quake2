@@ -53,6 +53,12 @@ function move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (ent: E
   } else {
       // Continue
       ent.velocity = scaleVec3(dir, currentSpeed);
+      ent.think = (e) => {
+          // Update position based on velocity (simulating physics step)
+          e.origin = addVec3(e.origin, scaleVec3(e.velocity, dt));
+          context.linkentity(e);
+          move_calc(e, dest, context, done);
+      };
       context.scheduleThink(ent, context.timeSeconds + dt);
   }
 }
@@ -323,7 +329,7 @@ function door_secret_blocked(self: Entity, other: Entity | null) {
     }
 }
 
-const func_door_secret: SpawnFunction = (entity, context) => {
+export const func_door_secret: SpawnFunction = (entity, context) => {
     // Handle sounds
     const moveinfo: MoveInfo = {
         sound_start: 'doors/dr1_strt.wav',
@@ -346,7 +352,7 @@ const func_door_secret: SpawnFunction = (entity, context) => {
         const d = distance(self.origin, start);
         if (d > 0.1) return; // Already moving or open
 
-        move_calc(self, self.pos1, context.entities, door_secret_move1);
+        move_calc(self, self.pos1, context, door_secret_move1);
         // Real implementation would update PVS visibility here
     };
 
@@ -371,10 +377,7 @@ const func_door_secret: SpawnFunction = (entity, context) => {
     const start_origin = { ...entity.origin };
     (entity as any).start_origin = start_origin;
 
-    const forward = { x: 0, y: 0, z: 0 };
-    const right = { x: 0, y: 0, z: 0 };
-    const up = { x: 0, y: 0, z: 0 };
-    angleVectors(entity.angles, forward, right, up);
+    const { forward, right, up } = angleVectors(entity.angles);
     entity.angles = { x: 0, y: 0, z: 0 };
 
     const side = 1.0 - ((entity.spawnflags & SPAWNFLAG_SECRET_1ST_LEFT) ? 2 : 0);
