@@ -6,8 +6,8 @@
  * interface to the client engine.
  */
 
-import type { CGameImport, CGameExport } from './types.js';
-import type { PlayerState, Vec3 } from '@quake2ts/shared';
+import type { CGameImport, CGameExport, PmoveInfo } from './types.js';
+import { PlayerState, Vec3, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
 import { LayoutFlags } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
 import { CG_ParseConfigString } from './parse.js';
@@ -110,9 +110,49 @@ function GetHitMarkerDamage(ps: PlayerState): number {
     return 0;
 }
 
+/**
+ * Pmove implementation for client-side prediction.
+ * Calls the shared Pmove() function (applyPmove in TS port).
+ *
+ * @param pmove - PmoveInfo structure (similar to pmove_t)
+ */
 function Pmove(pmove: unknown): void {
-    // TODO: Implement client-side movement prediction
-    // Should call shared Pmove() function
+    const pm = pmove as PmoveInfo;
+    if (!pm || !pm.s || !pm.cmd || !cgi) {
+        return;
+    }
+
+    // Adapter for PmoveTraceFn using CGameImport trace
+    const traceAdapter = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3): PmoveTraceResult => {
+        // Shared PmoveTraceFn uses optional mins/maxs, CGameImport expects them.
+        // If not provided, assume point trace (0,0,0)
+        const zero: Vec3 = { x: 0, y: 0, z: 0 };
+        return cgi!.PM_Trace(
+            start,
+            end,
+            mins || zero,
+            maxs || zero
+        );
+    };
+
+    // Adapter for PmovePointContentsFn using CGameImport trace
+    const pointContentsAdapter = (point: Vec3): number => {
+        const zero: Vec3 = { x: 0, y: 0, z: 0 };
+        // Perform a point trace to get contents
+        const tr = cgi!.PM_Trace(point, point, zero, zero);
+        return tr.contents || 0;
+    };
+
+    // Call shared Pmove implementation
+    // This returns a NEW PlayerState, so we must update pm.s
+    const newState = applyPmove(pm.s, pm.cmd, traceAdapter, pointContentsAdapter);
+
+    // Update mutable state
+    pm.s.origin = newState.origin;
+    pm.s.velocity = newState.velocity;
+    pm.s.onGround = newState.onGround;
+    pm.s.waterLevel = newState.waterLevel;
+    // applyPmove might update other fields in the future
 }
 
 function ParseConfigString(i: number, s: string): void {
