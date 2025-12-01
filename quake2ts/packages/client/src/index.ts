@@ -66,6 +66,8 @@ export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
 
+export { MultiplayerConnection } from './net/connection.js';
+
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
 export interface ClientImports {

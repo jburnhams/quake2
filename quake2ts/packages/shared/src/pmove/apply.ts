@@ -1,6 +1,7 @@
 
 import { PmoveCmd, PmoveTraceFn } from './types.js';
 import { Vec3 } from '../math/vec3.js';
+import { angleVectors } from '../math/angles.js';
 
 import { applyPmoveAccelerate, applyPmoveFriction, buildAirGroundWish, buildWaterWish } from './pmove.js';
 import { PlayerState } from '../protocol/player-state.js';
@@ -39,7 +40,7 @@ export const applyPmove = (
   newState = categorizePosition(newState, trace);
   newState = checkWater(newState, pointContents);
 
-  const { origin, velocity, onGround, waterLevel } = newState;
+  const { origin, velocity, onGround, waterLevel, viewAngles } = newState;
 
   // Apply friction BEFORE acceleration to match original Quake 2 rerelease behavior
   // See: rerelease/src/game/player/pmove.c lines 1678 (PM_Friction) then 1693 (PM_AirMove->PM_Accelerate)
@@ -55,16 +56,18 @@ export const applyPmove = (
     pmWaterFriction: 1,
   });
 
+  const { forward, right } = angleVectors(viewAngles);
+
   const wish = waterLevel >= 2
     ? buildWaterWish({
-        forward: { x: 1, y: 0, z: 0 },
-        right: { x: 0, y: 1, z: 0 },
+        forward,
+        right,
         cmd,
         maxSpeed: 320,
       })
     : buildAirGroundWish({
-        forward: { x: 1, y: 0, z: 0 },
-        right: { x: 0, y: 1, z: 0 },
+        forward,
+        right,
         cmd,
         maxSpeed: 320,
       });

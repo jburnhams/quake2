@@ -1,0 +1,19 @@
+{
+  "name": "@quake2ts/e2e-tests",
+  "version": "0.0.1",
+  "description": "Integration and E2E tests for Quake 2",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@quake2ts/client": "workspace:*",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "ws": "^8.18.0",
+    "vitest": "^1.5.3",
+    "ts-node": "^10.9.2"
+  }
+}

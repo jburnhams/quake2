@@ -8,7 +8,7 @@
 
 import type { CGameImport, CGameExport } from './types.js';
 import type { PlayerState, Vec3 } from '@quake2ts/shared';
-import { LayoutFlags } from '@quake2ts/shared';
+import { LayoutFlags, pmove_t, applyPmove, angleVectors } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
 import { CG_ParseConfigString } from './parse.js';
 
@@ -110,9 +110,29 @@ function GetHitMarkerDamage(ps: PlayerState): number {
     return 0;
 }
 
+/**
+ * Pmove implementation.
+ * Wraps the shared applyPmove function.
+ * Reference: rerelease/cg_main.c Pmove()
+ */
 function Pmove(pmove: unknown): void {
-    // TODO: Implement client-side movement prediction
-    // Should call shared Pmove() function
+    const pm = pmove as pmove_t;
+
+    // In typical Q2, Pmove() expects the forward/right/up vectors to be set in pm_t
+    // or derived from s.angles.
+    // applyPmove in shared/pmove/apply.ts now derives them from state.viewAngles.
+
+    // We assume the caller (Client Engine) has populated pm.s (PlayerState)
+    // with valid viewAngles.
+
+    // Call the shared implementation
+    // Note: applyPmove returns a new PlayerState, it does NOT mutate in place.
+    // We must assign the result back to pm.s
+    const resultState = applyPmove(pm.s, pm.cmd, pm.trace, pm.pointcontents);
+
+    // Update the state in the pmove structure
+    // We use Object.assign to preserve references if needed, or just replace fields
+    Object.assign(pm.s, resultState);
 }
 
 function ParseConfigString(i: number, s: string): void {

@@ -8,6 +8,7 @@ export default defineConfig({
   },
   sourcemap: true,
   clean: true,
-  treeshake: true,
+  treeshake: false, // Disable treeshaking to prevent missing files/exports
+  splitting: false, // Disable code splitting to bundle everything into index.js
   tsconfig: './tsconfig.build.json',
 });

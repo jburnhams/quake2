@@ -31,6 +31,7 @@ export interface MultiplayerConnectionOptions {
     skin: string;
     hand?: number;
     fov?: number;
+    driver?: NetDriver;
 }
 
 export class MultiplayerConnection implements NetworkMessageHandler {
@@ -53,8 +54,8 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private connectPacketTime = 0;
 
   constructor(options: MultiplayerConnectionOptions) {
-    this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
+    this.driver = options.driver ?? new BrowserWebSocketNetDriver();
 
     this.driver.onMessage((data) => this.handleMessage(data));
     this.driver.onClose(() => this.handleDisconnect());
