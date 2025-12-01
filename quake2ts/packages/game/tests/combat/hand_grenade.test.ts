@@ -139,6 +139,60 @@ describe('Hand Grenade', () => {
         );
     });
 
+    it('should use P_ProjectSource with correct offset for throw origin', () => {
+        const game = createMockGame();
+        const createGrenade = vi.spyOn(projectiles, 'createGrenade');
+
+        // Setup player facing East (1, 0, 0)
+        // AngleVectors(0, 0, 0) -> Forward(1,0,0), Right(0,-1,0), Up(0,0,1)
+        const player = game.entities.spawn();
+        player.origin = { x: 100, y: 100, z: 100 };
+        player.viewheight = 22;
+        player.angles = { x: 0, y: 0, z: 0 };
+        player.classname = 'player';
+        player.client = {
+            inventory: createPlayerInventory({
+                weapons: [WeaponId.HandGrenade],
+                ammo: { [AmmoType.Grenades]: 5 },
+            }),
+            weaponStates: createPlayerWeaponStates(),
+            buttons: 0, // Release immediately to throw
+            weaponstate: WeaponStateEnum.WEAPON_FIRING,
+            gun_frame: FRAME_GRENADE_THROW_HOLD // Ready to throw
+        } as any;
+
+        // Trigger throw logic (release button from hold frame)
+        // Transition to THROW_FIRE (12)
+        player.client!.weapon_think_time = 0;
+        fire(game, player, WeaponId.HandGrenade);
+
+        // Execute throw frame (12)
+        player.client!.weapon_think_time = 0;
+        fire(game, player, WeaponId.HandGrenade);
+
+        // Expected Origin calculation:
+        // Eye: 100, 100, 122
+        // Offset: 2, 0, -14
+        // Forward (1,0,0) * 2 = 2, 0, 0
+        // Right (0,-1,0) * 0 = 0, 0, 0
+        // Up (0,0,1) * -14 = 0, 0, -14
+        // Result: 102, 100, 108
+
+        expect(createGrenade).toHaveBeenCalledWith(
+            expect.anything(),
+            player,
+            expect.objectContaining({
+                x: expect.closeTo(102),
+                y: expect.closeTo(100),
+                z: expect.closeTo(108)
+            }),
+            expect.anything(),
+            120, // damage
+            expect.anything(), // speed
+            expect.anything() // timer
+        );
+    });
+
     it('should explode in hand if held too long (3.0s)', () => {
         const game = createMockGame();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
