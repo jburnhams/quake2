@@ -61,3 +61,11 @@ export function createTestContext(): SpawnContext {
     precacheImage: vi.fn(),
   } as unknown as SpawnContext;
 }
+
+export function createSpawnContext(): SpawnContext {
+    return createTestContext();
+}
+
+export function createEntity(): Entity {
+    return new Entity(1);
+}
