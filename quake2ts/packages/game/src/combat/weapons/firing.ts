@@ -226,7 +226,7 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
                 const { forward } = angleVectors(throwAngles);
                 const { right, up } = angleVectors(ent.angles);
 
-                const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
+                const source = P_ProjectSource(ent, { x: 2, y: 0, z: -14 }, forward, right, up, game.trace);
 
                 createGrenade(game.entities, ent, source, forward, 120, speed, timer);
             }
@@ -304,7 +304,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
     // So if we want Z to be 'viewheight-8' above origin, then Z offset should be -8.
     // (origin + viewheight) + (-8) = origin + viewheight - 8. Correct.
     const defaultOffset = { x: 8, y: 8, z: -8 };
-    const source = P_ProjectSource(game, player, defaultOffset, forward, right, up);
+    const source = P_ProjectSource(player, defaultOffset, forward, right, up, game.trace);
 
     switch (weaponId) {
         case WeaponId.Shotgun: {
