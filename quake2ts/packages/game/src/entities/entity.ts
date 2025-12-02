@@ -451,6 +451,24 @@ export class Entity {
   }
 }
 
+export enum AiFlags {
+  StandGround = 0x00000001,
+  TempStandGround = 0x00000002,
+  SoundTarget = 0x00000004,
+  SightCover = 0x00000008,
+  Chicken = 0x00000010,
+  Flee = 0x00000020,
+  Stand = 0x00000040,
+  FixTarget = 0x00000080,
+  GoodGuy = 0x00000100,
+  BrtMove = 0x00000200,
+  DoNotCount = 0x00000400, // [Paril-KEX]
+  ManualTarget = 0x00000800,
+  CombatPoint = 0x00001000,
+  Medic = 0x00002000,
+  HoldFrame = 0x00004000,
+}
+
 export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'classname', type: 'string', save: true },
   { name: 'spawnflags', type: 'int', save: true },

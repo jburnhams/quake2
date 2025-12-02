@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
-import { Entity, ServerFlags } from '../../src/entities/entity.js';
+import { Entity, ServerFlags, AiFlags } from '../../src/entities/entity.js';
 import { createTestContext } from '../test-helpers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { RenderFx } from '@quake2ts/shared';
 
 describe('target_spawner', () => {
   let context: ReturnType<typeof createTestContext>;
@@ -49,6 +50,13 @@ describe('target_spawner', () => {
     expect(context.entities.finalizeSpawn).toHaveBeenCalled();
     expect(context.entities.linkentity).toHaveBeenCalled();
     expect(context.entities.killBox).toHaveBeenCalled();
+
+    // Capture the spawned entity
+    const spawnedEnt = (context.entities.spawn as any).mock.results[0].value;
+
+    // Check flags
+    expect(spawnedEnt.monsterinfo.aiflags & AiFlags.DoNotCount).toBeTruthy();
+    expect(spawnedEnt.renderfx & RenderFx.IrVisible).toBeTruthy();
   });
 
   it('should apply speed/velocity to spawned entity', () => {
