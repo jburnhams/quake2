@@ -24,24 +24,24 @@
 **File**: `packages/client/src/index.ts`
 **Reference**: `full/client/cl_main.c` (CL_Frame, demo playback)
 
-- [ ] **1.1.1** Add demo playback mode state to `ClientExports`
+- [x] **1.1.1** Add demo playback mode state to `ClientExports`
   - Add `isDemoPlaying: boolean` property
   - Add `currentDemoName: string | null` property
   - Add enum `ClientMode { Normal, DemoPlayback, Multiplayer }`
 
-- [ ] **1.1.2** Create `startDemoPlayback(buffer: ArrayBuffer, filename: string): void` method
+- [x] **1.1.2** Create `startDemoPlayback(buffer: ArrayBuffer, filename: string): void` method
   - Call `demoPlayback.loadDemo(buffer)`
   - Set `demoHandler` as message handler via `demoPlayback.setHandler(demoHandler)`
   - Transition client to demo playback mode
-  - Initialize demo HUD overlay
+  - [ ] Initialize demo HUD overlay
 
-- [ ] **1.1.3** Create `stopDemoPlayback(): void` method
+- [x] **1.1.3** Create `stopDemoPlayback(): void` method
   - Call `demoPlayback.stop()`
   - Clear demo state from `demoHandler`
   - Transition client back to normal mode
-  - Clean up demo HUD overlay
+  - [ ] Clean up demo HUD overlay
 
-- [ ] **1.1.4** Update client render loop to handle demo playback
+- [x] **1.1.4** Update client render loop to handle demo playback
   - In `ClientExports.Sample()`, check if in demo mode
   - If demo mode, call `demoPlayback.update(dt)` instead of normal game update
   - Return camera/view from demo data instead of player state

@@ -90,4 +90,13 @@ export class DemoPlaybackController {
   public getState(): PlaybackState {
       return this.state;
   }
+
+  public getCurrentTime(): number {
+      // Return accumulated time within current frame?
+      // Or total playback time?
+      // For interpolation, we might need time relative to the current frame start.
+      // But typically renderers want 'clientTime'.
+      // For now, let's return accumulatedTime which represents how far we are into the current frame.
+      return this.accumulatedTime;
+  }
 }
