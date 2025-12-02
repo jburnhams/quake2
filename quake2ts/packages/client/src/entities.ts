@@ -16,7 +16,7 @@ function lerpAngle(a: number, b: number, t: number): number {
 
 export function buildRenderableEntities(
     latestEntities: EntityState[],
-    previousEntities: EntityState[],
+    previousEntities: EntityState[] | Map<number, EntityState>,
     alpha: number,
     configStrings: ClientConfigStrings,
     imports: ClientImports
@@ -25,12 +25,17 @@ export function buildRenderableEntities(
     const assets = imports.engine.assets;
     if (!assets) return renderables;
 
-    const prevMap = new Map(previousEntities.map(e => [e.number, e]));
+    let prevMap: Map<number, EntityState>;
+    if (previousEntities instanceof Map) {
+        prevMap = previousEntities;
+    } else {
+        prevMap = new Map(previousEntities.map(e => [e.number, e]));
+    }
 
     for (const ent of latestEntities) {
         const prev = prevMap.get(ent.number) ?? ent;
 
-        const modelName = configStrings.getModelName(ent.modelIndex);
+        const modelName = configStrings.getModelName(ent.modelindex);
         if (!modelName) continue;
 
         const model = assets.getMd2Model(modelName) || assets.getMd3Model(modelName);
@@ -89,7 +94,7 @@ export function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
-                skin: ent.skinNum > 0 ? configStrings.getImageName(ent.skinNum) : undefined,
+                skin: ent.skinnum > 0 ? configStrings.getImageName(ent.skinnum) : undefined,
                 alpha: normalizedAlpha
              });
         } else if (model.header.magic === 860898377) { // IDP3 (MD3)
