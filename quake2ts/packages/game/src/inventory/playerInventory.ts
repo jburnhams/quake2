@@ -137,6 +137,8 @@ export interface PlayerClient {
     anim_priority?: number;
     anim_end?: number;
     anim_time?: number;
+    // Earthquakes
+    quake_time?: number;
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {
