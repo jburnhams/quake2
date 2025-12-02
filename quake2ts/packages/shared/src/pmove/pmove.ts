@@ -166,18 +166,21 @@ export function buildAirGroundWish(params: PmoveWishParams): PmoveWishResult {
 export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
   const { forward, right, cmd, maxSpeed } = params;
 
+  // Use full 3D components for water movement
   let wishvel = {
     x: forward.x * cmd.forwardmove + right.x * cmd.sidemove,
     y: forward.y * cmd.forwardmove + right.y * cmd.sidemove,
-    z: 0,
+    z: forward.z * cmd.forwardmove + right.z * cmd.sidemove,
   } satisfies Vec3;
 
   if (cmd.upmove > 10) {
     wishvel = addVec3(wishvel, { x: 0, y: 0, z: cmd.upmove });
   } else if (cmd.upmove < -10) {
     wishvel = addVec3(wishvel, { x: 0, y: 0, z: cmd.upmove });
-  } else {
-    wishvel = addVec3(wishvel, { x: 0, y: 0, z: 10 });
+  } else if (Math.abs(cmd.forwardmove) < 10 && Math.abs(cmd.sidemove) < 10) {
+    // Standard drift down when no vertical input AND no significant horizontal input
+    // Matches Quake 2 rerelease behavior (sinking slowly)
+    wishvel = addVec3(wishvel, { x: 0, y: 0, z: -60 });
   }
 
   let wishspeed = lengthVec3(wishvel);
