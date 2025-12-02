@@ -1,529 +1,864 @@
-# Section 13: Multiplayer & Network Support
-
-## Overview
-This section covers the transition from a local-only "listen server" architecture to a true Client-Server model, enabling multiplayer support over the network.
-
-Following the **Quake II Rerelease** architecture, we will split the engine into distinct `Server` and `Client` components. The Client will utilize a `cgame` module for prediction and rendering, while the Server will run the authoritative game logic.
-
-**Current Status:** Server architecture and protocol foundations are approximately **35-40% complete** (lower than previously estimated). The dedicated server framework exists and can run game simulation in isolation. Basic WebSocket client-server connection works. **CRITICAL LIMITATION**: The reliability layer (NetChan) is fundamentally incomplete - the TS port implements basic WebSocket send/receive but lacks the sophisticated reliability, sequencing, acknowledgment, and retransmission that Quake II requires (see `/home/user/quake2/full/qcommon/net_chan.c`). **Multiplayer is NOT functional end-to-end** - no true integration tests exist, all tests use extensive mocking.
-
-## Architecture
-
-### 1. Networking Transport (WebSockets)
-Since this is a browser-based port, we will replace the original UDP `netchan_t` with **WebSockets**.
-- **Server**: Node.js `WebSocketServer` (using `ws` library).
-- **Client**: Browser native `WebSocket` API.
-- **Abstraction**: A `NetDriver` interface will abstract the transport layer, allowing the engine to remain agnostic to the underlying protocol (future proofing for WebTransport).
-
-### 2. Protocol (Binary Compatibility)
-We will implement the original Quake II network protocol (`svc_*` and `clc_*` commands) defined in `qcommon.h`.
-- **Reasoning**: Ensures compatibility with existing demo formats (Section 12) and potential future interoperability with legacy servers (via proxy).
-- **Serialization**: Implement `MSG_Write*` functions (mirroring `qcommon/msg.c`) to construct binary packets.
-- **Deserialization**: Reuse and extend the `NetworkMessageParser` from Section 12.
-
-### 3. Server Architecture (`packages/server`)
-A new package will be created to host the dedicated server.
-- **Headless**: The server must run without any dependency on the DOM, Canvas, or WebGL.
-- **Game API**: It will load the `Game` module and interact via the `game_export_t` / `game_import_t` interface.
-- **Loop**: A fixed-timestep loop (10Hz or 20Hz default) running `SV_Frame`.
-- **State**: Manages `svs` (Server Static) and `sv` (Server Level) states, including clients, entities, and challenges.
-
-### 4. Client Architecture (`packages/client`)
-The client will be refactored to support the **Rerelease `cgame` Architecture**.
-- **CGame Module**: Extract rendering and prediction logic into a `cgame` module (`cg_main.cpp` equivalent).
-- **Prediction**: Implement `CL_PredictMovement` using `cglobals.Pmove` to simulate movement ahead of server updates.
-- **Interpolation**: Buffer server snapshots (`svc_frame`) and interpolate entities for smooth rendering.
-- **Transport**: Connects to the server via `NetDriver` and feeds packets to the parser.
-
-## Implementation Tasks
-
-### Phase 1: Network Plumbing
-- [x] **Protocol Definitions**: Ensure `packages/shared/src/protocol` contains all `svc_` and `clc_` enums.
-- [x] **Message Builder**: Implement `NetworkMessageBuilder` (Writer) to complement the existing `NetworkMessageParser` (Reader).
-  - Support `WriteByte`, `WriteShort`, `WriteLong`, `WriteFloat`, `WriteString`, `WriteDir`, `WriteAngle`.
-- [x] **Transport Layer**:
-  - [x] Create `NetDriver` interface.
-  - [x] Implement `WebSocketNetDriver` for Node.js (Server).
-  - [x] **`BrowserWebSocketNetDriver` created and used** - Instantiated in `MultiplayerConnection`.
-
-### Phase 2: The Dedicated Server
-
-**Background**: The server (`packages/server`) is headless, runs the authoritative game simulation, and sends periodic snapshots to clients. It must work in Node.js without DOM/Canvas/WebGL dependencies.
-
-#### 2.1 Server Architecture (Reference: original `server/sv_*.c`)
-- [x] **Package Setup**: `packages/server` created with basic structure.
-- [x] **Server State**: Define core structures (TypeScript equivalents):
-  - `server_static_t` (`svs`): Global server state - port, client array, challenge list, etc.
-  - `server_t` (`sv`): Per-level state - map name, BSP data, entity baselines, configstrings.
-  - `client_t`: Per-client state - connection state, reliable/unreliable messages, last frame acked, user info, name, rate.
-
-#### 2.2 Server Main Loop (`SV_Frame`)
-- [x] **Frame Structure**: Basic loop exists in `packages/server/src/dedicated.ts`.
-- ⚠️ **Frame Steps** (partial implementation with TODOs):
-  1. **`SV_ReadPackets()`**: Poll `NetDriver` for incoming packets. (Packet queue implemented).
-  2. **`SV_RunGameFrame()`**:
-     - For each active client: Call `ge->ClientThink(edict, &usercmd)` with oldest unprocessed command.
-     - Call `ge->G_RunFrame()` to advance game simulation (physics, AI, triggers).
-     - Increment `sv.framenum`.
-  3. **`SV_SendClientMessages()`**:
-     - For each client: Build `svc_frame` with delta-compressed entity snapshot.
-     - Call `SV_WriteFrameToClient()` (uses `writeDeltaEntity`).
-     - Send via `client.netchan.Transmit()`.
-     - [ ] **TODO (line 326):** "Disconnect client after delay?" - Timeout handling incomplete
-     - [ ] **TODO (line 396):** "Handle reliable messaging properly" - Currently sends immediately without proper queuing
-     - [ ] **TODO (line 459):** "Process command queue, apply rate limiting" - Command rate limiting not implemented
-     - [ ] **TODO (line 650):** "Differentiate between reliable and unreliable stream" - Message type separation incomplete
-  4. **Rate Limiting**: Enforce server tickrate (10Hz/20Hz). Sleep remainder of frame time if processing finishes early.
-     - [x] Implemented drift-correcting loop in `DedicatedServer.runFrame`.
-     - ⚠️ Tested with mocked integration tests (not true network tests) in `tests/dedicated.test.ts`.
-
-#### 2.3 Client Connection Handshake
-- [x] **Challenge System**: Basic implementation exists.
-- [x] **Connection Flow** (verify/complete):
-  1. Client sends `clc_stringcmd("connect")` with userinfo (name, model, skin, etc.).
-  2. Server validates, calls `ge->ClientConnect(edict, userinfo)` (game can reject).
-  3. Server responds with `svc_serverdata` (protocol version, server frame, map name, player slot).
-  4. **Config Strings**: Server sends all configstrings (`svc_configstring` for CS_NAME, CS_MODELS[], CS_SOUNDS[], etc.).
-  5. **Baselines**: Server sends spawn baselines (`svc_spawnbaseline`) for all entities.
-  6. Server sends `svc_stufftext("precache\n")`.
-  7. Client responds with `clc_stringcmd("begin")` when ready.
-  8. Server calls `ge->ClientBegin(edict)`.
-
-#### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
-- [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts` (Vanilla fields only).
-- [x] **Rerelease Fields Not Written**: `writeDeltaEntity` now serializes `alpha`, `scale`, `instanceBits`, `loopVolume`, `loopAttenuation`, `owner`, and `oldFrame` fields.
-- [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
-- [x] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
-- [x] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
-- [x] **Overflow Handling**: Handle MTU limits.
-  - Implemented check in `SV_SendClientFrame` to stop writing entities/removals if 1400 byte limit is reached.
-
-#### 2.5 Game Module Interface (`game_export_t`)
-- [x] **Game Stats**: `ps.stats` population implemented in `packages/game/src/entities/playerStats.ts`.
-- [x] **Config Strings**: Add `configstring(index, value)` to `GameImports` so game can set strings (models, sounds).
-- [x] **Sound/FX**: `multicast` / `unicast` implemented.
-- [x] **Player State**: Added missing fields (`pm_time`, `gun_frame`, `rdflags`, `fov`) to `PlayerClient`, `GameStateSnapshot`, and `PlayerState` to ensure correct network synchronization.
-
-### Phase 3: Client Refactoring (CGame)
-
-#### 3.1 Create CGame Package Structure
-- [x] **Package Setup**: Created `packages/cgame`.
-- [x] **HUD Migration**: Moved all HUD code (`hud/*.ts`, `screen.ts`) to `cgame`.
-- ⚠️ **View/Prediction**: Moved `view/camera.ts`, `view/effects.ts`, `prediction/index.ts` to `cgame` - **BUT prediction is not implemented**.
-
-#### 3.2 Define CGame Interfaces
-- [x] **cgame_import_t**: Defined in `packages/cgame/src/types.ts`.
-- [x] **cgame_export_t**: Defined in `packages/cgame/src/types.ts` - **Implemented core functions including Pmove and Weapon Wheel stubs**.
-
-#### 3.3 Move Shared Code (`packages/shared`)
-- [x] **Stats**: Added `PlayerStat` enums and helpers (`G_SetAmmoStat`).
-- [x] **Items**: Moved `WeaponId`, `AmmoType` to shared.
-
-#### 3.4 Migrate Client Code to CGame
-- [x] **HUD System**: Fully migrated to `cgame/src/hud`.
-- [x] **Stat Reading**: Updated HUD to read `ps.stats` array.
-- [x] **Asset Precaching**: Implemented `CG_TouchPics`.
-- [x] **Parsing**:
-  - [x] **Config String Parsing**: Implement `ParseConfigString(i, s)` in `cgame`.
-  - [x] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
-  - [x] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
-  - [x] **StuffText**: Implement `svc_stufftext` handling in Client (redirects to console commands).
-- [x] **Client-Side Prediction** - **IMPLEMENTED**
-  - [x] Pmove integration via `ClientPrediction` class.
-  - [x] Buffering and Reconciliation logic in place.
-  - [ ] `cg_predict` cvar logic pending.
-
-### Phase 4: Integration & Testing
-
-#### 4.1 Localhost Server-Client Test
-- ⚠️ **Config String Sync**: `packages/server/tests/integration/configstring_sync.test.ts` - **NOT a true integration test**. Uses extensive mocking (WebSocket, file system, BSP parser). No actual client connects.
-- ⚠️ **Icon Sync**: Tested in same mocked test file - **NOT validated with real network connection**.
-
-## Progress Update
-- [x] **HUD Migration Complete**: `packages/cgame` is fully populated and builds. Client-CGame bridge is wired.
-- [x] **Server Stats**: `packages/game` populates `PlayerState.stats` with health, armor, ammo, and active powerups.
-- [x] **Protocol**: `MSG_WriteDeltaEntity` implemented and used by server.
-- [x] **Server Config Strings**: Implemented `configstring` in `GameImports` and `DedicatedServer`. Server now broadcasts config string updates and sends full list on client connect.
-- [x] **Client Parsing**: Implemented `ParseConfigString`, `ParseCenterPrint`, `NotifyMessage`, and `svc_stufftext` handling. Wired up via `ClientExports`.
-- [x] **HUD Rendering**: Client now delegates main HUD rendering to `cg.DrawHUD`, including status bar via `ps.stats`.
-- [x] **Integration Test**: Added `configstring_sync.test.ts` to verify config string and stats synchronization.
-- [x] **Subtitles**: Moved subtitle logic to `CGame` and exposed via `ShowSubtitle`.
-- [x] **CGame Refinements**: Fully implemented `cvar` registration in `CGameImport` bridge.
-- [x] **Network Messaging**: Implemented `multicast` and `unicast` in `DedicatedServer` with robust argument serialization for `ServerCommand`s (`centerprint`, `stufftext`, `sound`).
-- [x] **Entity Delta Compression**: Implemented baseline population and entity removal logic in `DedicatedServer`.
-- [x] **Rate Limiting**: Implemented drift-correcting 10Hz loop in `DedicatedServer` and verified with integration tests.
-- [x] **MTU Handling**: Implemented logic to prevent packet overflow by capping entities in `SV_SendClientFrame`.
-- [x] **Player State Completeness**: Added `pm_type`, `pm_time`, `pm_flags`, `gun_frame`, `rdflags`, and `fov` to `PlayerState` and wired them through from `PlayerClient` to `DedicatedServer` output.
-- [x] **Client-Server Connection**: Implemented basic WebSocket connection, handshake, and `clc_move` command sending in `packages/client`.
-- [x] **Weapon Wheel Logic**: Implemented `GetActiveWeaponWheelWeapon` and friends in `CGame`, backed by shared logic.
-- [x] **Shared Weapon Definitions**: Consolidated `WeaponId` into `packages/shared`, ensuring server and client agree on weapon IDs and ammo types.
-
-## Known Gaps and Required Work
-
-### Critical Issues (BLOCKS MULTIPLAYER FUNCTIONALITY)
-
-**Priority 0: Fundamental Architecture Gaps**
-
-1. **NetChan Reliability Layer Missing** - **CRITICAL BLOCKER**
-   - **Current**: Basic WebSocket send/receive with placeholder sequence numbers (0)
-   - **Required**: Full NetChan implementation per `/home/user/quake2/full/qcommon/net_chan.c`:
-     * Sequence numbering and acknowledgment
-     * Reliable message queuing and retransmission
-     * Even/odd reliable message tracking
-     * Packet loss detection
-     * qport handling for NAT traversal
-     * Message fragmentation and reassembly
-     * Overflow detection
-   - **Location**: `packages/client/src/net/connection.ts:129-131`, `packages/server/src/dedicated.ts`
-   - **Impact**: Multiplayer cannot work reliably without this - dropped packets = lost state
-   - **Effort**: 2-3 weeks for full implementation
-
-2. **No End-to-End Integration** - **CRITICAL BLOCKER**
-   - All "integration" tests use extensive mocking (fake WebSocket, fake BSP, fake game)
-   - **Cannot verify multiplayer actually works** because it has never been tested
-   - No test where real client connects to real server
-   - **Impact**: Unknown if system works at all outside of isolated unit tests
-   - **Effort**: 1-2 weeks to create true E2E test infrastructure
-
-3. **Server Incomplete Features** (`packages/server/src/dedicated.ts`)
-   - **Line 396:** Reliable messaging not properly queued (sent immediately, no retransmission)
-   - **Line 459:** Command rate limiting not implemented (exploit vector)
-   - **Line 650:** Reliable/unreliable stream separation incomplete
-   - ~~**Line 326:** Client timeout/disconnect handling~~ - **SOLVED**
-   - **Impact**: Even if NetChan works, server behavior is incorrect and exploitable
-
-**Priority 1: Missing Core Functionality**
-
-4. **Client-Side Prediction Not Fully Integrated**
-   - `Pmove` function implemented but end-to-end flow unverified
-   - `cg_predict` cvar logic incomplete
-   - Command buffering exists but reconciliation logic not tested
-   - **Impact**: Playable but laggy multiplayer (if NetChan worked)
-
-5. **Incomplete Protocol Features**
-   - Checksums use placeholder (0) values
-   - Download system not implemented (large maps won't work)
-   - Challenge system basic but untested
-   - **Impact**: Reduced security, cannot join servers with different maps
-
-### Testing Gaps
-
-1. **No True Integration Tests**
-   - All "integration" tests use extensive mocking
-   - No actual WebSocket communication tested
-   - No end-to-end client-server connection tested
-   - **Cannot verify multiplayer actually works**
-
-2. **Missing Test Scenarios**
-   - Client connects to server
-   - Client sends user commands
-   - Server sends entity updates
-   - Client interpolates entities
-   - Client predicts movement
-   - Multiple clients interact
-
-## Subtasks to Complete Multiplayer
-
-### Phase 1: Implement Client-Server Connection (Critical)
-**Priority: HIGHEST** - Nothing works without this
-
-**Location:** `packages/client/src/network/`
-
-1. [x] **Create Network Manager** (`client/src/network/connection.ts`)
-   ```typescript
-   class MultiplayerConnection {
-       private driver: BrowserWebSocketNetDriver;
-       private parser: NetworkMessageParser;
-
-       async connect(serverAddress: string): Promise<void>
-       disconnect(): void
-       sendCommand(cmd: UserCommand): void
-       private handleServerMessage(data: Uint8Array): void
-   }
-   ```
-
-2. [x] **Add Connection UI** (`client/src/ui/multiplayer-menu.ts`)
-   - Server address input field
-   - Connect/Disconnect button
-   - Connection status display
-   - Player name/config input
-
-3. [x] **Implement Connection Handshake** (`connection.ts`)
-   - Send `clc_stringcmd("connect")` with userinfo
-   - Handle `svc_serverdata` response
-   - Receive and process all `svc_configstring` commands
-   - Receive and process all `svc_spawnbaseline` commands
-   - Send `clc_stringcmd("begin")` when ready
-   - Transition to active gameplay state
-
-4. [x] **Wire Up to Game Loop**
-   - Integrate `MultiplayerConnection` into main client
-   - Process incoming packets each frame
-   - Send user commands at appropriate rate
-   - Handle connection loss/timeout
-
-### Phase 2: Implement Client-Side Prediction (Critical)
-**Priority: HIGH** - Required for playable multiplayer
-
-**Location:** `packages/cgame/src/index.ts`
-
-1. [x] **Implement Pmove Function** (lines 113-116)
-   - Import shared `Pmove()` from `@quake2ts/shared`
-   - Set up `pmove_t` structure from `PlayerState`
-   - Call shared physics simulation
-   - Apply results to local player state
-   - Store command history for server reconciliation
-
-2. [x] **Add Command Buffering**
-   - Buffer last 64 user commands (CMD_BACKUP)
-   - Associate each command with frame number
-   - Use for prediction rewind/replay
-
-3. [x] **Implement Prediction Correction**
-   - When server snapshot arrives, compare to predicted state
-   - If mismatch detected, rewind to server state
-   - Replay buffered commands from that point forward
-   - Smooth correction over multiple frames if error is small
-
-4. **Add Prediction Variables**
-   - `cg_predict` cvar to enable/disable prediction
-   - `cg_showmiss` cvar to debug prediction errors
-   - Track prediction error magnitude for debugging
-
-### Phase 3: Complete Server Features
-
-**Location:** `packages/server/src/dedicated.ts`
-
-1. **Implement Reliable Messaging** (line 396)
-   - Create reliable message queue per client
-   - Track which messages have been acknowledged
-   - Retransmit unacknowledged messages
-   - Implement acknowledgment system
-
-2. **Implement Command Rate Limiting** (line 459)
-   - Process command queue instead of oldest command only
-   - Apply configurable rate limit (sv_maxrate)
-   - Drop excessive commands from suspicious clients
-   - Log rate violations
-
-3. [x] **Implement Client Timeout** (line 326)
-   - Track last packet time per client
-   - Disconnect clients that haven't sent packets in 30+ seconds
-   - [ ] Send timeout warning before disconnect (Optional/Enhancement)
-   - Clean up client state on timeout
-
-4. **Separate Reliable/Unreliable Streams** (line 650)
-   - Maintain two message buffers per client
-   - Reliable: Configstrings, critical events
-   - Unreliable: Entity updates, temp entities
-   - Send reliable messages with acknowledgment
-   - Send unreliable messages without acknowledgment
-
-### Phase 4: Implement Rerelease Protocol Support
-
-**Location:** `packages/server/src/protocol/entity.ts` and `packages/engine/src/demo/parser.ts`
-
-1. **Server: Add Rerelease Entity Writing**
-   - [x] Define Rerelease bit flags (U_SCALE, U_INSTANCE_BITS, etc.)
-   - [x] Update `writeDeltaEntity` to write new fields when flags set
-   - [x] Match bit positions to reference source
-   - [x] Test that written stream matches expected format
-
-2. **Client: Add Rerelease Entity Parsing**
-   - See Section 12 subtasks (this is the same work)
-   - Ensure client and server use identical bit flag definitions
-
-3. **Negotiate Protocol Version**
-   - Server sends protocol version in `svc_serverdata`
-   - Client accepts or rejects based on supported versions
-   - Both sides switch to appropriate parsing mode
-
-### Phase 5: Complete CGame Stubs
-
-**Location:** `packages/cgame/src/index.ts` (lines 89-111)
-
-1. [x] **Implement Weapon Wheel Functions**
-   - `GetActiveWeaponWheelWeapon`: Return current active weapon from player state
-   - `GetOwnedWeaponWheelWeapons`: Query player inventory for owned weapons
-   - `GetWeaponWheelAmmoCount`: Return ammo count for specified weapon
-
-2. [x] **Implement Powerup Functions**
-   - `GetPowerupWheelCount`: Return count of active powerups from player stats
-
-3. [x] **Implement Hit Marker**
-   - `GetHitMarkerDamage`: Track recent damage events, return for UI display
-   - Add damage event tracking system
-   - Expire hit markers after short duration
-
-### Phase 6: True Integration Testing
-
-**Location:** `packages/e2e-tests/` (create new package)
-
-1. **Set Up E2E Test Infrastructure**
-   - Create dedicated test package
-   - Use Playwright or Puppeteer for browser automation
-   - Start real dedicated server on test port
-   - Launch headless browser client
-
-2. **Write E2E Test: Basic Connection**
-   ```typescript
-   test('client connects to server', async () => {
-       const server = await startDedicatedServer();
-       const client = await launchClient();
-       await client.connect('localhost:27910');
-       expect(await client.isConnected()).toBe(true);
-       await client.disconnect();
-       await server.stop();
-   });
-   ```
-
-3. **Write E2E Test: Entity Synchronization**
-   - Spawn entity on server
-   - Verify client receives entity in snapshot
-   - Move entity on server
-   - Verify client sees updated position
-
-4. **Write E2E Test: User Commands**
-   - Client sends movement commands
-   - Server processes commands
-   - Verify player entity moves on server
-   - Verify client receives updated player state
-
-5. **Write E2E Test: Multi-Client**
-   - Connect two clients to same server
-   - Each client sees the other's entity
-   - Movement/shooting visible to both clients
-
-### Phase 7: Polish and Optimization
-
-1. **Add Client Interpolation**
-   - Buffer last 2-3 server snapshots
-   - Interpolate entity positions between snapshots
-   - Result in smooth 60fps rendering from 10Hz server updates
-
-2. **Add Network Statistics UI**
-   - Display ping (round-trip time)
-   - Display packet loss percentage
-   - Display prediction errors
-   - Display bandwidth usage
-
-3. **Optimize Bandwidth**
-   - Implement PVS (Potentially Visible Set) filtering
-   - Only send entities visible to each client
-   - Reduce update rate for distant entities
-   - Compress configstrings and baselines
-
-4. **Add Cheat Protection**
-   - Validate all client commands on server
-   - Clamp movement speed to legal values
-   - Verify weapon fire rate limits
-   - Log suspicious behavior
-
-## Revised Completion Roadmap
-
-**Current Reality Check:**
-- ❌ Multiplayer is NOT 45% complete - more like 35-40%
-- ❌ Cannot play multiplayer games - NetChan layer missing
-- ❌ No real integration testing - all tests use mocks
-- ✅ Basic framework exists (server, client, protocol structures)
-- ✅ Multiplayer menu UI implemented
-
-**Critical Path to Working Multiplayer:**
-
-### Phase 0: NetChan Implementation (MUST DO FIRST) - 2-3 weeks
-**Blocks everything else**
-1. Implement `NetChan` class in `packages/shared`:
-   - Sequence number tracking (send/receive)
-   - Reliable message queue + retransmission
-   - Even/odd reliable message acknowledgment
-   - Fragment detection and reassembly
-   - Overflow handling
-   - Reference: `/home/user/quake2/full/qcommon/net_chan.c`
-
-2. Integrate NetChan into Server:
-   - Replace direct WebSocket writes with NetChan.Transmit
-   - Separate reliable vs unreliable buffers (fix Line 650)
-   - Implement proper message queuing (fix Line 396)
-
-3. Integrate NetChan into Client:
-   - Replace placeholder sequence numbers
-   - Implement acknowledgment handling
-   - Add packet loss detection
-
-### Phase 1: True E2E Testing (REQUIRED FOR VALIDATION) - 1-2 weeks
-**Cannot verify anything works without this**
-1. Create `packages/e2e-tests` with Playwright/Puppeteer
-2. Implement test: Server starts, client connects, handshake completes
-3. Implement test: Client sends commands, server processes them
-4. Implement test: Server sends entity updates, client receives them
-5. Implement test: Prediction + reconciliation flow
-6. Run all existing unit tests against real connections (not mocks)
-
-### Phase 2: Complete Server Implementation - 1 week
-1. Implement command rate limiting (Line 459)
-2. Implement proper timeout handling with warnings
-3. Separate reliable/unreliable streams completely
-4. Add CRC checksums for commands
-5. Test server under load (multiple clients)
-
-### Phase 3: Complete Client Prediction - 1 week
-1. Verify Pmove integration end-to-end
-2. Implement `cg_predict` cvar logic
-3. Add prediction error visualization (`cg_showmiss`)
-4. Tune reconciliation parameters
-5. Test with artificial latency
-
-### Phase 4: Rerelease Protocol (Optional) - 1 week
-1. Test with real Rerelease demos
-2. Verify Rerelease entity fields work end-to-end
-3. Test Protocol 2023 client connecting to server
-
-**Total Time to Working Multiplayer: 6-8 weeks**
-
-**Success Criteria:**
-- ✅ Two browser clients can connect to dedicated server
-- ✅ Players can see each other move and shoot
-- ✅ Prediction provides smooth movement
-- ✅ System handles packet loss gracefully
-- ✅ Works with 100ms+ latency
-- ✅ No crashes or exploits under normal conditions
+# Section 13: Multiplayer & Network Support - Implementation Tasks
+
+## Current Status
+**~35-40% Complete (Framework Only)**
+
+- ✅ Server and client packages exist
+- ✅ Basic WebSocket transport works
+- ✅ Protocol message builders/parsers exist
+- ✅ Multiplayer UI menu exists
+- ❌ NetChan reliability layer missing (CRITICAL BLOCKER)
+- ❌ No real end-to-end testing (all tests use mocks)
+- ❌ Server features incomplete (3 critical TODOs)
+
+**Goal**: Enable browser-based multiplayer with client-server architecture, client-side prediction, and reliable networking.
 
 ---
 
-## Concise Subtask List for Completion
+## Implementation Roadmap
 
-**Section 13 - Multiplayer (6-8 weeks)**
+### Phase 1: NetChan Reliability Layer (CRITICAL - BLOCKS ALL MULTIPLAYER)
 
-1. **NetChan Reliability Layer** (2-3 weeks) - **CRITICAL BLOCKER**
-   - Implement sequence numbering and acknowledgment
-   - Implement reliable message queue with retransmission
-   - Implement packet loss detection
-   - Add fragment handling
-   - Reference: `/home/user/quake2/full/qcommon/net_chan.c`
+**Estimated Time**: 2-3 weeks
+**Dependencies**: None (reference implementation exists)
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` (300+ lines of networking code)
 
-2. **E2E Integration Testing** (1-2 weeks) - **CRITICAL BLOCKER**
-   - Create `packages/e2e-tests` infrastructure
-   - Test: Client connects to server
-   - Test: Commands flow both ways
-   - Test: Entity updates work
-   - Test: Prediction + reconciliation
-   - Remove mocking from integration tests
+#### Task 1.1: Create NetChan Class Structure
+**File**: Create `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` lines 1-100 (struct and init)
 
-3. **Complete Server Features** (1 week)
-   - Implement reliable messaging queue (Line 396)
-   - Implement command rate limiting (Line 459)
-   - Separate reliable/unreliable streams (Line 650)
-   - Add CRC checksums
-   - Test under load
+- [ ] **1.1.1** Define `NetChan` interface and state
+  - Add `interface NetAddress { type: string, port: number }`
+  - Add `qport: number` (client port for NAT traversal)
+  - Add `incomingSequence: number` (last received seq)
+  - Add `outgoingSequence: number` (next seq to send)
+  - Add `incomingAcknowledged: number` (last acked by remote)
+  - Add `incomingReliableAcknowledged: boolean` (even/odd reliable ack)
+  - Add `incomingReliableSequence: number` (last reliable received)
+  - Add `outgoingReliableSequence: number` (reliable message being sent)
+  - Add `reliableMessage: BinaryWriter` (outgoing reliable buffer)
+  - Add `reliableLength: number` (size of reliable message)
+  - Add `lastReceived: number` (timestamp for timeout detection)
+  - Add `lastSent: number` (timestamp for keepalive)
 
-4. **Complete Client Prediction** (1 week)
-   - Verify Pmove end-to-end
-   - Implement `cg_predict` cvar
-   - Add prediction visualization
-   - Tune reconciliation
-   - Test with latency
+- [ ] **1.1.2** Create `NetChan` class constructor
+  - Initialize all sequence numbers to 0
+  - Set qport from random or config
+  - Initialize message buffers
+  - Set timestamps to current time
 
-5. **Rerelease Protocol Testing** (1 week) - Optional
-   - Test Protocol 2023 client-server
-   - Verify entity extensions work
-   - Test with real Rerelease content
+- [ ] **1.1.3** Add constants (from net_chan.c)
+  - `MAX_MSGLEN = 1400` (MTU limit)
+  - `FRAGMENT_SIZE = 1024`
+  - `PACKET_HEADER = 10` (sequence + ack + qport)
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan.test.ts`
+- Create NetChan instance
+- Verify initial state (sequences = 0)
+- Verify qport is set
+- Verify buffers initialized
+
+**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:82-102` (Netchan_Init, Netchan_Setup)
+
+#### Task 1.2: Implement Netchan_Transmit
+**File**: `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:180-250` (Netchan_Transmit)
+
+- [ ] **1.2.1** Create `transmit(unreliableData?: Uint8Array): Uint8Array` method
+  - Build packet header (sequence, ack, qport)
+  - Increment `outgoingSequence`
+  - Update `lastSent` timestamp
+
+- [ ] **1.2.2** Add reliable message handling
+  - Check if `reliableMessage` has data (reliableLength > 0)
+  - If yes, set reliable bit in sequence field (sequence | 0x80000000)
+  - Set reliable acknowledge bit based on `incomingReliableSequence` (even/odd)
+  - Prepend reliable message to packet
+
+- [ ] **1.2.3** Append unreliable data
+  - After reliable data (if any), append unreliableData
+  - Verify total size < MAX_MSGLEN
+  - If overflow, truncate unreliable (reliable must go through)
+
+- [ ] **1.2.4** Return packet for transmission
+  - Return complete packet as Uint8Array
+  - Caller sends via WebSocket
+  - Reliable data stays in buffer until acked
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan-transmit.test.ts`
+- Create NetChan, add reliable data
+- Call transmit with unreliable data
+- Parse returned packet
+- Verify header fields correct
+- Verify reliable + unreliable both present
+- Verify sequence incremented
+
+**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:180-250`
+
+#### Task 1.3: Implement Netchan_Process (Receive)
+**File**: `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:252-360` (Netchan_Process)
+
+- [ ] **1.3.1** Create `process(packet: Uint8Array): Uint8Array | null` method
+  - Parse packet header (sequence, ack, qport)
+  - Verify qport matches (reject if mismatch)
+  - Update `lastReceived` timestamp
+
+- [ ] **1.3.2** Handle sequence acknowledgment
+  - Check `ack` field in packet
+  - If `ack === outgoingReliableSequence`, reliable message was received
+  - Check reliable ack bit matches expected (even/odd)
+  - If matched, clear `reliableMessage` (acked successfully)
+  - Update `incomingAcknowledged` to ack value
+
+- [ ] **1.3.3** Handle sequence validation
+  - Extract sequence from packet
+  - Check if `sequence <= incomingSequence` (duplicate or out of order)
+  - If duplicate, discard packet silently
+  - If too old, discard
+  - Update `incomingSequence` to sequence value
+
+- [ ] **1.3.4** Handle reliable message reception
+  - Check if sequence has reliable bit set (sequence & 0x80000000)
+  - If set, this packet contains reliable data
+  - Check reliable sequence (even/odd toggle)
+  - If sequence expected, accept reliable data
+  - If duplicate reliable, discard but still ack
+  - Update `incomingReliableSequence`
+
+- [ ] **1.3.5** Extract and return message payload
+  - Skip packet header bytes
+  - If reliable data present, skip it (already processed)
+  - Return unreliable portion as Uint8Array
+  - Return null if packet invalid/duplicate
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan-process.test.ts`
+- Create two NetChan instances (simulate client/server)
+- Client transmits packet
+- Server processes packet
+- Verify sequence tracking
+- Verify reliable ack works
+- Test duplicate detection
+- Test out-of-order handling
+
+**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:252-360`
+
+#### Task 1.4: Add Reliable Message Queueing
+**File**: `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` (MSG_Write* to netchan.message)
+
+- [ ] **1.4.1** Create `canSendReliable(): boolean` method
+  - Return true if `reliableMessage` is empty (acked)
+  - Return false if still waiting for ack
+  - Used by caller to check if can queue more
+
+- [ ] **1.4.2** Create `writeReliableByte(value: number): void` method
+  - Check if `reliableMessage` has space
+  - Append byte to `reliableMessage` buffer
+  - Increment `reliableLength`
+  - Throw if overflow (reliable queue full)
+
+- [ ] **1.4.3** Add helper methods for other types
+  - `writeReliableShort(value: number): void`
+  - `writeReliableLong(value: number): void`
+  - `writeReliableString(value: string): void`
+  - Each wraps BinaryWriter methods
+
+- [ ] **1.4.4** Create `getReliableData(): Uint8Array` method
+  - Return current reliable buffer contents
+  - Used internally by transmit
+  - Returns empty array if no reliable data
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan-reliable.test.ts`
+- Write reliable data to NetChan
+- Verify canSendReliable returns false
+- Transmit packet
+- Process ack packet
+- Verify canSendReliable returns true (cleared)
+- Verify reliable data was sent
+
+**Reference**: Pattern from MSG_Write* functions in qcommon/msg.c
+
+#### Task 1.5: Add Fragment Support (Optional but Recommended)
+**File**: `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:104-178` (fragment handling)
+
+- [ ] **1.5.1** Add fragment state to NetChan
+  - Add `fragmentSequence: number` (sequence of fragmented message)
+  - Add `fragmentLength: number` (total length)
+  - Add `fragmentData: Uint8Array` (reassembly buffer)
+
+- [ ] **1.5.2** Modify transmit for large reliable messages
+  - Check if `reliableLength > FRAGMENT_SIZE`
+  - If yes, send in fragments
+  - Set fragment bit in sequence
+  - Send first N bytes, mark continuation
+
+- [ ] **1.5.3** Modify process for fragment reassembly
+  - Detect fragment bit in sequence
+  - Buffer fragment data
+  - Wait for all fragments
+  - Once complete, process as normal reliable message
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan-fragments.test.ts`
+- Write large reliable message (>1024 bytes)
+- Transmit in fragments
+- Receive and reassemble
+- Verify complete message intact
+
+**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:104-178`
+
+#### Task 1.6: Add Timeout and Keepalive
+**File**: `packages/shared/src/net/netchan.ts`
+**Reference**: `/home/user/quake2/full/server/sv_main.c` (timeout logic)
+
+- [ ] **1.6.1** Create `needsKeepalive(currentTime: number): boolean` method
+  - Check if `currentTime - lastSent > 1000ms`
+  - Return true if need to send keepalive packet
+  - Prevents router timeout
+
+- [ ] **1.6.2** Create `isTimedOut(currentTime: number, timeoutMs: number): boolean` method
+  - Check if `currentTime - lastReceived > timeoutMs`
+  - Default timeout 30000ms (30 seconds)
+  - Used by server to disconnect idle clients
+
+- [ ] **1.6.3** Update transmit/process to track times
+  - Already implemented in 1.2.1 and 1.3.1
+  - Verify timestamps updated correctly
+
+**Test Case**: Unit test in `packages/shared/tests/net/netchan-timeout.test.ts`
+- Create NetChan
+- Advance time without receiving
+- Verify isTimedOut returns true after 30s
+- Verify needsKeepalive returns true after 1s
+
+**Reference**: Timeout patterns in server code
+
+---
+
+### Phase 2: Server NetChan Integration (Depends on Phase 1)
+
+**Estimated Time**: 1 week
+**Dependencies**: Phase 1 complete (NetChan exists)
+
+#### Task 2.1: Add NetChan to Server Client State
+**File**: `packages/server/src/client.ts`
+**Reference**: `/home/user/quake2/full/server/server.h:108-145` (client_t struct)
+
+- [ ] **2.1.1** Import NetChan class
+  - Add `import { NetChan } from '@quake2ts/shared'`
+
+- [ ] **2.1.2** Add `netchan: NetChan` to `Client` interface
+  - Initialize in `createClient` function
+  - Pass appropriate qport
+
+- [ ] **2.1.3** Remove direct WebSocket references
+  - Replace `client.driver.send(data)` with `client.netchan.transmit(data)`
+  - Socket only used by NetChan internally
+
+**Test Case**: Update `packages/server/tests/client.test.ts`
+- Create client
+- Verify netchan initialized
+- Test transmit goes through netchan
+- Verify sequence tracking works
+
+**Reference Lines**: `/home/user/quake2/full/server/server.h:108-145`
+
+#### Task 2.2: Update SV_SendClientMessages (Fix TODO Line 396 and 650)
+**File**: `packages/server/src/dedicated.ts` around lines 380-420
+**Reference**: `/home/user/quake2/full/server/sv_send.c:500-570` (SV_SendClientMessages)
+
+- [ ] **2.2.1** Separate reliable and unreliable buffers (Line 650)
+  - Create `reliableWriter = new BinaryWriter()` per client
+  - Create `unreliableWriter = new BinaryWriter()` per client
+  - Reliable: configstrings, prints, critical events
+  - Unreliable: entity updates, temp entities
+
+- [ ] **2.2.2** Queue reliable messages instead of immediate send (Line 396)
+  - Configstrings go to `client.netchan.writeReliableString()`
+  - Critical events go to reliable channel
+  - Don't send immediately, let NetChan manage
+
+- [ ] **2.2.3** Update frame sending logic
+  - Build entity updates in unreliable buffer
+  - Call `client.netchan.transmit(unreliableData)`
+  - NetChan combines reliable + unreliable automatically
+  - Send resulting packet via WebSocket
+
+- [ ] **2.2.4** Handle transmission failures
+  - Check `client.netchan.canSendReliable()` before queuing more
+  - If false, reliable queue is full (waiting for ack)
+  - Don't add more reliable data until space available
+
+**Test Case**: Update `packages/server/tests/dedicated.test.ts`
+- Mock client with NetChan
+- Send configstring (reliable)
+- Send entity update (unreliable)
+- Verify both in same packet
+- Verify reliable persists until acked
+
+**Reference Lines**: `/home/user/quake2/full/server/sv_send.c:500-570`
+
+#### Task 2.3: Update SV_ReadPackets to use NetChan
+**File**: `packages/server/src/dedicated.ts` around lines 440-480
+**Reference**: `/home/user/quake2/full/server/sv_main.c:390-450` (SV_ReadPackets)
+
+- [ ] **2.3.1** Process incoming packets through NetChan
+  - When WebSocket receives data, call `client.netchan.process(data)`
+  - Returns processed message (unreliable portion)
+  - Returns null if duplicate/invalid
+
+- [ ] **2.3.2** Handle NetChan validation
+  - If process returns null, discard packet
+  - If process returns data, parse as ClientCommand
+  - NetChan handles sequence validation automatically
+
+- [ ] **2.3.3** Update client timeout logic (Line 326 - ALREADY SOLVED but verify)
+  - Use `client.netchan.isTimedOut(currentTime, 30000)`
+  - Disconnect client if true
+  - Send timeout message before disconnect (optional)
+
+**Test Case**: Update `packages/server/tests/dedicated.test.ts`
+- Send valid packet
+- Verify processed correctly
+- Send duplicate packet
+- Verify discarded
+- Send out-of-order packet
+- Verify handled correctly
+
+**Reference Lines**: `/home/user/quake2/full/server/sv_main.c:390-450`
+
+#### Task 2.4: Implement Command Rate Limiting (Fix TODO Line 459)
+**File**: `packages/server/src/dedicated.ts` around line 459
+**Reference**: `/home/user/quake2/full/server/sv_user.c:370-420` (command processing)
+
+- [ ] **2.4.1** Add command queue to client state
+  - Add `commandQueue: UserCommand[]` to Client interface
+  - Add `lastCommandTime: number` for rate tracking
+  - Add `commandCount: number` for rate limiting
+
+- [ ] **2.4.2** Implement rate limiting logic
+  - Check `currentTime - lastCommandTime`
+  - Allow max 40 commands per second (25ms min interval)
+  - If exceeded, drop command and log warning
+  - Increment `commandCount` for ban tracking
+
+- [ ] **2.4.3** Process commands from queue
+  - In `SV_RunGameFrame`, process queued commands
+  - Apply rate limit per client
+  - Call `ge->ClientThink()` with valid commands only
+
+- [ ] **2.4.4** Add flood protection
+  - If `commandCount > 200` in 1 second window
+  - Kick client with "command overflow" message
+  - Log incident for admin review
+
+**Test Case**: Unit test in `packages/server/tests/unit/rate-limiting.test.ts`
+- Send commands within rate limit
+- Verify all processed
+- Send excessive commands (>40/sec)
+- Verify some dropped
+- Send flood (>200/sec)
+- Verify client kicked
+
+**Reference Lines**: `/home/user/quake2/full/server/sv_user.c:370-420`
+
+#### Task 2.5: Add CRC Checksums for Commands
+**File**: `packages/server/src/protocol.ts` and `packages/client/src/net/connection.ts`
+**Reference**: `/home/user/quake2/full/qcommon/crc.c` (CRC calculation)
+
+- [ ] **2.5.1** Create CRC8 implementation
+  - File: `packages/shared/src/protocol/crc.ts`
+  - Implement `crc8(data: Uint8Array): number`
+  - Use standard CRC8 table (reference from crc.c)
+
+- [ ] **2.5.2** Update client to send CRC
+  - In `MultiplayerConnection.sendCommand`
+  - Calculate CRC8 of last server frame received
+  - Write CRC to `clc_move` packet (replace placeholder 0)
+
+- [ ] **2.5.3** Update server to verify CRC
+  - In `ClientMessageParser.parseMove`
+  - Read CRC from packet
+  - Verify CRC matches expected
+  - Drop command if CRC mismatch (potential tamper)
+
+**Test Case**: Unit test in `packages/shared/tests/protocol/crc.test.ts`
+- Test CRC8 calculation
+- Verify matches reference implementation
+- Test command with valid CRC accepted
+- Test command with invalid CRC rejected
+
+**Reference File**: `/home/user/quake2/full/qcommon/crc.c`
+
+---
+
+### Phase 3: Client NetChan Integration (Depends on Phase 1)
+
+**Estimated Time**: 1 week
+**Dependencies**: Phase 1 complete (NetChan exists)
+
+#### Task 3.1: Add NetChan to MultiplayerConnection
+**File**: `packages/client/src/net/connection.ts`
+**Reference**: `/home/user/quake2/full/client/client.h:150-200` (client_static_t)
+
+- [ ] **3.1.1** Import and create NetChan instance
+  - Add `import { NetChan } from '@quake2ts/shared'`
+  - Add `private netchan: NetChan` to MultiplayerConnection
+  - Initialize in constructor with random qport
+
+- [ ] **3.1.2** Update sendCommand to use NetChan (replaces Lines 129-131)
+  - Remove placeholder sequence numbers (0)
+  - Build command in BinaryWriter
+  - Call `this.netchan.transmit(commandData)`
+  - Send resulting packet via `this.driver.send()`
+
+- [ ] **3.1.3** Update handleMessage to use NetChan (replaces Lines 166-168)
+  - Remove manual sequence parsing
+  - Call `this.netchan.process(data)`
+  - If returns null, discard (duplicate/invalid)
+  - If returns data, parse as ServerCommand
+
+**Test Case**: Update `packages/client/tests/net/connection.test.ts`
+- Create MultiplayerConnection
+- Send command
+- Verify netchan used (sequence tracking)
+- Receive server message
+- Verify netchan processes it
+- Test duplicate detection
+
+**Reference Lines**: `/home/user/quake2/full/client/client.h:150-200`
+
+#### Task 3.2: Implement Client-Side Prediction with Command History
+**File**: `packages/cgame/src/prediction.ts` (ClientPrediction class)
+**Reference**: `/home/user/quake2/full/client/cl_pred.c:100-200` (CL_PredictMovement)
+
+- [ ] **3.2.1** Enhance command buffering (already exists but verify)
+  - `ClientPrediction` stores last 64 commands (CMD_BACKUP)
+  - Each command tagged with sequence number
+  - Used for prediction rewind/replay
+
+- [ ] **3.2.2** Implement prediction reconciliation
+  - When `svc_frame` arrives, extract server's player state
+  - Compare to predicted state at that sequence
+  - If mismatch detected (>10 units difference):
+    * Rewind to server state
+    * Replay all commands since that sequence
+    * Update client position to reconciled state
+
+- [ ] **3.2.3** Add prediction error smoothing
+  - If error small (<5 units), smooth over 100ms
+  - If error large (>10 units), snap immediately
+  - Reduces visual "stuttering" on corrections
+
+- [ ] **3.2.4** Wire prediction to frame updates
+  - In `MultiplayerConnection.onFrame`, extract player state
+  - Pass to `ClientPrediction.reconcile(serverState, serverFrame)`
+  - Apply reconciliation result to client view
+
+**Test Case**: Unit test in `packages/cgame/tests/prediction-reconciliation.test.ts`
+- Predict 5 frames ahead
+- Receive server state at frame 3 with different position
+- Verify rewind to frame 3
+- Verify replay frames 4-5
+- Verify final position corrected
+
+**Reference Lines**: `/home/user/quake2/full/client/cl_pred.c:100-200`
+
+#### Task 3.3: Add Prediction CVar Support
+**File**: `packages/cgame/src/index.ts`
+**Reference**: `/home/user/quake2/full/client/cl_pred.c:30-50` (cl_predict cvar)
+
+- [ ] **3.3.1** Implement `cg_predict` cvar
+  - Add to CGame cvar registration
+  - Default value: 1 (enabled)
+  - When 0, disable prediction (use server state directly)
+
+- [ ] **3.3.2** Implement `cg_showmiss` cvar
+  - Default value: 0 (disabled)
+  - When 1, log prediction errors to console
+  - Format: "prediction error: X units"
+
+- [ ] **3.3.3** Wire cvars to prediction system
+  - In Pmove call, check `cg_predict`
+  - If disabled, return server state unchanged
+  - If `cg_showmiss` enabled, log reconciliation events
+
+**Test Case**: Unit test in `packages/cgame/tests/prediction-cvars.test.ts`
+- Set `cg_predict` to 0
+- Verify prediction disabled
+- Set `cg_predict` to 1
+- Verify prediction enabled
+- Set `cg_showmiss` to 1
+- Verify errors logged
+
+**Reference**: CVar patterns from cl_pred.c
+
+---
+
+### Phase 4: End-to-End Integration Testing (Depends on Phases 1-3)
+
+**Estimated Time**: 1-2 weeks
+**Dependencies**: Server and client NetChan integrated
+
+#### Task 4.1: Create E2E Test Infrastructure
+**File**: Create `packages/e2e-tests` package
+**Reference**: Standard E2E testing patterns (Playwright/Puppeteer)
+
+- [ ] **4.1.1** Set up E2E test package
+  - Create `packages/e2e-tests/package.json`
+  - Add Playwright as dependency
+  - Configure for headless browser testing
+  - Add scripts for running E2E tests
+
+- [ ] **4.1.2** Create test server helper
+  - File: `packages/e2e-tests/helpers/testServer.ts`
+  - Create `startTestServer(port: number): Promise<DedicatedServer>`
+  - Load minimal test map
+  - Return server instance for control
+
+- [ ] **4.1.3** Create test client helper
+  - File: `packages/e2e-tests/helpers/testClient.ts`
+  - Create `launchBrowserClient(serverUrl: string): Promise<Page>`
+  - Use Playwright to launch browser
+  - Load client application
+  - Return page handle for control
+
+- [ ] **4.1.4** Add cleanup utilities
+  - `stopServer(server: DedicatedServer): Promise<void>`
+  - `closeBrowser(page: Page): Promise<void>`
+  - Ensure clean shutdown in all cases
+
+**Test Case**: Smoke test in `packages/e2e-tests/smoke.test.ts`
+- Start test server
+- Launch browser client
+- Verify both start without errors
+- Clean up both
+
+**Reference**: Standard E2E testing setup
+
+#### Task 4.2: Test Basic Connection
+**File**: `packages/e2e-tests/connection.test.ts`
+**Reference**: Connection flow validation
+
+- [ ] **4.2.1** Test client can connect to server
+  - Start server on localhost:27910
+  - Launch browser client
+  - Client initiates connection
+  - Verify `onServerData` callback fires
+  - Verify `ConnectionState.Connected` reached
+
+- [ ] **4.2.2** Test handshake completes
+  - After connection, verify `svc_serverdata` received
+  - Verify configstrings received
+  - Verify baselines received
+  - Verify `clc_stringcmd("begin")` sent by client
+  - Verify client reaches `ConnectionState.Active`
+
+- [ ] **4.2.3** Test disconnection
+  - After active, client disconnects
+  - Verify server receives disconnect
+  - Verify server cleans up client state
+  - Verify client returns to menu
+
+**Test Case**: Full connection E2E test
+- Verifies real WebSocket communication
+- No mocking of any components
+- Tests complete handshake protocol
+
+**Reference**: Connection flow from Section 13 docs
+
+#### Task 4.3: Test Command Flow
+**File**: `packages/e2e-tests/commands.test.ts`
+**Reference**: User command processing
+
+- [ ] **4.3.1** Test client sends commands
+  - Client in active state
+  - Simulate user input (movement)
+  - Verify `clc_move` packets sent
+  - Verify NetChan sequence numbers increment
+
+- [ ] **4.3.2** Test server receives commands
+  - Server receives `clc_move` packets
+  - Verify NetChan processes them
+  - Verify `UserCommand` parsed
+  - Verify `ge->ClientThink` called with command
+
+- [ ] **4.3.3** Test command rate limiting
+  - Send excessive commands (>40/sec)
+  - Verify server drops excess
+  - Verify no crash or overflow
+
+**Test Case**: Command flow E2E test
+- Verifies client → server command path
+- Verifies rate limiting works
+- Verifies game logic receives commands
+
+**Reference**: Command processing flow
+
+#### Task 4.4: Test Entity Synchronization
+**File**: `packages/e2e-tests/entities.test.ts`
+**Reference**: Entity updates and rendering
+
+- [ ] **4.4.1** Test server sends entity updates
+  - Server running game simulation
+  - Entities move/spawn/die
+  - Verify `svc_frame` packets sent
+  - Verify entity deltas in packets
+
+- [ ] **4.4.2** Test client receives entity updates
+  - Client receives `svc_frame` packets
+  - Verify NetChan processes them
+  - Verify entities parsed from frame
+  - Verify client's entity map updated
+
+- [ ] **4.4.3** Test entity rendering
+  - Client has updated entities
+  - Call client render
+  - Verify entities passed to renderer
+  - Visual check: entities visible (screenshot)
+
+**Test Case**: Entity sync E2E test
+- Spawn entity on server
+- Verify client sees it
+- Move entity on server
+- Verify client sees updated position
+- Remove entity on server
+- Verify client removes it
+
+**Reference**: Entity synchronization flow
+
+#### Task 4.5: Test Prediction and Reconciliation
+**File**: `packages/e2e-tests/prediction.test.ts`
+**Reference**: Client-side prediction flow
+
+- [ ] **4.5.1** Test prediction runs locally
+  - Client sends command
+  - Verify client predicts immediately (no wait for server)
+  - Verify player moves locally before server response
+  - Measure input lag (<16ms)
+
+- [ ] **4.5.2** Test reconciliation on match
+  - Client predicts position
+  - Server confirms same position
+  - Verify no correction needed
+  - Position stays smooth
+
+- [ ] **4.5.3** Test reconciliation on mismatch
+  - Client predicts position
+  - Server returns different position (simulated collision)
+  - Verify client rewinds and replays
+  - Verify position corrected
+  - Verify smooth transition (<100ms)
+
+**Test Case**: Prediction E2E test
+- Test with 0ms latency (prediction matches server)
+- Test with 100ms latency (reconciliation needed)
+- Test with packet loss (prediction diverges, then corrects)
+
+**Reference**: Prediction system design
+
+#### Task 4.6: Test Multi-Client Scenarios
+**File**: `packages/e2e-tests/multi-client.test.ts`
+**Reference**: Multiple players interacting
+
+- [ ] **4.6.1** Test two clients connect
+  - Start server
+  - Launch client 1, connect
+  - Launch client 2, connect
+  - Verify both reach active state
+
+- [ ] **4.6.2** Test clients see each other
+  - Client 1's player entity exists on server
+  - Verify client 2 receives entity in frame
+  - Verify client 2 renders client 1's player
+  - Visual check: both players visible
+
+- [ ] **4.6.3** Test interaction
+  - Client 1 moves
+  - Verify client 2 sees movement
+  - Client 2 shoots
+  - Verify client 1 sees projectile/effects
+
+**Test Case**: Multi-client E2E test
+- Requires two browser instances
+- Verifies entity replication to all clients
+- Verifies server broadcasts correctly
+
+**Reference**: Multi-player design
+
+---
+
+### Phase 5: Performance and Stress Testing (Depends on Phase 4)
+
+**Estimated Time**: 1 week
+**Dependencies**: Basic E2E tests passing
+
+#### Task 5.1: Latency Testing
+**File**: `packages/e2e-tests/latency.test.ts`
+**Reference**: Network simulation
+
+- [ ] **5.1.1** Add artificial latency to test server
+  - Implement `delayPackets(ms: number)` helper
+  - Delay all incoming/outgoing packets by N ms
+  - Test with 50ms, 100ms, 200ms latency
+
+- [ ] **5.1.2** Verify prediction handles latency
+  - With 100ms latency, movement still feels responsive
+  - Reconciliation happens smoothly
+  - No visible "rubber-banding" (visual check)
+
+- [ ] **5.1.3** Test maximum playable latency
+  - Test with 300ms, 500ms, 1000ms latency
+  - Determine threshold for playability
+  - Document acceptable latency range
+
+**Test Case**: Latency stress test
+- Incrementally increase latency
+- Verify gameplay remains smooth up to threshold
+- Measure reconciliation accuracy
+
+#### Task 5.2: Packet Loss Testing
+**File**: `packages/e2e-tests/packet-loss.test.ts`
+**Reference**: Network reliability
+
+- [ ] **5.2.1** Add packet loss simulation
+  - Implement `dropPackets(percentage: number)` helper
+  - Randomly drop N% of packets
+  - Test with 5%, 10%, 20% loss
+
+- [ ] **5.2.2** Verify NetChan handles loss
+  - Reliable messages retransmitted automatically
+  - Configstrings always arrive
+  - Unreliable messages dropped gracefully (entities)
+
+- [ ] **5.2.3** Test recovery from loss
+  - 10% packet loss for 30 seconds
+  - Verify game still playable
+  - Verify no disconnect
+
+**Test Case**: Packet loss stress test
+- Simulate lossy network
+- Verify NetChan reliability
+- Verify acceptable gameplay
+
+#### Task 5.3: Multi-Client Load Testing
+**File**: `packages/e2e-tests/load.test.ts`
+**Reference**: Server capacity
+
+- [ ] **5.3.1** Test server with multiple clients
+  - Connect 2, 4, 8, 16 clients sequentially
+  - Measure server CPU usage
+  - Measure memory usage
+  - Measure frame time consistency
+
+- [ ] **5.3.2** Verify server performance
+  - Server maintains 10Hz with 16 clients
+  - Frame time <100ms per frame
+  - Memory stable (no leaks)
+
+- [ ] **5.3.3** Test client performance
+  - Each client renders at 60 FPS
+  - Input lag <16ms per client
+  - No performance degradation over time
+
+**Test Case**: Load stress test
+- Start with 1 client, add more incrementally
+- Monitor performance metrics
+- Identify bottlenecks
+
+---
+
+### Phase 6: Optional Enhancements (OPTIONAL - External Dependencies)
+
+**Estimated Time**: Variable
+**Dependencies**: Phase 4 complete
+
+#### Task 6.1: Test with Real Quake II Servers (REQUIRES EXTERNAL SERVER)
+**Reference**: Compatibility testing
+
+- [ ] **6.1.1** Set up Quake II Rerelease dedicated server
+  - Install Quake II Rerelease on test machine
+  - Start dedicated server
+  - Configure for test
+
+- [ ] **6.1.2** Attempt connection from browser client
+  - Point client to external server
+  - Attempt handshake
+  - Document compatibility issues
+
+- [ ] **6.1.3** Fix compatibility issues (if found)
+  - Protocol differences
+  - Message format issues
+  - NetChan incompatibilities
+
+**Note**: This task requires external Quake II server - optional validation only
+
+#### Task 6.2: Implement Download System (REQUIRES MAP FILES)
+**Reference**: `/home/user/quake2/full/client/cl_parse.c:200-270` (svc_download)
+
+- [ ] **6.2.1** Implement `svc_download` handling
+  - Client requests missing files (maps, models)
+  - Server sends file in chunks
+  - Client reassembles and loads
+
+- [ ] **6.2.2** Test with custom maps
+  - Server has map client doesn't
+  - Verify download initiates
+  - Verify client loads map after download
+
+**Note**: Complex feature, optional for basic multiplayer
+
+---
+
+## Success Criteria
+
+**Phase 1 Complete When:**
+- ✅ NetChan class exists with full reliability
+- ✅ Sequence tracking works
+- ✅ Reliable message retransmission works
+- ✅ All unit tests pass
+
+**Phase 2 Complete When:**
+- ✅ Server uses NetChan for all client communication
+- ✅ Reliable/unreliable separation working (TODO 650 fixed)
+- ✅ Reliable queuing working (TODO 396 fixed)
+- ✅ Command rate limiting working (TODO 459 fixed)
+- ✅ All tests pass
+
+**Phase 3 Complete When:**
+- ✅ Client uses NetChan for server communication
+- ✅ Client-side prediction working
+- ✅ Prediction reconciliation working
+- ✅ CVars implemented
+- ✅ All tests pass
+
+**Phase 4 Complete When:**
+- ✅ Can start real dedicated server
+- ✅ Browser client can connect
+- ✅ Handshake completes
+- ✅ Commands flow bidirectionally
+- ✅ Entity updates render correctly
+- ✅ Two clients can see each other
+- ✅ All E2E tests pass
+
+**Phase 5 Complete When:**
+- ✅ Works with 100ms+ latency
+- ✅ Works with 10% packet loss
+- ✅ Server handles 16 clients at 10Hz
+- ✅ Performance acceptable
+
+---
+
+## Dependencies Summary
+
+**Phase 1**: No dependencies - reference code exists
+**Phase 2**: Requires Phase 1 complete (NetChan class exists)
+**Phase 3**: Requires Phase 1 complete (NetChan class exists)
+**Phase 4**: Requires Phases 1, 2, 3 complete (both sides working)
+**Phase 5**: Requires Phase 4 complete (basic E2E working)
+**Phase 6**: Optional - requires external resources
+
+**Critical Path**: Phase 1 → Phase 2 & 3 (parallel) → Phase 4 → Phase 5
+
+**No External Dependencies Until Phase 6** - All core multiplayer can be implemented and tested with existing code.
