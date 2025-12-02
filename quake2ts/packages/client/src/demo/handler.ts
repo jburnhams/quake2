@@ -25,7 +25,8 @@ import {
     U_OWNER_HIGH,
     U_OLD_FRAME_HIGH,
     FogData,
-    DamageIndicator
+    DamageIndicator,
+    RenderableEntity
 } from '@quake2ts/engine';
 import {
     Vec3, ZERO_VEC3,
@@ -39,6 +40,8 @@ import { PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
 import { PlayerInventory, WeaponId, KeyId, ArmorType } from '@quake2ts/game';
 import { DEMO_ITEM_MAPPING } from './itemMapping.js';
 import { ClientImports } from '../index.js';
+import { buildRenderableEntities } from '../entities.js';
+import { ClientConfigStrings } from '../configStrings.js';
 
 // Constants
 const MAX_CONFIGSTRINGS = 32768; // Rerelease increased limits
@@ -59,6 +62,7 @@ export interface DemoHandlerCallbacks {
 export class ClientNetworkHandler implements NetworkMessageHandler {
     public configstrings: string[] = new Array(MAX_CONFIGSTRINGS).fill('');
     public entities: Map<number, EntityState> = new Map(); // Current frame entities
+    public previousEntities: Map<number, EntityState> = new Map(); // Previous frame entities
     public baselines: Map<number, EntityState> = new Map();
 
     public previousFrame: FrameData | null = null;
@@ -95,8 +99,10 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         // Reset state on new server connection
         this.configstrings.fill('');
         this.entities.clear();
+        this.previousEntities.clear();
         this.baselines.clear();
         this.latestFrame = null;
+        this.previousFrame = null;
         this.playerNum = playerNum;
 
         if (this.callbacks?.onServerData) {
@@ -119,6 +125,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     onFrame(frame: FrameData): void {
         if (this.latestFrame) {
             this.previousFrame = this.latestFrame;
+            // Store previous entities before updating
+            this.previousEntities = this.entities;
         }
         this.latestFrame = frame;
         this.stats = [...frame.playerState.stats];
@@ -506,7 +514,13 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
              const latestServerTime = this.latestFrame.serverFrame * 100; // ms
              const previousServerTime = this.previousFrame.serverFrame * 100; // ms
 
-             if (timeMs >= previousServerTime && timeMs <= latestServerTime) {
+             // Check if timeMs is alpha (0-1) or absolute time
+             // We assume absolute for now if it's large, but logic above used absolute.
+             // If caller passes alpha, we can handle that.
+             if (timeMs <= 1.0) {
+                 const previousState = this.convertFrameToPredictionState(this.previousFrame);
+                 return interpolatePredictionState(previousState, latestState, Math.max(0, Math.min(1, timeMs)));
+             } else if (timeMs >= previousServerTime && timeMs <= latestServerTime) {
                  const alpha = (timeMs - previousServerTime) / (latestServerTime - previousServerTime);
                  const previousState = this.convertFrameToPredictionState(this.previousFrame);
                  return interpolatePredictionState(previousState, latestState, Math.max(0, Math.min(1, alpha)));
@@ -514,6 +528,32 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         }
 
         return latestState;
+    }
+
+    public getRenderableEntities(alpha: number, configStrings: ClientConfigStrings): RenderableEntity[] {
+        if (!this.latestFrame) return [];
+        if (!this.imports) return [];
+
+        const latest = Array.from(this.entities.values());
+        const previous = this.previousEntities.size > 0 ? this.previousEntities : latest;
+
+        return buildRenderableEntities(
+            latest,
+            previous,
+            alpha,
+            configStrings,
+            this.imports
+        );
+    }
+
+    public getDemoCamera(alpha: number): { origin: Vec3, angles: Vec3, fov: number } {
+        // Use getPredictionState to interpolate camera properties
+        const ps = this.getPredictionState(alpha);
+        return {
+            origin: ps.origin,
+            angles: ps.viewAngles,
+            fov: ps.fov ?? 90
+        };
     }
 
     public get latestServerFrame(): number {
