@@ -93,3 +93,12 @@ export const FRAME_GRENADELAUNCHER_IDLE_LAST = 36;
 export const FRAME_GRENADELAUNCHER_DEACTIVATE_LAST = 39;
 // pause_frames = {34}
 // fire_frames = {6}
+
+// Blaster
+// Source: p_weapon.cpp:1342-1393
+export const FRAME_BLASTER_ACTIVATE_LAST = 4;
+export const FRAME_BLASTER_FIRE_LAST = 8;
+export const FRAME_BLASTER_IDLE_LAST = 52;
+export const FRAME_BLASTER_DEACTIVATE_LAST = 55;
+// pause_frames = {19, 32}
+// fire_frames = {5}

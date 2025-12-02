@@ -221,7 +221,7 @@ export function Weapon_Repeating(
             client.gun_frame++;
         }
 
-        if (client.gun_frame === FRAME_FIRE_FRAME && fire) {
+        if (fire) {
             fire(ent);
         }
 
