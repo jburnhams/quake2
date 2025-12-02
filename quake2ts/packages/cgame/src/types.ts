@@ -44,6 +44,7 @@ export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
   [WeaponId.PlasmaBeam]: 'w_plasmabeam',
   [WeaponId.Phalanx]: 'w_phalanx',
   [WeaponId.Disruptor]: 'w_disruptor',
+  [WeaponId.Trap]: 'w_trap',
 };
 
 export const KEY_ICON_MAP: Record<string, string> = {

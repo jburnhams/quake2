@@ -7,7 +7,7 @@
  */
 
 import type { CGameImport, CGameExport, PmoveInfo } from './types.js';
-import { PlayerState, Vec3, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
+import { PlayerState, PlayerStat, Vec3, applyPmove, PmoveTraceResult, WEAPON_WHEEL_ORDER, WEAPON_AMMO_MAP, G_GetAmmoStat, G_GetPowerupStat, PowerupId } from '@quake2ts/shared';
 import { LayoutFlags } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
 import { CG_ParseConfigString } from './parse.js';
@@ -91,23 +91,49 @@ function GetLayoutFlags(ps: PlayerState): LayoutFlags {
  */
 
 function GetActiveWeaponWheelWeapon(ps: PlayerState): number {
-    return 0;
+    return ps.stats[PlayerStat.STAT_ACTIVE_WHEEL_WEAPON] ?? 0;
 }
 
 function GetOwnedWeaponWheelWeapons(ps: PlayerState): number[] {
-    return [];
+    const owned: number[] = [];
+    const bits1 = ps.stats[PlayerStat.STAT_WEAPONS_OWNED_1] || 0;
+    const bits2 = ps.stats[PlayerStat.STAT_WEAPONS_OWNED_2] || 0;
+    const fullBits = bits1 | (bits2 << 16);
+
+    for (let i = 0; i < WEAPON_WHEEL_ORDER.length; i++) {
+        if (fullBits & (1 << i)) {
+            owned.push(i);
+        }
+    }
+    return owned;
 }
 
 function GetWeaponWheelAmmoCount(ps: PlayerState, weapon: number): number {
-    return 0;
+    if (weapon < 0 || weapon >= WEAPON_WHEEL_ORDER.length) {
+        return 0;
+    }
+    const weaponId = WEAPON_WHEEL_ORDER[weapon];
+    const ammoType = WEAPON_AMMO_MAP[weaponId];
+    if (ammoType === null) {
+        return -1; // Infinite/No ammo
+    }
+    return G_GetAmmoStat(ps.stats, ammoType);
 }
 
 function GetPowerupWheelCount(ps: PlayerState): number {
-    return 0;
+    let count = 0;
+    // Iterate over all known powerups to check if they are active
+    const powerups = Object.values(PowerupId);
+    for (const id of powerups) {
+        if (G_GetPowerupStat(ps.stats, id) > 0) {
+            count++;
+        }
+    }
+    return count;
 }
 
 function GetHitMarkerDamage(ps: PlayerState): number {
-    return 0;
+    return ps.stats[PlayerStat.STAT_HIT_MARKER] ?? 0;
 }
 
 /**
