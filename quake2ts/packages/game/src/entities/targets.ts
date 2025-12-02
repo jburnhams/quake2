@@ -127,6 +127,133 @@ function useTargetBlaster(self: Entity, other: Entity | null, activator: Entity 
     context.entities.sound(self, 2, 'weapons/laser2.wav', 1, ATTN_NORM, 0);
 }
 
+// target_earthquake implementation
+
+const SPAWNFLAG_EARTHQUAKE_SILENT = 1;
+const SPAWNFLAG_EARTHQUAKE_TOGGLE = 2;
+const SPAWNFLAG_EARTHQUAKE_ONE_SHOT = 8;
+
+function target_earthquake_think(self: Entity, context: any) {
+    if (!(self.spawnflags & SPAWNFLAG_EARTHQUAKE_SILENT)) {
+        if (self.last_move_time < context.entities.timeSeconds) {
+            context.entities.sound(self, 2, 'world/quake.wav', 1.0, ATTN_NONE, 0);
+            self.last_move_time = context.entities.timeSeconds + 0.5;
+        }
+    }
+
+    context.entities.forEachEntity((ent: Entity) => {
+        if (!ent.client) return;
+
+        ent.client.quake_time = context.entities.timeSeconds + 0.2;
+    });
+
+    if (context.entities.timeSeconds < self.timestamp) {
+        self.nextthink = context.entities.timeSeconds + 0.1;
+    }
+}
+
+function useTargetEarthquake(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    if (self.spawnflags & SPAWNFLAG_EARTHQUAKE_ONE_SHOT) {
+        context.entities.forEachEntity((ent: Entity) => {
+            if (!ent.client) return;
+
+            // Using v_angle or kick_angles for shake effect
+            // Original code sets v_dmg_pitch and v_dmg_time
+            // Here we can try to approximate or add fields if needed.
+            // For now, let's assume client handles quake_time logic for continuous shake,
+            // but one_shot might need direct kick application.
+            // quake2ts likely handles view kick via kick_angles.
+            if (ent.client) {
+                if (!ent.client.kick_angles) ent.client.kick_angles = { x: 0, y: 0, z: 0 };
+                ent.client.kick_angles = { ...ent.client.kick_angles, x: -self.speed * 0.1 };
+                // v_dmg_time logic is usually client-side prediction or handled in p_view.
+            }
+        });
+        return;
+    }
+
+    self.timestamp = context.entities.timeSeconds + self.count;
+
+    if (self.spawnflags & SPAWNFLAG_EARTHQUAKE_TOGGLE) {
+        if (self.style) {
+            self.nextthink = 0;
+        } else {
+            self.nextthink = context.entities.timeSeconds + 0.1;
+        }
+        self.style = !self.style ? 1 : 0;
+    } else {
+        self.nextthink = context.entities.timeSeconds + 0.1;
+        self.last_move_time = 0;
+    }
+
+    self.activator = activator;
+}
+
+// target_lightramp implementation
+
+const SPAWNFLAG_LIGHTRAMP_TOGGLE = 1;
+
+function target_lightramp_think(self: Entity, context: any) {
+    // style string construction: 'a' + movedir[0] + ((time - timestamp) / frame_time) * movedir[2]
+    // We approximate frame_time as 0.1 since we think every 0.1s, but actually configstrings update instantly?
+    // Original uses frame_time_s.
+
+    const timeDelta = context.entities.timeSeconds - self.timestamp;
+
+    // movedir[0] is start char offset ('a' relative)
+    // movedir[2] is slope
+
+    const val = self.movedir.x + (timeDelta / 0.1) * self.movedir.z;
+    let charCode = Math.floor('a'.charCodeAt(0) + val);
+
+    // Clamp to 'a'-'z' range logic implicitly handled by renderer usually, but let's be safe?
+    // Actually, Quake just sends the char.
+
+    const styleStr = String.fromCharCode(charCode);
+    // context.entities.configstring(CS_LIGHTS + self.enemy.style, styleStr);
+    // We need CS_LIGHTS constant. In Q2 it is 32.
+    const CS_LIGHTS = 32;
+    if (self.enemy && self.enemy.style !== undefined) {
+        context.entities.configstring(CS_LIGHTS + self.enemy.style, styleStr);
+    }
+
+    if (timeDelta < self.speed) {
+        self.nextthink = context.entities.timeSeconds + 0.1;
+    } else if (self.spawnflags & SPAWNFLAG_LIGHTRAMP_TOGGLE) {
+        // Toggle direction
+        const temp = self.movedir.x;
+        self.movedir = { ...self.movedir, x: self.movedir.y, y: temp, z: self.movedir.z * -1 };
+    }
+}
+
+function useTargetLightramp(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    if (!self.enemy) {
+        let e: Entity | null = null;
+        let found = false;
+
+        // This search logic mirrors original which tries to find ANY light matching target
+        context.entities.forEachEntity((ent: Entity) => {
+            if (ent.targetname === self.target) {
+                if (ent.classname === 'light') {
+                    self.enemy = ent;
+                    found = true;
+                } else {
+                    context.warn(`${self.classname} target ${self.target} is not a light`);
+                }
+            }
+        });
+
+        if (!found) {
+            context.warn(`${self.classname} target ${self.target} not found`);
+            return;
+        }
+    }
+
+    self.timestamp = context.entities.timeSeconds;
+    target_lightramp_think(self, context);
+}
+
+
 // target_laser implementation
 
 const TARGET_LASER_START_ON = 1;
@@ -438,5 +565,45 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
         }
     };
     context.entities.scheduleThink(entity, context.entities.timeSeconds + entity.delay);
+  });
+
+  registry.register('target_earthquake', (entity, context) => {
+      if (!entity.count) entity.count = 5;
+      if (!entity.speed) entity.speed = 200;
+
+      entity.svflags |= ServerFlags.NoClient;
+      entity.think = (self) => target_earthquake_think(self, context);
+      entity.use = (self, other, activator) => useTargetEarthquake(self, other, activator ?? null, context);
+
+      if (!(entity.spawnflags & SPAWNFLAG_EARTHQUAKE_SILENT)) {
+          // entity.noise_index = ... // sound loading usually handled elsewhere or here
+      }
+  });
+
+  registry.register('target_lightramp', (entity, context) => {
+      // Message validation "bad ramp" logic skipped for now or assume checked.
+      // Message format: "az", "mm", etc. 2 chars.
+
+      entity.svflags |= ServerFlags.NoClient;
+      entity.use = (self, other, activator) => useTargetLightramp(self, other, activator ?? null, context);
+      entity.think = (self) => target_lightramp_think(self, context);
+
+      if (entity.message && entity.message.length === 2 && entity.speed) {
+          const start = entity.message.charCodeAt(0) - 'a'.charCodeAt(0);
+          const end = entity.message.charCodeAt(1) - 'a'.charCodeAt(0);
+          // movedir usage:
+          // [0] = start offset
+          // [1] = end offset (not used in think directly, but good for storage)
+          // [2] = slope per second
+
+          // Frames per second is implicitly 10Hz in physics but configstrings are generic.
+          // slope = (end - start) / (speed / frame_time) ?
+          // Re-reading original:
+          // self->movedir[2] = (self->movedir[1] - self->movedir[0]) / (self->speed / gi.frame_time_s);
+          // frame_time_s is 0.1 usually.
+
+          const slope = (end - start) / (entity.speed / 0.1);
+          entity.movedir = { x: start, y: end, z: slope };
+      }
   });
 }

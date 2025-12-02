@@ -257,7 +257,9 @@ export class EntitySystem {
 
   forEachEntity(callback: (entity: Entity) => void): void {
     for (const entity of this.pool) {
-      callback(entity);
+      if (entity.inUse && !entity.freePending) {
+        callback(entity);
+      }
     }
   }
 

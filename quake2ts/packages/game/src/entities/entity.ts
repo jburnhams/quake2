@@ -233,6 +233,8 @@ export class Entity {
   attenuation = 0;
   volume = 0;
   fly_sound_debounce_time = 0;
+  last_move_time = 0;
+  damage_debounce_time = 0;
 
   enemy: Entity | null = null;
   movetarget: Entity | null = null;
@@ -401,6 +403,8 @@ export class Entity {
     this.sounds = 0;
     this.noise_index = 0;
     this.fly_sound_debounce_time = 0;
+    this.last_move_time = 0;
+    this.damage_debounce_time = 0;
 
     this.enemy = null;
     this.movetarget = null;
@@ -504,6 +508,8 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'attenuation', type: 'float', save: true },
   { name: 'volume', type: 'float', save: true },
   { name: 'fly_sound_debounce_time', type: 'float', save: true },
+  { name: 'last_move_time', type: 'float', save: true },
+  { name: 'damage_debounce_time', type: 'float', save: true },
   { name: 'enemy', type: 'entity', save: true },
   { name: 'movetarget', type: 'entity', save: true },
   { name: 'target_ent', type: 'entity', save: true },
