@@ -13,6 +13,7 @@ export class DemoPlaybackController {
   private state: PlaybackState = PlaybackState.Stopped;
   private playbackSpeed: number = 1.0;
   private handler?: NetworkMessageHandler;
+  private currentProtocolVersion: number = 0;
 
   // Timing
   private accumulatedTime: number = 0;
@@ -28,6 +29,7 @@ export class DemoPlaybackController {
     this.reader = new DemoReader(buffer);
     this.state = PlaybackState.Stopped;
     this.accumulatedTime = 0;
+    this.currentProtocolVersion = 0;
   }
 
   public play() {
@@ -48,6 +50,7 @@ export class DemoPlaybackController {
       this.reader.reset();
     }
     this.accumulatedTime = 0;
+    this.currentProtocolVersion = 0;
   }
 
   public setFrameDuration(ms: number) {
@@ -74,7 +77,12 @@ export class DemoPlaybackController {
         }
 
         const parser = new NetworkMessageParser(block.data, this.handler);
+        // Persist protocol version across frames
+        parser.setProtocolVersion(this.currentProtocolVersion);
         parser.parseMessage();
+        // Update protocol version in case it changed (e.g. serverdata)
+        this.currentProtocolVersion = parser.getProtocolVersion();
+
         this.accumulatedTime -= this.frameDuration;
     }
   }
