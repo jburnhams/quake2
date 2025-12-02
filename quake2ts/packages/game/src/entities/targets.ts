@@ -1,6 +1,6 @@
-import { Entity, ServerFlags, Solid, MoveType } from './entity.js';
+import { Entity, ServerFlags, Solid, MoveType, AiFlags } from './entity.js';
 import type { SpawnRegistry } from './spawn.js';
-import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER } from '@quake2ts/shared';
+import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { setMovedir } from './utils.js';
 import { createBlasterBolt } from './projectiles.js';
@@ -88,6 +88,9 @@ function useTargetSpawner(self: Entity, other: Entity | null, activator: Entity 
         free: context.free
     };
 
+    // [Paril-KEX] Don't count these monsters so they don't inflate the monster count.
+    ent.monsterinfo.aiflags |= AiFlags.DoNotCount;
+
     spawnFunc(ent, spawnContext);
     context.entities.finalizeSpawn(ent);
     context.entities.linkentity(ent);
@@ -97,6 +100,8 @@ function useTargetSpawner(self: Entity, other: Entity | null, activator: Entity 
     if (self.speed) {
         ent.velocity = { ...self.movedir };
     }
+
+    ent.renderfx |= RenderFx.IrVisible;
 }
 
 const SPAWNFLAG_BLASTER_NOTRAIL = 1;
