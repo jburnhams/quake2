@@ -1,4 +1,4 @@
-import { BinaryWriter } from '../io/binaryWriter';
+import { BinaryWriter } from '../io/binaryWriter.js';
 
 export interface NetAddress {
   type: string;
