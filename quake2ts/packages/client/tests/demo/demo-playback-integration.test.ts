@@ -127,19 +127,30 @@ describe('Client Demo Playback Integration', () => {
     it('should update demo playback in render loop when playing', () => {
         client.startDemoPlayback(new ArrayBuffer(10), 'demo.dm2');
 
-        // Mock state to Playing for the update check if needed,
-        // though isDemoPlaying flag should control the branch.
-        // Also need to check if getState is called.
-
-        const sample = {
+        // First frame (initializes lastRenderTime)
+        client.render({
             latest: { timeMs: 100 },
             previous: { timeMs: 50 },
-            alpha: 0.5
-        } as any;
+            alpha: 0.5,
+            nowMs: 1000,
+            accumulatorMs: 0,
+            frame: 1
+        } as any);
 
-        client.render(sample);
+        // First frame has dt=0 because lastRenderTime was 0
+        expect(mockDemoPlayback.update).toHaveBeenCalledWith(0);
 
-        // dt calculation: 100 - 50 = 50ms
+        // Second frame (50ms later)
+        client.render({
+            latest: { timeMs: 150 },
+            previous: { timeMs: 100 },
+            alpha: 0.5,
+            nowMs: 1050,
+            accumulatorMs: 0,
+            frame: 2
+        } as any);
+
+        // dt calculation: 1050 - 1000 = 50ms
         expect(mockDemoPlayback.update).toHaveBeenCalledWith(50);
         expect(mockDemoHandler.getPredictionState).toHaveBeenCalledWith(0);
     });

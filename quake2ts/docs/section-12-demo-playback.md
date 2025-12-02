@@ -33,13 +33,13 @@
   - Call `demoPlayback.loadDemo(buffer)`
   - Set `demoHandler` as message handler via `demoPlayback.setHandler(demoHandler)`
   - Transition client to demo playback mode
-  - Initialize demo HUD overlay
+  - [ ] Initialize demo HUD overlay
 
 - [x] **1.1.3** Create `stopDemoPlayback(): void` method
   - Call `demoPlayback.stop()`
   - Clear demo state from `demoHandler`
   - Transition client back to normal mode
-  - Clean up demo HUD overlay
+  - [ ] Clean up demo HUD overlay
 
 - [x] **1.1.4** Update client render loop to handle demo playback
   - In `ClientExports.Sample()`, check if in demo mode

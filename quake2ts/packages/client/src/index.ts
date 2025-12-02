@@ -169,6 +169,7 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Define State Provider for CGame first
   let latestFrame: GameFrameResult<PredictionState> | undefined;
+  let lastRenderTime = 0;
   let clientInAutoDemo = false;
 
   const stateProvider: ClientStateProvider = {
@@ -459,12 +460,16 @@ export function createClient(imports: ClientImports): ClientExports {
 
       if (isDemoPlaying) {
           // Update demo playback with delta time since last frame
-          const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
-          demoPlayback.update(frameTimeMs);
+          const now = sample.nowMs;
+          const dt = lastRenderTime > 0 ? Math.max(0, now - lastRenderTime) : 0;
+          lastRenderTime = now;
+
+          demoPlayback.update(dt);
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // TODO: Demo playback entities
       } else {
+          lastRenderTime = sample.nowMs;
           if (sample.latest?.state) {
             prediction.setAuthoritative(sample.latest);
             latestFrame = sample.latest;
@@ -691,6 +696,7 @@ export function createClient(imports: ClientImports): ClientExports {
         isDemoPlaying = true;
         currentDemoName = filename;
         clientMode = ClientMode.DemoPlayback;
+        lastRenderTime = 0;
         // Reset state
         configStrings.clear(); // Clear existing configstrings
     },
