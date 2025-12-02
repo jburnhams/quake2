@@ -1,27 +1,3 @@
-export enum WeaponId {
-  Blaster = 'blaster',
-  Shotgun = 'shotgun',
-  SuperShotgun = 'supershotgun',
-  Machinegun = 'machinegun',
-  Chaingun = 'chaingun',
-  GrenadeLauncher = 'grenadelauncher',
-  RocketLauncher = 'rocketlauncher',
-  HyperBlaster = 'hyperblaster',
-  Railgun = 'railgun',
-  BFG10K = 'bfg10k',
-  HandGrenade = 'grenades',
-  Grapple = 'grapple', // Missing
-  // Rogue
-  IonRipper = 'ionripper',
-  Phalanx = 'phalanx',
-  Trap = 'trap',
-  PlasmaBeam = 'plasmabeam', // Heatbeam
-  EtfRifle = 'etfrifle',
-  ProxLauncher = 'proxlauncher',
-  ChainFist = 'chainfist',
-  Disruptor = 'disruptor',
-}
-
 import {
   type AmmoInventory,
   createAmmoInventory,
@@ -31,11 +7,17 @@ import {
   type AmmoAdjustmentResult,
   AmmoType,
 } from './ammo.js';
+import {
+  WeaponId,
+  PowerupId
+} from '@quake2ts/shared';
 import { ArmorType, ARMOR_INFO, type RegularArmorState } from '../combat/armor.js';
 import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { WeaponStateEnum } from '../combat/weapons/state.js';
+
+export { WeaponId, PowerupId };
 
 export interface PlayerInventoryOptions {
   readonly weapons?: readonly WeaponId[];
@@ -44,36 +26,11 @@ export interface PlayerInventoryOptions {
   readonly currentWeapon?: WeaponId;
 }
 
-export enum PowerupId {
-  QuadDamage = 'quad',
-  Invulnerability = 'invulnerability',
-  Silencer = 'silencer',
-  Rebreather = 'rebreather',
-  EnviroSuit = 'enviro',
-  DoubleDamage = 'double', // Rogue
-  QuadFire = 'quadfire', // Xatrix?
-  Invisibility = 'invisibility', // TF? or other mod
-  Bandolier = 'bandolier',
-  AmmoPack = 'pack',
-  IRGoggles = 'goggles',
-  SphereVengeance = 'vengeance', // Rogue
-  SphereHunter = 'hunter', // Rogue
-  SphereDefender = 'defender', // Rogue
-  Doppelganger = 'doppelganger', // Rogue
-  TagToken = 'tagtoken',
-  TechResistance = 'tech_resistance',
-  TechStrength = 'tech_strength',
-  TechHaste = 'tech_haste',
-  TechRegeneration = 'tech_regeneration',
-  Flashlight = 'flashlight',
-  Compass = 'compass',
-}
-
 export enum KeyId {
   Blue = 'key_blue',
   Red = 'key_red',
-  Green = 'key_green', // Data CD / Security Pass
-  Yellow = 'key_yellow', // Power Cube / Pyramid Key
+  Green = 'key_green',
+  Yellow = 'key_yellow',
   DataCD = 'key_data_cd',
   PowerCube = 'key_power_cube',
   ExplosiveCharges = 'key_explosive_charges',

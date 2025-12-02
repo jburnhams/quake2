@@ -1,11 +1,7 @@
-/**
- * Local type definitions for HUD components.
- * These types represent the minimal data structures needed for HUD rendering.
- * TODO: Refactor HUD to read from PlayerState.stats[] instead of inventory structure.
- */
-
+import type { LayoutFlags, PlayerState } from '@quake2ts/shared';
 import { WeaponId, PowerupId } from '@quake2ts/shared';
 
+// Local types for HUD state
 export interface ArmorState {
   armorType: string;
   armorCount: number;
@@ -22,9 +18,18 @@ export interface ClientState {
   inventory: InventoryState;
 }
 
+export interface HUDContext {
+  isplit: number;
+  data: unknown; // Placeholder
+  hud_vrect: { x: number, y: number, width: number, height: number };
+  hud_safe: { x: number, y: number, width: number, height: number };
+  scale: number;
+  playernum: number;
+  ps: PlayerState;
+}
+
 /**
  * Mapping from WeaponId to HUD icon names.
- * This avoids needing to import WEAPON_ITEMS from game package.
  */
 export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
   [WeaponId.Blaster]: 'w_blaster',
@@ -46,15 +51,5 @@ export const WEAPON_ICON_MAP: Record<WeaponId, string> = {
   [WeaponId.PlasmaBeam]: 'w_plasmabeam',
   [WeaponId.Phalanx]: 'w_phalanx',
   [WeaponId.Disruptor]: 'w_disruptor',
-};
-
-/**
- * Mapping from key names to HUD icon names.
- * Provides O(1) lookup for key icon rendering.
- */
-export const KEY_ICON_MAP: Record<string, string> = {
-  'blue': 'k_bluekey',
-  'red': 'k_redkey',
-  'green': 'k_security',
-  'yellow': 'k_pyramid',
+  [WeaponId.Trap]: 'w_trap',
 };

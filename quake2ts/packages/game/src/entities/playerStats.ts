@@ -1,22 +1,7 @@
 import { Entity } from './entity.js';
-import { PlayerStat, G_SetAmmoStat, G_SetPowerupStat, AmmoType, AMMO_TYPE_COUNT, AMMO_MAX } from '@quake2ts/shared';
+import { PlayerStat, G_SetAmmoStat, G_SetPowerupStat, AmmoType, AMMO_TYPE_COUNT, AMMO_MAX, WEAPON_WHEEL_ORDER } from '@quake2ts/shared';
 import { WeaponId, PowerupId } from '../inventory/playerInventory.js';
 import { WEAPON_ITEMS } from '../inventory/items.js';
-
-// Order matches Q2 original weapon wheel index order for bitmask generation
-const WEAPON_WHEEL_ORDER: WeaponId[] = [
-    WeaponId.Blaster,
-    WeaponId.Shotgun,
-    WeaponId.SuperShotgun,
-    WeaponId.Machinegun,
-    WeaponId.Chaingun,
-    WeaponId.GrenadeLauncher,
-    WeaponId.RocketLauncher,
-    WeaponId.HandGrenade,
-    WeaponId.HyperBlaster,
-    WeaponId.Railgun,
-    WeaponId.BFG10K
-];
 
 // Powerup wheel mapping (based on original game)
 // Used for finding the active timer
@@ -53,6 +38,14 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
     }
     statArray[PlayerStat.STAT_WEAPONS_OWNED_1] = weaponBits & 0xFFFF;
     statArray[PlayerStat.STAT_WEAPONS_OWNED_2] = (weaponBits >> 16) & 0xFFFF;
+
+    // Active Wheel Weapon Index
+    if (inventory.currentWeapon) {
+        const index = WEAPON_WHEEL_ORDER.indexOf(inventory.currentWeapon);
+        if (index !== -1) {
+             statArray[PlayerStat.STAT_ACTIVE_WHEEL_WEAPON] = index;
+        }
+    }
 
     // Ammo (Current Weapon)
     statArray[PlayerStat.STAT_AMMO] = 0;
