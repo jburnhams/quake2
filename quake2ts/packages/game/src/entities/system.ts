@@ -163,7 +163,7 @@ export class EntitySystem {
   }
 
   readonly engine: GameEngine;
-  private readonly imports: GameImports;
+  readonly imports: GameImports;
   private readonly gravity: Vec3;
   readonly deathmatch: boolean;
 
@@ -173,6 +173,22 @@ export class EntitySystem {
 
   get pointcontents(): PointContentsFunction {
     return this.imports.pointcontents;
+  }
+
+  get game(): any {
+      // Temporary workaround to expose GameExports if available via some hidden property or global
+      // Actually, sys.engine is GameEngine, not GameExports.
+      // GameExports has trace, but Engine has trace too.
+      // The weapon code expects sys.game to be GameExports (with .time, .deathmatch, etc.)
+
+      // Since EntitySystem is created inside createGame, we can't easily access the GameExports object
+      // unless we pass it in or attach it.
+
+      // Ideally weapon fire functions should take EntitySystem, not GameExports.
+      // But fire functions are shared with old code.
+
+      // Let's attach a 'game' property to EntitySystem that is set after creation.
+      return (this as any)._game;
   }
 
   constructor(
