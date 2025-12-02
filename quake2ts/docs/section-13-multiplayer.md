@@ -27,7 +27,7 @@
 **File**: Create `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c` lines 1-100 (struct and init)
 
-- [ ] **1.1.1** Define `NetChan` interface and state
+- [x] **1.1.1** Define `NetChan` interface and state
   - Add `interface NetAddress { type: string, port: number }`
   - Add `qport: number` (client port for NAT traversal)
   - Add `incomingSequence: number` (last received seq)
@@ -41,13 +41,13 @@
   - Add `lastReceived: number` (timestamp for timeout detection)
   - Add `lastSent: number` (timestamp for keepalive)
 
-- [ ] **1.1.2** Create `NetChan` class constructor
+- [x] **1.1.2** Create `NetChan` class constructor
   - Initialize all sequence numbers to 0
   - Set qport from random or config
   - Initialize message buffers
   - Set timestamps to current time
 
-- [ ] **1.1.3** Add constants (from net_chan.c)
+- [x] **1.1.3** Add constants (from net_chan.c)
   - `MAX_MSGLEN = 1400` (MTU limit)
   - `FRAGMENT_SIZE = 1024`
   - `PACKET_HEADER = 10` (sequence + ack + qport)
@@ -64,23 +64,23 @@
 **File**: `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c:180-250` (Netchan_Transmit)
 
-- [ ] **1.2.1** Create `transmit(unreliableData?: Uint8Array): Uint8Array` method
+- [x] **1.2.1** Create `transmit(unreliableData?: Uint8Array): Uint8Array` method
   - Build packet header (sequence, ack, qport)
   - Increment `outgoingSequence`
   - Update `lastSent` timestamp
 
-- [ ] **1.2.2** Add reliable message handling
+- [x] **1.2.2** Add reliable message handling
   - Check if `reliableMessage` has data (reliableLength > 0)
   - If yes, set reliable bit in sequence field (sequence | 0x80000000)
   - Set reliable acknowledge bit based on `incomingReliableSequence` (even/odd)
   - Prepend reliable message to packet
 
-- [ ] **1.2.3** Append unreliable data
+- [x] **1.2.3** Append unreliable data
   - After reliable data (if any), append unreliableData
   - Verify total size < MAX_MSGLEN
   - If overflow, truncate unreliable (reliable must go through)
 
-- [ ] **1.2.4** Return packet for transmission
+- [x] **1.2.4** Return packet for transmission
   - Return complete packet as Uint8Array
   - Caller sends via WebSocket
   - Reliable data stays in buffer until acked
@@ -99,26 +99,26 @@
 **File**: `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c:252-360` (Netchan_Process)
 
-- [ ] **1.3.1** Create `process(packet: Uint8Array): Uint8Array | null` method
+- [x] **1.3.1** Create `process(packet: Uint8Array): Uint8Array | null` method
   - Parse packet header (sequence, ack, qport)
   - Verify qport matches (reject if mismatch)
   - Update `lastReceived` timestamp
 
-- [ ] **1.3.2** Handle sequence acknowledgment
+- [x] **1.3.2** Handle sequence acknowledgment
   - Check `ack` field in packet
   - If `ack === outgoingReliableSequence`, reliable message was received
   - Check reliable ack bit matches expected (even/odd)
   - If matched, clear `reliableMessage` (acked successfully)
   - Update `incomingAcknowledged` to ack value
 
-- [ ] **1.3.3** Handle sequence validation
+- [x] **1.3.3** Handle sequence validation
   - Extract sequence from packet
   - Check if `sequence <= incomingSequence` (duplicate or out of order)
   - If duplicate, discard packet silently
   - If too old, discard
   - Update `incomingSequence` to sequence value
 
-- [ ] **1.3.4** Handle reliable message reception
+- [x] **1.3.4** Handle reliable message reception
   - Check if sequence has reliable bit set (sequence & 0x80000000)
   - If set, this packet contains reliable data
   - Check reliable sequence (even/odd toggle)
@@ -126,7 +126,7 @@
   - If duplicate reliable, discard but still ack
   - Update `incomingReliableSequence`
 
-- [ ] **1.3.5** Extract and return message payload
+- [x] **1.3.5** Extract and return message payload
   - Skip packet header bytes
   - If reliable data present, skip it (already processed)
   - Return unreliable portion as Uint8Array
@@ -147,24 +147,24 @@
 **File**: `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c` (MSG_Write* to netchan.message)
 
-- [ ] **1.4.1** Create `canSendReliable(): boolean` method
+- [x] **1.4.1** Create `canSendReliable(): boolean` method
   - Return true if `reliableMessage` is empty (acked)
   - Return false if still waiting for ack
   - Used by caller to check if can queue more
 
-- [ ] **1.4.2** Create `writeReliableByte(value: number): void` method
+- [x] **1.4.2** Create `writeReliableByte(value: number): void` method
   - Check if `reliableMessage` has space
   - Append byte to `reliableMessage` buffer
   - Increment `reliableLength`
   - Throw if overflow (reliable queue full)
 
-- [ ] **1.4.3** Add helper methods for other types
+- [x] **1.4.3** Add helper methods for other types
   - `writeReliableShort(value: number): void`
   - `writeReliableLong(value: number): void`
   - `writeReliableString(value: string): void`
   - Each wraps BinaryWriter methods
 
-- [ ] **1.4.4** Create `getReliableData(): Uint8Array` method
+- [x] **1.4.4** Create `getReliableData(): Uint8Array` method
   - Return current reliable buffer contents
   - Used internally by transmit
   - Returns empty array if no reliable data
@@ -212,17 +212,17 @@
 **File**: `packages/shared/src/net/netchan.ts`
 **Reference**: `full/server/sv_main.c` (timeout logic)
 
-- [ ] **1.6.1** Create `needsKeepalive(currentTime: number): boolean` method
+- [x] **1.6.1** Create `needsKeepalive(currentTime: number): boolean` method
   - Check if `currentTime - lastSent > 1000ms`
   - Return true if need to send keepalive packet
   - Prevents router timeout
 
-- [ ] **1.6.2** Create `isTimedOut(currentTime: number, timeoutMs: number): boolean` method
+- [x] **1.6.2** Create `isTimedOut(currentTime: number, timeoutMs: number): boolean` method
   - Check if `currentTime - lastReceived > timeoutMs`
   - Default timeout 30000ms (30 seconds)
   - Used by server to disconnect idle clients
 
-- [ ] **1.6.3** Update transmit/process to track times
+- [x] **1.6.3** Update transmit/process to track times
   - Already implemented in 1.2.1 and 1.3.1
   - Verify timestamps updated correctly
 
