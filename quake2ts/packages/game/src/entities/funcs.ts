@@ -63,6 +63,40 @@ function move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (ent: E
   }
 }
 
+function angle_move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (ent: Entity, ctx: EntitySystem) => void) {
+    const dt = 0.1;
+    const vec = subtractVec3(dest, ent.angles);
+    const dist = lengthVec3(vec);
+    const dir = normalizeVec3(vec);
+    const speed = ent.speed || 100;
+
+    // Linear speed for now (TODO: accel/decel support matching move_calc)
+    let currentSpeed = speed;
+
+    const move = currentSpeed * dt;
+
+    if (dist <= move) {
+        // Finish this frame
+        ent.avelocity = scaleVec3(dir, dist / dt);
+        ent.think = (e) => {
+            e.avelocity = { x: 0, y: 0, z: 0 };
+            e.angles = { ...dest }; // Snap to final exact
+            context.linkentity(e);
+            done(e, context);
+        };
+        context.scheduleThink(ent, context.timeSeconds + dt);
+    } else {
+        // Continue
+        ent.avelocity = scaleVec3(dir, currentSpeed);
+        ent.think = (e) => {
+            // runPush handles angle updates via avelocity
+            angle_move_calc(e, dest, context, done);
+        };
+        context.scheduleThink(ent, context.timeSeconds + dt);
+    }
+}
+
+
 // ============================================================================
 // FUNC DOOR
 // ============================================================================
@@ -75,6 +109,7 @@ export enum DoorState {
 }
 
 const SPAWNFLAG_DOOR_START_OPEN = 1;
+const SPAWNFLAG_DOOR_REVERSE = 2; // Shared with rotating
 const SPAWNFLAG_DOOR_CRUSHER = 4;
 const SPAWNFLAG_DOOR_NOMONSTER = 8;
 const SPAWNFLAG_DOOR_ANIMATED = 16;
@@ -89,6 +124,8 @@ interface MoveInfo {
     sound_start: string | null;
     sound_middle: string | null;
     sound_end: string | null;
+    reversing?: boolean;
+    dir?: Vec3;
 }
 
 function getMoveInfo(ent: Entity): MoveInfo | undefined {
@@ -131,8 +168,20 @@ function door_go_down(door: Entity, context: EntitySystem) {
   if (moveinfo && moveinfo.sound_start) {
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
-  door.think = (e) => move_calc(e, e.pos1, context, door_hit_bottom);
-  move_calc(door, door.pos1, context, door_hit_bottom);
+
+  if (door.classname === 'func_door_rotating') {
+       // Check if reversing for safe_open
+       let dest = door.pos1; // Default to closed (pos1)
+       // Wait, pos1 is closed state (angles).
+       // If rotating door, go_down means closing.
+       // So target is pos1.
+
+       door.think = (e) => angle_move_calc(e, dest, context, door_hit_bottom);
+       angle_move_calc(door, dest, context, door_hit_bottom);
+  } else {
+       door.think = (e) => move_calc(e, e.pos1, context, door_hit_bottom);
+       move_calc(door, door.pos1, context, door_hit_bottom);
+  }
 }
 
 function door_go_up(door: Entity, context: EntitySystem) {
@@ -141,8 +190,18 @@ function door_go_up(door: Entity, context: EntitySystem) {
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
 
-  door.think = (e) => move_calc(e, e.pos2, context, door_hit_top);
-  move_calc(door, door.pos2, context, door_hit_top);
+  if (door.classname === 'func_door_rotating') {
+      let dest = door.pos2;
+      // Handle reversing logic if needed (e.g. SAFE_OPEN)
+      if (moveinfo && moveinfo.reversing && (door as any).pos3) {
+           dest = (door as any).pos3;
+      }
+      door.think = (e) => angle_move_calc(e, dest, context, door_hit_top);
+      angle_move_calc(door, dest, context, door_hit_top);
+  } else {
+      door.think = (e) => move_calc(e, e.pos2, context, door_hit_top);
+      move_calc(door, door.pos2, context, door_hit_top);
+  }
 }
 
 const func_door: SpawnFunction = (entity, context) => {
@@ -638,6 +697,203 @@ const func_rotating: SpawnFunction = (entity, context) => {
 };
 
 // ============================================================================
+// FUNC DOOR ROTATING
+// ============================================================================
+
+const SPAWNFLAG_DOOR_ROTATING_X_AXIS = 64;
+const SPAWNFLAG_DOOR_ROTATING_Y_AXIS = 128;
+const SPAWNFLAG_DOOR_ROTATING_INACTIVE = 0x10000;
+const SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN = 0x20000;
+
+const func_door_rotating: SpawnFunction = (entity, context) => {
+    // Handling SAFE_OPEN
+    if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN) {
+        // G_SetMovedir logic is slightly different, but let's assume standard angular logic
+        // for determining "forward" from angles.
+        entity.movedir = setMovedir(entity.angles);
+        // Store this direction for safe_open check?
+        // In C it sets ent.moveinfo.dir = forward vector of angles.
+        // We can store it on moveinfo.
+    }
+    const safeOpenDir = { ...entity.movedir };
+
+    // Reset angles? C says VectorClear(ent->s.angles);
+    entity.angles = { x: 0, y: 0, z: 0 };
+
+    // set the axis of rotation in movedir
+    entity.movedir = { x: 0, y: 0, z: 0 };
+    if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_X_AXIS) {
+        entity.movedir = { x: 0, y: 0, z: 1.0 }; // Index 2 -> Z
+    } else if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_Y_AXIS) {
+        entity.movedir = { x: 1.0, y: 0, z: 0 }; // Index 0 -> X
+    } else {
+        // Z_AXIS (Default)
+        entity.movedir = { x: 0, y: 1.0, z: 0 }; // Index 1 -> Y
+    }
+
+    // check for reverse rotation
+    if (entity.spawnflags & SPAWNFLAG_DOOR_REVERSE) {
+        entity.movedir = scaleVec3(entity.movedir, -1);
+    }
+
+    // Distance
+    let dist = (entity as any).distance;
+    if (!dist) {
+         context.warn(`${entity.classname}: no distance set`);
+         dist = 90;
+    }
+
+    entity.pos1 = { ...entity.angles };
+    entity.pos2 = addVec3(entity.angles, scaleVec3(entity.movedir, dist));
+    (entity as any).pos3 = addVec3(entity.angles, scaleVec3(entity.movedir, -dist)); // Reversed
+
+    entity.movetype = MoveType.Push;
+    entity.solid = Solid.Bsp;
+    entity.svflags |= ServerFlags.Door;
+
+    // Use shared door callbacks
+    entity.blocked = (self, other) => {
+        // door_blocked logic
+        if (other && other.takedamage) {
+            const damage = self.dmg || 2;
+             if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) {
+                 other.health -= damage;
+             } else {
+                 other.health -= damage;
+             }
+        }
+        if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) return;
+
+        // Reverse if blocked?
+        if (self.state === DoorState.Opening) {
+             self.state = DoorState.Closing;
+             door_go_down(self, context.entities);
+        } else if (self.state === DoorState.Closing) {
+             self.state = DoorState.Opening;
+             door_go_up(self, context.entities);
+        }
+    };
+
+    entity.use = (self, other, activator) => {
+        // door_use logic
+        // Check SAFE_OPEN
+        const moveinfo = getMoveInfo(self);
+        if (moveinfo && (self.spawnflags & SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN)) {
+            if (self.state === DoorState.Closed || self.state === DoorState.Closing) {
+                 // Check activator position vs door
+                 if (activator && moveinfo.dir) {
+                     const forward = normalizeVec3(subtractVec3(activator.origin, self.origin));
+                     // Use moveinfo.dir (which we saved as safeOpenDir earlier but lost scope?
+                     // Need to store it in moveinfo.
+                     if (dotVec3(forward, moveinfo.dir) > 0) {
+                         moveinfo.reversing = true;
+                     } else {
+                         moveinfo.reversing = false;
+                     }
+                 }
+            }
+        }
+
+        if (self.spawnflags & SPAWNFLAG_DOOR_TOGGLE) {
+            if (self.state === DoorState.Open || self.state === DoorState.Opening) {
+                 // Close
+                 self.state = DoorState.Closing;
+                 door_go_down(self, context.entities);
+                 return;
+            }
+        }
+
+        if (self.state !== DoorState.Closed) return;
+        self.state = DoorState.Opening;
+        door_go_up(self, context.entities);
+    };
+
+    if (!entity.speed) entity.speed = 100;
+    if (!entity.wait) entity.wait = 3;
+    if (!entity.dmg) entity.dmg = 2;
+
+    // Handle sounds
+    const moveinfo: MoveInfo = {
+        sound_start: 'doors/dr1_strt.wav',
+        sound_middle: 'doors/dr1_mid.wav',
+        sound_end: 'doors/dr1_end.wav',
+        dir: safeOpenDir
+    };
+    if (entity.sounds !== 1) {
+        // Default set 1
+    } else {
+        moveinfo.sound_start = null;
+        moveinfo.sound_middle = null;
+        moveinfo.sound_end = null;
+    }
+    (entity as any).moveinfo = moveinfo;
+
+    // START_OPEN logic
+    if (entity.spawnflags & SPAWNFLAG_DOOR_START_OPEN) {
+        if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN) {
+             context.warn(`${entity.classname}: SAFE_OPEN is not compatible with START_OPEN`);
+             entity.spawnflags &= ~SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN;
+        }
+        // Swap pos1/pos2
+        const temp = entity.pos2;
+        entity.pos2 = entity.pos1;
+        entity.pos1 = temp;
+
+        entity.movedir = scaleVec3(entity.movedir, -1);
+        entity.angles = { ...entity.pos1 }; // Start at pos1 (which was old pos2)
+    }
+
+    if (entity.health) {
+        entity.takedamage = true;
+        entity.max_health = entity.health;
+        entity.die = (self, inflictor, attacker, damage) => {
+             self.takedamage = false;
+             self.use?.(self, attacker, attacker);
+        };
+    }
+
+    if (entity.targetname && (entity as any).message) {
+         entity.touch = (self, other) => {
+             if (!other || !other.client) return;
+             // print message
+         };
+    }
+
+    entity.state = DoorState.Closed; // pos1
+
+    // Need to capture the standard door logic use callback
+    const door_use_wrapper = entity.use;
+
+    // INACTIVE logic
+    if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_INACTIVE) {
+         entity.takedamage = false;
+         entity.die = undefined;
+         entity.think = undefined;
+         entity.nextthink = 0;
+         entity.use = (self, other, activator) => {
+             // Activate
+             self.use = door_use_wrapper; // Switch to normal use
+             if (self.health) {
+                 self.takedamage = true;
+                 self.die = (s, i, a, d) => {
+                     s.takedamage = false;
+                     s.use?.(s, a, a);
+                 };
+             }
+             // Call use immediately?
+             if (self.use) {
+                 self.use(self, other, activator);
+             }
+         };
+    }
+
+    if (entity.spawnflags & SPAWNFLAG_DOOR_ANIMATED) {
+        entity.effects |= EF_ANIM_ALL;
+    }
+};
+
+
+// ============================================================================
 // FUNC MISC (Conveyor, Water, Explosive, Killbox)
 // ============================================================================
 
@@ -683,6 +939,61 @@ const func_areaportal: SpawnFunction = (entity, context) => {
     };
 }
 
+// ============================================================================
+// FUNC TIMER
+// ============================================================================
+
+const SPAWNFLAG_TIMER_START_ON = 1;
+
+const func_timer: SpawnFunction = (entity, context) => {
+    if (!entity.wait) entity.wait = 1.0;
+
+    const func_timer_think = (self: Entity, ctx: EntitySystem) => {
+        ctx.useTargets(self, self.activator);
+        const variance = ctx.rng.crandom() * self.random;
+        const nextTime = self.wait + variance;
+        ctx.scheduleThink(self, ctx.timeSeconds + nextTime);
+    };
+
+    entity.use = (self, other, activator) => {
+        self.activator = activator || null;
+
+        // If on, turn it off
+        if (self.nextthink > 0) {
+            self.nextthink = 0;
+            self.think = undefined;
+            return;
+        }
+
+        // Turn it on
+        if (self.delay) {
+            self.think = (e) => func_timer_think(e, context.entities);
+            context.entities.scheduleThink(self, context.entities.timeSeconds + self.delay);
+        } else {
+            func_timer_think(self, context.entities);
+        }
+    };
+
+    if (entity.random >= entity.wait) {
+        entity.random = entity.wait - 0.05; // frame_time_s approx
+        context.warn(`${entity.classname}: random >= wait`);
+    }
+
+    if (entity.spawnflags & SPAWNFLAG_TIMER_START_ON) {
+        entity.activator = entity;
+        const pausetime = (entity as any).pausetime || 0;
+        const delay = entity.delay || 0;
+
+        const variance = context.entities.rng.crandom() * entity.random;
+        const nextTime = 1.0 + pausetime + delay + entity.wait + variance;
+
+        entity.think = (e) => func_timer_think(e, context.entities);
+        context.entities.scheduleThink(entity, context.entities.timeSeconds + nextTime);
+    }
+
+    entity.svflags |= ServerFlags.NoClient;
+};
+
 export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_door', func_door);
   registry.register('func_door_secret', func_door_secret);
@@ -695,4 +1006,6 @@ export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_explosive', func_explosive);
   registry.register('func_killbox', func_killbox);
   registry.register('func_areaportal', func_areaportal);
+  registry.register('func_door_rotating', func_door_rotating);
+  registry.register('func_timer', func_timer);
 }

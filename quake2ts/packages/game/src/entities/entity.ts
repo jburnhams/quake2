@@ -220,6 +220,7 @@ export class Entity {
   count = 0;
   wait = 0;
   delay = 0;
+  random = 0;
   timestamp = 0;
   lip = 0;
   state = 0;
@@ -490,6 +491,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'count', type: 'int', save: true },
   { name: 'wait', type: 'float', save: true },
   { name: 'delay', type: 'float', save: true },
+  { name: 'random', type: 'float', save: true },
   { name: 'timestamp', type: 'float', save: true },
   { name: 'lip', type: 'int', save: true },
   { name: 'state', type: 'int', save: true },
