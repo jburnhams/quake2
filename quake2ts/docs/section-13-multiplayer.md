@@ -91,7 +91,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 #### 2.4 Delta Compression (`MSG_WriteDeltaEntity`)
 - [x] **Basic Implementation**: Exists in `packages/server/src/protocol/entity.ts` (Vanilla fields only).
-- [ ] **Rerelease Fields Not Written**: `writeDeltaEntity` does not serialize `alpha`, `scale`, `instanceBits`, `loopVolume`, `loopAttenuation`, `owner`, or `oldFrame` fields. Server cannot send Rerelease entity state.
+- [x] **Rerelease Fields Not Written**: `writeDeltaEntity` now serializes `alpha`, `scale`, `instanceBits`, `loopVolume`, `loopAttenuation`, `owner`, and `oldFrame` fields.
 - [x] **Baseline Management**: Initial `writeDeltaEntity` logic implemented for frame snapshots.
 - [x] **Baseline Population**: Populate `sv.baselines` from game entities (static or initial state).
 - [x] **Removal**: If entity removed since last frame, send entity number with special "remove" flag.
@@ -192,7 +192,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
     - No packet loss detection or retransmission logic (NetChan) over WebSocket.
 
 5. **Rerelease Protocol Incomplete on Both Ends**
-   - **Server:** `writeDeltaEntity` doesn't write Rerelease fields (alpha, scale, etc.)
+   - **Server:** `writeDeltaEntity` doesn't write Rerelease fields (alpha, scale, etc.) **(COMPLETED)**
    - **Client:** `parseDelta` doesn't read Rerelease fields (see Section 12)
    - **Impact:** Cannot support Rerelease features even if protocol version negotiated
 
@@ -314,10 +314,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 **Location:** `packages/server/src/protocol/entity.ts` and `packages/engine/src/demo/parser.ts`
 
 1. **Server: Add Rerelease Entity Writing**
-   - Define Rerelease bit flags (U_SCALE, U_INSTANCE_BITS, etc.)
-   - Update `writeDeltaEntity` to write new fields when flags set
-   - Match bit positions to reference source
-   - Test that written stream matches expected format
+   - [x] Define Rerelease bit flags (U_SCALE, U_INSTANCE_BITS, etc.)
+   - [x] Update `writeDeltaEntity` to write new fields when flags set
+   - [x] Match bit positions to reference source
+   - [x] Test that written stream matches expected format
 
 2. **Client: Add Rerelease Entity Parsing**
    - See Section 12 subtasks (this is the same work)
