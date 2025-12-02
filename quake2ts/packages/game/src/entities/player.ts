@@ -6,6 +6,119 @@ import { throwGibs } from './gibs.js';
 import { DamageMod, damageModName } from '../combat/damageMods.js';
 import { EntitySystem } from './system.js';
 import { ClientObituary } from '../combat/obituary.js';
+import {
+    FRAME_death101, FRAME_death106,
+    FRAME_death201, FRAME_death206,
+    FRAME_death301, FRAME_death306,
+    FRAME_crdeath1, FRAME_crdeath5,
+    FRAME_pain101, FRAME_pain104,
+    FRAME_pain201, FRAME_pain204,
+    FRAME_pain301, FRAME_pain304,
+    FRAME_crpain1, FRAME_crpain4,
+    FRAME_run1, FRAME_run6,
+    FRAME_stand01, FRAME_stand40,
+    ANIM_BASIC, ANIM_DEATH, ANIM_PAIN, ANIM_REVERSE, ANIM_ATTACK
+} from './player_anim.js';
+import { firingRandom } from '../combat/weapons/firing.js';
+
+export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
+    if (!ent.client) return;
+
+    // Animation update
+    const client = ent.client;
+    let animChanged = false;
+
+    // If dead, animation logic is different
+    if (ent.deadflag) {
+        // Handled in death think mostly, but let's check
+        // If animation not finished, continue
+    } else {
+        // Movement animation
+        // Check velocity
+        const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y);
+        const moving = speed > 10; // Minimal speed
+
+        // Only update movement animation if we are in BASIC animation priority
+        if (client.anim_priority === ANIM_BASIC || client.anim_priority === undefined) {
+            if (moving) {
+                // Run
+                // If not already running, start
+                if (ent.frame < FRAME_run1 || ent.frame > FRAME_run6) {
+                    ent.frame = FRAME_run1;
+                    client.anim_end = FRAME_run6;
+                    client.anim_priority = ANIM_BASIC;
+                    animChanged = true;
+                }
+            } else {
+                // Stand
+                // If running, switch to stand
+                // Or if we are in basic priority but our anim_end doesn't match stand end (e.g. initialized to 0), fix it.
+                if ((ent.frame >= FRAME_run1 && ent.frame <= FRAME_run6) ||
+                    (client.anim_priority === ANIM_BASIC && client.anim_end !== FRAME_stand40) ||
+                    client.anim_priority === undefined) {
+                    ent.frame = FRAME_stand01;
+                    client.anim_end = FRAME_stand40;
+                    client.anim_priority = ANIM_BASIC;
+                    animChanged = true;
+                }
+            }
+        }
+    }
+
+    if (animChanged) {
+        return;
+    }
+
+    // Advance frame
+    if (client.anim_end !== undefined && client.anim_end !== ent.frame) {
+        if (ent.frame < client.anim_end) {
+            ent.frame++;
+        } else if (ent.frame > client.anim_end) {
+            // Handle Reverse
+            ent.frame--; // Decrement towards target
+        }
+    } else if (client.anim_end === ent.frame) {
+         if (client.anim_priority === ANIM_BASIC) {
+                // Reset loop
+                if (ent.frame === FRAME_run6) ent.frame = FRAME_run1;
+                else if (ent.frame === FRAME_stand40) ent.frame = FRAME_stand01;
+         } else {
+             // Non-looping animation finished
+             if (client.anim_priority !== ANIM_DEATH) {
+                 client.anim_priority = ANIM_BASIC;
+             }
+         }
+    }
+}
+
+export function player_pain(self: Entity, damage: number) {
+    if (!self.client) return;
+
+    // Pick pain animation
+    if (self.health < 40) {
+        // Heavy pain
+        // Randomly pick
+    }
+
+    // For now, basic implementation
+    if (self.client.anim_priority && self.client.anim_priority >= ANIM_PAIN) {
+        return; // Already in pain or death
+    }
+
+    self.client.anim_priority = ANIM_PAIN;
+
+    const r = firingRandom.frandom();
+    if (r < 0.33) {
+        self.frame = FRAME_pain101;
+        self.client.anim_end = FRAME_pain104;
+    } else if (r < 0.66) {
+        self.frame = FRAME_pain201;
+        self.client.anim_end = FRAME_pain204;
+    } else {
+        self.frame = FRAME_pain301;
+        self.client.anim_end = FRAME_pain304;
+    }
+}
 
 export function player_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: any, mod: DamageMod, sys?: EntitySystem) {
     self.deadflag = DeadFlag.Dead;
@@ -16,11 +129,26 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
     // Check for gibbing
     if (self.health < -40 && sys) {
         throwGibs(sys, self.origin, damage);
+        return; // No death anim if gibbed
     }
 
     // Death animation
-    self.frame = 0; // Start death frame
-    // We don't have animation frames defined for player yet.
+    if (self.client) {
+        self.client.anim_priority = ANIM_DEATH;
+        const r = firingRandom.frandom();
+        if (r < 0.33) {
+            self.frame = FRAME_death101;
+            self.client.anim_end = FRAME_death106;
+        } else if (r < 0.66) {
+            self.frame = FRAME_death201;
+            self.client.anim_end = FRAME_death206;
+        } else {
+            self.frame = FRAME_death301;
+            self.client.anim_end = FRAME_death306;
+        }
+    } else {
+        self.frame = 0;
+    }
 
     // Obituaries
     if (sys) {
@@ -82,6 +210,9 @@ export function player_think(self: Entity, sys: EntitySystem) {
             weaponItem.think(self, sys);
         }
     }
+
+    // Player Animation
+    P_PlayerThink(self, sys);
 
     self.nextthink = sys.timeSeconds + 0.1;
     sys.scheduleThink(self, self.nextthink);

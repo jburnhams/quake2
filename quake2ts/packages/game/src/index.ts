@@ -79,7 +79,7 @@ export interface GameStateSnapshot {
 }
 
 import { findPlayerStart } from './entities/spawn.js';
-import { player_die, player_think } from './entities/player.js';
+import { player_die, player_think, player_pain } from './entities/player.js';
 import { populatePlayerStats } from './entities/playerStats.js';
 
 import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
@@ -435,6 +435,10 @@ export function createGame(
 
        player.die = (self, inflictor, attacker, damage, point, mod) => {
            player_die(self, inflictor, attacker, damage, point, mod, entities);
+       };
+
+       player.pain = (self, other, kick, damage) => {
+           player_pain(self, damage);
        };
 
        player.think = (self) => {

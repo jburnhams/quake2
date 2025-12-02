@@ -69,6 +69,9 @@ export type DieCallback = (
   mod: DamageMod
 ) => void;
 
+// Simple Pain Callback for player (no kick/other needed?) or matched signature
+export type PlayerPainCallback = (self: Entity, damage: number) => void;
+
 export type EntityFieldType =
   | 'int'
   | 'float'
@@ -252,7 +255,7 @@ export class Entity {
   touch?: TouchCallback;
   use?: UseCallback;
   blocked?: BlockedCallback;
-  pain?: PainCallback;
+  pain?: PainCallback | PlayerPainCallback; // Allow looser signature for player
   die?: DieCallback;
   postthink?: ThinkCallback; // Added for beam updates
   activator: Entity | null = null;
