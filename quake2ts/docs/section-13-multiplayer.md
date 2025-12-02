@@ -21,11 +21,11 @@
 
 **Estimated Time**: 2-3 weeks
 **Dependencies**: None (reference implementation exists)
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` (300+ lines of networking code)
+**Reference**: `full/qcommon/net_chan.c` (300+ lines of networking code)
 
 #### Task 1.1: Create NetChan Class Structure
 **File**: Create `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` lines 1-100 (struct and init)
+**Reference**: `full/qcommon/net_chan.c` lines 1-100 (struct and init)
 
 - [ ] **1.1.1** Define `NetChan` interface and state
   - Add `interface NetAddress { type: string, port: number }`
@@ -58,11 +58,11 @@
 - Verify qport is set
 - Verify buffers initialized
 
-**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:82-102` (Netchan_Init, Netchan_Setup)
+**Reference Lines**: `full/qcommon/net_chan.c:82-102` (Netchan_Init, Netchan_Setup)
 
 #### Task 1.2: Implement Netchan_Transmit
 **File**: `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:180-250` (Netchan_Transmit)
+**Reference**: `full/qcommon/net_chan.c:180-250` (Netchan_Transmit)
 
 - [ ] **1.2.1** Create `transmit(unreliableData?: Uint8Array): Uint8Array` method
   - Build packet header (sequence, ack, qport)
@@ -93,11 +93,11 @@
 - Verify reliable + unreliable both present
 - Verify sequence incremented
 
-**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:180-250`
+**Reference Lines**: `full/qcommon/net_chan.c:180-250`
 
 #### Task 1.3: Implement Netchan_Process (Receive)
 **File**: `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:252-360` (Netchan_Process)
+**Reference**: `full/qcommon/net_chan.c:252-360` (Netchan_Process)
 
 - [ ] **1.3.1** Create `process(packet: Uint8Array): Uint8Array | null` method
   - Parse packet header (sequence, ack, qport)
@@ -141,11 +141,11 @@
 - Test duplicate detection
 - Test out-of-order handling
 
-**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:252-360`
+**Reference Lines**: `full/qcommon/net_chan.c:252-360`
 
 #### Task 1.4: Add Reliable Message Queueing
 **File**: `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c` (MSG_Write* to netchan.message)
+**Reference**: `full/qcommon/net_chan.c` (MSG_Write* to netchan.message)
 
 - [ ] **1.4.1** Create `canSendReliable(): boolean` method
   - Return true if `reliableMessage` is empty (acked)
@@ -181,7 +181,7 @@
 
 #### Task 1.5: Add Fragment Support (Optional but Recommended)
 **File**: `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/qcommon/net_chan.c:104-178` (fragment handling)
+**Reference**: `full/qcommon/net_chan.c:104-178` (fragment handling)
 
 - [ ] **1.5.1** Add fragment state to NetChan
   - Add `fragmentSequence: number` (sequence of fragmented message)
@@ -206,11 +206,11 @@
 - Receive and reassemble
 - Verify complete message intact
 
-**Reference Lines**: `/home/user/quake2/full/qcommon/net_chan.c:104-178`
+**Reference Lines**: `full/qcommon/net_chan.c:104-178`
 
 #### Task 1.6: Add Timeout and Keepalive
 **File**: `packages/shared/src/net/netchan.ts`
-**Reference**: `/home/user/quake2/full/server/sv_main.c` (timeout logic)
+**Reference**: `full/server/sv_main.c` (timeout logic)
 
 - [ ] **1.6.1** Create `needsKeepalive(currentTime: number): boolean` method
   - Check if `currentTime - lastSent > 1000ms`
@@ -243,7 +243,7 @@
 
 #### Task 2.1: Add NetChan to Server Client State
 **File**: `packages/server/src/client.ts`
-**Reference**: `/home/user/quake2/full/server/server.h:108-145` (client_t struct)
+**Reference**: `full/server/server.h:108-145` (client_t struct)
 
 - [ ] **2.1.1** Import NetChan class
   - Add `import { NetChan } from '@quake2ts/shared'`
@@ -262,11 +262,11 @@
 - Test transmit goes through netchan
 - Verify sequence tracking works
 
-**Reference Lines**: `/home/user/quake2/full/server/server.h:108-145`
+**Reference Lines**: `full/server/server.h:108-145`
 
 #### Task 2.2: Update SV_SendClientMessages (Fix TODO Line 396 and 650)
 **File**: `packages/server/src/dedicated.ts` around lines 380-420
-**Reference**: `/home/user/quake2/full/server/sv_send.c:500-570` (SV_SendClientMessages)
+**Reference**: `full/server/sv_send.c:500-570` (SV_SendClientMessages)
 
 - [ ] **2.2.1** Separate reliable and unreliable buffers (Line 650)
   - Create `reliableWriter = new BinaryWriter()` per client
@@ -297,11 +297,11 @@
 - Verify both in same packet
 - Verify reliable persists until acked
 
-**Reference Lines**: `/home/user/quake2/full/server/sv_send.c:500-570`
+**Reference Lines**: `full/server/sv_send.c:500-570`
 
 #### Task 2.3: Update SV_ReadPackets to use NetChan
 **File**: `packages/server/src/dedicated.ts` around lines 440-480
-**Reference**: `/home/user/quake2/full/server/sv_main.c:390-450` (SV_ReadPackets)
+**Reference**: `full/server/sv_main.c:390-450` (SV_ReadPackets)
 
 - [ ] **2.3.1** Process incoming packets through NetChan
   - When WebSocket receives data, call `client.netchan.process(data)`
@@ -326,11 +326,11 @@
 - Send out-of-order packet
 - Verify handled correctly
 
-**Reference Lines**: `/home/user/quake2/full/server/sv_main.c:390-450`
+**Reference Lines**: `full/server/sv_main.c:390-450`
 
 #### Task 2.4: Implement Command Rate Limiting (Fix TODO Line 459)
 **File**: `packages/server/src/dedicated.ts` around line 459
-**Reference**: `/home/user/quake2/full/server/sv_user.c:370-420` (command processing)
+**Reference**: `full/server/sv_user.c:370-420` (command processing)
 
 - [ ] **2.4.1** Add command queue to client state
   - Add `commandQueue: UserCommand[]` to Client interface
@@ -361,11 +361,11 @@
 - Send flood (>200/sec)
 - Verify client kicked
 
-**Reference Lines**: `/home/user/quake2/full/server/sv_user.c:370-420`
+**Reference Lines**: `full/server/sv_user.c:370-420`
 
 #### Task 2.5: Add CRC Checksums for Commands
 **File**: `packages/server/src/protocol.ts` and `packages/client/src/net/connection.ts`
-**Reference**: `/home/user/quake2/full/qcommon/crc.c` (CRC calculation)
+**Reference**: `full/qcommon/crc.c` (CRC calculation)
 
 - [ ] **2.5.1** Create CRC8 implementation
   - File: `packages/shared/src/protocol/crc.ts`
@@ -389,7 +389,7 @@
 - Test command with valid CRC accepted
 - Test command with invalid CRC rejected
 
-**Reference File**: `/home/user/quake2/full/qcommon/crc.c`
+**Reference File**: `full/qcommon/crc.c`
 
 ---
 
@@ -400,7 +400,7 @@
 
 #### Task 3.1: Add NetChan to MultiplayerConnection
 **File**: `packages/client/src/net/connection.ts`
-**Reference**: `/home/user/quake2/full/client/client.h:150-200` (client_static_t)
+**Reference**: `full/client/client.h:150-200` (client_static_t)
 
 - [ ] **3.1.1** Import and create NetChan instance
   - Add `import { NetChan } from '@quake2ts/shared'`
@@ -427,11 +427,11 @@
 - Verify netchan processes it
 - Test duplicate detection
 
-**Reference Lines**: `/home/user/quake2/full/client/client.h:150-200`
+**Reference Lines**: `full/client/client.h:150-200`
 
 #### Task 3.2: Implement Client-Side Prediction with Command History
 **File**: `packages/cgame/src/prediction.ts` (ClientPrediction class)
-**Reference**: `/home/user/quake2/full/client/cl_pred.c:100-200` (CL_PredictMovement)
+**Reference**: `full/client/cl_pred.c:100-200` (CL_PredictMovement)
 
 - [ ] **3.2.1** Enhance command buffering (already exists but verify)
   - `ClientPrediction` stores last 64 commands (CMD_BACKUP)
@@ -463,11 +463,11 @@
 - Verify replay frames 4-5
 - Verify final position corrected
 
-**Reference Lines**: `/home/user/quake2/full/client/cl_pred.c:100-200`
+**Reference Lines**: `full/client/cl_pred.c:100-200`
 
 #### Task 3.3: Add Prediction CVar Support
 **File**: `packages/cgame/src/index.ts`
-**Reference**: `/home/user/quake2/full/client/cl_pred.c:30-50` (cl_predict cvar)
+**Reference**: `full/client/cl_pred.c:30-50` (cl_predict cvar)
 
 - [ ] **3.3.1** Implement `cg_predict` cvar
   - Add to CGame cvar registration
@@ -795,7 +795,7 @@
 **Note**: This task requires external Quake II server - optional validation only
 
 #### Task 6.2: Implement Download System (REQUIRES MAP FILES)
-**Reference**: `/home/user/quake2/full/client/cl_parse.c:200-270` (svc_download)
+**Reference**: `full/client/cl_parse.c:200-270` (svc_download)
 
 - [ ] **6.2.1** Implement `svc_download` handling
   - Client requests missing files (maps, models)

@@ -22,7 +22,7 @@
 
 #### Task 1.1: Wire DemoPlaybackController to Client
 **File**: `packages/client/src/index.ts`
-**Reference**: `/home/user/quake2/full/client/cl_main.c` (CL_Frame, demo playback)
+**Reference**: `full/client/cl_main.c` (CL_Frame, demo playback)
 
 - [ ] **1.1.1** Add demo playback mode state to `ClientExports`
   - Add `isDemoPlaying: boolean` property
@@ -55,7 +55,7 @@
 
 #### Task 1.2: Enhance ClientNetworkHandler for Demo Rendering
 **File**: `packages/client/src/demo/handler.ts`
-**Reference**: `/home/user/quake2/full/client/cl_ents.c` (CL_AddPacketEntities)
+**Reference**: `full/client/cl_ents.c` (CL_AddPacketEntities)
 
 - [ ] **1.2.1** Add entity storage to `ClientNetworkHandler`
   - Add `private demoEntities: Map<number, EntityState>`
@@ -85,7 +85,7 @@
 
 #### Task 1.3: Update Renderer to Support Demo Entities
 **File**: `packages/client/src/index.ts` (render path)
-**Reference**: `/home/user/quake2/full/client/cl_view.c` (V_RenderView)
+**Reference**: `full/client/cl_view.c` (V_RenderView)
 
 - [ ] **1.3.1** Modify `Sample()` method to use demo entities when in demo mode
   - Check `isDemoPlaying` flag
@@ -150,7 +150,7 @@
 
 #### Task 1.5: Enhance DemoPlaybackController
 **File**: `packages/engine/src/demo/playback.ts`
-**Reference**: `/home/user/quake2/full/client/cl_main.c` (CL_Stop, CL_Pause)
+**Reference**: `full/client/cl_main.c` (CL_Stop, CL_Pause)
 
 - [ ] **1.5.1** Add seeking support
   - Add `seek(frameNumber: number): void` method
@@ -293,7 +293,7 @@
 
 #### Task 3.1: Create DemoRecorder Class
 **File**: Create `packages/engine/src/demo/recorder.ts`
-**Reference**: `/home/user/quake2/full/client/cl_main.c` (CL_Record, CL_WriteDemoMessage)
+**Reference**: `full/client/cl_main.c` (CL_Record, CL_WriteDemoMessage)
 
 - [ ] **3.1.1** Create `DemoRecorder` class structure
   - Add `private isRecording: boolean`
@@ -361,7 +361,7 @@
 
 #### Task 4.1: Error Handling in NetworkMessageParser
 **File**: `packages/engine/src/demo/parser.ts`
-**Reference**: `/home/user/quake2/full/client/cl_parse.c` (error handling patterns)
+**Reference**: `full/client/cl_parse.c` (error handling patterns)
 
 - [ ] **4.1.1** Add error recovery for corrupted data
   - Wrap `parseMessage()` in try-catch
