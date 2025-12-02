@@ -26,6 +26,11 @@ import {
     FRAME_GRENADE_THROW_LAST, FRAME_GRENADE_PRIME_SOUND, FRAME_GRENADE_THROW_HOLD,
     FRAME_GRENADE_THROW_FIRE
 } from './frames.js';
+import {
+    FRAME_crattak1, FRAME_crattak3,
+    FRAME_wave08, FRAME_wave01,
+    ANIM_ATTACK, ANIM_REVERSE
+} from '../../entities/player_anim.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -229,6 +234,21 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
                 const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
 
                 createGrenade(game.entities, ent, source, forward, 120, speed, timer);
+
+                // Player Animation
+                // Source: p_weapon.cpp:1166-1181
+                if (ent.client && !ent.deadflag) {
+                    if (ent.client.pm_flags & 2 /* PMF_DUCKED */) { // Check duck state properly if available, or assume viewheight check?
+                        // For now assuming standing if not using pm_flags
+                        // But we should check maxs.z usually or pm_flags.
+                        ent.frame = FRAME_crattak1 - 1;
+                        ent.client.anim_end = FRAME_crattak3;
+                    } else {
+                        ent.frame = FRAME_wave08;
+                        ent.client.anim_end = FRAME_wave01;
+                    }
+                    ent.client.anim_priority = ANIM_ATTACK;
+                }
             }
         },
         game.entities // EntitySystem
