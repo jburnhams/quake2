@@ -7,7 +7,7 @@
 - ✅ Basic WebSocket transport works
 - ✅ Protocol message builders/parsers exist
 - ✅ Multiplayer UI menu exists
-- ❌ NetChan reliability layer missing (CRITICAL BLOCKER)
+- ✅ NetChan reliability layer implemented (Phase 1 complete)
 - ❌ No real end-to-end testing (all tests use mocks)
 - ❌ Server features incomplete (3 critical TODOs)
 
@@ -17,7 +17,7 @@
 
 ## Implementation Roadmap
 
-### Phase 1: NetChan Reliability Layer (CRITICAL - BLOCKS ALL MULTIPLAYER)
+### Phase 1: NetChan Reliability Layer (COMPLETE)
 
 **Estimated Time**: 2-3 weeks
 **Dependencies**: None (reference implementation exists)

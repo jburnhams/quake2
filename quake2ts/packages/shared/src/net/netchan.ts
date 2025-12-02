@@ -166,6 +166,8 @@ export class NetChan {
     const qport = view.getUint16(8, true);
 
     if (this.qport !== qport) {
+      // Allow if we don't have a qport set yet?
+      // Q2 source: if ( netchan->qport != (msg->qport&0xffff) ) return false;
       return null;
     }
 
@@ -191,16 +193,13 @@ export class NetChan {
 
     // Check if our reliable message was acknowledged
     if (this.reliableLength > 0) {
-       // We sent 'bit'.
-       // Receiver consumes it and increments its expectation to 'bit ^ 1'.
-       // Receiver sends ACK with 'bit ^ 1'.
-       // So we check if ACK matches 'bit ^ 1'.
+       // Receiver toggles expectation when it gets our message.
+       // It sends that toggled expectation back in ACK bit 31.
+       // So if ACK bit != our outgoing sequence bit, it means they flipped (processed).
+       const receivedAckBit = ackReliable ? 1 : 0;
+       const currentReliableBit = this.outgoingReliableSequence & 1;
 
-       const bit = this.outgoingReliableSequence & 1;
-       const expectedAck = bit ^ 1;
-       const ackBit = ackReliable ? 1 : 0;
-
-       if (ackBit === expectedAck) {
+       if (receivedAckBit !== currentReliableBit) {
          this.reliableLength = 0;
          this.reliableMessage.reset();
          this.outgoingReliableSequence ^= 1;
@@ -212,6 +211,7 @@ export class NetChan {
     const reliableSeqBit = (sequence & 0x40000000) !== 0 ? 1 : 0;
 
     let payloadOffset = NetChan.PACKET_HEADER;
+    let reliableData: Uint8Array | null = null;
 
     if (hasReliableData) {
        if (payloadOffset + 2 > packet.byteLength) return null; // Malformed
@@ -219,24 +219,39 @@ export class NetChan {
        const reliableLen = view.getUint16(payloadOffset, true);
        payloadOffset += 2;
 
-       // We expect the reliable bit to toggle with each new reliable message.
-       // If incomingReliableSequence is 0 (initial), we expect the first reliable message (0).
-       // So expected bit is incomingReliableSequence & 1.
+       // Check if this is the expected reliable sequence
        const expectedBit = this.incomingReliableSequence & 1;
 
        if (reliableSeqBit === expectedBit) {
-          // New reliable data!
+          // New reliable data
           this.incomingReliableSequence++;
-          // We return both reliable and unreliable data concatenated
-          // The caller will parse them as a stream of commands
-       } else {
-          // Duplicate reliable data. Skip it.
-          payloadOffset += reliableLen;
+          if (payloadOffset + reliableLen > packet.byteLength) return null;
+          reliableData = packet.slice(payloadOffset, payloadOffset + reliableLen);
        }
+
+       // Advance past reliable data regardless (so we can get unreliable data)
+       payloadOffset += reliableLen;
     }
 
-    // Return the rest of the packet
-    return packet.slice(payloadOffset);
+    // Get unreliable data
+    const unreliableData = packet.slice(payloadOffset);
+
+    // Combine if we have reliable data
+    if (reliableData && reliableData.length > 0) {
+        const totalLen = reliableData.length + unreliableData.length;
+        const result = new Uint8Array(totalLen);
+        result.set(reliableData, 0);
+        result.set(unreliableData, reliableData.length);
+        return result;
+    }
+
+    // Ensure we return empty array if no data, rather than null or crashing on length access
+    if (unreliableData) {
+      return unreliableData;
+    }
+
+    // If both are empty/null
+    return new Uint8Array(0);
   }
 
   /**

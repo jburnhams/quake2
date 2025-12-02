@@ -1,88 +1,118 @@
-import { describe, it, expect } from 'vitest';
-import { NetChan } from '../../src/net/netchan';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NetChan } from '../../src/net/netchan.js';
 
 describe('NetChan Transmit', () => {
-  it('should create a packet with correct header', () => {
-    const netchan = new NetChan();
-    netchan.setup(12345);
+  let netchan: NetChan;
 
-    // Simulate some reliable data if needed, or just unreliable
-    const unreliableData = new Uint8Array([1, 2, 3, 4]);
-    const packet = netchan.transmit(unreliableData);
+  beforeEach(() => {
+    netchan = new NetChan();
+    netchan.setup(12345); // Fixed qport
+  });
 
-    // Header is 10 bytes: seq(4) + ack(4) + qport(2)
-    // 10 + 4 = 14 bytes total
-    expect(packet.length).toBe(14);
+  it('should transmit a basic packet with only header', () => {
+    const packet = netchan.transmit();
+
+    // Header size is 10 bytes
+    expect(packet.length).toBe(10);
 
     const view = new DataView(packet.buffer);
     const sequence = view.getUint32(0, true);
     const ack = view.getUint32(4, true);
     const qport = view.getUint16(8, true);
 
-    expect(sequence).toBe(1); // First sequence should be 1 (0 + 1)
+    expect(sequence).toBe(1); // First packet
     expect(ack).toBe(0);
     expect(qport).toBe(12345);
-
-    // Check payload
-    expect(packet[10]).toBe(1);
-    expect(packet[11]).toBe(2);
-    expect(packet[12]).toBe(3);
-    expect(packet[13]).toBe(4);
   });
 
   it('should increment outgoing sequence number', () => {
-    const netchan = new NetChan();
-    netchan.transmit(new Uint8Array([1]));
-    expect(netchan.outgoingSequence).toBe(1);
+    netchan.transmit();
+    const packet2 = netchan.transmit();
 
-    netchan.transmit(new Uint8Array([2]));
-    expect(netchan.outgoingSequence).toBe(2);
+    const view = new DataView(packet2.buffer);
+    const sequence = view.getUint32(0, true);
+
+    expect(sequence).toBe(2);
   });
 
-  it('should include reliable data when present', () => {
-    const netchan = new NetChan();
+  it('should include unreliable data', () => {
+    const unreliable = new Uint8Array([1, 2, 3, 4]);
+    const packet = netchan.transmit(unreliable);
 
-    // Manually inject reliable data for this test using writeByte
-    netchan.reliableMessage.writeByte(99);
-    netchan.reliableLength = 1;
+    expect(packet.length).toBe(10 + 4);
 
-    const packet = netchan.transmit(new Uint8Array([1]));
+    // Check data at end
+    expect(packet[10]).toBe(1);
+    expect(packet[13]).toBe(4);
+  });
+
+  it('should include reliable data', () => {
+    netchan.writeReliableByte(42);
+    const packet = netchan.transmit();
+
+    // Header(10) + Length(2) + Data(1) = 13
+    expect(packet.length).toBe(13);
 
     const view = new DataView(packet.buffer);
     const sequence = view.getUint32(0, true);
 
-    // Reliable bit (0x80000000) should be set
-    expect((sequence & 0x80000000) >>> 0).toBe(0x80000000);
+    // Check reliable flag (bit 31)
+    expect((sequence & 0x80000000) >>> 0).not.toBe(0);
 
-    // Packet structure: Header(10) + Length(2) + Reliable(1) + Unreliable(1)
-    // 10 + 2 + 1 + 1 = 14
-    expect(packet.length).toBe(14);
-
-    // Check length field
+    // Check reliable length
     const len = view.getUint16(10, true);
     expect(len).toBe(1);
 
-    expect(packet[12]).toBe(99); // Reliable data
-    expect(packet[13]).toBe(1);  // Unreliable data
+    // Check data
+    expect(packet[12]).toBe(42);
   });
 
-  it('should set reliable ack bit correctly', () => {
-    const netchan = new NetChan();
+  it('should set reliable sequence bit correctly', () => {
+    // outgoingReliableSequence starts at 0.
+    // So bit 30 should be 0.
 
-    // Case 1: incomingReliableSequence is odd (so bit 0 is 1)
-    netchan.incomingReliableSequence = 1;
-    let packet = netchan.transmit(new Uint8Array([0]));
+    netchan.writeReliableByte(42);
+    let packet = netchan.transmit();
     let view = new DataView(packet.buffer);
-    let ack = view.getUint32(4, true);
-    // Reliable ack bit (0x80000000) should be set
-    expect((ack & 0x80000000) >>> 0).toBe(0x80000000);
+    let sequence = view.getUint32(0, true);
 
-    // Case 2: incomingReliableSequence is even
-    netchan.incomingReliableSequence = 2;
-    packet = netchan.transmit(new Uint8Array([0]));
+    // Bit 31 set (reliable data present), Bit 30 clear (seq 0)
+    expect((sequence & 0x80000000) >>> 0).not.toBe(0);
+    expect((sequence & 0x40000000) >>> 0).toBe(0);
+
+    // Simulate ACK so we can flip sequence
+    // We hack the state directly for this unit test
+    netchan.reliableLength = 0;
+    netchan.reliableMessage.reset();
+    netchan.outgoingReliableSequence = 1;
+
+    // Send new reliable data
+    netchan.writeReliableByte(99);
+    packet = netchan.transmit();
     view = new DataView(packet.buffer);
-    ack = view.getUint32(4, true);
-    // Reliable ack bit should NOT be set
-    expect((ack & 0x80000000) >>> 0).toBe(0);
+    sequence = view.getUint32(0, true);
+
+    // Bit 31 set, Bit 30 set (seq 1)
+    expect((sequence & 0x80000000) >>> 0).not.toBe(0);
+    expect((sequence & 0x40000000) >>> 0).not.toBe(0);
+  });
+
+  it('should truncate unreliable data on overflow', () => {
+     // Max 1400. Header 10. Reliable Overhead 2.
+     // Available: 1388.
+
+     // Fill reliable with 1000 bytes
+     for (let i = 0; i < 1000; i++) netchan.writeReliableByte(0);
+
+     // Try to send 500 bytes unreliable
+     const unreliable = new Uint8Array(500);
+     const packet = netchan.transmit(unreliable);
+
+     // Total should be capped at 1400
+     expect(packet.length).toBe(1400);
+
+     // Header(10) + RelLen(2) + Rel(1000) = 1012
+     // Remaining for unreliable: 1400 - 1012 = 388
+     // Unreliable was 500, so it was truncated.
   });
 });

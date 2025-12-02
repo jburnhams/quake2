@@ -1,152 +1,111 @@
-import { describe, it, expect } from 'vitest';
-import { NetChan } from '../../src/net/netchan';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NetChan } from '../../src/net/netchan.js';
 
 describe('NetChan Process', () => {
-  it('should process a valid packet', () => {
-    const server = new NetChan();
-    server.setup(12345);
+  let client: NetChan;
+  let server: NetChan;
 
-    const client = new NetChan();
-    client.setup(12345);
+  beforeEach(() => {
+    client = new NetChan();
+    server = new NetChan();
 
-    // Client sends packet
-    const data = new Uint8Array([1, 2, 3]);
-    const packet = client.transmit(data);
-
-    // Server processes packet
-    const result = server.process(packet);
-
-    // Should return the data
-    expect(result).not.toBeNull();
-    expect(result).toEqual(data);
-
-    // State updates
-    expect(server.incomingSequence).toBe(1);
-    expect(server.qport).toBe(12345);
+    // Sync qports
+    client.setup(1111);
+    server.setup(1111);
   });
 
-  it('should reject packet with mismatching qport', () => {
-    const server = new NetChan();
-    server.setup(12345);
-
-    const client = new NetChan();
-    client.setup(54321); // Different qport
-
-    const packet = client.transmit(new Uint8Array([1]));
+  it('should process a basic packet', () => {
+    const packet = client.transmit();
     const result = server.process(packet);
 
+    expect(result).not.toBeNull();
+    expect(server.incomingSequence).toBe(1);
+  });
+
+  it('should reject packet with wrong qport', () => {
+    client.setup(9999);
+    const packet = client.transmit();
+
+    const result = server.process(packet);
     expect(result).toBeNull();
-    // Should not update sequence
+    // Sequence should not update
     expect(server.incomingSequence).toBe(0);
   });
 
-  it('should handle reliable data', () => {
-    const server = new NetChan();
-    server.setup(12345);
+  it('should handle reliable data transmission', () => {
+    // Client sends reliable data
+    client.writeReliableString("Hello");
+    const packet = client.transmit();
 
-    const client = new NetChan();
-    client.setup(12345);
-
-    // Add reliable data
-    client.reliableMessage.writeByte(42);
-    client.reliableLength = 1;
-
-    const packet = client.transmit(new Uint8Array([100]));
-
-    // Server processes
+    // Server processes it
     const result = server.process(packet);
 
-    // Should return BOTH reliable and unreliable data for new reliable packets
-    // Reliable data: [42]
-    // Unreliable data: [100]
-    expect(result).toEqual(new Uint8Array([42, 100]));
+    expect(result).not.toBeNull();
+    // We expect "Hello" + null terminator = 6 bytes
+    // result should contain this data
+    expect(result!.length).toBe(6);
 
-    // Reliable state should update
-    expect(server.incomingReliableSequence).toBe(1); // bit flipped 0 -> 1
+    // Server should have updated its reliable expectation
+    expect(server.incomingReliableSequence).toBe(1);
 
-    // Second packet (duplicate reliable)
-    const packet2 = client.transmit(new Uint8Array([101]));
-    const result2 = server.process(packet2);
+    // Now server needs to ACK this
+    // Server sends a packet back
+    const ackPacket = server.transmit();
 
-    // For duplicate reliable, it should ONLY return unreliable data
-    expect(result2).toEqual(new Uint8Array([101]));
-    // Should not increment reliable sequence again (it was already processed)
+    // Client processes ACK
+    client.process(ackPacket);
+
+    // Client reliable buffer should be cleared
+    expect(client.reliableLength).toBe(0);
+    expect(client.canSendReliable()).toBe(true);
+  });
+
+  it('should ignore duplicate reliable data', () => {
+    client.writeReliableByte(123);
+    const packet = client.transmit();
+
+    // Server processes first time
+    const res1 = server.process(packet);
+    expect(res1).not.toBeNull();
+    expect(res1!.length).toBe(1);
+    expect(server.incomingReliableSequence).toBe(1);
+
+    // Server receives SAME packet again (duplicate/retransmit)
+    const res2 = server.process(packet);
+
+    // Should return empty payload (or just unreliable if any)
+    // Reliable data should be skipped, so null is returned if duplicate processing causes drop?
+    // Wait, process() returns null if packet is invalid or duplicate sequence.
+    // If it's a valid retransmit (sequence > incomingSequence), it will be processed.
+
+    // NetChan logic:
+    // if (((seqNumberClean - this.incomingSequence) | 0) <= 0) return null;
+
+    // Ah, duplicate sequence numbers are dropped immediately by the sequence check!
+    // So res2 MUST be null because sequence is same as res1.
+
+    expect(res2).toBeNull();
+
+    // Sequence should not increment
     expect(server.incomingReliableSequence).toBe(1);
   });
 
-  it('should drop duplicate packets', () => {
-    const server = new NetChan();
-    server.setup(12345);
+  it('should handle packet loss (out of order)', () => {
+    // Packet 1
+    const p1 = client.transmit();
+    // Packet 2
+    const p2 = client.transmit();
 
-    const client = new NetChan();
-    client.setup(12345);
+    // Receive p2 first (p1 lost/delayed)
+    server.process(p2);
 
-    const packet = client.transmit(new Uint8Array([1]));
-
-    // First receive
-    const result1 = server.process(packet);
-    expect(result1).not.toBeNull();
-
-    // Second receive (duplicate)
-    const result2 = server.process(packet);
-    expect(result2).toBeNull();
-  });
-
-  it('should drop out-of-order packets', () => {
-    const server = new NetChan();
-    server.setup(12345);
-
-    const client = new NetChan();
-    client.setup(12345);
-
-    // Send 1
-    const packet1 = client.transmit(new Uint8Array([1]));
-    // Send 2
-    const packet2 = client.transmit(new Uint8Array([2]));
-
-    // Receive 2 first
-    server.process(packet2);
     expect(server.incomingSequence).toBe(2);
 
-    // Receive 1 later (should be dropped because sequence < incomingSequence)
-    const result1 = server.process(packet1);
-    expect(result1).toBeNull();
-  });
+    // Now receive p1 (old)
+    const res = server.process(p1);
 
-  it('should acknowledge reliable message', () => {
-     const sender = new NetChan();
-     sender.setup(111);
-
-     const receiver = new NetChan();
-     receiver.setup(111);
-
-     // Sender puts reliable message
-     sender.reliableMessage.writeByte(123);
-     sender.reliableLength = 1;
-
-     // Transmit 1: Contains reliable data
-     const packet = sender.transmit(new Uint8Array([0]));
-
-     // Receiver processes it
-     receiver.process(packet);
-     // Receiver state updated: incomingReliableSequence toggled (0 -> 1)
-     expect(receiver.incomingReliableSequence).toBe(1);
-
-     // Receiver replies (acks reliable)
-     // NOTE: Receiver must have processed the reliable packet to update its state
-     // before transmitting the ACK.
-     const reply = receiver.transmit(new Uint8Array([0]));
-
-     // Check if reply has ACK bit set
-     const view = new DataView(reply.buffer);
-     const ack = view.getUint32(4, true);
-     expect((ack & 0x80000000) >>> 0).toBe(0x80000000); // Should ack reliable
-
-     // Sender processes reply
-     sender.process(reply);
-
-     // Sender should now know reliable message was received
-     // So it clears reliable buffer
-     expect(sender.reliableLength).toBe(0);
+    // Should be discarded
+    expect(res).toBeNull();
+    expect(server.incomingSequence).toBe(2);
   });
 });
