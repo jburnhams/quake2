@@ -1,78 +1,48 @@
-import { Entity } from '../../entities/entity.js';
-import { GameExports } from '../../index.js';
-import { angleVectors, addVec3, scaleVec3, Vec3 } from '@quake2ts/shared';
+import type { Vec3 } from '@quake2ts/shared';
+import { addVec3, scaleVec3, copyVec3, MASK_SOLID, angleVectors } from '@quake2ts/shared';
+import type { Entity } from '../../entities/entity.js';
+import type { GameExports } from '../../index.js';
 
-/**
- * Calculates the exact firing origin for a weapon projectile or hitscan.
- * Replicates the behavior of P_ProjectSource from the original Quake II source.
- *
- * Source: p_weapon.cpp:91-135
- *
- * @param game The game exports interface
- * @param player The player entity firing the weapon
- * @param fireOffset The forward/right/up offset from the player's eye position (e.g., {8, 8, 8})
- * @param forward The forward vector of the player's view
- * @param right The right vector of the player's view
- * @param up The up vector of the player's view
- * @returns The calculated world position to spawn the projectile or start the trace
- */
-export function P_ProjectSource(
-    game: GameExports,
-    player: Entity,
-    fireOffset: Vec3,
-    forward: Vec3,
-    right: Vec3,
-    up: Vec3
-): Vec3 {
-    // Calculate eye position (start point)
-    const eyePos: Vec3 = {
-        x: player.origin.x,
-        y: player.origin.y,
-        z: player.origin.z + player.viewheight
-    };
+// From g_local.h
+export const VIEW_HEIGHT = 22;
 
-    // Calculate theoretical weapon muzzle position
-    // point = start + forward * offset.x + right * offset.y + up * offset.z
-    const muzzlePos = addVec3(
-        eyePos,
-        addVec3(
-            scaleVec3(forward, fireOffset.x),
-            addVec3(
-                scaleVec3(right, fireOffset.y),
-                scaleVec3(up, fireOffset.z)
-            )
-        )
-    );
+export function P_ProjectSource(game: GameExports, ent: Entity, offset: Vec3, forward: Vec3, right: Vec3, up: Vec3): Vec3 {
+  const origin = copyVec3(ent.origin);
 
-    // Prevent shooting through walls by tracing from eye to muzzle
-    // Source: p_weapon.cpp:126-135
-    const trace = game.trace(
-        eyePos,
-        null, // mins
-        null, // maxs
-        muzzlePos,
-        player,
-        0 // CONTENTS_SOLID
-    );
+  // Add view height
+  const eye = { ...origin, z: origin.z + (ent.viewheight ?? VIEW_HEIGHT) };
 
-    if (trace.fraction < 1.0) {
-        // If we hit something between eye and muzzle, pull back slightly
-        // so we don't start inside the wall
-        return addVec3(trace.endpos, scaleVec3(forward, -1));
-    }
+  // Apply offsets
+  // P_ProjectSource logic:
+  // point = origin + forward * offset[0] + right * offset[1] + up * offset[2]
 
-    return muzzlePos;
+  const f = scaleVec3(forward, offset.x);
+  const r = scaleVec3(right, offset.y);
+  const u = scaleVec3(up, offset.z);
+
+  const point = addVec3(addVec3(addVec3(eye, f), r), u);
+
+  // Wall check: Trace from eye to point
+  // If we hit something, pull back to the hit point to prevent shooting through walls
+  // Rerelease p_weapon.cpp:126-135
+  const tr = game.trace(eye, null, null, point, ent, MASK_SOLID);
+
+  if (tr.fraction < 1.0) {
+      // Pull back by 1 unit in the forward direction to prevent shooting through walls
+      return { x: tr.endpos.x - forward.x, y: tr.endpos.y - forward.y, z: tr.endpos.z - forward.z };
+  }
+
+  return point;
 }
 
-/**
- * Helper to get the correct firing origin for a specific weapon.
- * Applies the correct offsets based on weapon type and P_ProjectSource logic.
- *
- * @param game Game exports
- * @param player Player entity
- * @param offset Optional custom offset (defaults to standard {8, 8, player.viewheight-8})
- */
-export function getProjectileOrigin(game: GameExports, player: Entity, offset: Vec3 = { x: 8, y: 8, z: 8 }): Vec3 {
-    const { forward, right, up } = angleVectors(player.angles);
-    return P_ProjectSource(game, player, offset, forward, right, up);
+// Helper wrapper that calculates angle vectors automatically
+export function getProjectileOrigin(game: GameExports, ent: Entity, offset: Vec3 = { x: 8, y: 8, z: 8 }): Vec3 {
+  const { forward, right, up } = angleVectors(ent.client?.v_angle || ent.angles);
+  return P_ProjectSource(game, ent, offset, forward, right, up);
+}
+
+// Helper to get weapon firing vectors (legacy helper, might be useful)
+export function getWeaponVectors(ent: Entity, angleVectorsFn: (angles: Vec3) => { forward: Vec3, right: Vec3, up: Vec3 }): { forward: Vec3, right: Vec3, up: Vec3, origin: Vec3 } {
+  const { forward, right, up } = angleVectorsFn(ent.client?.v_angle || ent.angles);
+  return { forward, right, up, origin: ent.origin };
 }

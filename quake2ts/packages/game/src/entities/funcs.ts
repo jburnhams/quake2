@@ -205,6 +205,9 @@ function door_go_up(door: Entity, context: EntitySystem) {
 }
 
 const func_door: SpawnFunction = (entity, context) => {
+  // Use context.entities instead of context because context is SpawnContext and we need EntitySystem
+  const sys = context.entities;
+
   entity.movedir = setMovedir(entity.angles);
   if (!entity.speed) entity.speed = 100;
   if (!entity.wait) entity.wait = 3;
@@ -231,10 +234,10 @@ const func_door: SpawnFunction = (entity, context) => {
 
       if (self.state === DoorState.Opening) {
         self.state = DoorState.Closing;
-        door_go_down(self, context.entities);
+        door_go_down(self, sys);
       } else if (self.state === DoorState.Closing) {
         self.state = DoorState.Opening;
-        door_go_up(self, context.entities);
+        door_go_up(self, sys);
       }
   };
 
@@ -287,17 +290,17 @@ const func_door: SpawnFunction = (entity, context) => {
     if (entity.spawnflags & SPAWNFLAG_DOOR_TOGGLE) { // TOGGLE
          if (self.state === DoorState.Closed) {
              self.state = DoorState.Opening;
-             door_go_up(self, context.entities);
+             door_go_up(self, sys);
          } else if (self.state === DoorState.Open) {
              self.state = DoorState.Closing;
-             door_go_down(self, context.entities);
+             door_go_down(self, sys);
          }
          return;
     }
 
     if (self.state !== DoorState.Closed) return;
     self.state = DoorState.Opening;
-    door_go_up(self, context.entities);
+    door_go_up(self, sys);
   };
 
   if (entity.health <= 0 && !entity.targetname) {

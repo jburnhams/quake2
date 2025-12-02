@@ -7,6 +7,7 @@ import {
   NetworkMessageBuilder,
   writeUserCommand,
   BinaryWriter,
+  CMD_BACKUP
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -54,6 +55,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private connectPacketCount = 0;
   private connectPacketTime = 0;
 
+  public latestServerFrame = 0;
+  private commandHistory: UserCommand[] = [];
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -90,10 +94,25 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     this.state = ConnectionState.Disconnected;
     this.configStrings.clear();
     this.baselines.clear();
+    this.commandHistory = [];
+    this.latestServerFrame = 0;
   }
 
   public sendCommand(cmd: UserCommand): void {
       if (this.state !== ConnectionState.Active) return;
+
+      // Assign the last acknowledged server frame to this command
+      // This is crucial for prediction reconciliation
+      const commandWithFrame: UserCommand = {
+          ...cmd,
+          serverFrame: cmd.serverFrame ?? this.latestServerFrame
+      };
+
+      // Buffer command for retransmission/prediction
+      this.commandHistory.push(commandWithFrame);
+      if (this.commandHistory.length > CMD_BACKUP) {
+          this.commandHistory.shift();
+      }
 
       const writer = new BinaryWriter();
 
@@ -112,9 +131,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
       writer.writeByte(ClientCommand.move);
       writer.writeByte(0); // checksum (crc8 of last server frame) - TODO
-      writer.writeLong(0); // lastframe (ack) - TODO: Track last received server frame
+      writer.writeLong(this.latestServerFrame); // lastframe (ack)
 
-      writeUserCommand(writer, cmd);
+      writeUserCommand(writer, commandWithFrame);
 
       this.driver.send(writer.getData());
   }
@@ -237,8 +256,14 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.state = ConnectionState.Active;
   }
 
+  onFrame(frame: FrameData): void {
+    // Keep track of the latest server frame received for ack/prediction
+    if (frame.serverFrame > this.latestServerFrame) {
+      this.latestServerFrame = frame.serverFrame;
+    }
+  }
+
   // Stubs for other handlers
-  onFrame(frame: FrameData): void {}
   onCenterPrint(msg: string): void {}
   onPrint(level: number, msg: string): void {}
   onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: any): void {}

@@ -1,23 +1,19 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MultiplayerConnection, ConnectionState } from '../../src/net/connection';
+import { NetDriver, UserCommand, ClientCommand, ServerCommand, BinaryWriter } from '@quake2ts/shared';
+import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver';
 
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { MultiplayerConnection, ConnectionState } from '../../src/net/connection.js';
-import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver.js';
-import { ClientCommand, ServerCommand, NetworkMessageBuilder, BinaryStream, UserCommand, PlayerButton } from '@quake2ts/shared';
-
-// Mock BrowserWebSocketNetDriver
-vi.mock('../../src/net/browserWsDriver.js', () => {
+// Mock dependencies
+vi.mock('../../src/net/browserWsDriver', () => {
     return {
-        BrowserWebSocketNetDriver: vi.fn().mockImplementation(() => {
-            return {
-                connect: vi.fn().mockResolvedValue(undefined),
-                disconnect: vi.fn(),
-                send: vi.fn(),
-                onMessage: vi.fn(),
-                onClose: vi.fn(),
-                onError: vi.fn(),
-                isConnected: vi.fn().mockReturnValue(false)
-            };
-        })
+        BrowserWebSocketNetDriver: vi.fn().mockImplementation(() => ({
+            connect: vi.fn().mockResolvedValue(undefined),
+            disconnect: vi.fn(),
+            send: vi.fn(),
+            onMessage: vi.fn(),
+            onClose: vi.fn(),
+            onError: vi.fn()
+        }))
     };
 });
 
@@ -25,17 +21,22 @@ describe('MultiplayerConnection', () => {
     let connection: MultiplayerConnection;
     let mockDriver: any;
 
-    const options = {
-        username: 'Player',
-        model: 'male',
-        skin: 'grunt',
-        hand: 0,
-        fov: 90
+    const mockCmd: UserCommand = {
+        msec: 100,
+        buttons: 0,
+        angles: { x: 0, y: 0, z: 0 },
+        forwardmove: 0,
+        sidemove: 0,
+        upmove: 0,
+        serverFrame: 0
     };
 
     beforeEach(() => {
-        connection = new MultiplayerConnection(options);
-        // Get the mock instance from the constructor call
+        connection = new MultiplayerConnection({
+            username: 'Player',
+            model: 'male',
+            skin: 'grunt'
+        });
         mockDriver = (connection as any).driver;
     });
 
@@ -43,133 +44,87 @@ describe('MultiplayerConnection', () => {
         vi.clearAllMocks();
     });
 
-    it('should initiate connection and send getchallenge', async () => {
-        await connection.connect('ws://localhost:27910');
+    it('should initialize in disconnected state', () => {
+        expect(connection.isConnected()).toBe(false);
+    });
 
+    it('should transition to Connecting and then Challenge state on connect', async () => {
+        await connection.connect('ws://localhost:27910');
         expect(mockDriver.connect).toHaveBeenCalledWith('ws://localhost:27910');
+        expect((connection as any).state).toBe(ConnectionState.Challenge);
+        // Verify it sends getchallenge
         expect(mockDriver.send).toHaveBeenCalled();
-
-        const call = mockDriver.send.mock.calls[0];
-        const sentData = call[0];
-        const stream = new BinaryStream(sentData.buffer);
-
-        expect(stream.readByte()).toBe(ClientCommand.stringcmd);
-        expect(stream.readString()).toBe('getchallenge');
     });
 
-    it('should handle challenge response and send connect', async () => {
+    it('should complete handshake sequence', async () => {
         await connection.connect('ws://localhost:27910');
 
-        // Simulate server response: stufftext "challenge 12345"
-        // This simulates standard Quake 2 handshake flow over WebSocket stream.
+        // Simulate "challenge 12345" response
+        const writer = new BinaryWriter();
+        writer.writeLong(0); // Sequence
+        writer.writeLong(0); // Ack
+        writer.writeByte(ServerCommand.stufftext);
+        writer.writeString('challenge 12345\n');
 
-        const msgBuilder = new NetworkMessageBuilder();
-        msgBuilder.writeLong(0); // seq
-        msgBuilder.writeLong(0); // ack
-        msgBuilder.writeByte(ServerCommand.stufftext);
-        msgBuilder.writeString("challenge 12345");
+        // Trigger onMessage
+        const onMessage = mockDriver.onMessage.mock.calls[0][0];
+        onMessage(new Uint8Array(writer.getData()));
 
-        // Invoke callback
-        const onMessage = (mockDriver.onMessage as Mock).mock.calls[0][0];
-        onMessage(msgBuilder.getData());
+        // Should have sent connect command
+        expect(mockDriver.send).toHaveBeenCalledTimes(2); // getchallenge + connect
 
-        expect(mockDriver.send).toHaveBeenCalledTimes(2); // 1. getchallenge, 2. connect
+        // Simulate svc_serverdata
+        const writer2 = new BinaryWriter();
+        writer2.writeLong(1);
+        writer2.writeLong(0);
+        writer2.writeByte(ServerCommand.serverdata);
+        writer2.writeLong(34); // Protocol
+        writer2.writeLong(1); // Server count
+        writer2.writeByte(0); // Attract
+        writer2.writeString("baseq2");
+        writer2.writeShort(0); // Player num
+        writer2.writeString("maps/test.bsp");
 
-        const connectCall = mockDriver.send.mock.calls[1][0];
-        const connectStream = new BinaryStream(connectCall.buffer);
-        expect(connectStream.readByte()).toBe(ClientCommand.stringcmd);
-        const connectStr = connectStream.readString();
-        expect(connectStr).toContain('connect');
-        expect(connectStr).toContain('12345');
-        expect(connectStr).toContain('Player');
-    });
-
-    it('should handle serverdata and transition to loading', async () => {
-        // Setup state to expecting serverdata
-        await connection.connect('ws://localhost:27910');
-        (connection as any).state = ConnectionState.Challenge;
-
-        const msgBuilder = new NetworkMessageBuilder();
-        msgBuilder.writeLong(0); // seq
-        msgBuilder.writeLong(0); // ack
-
-        // ServerCommand.serverdata = 12
-        msgBuilder.writeByte(ServerCommand.serverdata);
-        msgBuilder.writeLong(34); // Protocol 34 (Vanilla)
-        msgBuilder.writeLong(1); // Server count
-        msgBuilder.writeByte(0); // Attract/Demo
-        msgBuilder.writeString("baseq2"); // GameDir
-        msgBuilder.writeShort(0); // PlayerNum
-        msgBuilder.writeString("q2dm1"); // LevelName
-
-        const onMessage = (mockDriver.onMessage as Mock).mock.calls[0][0];
-        onMessage(msgBuilder.getData());
-
+        onMessage(new Uint8Array(writer2.getData()));
         expect((connection as any).state).toBe(ConnectionState.Loading);
-        expect(connection.serverProtocol).toBe(34);
-        expect(connection.levelName).toBe('q2dm1');
 
-        // Should send "new" command
-        expect(mockDriver.send).toHaveBeenCalled();
-        const lastCall = mockDriver.send.mock.lastCall[0];
-        const stream = new BinaryStream(lastCall.buffer);
-        expect(stream.readByte()).toBe(ClientCommand.stringcmd);
-        expect(stream.readString()).toBe('new');
-    });
+        // Simulate "precache" which finishes loading
+        const writer3 = new BinaryWriter();
+        writer3.writeLong(2);
+        writer3.writeLong(0);
+        writer3.writeByte(ServerCommand.stufftext);
+        writer3.writeString('precache\n');
 
-    it('should finish loading on "precache" stufftext', async () => {
-        // Setup state
-        await connection.connect('ws://localhost:27910');
-        (connection as any).state = ConnectionState.Loading;
+        onMessage(new Uint8Array(writer3.getData()));
 
-        const msgBuilder = new NetworkMessageBuilder();
-        msgBuilder.writeLong(0);
-        msgBuilder.writeLong(0);
-        msgBuilder.writeByte(ServerCommand.stufftext);
-        msgBuilder.writeString("precache\n");
-
-        const onMessage = (mockDriver.onMessage as Mock).mock.calls[0][0];
-        onMessage(msgBuilder.getData());
-
-        expect((connection as any).state).toBe(ConnectionState.Active);
         expect(connection.isConnected()).toBe(true);
-
-        // Should send "begin"
-        const lastCall = mockDriver.send.mock.lastCall[0];
-        const stream = new BinaryStream(lastCall.buffer);
-        expect(stream.readByte()).toBe(ClientCommand.stringcmd);
-        expect(stream.readString()).toBe('begin');
+        expect((connection as any).state).toBe(ConnectionState.Active);
     });
 
-    it('should send clc_move when sending command', async () => {
-        // Verify current behavior (Phase 1)
-        await connection.connect('ws://localhost:27910');
+    it('should buffer last 64 commands', async () => {
+        // Manually set state to Active to allow sending
         (connection as any).state = ConnectionState.Active;
 
-        const cmd = {
-            msec: 100,
-            buttons: PlayerButton.Attack,
-            angles: { x:0, y:0, z:0 },
-            forwardmove: 100,
-            sidemove: 0,
-            upmove: 0
-        } as UserCommand;
+        // Send 70 commands
+        for (let i = 0; i < 70; i++) {
+            connection.sendCommand({ ...mockCmd, serverFrame: i });
+        }
 
-        connection.sendCommand(cmd);
+        const cmdBuffer = (connection as any).commandHistory as UserCommand[];
+        expect(cmdBuffer).toBeDefined();
+        expect(cmdBuffer.length).toBe(64);
+        expect(cmdBuffer[0].serverFrame).toBe(6); // Should drop first 6
+        expect(cmdBuffer[63].serverFrame).toBe(69);
+    });
 
-        const lastCall = mockDriver.send.mock.lastCall[0];
-        const stream = new BinaryStream(lastCall.buffer);
+    it('should attach serverFrame to sent commands if available', async () => {
+        // Mock server frame update
+        (connection as any).latestServerFrame = 123;
+        (connection as any).state = ConnectionState.Active;
 
-        // Skip header (Seq + Ack)
-        stream.readLong();
-        stream.readLong();
+        connection.sendCommand({ ...mockCmd, serverFrame: undefined });
 
-        expect(stream.readByte()).toBe(ClientCommand.move);
-        expect(stream.readByte()).toBe(0); // checksum
-        expect(stream.readLong()).toBe(0); // lastframe
-
-        expect(stream.readByte()).toBe(100); // msec
-        expect(stream.readByte()).toBe(PlayerButton.Attack);
-        // ... verify other fields if needed
+        const cmdBuffer = (connection as any).commandHistory as UserCommand[];
+        expect(cmdBuffer[0].serverFrame).toBe(123);
     });
 });

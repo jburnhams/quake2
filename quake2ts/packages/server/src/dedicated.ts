@@ -256,6 +256,8 @@ export class DedicatedServer implements GameEngine {
         driver.attach(ws);
 
         const client = createClient(clientIndex, driver);
+        // Initialize lastMessage to current frame to prevent immediate timeout
+        client.lastMessage = this.sv.frame;
         this.svs.clients[clientIndex] = client;
 
         driver.onMessage((data) => this.onClientMessage(client, data));
@@ -279,6 +281,13 @@ export class DedicatedServer implements GameEngine {
         this.svs.clients[client.index] = null;
         if (this.entityIndex && client.edict) {
             this.entityIndex.unlink(client.edict.index);
+        }
+    }
+
+    private dropClient(client: Client) {
+        // Disconnect handling will be triggered by onClose callback from net driver
+        if (client.net) {
+             client.net.disconnect();
         }
     }
 
@@ -455,6 +464,19 @@ export class DedicatedServer implements GameEngine {
 
         // 2. Run client commands
         for (const client of this.svs.clients) {
+            if (!client || client.state === ClientState.Free) continue;
+
+            // Check timeout
+            // Timeout if no packet received for 30 seconds (assuming 10Hz = 300 frames)
+            if (client.state >= ClientState.Connected) {
+                 const timeoutFrames = 300; // 30 seconds * 10 Hz
+                 if (this.sv.frame - client.lastMessage > timeoutFrames) {
+                     console.log(`Client ${client.index} timed out`);
+                     this.dropClient(client);
+                     continue;
+                 }
+            }
+
             if (client && client.state === ClientState.Active && client.edict) {
                 // TODO: Process command queue, apply rate limiting
                 this.game.clientThink(client.edict, client.lastCmd);
