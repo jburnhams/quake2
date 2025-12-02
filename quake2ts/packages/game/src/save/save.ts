@@ -267,6 +267,8 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
     entities: parseEntities(snapshot.entities),
     thinks: parseThinkEntries(snapshot.thinks),
     awareness: parseAwareness(snapshot.awareness),
+    crossLevelFlags: ensureNumberOrDefault(snapshot.crossLevelFlags, 'entities.crossLevelFlags', 0),
+    crossUnitFlags: ensureNumberOrDefault(snapshot.crossUnitFlags, 'entities.crossUnitFlags', 0),
   };
 }
 

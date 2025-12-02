@@ -388,6 +388,55 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
 
   registry.register('target_laser', (entity, context) => {
       entity.think = (self) => target_laser_start(self, context);
+      entity.think = (self) => target_laser_start(self, context);
       entity.nextthink = context.entities.timeSeconds + 1;
+  });
+
+  registry.register('target_crosslevel_trigger', (entity, context) => {
+    entity.svflags |= ServerFlags.NoClient;
+    entity.use = (self) => {
+        context.entities.crossLevelFlags |= self.spawnflags;
+        context.free(self);
+    };
+  });
+
+  registry.register('target_crosslevel_target', (entity, context) => {
+    entity.svflags |= ServerFlags.NoClient;
+    if (!entity.delay) {
+        entity.delay = 1;
+    }
+    const SFL_CROSS_TRIGGER_MASK = 0xFFFFFFFF; // Assume full mask for now, TODO: refine if needed
+    entity.think = (self) => {
+        const flags = self.spawnflags & SFL_CROSS_TRIGGER_MASK;
+        if ((context.entities.crossLevelFlags & flags) === flags) {
+            context.entities.useTargets(self, self);
+            context.free(self);
+        }
+    };
+    context.entities.scheduleThink(entity, context.entities.timeSeconds + entity.delay);
+  });
+
+  registry.register('target_crossunit_trigger', (entity, context) => {
+    entity.svflags |= ServerFlags.NoClient;
+    entity.use = (self) => {
+        context.entities.crossUnitFlags |= self.spawnflags;
+        context.free(self);
+    };
+  });
+
+  registry.register('target_crossunit_target', (entity, context) => {
+    entity.svflags |= ServerFlags.NoClient;
+    if (!entity.delay) {
+        entity.delay = 1;
+    }
+    const SFL_CROSS_TRIGGER_MASK = 0xFFFFFFFF;
+    entity.think = (self) => {
+        const flags = self.spawnflags & SFL_CROSS_TRIGGER_MASK;
+        if ((context.entities.crossUnitFlags & flags) === flags) {
+            context.entities.useTargets(self, self);
+            context.free(self);
+        }
+    };
+    context.entities.scheduleThink(entity, context.entities.timeSeconds + entity.delay);
   });
 }

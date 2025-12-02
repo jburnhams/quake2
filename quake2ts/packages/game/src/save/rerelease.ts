@@ -244,6 +244,8 @@ function buildEntitySnapshot(
     entities: serialized,
     thinks: [],
     awareness: dummyAwareness,
+    crossLevelFlags: 0,
+    crossUnitFlags: 0,
   };
 }
 

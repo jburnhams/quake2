@@ -93,6 +93,8 @@ export interface EntitySystemSnapshot {
   readonly entities: SerializedEntityState[];
   readonly thinks: ThinkScheduleEntry[];
   readonly awareness: SerializedTargetAwareness;
+  readonly crossLevelFlags: number;
+  readonly crossUnitFlags: number;
 }
 
 
@@ -143,6 +145,10 @@ export class EntitySystem {
   private frameNumber = 0;
 
   readonly targetAwareness: TargetAwarenessState;
+
+  // Persistent state for cross-level logic
+  crossLevelFlags: number = 0;
+  crossUnitFlags: number = 0;
 
   get rng() {
     return this.random;
@@ -529,11 +535,15 @@ export class EntitySystem {
         sound2EntityFrame: this.targetAwareness.sound2EntityFrame,
         sightClientIndex: this.targetAwareness.sightClient?.index ?? null,
       },
+      crossLevelFlags: this.crossLevelFlags,
+      crossUnitFlags: this.crossUnitFlags,
     };
   }
 
   restore(snapshot: EntitySystemSnapshot, callbackRegistry?: CallbackRegistry): void {
     this.currentTimeSeconds = snapshot.timeSeconds;
+    this.crossLevelFlags = snapshot.crossLevelFlags ?? 0;
+    this.crossUnitFlags = snapshot.crossUnitFlags ?? 0;
     this.pool.restore(snapshot.pool);
 
     const indexToEntity = new Map<number, Entity>();
