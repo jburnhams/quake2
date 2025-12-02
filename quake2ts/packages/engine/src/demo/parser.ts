@@ -258,33 +258,41 @@ export class NetworkMessageParser {
     this.handler = handler;
   }
 
+  public setProtocolVersion(version: number): void {
+      this.protocolVersion = version;
+  }
+
+  public getProtocolVersion(): number {
+      return this.protocolVersion;
+  }
+
   private translateCommand(cmd: number): number {
     if (this.protocolVersion === 0) {
         if (cmd === 7) return ServerCommand.serverdata;
         if (cmd === 12) return ServerCommand.serverdata;
     }
 
-    if (this.protocolVersion === 25) {
-        if (cmd >= 7 && cmd <= 15) return cmd + 5;
-        if (cmd === 1) return ServerCommand.print;
-        if (cmd === 2) return ServerCommand.stufftext;
-        if (cmd === 3) return ServerCommand.sound;
-        if (cmd === 4) return ServerCommand.nop;
-        if (cmd === 5) return ServerCommand.disconnect;
-        if (cmd === 6) return ServerCommand.reconnect;
-        if (cmd === 16) return ServerCommand.temp_entity;
-    }
-
-    // Vanilla Q2 (Protocol 34) doesn't need translation for base commands,
-    // but we need to ensure we don't fall through if the protocol is just unknown/default 0
-    // and we've already parsed serverdata.
-    // If protocol is 34, mapping is 1:1 for the commands we support.
-
     // Rerelease Protocol 2023+
-    // Mapping matches the ServerCommand enum directly, but we explicitly handle it
-    // to be clear about support.
     if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
       return cmd;
+    }
+
+    // Vanilla Q2 (Protocol 34) and Protocol 25 (v3.00) use the same base opcodes (mostly).
+    // Mapping is 1:1 for base commands up to svc_frame (20).
+    // We must ensure we don't accidentally interpret Rerelease extensions (21+)
+    // as valid commands if the protocol is legacy.
+    if (this.protocolVersion === 34 || this.protocolVersion === 25) {
+        if (cmd <= ServerCommand.frame) {
+            return cmd;
+        }
+        return ServerCommand.bad;
+    }
+
+    // Default / Unknown Protocol (usually treated as Vanilla-compatible until proven otherwise)
+    // But if we have a specific version set that isn't handled above, we should be careful.
+    // For now, if version is 0 (parsing serverdata), we return as is.
+    if (this.protocolVersion === 0) {
+        return cmd;
     }
 
     return cmd;
@@ -303,6 +311,10 @@ export class NetworkMessageParser {
 
       try {
         switch (cmd) {
+          case ServerCommand.bad:
+            // Often used as padding or end-of-message in demos.
+            // We treat it as end of processing for this message block.
+            return;
           case ServerCommand.nop:
             break;
           case ServerCommand.disconnect:
@@ -963,12 +975,13 @@ export class NetworkMessageParser {
       const areaBits = this.stream.readData(areaBytes);
 
       // Player Info
-      const piCmd = this.stream.readByte();
+      let piCmd = this.stream.readByte();
+      piCmd = this.translateCommand(piCmd);
 
       // Strict Protocol Check:
       // In standard Q2 protocol, `svc_playerinfo` MUST follow the frame header.
       if (piCmd !== ServerCommand.playerinfo) {
-          throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd}`);
+          throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd} (translated)`);
       }
       const playerState = this.parsePlayerState();
 

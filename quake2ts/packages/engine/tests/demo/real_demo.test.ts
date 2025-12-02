@@ -64,6 +64,7 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
         let messageCount = 0;
         let frameCount = 0;
         let serverDataFound = false;
+        let protocolVersion = 0;
 
         // Read all messages
         while (demoReader.hasMore()) {
@@ -75,44 +76,13 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
             // msg.data is already a BinaryStream
             const parser = new NetworkMessageParser(msg.data, handler);
 
-            // We need to manually handle ServerData to set protocol version for the parser
-            // In a real loop, the parser maintains state, but here we instantiate it per message.
-            // Wait, NetworkMessageParser is designed to parse one packet (which may contain multiple commands).
-            // But it maintains state (protocolVersion) across packets if we reuse it?
-            // Actually, `parseMessage` loops through commands in the stream until end.
-            // So if we create a NEW parser for each message, we lose the protocol version state.
-            // We should reuse the parser or manually set state.
-            // But the parser takes a stream in constructor. It's tied to one stream.
-            // The `DemoPlaybackController` handles this by creating a parser for each packet but passing in state?
-            // No, `NetworkMessageParser` stores `protocolVersion` internally.
-
-            // Let's modify the test to simulate a persistent parser or check how `DemoPlaybackController` does it.
-            // `DemoPlaybackController` creates a new parser for each frame.
-            // AND it seems `NetworkMessageParser` state is lost between frames?
-            // Checking `playback.ts`... it probably doesn't persist parser.
-            // Ah, `NetworkMessageParser` has `protocolVersion` which defaults to 0.
-            // If it's 0, it detects ServerData command (7 or 12).
-            // Once ServerData is parsed, `protocolVersion` is set.
-            // But if we create a NEW parser for the next frame, `protocolVersion` is 0 again.
-            // This means subsequent frames might be parsed incorrectly if they rely on protocol version for command translation (e.g. Protocol 25 translation).
-            // However, `demo1.dm2` is likely Protocol 34 (Vanilla).
-            // Protocol 34 doesn't need translation (commands map 1:1 mostly, except for older protocols).
-            // But wait, `translateCommand` checks `protocolVersion`.
-            // If `protocolVersion` is 0, it only knows 7 and 12.
-            // It returns `cmd` as is for others.
-            // If the demo is Vanilla (Proto 34), `cmd` 12 is `svc_serverdata`.
-            // If `NetworkMessageParser` is fresh every time, `protocolVersion` is 0.
-            // Does this matter?
-            // Yes, if `translateCommand` does mapping.
-            // For Proto 34: `translateCommand` returns `cmd`. Correct.
-            // For Proto 25: `translateCommand` maps 7-15 to +5.
-
-            // To properly test, we should maintain the protocol version.
-            // But `NetworkMessageParser` doesn't expose a way to set it from outside easily (it's private).
-            // Wait, we can see if `handler.onServerData` is called, capture the protocol,
-            // and maybe we don't need to set it back if the parser defaults work for Proto 34?
+            // Persist protocol version across messages
+            parser.setProtocolVersion(protocolVersion);
 
             parser.parseMessage();
+
+            // Update protocol version for next iteration
+            protocolVersion = parser.getProtocolVersion();
 
             if (handler.onServerData.mock.calls.length > 0) {
                  serverDataFound = true;
