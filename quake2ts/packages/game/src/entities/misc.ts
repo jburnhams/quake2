@@ -1,9 +1,11 @@
 import type { SpawnRegistry, SpawnFunction } from './spawn.js';
-import { MoveType, Solid, ServerFlags, Entity } from './entity.js';
+import { MoveType, Solid, ServerFlags, Entity, EntityFlags } from './entity.js';
 import { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { closestPointToBox } from '@quake2ts/shared';
+import { closestPointToBox, createRandomGenerator } from '@quake2ts/shared';
 import { T_Damage } from '../combat/damage.js';
+
+const random = createRandomGenerator();
 
 // ============================================================================
 // FUNC OBJECT
@@ -94,6 +96,39 @@ const func_object: SpawnFunction = (entity, context) => {
 };
 
 // ============================================================================
+// GIBS
+// ============================================================================
+
+function gib_die(self: any, inflictor: any, attacker: any, damage: number) {
+    // G_FreeEdict(self); // If using context.free, we need context.
+    // We can attach a free helper via closure in spawn function?
+    // Or just set think to free.
+    // For now, let's assume system handles garbage collection if health <= 0 eventually or think function kills it.
+    // Replicating: if (mod == MOD_CRUSH) G_FreeEdict(self);
+    // Since we don't have full context here easily without a factory closure, we skip logic for now.
+}
+
+function spawn_gib(entity: Entity, model: string, context: { entities: EntitySystem }) {
+    context.entities.modelIndex(model);
+    entity.solid = Solid.Not;
+    // entity.effects |= EF_GIB;
+    entity.takedamage = true;
+    entity.die = gib_die;
+    entity.movetype = MoveType.Toss;
+    entity.deadflag = 2; // DEAD_DEAD
+
+    entity.avelocity = {
+        x: random.frandom() * 200,
+        y: random.frandom() * 200,
+        z: random.frandom() * 200
+    };
+
+    entity.think = (self) => context.entities.free(self);
+    context.entities.scheduleThink(entity, context.entities.timeSeconds + 10);
+    context.entities.linkentity(entity);
+}
+
+// ============================================================================
 // REGISTRATION
 // ============================================================================
 
@@ -124,11 +159,16 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
     // Decorative
   });
 
-  // Example gib registration, others would follow a similar pattern
-  registry.register('misc_gib_arm', (entity) => {
-    entity.movetype = MoveType.Toss;
-    entity.solid = Solid.Not;
-    // Decorative
+  registry.register('misc_gib_arm', (entity, context) => {
+    spawn_gib(entity, "models/objects/gibs/arm/tris.md2", context);
+  });
+
+  registry.register('misc_gib_leg', (entity, context) => {
+    spawn_gib(entity, "models/objects/gibs/leg/tris.md2", context);
+  });
+
+  registry.register('misc_gib_head', (entity, context) => {
+    spawn_gib(entity, "models/objects/gibs/head/tris.md2", context);
   });
 
   registry.register('func_object', func_object);

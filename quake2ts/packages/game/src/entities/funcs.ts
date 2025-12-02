@@ -3,6 +3,10 @@ import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entity.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
+import { T_RadiusDamage, Damageable } from '../combat/damage.js';
+import { DamageFlags } from '../combat/damageFlags.js';
+import { DamageMod } from '../combat/damageMods.js';
+import { throwGibs, GIB_METALLIC, GIB_DEBRIS } from './gibs.js';
 
 // ============================================================================
 // MOVEMENT HELPERS
@@ -909,18 +913,138 @@ const func_water: SpawnFunction = (entity, context) => {
     entity.movetype = MoveType.Push;
 };
 
+const SPAWNFLAGS_EXPLOSIVE_TRIGGER_SPAWN = 1;
+const SPAWNFLAGS_EXPLOSIVE_ANIMATED = 2;
+const SPAWNFLAGS_EXPLOSIVE_ANIMATED_FAST = 4;
+const SPAWNFLAGS_EXPLOSIVE_INACTIVE = 8;
+const SPAWNFLAGS_EXPLOSIVE_ALWAYS_SHOOTABLE = 16;
+
 const func_explosive: SpawnFunction = (entity, context) => {
-    entity.solid = Solid.Bsp;
+    const sys = context.entities;
+
     entity.movetype = MoveType.Push;
 
-    if (!entity.health) entity.health = 100;
-    if (!entity.dmg) entity.dmg = 120;
+    // Models for debris are handled by throwGibs, but func_explosive itself might have a model set by map
+    // (it is a brush entity, so it has a model)
 
-    entity.takedamage = true;
-
-    entity.die = (self, inflictor, attacker, damage) => {
-        context.entities.free(self);
+    const func_explosive_spawn = (self: Entity, other: Entity | null, activator: Entity | null | undefined) => {
+        self.solid = Solid.Bsp;
+        self.svflags &= ~ServerFlags.NoClient;
+        self.use = undefined;
+        sys.linkentity(self);
+        sys.killBox(self);
     };
+
+    const func_explosive_explode = (self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number) => {
+        self.takedamage = false;
+
+        // Cast back to Entity since we know self is an Entity in this context and T_RadiusDamage expects Damageable but logic uses Entity properties
+        // Wait, self in die callback IS Entity.
+        const ent = self;
+
+        if (ent.dmg) {
+            // T_RadiusDamage signature: entities, inflictor, attacker, damage, ignore, radius, dflags, mod, time, options, multicast
+            // Get candidate entities for radius damage using findByRadius (optimization)
+            const radius = ent.dmg + 40;
+            const candidates = sys.findByRadius(ent.origin, radius);
+            // Convert Entity[] to Damageable[] (Entity implements Damageable)
+            const damageables = candidates as unknown as Damageable[];
+
+            T_RadiusDamage(damageables, ent as unknown as Damageable, attacker as unknown as Damageable, ent.dmg, null, radius, DamageFlags.NONE, DamageMod.EXPLOSIVE, sys.timeSeconds, {}, sys.multicast.bind(sys));
+        }
+
+        const mass = ent.mass || 75;
+
+        // big chunks
+        if (mass >= 100) {
+            let count = Math.floor(mass / 100);
+            if (count > 8) count = 8;
+            throwGibs(sys, ent.origin, [
+                { count, model: "models/objects/debris1/tris.md2", flags: GIB_METALLIC | GIB_DEBRIS }
+            ]);
+        }
+
+        // small chunks
+        let count = Math.floor(mass / 25);
+        if (count > 16) count = 16;
+        throwGibs(sys, ent.origin, [
+            { count, model: "models/objects/debris2/tris.md2", flags: GIB_METALLIC | GIB_DEBRIS }
+        ]);
+
+        sys.useTargets(ent, attacker as Entity);
+
+        // Sound
+        if ((ent as any).noise_index) {
+            sys.sound(ent, 0, (ent as any).noise_index, 1, 1, 0);
+        }
+
+        if (ent.dmg) {
+            // BecomeExplosion1
+            // Placeholder: free for now, real explosion effect needs TE_EXPLOSION1
+            // sys.multicast(self.origin, ... TE_EXPLOSION1)
+            sys.free(ent);
+        } else {
+            sys.free(ent);
+        }
+    };
+
+    const func_explosive_use = (self: Entity, other: Entity | null, activator: Entity | null | undefined) => {
+        func_explosive_explode(self, self, activator || null, self.health);
+    };
+
+    const func_explosive_activate = (self: Entity, other: Entity | null, activator: Entity | null | undefined) => {
+        let approved = false;
+        if (other && other.target && self.targetname && other.target === self.targetname) {
+            approved = true;
+        }
+        if (!approved && activator && activator.target && self.targetname && activator.target === self.targetname) {
+            approved = true;
+        }
+
+        if (!approved) return;
+
+        self.use = func_explosive_use;
+        if (!self.health) self.health = 100;
+        self.die = func_explosive_explode;
+        self.takedamage = true;
+    };
+
+    if (entity.spawnflags & SPAWNFLAGS_EXPLOSIVE_TRIGGER_SPAWN) {
+        entity.svflags |= ServerFlags.NoClient;
+        entity.solid = Solid.Not;
+        entity.use = func_explosive_spawn;
+    } else if (entity.spawnflags & SPAWNFLAGS_EXPLOSIVE_INACTIVE) {
+        entity.solid = Solid.Bsp;
+        if (entity.targetname) {
+            entity.use = func_explosive_activate;
+        }
+    } else {
+        entity.solid = Solid.Bsp;
+        if (entity.targetname) {
+            entity.use = func_explosive_use;
+        }
+    }
+
+    if (entity.spawnflags & SPAWNFLAGS_EXPLOSIVE_ANIMATED) {
+        entity.effects |= EF_ANIM_ALL;
+    }
+    if (entity.spawnflags & SPAWNFLAGS_EXPLOSIVE_ANIMATED_FAST) {
+        entity.effects |= EF_ANIM_ALLFAST;
+    }
+
+    if ((entity.spawnflags & SPAWNFLAGS_EXPLOSIVE_ALWAYS_SHOOTABLE) ||
+        (entity.use !== func_explosive_use && entity.use !== func_explosive_activate)) {
+        if (!entity.health) entity.health = 100;
+        entity.die = func_explosive_explode;
+        entity.takedamage = true;
+    }
+
+    // Handle sounds
+    if (entity.sounds === 1) {
+        // entity.noise_index = sys.soundIndex("world/brkglas.wav");
+        // Need to add noise_index to Entity or use loose typing
+        (entity as any).noise_index = "world/brkglas.wav"; // Use string for now if soundIndex is not available on sys direct or mock
+    }
 };
 
 const func_killbox: SpawnFunction = (entity, context) => {
