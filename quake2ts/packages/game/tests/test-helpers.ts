@@ -11,7 +11,7 @@ export function createTestContext(): SpawnContext {
   };
 
   const entities = {
-    spawn: () => new Entity(1),
+    spawn: vi.fn(() => new Entity(1)),
     free: vi.fn(),
     finalizeSpawn: vi.fn(),
     freeImmediate: vi.fn(),
@@ -39,7 +39,15 @@ export function createTestContext(): SpawnContext {
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
     }),
     findByTargetName: vi.fn(() => []),
-    pickTarget: vi.fn(() => null)
+    pickTarget: vi.fn(() => null),
+    killBox: vi.fn(),
+    rng: {
+        crandom: vi.fn(() => 0),
+        frandom: vi.fn(() => 0),
+        frandomRange: vi.fn(() => 0),
+        irandom: vi.fn(() => 0),
+        irandomRange: vi.fn(() => 0),
+    }
   } as unknown as EntitySystem;
 
   return {

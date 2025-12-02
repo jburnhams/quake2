@@ -49,13 +49,18 @@ describe('func_door_secret', () => {
         entity.mins = { x: 0, y: 0, z: 0 };
         entity.maxs = { x: 32, y: 32, z: 64 };
 
-        context = {
+        const sys = {
             scheduleThink: vi.fn((ent, time) => {
                 ent.nextthink = time;
             }),
             linkentity: vi.fn(),
             sound: vi.fn(),
             timeSeconds: 10,
+        } as any;
+
+        context = {
+            entities: sys,
+            warn: vi.fn(),
         } as any;
     });
 
@@ -82,7 +87,7 @@ describe('func_door_secret', () => {
         entity.use?.(entity, null, null);
 
         // Should start moving to pos1
-        expect(context.scheduleThink).toHaveBeenCalled();
+        expect(context.entities.scheduleThink).toHaveBeenCalled();
         expect(entity.velocity).not.toEqual({ x: 0, y: 0, z: 0 });
 
         // Simulate completing move to pos1 (move_calc logic)
@@ -113,14 +118,14 @@ describe('func_door_secret', () => {
         // It sets nextthink = time + 1.0 and think = door_secret_move2.
         expect(entity.origin).toEqual(entity.pos1);
         expect(entity.velocity).toEqual({ x: 0, y: 0, z: 0 });
-        expect(entity.nextthink).toBeGreaterThanOrEqual(context.timeSeconds);
+        expect(entity.nextthink).toBeGreaterThanOrEqual(context.entities.timeSeconds);
 
         // Invoke move2
         const move2Callback = entity.think;
         if (move2Callback) {
             // context.timeSeconds should advance in real game, but here we just call it.
             // context passed to think is EntitySystem
-            move2Callback(entity, context);
+            move2Callback(entity, context.entities);
 
             // Now moving to pos2 (door_secret_move2 -> move_calc(pos2))
             expect(entity.velocity).not.toEqual({ x: 0, y: 0, z: 0 });
@@ -128,7 +133,7 @@ describe('func_door_secret', () => {
             // Simulate reaching pos2 by calling think() until we reach the destination
             maxIterations = 100;
             while (maxIterations-- > 0 && entity.think) {
-                entity.think(entity, context);
+                entity.think(entity, context.entities);
                 // Check if we've reached pos2 (velocity becomes zero when destination is reached)
                 if (entity.velocity.x === 0 && entity.velocity.y === 0 && entity.velocity.z === 0) {
                     break;
@@ -139,15 +144,15 @@ describe('func_door_secret', () => {
 
             // Now `door_secret_move3` called (wait phase)
             // If wait is not -1, it schedules move4
-            expect(entity.nextthink).toBeGreaterThan(context.timeSeconds);
+            expect(entity.nextthink).toBeGreaterThan(context.entities.timeSeconds);
 
             const move4Setup = entity.think;
             if (move4Setup) {
-                move4Setup(entity, context);
+                move4Setup(entity, context.entities);
                 // move4 calls move_calc(pos1) - simulate movement back to pos1
                 maxIterations = 100;
                 while (maxIterations-- > 0 && entity.think) {
-                    entity.think(entity, context);
+                    entity.think(entity, context.entities);
                     if (entity.velocity.x === 0 && entity.velocity.y === 0 && entity.velocity.z === 0) {
                         break;
                     }
@@ -157,11 +162,11 @@ describe('func_door_secret', () => {
                 // move5 -> wait 1s -> move6
                 const move6Setup = entity.think;
                 if (move6Setup) {
-                    move6Setup(entity, context);
+                    move6Setup(entity, context.entities);
                     // move6 -> move_calc(start_origin) - simulate movement back to start
                     maxIterations = 100;
                     while (maxIterations-- > 0 && entity.think) {
-                        entity.think(entity, context);
+                        entity.think(entity, context.entities);
                         if (entity.velocity.x === 0 && entity.velocity.y === 0 && entity.velocity.z === 0) {
                             break;
                         }

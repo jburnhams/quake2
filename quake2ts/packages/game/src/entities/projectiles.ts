@@ -113,7 +113,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
     sys.finalizeSpawn(grenade);
 }
 
-export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, mod: DamageMod) {
+export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, mod: DamageMod): Entity {
     const bolt = sys.spawn();
     if (mod === DamageMod.HYPERBLASTER) {
         bolt.classname = 'hyperblaster_bolt';
@@ -173,6 +173,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     };
 
     sys.finalizeSpawn(bolt);
+    return bolt;
 }
 
 export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
