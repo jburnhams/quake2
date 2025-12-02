@@ -7,6 +7,15 @@ import { WeaponId } from './playerInventory.js';
 import { Entity } from '../entities/entity.js';
 import { EntitySystem } from '../entities/system.js';
 import { chaingunThink } from '../combat/weapons/chaingun.js';
+import { shotgunThink } from '../combat/weapons/shotgun.js';
+import { superShotgunThink } from '../combat/weapons/supershotgun.js';
+import { machinegunThink } from '../combat/weapons/machinegun.js';
+import { rocketLauncherThink } from '../combat/weapons/rocket.js';
+import { hyperBlasterThink } from '../combat/weapons/hyperblaster.js';
+import { railgunThink } from '../combat/weapons/railgun.js';
+import { bfgThink } from '../combat/weapons/bfg.js';
+import { grenadeLauncherThink } from '../combat/weapons/grenadelauncher.js';
+import { blasterThink } from '../combat/weapons/blaster.js';
 
 export { AmmoType };
 
@@ -60,6 +69,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 0,
         pickupAmmo: 0,
         fireRate: 0.5,
+        think: blasterThink,
     },
     'weapon_shotgun': {
         type: 'weapon',
@@ -70,6 +80,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 10,
         pickupAmmo: 10,
         fireRate: 1,
+        think: shotgunThink,
     },
     'weapon_supershotgun': {
         type: 'weapon',
@@ -80,6 +91,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 10,
         pickupAmmo: 10,
         fireRate: 1,
+        think: superShotgunThink,
     },
     'weapon_machinegun': {
         type: 'weapon',
@@ -90,7 +102,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 50,
         pickupAmmo: 50,
         fireRate: 0.1,
-        think: chaingunThink,
+        think: machinegunThink,
     },
     'weapon_chaingun': {
         type: 'weapon',
@@ -101,6 +113,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 50,
         pickupAmmo: 50,
         fireRate: 0.1,
+        think: chaingunThink,
     },
     'weapon_grenades': {
         type: 'weapon',
@@ -121,6 +134,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 10,
         pickupAmmo: 10,
         fireRate: 1,
+        think: grenadeLauncherThink,
     },
     'weapon_rocketlauncher': {
         type: 'weapon',
@@ -131,6 +145,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 5,
         pickupAmmo: 5,
         fireRate: 1,
+        think: rocketLauncherThink,
     },
     'weapon_hyperblaster': {
         type: 'weapon',
@@ -141,6 +156,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 50,
         pickupAmmo: 50,
         fireRate: 0.1,
+        think: hyperBlasterThink,
     },
     'weapon_railgun': {
         type: 'weapon',
@@ -151,6 +167,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 10,
         pickupAmmo: 10,
         fireRate: 1.5,
+        think: railgunThink,
     },
     'weapon_bfg': {
         type: 'weapon',
@@ -161,6 +178,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 50,
         pickupAmmo: 50,
         fireRate: 1,
+        think: bfgThink,
     },
     // Rogue Weapons
     'weapon_boomer': {
@@ -213,7 +231,6 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 5,
         fireRate: 0.8, // Guessing fire rate, refine if needed
     },
-    // ... add others as we implement them
 };
 
 export const HEALTH_ITEMS: Record<string, HealthItem> = {

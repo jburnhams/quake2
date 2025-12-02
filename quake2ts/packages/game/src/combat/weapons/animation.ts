@@ -4,11 +4,9 @@
 
 import { Entity } from '../../entities/entity.js';
 import { EntitySystem } from '../../entities/system.js';
-import { WeaponStateEnum, getWeaponState } from './state.js';
+import { WeaponStateEnum } from './state.js';
 import { PowerupId } from '../../inventory/playerInventory.js';
-import { GameExports } from '../../index.js';
-import { WeaponId } from '../../inventory/playerInventory.js';
-import { WEAPON_ITEMS } from '../../inventory/items.js';
+import { firingRandom } from './firing.js';
 
 /**
  * Calculates the animation time frame for weapons.
@@ -20,11 +18,6 @@ export function Weapon_AnimationTime(ent: Entity): number {
     // Default 10Hz (0.1s)
     // Haste doubles weapon speed (halves time)
     // Quad Fire (Xatrix) quadruples weapon speed
-
-    // In original:
-    // if (is_quad) return 0.25 * 0.1;
-    // if (is_haste) return 0.5 * 0.1;
-    // return 0.1;
 
     let time = 0.1;
 
@@ -50,8 +43,8 @@ export function Weapon_Generic(
     FRAME_FIRE_LAST: number,
     FRAME_IDLE_LAST: number,
     FRAME_DEACTIVATE_LAST: number,
-    FRAME_WAIT: number,
-    FRAME_NOOP: number,
+    pause_frames: number[] | null,
+    fire_frames: number[] | null,
     fire: (ent: Entity) => void,
     sys: EntitySystem
 ) {
@@ -76,7 +69,21 @@ export function Weapon_Generic(
             return;
         }
         client.weaponstate = WeaponStateEnum.WEAPON_READY;
-        // Proceed to READY logic
+        // Proceed to READY logic (fall through? No, separate block in C, but here we can just let it run next frame or return. C version returns.)
+        // But wait, if we switch state to READY, we should probably return and let it handle READY next frame, or fall through?
+        // C code:
+        // if (ent->client->weaponstate == WEAPON_ACTIVATING) { ... ent->client->weaponstate = WEAPON_READY; ent->client->ps.gunframe = FRAME_IDLE_LAST+1; return; }
+        // Actually, C sets gunframe to IDLE_LAST+1 to trigger idle loop immediately?
+        // Let's re-read C snippet.
+        // "ent->client->ps.gunframe = FRAME_ACTIVATE_LAST + 1;" (This seems wrong, ACTIVATE_LAST is end of activation)
+        // Actually, usually it goes to READY and lets READY logic handle it.
+        // In my C snippet: "ent->client->weaponstate = WEAPON_READY; ent->client->ps.gunframe = FRAME_FIRE_LAST + 1; return;"
+        // FRAME_FIRE_LAST + 1 is usually start of IDLE.
+
+        // Let's stick to standard behavior:
+        client.gun_frame = FRAME_FIRE_LAST + 1;
+        client.weapon_think_time = time + Weapon_AnimationTime(ent);
+        return;
     }
 
     if (client.weaponstate === WeaponStateEnum.WEAPON_DROPPING) {
@@ -87,26 +94,70 @@ export function Weapon_Generic(
         }
         // Switch to new weapon
         // ChangeWeapon(ent); (Implemented in switching.ts)
-        // For now, assume switch logic is called or handled elsewhere
+        // For now, assume switch logic is called or handled elsewhere.
+        // Actually we MUST call ChangeWeapon here or it hangs in DROPPING.
+        // We need to import ChangeWeapon? Circular dependency risk.
+        // Ideally switching.ts imports animation.ts, not vice versa.
+        // But ChangeWeapon is the end of dropping.
+        // Maybe we export a callback or something?
+        // Or we just assume the caller handles it? No, Weapon_Generic is the handler.
+
+        // Dynamic import to break cycle?
+        import('./switching.js').then(({ ChangeWeapon }) => {
+             ChangeWeapon(ent);
+        });
         return;
     }
 
     if (client.weaponstate === WeaponStateEnum.WEAPON_READY) {
         // Check for fire
-        if ((client.buttons & 1) /* BUTTON_ATTACK */) { // TODO: Check actual button constant
+        if ((client.buttons & 1) /* BUTTON_ATTACK */) {
+            // Check ammo? Usually handled by fire function or check before entering firing?
+            // Standard Quake 2 lets you enter firing state, and fire function checks ammo.
+            // Or pauses?
+            // "if ((ent->client->latched_buttons|ent->client->buttons) & BUTTON_ATTACK)"
+
             client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
             // Start fire sequence at ACTIVATE_LAST + 1
             client.gun_frame = FRAME_ACTIVATE_LAST + 1;
+            // C code: ent->client->ps.gunframe = FRAME_ACTIVATE_LAST + 1;
             return;
         }
 
         // Idle animation
         if (client.gun_frame < FRAME_IDLE_LAST) {
             client.gun_frame++;
-            // Pause frames logic (simplified for now)
             client.weapon_think_time = time + Weapon_AnimationTime(ent);
+
+            // Pause frames
+            if (pause_frames) {
+                for (const frame of pause_frames) {
+                    if (client.gun_frame === frame) {
+                        if (firingRandom.random() < 0.5) { // rand()&15 means 1/16 chance to UNPAUSE? No.
+                            // "if (rand()&15) return;" -> if non-zero, return (stay on frame).
+                            // So 15/16 chance to stay, 1/16 to advance?
+                            // No, return means "stop processing this frame", so it stays on this frame?
+                            // Wait, "return" in C Weapon_Generic just exits the function.
+                            // Since we already incremented gunframe, next call it will be gunframe+1?
+                            // NO. "ent->client->ps.gunframe == pause_frames[n]"
+                            // If we match, we check rand.
+                            // If we return, we keep the incremented frame?
+                            // No, we want to STAY on the frame.
+                            // So we should NOT increment if we pause?
+                            // The C code increments FIRST.
+                            // "ent->client->ps.gunframe++;"
+                            // THEN checks if (gunframe == pause_frame).
+                            // If so, and rand, return.
+                            // So we sit on the incremented frame for extra ticks.
+                            // That makes sense.
+                            return;
+                        }
+                    }
+                }
+            }
             return;
         }
+
         // Loop idle
         // Usually resets to FRAME_FIRE_LAST + 1
         client.gun_frame = FRAME_FIRE_LAST + 1;
@@ -115,12 +166,20 @@ export function Weapon_Generic(
     }
 
     if (client.weaponstate === WeaponStateEnum.WEAPON_FIRING) {
+        // Fire frames logic
+        if (fire_frames) {
+             for (const frame of fire_frames) {
+                 if (client.gun_frame === frame) {
+                     if (fire) fire(ent);
+                     // Don't break? Some weapons might fire multiple times per frame? No.
+                     break;
+                 }
+             }
+        }
+
         if (client.gun_frame < FRAME_FIRE_LAST) {
             client.gun_frame++;
             client.weapon_think_time = time + Weapon_AnimationTime(ent);
-             if (client.gun_frame === FRAME_WAIT && fire) {
-                fire(ent);
-            }
             return;
         }
 
@@ -142,7 +201,7 @@ export function Weapon_Repeating(
     FRAME_FIRE_LAST: number,  // The last frame of firing sequence
     FRAME_IDLE_LAST: number,  // The last frame of idle sequence (used to reset)
     FRAME_PAUSE: number,      // Pause frames (not used in repeating logic usually)
-    FRAME_NOOP: number,
+    FRAME_NOOP: number,       // Unused
     fire: (ent: Entity) => void,
     sys: EntitySystem
 ) {
@@ -178,8 +237,8 @@ export function Weapon_Repeating(
         // ACTIVATE_LAST = FRAME_FIRE_FRAME - 1
         // FIRE_LAST = FRAME_FIRE_LAST
         // IDLE_LAST = FRAME_IDLE_LAST
-        // DEACTIVATE_LAST = FRAME_PAUSE
-        // WAIT = FRAME_NOOP
+        // DEACTIVATE_LAST = FRAME_PAUSE (Often used for deactivate last in repeating calls in C?)
+        // Let's assume FRAME_PAUSE passed here is actually DEACTIVATE_LAST.
 
         Weapon_Generic(
             ent,
@@ -187,8 +246,8 @@ export function Weapon_Repeating(
             FRAME_FIRE_LAST,
             FRAME_IDLE_LAST,
             FRAME_PAUSE,
-            FRAME_NOOP,
-            0,
+            null,
+            null,
             fire,
             sys
         );
