@@ -1,12 +1,13 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~70% Complete (Parsing Infrastructure Only)**
+**~75% Complete (Parsing Infrastructure & Entity Rendering)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ Protocol 25, 34, and 2023 parsing implemented
+- ✅ Client integration with `startDemoPlayback` / `stopDemoPlayback`
+- ✅ Entity rendering support via `ClientNetworkHandler` and `buildRenderableEntities`
 - ❌ No demo viewer application
-- ❌ Parser not integrated with renderer
 - ❌ Rerelease Protocol 2023 unverified with real demos
 
 **Goal**: Enable playback of Quake II `.dm2` demo files in browser with full rendering.
@@ -57,24 +58,25 @@
 **File**: `packages/client/src/demo/handler.ts`
 **Reference**: `full/client/cl_ents.c` (CL_AddPacketEntities)
 
-- [ ] **1.2.1** Add entity storage to `ClientNetworkHandler`
+- [x] **1.2.1** Add entity storage to `ClientNetworkHandler`
   - Add `private demoEntities: Map<number, EntityState>`
   - Add `private currentServerFrame: number`
   - Update `onFrame` to store entity states from frame data
 
-- [ ] **1.2.2** Implement `getEntitiesForRendering(): EntityState[]` method
+- [x] **1.2.2** Implement `getEntitiesForRendering(): EntityState[]` method
   - Return array of current entity states
   - Filter out removed entities
   - Sort by entity number for consistent rendering
+  - Note: Implemented as `getRenderableEntities` returning `RenderableEntity[]` using interpolation.
 
-- [ ] **1.2.3** Implement `getDemoCamera(): { origin: Vec3, angles: Vec3, fov: number }` method
+- [x] **1.2.3** Implement `getDemoCamera(): { origin: Vec3, angles: Vec3, fov: number }` method
   - Extract camera from player state in last frame
   - Return camera position, angles, FOV for renderer
 
-- [ ] **1.2.4** Add frame interpolation support
-  - Store last 2 frames in ring buffer
-  - Add `private frameBuffer: FrameData[]`
-  - Implement `interpolateFrame(t: number): FrameData` using linear interpolation
+- [x] **1.2.4** Add frame interpolation support
+  - Store last 2 frames in ring buffer (`latestFrame`, `previousFrame`)
+  - Add `previousEntities` map for entity interpolation
+  - Implement interpolation logic in `getRenderableEntities` and `getPredictionState`
 
 **Test Case**: Unit test in `packages/client/tests/demo/handler.test.ts`
 - Create synthetic frame with entities
@@ -89,7 +91,7 @@
 
 - [ ] **1.3.1** Modify `Sample()` method to use demo entities when in demo mode
   - Check `isDemoPlaying` flag
-  - If true, call `demoHandler.getEntitiesForRendering()` instead of game entities
+  - If true, call `demoHandler.getRenderableEntities()` instead of game entities
   - Call `demoHandler.getDemoCamera()` for camera position
 
 - [ ] **1.3.2** Update `buildRenderableEntities()` call in demo mode
