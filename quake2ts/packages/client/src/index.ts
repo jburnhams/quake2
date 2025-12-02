@@ -73,6 +73,12 @@ export interface ClientImports {
   readonly host?: EngineHost;
 }
 
+export enum ClientMode {
+  Normal,
+  DemoPlayback,
+  Multiplayer
+}
+
 export interface ClientExports extends ClientRenderer<PredictionState> {
   // Core Engine Hooks
   predict(command: UserCommand): PredictionState;
@@ -92,6 +98,11 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Demo Playback
   demoPlayback: DemoPlaybackController;
   demoHandler: ClientNetworkHandler;
+  readonly isDemoPlaying: boolean;
+  readonly currentDemoName: string | null;
+  readonly mode: ClientMode;
+  startDemoPlayback(buffer: ArrayBuffer, filename: string): void;
+  stopDemoPlayback(): void;
 
   // Networking
   multiplayer: MultiplayerConnection;
@@ -136,6 +147,10 @@ export function createClient(imports: ClientImports): ClientExports {
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
   demoHandler.setView(view);
+
+  let isDemoPlaying = false;
+  let currentDemoName: string | null = null;
+  let clientMode: ClientMode = ClientMode.Normal;
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
@@ -439,13 +454,15 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     render(sample: GameRenderSample<PredictionState>): UserCommand {
-      const playbackState = demoPlayback.getState();
-
       // Keep track of entities to render
       let renderEntities: RenderableEntity[] = [];
 
-      if (playbackState === PlaybackState.Playing) {
-          lastRendered = demoHandler.getPredictionState();
+      if (isDemoPlaying) {
+          // Update demo playback with delta time since last frame
+          const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
+          demoPlayback.update(frameTimeMs);
+
+          lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // TODO: Demo playback entities
       } else {
           if (sample.latest?.state) {
@@ -659,6 +676,31 @@ export function createClient(imports: ClientImports): ClientExports {
       return camera;
     },
     demoPlayback,
+    get isDemoPlaying() {
+        return isDemoPlaying;
+    },
+    get currentDemoName() {
+        return currentDemoName;
+    },
+    get mode() {
+        return clientMode;
+    },
+    startDemoPlayback(buffer: ArrayBuffer, filename: string) {
+        demoPlayback.loadDemo(buffer);
+        demoPlayback.setHandler(demoHandler);
+        isDemoPlaying = true;
+        currentDemoName = filename;
+        clientMode = ClientMode.DemoPlayback;
+        // Reset state
+        configStrings.clear(); // Clear existing configstrings
+    },
+    stopDemoPlayback() {
+        demoPlayback.stop();
+        isDemoPlaying = false;
+        currentDemoName = null;
+        clientMode = ClientMode.Normal;
+        // Clean up
+    },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
     },
