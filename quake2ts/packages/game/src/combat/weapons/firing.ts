@@ -173,7 +173,8 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
     game.multicast(originalStart, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.RAILTRAIL, originalStart, finalEnd);
 }
 
-function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
+// Exported to allow tests to call it directly if needed, but primarily called by fire()
+export function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
     if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
         // TODO: NoAmmoWeaponChange
     }
