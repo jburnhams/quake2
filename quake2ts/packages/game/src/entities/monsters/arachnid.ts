@@ -6,6 +6,7 @@ import {
   EntityFlags,
   Trace,
   DamageMod,
+  Channel,
   Attenuation,
   Vec3,
   ServerCommand
@@ -103,9 +104,6 @@ let sound_step: string;
 let sound_charge: string;
 let sound_melee: string;
 let sound_melee_hit: string;
-
-function arachnid_sight(self: Entity, other: Entity) {
-}
 
 // Stand
 const arachnid_frames_stand: MonsterFrame[] = [
