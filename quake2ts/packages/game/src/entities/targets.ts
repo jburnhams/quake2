@@ -1,6 +1,6 @@
 import { Entity, ServerFlags, Solid, MoveType, AiFlags } from './entity.js';
 import type { SpawnRegistry } from './spawn.js';
-import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx } from '@quake2ts/shared';
+import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx, ConfigStringIndex } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { setMovedir } from './utils.js';
 import { createBlasterBolt } from './projectiles.js';
@@ -610,5 +610,92 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
           const slope = (end - start) / (entity.speed / 0.1);
           entity.movedir = { x: start, y: end, z: slope };
       }
+  });
+
+  registry.register('target_music', (entity, { entities, keyValues }) => {
+      entity.sounds = keyValues.sounds ? parseInt(keyValues.sounds) : 0;
+      entity.use = (self) => {
+          entities.configString(ConfigStringIndex.CdTrack, `${self.sounds}`);
+      };
+  });
+
+  registry.register('target_autosave', (entity, context) => {
+    entity.use = (self) => {
+      // Mocking g_athena_auto_save_min_time CVar logic
+      // In TS we access cvars via context.cvar?
+      const saveTimeCvar = context.entities.cvar('g_athena_auto_save_min_time', '60');
+      const saveTime = saveTimeCvar ? saveTimeCvar.value : 60;
+
+      if (context.entities.timeSeconds - context.entities.level.next_auto_save > saveTime) {
+          context.entities.serverCommand('autosave\n');
+          context.entities.level.next_auto_save = context.entities.timeSeconds;
+      }
+    };
+  });
+
+  registry.register('target_healthbar', (entity, { entities, warn, free }) => {
+      // Logic for target_healthbar use
+      // needs to: pick target, verify it matches spawn_count (health), set in level.health_bar_entities
+      entity.use = (self) => {
+          const target = entities.pickTarget(self.target);
+          if (!target || self.health !== target.spawn_count) {
+              if (target) {
+                  warn(`${self.classname}: target ${target.classname} changed from what it used to be`);
+              } else {
+                  warn(`${self.classname}: no target`);
+              }
+              // Use entities.free to ensure consistency with what context.free might point to or just be safe
+              entities.free(self);
+              return;
+          }
+
+          // In Rerelease code it checks MAX_HEALTH_BARS (4).
+          // We need to access level.health_bar_entities.
+          const level = entities.level;
+          if (!level.health_bar_entities) {
+             level.health_bar_entities = [null, null, null, null];
+          }
+
+          let found = false;
+          for (let i = 0; i < 4; i++) {
+              if (!level.health_bar_entities[i]) {
+                  self.enemy = target;
+                  level.health_bar_entities[i] = self;
+                  // CONFIG_HEALTH_BAR_NAME = 55
+                  entities.configString(55, self.message || "");
+                  found = true;
+                  break;
+              }
+          }
+
+          if (!found) {
+              warn(`${self.classname}: too many health bars`);
+              entities.free(self);
+          }
+      };
+
+      // Think to check validity periodically
+      entity.think = (self) => {
+          // Check if target still valid
+          // Logic simplified for TS port as pointer validation is different
+          // We just check if self.enemy is still good if we assigned it?
+          // Rerelease code re-picks target every frame in think check_target_healthbar?
+          // Actually "check_target_healthbar" does G_PickTarget.
+
+          const target = entities.pickTarget(self.target);
+          if (!target || !(target.svflags & ServerFlags.Monster)) {
+               if (target) {
+                   warn(`${self.classname}: target ${target.classname} does not appear to be a monster`);
+               }
+               entities.free(self);
+               return;
+          }
+
+          self.health = target.spawn_count; // sync spawn count?
+          self.nextthink = entities.timeSeconds + 0.1;
+      };
+
+      // Delay think start like Rerelease
+      entity.nextthink = entities.timeSeconds + 0.1;
   });
 }
