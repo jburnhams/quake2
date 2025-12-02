@@ -128,7 +128,10 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
   - [x] **Centerprint**: Implement `ParseCenterPrint` in `cgame`.
   - [x] **Notify/Chat**: Implement `NotifyMessage` in `cgame`.
   - [x] **StuffText**: Implement `svc_stufftext` handling in Client (redirects to console commands).
-- [ ] **Client-Side Prediction** - **NOT IMPLEMENTED** (see Known Gaps)
+- [x] **Client-Side Prediction** - **PARTIALLY IMPLEMENTED**
+  - [x] Pmove integration via `ClientPrediction` class.
+  - [x] Buffering and Reconciliation logic in place.
+  - [ ] `cg_predict` cvar logic pending.
 
 ### Phase 4: Integration & Testing
 
@@ -167,6 +170,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Core multiplayer feature for smooth gameplay
    - Without this, multiplayer would have severe input lag
    - **Impact:** Unplayable multiplayer experience even if connection worked
+   - **Update:** Basic logic implemented in `ClientPrediction`, pending full integration testing.
 
 2. **CGame Stubs - Multiple Weapon/UI Functions** (`packages/cgame/src/index.ts:89-111`)
    - `GetActiveWeaponWheelWeapon` - returns 0
@@ -265,7 +269,7 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Associate each command with frame number
    - Use for prediction rewind/replay
 
-3. **Implement Prediction Correction**
+3. [x] **Implement Prediction Correction**
    - When server snapshot arrives, compare to predicted state
    - If mismatch detected, rewind to server state
    - Replay buffered commands from that point forward

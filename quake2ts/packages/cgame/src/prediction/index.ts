@@ -13,16 +13,13 @@ import {
   type PmFlags,
   type UserCommand,
   PlayerState,
-} from '@quake2ts/shared';
-import {
-  applyPmoveAccelerate,
-  applyPmoveAirAccelerate,
-  applyPmoveFriction,
+  applyPmove,
+  PmoveCmd,
+  PmoveTraceFn
 } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
 import type { PlayerClient } from '@quake2ts/game';
 
-import { PmoveTraceFn } from '@quake2ts/shared';
 
 // PredictionState extends PlayerState with fields needed for physics simulation
 // that might not be in the base PlayerState interface yet or are client-side specific.
@@ -189,85 +186,51 @@ function simulateCommand(
   cmd: UserCommand,
   settings: PredictionSettings,
   trace: PmoveTraceFn,
+  pointContents: (p: Vec3) => number
 ): PredictionState {
-  const frametime = Math.min(Math.max(cmd.msec, 0), MSEC_MAX) / 1000;
+  // Convert UserCommand to PmoveCmd
+  const pmoveCmd: PmoveCmd = {
+      forwardmove: cmd.forwardmove,
+      sidemove: cmd.sidemove,
+      upmove: cmd.upmove,
+      buttons: cmd.buttons
+  };
 
-  const onGround = hasPmFlag(state.pmFlags, PmFlag.OnGround);
-  const onLadder = hasPmFlag(state.pmFlags, PmFlag.OnLadder);
+  // Delegate physics to shared applyPmove
+  // Note: applyPmove returns a NEW PlayerState, it does not mutate.
+  // We must ensure that PredictionState specific fields are preserved if they are not part of PlayerState
+  // But since PredictionState extends PlayerState and applyPmove spreads ...state, we should get them back.
 
-  let velocity = applyPmoveFriction({
-    velocity: state.velocity,
-    frametime,
-    onGround,
-    groundIsSlick: settings.groundIsSlick,
-    onLadder,
-    waterlevel: state.waterLevel,
-    pmFriction: settings.pmFriction,
-    pmStopSpeed: settings.pmStopSpeed,
-    pmWaterFriction: settings.pmWaterFriction,
-  });
+  const newState = applyPmove(state, pmoveCmd, trace, pointContents);
 
-  const { viewangles, forward, right } = clampViewAngles({
+  // applyPmove calculates physics.
+  // However, applyPmove also handles view angle clamping?
+  // shared/pmove/apply.ts imports categorizePosition, checkWater etc.
+
+  // One detail: applyPmove uses the cmd to update viewAngles?
+  // Looking at applyPmove in shared: it returns `...newState` which comes from `...state`
+  // But `applyPmove` doesn't seem to modify viewAngles directly unless it's implicit?
+  // Wait, applyPmove handles origin and velocity.
+  // View angle changes (like from mouse input) are usually pre-applied to the command angles.
+  // But physics might affect view angles? (Not usually, except maybe knockback?)
+
+  // The original simulateCommand implementation clamped view angles.
+  const { viewangles } = clampViewAngles({
     pmFlags: state.pmFlags,
     cmdAngles: cmd.angles,
     deltaAngles: state.deltaAngles ?? ZERO_VEC3,
   });
 
-  const wish =
-    state.waterLevel > WaterLevel.None
-      ? buildWaterWish({ forward, right, cmd, maxSpeed: settings.pmWaterSpeed })
-      : buildAirGroundWish({ forward, right, cmd, maxSpeed: settings.pmMaxSpeed });
-
-  if (state.waterLevel > WaterLevel.None) {
-    velocity = applyPmoveAccelerate({
-      velocity,
-      wishdir: wish.wishdir,
-      wishspeed: wish.wishspeed,
-      accel: settings.pmWaterAccelerate,
-      frametime,
-    });
-  } else if (onGround || onLadder) {
-    const maxSpeed = hasPmFlag(state.pmFlags, PmFlag.Ducked) ? settings.pmDuckSpeed : settings.pmMaxSpeed;
-    const clampedWish =
-      wish.wishspeed > maxSpeed
-        ? {
-            wishdir: wish.wishdir,
-            wishspeed: maxSpeed,
-          }
-        : wish;
-
-    velocity = applyPmoveAccelerate({
-      velocity,
-      wishdir: clampedWish.wishdir,
-      wishspeed: clampedWish.wishspeed,
-      accel: settings.pmAccelerate,
-      frametime,
-    });
-  } else {
-    velocity = applyPmoveAirAccelerate({
-      velocity,
-      wishdir: wish.wishdir,
-      wishspeed: wish.wishspeed,
-      accel: settings.pmAirAccelerate,
-      frametime,
-    });
-    velocity = { ...velocity, z: velocity.z - (state.gravity ?? DEFAULT_GRAVITY) * frametime };
-  }
-
-  const traceResult = trace(state.origin, addVec3(state.origin, scaleVec3(velocity, frametime)));
-  const origin = traceResult.endpos;
-
   return {
-    ...state,
-    origin,
-    velocity,
-    viewAngles: viewangles,
-  } satisfies PredictionState;
+    ...newState,
+    viewAngles: viewangles
+  } as PredictionState;
 }
 
 export class ClientPrediction {
   private readonly settings: PredictionSettings;
   private readonly trace: PmoveTraceFn;
+  private readonly pointContents: (p: Vec3) => number;
   private baseFrame: GameFrameResult<PredictionState> = {
     frame: 0,
     timeMs: 0,
@@ -276,9 +239,10 @@ export class ClientPrediction {
   private commands: UserCommand[] = [];
   private predicted: PredictionState = defaultPredictionState();
 
-  constructor(trace: PmoveTraceFn, settings: Partial<PredictionSettings> = {}) {
+  constructor(trace: PmoveTraceFn, pointContents: (p: Vec3) => number, settings: Partial<PredictionSettings> = {}) {
     this.settings = { ...DEFAULTS, ...settings } satisfies PredictionSettings;
     this.trace = trace;
+    this.pointContents = pointContents;
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
@@ -302,7 +266,7 @@ export class ClientPrediction {
     let state = normalizeState(this.baseFrame.state);
 
     for (const cmd of this.commands) {
-      state = simulateCommand(state, cmd, this.settings, this.trace);
+      state = simulateCommand(state, cmd, this.settings, this.trace, this.pointContents);
     }
 
     this.predicted = state;
