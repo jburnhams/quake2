@@ -1,12 +1,9 @@
 import {
-  SoundIndex,
-  ModelIndex,
-  MoveType,
-  Solid,
-  EntityFlags,
-  Trace,
   Vec3,
-  ServerCommand
+  ServerCommand,
+  angleVectors,
+  subtractVec3,
+  normalizeVec3
 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
@@ -14,7 +11,10 @@ import {
   MonsterInfo,
   MonsterMove,
   MonsterFrame,
-  DeadFlag
+  DeadFlag,
+  MoveType,
+  Solid,
+  EntityFlags
 } from '../entity.js';
 import {
   EntitySystem,
@@ -48,7 +48,6 @@ import {
   monster_fire_railgun,
   monster_fire_hit
 } from './attack.js';
-import { angleVectors, subtractVec3, normalizeVec3 } from '@quake2ts/shared';
 
 // Frames
 const FRAME_rails1 = 0;
