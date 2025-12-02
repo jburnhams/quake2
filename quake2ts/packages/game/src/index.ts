@@ -188,6 +188,13 @@ export function createGame(
   };
 
   const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch);
+  (entities as any)._game = {
+      // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
+      // This is circular, so we must be careful.
+      // We will assign the full gameExports object later?
+      // No, gameExports is const defined below.
+      // We can use a getter or assign properties later.
+  };
   frameLoop.addStage('prep', (context) => {
     levelClock.tick(context);
     entities.beginFrame(levelClock.current.timeSeconds);
@@ -528,6 +535,9 @@ export function createGame(
 
   const spawnRegistry = createDefaultSpawnRegistry(gameExports);
   entities.setSpawnRegistry(spawnRegistry);
+
+  // Patch the circular reference
+  (entities as any)._game = gameExports;
 
   return gameExports;
 }
