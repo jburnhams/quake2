@@ -1,49 +1,61 @@
-import { describe, it, expect } from 'vitest';
-import { NetChan } from '../../src/net/netchan';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NetChan } from '../../src/net/netchan.js';
 
 describe('NetChan Timeout', () => {
-  it('should detect timeout', () => {
-    const netchan = new NetChan();
-    const now = Date.now();
+  let netchan: NetChan;
 
-    // Simulate last received a long time ago
-    netchan.lastReceived = now - 31000;
-
-    // Default check
-    expect(netchan.isTimedOut(now, 30000)).toBe(true);
-
-    // Within limit
-    netchan.lastReceived = now - 29000;
-    expect(netchan.isTimedOut(now, 30000)).toBe(false);
+  beforeEach(() => {
+    netchan = new NetChan();
+    vi.useFakeTimers();
   });
 
-  it('should request keepalive', () => {
-    const netchan = new NetChan();
-    const now = Date.now();
-
-    // Just sent
-    netchan.lastSent = now;
-    expect(netchan.needsKeepalive(now)).toBe(false);
-
-    // Sent a while ago
-    netchan.lastSent = now - 1100;
-    expect(netchan.needsKeepalive(now)).toBe(true);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('should update timestamps on activity', () => {
-    const netchan = new NetChan();
-    const past = Date.now() - 5000;
+  it('should detect when keepalive is needed', () => {
+    // Initially fine (just sent in constructor)
+    expect(netchan.needsKeepalive(Date.now())).toBe(false);
 
-    netchan.lastReceived = past;
-    netchan.lastSent = past;
+    // Advance time by 1.1s
+    vi.advanceTimersByTime(1100);
+    // Note: NetChan uses Date.now(), which is mocked by vi.useFakeTimers()
 
-    // Transmit updates lastSent
+    expect(netchan.needsKeepalive(Date.now())).toBe(true);
+
+    // After transmit, should be fine
     netchan.transmit();
-    expect(netchan.lastSent).toBeGreaterThan(past);
+    expect(netchan.needsKeepalive(Date.now())).toBe(false);
+  });
 
-    // Process updates lastReceived
-    const validPacket = new Uint8Array(10); // Minimum header size
-    netchan.process(validPacket);
-    expect(netchan.lastReceived).toBeGreaterThan(past);
+  it('should detect timeouts', () => {
+    expect(netchan.isTimedOut(Date.now())).toBe(false);
+
+    // Default timeout is 30s
+    vi.advanceTimersByTime(31000);
+
+    expect(netchan.isTimedOut(Date.now())).toBe(true);
+
+    // Custom timeout
+    expect(netchan.isTimedOut(Date.now(), 60000)).toBe(false);
+  });
+
+  it('should reset timeout on receive', () => {
+    // Packet with valid header
+    const packet = new Uint8Array(10);
+    const view = new DataView(packet.buffer);
+    view.setUint32(0, 1, true); // sequence 1
+    view.setUint16(8, netchan.qport, true); // matching qport
+
+    // Wait almost 30s
+    vi.advanceTimersByTime(29000);
+
+    // Process packet
+    netchan.process(packet);
+
+    // Wait another 2s (total 31s since start, but only 2s since last packet)
+    vi.advanceTimersByTime(2000);
+
+    expect(netchan.isTimedOut(Date.now())).toBe(false);
   });
 });

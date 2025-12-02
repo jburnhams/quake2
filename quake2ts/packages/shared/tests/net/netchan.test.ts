@@ -1,49 +1,94 @@
-import { describe, it, expect } from 'vitest';
-import { NetChan } from '../../src/net/netchan';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NetChan } from '../../src/net/netchan.js';
 
 describe('NetChan', () => {
-  it('should initialize with default state', () => {
-    const netchan = new NetChan();
+  let netchan: NetChan;
 
-    expect(netchan.incomingSequence).toBe(0);
-    expect(netchan.outgoingSequence).toBe(0);
-    expect(netchan.incomingAcknowledged).toBe(0);
-    expect(netchan.incomingReliableAcknowledged).toBe(false);
-    expect(netchan.incomingReliableSequence).toBe(0);
-    expect(netchan.outgoingReliableSequence).toBe(0);
-    expect(netchan.reliableLength).toBe(0);
-    expect(netchan.qport).toBeGreaterThanOrEqual(0);
-    expect(netchan.qport).toBeLessThan(65536);
-    expect(netchan.remoteAddress).toBeNull();
+  beforeEach(() => {
+    netchan = new NetChan();
   });
 
-  it('should have correct constants', () => {
-    expect(NetChan.MAX_MSGLEN).toBe(1400);
-    expect(NetChan.FRAGMENT_SIZE).toBe(1024);
-    expect(NetChan.PACKET_HEADER).toBe(10);
+  describe('Initialization', () => {
+    it('should initialize with sequence numbers at 0', () => {
+      expect(netchan.incomingSequence).toBe(0);
+      expect(netchan.outgoingSequence).toBe(0);
+      expect(netchan.incomingAcknowledged).toBe(0);
+      expect(netchan.incomingReliableSequence).toBe(0);
+      expect(netchan.outgoingReliableSequence).toBe(0);
+    });
+
+    it('should assign a random qport', () => {
+      expect(netchan.qport).toBeGreaterThanOrEqual(0);
+      expect(netchan.qport).toBeLessThan(65536);
+    });
+
+    it('should initialize reliable message buffer', () => {
+      expect(netchan.reliableLength).toBe(0);
+      expect(netchan.canSendReliable()).toBe(true);
+    });
+
+    it('should allow setup with specific qport', () => {
+      netchan.setup(12345);
+      expect(netchan.qport).toBe(12345);
+    });
   });
 
-  it('should allow setup with specific qport', () => {
-    const netchan = new NetChan();
-    netchan.setup(12345);
+  describe('Reset', () => {
+    it('should reset all state', () => {
+      netchan.outgoingSequence = 100;
+      netchan.incomingSequence = 50;
+      netchan.writeReliableString('test');
 
-    expect(netchan.qport).toBe(12345);
+      netchan.reset();
+
+      expect(netchan.outgoingSequence).toBe(0);
+      expect(netchan.incomingSequence).toBe(0);
+      expect(netchan.reliableLength).toBe(0);
+      expect(netchan.canSendReliable()).toBe(true);
+    });
   });
 
-  it('should reset state correctly', () => {
-    const netchan = new NetChan();
+  describe('Reliable Buffer', () => {
+    it('should write bytes', () => {
+      netchan.writeReliableByte(0xAB);
+      expect(netchan.reliableLength).toBe(1);
+      const data = netchan.getReliableData();
+      expect(data[0]).toBe(0xAB);
+    });
 
-    // Modify state
-    netchan.incomingSequence = 100;
-    netchan.outgoingSequence = 50;
-    netchan.incomingAcknowledged = 40;
-    netchan.incomingReliableAcknowledged = true;
+    it('should write shorts', () => {
+      netchan.writeReliableShort(0x1234);
+      expect(netchan.reliableLength).toBe(2);
+      const data = netchan.getReliableData();
+      const view = new DataView(data.buffer);
+      expect(view.getUint16(0, true)).toBe(0x1234);
+    });
 
-    netchan.reset();
+    it('should write longs', () => {
+      netchan.writeReliableLong(0x12345678);
+      expect(netchan.reliableLength).toBe(4);
+      const data = netchan.getReliableData();
+      const view = new DataView(data.buffer);
+      expect(view.getUint32(0, true)).toBe(0x12345678);
+    });
 
-    expect(netchan.incomingSequence).toBe(0);
-    expect(netchan.outgoingSequence).toBe(0);
-    expect(netchan.incomingAcknowledged).toBe(0);
-    expect(netchan.incomingReliableAcknowledged).toBe(false);
+    it('should write strings', () => {
+      netchan.writeReliableString('hello');
+      // 'hello' is 5 bytes + 1 null terminator = 6 bytes
+      expect(netchan.reliableLength).toBe(6);
+    });
+
+    it('should throw on overflow', () => {
+      // Fill buffer close to limit
+      // MAX_MSGLEN - HEADER_OVERHEAD
+      // 1400 - 12 = 1388
+      const maxLen = 1388;
+
+      // We can't easily write 1388 bytes one by one in a test without loop
+      // But we can simulate it by hacking reliableLength for this test
+      netchan.reliableLength = maxLen;
+
+      expect(() => netchan.writeReliableByte(1)).toThrow(/overflow/);
+    });
   });
 });
