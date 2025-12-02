@@ -23,6 +23,8 @@ import { registerSupertankSpawns } from './supertank.js';
 import { registerTankSpawns } from './tank.js';
 import { registerTankCommanderSpawns } from './tankCommander.js';
 import { registerTurretSpawns } from './turret.js';
+import { registerGekkSpawns } from './gekk.js';
+import { registerFixbotSpawns } from './fixbot.js';
 
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerSoldierSpawns(registry);
@@ -49,4 +51,6 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerMakronSpawns(registry);
   registerInsaneSpawns(registry);
   registerActorSpawns(registry);
+  registerGekkSpawns(registry);
+  registerFixbotSpawns(registry);
 }
