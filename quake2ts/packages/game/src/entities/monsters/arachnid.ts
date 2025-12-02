@@ -3,7 +3,12 @@ import {
   ServerCommand,
   angleVectors,
   subtractVec3,
-  normalizeVec3
+  normalizeVec3,
+  SoundChannel,
+  ATTN_NORM,
+  ATTN_IDLE,
+  ATTN_STATIC,
+  ATTN_NONE
 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
@@ -82,19 +87,6 @@ const MODEL_SCALE = 1.0;
 const MELEE_DISTANCE = 64;
 const MONSTER_TICK = 0.1;
 
-// Sound Channels
-const CHAN_AUTO = 0;
-const CHAN_WEAPON = 1;
-const CHAN_VOICE = 2;
-const CHAN_ITEM = 3;
-const CHAN_BODY = 4;
-
-// Attenuation
-const ATTN_NONE = 0;
-const ATTN_NORM = 1;
-const ATTN_IDLE = 2;
-const ATTN_STATIC = 3;
-
 // Muzzle Flash IDs
 const MZ2_ARACHNID_RAIL1 = 20;
 const MZ2_ARACHNID_RAIL2 = 21;
@@ -160,7 +152,7 @@ function arachnid_stand(self: Entity, context: EntitySystem) {
 
 // Walk
 function arachnid_footstep(self: Entity, context: EntitySystem) {
-  context.engine.sound?.(self, CHAN_BODY, sound_step, 0.5, ATTN_IDLE, 0);
+  context.engine.sound?.(self, SoundChannel.Body, sound_step, 0.5, ATTN_IDLE, 0);
 }
 
 const arachnid_frames_walk: MonsterFrame[] = [
@@ -250,7 +242,7 @@ function arachnid_pain(self: Entity, other: Entity | null, kick: number, damage:
   }
 
   self.pain_debounce_time = context.timeSeconds + 3;
-  context.engine.sound?.(self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
+  context.engine.sound?.(self, SoundChannel.Voice, sound_pain, 1, ATTN_NORM, 0);
 
   if (!M_ShouldReactToPain(self)) {
     return;
@@ -269,7 +261,7 @@ function arachnid_charge_rail(self: Entity, context: EntitySystem) {
     return;
   }
 
-  context.engine.sound?.(self, CHAN_WEAPON, sound_charge, 1, ATTN_NORM, 0);
+  context.engine.sound?.(self, SoundChannel.Weapon, sound_charge, 1, ATTN_NORM, 0);
 
   // self.pos1 is used to store target position
   self.pos1 = { ...self.enemy.origin };
@@ -350,7 +342,7 @@ const arachnid_attack_up1: MonsterMove = {
 };
 
 function arachnid_melee_charge(self: Entity, context: EntitySystem) {
-  context.engine.sound?.(self, CHAN_WEAPON, sound_melee, 1, ATTN_NORM, 0);
+  context.engine.sound?.(self, SoundChannel.Weapon, sound_melee, 1, ATTN_NORM, 0);
 }
 
 function arachnid_melee_hit(self: Entity, context: EntitySystem) {
@@ -439,7 +431,7 @@ const arachnid_move_death: MonsterMove = {
 
 function arachnid_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod, context: EntitySystem) {
   if (M_CheckGib(self, context)) {
-    context.engine.sound?.(self, CHAN_VOICE, 'misc/udeath.wav', 1, ATTN_NORM, 0);
+    context.engine.sound?.(self, SoundChannel.Voice, 'misc/udeath.wav', 1, ATTN_NORM, 0);
     throwGibs(context, self.origin, damage); // throwGibs accepts EntitySystem
     self.deadflag = DeadFlag.Dead;
     return;
@@ -449,7 +441,7 @@ function arachnid_die(self: Entity, inflictor: Entity | null, attacker: Entity |
     return;
   }
 
-  context.engine.sound?.(self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
+  context.engine.sound?.(self, SoundChannel.Voice, sound_death, 1, ATTN_NORM, 0);
   self.deadflag = DeadFlag.Dead;
   self.takedamage = true;
 
@@ -473,6 +465,15 @@ export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
   sound_death = 'arachnid/death.wav';
   sound_sight = 'arachnid/sight.wav';
 
+  context.soundIndex(sound_step);
+  context.soundIndex(sound_charge);
+  context.soundIndex(sound_melee);
+  context.soundIndex(sound_melee_hit);
+  context.soundIndex(sound_pain);
+  context.soundIndex(sound_death);
+  context.soundIndex(sound_sight);
+  context.soundIndex('misc/udeath.wav');
+
   self.model = 'models/monsters/arachnid/tris.md2';
   self.mins = {x: -48, y: -48, z: -20};
   self.maxs = {x: 48, y: 48, z: 48};
@@ -493,7 +494,7 @@ export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
     walk: arachnid_walk,
     run: arachnid_run,
     attack: arachnid_attack,
-    sight: (e, o) => context.engine.sound?.(e, CHAN_VOICE, sound_sight, 1, ATTN_NORM, 0),
+    sight: (e, o) => context.engine.sound?.(e, SoundChannel.Voice, sound_sight, 1, ATTN_NORM, 0),
     scale: MODEL_SCALE,
     aiflags: self.monsterinfo?.aiflags || 0
   };

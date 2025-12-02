@@ -30,6 +30,7 @@ export { MulticastType } from './imports.js'; // Export MulticastType
 export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+    soundIndex?(sound: string): number;
     centerprintf?(entity: Entity, message: string): void;
     modelIndex?(model: string): number;
     multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
@@ -92,6 +93,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   spawnWorld(): void;
   readonly entities: EntitySystem;
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
+  soundIndex(sound: string): number;
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
   readonly deathmatch: boolean;
@@ -485,6 +487,9 @@ export function createGame(
     entities,
     sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void {
       entities.sound(entity, channel, sound, volume, attenuation, timeofs);
+    },
+    soundIndex(sound: string): number {
+        return entities.soundIndex(sound);
     },
     centerprintf(entity: Entity, message: string): void {
       engine.centerprintf?.(entity, message);
