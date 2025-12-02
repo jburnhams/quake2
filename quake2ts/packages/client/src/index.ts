@@ -123,7 +123,15 @@ function lerpAngle(a: number, b: number, t: number): number {
 }
 
 export function createClient(imports: ClientImports): ClientExports {
-  const prediction = new ClientPrediction(imports.engine.trace);
+  // Adapter for pointContents using trace
+  const pointContents = (point: Vec3): number => {
+      const zero: Vec3 = { x: 0, y: 0, z: 0 };
+      // Perform a point trace to get contents
+      const tr = imports.engine.trace(point, point, zero, zero);
+      return tr.contents || 0;
+  };
+
+  const prediction = new ClientPrediction(imports.engine.trace, pointContents);
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
