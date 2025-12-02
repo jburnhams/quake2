@@ -4,6 +4,7 @@ import { Vec3 } from '../math/vec3.js';
 
 import { applyPmoveAccelerate, applyPmoveFriction, buildAirGroundWish, buildWaterWish } from './pmove.js';
 import { PlayerState } from '../protocol/player-state.js';
+import { angleVectors } from '../math/angles.js';
 
 const FRAMETIME = 0.025;
 
@@ -39,7 +40,22 @@ export const applyPmove = (
   newState = categorizePosition(newState, trace);
   newState = checkWater(newState, pointContents);
 
-  const { origin, velocity, onGround, waterLevel } = newState;
+  const { origin, velocity, onGround, waterLevel, viewAngles } = newState;
+
+  // Calculate forward and right vectors from view angles
+  // For water movement, use full view angles including pitch
+  // For ground/air movement, reduce pitch influence by dividing by 3
+  // See: rerelease/p_move.cpp lines 1538, 1686-1691, 800, 858
+  const adjustedAngles = waterLevel >= 2
+    ? viewAngles
+    : {
+        // For ground/air movement, reduce pitch influence (rerelease/p_move.cpp:1689)
+        x: viewAngles.x > 180 ? (viewAngles.x - 360) / 3 : viewAngles.x / 3,
+        y: viewAngles.y,
+        z: viewAngles.z,
+      };
+
+  const { forward, right } = angleVectors(adjustedAngles);
 
   // Apply friction BEFORE acceleration to match original Quake 2 rerelease behavior
   // See: rerelease/src/game/player/pmove.c lines 1678 (PM_Friction) then 1693 (PM_AirMove->PM_Accelerate)
@@ -57,14 +73,14 @@ export const applyPmove = (
 
   const wish = waterLevel >= 2
     ? buildWaterWish({
-        forward: { x: 1, y: 0, z: 0 },
-        right: { x: 0, y: 1, z: 0 },
+        forward,
+        right,
         cmd,
         maxSpeed: 320,
       })
     : buildAirGroundWish({
-        forward: { x: 1, y: 0, z: 0 },
-        right: { x: 0, y: 1, z: 0 },
+        forward,
+        right,
         cmd,
         maxSpeed: 320,
       });
