@@ -368,7 +368,7 @@ describe('pmove view angle movement (critical bug fix)', () => {
       expect(result.wishspeed).toBeGreaterThan(0);
     });
 
-    it('applies upward bias in water when no upmove', () => {
+    it('applies downward bias (sink) in water when no input', () => {
       const angles: Vec3 = { x: 0, y: 0, z: 0 };
       const { forward, right } = angleVectors(angles);
 
@@ -385,8 +385,8 @@ describe('pmove view angle movement (critical bug fix)', () => {
         maxSpeed: 320,
       });
 
-      // Should have upward component from bias (see rerelease PM_WaterMove)
-      expect(result.wishdir.z).toBeGreaterThan(0);
+      // Should have downward component from bias (see rerelease PM_WaterMove sinking logic)
+      expect(result.wishdir.z).toBeLessThan(0);
     });
 
     it('moves up in water with positive upmove', () => {

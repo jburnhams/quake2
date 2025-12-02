@@ -8,6 +8,18 @@ import { angleVectors } from '../math/angles.js';
 
 const FRAMETIME = 0.025;
 
+// MASK_WATER definition from shared constants (0x2000000)
+const MASK_WATER = 0x2000000;
+
+// Local definition to avoid dependency issues if constants.ts is missing
+// Matches packages/shared/src/pmove/constants.ts
+const WaterLevel = {
+  None: 0,
+  Feet: 1,
+  Waist: 2,
+  Under: 3,
+} as const;
+
 const categorizePosition = (state: PlayerState, trace: PmoveTraceFn): PlayerState => {
   const point = { ...state.origin };
   point.z -= 0.25;
@@ -21,12 +33,42 @@ const categorizePosition = (state: PlayerState, trace: PmoveTraceFn): PlayerStat
 
 const checkWater = (state: PlayerState, pointContents: (point: Vec3) => number): PlayerState => {
   const point = { ...state.origin };
-  point.z += state.mins.z + 1;
+  const { mins, maxs } = state;
+
+  // Default to feet
+  point.z = state.origin.z + mins.z + 1;
+
   const contents = pointContents(point);
-  if (contents & 0x2000000) {
-    return { ...state, waterLevel: 1 };
+
+  if (!(contents & MASK_WATER)) {
+    return { ...state, waterLevel: WaterLevel.None };
   }
-  return { ...state, waterLevel: 0 };
+
+  let waterLevel: number = WaterLevel.Feet;
+
+  // Check waist
+  const waist = state.origin.z + (mins.z + maxs.z) * 0.5;
+  point.z = waist;
+  const waistContents = pointContents(point);
+
+  if (waistContents & MASK_WATER) {
+    waterLevel = WaterLevel.Waist;
+
+    // Check head (eyes)
+    // Standard Quake 2 viewheight is 22. maxs.z is typically 32.
+    // So eyes are roughly at origin.z + 22.
+    // We'll use origin.z + 22 to check if eyes are underwater.
+    // If viewheight was available in PlayerState, we'd use that.
+    const head = state.origin.z + 22;
+    point.z = head;
+    const headContents = pointContents(point);
+
+    if (headContents & MASK_WATER) {
+      waterLevel = WaterLevel.Under;
+    }
+  }
+
+  return { ...state, waterLevel };
 };
 
 
@@ -89,7 +131,8 @@ export const applyPmove = (
     velocity: frictionedVelocity,
     wishdir: wish.wishdir,
     wishspeed: wish.wishspeed,
-    accel: onGround ? 10 : 1,
+    // Water movement uses ground acceleration (10), not air acceleration (1)
+    accel: (onGround || waterLevel >= 2) ? 10 : 1,
     frametime: FRAMETIME,
   });
 
