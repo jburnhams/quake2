@@ -8,6 +8,8 @@ export {
   type TouchCallback,
   type UseCallback,
   type MonsterInfo,
+  type MonsterMove,
+  type MonsterFrame,
   MoveType,
   Solid,
   ServerFlags,
