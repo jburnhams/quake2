@@ -90,12 +90,10 @@ describe('Water Physics', () => {
             }
 
             expect(state.velocity.x).toBeGreaterThan(10);
-            // Z should be minimal (just drift or small noise, mostly 0ish if strict, but we have sink logic)
-            // If moving forward, sink logic is disabled?
-            // "if (!cmd->forwardmove && ...)" -> drift is only when NO input.
-            // So if moving forward, drift is 0.
-            // Thus Z velocity should be very close to 0.
-            expect(Math.abs(state.velocity.z)).toBeLessThan(1);
+            // Z should have a slight upward bias (drift) when moving horizontally, matching Quake 2 behavior
+            // It applies +10 to wishvel.z
+            expect(state.velocity.z).toBeGreaterThan(0);
+            expect(state.velocity.z).toBeLessThan(20); // Should be small, not full speed
          });
 
          it('swims diagonally up with pitch=-45 (looking up)', () => {

@@ -181,6 +181,10 @@ export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
     // Standard drift down when no vertical input AND no significant horizontal input
     // Matches Quake 2 rerelease behavior (sinking slowly)
     wishvel = addVec3(wishvel, { x: 0, y: 0, z: -60 });
+  } else {
+    // When moving horizontally but not vertically, drift slightly up
+    // This matches the "else { wishvel[2] += 10 }" logic in PM_WaterMove
+    wishvel = addVec3(wishvel, { x: 0, y: 0, z: 10 });
   }
 
   let wishspeed = lengthVec3(wishvel);
