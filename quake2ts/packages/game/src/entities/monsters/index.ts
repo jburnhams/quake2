@@ -26,6 +26,7 @@ import { registerTurretSpawns } from './turret.js';
 import { registerGekkSpawns } from './gekk.js';
 import { registerFixbotSpawns } from './fixbot.js';
 import { registerArachnidSpawns } from './arachnid.js';
+import { registerGunCommanderSpawns } from './gunnerCommander.js';
 
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerSoldierSpawns(registry);
@@ -55,4 +56,5 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerGekkSpawns(registry);
   registerFixbotSpawns(registry);
   registerArachnidSpawns(registry);
+  registerGunCommanderSpawns(registry);
 }
