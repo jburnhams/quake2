@@ -371,10 +371,7 @@ const func_door_secret: SpawnFunction = (entity, context) => {
     const start_origin = { ...entity.origin };
     (entity as any).start_origin = start_origin;
 
-    const forward = { x: 0, y: 0, z: 0 };
-    const right = { x: 0, y: 0, z: 0 };
-    const up = { x: 0, y: 0, z: 0 };
-    angleVectors(entity.angles, forward, right, up);
+    const { forward, right, up } = angleVectors(entity.angles);
     entity.angles = { x: 0, y: 0, z: 0 };
 
     const side = 1.0 - ((entity.spawnflags & SPAWNFLAG_SECRET_1ST_LEFT) ? 2 : 0);
