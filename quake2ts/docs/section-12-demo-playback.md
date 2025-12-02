@@ -3,7 +3,7 @@
 ## Overview
 This section covers the implementation of Quake II demo (`.dm2`) playback in the browser. The goal is to parse and render standard Quake II demo files, which record the server-to-client network stream. This involves implementing a strict parser for the Quake II network protocol (`svc_*` commands), a demo file container reader, and a playback controller that feeds these messages into the engine's state machine, simulating a live connection.
 
-**Current Status:** The system implements both Vanilla Quake II (v3.20) and Rerelease (Protocol 2023) network protocol parsing. Vanilla demo playback is functional. Rerelease Protocol 2023 support is complete, with entity state extensions and all new commands implemented and verified via synthetic tests.
+**Current Status:** The demo parsing infrastructure is ~70% complete. The NetworkMessageParser can parse Protocol 25 (Q2 v3.00), Protocol 34 (Q2 v3.20), and Protocol 2023 (Rerelease) formats. **Demo playback is NOT functional** - the parser exists but is not integrated into any playable demo viewer. Rerelease Protocol 2023 parsing is implemented but **UNVERIFIED** - all tests use synthetic data, no real Rerelease .dm2 files have been tested. **Critical**: No application exists to actually play demos.
 
 ## Dependencies
 - **Shared Protocol**: Requires complete definition of `svc_ops_e` and `clc_ops_e` opcodes for both Vanilla and Rerelease protocols.
@@ -76,13 +76,181 @@ The `PlayerState` interface in `packages/shared/src/protocol/player-state.ts` no
 
 ## Remaining Work
 
-### Testing Gaps
+### Critical Gaps (BLOCKS DEMO PLAYBACK)
 
-1. **Missing Test Assets**
-   - Need vanilla Quake II `.dm2` demo files for regression testing (Deferred: Using synthetic tests)
-   - Need Rerelease `.dm2` demo files for Protocol 2023 validation (Deferred: Using synthetic tests)
-   - Need demo files exercising all entity state features (transparency, scaling, etc.) (Deferred: Using synthetic tests)
+1. **No Demo Viewer Application**
+   - Parser and DemoPlaybackController exist but are unused
+   - No UI to load demo files
+   - No integration with renderer
+   - No demo playback controls (play/pause/seek)
+   - **Impact**: Cannot actually play demos despite parser being "complete"
+
+2. **Missing Real Demo Testing**
+   - Only tested with ONE real demo file: demo1.dm2 (Protocol 25, not even v3.20)
+   - No Protocol 34 (v3.20) demos tested
+   - **NO Rerelease (Protocol 2023) demos tested at all**
+   - All Rerelease tests use synthetic data only
+   - **Cannot verify Rerelease parsing actually works**
+
+3. **Parser-Renderer Integration Missing**
+   - Parser outputs entity states, but no code consumes them for rendering
+   - Frame interpolation not implemented
+   - Camera/view handling for demo playback missing
+   - **Impact**: Even if parser works, cannot render the demo
 
 ## Implementation Notes
 - **Reference**: The `/home/user/quake2/rerelease/` directory contains only game logic source code. **It does not contain client/server engine source code.** Client parsing reference (`cl_parse.cpp`) is located in `/home/user/quake2/full/client/` directory. Server network code is in `/home/user/quake2/full/server/`.
 - **Legacy Support**: The parser should switch modes based on the `protocolVersion` received in `svc_serverdata`.
+
+---
+
+## Revised Completion Roadmap
+
+**Current Reality Check:**
+- ❌ Demo playback is NOT functional - parser exists but not integrated
+- ❌ Rerelease demos are UNVERIFIED - only synthetic tests exist
+- ❌ No demo viewer application exists
+- ✅ Parser can parse Protocol 25, 34, and 2023 formats (parsing only)
+- ✅ DemoPlaybackController class exists
+- ✅ Tested with ONE real demo file (demo1.dm2, Protocol 25)
+
+**Critical Path to Working Demo Playback:**
+
+### Phase 1: Demo Viewer Application (BLOCKS EVERYTHING) - 2-3 weeks
+**No demo playback without an actual viewer**
+
+1. **Create Demo Viewer Package** (`packages/demo-viewer` or in existing client)
+   - File upload UI for .dm2 files
+   - Demo playback controls (play, pause, stop, seek)
+   - Timeline scrubber showing demo duration
+   - Speed controls (0.5x, 1x, 2x, etc.)
+   - Frame-by-frame stepping
+
+2. **Integrate Parser with Renderer**
+   - Feed parsed entity states to renderer
+   - Implement frame interpolation for smooth playback
+   - Handle camera/view updates from demo
+   - Render HUD elements from demo data
+   - Handle configstring updates (models, sounds)
+
+3. **Add Demo Controls to Main Menu**
+   - "Play Demo" menu option
+   - Demo browser showing available demos
+   - Recently played demos list
+
+### Phase 2: Real Demo Testing (CRITICAL FOR VALIDATION) - 1 week
+**Cannot claim "support" without testing real demos**
+
+1. **Acquire Test Demos**
+   - Find/create Protocol 34 (v3.20) demo files
+   - Find/create Protocol 2023 (Rerelease) demo files
+   - Get demos with various features (transparency, scaling, etc.)
+
+2. **Test Vanilla Demos (Protocol 34)**
+   - Test parsing without errors
+   - Verify entity states match expected values
+   - Verify visual rendering matches original Quake II
+   - Test long demos (>10 minutes)
+   - Test demos with many entities
+
+3. **Test Rerelease Demos (Protocol 2023)**
+   - **THIS HAS NEVER BEEN DONE**
+   - Verify all new svc_* commands parse correctly
+   - Verify entity extensions (alpha, scale) work
+   - Verify compression (configblast, spawnbaselineblast) works
+   - Compare frame-by-frame with original Rerelease
+
+4. **Create Demo Regression Suite**
+   - Add real .dm2 files to test assets
+   - Automated tests that verify parsing output
+   - Visual regression tests comparing rendered frames
+
+### Phase 3: Parser Robustness - 1 week
+**Handle edge cases and errors gracefully**
+
+1. **Error Handling**
+   - Gracefully handle corrupted demo files
+   - Detect truncated demos
+   - Handle unknown commands (forward compatibility)
+   - Add detailed error messages
+
+2. **Performance Optimization**
+   - Profile parser performance on large demos
+   - Optimize entity delta parsing
+   - Add parsing progress indicator
+   - Implement demo streaming (don't load entire file)
+
+3. **Advanced Features**
+   - Demo recording support
+   - Demo editing (cut, trim, concat)
+   - Demo metadata extraction
+   - Demo statistics (map, duration, kills, etc.)
+
+### Phase 4: Rerelease Feature Verification - 1 week
+**Ensure Rerelease features work correctly**
+
+1. **Entity Extensions**
+   - Verify alpha transparency renders correctly
+   - Verify entity scaling works
+   - Verify instance bits handled
+   - Verify loop sounds work
+
+2. **New Commands**
+   - Test all fog types
+   - Test POI markers
+   - Test bot chat
+   - Test achievements
+   - Test level_restart
+
+3. **Compression**
+   - Verify zlib decompression works on real data
+   - Test large compressed baselines
+   - Test compressed configstrings
+
+**Total Time to Working Demo Playback: 5-6 weeks**
+
+**Success Criteria:**
+- ✅ Can load and play .dm2 files from file picker
+- ✅ Demo renders correctly with proper camera/entities/effects
+- ✅ Playback controls work (play/pause/seek/speed)
+- ✅ Protocol 34 demos work perfectly
+- ✅ Protocol 2023 demos work with all Rerelease features
+- ✅ Tested with at least 10 different real demo files
+- ✅ Parser handles errors without crashing
+- ✅ Performance is acceptable (60 FPS playback)
+
+---
+
+## Concise Subtask List for Completion
+
+**Section 12 - Demo Playback (5-6 weeks)**
+
+1. **Demo Viewer UI** (1 week)
+   - File upload for .dm2
+   - Playback controls (play/pause/seek)
+   - Speed controls
+   - Timeline scrubber
+
+2. **Parser-Renderer Integration** (1-2 weeks)
+   - Feed entity states to renderer
+   - Frame interpolation
+   - Camera handling
+   - Configstring application
+
+3. **Real Demo Testing** (1 week)
+   - Acquire Protocol 34 demos
+   - Acquire Protocol 2023 demos
+   - Test and fix issues
+   - Create regression suite
+
+4. **Rerelease Verification** (1 week)
+   - Test with real Rerelease demos
+   - Verify all extensions work
+   - Fix any parsing issues
+   - Document any limitations
+
+5. **Polish** (1 week)
+   - Error handling
+   - Performance optimization
+   - Demo browser UI
+   - Documentation

@@ -5,7 +5,7 @@ This section covers the transition from a local-only "listen server" architectur
 
 Following the **Quake II Rerelease** architecture, we will split the engine into distinct `Server` and `Client` components. The Client will utilize a `cgame` module for prediction and rendering, while the Server will run the authoritative game logic.
 
-**Current Status:** Server architecture and protocol foundations are approximately **45% complete**. The dedicated server framework exists and can run game logic. **Client-server networking basics are implemented**, including handshake and command sending, but reliability features and client-side prediction are still missing.
+**Current Status:** Server architecture and protocol foundations are approximately **35-40% complete** (lower than previously estimated). The dedicated server framework exists and can run game simulation in isolation. Basic WebSocket client-server connection works. **CRITICAL LIMITATION**: The reliability layer (NetChan) is fundamentally incomplete - the TS port implements basic WebSocket send/receive but lacks the sophisticated reliability, sequencing, acknowledgment, and retransmission that Quake II requires (see `/home/user/quake2/full/qcommon/net_chan.c`). **Multiplayer is NOT functional end-to-end** - no true integration tests exist, all tests use extensive mocking.
 
 ## Architecture
 
@@ -160,30 +160,51 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
 
 ## Known Gaps and Required Work
 
-### Critical Issues (Blocks Multiplayer Functionality)
+### Critical Issues (BLOCKS MULTIPLAYER FUNCTIONALITY)
 
-1. **Client-Side Prediction Not Implemented** (`packages/cgame/src/index.ts:113-116`) - **PARTIALLY SOLVED**
-   - `Pmove` function now implemented and calls shared `applyPmove`.
-   - Still need to verify `cg_predict` cvar logic and full end-to-end integration.
+**Priority 0: Fundamental Architecture Gaps**
 
-2. **CGame Stubs - Multiple Weapon/UI Functions** (`packages/cgame/src/index.ts:89-111`) - **SOLVED**
-   - Implemented `GetActiveWeaponWheelWeapon`, `GetOwnedWeaponWheelWeapons`, etc.
+1. **NetChan Reliability Layer Missing** - **CRITICAL BLOCKER**
+   - **Current**: Basic WebSocket send/receive with placeholder sequence numbers (0)
+   - **Required**: Full NetChan implementation per `/home/user/quake2/full/qcommon/net_chan.c`:
+     * Sequence numbering and acknowledgment
+     * Reliable message queuing and retransmission
+     * Even/odd reliable message tracking
+     * Packet loss detection
+     * qport handling for NAT traversal
+     * Message fragmentation and reassembly
+     * Overflow detection
+   - **Location**: `packages/client/src/net/connection.ts:129-131`, `packages/server/src/dedicated.ts`
+   - **Impact**: Multiplayer cannot work reliably without this - dropped packets = lost state
+   - **Effort**: 2-3 weeks for full implementation
+
+2. **No End-to-End Integration** - **CRITICAL BLOCKER**
+   - All "integration" tests use extensive mocking (fake WebSocket, fake BSP, fake game)
+   - **Cannot verify multiplayer actually works** because it has never been tested
+   - No test where real client connects to real server
+   - **Impact**: Unknown if system works at all outside of isolated unit tests
+   - **Effort**: 1-2 weeks to create true E2E test infrastructure
 
 3. **Server Incomplete Features** (`packages/server/src/dedicated.ts`)
-   - **Line 326:** Client timeout/disconnect handling not implemented - **SOLVED**
-   - **Line 396:** Reliable messaging not properly queued (sent immediately)
-   - **Line 459:** Command rate limiting not implemented
+   - **Line 396:** Reliable messaging not properly queued (sent immediately, no retransmission)
+   - **Line 459:** Command rate limiting not implemented (exploit vector)
    - **Line 650:** Reliable/unreliable stream separation incomplete
-   - **Impact:** Unreliable network behavior, potential exploits, poor performance
+   - ~~**Line 326:** Client timeout/disconnect handling~~ - **SOLVED**
+   - **Impact**: Even if NetChan works, server behavior is incorrect and exploitable
 
-4. **Incomplete Protocol Reliability**
-    - `clc_move` packets are sent with placeholder sequence numbers (0) and checksums (0).
-    - No packet loss detection or retransmission logic (NetChan) over WebSocket.
+**Priority 1: Missing Core Functionality**
 
-5. **Rerelease Protocol Incomplete on Both Ends**
-   - **Server:** `writeDeltaEntity` doesn't write Rerelease fields (alpha, scale, etc.) **(COMPLETED)**
-   - **Client:** `parseDelta` doesn't read Rerelease fields (see Section 12)
-   - **Impact:** Cannot support Rerelease features even if protocol version negotiated
+4. **Client-Side Prediction Not Fully Integrated**
+   - `Pmove` function implemented but end-to-end flow unverified
+   - `cg_predict` cvar logic incomplete
+   - Command buffering exists but reconciliation logic not tested
+   - **Impact**: Playable but laggy multiplayer (if NetChan worked)
+
+5. **Incomplete Protocol Features**
+   - Checksums use placeholder (0) values
+   - Download system not implemented (large maps won't work)
+   - Challenge system basic but untested
+   - **Impact**: Reduced security, cannot join servers with different maps
 
 ### Testing Gaps
 
@@ -398,12 +419,111 @@ The client will be refactored to support the **Rerelease `cgame` Architecture**.
    - Verify weapon fire rate limits
    - Log suspicious behavior
 
-## Next Steps Summary
-**To achieve working multiplayer, complete phases in order:**
-1. Phase 1 (Client-Server Connection) - **BLOCKS EVERYTHING**
-2. Phase 2 (Client-Side Prediction) - **REQUIRED FOR PLAYABLE EXPERIENCE**
-3. Phase 3 (Server Features) - **REQUIRED FOR RELIABILITY**
-4. Phase 6 (Integration Testing) - **REQUIRED TO VERIFY IT WORKS**
-5. Phase 4 (Rerelease Protocol) - Optional for vanilla MP, required for Rerelease
-6. Phase 5 (CGame Stubs) - Optional, improves UX
-7. Phase 7 (Polish) - Optional, improves experience
+## Revised Completion Roadmap
+
+**Current Reality Check:**
+- ❌ Multiplayer is NOT 45% complete - more like 35-40%
+- ❌ Cannot play multiplayer games - NetChan layer missing
+- ❌ No real integration testing - all tests use mocks
+- ✅ Basic framework exists (server, client, protocol structures)
+- ✅ Multiplayer menu UI implemented
+
+**Critical Path to Working Multiplayer:**
+
+### Phase 0: NetChan Implementation (MUST DO FIRST) - 2-3 weeks
+**Blocks everything else**
+1. Implement `NetChan` class in `packages/shared`:
+   - Sequence number tracking (send/receive)
+   - Reliable message queue + retransmission
+   - Even/odd reliable message acknowledgment
+   - Fragment detection and reassembly
+   - Overflow handling
+   - Reference: `/home/user/quake2/full/qcommon/net_chan.c`
+
+2. Integrate NetChan into Server:
+   - Replace direct WebSocket writes with NetChan.Transmit
+   - Separate reliable vs unreliable buffers (fix Line 650)
+   - Implement proper message queuing (fix Line 396)
+
+3. Integrate NetChan into Client:
+   - Replace placeholder sequence numbers
+   - Implement acknowledgment handling
+   - Add packet loss detection
+
+### Phase 1: True E2E Testing (REQUIRED FOR VALIDATION) - 1-2 weeks
+**Cannot verify anything works without this**
+1. Create `packages/e2e-tests` with Playwright/Puppeteer
+2. Implement test: Server starts, client connects, handshake completes
+3. Implement test: Client sends commands, server processes them
+4. Implement test: Server sends entity updates, client receives them
+5. Implement test: Prediction + reconciliation flow
+6. Run all existing unit tests against real connections (not mocks)
+
+### Phase 2: Complete Server Implementation - 1 week
+1. Implement command rate limiting (Line 459)
+2. Implement proper timeout handling with warnings
+3. Separate reliable/unreliable streams completely
+4. Add CRC checksums for commands
+5. Test server under load (multiple clients)
+
+### Phase 3: Complete Client Prediction - 1 week
+1. Verify Pmove integration end-to-end
+2. Implement `cg_predict` cvar logic
+3. Add prediction error visualization (`cg_showmiss`)
+4. Tune reconciliation parameters
+5. Test with artificial latency
+
+### Phase 4: Rerelease Protocol (Optional) - 1 week
+1. Test with real Rerelease demos
+2. Verify Rerelease entity fields work end-to-end
+3. Test Protocol 2023 client connecting to server
+
+**Total Time to Working Multiplayer: 6-8 weeks**
+
+**Success Criteria:**
+- ✅ Two browser clients can connect to dedicated server
+- ✅ Players can see each other move and shoot
+- ✅ Prediction provides smooth movement
+- ✅ System handles packet loss gracefully
+- ✅ Works with 100ms+ latency
+- ✅ No crashes or exploits under normal conditions
+
+---
+
+## Concise Subtask List for Completion
+
+**Section 13 - Multiplayer (6-8 weeks)**
+
+1. **NetChan Reliability Layer** (2-3 weeks) - **CRITICAL BLOCKER**
+   - Implement sequence numbering and acknowledgment
+   - Implement reliable message queue with retransmission
+   - Implement packet loss detection
+   - Add fragment handling
+   - Reference: `/home/user/quake2/full/qcommon/net_chan.c`
+
+2. **E2E Integration Testing** (1-2 weeks) - **CRITICAL BLOCKER**
+   - Create `packages/e2e-tests` infrastructure
+   - Test: Client connects to server
+   - Test: Commands flow both ways
+   - Test: Entity updates work
+   - Test: Prediction + reconciliation
+   - Remove mocking from integration tests
+
+3. **Complete Server Features** (1 week)
+   - Implement reliable messaging queue (Line 396)
+   - Implement command rate limiting (Line 459)
+   - Separate reliable/unreliable streams (Line 650)
+   - Add CRC checksums
+   - Test under load
+
+4. **Complete Client Prediction** (1 week)
+   - Verify Pmove end-to-end
+   - Implement `cg_predict` cvar
+   - Add prediction visualization
+   - Tune reconciliation
+   - Test with latency
+
+5. **Rerelease Protocol Testing** (1 week) - Optional
+   - Test Protocol 2023 client-server
+   - Verify entity extensions work
+   - Test with real Rerelease content
