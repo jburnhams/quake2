@@ -21,7 +21,8 @@ import type { EntitySystem } from '../system.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
 import { monster_fire_bullet_v2, monster_fire_bfg } from './attack.js';
-import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
+import { SP_monster_makron } from './makron.js';
+import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3, vectorToYaw } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { visible, rangeTo } from '../../ai/perception.js';
 
@@ -199,7 +200,39 @@ function makron_toss(self: Entity, context: any): void {
     const makron = context.spawn();
     makron.classname = 'monster_makron';
     makron.origin = { ...self.origin };
-    makron.angles = { ...self.angles };
+    makron.target = self.target;
+    makron.enemy = self.enemy;
+
+    // Use SP_monster_makron to initialize
+    // We need to pass context which is usually SpawnContext.
+    // Here 'context' is likely EntitySystem (passed from think).
+    // SP_monster_makron expects { entities: EntitySystem, ... } as SpawnContext.
+    // We can construct a minimal mock or cast if SP function structure allows.
+    // SP functions typically only use .entities from context.
+    const spawnContext = { entities: context } as any as SpawnContext;
+    SP_monster_makron(makron, spawnContext);
+
+    // Jump at player
+    if (makron.enemy && makron.enemy.health > 0) {
+        const vec = subtractVec3(makron.enemy.origin, makron.origin);
+        makron.angles = { ...makron.angles, y: vectorToYaw(vec) };
+        const dir = normalizeVec3(vec);
+        // We cannot assign directly to readonly properties of Vec3
+        const vel = scaleVec3(dir, 400);
+        makron.velocity = { x: vel.x, y: vel.y, z: 200 };
+        // For physics to update, we need to ensure velocity is used
+        // Typically gravity/physics runs every frame.
+        // Also ensure groundentity is cleared
+        makron.groundentity = null;
+
+        if (makron.monsterinfo.sight) {
+            makron.monsterinfo.sight(makron, makron.enemy);
+        }
+        // Force frame to active01 if needed, or rely on sight logic
+        // self->s.frame = self->monsterinfo.nextframe = FRAME_active01;
+        // We'll let standard sight logic handle animation transition if possible,
+        // or force it if needed. SP_monster_makron sets sight_move as current.
+    }
 }
 
 // Use local type to break inference loop or type check confusion

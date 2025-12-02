@@ -212,10 +212,79 @@ function makron_pain(self: Entity, other: Entity | null, kick: number, damage: n
     }
 }
 
+function makron_torso_think(self: Entity, context: any): void {
+    if (++self.frame >= 365)
+        self.frame = 346;
+
+    self.nextthink = context.timeSeconds + 0.1;
+
+    // Spin
+    // if (self->s.angles[0] > 0) self->s.angles[0] = max(0.f, self->s.angles[0] - 15);
+    if (self.angles.x > 0)
+        self.angles = { ...self.angles, x: Math.max(0, self.angles.x - 15) };
+}
+
+function makron_torso(ent: Entity, context: any): void {
+    ent.frame = 346;
+    ent.model = 'models/monsters/boss3/rider/tris.md2';
+    ent.skin = 1;
+    ent.think = makron_torso_think;
+    ent.nextthink = context.timeSeconds + 0.1;
+    context.sound(ent, 0, 'makron/spine.wav', 1, 1, 0);
+    ent.movetype = MoveType.Toss;
+    // ent.effects = EF_GIB;
+
+    const { forward, up } = angleVectors(ent.angles);
+
+    // ent->velocity += (up * 120);
+    // ent->velocity += (forward * -120);
+    // ent->s.origin += (forward * -10);
+
+    const vUp = scaleVec3(up, 120);
+    const vFwd = scaleVec3(forward, -120);
+    ent.velocity = addVec3(addVec3(ent.velocity, vUp), vFwd);
+    ent.origin = addVec3(ent.origin, scaleVec3(forward, -10));
+
+    ent.angles = { ...ent.angles, x: 90 };
+    ent.avelocity = ZERO_VEC3;
+
+    context.linkentity(ent);
+}
+
+function makron_spawn_torso(self: Entity, context: any): void {
+    // Mimic ThrowGib logic but for specific entity
+    // In original it calls ThrowGib then modifies.
+    // We'll spawn a new entity.
+
+    const tempent = context.spawn();
+    // Configure basic gib properties if needed, but makron_torso overwrites most.
+    tempent.classname = 'makron_torso'; // or gib?
+    tempent.origin = { ...self.origin };
+    tempent.angles = { ...self.angles };
+
+    // self->maxs[2] -= tempent->maxs[2]; // adjustments
+    // tempent->s.origin[2] += self->maxs[2] - 15;
+    // Assume standard gib sizes or torso sizes?
+    // In jorg/makron models, we might need to adjust origin.
+    // Original: self->maxs[2] -= tempent->maxs[2]; tempent->s.origin[2] += self->maxs[2] - 15;
+
+    // For now simple offset
+    tempent.origin.z += self.maxs.z - 15;
+
+    makron_torso(tempent, context);
+}
+
 function makron_die(self: Entity, context: any): void {
     context.engine.sound?.(self, 0, 'makron/death.wav', 1, 1, 0);
-    // Spawn torso gib?
+
+    makron_spawn_torso(self, context);
+
     self.monsterinfo.current_move = death_move;
+
+    // Resize bounding box
+    // self->mins = { -60, -60, 0 }; self->maxs = { 60, 60, 48 };
+    self.mins = { x: -60, y: -60, z: 0 };
+    self.maxs = { x: 60, y: 60, z: 48 };
 }
 
 function makron_dead(self: Entity): void {
