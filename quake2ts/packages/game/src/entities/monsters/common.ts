@@ -2,6 +2,7 @@ import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag } from '..
 import { monster_think, ai_stand, ai_walk, ai_run, ai_charge } from '../../ai/index.js';
 import { SpawnContext } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
+import { Vec3, addVec3, scaleVec3 } from '@quake2ts/shared';
 
 const MONSTER_TICK = 0.1;
 
@@ -110,4 +111,34 @@ export function createMonsterSpawn(config: MonsterConfig) {
     self.monsterinfo.stand(self, context.entities);
     self.nextthink = self.timestamp + MONSTER_TICK;
   };
+}
+
+export function M_SetAnimation(self: Entity, move: MonsterMove, context: any): void {
+  self.monsterinfo.current_move = move;
+}
+
+export function M_ShouldReactToPain(self: Entity): boolean {
+  // Nightmare check etc.
+  return true;
+}
+
+export function M_CheckGib(self: Entity, context: any): boolean {
+  const gibHealth = (self as any).gib_health ?? -40;
+  return self.health < gibHealth;
+}
+
+export function M_AllowSpawn(self: Entity, context: any): boolean {
+  return true; // deathmatch checks etc.
+}
+
+export function walkmonster_start(self: Entity, context: any): void {
+  self.think = monster_think;
+  self.nextthink = context.timeSeconds + MONSTER_TICK;
+}
+
+export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, right: Vec3): Vec3 {
+  const start = addVec3(self.origin, scaleVec3(forward, offset.x));
+  const start2 = addVec3(start, scaleVec3(right, offset.y));
+  const start3 = addVec3(start2, { x: 0, y: 0, z: offset.z });
+  return start3;
 }
