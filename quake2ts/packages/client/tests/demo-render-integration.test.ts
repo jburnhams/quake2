@@ -81,7 +81,7 @@ describe('Client Demo Playback Integration', () => {
 
     const mockGetDemoCamera = vi.spyOn(mockDemoHandler, 'getDemoCamera');
     mockGetDemoCamera.mockReturnValue({
-        origin: { x: 100, y: 100, z: 100 },
+        origin: { x: 200, y: 200, z: 200 }, // Different origin to verify override
         angles: { x: 0, y: 90, z: 0 },
         fov: 90
     });
@@ -123,9 +123,9 @@ describe('Client Demo Playback Integration', () => {
 
     expect(camera).toBeDefined();
     // Check camera position (Float32Array)
-    expect(camera.position[0]).toBeCloseTo(100);
-    expect(camera.position[1]).toBeCloseTo(100);
-    expect(camera.position[2]).toBeCloseTo(100);
+    expect(camera.position[0]).toBeCloseTo(200);
+    expect(camera.position[1]).toBeCloseTo(200);
+    expect(camera.position[2]).toBeCloseTo(200);
     // Check camera FOV (should be 90 from demo state)
     expect(camera.fov).toBe(90);
 

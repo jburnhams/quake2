@@ -491,7 +491,16 @@ export function createClient(imports: ClientImports): ClientExports {
           renderEntities = demoHandler.getRenderableEntities(1.0, configStrings);
 
           if (lastRendered) {
-            // Camera construction below uses lastRendered, which we just updated from the demo state.
+             const demoCamera = demoHandler.getDemoCamera(1.0);
+             if (demoCamera) {
+                 // Override camera properties derived from lastRendered with specific demo camera data
+                 // (e.g. correct view origin including viewheight)
+                 lastRendered.origin = demoCamera.origin;
+                 lastRendered.viewAngles = demoCamera.angles;
+                 if (demoCamera.fov) {
+                    lastRendered.fov = demoCamera.fov;
+                 }
+             }
           }
       } else {
           lastRenderTime = sample.nowMs;

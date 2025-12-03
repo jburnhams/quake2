@@ -46,6 +46,12 @@ const mockDemoHandler = {
     setView: vi.fn(),
     onServerData: vi.fn(),
     onConfigString: vi.fn(),
+    getRenderableEntities: vi.fn().mockReturnValue([]),
+    getDemoCamera: vi.fn().mockReturnValue({
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 },
+        fov: 90
+    }),
     getPredictionState: vi.fn().mockReturnValue({
         origin: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
