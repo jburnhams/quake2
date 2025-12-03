@@ -131,11 +131,6 @@ export function Weapon_Generic(
                      break;
                  }
              }
-        } else if (fire) {
-            // If no fire_frames array, maybe fire every frame?
-            // Or maybe fire is handled by caller logic?
-            // In C, if fire_frames is null, it doesn't fire automatically here?
-            // Actually C Generic uses fire_frames loop.
         }
 
         if (client.gun_frame < FRAME_FIRE_LAST) {
