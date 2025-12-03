@@ -43,10 +43,21 @@ const createMockClient = (index: number): Client => {
     edict: { id: 1, classname: 'player' },
     lastCmd: { msec: 0, angles: {x: 0, y: 0, z: 0}, buttons: 0, forwardmove: 0, sidemove: 0, upmove: 0 },
     net: { send: vi.fn() },
+    netchan: {
+      transmit: vi.fn().mockReturnValue(new Uint8Array(0)),
+      process: vi.fn().mockReturnValue(new Uint8Array(0)),
+      writeReliableByte: vi.fn(),
+      writeReliableShort: vi.fn(),
+      writeReliableString: vi.fn(),
+      writeReliableLong: vi.fn(),
+    },
     messageQueue: [],
     lastPacketEntities: [],
     frames: frames,
-    lastFrame: 0
+    lastFrame: 0,
+    commandQueue: [],
+    lastCommandTime: Date.now(),
+    commandCount: 0
   } as unknown as Client;
 };
 
