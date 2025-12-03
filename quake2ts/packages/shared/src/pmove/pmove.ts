@@ -16,9 +16,9 @@ import { checkJump } from './jump.js';
 import { applyPmoveAirMove, applyPmoveWaterMove, applyPmoveWalkMove } from './move.js';
 import { categorizePosition } from './categorize.js';
 import { checkDuckState, DuckTraceParams } from './duck.js';
-// import { updateViewOffsets } from './view.js';
+import { updateViewOffsets } from './view.js'; // Imported correctly now
 
-const FRAMETIME = 0.025; // Define FRAMETIME here or import if available in constants? Using local definition for now as per previous context.
+const FRAMETIME = 0.025;
 
 /**
  * Pure version of PM_Friction from rerelease p_move.cpp.
@@ -440,7 +440,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
   nextState.watertype = catResultEnd.watertype;
 
   // Update view offsets (bobbing, etc)
-  // nextState = updateViewOffsets(nextState);
+  nextState = updateViewOffsets(nextState);
 
   return nextState;
 }

@@ -1,6 +1,7 @@
 import type { Vec3 } from '../math/vec3.js';
 import { angleVectors, type AngleVectorsResult } from '../math/angles.js';
 import { PmFlag, type PmFlags } from './constants.js';
+import type { PmoveState } from './types.js'; // Use type-only import for PmoveState if it's an interface, but here view.ts used it in signature
 
 export interface ClampViewAnglesParams {
   readonly pmFlags: PmFlags;
@@ -54,4 +55,10 @@ export function clampViewAngles(params: ClampViewAnglesParams): ClampViewAnglesR
 
   const vectors = angleVectors(viewangles);
   return { viewangles, ...vectors };
+}
+
+export function updateViewOffsets(state: PmoveState): PmoveState {
+  // Simplistic implementation for now to satisfy the call.
+  // In Q2 this handles view bobbing, fall damage kicks, etc.
+  return state;
 }
