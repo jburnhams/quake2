@@ -39,6 +39,7 @@ import { WheelMenuSystem } from './ui/wheels/index.js';
 import { angleVectors } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
+import { DemoControls } from './ui/demo-controls.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -147,6 +148,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const demoPlayback = new DemoPlaybackController();
   const demoHandler = new ClientNetworkHandler(imports);
   demoHandler.setView(view);
+  const demoControls = new DemoControls(demoPlayback);
 
   let isDemoPlaying = false;
   let currentDemoName: string | null = null;
@@ -372,6 +374,21 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     handleInput(key: string, down: boolean): boolean {
+        if (isDemoPlaying) {
+             // Let demo controls handle input first
+             if (demoControls.handleInput(key, down)) {
+                 // If stopped (Escape), we might need to handle state transition here?
+                 // controller.stop() sets state to Stopped.
+                 // We check isDemoPlaying in render/update loop.
+                 // But we should probably check if stop was called.
+                 if (demoPlayback.getState() === PlaybackState.Stopped) {
+                     this.stopDemoPlayback();
+                 }
+                 return true;
+             }
+             // If not handled, fall through? Or block game input?
+        }
+
         if (!menuSystem.isActive()) return false;
 
         if (!down) return true;
@@ -466,8 +483,17 @@ export function createClient(imports: ClientImports): ClientExports {
 
           demoPlayback.update(dt);
 
-          lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
-          // TODO: Demo playback entities
+          // Calculate interpolation alpha (0.0 to 1.0)
+          // accumulatedTime in playback controller represents time since the *latest* frame was read.
+          // We interpolate from previous -> latest based on this time.
+          // Note: frameDuration is handled by playback controller but we assume standard 10Hz or derived.
+          // We can estimate alpha using accumulatedTime / frameDuration.
+          // We can estimate alpha using accumulatedTime / frameDuration.
+          const alpha = Math.max(0, Math.min(1, demoPlayback.getCurrentTime() / demoPlayback.getFrameDuration()));
+
+          lastRendered = demoHandler.getPredictionState(alpha);
+
+          renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
       } else {
           lastRenderTime = sample.nowMs;
           if (sample.latest?.state) {
@@ -511,7 +537,13 @@ export function createClient(imports: ClientImports): ClientExports {
         const effectAngles = lastView?.angles ?? { x: 0, y: 0, z: 0 };
         camera.angles = vec3.fromValues(viewAngles.x + effectAngles.x, viewAngles.y + effectAngles.y, viewAngles.z + effectAngles.z);
 
-        camera.fov = isZooming ? 40 : fovValue;
+        // In demo mode, use FOV from player state
+        if (isDemoPlaying) {
+             camera.fov = lastRendered.fov || 90;
+        } else {
+             camera.fov = isZooming ? 40 : fovValue;
+        }
+
         camera.aspect = 4 / 3; // Default aspect
 
         // Update aspect from renderer
@@ -634,6 +666,10 @@ export function createClient(imports: ClientImports): ClientExports {
 
         if (menuSystem.isActive()) {
             Draw_Menu(imports.engine.renderer, menuSystem.getState(), imports.engine.renderer.width, imports.engine.renderer.height);
+        }
+
+        if (isDemoPlaying) {
+            demoControls.render(imports.engine.renderer, imports.engine.renderer.width, imports.engine.renderer.height);
         }
 
         if (lastRendered && lastRendered.client) {

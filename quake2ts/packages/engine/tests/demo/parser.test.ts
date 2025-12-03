@@ -89,14 +89,18 @@ describe('NetworkMessageParser', () => {
     writeShort(data, 0); // flags
     writeLong(data, 0); // stats
 
+    // svc_packetentities MUST follow svc_playerinfo in this parser implementation
+    writeByte(data, ServerCommand.packetentities);
+    writeByte(data, 0); writeByte(data, 0); // Terminate
+
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
     parser.parseMessage();
     expect(stream.hasMore()).toBe(false);
   });
 
-  it('should parse svc_frame for protocol 26 (NOT skipping extra byte)', () => {
-    // Protocol 26 should NOT read an extra byte
+  it('should parse svc_frame for protocol 26 (skipping extra byte)', () => {
+    // Protocol 26 should NOT read an extra byte (suppressCount)
     const data: number[] = [];
 
     // Set protocol to 26
@@ -108,16 +112,7 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.frame);
     writeLong(data, 100);
     writeLong(data, 99);
-    writeByte(data, 0); // UK_B1 (surpress count) - WAIT, check impl.
-    // The implementation reads suppressCount ALWAYS.
-    // const surpressCount = this.stream.readByte();
-
-    // So both proto 34 and 26 read suppress count?
-    // Let's check parser.ts again.
-    // It reads serverFrame, deltaFrame, suppressCount.
-
-    // The test description says "NOT skipping extra byte".
-    // If the parser code does NOT check protocol version for suppressCount, then it reads it always.
+    // writeByte(data, 0); // UK_B1 (surpress count) - SKIPPED FOR PROTOCOL 26
 
     writeByte(data, 0); // Area count
 
@@ -126,14 +121,25 @@ describe('NetworkMessageParser', () => {
     writeShort(data, 0); // flags
     writeLong(data, 0); // stats
 
+    // svc_packetentities MUST follow svc_playerinfo
+    writeByte(data, ServerCommand.packetentities);
+    writeByte(data, 0); writeByte(data, 0); // Terminate
+
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
     parser.parseMessage();
     expect(stream.hasMore()).toBe(false);
   });
 
-  it('should parse svc_playerinfo', () => {
+  it('should parse svc_playerinfo (Protocol 25 Standalone)', () => {
+    // To parse playerinfo standalone, we must be Protocol 25
     const data: number[] = [];
+
+    // Set Protocol 25 (Vanilla style serverdata)
+    writeByte(data, ServerCommand.serverdata);
+    writeLong(data, 25); // Protocol 25
+    writeLong(data, 0); writeByte(data, 0); writeString(data, ""); writeShort(data, 0); writeString(data, "");
+
     writeByte(data, ServerCommand.playerinfo);
 
     const flags = 2 | 256; // ORIGIN (2) + VIEWANGLES (256)
@@ -154,8 +160,14 @@ describe('NetworkMessageParser', () => {
     expect(stream.hasMore()).toBe(false);
   });
 
-  it('should parse svc_packetentities with termination', () => {
+  it('should parse svc_packetentities with termination (Protocol 25 Standalone)', () => {
     const data: number[] = [];
+
+    // Set Protocol 25
+    writeByte(data, ServerCommand.serverdata);
+    writeLong(data, 25);
+    writeLong(data, 0); writeByte(data, 0); writeString(data, ""); writeShort(data, 0); writeString(data, "");
+
     writeByte(data, ServerCommand.packetentities);
 
     // Entity 1: minimal bits (number 8bit)

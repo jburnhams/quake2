@@ -57,6 +57,10 @@ export class DemoPlaybackController {
       this.frameDuration = ms;
   }
 
+  public getFrameDuration(): number {
+      return this.frameDuration;
+  }
+
   public update(dt: number) {
     if (this.state !== PlaybackState.Playing || !this.reader) {
       return;

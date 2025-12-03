@@ -167,16 +167,26 @@ describe('NetworkMessageParser Synthetic Tests', () => {
 
   it('should parse Rerelease Entity Delta with extensions', () => {
     // First we need to set protocol version to Rerelease
-    // We can simulate this by manually setting the private property or sending a serverdata packet first
-    // Let's send serverdata first.
-
     const bb = new ByteBuilder();
     // ServerData to switch mode
     bb.addByte(ServerCommand.serverdata);
     bb.addLong(PROTOCOL_VERSION_RERELEASE);
     bb.addLong(0); bb.addByte(0); bb.addByte(0); bb.addString(""); bb.addShort(0); bb.addString("");
 
-    // Now PacketEntities
+    // svc_frame (Protocol 2023 requires packetentities INSIDE frame)
+    bb.addByte(ServerCommand.frame);
+    bb.addLong(1); // serverFrame
+    bb.addLong(0); // deltaFrame
+    bb.addByte(0); // suppressCount
+    bb.addByte(0); // areaBytes
+    // no areaBits
+
+    // svc_playerinfo (Required inside frame)
+    bb.addByte(ServerCommand.playerinfo);
+    bb.addShort(0); // flags
+    bb.addLong(0); // stats
+
+    // Now PacketEntities (Inside frame)
     bb.addByte(ServerCommand.packetentities);
 
     // Entity 1
@@ -189,43 +199,6 @@ describe('NetworkMessageParser Synthetic Tests', () => {
     // U_MOREBITS4 = 1<<31
 
     // Byte 1: U_ORIGIN1 (1) | U_MOREBITS1 (128) = 129
-    // Byte 2: U_ALPHA (1<<5 in 2nd byte if shifted? No, 1<<13 is 0x2000. 0x2000 >> 8 = 0x20)
-    // Wait, let's construct it bit by bit manually.
-
-    let bits = U_ORIGIN1 | U_ALPHA | U_SCALE;
-    // Auto-set morebits? No, the parser reads bytes.
-    // We have to construct the header bytes carefully.
-
-    // Byte 1 contains bits 0-7 (flags 1<<0 to 1<<7)
-    // Byte 2 contains bits 8-15
-    // Byte 3 contains bits 16-23
-    // Byte 4 contains bits 24-31
-
-    // U_ORIGIN1 is in Byte 1
-    // U_ALPHA is in Byte 2
-    // U_SCALE is in Byte 4
-
-    // So we need U_MOREBITS1, U_MOREBITS2, U_MOREBITS3 set to reach Byte 4.
-    // U_SCALE (1<<28) implies we need to read Byte 4.
-
-    // Let's redefine bits for clarity
-    const bits1 = U_ORIGIN1;
-    const bits2 = U_ALPHA;
-    const bits4 = U_SCALE;
-
-    // Construct bytes
-    // Byte 1: Needs U_ORIGIN1 | U_MOREBITS1
-    // Byte 2: Needs U_ALPHA | U_MOREBITS2
-    // Byte 3: Needs U_MOREBITS3 (no data flags used here in this test case)
-    // Byte 4: Needs U_SCALE | U_MOREBITS4 (if we want high bits)
-
-    // Let's verify constants values:
-    // U_MOREBITS1 = 1<<7  = 0x80
-    // U_MOREBITS2 = 1<<15 = 0x8000
-    // U_MOREBITS3 = 1<<23 = 0x800000
-    // U_MOREBITS4 = 0x80000000
-
-    // Byte 1: U_ORIGIN1 (1) | 0x80 = 0x81
     // Byte 2: (U_ALPHA >> 8) | 0x80 = (0x2000 >> 8) | 0x80 = 0x20 | 0x80 = 0xA0
     // Byte 3: 0 | 0x80 = 0x80
     // Byte 4: (U_SCALE >> 24) = (1<<28 >> 24) = 1<<4 = 0x10. No U_MOREBITS4 this time.
@@ -257,7 +230,7 @@ describe('NetworkMessageParser Synthetic Tests', () => {
     bb.addByte(0); // Number -> 0
 
     const parser = createParser(bb.build());
-    parser.parseMessage(); // Parses serverdata
+    parser.parseMessage(); // Parses serverdata and frame
 
     // We expect onFrame to be called with packet entities
     expect(handler.onFrame).toHaveBeenCalled();

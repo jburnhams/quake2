@@ -90,6 +90,11 @@ function createRereleaseDemoData(): ArrayBuffer {
   writeShort(0); // Flags (0 means no fields follow)
   writeLong(0); // Stats bits (0)
 
+  // PacketEntities (REQUIRED after playerinfo in parser logic)
+  writeByte(ServerCommand.packetentities);
+  writeByte(0); // Header byte 1 -> 0
+  writeByte(0); // Number -> 0 (Termination)
+
   // End of message
   // No explicit EOF byte needed, block end implies it.
 
@@ -169,6 +174,11 @@ function createVanillaDemoData(): ArrayBuffer {
   writeByte(ServerCommand.playerinfo);
   writeShort(0); // Flags
   writeLong(0); // Stats bits
+
+  // PacketEntities (REQUIRED after playerinfo in parser logic)
+  writeByte(ServerCommand.packetentities);
+  writeByte(0); // Header byte 1 -> 0
+  writeByte(0); // Number -> 0 (Termination)
 
   const msgLen = offset;
   const finalBuffer = new ArrayBuffer(8 + msgLen);

@@ -11,6 +11,7 @@ const mockEngineImports: EngineImports = {
         renderFrame: vi.fn(),
         begin2D: vi.fn(),
         end2D: vi.fn(),
+        drawString: vi.fn(), // Added for DemoControls
         stats: undefined
     },
     audio: {
@@ -31,6 +32,7 @@ const mockDemoPlayback = {
     update: vi.fn(),
     getState: vi.fn().mockReturnValue(0), // PlaybackState.Stopped
     setFrameDuration: vi.fn(),
+    getFrameDuration: vi.fn().mockReturnValue(100),
     play: vi.fn(),
     pause: vi.fn(),
     setSpeed: vi.fn(),
@@ -42,6 +44,7 @@ const mockDemoHandler = {
     setView: vi.fn(),
     onServerData: vi.fn(),
     onConfigString: vi.fn(),
+    getRenderableEntities: vi.fn().mockReturnValue([]),
     getPredictionState: vi.fn().mockReturnValue({
         origin: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
@@ -165,5 +168,53 @@ describe('Client Demo Playback Integration', () => {
         client.render(sample);
 
         expect(mockDemoPlayback.update).not.toHaveBeenCalled();
+    });
+
+    it('should handle input for demo controls', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'demo.dm2');
+
+        // Mock Playing state
+        mockDemoPlayback.getState.mockReturnValue(1); // Playing
+
+        // Press Space (Pause)
+        client.handleInput(' ', true);
+        expect(mockDemoPlayback.pause).toHaveBeenCalled();
+
+        // Mock Paused state
+        mockDemoPlayback.getState.mockReturnValue(2); // Paused
+
+        // Press Space (Play)
+        client.handleInput(' ', true);
+        expect(mockDemoPlayback.play).toHaveBeenCalled();
+
+        // Press Escape (Stop)
+        mockDemoPlayback.getState.mockReturnValue(0); // Stopped (after stop called)
+
+        client.handleInput('escape', true);
+        expect(mockDemoPlayback.stop).toHaveBeenCalled();
+
+        // Should transition client out of demo mode if stopped
+        expect(client.isDemoPlaying).toBe(false);
+    });
+
+    it('should render demo controls overlay', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'demo.dm2');
+
+        const renderer = mockEngineImports.renderer;
+
+        // Mock renderer.drawString if it exists, otherwise check calls
+        (renderer as any).drawString = vi.fn();
+
+        client.render({
+             latest: { timeMs: 100 },
+             previous: { timeMs: 50 },
+             alpha: 0.5,
+             nowMs: 1000,
+             accumulatorMs: 0,
+             frame: 1
+        } as any);
+
+        // Check if drawString was called (DemoControls.render calls it)
+        expect((renderer as any).drawString).toHaveBeenCalled();
     });
 });
