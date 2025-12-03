@@ -4,7 +4,7 @@ import { throwGibs } from '../gibs.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import { monster_fire_bullet } from './attack.js';
-import { angleVectors, vectorToYaw as vectoyaw } from '@quake2ts/shared';
+import { angleVectors, vectorToYaw as vectoyaw, SoundChannel, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '@quake2ts/shared';
 import { Vec3, subtractVec3 as subVec3, normalizeVec3, scaleVec3, addVec3, copyVec3, lengthVec3 } from '@quake2ts/shared';
 import { setMovedir } from '../utils.js';
 
@@ -27,6 +27,15 @@ const actor_names = [
     "Titus",
     "Bitterman"
 ];
+
+// Sounds
+const sound_pain1 = 'player/male/pain100.wav';
+const sound_pain2 = 'player/male/pain75.wav';
+const sound_pain3 = 'player/male/pain50.wav';
+const sound_die1 = 'player/male/death1.wav';
+const sound_die2 = 'player/male/death2.wav';
+const sound_gib = 'misc/udeath.wav';
+
 
 // Frames
 const FRAME_stand101 = 0;
@@ -132,7 +141,14 @@ function actor_pain(self: Entity, other: Entity | null, kick: number, damage: nu
         return;
 
     self.pain_debounce_time = context.timeSeconds + 3;
-    // gi.sound (self, CHAN_VOICE, actor.sound_pain, 1, ATTN_NORM, 0);
+
+    // Pick random pain sound
+    const n = Math.floor(Math.random() * 3);
+    let sound = sound_pain1;
+    if (n === 1) sound = sound_pain2;
+    if (n === 2) sound = sound_pain3;
+
+    context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
 
     const random = Math.random();
 
@@ -154,7 +170,6 @@ function actor_pain(self: Entity, other: Entity | null, kick: number, damage: nu
         return;
     }
 
-    const n = Math.floor(Math.random() * 3);
     if (n === 0)
         self.monsterinfo.current_move = actor_move_pain1;
     else if (n === 1)
@@ -221,7 +236,7 @@ function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
 
     // check for gib
     if (self.health <= -80) {
-        // gi.sound (self, CHAN_VOICE, actor.sound_gib, 1, ATTN_NORM, 0);
+        context.sound(self, SoundChannel.Voice, sound_gib, 1, ATTN_NORM, 0);
         throwGibs(context, self.origin, damage);
         // ThrowGibs also handles head
         self.deadflag = DeadFlag.Dead;
@@ -232,11 +247,14 @@ function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
         return;
 
     // regular death
-    // gi.sound (self, CHAN_VOICE, actor.sound_die, 1, ATTN_NORM, 0);
+    const n = Math.floor(Math.random() * 2);
+    const sound = n === 0 ? sound_die1 : sound_die2;
+    context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
+
     self.deadflag = DeadFlag.Dead;
     self.takedamage = true;
 
-    if (Math.random() < 0.5)
+    if (n === 0)
         self.monsterinfo.current_move = actor_move_death1;
     else
         self.monsterinfo.current_move = actor_move_death2;
@@ -433,6 +451,15 @@ export function SP_misc_actor(self: Entity, context: SpawnContext) {
     self.pain = actor_pain;
     self.die = actor_die;
 
+    // Precache sounds
+    context.entities.soundIndex(sound_pain1);
+    context.entities.soundIndex(sound_pain2);
+    context.entities.soundIndex(sound_pain3);
+    context.entities.soundIndex(sound_die1);
+    context.entities.soundIndex(sound_die2);
+    context.entities.soundIndex(sound_gib);
+    context.entities.soundIndex('player/male/jump1.wav');
+
     self.monsterinfo = {
         ...self.monsterinfo, // Preserve default properties like last_sighting, trail_time, pausetime
         stand: (s) => actor_stand_wrapper(s, context.entities), // Wrap to match signature
@@ -507,7 +534,7 @@ function target_actor_touch(self: Entity, other: Entity | null, plane: any, surf
         if (other.groundentity) {
             other.groundentity = null;
             v.z = self.movedir.z;
-            context.sound(other, 2, 'player/male/jump1.wav', 1, 1, 0);
+            context.sound(other, SoundChannel.Voice, 'player/male/jump1.wav', 1, ATTN_NORM, 0);
         }
     }
 

@@ -314,6 +314,10 @@ export class EntitySystem {
     this.engine.sound?.(entity, channel, sound, volume, attenuation, timeofs);
   }
 
+  soundIndex(sound: string): number {
+    return this.engine.soundIndex?.(sound) || 0;
+  }
+
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
   }
