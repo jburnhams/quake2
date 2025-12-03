@@ -254,3 +254,68 @@ describe('ai_charge', () => {
     expect(ent.origin.y).toBeCloseTo(-8, 6);
   });
 });
+
+// Added tests for M_walkmove stepping logic
+import { M_walkmove, M_CheckBottom, CheckGround } from '../../src/ai/movement.js';
+import { MoveType } from '../../src/entities/entity.js';
+
+describe('M_walkmove stepping', () => {
+  let mockEntity: Entity;
+  // We reuse mockContext from above but need to adjust trace behavior
+
+  beforeEach(() => {
+    // Reset Entity
+    mockEntity = createEntity();
+    mockEntity.origin = { x: 0, y: 0, z: 0 };
+    mockEntity.movetype = MoveType.Step;
+    mockEntity.flags = 0; // Not flying/swimming
+    mockEntity.groundentity = {} as any;
+
+    // Reset mocks
+    mockTraceFn.mockReset();
+    mockTraceFn.mockReturnValue({ fraction: 1.0, startsolid: false, allsolid: false });
+    mockPointcontentsFn.mockReturnValue(0);
+  });
+
+  it('should move successfully on flat ground', () => {
+    // First trace: clear path
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
+
+    // M_CheckBottom mock: hit floor
+    // This is called inside M_walkmove -> M_CheckBottom -> trace
+    mockTraceFn.mockReturnValue({ fraction: 0.5 });
+
+    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+
+    expect(result).toBe(true);
+    expect(mockEntity.origin.x).toBe(10);
+  });
+
+  it('should step up if blocked', () => {
+    // 1. Trace forward: Blocked (fraction < 1)
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+
+    // 2. Trace UP: Clear
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+
+    // 3. Trace Forward (at height): Clear
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+
+    // 4. Trace Down: Hit ground at z=18 (step height)
+    mockTraceFn.mockReturnValueOnce({
+        fraction: 0.5,
+        endpos: { x: 10, y: 0, z: 18 },
+        startsolid: false,
+        allsolid: false
+    });
+
+    // M_CheckBottom traces (mock success)
+    mockTraceFn.mockReturnValue({ fraction: 0.5 });
+
+    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+
+    expect(result).toBe(true);
+    expect(mockEntity.origin.z).toBe(18);
+    expect(mockEntity.origin.x).toBe(10);
+  });
+});

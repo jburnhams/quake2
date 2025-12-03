@@ -1,12 +1,24 @@
 import type { Vec3 } from '../math/vec3.js';
 import { addVec3, dotVec3, lengthVec3, normalizeVec3, scaleVec3 } from '../math/vec3.js';
+import { angleVectors } from '../math/angles.js';
 import type {
   PmoveAccelerateParams,
   PmoveCmd,
   PmoveFrictionParams,
   PmoveWishParams,
   PmoveWishResult,
+  PmoveState,
+  PmoveImports,
+  PmoveTraceResult
 } from './types.js';
+import { PlayerButton, PmFlag, PmType, addPmFlag, removePmFlag } from './constants.js';
+import { checkJump } from './jump.js';
+import { applyPmoveAirMove, applyPmoveWaterMove, applyPmoveWalkMove } from './move.js';
+import { categorizePosition } from './categorize.js';
+import { checkDuckState, DuckTraceParams } from './duck.js';
+// import { updateViewOffsets } from './view.js';
+
+const FRAMETIME = 0.025; // Define FRAMETIME here or import if available in constants? Using local definition for now as per previous context.
 
 /**
  * Pure version of PM_Friction from rerelease p_move.cpp.
@@ -200,4 +212,235 @@ export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
     wishdir: wishspeed === 0 ? wishvel : normalizeVec3(wishvel),
     wishspeed,
   };
+}
+
+/**
+ * Runs the full player movement simulation for a single frame.
+ */
+export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
+  if (state.pmType === PmType.Dead) {
+    return state;
+  }
+
+  let nextState = { ...state };
+
+  // Categorize Position
+  const catResult = categorizePosition({
+    pmType: nextState.pmType,
+    pmFlags: nextState.pmFlags,
+    pmTime: 0,
+    n64Physics: false,
+    velocity: nextState.velocity,
+    startVelocity: nextState.velocity,
+    origin: nextState.origin,
+    mins: nextState.mins,
+    maxs: nextState.maxs,
+    viewheight: nextState.viewHeight,
+    trace: imports.trace,
+    pointContents: imports.pointcontents
+  });
+
+  // Merge result back to state
+  nextState.pmFlags = catResult.pmFlags;
+  nextState.waterlevel = catResult.waterlevel;
+  nextState.watertype = catResult.watertype;
+
+  // Check Ducking (Before Jump)
+  const duckResult = checkDuckState({
+    pmType: nextState.pmType,
+    pmFlags: nextState.pmFlags,
+    buttons: nextState.cmd.buttons,
+    waterlevel: nextState.waterlevel,
+    hasGroundEntity: (nextState.pmFlags & PmFlag.OnGround) !== 0,
+    onLadder: false,
+    n64Physics: false,
+    origin: nextState.origin,
+    mins: nextState.mins,
+    maxs: nextState.maxs,
+    trace: (params: DuckTraceParams): PmoveTraceResult => {
+      // Adapter from DuckTraceFn (obj) to PmoveTraceFn (args)
+      return imports.trace(params.start, params.end, params.mins, params.maxs);
+    }
+  });
+
+  nextState.pmFlags = duckResult.pmFlags;
+  nextState.mins = duckResult.mins;
+  nextState.maxs = duckResult.maxs;
+  nextState.viewHeight = duckResult.viewheight;
+
+  // Check Jump
+  const jumpResult = checkJump({
+    pmFlags: nextState.pmFlags,
+    pmType: nextState.pmType,
+    buttons: nextState.cmd.buttons,
+    waterlevel: nextState.waterlevel,
+    onGround: (nextState.pmFlags & PmFlag.OnGround) !== 0,
+    velocity: nextState.velocity,
+    origin: nextState.origin
+  });
+
+  nextState.pmFlags = jumpResult.pmFlags;
+  nextState.velocity = jumpResult.velocity;
+  nextState.origin = jumpResult.origin;
+
+  if (jumpResult.onGround !== ((nextState.pmFlags & PmFlag.OnGround) !== 0)) {
+     if (jumpResult.onGround) {
+       nextState.pmFlags = addPmFlag(nextState.pmFlags, PmFlag.OnGround);
+     } else {
+       nextState.pmFlags = removePmFlag(nextState.pmFlags, PmFlag.OnGround);
+     }
+  }
+
+  // Frictional movement
+  const onGround = (nextState.pmFlags & PmFlag.OnGround) !== 0;
+
+  // Apply friction
+  const velocityBeforeFriction = nextState.velocity;
+  nextState.velocity = applyPmoveFriction({
+      velocity: nextState.velocity,
+      frametime: FRAMETIME,
+      onGround,
+      groundIsSlick: false,
+      onLadder: false, // Defaulting to false for now as ladder logic is complex
+      waterlevel: nextState.waterlevel,
+      pmFriction: 6, // Default
+      pmStopSpeed: 100, // Default
+      pmWaterFriction: 1 // Default
+  });
+
+  // Calculate view vectors from angles
+  const { forward, right } = angleVectors(nextState.viewAngles);
+
+  if (nextState.pmType === PmType.NoClip) {
+    // PM_NoclipMove
+    // Simplified noclip
+    const wishvel = {
+         x: forward.x * nextState.cmd.forwardmove + right.x * nextState.cmd.sidemove,
+         y: forward.y * nextState.cmd.forwardmove + right.y * nextState.cmd.sidemove,
+         z: nextState.cmd.upmove
+    };
+    const scale = FRAMETIME; // Just move by velocity
+    // Actually we need to apply velocity based on input
+    // But sticking to just what's needed for jumping/movement:
+    nextState.velocity = wishvel; // Simple override for noclip
+    nextState.origin = {
+        x: nextState.origin.x + wishvel.x * scale,
+        y: nextState.origin.y + wishvel.y * scale,
+        z: nextState.origin.z + wishvel.z * scale
+    };
+
+  } else if (nextState.waterlevel >= 2) {
+    const outcome = applyPmoveWaterMove({
+        origin: nextState.origin,
+        velocity: nextState.velocity,
+        frametime: FRAMETIME,
+        mins: nextState.mins,
+        maxs: nextState.maxs,
+        trace: imports.trace,
+        cmd: nextState.cmd,
+        forward,
+        right,
+        pmFlags: nextState.pmFlags,
+        onGround,
+        pmMaxSpeed: 300,
+        pmDuckSpeed: 100,
+        pmWaterAccelerate: 4,
+        pmWaterSpeed: 400,
+        onLadder: false,
+        watertype: nextState.watertype,
+        groundContents: 0, // Should be passed in?
+        waterlevel: nextState.waterlevel,
+        viewPitch: nextState.viewAngles.x,
+        ladderMod: 1,
+        stepSize: 18 // Added stepSize for consistency, though water move might not use it heavily
+    });
+    nextState.origin = outcome.origin;
+    nextState.velocity = outcome.velocity;
+
+  } else if ((nextState.pmFlags & PmFlag.OnGround) === 0) {
+     const outcome = applyPmoveAirMove({
+        origin: nextState.origin,
+        velocity: nextState.velocity,
+        frametime: FRAMETIME,
+        mins: nextState.mins,
+        maxs: nextState.maxs,
+        trace: imports.trace,
+        cmd: nextState.cmd,
+        forward,
+        right,
+        pmFlags: nextState.pmFlags,
+        onGround,
+        gravity: nextState.gravity,
+        pmType: nextState.pmType,
+        pmAccelerate: 10,
+        pmAirAccelerate: 1,
+        pmMaxSpeed: 300,
+        pmDuckSpeed: 100,
+        onLadder: false,
+        waterlevel: nextState.waterlevel,
+        watertype: nextState.watertype,
+        groundContents: 0,
+        viewPitch: nextState.viewAngles.x,
+        ladderMod: 1,
+        pmWaterSpeed: 400,
+        stepSize: 18 // Added stepSize
+    });
+    nextState.origin = outcome.origin;
+    nextState.velocity = outcome.velocity;
+
+  } else {
+     const outcome = applyPmoveWalkMove({
+        origin: nextState.origin,
+        velocity: nextState.velocity,
+        frametime: FRAMETIME,
+        mins: nextState.mins,
+        maxs: nextState.maxs,
+        trace: imports.trace,
+        cmd: nextState.cmd,
+        forward,
+        right,
+        pmFlags: nextState.pmFlags,
+        onGround,
+        gravity: nextState.gravity,
+        pmType: nextState.pmType,
+        pmAccelerate: 10,
+        pmMaxSpeed: 300,
+        pmDuckSpeed: 100,
+        onLadder: false,
+        waterlevel: nextState.waterlevel,
+        watertype: nextState.watertype,
+        groundContents: 0,
+        viewPitch: nextState.viewAngles.x,
+        ladderMod: 1,
+        pmWaterSpeed: 400,
+        stepSize: 18 // Added stepSize
+    });
+    nextState.origin = outcome.origin;
+    nextState.velocity = outcome.velocity;
+  }
+
+  // Categorize Position again at end of frame
+  const catResultEnd = categorizePosition({
+    pmType: nextState.pmType,
+    pmFlags: nextState.pmFlags,
+    pmTime: 0,
+    n64Physics: false,
+    velocity: nextState.velocity,
+    startVelocity: nextState.velocity,
+    origin: nextState.origin,
+    mins: nextState.mins,
+    maxs: nextState.maxs,
+    viewheight: nextState.viewHeight,
+    trace: imports.trace,
+    pointContents: imports.pointcontents
+  });
+
+  nextState.pmFlags = catResultEnd.pmFlags;
+  nextState.waterlevel = catResultEnd.waterlevel;
+  nextState.watertype = catResultEnd.watertype;
+
+  // Update view offsets (bobbing, etc)
+  // nextState = updateViewOffsets(nextState);
+
+  return nextState;
 }
