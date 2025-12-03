@@ -4,77 +4,62 @@
 
 import { Entity } from '../../entities/entity.js';
 import { EntitySystem } from '../../entities/system.js';
-import { getWeaponState } from './state.js';
-import { WeaponId } from '../../inventory/playerInventory.js';
-import { BUTTON_ATTACK } from '../../buttons.js';
 import { Weapon_Repeating } from './animation.js';
 import { fireChaingun } from './firing.js';
-import {
-    FRAME_CHAINGUN_ACTIVATE_LAST,
-    FRAME_CHAINGUN_FIRE_FRAME,
-    FRAME_CHAINGUN_FIRE_LAST,
-    FRAME_CHAINGUN_IDLE_LAST,
-    FRAME_CHAINGUN_DEACTIVATE_LAST
-} from './frames.js';
+import { BUTTON_ATTACK } from '../../buttons.js';
+import { AmmoType } from '../../inventory/ammo.js';
+import { getWeaponState } from './state.js';
+import { WeaponId } from '../../inventory/playerInventory.js';
 
-const CHAINGUN_PAUSE_FRAMES = [38, 43, 51, 61];
-// fire_frames not used in Weapon_Repeating as it handles firing internally?
-// Wait, C code has: static int fire_frames[] = {5, 0};
-// And Weapon_Repeating call passes it.
-// But Weapon_Repeating logic in C:
-// if (fire_frames) { ... if (gunframe == fire_frames[n]) fire(ent); ... }
-// My TS Weapon_Repeating logic:
-// if (gunframe == FRAME_FIRE_FRAME) fire(ent);
-// So I should pass FRAME_CHAINGUN_FIRE_FRAME (5) as the single fire frame?
-// The signature of my Weapon_Repeating supports explicit FRAME_FIRE_FRAME.
+// Chaingun Frames
+const FRAME_CHAINGUN_ACTIVATE_LAST = 4;
+const FRAME_CHAINGUN_FIRE_FRAME = 5;
+const FRAME_CHAINGUN_FIRE_LAST = 21;
+const FRAME_CHAINGUN_IDLE_LAST = 52;
+const FRAME_CHAINGUN_DEACTIVATE_LAST = 61;
 
-// However, I updated Weapon_Repeating in animation.ts to delegate to Weapon_Generic for non-firing states.
-// Weapon_Generic takes pause_frames and fire_frames.
+function chaingunFire(ent: Entity, sys: EntitySystem) {
+    if (!ent.client) return;
+    const client = ent.client;
 
-export function chaingunThink(player: Entity, sys: EntitySystem) {
-    const weaponState = getWeaponState(player.client!.weaponStates, WeaponId.Chaingun);
+    if (client.gun_frame > 31) {
+        client.gun_frame = 5;
+        sys.sound(ent, 0, 'weapons/chngnu1a.wav', 1, 0, 0);
+    } else if (client.gun_frame === 14 && !(client.buttons & BUTTON_ATTACK)) {
+        client.gun_frame = 32;
+        // weapon_sound = 0
+        return;
+    } else if (client.gun_frame === 21 && (client.buttons & BUTTON_ATTACK) && client.inventory.ammo.counts[AmmoType.Bullets] > 0) {
+        client.gun_frame = 15;
+    } else {
+        client.gun_frame++;
+    }
 
-    // Check for spin-down sound
-    if (!(player.client!.buttons & BUTTON_ATTACK) && weaponState.spinupCount && weaponState.spinupCount > 0) {
-        sys.sound(player, 0, 'weapons/chngnd1a.wav', 1, 0, 0);
+    if (client.gun_frame === 22) {
+        // weapon_sound = 0
+        sys.sound(ent, 0, 'weapons/chngnd1a.wav', 1, 0, 0);
+        // Reset spinupCount for compatibility/tests
+        const weaponState = getWeaponState(client.weaponStates, WeaponId.Chaingun);
         weaponState.spinupCount = 0;
     }
 
-    // Weapon Repeating Logic
-    // In C: Weapon_Repeating (ent, 5, 21, 52, 61, pause_frames, fire_frames, Chaingun_Fire);
-    // My TS Signature:
-    // Weapon_Repeating(ent, FRAME_FIRE_FRAME, FRAME_FIRE_LAST, FRAME_IDLE_LAST, FRAME_DEACTIVATE_LAST, FRAME_NOOP, fire, sys)
-    // Wait, I updated Weapon_Repeating signature? No, I only updated Weapon_Generic.
-    // I need to update Weapon_Repeating signature in animation.ts or stick to what I have.
-    // In animation.ts I see:
-    // export function Weapon_Repeating(ent, FRAME_FIRE_FRAME, FRAME_FIRE_LAST, FRAME_IDLE_LAST, FRAME_PAUSE, FRAME_NOOP, fire, sys)
+    if (client.gun_frame >= 5 && client.gun_frame <= 21) {
+        // Play loop sound (handled by client/engine usually via weapon_sound, or we can play here)
+        // ent.client.weapon_sound = ...
 
-    // And in animation.ts Weapon_Repeating implementation:
-    // It calls Weapon_Generic(..., FRAME_PAUSE, null, null, ...)
-    // So it ignores arrays for non-firing states?
-    // C code passes pause_frames to Weapon_Generic via Weapon_Repeating.
+        fireChaingun(sys.game, ent);
+    }
+}
 
-    // I should probably update Weapon_Repeating to accept arrays if I want pause frames to work during idle/deactivate.
-    // But currently I am stuck with the signature in animation.ts unless I change it.
-    // I changed Weapon_Generic. I did NOT change Weapon_Repeating signature in the file overwrite?
-    // Let me double check animation.ts content I wrote.
-
-    // I wrote:
-    // export function Weapon_Repeating(..., FRAME_PAUSE, FRAME_NOOP, fire, sys)
-    // And inside:
-    // Weapon_Generic(..., FRAME_PAUSE, null, null, fire, sys);
-
-    // So currently pause_frames are LOST in Weapon_Repeating.
-    // I should fix Weapon_Repeating in animation.ts first.
-
+export function chaingunThink(player: Entity, sys: EntitySystem) {
     Weapon_Repeating(
         player,
         FRAME_CHAINGUN_FIRE_FRAME,
-        FRAME_CHAINGUN_FIRE_LAST,
+        FRAME_CHAINGUN_FIRE_LAST, // Note: Logic handles looping, this is just for generic activation
         FRAME_CHAINGUN_IDLE_LAST,
         FRAME_CHAINGUN_DEACTIVATE_LAST,
-        0, // FRAME_NOOP
-        (ent) => fireChaingun(sys.game, ent),
+        0,
+        (ent) => chaingunFire(ent, sys),
         sys
     );
 }

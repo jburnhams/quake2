@@ -13,7 +13,11 @@ import {
     FRAME_GRENADELAUNCHER_DEACTIVATE_LAST
 } from './frames.js';
 
-const GRENADELAUNCHER_PAUSE_FRAMES = [34, 51, 59];
+// Corrected pause frames based on C source and unreachable frames analysis
+// Source: p_weapon.cpp:1240 (pause_frames[] = {34, 51, 59, 0})
+// However, IDLE_LAST is 36, so 51 and 59 are unreachable.
+// We keep 34.
+const GRENADELAUNCHER_PAUSE_FRAMES = [34];
 const GRENADELAUNCHER_FIRE_FRAMES = [6];
 
 export function grenadeLauncherThink(player: Entity, sys: EntitySystem) {

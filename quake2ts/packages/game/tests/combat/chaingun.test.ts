@@ -9,6 +9,9 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { Entity } from '../../src/entities/entity.js';
+import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
+import { getWeaponState, WeaponStateEnum } from '../../src/combat/weapons/state.js';
+import { EntitySystem } from '../../src/entities/system.js';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -194,10 +197,6 @@ describe('Chaingun', () => {
     });
 });
 
-import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
-import { getWeaponState } from '../../src/combat/weapons/state.js';
-import { EntitySystem } from '../../src/entities/system.js';
-
 describe('Chaingun Spin-down', () => {
     let game: GameExports;
     let player: Entity;
@@ -232,6 +231,11 @@ describe('Chaingun Spin-down', () => {
         // Arrange
         const weaponState = getWeaponState(player.client.weaponStates, WeaponId.Chaingun);
         weaponState.spinupCount = 1;
+
+        // Setup for frame-based logic (required for correct Weapon_Repeating behavior)
+        player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
+        player.client.gun_frame = 21; // Last fire frame
+        player.client.buttons = 0; // Released
 
         // Act
         chaingunThink(player, game as unknown as EntitySystem);

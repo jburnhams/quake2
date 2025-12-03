@@ -32,6 +32,7 @@ export interface GameEngine {
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
     centerprintf?(entity: Entity, message: string): void;
     modelIndex?(model: string): number;
+    soundIndex?(sound: string): number;
     multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
     configstring?(index: number, value: string): void;

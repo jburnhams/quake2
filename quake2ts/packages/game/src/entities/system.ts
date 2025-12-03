@@ -242,6 +242,7 @@ export class EntitySystem {
       multicast: () => {},
       unicast: () => {},
       configstring: () => {},
+      serverCommand: () => {},
     };
 
     // Merge defaults with provided imports
@@ -332,6 +333,10 @@ export class EntitySystem {
 
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
+  }
+
+  soundIndex(sound: string): number {
+    return this.engine.soundIndex?.(sound) || 0;
   }
 
   linkentity(ent: Entity): void {
