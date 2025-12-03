@@ -73,7 +73,10 @@ describe('Shotgun Animation Logic', () => {
         expect(mockPlayer.client!.gun_frame).toBe(FRAME_SHOTGUN_ACTIVATE_LAST + 1); // 8
 
         // Mock trace to avoid error in fireShotgun
-        (mockGame.trace as any).mockReturnValue({ fraction: 1.0 });
+        (mockGame.trace as any)
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // Convergence
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // Wall check
+            .mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }); // Pellets
 
         // 2. Firing Frame 8
         // Need to advance time

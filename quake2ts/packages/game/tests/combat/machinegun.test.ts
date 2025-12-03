@@ -41,16 +41,19 @@ describe('Machinegun', () => {
         target.health = 100;
         target.takedamage = 1;
 
-        trace.mockReturnValue({
-            ent: target,
-            endpos: { x: 10, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
-        });
+        trace
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
+            .mockReturnValue({
+                ent: target,
+                endpos: { x: 10, y: 0, z: 0 },
+                plane: { normal: { x: -1, y: 0, z: 0 } },
+            });
 
         fire(game, player, WeaponId.Machinegun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 source + 1 bullet
+        expect(trace).toHaveBeenCalledTimes(3); // 2 source + 1 bullet
         expect(T_Damage).toHaveBeenCalled();
     });
 });

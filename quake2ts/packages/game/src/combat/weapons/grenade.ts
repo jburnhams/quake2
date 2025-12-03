@@ -88,9 +88,9 @@ export function grenadeThink(player: Entity, sys: EntitySystem) {
                 const { forward } = angleVectors(throwAngles);
                 const { right, up } = angleVectors(ent.angles);
 
-                const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
+                const { point, dir } = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
 
-                createGrenade(game.entities, ent, source, forward, 120, speed, timer);
+                createGrenade(game.entities, ent, point, dir, 120, speed, timer);
 
                 if (ent.client && !ent.deadflag) {
                     if (ent.client.pm_flags & 2) { // PMF_DUCKED

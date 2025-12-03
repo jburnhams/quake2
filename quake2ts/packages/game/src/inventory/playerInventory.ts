@@ -19,6 +19,10 @@ import { WeaponStateEnum } from '../combat/weapons/state.js';
 
 export { WeaponId, PowerupId };
 
+export const HAND_RIGHT = 0;
+export const HAND_LEFT = 1;
+export const HAND_CENTER = 2;
+
 export interface PlayerInventoryOptions {
   readonly weapons?: readonly WeaponId[];
   readonly ammo?: Record<number, number>;
@@ -63,6 +67,7 @@ export interface PlayerClient {
     inventory: PlayerInventory;
     weaponStates: PlayerWeaponStates;
     buttons: number;
+    hand: number; // 0=Right, 1=Left, 2=Center
     // Movement
     pm_type: number;
     pm_time: number;

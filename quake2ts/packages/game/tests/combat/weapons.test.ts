@@ -68,7 +68,10 @@ describe('Weapon Firing Logic', () => {
             player.client!.inventory.ammo.counts[AmmoType.Bullets] = 10;
             const chaingunState = getWeaponState(player.client!.weaponStates, WeaponId.Chaingun);
             chaingunState.lastFireTime = 0;
-            (mockGame.trace as any).mockReturnValue({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.5, plane: { normal: ZERO_VEC3 } });
+            (mockGame.trace as any)
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
+                .mockReturnValue({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.5, plane: { normal: ZERO_VEC3 } }); // Hitscan trace
         });
 
         it('should use single-player damage values', () => {
@@ -99,7 +102,8 @@ describe('Weapon Firing Logic', () => {
 
         it('should penetrate multiple targets in SP', () => {
             (mockGame.trace as any)
-                .mockReturnValueOnce({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 }) // P_ProjectSource
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
                 .mockReturnValueOnce({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1, plane: { normal: ZERO_VEC3 } })
                 .mockReturnValueOnce({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2, plane: { normal: ZERO_VEC3 } })
                 .mockReturnValueOnce({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0, plane: { normal: ZERO_VEC3 } });
@@ -119,7 +123,8 @@ describe('Weapon Firing Logic', () => {
         it('should penetrate multiple targets in DM', () => {
             mockGame.deathmatch = true;
             (mockGame.trace as any)
-                .mockReturnValueOnce({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 }) // P_ProjectSource
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
                 .mockReturnValueOnce({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1, plane: { normal: ZERO_VEC3 } })
                 .mockReturnValueOnce({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2, plane: { normal: ZERO_VEC3 } })
                 .mockReturnValueOnce({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0, plane: { normal: ZERO_VEC3 } });
