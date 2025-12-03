@@ -10,6 +10,7 @@ export interface CheckJumpParams {
   readonly waterlevel: WaterLevel;
   readonly onGround: boolean;
   readonly velocity: Vec3;
+  readonly origin: Vec3;
   readonly jumpHeight?: number;
 }
 
@@ -17,6 +18,7 @@ export interface CheckJumpResult {
   readonly pmFlags: PmFlags;
   readonly onGround: boolean;
   readonly velocity: Vec3;
+  readonly origin: Vec3;
   readonly jumpSound: boolean;
   readonly jumped: boolean;
 }
@@ -32,11 +34,11 @@ function hasButton(buttons: number, button: PlayerButton): boolean {
  * apply the same semantics on both the server and client.
  */
 export function checkJump(params: CheckJumpParams): CheckJumpResult {
-  const { pmFlags, pmType, buttons, waterlevel, onGround, velocity, jumpHeight = DEFAULT_JUMP_HEIGHT } = params;
+  const { pmFlags, pmType, buttons, waterlevel, onGround, velocity, origin, jumpHeight = DEFAULT_JUMP_HEIGHT } = params;
 
   // PM_CheckJump immediately bails while the landing timer is active.
   if (pmFlags & PmFlag.TimeLand) {
-    return { pmFlags, onGround, velocity, jumpSound: false, jumped: false };
+    return { pmFlags, onGround, velocity, origin, jumpSound: false, jumped: false };
   }
 
   const holdingJump = hasButton(buttons, PlayerButton.Jump);
@@ -45,27 +47,28 @@ export function checkJump(params: CheckJumpParams): CheckJumpResult {
   let jumpSound = false;
   let jumped = false;
   let nextVelocity = velocity;
+  let nextOrigin = origin;
 
   if (!holdingJump) {
     nextFlags = removePmFlag(nextFlags, PmFlag.JumpHeld);
-    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
   }
 
   if (hasPmJumpHold(nextFlags)) {
-    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
   }
 
   if (pmType === PmType.Dead) {
-    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
   }
 
   if (waterlevel >= WaterLevel.Waist) {
     nextOnGround = false;
-    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
   }
 
   if (!nextOnGround) {
-    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+    return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
   }
 
   nextFlags = addPmFlag(nextFlags, PmFlag.JumpHeld);
@@ -78,7 +81,10 @@ export function checkJump(params: CheckJumpParams): CheckJumpResult {
   const finalZ = z < jumpHeight ? jumpHeight : z;
   nextVelocity = { ...velocity, z: finalZ };
 
-  return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, jumpSound, jumped };
+  // Unstuck from ground: pm->s.origin[2] += 1;
+  nextOrigin = { ...origin, z: origin.z + 1 };
+
+  return { pmFlags: nextFlags, onGround: nextOnGround, velocity: nextVelocity, origin: nextOrigin, jumpSound, jumped };
 }
 
 function hasPmJumpHold(flags: PmFlags): boolean {
