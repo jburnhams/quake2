@@ -33,6 +33,7 @@ const createMockHandler = () => ({
     onHelpPath: vi.fn(),
     onMuzzleFlash3: vi.fn(),
     onAchievement: vi.fn(),
+    onStuffText: vi.fn(),
 });
 
 describe('Real Demo Parsing (demo1.dm2)', () => {

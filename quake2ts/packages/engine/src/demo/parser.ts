@@ -282,9 +282,17 @@ export class NetworkMessageParser {
     // We must ensure we don't accidentally interpret Rerelease extensions (21+)
     // as valid commands if the protocol is legacy.
     if (this.protocolVersion === 34 || this.protocolVersion === 25) {
+        if (this.protocolVersion === 25 && cmd === 12) return ServerCommand.bad;
         if (cmd <= ServerCommand.frame) {
             return cmd;
         }
+
+        // Handle internal sub-commands that only appear inside svc_frame
+        // 22 = svc_playerinfo, 23 = svc_packetentities (in protocol 34/25 wire format)
+        // These map to ServerCommand.playerinfo (17) and ServerCommand.packetentities (18) in our enum
+        if (cmd === 22) return ServerCommand.playerinfo;
+        if (cmd === 23) return ServerCommand.packetentities;
+
         return ServerCommand.bad;
     }
 
@@ -345,14 +353,12 @@ export class NetworkMessageParser {
              this.parseFrame();
              break;
           case ServerCommand.packetentities:
-             this.parsePacketEntities(false);
-             break;
+             // svc_packetentities must appear inside svc_frame in compliant streams
+             if (this.protocolVersion === 25) this.parsePacketEntities(false); else throw new Error("svc_packetentities must appear inside svc_frame");
           case ServerCommand.deltapacketentities:
-             this.parsePacketEntities(true);
-             break;
+             if (this.protocolVersion === 25) this.parsePacketEntities(true); else throw new Error("svc_deltapacketentities must appear inside svc_frame");
           case ServerCommand.playerinfo:
-             this.parsePlayerState();
-             break;
+             if (this.protocolVersion === 25) this.parsePlayerState(); else throw new Error("svc_playerinfo must appear inside svc_frame");
           case ServerCommand.stufftext:
             this.parseStuffText();
             break;
@@ -969,7 +975,12 @@ export class NetworkMessageParser {
   private parseFrame(): void {
       const serverFrame = this.stream.readLong();
       const deltaFrame = this.stream.readLong();
-      const surpressCount = this.stream.readByte();
+
+      // Protocol 26 (old demos) does not read suppressCount
+      let surpressCount = 0;
+      if (this.protocolVersion !== 26) {
+        surpressCount = this.stream.readByte();
+      }
 
       const areaBytes = this.stream.readByte();
       const areaBits = this.stream.readData(areaBytes);
@@ -984,6 +995,20 @@ export class NetworkMessageParser {
           throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd} (translated)`);
       }
       const playerState = this.parsePlayerState();
+
+      // Packet Entities
+      let entCmd = this.stream.readByte();
+      entCmd = this.translateCommand(entCmd);
+
+      let packetEntities: { delta: boolean; entities: EntityState[] } = { delta: false, entities: [] };
+
+      if (entCmd === ServerCommand.packetentities) {
+          packetEntities = { delta: false, entities: this.collectPacketEntities() };
+      } else if (entCmd === ServerCommand.deltapacketentities) {
+          packetEntities = { delta: true, entities: this.collectPacketEntities() };
+      } else {
+          throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${entCmd} (translated)`);
+      }
 
       if (this.isDemo === RECORD_RELAY) {
           const connectedCount = this.stream.readByte();
@@ -1004,10 +1029,7 @@ export class NetworkMessageParser {
               areaBytes,
               areaBits,
               playerState,
-              packetEntities: {
-                  delta: false,
-                  entities: []
-              }
+              packetEntities
           });
       }
   }
