@@ -180,32 +180,37 @@
 
 **Reference**: Pattern from MSG_Write* functions in qcommon/msg.c
 
-#### Task 1.5: Add Fragment Support (Optional but Recommended)
+#### Task 1.5: Add Fragment Support (COMPLETE)
 **File**: `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c:104-178` (fragment handling)
 
-- [ ] **1.5.1** Add fragment state to NetChan
-  - Add `fragmentSequence: number` (sequence of fragmented message)
-  - Add `fragmentLength: number` (total length)
-  - Add `fragmentData: Uint8Array` (reassembly buffer)
+- [x] **1.5.1** Add fragment state to NetChan
+  - Add `fragmentSendOffset: number` (offset for sending)
+  - Add `fragmentBuffer: Uint8Array` (reassembly buffer)
+  - Add `fragmentLength: number` (total length expected)
+  - Add `fragmentReceived: number` (bytes received so far)
+  - Increased `reliableMessage` buffer to 256KB (`MAX_RELIABLE_BUFFER`)
 
-- [ ] **1.5.2** Modify transmit for large reliable messages
-  - Check if `reliableLength > FRAGMENT_SIZE`
-  - If yes, send in fragments
-  - Set fragment bit in sequence
-  - Send first N bytes, mark continuation
+- [x] **1.5.2** Modify transmit for large reliable messages
+  - Checks if `reliableLength > FRAGMENT_SIZE`
+  - Sends chunks of `FRAGMENT_SIZE` (1024 bytes)
+  - Sets high bit (0x8000) in length field to indicate fragment
+  - Includes fragment header (start offset, total length)
+  - Implements retransmission loop for lost fragments
 
-- [ ] **1.5.3** Modify process for fragment reassembly
-  - Detect fragment bit in sequence
-  - Buffer fragment data
-  - Wait for all fragments
-  - Once complete, process as normal reliable message
+- [x] **1.5.3** Modify process for fragment reassembly
+  - Detects fragment bit in length field
+  - Validates `fragTotal` against `MAX_RELIABLE_BUFFER` for security
+  - Buffers fragment data in `fragmentBuffer`
+  - Enforces in-order delivery (`fragStart === fragmentReceived`)
+  - Once complete, processes as normal reliable message
 
 **Test Case**: Unit test in `packages/shared/tests/net/netchan-fragments.test.ts`
 - Write large reliable message (>1024 bytes)
 - Transmit in fragments
 - Receive and reassemble
 - Verify complete message intact
+- Verify recovery from packet loss (retransmission)
 
 **Reference Lines**: `full/qcommon/net_chan.c:104-178`
 
