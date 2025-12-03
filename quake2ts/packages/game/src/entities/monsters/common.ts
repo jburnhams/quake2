@@ -2,7 +2,8 @@ import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag } from '..
 import { monster_think, ai_stand, ai_walk, ai_run, ai_charge } from '../../ai/index.js';
 import { SpawnContext } from '../spawn.js';
 import { throwGibs } from '../gibs.js';
-import { Vec3, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { Vec3, addVec3, scaleVec3, MASK_SHOT, ZERO_VEC3 } from '@quake2ts/shared';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -141,4 +142,33 @@ export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, 
   const start2 = addVec3(start, scaleVec3(right, offset.y));
   const start3 = addVec3(start2, { x: 0, y: 0, z: offset.z });
   return start3;
+}
+
+export function M_MonsterDodge(self: Entity, attacker: Entity, eta: number, context: EntitySystem): void {
+    // Stub implementation
+}
+
+export function M_CheckClearShot(self: Entity, offset: Vec3, context: EntitySystem): boolean {
+    if (!self.enemy) return false;
+
+    // Get the firing start position
+    // Assuming self.angles is correct for facing
+    // We don't have direct access to 'forward' and 'right' vectors here unless we calculate them
+    // But this function is usually called with an offset from monster_flash_offset
+    // which assumes a certain orientation.
+    // For now, let's just do a simple trace from origin+viewheight to enemy origin.
+
+    const start = { ...self.origin };
+    start.z += self.viewheight;
+
+    const end = { ...self.enemy.origin };
+    end.z += self.enemy.viewheight; // Aim at eyes? Or origin? origin is at feet usually.
+
+    const tr = context.trace(start, end, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
+
+    if (tr.fraction === 1.0 || tr.ent === self.enemy) {
+        return true;
+    }
+
+    return false;
 }

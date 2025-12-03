@@ -34,6 +34,9 @@ export enum AttackState {
   Blind = 4,
 }
 
+// Alias for convenience/porting
+export const MonsterAttackState = AttackState;
+
 export enum TraceMask {
   Opaque = 1 << 0,
   Window = 1 << 1,
