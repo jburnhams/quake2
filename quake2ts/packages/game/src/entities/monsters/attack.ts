@@ -4,7 +4,7 @@ import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/dama
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
@@ -381,4 +381,16 @@ export function monster_fire_dabeam(
   // Call update immediately
   update_func(beam, context);
   dabeam_update(beam, context);
+}
+
+export function monster_fire_flechette(
+  self: Entity,
+  start: Vec3,
+  dir: Vec3,
+  damage: number,
+  speed: number,
+  flashtype: number,
+  context: EntitySystem
+): void {
+    createFlechette(context, self, start, dir, damage, speed);
 }

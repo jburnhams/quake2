@@ -11,6 +11,11 @@ const random = createRandomGenerator();
 export const GIB_METALLIC = 1;
 export const GIB_DEBRIS = 2;
 
+export enum GibType {
+    Metallic = 1,
+    Debris = 2
+}
+
 export interface GibDef {
     count: number;
     model: string;
@@ -74,12 +79,12 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
 // 1. throwGibs(sys, origin, damage) - Existing
 // 2. throwGibs(sys, origin, defs) - New for func_explosive
 
-export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[]) {
+export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], model?: string, type?: GibType) {
     if (typeof damageOrDefs === 'number') {
         const damage = damageOrDefs;
         const count = 4 + Math.floor(random.frandom() * 4);
         for (let i = 0; i < count; i++) {
-            spawnGib(sys, origin, damage);
+            spawnGib(sys, origin, damage, model, type);
         }
     } else {
         const defs = damageOrDefs;
