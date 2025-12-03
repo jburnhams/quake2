@@ -8,6 +8,7 @@ import { traceBox, TraceResult } from '../src/bsp/collision.js';
 import { applyPmoveAirMove, applyPmoveWaterMove } from '../src/pmove/move.js';
 import { categorizePosition } from '../src/pmove/categorize.js';
 import { checkJump } from '../src/pmove/jump.js';
+import { runPmove } from '../src/pmove/pmove.js';
 import { PmoveState, PmoveCmd } from '../src/pmove/types.js';
 import { ZERO_VEC3, copyVec3 } from '../src/math/vec3.js';
 import { PmType, PmFlag, PlayerButton } from '../src/pmove/constants.js';
@@ -50,7 +51,7 @@ describe('Player Movement Integration', () => {
     maxs,
     pmFlags: 0,
     pmType: PmType.Normal,
-    viewheight: 22,
+    viewHeight: 22,
     waterlevel: 0,
     watertype: 0,
     onGround: false,
@@ -63,9 +64,11 @@ describe('Player Movement Integration', () => {
     pmWaterSpeed: 400,
     pmWaterAccelerate: 10,
     frametime: 0.1,
-    cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0 } as PmoveCmd,
+    cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } } as PmoveCmd,
     forward: { x: 1, y: 0, z: 0 },
     right: { x: 0, y: 1, z: 0 },
+    viewAngles: { x: 0, y: 0, z: 0 },
+    delta_angles: { x: 0, y: 0, z: 0 },
     viewPitch: 0,
     ladderMod: 1,
     onLadder: false,
@@ -85,6 +88,7 @@ describe('Player Movement Integration', () => {
     // Categorize position to update onGround status
     let catResult = categorizePosition({
        ...state,
+       viewheight: state.viewHeight,
        trace,
        pointContents
     });
@@ -96,7 +100,7 @@ describe('Player Movement Integration', () => {
 
     // Now slide along floor
     const startX = state.origin.x;
-    state.cmd = { forwardmove: 400, sidemove: 0, upmove: 0 };
+    state.cmd = { forwardmove: 400, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } };
 
     const moveResult = applyPmoveAirMove({
         ...state,
@@ -118,6 +122,7 @@ describe('Player Movement Integration', () => {
      // Check if we are on ground
      let catResult = categorizePosition({
        ...state,
+       viewheight: state.viewHeight,
        trace,
        pointContents
     });
@@ -139,11 +144,12 @@ describe('Player Movement Integration', () => {
         pmFlags: PmFlag.OnGround
     };
 
-    state.cmd = { forwardmove: 400, sidemove: 0, upmove: 0 };
+    state.cmd = { forwardmove: 400, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } };
 
     const result = applyPmoveAirMove({
         ...state,
-        trace
+        trace,
+        stepSize: 18 // Pass stepSize as expected by current move.ts
     });
 
     // Should have climbed the step
@@ -161,19 +167,21 @@ describe('Player Movement Integration', () => {
         pmFlags: PmFlag.OnGround
     };
 
-    const cmd: PmoveCmd = { forwardmove: 0, sidemove: 0, upmove: 200, buttons: PlayerButton.Jump };
+    state.cmd = { forwardmove: 0, sidemove: 0, upmove: 200, buttons: PlayerButton.Jump, angles: { x: 0, y: 0, z: 0 } };
 
-    const jumpResult = checkJump({
-        pmFlags: state.pmFlags,
-        pmType: state.pmType,
-        buttons: cmd.buttons!,
-        waterlevel: state.waterlevel,
-        onGround: state.onGround,
-        velocity: state.velocity
-    });
+    const imports = {
+        trace: trace,
+        pointcontents: pointContents
+    };
 
-    expect(jumpResult.jumped).toBe(true);
-    expect(jumpResult.onGround).toBe(false); // Should be airborne
-    expect(jumpResult.velocity.z).toBeGreaterThan(0);
+    const endState = runPmove(state, imports);
+
+    expect(endState.pmFlags & PmFlag.JumpHeld).toBeTruthy();
+    expect(endState.pmFlags & PmFlag.OnGround).toBe(0);
+
+    // Check velocity
+    // Jump adds 270. Gravity (800) is applied for 0.025s (20 units).
+    // Expected velocity Z = 270 - 20 = 250.
+    expect(endState.velocity).toEqual({ x: 0, y: 0, z: 250 });
   });
 });

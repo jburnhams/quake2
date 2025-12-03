@@ -8,6 +8,8 @@ import { AIFlags } from './constants.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
 
+const STEPSIZE = 18;
+
 function yawVector(yawDegrees: number, distance: number): Vec3 {
   if (distance === 0) {
     return { x: 0, y: 0, z: 0 };
@@ -283,7 +285,7 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
 export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
   // If we're not step/toss/bounce/fly, we can't move normally
   // but M_walkmove is usually called for monsters.
-  // Original Quake 2: M_walkmove
+  // Original Quake 2: M_walkmove checks waterlevel or groundentity.
 
   if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
       if (!self.groundentity && self.waterlevel === 0) {
@@ -305,34 +307,129 @@ export function M_walkmove(self: Entity, yawDegrees: number, distance: number, c
       z: self.origin.z + delta.z
   };
 
-  // Trace to destination
+  // 1. Try moving directly to destination
   const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
 
-  if (trace.fraction < 1.0) {
+  if (trace.fraction === 1.0) {
+      // Success? Check bottom if needed
+      const oldOrigin = { ...self.origin };
+      (self.origin as MutableVec3).x = dest.x;
+      (self.origin as MutableVec3).y = dest.y;
+      (self.origin as MutableVec3).z = dest.z;
+
+      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
+         if (!M_CheckBottom(self, context)) {
+             // Revert
+             (self.origin as MutableVec3).x = oldOrigin.x;
+             (self.origin as MutableVec3).y = oldOrigin.y;
+             (self.origin as MutableVec3).z = oldOrigin.z;
+             return false;
+         }
+      }
+
+      // Update ground status
+      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
+        CheckGround(self, context);
+      }
+      return true;
+  }
+
+  // 2. If blocked, and not flying/swimming, try stepping up
+  // SV_movestep logic:
+  // if (trace.fraction < 1) ...
+  //   move up STEPSIZE
+  //   trace
+  //   move down STEPSIZE + extra
+
+  if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
+      return false; // Flying/Swimming monsters don't step up stairs? Or maybe they do?
+      // Original sv_movestep handles flying by just returning false if blocked (flymove handled elsewhere?)
+      // Actually M_walkmove calls SV_movestep.
+      // If flying, SV_movestep might try to slide?
+      // But standard Q2 monsters (Flyer/Icarus) use MoveType.Step too?
+      // Wait, Flyer uses MoveType.Step + EntityFlags.Fly.
+      // So they enter this block.
+      // If they hit a wall, they stop. They don't step up walls.
+  }
+
+  // Allow stepping up
+  const oldOrigin = { ...self.origin };
+  const up = { ...self.origin, z: self.origin.z + STEPSIZE };
+
+  // Test move up
+  const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
+  if (traceUp.startsolid || traceUp.allsolid) {
+      return false; // Can't move up
+  }
+
+  // Move forward at the higher position
+  const destUp = {
+      x: up.x + delta.x,
+      y: up.y + delta.y,
+      z: up.z // stay at up z
+  };
+
+  const traceStep = context.trace(up, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
+  if (traceStep.fraction < 1.0) {
+      return false; // Still blocked
+  }
+
+  // Move down
+  const destDown = {
+      x: destUp.x,
+      y: destUp.y,
+      z: destUp.z - STEPSIZE // Go back down
+  };
+
+  // Trace down to find ground
+  // We need to trace down further than just STEPSIZE to find the floor if it's a small step down
+  // Original uses SV_CheckBottom or similar logic which traces down.
+  // Actually SV_movestep:
+  //   moves down by STEPSIZE.
+  //   calls SV_CheckBottom(self).
+
+  // In our case, M_CheckBottom checks for ledges, but doesn't snap to ground.
+  // We need to find the ground.
+
+  const downTraceDest = {
+      x: destDown.x,
+      y: destDown.y,
+      z: destDown.z - STEPSIZE // Look a bit deeper?
+  };
+
+  // Actually we just want to land on the step.
+  // So we trace down from `destUp` to `destDown`.
+
+  const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
+
+  if (traceDown.startsolid || traceDown.allsolid) {
+       // Should not happen if we came from there?
+       // Unless we stepped onto something that is now inside us?
+       return false;
+  }
+
+  // Use the endpos of the down trace as the new position
+  const newPos = traceDown.endpos;
+
+  // Set position
+  (self.origin as MutableVec3).x = newPos.x;
+  (self.origin as MutableVec3).y = newPos.y;
+  (self.origin as MutableVec3).z = newPos.z;
+
+  // Check bottom (ledge check)
+  if (!M_CheckBottom(self, context)) {
+      // Revert
+      (self.origin as MutableVec3).x = oldOrigin.x;
+      (self.origin as MutableVec3).y = oldOrigin.y;
+      (self.origin as MutableVec3).z = oldOrigin.z;
       return false;
   }
 
-  // Set new position
-  const oldOrigin = { ...self.origin };
-  (self.origin as MutableVec3).x = dest.x;
-  (self.origin as MutableVec3).y = dest.y;
-  (self.origin as MutableVec3).z = dest.z;
-
-  // Check for ledges if not flying/swimming
-  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
-     if (!M_CheckBottom(self, context)) {
-         // Revert
-         (self.origin as MutableVec3).x = oldOrigin.x;
-         (self.origin as MutableVec3).y = oldOrigin.y;
-         (self.origin as MutableVec3).z = oldOrigin.z;
-         return false;
-     }
-  }
-
   // Update ground status
-  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
-    CheckGround(self, context);
-  }
+  CheckGround(self, context);
+
+  // If we are not on ground after stepping, we might have stepped into air?
+  // But M_CheckBottom should catch that.
 
   return true;
 }

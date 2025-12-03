@@ -193,7 +193,8 @@ function simulateCommand(
       forwardmove: cmd.forwardmove,
       sidemove: cmd.sidemove,
       upmove: cmd.upmove,
-      buttons: cmd.buttons
+      buttons: cmd.buttons,
+      angles: cmd.angles // Added missing property
   };
 
   // Delegate physics to shared applyPmove

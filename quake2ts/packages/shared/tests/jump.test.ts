@@ -15,6 +15,7 @@ const BASE_STATE = {
   waterlevel: WaterLevel.None,
   onGround: true,
   velocity: { x: 0, y: 0, z: 0 },
+  origin: { x: 0, y: 0, z: 0 }, // Added origin to match CheckJumpParams
 };
 
 describe('checkJump', () => {

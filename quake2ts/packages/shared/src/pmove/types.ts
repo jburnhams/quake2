@@ -1,5 +1,6 @@
 import type { ContentsFlag } from '../bsp/contents.js';
 import type { Vec3 } from '../math/vec3.js';
+import type { PmFlags, PmType, WaterLevel, PlayerButton } from './constants.js';
 
 export interface PmoveFrictionParams {
   readonly velocity: Vec3;
@@ -25,7 +26,10 @@ export interface PmoveCmd {
   readonly forwardmove: number;
   readonly sidemove: number;
   readonly upmove: number;
-  readonly buttons?: number;
+  readonly buttons: PlayerButton;
+  readonly impulse?: number;
+  readonly lightlevel?: number;
+  readonly angles: Vec3;
 }
 
 export interface PmoveWishResult {
@@ -54,3 +58,25 @@ export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
 
 export type PmovePointContentsFn = (point: Vec3) => ContentsFlag;
 
+// Missing exports added for runPmove
+export interface PmoveState {
+  pmType: PmType;
+  pmFlags: PmFlags;
+  origin: Vec3;
+  velocity: Vec3;
+  angles: Vec3;
+  viewAngles: Vec3;
+  viewHeight: number;
+  waterlevel: WaterLevel;
+  watertype: number;
+  cmd: PmoveCmd;
+  delta_angles: Vec3;
+  gravity: number;
+  mins: Vec3;
+  maxs: Vec3;
+}
+
+export interface PmoveImports {
+  trace: PmoveTraceFn;
+  pointcontents: PmovePointContentsFn;
+}
