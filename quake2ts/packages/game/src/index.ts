@@ -35,6 +35,7 @@ export interface GameEngine {
     multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
     configstring?(index: number, value: string): void;
+    serverCommand?(cmd: string): void;
 }
 
 export interface GameStateSnapshot {
@@ -102,6 +103,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
   configstring(index: number, value: string): void;
+  serverCommand(cmd: string): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
   clientConnect(ent: Entity | null, userInfo: string): string | true;
@@ -155,6 +157,7 @@ export function createGame(
   const multicast = imports.multicast || (() => {});
   const unicast = imports.unicast || (() => {});
   const configstring = imports.configstring || (() => {});
+  const serverCommand = imports.serverCommand || (() => {});
   const linkentity = imports.linkentity; // optional, handled in wrappedLinkEntity
 
   const wrappedLinkEntity = (ent: Entity) => {
@@ -184,7 +187,8 @@ export function createGame(
       linkentity: wrappedLinkEntity,
       multicast,
       unicast,
-      configstring
+      configstring,
+      serverCommand
   };
 
   const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch);
@@ -501,6 +505,9 @@ export function createGame(
     },
     configstring(index: number, value: string): void {
       configstring(index, value);
+    },
+    serverCommand(cmd: string): void {
+      serverCommand(cmd);
     },
     get time() {
       return levelClock.current.timeSeconds;
