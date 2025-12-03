@@ -614,6 +614,83 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
 }
 
 // Rogue ETF Rifle Flechette
+export function createTrap(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
+    const trap = sys.spawn();
+    trap.classname = 'trap';
+    trap.owner = owner;
+    trap.origin = { ...start };
+    trap.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    trap.movetype = MoveType.Bounce; // Sticks on impact
+    trap.solid = Solid.BoundingBox;
+    trap.modelindex = sys.modelIndex('models/objects/trap/tris.md2');
+
+    trap.mins = { x: -4, y: -4, z: -4 };
+    trap.maxs = { x: 4, y: 4, z: 4 };
+
+    // Trap logic: Suck/Damage phase
+    // Source: g_xatrix_weapon.cpp (trap_think)
+    const trapThink = (self: Entity) => {
+        const radius = 256;
+        const entities = sys.findByRadius(self.origin, radius);
+
+        // Suction effect (pull entities towards trap)
+        for (const ent of entities) {
+            if (ent === self || !ent.takedamage || ent === self.owner) continue;
+
+            const dir = subtractVec3(self.origin, ent.origin);
+            const dist = lengthVec3(dir);
+            if (dist > radius || dist < 1) continue;
+
+            const pullStrength = (1.0 - (dist / radius)) * 200; // Stronger closer
+            const pullDir = normalizeVec3(dir);
+
+            // Apply pull to velocity
+            ent.velocity = {
+                x: ent.velocity.x + pullDir.x * pullStrength,
+                y: ent.velocity.y + pullDir.y * pullStrength,
+                z: ent.velocity.z + pullDir.z * pullStrength + 20 // Lift slightly
+            };
+        }
+
+        // Damage pulse
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, radius, DamageFlags.ENERGY, DamageMod.TRAP, sys.timeSeconds, {}, sys.multicast.bind(sys));
+
+        // Visuals (Placeholder for laser beams or suck effect)
+        // sys.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.TRACKER_EXPLOSION, self.origin);
+
+        // Count down lifetime
+        self.wait = (self.wait || 0) + 0.1;
+        if (self.wait > 5.0) { // Lasts 5 seconds
+             sys.free(self);
+             return;
+        }
+
+        sys.scheduleThink(self, sys.timeSeconds + 0.1);
+    };
+
+    trap.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) return;
+
+        // If hitting world, stick and deploy
+        if (plane && !other) {
+            self.velocity = { x: 0, y: 0, z: 0 };
+            self.movetype = MoveType.None;
+            self.solid = Solid.Not;
+
+            // Deploy
+            sys.sound(self, 0, 'weapons/trap/deploy.wav', 1, 1, 0); // Placeholder
+            self.think = trapThink;
+            sys.scheduleThink(self, sys.timeSeconds + 0.5); // Delay before activation
+        } else if (other && other.takedamage) {
+            // Hit enemy directly - explode
+             T_RadiusDamage([], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.TRAP, sys.timeSeconds, {}, sys.multicast.bind(sys));
+             sys.free(self);
+        }
+    };
+
+    sys.finalizeSpawn(trap);
+}
+
 export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
     const flechette = sys.spawn();
     flechette.classname = 'flechette';
