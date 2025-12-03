@@ -211,6 +211,7 @@ export class Entity {
 
   health = 0;
   max_health = 0;
+  spawn_count = 0;
   takedamage = false;
   dmg = 0;
   radius_dmg = 0; // Damage amount for radius damage (used by BFG, rockets, etc.)
@@ -387,6 +388,7 @@ export class Entity {
 
     this.health = 0;
     this.max_health = 0;
+    this.spawn_count = 0;
     this.takedamage = false;
     this.dmg = 0;
     this.speed = 0;
@@ -506,6 +508,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'renderfx', type: 'int', save: true },
   { name: 'health', type: 'int', save: true },
   { name: 'max_health', type: 'int', save: true },
+  { name: 'spawn_count', type: 'int', save: true },
   { name: 'takedamage', type: 'boolean', save: true },
   { name: 'dmg', type: 'int', save: true },
   { name: 'speed', type: 'float', save: true },

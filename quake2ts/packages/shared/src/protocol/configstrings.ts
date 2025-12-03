@@ -37,6 +37,7 @@ export enum ConfigStringIndex {
   StatusBar = 5,
 
   // Matching bg_local.h:55-76
+  HealthBarName = 55,
   CONFIG_N64_PHYSICS = 56,
   CONFIG_CTF_TEAMS = 57,
   CONFIG_COOP_RESPAWN_STRING = 58,

@@ -95,6 +95,12 @@ export interface EntitySystemSnapshot {
   readonly awareness: SerializedTargetAwareness;
   readonly crossLevelFlags: number;
   readonly crossUnitFlags: number;
+  readonly level: LevelState;
+}
+
+export interface LevelState {
+  next_auto_save: number;
+  health_bar_entities: (Entity | null)[];
 }
 
 
@@ -143,12 +149,15 @@ export class EntitySystem {
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
   private frameNumber = 0;
+  private spawnCount = 0;
 
   readonly targetAwareness: TargetAwarenessState;
 
   // Persistent state for cross-level logic
   crossLevelFlags: number = 0;
   crossUnitFlags: number = 0;
+
+  public level: LevelState;
 
   get rng() {
     return this.random;
@@ -257,6 +266,11 @@ export class EntitySystem {
       sound2EntityFrame: 0,
       sightClient: null,
     };
+
+    this.level = {
+      next_auto_save: 0,
+      health_bar_entities: [null, null, null, null],
+    };
   }
 
   get world(): Entity {
@@ -294,6 +308,8 @@ export class EntitySystem {
 
   spawn(): Entity {
     const ent = this.pool.spawn();
+    this.spawnCount++;
+    ent.spawn_count = this.spawnCount;
     ent.timestamp = this.currentTimeSeconds;
     return ent;
   }
@@ -555,6 +571,10 @@ export class EntitySystem {
       },
       crossLevelFlags: this.crossLevelFlags,
       crossUnitFlags: this.crossUnitFlags,
+      level: {
+        next_auto_save: this.level.next_auto_save,
+        health_bar_entities: [null, null, null, null], // Transient
+      },
     };
   }
 
@@ -562,6 +582,10 @@ export class EntitySystem {
     this.currentTimeSeconds = snapshot.timeSeconds;
     this.crossLevelFlags = snapshot.crossLevelFlags ?? 0;
     this.crossUnitFlags = snapshot.crossUnitFlags ?? 0;
+    if (snapshot.level) {
+        this.level = { ...snapshot.level };
+        this.level.health_bar_entities = [null, null, null, null];
+    }
     this.pool.restore(snapshot.pool);
 
     const indexToEntity = new Map<number, Entity>();

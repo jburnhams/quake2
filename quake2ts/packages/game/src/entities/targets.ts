@@ -1,6 +1,6 @@
 import { Entity, ServerFlags, Solid, MoveType, AiFlags } from './entity.js';
 import type { SpawnRegistry } from './spawn.js';
-import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx } from '@quake2ts/shared';
+import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx, ConfigStringIndex } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { setMovedir } from './utils.js';
 import { createBlasterBolt } from './projectiles.js';
@@ -610,5 +610,100 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
           const slope = (end - start) / (entity.speed / 0.1);
           entity.movedir = { x: start, y: end, z: slope };
       }
+  });
+
+  registry.register('target_music', (entity, { entities, keyValues }) => {
+      entity.sounds = keyValues.sounds ? parseInt(keyValues.sounds) : 0;
+      entity.use = (self) => {
+          entities.imports.configstring(ConfigStringIndex.CdTrack, `${self.sounds}`);
+      };
+  });
+
+  registry.register('target_autosave', (entity, context) => {
+    entity.use = (self) => {
+      // TODO: Implement CVar access via imports or engine when available.
+      // Default to 60 seconds.
+      const saveTime = 60;
+
+      if (context.entities.timeSeconds - context.entities.level.next_auto_save > saveTime) {
+          context.entities.imports.serverCommand('autosave\n');
+          context.entities.level.next_auto_save = context.entities.timeSeconds;
+      }
+    };
+  });
+
+  registry.register('target_healthbar', (entity, { entities, warn, free }) => {
+      // Logic for target_healthbar use
+      // needs to: pick target, verify it matches spawn_count (health), set in level.health_bar_entities
+      entity.use = (self) => {
+          const target = entities.pickTarget(self.target);
+          if (!target || self.health !== target.spawn_count) {
+              if (target) {
+                  warn(`${self.classname}: target ${target.classname} changed from what it used to be`);
+              } else {
+                  warn(`${self.classname}: no target`);
+              }
+              entities.free(self);
+              return;
+          }
+
+          const level = entities.level;
+          // Note: health_bar_entities initialized in EntitySystem
+
+          let found = false;
+          for (let i = 0; i < 4; i++) {
+              if (!level.health_bar_entities[i]) {
+                  self.enemy = target;
+                  level.health_bar_entities[i] = self;
+                  entities.imports.configstring(ConfigStringIndex.HealthBarName, self.message || "");
+                  found = true;
+                  break;
+              }
+          }
+
+          if (!found) {
+              warn(`${self.classname}: too many health bars`);
+              entities.free(self);
+          }
+      };
+
+      // Think to check validity periodically
+      entity.think = (self) => {
+          const target = entities.pickTarget(self.target);
+          if (!target || !(target.svflags & ServerFlags.Monster)) {
+               if (target) {
+                   warn(`${self.classname}: target ${target.classname} does not appear to be a monster`);
+               }
+               entities.free(self);
+               return;
+          }
+
+          // Re-register if needed (e.g. after load)
+          const level = entities.level;
+          if (level.health_bar_entities) {
+              let registered = false;
+              for (let i = 0; i < 4; i++) {
+                  if (level.health_bar_entities[i] === self) {
+                      registered = true;
+                      break;
+                  }
+              }
+              if (!registered) {
+                  for (let i = 0; i < 4; i++) {
+                      if (!level.health_bar_entities[i]) {
+                          level.health_bar_entities[i] = self;
+                          entities.imports.configstring(ConfigStringIndex.HealthBarName, self.message || "");
+                          break;
+                      }
+                  }
+              }
+          }
+
+          self.health = target.spawn_count; // sync spawn count?
+          self.nextthink = entities.timeSeconds + 0.1;
+      };
+
+      // Delay think start like Rerelease
+      entity.nextthink = entities.timeSeconds + 0.1;
   });
 }
