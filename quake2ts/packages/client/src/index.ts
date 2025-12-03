@@ -39,6 +39,7 @@ import { WheelMenuSystem } from './ui/wheels/index.js';
 import { angleVectors } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
+import { DemoControls } from './ui/demo-controls.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -145,6 +146,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace, pointContents);
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
+  const demoControls = new DemoControls(demoPlayback);
   const demoHandler = new ClientNetworkHandler(imports);
   demoHandler.setView(view);
 
@@ -372,6 +374,13 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     handleInput(key: string, down: boolean): boolean {
+        if (isDemoPlaying) {
+             if (demoControls.handleInput(key, down)) {
+                 return true;
+             }
+             // If demo controls didn't consume input, fall through (e.g. for togglemenu)
+        }
+
         if (!menuSystem.isActive()) return false;
 
         if (!down) return true;
@@ -634,6 +643,10 @@ export function createClient(imports: ClientImports): ClientExports {
 
         if (menuSystem.isActive()) {
             Draw_Menu(imports.engine.renderer, menuSystem.getState(), imports.engine.renderer.width, imports.engine.renderer.height);
+        }
+
+        if (isDemoPlaying) {
+             demoControls.render(imports.engine.renderer, imports.engine.renderer.width, imports.engine.renderer.height);
         }
 
         if (lastRendered && lastRendered.client) {

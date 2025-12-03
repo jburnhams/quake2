@@ -1,7 +1,7 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~45% Complete (Parsing Infrastructure Improved)**
+**~50% Complete (Parsing Infrastructure Improved, Basic UI Controls Added)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
@@ -242,27 +242,27 @@ if (cls.serverProtocol != 26)
 **File**: Create `packages/client/src/ui/demo-controls.ts`
 **Reference**: UI patterns from existing menus
 
-- [ ] **1.4.1** Create `DemoControls` class
+- [x] **1.4.1** Create `DemoControls` class
   - Add play/pause button state
   - Add current time / total time display
   - Add progress bar for seeking
   - Add speed selector (0.25x, 0.5x, 1x, 2x, 4x)
 
-- [ ] **1.4.2** Implement `render(ctx: CanvasRenderingContext2D): void` method
+- [x] **1.4.2** Implement `render(ctx: CanvasRenderingContext2D): void` method
   - Draw transparent overlay at bottom of screen
   - Draw play/pause button icon
   - Draw timeline with current position marker
   - Draw time text (MM:SS / MM:SS format)
   - Draw speed indicator
 
-- [ ] **1.4.3** Implement `handleInput(key: string, down: boolean): boolean` method
+- [x] **1.4.3** Implement `handleInput(key: string, down: boolean): boolean` method
   - Space: toggle play/pause
-  - Left/Right arrows: seek backward/forward 5 seconds
-  - [ and ]: decrease/increase playback speed
+  - [x] Left/Right arrows: seek backward/forward 5 seconds (Implemented as frame stepping for now)
+  - [x] [ and ]: decrease/increase playback speed
   - Escape: stop demo and return to menu
   - Return true if input consumed
 
-- [ ] **1.4.4** Wire controls to DemoPlaybackController
+- [x] **1.4.4** Wire controls to DemoPlaybackController
   - Call `demoPlayback.play()` on play button
   - Call `demoPlayback.pause()` on pause button
   - Call `demoPlayback.setSpeed(speed)` on speed change
