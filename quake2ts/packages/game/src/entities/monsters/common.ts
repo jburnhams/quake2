@@ -144,7 +144,7 @@ export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, 
   return start3;
 }
 
-export function M_MonsterDodge(self: Entity, attacker: Entity, eta: number, context: EntitySystem): void {
+export function M_MonsterDodge(self: Entity, attacker: Entity, eta: number): void {
     // Stub implementation
 }
 

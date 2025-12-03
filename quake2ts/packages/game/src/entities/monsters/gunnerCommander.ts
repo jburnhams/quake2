@@ -490,7 +490,17 @@ function guncmdr_pain(self: Entity, context: EntitySystem): void {
 function guncmdr_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: EntitySystem): void {
     if (M_CheckGib(self, damage)) {
         context.engine.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-        throwGibs(context, self.origin, damage, 'models/monsters/gunner/gibs/chest.md2', GibType.Metallic); // simplified
+        // throwGibs signature is (sys, origin, damage|defs, type?)
+        // The call was passing 5 args: context, origin, damage, model, type
+        // This is incorrect. It should probably pass a GibDef array if it wants specific models.
+        // Or if it wants to use the generic damage based one, it should match the signature.
+        // However, looking at the intent, it wants to throw a specific model.
+        // throwGibs supports passing an array of GibDefs.
+        throwGibs(context, self.origin, [{
+            count: 1,
+            model: 'models/monsters/gunner/gibs/chest.md2',
+            flags: GibType.Metallic
+        }]);
         self.deadflag = DeadFlag.Dead;
         return;
     }
@@ -833,7 +843,7 @@ export function SP_monster_guncmdr(self: Entity, context: SpawnContext): void {
     self.monsterinfo.stand = (s) => guncmdr_stand(s, context.entities);
     self.monsterinfo.walk = (s) => guncmdr_walk(s, context.entities);
     self.monsterinfo.run = (s) => guncmdr_run(s, context.entities);
-    self.monsterinfo.dodge = (s, a, e) => M_MonsterDodge(s, a, e, context.entities);
+    self.monsterinfo.dodge = (s, a, e) => M_MonsterDodge(s, a, e);
     self.monsterinfo.duck = (s, e) => guncmdr_duck(s, e, context.entities);
     self.monsterinfo.unduck = (s) => monster_duck_up(s, context.entities);
     self.monsterinfo.sidestep = (s) => guncmdr_sidestep(s, context.entities);
