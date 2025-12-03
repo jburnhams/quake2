@@ -19,6 +19,8 @@ import {
   PROTOCOL_VERSION_RERELEASE
 } from '@quake2ts/engine';
 import { BrowserWebSocketNetDriver } from './browserWsDriver.js';
+import { ClientPrediction, PredictionState, defaultPredictionState } from '@quake2ts/cgame';
+import { GameFrameResult } from '@quake2ts/engine';
 
 export enum ConnectionState {
   Disconnected,
@@ -60,6 +62,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   public latestServerFrame = 0;
   private commandHistory: UserCommand[] = [];
 
+  // Prediction
+  public prediction: ClientPrediction | null = null;
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -68,6 +73,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     this.driver.onMessage((data) => this.handleMessage(data));
     this.driver.onClose(() => this.handleDisconnect());
     this.driver.onError((err) => console.error('Network Error:', err));
+  }
+
+  public setPrediction(prediction: ClientPrediction) {
+      this.prediction = prediction;
   }
 
   public async connect(url: string): Promise<void> {
@@ -121,6 +130,11 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.commandHistory.push(commandWithFrame);
       if (this.commandHistory.length > CMD_BACKUP) {
           this.commandHistory.shift();
+      }
+
+      // Enqueue to local prediction system if available
+      if (this.prediction) {
+          this.prediction.enqueueCommand(commandWithFrame);
       }
 
       const writer = new BinaryWriter();
@@ -262,6 +276,40 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     // Keep track of the latest server frame received for ack/prediction
     if (frame.serverFrame > this.latestServerFrame) {
       this.latestServerFrame = frame.serverFrame;
+    }
+
+    // Process player state for prediction reconciliation
+    if (this.prediction && frame.playerState) {
+        // Convert to GameFrameResult<PredictionState>
+        // Note: FrameData.playerState is PlayerState (from @quake2ts/engine or shared)
+        // We need to cast or convert it.
+        // Assuming frame.playerState is compatible with PredictionState structure
+        // (PredictionState extends PlayerState)
+
+        // Construct a safe default state if fields are missing
+        const ps = frame.playerState;
+        const predState: PredictionState = {
+            ...defaultPredictionState(),
+            // Manual mapping due to type mismatch (MutableVec3 vs Vec3, and property names)
+            origin: { x: ps.origin.x, y: ps.origin.y, z: ps.origin.z },
+            velocity: { x: ps.velocity.x, y: ps.velocity.y, z: ps.velocity.z },
+            viewAngles: { x: ps.viewangles.x, y: ps.viewangles.y, z: ps.viewangles.z },
+            deltaAngles: { x: ps.delta_angles.x, y: ps.delta_angles.y, z: ps.delta_angles.z },
+            pmFlags: ps.pm_flags,
+            pmType: ps.pm_type,
+            gravity: ps.gravity,
+            // Copy other matching fields
+            health: ps.stats[0], // Assuming stat 0 is health? Or generic copy
+            // ...
+        };
+
+        const gameFrame: GameFrameResult<PredictionState> = {
+            frame: frame.serverFrame,
+            timeMs: 0, // Should be server time, but frame doesn't always have it explicitly?
+            state: predState
+        };
+
+        this.prediction.setAuthoritative(gameFrame);
     }
   }
 
