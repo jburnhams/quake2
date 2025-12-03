@@ -66,6 +66,26 @@ export interface WaterMoveParams extends BaseMoveParams {
   readonly ladderMod: number;
 }
 
+export interface WalkMoveParams extends BaseMoveParams {
+  readonly cmd: PmoveCmd;
+  readonly forward: Vec3;
+  readonly right: Vec3;
+  readonly pmFlags: PmFlags;
+  readonly onGround: boolean;
+  readonly gravity: number;
+  readonly pmType: PmType;
+  readonly pmAccelerate: number;
+  readonly pmMaxSpeed: number;
+  readonly pmDuckSpeed: number;
+  readonly onLadder: boolean;
+  readonly waterlevel: WaterLevel;
+  readonly watertype: number;
+  readonly groundContents: number;
+  readonly viewPitch: number;
+  readonly ladderMod: number;
+  readonly pmWaterSpeed: number;
+}
+
 const DEFAULT_AIR_ACCELERATE = 1;
 const WATER_DRIFT_SPEED = 60;
 const DEFAULT_STEP_OVERBOUNCE = 1.01;
@@ -318,6 +338,114 @@ export function applyPmoveWaterMove(params: WaterMoveParams): StepSlideMoveOutco
   }
 
   velocity = applyPmoveAccelerate({ velocity, wishdir, wishspeed, accel: pmWaterAccelerate, frametime });
+
+  return runStepSlideMove({
+    origin,
+    velocity,
+    frametime,
+    mins,
+    maxs,
+    trace,
+    overbounce,
+    stepSize,
+    maxBumps,
+    maxClipPlanes,
+    hasTime,
+  });
+}
+
+export function applyPmoveWalkMove(params: WalkMoveParams): StepSlideMoveOutcome {
+  const {
+    origin,
+    frametime,
+    mins,
+    maxs,
+    trace,
+    overbounce = DEFAULT_STEP_OVERBOUNCE,
+    stepSize,
+    maxBumps,
+    maxClipPlanes,
+    hasTime,
+    forward,
+    right,
+    cmd,
+    pmFlags,
+    onGround,
+    gravity,
+    pmAccelerate,
+    pmMaxSpeed,
+    pmDuckSpeed,
+    onLadder,
+    waterlevel,
+    watertype,
+    groundContents,
+    viewPitch,
+    ladderMod,
+    pmWaterSpeed,
+  } = params;
+
+  let velocity = { ...params.velocity };
+  let wishvel = buildPlanarWishVelocity(forward, right, cmd);
+
+  wishvel = applyPmoveAddCurrents({
+    wishVelocity: wishvel,
+    onLadder,
+    onGround,
+    waterlevel,
+    watertype,
+    groundContents,
+    cmd,
+    viewPitch,
+    maxSpeed: hasPmFlag(pmFlags, PmFlag.Ducked) ? pmDuckSpeed : pmMaxSpeed,
+    ladderMod,
+    waterSpeed: pmWaterSpeed,
+    forward,
+    origin,
+    mins,
+    maxs,
+    trace,
+  });
+
+  const ducked = hasPmFlag(pmFlags, PmFlag.Ducked);
+  const maxSpeed = ducked ? pmDuckSpeed : pmMaxSpeed;
+
+  let wishdir = wishvel;
+  let wishspeed = lengthVec3(wishdir);
+  if (wishspeed !== 0) {
+    wishdir = normalizeVec3(wishdir);
+  }
+
+  if (wishspeed > maxSpeed) {
+    const scale = maxSpeed / wishspeed;
+    wishvel = scaleVec3(wishvel, scale);
+    wishspeed = maxSpeed;
+    if (wishspeed !== 0) {
+      wishdir = normalizeVec3(wishvel);
+    }
+  }
+
+  // Ground friction handled by caller (applyPmoveFriction)
+
+  velocity = { ...velocity, z: 0 };
+  velocity = applyPmoveAccelerate({ velocity, wishdir, wishspeed, accel: pmAccelerate, frametime });
+
+  if (gravity > 0) {
+    velocity = { ...velocity, z: 0 };
+  } else {
+    velocity = { ...velocity, z: velocity.z - gravity * frametime };
+  }
+
+  if (velocity.x === 0 && velocity.y === 0) {
+    return {
+      origin,
+      velocity,
+      planes: [],
+      blocked: 0,
+      stopped: true,
+      stepped: false,
+      stepHeight: 0,
+    };
+  }
 
   return runStepSlideMove({
     origin,
