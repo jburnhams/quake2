@@ -13,6 +13,11 @@ export const GIB_ORGANIC = 0;
 export const GIB_METALLIC = 1;
 export const GIB_DEBRIS = 2;
 
+export enum GibType {
+    Metallic = 1,
+    Debris = 2
+}
+
 export interface GibDef {
     count: number;
     model: string;
