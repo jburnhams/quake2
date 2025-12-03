@@ -21,6 +21,8 @@ export * from './prediction/index.js';
 
 // Module-level state
 let cgi: CGameImport | null = null;
+let cg_predict: { value: number } | null = null;
+let cg_showmiss: { value: number } | null = null;
 
 /**
  * Initialize the CGame module.
@@ -36,6 +38,10 @@ function Init(): void {
 
     // Initialize screen/HUD module
     CG_InitScreen(cgi);
+
+    // Register CVars
+    cg_predict = cgi.Cvar_Get('cg_predict', '1', 0);
+    cg_showmiss = cgi.Cvar_Get('cg_showmiss', '0', 0);
 
     cgi.Com_Print('CGame initialized\n');
 }
@@ -148,6 +154,11 @@ function Pmove(pmove: unknown): void {
         return;
     }
 
+    // If prediction is disabled, do nothing (server state prevails)
+    if (cg_predict && cg_predict.value === 0) {
+        return;
+    }
+
     // Adapter for PmoveTraceFn using CGameImport trace
     const traceAdapter = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3): PmoveTraceResult => {
         // Shared PmoveTraceFn uses optional mins/maxs, CGameImport expects them.
@@ -169,6 +180,18 @@ function Pmove(pmove: unknown): void {
         return tr.contents || 0;
     };
 
+    // Check for prediction errors if enabled
+    // Note: The actual prediction logic (reconciliation) happens in ClientPrediction class which
+    // drives the client-side state update. However, Pmove here is called by the client engine
+    // to execute the *current* frame's prediction during the client loop.
+
+    // In Quake 2, CL_PredictMovement calls Pmove repeatedly.
+    // The client prediction class we built (ClientPrediction) encapsulates state management.
+    // Ideally, the client engine should use ClientPrediction to get the state to render.
+
+    // But keeping with the Pmove API:
+    // This function simply advances the physics for one command.
+
     // Call shared Pmove implementation
     // This returns a NEW PlayerState, so we must update pm.s
     const newState = applyPmove(pm.s, pm.cmd, traceAdapter, pointContentsAdapter);
@@ -179,6 +202,9 @@ function Pmove(pmove: unknown): void {
     pm.s.onGround = newState.onGround;
     pm.s.waterLevel = newState.waterLevel;
     // applyPmove might update other fields in the future
+
+    // If debug enabled, we might log something here, but Pmove is high frequency.
+    // We defer logging to the reconciliation step in ClientPrediction.
 }
 
 function ParseConfigString(i: number, s: string): void {

@@ -79,6 +79,7 @@ export interface CGameImport {
 
   // Cvars
   cvar(name: string, value: string, flags: number): unknown; // simplified type
+  Cvar_Get(name: string, value: string, flags: number): { value: number }; // Added to match usage in index.ts
   cvar_set(name: string, value: string): void;
   cvar_forceset(name: string, value: string): void;
 

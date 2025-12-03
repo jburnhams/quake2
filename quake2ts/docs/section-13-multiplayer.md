@@ -430,16 +430,16 @@
 
 **Reference Lines**: `full/client/client.h:150-200`
 
-#### Task 3.2: Implement Client-Side Prediction with Command History
+#### Task 3.2: Implement Client-Side Prediction with Command History (COMPLETE)
 **File**: `packages/cgame/src/prediction.ts` (ClientPrediction class)
 **Reference**: `full/client/cl_pred.c:100-200` (CL_PredictMovement)
 
-- [ ] **3.2.1** Enhance command buffering (already exists but verify)
+- [x] **3.2.1** Enhance command buffering (already exists but verify)
   - `ClientPrediction` stores last 64 commands (CMD_BACKUP)
   - Each command tagged with sequence number
   - Used for prediction rewind/replay
 
-- [ ] **3.2.2** Implement prediction reconciliation
+- [x] **3.2.2** Implement prediction reconciliation
   - When `svc_frame` arrives, extract server's player state
   - Compare to predicted state at that sequence
   - If mismatch detected (>10 units difference):
@@ -447,12 +447,12 @@
     * Replay all commands since that sequence
     * Update client position to reconciled state
 
-- [ ] **3.2.3** Add prediction error smoothing
+- [x] **3.2.3** Add prediction error smoothing
   - If error small (<5 units), smooth over 100ms
   - If error large (>10 units), snap immediately
   - Reduces visual "stuttering" on corrections
 
-- [ ] **3.2.4** Wire prediction to frame updates
+- [x] **3.2.4** Wire prediction to frame updates
   - In `MultiplayerConnection.onFrame`, extract player state
   - Pass to `ClientPrediction.reconcile(serverState, serverFrame)`
   - Apply reconciliation result to client view
@@ -466,21 +466,21 @@
 
 **Reference Lines**: `full/client/cl_pred.c:100-200`
 
-#### Task 3.3: Add Prediction CVar Support
+#### Task 3.3: Add Prediction CVar Support (COMPLETE)
 **File**: `packages/cgame/src/index.ts`
 **Reference**: `full/client/cl_pred.c:30-50` (cl_predict cvar)
 
-- [ ] **3.3.1** Implement `cg_predict` cvar
+- [x] **3.3.1** Implement `cg_predict` cvar
   - Add to CGame cvar registration
   - Default value: 1 (enabled)
   - When 0, disable prediction (use server state directly)
 
-- [ ] **3.3.2** Implement `cg_showmiss` cvar
+- [x] **3.3.2** Implement `cg_showmiss` cvar
   - Default value: 0 (disabled)
   - When 1, log prediction errors to console
   - Format: "prediction error: X units"
 
-- [ ] **3.3.3** Wire cvars to prediction system
+- [x] **3.3.3** Wire cvars to prediction system
   - In Pmove call, check `cg_predict`
   - If disabled, return server state unchanged
   - If `cg_showmiss` enabled, log reconciliation events

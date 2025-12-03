@@ -10,6 +10,9 @@ export interface UserCommand {
   readonly sidemove: number;
   readonly upmove: number;
   readonly serverFrame?: number;
+  readonly sequence: number;
+  readonly lightlevel: number;
+  readonly impulse: number;
 }
 
 export interface MouseDelta {

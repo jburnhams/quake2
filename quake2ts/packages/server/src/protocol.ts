@@ -70,7 +70,10 @@ export class ClientMessageParser {
       angles,
       forwardmove,
       sidemove,
-      upmove
+      upmove,
+      impulse,
+      lightlevel,
+      sequence: 0 // Server doesn't read sequence from packet body in standard protocol, it tracks it
     };
 
     this.handler.onMove(checksum, lastFrame, userCmd);
