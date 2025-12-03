@@ -285,6 +285,10 @@ export class NetworkMessageParser {
         if (cmd <= ServerCommand.frame) {
             return cmd;
         }
+        // Map legacy high commands
+        if (cmd === 22) return ServerCommand.playerinfo;
+        if (cmd === 23) return ServerCommand.packetentities;
+
         return ServerCommand.bad;
     }
 
@@ -345,12 +349,14 @@ export class NetworkMessageParser {
              this.parseFrame();
              break;
           case ServerCommand.packetentities:
+             // Should only happen if not inside a frame (unlikely for vanilla)
              this.parsePacketEntities(false);
              break;
           case ServerCommand.deltapacketentities:
              this.parsePacketEntities(true);
              break;
           case ServerCommand.playerinfo:
+             // Should only happen if not inside a frame (unlikely for vanilla)
              this.parsePlayerState();
              break;
           case ServerCommand.stufftext:
@@ -985,6 +991,16 @@ export class NetworkMessageParser {
       }
       const playerState = this.parsePlayerState();
 
+      // Packet Entities
+      let peCmd = this.stream.readByte();
+      peCmd = this.translateCommand(peCmd);
+
+      // In standard Q2 protocol, `svc_packetentities` MUST follow `svc_playerinfo`.
+      if (peCmd !== ServerCommand.packetentities) {
+           throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd} (translated)`);
+      }
+      const entities = this.collectPacketEntities();
+
       if (this.isDemo === RECORD_RELAY) {
           const connectedCount = this.stream.readByte();
           for(let i=0; i<connectedCount; i++) {
@@ -1005,8 +1021,8 @@ export class NetworkMessageParser {
               areaBits,
               playerState,
               packetEntities: {
-                  delta: false,
-                  entities: []
+                  delta: true, // Frame packet entities are usually delta compressed
+                  entities
               }
           });
       }
