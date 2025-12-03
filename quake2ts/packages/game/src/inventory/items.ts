@@ -16,6 +16,7 @@ import { railgunThink } from '../combat/weapons/railgun.js';
 import { bfgThink } from '../combat/weapons/bfg.js';
 import { grenadeLauncherThink } from '../combat/weapons/grenadelauncher.js';
 import { blasterThink } from '../combat/weapons/blaster.js';
+import { Weapon_ChainFist } from '../combat/weapons/chainfist.js';
 
 export { AmmoType };
 
@@ -181,6 +182,17 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         think: bfgThink,
     },
     // Rogue Weapons
+    'weapon_chainfist': {
+        type: 'weapon',
+        id: 'weapon_chainfist',
+        name: 'Chainfist',
+        weaponId: WeaponId.ChainFist,
+        ammoType: null,
+        initialAmmo: 0,
+        pickupAmmo: 0,
+        fireRate: 0.1, // Depends on animation
+        think: Weapon_ChainFist,
+    },
     'weapon_boomer': {
         type: 'weapon',
         id: 'weapon_boomer', // Ion Ripper

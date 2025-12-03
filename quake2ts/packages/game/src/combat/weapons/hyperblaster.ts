@@ -17,11 +17,11 @@ import {
 export function hyperBlasterThink(player: Entity, sys: EntitySystem) {
     Weapon_Repeating(
         player,
-        FRAME_HYPERBLASTER_FIRE_FRAME,
+        FRAME_HYPERBLASTER_ACTIVATE_LAST,
         FRAME_HYPERBLASTER_FIRE_LAST,
         FRAME_HYPERBLASTER_IDLE_LAST,
         FRAME_HYPERBLASTER_DEACTIVATE_LAST,
-        0, // FRAME_NOOP
+        null, // No pause frames
         (ent) => fireHyperBlaster(sys.game, ent),
         sys
     );
