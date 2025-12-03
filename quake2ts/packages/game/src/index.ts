@@ -290,14 +290,25 @@ export function createGame(
         }
     });
 
+    let viewangles = player ? { ...player.angles } : { x:0, y:0, z:0 };
+    let playerOrigin = player ? { ...player.origin } : { ...origin };
+    let pmType = player?.client?.pm_type ?? 0;
+
+    if (entities.level.intermissiontime) {
+        playerOrigin = { ...entities.level.intermission_origin };
+        viewangles = { ...entities.level.intermission_angle };
+        // PM_FREEZE is 4
+        pmType = 4;
+    }
+
     return {
       frame,
       timeMs: frameLoop.time,
       state: {
         gravity: { ...gravity },
-        origin: player ? { ...player.origin } : { ...origin },
+        origin: playerOrigin,
         velocity: player ? { ...player.velocity } : { ...velocity },
-        viewangles: player ? { ...player.angles } : { x:0, y:0, z:0 },
+        viewangles,
         level: { ...levelClock.current },
         entities: {
           activeCount: entities.activeCount,
@@ -305,7 +316,7 @@ export function createGame(
         },
         packetEntities,
         pmFlags: player?.client?.pm_flags ?? 0,
-        pmType: player?.client?.pm_type ?? 0,
+        pmType,
         pm_time: player?.client?.pm_time ?? 0,
         waterlevel: player ? player.waterlevel : 0,
         deltaAngles: { x: 0, y: 0, z: 0 },
@@ -329,7 +340,7 @@ export function createGame(
         fov: player?.client?.fov ?? 90,
 
         // Populate new compatibility fields
-        pm_type: player?.client?.pm_type ?? 0,
+        pm_type: pmType,
         pm_flags: player?.client?.pm_flags ?? 0
       },
     };
@@ -345,6 +356,11 @@ export function createGame(
   };
 
   const runPlayerMove = (player: Entity, command: UserCommand) => {
+    // If intermission, do not run move (or run frozen move)
+    if (entities.level.intermissiontime) {
+        return;
+    }
+
     const pcmd = {
       forwardmove: command.forwardmove,
       sidemove: command.sidemove,

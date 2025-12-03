@@ -160,6 +160,28 @@ const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
   pausetime: 0,
 });
 
+export interface MoveInfo {
+    start_origin: Vec3;
+    start_angles: Vec3;
+    end_origin: Vec3;
+    end_angles: Vec3;
+    sound_start: string;
+    sound_middle: string;
+    sound_end: string;
+    accel: number;
+    speed: number;
+    decel: number;
+    distance: number;
+    wait: number;
+    state: number; // 0=start, 1=end
+    dir: Vec3;
+    current_speed: number;
+    move_speed: number;
+    next_speed: number;
+    remaining_distance: number;
+    decel_distance: number;
+}
+
 export class Entity {
   readonly index: number;
 
@@ -179,6 +201,7 @@ export class Entity {
   model?: string;
   item?: string;
   map?: string;
+  hackflags = 0;
 
   inventory: Record<string, number> = {};
 
@@ -270,6 +293,27 @@ export class Entity {
   svflags = 0;
 
   monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
+  moveinfo: MoveInfo = {
+    start_origin: copyVec3(),
+    start_angles: copyVec3(),
+    end_origin: copyVec3(),
+    end_angles: copyVec3(),
+    sound_start: '',
+    sound_middle: '',
+    sound_end: '',
+    accel: 0,
+    speed: 0,
+    decel: 0,
+    distance: 0,
+    wait: 0,
+    state: 0,
+    dir: copyVec3(),
+    current_speed: 0,
+    move_speed: 0,
+    next_speed: 0,
+    remaining_distance: 0,
+    decel_distance: 0
+  };
 
   combattarget?: string;
   show_hostile = 0;
@@ -450,6 +494,7 @@ export class Entity {
 
     this._regularArmor = undefined;
     this._powerArmor = undefined;
+    this.hackflags = 0;
   }
 }
 
@@ -550,6 +595,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'solid', type: 'int', save: true },
   { name: 'flags', type: 'int', save: true },
   { name: 'svflags', type: 'int', save: true },
+  { name: 'hackflags', type: 'int', save: true },
   { name: 'think', type: 'callback', save: false },
   { name: 'touch', type: 'callback', save: false },
   { name: 'use', type: 'callback', save: false },

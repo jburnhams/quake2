@@ -421,6 +421,207 @@ function target_laser_start(self: Entity, context: any) {
 }
 
 
+// target_camera implementation
+
+const HACKFLAG_TELEPORT_OUT = 2;
+const HACKFLAG_SKIPPABLE = 64;
+const HACKFLAG_END_OF_UNIT = 128;
+
+function cameraLookAtPathtarget(self: Entity, origin: any, dest: any, context: any) {
+    if (self.pathtarget) {
+        const pt = context.entities.pickTarget(self.pathtarget);
+        if (pt) {
+            const delta = subtractVec3(pt.origin, origin);
+            const d = delta.x * delta.x + delta.y * delta.y;
+            let yaw: number, pitch: number;
+            if (d === 0.0) {
+                yaw = 0.0;
+                pitch = delta.z > 0.0 ? 90.0 : -90.0;
+            } else {
+                yaw = Math.atan2(delta.y, delta.x) * (180.0 / Math.PI);
+                pitch = Math.atan2(delta.z, Math.sqrt(d)) * (180.0 / Math.PI);
+            }
+            dest.x = 0; // Pitch in Q2 is actually angle[0], wait. Q2 angles are Pitch, Yaw, Roll.
+            // C code: (*dest)[YAW] = yaw; (*dest)[PITCH] = -pitch; (*dest)[ROLL] = 0;
+            // vector index: 0=pitch, 1=yaw, 2=roll.
+            dest.x = -pitch;
+            dest.y = yaw;
+            dest.z = 0;
+        }
+    }
+}
+
+function updateTargetCamera(self: Entity, context: any) {
+    // TODO: implement skippable check
+
+    if (self.movetarget) {
+        // moveinfo.remaining_distance -= (self.moveinfo.move_speed * gi.frame_time_s) * 0.8f;
+        // Assume frame time 0.1s
+        self.moveinfo.remaining_distance -= (self.moveinfo.move_speed * 0.1) * 0.8;
+
+        if (self.moveinfo.remaining_distance <= 0) {
+            if (self.movetarget.hackflags & HACKFLAG_TELEPORT_OUT) {
+                if (self.enemy) {
+                    // self.enemy->s.event = EV_PLAYER_TELEPORT;
+                    self.enemy.hackflags = HACKFLAG_TELEPORT_OUT;
+                    // self.enemy->pain_debounce_time = self.enemy->timestamp = gtime_t::from_sec(self->movetarget->wait);
+                    self.enemy.timestamp = context.entities.timeSeconds + self.movetarget.wait;
+                    self.enemy.pain_debounce_time = self.enemy.timestamp;
+                }
+            }
+
+            self.origin = { ...self.movetarget.origin };
+            self.nextthink = context.entities.timeSeconds + self.movetarget.wait;
+
+            if (self.movetarget.target) {
+                self.movetarget = context.entities.pickTarget(self.movetarget.target);
+                if (self.movetarget) {
+                    self.moveinfo.move_speed = self.movetarget.speed ? self.movetarget.speed : 55;
+                    const dist = subtractVec3(self.movetarget.origin, self.origin);
+                    self.moveinfo.remaining_distance = Math.sqrt(dist.x * dist.x + dist.y * dist.y + dist.z * dist.z);
+                    self.moveinfo.distance = self.moveinfo.remaining_distance;
+                }
+            } else {
+                self.movetarget = null;
+            }
+            return;
+        } else {
+            const frac = 1.0 - (self.moveinfo.remaining_distance / self.moveinfo.distance);
+
+            if (self.enemy && (self.enemy.hackflags & HACKFLAG_TELEPORT_OUT)) {
+                // self.enemy->s.alpha = max(1.f / 255.f, frac);
+                // Alpha handling not fully exposed in Entity, assume renderfx handles it or ignored for now
+            }
+
+            const delta = subtractVec3(self.movetarget.origin, self.origin);
+            const scaledDelta = scaleVec3(delta, frac); // This logic seems wrong in C?
+            // vec3_t delta = self->movetarget->s.origin - self->s.origin;
+            // delta *= frac;
+            // vec3_t newpos = self->s.origin + delta;
+            // Wait, self->s.origin is NOT updated every frame?
+            // "self->s.origin = self->movetarget->s.origin" happens at END.
+            // Ah, the C code does "vec3_t newpos = self->s.origin + delta".
+            // self->s.origin is the STARTING position of the segment, presumably?
+            // But wait, self->s.origin is updated when we reach a node.
+
+            // Re-read C:
+            /*
+            if(self->moveinfo.remaining_distance <= 0) {
+               self->s.origin = self->movetarget->s.origin;
+               ...
+            } else {
+               ...
+               vec3_t delta = self->movetarget->s.origin - self->s.origin;
+               delta *= frac;
+               vec3_t newpos = self->s.origin + delta;
+               camera_lookat_pathtarget(self, newpos, &level.intermission_angle);
+               level.intermission_origin = newpos;
+               ...
+            }
+            */
+            // Yes, self.origin stays at the previous node position until the segment is done.
+            // But wait, if we don't update self.origin, we are always interpolating from start?
+            // Yes, standard Quake 2 linear interpolation between nodes.
+
+            const newpos = addVec3(self.origin, scaledDelta);
+            cameraLookAtPathtarget(self, newpos, context.entities.level.intermission_angle, context);
+            context.entities.level.intermission_origin = newpos;
+
+            // move all clients to intermission point (handled by client loop reading level state?)
+            // Rerelease C code iterates clients and calls MoveClientToIntermission(client).
+            // We should replicate that or assume the client uses level.intermission_origin.
+        }
+    } else {
+        if (self.killtarget) {
+            if (self.enemy) {
+                 context.entities.free(self.enemy);
+                 self.enemy = null;
+            }
+
+            context.entities.level.intermissiontime = 0;
+            context.entities.level.level_intermission_set = true;
+
+            // Fire targets
+            const targets = context.entities.findByTargetName(self.killtarget);
+            for (const t of targets) {
+                t.use?.(t, self, self.activator);
+            }
+
+            context.entities.level.intermissiontime = context.entities.timeSeconds;
+            // level.intermission_server_frame = gi.ServerFrame();
+
+            // end of unit check...
+        }
+        self.think = undefined;
+        return;
+    }
+
+    self.nextthink = context.entities.timeSeconds + 0.1;
+}
+
+function targetCameraDummyThink(self: Entity, context: any) {
+    // client movement simulation
+    // self.client = self.owner.client
+    // G_SetClientFrame(self)
+    // self.client = null
+    // ... logic for animation ...
+
+    self.nextthink = context.entities.timeSeconds + 0.1;
+}
+
+function useTargetCamera(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    if (self.sounds) {
+        context.entities.imports.configstring(ConfigStringIndex.CdTrack, `${self.sounds}`);
+    }
+
+    if (!self.target) return;
+
+    self.movetarget = context.entities.pickTarget(self.target);
+    if (!self.movetarget) return;
+
+    context.entities.level.intermissiontime = context.entities.timeSeconds;
+    context.entities.level.exitintermission = false;
+
+    if (activator && activator.client) {
+        const dummy = context.entities.spawn();
+        self.enemy = dummy;
+        dummy.owner = activator;
+        dummy.clipmask = activator.clipmask;
+        dummy.origin = { ...activator.origin };
+        dummy.angles = { ...activator.angles };
+        dummy.groundentity = activator.groundentity;
+        dummy.think = (d: Entity) => targetCameraDummyThink(d, context);
+        dummy.nextthink = context.entities.timeSeconds + 0.1;
+        dummy.solid = Solid.BoundingBox;
+        dummy.movetype = MoveType.Step;
+        dummy.mins = { ...activator.mins };
+        dummy.maxs = { ...activator.maxs };
+        dummy.modelindex = activator.modelindex; // TODO: check MODELINDEX_PLAYER constant
+        dummy.skin = activator.skin;
+        dummy.velocity = { ...activator.velocity };
+        dummy.renderfx = RenderFx.MinLight;
+        dummy.frame = activator.frame;
+        context.entities.linkentity(dummy);
+    }
+
+    cameraLookAtPathtarget(self, self.origin, context.entities.level.intermission_angle, context);
+    context.entities.level.intermission_origin = { ...self.origin };
+
+    // Move clients to intermission (handled implicitly by level state update?)
+
+    self.activator = activator;
+    self.think = (s) => updateTargetCamera(s, context);
+    self.nextthink = context.entities.timeSeconds + self.wait;
+    self.moveinfo.move_speed = self.speed;
+
+    const dist = subtractVec3(self.movetarget.origin, self.origin);
+    self.moveinfo.remaining_distance = Math.sqrt(dist.x * dist.x + dist.y * dist.y + dist.z * dist.z);
+    self.moveinfo.distance = self.moveinfo.remaining_distance;
+
+    // if (self.hackflags & HACKFLAG_END_OF_UNIT) ...
+}
+
+
 export function registerTargetSpawns(registry: SpawnRegistry) {
   registry.register('target_temp_entity', (entity, context) => {
     entity.style = context.keyValues.style ? parseInt(context.keyValues.style) : 0;
@@ -705,5 +906,10 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
 
       // Delay think start like Rerelease
       entity.nextthink = entities.timeSeconds + 0.1;
+  });
+
+  registry.register('target_camera', (entity, context) => {
+      entity.use = (self, other, activator) => useTargetCamera(self, other, activator ?? null, context);
+      entity.svflags |= ServerFlags.NoClient;
   });
 }
