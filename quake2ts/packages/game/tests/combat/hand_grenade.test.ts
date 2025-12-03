@@ -47,6 +47,7 @@ function createMockGame() {
         useTargets: vi.fn(),
         modelIndex: vi.fn().mockReturnValue(1),
         scheduleThink: vi.fn(),
+        sound: game.sound,
         get timeSeconds() { return game.time; }
     } as unknown as EntitySystem;
 

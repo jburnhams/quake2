@@ -29,6 +29,7 @@ describe('Grenade Think Logic', () => {
             modelIndex: vi.fn().mockReturnValue(1),
             scheduleThink: vi.fn(),
             finalizeSpawn: vi.fn(),
+            sound: vi.fn(),
             engine: {
                 multicast: multicastFn
             }

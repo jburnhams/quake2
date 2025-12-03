@@ -242,6 +242,7 @@ export class EntitySystem {
       multicast: () => {},
       unicast: () => {},
       configstring: () => {},
+      serverCommand: () => {},
     };
 
     // Merge defaults with provided imports
