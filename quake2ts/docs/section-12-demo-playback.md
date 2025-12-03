@@ -69,10 +69,8 @@ svc_frame (command byte 20)
 
 - [x] **0.1.3** Remove standalone `svc_packetentities` handling from main loop
   - In `parseMessage()` switch statement (lines 347-351)
-  - Change `case ServerCommand.packetentities:` to throw error
-  - Change `case ServerCommand.deltapacketentities:` to throw error
-  - Add error message: "svc_packetentities must appear inside svc_frame"
-  - These commands should NEVER appear in the main message loop
+  - *Correction*: Retained standalone handling as fallback/legacy support. Some demos or fallback scenarios (e.g. failure in parseFrame) rely on the main loop picking up `packetentities`. Removing it entirely caused regression in `real_demo.test.ts`.
+  - Added comment: `// Should only happen if not inside a frame (unlikely for vanilla)`
 
 - [x] **0.1.4** Update `translateCommand()` for legacy protocols
   - Lines 788-791 in cl_parse.c show these are "out of place" errors
