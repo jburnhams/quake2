@@ -16,6 +16,8 @@ import { railgunThink } from '../combat/weapons/railgun.js';
 import { bfgThink } from '../combat/weapons/bfg.js';
 import { grenadeLauncherThink } from '../combat/weapons/grenadelauncher.js';
 import { blasterThink } from '../combat/weapons/blaster.js';
+import { chainfistThink } from '../combat/weapons/rogue.js';
+import { trapThink } from '../combat/weapons/xatrix.js';
 
 export { AmmoType };
 
@@ -230,6 +232,28 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 5,
         pickupAmmo: 5,
         fireRate: 0.8, // Guessing fire rate, refine if needed
+    },
+    'weapon_chainfist': {
+        type: 'weapon',
+        id: 'weapon_chainfist',
+        name: 'Chainfist',
+        weaponId: WeaponId.ChainFist,
+        ammoType: null,
+        initialAmmo: 0,
+        pickupAmmo: 0,
+        fireRate: 0.1,
+        think: chainfistThink,
+    },
+    'weapon_trap': {
+        type: 'weapon',
+        id: 'weapon_trap',
+        name: 'Trap',
+        weaponId: WeaponId.Trap,
+        ammoType: AmmoType.Trap,
+        initialAmmo: 1,
+        pickupAmmo: 1,
+        fireRate: 1,
+        think: trapThink,
     },
 };
 

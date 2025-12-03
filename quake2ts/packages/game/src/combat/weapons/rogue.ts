@@ -3,6 +3,7 @@
 // =================================================================
 
 import { Entity } from '../../entities/entity.js';
+import { EntitySystem } from '../../entities/system.js';
 import { GameExports } from '../../index.js';
 import { getWeaponState, WeaponState } from './state.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
@@ -18,6 +19,11 @@ import { DamageMod } from '../damageMods.js';
 import { MulticastType } from '../../imports.js';
 import { firingRandom } from './firing.js';
 import { createIonRipper, createPhalanxBall, createFlechette } from '../../entities/projectiles.js';
+import { Weapon_Repeating } from './animation.js';
+import {
+    FRAME_CHAINGUN_FIRE_FRAME, FRAME_CHAINGUN_FIRE_LAST,
+    FRAME_CHAINGUN_IDLE_LAST, FRAME_CHAINGUN_DEACTIVATE_LAST
+} from './frames.js';
 
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {
@@ -141,4 +147,93 @@ export function fireEtfRifle(game: GameExports, player: Entity, inventory: Playe
     const speed = 900;
 
     createFlechette(game.entities, player, start, forward, damage, speed);
+}
+
+// Rogue Chainfist
+// Source: g_rogue_weapon.c
+export function fireChainFist(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
+    const damage = 15; // Per frame (approx 150 DPS)
+    const range = 64;
+
+    const end = addVec3(start, scaleVec3(forward, range));
+
+    // Trace for hit
+    const trace = game.trace(start, null, null, end, player, 0x00000001 | 0x00000010 | 0x00000002 | 0x00000004); // MASK_SHOT
+
+    if (trace.fraction < 1.0 && trace.ent) {
+        // Hit something
+        if (trace.ent.takedamage) {
+            T_Damage(
+                trace.ent as any,
+                player as any,
+                player as any,
+                forward,
+                trace.endpos,
+                trace.plane ? trace.plane.normal : ZERO_VEC3,
+                damage,
+                0, // No knockback
+                DamageFlags.NONE,
+                DamageMod.CHAINFIST,
+                game.time,
+                game.multicast
+            );
+            // Hit sound
+            if (Math.random() < 0.3)
+                game.sound(player, 1, "weapons/machgf1b.wav", 1, 1, 0); // Placeholder
+        } else {
+            // Hit wall
+            if (Math.random() < 0.3)
+                game.sound(player, 1, "weapons/machgf1b.wav", 1, 1, 0); // Placeholder
+        }
+
+        // Sparks
+        if (trace.plane) {
+             game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SPARKS, trace.endpos, trace.plane.normal);
+        }
+    } else {
+        // Miss (idle revving)
+        if (Math.random() < 0.1)
+            game.sound(player, 1, "weapons/machgf1b.wav", 1, 1, 0); // Placeholder
+    }
+
+    applyKick(player, -0.5, 0, 0);
+}
+
+export function chainfistThink(player: Entity, sys: EntitySystem) {
+    // Reuse frames from Chaingun for now as placeholders for continuous fire
+    const fire = (ent: Entity) => {
+        const game = {
+            trace: (start: any, mins: any, maxs: any, end: any, passent: any, mask: any) => sys.trace(start, mins, maxs, end, passent, mask),
+            multicast: (origin: any, type: any, event: any, ...args: any[]) => {
+                if (sys.engine.multicast) sys.engine.multicast(origin, type, event, ...args);
+            },
+            time: sys.timeSeconds,
+            entities: sys,
+            deathmatch: sys.deathmatch,
+            random: (sys as any).random,
+            sound: sys.sound.bind(sys)
+        } as unknown as GameExports;
+
+        // P_ProjectSource or similar logic for start/forward
+        // Simplified for now (from player eyes)
+        const angles = { ...ent.angles };
+        angles.z = 0;
+        const vectors = angleVectors(angles);
+        const start = { ...ent.origin };
+        start.z += ent.viewheight;
+
+        if (ent.client)
+            fireChainFist(game, ent, ent.client.inventory, {} as any, start, vectors.forward);
+    };
+
+    Weapon_Repeating(
+        player,
+        FRAME_CHAINGUN_FIRE_FRAME,
+        FRAME_CHAINGUN_FIRE_LAST,
+        FRAME_CHAINGUN_IDLE_LAST,
+        0,
+        0,
+        fire,
+        sys
+    );
 }
