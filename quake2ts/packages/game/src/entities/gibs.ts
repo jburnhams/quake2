@@ -185,20 +185,31 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number) {
     return head;
 }
 
-export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[]) {
+export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], type: number = GIB_ORGANIC) {
     if (typeof damageOrDefs === 'number') {
         const damage = damageOrDefs;
 
-        spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', GIB_ORGANIC);
-        spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', GIB_ORGANIC);
-        spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', GIB_ORGANIC);
-        spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', GIB_ORGANIC);
+        if (type === GIB_METALLIC) {
+             // Debris 1, 2, 3
+             // Based on func_explosive but scaled down a bit maybe?
+             // func_explosive_explode spawns multiple debris based on mass.
+             // Here we are generic.
+             spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
+             spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
+        } else {
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
 
-        spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', GIB_ORGANIC);
-        spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', GIB_ORGANIC);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', type);
 
-        // Spawn head
-        spawnHead(sys, origin, damage);
+            // Spawn head
+            spawnHead(sys, origin, damage);
+        }
 
     } else {
         const defs = damageOrDefs;
