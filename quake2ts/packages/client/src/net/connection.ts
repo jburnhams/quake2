@@ -7,7 +7,8 @@ import {
   NetworkMessageBuilder,
   writeUserCommand,
   BinaryWriter,
-  CMD_BACKUP
+  CMD_BACKUP,
+  NetChan
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -41,6 +42,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private state: ConnectionState = ConnectionState.Disconnected;
   private parser: NetworkMessageParser | null = null;
   private options: MultiplayerConnectionOptions;
+  private netchan: NetChan;
 
   // Game State
   public serverProtocol = 0;
@@ -61,6 +63,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
+    this.netchan = new NetChan();
 
     this.driver.onMessage((data) => this.handleMessage(data));
     this.driver.onClose(() => this.handleDisconnect());
@@ -74,6 +77,12 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
     console.log(`Connecting to ${url}...`);
     this.state = ConnectionState.Connecting;
+
+    // Reset netchan state for new connection
+    // Note: qport is preserved or randomized in constructor.
+    // We should probably re-randomize or keep it if we want to be same client.
+    // For now, simple reset.
+    this.netchan.reset();
 
     try {
       await this.driver.connect(url);
@@ -116,26 +125,15 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
       const writer = new BinaryWriter();
 
-      // Sequence number handling would go here, but for now we write header (seq/ack) if needed
-      // Assuming simple framing for now where we just send the command.
-      // NOTE: Q2 uses clc_move which includes checksum and loss.
-      // Standard Q2 Client packet:
-      // [Sequence] [Ack Sequence] [Command] [Args...]
-
-      // Let's implement full packet structure for WebSocket transport (Sequence + Ack + Command)
-      // This mirrors what we expect in handleMessage (seq, ack).
-      // We are not tracking sequence numbers properly yet, using 0 placeholder.
-
-      writer.writeLong(0); // Sequence
-      writer.writeLong(0); // Ack Sequence
-
       writer.writeByte(ClientCommand.move);
       writer.writeByte(0); // checksum (crc8 of last server frame) - TODO
       writer.writeLong(this.latestServerFrame); // lastframe (ack)
 
       writeUserCommand(writer, commandWithFrame);
 
-      this.driver.send(writer.getData());
+      // Use NetChan to wrap the command
+      const packet = this.netchan.transmit(writer.getData());
+      this.driver.send(packet);
   }
 
   private handleMessage(data: Uint8Array): void {
@@ -148,27 +146,22 @@ export class MultiplayerConnection implements NetworkMessageHandler {
         buffer = newBuffer;
     }
 
-    const stream = new BinaryStream(buffer as ArrayBuffer);
+    // Process via NetChan
+    // NetChan handles sequence numbers, acks, reliable message assembly
+    const processedData = this.netchan.process(new Uint8Array(buffer));
 
-    // In Q2, the first long is sequence number, usually handled by NetChan.
-    // Since we use WebSockets, we might treat the whole payload as the message stream.
-    // However, existing server implementation likely sends raw packet data.
+    if (!processedData) {
+        // Packet discarded (duplicate, out of order, or invalid qport)
+        return;
+    }
 
-    // Check if we need to parse NetChan header or if WebSocket is the NetChan.
-    // Assuming WebSocket frame = NetChan packet.
-
-    // The sequence number handling is missing in shared/NetChan for now,
-    // but the Parser expects a stream of commands.
-
-    // If the server sends a sequence number, we should skip it or handle it.
-    // Let's assume standard Q2 NetChan header: sequence (4 bytes), sequence_ack (4 bytes).
-
-    const sequence = stream.readLong();
-    const sequenceAck = stream.readLong();
-
-    // Create parser for the rest of the message
-    this.parser = new NetworkMessageParser(stream, this);
-    this.parser.parseMessage();
+    // Process the payload
+    if (processedData.byteLength > 0) {
+        const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
+        // Create parser for the message content
+        this.parser = new NetworkMessageParser(stream, this);
+        this.parser.parseMessage();
+    }
   }
 
   private handleDisconnect(): void {
@@ -180,7 +173,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     const builder = new NetworkMessageBuilder();
     builder.writeByte(ClientCommand.stringcmd);
     builder.writeString('getchallenge');
-    this.driver.send(builder.getData());
+
+    // Send directly via NetChan
+    const packet = this.netchan.transmit(builder.getData());
+    this.driver.send(packet);
   }
 
   private sendConnect(challenge: number): void {
@@ -191,7 +187,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
     // Use the client's supported protocol version
     builder.writeString(`connect ${PROTOCOL_VERSION_RERELEASE} ${challenge} ${userinfo}`);
-    this.driver.send(builder.getData());
+
+    const packet = this.netchan.transmit(builder.getData());
+    this.driver.send(packet);
   }
 
   public isConnected(): boolean {
@@ -216,7 +214,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       const builder = new NetworkMessageBuilder();
       builder.writeByte(ClientCommand.stringcmd);
       builder.writeString('new');
-      this.driver.send(builder.getData());
+
+      const packet = this.netchan.transmit(builder.getData());
+      this.driver.send(packet);
 
       this.state = ConnectionState.Loading;
   }
@@ -251,7 +251,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       const builder = new NetworkMessageBuilder();
       builder.writeByte(ClientCommand.stringcmd);
       builder.writeString('begin');
-      this.driver.send(builder.getData());
+
+      const packet = this.netchan.transmit(builder.getData());
+      this.driver.send(packet);
 
       this.state = ConnectionState.Active;
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MultiplayerConnection, ConnectionState } from '../../src/net/connection';
-import { NetDriver, UserCommand, ClientCommand, ServerCommand, BinaryWriter } from '@quake2ts/shared';
+import { NetDriver, UserCommand, ClientCommand, ServerCommand, BinaryWriter, NetChan } from '@quake2ts/shared';
 import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver';
 
 // Mock dependencies
@@ -59,24 +59,35 @@ describe('MultiplayerConnection', () => {
     it('should complete handshake sequence', async () => {
         await connection.connect('ws://localhost:27910');
 
+        // Wait for next tick to ensure async operations complete if any
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Create a server-side NetChan to format packets correctly
+        const serverNetChan = new NetChan();
+        // Set qport to match what client sent?
+        // Actually, the client just initialized and sent a packet.
+        // We can inspect the sent packet to get the qport.
+        const sentPacket = mockDriver.send.mock.calls[0][0] as Uint8Array;
+        const view = new DataView(sentPacket.buffer, sentPacket.byteOffset, sentPacket.byteLength);
+        const qport = view.getUint16(8, true);
+        serverNetChan.setup(qport);
+
+        // --- 1. Server sends challenge ---
         // Simulate "challenge 12345" response
         const writer = new BinaryWriter();
-        writer.writeLong(0); // Sequence
-        writer.writeLong(0); // Ack
         writer.writeByte(ServerCommand.stufftext);
         writer.writeString('challenge 12345\n');
 
-        // Trigger onMessage
+        const challengePacket = serverNetChan.transmit(writer.getData());
         const onMessage = mockDriver.onMessage.mock.calls[0][0];
-        onMessage(new Uint8Array(writer.getData()));
+        onMessage(challengePacket);
 
         // Should have sent connect command
         expect(mockDriver.send).toHaveBeenCalledTimes(2); // getchallenge + connect
 
+        // --- 2. Server sends serverdata ---
         // Simulate svc_serverdata
         const writer2 = new BinaryWriter();
-        writer2.writeLong(1);
-        writer2.writeLong(0);
         writer2.writeByte(ServerCommand.serverdata);
         writer2.writeLong(34); // Protocol
         writer2.writeLong(1); // Server count
@@ -85,17 +96,19 @@ describe('MultiplayerConnection', () => {
         writer2.writeShort(0); // Player num
         writer2.writeString("maps/test.bsp");
 
-        onMessage(new Uint8Array(writer2.getData()));
+        const serverDataPacket = serverNetChan.transmit(writer2.getData());
+        onMessage(serverDataPacket);
+
         expect((connection as any).state).toBe(ConnectionState.Loading);
 
+        // --- 3. Server sends precache (end of loading) ---
         // Simulate "precache" which finishes loading
         const writer3 = new BinaryWriter();
-        writer3.writeLong(2);
-        writer3.writeLong(0);
         writer3.writeByte(ServerCommand.stufftext);
         writer3.writeString('precache\n');
 
-        onMessage(new Uint8Array(writer3.getData()));
+        const precachePacket = serverNetChan.transmit(writer3.getData());
+        onMessage(precachePacket);
 
         expect(connection.isConnected()).toBe(true);
         expect((connection as any).state).toBe(ConnectionState.Active);

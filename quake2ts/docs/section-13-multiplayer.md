@@ -399,22 +399,22 @@
 **Estimated Time**: 1 week
 **Dependencies**: Phase 1 complete (NetChan exists)
 
-#### Task 3.1: Add NetChan to MultiplayerConnection
+#### Task 3.1: Add NetChan to MultiplayerConnection (COMPLETE)
 **File**: `packages/client/src/net/connection.ts`
 **Reference**: `full/client/client.h:150-200` (client_static_t)
 
-- [ ] **3.1.1** Import and create NetChan instance
+- [x] **3.1.1** Import and create NetChan instance
   - Add `import { NetChan } from '@quake2ts/shared'`
   - Add `private netchan: NetChan` to MultiplayerConnection
   - Initialize in constructor with random qport
 
-- [ ] **3.1.2** Update sendCommand to use NetChan (replaces Lines 129-131)
+- [x] **3.1.2** Update sendCommand to use NetChan (replaces Lines 129-131)
   - Remove placeholder sequence numbers (0)
   - Build command in BinaryWriter
   - Call `this.netchan.transmit(commandData)`
   - Send resulting packet via `this.driver.send()`
 
-- [ ] **3.1.3** Update handleMessage to use NetChan (replaces Lines 166-168)
+- [x] **3.1.3** Update handleMessage to use NetChan (replaces Lines 166-168)
   - Remove manual sequence parsing
   - Call `this.netchan.process(data)`
   - If returns null, discard (duplicate/invalid)
