@@ -160,7 +160,7 @@
   - Parse frames sequentially until target frame reached
   - Update current position state
 
-- [ ] **1.5.2** Add speed control
+- [x] **1.5.2** Add speed control
   - Modify `playbackSpeed` property (already exists)
   - Ensure `update()` respects speed multiplier
   - Clamp speed to reasonable range (0.1x to 16x)
@@ -170,7 +170,7 @@
   - Add `getCurrentFrame(): number` method
   - Add `getDuration(): number` method (frames * frame time)
 
-- [ ] **1.5.4** Add frame-by-frame stepping
+- [x] **1.5.4** Add frame-by-frame stepping
   - Add `stepForward(): void` method (advance 1 frame)
   - Add `stepBackward(): void` method (seek to current - 1)
 
