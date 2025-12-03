@@ -18,6 +18,11 @@ export class NetChan {
   static readonly PACKET_HEADER = 10; // sequence(4) + ack(4) + qport(2)
   static readonly HEADER_OVERHEAD = NetChan.PACKET_HEADER + 2; // +2 for reliable length prefix
 
+  // Increase internal reliable buffer to support large messages (fragmentation)
+  // Quake 2 uses MAX_MSGLEN for the reliable buffer, limiting single messages to ~1400 bytes.
+  // We expand this to allow larger messages (e.g. snapshots, downloads) which are then fragmented.
+  static readonly MAX_RELIABLE_BUFFER = 0x40000; // 256KB
+
   // Public state
   qport = 0; // qport value to distinguish multiple clients from same IP
 
@@ -33,6 +38,14 @@ export class NetChan {
   reliableMessage: BinaryWriter;
   reliableLength = 0;
 
+  // Fragmentation State (Sending)
+  fragmentSendOffset = 0;
+
+  // Fragmentation State (Receiving)
+  fragmentBuffer: Uint8Array | null = null;
+  fragmentLength = 0;
+  fragmentReceived = 0;
+
   // Timing
   lastReceived = 0;
   lastSent = 0;
@@ -41,7 +54,7 @@ export class NetChan {
 
   constructor() {
     // Initialize buffers
-    this.reliableMessage = new BinaryWriter(NetChan.MAX_MSGLEN);
+    this.reliableMessage = new BinaryWriter(NetChan.MAX_RELIABLE_BUFFER);
 
     // Set initial timestamps
     const now = Date.now();
@@ -73,6 +86,12 @@ export class NetChan {
     this.outgoingReliableSequence = 0;
     this.reliableLength = 0;
     this.reliableMessage.reset();
+
+    this.fragmentSendOffset = 0;
+    this.fragmentBuffer = null;
+    this.fragmentLength = 0;
+    this.fragmentReceived = 0;
+
     this.lastReceived = Date.now();
     this.lastSent = Date.now();
   }
@@ -84,20 +103,55 @@ export class NetChan {
     this.outgoingSequence++;
     this.lastSent = Date.now();
 
+    // Determine how much reliable data to send in this packet
+    let sendReliableLength = 0;
+    let isFragment = false;
+    let fragmentStart = 0;
+
+    if (this.reliableLength > 0) {
+      // Check if we need to fragment
+      if (this.reliableLength > NetChan.FRAGMENT_SIZE) {
+        // We are in fragment mode
+        isFragment = true;
+
+        // If we have finished sending all fragments but still haven't received ACK,
+        // we must loop back to the beginning to retransmit.
+        if (this.fragmentSendOffset >= this.reliableLength) {
+          this.fragmentSendOffset = 0;
+        }
+
+        // Calculate chunk size
+        const remaining = this.reliableLength - this.fragmentSendOffset;
+        sendReliableLength = remaining;
+        if (sendReliableLength > NetChan.FRAGMENT_SIZE) {
+          sendReliableLength = NetChan.FRAGMENT_SIZE;
+        }
+
+        fragmentStart = this.fragmentSendOffset;
+
+        // Advance offset for the next packet
+        this.fragmentSendOffset += sendReliableLength;
+      } else {
+        // Fits in one packet
+        sendReliableLength = this.reliableLength;
+      }
+    }
+
     // Calculate total size
     // Header + Reliable + Unreliable
     const headerSize = NetChan.PACKET_HEADER;
-    const reliableSize = this.reliableLength > 0 ? this.reliableLength + 2 : 0; // +2 for length prefix
+    const reliableHeaderSize = sendReliableLength > 0 ? 2 + (isFragment ? 8 : 0) : 0; // +2 length, +8 fragment info
+
     let unreliableSize = unreliableData ? unreliableData.length : 0;
 
     // Check for overflow
-    if (headerSize + reliableSize + unreliableSize > NetChan.MAX_MSGLEN) {
-      unreliableSize = NetChan.MAX_MSGLEN - headerSize - reliableSize;
+    if (headerSize + reliableHeaderSize + sendReliableLength + unreliableSize > NetChan.MAX_MSGLEN) {
+      unreliableSize = NetChan.MAX_MSGLEN - headerSize - reliableHeaderSize - sendReliableLength;
       // We truncate unreliable data if it doesn't fit with reliable data
       if (unreliableSize < 0) unreliableSize = 0;
     }
 
-    const buffer = new ArrayBuffer(headerSize + reliableSize + unreliableSize);
+    const buffer = new ArrayBuffer(headerSize + reliableHeaderSize + sendReliableLength + unreliableSize);
     const view = new DataView(buffer);
     const result = new Uint8Array(buffer);
 
@@ -106,7 +160,7 @@ export class NetChan {
     let sequence = this.outgoingSequence;
 
     // Set reliable bit if we are sending reliable data
-    if (this.reliableLength > 0) {
+    if (sendReliableLength > 0) {
       sequence |= 0x80000000;
       // Also set the reliable sequence bit (0/1 toggle) at bit 30
       if ((this.outgoingReliableSequence & 1) !== 0) {
@@ -128,16 +182,30 @@ export class NetChan {
 
     // Copy Reliable Data
     let offset = headerSize;
-    if (this.reliableLength > 0) {
-      // Write length of reliable data (2 bytes) to allow skipping duplicates
-      view.setUint16(offset, this.reliableLength, true);
+    if (sendReliableLength > 0) {
+      // Write length of reliable data (2 bytes)
+      // Extension: If length has high bit (0x8000), it's a fragment.
+      let lengthField = sendReliableLength;
+      if (isFragment) {
+        lengthField |= 0x8000;
+      }
+
+      view.setUint16(offset, lengthField, true);
       offset += 2;
 
-      // BinaryWriter buffer might be larger than reliableLength, so we slice
+      if (isFragment) {
+        // Write fragment info: 4 bytes start offset, 4 bytes total length
+        view.setUint32(offset, fragmentStart, true);
+        offset += 4;
+        view.setUint32(offset, this.reliableLength, true);
+        offset += 4;
+      }
+
+      // Copy data
       const reliableBuffer = this.reliableMessage.getBuffer();
-      const reliableBytes = reliableBuffer.subarray(0, this.reliableLength);
+      const reliableBytes = reliableBuffer.subarray(fragmentStart, fragmentStart + sendReliableLength);
       result.set(reliableBytes, offset);
-      offset += this.reliableLength;
+      offset += sendReliableLength;
     }
 
     // Copy Unreliable Data
@@ -166,13 +234,10 @@ export class NetChan {
     const qport = view.getUint16(8, true);
 
     if (this.qport !== qport) {
-      // Allow if we don't have a qport set yet?
-      // Q2 source: if ( netchan->qport != (msg->qport&0xffff) ) return false;
       return null;
     }
 
     // Check for duplicate or out of order
-    // Sequence wraps at 32-bit.
     const seqNumberClean = sequence & ~(0x80000000 | 0x40000000); // Mask out flags
 
     // Handle wrapping using signed difference
@@ -192,17 +257,17 @@ export class NetChan {
     }
 
     // Check if our reliable message was acknowledged
+    // If the receiver has toggled their reliable bit, it means they got the WHOLE message
     if (this.reliableLength > 0) {
-       // Receiver toggles expectation when it gets our message.
-       // It sends that toggled expectation back in ACK bit 31.
-       // So if ACK bit != our outgoing sequence bit, it means they flipped (processed).
        const receivedAckBit = ackReliable ? 1 : 0;
        const currentReliableBit = this.outgoingReliableSequence & 1;
 
        if (receivedAckBit !== currentReliableBit) {
+         // Acked!
          this.reliableLength = 0;
          this.reliableMessage.reset();
          this.outgoingReliableSequence ^= 1;
+         this.fragmentSendOffset = 0; // Reset fragment offset
        }
     }
 
@@ -216,20 +281,74 @@ export class NetChan {
     if (hasReliableData) {
        if (payloadOffset + 2 > packet.byteLength) return null; // Malformed
 
-       const reliableLen = view.getUint16(payloadOffset, true);
+       let reliableLen = view.getUint16(payloadOffset, true);
        payloadOffset += 2;
+
+       const isFragment = (reliableLen & 0x8000) !== 0;
+       reliableLen &= 0x7FFF;
 
        // Check if this is the expected reliable sequence
        const expectedBit = this.incomingReliableSequence & 1;
 
        if (reliableSeqBit === expectedBit) {
-          // New reliable data
-          this.incomingReliableSequence++;
-          if (payloadOffset + reliableLen > packet.byteLength) return null;
-          reliableData = packet.slice(payloadOffset, payloadOffset + reliableLen);
+          // It's the sequence we are waiting for
+
+          if (isFragment) {
+             // Read fragment info
+             if (payloadOffset + 8 > packet.byteLength) return null;
+             const fragStart = view.getUint32(payloadOffset, true);
+             payloadOffset += 4;
+             const fragTotal = view.getUint32(payloadOffset, true);
+             payloadOffset += 4;
+
+             // Validate fragTotal against MAX_RELIABLE_BUFFER
+             if (fragTotal > NetChan.MAX_RELIABLE_BUFFER) {
+               console.warn(`NetChan: received invalid fragment total ${fragTotal} > ${NetChan.MAX_RELIABLE_BUFFER}`);
+               return null;
+             }
+
+             // Initialize fragment buffer if needed
+             if (!this.fragmentBuffer || this.fragmentBuffer.length !== fragTotal) {
+                this.fragmentBuffer = new Uint8Array(fragTotal);
+                this.fragmentLength = fragTotal;
+                this.fragmentReceived = 0;
+             }
+
+             // Check for valid fragment offset
+             if (payloadOffset + reliableLen > packet.byteLength) return null;
+             const data = packet.subarray(payloadOffset, payloadOffset + reliableLen);
+
+             // Only accept if it matches our expected offset (enforce in-order delivery for simplicity)
+             // or check if we haven't received this part yet.
+             // Since we use a simple 'fragmentReceived' counter, we effectively expect in-order delivery
+             // of streams if we just use append logic.
+             // BUT UDP can reorder.
+             // To be robust, we should enforce strict ordering: fragStart must equal fragmentReceived.
+             // If we miss a chunk, we ignore subsequent chunks until the missing one arrives (via retransmit loop).
+
+             if (fragStart === this.fragmentReceived && fragStart + reliableLen <= fragTotal) {
+               this.fragmentBuffer.set(data, fragStart);
+               this.fragmentReceived += reliableLen;
+
+               // Check if complete
+               if (this.fragmentReceived >= fragTotal) {
+                 reliableData = this.fragmentBuffer;
+                 this.incomingReliableSequence++;
+                 this.fragmentBuffer = null;
+                 this.fragmentLength = 0;
+                 this.fragmentReceived = 0;
+               }
+             }
+
+          } else {
+             // Not a fragment (standard)
+             this.incomingReliableSequence++;
+             if (payloadOffset + reliableLen > packet.byteLength) return null;
+             reliableData = packet.slice(payloadOffset, payloadOffset + reliableLen);
+          }
        }
 
-       // Advance past reliable data regardless (so we can get unreliable data)
+       // Advance past reliable data regardless
        payloadOffset += reliableLen;
     }
 
@@ -245,12 +364,10 @@ export class NetChan {
         return result;
     }
 
-    // Ensure we return empty array if no data, rather than null or crashing on length access
     if (unreliableData) {
       return unreliableData;
     }
 
-    // If both are empty/null
     return new Uint8Array(0);
   }
 
@@ -265,7 +382,7 @@ export class NetChan {
    * Writes a byte to the reliable message buffer
    */
   writeReliableByte(value: number): void {
-    if (this.reliableLength + 1 > NetChan.MAX_MSGLEN - NetChan.HEADER_OVERHEAD) {
+    if (this.reliableLength + 1 > NetChan.MAX_RELIABLE_BUFFER) {
       throw new Error('NetChan reliable buffer overflow');
     }
     this.reliableMessage.writeByte(value);
@@ -276,7 +393,7 @@ export class NetChan {
    * Writes a short to the reliable message buffer
    */
   writeReliableShort(value: number): void {
-    if (this.reliableLength + 2 > NetChan.MAX_MSGLEN - NetChan.HEADER_OVERHEAD) {
+    if (this.reliableLength + 2 > NetChan.MAX_RELIABLE_BUFFER) {
       throw new Error('NetChan reliable buffer overflow');
     }
     this.reliableMessage.writeShort(value);
@@ -287,7 +404,7 @@ export class NetChan {
    * Writes a long to the reliable message buffer
    */
   writeReliableLong(value: number): void {
-    if (this.reliableLength + 4 > NetChan.MAX_MSGLEN - NetChan.HEADER_OVERHEAD) {
+    if (this.reliableLength + 4 > NetChan.MAX_RELIABLE_BUFFER) {
       throw new Error('NetChan reliable buffer overflow');
     }
     this.reliableMessage.writeLong(value);
@@ -299,7 +416,7 @@ export class NetChan {
    */
   writeReliableString(value: string): void {
     const len = value.length + 1; // +1 for null terminator
-    if (this.reliableLength + len > NetChan.MAX_MSGLEN - NetChan.HEADER_OVERHEAD) {
+    if (this.reliableLength + len > NetChan.MAX_RELIABLE_BUFFER) {
       throw new Error('NetChan reliable buffer overflow');
     }
     this.reliableMessage.writeString(value);

@@ -80,11 +80,10 @@ describe('NetChan', () => {
 
     it('should throw on overflow', () => {
       // Fill buffer close to limit
-      // MAX_MSGLEN - HEADER_OVERHEAD
-      // 1400 - 12 = 1388
-      const maxLen = 1388;
+      // With fragmentation support, the buffer is MAX_RELIABLE_BUFFER (256KB)
+      const maxLen = NetChan.MAX_RELIABLE_BUFFER;
 
-      // We can't easily write 1388 bytes one by one in a test without loop
+      // We can't easily write 256KB bytes one by one in a test without loop
       // But we can simulate it by hacking reliableLength for this test
       netchan.reliableLength = maxLen;
 
