@@ -476,7 +476,11 @@ export function createClient(imports: ClientImports): ClientExports {
           demoPlayback.update(dt);
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
-          // TODO: Demo playback entities
+          renderEntities = demoHandler.getRenderableEntities();
+
+          if (lastRendered) {
+            // Camera construction below uses lastRendered, which we just updated from the demo state.
+          }
       } else {
           lastRenderTime = sample.nowMs;
           if (sample.latest?.state) {
