@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import { Entity } from '../src/entities/entity.js';
 import type { SpawnContext } from '../src/entities/spawn.js';
-import type { EntitySystem } from '../src/entities/system.js';
+import type { EntitySystem, LevelState } from '../src/entities/system.js';
 
 export function createTestContext(): SpawnContext {
   const engine = {
@@ -47,6 +47,24 @@ export function createTestContext(): SpawnContext {
         frandomRange: vi.fn(() => 0),
         irandom: vi.fn(() => 0),
         irandomRange: vi.fn(() => 0),
+    },
+    // Add setSpawnRegistry to mock
+    setSpawnRegistry: vi.fn(),
+    // Add level state mock
+    level: {
+        next_auto_save: 0,
+        health_bar_entities: [null, null, null, null],
+        intermission_angle: { x: 0, y: 0, z: 0 },
+        intermission_origin: { x: 0, y: 0, z: 0 },
+        intermissiontime: 0,
+        exitintermission: false,
+        level_intermission_set: false,
+        changemap: null,
+    } as unknown as LevelState,
+    forEachEntity: vi.fn(),
+    find: vi.fn(),
+    imports: {
+        configstring: vi.fn(),
     }
   } as unknown as EntitySystem;
 

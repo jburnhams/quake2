@@ -101,6 +101,12 @@ export interface EntitySystemSnapshot {
 export interface LevelState {
   next_auto_save: number;
   health_bar_entities: (Entity | null)[];
+  intermission_angle: Vec3;
+  intermission_origin: Vec3;
+  intermissiontime: number;
+  exitintermission: boolean;
+  level_intermission_set: boolean;
+  changemap: string | null;
 }
 
 
@@ -271,6 +277,12 @@ export class EntitySystem {
     this.level = {
       next_auto_save: 0,
       health_bar_entities: [null, null, null, null],
+      intermission_angle: { x: 0, y: 0, z: 0 },
+      intermission_origin: { x: 0, y: 0, z: 0 },
+      intermissiontime: 0,
+      exitintermission: false,
+      level_intermission_set: false,
+      changemap: null,
     };
   }
 
@@ -575,6 +587,12 @@ export class EntitySystem {
       level: {
         next_auto_save: this.level.next_auto_save,
         health_bar_entities: [null, null, null, null], // Transient
+        intermission_angle: this.level.intermission_angle,
+        intermission_origin: this.level.intermission_origin,
+        intermissiontime: this.level.intermissiontime,
+        exitintermission: this.level.exitintermission,
+        level_intermission_set: this.level.level_intermission_set,
+        changemap: this.level.changemap,
       },
     };
   }
