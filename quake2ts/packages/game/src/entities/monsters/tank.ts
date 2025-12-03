@@ -18,7 +18,7 @@ import {
   Solid,
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { GIB_METALLIC, throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
 import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -464,7 +464,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -40) {
-        throwGibs(context.entities, self.origin, damage);
+        throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
         context.entities.free(self);
         return;
     }
