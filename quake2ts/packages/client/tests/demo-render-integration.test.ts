@@ -126,6 +126,8 @@ describe('Client Demo Playback Integration', () => {
     expect(camera.position[0]).toBeCloseTo(100);
     expect(camera.position[1]).toBeCloseTo(100);
     expect(camera.position[2]).toBeCloseTo(100);
+    // Check camera FOV (should be 90 from demo state)
+    expect(camera.fov).toBe(90);
 
     // Check entities
     expect(entities).toHaveLength(1);

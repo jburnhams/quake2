@@ -476,7 +476,19 @@ export function createClient(imports: ClientImports): ClientExports {
           demoPlayback.update(dt);
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
-          renderEntities = demoHandler.getRenderableEntities();
+          // Calculate alpha for interpolation
+          const frameDuration = 100; // Assume 10Hz
+          // Ideally demoPlayback should provide alpha or exact times
+          // For now, let's use 1.0 (latest) or calculate from demoPlayback.getCurrentTime()
+          // But demoHandler.getPredictionState(time) already does interpolation.
+          // However, getRenderableEntities needs explicit alpha.
+          // Let's assume demoPlayback.getCurrentTime() returns absolute time in demo timeline.
+          // We need alpha relative to the two frames in demoHandler.
+
+          // HACK: Calculate alpha from sub-frame time in demo playback?
+          // For now, pass 1.0 to render latest entities.
+          // TODO: Improve demo time tracking to provide correct interpolation alpha
+          renderEntities = demoHandler.getRenderableEntities(1.0, configStrings);
 
           if (lastRendered) {
             // Camera construction below uses lastRendered, which we just updated from the demo state.
@@ -524,7 +536,13 @@ export function createClient(imports: ClientImports): ClientExports {
         const effectAngles = lastView?.angles ?? { x: 0, y: 0, z: 0 };
         camera.angles = vec3.fromValues(viewAngles.x + effectAngles.x, viewAngles.y + effectAngles.y, viewAngles.z + effectAngles.z);
 
-        camera.fov = isZooming ? 40 : fovValue;
+        // In demo playback, prefer the recorded FOV if available
+        if (isDemoPlaying && lastRendered.fov) {
+            camera.fov = lastRendered.fov;
+        } else {
+            camera.fov = isZooming ? 40 : fovValue;
+        }
+
         camera.aspect = 4 / 3; // Default aspect
 
         // Update aspect from renderer
