@@ -13,6 +13,7 @@ export interface RenderableMd2 {
     readonly ambientLight?: number;
     readonly alpha?: number;
     readonly id?: number; // Optional numeric ID for stable randomization
+    readonly tint?: readonly [number, number, number, number];
 }
 
 export interface RenderableMd3 {
@@ -24,6 +25,7 @@ export interface RenderableMd3 {
     readonly skins?: Map<string, string>; // Surface name to texture name
     readonly alpha?: number;
     readonly id?: number; // Optional numeric ID for stable randomization
+    readonly tint?: readonly [number, number, number, number];
 }
 
 export type RenderableEntity = RenderableMd2 | RenderableMd3;

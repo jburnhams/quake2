@@ -104,3 +104,102 @@ describe('Monster AI - Soldier', () => {
     expect(soldier.frame).toBe(move.firstframe + 1);
   });
 });
+
+import { monster_think } from '../../src/ai/monster.js';
+import { RenderFx } from '@quake2ts/shared';
+import { createTestContext } from '../test-helpers.js';
+
+describe('monster_think (Freeze Logic)', () => {
+  let context: EntitySystem;
+  let entity: Entity;
+
+  beforeEach(() => {
+    const testContext = createTestContext();
+    context = testContext.entities;
+    entity = context.spawn();
+    entity.inUse = true; // Ensure entity is marked active for M_MoveFrame
+    entity.monsterinfo = {
+      current_move: {
+        firstframe: 0,
+        lastframe: 10,
+        frames: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}], // Dummy frames to avoid index error
+        endfunc: null
+      },
+      aiflags: 0,
+      nextframe: 0,
+      scale: 1,
+      stand: null,
+      walk: null,
+      run: null,
+      dodge: null,
+      attack: null,
+      melee: null,
+      sight: null,
+      idle: null,
+      checkattack: null,
+      search: null,
+      pause_time: 0,
+      attack_finished: 0,
+      saved_goal: null,
+      last_sighting: { x: 0, y: 0, z: 0 },
+      trail_time: 0,
+      viewheight: 0,
+      allow_spawn: null
+    };
+    entity.frame = 0;
+    entity.renderfx = 0;
+  });
+
+  it('should apply freeze effect and stop animation when frozen', () => {
+    context.timeSeconds = 10;
+    entity.monsterinfo!.freeze_time = 15; // Frozen for 5 seconds
+
+    monster_think(entity, context);
+
+    // Should have renderfx
+    expect((entity.renderfx & RenderFx.ShellBlue)).toBeTruthy();
+    expect((entity.renderfx & RenderFx.ShellGreen)).toBeTruthy();
+
+    // Should NOT have advanced frame (because monster_think returns early)
+    expect(entity.frame).toBe(0);
+
+    // Should reschedule think
+    expect(entity.nextthink).toBeGreaterThan(context.timeSeconds);
+  });
+
+  it('should clear freeze effect when timer expires', () => {
+    context.timeSeconds = 20;
+    entity.monsterinfo!.freeze_time = 15; // Expired
+    entity.renderfx = RenderFx.ShellBlue | RenderFx.ShellGreen; // Pre-set
+
+    monster_think(entity, context);
+
+    // Should clear renderfx
+    expect((entity.renderfx & RenderFx.ShellBlue)).toBeFalsy();
+    expect((entity.renderfx & RenderFx.ShellGreen)).toBeFalsy();
+
+    // Should have advanced frame (because M_MoveFrame was called)
+    // entity.frame started at 0.
+    // M_MoveFrame increments frame unless loop conditions reset it.
+    // Given firstframe 0, lastframe 10, current frame 0:
+    // It should run frame 0 logic then increment to 1.
+
+    // Debug note: It seems M_MoveFrame logic regarding frame increment might depend on aiflags or other state.
+    // However, if we just want to ensure it *ran* (unlike when frozen), checking that frame is NOT 0 might be flaky if it resets.
+    // But since start=0 and end=10, it should increment.
+    // Let's relax the check to ensure it ran logic - mainly that freeze_time is cleared.
+    // If the previous test (frozen) asserted frame 0, and this one asserts frame 1, that proves the difference.
+    // Wait, why did it fail with 0?
+    // Maybe `entity.inUse` is false in the mock?
+    // M_MoveFrame checks `if (!self.inUse) return;` before incrementing frame.
+    // Default mock spawn usually sets inUse=true?
+    // Let's check `context.spawn()` in test-helpers.
+    // Ah, `new Entity(1)` might not set `inUse` to true by default?
+    // In `entity.ts`, `inUse` defaults to false?
+    // Usually `spawn()` sets it.
+
+    // Let's manually set inUse to true in the test setup.
+    expect(entity.frame).toBe(1);
+    expect(entity.monsterinfo!.freeze_time).toBe(0);
+  });
+});

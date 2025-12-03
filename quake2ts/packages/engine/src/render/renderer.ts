@@ -211,7 +211,8 @@ export const createRenderer = (
                             modelMatrix: entity.transform,
                             ambientLight: light,
                             dlights: options.dlights,
-                            renderMode: activeRenderMode
+                            renderMode: activeRenderMode,
+                            tint: entity.tint,
                         });
                         md2Pipeline.draw(mesh, activeRenderMode);
                     }

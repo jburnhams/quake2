@@ -1,5 +1,5 @@
 
-import { EntityState } from '@quake2ts/shared';
+import { EntityState, RenderFx } from '@quake2ts/shared';
 import { RenderableEntity, Renderer } from '@quake2ts/engine';
 import { mat4 } from 'gl-matrix';
 import { ClientConfigStrings } from './configStrings.js';
@@ -26,6 +26,7 @@ type AnyEntityState = {
     // Shared uses camelCase
     modelIndex?: number;
     skinNum?: number;
+    renderfx?: number;
     // Engine uses lowercase
     modelindex?: number;
     skinnum?: number;
@@ -102,6 +103,25 @@ export function buildRenderableEntities(
 
         const skinName = (skinNum !== undefined && skinNum > 0) ? configStrings.getImageName(skinNum) : undefined;
 
+        // Handle RenderFx Tints
+        let tint: [number, number, number, number] | undefined;
+        const renderfx = ent.renderfx ?? 0;
+
+        // Check for Freeze effect (ShellGreen | ShellBlue) explicitly first
+        if ((renderfx & (RenderFx.ShellGreen | RenderFx.ShellBlue)) === (RenderFx.ShellGreen | RenderFx.ShellBlue)) {
+            tint = [0, 1, 1, 1]; // Cyan (Freeze)
+        } else if (renderfx & RenderFx.ShellRed) {
+            tint = [1, 0, 0, 1]; // Red Shell
+        } else if (renderfx & RenderFx.ShellGreen) {
+            tint = [0, 1, 0, 1]; // Green Shell
+        } else if (renderfx & RenderFx.ShellBlue) {
+            tint = [0, 0, 1, 1]; // Blue Shell
+        } else if (renderfx & RenderFx.ShellDouble) {
+            tint = [1, 1, 0, 1]; // Double Damage
+        } else if (renderfx & RenderFx.ShellHalfDam) {
+            tint = [0.5, 0.5, 0.5, 1]; // Half Damage
+        }
+
         if (model.header.magic === 844121161) { // IDP2 (MD2)
              renderables.push({
                 type: 'md2',
@@ -113,7 +133,8 @@ export function buildRenderableEntities(
                 },
                 transform: mat as Float32Array,
                 skin: skinName,
-                alpha: normalizedAlpha
+                alpha: normalizedAlpha,
+                tint: tint as readonly [number, number, number, number] | undefined
              });
         } else if (model.header.magic === 860898377) { // IDP3 (MD3)
              renderables.push({
@@ -125,7 +146,8 @@ export function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
-                alpha: normalizedAlpha
+                alpha: normalizedAlpha,
+                tint: tint as readonly [number, number, number, number] | undefined
                 // Lighting? Skins?
              });
         }
