@@ -351,7 +351,8 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         groundContents: 0, // Should be passed in?
         waterlevel: nextState.waterlevel,
         viewPitch: nextState.viewAngles.x,
-        ladderMod: 1
+        ladderMod: 1,
+        stepSize: 18 // Added stepSize for consistency, though water move might not use it heavily
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
@@ -381,7 +382,8 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         groundContents: 0,
         viewPitch: nextState.viewAngles.x,
         ladderMod: 1,
-        pmWaterSpeed: 400
+        pmWaterSpeed: 400,
+        stepSize: 18 // Added stepSize
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
@@ -410,7 +412,8 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         groundContents: 0,
         viewPitch: nextState.viewAngles.x,
         ladderMod: 1,
-        pmWaterSpeed: 400
+        pmWaterSpeed: 400,
+        stepSize: 18 // Added stepSize
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
