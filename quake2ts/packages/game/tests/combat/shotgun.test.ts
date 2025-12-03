@@ -42,24 +42,27 @@ describe('Shotgun', () => {
         target.health = 100;
         target.takedamage = 1;
 
-        trace.mockReturnValue({
-            ent: target,
-            endpos: { x: 0, y: 10, z: 0 },
-            plane: { normal: { x: 0, y: -1, z: 0 } },
-        });
+        trace
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
+            .mockReturnValue({
+                ent: target,
+                endpos: { x: 0, y: 10, z: 0 },
+                plane: { normal: { x: 0, y: -1, z: 0 } },
+            });
 
         fire(game, player, WeaponId.Shotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(9);
-        expect(trace).toHaveBeenCalledTimes(13); // 1 for P_ProjectSource + 12 pellets
+        expect(trace).toHaveBeenCalledTimes(14); // 2 for P_ProjectSource + 12 pellets
 
         const calls = trace.mock.calls;
-        // calls[0] is P_ProjectSource trace.
-        // calls[1] to calls[12] are pellets.
+        // calls[0,1] is P_ProjectSource trace.
+        // calls[2] to calls[13] are pellets.
 
-        const firstPelletEnd = calls[1][3];
+        const firstPelletEnd = calls[2][3];
         let allSame = true;
-        for (let i = 2; i < 13; i++) {
+        for (let i = 3; i < 14; i++) {
             if (calls[i][3].x !== firstPelletEnd.x || calls[i][3].y !== firstPelletEnd.y || calls[i][3].z !== firstPelletEnd.z) {
                 allSame = false;
                 break;

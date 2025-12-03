@@ -221,9 +221,9 @@ function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInv
                 const { forward } = angleVectors(throwAngles);
                 const { right, up } = angleVectors(ent.angles);
 
-                const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
+                const { point, dir } = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
 
-                createGrenade(game.entities, ent, source, forward, 120, speed, timer);
+                createGrenade(game.entities, ent, point, dir, 120, speed, timer);
 
                 // Player Animation
                 if (ent.client && !ent.deadflag) {
@@ -258,9 +258,9 @@ export function fireShotgun(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    fireMultiplePellets(game, player, source, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
+    fireMultiplePellets(game, player, point, dir, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
 }
 
 export function fireSuperShotgun(game: GameExports, player: Entity) {
@@ -277,12 +277,15 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
-    fireMultiplePellets(game, player, source, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+    const { point: point1, dir: dir1 } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward1, right1, up1);
+    fireMultiplePellets(game, player, point1, dir1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+
     const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
-    fireMultiplePellets(game, player, source, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+    const { point: point2, dir: dir2 } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward2, right2, up2);
+    fireMultiplePellets(game, player, point2, dir2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
 }
 
 export function fireMachinegun(game: GameExports, player: Entity) {
@@ -299,9 +302,9 @@ export function fireMachinegun(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    fireHitscan(game, player, source, forward, 8, 1, DamageMod.MACHINEGUN);
+    fireHitscan(game, player, point, dir, 8, 1, DamageMod.MACHINEGUN);
 }
 
 export function fireChaingun(game: GameExports, player: Entity) {
@@ -352,12 +355,12 @@ export function fireChaingun(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir: firingDir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     for (let i = 0; i < shots; i++) {
         const spread = addVec3(scaleVec3(right, random.crandom() * 4), scaleVec3(up, random.crandom() * 4));
-        const dir = addVec3(forward, spread);
-        fireHitscan(game, player, source, dir, damage, knockback, DamageMod.CHAINGUN);
+        const dir = addVec3(firingDir, spread);
+        fireHitscan(game, player, point, dir, damage, knockback, DamageMod.CHAINGUN);
     }
 
     const flash = MZ_CHAINGUN1 + shots - 1;
@@ -378,11 +381,11 @@ export function fireRailgunShot(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     const damage = game.deathmatch ? 100 : 125;
     const knockback = game.deathmatch ? 200 : 225;
-    fireRailgun(game, player, source, forward, damage, knockback);
+    fireRailgun(game, player, point, dir, damage, knockback);
 }
 
 export function fireHyperBlaster(game: GameExports, player: Entity) {
@@ -399,10 +402,10 @@ export function fireHyperBlaster(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     const damage = game.deathmatch ? 15 : 20;
-    createBlasterBolt(game.entities, player, source, forward, damage, 1000, DamageMod.HYPERBLASTER);
+    createBlasterBolt(game.entities, player, point, dir, damage, 1000, DamageMod.HYPERBLASTER);
 }
 
 export function fireBlaster(game: GameExports, player: Entity) {
@@ -413,9 +416,9 @@ export function fireBlaster(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    createBlasterBolt(game.entities, player, source, forward, 15, 1500, DamageMod.BLASTER);
+    createBlasterBolt(game.entities, player, point, dir, 15, 1500, DamageMod.BLASTER);
 }
 
 export function fireRocket(game: GameExports, player: Entity) {
@@ -432,11 +435,11 @@ export function fireRocket(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     const damage = 100 + game.random.irandom(21);
     const radiusDamage = 120;
-    createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
+    createRocket(game.entities, player, point, dir, damage, radiusDamage, 650);
 }
 
 export function fireGrenadeLauncher(game: GameExports, player: Entity) {
@@ -453,9 +456,9 @@ export function fireGrenadeLauncher(game: GameExports, player: Entity) {
     setPlayerAttackAnim(player);
 
     const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    createGrenade(game.entities, player, source, forward, 120, 600);
+    createGrenade(game.entities, player, point, dir, 120, 600);
 }
 
 export function fireBFG(game: GameExports, player: Entity) {
@@ -489,10 +492,10 @@ export function fireBFG(game: GameExports, player: Entity) {
         setPlayerAttackAnim(player);
 
         const { forward, right, up } = angleVectors(player.angles);
-        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+        const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
         const damage = game.deathmatch ? 200 : 500;
-        createBfgBall(game.entities, player, source, forward, damage, 400, 200);
+        createBfgBall(game.entities, player, point, dir, damage, 400, 200);
     } else if (gun_frame === undefined || gun_frame === 0) {
         // Fallback for tests that don't set frames: mimic full fire sequence
         // We already checked isPrimeFrame above which matches 0.
@@ -547,26 +550,26 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
         // Rogue weapons
         case WeaponId.PlasmaBeam: {
             const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            firePlasmaBeam(game, player, inventory, weaponState, source, forward);
+            const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            firePlasmaBeam(game, player, inventory, weaponState, point, dir);
             break;
         }
         case WeaponId.IonRipper: {
             const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            fireIonRipper(game, player, inventory, weaponState, source, forward);
+            const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            fireIonRipper(game, player, inventory, weaponState, point, dir);
             break;
         }
         case WeaponId.Phalanx: {
             const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            firePhalanx(game, player, inventory, weaponState, source, forward);
+            const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            firePhalanx(game, player, inventory, weaponState, point, dir);
             break;
         }
         case WeaponId.EtfRifle: {
             const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            fireEtfRifle(game, player, inventory, weaponState, source, forward);
+            const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            fireEtfRifle(game, player, inventory, weaponState, point, dir);
             break;
         }
         case WeaponId.ProxLauncher: {
@@ -577,8 +580,8 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
             applyKick(player, -2, 0, -2);
             const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            createProxMine(game.entities, player, source, forward, 600);
+            const { point, dir } = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            createProxMine(game.entities, player, point, dir, 600);
             break;
         }
     }

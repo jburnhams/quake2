@@ -50,18 +50,21 @@ describe('Chaingun', () => {
         target.takedamage = true;
         game.entities.finalizeSpawn(target);
 
-        trace.mockReturnValue({
-            ent: target,
-            endpos: { x: 10, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
-        });
+        trace
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
+            .mockReturnValue({
+                ent: target,
+                endpos: { x: 10, y: 0, z: 0 },
+                plane: { normal: { x: -1, y: 0, z: 0 } },
+            });
     });
 
     it('should consume 1 bullet and deal 8 damage in SP', () => {
         fire(game, player, WeaponId.Chaingun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 for P_ProjectSource + 1 for bullet
+        expect(trace).toHaveBeenCalledTimes(3); // 2 for P_ProjectSource + 1 for bullet
         expect(T_Damage).toHaveBeenCalledWith(
             target,
             expect.anything(),
@@ -81,10 +84,21 @@ describe('Chaingun', () => {
     it('should consume 1 bullet and deal 6 damage in DM', () => {
         (game as any).deathmatch = true; // Set deathmatch mode
 
+        // Reset mocks because trace was set in beforeEach with mockReturnValueOnce
+        trace.mockReset();
+        trace
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }) // P_ProjectSource convergence
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }) // P_ProjectSource wall check
+            .mockReturnValue({
+                ent: target,
+                endpos: { x: 10, y: 0, z: 0 },
+                plane: { normal: { x: -1, y: 0, z: 0 } },
+            });
+
         fire(game, player, WeaponId.Chaingun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 for P_ProjectSource + 1 for bullet
+        expect(trace).toHaveBeenCalledTimes(3); // 2 for P_ProjectSource + 1 for bullet
         expect(T_Damage).toHaveBeenCalledWith(
             target,
             expect.anything(),
@@ -142,40 +156,54 @@ describe('Chaingun', () => {
             target.takedamage = 1;
             game.entities.finalizeSpawn(target);
 
-            trace.mockReturnValue({
-                ent: target,
-                endpos: { x: 10, y: 0, z: 0 },
-                plane: { normal: { x: -1, y: 0, z: 0 } },
-                fraction: 0.1
+            trace.mockImplementation((start: any, mins: any, maxs: any, end: any, passent: any, mask: any) => {
+                if (!start) return { fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 }; // P_ProjectSource convergence
+                if (start && !mins && !mask) return { fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }; // P_ProjectSource wall check - wait, checking signatures.
+                // P_ProjectSource wall check: game.trace(eye, null, null, point, ent, MASK_SOLID);
+                // P_ProjectSource convergence: game.trace(eye, null, null, end, ent, mask);
+
+                // Let's just return miss for P_ProjectSource and hit for bullet.
+                // But P_ProjectSource calls also have start/end.
+                // Let's use call count or something simple.
+                // Or just always return hit but fraction 1.0 if dist > 8192? No.
+
+                // Let's make it simpler.
+                return {
+                    ent: target,
+                    endpos: { x: 10, y: 0, z: 0 },
+                    plane: { normal: { x: -1, y: 0, z: 0 } },
+                    fraction: 0.1,
+                    contents: 0
+                };
             });
 
             let totalTraceCalls = 0;
             let ammoConsumed = 0;
 
-            // Stage 1: 1 shot per fire
+            // Stage 1: 1 shot per fire -> 2 source traces + 1 shot = 3
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 2; // 1 for P_ProjectSource + 1 shot
+                totalTraceCalls += 3;
                 ammoConsumed += 1;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
                 game.advanceTime!(100);
             }
 
-            // Stage 2: 2 shots per fire
+            // Stage 2: 2 shots per fire -> 2 source traces + 2 shots = 4
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 3; // 1 for P_ProjectSource + 2 shots
+                totalTraceCalls += 4;
                 ammoConsumed += 2;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
                 game.advanceTime!(100);
             }
 
-            // Stage 3: 3 shots per fire
+            // Stage 3: 3 shots per fire -> 2 source traces + 3 shots = 5
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 4; // 1 for P_ProjectSource + 3 shots
+                totalTraceCalls += 5;
                 ammoConsumed += 3;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
@@ -186,7 +214,7 @@ describe('Chaingun', () => {
             game.advanceTime!(300);
 
             fire(game, player, WeaponId.Chaingun);
-            totalTraceCalls += 2; // Should reset to 1 shot (+1 source check)
+            totalTraceCalls += 3; // Should reset to 1 shot (+2 source checks)
             ammoConsumed += 1;
             expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
             expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
