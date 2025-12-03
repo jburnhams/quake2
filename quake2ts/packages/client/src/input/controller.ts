@@ -195,6 +195,8 @@ export class InputController {
   private readonly gamepadLookScale: number;
   private readonly invertGamepadY: boolean;
 
+  private sequence = 0;
+
   constructor(options: InputControllerOptions = {}, bindings = new InputBindings()) {
     this.bindings = bindings;
     this.forwardSpeed = options.forwardSpeed ?? DEFAULT_FORWARD_SPEED;
@@ -372,6 +374,9 @@ export class InputController {
 
     this.anyPressed = false;
 
+    // Command sequence number (client-side generated)
+    this.sequence++;
+
     return {
       msec,
       buttons,
@@ -380,6 +385,9 @@ export class InputController {
       sidemove,
       upmove,
       serverFrame,
+      sequence: this.sequence,
+      lightlevel: 0,
+      impulse: 0
     } satisfies UserCommand;
   }
 

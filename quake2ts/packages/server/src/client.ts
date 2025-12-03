@@ -135,7 +135,10 @@ function createEmptyUserCommand(): UserCommand {
         angles: { x: 0, y: 0, z: 0 },
         forwardmove: 0,
         sidemove: 0,
-        upmove: 0
+        upmove: 0,
+        sequence: 0,
+        lightlevel: 0,
+        impulse: 0
     };
 }
 
