@@ -246,6 +246,10 @@ function buildEntitySnapshot(
     awareness: dummyAwareness,
     crossLevelFlags: 0,
     crossUnitFlags: 0,
+    level: {
+        next_auto_save: 0,
+        health_bar_entities: [null, null, null, null]
+    },
   };
 }
 

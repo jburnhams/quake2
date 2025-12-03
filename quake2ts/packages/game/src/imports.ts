@@ -43,4 +43,5 @@ export interface GameImports {
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
 
   configstring(index: number, value: string): void;
+  serverCommand(cmd: string): void;
 }

@@ -269,6 +269,10 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
     awareness: parseAwareness(snapshot.awareness),
     crossLevelFlags: ensureNumberOrDefault(snapshot.crossLevelFlags, 'entities.crossLevelFlags', 0),
     crossUnitFlags: ensureNumberOrDefault(snapshot.crossUnitFlags, 'entities.crossUnitFlags', 0),
+    level: {
+        next_auto_save: 0,
+        health_bar_entities: [null, null, null, null]
+    },
   };
 }
 
