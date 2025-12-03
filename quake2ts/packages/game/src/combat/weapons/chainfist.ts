@@ -9,14 +9,15 @@ import { WeaponState } from './state.js';
 import { PlayerInventory } from '../../inventory/playerInventory.js';
 import {
     ZERO_VEC3, angleVectors, addVec3, scaleVec3, ServerCommand, TempEntity, Vec3,
-    subtractVec3, lengthVec3, dotVec3, normalizeVec3
+    subtractVec3, lengthVec3, dotVec3, normalizeVec3, MASK_SHOT
 } from '@quake2ts/shared';
 import { T_Damage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { MulticastType } from '../../imports.js';
-import { applyKick, Weapon_Repeating } from './common.js';
-import { MASK_SHOT, Solid } from '../../physics/contents.js';
+import { applyKick } from './common.js';
+import { Weapon_Repeating } from './animation.js';
+import { Solid } from '../../entities/entity.js';
 import {
     FRAME_crattak1, FRAME_crattak9, FRAME_attack1, FRAME_attack8, ANIM_ATTACK
 } from '../../entities/player_anim.js';

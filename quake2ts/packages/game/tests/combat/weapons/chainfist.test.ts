@@ -10,23 +10,35 @@ import { GameExports } from '../../../src/index.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 
-// Mock T_Damage and applyKick
+// Mock T_Damage
 vi.mock('../../../src/combat/damage.js', () => ({
   T_Damage: vi.fn(),
 }));
+
+// Mock applyKick from common.js
 vi.mock('../../../src/combat/weapons/common.js', () => ({
   applyKick: vi.fn(),
+}));
+
+// Mock Weapon_Repeating from animation.js
+vi.mock('../../../src/combat/weapons/animation.js', () => ({
   Weapon_Repeating: vi.fn((ent, a, b, c, d, e, fire, sys) => {
-    // Basic mock implementation to trigger fire callback
-    // We simulate Weapon_Repeating behavior: if Firing, call fire, then increment.
+    // Mock behavior:
+    // If we want to simulate frame progression + callback:
     if (ent.client?.weaponstate === WeaponStateEnum.WEAPON_FIRING) {
+        // Increment frame (standard Weapon_Repeating behavior)
+        // Check loop (simplified)
+        ent.client.gun_frame++;
+
+        // Call fire callback
         fire(ent);
     }
   }),
 }));
 
 import { T_Damage } from '../../../src/combat/damage.js';
-import { applyKick, Weapon_Repeating } from '../../../src/combat/weapons/common.js';
+import { applyKick } from '../../../src/combat/weapons/common.js';
+import { Weapon_Repeating } from '../../../src/combat/weapons/animation.js';
 
 describe('Chainfist Weapon', () => {
   let entity: Entity;
@@ -119,24 +131,32 @@ describe('Chainfist Weapon', () => {
       });
 
       it('should apply frame skipping logic via fire callback', () => {
-           // We mock Weapon_Repeating to call the callback
-           // And we verify frame change
-           entity.client!.gun_frame = 12;
+           // Set gun_frame to 11.
+           // Mocked Weapon_Repeating increments to 12.
+           // Fire callback sees 12, sets to 14.
+           entity.client!.gun_frame = 11;
            entity.client!.buttons = 1;
 
            Weapon_ChainFist(entity, sys);
 
-           // The fire callback should have been called (mocked Weapon_Repeating calls it)
-           // And it should have updated gunframe from 12 to 14
            expect(entity.client!.gun_frame).toBe(14);
       });
 
       it('should trigger smoke effect probabilistically', () => {
-          // Smoke happens during IDLE (WeaponStateEnum.WEAPON_READY or similar) or firing loops if frames match?
-          // Code says: if ((gunframe === 42 || gunframe === 51) ...)
-          // Frame 42 is in IDLE range (FireLast 32, IdleLast 57).
-          // So we should be in WEAPON_READY usually.
-          entity.client!.weaponstate = WeaponStateEnum.WEAPON_READY;
+          // Smoke checks gun_frame AFTER Weapon_Repeating logic.
+          // We want to test when gun_frame becomes 42.
+          // We set start frame to 41. Mock increments to 42.
+          // Weapon_ChainFist logic checks 42.
+          entity.client!.weaponstate = WeaponStateEnum.WEAPON_READY; // Use READY so mock doesn't fire (and doesn't increment if logic differs? Wait)
+
+          // If WeaponState is READY, Weapon_Repeating usually calls Weapon_Generic.
+          // Our mock only handles FIRING.
+          // If we want smoke, we need to be in a state where smoke logic runs.
+          // Weapon_ChainFist runs smoke logic unconditionally after Weapon_Repeating.
+
+          // But our mock doesn't handle READY, so it does NOTHING.
+          // So gun_frame stays what we set.
+          // So we set 42.
           entity.client!.gun_frame = 42;
 
           // Mock Math.random to return low value for both checks
