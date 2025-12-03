@@ -1,12 +1,13 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~70% Complete (Parsing Infrastructure Only)**
+**~50% Complete (Parsing Infrastructure Improved, Basic UI Controls Added)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
-- ✅ Protocol 25, 34, and 2023 parsing implemented
+- ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
+- ✅ **Fixed**: Entity commands (22, 23) correctly mapped for legacy protocols
+- ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
 - ❌ No demo viewer application
-- ❌ Parser not integrated with renderer
 - ❌ Rerelease Protocol 2023 unverified with real demos
 
 **Goal**: Enable playback of Quake II `.dm2` demo files in browser with full rendering.
@@ -14,6 +15,131 @@
 ---
 
 ## Implementation Roadmap
+
+### Phase 0: Fix Critical Parser Bugs (URGENT - BLOCKS ALL OTHER WORK)
+
+**Estimated Time**: 1-2 days
+**Dependencies**: None
+**Priority**: CRITICAL - Must be fixed before any other demo work
+
+#### Problem Summary
+
+The `NetworkMessageParser.parseFrame()` method is incomplete and doesn't follow the Quake2 protocol specification. According to the original Quake2 source (`full/client/cl_ents.c:663-739`), the `svc_frame` command has this structure:
+
+```
+svc_frame (command byte 20)
+  ├─ serverframe (long)
+  ├─ deltaframe (long)
+  ├─ suppressCount (byte)
+  ├─ areabits length (byte)
+  ├─ areabits data (variable)
+  ├─ svc_playerinfo (byte 22)
+  │  └─ [player state data]
+  └─ svc_packetentities (byte 23)
+     └─ [entity data until entity number 0]
+```
+
+**Our current implementation:**
+- ✅ Reads frame header correctly
+- ✅ Reads areabits correctly
+- ✅ Reads and validates `svc_playerinfo` command byte
+- ✅ Parses player state correctly
+- ✅ **FIXED**: Reads `svc_packetentities` command byte inside `parseFrame`
+- ✅ **FIXED**: Parses entity data inside the frame and attaches to `FrameData`
+- ✅ **FIXED**: Correctly translates legacy command bytes 22 and 23
+
+**Result**: Real demo files show hundreds of "unknown command" errors because entity data bytes are being interpreted as command bytes.
+
+#### Task 0.1: Fix svc_frame Parsing
+
+**File**: `packages/engine/src/demo/parser.ts:969-1013`
+**Reference**: `full/client/cl_ents.c:663-739`
+
+- [x] **0.1.1** Update `parseFrame()` to read `svc_packetentities` command after player state
+  - After calling `parsePlayerState()` at line 986
+  - Read next command byte: `cmd = this.stream.readByte()`
+  - Translate command: `cmd = this.translateCommand(cmd)`
+  - Verify it's `svc_packetentities` (not `svc_deltapacketentities` for vanilla Q2)
+  - If not `svc_packetentities`, throw error with context
+
+- [x] **0.1.2** Parse packet entities inside `parseFrame()`
+  - Call `const entities = this.collectPacketEntities()`
+  - Store entities in frame data passed to handler
+  - Update `FrameData` interface to include entities properly
+
+- [x] **0.1.3** Remove standalone `svc_packetentities` handling from main loop
+  - In `parseMessage()` switch statement (lines 347-351)
+  - *Correction*: Retained standalone handling as fallback/legacy support. Some demos or fallback scenarios (e.g. failure in parseFrame) rely on the main loop picking up `packetentities`. Removing it entirely caused regression in `real_demo.test.ts`.
+  - Added comment: `// Should only happen if not inside a frame (unlikely for vanilla)`
+
+- [x] **0.1.4** Update `translateCommand()` for legacy protocols
+  - Lines 788-791 in cl_parse.c show these are "out of place" errors
+  - Ensure commands 22, 23 are recognized but only valid inside frames
+  - Add comment explaining the protocol structure
+
+**Test Case**: Update `packages/engine/tests/demo/real_demo.test.ts`
+- Run against real demo1.dm2 from pak.pak
+- Verify NO "unknown command" errors in console
+- Verify NO parsing errors
+- Verify frame count matches expected
+- Verify entity count per frame > 0
+
+#### Task 0.2: Fix Protocol 26 Compatibility
+
+**File**: `packages/engine/src/demo/parser.ts:969-1013`
+**Reference**: `full/client/cl_ents.c:679-681`
+
+The original code has this check:
+```c
+// BIG HACK to let old demos continue to work
+if (cls.serverProtocol != 26)
+    cl.surpressCount = MSG_ReadByte (&net_message);
+```
+
+- [ ] **0.2.1** Add protocol version check in `parseFrame()`
+  - Lines 679-681 show suppressCount is NOT read for protocol 26
+  - Add check: `if (this.protocolVersion !== 26)`
+  - Only read suppressCount if protocol is not 26
+  - Document why protocol 26 is special (old demo compatibility)
+
+**Test Case**: Find or create protocol 26 demo file
+- Test parsing with and without suppressCount
+- Verify protocol 26 demos parse correctly
+- Verify protocol 25 and 34 demos still work
+
+#### Task 0.3: Verify Protocol 25 vs 34 Differences
+
+**File**: `packages/engine/src/demo/parser.ts`
+**Reference**: Compare `full/` and `rerelease/` source
+
+- [ ] **0.3.1** Research protocol differences
+  - Compare vanilla Q2 v3.00 (protocol 25) vs v3.20 (protocol 34)
+  - Check if entity format differs
+  - Check if command set differs
+  - Document findings in code comments
+
+- [ ] **0.3.2** Update `translateCommand()` if needed
+  - Ensure protocol 25 and 34 handle commands correctly
+  - Add any protocol-specific logic
+  - Test with both protocol versions
+
+**Test Case**:
+- Test real_demo.test.ts confirms protocol 25 (demo1.dm2 from pak.pak)
+- Find protocol 34 demo and test
+- Compare entity counts and frame data
+
+---
+
+**Phase 0 Success Criteria:**
+- ✅ Real demo1.dm2 (Protocol 25) parses with ZERO errors
+- ✅ No "unknown command" warnings in console
+- ✅ All frames have entity data
+- ✅ Test suite passes
+- ✅ Code matches original Quake2 protocol structure
+
+**BLOCKER**: Phases 1-5 cannot proceed until Phase 0 is complete. The current parser is fundamentally broken and will fail on all real demo files.
+
+---
 
 ### Phase 1: Client-Side Demo Playback Integration (No External Dependencies)
 
@@ -57,24 +183,25 @@
 **File**: `packages/client/src/demo/handler.ts`
 **Reference**: `full/client/cl_ents.c` (CL_AddPacketEntities)
 
-- [ ] **1.2.1** Add entity storage to `ClientNetworkHandler`
+- [x] **1.2.1** Add entity storage to `ClientNetworkHandler`
   - Add `private demoEntities: Map<number, EntityState>`
   - Add `private currentServerFrame: number`
   - Update `onFrame` to store entity states from frame data
 
-- [ ] **1.2.2** Implement `getEntitiesForRendering(): EntityState[]` method
+- [x] **1.2.2** Implement `getEntitiesForRendering(): EntityState[]` method
   - Return array of current entity states
   - Filter out removed entities
   - Sort by entity number for consistent rendering
+  - Note: Implemented as `getRenderableEntities` returning `RenderableEntity[]` using interpolation.
 
-- [ ] **1.2.3** Implement `getDemoCamera(): { origin: Vec3, angles: Vec3, fov: number }` method
+- [x] **1.2.3** Implement `getDemoCamera(): { origin: Vec3, angles: Vec3, fov: number }` method
   - Extract camera from player state in last frame
   - Return camera position, angles, FOV for renderer
 
-- [ ] **1.2.4** Add frame interpolation support
-  - Store last 2 frames in ring buffer
-  - Add `private frameBuffer: FrameData[]`
-  - Implement `interpolateFrame(t: number): FrameData` using linear interpolation
+- [x] **1.2.4** Add frame interpolation support
+  - Store last 2 frames in ring buffer (`latestFrame`, `previousFrame`)
+  - Add `previousEntities` map for entity interpolation
+  - Implement interpolation logic in `getRenderableEntities` and `getPredictionState`
 
 **Test Case**: Unit test in `packages/client/tests/demo/handler.test.ts`
 - Create synthetic frame with entities
@@ -89,7 +216,7 @@
 
 - [ ] **1.3.1** Modify `Sample()` method to use demo entities when in demo mode
   - Check `isDemoPlaying` flag
-  - If true, call `demoHandler.getEntitiesForRendering()` instead of game entities
+  - If true, call `demoHandler.getRenderableEntities()` instead of game entities
   - Call `demoHandler.getDemoCamera()` for camera position
 
 - [ ] **1.3.2** Update `buildRenderableEntities()` call in demo mode
@@ -115,27 +242,27 @@
 **File**: Create `packages/client/src/ui/demo-controls.ts`
 **Reference**: UI patterns from existing menus
 
-- [ ] **1.4.1** Create `DemoControls` class
+- [x] **1.4.1** Create `DemoControls` class
   - Add play/pause button state
   - Add current time / total time display
   - Add progress bar for seeking
   - Add speed selector (0.25x, 0.5x, 1x, 2x, 4x)
 
-- [ ] **1.4.2** Implement `render(ctx: CanvasRenderingContext2D): void` method
+- [x] **1.4.2** Implement `render(ctx: CanvasRenderingContext2D): void` method
   - Draw transparent overlay at bottom of screen
   - Draw play/pause button icon
   - Draw timeline with current position marker
   - Draw time text (MM:SS / MM:SS format)
   - Draw speed indicator
 
-- [ ] **1.4.3** Implement `handleInput(key: string, down: boolean): boolean` method
+- [x] **1.4.3** Implement `handleInput(key: string, down: boolean): boolean` method
   - Space: toggle play/pause
-  - Left/Right arrows: seek backward/forward 5 seconds
-  - [ and ]: decrease/increase playback speed
+  - [x] Left/Right arrows: seek backward/forward 5 seconds (Implemented as frame stepping for now)
+  - [x] [ and ]: decrease/increase playback speed
   - Escape: stop demo and return to menu
   - Return true if input consumed
 
-- [ ] **1.4.4** Wire controls to DemoPlaybackController
+- [x] **1.4.4** Wire controls to DemoPlaybackController
   - Call `demoPlayback.play()` on play button
   - Call `demoPlayback.pause()` on pause button
   - Call `demoPlayback.setSpeed(speed)` on speed change
@@ -158,7 +285,7 @@
   - Parse frames sequentially until target frame reached
   - Update current position state
 
-- [ ] **1.5.2** Add speed control
+- [x] **1.5.2** Add speed control
   - Modify `playbackSpeed` property (already exists)
   - Ensure `update()` respects speed multiplier
   - Clamp speed to reasonable range (0.1x to 16x)
@@ -169,8 +296,8 @@
   - Add `getDuration(): number` method (frames * frame time)
 
 - [ ] **1.5.4** Add frame-by-frame stepping
-  - Add `stepForward(): void` method (advance 1 frame)
-  - Add `stepBackward(): void` method (seek to current - 1)
+  - [x] Add `stepForward(): void` method (advance 1 frame)
+  - [ ] Add `stepBackward(): void` method (seek to current - 1)
 
 **Test Case**: Unit test in `packages/engine/tests/demo/playback.test.ts`
 - Create mock DemoReader with known frame count

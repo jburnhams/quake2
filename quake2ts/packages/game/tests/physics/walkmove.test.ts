@@ -36,28 +36,11 @@ describe('M_walkmove', () => {
   });
 
   it('should return false if checkBottom fails (step off ledge)', () => {
-    // Mock trace to not hit anything when checking bottom
-    traceMock.mockReturnValue({ fraction: 1.0 });
-    // And point contents empty
-    pointContentsMock.mockReturnValue(0);
+    // 1. Move trace: succeeds
+    traceMock.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 100 } });
 
-    // We need to make sure the initial move trace is successful so we get to checkBottom
-    traceMock.mockImplementationOnce(() => ({
-        fraction: 1.0,
-        allsolid: false,
-        startsolid: false
-    }));
-
-    // But checkBottom traces fail (this is tricky to mock with single mock function)
-    // Actually M_CheckBottom calls trace multiple times.
-    // Let's assume M_walkmove calls CheckBottom.
-
-    // Simplest way: Make M_CheckBottom logic fail inside M_walkmove flow
-
-    // First trace: move itself. Succeeds.
-    traceMock.mockReturnValueOnce({ fraction: 1.0 });
-
-    // Subsequent traces: check bottom. Fail (return fraction 1.0 meaning no hit = void)
+    // 2. M_CheckBottom traces: fail (no ground found)
+    // It does two traces. Both return fraction 1.0 (no hit)
     traceMock.mockReturnValue({ fraction: 1.0 });
     pointContentsMock.mockReturnValue(0);
 
@@ -66,10 +49,10 @@ describe('M_walkmove', () => {
   });
 
   it('should return true and update origin if move is valid', () => {
-     // First trace: move itself. Succeeds.
-    traceMock.mockReturnValueOnce({ fraction: 1.0 });
+    // 1. Move trace: succeeds
+    traceMock.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 100 } });
 
-    // Subsequent traces: check bottom. Succeed (return fraction < 1.0 meaning hit ground)
+    // 2. M_CheckBottom traces: succeed (hit ground)
     traceMock.mockReturnValue({ fraction: 0.5 });
     pointContentsMock.mockReturnValue(0);
 
@@ -79,9 +62,15 @@ describe('M_walkmove', () => {
     expect(entity.origin.x).toBeGreaterThan(0);
   });
 
-  it('should return false if move hits a wall', () => {
-       // First trace: move itself. Fails (fraction < 1.0).
-    traceMock.mockReturnValueOnce({ fraction: 0.5 });
+  it('should return false if move hits a wall (and stepping fails)', () => {
+    // 1. Forward trace: Hit wall
+    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+
+    // 2. Step Up trace: Clear
+    traceMock.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+
+    // 3. Step Forward (High) trace: Hit wall again (Too tall to step)
+    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
 
     const result = M_walkmove(entity, 0, 10, context);
 

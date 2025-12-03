@@ -1,5 +1,5 @@
 
-import { EntityState } from '@quake2ts/shared';
+import { EntityState, RenderFx } from '@quake2ts/shared';
 import { RenderableEntity, Renderer } from '@quake2ts/engine';
 import { mat4 } from 'gl-matrix';
 import { ClientConfigStrings } from './configStrings.js';
@@ -14,9 +14,27 @@ function lerpAngle(a: number, b: number, t: number): number {
     return lerp(a, b, t);
 }
 
+// Define a type that covers both Shared (camelCase) and Engine (lowercase) EntityState
+// to avoid strict type mismatches when called from Demo Handler (Engine types).
+type AnyEntityState = {
+    number: number;
+    origin: { x: number, y: number, z: number };
+    angles: { x: number, y: number, z: number };
+    frame: number;
+    alpha?: number;
+    scale?: number;
+    // Shared uses camelCase
+    modelIndex?: number;
+    skinNum?: number;
+    renderfx?: number;
+    // Engine uses lowercase
+    modelindex?: number;
+    skinnum?: number;
+};
+
 export function buildRenderableEntities(
-    latestEntities: EntityState[],
-    previousEntities: EntityState[],
+    latestEntities: AnyEntityState[],
+    previousEntities: AnyEntityState[] | Map<number, AnyEntityState>,
     alpha: number,
     configStrings: ClientConfigStrings,
     imports: ClientImports
@@ -25,12 +43,23 @@ export function buildRenderableEntities(
     const assets = imports.engine.assets;
     if (!assets) return renderables;
 
-    const prevMap = new Map(previousEntities.map(e => [e.number, e]));
+    let prevMap: Map<number, AnyEntityState>;
+    if (previousEntities instanceof Map) {
+        prevMap = previousEntities;
+    } else {
+        prevMap = new Map(previousEntities.map(e => [e.number, e]));
+    }
 
     for (const ent of latestEntities) {
         const prev = prevMap.get(ent.number) ?? ent;
 
-        const modelName = configStrings.getModelName(ent.modelIndex);
+        // Normalize property access
+        const modelIndex = ent.modelIndex ?? ent.modelindex;
+        const skinNum = ent.skinNum ?? ent.skinnum;
+
+        if (modelIndex === undefined) continue;
+
+        const modelName = configStrings.getModelName(modelIndex);
         if (!modelName) continue;
 
         const model = assets.getMd2Model(modelName) || assets.getMd3Model(modelName);
@@ -54,17 +83,11 @@ export function buildRenderableEntities(
         const prevFrame = prev.frame;
 
         // Scale interpolation
-        // Default to 1.0 if not set (or 0 means 1 in legacy, but new field implies explicit)
-        // If scale is 0 in both, use 1. If 0 in one, interpolate from 0?
-        // Usually 0 means default 1.
         const scaleA: number = (prev.scale !== undefined) ? prev.scale : 1.0;
         const scaleB: number = (ent.scale !== undefined) ? ent.scale : 1.0;
         const scale = lerp(scaleA, scaleB, alpha);
 
         // Alpha interpolation
-        // Alpha is typically 0-255. 0 means opaque/default usually?
-        // Or 255 opaque. Rerelease behavior: 0 might be "default" (255).
-        // If undefined/0, assume 255 (opaque).
         const getAlpha = (val: number | undefined) => (val === undefined || val === 0) ? 255 : val;
         const alphaA = getAlpha(prev.alpha);
         const alphaB = getAlpha(ent.alpha);
@@ -78,6 +101,26 @@ export function buildRenderableEntities(
         mat4.rotateX(mat, mat, angles.x * Math.PI / 180);
         mat4.scale(mat, mat, [scale, scale, scale]);
 
+        const skinName = (skinNum !== undefined && skinNum > 0) ? configStrings.getImageName(skinNum) : undefined;
+
+        // Handle RenderFx Tints
+        let tint: [number, number, number, number] | undefined;
+        const renderfx = ent.renderfx ?? 0;
+
+        // Check for Freeze effect (ShellGreen | ShellBlue) explicitly first
+        if ((renderfx & (RenderFx.ShellGreen | RenderFx.ShellBlue)) === (RenderFx.ShellGreen | RenderFx.ShellBlue)) {
+            tint = [0, 1, 1, 1]; // Cyan (Freeze)
+        } else if (renderfx & RenderFx.ShellRed) {
+            tint = [1, 0, 0, 1]; // Red Shell
+        } else if (renderfx & RenderFx.ShellGreen) {
+            tint = [0, 1, 0, 1]; // Green Shell
+        } else if (renderfx & RenderFx.ShellBlue) {
+            tint = [0, 0, 1, 1]; // Blue Shell
+        } else if (renderfx & RenderFx.ShellDouble) {
+            tint = [1, 1, 0, 1]; // Double Damage
+        } else if (renderfx & RenderFx.ShellHalfDam) {
+            tint = [0.5, 0.5, 0.5, 1]; // Half Damage
+        }
 
         if (model.header.magic === 844121161) { // IDP2 (MD2)
              renderables.push({
@@ -89,8 +132,9 @@ export function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
-                skin: ent.skinNum > 0 ? configStrings.getImageName(ent.skinNum) : undefined,
-                alpha: normalizedAlpha
+                skin: skinName,
+                alpha: normalizedAlpha,
+                tint: tint as readonly [number, number, number, number] | undefined
              });
         } else if (model.header.magic === 860898377) { // IDP3 (MD3)
              renderables.push({
@@ -102,7 +146,8 @@ export function buildRenderableEntities(
                     lerp: alpha
                 },
                 transform: mat as Float32Array,
-                alpha: normalizedAlpha
+                alpha: normalizedAlpha,
+                tint: tint as readonly [number, number, number, number] | undefined
                 // Lighting? Skins?
              });
         }

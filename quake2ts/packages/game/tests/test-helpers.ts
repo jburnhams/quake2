@@ -6,6 +6,7 @@ import type { EntitySystem } from '../src/entities/system.js';
 export function createTestContext(): SpawnContext {
   const engine = {
     sound: vi.fn(),
+    soundIndex: vi.fn(() => 0),
     modelIndex: vi.fn(() => 0),
     centerprintf: vi.fn(),
   };
@@ -36,6 +37,7 @@ export function createTestContext(): SpawnContext {
     sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
     }),
+    soundIndex: vi.fn((sound: string) => engine.soundIndex(sound)),
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
     }),
     findByTargetName: vi.fn(() => []),

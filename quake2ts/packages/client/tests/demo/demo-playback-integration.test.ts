@@ -11,6 +11,9 @@ const mockEngineImports: EngineImports = {
         renderFrame: vi.fn(),
         begin2D: vi.fn(),
         end2D: vi.fn(),
+        drawfillRect: vi.fn(),
+        drawString: vi.fn(),
+        drawCenterString: vi.fn(),
         stats: undefined
     },
     audio: {
@@ -34,6 +37,7 @@ const mockDemoPlayback = {
     play: vi.fn(),
     pause: vi.fn(),
     setSpeed: vi.fn(),
+    getSpeed: vi.fn().mockReturnValue(1.0),
     getCurrentTime: vi.fn().mockReturnValue(0)
 };
 

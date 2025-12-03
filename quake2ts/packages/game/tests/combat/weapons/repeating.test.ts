@@ -45,15 +45,15 @@ describe('Weapon_Repeating', () => {
     // Setup: Firing state, button held
     entity.client!.weaponstate = WeaponStateEnum.WEAPON_FIRING;
     entity.client!.buttons = 1; // BUTTON_ATTACK
-    entity.client!.gun_frame = 9; // Set to fire_frame - 1 so it increments to fire_frame
+    entity.client!.gun_frame = 9; // Set to ACTIVATE_LAST (fire_frame - 1) so it increments to fire_frame
 
-    // Weapon_Repeating(ent, fire_frame, fire_last, idle_last, pause_frames, noop_frames, fire)
-    const fire_frame = 10;
+    // Weapon_Repeating(ent, ACTIVATE_LAST, fire_last, idle_last, deactivate_last, pause_frames, fire, sys)
+    const activate_last = 9;
     const fire_last = 15;
     const idle_last = 20;
 
     // First call: Starts at 9, increments to 10 (fire_frame), calls fire
-    Weapon_Repeating(entity, fire_frame, fire_last, idle_last, 0, 0, fireMock, sys);
+    Weapon_Repeating(entity, activate_last, fire_last, idle_last, 0, [], fireMock, sys);
 
     // Should call fire
     expect(fireMock).toHaveBeenCalledWith(entity);
@@ -66,12 +66,12 @@ describe('Weapon_Repeating', () => {
     entity.client!.buttons = 1;
     entity.client!.gun_frame = 15; // fire_last
 
-    const fire_frame = 10;
+    const activate_last = 9;
     const fire_last = 15;
     const idle_last = 20;
 
-    // Should reset to fire_frame
-    Weapon_Repeating(entity, fire_frame, fire_last, idle_last, 0, 0, fireMock, sys);
+    // Should reset to fire_frame (activate_last + 1 = 10)
+    Weapon_Repeating(entity, activate_last, fire_last, idle_last, 0, [], fireMock, sys);
 
     expect(entity.client!.gun_frame).toBe(10);
     expect(fireMock).toHaveBeenCalledWith(entity); // Because it reset to 10

@@ -68,6 +68,27 @@ export function createCGameImport(imports: ClientImports, state: ClientStateProv
                 flags,
             });
         },
+        Cvar_Get: (name: string, value: string, flags: number) => {
+            if (!imports.host || !imports.host.cvars) {
+                // Return dummy if no host
+                return { value: parseInt(value) || 0 };
+            }
+             // Check if existing
+            let existing = imports.host.cvars.get(name);
+            if (!existing) {
+                 // Register new cvar
+                existing = imports.host.cvars.register({
+                    name,
+                    defaultValue: value,
+                    flags,
+                });
+            }
+
+            // Return proxy object
+            return {
+                get value() { return existing!.number; }
+            };
+        },
         cvar_set: (name: string, value: string) => {
             imports.host?.cvars?.setValue(name, value);
         },

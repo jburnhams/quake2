@@ -1,4 +1,4 @@
-import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState } from '@quake2ts/shared';
+import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState, NetChan } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 
 export enum ClientState {
@@ -17,12 +17,14 @@ export interface ClientFrame {
     firstEntity: number; // into the circular sv_packet_entities[]
     sentTime: number;    // for ping calculations
     entities: EntityState[];
+    packetCRC: number;   // CRC of the packet sending this frame
 }
 
 export interface Client {
     index: number; // Client index (0 to maxClients - 1)
     state: ClientState;
     net: NetDriver;
+    netchan: NetChan; // Network channel for reliable communication
     userInfo: string;
 
     lastFrame: number; // for delta compression
@@ -58,6 +60,11 @@ export interface Client {
 
     messageQueue: Uint8Array[]; // Queue for incoming packets
     lastPacketEntities: number[]; // List of entity numbers sent in the last packet
+
+    // Rate limiting
+    commandQueue: UserCommand[];
+    lastCommandTime: number;
+    commandCount: number;
 }
 
 export function createClient(index: number, net: NetDriver): Client {
@@ -71,14 +78,20 @@ export function createClient(index: number, net: NetDriver): Client {
             numEntities: 0,
             firstEntity: 0,
             sentTime: 0,
-            entities: []
+            entities: [],
+            packetCRC: 0
         });
     }
+
+    const netchan = new NetChan();
+    // Initialize qport - normally we would get this from userinfo or handshake
+    netchan.setup(Math.floor(Math.random() * 65536));
 
     return {
         index,
         state: ClientState.Connected,
         net,
+        netchan,
         userInfo: '',
 
         lastFrame: 0,
@@ -107,7 +120,11 @@ export function createClient(index: number, net: NetDriver): Client {
         challenge: 0,
 
         messageQueue: [],
-        lastPacketEntities: []
+        lastPacketEntities: [],
+
+        commandQueue: [],
+        lastCommandTime: 0,
+        commandCount: 0
     };
 }
 
@@ -118,7 +135,10 @@ function createEmptyUserCommand(): UserCommand {
         angles: { x: 0, y: 0, z: 0 },
         forwardmove: 0,
         sidemove: 0,
-        upmove: 0
+        upmove: 0,
+        sequence: 0,
+        lightlevel: 0,
+        impulse: 0
     };
 }
 

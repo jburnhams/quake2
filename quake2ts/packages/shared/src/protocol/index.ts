@@ -11,3 +11,4 @@ export * from './layout.js';
 export * from './stats.js';
 export * from './writeUserCmd.js';
 export * from './renderFx.js';
+export * from './crc.js';

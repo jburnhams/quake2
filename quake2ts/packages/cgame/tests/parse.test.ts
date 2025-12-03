@@ -24,6 +24,7 @@ describe('CGame Parsing', () => {
             TagFree: vi.fn(),
             FreeTags: vi.fn(),
             cvar: vi.fn(),
+            Cvar_Get: vi.fn().mockReturnValue({ value: 0 }),
             cvar_set: vi.fn(),
             cvar_forceset: vi.fn(),
             CL_FrameValid: vi.fn().mockReturnValue(true),

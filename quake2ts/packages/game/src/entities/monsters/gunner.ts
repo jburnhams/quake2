@@ -20,7 +20,7 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { monster_fire_bullet } from './attack.js';
 import { createGrenade } from '../projectiles.js';
-import { throwGibs } from '../gibs.js';
+import { GIB_METALLIC, throwGibs } from '../gibs.js';
 import type { EntitySystem } from '../system.js';
 import { AIFlags } from '../../ai/constants.js';
 import { visible } from '../../ai/perception.js';
@@ -529,7 +529,7 @@ function SP_monster_gunner(self: Entity, context: SpawnContext): void {
 
         if (self.health < -40) {
             context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-            throwGibs(context.entities, self.origin, damage);
+            throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
             context.entities.free(self);
             return;
         }

@@ -3,7 +3,7 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8 } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
@@ -180,7 +180,8 @@ export class DedicatedServer implements GameEngine {
             },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
             unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args),
-            configstring: (index, value) => this.SV_SetConfigString(index, value)
+            configstring: (index, value) => this.SV_SetConfigString(index, value),
+            serverCommand: (cmd) => { console.log(`Server command: ${cmd}`); }
         };
 
         this.game = createGame(imports, this, {
@@ -291,9 +292,22 @@ export class DedicatedServer implements GameEngine {
         }
     }
 
-    private handleMove(client: Client, cmd: UserCommand) {
+    private handleMove(client: Client, cmd: UserCommand, checksum: number, lastFrame: number) {
+        // Verify Checksum
+        if (lastFrame > 0 && lastFrame <= client.lastFrame && lastFrame > client.lastFrame - UPDATE_BACKUP) {
+             const frameIdx = lastFrame % UPDATE_BACKUP;
+             const frame = client.frames[frameIdx];
+
+             // Verify
+             if (frame.packetCRC !== checksum) {
+                 console.warn(`Client ${client.index} checksum mismatch for frame ${lastFrame}: expected ${frame.packetCRC}, got ${checksum}`);
+                 // Q2 behavior: usually ignore or drop. We log for now.
+             }
+        }
+
         client.lastCmd = cmd;
         client.lastMessage = this.sv.frame;
+        client.commandCount++;
     }
 
     private handleUserInfo(client: Client, info: string) {
@@ -402,16 +416,23 @@ export class DedicatedServer implements GameEngine {
         this.sv.configStrings[index] = value;
 
         // Broadcast to all active clients
-        // TODO: Handle reliable messaging properly. For now, we send it immediately.
-        // In a real implementation, this should go into a reliable message buffer.
-
-        const writer = new BinaryWriter();
-        this.SV_WriteConfigString(writer, index, value);
-        const data = writer.getData();
-
         for (const client of this.svs.clients) {
             if (client && client.state >= ClientState.Connected) {
-                client.net.send(data);
+                // Config strings are always reliable
+                if (client.netchan) {
+                    try {
+                        client.netchan.writeReliableByte(ServerCommand.configstring);
+                        client.netchan.writeReliableShort(index);
+                        client.netchan.writeReliableString(value);
+
+                        // Force transmit immediately for config strings
+                        const packet = client.netchan.transmit();
+                        client.net.send(packet);
+                    } catch (e) {
+                        console.warn(`Client ${client.index} reliable buffer overflow`);
+                        this.dropClient(client);
+                    }
+                }
             }
         }
     }
@@ -427,12 +448,24 @@ export class DedicatedServer implements GameEngine {
             if (!client || client.state === ClientState.Free) continue;
 
             while (client.messageQueue.length > 0) {
-                const data = client.messageQueue.shift();
-                if (!data) continue;
+                const rawData = client.messageQueue.shift();
+                if (!rawData) continue;
+
+                // Process through NetChan
+                const data = client.netchan.process(rawData);
+                if (!data) {
+                    // Duplicate or out of order, or invalid qport
+                    continue;
+                }
+
+                if (data.length === 0) {
+                    // Just an ack or keepalive
+                    continue;
+                }
 
                 const reader = new BinaryStream(data.buffer);
                 const parser = new ClientMessageParser(reader, {
-                    onMove: (checksum, lastFrame, cmd) => this.handleMove(client, cmd),
+                    onMove: (checksum, lastFrame, cmd) => this.handleMove(client, cmd, checksum, lastFrame),
                     onUserInfo: (info) => this.handleUserInfo(client, info),
                     onStringCmd: (cmd) => this.handleStringCmd(client, cmd),
                     onNop: () => {},
@@ -478,7 +511,19 @@ export class DedicatedServer implements GameEngine {
             }
 
             if (client && client.state === ClientState.Active && client.edict) {
-                // TODO: Process command queue, apply rate limiting
+                // Rate limiting
+                const now = Date.now();
+                if (now - client.lastCommandTime >= 1000) {
+                    client.lastCommandTime = now;
+                    client.commandCount = 0;
+                }
+
+                if (client.commandCount > 200) {
+                     console.warn(`Client ${client.index} kicked for command flooding`);
+                     this.dropClient(client);
+                     continue;
+                }
+
                 this.game.clientThink(client.edict, client.lastCmd);
             }
         }
@@ -620,7 +665,13 @@ export class DedicatedServer implements GameEngine {
         // Write 0 to signal end of entities
         writer.writeShort(0);
 
-        client.net.send(writer.getData());
+        // Calculate CRC of the unreliable payload (writer data)
+        const frameData = writer.getData();
+        currentFrame.packetCRC = crc8(frameData);
+
+        // Send via NetChan
+        const packet = client.netchan.transmit(frameData);
+        client.net.send(packet);
 
         // Update client history
         client.lastFrame = this.sv.frame;

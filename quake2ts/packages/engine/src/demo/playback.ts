@@ -57,6 +57,15 @@ export class DemoPlaybackController {
       this.frameDuration = ms;
   }
 
+  public setSpeed(speed: number) {
+      // Clamp speed between 0.1x and 16x as per requirements
+      this.playbackSpeed = Math.max(0.1, Math.min(speed, 16.0));
+  }
+
+  public getSpeed(): number {
+      return this.playbackSpeed;
+  }
+
   public update(dt: number) {
     if (this.state !== PlaybackState.Playing || !this.reader) {
       return;
@@ -65,26 +74,46 @@ export class DemoPlaybackController {
     this.accumulatedTime += dt * 1000 * this.playbackSpeed; // Convert to ms
 
     while (this.accumulatedTime >= this.frameDuration) {
-        if (!this.reader.hasMore()) {
-            this.state = PlaybackState.Finished;
+        const hasMore = this.processNextFrame();
+        if (!hasMore) {
             return;
         }
-
-        const block = this.reader.readNextBlock();
-        if (!block) {
-            this.state = PlaybackState.Finished;
-            return;
-        }
-
-        const parser = new NetworkMessageParser(block.data, this.handler);
-        // Persist protocol version across frames
-        parser.setProtocolVersion(this.currentProtocolVersion);
-        parser.parseMessage();
-        // Update protocol version in case it changed (e.g. serverdata)
-        this.currentProtocolVersion = parser.getProtocolVersion();
-
         this.accumulatedTime -= this.frameDuration;
     }
+  }
+
+  public stepForward() {
+    if (!this.reader) return;
+
+    // Process one frame immediately
+    this.processNextFrame();
+  }
+
+  public stepBackward() {
+      // Not implemented yet - requires seeking or history
+      console.warn("stepBackward not implemented");
+  }
+
+  private processNextFrame(): boolean {
+      if (!this.reader || !this.reader.hasMore()) {
+          this.state = PlaybackState.Finished;
+          return false;
+      }
+
+      const block = this.reader.readNextBlock();
+      if (!block) {
+          this.state = PlaybackState.Finished;
+          return false;
+      }
+
+      const parser = new NetworkMessageParser(block.data, this.handler);
+      // Persist protocol version across frames
+      parser.setProtocolVersion(this.currentProtocolVersion);
+      parser.parseMessage();
+      // Update protocol version in case it changed (e.g. serverdata)
+      this.currentProtocolVersion = parser.getProtocolVersion();
+
+      return true;
   }
 
   public getState(): PlaybackState {
@@ -92,11 +121,6 @@ export class DemoPlaybackController {
   }
 
   public getCurrentTime(): number {
-      // Return accumulated time within current frame?
-      // Or total playback time?
-      // For interpolation, we might need time relative to the current frame start.
-      // But typically renderers want 'clientTime'.
-      // For now, let's return accumulatedTime which represents how far we are into the current frame.
       return this.accumulatedTime;
   }
 }
