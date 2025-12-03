@@ -27,7 +27,7 @@
 **File**: Create `packages/shared/src/net/netchan.ts`
 **Reference**: `full/qcommon/net_chan.c` lines 1-100 (struct and init)
 
-- [ ] **1.1.1** Define `NetChan` interface and state
+- [x] **1.1.1** Define `NetChan` interface and state
   - Add `interface NetAddress { type: string, port: number }`
   - Add `qport: number` (client port for NAT traversal)
   - Add `incomingSequence: number` (last received seq)
@@ -41,13 +41,13 @@
   - Add `lastReceived: number` (timestamp for timeout detection)
   - Add `lastSent: number` (timestamp for keepalive)
 
-- [ ] **1.1.2** Create `NetChan` class constructor
+- [x] **1.1.2** Create `NetChan` class constructor
   - Initialize all sequence numbers to 0
   - Set qport from random or config
   - Initialize message buffers
   - Set timestamps to current time
 
-- [ ] **1.1.3** Add constants (from net_chan.c)
+- [x] **1.1.3** Add constants (from net_chan.c)
   - `MAX_MSGLEN = 1400` (MTU limit)
   - `FRAGMENT_SIZE = 1024`
   - `PACKET_HEADER = 10` (sequence + ack + qport)
