@@ -180,7 +180,8 @@ export class DedicatedServer implements GameEngine {
             },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
             unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args),
-            configstring: (index, value) => this.SV_SetConfigString(index, value)
+            configstring: (index, value) => this.SV_SetConfigString(index, value),
+            serverCommand: (cmd) => { console.log(`Server command: ${cmd}`); }
         };
 
         this.game = createGame(imports, this, {
