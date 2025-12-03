@@ -103,4 +103,25 @@ describe('P_ProjectSource', () => {
         expect(result.y).toBeCloseTo(92);
         expect(result.z).toBeCloseTo(130);
     });
+
+    it('should adjust origin based on viewheight (ducking)', () => {
+        // Standard viewheight is 22.
+        // Let's test a different viewheight, e.g., 0 (crouching usually reduces it, but let's just show it uses the property)
+        // Actually Quake 2 crouching viewheight is often lower.
+        // If we change viewheight to 10, the Z should be lower.
+
+        // Default mockPlayer has viewheight 22.
+        // Let's modify it.
+        mockPlayer.viewheight = 10;
+
+        (mockGame.trace as any).mockReturnValue({ fraction: 1.0 });
+
+        const offset: Vec3 = { x: 0, y: 0, z: 0 };
+        const { forward, right, up } = angleVectors({ x: 0, y: 0, z: 0 });
+
+        const result = P_ProjectSource(mockGame, mockPlayer, offset, forward, right, up);
+
+        // Expected EyePos: 100, 100, 100 + 10 = 110
+        expect(result.z).toBeCloseTo(110);
+    });
 });
