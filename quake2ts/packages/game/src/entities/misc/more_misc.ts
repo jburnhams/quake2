@@ -350,3 +350,19 @@ export function registerMiscPlayerMannequin(registry: SpawnRegistry) {
         context.entities.linkentity(entity);
     });
 }
+
+// ============================================================================
+// MISC MODEL
+// ============================================================================
+
+export function registerMiscModel(registry: SpawnRegistry) {
+    registry.register('misc_model', (entity: Entity, context: any) => {
+        if (!entity.model) {
+            context.warn(`${entity.classname} with no model`);
+            context.free(entity);
+            return;
+        }
+        entity.modelindex = context.entities.modelIndex(entity.model);
+        context.entities.linkentity(entity);
+    });
+}

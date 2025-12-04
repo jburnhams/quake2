@@ -7,7 +7,7 @@ import { T_Damage } from '../combat/damage.js';
 import { registerMiscViper, registerMiscViperBomb, registerMiscStroggShip } from './misc/flyers.js';
 import { registerMiscViperMissile } from './misc/viperMissile.js';
 import { registerMiscSatelliteDish, registerMiscBlackhole, registerMiscEasterTank, registerMiscEasterChick, registerMiscEasterChick2 } from './misc/decorative.js';
-import { registerFuncClock, registerTargetString, registerTargetCharacter, registerMiscFlare, registerMiscHologram, registerMiscFireball, registerInfoLandmark, registerInfoWorldText, registerMiscPlayerMannequin } from './misc/more_misc.js';
+import { registerFuncClock, registerTargetString, registerTargetCharacter, registerMiscFlare, registerMiscHologram, registerMiscFireball, registerInfoLandmark, registerInfoWorldText, registerMiscPlayerMannequin, registerMiscModel } from './misc/more_misc.js';
 
 const random = createRandomGenerator();
 
@@ -194,4 +194,5 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
   registerInfoLandmark(registry);
   registerInfoWorldText(registry);
   registerMiscPlayerMannequin(registry);
+  registerMiscModel(registry);
 }
