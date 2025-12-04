@@ -4,3 +4,4 @@ export * from './armor.js';
 export * from './powerups.js';
 export * from './keys.js';
 export * from './ammo.js';
+export * from './foodcube.js';
