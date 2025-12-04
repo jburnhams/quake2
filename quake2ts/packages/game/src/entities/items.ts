@@ -20,10 +20,15 @@ import { createPowerupPickupEntity } from './items/powerups.js';
 import { createKeyPickupEntity } from './items/keys.js';
 import { createAmmoPickupEntity } from './items/ammo.js';
 import { createPowerArmorPickupEntity } from './items/powerArmor.js';
+import { createFoodCubePickupEntity } from './items/foodcube.js';
 import { AmmoItemId } from '../inventory/ammo.js';
 import { Entity } from './entity.js';
 
 export function registerItemSpawns(game: GameExports, registry: SpawnRegistry) {
+    registry.register('item_foodcube', (entity: Entity) => {
+        Object.assign(entity, createFoodCubePickupEntity(game));
+    });
+
     for (const weaponItem of Object.values(WEAPON_ITEMS)) {
         registry.register(weaponItem.id, (entity: Entity) => {
             Object.assign(entity, createWeaponPickupEntity(game, weaponItem));
