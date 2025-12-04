@@ -14,6 +14,7 @@ export class DemoPlaybackController {
   private playbackSpeed: number = 1.0;
   private handler?: NetworkMessageHandler;
   private currentProtocolVersion: number = 0;
+  private currentFrameIndex: number = 0;
 
   // Timing
   private accumulatedTime: number = 0;
@@ -30,6 +31,7 @@ export class DemoPlaybackController {
     this.state = PlaybackState.Stopped;
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
+    this.currentFrameIndex = 0;
   }
 
   public play() {
@@ -51,6 +53,7 @@ export class DemoPlaybackController {
     }
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
+    this.currentFrameIndex = 0;
   }
 
   public setFrameDuration(ms: number) {
@@ -94,6 +97,28 @@ export class DemoPlaybackController {
       console.warn("stepBackward not implemented");
   }
 
+  /**
+   * Seeks to a specific frame number.
+   */
+  public seek(frameNumber: number) {
+      if (!this.reader) return;
+
+      const total = this.getTotalFrames();
+      if (frameNumber < 0) frameNumber = 0;
+      if (frameNumber >= total) frameNumber = total - 1;
+
+      if (this.reader.seekToMessage(frameNumber)) {
+          this.currentFrameIndex = frameNumber;
+          // Reset timing accumulator when seeking to avoid jumpy playback
+          this.accumulatedTime = 0;
+
+          // Re-process the current frame to update state
+          // Note: Ideally we should process from a known sync point (like serverdata)
+          // but for now we just jump. State might be glitched until next full update.
+          // TODO: Implement keyframe searching or state reconstruction.
+      }
+  }
+
   private processNextFrame(): boolean {
       if (!this.reader || !this.reader.hasMore()) {
           this.state = PlaybackState.Finished;
@@ -105,6 +130,8 @@ export class DemoPlaybackController {
           this.state = PlaybackState.Finished;
           return false;
       }
+
+      this.currentFrameIndex++;
 
       const parser = new NetworkMessageParser(block.data, this.handler);
       // Persist protocol version across frames
@@ -122,5 +149,20 @@ export class DemoPlaybackController {
 
   public getCurrentTime(): number {
       return this.accumulatedTime;
+  }
+
+  public getTotalFrames(): number {
+      return this.reader ? this.reader.getMessageCount() : 0;
+  }
+
+  public getCurrentFrame(): number {
+      return this.currentFrameIndex;
+  }
+
+  /**
+   * Returns estimated duration in seconds based on frame count and frame duration.
+   */
+  public getDuration(): number {
+      return (this.getTotalFrames() * this.frameDuration) / 1000;
   }
 }
