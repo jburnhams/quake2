@@ -1,0 +1,22 @@
+{
+  "name": "@quake2ts/e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests for Quake 2 TS",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0",
+    "vitest": "^1.0.0",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/engine": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
