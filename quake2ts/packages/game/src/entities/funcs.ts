@@ -1118,7 +1118,84 @@ const func_timer: SpawnFunction = (entity, context) => {
     entity.svflags |= ServerFlags.NoClient;
 };
 
+// ============================================================================
+// FUNC WALL
+// ============================================================================
+
+const SPAWNFLAG_WALL_TRIGGER_SPAWN = 1;
+const SPAWNFLAG_WALL_TOGGLE = 2;
+const SPAWNFLAG_WALL_START_ON = 4;
+const SPAWNFLAG_WALL_ANIMATED = 8;
+const SPAWNFLAG_WALL_ANIMATED_FAST = 16;
+
+const func_wall_use = (self: Entity, other: Entity | null, activator: Entity | null, context: EntitySystem) => {
+    if (self.solid === Solid.Not) {
+        self.solid = Solid.Bsp;
+        self.svflags &= ~ServerFlags.NoClient;
+        context.linkentity(self);
+        context.killBox(self);
+    } else {
+        self.solid = Solid.Not;
+        self.svflags |= ServerFlags.NoClient;
+        context.linkentity(self);
+    }
+
+    if (!(self.spawnflags & SPAWNFLAG_WALL_TOGGLE)) {
+        self.use = undefined;
+    }
+};
+
+export const func_wall: SpawnFunction = (entity, context) => {
+    entity.movetype = MoveType.Push;
+    // entity.model is set by spawn system
+
+    if (entity.spawnflags & SPAWNFLAG_WALL_ANIMATED) {
+        entity.effects |= EF_ANIM_ALL;
+    }
+    if (entity.spawnflags & SPAWNFLAG_WALL_ANIMATED_FAST) {
+        entity.effects |= EF_ANIM_ALLFAST;
+    }
+
+    // Just a wall
+    if (!(entity.spawnflags & (SPAWNFLAG_WALL_TRIGGER_SPAWN | SPAWNFLAG_WALL_TOGGLE | SPAWNFLAG_WALL_START_ON))) {
+        entity.solid = Solid.Bsp;
+        // linkentity done by system
+        return;
+    }
+
+    // It must be TRIGGER_SPAWN (if any of the above flags are set, it implies trigger behavior logic is needed,
+    // but C code specifically checks if not any of them -> solid. Else forces TRIGGER_SPAWN if not set?)
+    // C code:
+    // if (!(self->spawnflags & (SPAWNFLAG_WALL_TRIGGER_SPAWN | SPAWNFLAG_WALL_TOGGLE | SPAWNFLAG_WALL_START_ON))) ... return;
+    // if (!(self->spawnflags & SPAWNFLAG_WALL_TRIGGER_SPAWN)) self->spawnflags |= SPAWNFLAG_WALL_TRIGGER_SPAWN;
+
+    if (!(entity.spawnflags & SPAWNFLAG_WALL_TRIGGER_SPAWN)) {
+        entity.spawnflags |= SPAWNFLAG_WALL_TRIGGER_SPAWN;
+    }
+
+    // Warn if odd flags
+    if (entity.spawnflags & SPAWNFLAG_WALL_START_ON) {
+        if (!(entity.spawnflags & SPAWNFLAG_WALL_TOGGLE)) {
+            console.log("func_wall START_ON without TOGGLE");
+            entity.spawnflags |= SPAWNFLAG_WALL_TOGGLE;
+        }
+    }
+
+    entity.use = (self, other, activator) => func_wall_use(self, other, activator || null, context.entities);
+
+    if (entity.spawnflags & SPAWNFLAG_WALL_START_ON) {
+        entity.solid = Solid.Bsp;
+    } else {
+        entity.solid = Solid.Not;
+        entity.svflags |= ServerFlags.NoClient;
+    }
+
+    // linkentity done by system
+};
+
+
 export function registerFuncSpawns(registry: SpawnRegistry) {
+  registry.register('func_wall', func_wall);
   registry.register('func_door', func_door);
   registry.register('func_door_secret', func_door_secret);
   registry.register('func_button', func_button);
