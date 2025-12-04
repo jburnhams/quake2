@@ -616,7 +616,8 @@ export function createClient(imports: ClientImports): ClientExports {
         const width = renderer.width;
         const height = renderer.height;
 
-        if (lastRendered && lastRendered.client) {
+        // Only draw full player HUD if not in demo mode
+        if (!isDemoPlaying && lastRendered && lastRendered.client) {
              const playerState: PlayerState = {
                 origin: lastRendered.origin,
                 velocity: lastRendered.velocity,
