@@ -523,14 +523,14 @@
   - Load minimal test map
   - Return server instance for control
 
-- [ ] **4.1.3** Create test client helper
+- [x] **4.1.3** Create test client helper
   - File: `packages/e2e-tests/helpers/testClient.ts`
   - Create `launchBrowserClient(serverUrl: string): Promise<Page>`
   - Use Playwright to launch browser
   - Load client application
   - Return page handle for control
 
-- [ ] **4.1.4** Add cleanup utilities
+- [x] **4.1.4** Add cleanup utilities
   - `stopServer(server: DedicatedServer): Promise<void>`
   - `closeBrowser(page: Page): Promise<void>`
   - Ensure clean shutdown in all cases
