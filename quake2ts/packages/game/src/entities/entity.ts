@@ -1,10 +1,14 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { ZERO_VEC3 } from '@quake2ts/shared';
+import { ZERO_VEC3, RenderFx } from '@quake2ts/shared';
 import { PlayerClient, hasItem } from '../inventory/playerInventory.js';
 import type { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
 import type { RegularArmorState, PowerArmorState } from '../combat/armor.js';
 import { AmmoType } from '../inventory/ammo.js';
+import { EntityFlags, EntityEffects } from './enums.js';
+
+export { RenderFx }; // Export RenderFx from shared for convenience if imported from entity.js
+export { EntityFlags, EntityEffects }; // Re-export for compatibility
 
 export enum MoveType {
   None = 0,
@@ -47,12 +51,6 @@ export enum ServerFlags {
   Door = 1 << 9,
   NoCull = 1 << 10,
   Hull = 1 << 11,
-}
-
-export enum EntityFlags {
-  Fly = 1 << 0,
-  Swim = 1 << 1,
-  Flashlight = 1 << 22,
 }
 
 export enum DeadFlag {

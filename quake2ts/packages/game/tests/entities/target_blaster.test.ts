@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
+import { EntityEffects } from '../../src/entities/enums.js';
 import { createTestContext } from '../test-helpers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { createBlasterBolt } from '../../src/entities/projectiles.js';
@@ -69,7 +70,6 @@ describe('target_blaster', () => {
     // Check effect setting
     // We mocked createBlasterBolt to return an entity.
     const bolt = (createBlasterBolt as any).mock.results[0].value;
-    // EF_HYPERBLASTER = 0x00001000
-    expect(bolt.effects & 0x00001000).toBeTruthy();
+    expect(bolt.effects & EntityEffects.HyperBlaster).toBeTruthy();
   });
 });

@@ -1,4 +1,5 @@
 import { Entity, ServerFlags, Solid, MoveType, AiFlags } from './entity.js';
+import { EntityEffects } from './enums.js';
 import type { SpawnRegistry } from './spawn.js';
 import { TempEntity, ServerCommand, scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, RenderFx, ConfigStringIndex } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
@@ -108,17 +109,14 @@ function useTargetSpawner(self: Entity, other: Entity | null, activator: Entity 
 const SPAWNFLAG_BLASTER_NOTRAIL = 1;
 const SPAWNFLAG_BLASTER_NOEFFECTS = 2;
 
-const EF_BLASTER = 0x00000008; // Check q_shared.h if available, or use constant
-const EF_HYPERBLASTER = 0x00001000;
-
 function useTargetBlaster(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
     let effect = 0;
     if (self.spawnflags & SPAWNFLAG_BLASTER_NOEFFECTS) {
         effect = 0;
     } else if (self.spawnflags & SPAWNFLAG_BLASTER_NOTRAIL) {
-        effect = EF_HYPERBLASTER;
+        effect = EntityEffects.HyperBlaster; // EF_HYPERBLASTER
     } else {
-        effect = EF_BLASTER;
+        effect = EntityEffects.Blaster; // EF_BLASTER
     }
 
     const bolt = createBlasterBolt(context.entities, self, self.origin, self.movedir, self.dmg, self.speed, DamageMod.TARGET_BLASTER);
@@ -361,7 +359,7 @@ function target_laser_use(self: Entity, other: Entity | null, activator: Entity 
 function target_laser_start(self: Entity, context: any) {
     self.movetype = MoveType.None;
     self.solid = Solid.Not;
-    self.renderfx |= 0x00000008 | 0x00000040; // RF_BEAM | RF_TRANSLUCENT
+    self.renderfx |= RenderFx.Beam | RenderFx.Translucent;
 
     self.modelindex = 1;
 

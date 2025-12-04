@@ -1,7 +1,7 @@
-import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
+import { Entity, MoveType, Solid, ServerFlags, EntityEffects } from '../entity.js';
 import { EntitySystem } from '../system.js';
 import { SpawnRegistry } from '../spawn.js';
-import { createRandomGenerator } from '@quake2ts/shared';
+import { createRandomGenerator, RenderFx } from '@quake2ts/shared';
 
 const random = createRandomGenerator();
 
@@ -72,7 +72,7 @@ export function registerMiscBlackhole(registry: SpawnRegistry) {
         entity.mins = { x: -64, y: -64, z: 0 };
         entity.maxs = { x: 64, y: 64, z: 8 };
         entity.modelindex = context.entities.modelIndex("models/objects/black/tris.md2");
-        entity.renderfx |= 32; // RF_TRANSLUCENT
+        entity.renderfx |= RenderFx.Translucent; // RF_TRANSLUCENT
 
         entity.use = (self, other, activator) => misc_blackhole_use(self, other, activator ?? null, context.entities);
         entity.think = (self) => misc_blackhole_think(self, context.entities);
