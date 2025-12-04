@@ -4,6 +4,10 @@ import { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
 import { closestPointToBox, createRandomGenerator } from '@quake2ts/shared';
 import { T_Damage } from '../combat/damage.js';
+import { registerMiscViper, registerMiscViperBomb, registerMiscStroggShip } from './misc/flyers.js';
+import { registerMiscViperMissile } from './misc/viperMissile.js';
+import { registerMiscSatelliteDish, registerMiscBlackhole, registerMiscEasterTank, registerMiscEasterChick, registerMiscEasterChick2 } from './misc/decorative.js';
+import { registerFuncClock, registerTargetString, registerTargetCharacter, registerMiscFlare, registerMiscHologram, registerMiscFireball, registerInfoLandmark, registerInfoWorldText, registerMiscPlayerMannequin } from './misc/more_misc.js';
 
 const random = createRandomGenerator();
 
@@ -172,4 +176,22 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
   });
 
   registry.register('func_object', func_object);
+  registerMiscViper(registry);
+  registerMiscViperBomb(registry);
+  registerMiscViperMissile(registry);
+  registerMiscStroggShip(registry);
+  registerMiscSatelliteDish(registry);
+  registerMiscBlackhole(registry);
+  registerMiscEasterTank(registry);
+  registerMiscEasterChick(registry);
+  registerMiscEasterChick2(registry);
+  registerFuncClock(registry);
+  registerTargetString(registry);
+  registerTargetCharacter(registry);
+  registerMiscFlare(registry);
+  registerMiscHologram(registry);
+  registerMiscFireball(registry);
+  registerInfoLandmark(registry);
+  registerInfoWorldText(registry);
+  registerMiscPlayerMannequin(registry);
 }

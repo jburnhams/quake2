@@ -15,6 +15,7 @@ import { registerPathSpawns } from './paths.js';
 import { registerLightSpawns } from './lights.js';
 import { registerMonsterSpawns } from './monsters/index.js';
 import { registerWorldSpawn } from './worldspawn.js';
+import { registerTargetCamera } from './camera.js';
 import type { EntitySystem } from './system.js';
 
 export type ParsedEntity = Record<string, string>;
@@ -325,6 +326,7 @@ export function registerDefaultSpawns(registry: SpawnRegistry, game?: any): void
   registerPathSpawns(registry);
   registerLightSpawns(registry);
   registerMonsterSpawns(registry);
+  registerTargetCamera(registry);
 }
 
 export function createDefaultSpawnRegistry(game: any): SpawnRegistry {

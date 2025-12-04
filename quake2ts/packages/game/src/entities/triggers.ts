@@ -3,6 +3,8 @@ import { EntityFlags, MoveType, ServerFlags, Solid, type Entity, type TouchCallb
 import type { SpawnRegistry } from './spawn.js';
 import { isZeroVector, setMovedir } from './utils.js';
 import type { EntitySystem } from './system.js';
+import { registerTriggerFog } from './triggers/fog.js';
+import { registerTriggerFlashlight } from './triggers/flashlight.js';
 
 const FRAME_TIME_SECONDS = 1 / 40;
 const THINK_INTERVAL = 0.1;
@@ -668,4 +670,6 @@ export function registerTriggerSpawns(registry: SpawnRegistry): void {
   registerTriggerGravity(registry);
   registerTriggerElevator(registry);
   registerTriggerMonsterJump(registry);
+  registerTriggerFog(registry);
+  registerTriggerFlashlight(registry);
 }

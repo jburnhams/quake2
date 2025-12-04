@@ -16,6 +16,7 @@ export function createTestContext(): SpawnContext {
     free: vi.fn(),
     finalizeSpawn: vi.fn(),
     freeImmediate: vi.fn(),
+    setSpawnRegistry: vi.fn(),
     timeSeconds: 10,
     modelIndex: vi.fn(() => 0),
     scheduleThink: vi.fn((entity: Entity, time: number) => {
@@ -49,7 +50,25 @@ export function createTestContext(): SpawnContext {
         frandomRange: vi.fn(() => 0),
         irandom: vi.fn(() => 0),
         irandomRange: vi.fn(() => 0),
-    }
+    },
+    imports: {
+        configstring: vi.fn(),
+    },
+    level: {
+        intermission_angle: { x: 0, y: 0, z: 0 },
+        intermission_origin: { x: 0, y: 0, z: 0 },
+    },
+    targetNameIndex: new Map(),
+    forEachEntity: vi.fn((callback) => {
+        // Implement simple iteration over a few mocked entities if needed,
+        // or just rely on the fact that G_PickTarget iterates.
+        // For testing G_PickTarget, we can look at the targetNameIndex we just added
+        for (const bucket of (entities as any).targetNameIndex.values()) {
+            for (const ent of bucket) {
+                callback(ent);
+            }
+        }
+    }),
   } as unknown as EntitySystem;
 
   return {
