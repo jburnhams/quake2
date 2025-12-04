@@ -1,7 +1,7 @@
 # Section 13: Multiplayer & Network Support - Implementation Tasks
 
 ## Current Status
-**~60% Complete (Framework & Server Integration)**
+**~65% Complete (Framework, Server Integration & E2E Infra Started)**
 
 - ✅ Server and client packages exist
 - ✅ Basic WebSocket transport works
@@ -9,7 +9,7 @@
 - ✅ Multiplayer UI menu exists
 - ✅ NetChan reliability layer implemented (Phase 1 complete)
 - ✅ Server NetChan integration complete (Phase 2 complete)
-- ❌ No real end-to-end testing (all tests use mocks)
+- 🟡 E2E Infrastructure initialized (Phase 4 started)
 - ❌ Client NetChan integration incomplete (Phase 3 pending)
 
 **Goal**: Enable browser-based multiplayer with client-server architecture, client-side prediction, and reliable networking.
@@ -511,13 +511,13 @@
 **File**: Create `packages/e2e-tests` package
 **Reference**: Standard E2E testing patterns (Playwright/Puppeteer)
 
-- [ ] **4.1.1** Set up E2E test package
+- [x] **4.1.1** Set up E2E test package
   - Create `packages/e2e-tests/package.json`
   - Add Playwright as dependency
   - Configure for headless browser testing
   - Add scripts for running E2E tests
 
-- [ ] **4.1.2** Create test server helper
+- [x] **4.1.2** Create test server helper
   - File: `packages/e2e-tests/helpers/testServer.ts`
   - Create `startTestServer(port: number): Promise<DedicatedServer>`
   - Load minimal test map
