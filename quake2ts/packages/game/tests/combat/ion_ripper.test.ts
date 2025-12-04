@@ -52,12 +52,13 @@ describe('Ion Ripper', () => {
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(48);
 
         // Projectile creation
+        // Expect damage 50 because default is SP (deathmatch=0)
         expect(createIonRipper).toHaveBeenCalledWith(
             expect.anything(),
             player,
             expect.anything(),
             expect.anything(),
-            30, // damage
+            50, // damage (SP default)
             500 // speed
         );
 
