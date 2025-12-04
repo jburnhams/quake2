@@ -989,6 +989,10 @@ export class NetworkMessageParser {
       const serverFrame = this.stream.readLong();
       const deltaFrame = this.stream.readLong();
       let surpressCount = 0;
+
+      // Protocol 26 (legacy) hack:
+      // In original Quake 2, protocol 26 demos did NOT include the suppressCount byte.
+      // See full/client/cl_ents.c:679-681
       if (this.protocolVersion !== 26) {
           surpressCount = this.stream.readByte();
       }

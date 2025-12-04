@@ -80,7 +80,7 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.frame);
     writeLong(data, 100); // seq1
     writeLong(data, 99); // seq2
-    writeByte(data, 0); // UK_B1 (surpress count) - READ ONLY IF NOT PROTOCOL 26
+    writeByte(data, 123); // UK_B1 (surpress count) - READ ONLY IF NOT PROTOCOL 26
     writeByte(data, 0); // Area count
     // No area bytes since count is 0
 
@@ -88,6 +88,10 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.playerinfo);
     writeShort(data, 0); // flags
     writeLong(data, 0); // stats
+
+    // svc_packetentities
+    writeByte(data, ServerCommand.packetentities);
+    writeByte(data, 0); writeByte(data, 0); // Terminate
 
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
@@ -116,6 +120,10 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.playerinfo);
     writeShort(data, 0); // flags
     writeLong(data, 0); // stats
+
+    // svc_packetentities
+    writeByte(data, ServerCommand.packetentities);
+    writeByte(data, 0); writeByte(data, 0); // Terminate
 
     const stream = createStream(data);
     const parser = new NetworkMessageParser(stream);
