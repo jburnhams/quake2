@@ -10,7 +10,8 @@ import { AmmoType } from '../../inventory/ammo.js';
 import {
     ZERO_VEC3, angleVectors, addVec3, scaleVec3, ServerCommand, TempEntity, Vec3,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
-    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
+    MZ_IONRIPPER, MZ_PHALANX, MZ_PHALANX2
 } from '@quake2ts/shared';
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
@@ -18,6 +19,7 @@ import { DamageMod } from '../damageMods.js';
 import { MulticastType } from '../../imports.js';
 import { firingRandom } from './firing.js';
 import { createIonRipper, createPhalanxBall, createFlechette } from '../../entities/projectiles.js';
+import { P_ProjectSource } from './projectSource.js';
 
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {
@@ -77,52 +79,86 @@ export function firePlasmaBeam(game: GameExports, player: Entity, inventory: Pla
 }
 
 // Rogue Ion Ripper
-// Source: g_rogue_weapon.c
-export function fireIonRipper(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
-    const ammoCost = 2;
-    if (inventory.ammo.counts[AmmoType.Cells] < ammoCost) {
-        // TODO: Switch weapon
+// Source: xatrix/p_xatrix_weapon.cpp
+export function fireIonRipper(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
+    if (inventory.ammo.counts[AmmoType.Cells] < 2) {
         return;
     }
 
-    inventory.ammo.counts[AmmoType.Cells] -= ammoCost;
+    const damage = game.deathmatch ? 30 : 50;
 
-    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET); // Placeholder flash
-    applyKick(player, -2, 0, 0);
+    // Spread: tempang[YAW] += crandom();
+    // We need to calculate start and forward here.
+    const tempAng = { ...player.angles };
+    tempAng.y += game.random.crandom();
 
-    // Ref: g_rogue_weapon.c -> fire_ionripper (ent, start, dir, 30, 500, EF_IONRIPPER);
-    const damage = 30;
+    const { forward } = angleVectors(tempAng);
+    const { right, up } = angleVectors(player.angles); // Only yaw affected? No, P_ProjectSource uses full angles.
+    // Actually source C++ code:
+    // tempang = ent->client->v_angle;
+    // tempang[YAW] += crandom();
+    // P_ProjectSource(ent, tempang, { 16, 7, -8 }, start, dir);
+    // So P_ProjectSource uses the MODIFIED angles for both START and DIR?
+    // "AngleVectors(angles, forward, right, up);" inside P_ProjectSource.
+    // Yes.
+
+    // So we need to call angleVectors with tempAng to get forward, right, up for P_ProjectSource.
+    const { forward: fwd2, right: right2, up: up2 } = angleVectors(tempAng);
+
+    const source = P_ProjectSource(game, player, { x: 16, y: 7, z: -8 }, fwd2, right2, up2);
+
+    inventory.ammo.counts[AmmoType.Cells] -= 2;
+
+    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_IONRIPPER);
+    applyKick(player, -3, 0, 0);
+
     const speed = 500;
-
-    createIonRipper(game.entities, player, start, forward, damage, speed);
+    createIonRipper(game.entities, player, source, fwd2, damage, speed);
 }
 
 // Rogue Phalanx (Mag Slug)
-// Source: g_rogue_weapon.c
-export function firePhalanx(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState, start: Vec3, forward: Vec3) {
+// Source: xatrix/p_xatrix_weapon.cpp
+export function firePhalanx(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
     if (inventory.ammo.counts[AmmoType.MagSlugs] < 1) {
         return;
     }
 
     inventory.ammo.counts[AmmoType.MagSlugs]--;
 
-    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET); // Placeholder
+    const damage = game.random.irandomRange(70, 80);
+    const speed = 725; // 700 in my previous reading? C++ says 725.
+
+    let yawOffset = 0;
+    let frameRadiusDamage = 120;
+    let flash = MZ_PHALANX;
+
+    // Frame logic
+    const frame = player.client ? player.client.gun_frame : 0;
+    if (frame === 8) {
+        yawOffset = -1.5;
+        frameRadiusDamage = 30;
+        flash = MZ_PHALANX2;
+    } else {
+        yawOffset = 1.5;
+        frameRadiusDamage = 120;
+        flash = MZ_PHALANX;
+    }
+
+    // Note: C++ uses different P_ProjectSource args for frame 8?
+    // if (frame == 8) ... P_ProjectSource(ent, v, { 0, 8, -8 }, start, dir);
+    // else ... P_ProjectSource(ent, v, { 0, 8, -8 }, start, dir);
+    // Identical offset { 0, 8, -8 }.
+
+    const tempAng = { ...player.angles };
+    tempAng.y += yawOffset;
+
+    const { forward: fwd2, right: right2, up: up2 } = angleVectors(tempAng);
+    const source = P_ProjectSource(game, player, { x: 0, y: 8, z: -8 }, fwd2, right2, up2);
+
+    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, flash);
     applyKick(player, -2, 0, 0);
 
-    const damage = 70; // Damage + 120 radius
-    const radiusDamage = 120;
-    const speed = 700;
-
-    // Fire 2 balls with slight spread (+/- 2.5 degrees)
-    const angles1 = { ...player.angles };
-    angles1.y -= 2.5;
-    const { forward: dir1 } = angleVectors(angles1);
-    createPhalanxBall(game.entities, player, start, dir1, damage, radiusDamage, speed);
-
-    const angles2 = { ...player.angles };
-    angles2.y += 2.5;
-    const { forward: dir2 } = angleVectors(angles2);
-    createPhalanxBall(game.entities, player, start, dir2, damage, radiusDamage, speed);
+    createPhalanxBall(game.entities, player, source, fwd2, damage, frameRadiusDamage, speed);
 }
 
 // Rogue ETF Rifle (Flechette Gun)

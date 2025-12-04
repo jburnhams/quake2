@@ -553,15 +553,11 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             break;
         }
         case WeaponId.IonRipper: {
-            const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            fireIonRipper(game, player, inventory, weaponState, source, forward);
+            fireIonRipper(game, player, inventory, weaponState);
             break;
         }
         case WeaponId.Phalanx: {
-            const { forward, right, up } = angleVectors(player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-            firePhalanx(game, player, inventory, weaponState, source, forward);
+            firePhalanx(game, player, inventory, weaponState);
             break;
         }
         case WeaponId.EtfRifle: {
