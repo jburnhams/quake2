@@ -427,7 +427,25 @@ export function createGame(
            const player = entities.spawn();
            player.classname = 'player';
            // ... (SP init)
-           this.clientBegin({ inventory: createPlayerInventory(), weaponStates: createPlayerWeaponStates(), buttons: 0, pm_type: 0, pm_time: 0, pm_flags: 0, gun_frame: 0, rdflags: 0, fov: 90 });
+           this.clientBegin({
+             inventory: createPlayerInventory(),
+             weaponStates: createPlayerWeaponStates(),
+             buttons: 0,
+             pm_type: 0,
+             pm_time: 0,
+             pm_flags: 0,
+             gun_frame: 0,
+             rdflags: 0,
+             fov: 90,
+             pers: {
+               connected: true,
+               inventory: [],
+               health: 100,
+               max_health: 100,
+               savedFlags: 0,
+               selected_item: 0
+             }
+           });
       }
     },
     clientConnect(ent: Entity | null, userInfo: string): string | true {

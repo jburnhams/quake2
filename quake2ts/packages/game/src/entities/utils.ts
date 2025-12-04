@@ -65,3 +65,18 @@ export function velocityForDamage(damage: number, kick: number): Vec3 {
 export function clipVelocity(inVel: Vec3, normal: Vec3, overbounce: number): Vec3 {
   return clipVelocityVec3(inVel, normal, overbounce);
 }
+
+export function G_PickTarget(targetName: string | undefined | null, context: EntitySystem): Entity | null {
+  if (!targetName) {
+    return null;
+  }
+
+  let found: Entity | null = null;
+  // TODO: This should probably use findByTargetname if/when available on context, or context.find()
+  context.forEachEntity((ent) => {
+    if (ent.targetname === targetName) {
+      found = ent;
+    }
+  });
+  return found;
+}

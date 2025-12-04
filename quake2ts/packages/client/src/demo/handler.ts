@@ -472,7 +472,15 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 pm_flags: ps.pm_flags,
                 gun_frame: ps.gun_frame,
                 rdflags: ps.rdflags,
-                fov: ps.fov
+                fov: ps.fov,
+                pers: {
+                    connected: true,
+                    inventory: [],
+                    health: 100,
+                    max_health: 100,
+                    savedFlags: 0,
+                    selected_item: 0
+                }
             },
             health: ps.stats[1], // STAT_HEALTH
             armor: ps.stats[4], // STAT_ARMOR

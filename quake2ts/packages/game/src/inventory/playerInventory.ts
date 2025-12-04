@@ -59,9 +59,48 @@ export interface PlayerInventory {
   pickupTime?: number;
 }
 
+export interface FogState {
+    density: number;
+    r: number;
+    g: number;
+    b: number;
+    sky_factor: number;
+}
+
+export interface HeightFogState {
+    start_color: number[];
+    end_color: number[];
+    falloff: number;
+    density: number;
+}
+
+export interface PlayerPersistentState {
+    connected: boolean;
+    inventory: number[]; // Indexable inventory if needed, or map to PlayerInventory
+    health: number;
+    max_health: number;
+    savedFlags: number;
+    selected_item: number;
+
+    // KEX Fog fields
+    wanted_fog?: FogState;
+    wanted_heightfog?: HeightFogState;
+    fog_transition_time?: number;
+
+    // Additional fields as needed by original gclient_t.pers
+    power_cubes?: number;
+    helpchanged?: number;
+    help_time?: number;
+    game_help1changed?: number;
+    game_help2changed?: number;
+    netname?: string;
+    spectator?: boolean;
+}
+
 export interface PlayerClient {
     inventory: PlayerInventory;
     weaponStates: PlayerWeaponStates;
+    pers: PlayerPersistentState; // [Paril-KEX] Persistent state including fog
     buttons: number;
     // Movement
     pm_type: number;
@@ -96,6 +135,13 @@ export interface PlayerClient {
     anim_time?: number;
     // Earthquakes
     quake_time?: number;
+    // Additional fields
+    landmark_name?: string | null;
+    landmark_rel_pos?: Vec3;
+    oldvelocity?: Vec3;
+    oldviewangles?: Vec3;
+    oldgroundentity?: any; // Entity
+    owned_sphere?: any; // Entity
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {

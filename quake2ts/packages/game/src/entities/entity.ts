@@ -46,6 +46,7 @@ export enum ServerFlags {
 export enum EntityFlags {
   Fly = 1 << 0,
   Swim = 1 << 1,
+  Flashlight = 1 << 22,
 }
 
 export enum DeadFlag {
@@ -109,6 +110,28 @@ export interface MonsterMove {
   lastframe: number;
   frames: MonsterFrame[];
   endfunc: MonsterAction | null;
+}
+
+export interface MoveInfo {
+  start_origin?: Vec3;
+  start_angles?: Vec3;
+  end_origin?: Vec3;
+  end_angles?: Vec3;
+  sound_start?: number;
+  sound_middle?: number;
+  sound_end?: number;
+  accel?: number;
+  speed?: number;
+  decel?: number;
+  distance?: number;
+  wait?: number;
+  state?: number;
+  dir?: Vec3;
+  current_speed?: number;
+  move_speed?: number;
+  next_speed?: number;
+  remaining_distance?: number;
+  decel_distance?: number;
 }
 
 export interface MonsterInfo {
@@ -263,6 +286,7 @@ export class Entity {
   die?: DieCallback;
   postthink?: ThinkCallback; // Added for beam updates
   activator: Entity | null = null;
+  alpha = 0; // Added for rendering transparency
 
   solid: Solid = Solid.Not;
   clipmask = 0;
@@ -270,6 +294,8 @@ export class Entity {
   svflags = 0;
 
   monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
+  moveinfo?: MoveInfo;
+  hackflags = 0;
 
   combattarget?: string;
   show_hostile = 0;
@@ -434,12 +460,15 @@ export class Entity {
     this.die = undefined;
     this.postthink = undefined;
     this.activator = null;
+    this.alpha = 0;
 
     this.solid = Solid.Not;
     this.flags = 0;
     this.svflags = 0;
 
     this.monsterinfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
+    this.moveinfo = undefined;
+    this.hackflags = 0;
     this.combattarget = undefined;
     this.show_hostile = 0;
     this.light_level = 0;
@@ -559,4 +588,6 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'postthink', type: 'callback', save: false }, // Added
   { name: 'beam', type: 'entity', save: true }, // Added
   { name: 'beam2', type: 'entity', save: true }, // Added
+  { name: 'alpha', type: 'float', save: true },
+  { name: 'hackflags', type: 'int', save: true },
 ];

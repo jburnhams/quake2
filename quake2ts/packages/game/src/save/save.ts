@@ -271,7 +271,9 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
     crossUnitFlags: ensureNumberOrDefault(snapshot.crossUnitFlags, 'entities.crossUnitFlags', 0),
     level: {
         next_auto_save: 0,
-        health_bar_entities: [null, null, null, null]
+        health_bar_entities: [null, null, null, null],
+        intermission_angle: { x: 0, y: 0, z: 0 },
+        intermission_origin: { x: 0, y: 0, z: 0 },
     },
   };
 }
