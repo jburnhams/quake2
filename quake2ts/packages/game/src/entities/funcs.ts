@@ -1,4 +1,4 @@
-import { angleVectors, distance, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, addVec3, Vec3, dotVec3 } from '@quake2ts/shared';
+import { angleVectors, distance, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, addVec3, Vec3, dotVec3, TempEntity, ServerCommand } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entity.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
@@ -7,6 +7,7 @@ import { T_RadiusDamage, Damageable } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
 import { throwGibs, GIB_METALLIC, GIB_DEBRIS } from './gibs.js';
+import { MulticastType } from '../imports.js';
 
 // ============================================================================
 // MOVEMENT HELPERS
@@ -953,6 +954,13 @@ const func_explosive: SpawnFunction = (entity, context) => {
             T_RadiusDamage(damageables, ent as unknown as Damageable, attacker as unknown as Damageable, ent.dmg, null, radius, DamageFlags.NONE, DamageMod.EXPLOSIVE, sys.timeSeconds, {}, sys.multicast.bind(sys));
         }
 
+        // Calculate velocity based on inflictor, similar to C
+        let velocity: Vec3 = { x: 0, y: 0, z: 0 };
+        if (inflictor && inflictor !== self) {
+            const dir = normalizeVec3(subtractVec3(inflictor.origin, self.origin));
+            velocity = scaleVec3(dir, 150);
+        }
+
         const mass = ent.mass || 75;
 
         // big chunks
@@ -961,7 +969,7 @@ const func_explosive: SpawnFunction = (entity, context) => {
             if (count > 8) count = 8;
             throwGibs(sys, ent.origin, [
                 { count, model: "models/objects/debris1/tris.md2", flags: GIB_METALLIC | GIB_DEBRIS }
-            ]);
+            ], GIB_METALLIC, velocity);
         }
 
         // small chunks
@@ -969,7 +977,7 @@ const func_explosive: SpawnFunction = (entity, context) => {
         if (count > 16) count = 16;
         throwGibs(sys, ent.origin, [
             { count, model: "models/objects/debris2/tris.md2", flags: GIB_METALLIC | GIB_DEBRIS }
-        ]);
+        ], GIB_METALLIC, velocity);
 
         sys.useTargets(ent, attacker as Entity);
 
@@ -979,9 +987,7 @@ const func_explosive: SpawnFunction = (entity, context) => {
         }
 
         if (ent.dmg) {
-            // BecomeExplosion1
-            // Placeholder: free for now, real explosion effect needs TE_EXPLOSION1
-            // sys.multicast(self.origin, ... TE_EXPLOSION1)
+            sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.EXPLOSION1, self.origin);
             sys.free(ent);
         } else {
             sys.free(ent);

@@ -4,7 +4,7 @@
 
 import { Entity, MoveType, Solid } from './entity.js';
 import { EntitySystem } from './system.js';
-import { createRandomGenerator, Vec3, scaleVec3 } from '@quake2ts/shared';
+import { createRandomGenerator, Vec3, scaleVec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 
 const random = createRandomGenerator();
@@ -68,7 +68,7 @@ function gib_touch(self: Entity, other: Entity | null, plane: any, surf: any, sy
     }
 }
 
-export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?: string, type: number = GIB_ORGANIC) {
+export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?: string, type: number = GIB_ORGANIC, baseVelocity: Vec3 = ZERO_VEC3) {
     const gib = sys.spawn();
     gib.classname = 'gib';
 
@@ -106,9 +106,9 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
     const vd = velocityForDamage(damage);
 
     gib.velocity = {
-        x: vd.x * vscale,
-        y: vd.y * vscale,
-        z: vd.z * vscale
+        x: baseVelocity.x + vd.x * vscale,
+        y: baseVelocity.y + vd.y * vscale,
+        z: baseVelocity.z + vd.z * vscale
     };
 
     clipGibVelocity(gib);
@@ -190,7 +190,7 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number) {
     return head;
 }
 
-export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], type: number = GIB_ORGANIC) {
+export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], type: number = GIB_ORGANIC, velocity: Vec3 = ZERO_VEC3) {
     if (typeof damageOrDefs === 'number') {
         const damage = damageOrDefs;
 
@@ -199,20 +199,20 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
              // Based on func_explosive but scaled down a bit maybe?
              // func_explosive_explode spawns multiple debris based on mass.
              // Here we are generic.
-             spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
+             spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type, velocity);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type, velocity);
+             spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type, velocity);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type, velocity);
         } else {
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, velocity);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, velocity);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, velocity);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, velocity);
 
-            spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', type, velocity);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', type, velocity);
 
-            // Spawn head
+            // Spawn head (TODO: pass velocity to spawnHead too?)
             spawnHead(sys, origin, damage);
         }
 
@@ -220,7 +220,7 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
         const defs = damageOrDefs;
         for (const def of defs) {
             for (let i = 0; i < def.count; i++) {
-                spawnGib(sys, origin, 0, def.model, def.flags);
+                spawnGib(sys, origin, 0, def.model, def.flags, velocity);
             }
         }
     }
