@@ -252,10 +252,12 @@ export class NetworkMessageParser {
   private protocolVersion: number = 0; // 0 = unknown, will be set by serverdata
   private isDemo: number = RECORD_CLIENT;
   private handler?: NetworkMessageHandler;
+  private strictMode: boolean = false;
 
-  constructor(stream: BinaryStream, handler?: NetworkMessageHandler) {
+  constructor(stream: BinaryStream, handler?: NetworkMessageHandler, strictMode: boolean = false) {
     this.stream = stream;
     this.handler = handler;
+    this.strictMode = strictMode;
   }
 
   public setProtocolVersion(version: number): void {
@@ -316,6 +318,14 @@ export class NetworkMessageParser {
       try {
         switch (cmd) {
           case ServerCommand.bad:
+            if (this.strictMode && cmd === 0) {
+               // command 0 is officially 'bad' but often padding.
+               // We might want to allow it even in strict mode if it's genuinely padding?
+               // But 'bad' returned from translateCommand means invalid/unmapped.
+               // If translateCommand returns 0 for valid reasons (e.g. padding), it's fine.
+               // If it returns 0 because of invalid mapping...
+               // Let's assume 0 is allowed padding.
+            }
             // Often used as padding or end-of-message in demos.
             // We treat it as end of processing for this message block.
             return;
@@ -423,6 +433,9 @@ export class NetworkMessageParser {
              break;
 
           default:
+            if (this.strictMode) {
+                throw new Error(`Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`);
+            }
             console.warn(`Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`);
             // If we don't know the command, we are stuck because we don't know the length.
             // In a real scenario, we might want to bail or try to skip?
@@ -975,7 +988,10 @@ export class NetworkMessageParser {
   private parseFrame(): void {
       const serverFrame = this.stream.readLong();
       const deltaFrame = this.stream.readLong();
-      const surpressCount = this.stream.readByte();
+      let surpressCount = 0;
+      if (this.protocolVersion !== 26) {
+          surpressCount = this.stream.readByte();
+      }
 
       const areaBytes = this.stream.readByte();
       const areaBits = this.stream.readData(areaBytes);
@@ -1140,11 +1156,35 @@ export class NetworkMessageParser {
       const entities: EntityState[] = [];
       while (true) {
           const bits = this.parseEntityBits();
+
+          // If U_REMOVE is set, the entity is removed and NO delta data is sent.
+          // We must NOT call parseDelta because it might interpret other bits in 'bits'
+          // as payload flags and try to read from the stream, desyncing it.
+          // Quake 2 source (cl_ents.c) explicitly continues the loop if U_REMOVE is set.
+          if (bits.bits & U_REMOVE) {
+              if (bits.number === 0) break; // Should not happen but safety
+              continue;
+          }
+
+          const entity = createEmptyEntityState();
+
+          // Protocol 25 Demo Hack:
+          // Some messages (e.g. Msg 145 in demo1.dm2) have a terminator entity (number 0)
+          // that has bits set (e.g. 0x1C) AND includes payload bytes.
+          // Other messages (e.g. Msg 8) have terminator with bits (e.g. 0x83) but NO payload
+          // (or parsing payload causes desync).
+          // Heuristic: If U_MOREBITS1 is NOT set, assume payload is present even for terminator.
+          // If U_MOREBITS1 IS set, assume standard behavior (no payload for terminator).
+          const forceParse = bits.number === 0 && !(bits.bits & U_MOREBITS1);
+
+          if (bits.number !== 0 || forceParse) {
+              this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
+          }
+
           if (bits.number === 0) {
               break;
           }
-          const entity = createEmptyEntityState();
-          this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
+
           entities.push(entity);
       }
       return entities;
@@ -1163,10 +1203,12 @@ export class NetworkMessageParser {
       }
 
       let bitsHigh = 0;
-      if (total & U_MOREBITS4) {
-          const byte5 = this.stream.readByte();
-          bitsHigh = byte5;
-          // If U_MOREBITS5 (0x80) would be here, we could read byte 6...
+      if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
+          if (total & U_MOREBITS4) {
+              const byte5 = this.stream.readByte();
+              bitsHigh = byte5;
+              // If U_MOREBITS5 (0x80) would be here, we could read byte 6...
+          }
       }
 
       let number: number;
@@ -1263,13 +1305,15 @@ export class NetworkMessageParser {
       if (bits & U_SOLID) to.solid = this.stream.readShort();
 
       // Rerelease Fields
-      if (bits & U_ALPHA) to.alpha = this.stream.readByte() / 255.0;
-      if (bits & U_SCALE) to.scale = this.stream.readFloat();
-      if (bits & U_INSTANCE_BITS) to.instanceBits = this.stream.readLong();
-      if (bits & U_LOOP_VOLUME) to.loopVolume = this.stream.readByte() / 255.0;
+      if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
+          if (bits & U_ALPHA) to.alpha = this.stream.readByte() / 255.0;
+          if (bits & U_SCALE) to.scale = this.stream.readFloat();
+          if (bits & U_INSTANCE_BITS) to.instanceBits = this.stream.readLong();
+          if (bits & U_LOOP_VOLUME) to.loopVolume = this.stream.readByte() / 255.0;
 
-      if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = this.stream.readByte() / 255.0;
-      if (bitsHigh & U_OWNER_HIGH) to.owner = this.stream.readShort();
-      if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = this.stream.readShort();
+          if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = this.stream.readByte() / 255.0;
+          if (bitsHigh & U_OWNER_HIGH) to.owner = this.stream.readShort();
+          if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = this.stream.readShort();
+      }
   }
 }

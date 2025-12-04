@@ -1,5 +1,5 @@
 
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { PakArchive } from '../../src/assets/pak';
@@ -48,17 +48,10 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
         demoData = pak.readFile('demos/demo1.dm2');
     });
 
-    it('should parse real demo1.dm2 without errors', () => {
-        // BinaryStream is not needed for DemoReader constructor, it takes ArrayBuffer
-        // demoData is Uint8Array, so we pass its buffer
-
-        // Important: demoData.buffer might refer to the whole pak buffer if it's a subarray
-        // We should ensure we pass only the relevant slice
+    it('should parse real demo1.dm2 without errors in strict mode', () => {
         const demoBuffer = demoData.buffer.slice(demoData.byteOffset, demoData.byteOffset + demoData.byteLength);
 
         const handler = createMockHandler();
-
-        // Demo1.dm2 is a container format. We need DemoReader first.
         const demoReader = new DemoReader(demoBuffer);
 
         let messageCount = 0;
@@ -73,15 +66,13 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
 
             messageCount++;
 
-            // msg.data is already a BinaryStream
-            const parser = new NetworkMessageParser(msg.data, handler);
-
-            // Persist protocol version across messages
+            // Pass true for strictMode
+            const parser = new NetworkMessageParser(msg.data, handler, true);
             parser.setProtocolVersion(protocolVersion);
 
+            // This should throw if unknown command is encountered
             parser.parseMessage();
 
-            // Update protocol version for next iteration
             protocolVersion = parser.getProtocolVersion();
 
             if (handler.onServerData.mock.calls.length > 0) {
@@ -96,14 +87,10 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
         expect(serverDataFound).toBe(true);
         expect(frameCount).toBeGreaterThan(0);
 
-        console.log(`Parsed ${messageCount} messages, ${frameCount} frames.`);
-
-        // Check protocol version from the first onServerData call
+        // Check protocol version
         const firstCall = handler.onServerData.mock.calls[0];
-        const protocol = firstCall[0];
+        const protocol = firstCall ? firstCall[0] : 0;
         console.log(`Demo Protocol Version: ${protocol}`);
-
-        // demo1.dm2 in pak.pak is Protocol 25 (Quake 2 v3.00), not Protocol 34 (v3.20)
         expect(protocol).toBe(25);
     });
 });
