@@ -14,7 +14,7 @@ export class DemoPlaybackController {
   private playbackSpeed: number = 1.0;
   private handler?: NetworkMessageHandler;
   private currentProtocolVersion: number = 0;
-  private currentFrameIndex: number = 0;
+  private currentFrameIndex: number = -1; // -1 means no frames processed yet
 
   // Timing
   private accumulatedTime: number = 0;
@@ -31,7 +31,7 @@ export class DemoPlaybackController {
     this.state = PlaybackState.Stopped;
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
-    this.currentFrameIndex = 0;
+    this.currentFrameIndex = -1;
   }
 
   public play() {
@@ -53,7 +53,7 @@ export class DemoPlaybackController {
     }
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
-    this.currentFrameIndex = 0;
+    this.currentFrameIndex = -1;
   }
 
   public setFrameDuration(ms: number) {
@@ -87,14 +87,16 @@ export class DemoPlaybackController {
 
   public stepForward() {
     if (!this.reader) return;
-
-    // Process one frame immediately
     this.processNextFrame();
   }
 
   public stepBackward() {
-      // Not implemented yet - requires seeking or history
-      console.warn("stepBackward not implemented");
+      if (!this.reader) return;
+
+      // Seek to current - 1
+      if (this.currentFrameIndex > 0) {
+          this.seek(this.currentFrameIndex - 1);
+      }
   }
 
   /**
@@ -108,14 +110,13 @@ export class DemoPlaybackController {
       if (frameNumber >= total) frameNumber = total - 1;
 
       if (this.reader.seekToMessage(frameNumber)) {
-          this.currentFrameIndex = frameNumber;
-          // Reset timing accumulator when seeking to avoid jumpy playback
+          // Set index to frameNumber - 1, so that processing next frame brings us to frameNumber
+          this.currentFrameIndex = frameNumber - 1;
           this.accumulatedTime = 0;
 
-          // Re-process the current frame to update state
-          // Note: Ideally we should process from a known sync point (like serverdata)
-          // but for now we just jump. State might be glitched until next full update.
-          // TODO: Implement keyframe searching or state reconstruction.
+          // Process the frame to update state
+          this.processNextFrame();
+          // Now currentFrameIndex should be frameNumber
       }
   }
 
@@ -134,10 +135,8 @@ export class DemoPlaybackController {
       this.currentFrameIndex++;
 
       const parser = new NetworkMessageParser(block.data, this.handler);
-      // Persist protocol version across frames
       parser.setProtocolVersion(this.currentProtocolVersion);
       parser.parseMessage();
-      // Update protocol version in case it changed (e.g. serverdata)
       this.currentProtocolVersion = parser.getProtocolVersion();
 
       return true;
@@ -148,7 +147,9 @@ export class DemoPlaybackController {
   }
 
   public getCurrentTime(): number {
-      return this.accumulatedTime;
+      // If index is -1, time is 0.
+      if (this.currentFrameIndex < 0) return this.accumulatedTime;
+      return (this.currentFrameIndex * this.frameDuration) + this.accumulatedTime;
   }
 
   public getTotalFrames(): number {
@@ -156,13 +157,13 @@ export class DemoPlaybackController {
   }
 
   public getCurrentFrame(): number {
-      return this.currentFrameIndex;
+      return this.currentFrameIndex < 0 ? 0 : this.currentFrameIndex;
   }
 
   /**
-   * Returns estimated duration in seconds based on frame count and frame duration.
+   * Returns estimated duration in milliseconds.
    */
   public getDuration(): number {
-      return (this.getTotalFrames() * this.frameDuration) / 1000;
+      return this.getTotalFrames() * this.frameDuration;
   }
 }

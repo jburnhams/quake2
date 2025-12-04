@@ -17,10 +17,16 @@ vi.mock('@quake2ts/engine', async () => {
             setSpeed: vi.fn(),
             setFrameDuration: vi.fn(),
             getCurrentTime: vi.fn().mockReturnValue(0),
+            getDuration: vi.fn().mockReturnValue(100),
             getState: vi.fn(),
             getSpeed: vi.fn().mockReturnValue(1),
             play: vi.fn(),
-            pause: vi.fn()
+            pause: vi.fn(),
+            stepForward: vi.fn(),
+            stepBackward: vi.fn(),
+            seek: vi.fn(),
+            getCurrentFrame: vi.fn().mockReturnValue(0),
+            getTotalFrames: vi.fn().mockReturnValue(100)
         })),
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
@@ -52,7 +58,8 @@ vi.mock('../src/demo/handler.js', () => ({
 vi.mock('../src/ui/demo-controls.js', () => ({
     DemoControls: vi.fn().mockImplementation(() => ({
         render: vi.fn(),
-        handleInput: vi.fn().mockReturnValue(false)
+        handleInput: vi.fn().mockReturnValue(false),
+        setDemoName: vi.fn()
     }))
 }));
 
@@ -60,6 +67,11 @@ vi.mock('../src/ui/demo-controls.js', () => ({
 vi.mock('../src/cgameBridge.js', () => ({
     createCGameImport: vi.fn(),
     ClientStateProvider: vi.fn()
+}));
+
+vi.mock('../src/hud.js', () => ({
+    Init_Hud: vi.fn().mockResolvedValue(undefined),
+    Draw_Hud: vi.fn()
 }));
 
 vi.mock('@quake2ts/cgame', async () => {
@@ -112,7 +124,9 @@ describe('Demo Playback Integration', () => {
             end2D: vi.fn(),
             drawfillRect: vi.fn(),
             drawString: vi.fn(),
-            drawCenterString: vi.fn()
+            drawCenterString: vi.fn(),
+            registerTexture: vi.fn(),
+            registerPic: vi.fn()
         };
 
         mockEngine = {
