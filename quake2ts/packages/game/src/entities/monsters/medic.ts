@@ -208,7 +208,8 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
           entities: context,
           keyValues: { classname: ent.classname },
           warn: (msg) => {},
-          free: (e) => context.free(e)
+          free: (e) => context.free(e),
+          health_multiplier: 1.0,
       };
 
       const origin = { ...ent.origin };
@@ -308,7 +309,8 @@ function medic_call_reinforcements(self: Entity, context: EntitySystem): void {
         entities: context,
         keyValues: { classname: chosenClass },
         warn: () => {},
-        free: (e) => context.free(e)
+        free: (e) => context.free(e),
+        health_multiplier: 1.0,
       };
 
       spawnFunc(ent, spawnContext);
