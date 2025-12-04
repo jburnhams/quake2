@@ -574,23 +574,54 @@
 
 **Reference**: Connection flow from Section 13 docs
 
-#### Task 4.3: Test Command Flow
+#### Task 4.3: Integrate Real Client Bundle for High-Fidelity E2E Testing
+**File**: `packages/e2e-tests/fixtures/real-client.html` (new)
+**Reference**: Full client verification using actual application code
+
+- [ ] **4.3.1** Configure Build Pipeline
+  - Ensure `packages/e2e-tests/package.json` or root `package.json` has a script to build `@quake2ts/client` before running tests.
+  - Add `pnpm --filter @quake2ts/client build` step to E2E test runner.
+
+- [ ] **4.3.2** Create Real Client Harness HTML
+  - File: `packages/e2e-tests/fixtures/real-client.html`
+  - Load the built client module (`/dist/esm/index.js`).
+  - Implement a minimal `EngineHost` mock that provides `trace` (returning empty), `assets`, and `renderer` (stubbed).
+  - Implement a `requestAnimationFrame` loop to call `client.predict()` and `client.render()` every frame.
+  - Expose `window.client` for Playwright inspection.
+
+- [ ] **4.3.3** Serve Client Bundle in Test Helper
+  - Update `packages/e2e-tests/helpers/testClient.ts` to serve files from `packages/client/dist` when requested.
+  - Update `startTestServer` or static file server to map `/dist` to the actual build output.
+
+- [ ] **4.3.4** Verify Handshake with Real Client
+  - Update `entities.test.ts` (or create `real-connection.test.ts`) to use `real-client.html`.
+  - Connect to test server.
+  - Verify client sends valid `userinfo`, handles `configstrings`, and sends `begin`.
+  - Verify client state transitions to `Active`.
+  - Validate `client.lastRendered` contains synchronized server entities.
+
+**Test Case**: Real Client Integration Test
+- Browser loads `real-client.html`.
+- Client connects to `DedicatedServer`.
+- Verify full handshake and entity synchronization using the actual `MultiplayerConnection` class.
+
+#### Task 4.4: Test Command Flow
 **File**: `packages/e2e-tests/commands.test.ts`
 **Reference**: User command processing
 
-- [ ] **4.3.1** Test client sends commands
-  - Client in active state
+- [ ] **4.4.1** Test client sends commands
+  - Client in active state (Real Client)
   - Simulate user input (movement)
   - Verify `clc_move` packets sent
   - Verify NetChan sequence numbers increment
 
-- [ ] **4.3.2** Test server receives commands
+- [ ] **4.4.2** Test server receives commands
   - Server receives `clc_move` packets
   - Verify NetChan processes them
   - Verify `UserCommand` parsed
   - Verify `ge->ClientThink` called with command
 
-- [ ] **4.3.3** Test command rate limiting
+- [ ] **4.4.3** Test command rate limiting
   - Send excessive commands (>40/sec)
   - Verify server drops excess
   - Verify no crash or overflow
@@ -601,29 +632,6 @@
 - Verifies game logic receives commands
 
 **Reference**: Command processing flow
-
-#### Task 4.4: Integrate Real Client for E2E Tests (Option 2)
-**File**: `packages/e2e-tests/fixtures/client-bundle.html` (new)
-**Reference**: Full client verification
-
-- [ ] **4.4.1** Serve Real Client Bundle
-  - Configure `packages/e2e-tests/helpers/testClient.ts` to serve the actual `@quake2ts/client` bundle or build artifacts.
-  - Ensure static server in `testClient` can serve `dist/` from `packages/client`.
-
-- [ ] **4.4.2** Validate Full Handshake with Real Client
-  - Update `entities.test.ts` to use real client.
-  - Verify client sends `userinfo`, handles `configstrings`, sends `begin`.
-  - Verify server transitions client to `Active` state.
-
-- [ ] **4.4.3** Verify Entity Sync
-  - Once handshake complete, verify real client receives and processes `svc_frame`.
-  - Inspect `client.lastRendered` state in browser via Playwright.
-  - Verify entity positions match server.
-
-**Test Case**: Entity sync with Real Client
-- Connect real client to test server.
-- Ensure transitions to Active.
-- Verify `quake2.lastRendered` contains server entities.
 
 #### Task 4.5: Test Prediction and Reconciliation
 **File**: `packages/e2e-tests/prediction.test.ts`
