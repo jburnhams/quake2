@@ -358,20 +358,20 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 32 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 20;
-  self.max_health = 20;
+  self.health = 20 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 100;
   self.takedamage = true;
 
   // Set skin and stats based on flags
   if (self.spawnflags & SOLDIER_SSG) {
     self.skin = 2;
-    self.health = 30; // Slightly stronger?
-    self.max_health = 30;
+    self.health = 30 * context.health_multiplier; // Slightly stronger?
+    self.max_health = self.health;
   } else if (self.spawnflags & SOLDIER_MACHINEGUN) {
     self.skin = 4;
-    self.health = 30;
-    self.max_health = 30;
+    self.health = 30 * context.health_multiplier;
+    self.max_health = self.health;
   } else {
     // Light or Normal
     self.skin = 0;
@@ -380,8 +380,8 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
 
   // Override for Light soldier?
   if (self.spawnflags & SOLDIER_LIGHT) {
-    self.health = 10;
-    self.max_health = 10;
+    self.health = 10 * context.health_multiplier;
+    self.max_health = self.health;
   }
 
   self.pain = (self, other, kick, damage) => {
@@ -449,8 +449,8 @@ function SP_monster_soldier_x(self: Entity, context: SpawnContext, skin: number,
     self.style = 1; // Mark as Xatrix variant
     self.skin = skin;
     self.count = skin - 6; // Set count for attack dispatch logic
-    self.health = health;
-    self.max_health = health;
+    self.health = health * context.health_multiplier;
+    self.max_health = self.health;
 }
 
 export function SP_monster_soldier_ripper(self: Entity, context: SpawnContext): void {

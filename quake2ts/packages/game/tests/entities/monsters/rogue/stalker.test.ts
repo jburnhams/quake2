@@ -9,6 +9,7 @@ describe('monster_stalker', () => {
 
   beforeEach(() => {
     context = createTestContext();
+    context.health_multiplier = 1.0;
     entity = context.entities.spawn();
     vi.clearAllMocks();
   });

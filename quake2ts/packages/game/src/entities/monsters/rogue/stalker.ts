@@ -648,7 +648,7 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
 
-    self.health = 250;
+    self.health = 250 * context.health_multiplier;
     self.max_health = self.health;
     self.mass = 250;
 

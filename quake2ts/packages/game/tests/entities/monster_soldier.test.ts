@@ -72,7 +72,7 @@ describe('monster_soldier', () => {
     });
 
     it('should set stand action that calls ai_stand', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
 
         // Initial state is standing
         const move = entity.monsterinfo.current_move;
@@ -92,7 +92,7 @@ describe('monster_soldier', () => {
     });
 
     it('should set walk action that calls ai_walk', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
 
         // Switch to walk
         entity.monsterinfo.walk!(entity, context);
@@ -108,7 +108,7 @@ describe('monster_soldier', () => {
     });
 
     it('should set run action that calls ai_run', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
 
         entity.enemy = {
           health: 100,
@@ -131,7 +131,7 @@ describe('monster_soldier', () => {
     });
 
     it('should transition to pain state when pain callback is called with low health', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
         entity.health = 5; // Less than max_health / 2 (20 / 2 = 10)
 
         const initialMove = entity.monsterinfo.current_move;
@@ -144,7 +144,7 @@ describe('monster_soldier', () => {
     });
 
     it('should throw gibs and remove entity when health is below -40', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
         entity.health = -50;
 
         entity.die!(entity, null, null, 100, { x: 0, y: 0, z: 0 }, 0);
@@ -156,7 +156,7 @@ describe('monster_soldier', () => {
     });
 
     it('should transition to death animation when dying but not gibbed', () => {
-        spawnFunc(entity, { entities: context });
+        spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
         entity.health = -10;
 
         const initialMove = entity.monsterinfo.current_move;

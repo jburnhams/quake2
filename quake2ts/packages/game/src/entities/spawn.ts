@@ -205,6 +205,7 @@ export function parseEntityLump(text: string): ParsedEntity[] {
 export interface SpawnContext {
   readonly keyValues: ParsedEntity;
   readonly entities: EntitySystem;
+  readonly health_multiplier: number;
   warn(message: string): void;
   free(entity: Entity): void;
 }
@@ -274,6 +275,7 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
   const context: SpawnContext = {
     keyValues: dictionary,
     entities: options.entities,
+    health_multiplier: dictionary.health_multiplier ? Number.parseFloat(dictionary.health_multiplier) : 1.0,
     warn,
     free(target) {
       options.entities.freeImmediate(target);

@@ -85,7 +85,8 @@ function useTargetSpawner(self: Entity, other: Entity | null, activator: Entity 
         keyValues: { classname: self.target },
         entities: context.entities,
         warn: context.warn,
-        free: context.free
+        free: context.free,
+        health_multiplier: 1.0,
     };
 
     // [Paril-KEX] Don't count these monsters so they don't inflate the monster count.
