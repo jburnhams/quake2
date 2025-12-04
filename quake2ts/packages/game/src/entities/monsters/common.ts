@@ -75,8 +75,8 @@ export function createMonsterSpawn(config: MonsterConfig) {
     // But `monster_start` often sets MOVETYPE_STEP.
 
     self.solid = Solid.BoundingBox;
-    self.health = config.health;
-    self.max_health = config.health;
+    self.health = config.health * context.health_multiplier;
+    self.max_health = self.health;
     self.mass = config.mass;
     self.takedamage = true;
 

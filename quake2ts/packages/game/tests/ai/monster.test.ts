@@ -27,7 +27,8 @@ describe('Monster AI - Soldier', () => {
         keyValues: {},
         entities: system,
         warn: vi.fn(),
-        free: vi.fn()
+        free: vi.fn(),
+        health_multiplier: 1.0,
     };
 
     spawnFunc(soldier, context);
@@ -49,7 +50,8 @@ describe('Monster AI - Soldier', () => {
         keyValues: {},
         entities: system,
         warn: vi.fn(),
-        free: vi.fn()
+        free: vi.fn(),
+        health_multiplier: 1.0,
     };
     spawnFunc(soldier, context);
 
@@ -78,7 +80,7 @@ describe('Monster AI - Soldier', () => {
     const soldier = system.spawn();
     soldier.classname = 'monster_soldier';
     const spawnFunc = registry.get('monster_soldier');
-    spawnFunc(soldier, { keyValues: {}, entities: system, warn: vi.fn(), free: vi.fn() });
+    spawnFunc(soldier, { keyValues: {}, entities: system, warn: vi.fn(), free: vi.fn(), health_multiplier: 1.0 });
 
     const move = soldier.monsterinfo.current_move!;
     expect(move).toBeDefined();

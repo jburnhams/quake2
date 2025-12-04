@@ -831,8 +831,7 @@ export function SP_monster_guncmdr(self: Entity, context: SpawnContext): void {
     self.skin = 2;
 
     // Stats
-    const healthMultiplier = context.keyValues['health_multiplier'] ? parseFloat(context.keyValues['health_multiplier']) : 1;
-    self.health = 325 * healthMultiplier;
+    self.health = 325 * context.health_multiplier;
     self.max_health = self.health;
     // self.gib_health = -175; // Removed as it is not on Entity
     self.mass = 255;
