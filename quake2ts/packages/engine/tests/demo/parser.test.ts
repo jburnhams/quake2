@@ -108,16 +108,7 @@ describe('NetworkMessageParser', () => {
     writeByte(data, ServerCommand.frame);
     writeLong(data, 100);
     writeLong(data, 99);
-    writeByte(data, 0); // UK_B1 (surpress count) - WAIT, check impl.
-    // The implementation reads suppressCount ALWAYS.
-    // const surpressCount = this.stream.readByte();
-
-    // So both proto 34 and 26 read suppress count?
-    // Let's check parser.ts again.
-    // It reads serverFrame, deltaFrame, suppressCount.
-
-    // The test description says "NOT skipping extra byte".
-    // If the parser code does NOT check protocol version for suppressCount, then it reads it always.
+    // Protocol 26 skips suppressCount reading.
 
     writeByte(data, 0); // Area count
 
