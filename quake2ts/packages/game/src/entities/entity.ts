@@ -27,6 +27,12 @@ export enum Solid {
   Bsp = 3,
 }
 
+export const SPAWNFLAG_NOT_EASY = 0x00000100;
+export const SPAWNFLAG_NOT_MEDIUM = 0x00000200;
+export const SPAWNFLAG_NOT_HARD = 0x00000400;
+export const SPAWNFLAG_NOT_DEATHMATCH = 0x00000800;
+export const SPAWNFLAG_NOT_COOP = 0x00001000;
+
 export enum ServerFlags {
   None = 0,
   NoClient = 1 << 0,

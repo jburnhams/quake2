@@ -177,6 +177,7 @@ export class EntitySystem {
   readonly imports: GameImports;
   private readonly gravity: Vec3;
   readonly deathmatch: boolean;
+  readonly skill: number;
 
   get trace(): TraceFunction {
     return this.imports.trace;
@@ -208,12 +209,14 @@ export class EntitySystem {
     gravity?: Vec3,
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry,
-    deathmatch?: boolean
+    deathmatch?: boolean,
+    skill?: number
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
+    this.skill = skill ?? 1; // Default to medium
 
     // Default imports
     const defaultImports: GameImports = {
