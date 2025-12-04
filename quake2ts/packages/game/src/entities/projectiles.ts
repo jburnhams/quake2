@@ -681,3 +681,4 @@ export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, d
 }
 
 export * from './projectiles/prox.js';
+export * from './projectiles/trap.js';

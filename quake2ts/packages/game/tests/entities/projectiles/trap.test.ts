@@ -1,10 +1,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTrap, trapThink, trapGibThink } from '../../../../src/entities/projectiles/trap.js';
-import { Entity, MoveType, Solid } from '../../../../src/entities/entity.js';
+import { createTrap, trapThink } from '../../../src/entities/projectiles.js';
+import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { createTestContext } from '../../test-helpers.js';
-import { GameExports } from '../../../../src/index.js';
-import { vec3 } from '@quake2ts/shared/src/math/vec3.js';
+import { GameExports } from '../../../src/index.js';
+import { vec3 } from '@quake2ts/shared';
 
 describe('Trap Projectile', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -12,27 +12,34 @@ describe('Trap Projectile', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        game = context.game;
-        context.sys.spawn = vi.fn().mockImplementation(() => new Entity(10));
-        context.sys.linkentity = vi.fn();
-        context.sys.free = vi.fn();
-        context.sys.forEachEntity = vi.fn();
+        const sys = context.entities;
+
+        game = {
+            sound: sys.engine.sound,
+            centerprintf: sys.engine.centerprintf,
+            time: 100,
+            deathmatch: true,
+            entities: sys
+        } as unknown as GameExports;
+
+        // Mock sys methods if needed override
+        // sys.spawn is already mocked in createTestContext
     });
 
     it('should create a trap projectile', () => {
         const owner = new Entity(1);
-        const start = vec3(0, 0, 0);
-        const dir = vec3(1, 0, 0);
+        const start = { x: 0, y: 0, z: 0 };
+        const dir = { x: 1, y: 0, z: 0 };
         const speed = 400;
 
-        const trap = createTrap(context.sys, owner, start, dir, speed);
+        const trap = createTrap(context.entities, owner, start, dir, speed);
 
         expect(trap.classname).toBe('food_cube_trap');
         expect(trap.movetype).toBe(MoveType.Bounce);
         expect(trap.solid).toBe(Solid.BoundingBox);
         expect(trap.owner).toBe(owner);
         expect(trap.velocity.x).toBe(400);
-        expect(context.sys.linkentity).toHaveBeenCalledWith(trap);
+        expect(context.entities.linkentity).toHaveBeenCalledWith(trap);
     });
 
     it('should deploy when on ground', () => {
@@ -42,7 +49,7 @@ describe('Trap Projectile', () => {
         trap.timestamp = 1000;
 
         // Mock context time
-        const ctx = { ...context.sys, timeSeconds: 100 } as any;
+        const ctx = { ...context.entities, timeSeconds: 100 } as any;
 
         trapThink(trap, ctx);
 
@@ -55,30 +62,24 @@ describe('Trap Projectile', () => {
         trap.groundentity = new Entity(99);
         trap.frame = 4; // Deployed
         trap.timestamp = 1000;
-        trap.origin = vec3(0, 0, 0);
+        trap.origin = { x: 0, y: 0, z: 0 };
 
         const target = new Entity(20);
         target.inUse = true;
-        target.origin = vec3(100, 0, 0); // Within 256
+        target.origin = { x: 100, y: 0, z: 0 }; // Within 256
         target.health = 100;
         target.takedamage = true;
 
-        const ctx = {
-            ...context.sys,
-            timeSeconds: 100,
-            forEachEntity: (cb: any) => cb(target),
-            engine: game
-        } as any;
+        const sys = context.entities;
+        sys.forEachEntity = vi.fn((cb: any) => cb(target));
+        sys.engine = game; // Ensure engine access
+        sys.timeSeconds = 100;
 
-        // Mock game.sound
-        game.sound = vi.fn();
+        trapThink(trap, sys);
 
-        trapThink(trap, ctx);
-
-        // Should pull target
-        // target velocity should change
-        // We expect velocity to be modified (added).
-        expect(target.velocity.x).toBeGreaterThan(0);
-        expect(game.sound).toHaveBeenCalledWith(trap, 0, 'weapons/trapsuck.wav', 1, 1, 0);
+        // Should pull target towards trap (at 0,0,0)
+        // Target is at 100,0,0. Pull direction is (-1, 0, 0).
+        expect(target.velocity.x).toBeLessThan(0);
+        expect(sys.engine.sound).toHaveBeenCalledWith(trap, 0, 'weapons/trapsuck.wav', 1, 1, 0);
     });
 });

@@ -1,10 +1,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Trap_Think } from '../../../../src/combat/weapons/trap.js';
-import { Entity } from '../../../../src/entities/entity.js';
+import { Trap_Think } from '../../../src/combat/weapons/trap.js';
+import { Entity } from '../../../src/entities/entity.js';
 import { createTestContext } from '../../test-helpers.js';
-import { WeaponStateEnum } from '../../../../src/combat/weapons/state.js';
-import { AmmoType } from '../../../../src/inventory/ammo.js';
+import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
+import { AmmoType } from '../../../src/inventory/ammo.js';
 
 describe('Trap Weapon', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -25,15 +25,19 @@ describe('Trap Weapon', () => {
         } as any;
         player.client!.inventory.ammo.counts[AmmoType.Trap] = 10;
 
-        // Mock Throw_Generic requirements
-        // We need to ensure frames match expected logic
+        // Mock engine on sys for P_ProjectSource
+        const sys = context.entities;
+        (sys as any).engine = {
+            trace: sys.trace,
+            sound: sys.sound,
+        };
     });
 
     it('should start throw sequence when fired', () => {
         player.client!.buttons = 1; // Attack
         // FRAME_THROW_FIRST = 5
 
-        Trap_Think(player, context.sys);
+        Trap_Think(player, context.entities);
 
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
         expect(player.client!.gun_frame).toBe(5);
@@ -44,7 +48,7 @@ describe('Trap Weapon', () => {
         player.client!.gun_frame = 11; // FRAME_THROW_HOLD
         player.client!.buttons = 1; // Still holding
 
-        Trap_Think(player, context.sys);
+        Trap_Think(player, context.entities);
 
         // Should stay on frame 11
         expect(player.client!.gun_frame).toBe(11);
