@@ -1,7 +1,7 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~70% Complete (Parsing Infrastructure Improved, Metadata & Seeking Added, Client Integration Tested)**
+**~90% Complete (Parsing Infrastructure, Client Playback, Menu, Recording Implemented)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
@@ -9,8 +9,12 @@
 - ✅ **Added**: Demo file indexing, metadata retrieval (frames, duration), and seeking support
 - ✅ **Tested**: Client-side demo playback integration (start/stop, mode switching, render loop)
 - ✅ **Fixed**: Protocol 26 compatibility (suppressCount check)
+- ✅ **Updated**: Demo Playback Controls now show time, duration, and demo name
+- ✅ **Added**: Frame-by-frame stepping (forward and backward)
+- ✅ **Added**: Demo Menu (Tasks 2.1, 2.3) wired to main menu
+- ✅ **Added**: Demo Recording (Tasks 3.1, 3.2) including download support
 - ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
-- ❌ No demo viewer application
+- ❌ Demo file storage (IndexedDB) and advanced file validation pending (Task 2.2)
 - ❌ Rerelease Protocol 2023 unverified with real demos
 
 **Goal**: Enable playback of Quake II `.dm2` demo files in browser with full rendering.
@@ -222,12 +226,12 @@ if (cls.serverProtocol != 26)
   - If true, call `demoHandler.getRenderableEntities()` instead of game entities
   - Call `demoHandler.getDemoCamera()` for camera position
 
-- [ ] **1.3.2** Update `buildRenderableEntities()` call in demo mode
+- [x] **1.3.2** Update `buildRenderableEntities()` call in demo mode
   - Pass demo entities to `buildRenderableEntities`
   - Use demo configstrings for model lookups
   - Handle missing models gracefully (demo might reference models not loaded)
 
-- [ ] **1.3.3** Update HUD rendering for demo mode
+- [x] **1.3.3** Update HUD rendering for demo mode
   - Show demo playback controls overlay
   - Display demo time / total time
   - Show demo filename
@@ -298,9 +302,9 @@ if (cls.serverProtocol != 26)
   - Add `getCurrentFrame(): number` method
   - Add `getDuration(): number` method (frames * frame time)
 
-- [ ] **1.5.4** Add frame-by-frame stepping
+- [x] **1.5.4** Add frame-by-frame stepping
   - [x] Add `stepForward(): void` method (advance 1 frame)
-  - [ ] Add `stepBackward(): void` method (seek to current - 1)
+  - [x] Add `stepBackward(): void` method (seek to current - 1)
 
 **Test Case**: Unit test in `packages/engine/tests/demo/playback.test.ts`
 - Create mock DemoReader with known frame count
@@ -344,17 +348,17 @@ if (cls.serverProtocol != 26)
 **File**: Create `packages/client/src/ui/menu/demo.ts`
 **Reference**: `packages/client/src/ui/menu/maps.ts` (similar list-based menu)
 
-- [ ] **2.1.1** Create `DemoMenuFactory` class
+- [x] **2.1.1** Create `DemoMenuFactory` class
   - Constructor takes `MenuSystem` and `ClientExports` references
   - Implement `createDemoMenu(): Menu` method
   - Return menu with demo list and controls
 
-- [ ] **2.1.2** Implement demo list rendering
+- [x] **2.1.2** Implement demo list rendering
   - Show list of available demos (initially just file upload option)
   - Show demo name, duration (if parsed), file size
   - Highlight selected demo
 
-- [ ] **2.1.3** Add demo actions
+- [x] **2.1.3** Add demo actions
   - "Load Demo File" - triggers file picker
   - "Play Demo" - starts selected demo
   - "Delete Demo" - removes from list (browser storage)
@@ -370,10 +374,11 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/ui/pakLoader.ts` (adapt existing file loading)
 **Reference**: Existing PAK loader pattern
 
-- [ ] **2.2.1** Add `loadDemoFile(file: File): Promise<ArrayBuffer>` method
+- [x] **2.2.1** Add `loadDemoFile(file: File): Promise<ArrayBuffer>` method
   - Read file as ArrayBuffer
   - Validate it's a .dm2 file (check header)
   - Return buffer for playback
+  - Note: Initial implementation uses inline loading in DemoMenuFactory.
 
 - [ ] **2.2.2** Add demo file validation
   - Check file extension is .dm2
@@ -396,15 +401,15 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/ui/menu/main.ts`
 **Reference**: Existing menu wiring
 
-- [ ] **2.3.1** Add "Play Demo" option to main menu
+- [x] **2.3.1** Add "Play Demo" option to main menu
   - Insert after "New Game" or "Load Game"
   - Create menu item with action that pushes demo menu
 
-- [ ] **2.3.2** Pass demo menu factory to MainMenuFactory
+- [x] **2.3.2** Pass demo menu factory to MainMenuFactory
   - Update constructor to accept `DemoMenuFactory`
   - Store reference for menu creation
 
-- [ ] **2.3.3** Update main menu creation logic
+- [x] **2.3.3** Update main menu creation logic
   - Add demo menu factory to options
   - Wire "Play Demo" action to push demo menu
 
@@ -425,24 +430,24 @@ if (cls.serverProtocol != 26)
 **File**: Create `packages/engine/src/demo/recorder.ts`
 **Reference**: `full/client/cl_main.c` (CL_Record, CL_WriteDemoMessage)
 
-- [ ] **3.1.1** Create `DemoRecorder` class structure
+- [x] **3.1.1** Create `DemoRecorder` class structure
   - Add `private isRecording: boolean`
   - Add `private messageBuffer: BinaryWriter`
   - Add `private startTime: number`
   - Add `private frameCount: number`
 
-- [ ] **3.1.2** Implement `startRecording(filename: string): void` method
+- [x] **3.1.2** Implement `startRecording(filename: string): void` method
   - Initialize binary writer
   - Write demo header
   - Set isRecording flag
   - Record start time
 
-- [ ] **3.1.3** Implement `recordMessage(data: Uint8Array): void` method
+- [x] **3.1.3** Implement `recordMessage(data: Uint8Array): void` method
   - Write message length (4 bytes)
   - Write message data
   - Increment frame count
 
-- [ ] **3.1.4** Implement `stopRecording(): Uint8Array` method
+- [x] **3.1.4** Implement `stopRecording(): Uint8Array` method
   - Finalize demo file
   - Return complete demo buffer
   - Clear recording state
@@ -458,21 +463,21 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/index.ts`
 **Reference**: Recording trigger points
 
-- [ ] **3.2.1** Add DemoRecorder instance to client
+- [x] **3.2.1** Add DemoRecorder instance to client
   - Create `private demoRecorder: DemoRecorder` in createClient
   - Add `startRecording(name: string): void` to ClientExports
   - Add `stopRecording(): void` to ClientExports
 
-- [ ] **3.2.2** Hook recording into network message flow
+- [x] **3.2.2** Hook recording into network message flow
   - In multiplayer mode, record all `svc_*` messages received
   - In `MultiplayerConnection.handleMessage`, call `demoRecorder.recordMessage(data)`
   - Only record when multiplayer mode active and recording enabled
 
-- [ ] **3.2.3** Add recording controls to UI
+- [x] **3.2.3** Add recording controls to UI
   - Add "Record Demo" button to multiplayer menu
   - Show recording indicator when active
   - Add "Stop Recording" button
-  - Save demo file to IndexedDB when stopped
+  - Save demo file to IndexedDB when stopped (Currently downloads file)
 
 **Test Case**: Integration test in `packages/client/tests/demo-recording-integration.test.ts`
 - Mock multiplayer connection

@@ -4,6 +4,7 @@ import { SaveLoadMenuFactory } from './saveLoad.js';
 import { OptionsMenuFactory } from './options.js';
 import { MapsMenuFactory } from './maps.js';
 import { MultiplayerMenuFactory } from './multiplayer.js';
+import { DemoMenuFactory } from './demo.js';
 
 export interface MainMenuOptions {
   onNewGame: () => void;
@@ -13,6 +14,7 @@ export interface MainMenuOptions {
   onSetDifficulty?: (skill: number) => void;
   showSaveOption?: boolean;
   multiplayerFactory?: MultiplayerMenuFactory;
+  demoFactory?: DemoMenuFactory;
 }
 
 export class MainMenuFactory {
@@ -37,6 +39,16 @@ export class MainMenuFactory {
                 this.menuSystem.pushMenu(this.options.multiplayerFactory.createMultiplayerMenu());
             } else {
                 console.warn('Multiplayer factory not configured');
+            }
+        }
+      },
+      {
+        label: 'Demos',
+        action: () => {
+            if (this.options.demoFactory) {
+                this.menuSystem.pushMenu(this.options.demoFactory.createDemoMenu());
+            } else {
+                console.warn('Demo factory not configured');
             }
         }
       },

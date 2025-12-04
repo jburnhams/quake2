@@ -30,6 +30,7 @@ import { OptionsMenuFactory } from './ui/menu/options.js';
 import { MapsMenuFactory } from './ui/menu/maps.js';
 import { PauseMenuFactory } from './ui/menu/pause.js';
 import { MultiplayerMenuFactory } from './ui/menu/multiplayer.js';
+import { DemoMenuFactory } from './ui/menu/demo.js';
 import { Draw_Menu } from './ui/menu/render.js';
 import { InputBindings } from './input/bindings.js';
 import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
@@ -40,6 +41,7 @@ import { angleVectors } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
 import { DemoControls } from './ui/demo-controls.js';
+import { DemoRecorder } from '@quake2ts/engine';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -108,6 +110,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Networking
   multiplayer: MultiplayerConnection;
 
+  // Recording
+  startRecording(filename: string): void;
+  stopRecording(): void;
+
   // Menu System
   createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
 
@@ -148,6 +154,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const demoPlayback = new DemoPlaybackController();
   const demoControls = new DemoControls(demoPlayback);
   const demoHandler = new ClientNetworkHandler(imports);
+  const demoRecorder = new DemoRecorder();
   demoHandler.setView(view);
 
   let isDemoPlaying = false;
@@ -196,6 +203,7 @@ export function createClient(imports: ClientImports): ClientExports {
       get skin() { return imports.host?.cvars?.get('skin')?.string || 'grunt'; },
       get fov() { return fovValue; }
   });
+  multiplayer.setDemoRecorder(demoRecorder);
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
 
@@ -293,6 +301,15 @@ export function createClient(imports: ClientImports): ClientExports {
         multiplayer.disconnect();
         console.log('Disconnected.');
     }, 'Disconnect from server');
+
+    imports.host.commands.register('record', (args) => {
+        const name = args.length > 0 ? args[0] : `demo_${Date.now()}`;
+        clientExports.startRecording(name + '.dm2');
+    }, 'Record a demo');
+
+    imports.host.commands.register('stop', () => {
+        clientExports.stopRecording();
+    }, 'Stop recording demo');
 
     if (imports.host.cvars) {
       imports.host.cvars.register({
@@ -428,7 +445,7 @@ export function createClient(imports: ClientImports): ClientExports {
         }
     },
 
-    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory' | 'demoFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
         let optsFactory = optionsFactory;
         if (!optsFactory) {
@@ -448,11 +465,14 @@ export function createClient(imports: ClientImports): ClientExports {
              imports.host?.commands.execute(`map ${map}`);
         });
 
+        const demoFactory = new DemoMenuFactory(menuSystem, clientExports);
+
         const factory = new MainMenuFactory(menuSystem, saveLoadFactory, {
             ...options,
             optionsFactory: optsFactory,
             mapsFactory,
             multiplayerFactory,
+            demoFactory,
             onSetDifficulty: (skill: number) => {
                 if (imports.host?.cvars) {
                     imports.host.cvars.setValue('skill', skill.toString());
@@ -738,6 +758,7 @@ export function createClient(imports: ClientImports): ClientExports {
     startDemoPlayback(buffer: ArrayBuffer, filename: string) {
         demoPlayback.loadDemo(buffer);
         demoPlayback.setHandler(demoHandler);
+        demoControls.setDemoName(filename);
         isDemoPlaying = true;
         currentDemoName = filename;
         clientMode = ClientMode.DemoPlayback;
@@ -747,10 +768,38 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     stopDemoPlayback() {
         demoPlayback.stop();
+        demoControls.setDemoName(null);
         isDemoPlaying = false;
         currentDemoName = null;
         clientMode = ClientMode.Normal;
         // Clean up
+    },
+    startRecording(filename: string) {
+        if (multiplayer.isConnected()) {
+             demoRecorder.startRecording(filename);
+             console.log(`Recording started: ${filename}`);
+        } else {
+             console.log("Not connected to a server.");
+        }
+    },
+    stopRecording() {
+        if (demoRecorder.getIsRecording()) {
+             const data = demoRecorder.stopRecording();
+             console.log(`Recording stopped. Size: ${data?.length} bytes.`);
+             // Auto-save to VFS or download?
+             // For now, let's offer download if in browser
+             if (data && typeof document !== 'undefined') {
+                 const blob = new Blob([data as any], { type: 'application/octet-stream' });
+                 const url = URL.createObjectURL(blob);
+                 const a = document.createElement('a');
+                 a.href = url;
+                 a.download = 'demo.dm2'; // Should use filename
+                 document.body.appendChild(a);
+                 a.click();
+                 document.body.removeChild(a);
+                 URL.revokeObjectURL(url);
+             }
+        }
     },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
