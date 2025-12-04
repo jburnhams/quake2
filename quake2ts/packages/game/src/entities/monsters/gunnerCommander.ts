@@ -470,7 +470,7 @@ function guncmdr_pain(self: Entity, context: EntitySystem): void {
          context.engine.sound?.(self, 0, 'guncmdr/gcdrpain1.wav', 1, 1, 0);
     }
 
-    if (!M_ShouldReactToPain(self)) return;
+    if (!M_ShouldReactToPain(self, context)) return;
 
     const r = Math.floor(Math.random() * 7);
     switch (r) {

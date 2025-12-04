@@ -230,7 +230,7 @@ guardian_move_pain1 = {
   endfunc: guardian_run,
 };
 
-function guardian_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function guardian_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
     if (damage <= 10) return;
 
     // Don't go into pain while attacking
@@ -239,9 +239,9 @@ function guardian_pain(self: Entity, other: Entity | null, kick: number, damage:
     if (frame >= FRAME_atk2_fire1 && frame <= FRAME_atk2_fire4) return;
     if (frame >= FRAME_kick_in1 && frame <= FRAME_kick_in13) return;
 
-    if (!M_ShouldReactToPain(self)) return;
+    if (!M_ShouldReactToPain(self, context)) return;
 
-    M_SetAnimation(self, guardian_move_pain1, null);
+    M_SetAnimation(self, guardian_move_pain1, context);
 }
 
 //
@@ -594,7 +594,7 @@ export function SP_monster_guardian(self: Entity, context: SpawnContext): void {
 
   // Define pain and die with captured context
   self.pain = (ent, other, kick, damage) => {
-      guardian_pain(ent, other, kick, damage);
+      guardian_pain(ent, other, kick, damage, context.entities);
   };
 
   self.die = (ent, inflictor, attacker, damage, point, mod) => {

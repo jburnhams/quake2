@@ -20,6 +20,7 @@ import {
   ai_turn,
   ai_face
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
@@ -317,6 +318,10 @@ function chick_pain(self: Entity, other: Entity | null, kick: number, damage: nu
   if (r < 0.33) context.engine.sound?.(self, 0, 'chick/chkpain1.wav', 1, 1, 0);
   else if (r < 0.66) context.engine.sound?.(self, 0, 'chick/chkpain2.wav', 1, 1, 0);
   else context.engine.sound?.(self, 0, 'chick/chkpain3.wav', 1, 1, 0);
+
+  if (!M_ShouldReactToPain(self, context.entities)) {
+    return;
+  }
 
   // Clear blindfire
   self.monsterinfo.blindfire = false;

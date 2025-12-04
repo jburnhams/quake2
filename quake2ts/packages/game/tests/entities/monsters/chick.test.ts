@@ -30,7 +30,7 @@ describe('monster_chick', () => {
       unicast: vi.fn(),
     };
 
-    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
+    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 }, skill: 1 });
     system = (gameExports as any).entities;
 
     context = {

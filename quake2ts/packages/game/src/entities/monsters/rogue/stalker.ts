@@ -401,7 +401,7 @@ stalker_move_pain = {
     endfunc: stalker_run
 };
 
-function stalker_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
+function stalker_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
     if (self.deadflag) return;
     if (!self.groundentity) return;
 
@@ -413,7 +413,9 @@ function stalker_pain(self: Entity, other: Entity | null, kick: number, damage: 
         return;
     }
 
-    if (M_ShouldReactToPain(self)) {
+    context.engine.sound?.(self, 0, SOUND_PAIN, 1, ATTN_NORM, 0);
+
+    if (M_ShouldReactToPain(self, context)) {
         self.monsterinfo.current_move = stalker_move_pain;
     }
 }
@@ -631,7 +633,7 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.max_health = self.health;
     self.mass = 250;
 
-    self.pain = stalker_pain;
+    self.pain = (ent, other, kick, damage) => stalker_pain(ent, other, kick, damage, context.entities);
     self.die = stalker_die;
 
     self.monsterinfo.stand = stalker_stand;

@@ -6,6 +6,7 @@ import {
   ai_walk,
   monster_think,
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -210,6 +211,10 @@ export function SP_monster_flyer(self: Entity, context: SpawnContext): void {
   self.viewheight = 18;
 
   self.pain = (self, other, kick, damage) => {
+    if (!M_ShouldReactToPain(self, context.entities)) {
+        return;
+    }
+
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }

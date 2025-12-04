@@ -7,6 +7,7 @@ import {
     ai_walk,
     monster_think,
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
     DeadFlag,
@@ -173,6 +174,10 @@ function gunner_pain(self: Entity, context: any): void {
 
     if (self.pain_debounce_time && context.timeSeconds < self.pain_debounce_time) return;
     self.pain_debounce_time = context.timeSeconds + 3;
+
+    if (!M_ShouldReactToPain(self, context)) {
+        return;
+    }
 
     if (Math.random() < 0.5) {
         context.engine.sound?.(self, 0, 'gunner/gunpain1.wav', 1, 1, 0);

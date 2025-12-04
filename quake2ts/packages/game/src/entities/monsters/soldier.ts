@@ -7,6 +7,7 @@ import {
   ai_walk,
   monster_think,
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
@@ -385,6 +386,10 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   }
 
   self.pain = (self, other, kick, damage) => {
+    if (!M_ShouldReactToPain(self, context.entities)) {
+        return;
+    }
+
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }

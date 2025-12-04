@@ -6,6 +6,7 @@ import {
   ai_walk,
   monster_think,
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -178,9 +179,17 @@ function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: 
 
   if (random() < 0.5) {
     context.engine.sound?.(self, 0, 'flipper/flppain1.wav', 1, 1, 0);
-    self.monsterinfo.current_move = pain1_move;
   } else {
     context.engine.sound?.(self, 0, 'flipper/flppain2.wav', 1, 1, 0);
+  }
+
+  if (!M_ShouldReactToPain(self, context.entities)) {
+    return;
+  }
+
+  if (Math.random() < 0.5) {
+    self.monsterinfo.current_move = pain1_move;
+  } else {
     self.monsterinfo.current_move = pain2_move;
   }
 }

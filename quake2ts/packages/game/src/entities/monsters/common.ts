@@ -118,8 +118,13 @@ export function M_SetAnimation(self: Entity, move: MonsterMove, context: any): v
   self.monsterinfo.current_move = move;
 }
 
-export function M_ShouldReactToPain(self: Entity): boolean {
-  // Nightmare check etc.
+export function M_ShouldReactToPain(self: Entity, context: EntitySystem): boolean {
+  if (!context) {
+      return true; // Should not happen in proper env
+  }
+  if (context.skill >= 3) {
+    return false;
+  }
   return true;
 }
 
