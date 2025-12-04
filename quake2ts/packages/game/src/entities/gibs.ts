@@ -6,6 +6,7 @@ import { Entity, MoveType, Solid } from './entity.js';
 import { EntitySystem } from './system.js';
 import { createRandomGenerator, Vec3, scaleVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
+import { EntityEffects } from './enums.js';
 
 const random = createRandomGenerator();
 
@@ -68,7 +69,7 @@ function gib_touch(self: Entity, other: Entity | null, plane: any, surf: any, sy
     }
 }
 
-export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?: string, type: number = GIB_ORGANIC) {
+export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?: string, type: number = GIB_ORGANIC, mod: DamageMod = DamageMod.UNKNOWN) {
     const gib = sys.spawn();
     gib.classname = 'gib';
 
@@ -103,6 +104,17 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
         vscale = 1.0;
     }
 
+    // Apply effects based on damage mod
+    if (mod === DamageMod.LAVA || mod === DamageMod.TRAP) {
+        // Burn gibs: No blood, maybe smoke?
+        // Using EF_ROCKET for a smoke trail effect, although it might be too much.
+        // For now, simply avoiding EF_GIB stops the blood trail.
+        // gib.effects |= EntityEffects.Rocket;
+    } else if (type !== GIB_METALLIC && type !== GIB_DEBRIS) {
+        // Organic gibs bleed unless burned
+        gib.effects |= EntityEffects.Gib;
+    }
+
     const vd = velocityForDamage(damage);
 
     gib.velocity = {
@@ -130,7 +142,7 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
 
 // Matches ThrowClientHead logic in g_misc.c (mostly)
 // Replaces ThrowHead behavior for generic monsters too for now.
-export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number) {
+export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: DamageMod = DamageMod.UNKNOWN) {
     const head = sys.spawn();
 
     // Randomize between skull (skin 0) and player head (skin 1)
@@ -169,6 +181,12 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number) {
     head.movetype = MoveType.Toss;
     head.touch = (self, other, plane, surf) => gib_touch(self, other, plane, surf, sys);
 
+    if (mod === DamageMod.LAVA || mod === DamageMod.TRAP) {
+        // Burn gibs: No blood
+    } else {
+        head.effects |= EntityEffects.Gib;
+    }
+
     const vd = velocityForDamage(damage);
 
     head.velocity = {
@@ -190,7 +208,7 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number) {
     return head;
 }
 
-export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], type: number = GIB_ORGANIC) {
+export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number | GibDef[], type: number = GIB_ORGANIC, mod: DamageMod = DamageMod.UNKNOWN) {
     if (typeof damageOrDefs === 'number') {
         const damage = damageOrDefs;
 
@@ -199,28 +217,28 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
              // Based on func_explosive but scaled down a bit maybe?
              // func_explosive_explode spawns multiple debris based on mass.
              // Here we are generic.
-             spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type);
-             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type);
+             spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type, mod);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type, mod);
+             spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type, mod);
+             spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type, mod);
         } else {
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, mod);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, mod);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, mod);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/sm_meat/tris.md2', type, mod);
 
-            spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', type);
-            spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', type);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/meat/tris.md2', type, mod);
+            spawnGib(sys, origin, damage, 'models/objects/gibs/bone/tris.md2', type, mod);
 
             // Spawn head
-            spawnHead(sys, origin, damage);
+            spawnHead(sys, origin, damage, mod);
         }
 
     } else {
         const defs = damageOrDefs;
         for (const def of defs) {
             for (let i = 0; i < def.count; i++) {
-                spawnGib(sys, origin, 0, def.model, def.flags);
+                spawnGib(sys, origin, 0, def.model, def.flags, mod);
             }
         }
     }
