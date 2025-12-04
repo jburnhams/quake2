@@ -6,7 +6,7 @@ import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { TempEntity, ServerCommand } from '@quake2ts/shared';
+import { TempEntity, ServerCommand, RenderFx } from '@quake2ts/shared';
 
 // Mock T_Damage
 vi.mock('../../src/combat/damage.js', () => ({
@@ -45,7 +45,7 @@ describe('target_laser', () => {
 
         expect(entity.movetype).toBe(MoveType.None);
         expect(entity.solid).toBe(Solid.Not);
-        expect(entity.renderfx & 0x00000008).toBeTruthy(); // RF_BEAM
+        expect(entity.renderfx & RenderFx.Beam).toBeTruthy();
         expect(entity.modelindex).toBe(1);
         expect(entity.movedir.x).toBeCloseTo(1);
 
