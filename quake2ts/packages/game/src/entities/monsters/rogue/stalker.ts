@@ -14,7 +14,11 @@ import {
   ai_walk,
   ai_run,
   ai_charge,
-  monster_think
+  monster_think,
+  PredictAim,
+  M_CalculatePitchToFire,
+  blocked_checkjump,
+  blocked_checkplat
 } from '../../../ai/index.js';
 import {
   Vec3,
@@ -76,36 +80,6 @@ function has_valid_enemy(self: Entity): boolean {
     return self.enemy !== null && self.enemy.health > 0;
 }
 
-function PredictAim(self: Entity, target: Entity, start: Vec3, speed: number, b1: boolean, f1: number, dir: Vec3[], end: Vec3[]): void {
-  if (target) {
-    if (end && end.length > 0) {
-        end[0] = { ...target.origin };
-    }
-    if (dir && dir.length > 0) {
-        dir[0] = normalizeVec3(subtractVec3(target.origin, start));
-    }
-  }
-}
-
-function M_CalculatePitchToFire(self: Entity, jumpLZ: Vec3, origin: Vec3, dir: Vec3, velocity: number, i: number, b1: boolean, b2: boolean): boolean {
-  return false;
-}
-
-enum blocked_jump_result_t {
-    NO_JUMP = 0,
-    JUMP_TURN = 1,
-    JUMP_JUMP_UP = 2,
-    JUMP_JUMP_DOWN = 3
-}
-
-function blocked_checkjump(self: Entity, dist: number): blocked_jump_result_t {
-    return blocked_jump_result_t.NO_JUMP;
-}
-
-function blocked_checkplat(self: Entity, dist: number): boolean {
-    return false;
-}
-
 function monster_footstep(self: Entity, context: EntitySystem): void {
     // Stub
 }
@@ -119,7 +93,7 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
 
     const end = addVec3(start, scaleVec3(forward, aim.x));
 
-    const tr = context.trace(start, end, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
+    const tr = context.trace(start, null, null, end, self, MASK_SHOT);
 
     if (tr.ent === self.enemy || (tr.ent && tr.ent.takedamage)) {
         return true;
@@ -473,8 +447,11 @@ function stalker_shoot_attack(self: Entity, context: EntitySystem): void {
     const start = M_ProjectFlashSource(self, offset, forward, right);
 
     if (self.enemy) {
-        let dir = subtractVec3(self.enemy.origin, start);
-        monster_fire_blaster(self, start, normalizeVec3(dir), 5, 800, 0, 0, context, DamageMod.BLASTER);
+        // Adopt shared PredictAim
+        const boltSpeed = 800;
+        const { aimdir } = PredictAim(context, self, self.enemy, start, boltSpeed, false, 0);
+
+        monster_fire_blaster(self, start, aimdir, 5, boltSpeed, 0, 0, context, DamageMod.BLASTER);
     }
 }
 
@@ -569,11 +546,13 @@ stalker_move_jump_straightup = {
 };
 
 function stalker_dodge(self: Entity, attacker: Entity, eta: number): void {
+    // TODO: Use M_MonsterDodge / blocked_checkjump / etc if needed
 }
 
 
 // BLOCKED
 function stalker_blocked(self: Entity, other: Entity | null): void {
+    // Use blocked_checkplat or similar?
 }
 
 // DEATH
@@ -665,6 +644,11 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.monsterinfo.blocked = stalker_blocked;
     self.monsterinfo.melee = stalker_attack_melee;
     self.monsterinfo.setskin = stalker_setskin;
+
+    // Set Rogue/Mission Pack specific jump/drop heights if needed
+    self.monsterinfo.jump_height = 48; // Or similar
+    self.monsterinfo.drop_height = 300; // Stalker can drop far?
+    self.monsterinfo.can_jump = true;
 
     context.entities.linkentity(self);
 

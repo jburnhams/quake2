@@ -178,6 +178,12 @@ export interface MonsterInfo {
   blocked?: BlockedCallback;
   setskin?: (self: Entity) => void;
   freeze_time?: number; // For ETF Rifle freeze effect
+
+  // [Paril-KEX] Jump/Drop support
+  jump_time?: number;
+  jump_height?: number;
+  drop_height?: number;
+  can_jump?: boolean;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
