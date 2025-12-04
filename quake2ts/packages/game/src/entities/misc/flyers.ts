@@ -215,3 +215,18 @@ export function registerMiscViperBomb(registry: SpawnRegistry) {
         context.entities.linkentity(entity);
     });
 }
+
+// ============================================================================
+// MISC BIG VIPER
+// ============================================================================
+
+export function registerMiscBigViper(registry: SpawnRegistry) {
+    registry.register('misc_bigviper', (entity: Entity, context: any) => {
+        entity.movetype = MoveType.None;
+        entity.solid = Solid.BoundingBox;
+        entity.mins = { x: -176, y: -120, z: -24 };
+        entity.maxs = { x: 176, y: 120, z: 72 };
+        entity.modelindex = context.entities.modelIndex("models/ships/bigviper/tris.md2");
+        context.entities.linkentity(entity);
+    });
+}
