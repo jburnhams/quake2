@@ -25,6 +25,7 @@ import { SP_monster_makron } from './makron.js';
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3, vectorToYaw } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { visible, rangeTo } from '../../ai/perception.js';
+import { PredictAim } from '../../ai/rogue.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -132,12 +133,12 @@ function jorg_fire_bullet(self: Entity, context: any): void {
 
     // Fire left
     const startL = getProjectedOffset(self, JORG_MACHINEGUN_L1_OFFSET);
-    const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
+    const { aimdir: dirL } = PredictAim(context, self, self.enemy, startL, 0, false, 0.2);
     monster_fire_bullet_v2(self, startL, dirL, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 
     // Fire right
     const startR = getProjectedOffset(self, JORG_MACHINEGUN_R1_OFFSET);
-    const dirR = normalizeVec3(subtractVec3(self.enemy.origin, startR));
+    const { aimdir: dirR } = PredictAim(context, self, self.enemy, startR, 0, false, -0.2);
     monster_fire_bullet_v2(self, startR, dirR, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 }
 
