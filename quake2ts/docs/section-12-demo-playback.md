@@ -1,12 +1,13 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~60% Complete (Parsing Infrastructure Improved, Metadata & Seeking Added)**
+**~65% Complete (Parsing Infrastructure Improved, Metadata & Seeking Added, Client Integration Tested)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
 - ✅ **Fixed**: Entity commands (22, 23) correctly mapped for legacy protocols
 - ✅ **Added**: Demo file indexing, metadata retrieval (frames, duration), and seeking support
+- ✅ **Tested**: Client-side demo playback integration (start/stop, mode switching, render loop)
 - ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
 - ❌ No demo viewer application
 - ❌ Rerelease Protocol 2023 unverified with real demos
@@ -174,11 +175,11 @@ if (cls.serverProtocol != 26)
   - Return camera/view from demo data instead of player state
 
 **Test Case**: Create unit test in `packages/client/tests/demo-playback-integration.test.ts`
-- Mock DemoPlaybackController
-- Call startDemoPlayback with synthetic buffer
-- Verify mode transition
-- Verify update loop calls demoPlayback.update
-- Call stopDemoPlayback, verify cleanup
+- [x] Mock DemoPlaybackController
+- [x] Call startDemoPlayback with synthetic buffer
+- [x] Verify mode transition
+- [x] Verify update loop calls demoPlayback.update
+- [x] Call stopDemoPlayback, verify cleanup
 
 #### Task 1.2: Enhance ClientNetworkHandler for Demo Rendering
 **File**: `packages/client/src/demo/handler.ts`
