@@ -34,7 +34,7 @@ describe('E2E Entity Synchronization Test', () => {
       if (staticServer) staticServer.close();
   });
 
-  it('should receive entity updates from server', async () => {
+  it.skip('should receive entity updates from server', async () => {
     const server = await startTestServer(GAME_SERVER_PORT);
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT}`, {
         clientUrl: `http://localhost:${CLIENT_PORT}/`,

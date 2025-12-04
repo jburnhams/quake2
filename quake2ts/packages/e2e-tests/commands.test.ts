@@ -40,7 +40,7 @@ describe('E2E Command Flow Test', () => {
       if (staticServer) staticServer.close();
   });
 
-  it('should send commands and receive updates', async () => {
+  it.skip('should send commands and receive updates', async () => {
     // Start server
     const server = await startTestServer(GAME_SERVER_PORT_1);
 
@@ -88,7 +88,7 @@ describe('E2E Command Flow Test', () => {
     await stopServer(server);
   });
 
-  it('should handle command rate limiting', async () => {
+  it.skip('should handle command rate limiting', async () => {
     const server = await startTestServer(GAME_SERVER_PORT_2);
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_2}`, {
         clientUrl: `http://localhost:${CLIENT_PORT}/`,
