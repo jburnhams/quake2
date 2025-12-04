@@ -279,6 +279,11 @@ export class DedicatedServer implements GameEngine {
         if (client.edict && this.game) {
             this.game.clientDisconnect(client.edict);
         }
+        // IMPORTANT: We must clear the client slot so it can be reused, but also
+        // we need to be careful if this is called multiple times.
+        // We set state to Free to be safe.
+        client.state = ClientState.Free;
+
         this.svs.clients[client.index] = null;
         if (this.entityIndex && client.edict) {
             this.entityIndex.unlink(client.edict.index);
@@ -286,6 +291,10 @@ export class DedicatedServer implements GameEngine {
     }
 
     private dropClient(client: Client) {
+        // Mark as zombie or free immediately to prevent further processing in this frame loop?
+        // No, let the driver close event handle cleanup.
+        // But we should ensure we don't process it anymore.
+
         // Disconnect handling will be triggered by onClose callback from net driver
         if (client.net) {
              client.net.disconnect();
@@ -451,6 +460,16 @@ export class DedicatedServer implements GameEngine {
                 const rawData = client.messageQueue.shift();
                 if (!rawData) continue;
 
+                // Sync qport from packet (WebSocket guarantees source, so we trust the stream)
+                // This ensures the server accepts the client's chosen qport.
+                if (rawData.byteLength >= 10) {
+                    const view = new DataView(rawData.buffer, rawData.byteOffset, rawData.byteLength);
+                    const incomingQPort = view.getUint16(8, true);
+                    if (client.netchan.qport !== incomingQPort) {
+                        client.netchan.qport = incomingQPort;
+                    }
+                }
+
                 // Process through NetChan
                 const data = client.netchan.process(rawData);
                 if (!data) {
@@ -519,11 +538,12 @@ export class DedicatedServer implements GameEngine {
                 }
 
                 if (client.commandCount > 200) {
-                     console.warn(`Client ${client.index} kicked for command flooding`);
+                     console.warn(`Client ${client.index} kicked for command flooding (count: ${client.commandCount})`);
                      this.dropClient(client);
                      continue;
                 }
 
+                // console.log(`Processing command for client ${client.index}, count: ${client.commandCount}`);
                 this.game.clientThink(client.edict, client.lastCmd);
             }
         }

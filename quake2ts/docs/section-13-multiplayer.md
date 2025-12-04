@@ -602,37 +602,28 @@
 
 **Reference**: Command processing flow
 
-#### Task 4.4: Test Entity Synchronization
-**File**: `packages/e2e-tests/entities.test.ts`
-**Reference**: Entity updates and rendering
+#### Task 4.4: Integrate Real Client for E2E Tests (Option 2)
+**File**: `packages/e2e-tests/fixtures/client-bundle.html` (new)
+**Reference**: Full client verification
 
-- [ ] **4.4.1** Test server sends entity updates
-  - Server running game simulation
-  - Entities move/spawn/die
-  - Verify `svc_frame` packets sent
-  - Verify entity deltas in packets
+- [ ] **4.4.1** Serve Real Client Bundle
+  - Configure `packages/e2e-tests/helpers/testClient.ts` to serve the actual `@quake2ts/client` bundle or build artifacts.
+  - Ensure static server in `testClient` can serve `dist/` from `packages/client`.
 
-- [ ] **4.4.2** Test client receives entity updates
-  - Client receives `svc_frame` packets
-  - Verify NetChan processes them
-  - Verify entities parsed from frame
-  - Verify client's entity map updated
+- [ ] **4.4.2** Validate Full Handshake with Real Client
+  - Update `entities.test.ts` to use real client.
+  - Verify client sends `userinfo`, handles `configstrings`, sends `begin`.
+  - Verify server transitions client to `Active` state.
 
-- [ ] **4.4.3** Test entity rendering
-  - Client has updated entities
-  - Call client render
-  - Verify entities passed to renderer
-  - Visual check: entities visible (screenshot)
+- [ ] **4.4.3** Verify Entity Sync
+  - Once handshake complete, verify real client receives and processes `svc_frame`.
+  - Inspect `client.lastRendered` state in browser via Playwright.
+  - Verify entity positions match server.
 
-**Test Case**: Entity sync E2E test
-- Spawn entity on server
-- Verify client sees it
-- Move entity on server
-- Verify client sees updated position
-- Remove entity on server
-- Verify client removes it
-
-**Reference**: Entity synchronization flow
+**Test Case**: Entity sync with Real Client
+- Connect real client to test server.
+- Ensure transitions to Active.
+- Verify `quake2.lastRendered` contains server entities.
 
 #### Task 4.5: Test Prediction and Reconciliation
 **File**: `packages/e2e-tests/prediction.test.ts`
