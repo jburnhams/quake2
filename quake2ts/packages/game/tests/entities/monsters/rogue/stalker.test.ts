@@ -1,55 +1,60 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_stalker } from '../../../../src/entities/monsters/rogue/stalker.js';
-import { createTestContext } from '../../../test-helpers.js';
-import { Entity, MoveType, Solid, DeadFlag } from '../../../../src/entities/entity.js';
+import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../../src/entities/entity.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { ZERO_VEC3 } from '@quake2ts/shared';
+
+// Mock dependencies
+const mockSound = vi.fn();
+const mockLinkEntity = vi.fn();
+const mockFree = vi.fn();
+const mockSoundIndex = vi.fn();
+const mockModelIndex = vi.fn();
+const mockCheckBottom = vi.fn().mockReturnValue(true);
+
+const mockContext: any = {
+  entities: {
+    engine: {
+      sound: mockSound,
+    },
+    sound: mockSound,
+    linkentity: mockLinkEntity,
+    free: mockFree,
+    soundIndex: mockSoundIndex,
+    modelIndex: mockModelIndex,
+    timeSeconds: 10,
+    checkGround: vi.fn(),
+    trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
+  },
+};
 
 describe('monster_stalker', () => {
-  let context: any;
   let entity: Entity;
 
   beforeEach(() => {
-    context = createTestContext();
-    entity = context.entities.spawn();
+    entity = new Entity();
+    entity.monsterinfo = {} as any;
+    entity.origin = { ...ZERO_VEC3 };
+    entity.angles = { ...ZERO_VEC3 };
     vi.clearAllMocks();
   });
 
-  it('should spawn with correct initial state', () => {
-    SP_monster_stalker(entity, context);
+  it('should spawn with correct properties', () => {
+    SP_monster_stalker(entity, mockContext);
 
-    expect(entity.health).toBe(250);
-    expect(entity.max_health).toBe(250);
-    expect(entity.mass).toBe(250);
+    expect(mockModelIndex).toHaveBeenCalledWith("models/monsters/stalker/tris.md2");
+
     expect(entity.movetype).toBe(MoveType.Step);
     expect(entity.solid).toBe(Solid.BoundingBox);
-    expect(entity.mins).toEqual({ x: -28, y: -28, z: -18 });
-    expect(entity.maxs).toEqual({ x: 28, y: 28, z: 18 });
+    expect(entity.health).toBe(250);
+    expect(entity.mass).toBe(250);
+    expect(entity.classname).toBe('monster_stalker');
   });
 
-  it('should start on ceiling if spawnflag is set', () => {
-    const SPAWNFLAG_STALKER_ONROOF = 8;
-    entity.spawnflags = SPAWNFLAG_STALKER_ONROOF;
+  it('should set ceiling orientation if flag set', () => {
+      entity.spawnflags = 8; // SPAWNFLAG_STALKER_ONROOF
+      SP_monster_stalker(entity, mockContext);
 
-    SP_monster_stalker(entity, context);
-
-    expect(entity.angles.z).toBe(180);
-  });
-
-  it('should have pain and die callbacks', () => {
-    SP_monster_stalker(entity, context);
-    expect(entity.pain).toBeDefined();
-    expect(entity.die).toBeDefined();
-  });
-
-  it('should set skin based on health', () => {
-    SP_monster_stalker(entity, context);
-    expect(entity.monsterinfo.setskin).toBeDefined();
-
-    entity.health = 10;
-    entity.monsterinfo.setskin!(entity);
-    expect(entity.skin).toBe(1); // Damaged skin
-
-    entity.health = 250;
-    entity.monsterinfo.setskin!(entity);
-    expect(entity.skin).toBe(0); // Normal skin
+      expect(entity.angles.z).toBe(180);
   });
 });

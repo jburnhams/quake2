@@ -418,6 +418,7 @@ export function SP_monster_fixbot(self: Entity, context: SpawnContext): void {
     self.movetype = MoveType.Step; // But flies
     self.solid = Solid.BoundingBox;
     self.health = 150;
+    self.max_health = 150;
     self.mass = 150;
 
     self.pain = (e, o, k, d) => fixbot_pain(e, o, k, d, context.entities);
@@ -447,4 +448,5 @@ export function SP_monster_fixbot(self: Entity, context: SpawnContext): void {
 
 export function registerFixbotSpawns(registry: SpawnRegistry): void {
   registry.register('monster_fixbot', SP_monster_fixbot);
+  registry.register('monster_repair', SP_monster_fixbot);
 }

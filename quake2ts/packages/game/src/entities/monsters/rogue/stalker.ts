@@ -632,6 +632,8 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
         return;
     }
 
+    self.classname = 'monster_stalker';
+
     context.entities.soundIndex(SOUND_PAIN);
     context.entities.soundIndex(SOUND_DIE);
     context.entities.soundIndex(SOUND_SIGHT);
