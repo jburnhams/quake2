@@ -19,6 +19,8 @@ describe('DemoReader', () => {
     const reader = new DemoReader(buffer);
 
     expect(reader.hasMore()).toBe(true);
+    expect(reader.getMessageCount()).toBe(1);
+
     const block = reader.readNextBlock();
 
     expect(block).not.toBeNull();
@@ -34,7 +36,7 @@ describe('DemoReader', () => {
     expect(reader.hasMore()).toBe(false);
   });
 
-  it('should handle multiple blocks', () => {
+  it('should handle multiple blocks and build index', () => {
     // Block 1: 2 bytes
     // Block 2: 1 byte
     const buffer = new ArrayBuffer(4 + 2 + 4 + 1);
@@ -52,6 +54,8 @@ describe('DemoReader', () => {
 
     const reader = new DemoReader(buffer);
 
+    expect(reader.getMessageCount()).toBe(2);
+
     const block1 = reader.readNextBlock();
     expect(block1).not.toBeNull();
     expect(block1!.length).toBe(2);
@@ -65,12 +69,39 @@ describe('DemoReader', () => {
     expect(reader.hasMore()).toBe(false);
   });
 
+  it('should seek to specific message', () => {
+    // 3 blocks
+    const buffer = new ArrayBuffer((4 + 1) * 3);
+    const view = new DataView(buffer);
+    for (let i = 0; i < 3; i++) {
+        view.setInt32(i * 5, 1, true);
+        view.setUint8(i * 5 + 4, i + 10);
+    }
+
+    const reader = new DemoReader(buffer);
+    expect(reader.getMessageCount()).toBe(3);
+
+    // Seek to last
+    expect(reader.seekToMessage(2)).toBe(true);
+    const lastBlock = reader.readNextBlock();
+    expect(lastBlock!.data.readByte()).toBe(12);
+
+    // Seek to first
+    expect(reader.seekToMessage(0)).toBe(true);
+    const firstBlock = reader.readNextBlock();
+    expect(firstBlock!.data.readByte()).toBe(10);
+
+    // Seek out of bounds
+    expect(reader.seekToMessage(5)).toBe(false);
+  });
+
   it('should handle incomplete blocks gracefully', () => {
     const buffer = new ArrayBuffer(4 + 10); // Length says 20, but only 10 bytes exist
     const view = new DataView(buffer);
     view.setInt32(0, 20, true);
 
     const reader = new DemoReader(buffer);
+    expect(reader.getMessageCount()).toBe(0); // Should be 0 valid blocks
     const block = reader.readNextBlock();
 
     expect(block).toBeNull();
@@ -79,6 +110,7 @@ describe('DemoReader', () => {
   it('should handle truncated length', () => {
       const buffer = new ArrayBuffer(2); // Not enough for 4-byte length
       const reader = new DemoReader(buffer);
+      expect(reader.getMessageCount()).toBe(0);
       const block = reader.readNextBlock();
       expect(block).toBeNull();
   });

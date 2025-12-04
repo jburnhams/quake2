@@ -9,11 +9,40 @@ export class DemoReader {
   private buffer: ArrayBuffer;
   private view: DataView;
   private offset: number;
+  private messageOffsets: number[] = [];
 
   constructor(buffer: ArrayBuffer) {
     this.buffer = buffer;
     this.view = new DataView(buffer);
     this.offset = 0;
+    this.scan();
+  }
+
+  /**
+   * Scans the buffer to build an index of message offsets.
+   */
+  private scan(): void {
+    let scanOffset = 0;
+    this.messageOffsets = [];
+
+    while (scanOffset + 4 <= this.buffer.byteLength) {
+      const length = this.view.getInt32(scanOffset, true);
+
+      if (length < 0 || length > 0x200000) {
+        // Sanity check failed, stop scanning
+        console.warn(`DemoReader: Invalid block length ${length} at offset ${scanOffset} during scan`);
+        break;
+      }
+
+      if (scanOffset + 4 + length > this.buffer.byteLength) {
+        // Incomplete block, stop scanning
+        console.warn(`DemoReader: Incomplete block at offset ${scanOffset} during scan`);
+        break;
+      }
+
+      this.messageOffsets.push(scanOffset);
+      scanOffset += 4 + length;
+    }
   }
 
   /**
@@ -30,29 +59,18 @@ export class DemoReader {
    */
   public readNextBlock(): DemoMessageBlock | null {
     if (this.offset + 4 > this.buffer.byteLength) {
-      // Not enough data for length
       return null;
     }
 
-    // Read length (little endian)
     const length = this.view.getInt32(this.offset, true);
-    this.offset += 4;
 
-    if (length < 0 || length > 0x200000) { // 2MB sanity check (Rerelease frames can be large)
-       // Sanity check failed or negative length
-       console.warn(`DemoReader: Invalid block length ${length} at offset ${this.offset - 4}`);
+    // We already validated this in scan(), but let's keep it safe
+    if (length < 0 || this.offset + 4 + length > this.buffer.byteLength) {
        return null;
     }
 
-    if (this.offset + length > this.buffer.byteLength) {
-      // Not enough data for the block body
-      console.warn(`DemoReader: Incomplete block. Expected ${length} bytes, but only ${this.buffer.byteLength - this.offset} remain.`);
-      return null;
-    }
+    this.offset += 4; // Skip length
 
-    // Create a view for the block data
-    // Slice creates a copy, which is safer but slower.
-    // For now, let's slice to ensure the BinaryStream is isolated.
     const blockData = this.buffer.slice(this.offset, this.offset + length);
     this.offset += length;
 
@@ -67,6 +85,25 @@ export class DemoReader {
    */
   public reset(): void {
     this.offset = 0;
+  }
+
+  /**
+   * Seeks to a specific message index.
+   * Returns true if successful, false if index is out of bounds.
+   */
+  public seekToMessage(index: number): boolean {
+    if (index < 0 || index >= this.messageOffsets.length) {
+      return false;
+    }
+    this.offset = this.messageOffsets[index];
+    return true;
+  }
+
+  /**
+   * Returns the total number of messages in the demo.
+   */
+  public getMessageCount(): number {
+    return this.messageOffsets.length;
   }
 
   public getOffset(): number {

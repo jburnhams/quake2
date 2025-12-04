@@ -1,11 +1,12 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~50% Complete (Parsing Infrastructure Improved, Basic UI Controls Added)**
+**~60% Complete (Parsing Infrastructure Improved, Metadata & Seeking Added)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
 - ✅ **Fixed**: Entity commands (22, 23) correctly mapped for legacy protocols
+- ✅ **Added**: Demo file indexing, metadata retrieval (frames, duration), and seeking support
 - ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
 - ❌ No demo viewer application
 - ❌ Rerelease Protocol 2023 unverified with real demos
@@ -279,7 +280,7 @@ if (cls.serverProtocol != 26)
 **File**: `packages/engine/src/demo/playback.ts`
 **Reference**: `full/client/cl_main.c` (CL_Stop, CL_Pause)
 
-- [ ] **1.5.1** Add seeking support
+- [x] **1.5.1** Add seeking support
   - Add `seek(frameNumber: number): void` method
   - Reset `DemoReader` to beginning
   - Parse frames sequentially until target frame reached
@@ -290,7 +291,7 @@ if (cls.serverProtocol != 26)
   - Ensure `update()` respects speed multiplier
   - Clamp speed to reasonable range (0.1x to 16x)
 
-- [ ] **1.5.3** Add demo metadata tracking
+- [x] **1.5.3** Add demo metadata tracking
   - Add `getTotalFrames(): number` method (requires DemoReader enhancement)
   - Add `getCurrentFrame(): number` method
   - Add `getDuration(): number` method (frames * frame time)
@@ -310,17 +311,17 @@ if (cls.serverProtocol != 26)
 **File**: `packages/engine/src/demo/demoReader.ts`
 **Reference**: Quake II demo file format documentation
 
-- [ ] **1.6.1** Add demo file header parsing
+- [x] **1.6.1** Add demo file header parsing (Implemented via file scanning)
   - Parse demo format version
   - Store total message count (if available)
   - Store demo duration estimate
 
-- [ ] **1.6.2** Add `reset(): void` method
+- [x] **1.6.2** Add `reset(): void` method
   - Reset read position to beginning of demo data
   - Clear any cached state
   - Prepare for replay from start
 
-- [ ] **1.6.3** Add `getMessageCount(): number` method
+- [x] **1.6.3** Add `getMessageCount(): number` method
   - Return total number of messages in demo
   - Used for seek progress calculation
 
