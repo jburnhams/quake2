@@ -3,9 +3,14 @@ import { Renderer, DemoPlaybackController, PlaybackState } from '@quake2ts/engin
 export class DemoControls {
   private playback: DemoPlaybackController;
   private isVisible: boolean = true;
+  private demoName: string | null = null;
 
   constructor(playback: DemoPlaybackController) {
     this.playback = playback;
+  }
+
+  public setDemoName(name: string | null) {
+      this.demoName = name;
   }
 
   public render(renderer: Renderer, width: number, height: number): void {
@@ -32,16 +37,21 @@ export class DemoControls {
     const speedText = `Speed: ${speed}x`;
     renderer.drawCenterString(iconY, speedText);
 
-    // Time Text (MM:SS / MM:SS) - Stubbed total time for now as metadata tracking is pending
+    // Time Text (MM:SS / MM:SS)
     const currentTime = this.playback.getCurrentTime();
+    const totalTime = this.playback.getDuration();
     const currentFormatted = this.formatTime(currentTime);
-    // TODO: Get total duration from metadata when available
-    const totalFormatted = "--:--";
+    const totalFormatted = this.formatTime(totalTime);
     const timeText = `${currentFormatted} / ${totalFormatted}`;
 
     // Position time text to the right
     const timeX = width - 150;
     renderer.drawString(timeX, iconY, timeText);
+
+    // Demo Name
+    if (this.demoName) {
+        renderer.drawString(width - 300, iconY - 20, this.demoName);
+    }
 
     // Timeline (Progress Bar)
     const timelineY = y + 5;
@@ -52,10 +62,10 @@ export class DemoControls {
     // Draw background bar
     renderer.drawfillRect(timelineX, timelineY, timelineWidth, timelineHeight, [0.3, 0.3, 0.3, 1.0]);
 
-    // Draw progress (Stubbed as 0% for now if total unknown)
-    // TODO: Calculate real progress once total time is known
-    const progress = 0;
-    const progressWidth = timelineWidth * progress;
+    // Draw progress
+    const progress = totalTime > 0 ? (currentTime / totalTime) : 0;
+    const clampedProgress = Math.max(0, Math.min(1, progress));
+    const progressWidth = timelineWidth * clampedProgress;
     renderer.drawfillRect(timelineX, timelineY, progressWidth, timelineHeight, [1.0, 1.0, 1.0, 1.0]);
 
     // Draw marker
@@ -63,7 +73,6 @@ export class DemoControls {
     renderer.drawfillRect(markerX - 2, timelineY - 2, 4, timelineHeight + 4, [1.0, 0.0, 0.0, 1.0]);
 
     // Controls Help
-    // Note: Seeking is implemented as stepping currently
     const helpText = "[Space] Toggle  [< >] Step  [ [ ] ] Speed  [Esc] Stop";
     renderer.drawCenterString(y + 35, helpText);
   }
@@ -82,7 +91,6 @@ export class DemoControls {
         return true;
 
       case 'arrowright':
-        // Seek forward not fully implemented in controller yet, using step for now
         this.playback.stepForward();
         return true;
 

@@ -30,6 +30,7 @@ import { OptionsMenuFactory } from './ui/menu/options.js';
 import { MapsMenuFactory } from './ui/menu/maps.js';
 import { PauseMenuFactory } from './ui/menu/pause.js';
 import { MultiplayerMenuFactory } from './ui/menu/multiplayer.js';
+import { DemoMenuFactory } from './ui/menu/demo.js';
 import { Draw_Menu } from './ui/menu/render.js';
 import { InputBindings } from './input/bindings.js';
 import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
@@ -428,7 +429,7 @@ export function createClient(imports: ClientImports): ClientExports {
         }
     },
 
-    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
+    createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory' | 'demoFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
         let optsFactory = optionsFactory;
         if (!optsFactory) {
@@ -448,11 +449,14 @@ export function createClient(imports: ClientImports): ClientExports {
              imports.host?.commands.execute(`map ${map}`);
         });
 
+        const demoFactory = new DemoMenuFactory(menuSystem, clientExports);
+
         const factory = new MainMenuFactory(menuSystem, saveLoadFactory, {
             ...options,
             optionsFactory: optsFactory,
             mapsFactory,
             multiplayerFactory,
+            demoFactory,
             onSetDifficulty: (skill: number) => {
                 if (imports.host?.cvars) {
                     imports.host.cvars.setValue('skill', skill.toString());
@@ -738,6 +742,7 @@ export function createClient(imports: ClientImports): ClientExports {
     startDemoPlayback(buffer: ArrayBuffer, filename: string) {
         demoPlayback.loadDemo(buffer);
         demoPlayback.setHandler(demoHandler);
+        demoControls.setDemoName(filename);
         isDemoPlaying = true;
         currentDemoName = filename;
         clientMode = ClientMode.DemoPlayback;
@@ -747,6 +752,7 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     stopDemoPlayback() {
         demoPlayback.stop();
+        demoControls.setDemoName(null);
         isDemoPlaying = false;
         currentDemoName = null;
         clientMode = ClientMode.Normal;
