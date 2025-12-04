@@ -1,9 +1,10 @@
 import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag } from '../entity.js';
 import { monster_think, ai_stand, ai_walk, ai_run, ai_charge } from '../../ai/index.js';
 import { SpawnContext } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_ORGANIC } from '../gibs.js';
 import { Vec3, addVec3, scaleVec3, MASK_SHOT, ZERO_VEC3 } from '@quake2ts/shared';
 import { EntitySystem } from '../system.js';
+import { DamageMod } from '../../combat/damageMods.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -84,12 +85,12 @@ export function createMonsterSpawn(config: MonsterConfig) {
       // Placeholder pain
     };
 
-    self.die = (self, inflictor, attacker, damage, point) => {
+    self.die = (self, inflictor, attacker, damage, point, mod = DamageMod.UNKNOWN) => {
         self.deadflag = DeadFlag.Dead;
         self.solid = Solid.Not;
 
         if (self.health < -40) {
-            throwGibs(context.entities, self.origin, damage);
+            throwGibs(context.entities, self.origin, damage, GIB_ORGANIC, mod);
             context.entities.free(self);
             return;
         }
