@@ -1,7 +1,7 @@
 # Section 13: Multiplayer & Network Support - Implementation Tasks
 
 ## Current Status
-**~65% Complete (Framework, Server Integration & E2E Infra Started)**
+**~70% Complete (Framework, Server Integration & E2E Infra Started)**
 
 - ✅ Server and client packages exist
 - ✅ Basic WebSocket transport works
@@ -547,21 +547,21 @@
 **File**: `packages/e2e-tests/connection.test.ts`
 **Reference**: Connection flow validation
 
-- [ ] **4.2.1** Test client can connect to server
+- [x] **4.2.1** Test client can connect to server
   - Start server on localhost:27910
   - Launch browser client
   - Client initiates connection
   - Verify `onServerData` callback fires
   - Verify `ConnectionState.Connected` reached
 
-- [ ] **4.2.2** Test handshake completes
+- [x] **4.2.2** Test handshake completes
   - After connection, verify `svc_serverdata` received
   - Verify configstrings received
   - Verify baselines received
   - Verify `clc_stringcmd("begin")` sent by client
   - Verify client reaches `ConnectionState.Active`
 
-- [ ] **4.2.3** Test disconnection
+- [x] **4.2.3** Test disconnection
   - After active, client disconnects
   - Verify server receives disconnect
   - Verify server cleans up client state
