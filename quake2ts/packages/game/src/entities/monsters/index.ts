@@ -28,6 +28,7 @@ import { registerFixbotSpawns } from './fixbot.js';
 import { registerArachnidSpawns } from './arachnid.js';
 import { registerGunCommanderSpawns } from './gunnerCommander.js';
 import { registerGuardianSpawns } from './guardian.js';
+import { registerStalkerSpawns } from './rogue/stalker.js';
 
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerSoldierSpawns(registry);
@@ -59,4 +60,5 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerArachnidSpawns(registry);
   registerGunCommanderSpawns(registry);
   registerGuardianSpawns(registry);
+  registerStalkerSpawns(registry);
 }
