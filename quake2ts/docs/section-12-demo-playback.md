@@ -214,7 +214,7 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/index.ts` (render path)
 **Reference**: `full/client/cl_view.c` (V_RenderView)
 
-- [ ] **1.3.1** Modify `Sample()` method to use demo entities when in demo mode
+- [x] **1.3.1** Modify `Sample()` method to use demo entities when in demo mode
   - Check `isDemoPlaying` flag
   - If true, call `demoHandler.getRenderableEntities()` instead of game entities
   - Call `demoHandler.getDemoCamera()` for camera position
