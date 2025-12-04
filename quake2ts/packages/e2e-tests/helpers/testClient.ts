@@ -52,7 +52,8 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
   const fullUrl = `${url}?connect=${encodeURIComponent(serverUrl)}`;
 
   try {
-    await page.goto(fullUrl, { waitUntil: 'networkidle' });
+    // networkidle is flaky for websocket connections or persistent polling
+    await page.goto(fullUrl, { waitUntil: 'domcontentloaded' });
   } catch (error) {
     // If navigation fails (e.g. server not running), we still return the page
     // but log a warning, allowing the test to potentially assert on the failure.

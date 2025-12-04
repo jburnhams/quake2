@@ -52,7 +52,7 @@ describe('testClient Helper', () => {
     expect(mockContext.newPage).toHaveBeenCalled();
 
     const expectedUrl = `${clientUrl}?connect=${encodeURIComponent(serverUrl)}`;
-    expect(mockPage.goto).toHaveBeenCalledWith(expectedUrl, { waitUntil: 'networkidle' });
+    expect(mockPage.goto).toHaveBeenCalledWith(expectedUrl, { waitUntil: 'domcontentloaded' });
 
     expect(client.browser).toBe(mockBrowser);
     expect(client.page).toBe(mockPage);
@@ -64,7 +64,7 @@ describe('testClient Helper', () => {
     await launchBrowserClient(serverUrl);
 
     const expectedUrl = `http://localhost:8080?connect=${encodeURIComponent(serverUrl)}`;
-    expect(mockPage.goto).toHaveBeenCalledWith(expectedUrl, { waitUntil: 'networkidle' });
+    expect(mockPage.goto).toHaveBeenCalledWith(expectedUrl, { waitUntil: 'domcontentloaded' });
   });
 
   it('should close the browser', async () => {
