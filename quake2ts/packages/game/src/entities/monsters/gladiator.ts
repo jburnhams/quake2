@@ -7,6 +7,7 @@ import {
   ai_walk,
   monster_think,
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -243,7 +244,17 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
   self.viewheight = 40; // Gladiator viewheight
 
   self.pain = (self, other, kick, damage) => {
+    if (Math.random() < 0.5) {
+        context.entities.sound?.(self, 0, 'gladiator/pain.wav', 1, 1, 0);
+    } else {
+        context.entities.sound?.(self, 0, 'gladiator/gldpain2.wav', 1, 1, 0);
+    }
+
     // Cast to any for interface compatibility
+    if (!M_ShouldReactToPain(self, context.entities)) {
+        return;
+    }
+
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }

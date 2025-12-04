@@ -9,6 +9,7 @@ import {
   AIFlags,
   AttackState
 } from '../../ai/index.js';
+import { M_ShouldReactToPain } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -452,6 +453,16 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
     }
 
     self.pain_finished_time = self.timestamp + 3.0;
+
+    if (self.count) {
+        context.entities.sound?.(self, 0, 'tank/pain.wav', 1, 1, 0);
+    } else {
+        context.entities.sound?.(self, 0, 'tank/tnkpain2.wav', 1, 1, 0);
+    }
+
+    if (!M_ShouldReactToPain(self, context.entities)) {
+        return;
+    }
 
     // Small chance to ignore pain if not severe
     if (damage <= 10 && Math.random() < 0.5) return;

@@ -242,9 +242,10 @@ function arachnid_pain(self: Entity, other: Entity | null, kick: number, damage:
   }
 
   self.pain_debounce_time = context.timeSeconds + 3;
+
   context.engine.sound?.(self, SoundChannel.Voice, sound_pain, 1, ATTN_NORM, 0);
 
-  if (!M_ShouldReactToPain(self)) {
+  if (!M_ShouldReactToPain(self, context)) {
     return;
   }
 
