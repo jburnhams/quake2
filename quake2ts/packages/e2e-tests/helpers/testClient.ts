@@ -1,4 +1,12 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import handler from 'serve-handler';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Fix for ESM __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Interface for Test Client options
@@ -14,6 +22,7 @@ export interface TestClient {
     browser: Browser;
     context: BrowserContext;
     page: Page;
+    server?: any; // HTTP server instance
 }
 
 /**
@@ -24,6 +33,49 @@ export interface TestClient {
  * @returns Object containing browser, context, and page instances
  */
 export async function launchBrowserClient(serverUrl: string, options: TestClientOptions = {}): Promise<TestClient> {
+  let staticServer;
+  let clientUrl = options.clientUrl;
+
+  if (!clientUrl) {
+    // Start a local static server to serve the client and fixtures
+    // We serve the root of the repo so we can access packages/client/dist
+    // __dirname is packages/e2e-tests/helpers
+    const repoRoot = path.resolve(__dirname, '../../..');
+
+    staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
+      return handler(request, response, {
+        public: repoRoot,
+        cleanUrls: false, // Ensure we don't redirect .html -> extensionless which might drop query params
+        headers: [
+          {
+            source: '**/*',
+            headers: [
+              {
+                key: 'Cache-Control',
+                value: 'no-cache'
+              },
+              {
+                key: 'Access-Control-Allow-Origin',
+                value: '*'
+              }
+            ]
+          }
+        ]
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+        staticServer.listen(0, () => {
+            const addr = staticServer.address();
+            const port = typeof addr === 'object' ? addr?.port : 0;
+            // Point to the fixture
+            clientUrl = `http://localhost:${port}/packages/e2e-tests/fixtures/real-client.html`;
+            console.log(`Test client serving from ${repoRoot} at ${clientUrl}`);
+            resolve();
+        });
+    });
+  }
+
   const browser = await chromium.launch({
     headless: options.headless ?? true,
     args: [
@@ -42,25 +94,31 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
 
   const page = await context.newPage();
 
-  // Default to a local dev server if not specified.
-  // In a real CI pipeline, this would point to the served build artifact.
-  const url = options.clientUrl || 'http://localhost:8080';
+  // Inject console logging to stdout for debugging
+  page.on('console', msg => {
+    if (msg.type() === 'error') console.error(`[Browser Error] ${msg.text()}`);
+    else console.log(`[Browser] ${msg.text()}`);
+  });
+
+  page.on('pageerror', err => {
+      console.error(`[Browser Page Error] ${err.message}`);
+  });
+
+  page.on('requestfailed', request => {
+    console.error(`[Browser Request Failed] ${request.url()} - ${request.failure()?.errorText}`);
+  });
 
   // Navigate to the client application
-  // We append the server address as a query parameter if the client supports auto-connect via URL
-  // e.g. http://localhost:8080/?connect=ws://localhost:27910
-  const fullUrl = `${url}?connect=${encodeURIComponent(serverUrl)}`;
+  const fullUrl = `${clientUrl}?connect=${encodeURIComponent(serverUrl)}`;
+  console.log(`Navigating to: ${fullUrl}`);
 
   try {
-    // networkidle is flaky for websocket connections or persistent polling
     await page.goto(fullUrl, { waitUntil: 'domcontentloaded' });
   } catch (error) {
-    // If navigation fails (e.g. server not running), we still return the page
-    // but log a warning, allowing the test to potentially assert on the failure.
     console.warn(`Failed to navigate to ${fullUrl}:`, error);
   }
 
-  return { browser, context, page };
+  return { browser, context, page, server: staticServer };
 }
 
 /**
@@ -71,5 +129,8 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
 export async function closeBrowser(client: TestClient): Promise<void> {
   if (client.browser) {
     await client.browser.close();
+  }
+  if (client.server) {
+      client.server.close();
   }
 }

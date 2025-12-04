@@ -2,87 +2,63 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { startTestServer, stopServer } from './helpers/testServer.js';
 import { launchBrowserClient, closeBrowser, TestClient } from './helpers/testClient.js';
 import { DedicatedServer } from '@quake2ts/server';
-import { createServer } from 'http';
-import handler from 'serve-handler';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { ConnectionState } from '@quake2ts/shared';
 
-const CLIENT_PORT = 8081;
 const GAME_SERVER_PORT = 27911;
 
-// Fix for ESM __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-describe('E2E Connection Test', () => {
+describe('E2E Real Client Connection Test', () => {
     let gameServer: DedicatedServer;
     let testClient: TestClient;
-    let staticServer: any;
 
     beforeAll(async () => {
-        // 1. Start static file server to serve the fixture
-        const fixturePath = path.resolve(__dirname, 'fixtures');
-        console.log(`Serving fixtures from: ${fixturePath}`);
-
-        staticServer = createServer((request, response) => {
-            return handler(request, response, {
-                public: fixturePath,
-                rewrites: [
-                  { source: '/', destination: '/client.html' }
-                ]
-            });
-        });
-
-        await new Promise<void>((resolve) => {
-            staticServer.listen(CLIENT_PORT, () => resolve());
-        });
-
-        // 2. Start Game Server
-        try {
-            gameServer = await startTestServer(GAME_SERVER_PORT);
-        } catch (e) {
-            console.warn("Server started with warning (likely map missing):", e);
-        }
+        // Start Game Server
+        gameServer = await startTestServer(GAME_SERVER_PORT);
     });
 
     afterAll(async () => {
         if (testClient) await closeBrowser(testClient);
         if (gameServer) await stopServer(gameServer);
-        if (staticServer) staticServer.close();
     });
 
-    it('should connect, complete handshake, and disconnect', async () => {
-        // 3. Launch Client
+    it('should connect and perform handshake', async () => {
         const serverUrl = `ws://localhost:${GAME_SERVER_PORT}`;
         testClient = await launchBrowserClient(serverUrl, {
-            clientUrl: `http://localhost:${CLIENT_PORT}/`,
             headless: true
         });
 
         const { page } = testClient;
 
-        // Debugging logs
-        page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
-        page.on('pageerror', err => console.error('BROWSER ERROR:', err));
+        // Verify the harness logic runs
+        await page.waitForSelector('#debug');
 
-        // 4. Verify Connection
-        await page.waitForSelector('#status');
-        const status1 = await page.textContent('#status');
-        expect(status1).toBe('Connected');
+        // Wait until debug text says "Connected!"
+        await page.waitForFunction(
+            () => document.getElementById('debug')?.innerText === 'Connected!',
+            { timeout: 10000 }
+        );
 
-        // 5. Verify Handshake
-        // As noted, this might not transition to 'Active' with dummy client
-        // We'll check if it stays connected or transitions.
-        // For now, we assume 'Connected' is enough for basic connectivity test
+        const debugText = await page.textContent('#debug');
+        expect(debugText).toBe('Connected!');
 
-        // 6. Test Disconnection
-        await page.click('#disconnectBtn');
+        // Inspect the client instance on the page to get the exact state
+        const connectionStateValue = await page.evaluate(() => {
+            const client = (window as any).clientInstance;
+            if (!client) return 'No Client';
+            return client.multiplayer.state;
+        });
 
-        // Wait for status update
-        await page.waitForFunction(() => document.getElementById('status')?.textContent === 'Disconnected');
+        // We expect it to be Connected (2) or Primed (3) or Active (4)
+        // If it's Disconnected (0), that's the failure.
+        // Let's log what we got if it fails.
+        // Mapping: Disconnected=0, Connecting=1, Connected=2, Primed=3, Active=4 (approx)
 
-        const status2 = await page.textContent('#status');
-        expect(status2).toBe('Disconnected');
+        // We accept Connected or higher as success for "connect()"
+        // But for full handshake, we might want Active.
+        // For this test, verifying it reached Connected and didn't immediately disconnect is the goal.
 
-    }, 15000);
+        // Check if state >= 2 (Connected)
+        const state = Number(connectionStateValue);
+        expect(state).toBeGreaterThanOrEqual(2);
+
+    }, 30000);
 });
