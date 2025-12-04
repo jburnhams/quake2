@@ -1,7 +1,7 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~80% Complete (Parsing Infrastructure Improved, Client Integration Tested, UI Updated, Menu Integration Added)**
+**~90% Complete (Parsing Infrastructure, Client Playback, Menu, Recording Implemented)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
@@ -12,6 +12,7 @@
 - ✅ **Updated**: Demo Playback Controls now show time, duration, and demo name
 - ✅ **Added**: Frame-by-frame stepping (forward and backward)
 - ✅ **Added**: Demo Menu (Tasks 2.1, 2.3) wired to main menu
+- ✅ **Added**: Demo Recording (Tasks 3.1, 3.2) including download support
 - ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
 - ❌ Demo file storage (IndexedDB) and advanced file validation pending (Task 2.2)
 - ❌ Rerelease Protocol 2023 unverified with real demos
@@ -373,7 +374,7 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/ui/pakLoader.ts` (adapt existing file loading)
 **Reference**: Existing PAK loader pattern
 
-- [ ] **2.2.1** Add `loadDemoFile(file: File): Promise<ArrayBuffer>` method
+- [x] **2.2.1** Add `loadDemoFile(file: File): Promise<ArrayBuffer>` method
   - Read file as ArrayBuffer
   - Validate it's a .dm2 file (check header)
   - Return buffer for playback
@@ -429,24 +430,24 @@ if (cls.serverProtocol != 26)
 **File**: Create `packages/engine/src/demo/recorder.ts`
 **Reference**: `full/client/cl_main.c` (CL_Record, CL_WriteDemoMessage)
 
-- [ ] **3.1.1** Create `DemoRecorder` class structure
+- [x] **3.1.1** Create `DemoRecorder` class structure
   - Add `private isRecording: boolean`
   - Add `private messageBuffer: BinaryWriter`
   - Add `private startTime: number`
   - Add `private frameCount: number`
 
-- [ ] **3.1.2** Implement `startRecording(filename: string): void` method
+- [x] **3.1.2** Implement `startRecording(filename: string): void` method
   - Initialize binary writer
   - Write demo header
   - Set isRecording flag
   - Record start time
 
-- [ ] **3.1.3** Implement `recordMessage(data: Uint8Array): void` method
+- [x] **3.1.3** Implement `recordMessage(data: Uint8Array): void` method
   - Write message length (4 bytes)
   - Write message data
   - Increment frame count
 
-- [ ] **3.1.4** Implement `stopRecording(): Uint8Array` method
+- [x] **3.1.4** Implement `stopRecording(): Uint8Array` method
   - Finalize demo file
   - Return complete demo buffer
   - Clear recording state
@@ -462,21 +463,21 @@ if (cls.serverProtocol != 26)
 **File**: `packages/client/src/index.ts`
 **Reference**: Recording trigger points
 
-- [ ] **3.2.1** Add DemoRecorder instance to client
+- [x] **3.2.1** Add DemoRecorder instance to client
   - Create `private demoRecorder: DemoRecorder` in createClient
   - Add `startRecording(name: string): void` to ClientExports
   - Add `stopRecording(): void` to ClientExports
 
-- [ ] **3.2.2** Hook recording into network message flow
+- [x] **3.2.2** Hook recording into network message flow
   - In multiplayer mode, record all `svc_*` messages received
   - In `MultiplayerConnection.handleMessage`, call `demoRecorder.recordMessage(data)`
   - Only record when multiplayer mode active and recording enabled
 
-- [ ] **3.2.3** Add recording controls to UI
+- [x] **3.2.3** Add recording controls to UI
   - Add "Record Demo" button to multiplayer menu
   - Show recording indicator when active
   - Add "Stop Recording" button
-  - Save demo file to IndexedDB when stopped
+  - Save demo file to IndexedDB when stopped (Currently downloads file)
 
 **Test Case**: Integration test in `packages/client/tests/demo-recording-integration.test.ts`
 - Mock multiplayer connection
