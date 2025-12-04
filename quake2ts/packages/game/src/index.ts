@@ -37,6 +37,7 @@ export interface GameEngine {
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
     configstring?(index: number, value: string): void;
     serverCommand?(cmd: string): void;
+    cvar?(name: string): { number: number; string: string; value: string } | undefined;
 }
 
 export interface GameStateSnapshot {
