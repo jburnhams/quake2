@@ -5,6 +5,11 @@ import {
   Entity,
   MoveType,
   Solid,
+  SPAWNFLAG_NOT_EASY,
+  SPAWNFLAG_NOT_MEDIUM,
+  SPAWNFLAG_NOT_HARD,
+  SPAWNFLAG_NOT_DEATHMATCH,
+  SPAWNFLAG_NOT_COOP,
 } from './entity.js';
 import { registerMiscSpawns } from './misc.js';
 import { registerTargetSpawns } from './targets.js';
@@ -238,6 +243,32 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
   const isWorld = classname === 'worldspawn';
   const entity = isWorld ? options.entities.world : options.entities.spawn();
   applyEntityKeyValues(entity, dictionary);
+
+  // Check spawn flags for filtering
+  if (!isWorld) {
+    if ((entity.spawnflags & SPAWNFLAG_NOT_DEATHMATCH) && options.entities.deathmatch) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
+
+    if ((entity.spawnflags & SPAWNFLAG_NOT_EASY) && options.entities.skill === 0) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
+
+    if ((entity.spawnflags & SPAWNFLAG_NOT_MEDIUM) && options.entities.skill === 1) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
+
+    if ((entity.spawnflags & SPAWNFLAG_NOT_HARD) && options.entities.skill >= 2) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
+
+    // TODO: Co-op filtering
+    // if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && options.entities.coop) { ... }
+  }
 
   const context: SpawnContext = {
     keyValues: dictionary,

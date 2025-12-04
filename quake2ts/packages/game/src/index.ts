@@ -18,6 +18,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 export interface GameCreateOptions {
   gravity: Vec3;
   deathmatch?: boolean;
+  skill?: number;
   rogue?: boolean;
   xatrix?: boolean;
   random?: RandomGenerator;
@@ -99,6 +100,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   centerprintf(entity: Entity, message: string): void;
   readonly time: number;
   readonly deathmatch: boolean;
+  readonly skill: number;
   readonly rogue: boolean;
   readonly xatrix: boolean;
   readonly random: RandomGenerator;
@@ -139,6 +141,7 @@ export function createGame(
 ): GameExports {
   const gravity = options.gravity;
   const deathmatch = options.deathmatch ?? false;
+  const skill = options.skill ?? 1;
   const rogue = options.rogue ?? false;
   const xatrix = options.xatrix ?? false;
   const levelClock = new LevelClock();
@@ -194,7 +197,7 @@ export function createGame(
       serverCommand
   };
 
-  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch);
+  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill);
   (entities as any)._game = {
       // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
       // This is circular, so we must be careful.
@@ -501,6 +504,7 @@ export function createGame(
     },
     trace,
     deathmatch,
+    skill,
     rogue,
     xatrix,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
