@@ -27,6 +27,7 @@ describe('monster_infantry', () => {
 
     context = {
         entities: sys,
+        health_multiplier: 1.0,
     } as unknown as SpawnContext;
 
     infantry = new Entity(1);

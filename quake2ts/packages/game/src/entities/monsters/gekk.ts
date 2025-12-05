@@ -751,8 +751,8 @@ export function SP_monster_gekk(self: Entity, context: SpawnContext): void {
     self.mins = { x: -18, y: -18, z: -24 };
     self.maxs = { x: 18, y: 18, z: 24 };
 
-    self.health = 125;
-    self.max_health = 125;
+    self.health = 125 * context.health_multiplier;
+    self.max_health = self.health;
     // self.gib_health = -30;
     self.mass = 300;
 

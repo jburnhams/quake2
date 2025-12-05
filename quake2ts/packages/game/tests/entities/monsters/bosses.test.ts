@@ -29,6 +29,7 @@ describe('Boss/Monster Spawns', () => {
         engine, // Attach mocked engine
         sound: engine.sound,
       } as any,
+      health_multiplier: 1,
       warn: vi.fn(),
       free: vi.fn(),
     };

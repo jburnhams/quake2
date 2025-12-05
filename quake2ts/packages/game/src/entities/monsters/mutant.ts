@@ -461,8 +461,8 @@ export function SP_monster_mutant(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 32, y: 32, z: 48 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 300;
-  self.max_health = 300;
+  self.health = 300 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 300;
   self.takedamage = true;
 

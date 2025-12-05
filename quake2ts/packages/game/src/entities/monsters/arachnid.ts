@@ -450,9 +450,11 @@ function arachnid_die(self: Entity, inflictor: Entity | null, attacker: Entity |
 }
 
 // Spawn
-export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
-  if (!M_AllowSpawn(self, context)) {
-    context.free(self);
+import { SpawnContext } from '../spawn.js';
+
+export function SP_monster_arachnid(self: Entity, context: SpawnContext) {
+  if (!M_AllowSpawn(self, context.entities)) {
+    context.entities.free(self);
     return;
   }
 
@@ -466,14 +468,14 @@ export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
   sound_death = 'arachnid/death.wav';
   sound_sight = 'arachnid/sight.wav';
 
-  context.soundIndex(sound_step);
-  context.soundIndex(sound_charge);
-  context.soundIndex(sound_melee);
-  context.soundIndex(sound_melee_hit);
-  context.soundIndex(sound_pain);
-  context.soundIndex(sound_death);
-  context.soundIndex(sound_sight);
-  context.soundIndex('misc/udeath.wav');
+  context.entities.soundIndex(sound_step);
+  context.entities.soundIndex(sound_charge);
+  context.entities.soundIndex(sound_melee);
+  context.entities.soundIndex(sound_melee_hit);
+  context.entities.soundIndex(sound_pain);
+  context.entities.soundIndex(sound_death);
+  context.entities.soundIndex(sound_sight);
+  context.entities.soundIndex('misc/udeath.wav');
 
   self.model = 'models/monsters/arachnid/tris.md2';
   self.mins = {x: -48, y: -48, z: -20};
@@ -481,13 +483,17 @@ export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
 
-  self.health = 1000;
-  self.max_health = 1000;
+  if (context.health_multiplier) {
+    self.health = 1000 * context.health_multiplier;
+  } else {
+    self.health = 1000;
+  }
+  self.max_health = self.health;
 
   self.mass = 450;
 
-  self.pain = (e, o, k, d) => arachnid_pain(e, o, k, d, context);
-  self.die = (e, i, a, d, p, m) => arachnid_die(e, i, a, d, p, m, context);
+  self.pain = (e, o, k, d) => arachnid_pain(e, o, k, d, context.entities);
+  self.die = (e, i, a, d, p, m) => arachnid_die(e, i, a, d, p, m, context.entities);
 
   self.monsterinfo = {
     ...self.monsterinfo,
@@ -495,14 +501,14 @@ export function SP_monster_arachnid(self: Entity, context: EntitySystem) {
     walk: arachnid_walk,
     run: arachnid_run,
     attack: arachnid_attack,
-    sight: (e, o) => context.engine.sound?.(e, SoundChannel.Voice, sound_sight, 1, ATTN_NORM, 0),
+    sight: (e, o) => context.entities.engine.sound?.(e, SoundChannel.Voice, sound_sight, 1, ATTN_NORM, 0),
     scale: MODEL_SCALE,
     aiflags: self.monsterinfo?.aiflags || 0
   };
 
-  context.linkentity(self);
-  M_SetAnimation(self, arachnid_move_stand, context);
-  walkmonster_start(self, context);
+  context.entities.linkentity(self);
+  M_SetAnimation(self, arachnid_move_stand, context.entities);
+  walkmonster_start(self, context.entities);
 }
 
 export function registerArachnidSpawns(registry: any): void {

@@ -36,6 +36,7 @@ describe('monster_gladiator', () => {
     context = {
       keyValues: {},
       entities: system,
+      health_multiplier: 1,
       warn: vi.fn(),
       free: vi.fn(),
     };

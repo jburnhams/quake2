@@ -645,8 +645,8 @@ export function SP_monster_brain(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 32 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 300;
-  self.max_health = 300;
+  self.health = 300 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 400;
   self.takedamage = true;
 

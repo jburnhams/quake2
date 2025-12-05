@@ -39,6 +39,7 @@ describe('monster_tank', () => {
       entities: system,
       warn: vi.fn(),
       free: vi.fn(),
+      health_multiplier: 1.0,
     };
   });
 

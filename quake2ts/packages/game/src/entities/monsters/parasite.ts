@@ -500,8 +500,8 @@ export function SP_monster_parasite(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 24 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 175;
-  self.max_health = 175;
+  self.health = 175 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 250;
   self.takedamage = true;
 

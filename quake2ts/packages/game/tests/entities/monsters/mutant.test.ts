@@ -27,6 +27,7 @@ const mockContext = {
     multicast: vi.fn(),
     spawn: vi.fn().mockReturnValue({} as Entity),
   } as unknown as EntitySystem,
+  health_multiplier: 1,
 } as unknown as SpawnContext;
 
 describe('monster_mutant', () => {

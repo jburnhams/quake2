@@ -165,8 +165,8 @@ export function SP_monster_turret(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-    self.health = 100;
-    self.max_health = 100;
+    self.health = 100 * context.health_multiplier;
+    self.max_health = self.health;
     self.mass = 200;
     self.takedamage = true;
     self.viewheight = 24;

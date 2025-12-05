@@ -306,8 +306,8 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
   self.maxs = { x: 64, y: 64, z: 112 }; // From C
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 1500;
-  self.max_health = 1500;
+  self.health = 1500 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 800;
   self.takedamage = true;
   self.viewheight = 64; // Guess, maybe higher?
