@@ -187,6 +187,7 @@ export function T_Damage(
   // Freeze Shatter Override
   if ((targ as any).monsterinfo && (targ as any).monsterinfo.freeze_time > time && modifiedDamage > 0) {
        // If frozen, any damage destroys it.
+       // Source: g_rogue_weapon.c (T_Damage)
        take = targ.health + 100;
        psave = 0;
        asave = 0;

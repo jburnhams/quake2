@@ -53,7 +53,8 @@ export function monster_think(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.freeze_time) {
     if (self.monsterinfo.freeze_time > context.timeSeconds) {
       // Apply ice shell effect
-      self.renderfx |= RenderFx.ShellBlue | RenderFx.ShellGreen;
+      // Rogue: uses ShellBlue | ShellGreen for ice look
+      self.renderfx |= (RenderFx.ShellBlue | RenderFx.ShellGreen);
 
       // Stop animation/thinking while frozen.
       // Reschedule check for later to see if we thawed.
