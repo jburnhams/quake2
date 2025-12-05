@@ -288,7 +288,7 @@ function ShamblerSaveLoc(self: Entity, context: EntitySystem): void {
 }
 
 function FindShamblerOffset(self: Entity, context: EntitySystem): Vec3 {
-    const offset = { x: 0, y: 0, z: 48 };
+    const offset: { x: number; y: number; z: number } = { x: 0, y: 0, z: 48 };
     for (let i = 0; i < 8; i++) {
         if (M_CheckClearShot(self, offset, context)) {
             return offset;
