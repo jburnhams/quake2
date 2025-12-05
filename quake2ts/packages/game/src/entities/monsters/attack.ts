@@ -4,7 +4,7 @@ import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/dama
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette, createHeatSeekingMissile } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
@@ -279,9 +279,7 @@ export function monster_fire_heat(
   turn_fraction: number,
   context: EntitySystem
 ): void {
-  // Implementation of heat seeking projectile - placeholder for now, usually rocket with seeking
-  // For now just fire a rocket
-  monster_fire_rocket(self, start, dir, damage, speed, flashtype, context);
+  createHeatSeekingMissile(context, self, start, dir, adjustDamage(self, damage, context), speed, flashtype, turn_fraction);
 }
 
 // Laser Beam Logic

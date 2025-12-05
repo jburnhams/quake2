@@ -57,7 +57,34 @@ export function huntTarget(self: Entity, level: TargetAwarenessState, context: E
     self.monsterinfo.stand?.(self, context);
   } else {
     self.monsterinfo.run?.(self, context);
-    self.attack_finished_time = level.timeSeconds + 1;
+    // Don't overwrite if already set by foundTarget logic (via trail_time check)
+    // Actually, huntTarget logic in original:
+    // self->monsterinfo.attack_finished = level.time + 1_sec;
+    // But it is called by FoundTarget... wait.
+
+    // In `FoundTarget` (C++):
+    // if (!self->monsterinfo.trail_time) ... set attack_finished
+    // add skill delay ...
+    // HuntTarget(self);
+
+    // In `HuntTarget` (C++):
+    // self->goalentity = self->enemy;
+    // ... run/stand ...
+
+    // `HuntTarget` does NOT set `attack_finished`.
+    // It seems the TS implementation added `self.attack_finished_time = level.timeSeconds + 1;` incorrectly?
+    // Or maybe it was a default?
+
+    // If I remove it, I rely on `foundTarget` setting it.
+    // What if `huntTarget` is called from elsewhere?
+    // `AI_GetSightClient` -> `FoundTarget` -> `HuntTarget`
+    // `ai_stand` -> `HuntTarget` (rare bug fix case)
+    // `monster_use` -> `FoundTarget` -> `HuntTarget`
+
+    // If `HuntTarget` is called directly, `attack_finished` might not be set.
+    // But `FoundTarget` seems to be the main entry.
+
+    // I will remove the line `self.attack_finished_time = level.timeSeconds + 1;` from `huntTarget`.
   }
 }
 
@@ -80,6 +107,62 @@ export function foundTarget(
   }
 
   self.show_hostile = level.timeSeconds + 1;
+
+  // The C++ logic checks !trail_time to apply the initial delay.
+  // In TS we use trail_time === 0 to detect "first sight" (or reset).
+  if (!self.monsterinfo.trail_time) {
+      self.attack_finished_time = level.timeSeconds + 0.6;
+  }
+
+  // Reaction time scaling (Always added in C++)
+  if (context.skill === 0) {
+      self.attack_finished_time += 0.4;
+  } else if (context.skill === 1) {
+      self.attack_finished_time += 0.2;
+  }
+
+  if (false) {
+      // Logic for subsequent sighting or if trail_time is already set?
+      // In original C++ FoundTarget:
+      // if (!self->monsterinfo.trail_time) self->monsterinfo.attack_finished = level.time + 600_ms;
+      // self->monsterinfo.attack_finished += skill->integer == 0 ? 400_ms : skill->integer == 1 ? 200_ms : 0_ms;
+
+      // Wait, the logic is:
+      // 1. If trail_time is 0 (first sight), set base to time + 600ms.
+      // 2. ALWAYS add the skill delay.
+
+      // My implementation was inside the `if (self.trail_time === 0)` block.
+      // But the C++ code adds the delay OUTSIDE that block?
+
+      // Let's check `rerelease/g_ai.cpp`:
+      // if (!self->monsterinfo.trail_time)
+      //     self->monsterinfo.attack_finished = level.time + 600_ms;
+      //
+      // // give easy/medium a little more reaction time
+      // self->monsterinfo.attack_finished += skill->integer == 0 ? 400_ms : skill->integer == 1 ? 200_ms : 0_ms;
+
+      // So if trail_time was NOT 0, attack_finished was NOT reset to time + 0.6.
+      // But the delay is added to whatever attack_finished IS.
+      // However, if attack_finished was already set from previous think, adding more delay might be cumulative?
+      // No, `FoundTarget` is called when target is found.
+
+      // If trail_time is not 0, it means we've seen them before.
+      // But `FoundTarget` is called when we spot them again?
+      // In `ai_stand` -> `FindTarget` -> `FoundTarget`.
+
+      // If `trail_time` is !0, `attack_finished` might be old value?
+
+      // But `huntTarget` (called later) sets `attack_finished_time = level.timeSeconds + 1` in `ai/targeting.ts`.
+      // `huntTarget` in TS:
+      //   self.monsterinfo.run?.(self, context);
+      //   self.attack_finished_time = level.timeSeconds + 1;
+
+      // This overwrites whatever we did in `foundTarget`.
+
+      // I should modify `huntTarget` to NOT overwrite if already set, or move logic to `huntTarget`.
+      // Or simply remove the hardcoded +1 in `huntTarget`.
+  }
+
   const lastSighting = self.monsterinfo.last_sighting as { x: number; y: number; z: number };
   lastSighting.x = self.enemy.origin.x;
   lastSighting.y = self.enemy.origin.y;
