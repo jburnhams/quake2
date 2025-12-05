@@ -79,11 +79,102 @@ export class DedicatedServer implements GameEngine {
             const arrayBuffer = mapData.buffer.slice(mapData.byteOffset, mapData.byteOffset + mapData.byteLength);
             const bspMap = parseBsp(arrayBuffer);
 
-            // Convert BspMap to CollisionModel (Shared interface is compatible/subset)
-            // Ideally we need a converter, but BspMap has nodes, planes, brushes etc.
-            // traceBox expects { nodes, planes, brushes, leafBrushes, visibility? }
-            // parseBsp returns BspMap which has these fields matching BspModel interface.
-            this.sv.collisionModel = bspMap as unknown as CollisionModel;
+            // Convert BspMap to CollisionModel manually
+            // BspMap properties differ slightly from CollisionModel:
+            // - BspPlane lacks signbits (needed for physics)
+            // - BspNode uses planeIndex (CollisionNode uses direct reference)
+            // - BspMap leaf brushes are arrays-of-arrays (leafLists.leafBrushes), CollisionModel needs flat array
+
+            // 1. Planes (with signbits)
+            const planes = bspMap.planes.map(p => {
+                const normal = { x: p.normal[0], y: p.normal[1], z: p.normal[2] };
+                let signbits = 0;
+                if (normal.x < 0) signbits |= 1;
+                if (normal.y < 0) signbits |= 2;
+                if (normal.z < 0) signbits |= 4;
+                return {
+                    normal,
+                    dist: p.dist,
+                    type: p.type,
+                    signbits
+                };
+            });
+
+            // 2. Nodes (resolve plane index)
+            const nodes = bspMap.nodes.map(n => ({
+                plane: planes[n.planeIndex],
+                children: n.children
+            }));
+
+            // 3. Leaf Brushes & Leaves
+            // `BspMap` stores leaf brushes in `leafLists.leafBrushes[leafIndex]`.
+            // `CollisionModel` expects a single flat `leafBrushes` array and `leaf` having `firstLeafBrush` and `numLeafBrushes`.
+            // We can flatten `leafLists.leafBrushes` and update `firstLeafBrush` indices.
+
+            const leafBrushes: number[] = [];
+            const leaves = bspMap.leafs.map((l, i) => {
+                const brushes = bspMap.leafLists.leafBrushes[i];
+                const firstLeafBrush = leafBrushes.length;
+                leafBrushes.push(...brushes);
+                return {
+                    contents: l.contents,
+                    cluster: l.cluster,
+                    area: l.area,
+                    firstLeafBrush,
+                    numLeafBrushes: brushes.length
+                };
+            });
+
+            // 4. Brushes & Sides
+            const brushes = bspMap.brushes.map(b => {
+                const sides = [];
+                for (let i = 0; i < b.numSides; i++) {
+                    const sideIndex = b.firstSide + i;
+                    const bspSide = bspMap.brushSides[sideIndex];
+                    const plane = planes[bspSide.planeIndex];
+                    const texInfo = bspMap.texInfo[bspSide.texInfo];
+                    const surfaceFlags = texInfo ? texInfo.flags : 0;
+
+                    sides.push({
+                        plane,
+                        surfaceFlags
+                    });
+                }
+                return {
+                    contents: b.contents,
+                    sides,
+                    checkcount: 0
+                };
+            });
+
+            // 5. BModels
+            const bmodels = bspMap.models.map(m => ({
+                mins: { x: m.mins[0], y: m.mins[1], z: m.mins[2] },
+                maxs: { x: m.maxs[0], y: m.maxs[1], z: m.maxs[2] },
+                origin: { x: m.origin[0], y: m.origin[1], z: m.origin[2] },
+                headnode: m.headNode
+            }));
+
+            // 6. Visibility
+            // BspMap visibility matches CollisionVisibility interface (mostly)
+            let visibility;
+            if (bspMap.visibility) {
+                visibility = {
+                    numClusters: bspMap.visibility.numClusters,
+                    clusters: bspMap.visibility.clusters
+                };
+            }
+
+            this.sv.collisionModel = {
+                planes,
+                nodes,
+                leaves,
+                brushes,
+                leafBrushes,
+                bmodels,
+                visibility
+            };
+
             console.log(`Map loaded successfully.`);
         } catch (e) {
             console.warn('Failed to load map:', e);
@@ -259,6 +350,8 @@ export class DedicatedServer implements GameEngine {
         const client = createClient(clientIndex, driver);
         // Initialize lastMessage to current frame to prevent immediate timeout
         client.lastMessage = this.sv.frame;
+        // Initialize lastCommandTime to prevent immediate reset of command count
+        client.lastCommandTime = Date.now();
         this.svs.clients[clientIndex] = client;
 
         driver.onMessage((data) => this.onClientMessage(client, data));
@@ -358,17 +451,19 @@ export class DedicatedServer implements GameEngine {
             client.state = ClientState.Connected;
             client.userInfo = userInfo;
             console.log(`Client ${client.index} connected: ${userInfo}`);
-            this.sendServerData(client);
 
+            // Send server data and precache command in a single reliable transmission
             // Q2 sends "precache\n" via stufftext here
-            // This is reliable. We append to the current reliable stream.
             try {
+                this.sendServerData(client);
+
                 client.netchan.writeReliableByte(ServerCommand.stufftext);
                 client.netchan.writeReliableString("precache\n");
+
                 const packet = client.netchan.transmit();
                 client.net.send(packet);
             } catch (e) {
-                console.warn(`Client ${client.index} reliable buffer overflow`);
+                console.warn(`Client ${client.index} reliable buffer overflow or connection error`);
                 this.dropClient(client);
             }
         } else {
@@ -423,58 +518,52 @@ export class DedicatedServer implements GameEngine {
     }
 
     private sendServerData(client: Client) {
-       // Send svc_serverdata via reliable stream
-       // This can be large, so we use the reliable buffer of NetChan
-       try {
-           client.netchan.writeReliableByte(ServerCommand.serverdata);
-           client.netchan.writeReliableLong(34); // Protocol version
-           client.netchan.writeReliableLong(this.sv.frame);
-           client.netchan.writeReliableByte(0); // Attract loop
-           client.netchan.writeReliableString("baseq2");
-           client.netchan.writeReliableShort(client.index);
-           client.netchan.writeReliableString(this.sv.name || "maps/test.bsp");
+        // Send svc_serverdata via reliable stream
+        // This can be large, so we use the reliable buffer of NetChan
 
-           // Send all configstrings
-           for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
-               if (this.sv.configStrings[i]) {
-                   client.netchan.writeReliableByte(ServerCommand.configstring);
-                   client.netchan.writeReliableShort(i);
-                   client.netchan.writeReliableString(this.sv.configStrings[i]);
-               }
-           }
+        client.netchan.writeReliableByte(ServerCommand.serverdata);
+        client.netchan.writeReliableLong(34); // Protocol version
+        client.netchan.writeReliableLong(this.sv.frame);
+        client.netchan.writeReliableByte(0); // Attract loop
+        client.netchan.writeReliableString("baseq2");
+        client.netchan.writeReliableShort(client.index);
+        client.netchan.writeReliableString(this.sv.name || "maps/test.bsp");
 
-           // Send baselines
-           // For baselines, we need a writer helper that writes to netchan buffer...
-           // Since writeDeltaEntity expects a BinaryWriter, we can create a temporary buffer
-           // and write it to reliable stream.
-           // However, baselines can be huge. We might need to chunk or just hope reliable buffer is big enough.
-           // NetChan reliable buffer is 256KB. Baselines should fit unless map is huge.
+        // Send all configstrings
+        for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
+            if (this.sv.configStrings[i]) {
+                client.netchan.writeReliableByte(ServerCommand.configstring);
+                client.netchan.writeReliableShort(i);
+                client.netchan.writeReliableString(this.sv.configStrings[i]);
+            }
+        }
 
-           // We can reuse a temporary BinaryWriter
-           const baselineWriter = new BinaryWriter();
+        // Send baselines
+        // For baselines, we need a writer helper that writes to netchan buffer...
+        // Since writeDeltaEntity expects a BinaryWriter, we can create a temporary buffer
+        // and write it to reliable stream.
+        // However, baselines can be huge. We might need to chunk or just hope reliable buffer is big enough.
+        // NetChan reliable buffer is 256KB. Baselines should fit unless map is huge.
 
-           for (let i = 0; i < MAX_EDICTS; i++) {
-               if (this.sv.baselines[i]) {
-                   baselineWriter.reset();
-                   baselineWriter.writeByte(ServerCommand.spawnbaseline);
-                   writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, baselineWriter, true, true);
+        // We can reuse a temporary BinaryWriter
+        const baselineWriter = new BinaryWriter();
 
-                   const data = baselineWriter.getData();
-                   // Write raw bytes to netchan reliable
-                   for(let j=0; j<data.length; j++) {
-                       client.netchan.writeReliableByte(data[j]);
-                   }
-               }
-           }
+        for (let i = 0; i < MAX_EDICTS; i++) {
+            if (this.sv.baselines[i]) {
+                baselineWriter.reset();
+                baselineWriter.writeByte(ServerCommand.spawnbaseline);
+                writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, baselineWriter, true, true);
 
-           // Transmit
-           const packet = client.netchan.transmit();
-           client.net.send(packet);
+                const data = baselineWriter.getData();
+                // Write raw bytes to netchan reliable
+                for(let j=0; j<data.length; j++) {
+                    client.netchan.writeReliableByte(data[j]);
+                }
+            }
+        }
 
-       } catch (e) {
-           console.warn(`Client ${client.index} sendServerData failed: ${e}`);
-           this.dropClient(client);
-       }
+        // Note: We do NOT transmit here. We want to batch this with the 'precache' command
+        // in handleConnect to ensure they are sent in the same reliable sequence block.
     }
 
     private SV_SetConfigString(index: number, value: string) {
