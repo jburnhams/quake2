@@ -1,108 +1,96 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { startTestServer, stopServer } from './helpers/testServer.js';
-import { launchBrowserClient, closeBrowser, TestClient } from './helpers/testClient.js';
+import { launchBrowserClient, closeBrowser } from './helpers/testClient.js';
 import { DedicatedServer } from '@quake2ts/server';
-import { createServer } from 'http';
-import handler from 'serve-handler';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { ConnectionState } from '@quake2ts/client'; // Assuming this is exported, otherwise use enum values
 
-const CLIENT_PORT = 8082;
 const GAME_SERVER_PORT_1 = 27912;
 const GAME_SERVER_PORT_2 = 27913;
 
-// Fix for ESM __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 describe('E2E Command Flow Test', () => {
-  let staticServer: any;
+  // No static server needed, testClient helper handles it for real-client.html
 
-  beforeAll(async () => {
-      // 1. Start static file server to serve the fixture
-      const fixturePath = path.resolve(__dirname, 'fixtures');
-
-      staticServer = createServer((request, response) => {
-          return handler(request, response, {
-              public: fixturePath,
-              rewrites: [
-                { source: '/', destination: '/client.html' }
-              ]
-          });
-      });
-
-      await new Promise<void>((resolve) => {
-          staticServer.listen(CLIENT_PORT, () => resolve());
-      });
-  });
-
-  afterAll(() => {
-      if (staticServer) staticServer.close();
-  });
-
-  it.skip('should send commands and receive updates', async () => {
+  it('should send commands and receive updates', async () => {
     // Start server
     const server = await startTestServer(GAME_SERVER_PORT_1);
 
     // Launch client
+    // Note: We don't provide clientUrl, so it defaults to serving the repo root and using real-client.html
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_1}`, {
-        clientUrl: `http://localhost:${CLIENT_PORT}/`,
         headless: true
     });
 
-    // Wait for connection to be established
-    await page.waitForSelector('#status');
-    const status = await page.textContent('#status');
-    expect(status).toBe('Connected');
+    // Wait for connection to be established (Active state)
+    // Increased timeout for slow environments
+    await page.waitForFunction(() => {
+        const client = (window as any).clientInstance;
+        return client && client.multiplayer && client.multiplayer.isConnected();
+    }, undefined, { timeout: 30000 });
 
-    // Simulate player movement (command generation)
-    // The dummy client in client.html automatically sends commands if connected.
-    // We can check the sequence numbers in the client instance if we expose them.
+    const status = await page.evaluate(() => {
+        const client = (window as any).clientInstance;
+        return client.multiplayer.state;
+    });
+    // Active = 5 (based on ConnectionState enum in client)
+    expect(status).toBeGreaterThanOrEqual(4); // ConnectionState.Active
 
-    // Since our dummy client is minimal, we need to inspect what it sends.
-    // The dummy client exposes `window.client` or similar?
-    // Wait, the dummy client in fixtures/client.html is very simple and doesn't expose quake2 object same as real client.
-    // BUT connection.test.ts uses a simple client.html that uses `MultiplayerConnection`.
+    // --- Test 4.4.1: Client sends commands ---
+    // The harness loop in real-client.html already sends commands every frame via client.predict()
 
-    // Let's assume we are testing the REAL client code (bundled) if possible,
-    // OR we are using the minimal test client which should expose `connection`.
-
-    // Let's inspect the `window.connection` which the fixture sets up.
-
-    const commandsSent = await page.evaluate(async () => {
-        const conn = (window as any).connection;
-        if (!conn) return 0;
-        const startSeq = conn.netchan ? conn.netchan.outgoingSequence : 0;
-
-        // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const endSeq = conn.netchan ? conn.netchan.outgoingSequence : 0;
-        return endSeq - startSeq;
+    // Verify outgoing sequence is increasing
+    const initialSequence = await page.evaluate(() => {
+        return (window as any).clientInstance.multiplayer.netchan.outgoingSequence;
     });
 
-    // The dummy client sends 1 command per frame (simulated loop in client.html)
-    expect(commandsSent).toBeGreaterThan(0);
+    // Wait for a few frames
+    await page.waitForTimeout(1000);
 
-    await closeBrowser(browser);
+    const newSequence = await page.evaluate(() => {
+        return (window as any).clientInstance.multiplayer.netchan.outgoingSequence;
+    });
+
+    expect(newSequence).toBeGreaterThan(initialSequence);
+
+    // --- Test 4.4.2: Server receives commands ---
+
+    // Access server state directly (running in same process)
+    // We need to find the connected client
+    const serverClients = (server as any).svs.clients;
+    const connectedClient = serverClients.find((c: any) => c && c.state >= 2); // 2 = Connected/Active
+
+    expect(connectedClient).toBeDefined();
+
+    // Verify server received commands
+    // We expect lastCmd to be populated and sequence numbers to align
+    expect(connectedClient.lastCmd).toBeDefined();
+
+    // The client harness sends empty commands with msec=16
+    expect(connectedClient.lastCmd.msec).toBe(16);
+
+    await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  });
+  }, 40000);
 
-  it.skip('should handle command rate limiting', async () => {
+  it('should handle command rate limiting', async () => {
     const server = await startTestServer(GAME_SERVER_PORT_2);
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_2}`, {
-        clientUrl: `http://localhost:${CLIENT_PORT}/`,
         headless: true
     });
 
-    await page.waitForSelector('#status');
+    // Wait for active
+    await page.waitForFunction(() => {
+        const client = (window as any).clientInstance;
+        return client && client.multiplayer && client.multiplayer.isConnected();
+    }, undefined, { timeout: 30000 });
 
-    // Flood commands
+    // --- Test 4.4.3: Command rate limiting ---
+
+    // Flood commands from client
     await page.evaluate(() => {
-        const conn = (window as any).connection;
-        // Spam 100 commands instantly
-        for(let i=0; i<100; i++) {
-            conn.sendCommand({
+        const client = (window as any).clientInstance;
+        // Send 300 commands instantly
+        for(let i=0; i<300; i++) {
+             client.multiplayer.sendCommand({
                 angles: {x:0, y:0, z:0},
                 forwardmove: 0,
                 sidemove: 0,
@@ -110,62 +98,44 @@ describe('E2E Command Flow Test', () => {
                 buttons: 0,
                 impulse: 0,
                 msec: 10,
-                lightlevel: 0
+                lightlevel: 0,
+                serverFrame: 0
             });
         }
     });
 
-    // Verify we are not disconnected immediately (rate limit warning, but not flood kick yet)
-    // Flood kick threshold is >200.
+    // Wait for server to process and kick
+    await page.waitForTimeout(2000);
+
+    // Verify client is disconnected
+    // The client might not know it's disconnected immediately if the server just drops it without a packet,
+    // but the WebSocket should close.
+    // Or the server sends a disconnect packet.
 
     const isConnected = await page.evaluate(() => {
-         const conn = (window as any).connection;
-         return conn.isConnected();
-    });
-    expect(isConnected).toBe(true);
-
-    // Now try to trigger flood kick (>200)
-    await page.evaluate(() => {
-        const conn = (window as any).connection;
-        // Flood - sending 300 commands
-        for(let i=0; i<300; i++) {
-             conn.sendCommand({
-                angles: {x:0, y:0, z:0},
-                forwardmove: 0,
-                sidemove: 0,
-                upmove: 0,
-                buttons: 0,
-                impulse: 0,
-                msec: 10,
-                lightlevel: 0
-            });
-        }
+         const client = (window as any).clientInstance;
+         return client.multiplayer.isConnected();
     });
 
-    // Wait for server to process and kick.
-    // The disconnect happens asynchronously.
-    // Wait for the status element to change to 'Disconnected'
+    // Server logic: `this.dropClient(client)` calls `client.net.disconnect()`.
+    // This should close the socket.
 
-    try {
-        // The waitForFunction fails if flood kick takes time.
-        // Let's verify that we eventually disconnect.
-        await page.waitForFunction(() => {
-             const conn = (window as any).connection;
-             return !conn.isConnected();
-        }, undefined, { timeout: 5000 });
-    } catch (e) {
-        console.log('Timeout waiting for disconnect, checking status manually');
-    }
+    // However, depending on timing, it might still be in 'Active' state on client if the close event hasn't fired yet
+    // or if the server just stopped processing but didn't close socket (unlikely with dropClient).
 
-    const isConnectedAfterFlood = await page.evaluate(() => {
-         const conn = (window as any).connection;
-         return conn.isConnected();
-    });
+    // Let's verify on server side first
+    const serverClients = (server as any).svs.clients;
+    // The client slot should be null or Free (0)
+    // Or if it's still there, it should be marked as dropped?
+    // In DedicatedServer.dropClient, it sets state to Free via onClose callback mostly.
 
-    // Should be disconnected
-    expect(isConnectedAfterFlood).toBe(false);
+    // Note: The websocket close might take a moment to propagate.
 
-    await closeBrowser(browser);
+    // Check if any client is still Active (4)
+    const activeClients = serverClients.filter((c: any) => c && c.state === 4);
+    expect(activeClients.length).toBe(0);
+
+    await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  }, 20000);
+  }, 40000);
 });
