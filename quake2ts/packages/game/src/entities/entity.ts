@@ -314,6 +314,7 @@ export class Entity {
   owner: Entity | null = null;
   beam: Entity | null = null; // Added
   beam2: Entity | null = null; // Added
+  chain: Entity | null = null; // Added
 
   client?: PlayerClient;
 
@@ -486,6 +487,7 @@ export class Entity {
     this.owner = null;
     this.beam = null;
     this.beam2 = null;
+    this.chain = null;
 
     this._regularArmor = undefined;
     this._powerArmor = undefined;
@@ -598,6 +600,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'postthink', type: 'callback', save: false }, // Added
   { name: 'beam', type: 'entity', save: true }, // Added
   { name: 'beam2', type: 'entity', save: true }, // Added
+  { name: 'chain', type: 'entity', save: true }, // Added
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
 ];
