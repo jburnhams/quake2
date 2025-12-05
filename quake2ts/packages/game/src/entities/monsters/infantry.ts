@@ -112,6 +112,12 @@ function infantry_duck(self: Entity): void {
     self.monsterinfo.current_move = duck_move;
 }
 
+function infantry_idle(self: Entity, context: EntitySystem): void {
+    if (Math.random() < 0.2) {
+        context.sound?.(self, 0, 'infantry/idle1.wav', 1, 2, 0);
+    }
+}
+
 // Frames
 const stand_frames: MonsterFrame[] = Array.from({ length: 22 }, () => ({
     ai: monster_ai_stand,
@@ -287,6 +293,7 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.monsterinfo.run = infantry_run;
     self.monsterinfo.attack = infantry_attack;
     self.monsterinfo.checkattack = infantry_checkattack;
+    self.monsterinfo.idle = (self) => infantry_idle(self, context.entities);
 
     self.think = monster_think;
 

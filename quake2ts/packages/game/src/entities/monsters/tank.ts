@@ -23,6 +23,7 @@ import { GIB_METALLIC, throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
 import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -312,6 +313,12 @@ function tank_refire_rocket(self: Entity, context: any): void {
   tank_run(self);
 }
 
+function tank_idle(self: Entity, context: EntitySystem): void {
+    if (Math.random() < 0.2) {
+        context.sound?.(self, 0, 'tank/tnkidle.wav', 1, 2, 0);
+    }
+}
+
 // Frame definitions (approximated)
 const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, () => ({
   ai: monster_ai_stand,
@@ -490,6 +497,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.attack_machinegun = attack_machinegun_move;
   self.monsterinfo.checkattack = tank_checkattack;
   self.monsterinfo.blindfire = true;
+  self.monsterinfo.idle = (self) => tank_idle(self, context.entities);
 
   self.think = monster_think;
 
