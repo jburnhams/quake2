@@ -567,13 +567,13 @@ function stalker_dodge(self: Entity, attacker: Entity, eta: number): void {
 
 
 // BLOCKED
-function stalker_blocked(self: Entity, other: Entity | null, context?: EntitySystem): void {
+function stalker_blocked(self: Entity, dist: number, context: EntitySystem): void {
     if (!context) return;
-    if (blocked_checkplat(self, 10, context)) return;
+    if (blocked_checkplat(context, self, 10)) return;
 
     if (self.spawnflags & SPAWNFLAG_STALKER_NOJUMPING) return;
 
-    const result = blocked_checkjump(self, 10, context);
+    const result = blocked_checkjump(context, self, 10);
 
     if (result === BlockedJumpResult.JUMP_JUMP_UP) {
         M_SetAnimation(self, stalker_move_jump_up, context);
@@ -668,7 +668,7 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.monsterinfo.sight = stalker_sight;
     self.monsterinfo.idle = stalker_idle;
     self.monsterinfo.dodge = stalker_dodge;
-    self.monsterinfo.blocked = stalker_blocked;
+    self.monsterinfo.blocked = (s, d) => stalker_blocked(s, d, context.entities);
     self.monsterinfo.melee = stalker_attack_melee;
     self.monsterinfo.setskin = stalker_setskin;
 
