@@ -253,6 +253,7 @@ export class NetworkMessageParser {
   private isDemo: number = RECORD_CLIENT;
   private handler?: NetworkMessageHandler;
   private strictMode: boolean = false;
+  private errorCount: number = 0;
 
   constructor(stream: BinaryStream, handler?: NetworkMessageHandler, strictMode: boolean = false) {
     this.stream = stream;
@@ -266,6 +267,10 @@ export class NetworkMessageParser {
 
   public getProtocolVersion(): number {
       return this.protocolVersion;
+  }
+
+  public getErrorCount(): number {
+      return this.errorCount;
   }
 
   private translateCommand(cmd: number): number {
@@ -306,7 +311,14 @@ export class NetworkMessageParser {
 
   public parseMessage(): void {
     while (this.stream.hasMore()) {
-      let cmd = this.stream.readByte();
+      let cmd = -1;
+
+      try {
+        cmd = this.stream.readByte();
+      } catch (e) {
+          // End of stream or read error
+          break;
+      }
 
       if (cmd === -1) {
         break;
@@ -320,11 +332,6 @@ export class NetworkMessageParser {
           case ServerCommand.bad:
             if (this.strictMode && cmd === 0) {
                // command 0 is officially 'bad' but often padding.
-               // We might want to allow it even in strict mode if it's genuinely padding?
-               // But 'bad' returned from translateCommand means invalid/unmapped.
-               // If translateCommand returns 0 for valid reasons (e.g. padding), it's fine.
-               // If it returns 0 because of invalid mapping...
-               // Let's assume 0 is allowed padding.
             }
             // Often used as padding or end-of-message in demos.
             // We treat it as end of processing for this message block.
@@ -433,16 +440,31 @@ export class NetworkMessageParser {
              break;
 
           default:
+            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`;
             if (this.strictMode) {
-                throw new Error(`Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`);
+                throw new Error(errorMsg);
             }
-            console.warn(`Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${this.stream.getPosition() - 1}`);
-            // If we don't know the command, we are stuck because we don't know the length.
-            // In a real scenario, we might want to bail or try to skip?
+            console.warn(errorMsg);
+
+            // Unknown command handling strategy:
+            // Since we don't know the length, we are likely to misinterpret the next bytes.
+            // However, in non-strict mode, we can try to proceed or just abort this message block.
+            // Aborting is safer than crashing later on random data.
+            this.errorCount++;
             return;
         }
       } catch (e) {
-          console.warn(`Error parsing command ${cmd}: ${(e as Error).message}`);
+          const context = `offset ${this.stream.getPosition()}, cmd ${cmd}, protocol ${this.protocolVersion}`;
+          console.warn(`Error parsing command ${cmd} (${context}): ${(e as Error).message}`);
+          this.errorCount++;
+
+          if (this.strictMode) {
+              throw e;
+          }
+
+          // Attempt recovery:
+          // For now, simply stop parsing this message block to avoid cascading errors.
+          // In a demo stream, this limits damage to one message block (usually one frame or packet).
           return;
       }
     }

@@ -1,7 +1,7 @@
 # Section 12: Demo Playback - Implementation Tasks
 
 ## Current Status
-**~90% Complete (Parsing Infrastructure, Client Playback, Menu, Recording Implemented)**
+**~94% Complete (Parsing Infrastructure, Client Playback, Menu, Recording Implemented)**
 
 - ✅ Parser infrastructure exists (`NetworkMessageParser`, `DemoReader`, `DemoPlaybackController`)
 - ✅ **Fixed**: Frame parsing now correctly handles `svc_packetentities` inside `svc_frame`
@@ -13,8 +13,10 @@
 - ✅ **Added**: Frame-by-frame stepping (forward and backward)
 - ✅ **Added**: Demo Menu (Tasks 2.1, 2.3) wired to main menu
 - ✅ **Added**: Demo Recording (Tasks 3.1, 3.2) including download support
+- ✅ **Added**: Demo file validation (Task 2.2.2)
+- ✅ **Added**: Demo file storage (IndexedDB) (Task 2.2.3)
+- ✅ **Robust**: Parser now handles corrupted/truncated data gracefully (Task 4.1)
 - ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
-- ❌ Demo file storage (IndexedDB) and advanced file validation pending (Task 2.2)
 - ❌ Rerelease Protocol 2023 unverified with real demos
 
 **Goal**: Enable playback of Quake II `.dm2` demo files in browser with full rendering.
@@ -380,13 +382,13 @@ if (cls.serverProtocol != 26)
   - Return buffer for playback
   - Note: Initial implementation uses inline loading in DemoMenuFactory.
 
-- [ ] **2.2.2** Add demo file validation
+- [x] **2.2.2** Add demo file validation
   - Check file extension is .dm2
   - Verify demo header magic bytes
   - Verify minimum file size
   - Return error message if invalid
 
-- [ ] **2.2.3** Implement demo file storage in IndexedDB
+- [x] **2.2.3** Implement demo file storage in IndexedDB
   - Store uploaded demos for quick access
   - Key by filename
   - Store metadata (upload date, size, duration estimate)
@@ -498,23 +500,23 @@ if (cls.serverProtocol != 26)
 **File**: `packages/engine/src/demo/parser.ts`
 **Reference**: `full/client/cl_parse.c` (error handling patterns)
 
-- [ ] **4.1.1** Add error recovery for corrupted data
+- [x] **4.1.1** Add error recovery for corrupted data
   - Wrap `parseMessage()` in try-catch
   - On error, log detailed state (offset, command, protocol version)
   - Attempt to skip to next message boundary
   - Add `private errorCount: number` to track issues
 
-- [ ] **4.1.2** Add unknown command handling
+- [x] **4.1.2** Add unknown command handling
   - When encountering unknown `svc_*` command, log warning
   - Skip command gracefully (don't crash)
   - Allow forward compatibility with newer protocols
 
-- [ ] **4.1.3** Add buffer overflow protection
+- [x] **4.1.3** Add buffer overflow protection
   - Verify read position doesn't exceed buffer length
   - Add bounds checking before all reads
   - Throw specific error type for truncated data
 
-- [ ] **4.1.4** Add detailed error messages
+- [x] **4.1.4** Add detailed error messages
   - Include context: protocol version, current command, buffer offset
   - Create custom error types: `ParseError`, `TruncatedDemoError`, `UnknownCommandError`
   - Return error details to caller for UI display

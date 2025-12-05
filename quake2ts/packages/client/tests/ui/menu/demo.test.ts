@@ -1,12 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DemoMenuFactory } from '../../../src/ui/menu/demo.js';
 import { MenuSystem } from '../../../src/ui/menu/system.js';
 import { ClientExports } from '../../../src/index.js';
+import { DemoValidator } from '@quake2ts/engine';
+
+// Mock DemoValidator
+vi.mock('@quake2ts/engine', async () => {
+    const actual = await vi.importActual('@quake2ts/engine');
+    return {
+        ...actual,
+        DemoValidator: {
+            validate: vi.fn().mockReturnValue({ valid: true })
+        }
+    };
+});
 
 describe('DemoMenuFactory', () => {
   let menuSystem: MenuSystem;
   let client: ClientExports;
   let factory: DemoMenuFactory;
+
+  // Mock document.body.appendChild and removeChild
+  const originalAppendChild = document.body.appendChild;
+  const originalRemoveChild = document.body.removeChild;
+  let mockInput: any;
 
   beforeEach(() => {
     menuSystem = new MenuSystem();
@@ -19,6 +36,31 @@ describe('DemoMenuFactory', () => {
     } as unknown as ClientExports;
 
     factory = new DemoMenuFactory(menuSystem, client);
+
+    // Mock file input creation
+    mockInput = {
+        type: 'file',
+        style: { display: 'none' },
+        click: vi.fn(),
+        files: [],
+        accept: ''
+    };
+
+    // We need to intercept createElement('input')
+    const originalCreateElement = document.createElement;
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'input') return mockInput;
+        return originalCreateElement.call(document, tagName);
+    });
+
+    document.body.appendChild = vi.fn();
+    document.body.removeChild = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.appendChild = originalAppendChild;
+    document.body.removeChild = originalRemoveChild;
   });
 
   it('should create a demo menu structure', () => {
@@ -54,5 +96,57 @@ describe('DemoMenuFactory', () => {
 
       backItem?.action();
       expect(spy).toHaveBeenCalled();
+  });
+
+  it('should show error dialog if demo validation fails', async () => {
+      // Setup validation failure
+      vi.mocked(DemoValidator.validate).mockReturnValue({ valid: false, error: 'Bad file' });
+
+      const menu = factory.createDemoMenu();
+      const loadItem = menu.items.find(i => i.label === 'Load Demo File...');
+
+      // Trigger action
+      loadItem?.action();
+
+      // Simulate file selection
+      const blob = new Blob(['fake demo content'], { type: 'application/octet-stream' });
+      const file = new File([blob], 'bad.dm2');
+      // Mock arrayBuffer specifically for jsdom/test env if File doesn't support it directly
+      file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(10));
+
+      mockInput.files = [file];
+
+      // Trigger change event
+      await mockInput.onchange();
+
+      expect(DemoValidator.validate).toHaveBeenCalled();
+      expect(client.errorDialog.show).toHaveBeenCalledWith("Invalid Demo File", "Bad file");
+      expect(client.startDemoPlayback).not.toHaveBeenCalled();
+  });
+
+  it('should start playback if demo validation passes', async () => {
+      // Setup validation success
+      vi.mocked(DemoValidator.validate).mockReturnValue({ valid: true });
+
+      const menu = factory.createDemoMenu();
+      const loadItem = menu.items.find(i => i.label === 'Load Demo File...');
+
+      // Trigger action
+      loadItem?.action();
+
+      // Simulate file selection
+      const blob = new Blob(['valid demo content'], { type: 'application/octet-stream' });
+      const file = new File([blob], 'good.dm2');
+      // Mock arrayBuffer
+      file.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(10));
+
+      mockInput.files = [file];
+
+      // Trigger change event
+      await mockInput.onchange();
+
+      expect(DemoValidator.validate).toHaveBeenCalled();
+      expect(client.startDemoPlayback).toHaveBeenCalled();
+      expect(client.errorDialog.show).not.toHaveBeenCalled();
   });
 });
