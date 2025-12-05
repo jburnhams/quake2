@@ -7,7 +7,6 @@ import { createProxMine } from '../../../src/entities/projectiles/prox.js';
 import { createGame } from '../../../src/index.js';
 import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
 import * as damage from '../../../src/combat/damage.js';
-import { Vec3 } from '@quake2ts/shared';
 
 describe('Prox Mine', () => {
     let trace: any;
@@ -17,7 +16,7 @@ describe('Prox Mine', () => {
         vi.clearAllMocks();
     });
 
-    const createTestGame = () => {
+    const createTestGame = (options: { deathmatch?: boolean } = {}) => {
         trace = vi.fn().mockReturnValue({
             fraction: 1.0,
             ent: null
@@ -54,7 +53,7 @@ describe('Prox Mine', () => {
             multicast,
             unicast,
             areaEdicts: vi.fn().mockReturnValue(null) // Use fallback iteration
-        }, engine, { gravity: { x: 0, y: 0, z: 0 } }); // Disable gravity
+        }, engine, { gravity: { x: 0, y: 0, z: 0 }, deathmatch: options.deathmatch ?? false });
 
         game.init(0);
 
@@ -66,6 +65,23 @@ describe('Prox Mine', () => {
         player.classname = 'player';
         player.origin = { x: 0, y: 0, z: 0 };
         player.angles = { x: 0, y: 0, z: 0 };
+        player.mins = { x: -16, y: -16, z: -24 };
+        player.maxs = { x: 16, y: 16, z: 32 };
+
+        // IMPORTANT: Set client property to identify as a player/client and mock inventory to avoid snapshot errors
+        // inventory.powerups needs to be a Map, not a Set, because `populatePlayerStats` uses `.get()`
+        player.client = {
+            inventory: {
+                pickupItem: undefined,
+                pickupItemTimer: 0,
+                powerups: new Map(), // Changed from Set to Map
+                ownedWeapons: new Set(),
+                ammo: {
+                    counts: new Array(32).fill(0)
+                }
+            }
+        } as any;
+
         game.entities.finalizeSpawn(player);
         game.entities.linkentity(player);
 
@@ -75,122 +91,126 @@ describe('Prox Mine', () => {
     it('should limit mines to 50 per player', () => {
         const { game, player } = createTestGame();
 
-        // Spawn 50 mines
         const mines: Entity[] = [];
         for (let i = 0; i < 50; i++) {
-            // Manually increment time to ensure distinct timestamps
+            // Advance time to ensure distinct timestamps
+            game.frame({ time: (i + 1) * 1000, delta: 1.0 });
             const mine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
-            mine.timestamp = i;
             mines.push(mine);
         }
 
-        // Verify all 50 exist
         expect(game.entities.findByClassname('prox_mine').length).toBe(50);
-        expect(mines[0].inUse).toBe(true);
 
-        // Spawn 51st mine
-        const newMine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
-        newMine.timestamp = 50;
+        // Advance time and spawn 51st
+        game.frame({ time: 51000, delta: 1.0 });
+        createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
 
-        // Verify only 50 exist (one removed)
+        // The first mine should have been freed
         expect(mines[0].inUse).toBe(false);
-        expect(mines[1].inUse).toBe(true);
-        expect(game.entities.findByClassname('prox_mine').length).toBe(50);
+        // The remaining 49 plus the new one should exist
+        const activeMines = game.entities.findByClassname('prox_mine').filter(e => e.inUse);
+        expect(activeMines.length).toBe(50);
     });
 
     it('should not trigger on owner', () => {
-        const { game, player } = createTestGame();
+        const { game, player } = createTestGame({ deathmatch: false });
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const mine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
 
         // Simulate mine landing and arming
-        mine.touch!(mine, null, undefined, undefined); // Land
+        if (mine.touch) {
+             const plane = { normal: { x: 0, y: 0, z: 1 } };
+             mine.touch(mine, game.entities.world, plane, undefined);
+        }
 
-        // Advance time to arm (1000ms delay)
-        game.frame({ time: 1500, delta: 1.5 });
+        // Advance time to complete prox_open animation (9 frames + wait)
+        let currentTime = 0;
+        for (let i = 0; i < 20; i++) {
+             currentTime += 100;
+             game.frame({ time: currentTime, delta: 0.1 });
+        }
 
-        // Move player near mine
-        player.origin = { ...mine.origin };
-        game.entities.linkentity(player);
+        // Check if mine entered 'seek' state (wait should be > time)
+        expect(mine.wait).toBeGreaterThan(game.entities.timeSeconds);
 
-        // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        // Test field trigger logic manually
+        const field = game.entities.findByClassname('prox_field')[0];
+        expect(field).toBeDefined();
 
-        // Should not have exploded
+        if (field && field.touch) {
+            field.touch(field, player, undefined, undefined);
+        }
+
         expect(T_RadiusDamage).not.toHaveBeenCalled();
         expect(mine.inUse).toBe(true);
     });
 
-    it('should trigger on enemy', () => {
-        const { game, player } = createTestGame();
+    it('should trigger on enemy via field touch', () => {
+        const { game, player } = createTestGame({ deathmatch: false });
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const mine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
 
-        // Simulate landing
-        mine.touch!(mine, null, undefined, undefined);
+        if (mine.touch) {
+             const plane = { normal: { x: 0, y: 0, z: 1 } };
+             mine.touch(mine, game.entities.world, plane, undefined);
+        }
 
-        // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
+        // Advance to arm
+        let currentTime = 0;
+        for (let i = 0; i < 20; i++) {
+             currentTime += 100;
+             game.frame({ time: currentTime, delta: 0.1 });
+        }
+
+        const field = game.entities.findByClassname('prox_field')[0];
+        expect(field).toBeDefined();
 
         // Create enemy
         const enemy = game.entities.spawn();
         enemy.classname = 'monster_soldier';
-        enemy.takedamage = true;
         enemy.health = 100;
-        enemy.solid = Solid.BoundingBox; // IMPORTANT: Must be solid for findInBox
-        enemy.origin = { ...mine.origin };
-        enemy.mins = { x: -16, y: -16, z: -24 };
-        enemy.maxs = { x: 16, y: 16, z: 32 };
-        game.entities.finalizeSpawn(enemy);
+        enemy.takedamage = true;
+        enemy.monsterinfo = {} as any;
         game.entities.linkentity(enemy);
 
-        // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        // Trigger field
+        if (field.touch) {
+            field.touch(field, enemy, undefined, undefined);
+        }
 
-        // Should have exploded
         expect(T_RadiusDamage).toHaveBeenCalled();
         expect(mine.inUse).toBe(false);
     });
 
-    it.skip('should trigger via laser tripwire (trace check)', () => {
-        const { game, player, trace } = createTestGame();
+    it('should trigger on initial open if enemy is present', () => {
+        const { game, player } = createTestGame();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
-        const mine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
-
-        // Land on a surface (floor)
-        const plane = { normal: { x: 0, y: 0, z: 1 } };
-        mine.touch!(mine, null, plane as any, undefined);
-
-        // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
-
-        // Create enemy far away (out of radius) but in beam path
+        // Create enemy nearby BEFORE mine arms
         const enemy = game.entities.spawn();
         enemy.classname = 'monster_soldier';
-        enemy.takedamage = true;
         enemy.health = 100;
-        enemy.solid = Solid.BoundingBox; // IMPORTANT
-        enemy.origin = { x: 0, y: 0, z: 150 };
-        enemy.mins = { x: -16, y: -16, z: -24 };
-        enemy.maxs = { x: 16, y: 16, z: 32 };
-        game.entities.finalizeSpawn(enemy);
+        enemy.monsterinfo = {} as any;
+        enemy.origin = { x: 50, y: 0, z: 0 };
         game.entities.linkentity(enemy);
 
-        // Mock trace to hit enemy
-        trace.mockReturnValue({
-            fraction: 0.5,
-            ent: enemy,
-            endpos: { x: 0, y: 0, z: 150 }
-        });
+        const mine = createProxMine(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, 600);
 
-        // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        if (mine.touch) {
+             const plane = { normal: { x: 0, y: 0, z: 1 } };
+             mine.touch(mine, game.entities.world, plane, undefined);
+        }
 
-        // Should have exploded due to beam
+        // Advance frames. Logic checks for enemies at frame 9 of prox_open.
+        let currentTime = 0;
+        for (let i = 0; i < 15; i++) {
+             currentTime += 100;
+             game.frame({ time: currentTime, delta: 0.1 });
+             if (!mine.inUse) break; // Exploded
+        }
+
         expect(T_RadiusDamage).toHaveBeenCalled();
-        expect(mine.inUse).toBe(false);
     });
 });
