@@ -21,7 +21,7 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { GIB_METALLIC, throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
-import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket } from './attack.js';
+import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket, monster_fire_heat } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import { EntitySystem } from '../system.js';
 
@@ -288,7 +288,11 @@ function tank_fire_rocket(self: Entity, context: any): void {
    const damage = 50;
    const speed = 650;
 
-   monster_fire_rocket(self, start, dir, damage, speed, 0, context);
+   if (self.spawnflags & 16) { // SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING
+       monster_fire_heat(self, start, dir, damage, speed, 0, (self.accel || 0.075), context);
+   } else {
+       monster_fire_rocket(self, start, dir, damage, speed, 0, context);
+   }
 }
 
 

@@ -157,10 +157,11 @@ function supertank_fire_rocket(self: Entity, context: any): void {
     const start = getProjectedOffset(self, SUPERTANK_ROCKET_OFFSET);
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
-    // If powershield spawnflag (8), fire heat seeker? Not implemented yet.
-    // Just fire normal rocket for now.
-
-    monster_fire_rocket(self, start, forward, 50, 650, 0, context);
+    if (self.spawnflags & 8) { // SPAWNFLAG_SUPERTANK_POWERSHIELD -> Heat seeker
+        monster_fire_heat(self, start, forward, 50, 650, 0, 0.075, context);
+    } else {
+        monster_fire_rocket(self, start, forward, 50, 650, 0, context);
+    }
 }
 
 function supertank_fire_grenade(self: Entity, context: any): void {

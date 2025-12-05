@@ -613,6 +613,121 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
     sys.finalizeSpawn(ball);
 }
 
+// Heat-Seeking Missile Think
+function heatThink(self: Entity, sys: EntitySystem): void {
+    const start = { ...self.origin };
+    const forward = normalizeVec3(self.velocity);
+
+    // Find targets in radius
+    const radius = 1024;
+    const candidates = sys.findByRadius(start, radius);
+
+    let best: Entity | null = null;
+    let bestDist = radius;
+    let bestDot = 0.5; // Requires at least 45 degrees? Rerelease says "dot < olddot" where olddot init 1?
+
+    // C++ logic:
+    // while ((target = findradius...))
+    // if owner==target continue
+    // if !target->client continue (only clients?)
+    // if health <= 0 continue
+    // if !visible continue
+    // dot check...
+
+    for (const ent of candidates) {
+        if (ent === self.owner) continue;
+        if (!ent.client) continue; // Only track players?
+        if (ent.health <= 0) continue;
+
+        // Visibility check
+        const tr = sys.trace(self.origin, ent.origin, ZERO_VEC3, ZERO_VEC3, self, MASK_SOLID);
+        if (tr.fraction < 1.0 && tr.ent !== ent) continue;
+
+        const delta = subtractVec3(ent.origin, self.origin);
+        const dist = lengthVec3(delta);
+        const dir = normalizeVec3(delta);
+        const dot = dir.x * forward.x + dir.y * forward.y + dir.z * forward.z;
+
+        if (dot > bestDot) {
+            bestDot = dot;
+            best = ent;
+        }
+    }
+
+    if (best) {
+        // Adjust velocity towards target
+        // self->accel stores turn_fraction
+        const accel = self.accel || 0.1;
+        const speed = self.speed || 300;
+
+        const targetDir = normalizeVec3(subtractVec3(best.origin, self.origin));
+
+        // Interpolate direction
+        // slerp or simple lerp for now
+        const newDir = {
+            x: forward.x + (targetDir.x - forward.x) * accel,
+            y: forward.y + (targetDir.y - forward.y) * accel,
+            z: forward.z + (targetDir.z - forward.z) * accel
+        };
+        const normalizedNewDir = normalizeVec3(newDir);
+
+        self.velocity = {
+            x: normalizedNewDir.x * speed,
+            y: normalizedNewDir.y * speed,
+            z: normalizedNewDir.z * speed
+        };
+        self.angles = vectorToAngles(normalizedNewDir);
+
+        if (!self.enemy) {
+            sys.sound(self, 0, 'weapons/railgr1a.wav', 1, 0.25, 0);
+            self.enemy = best;
+        }
+    } else {
+        self.enemy = null;
+    }
+
+    sys.scheduleThink(self, sys.timeSeconds + 0.1);
+}
+
+export function createHeatSeekingMissile(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, flashtype: number, turn_fraction: number) {
+    const heat = sys.spawn();
+    heat.classname = 'heat_seeking_missile';
+    heat.owner = owner;
+    heat.origin = { ...start };
+    heat.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    heat.movetype = MoveType.FlyMissile;
+    heat.solid = Solid.BoundingBox;
+    heat.modelindex = sys.modelIndex('models/objects/rocket/tris.md2');
+    heat.mins = { x: -4, y: -4, z: -4 };
+    heat.maxs = { x: 4, y: 4, z: 4 };
+
+    heat.speed = speed;
+    heat.accel = turn_fraction;
+
+    // Standard rocket damage + radius
+    heat.radius_dmg = damage; // Usually same as direct?
+    heat.dmg_radius = 120;
+
+    heat.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+        if (other === self.owner) return;
+
+        if (other && other.takedamage) {
+            T_Damage(other as any, self as any, self.owner as any, self.velocity, self.origin, plane ? plane.normal : ZERO_VEC3, damage, 0, DamageFlags.NONE, DamageMod.ROCKET, sys.timeSeconds, sys.multicast.bind(sys));
+        }
+
+        const entities = sys.findByRadius(self.origin, 120);
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, {}, sys.multicast.bind(sys));
+
+        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
+        sys.free(self);
+    };
+
+    heat.think = (ent, ctx) => heatThink(ent, sys); // Capture sys
+    sys.scheduleThink(heat, sys.timeSeconds + 0.1);
+
+    sys.finalizeSpawn(heat);
+}
+
 // Rogue ETF Rifle Flechette
 export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number) {
     const flechette = sys.spawn();
