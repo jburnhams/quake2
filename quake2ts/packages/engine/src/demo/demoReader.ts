@@ -109,4 +109,14 @@ export class DemoReader {
   public getOffset(): number {
       return this.offset;
   }
+
+  public getProgress(): { current: number; total: number; percent: number } {
+      const current = this.offset;
+      const total = this.buffer.byteLength;
+      return {
+          current,
+          total,
+          percent: total > 0 ? (current / total) * 100 : 0
+      };
+  }
 }
