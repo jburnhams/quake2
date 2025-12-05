@@ -280,7 +280,7 @@ function shambler_pain(self: Entity, other: Entity | null, kick: number, damage:
 function ShamblerSaveLoc(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
     self.pos1 = { ...self.enemy.origin };
-    self.pos1.z += self.enemy.viewheight || 0;
+    self.pos1 = { ...self.pos1, z: self.pos1.z + (self.enemy.viewheight || 0) };
     self.monsterinfo.nextframe = FRAME_magic09;
 
     context.engine.sound?.(self, 0, sound_boom, 1, 1, 0);
