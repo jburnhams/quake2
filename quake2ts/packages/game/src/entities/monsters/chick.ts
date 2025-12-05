@@ -453,7 +453,7 @@ function chick_dodge(self: Entity, attacker: Entity, eta: number): void {
     self.monsterinfo.current_move = duck_move;
 }
 
-function chick_blocked(self: Entity, other: Entity | null): void {
+function chick_blocked(self: Entity, dist: number, context: EntitySystem): void {
    // blocked checkplat logic omitted
 }
 
