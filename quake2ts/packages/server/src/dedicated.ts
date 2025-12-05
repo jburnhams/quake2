@@ -324,12 +324,29 @@ export class DedicatedServer implements GameEngine {
     }
 
     private handleStringCmd(client: Client, cmd: string) {
-        if (cmd.startsWith('connect ')) {
+        console.log(`Client ${client.index} stringcmd: ${cmd}`);
+        if (cmd === 'getchallenge') {
+            this.handleGetChallenge(client);
+        } else if (cmd.startsWith('connect ')) {
             const userInfo = cmd.substring(8); // "connect ".length
             this.handleConnect(client, userInfo);
         } else if (cmd === 'begin') {
             this.handleBegin(client);
         }
+    }
+
+    private handleGetChallenge(client: Client) {
+        // Generate a challenge number (random for now)
+        const challenge = Math.floor(Math.random() * 1000000) + 1;
+        client.challenge = challenge;
+
+        // Send challenge back to client
+        // Use NetChan to wrap it (unreliable payload is fine for challenge response)
+        const writer = new BinaryWriter();
+        writer.writeByte(ServerCommand.stufftext);
+        writer.writeString(`challenge ${challenge}\n`);
+        const packet = client.netchan.transmit(writer.getData());
+        client.net.send(packet);
     }
 
     private handleConnect(client: Client, userInfo: string) {
@@ -342,19 +359,27 @@ export class DedicatedServer implements GameEngine {
             client.userInfo = userInfo;
             console.log(`Client ${client.index} connected: ${userInfo}`);
             this.sendServerData(client);
+
             // Q2 sends "precache\n" via stufftext here
-            const writer = new BinaryWriter();
-            writer.writeByte(ServerCommand.stufftext);
-            writer.writeString("precache\n");
-            client.net.send(writer.getData());
+            // This is reliable. We append to the current reliable stream.
+            try {
+                client.netchan.writeReliableByte(ServerCommand.stufftext);
+                client.netchan.writeReliableString("precache\n");
+                const packet = client.netchan.transmit();
+                client.net.send(packet);
+            } catch (e) {
+                console.warn(`Client ${client.index} reliable buffer overflow`);
+                this.dropClient(client);
+            }
         } else {
             console.log(`Client ${client.index} rejected: ${result}`);
-            // Send rejection message?
+            // Send rejection message
             const writer = new BinaryWriter();
             writer.writeByte(ServerCommand.print);
             writer.writeByte(2); // PRINT_HIGH
             writer.writeString(`Connection rejected: ${result}\n`);
-            client.net.send(writer.getData());
+            const packet = client.netchan.transmit(writer.getData());
+            client.net.send(packet);
             // TODO: Disconnect client after delay?
         }
     }
@@ -398,32 +423,58 @@ export class DedicatedServer implements GameEngine {
     }
 
     private sendServerData(client: Client) {
-       // Send svc_serverdata
-       const writer = new BinaryWriter();
-       writer.writeByte(ServerCommand.serverdata);
-       writer.writeLong(34); // Protocol version
-       writer.writeLong(this.sv.frame);
-       writer.writeByte(0); // Attract loop
-       writer.writeString("baseq2");
-       writer.writeShort(client.index);
-       writer.writeString("maps/test.bsp");
+       // Send svc_serverdata via reliable stream
+       // This can be large, so we use the reliable buffer of NetChan
+       try {
+           client.netchan.writeReliableByte(ServerCommand.serverdata);
+           client.netchan.writeReliableLong(34); // Protocol version
+           client.netchan.writeReliableLong(this.sv.frame);
+           client.netchan.writeReliableByte(0); // Attract loop
+           client.netchan.writeReliableString("baseq2");
+           client.netchan.writeReliableShort(client.index);
+           client.netchan.writeReliableString(this.sv.name || "maps/test.bsp");
 
-       // Send all configstrings
-       for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
-           if (this.sv.configStrings[i]) {
-               this.SV_WriteConfigString(writer, i, this.sv.configStrings[i]);
+           // Send all configstrings
+           for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
+               if (this.sv.configStrings[i]) {
+                   client.netchan.writeReliableByte(ServerCommand.configstring);
+                   client.netchan.writeReliableShort(i);
+                   client.netchan.writeReliableString(this.sv.configStrings[i]);
+               }
            }
-       }
 
-       // Send baselines
-       for (let i = 0; i < MAX_EDICTS; i++) {
-           if (this.sv.baselines[i]) {
-               writer.writeByte(ServerCommand.spawnbaseline);
-               writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, writer, true, true);
+           // Send baselines
+           // For baselines, we need a writer helper that writes to netchan buffer...
+           // Since writeDeltaEntity expects a BinaryWriter, we can create a temporary buffer
+           // and write it to reliable stream.
+           // However, baselines can be huge. We might need to chunk or just hope reliable buffer is big enough.
+           // NetChan reliable buffer is 256KB. Baselines should fit unless map is huge.
+
+           // We can reuse a temporary BinaryWriter
+           const baselineWriter = new BinaryWriter();
+
+           for (let i = 0; i < MAX_EDICTS; i++) {
+               if (this.sv.baselines[i]) {
+                   baselineWriter.reset();
+                   baselineWriter.writeByte(ServerCommand.spawnbaseline);
+                   writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, baselineWriter, true, true);
+
+                   const data = baselineWriter.getData();
+                   // Write raw bytes to netchan reliable
+                   for(let j=0; j<data.length; j++) {
+                       client.netchan.writeReliableByte(data[j]);
+                   }
+               }
            }
-       }
 
-       client.net.send(writer.getData());
+           // Transmit
+           const packet = client.netchan.transmit();
+           client.net.send(packet);
+
+       } catch (e) {
+           console.warn(`Client ${client.index} sendServerData failed: ${e}`);
+           this.dropClient(client);
+       }
     }
 
     private SV_SetConfigString(index: number, value: string) {
@@ -718,7 +769,13 @@ export class DedicatedServer implements GameEngine {
         writeServerCommand(writer, event, ...args);
 
         const data = writer.getData();
-        const reliable = event === ServerCommand.print || event === ServerCommand.configstring; // Basic heuristic
+        // Heuristic for reliability if not explicit? Multicast is usually unreliable unless critical.
+        // But Q2 multicast (like muzzleflash) is unreliable.
+        // PRINT and CONFIGSTRING are reliable but handled elsewhere or via reliable=true.
+        // Game code calls multicast for ephemeral effects usually.
+        // If we need reliable multicast, we might need a flag.
+        // Assuming unreliable for multicast unless it's a critical event.
+        const reliable = false;
 
         for (const client of this.svs.clients) {
             if (!client || client.state < ClientState.Active || !client.edict) {
@@ -748,9 +805,19 @@ export class DedicatedServer implements GameEngine {
             }
 
             if (send) {
-                // TODO: Differentiate between reliable and unreliable stream
-                // For now, simple send
-                client.net.send(data);
+                if (reliable) {
+                    try {
+                        for (let i = 0; i < data.length; i++) {
+                            client.netchan.writeReliableByte(data[i]);
+                        }
+                    } catch (e) {
+                        // ignore overflow for multicast?
+                    }
+                } else {
+                    // Send as unreliable payload
+                    const packet = client.netchan.transmit(data);
+                    client.net.send(packet);
+                }
             }
         }
     }
@@ -761,7 +828,24 @@ export class DedicatedServer implements GameEngine {
         if (client && client.state >= ClientState.Connected) {
             const writer = new BinaryWriter();
             writeServerCommand(writer, event, ...args);
-            client.net.send(writer.getData());
+            const data = writer.getData();
+
+            if (reliable) {
+                try {
+                    for (let i = 0; i < data.length; i++) {
+                        client.netchan.writeReliableByte(data[i]);
+                    }
+                    // Flush immediately for unicast reliable events (like print)
+                    const packet = client.netchan.transmit();
+                    client.net.send(packet);
+                } catch (e) {
+                    console.warn(`Client ${client.index} reliable buffer overflow in unicast`);
+                    this.dropClient(client);
+                }
+            } else {
+                const packet = client.netchan.transmit(data);
+                client.net.send(packet);
+            }
         }
     }
 
