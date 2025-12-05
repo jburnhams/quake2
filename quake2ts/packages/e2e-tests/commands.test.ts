@@ -132,6 +132,11 @@ describe('E2E Command Flow Test', () => {
     // Note: The websocket close might take a moment to propagate.
 
     // Check if any client is still Active (4)
+    // We poll briefly because the server frame loop processes disconnects asynchronously
+    // Wait for server to update state - increase wait time as the client might retry or timeout slow
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Server side check
     const activeClients = serverClients.filter((c: any) => c && c.state === 4);
     expect(activeClients.length).toBe(0);
 
