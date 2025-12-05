@@ -147,21 +147,21 @@ export function M_CalculatePitchToFire(
   self: Entity,
   target: Vec3,
   start: Vec3,
-  baseAim: Vec3,
   speed: number,
   time_remaining: number,
   mortar: boolean,
-  destroy_on_touch: boolean,
+  destroy_on_touch: boolean = false,
   gravity: number = 800 // Default gravity
-): { valid: boolean, aim: Vec3 } {
+): { aimDir: Vec3 } | null {
+
+  const aimVec = normalizeVec3(subtractVec3(target, start));
+  const baseAngles = vectorToAngles(aimVec);
 
   const pitches = [-80, -70, -60, -50, -40, -30, -20, -10, -5];
   let best_pitch = 0;
   let best_dist = Infinity;
 
   const sim_time = 0.1;
-  const baseAngles = vectorToAngles(baseAim);
-  let finalAim = { ...baseAim };
   let found = false;
 
   for (const pitch of pitches) {
@@ -169,28 +169,14 @@ export function M_CalculatePitchToFire(
       break;
     }
 
-    const pitched_aim = { ...baseAngles };
-    // pitched_aim.x = pitch; // Readonly
-    pitched_aim.x = pitch; // Wait, Vec3 is readonly usually. In TS it depends on type definition.
-    // If it's from @quake2ts/shared, it's readonly.
-    // We need to create new object or cast to Mutable.
-    // However, here pitched_aim is created via spread { ...baseAngles }, so it's a new object typed as Vec3 (but we can assign if we cast or just rely on spread).
-    // Actually Typescript infers { x: number, y: number, z: number } which is mutable locally.
-
-    // But `baseAngles` comes from vectorToAngles which returns Vec3 (readonly).
-    // So `pitched_aim` is inferred as `{ x: number, y: number, z: number }`?
-    // Let's verify.
-    // The previous error was: Cannot assign to 'z' because it is a read-only property.
-    // So yes, we need to be careful.
-
-    const mutablePitchedAim = { ...pitched_aim, x: pitch };
-
-    const { forward: fwd } = angleVectors(mutablePitchedAim);
+    const pitched_aim = { ...baseAngles, x: pitch };
+    const { forward: fwd } = angleVectors(pitched_aim);
 
     let velocity = scaleVec3(fwd, speed);
     let origin = { ...start };
     let t = time_remaining;
     let hit = false;
+    let hitSomething = false;
 
     while (t > 0) {
       // Apply gravity: velocity.z -= gravity * sim_time
@@ -235,23 +221,23 @@ export function M_CalculatePitchToFire(
         }
 
         if (destroy_on_touch || (tr.contents & (CONTENTS_MONSTER | CONTENTS_PLAYER | CONTENTS_DEADMONSTER))) {
-           hit = true;
+           hitSomething = true;
            break;
         }
       }
 
       t -= sim_time;
-      if (hit) break;
+      if (hitSomething) break;
     }
   }
 
   if (best_dist !== Infinity) {
     const pitched_aim = { ...baseAngles, x: best_pitch };
-    finalAim = angleVectors(pitched_aim).forward;
-    return { valid: true, aim: finalAim };
+    const aimDir = angleVectors(pitched_aim).forward;
+    return { aimDir };
   }
 
-  return { valid: false, aim: finalAim };
+  return null;
 }
 
 // ============================================================================
@@ -265,7 +251,7 @@ export enum BlockedJumpResult {
   JUMP_JUMP_DOWN = 3
 }
 
-export function blocked_checkplat(self: Entity, dist: number, context: EntitySystem): boolean {
+export function blocked_checkplat(context: EntitySystem, self: Entity, dist: number): boolean {
   if (!self.enemy) return false;
 
   let playerPosition = 0;
@@ -327,7 +313,7 @@ export function blocked_checkplat(self: Entity, dist: number, context: EntitySys
   return false;
 }
 
-export function monster_jump_start(self: Entity, context: EntitySystem): void {
+export function monster_jump_start(context: EntitySystem, self: Entity): void {
   // monster_done_dodge(self); // TODO: implement if needed
   // Check if we are dodging, if so stop dodging?
   // aiflags not fully exposed in types for 'Dodging' yet?
@@ -336,7 +322,7 @@ export function monster_jump_start(self: Entity, context: EntitySystem): void {
   self.monsterinfo.jump_time = context.timeSeconds + 3.0;
 }
 
-export function monster_jump_finished(self: Entity, context: EntitySystem): boolean {
+export function monster_jump_finished(context: EntitySystem, self: Entity): boolean {
   const { forward } = angleVectors(self.angles);
 
   // project velocity onto forward
@@ -351,10 +337,11 @@ export function monster_jump_finished(self: Entity, context: EntitySystem): bool
   return (self.monsterinfo.jump_time || 0) < context.timeSeconds;
 }
 
-export function blocked_checkjump(self: Entity, dist: number, context: EntitySystem): BlockedJumpResult {
+export function blocked_checkjump(context: EntitySystem, self: Entity, dist: number, dropHeightInput?: number, jumpHeightInput?: number): BlockedJumpResult {
   // Check jump capability via jump_height or drop_height
-  const jumpHeight = self.monsterinfo?.jump_height || 0;
-  const dropHeight = self.monsterinfo?.drop_height || 0;
+  // Use passed inputs if available (to match C++ args often passed) or fallback to monsterinfo
+  const jumpHeight = jumpHeightInput ?? (self.monsterinfo?.jump_height || 0);
+  const dropHeight = dropHeightInput ?? (self.monsterinfo?.drop_height || 0);
 
   if (!jumpHeight && !dropHeight) // fallback check
       return BlockedJumpResult.NO_JUMP;
@@ -398,7 +385,7 @@ export function blocked_checkjump(self: Entity, dist: number, context: EntitySys
 
               if (trace2.plane && trace2.plane.normal.z < 0.9) return BlockedJumpResult.NO_JUMP;
 
-              monster_jump_start(self, context);
+              monster_jump_start(context, self);
               return BlockedJumpResult.JUMP_JUMP_DOWN;
          }
      }
@@ -411,7 +398,7 @@ export function blocked_checkjump(self: Entity, dist: number, context: EntitySys
      if (trace.fraction < 1 && !trace.allsolid && !trace.startsolid) {
          if ((trace.endpos.z - self.absmin.z) <= jumpHeight && (trace.contents & (MASK_SOLID | CONTENTS_WATER))) {
              // face_wall(self); // Turn to face wall?
-             monster_jump_start(self, context);
+             monster_jump_start(context, self);
              return BlockedJumpResult.JUMP_JUMP_UP;
          }
      }

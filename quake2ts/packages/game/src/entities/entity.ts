@@ -77,6 +77,9 @@ export type DieCallback = (
 // Simple Pain Callback for player (no kick/other needed?) or matched signature
 export type PlayerPainCallback = (self: Entity, damage: number) => void;
 
+// Monster specific blocked callback
+export type MonsterBlockedCallback = (self: Entity, dist: number, context: EntitySystem) => boolean | void;
+
 export type EntityFieldType =
   | 'int'
   | 'float'
@@ -175,7 +178,7 @@ export interface MonsterInfo {
   unduck?: (self: Entity) => void;
   duck?: (self: Entity, eta: number) => boolean;
   sidestep?: (self: Entity) => boolean;
-  blocked?: BlockedCallback;
+  blocked?: MonsterBlockedCallback;
   setskin?: (self: Entity) => void;
   freeze_time?: number; // For ETF Rifle freeze effect
 
