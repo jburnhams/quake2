@@ -35,6 +35,7 @@ describe('monster_flyer', () => {
     context = {
       keyValues: {},
       entities: system,
+      health_multiplier: 1,
       warn: vi.fn(),
       free: vi.fn(),
     };

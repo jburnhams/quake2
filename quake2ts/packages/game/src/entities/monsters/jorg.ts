@@ -209,7 +209,8 @@ function makron_toss(self: Entity, context: any): void {
     // SP_monster_makron expects { entities: EntitySystem, ... } as SpawnContext.
     // We can construct a minimal mock or cast if SP function structure allows.
     // SP functions typically only use .entities from context.
-    const spawnContext = { entities: context } as any as SpawnContext;
+    // Ensure health_multiplier defaults to 1 if not present on context (which it isn't on EntitySystem)
+    const spawnContext = { entities: context, health_multiplier: 1 } as any as SpawnContext;
     SP_monster_makron(makron, spawnContext);
 
     // Jump at player
@@ -310,8 +311,12 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 80, y: 80, z: 140 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 3000;
-  self.max_health = 3000;
+  if (context.health_multiplier) {
+    self.health = 3000 * context.health_multiplier;
+  } else {
+    self.health = 3000;
+  }
+  self.max_health = self.health;
   self.mass = 1000;
   self.takedamage = true;
   self.viewheight = 90; // Guess

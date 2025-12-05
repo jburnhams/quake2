@@ -12,6 +12,7 @@ describe('monster_guardian', () => {
 
   beforeEach(() => {
     context = createTestContext();
+    context.health_multiplier = 1.0;
     const spawnRegistry = new Map();
     spawnRegistry.register = (name: string, fn: any) => spawnRegistry.set(name, fn);
     registerGuardianSpawns(spawnRegistry as any);
@@ -26,12 +27,7 @@ describe('monster_guardian', () => {
     expect(entity.classname).toBe('monster_guardian');
     expect(entity.model).toBe('models/monsters/guardian/tris.md2');
     expect(entity.health).toBe(2500);
-    expect(entity.max_health).toBe(0); // Not set in SP? Wait, it usually defaults or should be set if used.
-    // The C++ code: self->health = 2500;
-    // It does not explicitly set max_health in SP function provided in diff.
-    // However, entity.max_health defaults to 0 in class.
-    // Should check if I missed setting max_health in my implementation.
-    // Standard practice is often max_health = health.
+    expect(entity.max_health).toBe(2500);
 
     expect(entity.movetype).toBe(MoveType.Step);
     expect(entity.solid).toBe(Solid.BoundingBox);

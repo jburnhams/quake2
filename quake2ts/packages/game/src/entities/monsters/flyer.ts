@@ -203,8 +203,8 @@ export function SP_monster_flyer(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 24 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 50;
-  self.max_health = 50;
+  self.health = 50 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 50;
   self.takedamage = true;
   self.flags |= EntityFlags.Fly;

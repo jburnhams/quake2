@@ -435,8 +435,8 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 32, y: 32, z: 64 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 750;
-  self.max_health = 750;
+  self.health = 750 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 500;
   self.takedamage = true;
   self.viewheight = 64; // Tank is large

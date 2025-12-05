@@ -587,7 +587,8 @@ export function SP_monster_guardian(self: Entity, context: SpawnContext): void {
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
 
-  self.health = 2500;
+  self.health = 2500 * context.health_multiplier;
+  self.max_health = self.health;
   // self.gib_health = -200; // Not in type
 
   self.mass = 850;
