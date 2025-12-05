@@ -535,7 +535,7 @@ function useTargetLight(self: Entity, other: Entity | null, activator: Entity | 
         self.svflags &= ~ServerFlags.NoClient;
     } else {
         self.svflags |= ServerFlags.NoClient;
-        self.think = null; // Stop thinking
+        self.think = undefined; // Stop thinking
         self.nextthink = 0;
         return;
     }
