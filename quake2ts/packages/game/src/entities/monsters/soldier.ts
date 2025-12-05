@@ -21,7 +21,7 @@ import { SpawnContext } from '../spawn.js';
 import { SpawnRegistry } from '../spawn.js';
 import { monster_fire_bullet, monster_fire_blaster, monster_fire_shotgun, monster_fire_ionripper, monster_fire_blueblaster, monster_fire_dabeam } from './attack.js';
 import { throwGibs } from '../gibs.js';
-import { TempEntity } from '@quake2ts/shared';
+import type { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -252,6 +252,12 @@ function soldier_fire(self: Entity, context: any): void {
   }
 }
 
+function soldier_idle(self: Entity, context: EntitySystem): void {
+    if (Math.random() < 0.2) {
+        context.sound?.(self, 0, 'soldier/idle.wav', 1, 2, 0);
+    }
+}
+
 // Define moves
 const stand_frames: MonsterFrame[] = Array.from({ length: 30 }, () => ({
   ai: monster_ai_stand,
@@ -430,6 +436,7 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
           context.entities.sound?.(self, 0, 'soldier/sight2.wav', 1, 1, 0);
       }
   };
+  self.monsterinfo.idle = (self) => soldier_idle(self, context.entities);
 
   self.think = monster_think;
 

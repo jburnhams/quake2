@@ -75,6 +75,7 @@ describe('monster_soldier', () => {
     expect(soldier.monsterinfo.stand).toBeDefined();
     expect(soldier.monsterinfo.run).toBeDefined();
     expect(soldier.monsterinfo.attack).toBeDefined();
+    expect(soldier.monsterinfo.idle).toBeDefined();
   });
 
   it('SP_monster_soldier_light sets spawnflag and lower health', () => {
@@ -247,5 +248,25 @@ describe('monster_soldier', () => {
         fireFrame.think(soldier, sys);
     }
     expect(monster_fire_dabeam).toHaveBeenCalled();
+  });
+
+  it('soldier plays idle sound periodically', () => {
+    SP_monster_soldier(soldier, context);
+
+    // Mock Math.random to trigger the sound
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+    // Execute the idle function
+    soldier.monsterinfo.idle!(soldier);
+
+    // Check if sound was played
+    expect(sys.sound).toHaveBeenCalledWith(
+        soldier,
+        expect.anything(), // channel
+        expect.stringMatching(/soldier\/idle/), // sound path
+        1, // volume
+        expect.anything(), // attenuation
+        0
+    );
   });
 });
