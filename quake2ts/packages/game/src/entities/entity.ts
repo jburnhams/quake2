@@ -314,6 +314,9 @@ export class Entity {
   owner: Entity | null = null;
   beam: Entity | null = null; // Added
   beam2: Entity | null = null; // Added
+  teammaster: Entity | null = null;
+  teamchain: Entity | null = null;
+  s_sound = 0;
 
   client?: PlayerClient;
 
