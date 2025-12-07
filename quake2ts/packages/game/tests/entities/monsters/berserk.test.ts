@@ -62,7 +62,7 @@ describe('monster_berserk', () => {
     berserk.origin = { x: 0, y: 0, z: 0 };
     player.origin = { x: 300, y: 0, z: 0 };
 
-    context.rng.frandom.mockReturnValue(0.6);
+    vi.spyOn(context.rng, 'frandom').mockReturnValue(0.6);
 
     // Ensure timestamp < timeSeconds
     berserk.timestamp = 0;
@@ -108,7 +108,7 @@ describe('monster_berserk', () => {
 
     berserk.enemy = player;
     player.origin = { x: 300, y: 0, z: 0 };
-    context.rng.frandom.mockReturnValue(0.6);
+    vi.spyOn(context.rng, 'frandom').mockReturnValue(0.6);
     berserk.timestamp = 0;
 
     berserk.monsterinfo.attack!(berserk, context);
