@@ -5,6 +5,7 @@ import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { ai_stand, ai_walk, ai_run, ai_move } from '../../src/ai/movement.js';
 import { throwGibs } from '../../src/entities/gibs.js';
+import { createTestContext } from '../test-helpers.js';
 
 // Mock ai functions
 vi.mock('../../src/ai/movement.js', async (importOriginal) => {
@@ -40,26 +41,9 @@ describe('monster_soldier', () => {
         registerMonsterSpawns(registry);
         spawnFunc = spawnMap.get('monster_soldier');
 
-        // Create a mock context with all necessary properties
-        const freeMock = vi.fn();
-        const soundMock = vi.fn();
-        const engineMock = {
-            sound: soundMock,
-        };
-        context = {
-            timeSeconds: 0,
-            free: freeMock,
-            modelIndex: vi.fn(),
-            spawn: vi.fn(),
-            scheduleThink: vi.fn(),
-            finalizeSpawn: vi.fn(),
-            engine: engineMock, // Attach engine mock
-            sound: soundMock,   // Attach sound method
-            entities: { // Recursively reference itself or mocks if accessed via entities property
-                free: freeMock,
-                timeSeconds: 0,
-            }
-        } as unknown as EntitySystem;
+        // Use createTestContext
+        const testContext = createTestContext();
+        context = testContext.entities as unknown as EntitySystem;
 
         entity = new Entity(0);
         entity.timestamp = 0;
@@ -133,6 +117,9 @@ describe('monster_soldier', () => {
     it('should transition to pain state when pain callback is called with low health', () => {
         spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
         entity.health = 5; // Less than max_health / 2 (20 / 2 = 10)
+
+        // Mock RNG for pain sound check (frandom < 0.5)
+        vi.spyOn(context.rng, 'frandom').mockReturnValue(0.1);
 
         const initialMove = entity.monsterinfo.current_move;
         entity.pain!(entity, null, 0, 5);

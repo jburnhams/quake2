@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import { Entity } from '../src/entities/entity.js';
 import type { SpawnContext } from '../src/entities/spawn.js';
 import type { EntitySystem } from '../src/entities/system.js';
+import { createRandomGenerator } from '@quake2ts/shared';
 
 export function createTestContext(): SpawnContext {
   const engine = {
@@ -44,13 +45,7 @@ export function createTestContext(): SpawnContext {
     findByTargetName: vi.fn(() => []),
     pickTarget: vi.fn(() => null),
     killBox: vi.fn(),
-    rng: {
-        crandom: vi.fn(() => 0),
-        frandom: vi.fn(() => 0),
-        frandomRange: vi.fn(() => 0),
-        irandom: vi.fn(() => 0),
-        irandomRange: vi.fn(() => 0),
-    },
+    rng: createRandomGenerator({ seed: 12345 }), // Use real RNG for determinism or easy mocking if we replace it
     imports: {
         configstring: vi.fn(),
     },

@@ -253,7 +253,7 @@ function soldier_fire(self: Entity, context: any): void {
 }
 
 function soldier_idle(self: Entity, context: EntitySystem): void {
-    if (Math.random() < 0.2) {
+    if (context.rng.frandom() < 0.2) {
         context.sound?.(self, 0, 'soldier/idle.wav', 1, 2, 0);
     }
 }
@@ -404,7 +404,7 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
     // C++ soldier_setskin sets bit 1 if health < max/2.
     // self.skin |= 1;
 
-    if (Math.random() < 0.5) {
+    if (context.entities.rng.frandom() < 0.5) {
         context.entities.sound?.(self, 0, 'soldier/pain1.wav', 1, 1, 0);
     } else {
         context.entities.sound?.(self, 0, 'soldier/pain2.wav', 1, 1, 0);
@@ -430,7 +430,7 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = soldier_run;
   self.monsterinfo.attack = soldier_attack;
   self.monsterinfo.sight = (self, other) => {
-      if (Math.random() < 0.5) {
+      if (context.entities.rng.frandom() < 0.5) {
           context.entities.sound?.(self, 0, 'soldier/sight1.wav', 1, 1, 0);
       } else {
           context.entities.sound?.(self, 0, 'soldier/sight2.wav', 1, 1, 0);

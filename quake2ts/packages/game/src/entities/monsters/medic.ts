@@ -127,7 +127,7 @@ function medic_attack(self: Entity, context: EntitySystem): void {
   if (self.classname === 'monster_medic_commander') {
     const slotsLeft = medic_slots_left(self);
     // Chance to spawn reinforcements if not already doing so
-    if (slotsLeft > 0 && Math.random() < 0.2) { // 20% chance to spawn instead of attacking
+    if (slotsLeft > 0 && context.rng.frandom() < 0.2) { // 20% chance to spawn instead of attacking
        self.monsterinfo.current_move = call_reinforcements_move;
        return;
     }
@@ -249,7 +249,7 @@ function medic_find_dead(self: Entity, context: EntitySystem): boolean {
         return true;
     }
 
-    if (Math.random() > 0.2) return false;
+    if (context.rng.frandom() > 0.2) return false;
 
     let best: Entity | null = null;
     let bestDist = 1024;
@@ -339,12 +339,12 @@ function medic_setup_reinforcements(self: Entity, str: string, context: EntitySy
     }
 }
 
-function medic_pick_reinforcements(self: Entity): number[] {
+function medic_pick_reinforcements(self: Entity, context: EntitySystem): number[] {
     const chosen: number[] = [];
     if (!self.monsterinfo.reinforcements) return chosen;
 
     const inverse_log_slots = Math.pow(2, MAX_REINFORCEMENTS);
-    const slots = Math.max(1, Math.floor(Math.log2(Math.random() * inverse_log_slots)));
+    const slots = Math.max(1, Math.floor(Math.log2(context.rng.frandom() * inverse_log_slots)));
 
     let remaining = medic_slots_left(self);
 
@@ -360,7 +360,7 @@ function medic_pick_reinforcements(self: Entity): number[] {
 
         if (available.length === 0) break;
 
-        const pick = available[Math.floor(Math.random() * available.length)];
+        const pick = available[Math.floor(context.rng.frandom() * available.length)];
         chosen.push(pick);
         remaining -= self.monsterinfo.reinforcements[pick].strength;
     }
@@ -402,7 +402,7 @@ function medic_determine_spawn(self: Entity, context: EntitySystem): void {
     const f = vectors.forward;
     const r = vectors.right;
 
-    self.monsterinfo.chosen_reinforcements = medic_pick_reinforcements(self);
+    self.monsterinfo.chosen_reinforcements = medic_pick_reinforcements(self, context);
     const num_summoned = self.monsterinfo.chosen_reinforcements.length;
 
     let num_success = 0;
@@ -726,7 +726,7 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
       // Pain sound logic
-      if (Math.random() < 0.5) {
+      if (context.entities.rng.frandom() < 0.5) {
           const sound = self.classname === 'monster_medic_commander'
               ? 'medic/medpain2.wav'
               : 'medic/medpain1.wav';
@@ -751,7 +751,7 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = medic_stand;
   self.monsterinfo.walk = medic_walk;
   self.monsterinfo.run = medic_run;
-  self.monsterinfo.attack = medic_attack;
+  self.monsterinfo.attack = (ent) => medic_attack(ent, context.entities);
 
   self.think = monster_think;
 
