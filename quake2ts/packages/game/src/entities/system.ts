@@ -394,6 +394,7 @@ export class EntitySystem {
   findInBox(mins: Vec3, maxs: Vec3): Entity[] {
     const indices = this.imports.areaEdicts(mins, maxs);
     if (indices === null) {
+      // Optimization TODO: Add spatial hash/tree to EntitySystem for fast box queries (P2 task).
       // Fallback: iterate all entities
       const results: Entity[] = [];
       const bounds = { min: mins, max: maxs };

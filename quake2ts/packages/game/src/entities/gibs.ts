@@ -4,11 +4,13 @@
 
 import { Entity, MoveType, Solid } from './entity.js';
 import { EntitySystem } from './system.js';
-import { Vec3, TempEntity, ServerCommand } from '@quake2ts/shared';
+import { createRandomGenerator, Vec3, scaleVec3, TempEntity, ServerCommand } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 import { EntityEffects } from './enums.js';
 import { MulticastType } from '../imports.js';
 import { velocityForDamage } from './utils.js';
+
+const random = createRandomGenerator();
 
 export const GIB_ORGANIC = 0;
 export const GIB_METALLIC = 1;

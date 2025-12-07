@@ -15,7 +15,36 @@ describe('monster_fixbot', () => {
     entity.angles = { ...ZERO_VEC3 };
     vi.clearAllMocks();
 
-    mockContext = createTestContext();
+    mockContext = {
+      entities: {
+        engine: {
+          sound: mockSound,
+        },
+        sound: mockSound,
+        linkentity: mockLinkEntity,
+        multicast: vi.fn(),
+        free: mockFree,
+        spawn: vi.fn().mockImplementation(() => {
+            return {
+                origin: { x: 0, y: 0, z: 0 },
+                velocity: { x: 0, y: 0, z: 0 },
+                angles: { x: 0, y: 0, z: 0 },
+                size: { x: 0, y: 0, z: 0 },
+                mins: { x: 0, y: 0, z: 0 },
+                maxs: { x: 0, y: 0, z: 0 },
+                absmin: { x: 0, y: 0, z: 0 },
+                absmax: { x: 0, y: 0, z: 0 },
+            };
+        }),
+        timeSeconds: 10,
+        checkGround: vi.fn(),
+        trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
+        modelIndex: vi.fn().mockReturnValue(0),
+        scheduleThink: vi.fn(),
+        finalizeSpawn: vi.fn(),
+      },
+      health_multiplier: 1,
+    };
   });
 
   it('should spawn with correct properties', () => {

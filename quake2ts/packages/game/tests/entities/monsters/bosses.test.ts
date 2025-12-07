@@ -12,7 +12,29 @@ describe('Boss/Monster Spawns', () => {
 
   beforeEach(() => {
     entity = new Entity(1);
-    context = createTestContext();
+    const engine = {
+        sound: vi.fn(),
+        modelIndex: vi.fn(() => 0),
+    };
+    context = {
+      keyValues: {},
+      entities: {
+        spawn: () => new Entity(2),
+        free: vi.fn(),
+        finalizeSpawn: vi.fn(),
+        freeImmediate: vi.fn(),
+        timeSeconds: 10,
+        modelIndex: vi.fn(() => 0),
+        scheduleThink: vi.fn(),
+        linkentity: vi.fn(),
+        multicast: vi.fn(),
+        engine, // Attach mocked engine
+        sound: engine.sound,
+      } as any,
+      health_multiplier: 1,
+      warn: vi.fn(),
+      free: vi.fn(),
+    };
     entity.timestamp = 10;
   });
 
