@@ -465,6 +465,12 @@ function clusterVisible(
   return (byte & (1 << (to & 7))) !== 0;
 }
 
+/**
+ * Recursively checks a hull sweep against a BSP tree.
+ * Implements a Liang-Barsky like clipping algorithm against the BSP planes.
+ *
+ * Based on CM_RecursiveHullCheck in qcommon/cm_trace.c.
+ */
 function recursiveHullCheck(params: {
   readonly model: CollisionModel;
   readonly nodeIndex: number;
@@ -496,10 +502,13 @@ function recursiveHullCheck(params: {
     brushCheckCount,
   } = params;
 
+  // If we've already hit something earlier in the trace than where we are starting this check,
+  // we can stop.
   if (trace.fraction <= startFraction) {
     return;
   }
 
+  // If we reached a leaf, check the brushes in it.
   if (nodeIndex < 0) {
     if (traceDebugInfo) {
       traceDebugInfo.leafsReached++;
@@ -517,6 +526,7 @@ function recursiveHullCheck(params: {
 
       if ((brush.contents & contentMask) === 0) continue;
       if (!brush.sides.length) continue;
+      // Optimization: Avoid checking the same brush multiple times in a single trace.
       if (brush.checkcount === brushCheckCount) continue;
 
       brush.checkcount = brushCheckCount;
@@ -539,13 +549,17 @@ function recursiveHullCheck(params: {
 
   const node = model.nodes[nodeIndex];
   const plane = node.plane;
-  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271)
-  // which uses fabs() on each component
+
+  // Calculate the distance from the plane to the box's nearest corner.
+  // This effectively expands the plane by the box extents.
+  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271).
   const offset = planeOffsetMagnitude(plane, mins, maxs);
 
   const startDist = planeDistanceToPoint(plane, start);
   const endDist = planeDistanceToPoint(plane, end);
 
+  // If both start and end points are in front of the plane (including offset),
+  // we only need to check the front child.
   if (startDist >= offset && endDist >= offset) {
     recursiveHullCheck({
       model,
@@ -565,6 +579,8 @@ function recursiveHullCheck(params: {
     return;
   }
 
+  // If both start and end points are behind the plane (including offset),
+  // we only need to check the back child.
   if (startDist < -offset && endDist < -offset) {
     recursiveHullCheck({
       model,
@@ -584,7 +600,8 @@ function recursiveHullCheck(params: {
     return;
   }
 
-  // Put the crosspoint DIST_EPSILON pixels on the near side
+  // The segment straddles the plane. We need to split the segment and recurse down both sides.
+  // Put the crosspoint DIST_EPSILON pixels on the near side to avoid precision issues.
   // See full/qcommon/cmodel.c:1293-1313 (CM_RecursiveHullCheck)
   // fraction1 (frac) is used for "move up to node" - the near-side recursion
   // fraction2 (frac2) is used for "go past the node" - the far-side recursion
@@ -611,6 +628,7 @@ function recursiveHullCheck(params: {
   const midFraction = startFraction + (endFraction - startFraction) * fraction1;
   const midPoint = lerpPoint(start, end, fraction1);
 
+  // Recurse down the near side
   recursiveHullCheck({
     model,
     nodeIndex: node.children[side],
@@ -629,6 +647,7 @@ function recursiveHullCheck(params: {
 
   const updatedFraction = trace.fraction;
 
+  // Optimisation: if we hit something closer than the split point, we don't need to check the far side
   if (updatedFraction <= midFraction) {
     return;
   }
@@ -636,6 +655,7 @@ function recursiveHullCheck(params: {
   const midFraction2 = startFraction + (endFraction - startFraction) * fraction2;
   const midPoint2 = lerpPoint(start, end, fraction2);
 
+  // Recurse down the far side
   recursiveHullCheck({
     model,
     nodeIndex: node.children[1 - side],

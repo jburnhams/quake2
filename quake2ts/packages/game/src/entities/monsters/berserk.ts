@@ -113,7 +113,7 @@ function berserk_stand(self: Entity, context: EntitySystem): void {
 function berserk_fidget(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.aiflags & AIFlags.StandGround) return;
   if (self.enemy) return;
-  if (context.rng.frandom() > 0.15) return;
+  if (context.game.random.frandom() > 0.15) return;
 
   M_SetAnimation(self, berserk_move_stand_fidget);
   context.sound(self, 1, SOUNDS.idle, 1, 2, 0);
