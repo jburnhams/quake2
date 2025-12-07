@@ -39,9 +39,6 @@ import { monster_fire_rocket, monster_fire_hit, monster_fire_heat } from './atta
 const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
 
-// Helper to access deterministic RNG or Math.random
-const random = Math.random;
-
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -106,17 +103,17 @@ function chick_sight(self: Entity, other: Entity): void {
 }
 
 // Fidget
-function chick_fidget(self: Entity): void {
+function chick_fidget(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.aiflags & 4) return; // AI_STAND_GROUND
   if (self.enemy) return;
 
-  if (random() <= 0.3) {
+  if (context.rng.frandom() <= 0.3) {
     self.monsterinfo.current_move = fidget_move;
   }
 }
 
 function ChickMoan(self: Entity, context: EntitySystem): void {
-  if (random() < 0.5) {
+  if (context.rng.frandom() < 0.5) {
      context.engine.sound?.(self, 2, 'chick/chkidle1.wav', 1, 0, 0);
   } else {
      context.engine.sound?.(self, 2, 'chick/chkidle2.wav', 1, 0, 0);
@@ -125,13 +122,13 @@ function ChickMoan(self: Entity, context: EntitySystem): void {
 
 // Attacks
 
-function chick_slash(self: Entity, context: any): void {
+function chick_slash(self: Entity, context: EntitySystem): void {
   const aim = { x: MELEE_DISTANCE, y: self.mins.x, z: 10 };
   context.engine.sound?.(self, 0, 'chick/chkatck3.wav', 1, 1, 0);
-  monster_fire_hit(self, aim, 10 + Math.floor(random() * 6), 100, context);
+  monster_fire_hit(self, aim, 10 + context.rng.irandom(6), 100, context);
 }
 
-function chick_rocket(self: Entity, context: any): void {
+function chick_rocket(self: Entity, context: EntitySystem): void {
   const { forward, right } = angleVectors(self.angles);
 
   // Approximate offset for rocket launcher on shoulder
@@ -159,7 +156,7 @@ function chick_rocket(self: Entity, context: any): void {
   let dir = subtractVec3(target, finalStart);
 
   if (!blindfire && self.enemy) {
-     if (random() < 0.33 || finalStart.z < self.enemy.absmin.z) {
+     if (context.rng.frandom() < 0.33 || finalStart.z < self.enemy.absmin.z) {
          const tempDir = { ...dir, z: dir.z + self.enemy.viewheight };
          dir = tempDir;
      } else {
@@ -195,7 +192,7 @@ function chick_attack1(self: Entity): void {
   self.monsterinfo.current_move = attack1_move;
 }
 
-function chick_rerocket(self: Entity): void {
+function chick_rerocket(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.blindfire) {
     self.monsterinfo.blindfire = false;
     self.monsterinfo.current_move = end_attack1_move;
@@ -203,7 +200,7 @@ function chick_rerocket(self: Entity): void {
   }
 
   if (self.enemy && self.enemy.health > 0) {
-      if (random() <= 0.6) { // Simplified range check
+      if (context.rng.frandom() <= 0.6) { // Simplified range check
           self.monsterinfo.current_move = attack1_move;
           return;
       }
@@ -211,10 +208,10 @@ function chick_rerocket(self: Entity): void {
   self.monsterinfo.current_move = end_attack1_move;
 }
 
-function chick_reslash(self: Entity): void {
+function chick_reslash(self: Entity, context: EntitySystem): void {
   if (self.enemy && self.enemy.health > 0) {
       // melee range check omitted
-      if (random() <= 0.9) {
+      if (context.rng.frandom() <= 0.9) {
           self.monsterinfo.current_move = slash_move;
           return;
       }
@@ -305,7 +302,7 @@ pain2_move = { firstframe: 95, lastframe: 99, frames: pain2_frames, endfunc: chi
 const pain3_frames: MonsterFrame[] = Array.from({ length: 21 }, () => ({ ai: monster_ai_move, dist: 0 }));
 pain3_move = { firstframe: 100, lastframe: 120, frames: pain3_frames, endfunc: chick_run };
 
-function chick_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
+function chick_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
   if (self.health < (self.max_health / 2)) {
     self.skin |= 1;
   }
@@ -314,12 +311,12 @@ function chick_pain(self: Entity, other: Entity | null, kick: number, damage: nu
 
   self.pain_debounce_time = self.timestamp + 3;
 
-  const r = random();
+  const r = context.rng.frandom();
   if (r < 0.33) context.engine.sound?.(self, 0, 'chick/chkpain1.wav', 1, 1, 0);
   else if (r < 0.66) context.engine.sound?.(self, 0, 'chick/chkpain2.wav', 1, 1, 0);
   else context.engine.sound?.(self, 0, 'chick/chkpain3.wav', 1, 1, 0);
 
-  if (!M_ShouldReactToPain(self, context.entities)) {
+  if (!M_ShouldReactToPain(self, context)) {
     return;
   }
 
@@ -346,11 +343,11 @@ function chick_dead(self: Entity): void {
   // linkentity
 }
 
-function chick_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: any): void {
+function chick_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: EntitySystem): void {
   if (self.health <= -70) { // gib_health
     context.engine.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-    throwGibs(context.entities, self.origin, damage);
-    context.entities.free(self);
+    throwGibs(context, self.origin, damage);
+    context.free(self);
     return;
   }
 
@@ -359,7 +356,7 @@ function chick_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
   self.deadflag = DeadFlag.Dead;
   self.takedamage = true;
 
-  if (random() <= 0.5) {
+  if (context.rng.frandom() <= 0.5) {
     self.monsterinfo.current_move = death1_move;
     context.engine.sound?.(self, 0, 'chick/chkdeth1.wav', 1, 1, 0);
   } else {

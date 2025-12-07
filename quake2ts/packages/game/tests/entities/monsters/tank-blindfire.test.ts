@@ -7,43 +7,23 @@ import { GameEngine } from '../../../src/engine.js';
 import { GameImports } from '../../../src/game.js';
 import { AIFlags, AttackState } from '../../../src/ai/constants.js';
 import { MASK_SHOT, Vec3 } from '@quake2ts/shared';
-
-const mockEngine = {
-  sound: vi.fn(),
-} as unknown as GameEngine;
-
-const mockImports = {
-  trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-  pointcontents: vi.fn().mockReturnValue(0),
-  linkentity: vi.fn(),
-} as unknown as GameImports;
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_tank blindfire', () => {
   let tank: Entity;
   let enemy: Entity;
-  let mockSys: EntitySystem;
-  let mockContext: SpawnContext;
+  let mockSys: any;
+  let mockContext: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockContext = createTestContext();
+    mockSys = mockContext.entities;
 
-    mockSys = {
-      engine: mockEngine,
-      free: vi.fn(),
-      spawn: vi.fn().mockImplementation(() => ({ origin: { x: 0, y: 0, z: 0 } } as Entity)),
-      trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null, startsolid: false, allsolid: false }),
-      timeSeconds: 100,
-      linkentity: vi.fn(),
-      modelIndex: vi.fn().mockReturnValue(1),
-      scheduleThink: vi.fn(),
-      finalizeSpawn: vi.fn(),
-    } as unknown as EntitySystem;
-
-    mockContext = {
-      timeSeconds: 100,
-      trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-      entities: mockSys,
-    } as unknown as SpawnContext;
+    // Customize mocks
+    mockSys.spawn.mockImplementation(() => ({ origin: { x: 0, y: 0, z: 0 } } as Entity));
+    mockSys.trace.mockReturnValue({ fraction: 1.0, ent: null, startsolid: false, allsolid: false });
+    mockSys.timeSeconds = 100;
 
     tank = new Entity(1);
     tank.timestamp = 100;
@@ -63,7 +43,7 @@ describe('monster_tank blindfire', () => {
 
   it('tank_checkattack enters blind state when enemy hidden but blind target valid', () => {
     // 1. Setup hidden enemy (trace blocked)
-    mockSys.trace = vi.fn((start, mins, maxs, end) => {
+    mockSys.trace = vi.fn((start: any, mins: any, maxs: any, end: any) => {
         // Trace to enemy is blocked
         if (end.x === enemy.origin.x && end.y === enemy.origin.y) {
             return { fraction: 0.5, ent: null, startsolid: false, allsolid: false }; // Hit wall
@@ -89,7 +69,7 @@ describe('monster_tank blindfire', () => {
     tank.monsterinfo.blind_fire_target = { x: 200, y: 50, z: 0 };
 
     // Mock random to ensure fire
-    vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    vi.spyOn(mockSys.rng, 'frandom').mockReturnValue(0.01);
 
     tank.monsterinfo.attack!(tank);
 
@@ -109,26 +89,15 @@ describe('monster_tank blindfire', () => {
      // We want to verify that context.trace is called with MASK_SHOT to verify target
      // M_AdjustBlindfireTarget calls context.trace(start, target, ...)
 
-     const fireBlasterFrame = tank.monsterinfo.attack_blaster_frames?.[6]; // Frame with think (approx)
-     // Wait, TS implementation of frames assigns think to range.
-     // Let's find a frame with think.
-     // attack_blaster_frames: frames 5-11 have think.
-     // Let's use `tank_fire_blaster` directly if we can export it? No it's not exported.
-     // But we can trigger it via run_frame if we set correct frame.
-
-     // Actually, we can just check if trace was called with blind_fire_target.
-     // The blaster fire calls M_AdjustBlindfireTarget which calls trace.
-
-     // But we need to call the think function.
-     // We can access it via current_move.frames[index].think
-
      // Setup move
-     tank.monsterinfo.current_move = tank.monsterinfo.attack_blaster_move; // Wait, this property is internal/local var?
-     // SP_monster_tank assigns it to `attack`. No, `attack` assigns it.
-
      // Trigger attack to set move
      tank.monsterinfo.attack_state = AttackState.Blind; // To force blaster/rocket
-     vi.spyOn(Math, 'random').mockReturnValue(0.6); // > 0.5 -> blaster
+
+     // Mock random:
+     // frandom < 0.5 -> rocket
+     // frandom >= 0.5 -> blaster
+     vi.spyOn(mockSys.rng, 'frandom').mockReturnValue(0.6); // > 0.5 -> blaster
+
      tank.monsterinfo.attack!(tank);
 
      const move = tank.monsterinfo.current_move!;
@@ -162,6 +131,14 @@ describe('monster_tank blindfire', () => {
     mockSys.trace = vi.fn().mockReturnValue({ fraction: 1.0, ent: enemy, startsolid: false, allsolid: false });
     tank.enemy!.velocity = { x: 100, y: 0, z: 0 };
     tank.monsterinfo.blind_fire_target = undefined;
+
+    // Mock random: chance for normal attack (missile)
+    // We want to verify visibility update part, not enter attack state necessarily,
+    // but checkattack does both.
+    // If enemy is visible, it updates blind_fire_target.
+
+    // frandom < chance (chance is 0.4 for melee/near, etc)
+    vi.spyOn(mockSys.rng, 'frandom').mockReturnValue(0.9); // Don't trigger missile attack immediately
 
     tank.monsterinfo.checkattack!(tank, mockSys);
 

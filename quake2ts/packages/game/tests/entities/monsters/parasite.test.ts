@@ -1,39 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_parasite } from '../../../src/entities/monsters/parasite.js';
-import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
-import { SpawnContext } from '../../../src/entities/spawn.js';
-import { GameEngine } from '../../../src/index.js';
 import * as gibsModule from '../../../src/entities/gibs.js';
 import * as damageModule from '../../../src/combat/damage.js';
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_parasite', () => {
   let parasite: Entity;
-  let mockContext: SpawnContext;
-  let mockEngine: GameEngine;
+  let mockContext: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockContext = createTestContext();
 
-    mockEngine = {
-      sound: vi.fn(),
-    } as unknown as GameEngine;
-
-    const mockEntities = {
-      engine: mockEngine,
-      free: vi.fn(),
-      trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-      multicast: vi.fn(),
-      spawn: vi.fn().mockImplementation(() => ({ origin: { x: 0, y: 0, z: 0 }, velocity: { x: 0, y: 0, z: 0 } } as Entity)),
-      modelIndex: vi.fn().mockReturnValue(0),
-      scheduleThink: vi.fn(),
-      finalizeSpawn: vi.fn(),
-    } as unknown as EntitySystem;
-
-    mockContext = {
-      entities: mockEntities,
-      health_multiplier: 1.0,
-    } as unknown as SpawnContext;
+    // Customize context if needed
+    mockContext.entities.trace = vi.fn().mockReturnValue({ fraction: 1.0, ent: null });
 
     parasite = new Entity(1);
     parasite.timestamp = 10;
@@ -56,6 +37,9 @@ describe('monster_parasite', () => {
 
     // Mock pain callback
     const painCallback = parasite.pain!;
+
+    // Mock RNG for deterministic path
+    vi.spyOn(mockContext.entities.rng, 'frandom').mockReturnValue(0.1);
 
     // Apply pain
     painCallback(parasite, null, 0, 10);
@@ -113,7 +97,7 @@ describe('monster_parasite', () => {
     parasite.frame = 41; // damage = 5
 
     // Mock trace to hit enemy
-    vi.spyOn(mockContext.entities, 'trace').mockReturnValue({
+    mockContext.entities.trace.mockReturnValue({
       fraction: 0.5,
       ent: enemy,
       allsolid: false,

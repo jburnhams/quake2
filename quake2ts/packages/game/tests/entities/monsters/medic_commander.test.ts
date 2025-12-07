@@ -4,6 +4,7 @@ import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_medic_commander reinforcement', () => {
   let context: any;
@@ -11,25 +12,14 @@ describe('monster_medic_commander reinforcement', () => {
   let spawnFunction: any;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    const testContext = createTestContext();
     spawnFunction = vi.fn();
-    context = {
-      engine: {
-        sound: vi.fn(),
-        modelIndex: vi.fn().mockReturnValue(1),
-      },
-      timeSeconds: 10,
-      trace: vi.fn().mockReturnValue({
-        fraction: 1,
-        ent: null,
-        endpos: { x: 0, y: 0, z: 0 }
-      }),
-      multicast: vi.fn(),
-      linkentity: vi.fn(),
-      finalizeSpawn: vi.fn(),
-      free: vi.fn(),
-      getSpawnFunction: vi.fn().mockReturnValue(spawnFunction),
-      forEachEntity: vi.fn(),
-      spawn: vi.fn().mockReturnValue({
+
+    // Customize context for this test
+    context = testContext.entities;
+    context.getSpawnFunction = vi.fn().mockReturnValue(spawnFunction);
+    context.spawn = vi.fn().mockReturnValue({
           index: 100,
           origin: { x: 0, y: 0, z: 0 },
           angles: { x: 0, y: 0, z: 0 },
@@ -38,9 +28,10 @@ describe('monster_medic_commander reinforcement', () => {
           maxs: { x: 16, y: 16, z: 32 },
           monsterinfo: {},
           classname: 'monster_soldier',
-      }),
-      keyValues: {}
-    };
+    });
+
+    // Provide keyValues via separate object mimicking SpawnContext
+    context.keyValues = {};
 
     commander = {
       index: 1,
@@ -61,15 +52,13 @@ describe('monster_medic_commander reinforcement', () => {
   });
 
   it('should have reinforcement parameters', () => {
-      context.keyValues = {
-          reinforcements: 'monster_gunner 4',
-          monster_slots: '5'
-      };
-
       const spawnContext = {
           entities: context,
           health_multiplier: 1,
-          keyValues: context.keyValues
+          keyValues: {
+              reinforcements: 'monster_gunner 4',
+              monster_slots: '5'
+          }
       } as any;
       SP_monster_medic_commander(commander, spawnContext);
 
@@ -85,12 +74,14 @@ describe('monster_medic_commander reinforcement', () => {
 
   it('should spawn reinforcements using medic_call_reinforcements', () => {
     // We need to parse valid reinforcements first
-    context.keyValues = {
-        reinforcements: 'monster_soldier 1', // Simple soldier
-        monster_slots: '5'
-    };
-
-    const spawnContext = { entities: context, health_multiplier: 1, keyValues: context.keyValues } as any;
+    const spawnContext = {
+        entities: context,
+        health_multiplier: 1,
+        keyValues: {
+            reinforcements: 'monster_soldier 1', // Simple soldier
+            monster_slots: '5'
+        }
+    } as any;
     SP_monster_medic_commander(commander, spawnContext);
 
     // Set enemy
@@ -101,25 +92,17 @@ describe('monster_medic_commander reinforcement', () => {
     } as any;
 
     // Trigger attack - which has chance to spawn
-    // We mock Math.random to force spawn
-    const originalRandom = Math.random;
-    // medic_pick_reinforcements uses random too.
-    // 1. medic_attack random check (< 0.2)
-    // 2. medic_pick_reinforcements log2 logic
+    // Force spawn trigger: medic_attack random check (< 0.2)
+    vi.spyOn(context.rng, 'frandom').mockReturnValue(0.1);
 
-    // Force spawn trigger
-    Math.random = () => 0.1;
-
-    // medic_attack calls medic_pick_reinforcements indirectly? No, determine_spawn does.
-    // medic_attack sets move to call_reinforcements_move.
+    // medic_pick_reinforcements log2 logic relies on Math.random/rng
+    // We can let mockReturnValue stay 0.1, which should pick index 0 if array length > 0
 
     // We need to call medic_attack
     // medic_attack requires context
     if (commander.monsterinfo?.attack) {
         commander.monsterinfo.attack(commander, context);
     }
-
-    Math.random = originalRandom;
 
     // Verify state transition to spawn_move
     expect(commander.monsterinfo.current_move?.firstframe).toBe(122); // spawn_move start

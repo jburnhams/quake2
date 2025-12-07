@@ -28,9 +28,6 @@ const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
 const FLIPPER_RUN_SPEED = 24;
 
-// Helper to access deterministic RNG or Math.random
-const random = Math.random;
-
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -177,7 +174,7 @@ function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: 
 
   self.pain_debounce_time = self.timestamp + 3;
 
-  if (random() < 0.5) {
+  if (context.rng.frandom() < 0.5) {
     context.engine.sound?.(self, 0, 'flipper/flppain1.wav', 1, 1, 0);
   } else {
     context.engine.sound?.(self, 0, 'flipper/flppain2.wav', 1, 1, 0);
@@ -187,7 +184,7 @@ function flipper_pain(self: Entity, other: Entity | null, kick: number, damage: 
     return;
   }
 
-  if (Math.random() < 0.5) {
+  if (context.rng.frandom() < 0.5) {
     self.monsterinfo.current_move = pain1_move;
   } else {
     self.monsterinfo.current_move = pain2_move;
