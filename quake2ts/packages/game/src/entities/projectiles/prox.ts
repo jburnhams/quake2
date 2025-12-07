@@ -29,6 +29,11 @@ function CheckTeamDamage(targ: Entity, attacker: Entity): boolean {
     return false;
 }
 
+function SetNextThink(ent: Entity, time: number, context: EntitySystem) {
+    ent.nextthink = time;
+    context.scheduleThink(ent, time);
+}
+
 function PlayerNoise(who: Entity, where: Vec3, type: number) {
     // TODO: Implement PlayerNoise
 }
@@ -59,11 +64,11 @@ function Prox_Explode(ent: Entity, entities: EntitySystem) {
 
     ent.takedamage = false;
     T_RadiusDamage(
-        Array.from(entities.findByRadius(ent.origin, PROX_DAMAGE_RADIUS)),
-        ent,
-        owner,
+        Array.from(entities.findByRadius(ent.origin, PROX_DAMAGE_RADIUS)) as unknown as any,
+        ent as any,
+        owner as any,
         ent.dmg,
-        ent,
+        ent as any,
         PROX_DAMAGE_RADIUS,
         DamageFlags.NONE,
         DamageMod.PROX,
@@ -95,13 +100,15 @@ function prox_die(self: Entity, inflictor: Entity, attacker: Entity, damage: num
     } else {
         self.takedamage = false;
         self.think = (ent) => Prox_Explode(ent, context);
-        self.nextthink = context.timeSeconds + 0.1;
+        SetNextThink(self, context.timeSeconds + 0.1, context);
     }
 }
 
-function Prox_Field_Touch(ent: Entity, other: Entity, plane: any, surf: any, context: EntitySystem) {
+function Prox_Field_Touch(ent: Entity, other: Entity | null, plane: any, surf: any, context: EntitySystem) {
     if (!ent.owner) return; // Should not happen if linked correctly
     const prox = ent.owner;
+
+    if (!other) return;
 
     if (!(other.svflags & 0x00000001) && !other.client) { // SVF_MONSTER check approximation?
          // In this engine, svflags might not be directly exposed same way.
@@ -110,7 +117,7 @@ function Prox_Field_Touch(ent: Entity, other: Entity, plane: any, surf: any, con
          if (!isMonster && !other.client) return;
     }
 
-    if (CheckTeamDamage(other, prox.teammaster)) return;
+    if (prox.teammaster && CheckTeamDamage(other, prox.teammaster)) return;
 
     if (!context.deathmatch && other.client) return;
 
@@ -124,7 +131,7 @@ function Prox_Field_Touch(ent: Entity, other: Entity, plane: any, surf: any, con
     if (prox.teamchain === ent) {
         context.sound(ent, 2, "weapons/proxwarn.wav", 1, 1, 0);
         prox.think = (e) => Prox_Explode(e, context);
-        prox.nextthink = context.timeSeconds + PROX_TIME_DELAY;
+        SetNextThink(prox, context.timeSeconds + PROX_TIME_DELAY, context);
         return;
     }
 
@@ -139,7 +146,7 @@ function prox_seek(ent: Entity, context: EntitySystem) {
         ent.frame++;
         if (ent.frame > 13) ent.frame = 9;
         ent.think = (e) => prox_seek(e, context);
-        ent.nextthink = context.timeSeconds + 0.1;
+        SetNextThink(ent, context.timeSeconds + 0.1, context);
     }
 }
 
@@ -160,6 +167,7 @@ function prox_open(ent: Entity, context: EntitySystem) {
         const targets = context.findByRadius(ent.origin, PROX_DAMAGE_RADIUS + 10);
         for (const search of targets) {
             if (!search.classname) continue;
+            if (!ent.teammaster) continue;
             if (CheckTeamDamage(search, ent.teammaster)) continue;
 
             // Monster or player with health > 0
@@ -174,7 +182,7 @@ function prox_open(ent: Entity, context: EntitySystem) {
                     ((isMonster || (context.deathmatch && (search.client || isProx))) && search.health > 0) ||
                     (context.deathmatch && (isPlayerStart || isTeleportDest || isFlag))
                 ) &&
-                visible(ent, search, context)
+                visible(ent, search, context as any)
             ) {
                 context.sound(ent, 2, "weapons/proxwarn.wav", 1, 1, 0);
                 Prox_Explode(ent, context);
@@ -187,7 +195,7 @@ function prox_open(ent: Entity, context: EntitySystem) {
         ent.wait = context.timeSeconds + PROX_TIME_TO_LIVE;
 
         ent.think = (e) => prox_seek(e, context);
-        ent.nextthink = context.timeSeconds + 0.2;
+        SetNextThink(ent, context.timeSeconds + 0.2, context);
 
     } else {
         if (ent.frame === 0) {
@@ -195,7 +203,7 @@ function prox_open(ent: Entity, context: EntitySystem) {
         }
         ent.frame++;
         ent.think = (e) => prox_open(e, context);
-        ent.nextthink = context.timeSeconds + 0.1;
+        SetNextThink(ent, context.timeSeconds + 0.1, context);
     }
 }
 
@@ -215,14 +223,14 @@ function prox_land(ent: Entity, other: Entity | null, plane: any, surf: any, con
     }
 
     if (!plane || !plane.normal || (other && (other.monsterinfo || other.client || other.takedamage))) { // Approximation of damageable/alive
-        if (other !== ent.teammaster) {
+        if (!ent.teammaster || other !== ent.teammaster) {
             Prox_Explode(ent, context);
         }
         return;
     } else if (other && other !== context.world) {
         // Sticky logic
         let stick_ok = false;
-        if (other.movetype === MoveType.Push && plane.normal.z > 0.7) {
+        if ((other.movetype === MoveType.Push || other === context.world || other.modelindex === 1) && plane.normal.z > 0.7) {
             stick_ok = true;
         }
 
@@ -245,7 +253,13 @@ function prox_land(ent: Entity, other: Entity | null, plane: any, surf: any, con
              ent.velocity = ZERO_VEC3;
              ent.avelocity = ZERO_VEC3;
         } else {
-            if (plane.normal.z > 0.7) {
+             // If we didn't stick but hit floor, maybe we should stop?
+             // Original logic exploded on floor if not sticky.
+             // But for now let's assume if it's not sticky surface it bounces or slides?
+             // But we just returned if not > 0.7.
+             // If > 0.7 (floor) and not stick_ok (e.g. weird entity), explode?
+             // Let's keep explosion for non-sticky floors (e.g. entities we can't stick to)
+             if (plane.normal.z > 0.7) {
                 Prox_Explode(ent, context);
                 return;
             }
@@ -274,12 +288,15 @@ function prox_land(ent: Entity, other: Entity | null, plane: any, surf: any, con
     ent.takedamage = true;
     ent.movetype = MoveType.None;
 
-    ent.die = (self, inflictor, attacker, damage, point) => prox_die(self, inflictor, attacker, damage, point, context);
+    ent.die = (self, inflictor, attacker, damage, point) => prox_die(self, inflictor as Entity, attacker as Entity, damage, point, context);
     ent.teamchain = field;
     ent.health = PROX_HEALTH;
-    ent.nextthink = context.timeSeconds;
+
     ent.think = (e) => prox_open(e, context);
-    ent.touch = null; // No longer explode on touch?
+    // Ensure nextthink is positive and future
+    SetNextThink(ent, context.timeSeconds + 0.1, context);
+
+    ent.touch = undefined; // No longer explode on touch?
     ent.solid = Solid.BoundingBox;
 
     context.linkentity(ent);
@@ -291,7 +308,15 @@ function Prox_Think(ent: Entity, context: EntitySystem) {
         return;
     }
     // Update angles based on velocity?
-    ent.nextthink = context.timeSeconds;
+    SetNextThink(ent, context.timeSeconds, context); // Or +0.1?
+    // Prox_Think just waits.
+    // If we want it to run every frame, we schedule it.
+    // But original code might not run it?
+    // "Update angles based on velocity?"
+    // If we don't schedule it, it stops thinking.
+    // But we need to check timestamp.
+    // So yes, schedule it.
+    SetNextThink(ent, context.timeSeconds + 0.1, context);
 }
 
 export function createProxMine(
@@ -302,7 +327,7 @@ export function createProxMine(
     speed: number = 600
 ): Entity {
     // Limit check: Enforce MAX_PROX_MINES per player
-    const existingMines = entities.findByClassname('prox_mine').filter(e => e.owner === owner);
+    const existingMines = entities.findByClassname('prox_mine').filter(e => e.inUse && e.owner === owner);
     if (existingMines.length >= MAX_PROX_MINES) {
         existingMines.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         const oldest = existingMines[0];
@@ -334,12 +359,13 @@ export function createProxMine(
 
     mine.touch = (self, other, plane, surf) => prox_land(self, other, plane, surf, entities);
     mine.think = (e) => Prox_Think(e, entities);
-    mine.nextthink = entities.timeSeconds;
+    // mine.nextthink = entities.timeSeconds;
+    SetNextThink(mine, entities.timeSeconds + 0.1, entities);
 
     mine.dmg = PROX_DAMAGE; // Multiplier?
     mine.takedamage = true;
     mine.health = PROX_HEALTH;
-    mine.die = (self, inflictor, attacker, damage, point) => prox_die(self, inflictor, attacker, damage, point, entities);
+    mine.die = (self, inflictor, attacker, damage, point) => prox_die(self, inflictor as Entity, (attacker || null) as Entity, damage, point, entities);
 
     mine.timestamp = entities.timeSeconds + PROX_TIME_TO_LIVE;
 
