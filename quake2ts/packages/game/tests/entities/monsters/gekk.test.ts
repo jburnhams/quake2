@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_gekk } from '../../../src/entities/monsters/gekk.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { ZERO_VEC3 } from '@quake2ts/shared';
+import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
 
 // Mock dependencies
 const mockSound = vi.fn();
@@ -20,6 +20,9 @@ const mockContext: any = {
     timeSeconds: 10,
     checkGround: vi.fn(),
     trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
+    game: {
+      random: createRandomGenerator({ seed: 12345 })
+    }
   },
   health_multiplier: 1,
 };
@@ -92,5 +95,4 @@ describe('monster_gekk', () => {
           entity.pain(entity, null, 0, 10);
       }
   });
-
 });

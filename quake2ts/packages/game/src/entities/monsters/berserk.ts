@@ -40,20 +40,6 @@ const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
 const SPAWNFLAG_BERSERK_NOJUMPING = 16;
 
-const random = createRandomGenerator();
-
-function frandom(): number {
-  return random.frandom();
-}
-
-function brandom(): boolean {
-  return random.frandom() > 0.5;
-}
-
-function irandom(min: number, max: number): number {
-  return Math.floor(random.frandom() * (max - min + 1) + min);
-}
-
 // Wrappers to match function signatures
 function monster_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -128,7 +114,7 @@ function berserk_stand(self: Entity, context: EntitySystem): void {
 function berserk_fidget(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.aiflags & AIFlags.StandGround) return;
   if (self.enemy) return;
-  if (frandom() > 0.15) return;
+  if (context.game.random.frandom() > 0.15) return;
 
   M_SetAnimation(self, berserk_move_stand_fidget);
   context.sound(self, 1, SOUNDS.idle, 1, 2, 0);
@@ -257,7 +243,7 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
 }
 
 function berserk_attack_spike(self: Entity, context: EntitySystem): void {
-  if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -24}, irandom(5, 11), 80, context)) {
+  if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -24}, 5 + Math.floor(context.game.random.frandom() * 7), 80, context)) {
     self.monsterinfo.melee_debounce_time = context.timeSeconds + 1.2;
   }
 }
@@ -285,7 +271,7 @@ berserk_move_attack_spike = {
 };
 
 function berserk_attack_club(self: Entity, context: EntitySystem): void {
-  if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -4}, irandom(15, 21), 400, context)) {
+  if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -4}, 15 + Math.floor(context.game.random.frandom() * 7), 400, context)) {
     self.monsterinfo.melee_debounce_time = context.timeSeconds + 2.5;
   }
 }
@@ -481,7 +467,7 @@ berserk_move_attack_strike = {
 };
 
 function berserk_melee(self: Entity, context: EntitySystem): void {
-  if (brandom()) {
+  if (context.game.random.frandom() > 0.5) {
     M_SetAnimation(self, berserk_move_attack_spike);
   } else {
     M_SetAnimation(self, berserk_move_attack_club);
@@ -493,7 +479,7 @@ function berserk_attack(self: Entity, context: EntitySystem): void {
 
   if ((self.monsterinfo.melee_debounce_time || 0) <= context.timeSeconds && dist < MELEE_DISTANCE) {
     berserk_melee(self, context);
-  } else if (self.timestamp < context.timeSeconds && brandom() && dist > 150) {
+  } else if (self.timestamp < context.timeSeconds && context.game.random.frandom() > 0.5 && dist > 150) {
     // Check for NOJUMPING flag
     if (self.spawnflags & SPAWNFLAG_BERSERK_NOJUMPING) return;
 
@@ -538,7 +524,7 @@ function berserk_pain(self: Entity, other: Entity | null, kick: number, damage: 
   self.pain_debounce_time = context.timeSeconds + 3.0;
   context.sound(self, 2, SOUNDS.pain, 1, 1, 0);
 
-  if (damage <= 50 || frandom() < 0.5) {
+  if (damage <= 50 || context.game.random.frandom() < 0.5) {
     M_SetAnimation(self, berserk_move_pain1);
   } else {
     M_SetAnimation(self, berserk_move_pain2);
@@ -627,7 +613,7 @@ function berserk_sight(self: Entity, other: Entity): void {
 }
 
 function berserk_search(self: Entity, context: EntitySystem): void {
-  if (brandom()) {
+  if (context.game.random.frandom() > 0.5) {
     context.sound(self, 2, SOUNDS.idle2, 1, 1, 0);
   } else {
     context.sound(self, 2, SOUNDS.search, 1, 1, 0);
