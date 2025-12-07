@@ -2,8 +2,7 @@ import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
-import { GameEngine } from '../index.js';
-import { GameImports, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
+import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
