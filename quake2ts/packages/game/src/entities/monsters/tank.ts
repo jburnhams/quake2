@@ -9,7 +9,7 @@ import {
   AIFlags,
   AttackState
 } from '../../ai/index.js';
-import { M_ShouldReactToPain } from './common.js';
+import { M_ShouldReactToPain, M_AdjustBlindfireTarget } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -26,31 +26,6 @@ import { DamageMod } from '../../combat/damageMods.js';
 import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
-
-// Helper to check if a blindfire shot is viable
-function M_AdjustBlindfireTarget(self: Entity, start: Vec3, target: Vec3, right: Vec3, context: any): Vec3 | null {
-  const tr = context.trace(start, target, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-
-  if (!tr.startsolid && !tr.allsolid && tr.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(target, start));
-  }
-
-  // Try left
-  const leftTarget = addVec3(target, scaleVec3(right, -20));
-  const trLeft = context.trace(start, leftTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-  if (!trLeft.startsolid && !trLeft.allsolid && trLeft.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(leftTarget, start));
-  }
-
-  // Try right
-  const rightTarget = addVec3(target, scaleVec3(right, 20));
-  const trRight = context.trace(start, rightTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-  if (!trRight.startsolid && !trRight.allsolid && trRight.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(rightTarget, start));
-  }
-
-  return null;
-}
 
 function tank_blind_check(self: Entity, context: any): void {
   if (self.monsterinfo.aiflags & AIFlags.ManualSteering) {

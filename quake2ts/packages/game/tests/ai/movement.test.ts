@@ -45,6 +45,7 @@ const mockContext = {
   pointcontents: mockPointcontentsFn,
   pickTarget: mockPickTargetFn,
   targetAwareness: mockTargetAwareness,
+  timeSeconds: 100, // Fixed time
 } as unknown as EntitySystem;
 
 beforeEach(() => {
@@ -211,6 +212,9 @@ describe('ai_run', () => {
     enemy.origin = { x: -10, y: 0, z: 0 };
     ent.enemy = enemy;
 
+    // Explicitly disable attack logic to test movement only
+    ent.monsterinfo.checkattack = () => false;
+
     ai_run(ent, 6, 0.1, mockContext);
 
     expect(ent.ideal_yaw).toBeCloseTo(180, 6);
@@ -245,6 +249,9 @@ describe('ai_charge', () => {
     const enemy = createEntity();
     enemy.origin = { x: 0, y: -8, z: 0 };
     ent.enemy = enemy;
+
+    // Explicitly disable attack logic to test movement only
+    ent.monsterinfo.checkattack = () => false;
 
     ai_charge(ent, 8, 0.1, mockContext);
 
