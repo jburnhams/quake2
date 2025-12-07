@@ -147,7 +147,7 @@ describe('monster_gunner', () => {
       const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
       spawnFn(gunner, context);
 
-      const spy = vi.spyOn(sys.rng, 'frandom');
+      const mockFrandom = vi.spyOn(sys.rng, 'frandom');
 
       // Pain 3 (< 0.33)
       mockFrandom.mockReturnValue(0.1); // Both calls return 0.1
