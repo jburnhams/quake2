@@ -119,7 +119,7 @@ export function createProxMine(
         self.nextthink = entities.timeSeconds + 0.1;
     };
 
-    const proxMineTouch = (self: Entity, other: Entity | null, plane?: { normal: Vec3 }, surf?: any) => {
+    const proxMineTouch = (self: Entity, other: Entity | null, plane?: any, surf?: any) => {
         if (surf && (surf.flags & 4)) { // SURF_SKY
             entities.free(self);
             return;
