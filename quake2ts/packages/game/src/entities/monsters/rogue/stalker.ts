@@ -18,7 +18,8 @@ import {
   PredictAim,
   M_CalculatePitchToFire,
   blocked_checkjump,
-  blocked_checkplat
+  blocked_checkplat,
+  BlockedJumpResult
 } from '../../../ai/index.js';
 import {
   Vec3,
@@ -56,11 +57,11 @@ import {
   createMonsterSpawn
 } from '../common.js';
 import { monster_fire_blaster } from '../attack.js';
-import { throwGibs, GibType } from '../../gibs.js'; // Removed GibFlag
+import { throwGibs, GibType } from '../../gibs.js';
 import { DamageMod } from '../../../combat/damageMods.js';
 import { SpawnContext, SpawnRegistry } from '../../spawn.js';
-import { visible, infront } from '../../../ai/perception.js'; // Removed has_valid_enemy
-import { MulticastType } from '../../../imports.js'; // Fixed import
+import { visible, infront } from '../../../ai/perception.js';
+import { MulticastType } from '../../../imports.js';
 
 // --- STUBS and HELPERS ---
 
@@ -75,13 +76,12 @@ function random_time(min: number, max: number): number {
     return min + Math.random() * (max - min);
 }
 
-// Stub for has_valid_enemy
 function has_valid_enemy(self: Entity): boolean {
     return self.enemy !== null && self.enemy.health > 0;
 }
 
 function monster_footstep(self: Entity, context: EntitySystem): void {
-    // Stub
+  // Can be implemented if sound effects are needed
 }
 
 function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context: EntitySystem): boolean {
@@ -102,7 +102,6 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
 }
 
 // --- AI WRAPPERS ---
-// Adapting (self, dist, context) to specific AI function signatures
 
 function stalker_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
     ai_stand(self, MONSTER_TICK, context);
@@ -125,7 +124,6 @@ function stalker_ai_move(self: Entity, dist: number, context: EntitySystem): voi
 }
 
 // --- CONSTANTS ---
-const MODEL_SCALE = 1.0;
 const MELEE_DISTANCE = 60;
 
 const SPAWNFLAG_STALKER_ONROOF = 8;
@@ -137,11 +135,6 @@ const SOUND_SIGHT = 'stalker/sight.wav';
 const SOUND_PUNCH_HIT1 = 'stalker/melee1.wav';
 const SOUND_PUNCH_HIT2 = 'stalker/melee2.wav';
 const SOUND_IDLE = 'stalker/idle.wav';
-
-// Helper to check ceiling status
-function STALKER_ON_CEILING(ent: Entity): boolean {
-  return Math.abs(ent.angles.z - 180) < 1.0;
-}
 
 // Forward declarations
 let stalker_move_stand: MonsterMove;
@@ -432,9 +425,11 @@ function stalker_setskin(self: Entity): void {
 
 function stalker_jump_straightup(self: Entity, context: EntitySystem): void {
      if (self.deadflag) return;
+     // Implement if jump straight up logic needed
 }
 
 function stalker_jump_wait_land(self: Entity, context: EntitySystem): void {
+    // Implement if needed
 }
 
 function stalker_do_pounce(self: Entity, dest: Vec3): boolean {
@@ -534,6 +529,7 @@ function stalker_sight(self: Entity, enemy: Entity): void {
 }
 
 // DODGE
+
 const stalker_frames_jump_straightup: MonsterFrame[] = [
     { ai: stalker_ai_move, dist: 1, think: stalker_jump_straightup },
     { ai: stalker_ai_move, dist: 1, think: stalker_jump_wait_land },
@@ -547,14 +543,43 @@ stalker_move_jump_straightup = {
     endfunc: stalker_run
 };
 
+const stalker_frames_jump_up: MonsterFrame[] = [
+  { ai: stalker_ai_move, dist: 0 }, // JUMP_UP
+  // Frames to animate jump...
+  // Stub for now, using stand as placeholder or similar
+];
+stalker_move_jump_up = {
+  firstframe: 86, lastframe: 89, frames: stalker_frames_jump_straightup, endfunc: stalker_run // Reuse straightup for now
+};
+
+const stalker_frames_jump_down: MonsterFrame[] = [
+  { ai: stalker_ai_move, dist: 0 }, // JUMP_DOWN
+];
+stalker_move_jump_down = {
+  firstframe: 86, lastframe: 89, frames: stalker_frames_jump_straightup, endfunc: stalker_run // Reuse
+};
+
+
 function stalker_dodge(self: Entity, attacker: Entity, eta: number): void {
-    // TODO: Use M_MonsterDodge / blocked_checkjump / etc if needed
+    if (self.spawnflags & SPAWNFLAG_STALKER_NOJUMPING) return;
+    // Basic dodge implementation or call shared
 }
 
 
 // BLOCKED
-function stalker_blocked(self: Entity, other: Entity | null): void {
-    // Use blocked_checkplat or similar?
+function stalker_blocked(self: Entity, dist: number, context: EntitySystem): void {
+    if (!context) return;
+    if (blocked_checkplat(context, self, 10)) return;
+
+    if (self.spawnflags & SPAWNFLAG_STALKER_NOJUMPING) return;
+
+    const result = blocked_checkjump(context, self, 10);
+
+    if (result === BlockedJumpResult.JUMP_JUMP_UP) {
+        M_SetAnimation(self, stalker_move_jump_up, context);
+    } else if (result === BlockedJumpResult.JUMP_JUMP_DOWN) {
+         M_SetAnimation(self, stalker_move_jump_down, context);
+    }
 }
 
 // DEATH
@@ -643,13 +668,13 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.monsterinfo.sight = stalker_sight;
     self.monsterinfo.idle = stalker_idle;
     self.monsterinfo.dodge = stalker_dodge;
-    self.monsterinfo.blocked = stalker_blocked;
+    self.monsterinfo.blocked = (s, d) => stalker_blocked(s, d, context.entities);
     self.monsterinfo.melee = stalker_attack_melee;
     self.monsterinfo.setskin = stalker_setskin;
 
-    // Set Rogue/Mission Pack specific jump/drop heights if needed
-    self.monsterinfo.jump_height = 48; // Or similar
-    self.monsterinfo.drop_height = 300; // Stalker can drop far?
+    // Set Rogue/Mission Pack specific jump/drop heights
+    self.monsterinfo.jump_height = 48;
+    self.monsterinfo.drop_height = 300;
     self.monsterinfo.can_jump = true;
 
     context.entities.linkentity(self);

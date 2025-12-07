@@ -39,6 +39,7 @@ describe('monster_tank', () => {
       entities: system,
       warn: vi.fn(),
       free: vi.fn(),
+      health_multiplier: 1.0,
     };
   });
 
@@ -112,6 +113,30 @@ describe('monster_tank', () => {
       expect.anything(),
       system,
       expect.anything()
+    );
+  });
+
+  it('tank plays idle sound periodically', () => {
+    const ent = system.spawn();
+    SP_monster_tank(ent, context);
+
+    // Should have an idle function in monsterinfo
+    expect(ent.monsterinfo.idle).toBeDefined();
+
+    // Mock Math.random to trigger the sound
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+    // Execute the idle function
+    ent.monsterinfo.idle!(ent);
+
+    // Check if sound was played
+    expect(system.engine.sound).toHaveBeenCalledWith(
+        ent,
+        expect.anything(), // channel
+        expect.stringMatching(/tank\/tnkidle/), // sound path
+        1, // volume
+        expect.anything(), // attenuation
+        0
     );
   });
 });

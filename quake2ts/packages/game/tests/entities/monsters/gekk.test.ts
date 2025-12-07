@@ -21,6 +21,7 @@ const mockContext: any = {
     checkGround: vi.fn(),
     trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
   },
+  health_multiplier: 1,
 };
 
 describe('monster_gekk', () => {

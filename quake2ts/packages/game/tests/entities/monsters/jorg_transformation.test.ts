@@ -15,6 +15,7 @@ describe('monster_jorg transformation', () => {
 
   beforeEach(() => {
     context = createSpawnContext();
+    context.health_multiplier = 1;
     jorg = context.entities.spawn();
     jorg.origin = { x: 100, y: 100, z: 0 };
     jorg.angles = { x: 0, y: 90, z: 0 };

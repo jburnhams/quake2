@@ -25,6 +25,7 @@ import { SP_monster_makron } from './makron.js';
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3, vectorToYaw } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { visible, rangeTo } from '../../ai/perception.js';
+import { PredictAim } from '../../ai/rogue.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -132,12 +133,12 @@ function jorg_fire_bullet(self: Entity, context: any): void {
 
     // Fire left
     const startL = getProjectedOffset(self, JORG_MACHINEGUN_L1_OFFSET);
-    const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
+    const { aimdir: dirL } = PredictAim(context, self, self.enemy, startL, 0, false, 0.2);
     monster_fire_bullet_v2(self, startL, dirL, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 
     // Fire right
     const startR = getProjectedOffset(self, JORG_MACHINEGUN_R1_OFFSET);
-    const dirR = normalizeVec3(subtractVec3(self.enemy.origin, startR));
+    const { aimdir: dirR } = PredictAim(context, self, self.enemy, startR, 0, false, -0.2);
     monster_fire_bullet_v2(self, startR, dirR, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
 }
 
@@ -209,7 +210,8 @@ function makron_toss(self: Entity, context: any): void {
     // SP_monster_makron expects { entities: EntitySystem, ... } as SpawnContext.
     // We can construct a minimal mock or cast if SP function structure allows.
     // SP functions typically only use .entities from context.
-    const spawnContext = { entities: context } as any as SpawnContext;
+    // Ensure health_multiplier defaults to 1 if not present on context (which it isn't on EntitySystem)
+    const spawnContext = { entities: context, health_multiplier: 1 } as any as SpawnContext;
     SP_monster_makron(makron, spawnContext);
 
     // Jump at player
@@ -310,8 +312,12 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 80, y: 80, z: 140 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 3000;
-  self.max_health = 3000;
+  if (context.health_multiplier) {
+    self.health = 3000 * context.health_multiplier;
+  } else {
+    self.health = 3000;
+  }
+  self.max_health = self.health;
   self.mass = 1000;
   self.takedamage = true;
   self.viewheight = 90; // Guess

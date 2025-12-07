@@ -460,8 +460,8 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 24, y: 24, z: 32 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 300;
-  self.max_health = 300;
+  self.health = 300 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 400;
   self.takedamage = true;
 
@@ -505,8 +505,8 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
 export function SP_monster_medic_commander(self: Entity, context: SpawnContext): void {
     SP_monster_medic(self, context);
     self.classname = 'monster_medic_commander';
-    self.health = 600;
-    self.max_health = 600;
+    self.health = 600 * context.health_multiplier;
+    self.max_health = self.health;
     self.skin = 1; // Commander skin
 
     // Commander doesn't heal, it spawns.

@@ -453,7 +453,7 @@ function chick_dodge(self: Entity, attacker: Entity, eta: number): void {
     self.monsterinfo.current_move = duck_move;
 }
 
-function chick_blocked(self: Entity, other: Entity | null): void {
+function chick_blocked(self: Entity, dist: number, context: EntitySystem): void {
    // blocked checkplat logic omitted
 }
 
@@ -464,8 +464,8 @@ export function SP_monster_chick(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 56 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 175;
-  self.max_health = 175;
+  self.health = 175 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 200;
   self.takedamage = true;
 

@@ -21,7 +21,7 @@ describe('monster_berserk', () => {
 
     it('spawns correctly', () => {
         const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
+        SP_monster_berserk(ent, { entities: context, health_multiplier: 1 } as any);
 
         expect(ent.classname).toBe('monster_berserk');
         expect(ent.health).toBe(240);

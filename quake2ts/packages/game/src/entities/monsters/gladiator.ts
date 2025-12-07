@@ -237,8 +237,8 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
   self.maxs = { x: 32, y: 32, z: 64 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 400;
-  self.max_health = 400;
+  self.health = 400 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 400;
   self.takedamage = true;
   self.viewheight = 40; // Gladiator viewheight

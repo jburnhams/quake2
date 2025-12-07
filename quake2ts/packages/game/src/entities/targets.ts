@@ -8,6 +8,7 @@ import { createBlasterBolt } from './projectiles.js';
 import { DamageMod } from '../combat/damageMods.js';
 import { T_Damage, Damageable } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
+import { EntitySystem } from './system.js';
 
 const ATTN_NONE = 0;
 const ATTN_NORM = 1;
@@ -160,17 +161,9 @@ function useTargetEarthquake(self: Entity, other: Entity | null, activator: Enti
     if (self.spawnflags & SPAWNFLAG_EARTHQUAKE_ONE_SHOT) {
         context.entities.forEachEntity((ent: Entity) => {
             if (!ent.client) return;
-
-            // Using v_angle or kick_angles for shake effect
-            // Original code sets v_dmg_pitch and v_dmg_time
-            // Here we can try to approximate or add fields if needed.
-            // For now, let's assume client handles quake_time logic for continuous shake,
-            // but one_shot might need direct kick application.
-            // quake2ts likely handles view kick via kick_angles.
             if (ent.client) {
                 if (!ent.client.kick_angles) ent.client.kick_angles = { x: 0, y: 0, z: 0 };
                 ent.client.kick_angles = { ...ent.client.kick_angles, x: -self.speed * 0.1 };
-                // v_dmg_time logic is usually client-side prediction or handled in p_view.
             }
         });
         return;
@@ -198,27 +191,15 @@ function useTargetEarthquake(self: Entity, other: Entity | null, activator: Enti
 const SPAWNFLAG_LIGHTRAMP_TOGGLE = 1;
 
 function target_lightramp_think(self: Entity, context: any) {
-    // style string construction: 'a' + movedir[0] + ((time - timestamp) / frame_time) * movedir[2]
-    // We approximate frame_time as 0.1 since we think every 0.1s, but actually configstrings update instantly?
-    // Original uses frame_time_s.
-
     const timeDelta = context.entities.timeSeconds - self.timestamp;
-
-    // movedir[0] is start char offset ('a' relative)
-    // movedir[2] is slope
 
     const val = self.movedir.x + (timeDelta / 0.1) * self.movedir.z;
     let charCode = Math.floor('a'.charCodeAt(0) + val);
 
-    // Clamp to 'a'-'z' range logic implicitly handled by renderer usually, but let's be safe?
-    // Actually, Quake just sends the char.
-
     const styleStr = String.fromCharCode(charCode);
-    // context.entities.configstring(CS_LIGHTS + self.enemy.style, styleStr);
-    // We need CS_LIGHTS constant. In Q2 it is 32.
-    const CS_LIGHTS = 32;
+
     if (self.enemy && self.enemy.style !== undefined) {
-        context.entities.configstring(CS_LIGHTS + self.enemy.style, styleStr);
+        context.entities.imports.configstring(ConfigStringIndex.Lights + self.enemy.style, styleStr);
     }
 
     if (timeDelta < self.speed) {
@@ -235,7 +216,6 @@ function useTargetLightramp(self: Entity, other: Entity | null, activator: Entit
         let e: Entity | null = null;
         let found = false;
 
-        // This search logic mirrors original which tries to find ANY light matching target
         context.entities.forEachEntity((ent: Entity) => {
             if (ent.targetname === self.target) {
                 if (ent.classname === 'light') {
@@ -271,7 +251,6 @@ const TARGET_LASER_FAT = 64;
 function target_laser_think(self: Entity, context: any) {
     let count: number;
 
-    // Use spawnflags high bit 0x80000000 to track state (hitting enemy vs hitting wall)
     if (self.spawnflags & 0x80000000) {
         count = 8;
     } else {
@@ -416,6 +395,157 @@ function target_laser_start(self: Entity, context: any) {
         target_laser_on(self, context);
     } else {
         target_laser_off(self);
+    }
+}
+
+// target_gravity implementation
+function useTargetGravity(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    context.entities.imports.cvar_set("sv_gravity", `${self.gravity}`);
+    context.entities.level.gravity = self.gravity;
+}
+
+// target_soundfx implementation
+function updateTargetSoundfx(self: Entity, context: any) {
+    context.entities.imports.positioned_sound(self.origin, self, 2, self.noise_index, self.volume, self.attenuation, 0);
+}
+
+function useTargetSoundfx(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    self.think = (s) => updateTargetSoundfx(s, context);
+    self.nextthink = context.entities.timeSeconds + self.delay;
+}
+
+// target_help implementation
+const SPAWNFLAG_HELP_HELP1 = 1;
+const SPAWNFLAG_SET_POI = 2;
+
+function useTargetHelp(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    const level = context.entities.level;
+    if (self.spawnflags & SPAWNFLAG_HELP_HELP1) {
+        if (level.helpmessage1 !== self.message) {
+            level.helpmessage1 = self.message || "";
+            level.help1changed++;
+        }
+    } else {
+        if (level.helpmessage2 !== self.message) {
+            level.helpmessage2 = self.message || "";
+            level.help2changed++;
+        }
+    }
+}
+
+// target_sky implementation
+function useTargetSky(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    if (self.map) {
+        context.entities.imports.configstring(ConfigStringIndex.Sky, self.map);
+    }
+
+    if (self.count & 3) {
+        let rotate = 0;
+        let autorotate = 0;
+
+        if (self.count & 1) rotate = self.accel;
+        if (self.count & 2) autorotate = self.style;
+
+        context.entities.imports.configstring(ConfigStringIndex.SkyRotate, `${rotate} ${autorotate}`);
+    }
+
+    if (self.count & 4) {
+        context.entities.imports.configstring(ConfigStringIndex.SkyAxis, `${self.movedir.x} ${self.movedir.y} ${self.movedir.z}`);
+    }
+}
+
+// target_achievement implementation
+function useTargetAchievement(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    context.entities.multicast(ZERO_VEC3, MulticastType.All, ServerCommand.achievement, self.map);
+}
+
+// target_story implementation
+function useTargetStory(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    context.entities.imports.configstring(ConfigStringIndex.Story, self.message || "");
+}
+
+
+// target_light implementation
+const SPAWNFLAG_TARGET_LIGHT_START_ON = 1;
+const SPAWNFLAG_TARGET_LIGHT_NO_LERP = 2;
+const SPAWNFLAG_TARGET_LIGHT_FLICKER = 4;
+
+function targetLightFlickerThink(self: Entity, context: any) {
+    if (context.entities.rng.random() < 0.5) {
+        self.svflags ^= ServerFlags.NoClient;
+    }
+    self.nextthink = context.entities.timeSeconds + 0.1;
+}
+
+function targetLightThink(self: Entity, context: any) {
+    if (self.spawnflags & SPAWNFLAG_TARGET_LIGHT_FLICKER) {
+        targetLightFlickerThink(self, context);
+    }
+
+    const styleStr = context.entities.imports.get_configstring(ConfigStringIndex.Lights + self.style);
+    if (!styleStr) return;
+
+    self.delay += self.speed;
+    const len = styleStr.length;
+    const index = Math.floor(self.delay) % len;
+
+    const styleValue = styleStr.charCodeAt(index);
+    const currentLerp = (styleValue - 97) / 25.0; // 'a' is 97
+
+    let lerp = currentLerp;
+
+    if (!(self.spawnflags & SPAWNFLAG_TARGET_LIGHT_NO_LERP)) {
+        const nextIndex = (index + 1) % len;
+        const nextStyleValue = styleStr.charCodeAt(nextIndex);
+        const nextLerp = (nextStyleValue - 97) / 25.0;
+
+        const modLerp = self.delay % 1.0;
+        lerp = (nextLerp * modLerp) + (currentLerp * (1.0 - modLerp));
+    }
+
+    if (self.chain) {
+        const targetRgb = self.chain.skin; // Assuming skin holds color
+        const myRgb = self.count;
+
+        // Extract RGB
+        const myB = (myRgb >> 8) & 0xff;
+        const myG = (myRgb >> 16) & 0xff;
+        const myR = (myRgb >> 24) & 0xff;
+
+        const targetB = (targetRgb >> 8) & 0xff;
+        const targetG = (targetRgb >> 16) & 0xff;
+        const targetR = (targetRgb >> 24) & 0xff;
+
+        const backLerp = 1.0 - lerp;
+
+        const b = Math.floor(targetB * lerp + myB * backLerp);
+        const g = Math.floor(targetG * lerp + myG * backLerp);
+        const r = Math.floor(targetR * lerp + myR * backLerp);
+
+        self.skin = (b << 8) | (g << 16) | (r << 24);
+    }
+
+    self.nextthink = context.entities.timeSeconds + 0.1;
+}
+
+function useTargetLight(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    self.health = self.health ? 0 : 1; // Toggle
+
+    if (self.health) {
+        self.svflags &= ~ServerFlags.NoClient;
+    } else {
+        self.svflags |= ServerFlags.NoClient;
+        self.think = undefined; // Stop thinking
+        self.nextthink = 0;
+        return;
+    }
+
+    if (self.chain) {
+        self.think = (s) => targetLightThink(s, context);
+        self.nextthink = context.entities.timeSeconds + 0.1;
+    } else if (self.spawnflags & SPAWNFLAG_TARGET_LIGHT_FLICKER) {
+        self.think = (s) => targetLightFlickerThink(s, context);
+        self.nextthink = context.entities.timeSeconds + 0.1;
     }
 }
 
@@ -704,5 +834,130 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
 
       // Delay think start like Rerelease
       entity.nextthink = entities.timeSeconds + 0.1;
+  });
+
+  registry.register('target_gravity', (entity, context) => {
+      entity.gravity = context.keyValues.gravity ? Number.parseFloat(context.keyValues.gravity) : 1;
+      entity.use = (self, other, activator) => useTargetGravity(self, other, activator ?? null, context);
+  });
+
+  registry.register('target_soundfx', (entity, context) => {
+      if (!entity.volume) entity.volume = 1.0;
+      if (!entity.attenuation) entity.attenuation = 1.0;
+      else if (entity.attenuation === -1) entity.attenuation = 0;
+
+      let idx = context.keyValues.noise ? parseInt(context.keyValues.noise) : 0;
+      // Map index to sound name/index
+      let soundName = "";
+      switch(idx) {
+          case 1: soundName = "world/x_alarm.wav"; break;
+          case 2: soundName = "world/flyby1.wav"; break;
+          case 4: soundName = "world/amb12.wav"; break;
+          case 5: soundName = "world/amb17.wav"; break;
+          case 7: soundName = "world/bigpump2.wav"; break;
+          default:
+             context.warn(`${entity.classname}: unknown noise ${idx}`);
+             return;
+      }
+      entity.noise_index = context.entities.soundIndex(soundName);
+
+      entity.use = (self, other, activator) => useTargetSoundfx(self, other, activator ?? null, context);
+  });
+
+  registry.register('target_help', (entity, context) => {
+      if (context.entities.deathmatch) {
+          context.free(entity);
+          return;
+      }
+      if (!entity.message) {
+          context.warn(`${entity.classname}: no message`);
+          context.free(entity);
+          return;
+      }
+      entity.use = (self, other, activator) => useTargetHelp(self, other, activator ?? null, context);
+      // Spawnflags 2 = SET_POI
+      if (entity.spawnflags & 2) {
+          // Image loading
+      }
+  });
+
+  registry.register('target_sky', (entity, context) => {
+      entity.use = (self, other, activator) => useTargetSky(self, other, activator ?? null, context);
+
+      if (context.keyValues.sky) entity.map = context.keyValues.sky;
+      if (context.keyValues.skyaxis) {
+          entity.count |= 4;
+          // Parse vector
+          const parts = context.keyValues.skyaxis.split(' ').map(Number);
+          if (parts.length === 3) entity.movedir = { x: parts[0], y: parts[1], z: parts[2] };
+      }
+      if (context.keyValues.skyrotate) {
+          entity.count |= 1;
+          entity.accel = Number.parseFloat(context.keyValues.skyrotate);
+      }
+      if (context.keyValues.skyautorotate) {
+          entity.count |= 2;
+          entity.style = Number.parseInt(context.keyValues.skyautorotate);
+      }
+  });
+
+  registry.register('target_achievement', (entity, context) => {
+      if (context.entities.deathmatch) {
+          context.free(entity);
+          return;
+      }
+      entity.map = context.keyValues.achievement;
+      entity.use = (self, other, activator) => useTargetAchievement(self, other, activator ?? null, context);
+  });
+
+  registry.register('target_story', (entity, context) => {
+      if (context.entities.deathmatch) {
+          context.free(entity);
+          return;
+      }
+      entity.use = (self, other, activator) => useTargetStory(self, other, activator ?? null, context);
+  });
+
+  registry.register('target_light', (entity, context) => {
+      entity.modelindex = 1;
+      entity.renderfx = RenderFx.CustomLight;
+      // entity.frame = radius
+      entity.count = entity.skin; // Store original skin/color
+      entity.svflags |= ServerFlags.NoClient;
+      entity.health = 0; // Off
+
+      if (entity.target) {
+          // entity.chain = pickTarget ... deferred until use or think?
+          // Rerelease picks in spawn, but we might not have all entities.
+          // We can pick in use.
+      }
+
+      if (entity.spawnflags & SPAWNFLAG_TARGET_LIGHT_START_ON) {
+           // useTargetLight(entity, entity, entity, context); // Will trigger logic
+           // But we need to defer to after spawn
+           entity.nextthink = context.entities.timeSeconds + 0.1;
+           entity.think = (self) => {
+               // Initial lookup
+               if (self.target && !self.chain) {
+                   self.chain = context.entities.pickTarget(self.target);
+               }
+               useTargetLight(self, self, self, context);
+           };
+      } else {
+          entity.use = (self, other, activator) => {
+               if (self.target && !self.chain) {
+                   self.chain = context.entities.pickTarget(self.target);
+               }
+               useTargetLight(self, other, activator ?? null, context);
+          };
+      }
+
+      if (!entity.speed) entity.speed = 1.0;
+      else entity.speed = 0.1 / entity.speed;
+
+      // N64 hack
+      // if (level.is_n64) self.style += 10;
+
+      context.entities.linkentity(entity);
   });
 }

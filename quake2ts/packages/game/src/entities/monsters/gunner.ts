@@ -513,14 +513,14 @@ jump_move = {
     endfunc: gunner_run
 };
 
-function SP_monster_gunner(self: Entity, context: SpawnContext): void {
+export function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.model = 'models/monsters/gunner/tris.md2';
     self.mins = { x: -16, y: -16, z: -24 };
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-    self.health = 175;
-    self.max_health = 175;
+    self.health = 175 * context.health_multiplier;
+    self.max_health = self.health;
     self.mass = 200;
     self.takedamage = true;
 

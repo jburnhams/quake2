@@ -251,6 +251,10 @@ function buildEntitySnapshot(
         health_bar_entities: [null, null, null, null],
         intermission_angle: { x: 0, y: 0, z: 0 },
         intermission_origin: { x: 0, y: 0, z: 0 },
+        helpmessage1: "",
+        helpmessage2: "",
+        help1changed: 0,
+        help2changed: 0,
     },
   };
 }

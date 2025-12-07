@@ -103,6 +103,10 @@ export interface LevelState {
   health_bar_entities: (Entity | null)[];
   intermission_angle: Vec3;
   intermission_origin: Vec3;
+  helpmessage1: string;
+  helpmessage2: string;
+  help1changed: number;
+  help2changed: number;
 }
 
 
@@ -188,18 +192,6 @@ export class EntitySystem {
   }
 
   get game(): any {
-      // Temporary workaround to expose GameExports if available via some hidden property or global
-      // Actually, sys.engine is GameEngine, not GameExports.
-      // GameExports has trace, but Engine has trace too.
-      // The weapon code expects sys.game to be GameExports (with .time, .deathmatch, etc.)
-
-      // Since EntitySystem is created inside createGame, we can't easily access the GameExports object
-      // unless we pass it in or attach it.
-
-      // Ideally weapon fire functions should take EntitySystem, not GameExports.
-      // But fire functions are shared with old code.
-
-      // Let's attach a 'game' property to EntitySystem that is set after creation.
       return (this as any)._game;
   }
 
@@ -278,6 +270,10 @@ export class EntitySystem {
       health_bar_entities: [null, null, null, null],
       intermission_angle: { x: 0, y: 0, z: 0 },
       intermission_origin: { x: 0, y: 0, z: 0 },
+      helpmessage1: "",
+      helpmessage2: "",
+      help1changed: 0,
+      help2changed: 0,
     };
   }
 
@@ -588,6 +584,10 @@ export class EntitySystem {
         health_bar_entities: [null, null, null, null], // Transient
         intermission_angle: this.level.intermission_angle,
         intermission_origin: this.level.intermission_origin,
+        helpmessage1: this.level.helpmessage1,
+        helpmessage2: this.level.helpmessage2,
+        help1changed: this.level.help1changed,
+        help2changed: this.level.help2changed,
       },
     };
   }
@@ -601,6 +601,10 @@ export class EntitySystem {
         this.level.health_bar_entities = [null, null, null, null];
         if (!this.level.intermission_angle) this.level.intermission_angle = { x: 0, y: 0, z: 0 };
         if (!this.level.intermission_origin) this.level.intermission_origin = { x: 0, y: 0, z: 0 };
+        if (this.level.helpmessage1 === undefined) this.level.helpmessage1 = "";
+        if (this.level.helpmessage2 === undefined) this.level.helpmessage2 = "";
+        if (this.level.help1changed === undefined) this.level.help1changed = 0;
+        if (this.level.help2changed === undefined) this.level.help2changed = 0;
     }
     this.pool.restore(snapshot.pool);
 

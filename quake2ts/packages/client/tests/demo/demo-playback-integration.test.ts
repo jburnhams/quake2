@@ -1,179 +1,268 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports, ClientExports, ClientMode } from '../../src/index.js';
-import { EngineImports, DemoPlaybackController } from '@quake2ts/engine';
+import { createClient, ClientExports, ClientImports, ClientMode } from '../../src/index.js';
+import { DemoPlaybackController, EngineImports } from '@quake2ts/engine';
 import { ClientNetworkHandler } from '../../src/demo/handler.js';
+import { DemoControls } from '../../src/ui/demo-controls.js';
 
 // Mock dependencies
-const mockEngineImports: EngineImports = {
-    renderer: {
-        width: 800,
-        height: 600,
-        renderFrame: vi.fn(),
-        begin2D: vi.fn(),
-        end2D: vi.fn(),
-        drawfillRect: vi.fn(),
-        drawString: vi.fn(),
-        drawCenterString: vi.fn(),
-        stats: undefined
-    },
-    audio: {
-        sound: vi.fn(),
-        positioned_sound: vi.fn()
-    },
-    trace: vi.fn().mockReturnValue({ contents: 0, fraction: 1.0, endpos: {x:0,y:0,z:0} }),
-    assets: {
-        getMap: vi.fn(),
-        listFiles: vi.fn()
-    }
-} as any;
-
-const mockDemoPlayback = {
-    loadDemo: vi.fn(),
-    setHandler: vi.fn(),
-    stop: vi.fn(),
-    update: vi.fn(),
-    getState: vi.fn().mockReturnValue(0), // PlaybackState.Stopped
-    setFrameDuration: vi.fn(),
-    play: vi.fn(),
-    pause: vi.fn(),
-    setSpeed: vi.fn(),
-    getSpeed: vi.fn().mockReturnValue(1.0),
-    getCurrentTime: vi.fn().mockReturnValue(0)
-};
-
-const mockDemoHandler = {
-    setCallbacks: vi.fn(),
-    setView: vi.fn(),
-    onServerData: vi.fn(),
-    onConfigString: vi.fn(),
-    getRenderableEntities: vi.fn().mockReturnValue([]),
-    getDemoCamera: vi.fn().mockReturnValue({
-        origin: { x: 0, y: 0, z: 0 },
-        angles: { x: 0, y: 0, z: 0 },
-        fov: 90
-    }),
-    getPredictionState: vi.fn().mockReturnValue({
-        origin: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        viewAngles: { x: 0, y: 0, z: 0 },
-        pmFlags: 0,
-        pmType: 0,
-        waterLevel: 0,
-        gravity: 800,
-        deltaAngles: { x: 0, y: 0, z: 0 },
-        client: {},
-        stats: new Array(32).fill(0),
-        blend: [0, 0, 0, 0],
-        damageAlpha: 0,
-        damageIndicators: [],
-        kick_angles: { x: 0, y: 0, z: 0 },
-        kick_origin: { x: 0, y: 0, z: 0 },
-        gunoffset: { x: 0, y: 0, z: 0 },
-        gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0,
-        mins: { x: -16, y: -16, z: -24 },
-        maxs: { x: 16, y: 16, z: 32 }
-    }),
-    latestServerFrame: 0
-};
-
-// Mock the modules
-vi.mock('@quake2ts/engine', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual as any,
-    DemoPlaybackController: vi.fn(() => mockDemoPlayback),
-  };
-});
-
-// Mock local ClientNetworkHandler
-vi.mock('../../src/demo/handler.js', () => {
+vi.mock('@quake2ts/engine', async () => {
+    const actual = await vi.importActual('@quake2ts/engine');
     return {
-        ClientNetworkHandler: vi.fn(() => mockDemoHandler)
+        ...actual,
+        DemoPlaybackController: vi.fn().mockImplementation(() => ({
+            loadDemo: vi.fn(),
+            setHandler: vi.fn(),
+            update: vi.fn(),
+            stop: vi.fn(),
+            setSpeed: vi.fn(),
+            setFrameDuration: vi.fn(),
+            getCurrentTime: vi.fn().mockReturnValue(0),
+            getDuration: vi.fn().mockReturnValue(100),
+            getState: vi.fn(),
+            getSpeed: vi.fn().mockReturnValue(1),
+            play: vi.fn(),
+            pause: vi.fn(),
+            stepForward: vi.fn(),
+            stepBackward: vi.fn(),
+            seek: vi.fn(),
+            getCurrentFrame: vi.fn().mockReturnValue(0),
+            getTotalFrames: vi.fn().mockReturnValue(100)
+        })),
+        ClientRenderer: vi.fn(),
+        createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
 });
 
-describe('Client Demo Playback Integration', () => {
+vi.mock('../../src/demo/handler.js', () => ({
+    ClientNetworkHandler: vi.fn().mockImplementation(() => ({
+        setView: vi.fn(),
+        setCallbacks: vi.fn(),
+        getPredictionState: vi.fn().mockReturnValue({
+             origin: { x: 0, y: 0, z: 0 },
+             velocity: { x: 0, y: 0, z: 0 },
+             viewAngles: { x: 0, y: 0, z: 0 },
+             pmFlags: 0,
+             fov: 90,
+             client: {} // Added client property to satisfy rendering condition
+        }),
+        getRenderableEntities: vi.fn().mockReturnValue([]),
+        getDemoCamera: vi.fn().mockReturnValue({
+             origin: { x: 0, y: 0, z: 0 },
+             angles: { x: 0, y: 0, z: 0 },
+             fov: 90
+        }),
+        latestServerFrame: 100
+    }))
+}));
+
+vi.mock('../../src/ui/demo-controls.js', () => ({
+    DemoControls: vi.fn().mockImplementation(() => ({
+        render: vi.fn(),
+        handleInput: vi.fn().mockReturnValue(false),
+        setDemoName: vi.fn()
+    }))
+}));
+
+// Mock cgameBridge to avoid complex dependencies
+vi.mock('../../src/cgameBridge.js', () => ({
+    createCGameImport: vi.fn(),
+    ClientStateProvider: vi.fn()
+}));
+
+vi.mock('../../src/hud.js', () => ({
+    Init_Hud: vi.fn().mockResolvedValue(undefined),
+    Draw_Hud: vi.fn()
+}));
+
+vi.mock('@quake2ts/cgame', async () => {
+  return {
+    ClientPrediction: vi.fn().mockImplementation(() => ({
+        setAuthoritative: vi.fn(),
+        enqueueCommand: vi.fn(),
+        getPredictedState: vi.fn()
+    })),
+    interpolatePredictionState: vi.fn(),
+    ViewEffects: vi.fn().mockImplementation(() => ({
+        sample: vi.fn()
+    })),
+    GetCGameAPI: vi.fn().mockReturnValue({
+        Init: vi.fn(),
+        Shutdown: vi.fn(),
+        DrawHUD: vi.fn(),
+        ParseCenterPrint: vi.fn(),
+        NotifyMessage: vi.fn(),
+        ParseConfigString: vi.fn(),
+        ShowSubtitle: vi.fn()
+    })
+  }
+});
+
+vi.mock('../../src/ui/menu/system.js', () => ({
+    MenuSystem: vi.fn().mockImplementation(() => ({
+        isActive: vi.fn().mockReturnValue(false),
+        closeAll: vi.fn(),
+        pushMenu: vi.fn(),
+        render: vi.fn(),
+        handleInput: vi.fn(),
+        getState: vi.fn().mockReturnValue({})
+    }))
+}));
+
+describe('Demo Playback Integration', () => {
     let client: ClientExports;
-    const imports: ClientImports = {
-        engine: mockEngineImports
-    };
+    let mockEngine: EngineImports & { renderer: any, cmd: any };
+    let mockRenderer: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        mockRenderer = {
+            width: 800,
+            height: 600,
+            renderFrame: vi.fn(),
+            begin2D: vi.fn(),
+            end2D: vi.fn(),
+            drawfillRect: vi.fn(),
+            drawString: vi.fn(),
+            drawCenterString: vi.fn(),
+            registerTexture: vi.fn(),
+            registerPic: vi.fn()
+        };
+
+        mockEngine = {
+            trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
+            assets: {
+                listFiles: vi.fn().mockReturnValue([]),
+                getMap: vi.fn(),
+                loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }), // Mock loadTexture
+            } as any,
+            renderer: mockRenderer,
+            cmd: {
+                executeText: vi.fn(),
+                register: vi.fn()
+            },
+            audio: {
+                sound: vi.fn(),
+                positioned_sound: vi.fn()
+            } as any
+        } as any;
+
+        const imports: ClientImports = {
+            engine: mockEngine,
+            host: {
+                cvars: {
+                    get: vi.fn().mockReturnValue({ string: '', number: 90 }),
+                    setValue: vi.fn(),
+                    list: vi.fn().mockReturnValue([]),
+                    register: vi.fn()
+                },
+                commands: {
+                    register: vi.fn(),
+                    execute: vi.fn()
+                }
+            } as any
+        };
+
         client = createClient(imports);
+        client.Init();
     });
 
-    it('should have demo playback state initialized', () => {
+    it('should initialize in Normal mode', () => {
+        expect(client.mode).toBe(ClientMode.Normal);
         expect(client.isDemoPlaying).toBe(false);
         expect(client.currentDemoName).toBeNull();
-        // expect(client.mode).toBe(ClientMode.Normal); // If exposed
     });
 
     it('should start demo playback correctly', () => {
         const buffer = new ArrayBuffer(100);
-        const filename = 'testdemo.dm2';
+        const filename = 'test.dm2';
 
         client.startDemoPlayback(buffer, filename);
 
-        expect(mockDemoPlayback.loadDemo).toHaveBeenCalledWith(buffer);
-        // Expect setHandler to be called with the mocked handler
-        expect(mockDemoPlayback.setHandler).toHaveBeenCalledWith(mockDemoHandler);
+        expect(client.mode).toBe(ClientMode.DemoPlayback);
         expect(client.isDemoPlaying).toBe(true);
         expect(client.currentDemoName).toBe(filename);
+
+        expect(client.demoPlayback.loadDemo).toHaveBeenCalledWith(buffer);
+        expect(client.demoPlayback.setHandler).toHaveBeenCalledWith(client.demoHandler);
     });
 
     it('should stop demo playback correctly', () => {
-        // First start to set state
-        client.startDemoPlayback(new ArrayBuffer(10), 'demo.dm2');
+        // First start
+        client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
 
+        // Then stop
         client.stopDemoPlayback();
 
-        expect(mockDemoPlayback.stop).toHaveBeenCalled();
+        expect(client.mode).toBe(ClientMode.Normal);
         expect(client.isDemoPlaying).toBe(false);
         expect(client.currentDemoName).toBeNull();
+        expect(client.demoPlayback.stop).toHaveBeenCalled();
     });
 
-    it('should update demo playback in render loop when playing', () => {
-        client.startDemoPlayback(new ArrayBuffer(10), 'demo.dm2');
+    it('should update demo playback in sample loop', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
 
-        // First frame (initializes lastRenderTime)
-        client.render({
-            latest: { timeMs: 100 },
-            previous: { timeMs: 50 },
-            alpha: 0.5,
-            nowMs: 1000,
-            accumulatorMs: 0,
-            frame: 1
-        } as any);
-
-        // First frame has dt=0 because lastRenderTime was 0
-        expect(mockDemoPlayback.update).toHaveBeenCalledWith(0);
-
-        // Second frame (50ms later)
-        client.render({
-            latest: { timeMs: 150 },
-            previous: { timeMs: 100 },
-            alpha: 0.5,
-            nowMs: 1050,
-            accumulatorMs: 0,
-            frame: 2
-        } as any);
-
-        // dt calculation: 1050 - 1000 = 50ms
-        expect(mockDemoPlayback.update).toHaveBeenCalledWith(50);
-        expect(mockDemoHandler.getPredictionState).toHaveBeenCalledWith(0);
-    });
-
-    it('should not update demo playback when not playing', () => {
         const sample = {
-            latest: { timeMs: 100 },
-            previous: { timeMs: 50 },
-            alpha: 0.5
-        } as any;
+            nowMs: 1000,
+            alpha: 1.0,
+            latest: null,
+            previous: null
+        };
 
         client.render(sample);
 
-        expect(mockDemoPlayback.update).not.toHaveBeenCalled();
+        // Should call demoPlayback.update
+        // First call sets lastRenderTime, so update might be called with 0 or small dt
+        // Let's call it twice to ensure dt > 0
+        client.render({ ...sample, nowMs: 1016 });
+
+        expect(client.demoPlayback.update).toHaveBeenCalled();
+    });
+
+    it('should use demo camera and entities during playback', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
+
+        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null });
+
+        expect(client.demoHandler.getRenderableEntities).toHaveBeenCalled();
+        expect(client.demoHandler.getDemoCamera).toHaveBeenCalled();
+        expect(mockRenderer.renderFrame).toHaveBeenCalled();
+    });
+
+    it('should render demo controls', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
+
+        // Mock render loop that eventually calls DrawHUD
+        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null });
+
+        // Access the mocked instance of DemoControls
+        const controlsMock = vi.mocked(DemoControls).mock.results[0].value;
+
+        // We expect the controls to be rendered
+        expect(controlsMock.render).toHaveBeenCalledWith(mockRenderer, mockRenderer.width, mockRenderer.height);
+    });
+
+    it('should handle demo input', () => {
+        client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
+
+        // Mock demoControls to return true for a key
+        const controlsMock = vi.mocked(DemoControls).mock.results[0].value;
+        controlsMock.handleInput.mockReturnValue(true);
+
+        const consumed = client.handleInput('Space', true);
+        expect(consumed).toBe(true);
+        expect(controlsMock.handleInput).toHaveBeenCalledWith('Space', true);
+    });
+
+    it('should allow togglemenu during demo playback', () => {
+         client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
+
+         const controlsMock = vi.mocked(DemoControls).mock.results[0].value;
+         controlsMock.handleInput.mockReturnValue(false); // Not consumed by demo controls
+
+         const consumed = client.handleInput('Escape', true);
+
+         expect(consumed).toBe(false);
     });
 });

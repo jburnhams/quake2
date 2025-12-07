@@ -63,7 +63,7 @@ export enum DeadFlag {
 export type ThinkCallback = (self: Entity, context: any) => void;
 export type TouchCallback = (self: Entity, other: Entity | null, plane?: any, surf?: any) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
-export type BlockedCallback = (self: Entity, other: Entity | null) => void;
+export type BlockedCallback = (self: Entity, other: Entity | null, context?: EntitySystem) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
 export type DieCallback = (
   self: Entity,
@@ -76,6 +76,9 @@ export type DieCallback = (
 
 // Simple Pain Callback for player (no kick/other needed?) or matched signature
 export type PlayerPainCallback = (self: Entity, damage: number) => void;
+
+// Monster specific blocked callback
+export type MonsterBlockedCallback = (self: Entity, dist: number, context: EntitySystem) => boolean | void;
 
 export type EntityFieldType =
   | 'int'
@@ -175,7 +178,7 @@ export interface MonsterInfo {
   unduck?: (self: Entity) => void;
   duck?: (self: Entity, eta: number) => boolean;
   sidestep?: (self: Entity) => boolean;
-  blocked?: BlockedCallback;
+  blocked?: MonsterBlockedCallback;
   setskin?: (self: Entity) => void;
   freeze_time?: number; // For ETF Rifle freeze effect
 
@@ -317,6 +320,7 @@ export class Entity {
   teammaster: Entity | null = null;
   teamchain: Entity | null = null;
   s_sound = 0;
+  chain: Entity | null = null; // Added
 
   client?: PlayerClient;
 
@@ -489,6 +493,7 @@ export class Entity {
     this.owner = null;
     this.beam = null;
     this.beam2 = null;
+    this.chain = null;
 
     this._regularArmor = undefined;
     this._powerArmor = undefined;
@@ -601,6 +606,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'postthink', type: 'callback', save: false }, // Added
   { name: 'beam', type: 'entity', save: true }, // Added
   { name: 'beam2', type: 'entity', save: true }, // Added
+  { name: 'chain', type: 'entity', save: true }, // Added
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
 ];

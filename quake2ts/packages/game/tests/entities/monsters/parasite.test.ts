@@ -3,12 +3,9 @@ import { SP_monster_parasite } from '../../../src/entities/monsters/parasite.js'
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
-import { GameEngine } from '../../../src/engine.js';
-import { GameImports } from '../../../src/game.js';
-import { DamageMod } from '../../../src/combat/damageMods.js';
-import { DamageFlags } from '../../../src/combat/damageFlags.js';
-import * as damageModule from '../../../src/combat/damage.js';
+import { GameEngine } from '../../../src/index.js';
 import * as gibsModule from '../../../src/entities/gibs.js';
+import * as damageModule from '../../../src/combat/damage.js';
 
 describe('monster_parasite', () => {
   let parasite: Entity;
@@ -35,6 +32,7 @@ describe('monster_parasite', () => {
 
     mockContext = {
       entities: mockEntities,
+      health_multiplier: 1.0,
     } as unknown as SpawnContext;
 
     parasite = new Entity(1);

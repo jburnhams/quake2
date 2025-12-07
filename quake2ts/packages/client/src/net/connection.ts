@@ -16,7 +16,8 @@ import {
   EntityState,
   FrameData,
   createEmptyEntityState,
-  PROTOCOL_VERSION_RERELEASE
+  PROTOCOL_VERSION_RERELEASE,
+  DemoRecorder
 } from '@quake2ts/engine';
 import { BrowserWebSocketNetDriver } from './browserWsDriver.js';
 import { ClientPrediction, PredictionState, defaultPredictionState } from '@quake2ts/cgame';
@@ -65,6 +66,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   // Prediction
   public prediction: ClientPrediction | null = null;
 
+  // Demo Recording
+  private demoRecorder: DemoRecorder | null = null;
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -77,6 +81,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   public setPrediction(prediction: ClientPrediction) {
       this.prediction = prediction;
+  }
+
+  public setDemoRecorder(recorder: DemoRecorder) {
+      this.demoRecorder = recorder;
   }
 
   public async connect(url: string): Promise<void> {
@@ -153,7 +161,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private handleMessage(data: Uint8Array): void {
     // Check if buffer is SharedArrayBuffer and copy if necessary
     let buffer = data.buffer;
-    if (buffer instanceof SharedArrayBuffer) {
+    if (typeof SharedArrayBuffer !== 'undefined' && buffer instanceof SharedArrayBuffer) {
         // Copy to ArrayBuffer
         const newBuffer = new ArrayBuffer(data.byteLength);
         new Uint8Array(newBuffer).set(data);
@@ -171,6 +179,16 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
     // Process the payload
     if (processedData.byteLength > 0) {
+        // If recording, write the raw message (decrypted/assembled payload)
+        // Note: Demo files usually store the NetChan payload (sequence, ack, etc removed?)
+        // Or do they store the raw packet?
+        // Quake 2 demos store the message block *after* NetChan processing (the raw commands).
+        // The format is [Length][MessageData].
+        // MessageData is exactly `processedData`.
+        if (this.demoRecorder && this.demoRecorder.getIsRecording()) {
+            this.demoRecorder.recordMessage(processedData);
+        }
+
         const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
         // Create parser for the message content
         this.parser = new NetworkMessageParser(stream, this);

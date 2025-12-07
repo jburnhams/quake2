@@ -417,7 +417,8 @@ export function SP_monster_fixbot(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 32, y: 32, z: 24 };
     self.movetype = MoveType.Step; // But flies
     self.solid = Solid.BoundingBox;
-    self.health = 150;
+    self.health = 150 * context.health_multiplier;
+    self.max_health = self.health;
     self.mass = 150;
 
     self.pain = (e, o, k, d) => fixbot_pain(e, o, k, d, context.entities);

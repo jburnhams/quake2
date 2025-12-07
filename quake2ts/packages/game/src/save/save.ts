@@ -261,6 +261,10 @@ function parsePool(raw: unknown): EntitySystemSnapshot['pool'] {
 
 function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
   const snapshot = ensureObject(raw, 'entities');
+
+  // Extract level state
+  const levelState = ensureObject(snapshot.level || {}, 'entities.level');
+
   return {
     timeSeconds: ensureNumber(snapshot.timeSeconds, 'entities.timeSeconds'),
     pool: parsePool(snapshot.pool),
@@ -270,10 +274,14 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
     crossLevelFlags: ensureNumberOrDefault(snapshot.crossLevelFlags, 'entities.crossLevelFlags', 0),
     crossUnitFlags: ensureNumberOrDefault(snapshot.crossUnitFlags, 'entities.crossUnitFlags', 0),
     level: {
-        next_auto_save: 0,
+        next_auto_save: ensureNumberOrDefault(levelState.next_auto_save, 'level.next_auto_save', 0),
         health_bar_entities: [null, null, null, null],
         intermission_angle: { x: 0, y: 0, z: 0 },
         intermission_origin: { x: 0, y: 0, z: 0 },
+        helpmessage1: ensureString(levelState.helpmessage1 || "", 'level.helpmessage1'),
+        helpmessage2: ensureString(levelState.helpmessage2 || "", 'level.helpmessage2'),
+        help1changed: ensureNumberOrDefault(levelState.help1changed, 'level.help1changed', 0),
+        help2changed: ensureNumberOrDefault(levelState.help2changed, 'level.help2changed', 0),
     },
   };
 }

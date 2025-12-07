@@ -244,8 +244,12 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 56, y: 56, z: 80 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 3000;
-  self.max_health = 3000;
+  if (context.health_multiplier) {
+    self.health = 3000 * context.health_multiplier;
+  } else {
+    self.health = 3000;
+  }
+  self.max_health = self.health;
   self.mass = 1000;
   self.takedamage = true;
   self.flags |= EntityFlags.Fly;

@@ -41,6 +41,7 @@ export enum ConfigStringIndex {
   CONFIG_N64_PHYSICS = 56,
   CONFIG_CTF_TEAMS = 57,
   CONFIG_COOP_RESPAWN_STRING = 58,
+  Story = 54, // Arbitrarily placed in the gap for now
 
   AirAccel = 59,
   MaxClients = 60,

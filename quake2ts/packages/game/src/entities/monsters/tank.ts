@@ -21,8 +21,9 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { GIB_METALLIC, throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
-import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket } from './attack.js';
+import { monster_fire_blaster, monster_fire_bullet, monster_fire_rocket, monster_fire_heat } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -287,7 +288,11 @@ function tank_fire_rocket(self: Entity, context: any): void {
    const damage = 50;
    const speed = 650;
 
-   monster_fire_rocket(self, start, dir, damage, speed, 0, context);
+   if (self.spawnflags & 16) { // SPAWNFLAG_TANK_COMMANDER_HEAT_SEEKING
+       monster_fire_heat(self, start, dir, damage, speed, 0, (self.accel || 0.075), context);
+   } else {
+       monster_fire_rocket(self, start, dir, damage, speed, 0, context);
+   }
 }
 
 
@@ -310,6 +315,12 @@ function tank_refire_rocket(self: Entity, context: any): void {
     self.monsterinfo.aiflags &= ~AIFlags.ManualSteering;
   }
   tank_run(self);
+}
+
+function tank_idle(self: Entity, context: EntitySystem): void {
+    if (Math.random() < 0.2) {
+        context.sound?.(self, 0, 'tank/tnkidle.wav', 1, 2, 0);
+    }
 }
 
 // Frame definitions (approximated)
@@ -435,8 +446,8 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 32, y: 32, z: 64 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 750;
-  self.max_health = 750;
+  self.health = 750 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 500;
   self.takedamage = true;
   self.viewheight = 64; // Tank is large
@@ -490,6 +501,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.attack_machinegun = attack_machinegun_move;
   self.monsterinfo.checkattack = tank_checkattack;
   self.monsterinfo.blindfire = true;
+  self.monsterinfo.idle = (self) => tank_idle(self, context.entities);
 
   self.think = monster_think;
 

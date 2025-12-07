@@ -1,14 +1,35 @@
 import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SHOT } from '@quake2ts/shared';
-import { Entity, MoveType, Solid } from '../entity.js';
+import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
-import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette } from '../projectiles.js';
+import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette, createHeatSeekingMissile } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
 function crandom(): number {
   return 2 * Math.random() - 1;
+}
+
+function getDamageScale(skill: number): number {
+  if (skill >= 3) return 1.5;
+  if (skill === 2) return 1.25;
+  if (skill === 0) return 0.75;
+  return 1.0;
+}
+
+function getSpreadScale(skill: number): number {
+  if (skill >= 3) return 0.5;
+  if (skill === 2) return 0.7;
+  if (skill === 0) return 1.5;
+  return 1.0;
+}
+
+function adjustDamage(self: Entity, damage: number, context: EntitySystem): number {
+  if (self.svflags & ServerFlags.Monster) {
+    return Math.floor(damage * getDamageScale(context.skill));
+  }
+  return damage;
 }
 
 // Renamed to force cache invalidation/TS resolution
@@ -26,12 +47,17 @@ export function monster_fire_bullet_v2(
 ): void {
   let direction = dir;
 
-  if (hspread > 0 || vspread > 0) {
+  // Scale spread based on difficulty
+  const spreadScale = (self.svflags & ServerFlags.Monster) ? getSpreadScale(context.skill) : 1.0;
+  const scaledHSpread = hspread * spreadScale;
+  const scaledVSpread = vspread * spreadScale;
+
+  if (scaledHSpread > 0 || scaledVSpread > 0) {
     const angles = vectorToAngles(dir);
     const { right, up } = angleVectors(angles);
 
-    const r = crandom() * hspread;
-    const u = crandom() * vspread;
+    const r = crandom() * scaledHSpread;
+    const u = crandom() * scaledVSpread;
 
     direction = {
       x: dir.x + right.x * r + up.x * u,
@@ -58,7 +84,7 @@ export function monster_fire_bullet_v2(
       direction,
       tr.endpos,
       tr.plane?.normal || ZERO_VEC3,
-      damage,
+      adjustDamage(self, damage, context),
       kick,
       DamageFlags.BULLET | DamageFlags.NO_ARMOR,
       mod,
@@ -98,7 +124,7 @@ export function monster_fire_blaster(
     context: EntitySystem,
     mod: DamageMod = DamageMod.BLASTER
 ): void {
-    createBlasterBolt(context, self, start, dir, damage, speed, mod);
+    createBlasterBolt(context, self, start, dir, adjustDamage(self, damage, context), speed, mod);
 }
 
 export function monster_fire_blueblaster(
@@ -111,7 +137,7 @@ export function monster_fire_blueblaster(
     effect: number,
     context: EntitySystem
 ): void {
-    createBlueBlaster(context, self, start, dir, damage, speed);
+    createBlueBlaster(context, self, start, dir, adjustDamage(self, damage, context), speed);
 }
 
 export function monster_fire_ionripper(
@@ -124,7 +150,7 @@ export function monster_fire_ionripper(
     effect: number,
     context: EntitySystem
 ): void {
-    createIonRipper(context, self, start, dir, damage, speed);
+    createIonRipper(context, self, start, dir, adjustDamage(self, damage, context), speed);
 }
 
 export function monster_fire_grenade(
@@ -136,7 +162,7 @@ export function monster_fire_grenade(
     flashtype: number,
     context: EntitySystem
 ): void {
-    createGrenade(context, self, start, aim, damage, speed);
+    createGrenade(context, self, start, aim, adjustDamage(self, damage, context), speed);
 }
 
 export function monster_fire_rocket(
@@ -148,7 +174,7 @@ export function monster_fire_rocket(
     flashtype: number,
     context: EntitySystem
 ): void {
-    createRocket(context, self, start, dir, damage, 120, speed);
+    createRocket(context, self, start, dir, adjustDamage(self, damage, context), 120, speed);
 }
 
 export function monster_fire_bfg(
@@ -164,7 +190,7 @@ export function monster_fire_bfg(
 ): void {
     // BFG ball logic from createBfgBall signature:
     // createBfgBall(context: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, speed: number, damageRadius: number)
-    createBfgBall(context, self, start, dir, damage, speed, damage_radius);
+    createBfgBall(context, self, start, dir, adjustDamage(self, damage, context), speed, damage_radius);
 }
 
 export function monster_fire_railgun(
@@ -190,7 +216,7 @@ export function monster_fire_railgun(
             aim,
             tr.endpos,
             ZERO_VEC3,
-            damage,
+            adjustDamage(self, damage, context),
             kick,
             DamageFlags.ENERGY | DamageFlags.NO_ARMOR,
             DamageMod.RAILGUN,
@@ -232,7 +258,7 @@ export function monster_fire_hit(
             dir,
             tr.endpos,
             tr.plane?.normal || ZERO_VEC3,
-            damage,
+            adjustDamage(self, damage, context),
             kick,
             0,
             DamageMod.UNKNOWN,
@@ -253,9 +279,7 @@ export function monster_fire_heat(
   turn_fraction: number,
   context: EntitySystem
 ): void {
-  // Implementation of heat seeking projectile - placeholder for now, usually rocket with seeking
-  // For now just fire a rocket
-  monster_fire_rocket(self, start, dir, damage, speed, flashtype, context);
+  createHeatSeekingMissile(context, self, start, dir, adjustDamage(self, damage, context), speed, flashtype, turn_fraction);
 }
 
 // Laser Beam Logic
@@ -392,5 +416,5 @@ export function monster_fire_flechette(
   flashtype: number,
   context: EntitySystem
 ): void {
-    createFlechette(context, self, start, dir, damage, speed);
+    createFlechette(context, self, start, dir, adjustDamage(self, damage, context), speed);
 }

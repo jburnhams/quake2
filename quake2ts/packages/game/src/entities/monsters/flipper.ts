@@ -276,8 +276,8 @@ export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
   self.movetype = MoveType.Fly; // Use Fly for swimming/flying in Q2TS
   self.flags |= EntityFlags.Swim;
   self.solid = Solid.BoundingBox;
-  self.health = 50;
-  self.max_health = 50;
+  self.health = 50 * context.health_multiplier;
+  self.max_health = self.health;
   self.mass = 100;
   self.takedamage = true;
 

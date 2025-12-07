@@ -74,6 +74,7 @@ export function createTestContext(): SpawnContext {
   return {
     keyValues: {},
     entities,
+    health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),
     // Legacy support for tests that might check precache

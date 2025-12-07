@@ -23,13 +23,19 @@ describe('monster_infantry', () => {
         modelIndex: (s: string) => 1,
         timeSeconds: 10,
         multicast: vi.fn(),
+        sound: vi.fn(),
     } as unknown as EntitySystem;
 
     context = {
         entities: sys,
+        health_multiplier: 1.0,
     } as unknown as SpawnContext;
 
     infantry = new Entity(1);
+    // Assign origin/angles explicitly if they aren't initialized
+    infantry.origin = { x: 0, y: 0, z: 0 };
+    infantry.angles = { x: 0, y: 0, z: 0 };
+
 
     spawnRegistry = {
         register: vi.fn(),
@@ -55,6 +61,7 @@ describe('monster_infantry', () => {
     expect(infantry.movetype).toBe(MoveType.Step);
     expect(infantry.monsterinfo.stand).toBeDefined();
     expect(infantry.monsterinfo.attack).toBeDefined();
+    expect(infantry.monsterinfo.idle).toBeDefined();
   });
 
   it('infantry attack fires machinegun', () => {
@@ -84,6 +91,28 @@ describe('monster_infantry', () => {
         0.05, 0.05, 0, // spread
         sys,
         expect.anything()
+    );
+  });
+
+  it('infantry plays idle sound periodically', () => {
+    registerInfantrySpawns(spawnRegistry);
+    const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
+    spawnFn(infantry, context);
+
+    // Mock Math.random to trigger the sound
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+    // Execute the idle function
+    infantry.monsterinfo.idle!(infantry);
+
+    // Check if sound was played
+    expect(sys.sound).toHaveBeenCalledWith(
+        infantry,
+        expect.anything(), // channel
+        expect.stringMatching(/infantry\/idle1.wav/), // sound path
+        1, // volume
+        expect.anything(), // attenuation
+        0
     );
   });
 });

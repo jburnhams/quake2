@@ -11,6 +11,17 @@ vi.mock('playwright', () => {
   };
 });
 
+// Mock http createServer
+vi.mock('http', () => {
+  return {
+    createServer: vi.fn(() => ({
+      listen: vi.fn((port, cb) => cb && cb()),
+      address: vi.fn(() => ({ port: 1234 })),
+      close: vi.fn(),
+    })),
+  };
+});
+
 describe('testClient Helper', () => {
   let mockBrowser: Browser;
   let mockContext: BrowserContext;
@@ -19,6 +30,7 @@ describe('testClient Helper', () => {
   beforeEach(() => {
     mockPage = {
       goto: vi.fn(),
+      on: vi.fn(),
     } as unknown as Page;
 
     mockContext = {
@@ -58,13 +70,14 @@ describe('testClient Helper', () => {
     expect(client.page).toBe(mockPage);
   });
 
-  it('should use default client URL if not provided', async () => {
+  it('should start a static server if clientUrl is not provided', async () => {
     const serverUrl = 'ws://localhost:27910';
 
     await launchBrowserClient(serverUrl);
 
-    const expectedUrl = `http://localhost:8080?connect=${encodeURIComponent(serverUrl)}`;
-    expect(mockPage.goto).toHaveBeenCalledWith(expectedUrl, { waitUntil: 'domcontentloaded' });
+    // Should use the port from the mocked http server (1234)
+    const expectedUrlPrefix = 'http://localhost:1234/packages/e2e-tests/fixtures/real-client.html';
+    expect(mockPage.goto).toHaveBeenCalledWith(expect.stringContaining(expectedUrlPrefix), { waitUntil: 'domcontentloaded' });
   });
 
   it('should close the browser', async () => {

@@ -46,6 +46,7 @@ describe('monster_fixbot', () => {
         scheduleThink: vi.fn(),
         finalizeSpawn: vi.fn(),
       },
+      health_multiplier: 1,
     };
   });
 

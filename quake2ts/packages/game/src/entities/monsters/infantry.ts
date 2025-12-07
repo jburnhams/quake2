@@ -112,6 +112,12 @@ function infantry_duck(self: Entity): void {
     self.monsterinfo.current_move = duck_move;
 }
 
+function infantry_idle(self: Entity, context: EntitySystem): void {
+    if (Math.random() < 0.2) {
+        context.sound?.(self, 0, 'infantry/idle1.wav', 1, 2, 0);
+    }
+}
+
 // Frames
 const stand_frames: MonsterFrame[] = Array.from({ length: 22 }, () => ({
     ai: monster_ai_stand,
@@ -252,8 +258,14 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-    self.health = 100;
-    self.max_health = 100;
+    // DEBUG LOG
+    console.log(`SP_monster_infantry: health_multiplier=${context.health_multiplier}`);
+    console.log(`SP_monster_infantry: context keys=${Object.keys(context)}`);
+    const h = 100 * context.health_multiplier;
+    console.log(`calculated health: ${h}`);
+    self.health = h;
+    console.log(`self.health after assign: ${self.health}`);
+    self.max_health = self.health;
     self.mass = 200;
     self.takedamage = true;
 
@@ -281,6 +293,7 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.monsterinfo.run = infantry_run;
     self.monsterinfo.attack = infantry_attack;
     self.monsterinfo.checkattack = infantry_checkattack;
+    self.monsterinfo.idle = (self) => infantry_idle(self, context.entities);
 
     self.think = monster_think;
 

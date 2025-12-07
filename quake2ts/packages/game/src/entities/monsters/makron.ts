@@ -362,8 +362,12 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 30, y: 30, z: 90 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 3000;
-  self.max_health = 3000;
+  if (context.health_multiplier) {
+    self.health = 3000 * context.health_multiplier;
+  } else {
+    self.health = 3000;
+  }
+  self.max_health = self.health;
   self.mass = 500;
   self.takedamage = true;
   self.viewheight = 90; // Guess? C code uses viewheight for aiming
