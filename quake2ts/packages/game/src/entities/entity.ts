@@ -6,6 +6,7 @@ import { DamageMod } from '../combat/damageMods.js';
 import type { RegularArmorState, PowerArmorState } from '../combat/armor.js';
 import { AmmoType } from '../inventory/ammo.js';
 import { EntityFlags, EntityEffects } from './enums.js';
+import type { ReinforcementList } from './monsters/rogue/common.js'; // Import ReinforcementList type
 
 export { RenderFx }; // Export RenderFx from shared for convenience if imported from entity.js
 export { EntityFlags, EntityEffects }; // Re-export for compatibility
@@ -187,6 +188,28 @@ export interface MonsterInfo {
   jump_height?: number;
   drop_height?: number;
   can_jump?: boolean;
+
+  // Rogue Mission Pack
+  monster_slots?: number;
+  monster_used?: number;
+  reinforcements?: ReinforcementList;
+  chosen_reinforcements?: number[];
+  badMedic1?: Entity;
+  badMedic2?: Entity;
+  healer?: Entity;
+  medicTries?: number;
+  commander?: Entity;
+  fire_wait?: number;
+  fly_above?: boolean;
+  orig_yaw_speed?: number;
+  base_height?: number;
+  initial_power_armor_type?: number;
+  max_power_armor_power?: number;
+  base_health?: number;
+  health_scaling?: number;
+  react_to_damage_time?: number;
+  weapon_sound?: number;
+  engine_sound?: number;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
@@ -513,6 +536,13 @@ export enum AiFlags {
   CombatPoint = 0x00001000,
   Medic = 0x00002000,
   HoldFrame = 0x00004000,
+
+  // Rogue specific
+  SpawnedCarrier = 0x00400000, // Matches AI_SPAWNED_CARRIER bit 22
+  IgnoreShots = 0x00100000, // Matches AI_IGNORE_SHOTS bit 20
+  ManualSteering = 0x00008000, // Matches AI_MANUAL_STEERING bit 15
+  Charging = 0x00040000, // Matches AI_CHARGING bit 18
+  AlternateFly = 0x200000000, // Matches AI_ALTERNATE_FLY bit 33 (requires expanding aiflags type if used directly as bitmask beyond 32bit or mapped carefully)
 }
 
 export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
