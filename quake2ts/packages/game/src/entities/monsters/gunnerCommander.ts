@@ -156,7 +156,7 @@ function guncmdr_opengun(self: Entity, context: EntitySystem): void {
 function guncmdr_fidget(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.aiflags & AIFlags.StandGround) return;
   if (self.enemy) return;
-  if (Math.random() <= 0.05) {
+  if (context.rng.frandom() <= 0.05) {
     M_SetAnimation(self, fidget_move, context);
   }
 }
@@ -199,7 +199,7 @@ function guncmdr_refire_chain(self: Entity, context: EntitySystem): void {
 
     if (self.enemy && self.enemy.health > 0) {
         if (visible(self, self.enemy, context.trace)) {
-            if (Math.random() <= 0.5) {
+            if (context.rng.frandom() <= 0.5) {
                  if (!(self.monsterinfo.aiflags & AIFlags.StandGround) && self.enemy) {
                     const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
                     if (dist > 400 && ai_move(self, 8.0)) {
@@ -229,7 +229,7 @@ function GunnerCmdrFire(self: Entity, context: EntitySystem): void {
 
     const start = M_ProjectFlashSource(self, monster_flash_offset[flash_number], forward, right);
 
-    const { aimdir: aim } = PredictAim(context, self, self.enemy, start, 800, false, Math.random() * 0.3);
+    const { aimdir: aim } = PredictAim(context, self, self.enemy, start, 800, false, context.rng.frandom() * 0.3);
 
     // Add randomness
     // aim is readonly, so we construct a new one.
@@ -237,9 +237,9 @@ function GunnerCmdrFire(self: Entity, context: EntitySystem): void {
     for (let i = 0; i < 3; i++) {
         // crandom_open() * 0.025f
         // crandom is -1 to 1.
-        randomAim.x += (Math.random() * 2 - 1) * 0.025;
-        randomAim.y += (Math.random() * 2 - 1) * 0.025;
-        randomAim.z += (Math.random() * 2 - 1) * 0.025;
+        randomAim.x += (context.rng.crandom()) * 0.025;
+        randomAim.y += (context.rng.crandom()) * 0.025;
+        randomAim.z += (context.rng.crandom()) * 0.025;
     }
 
     monster_fire_flechette(self, start, randomAim, 4, 800, flash_number, context);
@@ -562,7 +562,7 @@ function guncmdr_pain5_to_death1(self: Entity, context: EntitySystem): void {
     if (self.health < 0) M_SetAnimation(self, death1_move, context);
 }
 function guncmdr_pain5_to_death2(self: Entity, context: EntitySystem): void {
-    if (self.health < 0 && Math.random() < 0.5) M_SetAnimation(self, death2_move, context);
+    if (self.health < 0 && context.rng.frandom() < 0.5) M_SetAnimation(self, death2_move, context);
 }
 function guncmdr_pain6_to_death6(self: Entity, context: EntitySystem): void {
     if (self.health < 0) M_SetAnimation(self, death6_move, context);
@@ -592,7 +592,7 @@ function guncmdr_pain(self: Entity, context: EntitySystem): void {
     }
 
     if (context.timeSeconds < self.pain_debounce_time) {
-         if (Math.random() < 0.3) {
+         if (context.rng.frandom() < 0.3) {
              M_MonsterDodge(self, self.enemy!, 0.1);
          }
          return;
@@ -600,14 +600,14 @@ function guncmdr_pain(self: Entity, context: EntitySystem): void {
 
     self.pain_debounce_time = context.timeSeconds + 3;
 
-    if (Math.random() < 0.5) {
+    if (context.rng.frandom() < 0.5) {
          context.engine.sound?.(self, 0, 'guncmdr/gcdrpain2.wav', 1, 1, 0);
     } else {
          context.engine.sound?.(self, 0, 'guncmdr/gcdrpain1.wav', 1, 1, 0);
     }
 
     if (!M_ShouldReactToPain(self, context)) {
-        if (Math.random() < 0.3) {
+        if (context.rng.frandom() < 0.3) {
             M_MonsterDodge(self, self.enemy!, 0.1);
         }
         return;
@@ -625,7 +625,7 @@ function guncmdr_pain(self: Entity, context: EntitySystem): void {
     // damage < 35 -> small pain
     // For now simple random selection as per previous TS, but logic could be enhanced.
 
-    const r = Math.floor(Math.random() * 7);
+    const r = context.rng.irandom(0, 6);
     switch (r) {
         case 0: M_SetAnimation(self, pain1_move, context); break;
         case 1: M_SetAnimation(self, pain2_move, context); break;
@@ -659,7 +659,7 @@ function guncmdr_die(self: Entity, inflictor: Entity | null, attacker: Entity | 
     self.takedamage = true;
 
     // Death selection
-    const r = Math.floor(Math.random() * 7);
+    const r = context.rng.irandom(0, 6);
     switch (r) {
          case 0: M_SetAnimation(self, death1_move, context); break;
          case 1: M_SetAnimation(self, death2_move, context); break;
@@ -697,13 +697,13 @@ function guncmdr_duck(self: Entity, eta: number, context: EntitySystem): boolean
 
 function guncmdr_sidestep(self: Entity, context: EntitySystem): boolean {
     if (self.monsterinfo.current_move === fire_chain_move || self.monsterinfo.current_move === fire_chain_run_move) {
-        M_SetAnimation(self, Math.random() < 0.5 ? fire_chain_dodge_right_move : fire_chain_dodge_left_move, context);
+        M_SetAnimation(self, context.rng.frandom() < 0.5 ? fire_chain_dodge_right_move : fire_chain_dodge_left_move, context);
         return true;
     }
 
     if (self.monsterinfo.current_move === attack_grenade_back_move) {
         self.count = self.frame;
-        M_SetAnimation(self, Math.random() < 0.5 ? attack_grenade_back_dodge_right_move : attack_grenade_back_dodge_left_move, context);
+        M_SetAnimation(self, context.rng.frandom() < 0.5 ? attack_grenade_back_dodge_right_move : attack_grenade_back_dodge_left_move, context);
         return true;
     }
 

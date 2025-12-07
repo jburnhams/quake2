@@ -67,15 +67,6 @@ import { MulticastType } from '../../../imports.js';
 
 const MONSTER_TICK = 0.1;
 
-// Wrapper for random functions since they are not directly exported
-function crandom(): number {
-  return 2.0 * (Math.random() - 0.5);
-}
-
-function random_time(min: number, max: number): number {
-    return min + Math.random() * (max - min);
-}
-
 function has_valid_enemy(self: Entity): boolean {
     return self.enemy !== null && self.enemy.health > 0;
 }
@@ -160,7 +151,7 @@ function stalker_idle_noise(self: Entity, context: EntitySystem) {
 }
 
 function stalker_stand(self: Entity, context: EntitySystem): void {
-   if (Math.random() < 0.25)
+   if (context.rng.frandom() < 0.25)
         M_SetAnimation(self, stalker_move_stand, context);
     else
         M_SetAnimation(self, stalker_move_idle2, context);
@@ -219,7 +210,7 @@ stalker_move_idle2 = {
 };
 
 function stalker_idle(self: Entity, context: EntitySystem): void {
-    if (Math.random() < 0.35)
+    if (context.rng.frandom() < 0.35)
         M_SetAnimation(self, stalker_move_idle, context);
     else
         M_SetAnimation(self, stalker_move_idle2, context);
@@ -453,7 +444,7 @@ function stalker_shoot_attack(self: Entity, context: EntitySystem): void {
 }
 
 function stalker_shoot_attack2(self: Entity, context: EntitySystem): void {
-    if (Math.random() < 0.5)
+    if (context.rng.frandom() < 0.5)
         stalker_shoot_attack(self, context);
 }
 
@@ -518,7 +509,7 @@ stalker_move_swing_r = {
 
 function stalker_attack_melee(self: Entity, context: EntitySystem): void {
     if (!has_valid_enemy(self)) return;
-    if (Math.random() < 0.5)
+    if (context.rng.frandom() < 0.5)
         M_SetAnimation(self, stalker_move_swing_l, context);
     else
         M_SetAnimation(self, stalker_move_swing_r, context);
@@ -661,15 +652,15 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.pain = (ent, other, kick, damage) => stalker_pain(ent, other, kick, damage, context.entities);
     self.die = stalker_die;
 
-    self.monsterinfo.stand = stalker_stand;
-    self.monsterinfo.walk = stalker_walk;
-    self.monsterinfo.run = stalker_run;
-    self.monsterinfo.attack = stalker_attack_ranged;
+    self.monsterinfo.stand = (s) => stalker_stand(s, context.entities);
+    self.monsterinfo.walk = (s) => stalker_walk(s, context.entities);
+    self.monsterinfo.run = (s) => stalker_run(s, context.entities);
+    self.monsterinfo.attack = (s) => stalker_attack_ranged(s, context.entities);
     self.monsterinfo.sight = stalker_sight;
-    self.monsterinfo.idle = stalker_idle;
+    self.monsterinfo.idle = (s) => stalker_idle(s, context.entities);
     self.monsterinfo.dodge = stalker_dodge;
     self.monsterinfo.blocked = (s, d) => stalker_blocked(s, d, context.entities);
-    self.monsterinfo.melee = stalker_attack_melee;
+    self.monsterinfo.melee = (s) => stalker_attack_melee(s, context.entities);
     self.monsterinfo.setskin = stalker_setskin;
 
     // Set Rogue/Mission Pack specific jump/drop heights

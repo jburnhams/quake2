@@ -5,6 +5,7 @@ import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameEngine } from '../../../src/index.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
+import { createTestContext } from '../../test-helpers.js';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -18,18 +19,8 @@ describe('monster_infantry', () => {
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
-    sys = {
-        spawn: () => new Entity(1),
-        modelIndex: (s: string) => 1,
-        timeSeconds: 10,
-        multicast: vi.fn(),
-        sound: vi.fn(),
-    } as unknown as EntitySystem;
-
-    context = {
-        entities: sys,
-        health_multiplier: 1.0,
-    } as unknown as SpawnContext;
+    context = createTestContext();
+    sys = context.entities;
 
     infantry = new Entity(1);
     // Assign origin/angles explicitly if they aren't initialized
@@ -99,8 +90,8 @@ describe('monster_infantry', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(infantry, context);
 
-    // Mock Math.random to trigger the sound
-    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    // Use rng mock
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
 
     // Execute the idle function
     infantry.monsterinfo.idle!(infantry);

@@ -4,6 +4,7 @@ import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import * as aiIndex from '../../../src/ai/index.js';
+import { createTestContext } from '../../test-helpers.js';
 
 vi.mock('../../../src/ai/index.js', async (importOriginal) => {
     const actual = await importOriginal<typeof aiIndex>();
@@ -19,18 +20,8 @@ describe('monster_infantry dodge', () => {
     let infantry: Entity;
 
     beforeEach(() => {
-        sys = {
-            spawn: () => new Entity(1),
-            modelIndex: (s: string) => 1,
-            timeSeconds: 10,
-            multicast: vi.fn(),
-            trace: vi.fn(),
-            engine: { sound: vi.fn() },
-        } as unknown as EntitySystem;
-
-        context = {
-            entities: sys,
-        } as unknown as SpawnContext;
+        context = createTestContext();
+        sys = context.entities;
 
         infantry = new Entity(1);
         SP_monster_infantry(infantry, context);
@@ -45,7 +36,7 @@ describe('monster_infantry dodge', () => {
         infantry.enemy.health = 100;
 
         // Mock random to be < 0.3 (0.1)
-        vi.spyOn(Math, 'random').mockReturnValue(0.1);
+        vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
 
         const result = infantry.monsterinfo.checkattack!(infantry, sys);
 
@@ -60,7 +51,7 @@ describe('monster_infantry dodge', () => {
 
         // Mock random to be > 0.3 (0.5)
         // Also force second random check (for attack) to be > 0.2 (0.9) to fail attack too
-        vi.spyOn(Math, 'random').mockReturnValue(0.5);
+        vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.5);
 
         const result = infantry.monsterinfo.checkattack!(infantry, sys);
 
@@ -80,7 +71,7 @@ describe('monster_infantry dodge', () => {
         vi.mocked(aiIndex.visible).mockReturnValue(true);
 
         // Random > 0.3 (fail dodge), < 0.2 (pass attack)
-        const randomSpy = vi.spyOn(Math, 'random');
+        const randomSpy = vi.spyOn(sys.rng, 'frandom');
         randomSpy.mockReturnValueOnce(0.5); // Fail dodge
         randomSpy.mockReturnValueOnce(0.1); // Pass attack
 

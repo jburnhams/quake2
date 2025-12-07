@@ -113,7 +113,7 @@ function infantry_duck(self: Entity): void {
 }
 
 function infantry_idle(self: Entity, context: EntitySystem): void {
-    if (Math.random() < 0.2) {
+    if (context.rng.frandom() < 0.2) {
         context.sound?.(self, 0, 'infantry/idle1.wav', 1, 2, 0);
     }
 }
@@ -220,7 +220,7 @@ function infantry_dodge(self: Entity, context: EntitySystem): boolean {
     }
 
     // 30% chance to duck
-    if (Math.random() > 0.3) return false;
+    if (context.rng.frandom() > 0.3) return false;
 
     // Trigger duck
     infantry_duck(self);
@@ -243,8 +243,8 @@ function infantry_checkattack(self: Entity, context: EntitySystem): boolean {
          // 50% chance to attack if possible, to avoid instant reaction every frame?
          // Actually in ai_run it checks every frame.
          // Let's make it likely but not guaranteed to allow closing distance
-         if (Math.random() < 0.2) {
-             self.monsterinfo.attack?.(self, context);
+         if (context.rng.frandom() < 0.2) {
+             self.monsterinfo.attack?.(self); // context? infantry_attack doesn't use context
              return true;
          }
     }
@@ -258,13 +258,8 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-    // DEBUG LOG
-    console.log(`SP_monster_infantry: health_multiplier=${context.health_multiplier}`);
-    console.log(`SP_monster_infantry: context keys=${Object.keys(context)}`);
-    const h = 100 * context.health_multiplier;
-    console.log(`calculated health: ${h}`);
-    self.health = h;
-    console.log(`self.health after assign: ${self.health}`);
+
+    self.health = 100 * context.health_multiplier;
     self.max_health = self.health;
     self.mass = 200;
     self.takedamage = true;
@@ -292,7 +287,7 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.monsterinfo.walk = infantry_walk;
     self.monsterinfo.run = infantry_run;
     self.monsterinfo.attack = infantry_attack;
-    self.monsterinfo.checkattack = infantry_checkattack;
+    self.monsterinfo.checkattack = (s) => infantry_checkattack(s, context.entities);
     self.monsterinfo.idle = (self) => infantry_idle(self, context.entities);
 
     self.think = monster_think;

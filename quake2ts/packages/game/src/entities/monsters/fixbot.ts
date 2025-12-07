@@ -45,11 +45,6 @@ type MutableVec3 = { -readonly [P in keyof Vec3]: Vec3[P] };
 
 const MONSTER_TICK = 0.1;
 
-// Helper to access deterministic RNG or Math.random
-const random = () => Math.random();
-const frandom = () => Math.random();
-const irandom = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -147,11 +142,11 @@ function fixbot_search(self: Entity, context: EntitySystem): void {
         self.monsterinfo.aiflags |= AIFlags.Medic;
         // FoundTarget(self);
         // We trigger run behavior
-        fixbot_run(self);
+        fixbot_run(self, context);
         fixbot_set_fly_parameters(self, true, false);
     } else {
         // Standard search sound or behavior
-        if (random() < 0.1) {
+        if (context.rng.frandom() < 0.1) {
              context.engine.sound?.(self, 0, 'flyer/flysght1.wav', 1, 1, 0);
         }
     }
@@ -228,8 +223,8 @@ function fixbot_fire_laser(self: Entity, context: EntitySystem): void {
 
 function fixbot_fire_welder(self: Entity, context: EntitySystem): void {
     // Visuals and sounds
-    if (frandom() > 0.8) {
-        const r = frandom();
+    if (context.rng.frandom() > 0.8) {
+        const r = context.rng.frandom();
         if (r < 0.33) context.engine.sound?.(self, 0, 'misc/welder1.wav', 1, 1, 0);
         else if (r < 0.66) context.engine.sound?.(self, 0, 'misc/welder2.wav', 1, 1, 0);
         else context.engine.sound?.(self, 0, 'misc/welder3.wav', 1, 1, 0);
@@ -247,26 +242,26 @@ function fixbot_pain(self: Entity, other: Entity | null, kick: number, damage: n
     else self.monsterinfo.current_move = fixbot_move_paina;
 }
 
-function fixbot_stand(self: Entity): void {
+function fixbot_stand(self: Entity, context: EntitySystem): void {
     self.monsterinfo.current_move = fixbot_move_stand;
 }
 
-function fixbot_walk(self: Entity): void {
+function fixbot_walk(self: Entity, context: EntitySystem): void {
     self.monsterinfo.current_move = fixbot_move_walk;
 }
 
-function fixbot_run(self: Entity): void {
+function fixbot_run(self: Entity, context: EntitySystem): void {
     if (self.monsterinfo.aiflags & AIFlags.StandGround)
         self.monsterinfo.current_move = fixbot_move_stand;
     else
         self.monsterinfo.current_move = fixbot_move_run;
 }
 
-function fixbot_start_attack(self: Entity): void {
+function fixbot_start_attack(self: Entity, context: EntitySystem): void {
     self.monsterinfo.current_move = fixbot_move_start_attack;
 }
 
-function fixbot_attack(self: Entity): void {
+function fixbot_attack(self: Entity, context: EntitySystem): void {
     if (self.monsterinfo.aiflags & AIFlags.Medic) {
         // Laser repair
         self.monsterinfo.current_move = fixbot_move_laserattack;
@@ -276,7 +271,7 @@ function fixbot_attack(self: Entity): void {
     }
 }
 
-function weldstate(self: Entity): void {
+function weldstate(self: Entity, context: EntitySystem): void {
     // Logic to loop weld or end it
     if (self.goalentity && self.goalentity.health > 0) { // repairing object_repair?
          // decrement health of object?
@@ -327,7 +322,7 @@ fixbot_move_attack2 = {
     firstframe: 121, // FRAME_charging_01
     lastframe: 151,
     frames: frames_attack2,
-    endfunc: fixbot_run
+    endfunc: (s, ctx) => fixbot_run(s, ctx)
 };
 
 // LASER ATTACK (Repair)
@@ -388,7 +383,7 @@ fixbot_move_pain3 = {
     firstframe: 0,
     lastframe: 0,
     frames: frames_pain3,
-    endfunc: fixbot_run
+    endfunc: (s, ctx) => fixbot_run(s, ctx)
 };
 
 // PAIN B
@@ -397,7 +392,7 @@ fixbot_move_painb = {
     firstframe: 107, // FRAME_painb_01
     lastframe: 114,
     frames: frames_painb,
-    endfunc: fixbot_run
+    endfunc: (s, ctx) => fixbot_run(s, ctx)
 };
 
 // PAIN A
@@ -406,7 +401,7 @@ fixbot_move_paina = {
     firstframe: 101, // FRAME_paina_01
     lastframe: 106,
     frames: frames_paina,
-    endfunc: fixbot_run
+    endfunc: (s, ctx) => fixbot_run(s, ctx)
 };
 
 
@@ -424,10 +419,10 @@ export function SP_monster_fixbot(self: Entity, context: SpawnContext): void {
     self.pain = (e, o, k, d) => fixbot_pain(e, o, k, d, context.entities);
     self.die = (e, i, a, d, p, m) => fixbot_die(e, i, a, d, p, m, context.entities);
 
-    self.monsterinfo.stand = fixbot_stand;
-    self.monsterinfo.walk = fixbot_walk;
-    self.monsterinfo.run = fixbot_run;
-    self.monsterinfo.attack = fixbot_start_attack;
+    self.monsterinfo.stand = (s) => fixbot_stand(s, context.entities);
+    self.monsterinfo.walk = (s) => fixbot_walk(s, context.entities);
+    self.monsterinfo.run = (s) => fixbot_run(s, context.entities);
+    self.monsterinfo.attack = (s) => fixbot_start_attack(s, context.entities);
     // self.monsterinfo.search = (s) => fixbot_search(s, context.entities);
     // Not standard property, but we can hook it or use idle?
     // C code has monsterinfo.search = gekk_search; Wait, fixbot_search.

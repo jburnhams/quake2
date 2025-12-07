@@ -9,6 +9,7 @@ import { createPlayerInventory } from '../../../src/inventory/playerInventory.js
 import { GameExports } from '../../../src/index.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
+import { createTestContext } from '../../test-helpers.js';
 
 // Mock T_Damage
 vi.mock('../../../src/combat/damage.js', () => ({
@@ -45,6 +46,7 @@ describe('Chainfist Weapon', () => {
   let sys: EntitySystem;
   let gameMock: GameExports;
   let target: Entity;
+  let context: any;
 
   beforeEach(() => {
     target = {
@@ -55,7 +57,9 @@ describe('Chainfist Weapon', () => {
       maxs: { x: 16, y: 16, z: 32 },
     } as unknown as Entity;
 
-    gameMock = {
+    context = createTestContext();
+    sys = context.entities;
+    gameMock = sys.game = {
       trace: vi.fn(),
       time: 100,
       multicast: vi.fn(),
@@ -64,12 +68,6 @@ describe('Chainfist Weapon', () => {
           findInBox: vi.fn().mockReturnValue([target]),
       } as any
     } as unknown as GameExports;
-
-    sys = {
-      timeSeconds: 100,
-      sound: vi.fn(),
-      game: gameMock,
-    } as unknown as EntitySystem;
 
     entity = {
       origin: { x: 80, y: 0, z: 0 }, // Close to target
@@ -159,8 +157,8 @@ describe('Chainfist Weapon', () => {
           // So we set 42.
           entity.client!.gun_frame = 42;
 
-          // Mock Math.random to return low value for both checks
-          const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+          // Mock random to return low value for both checks
+          const randomSpy = vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
           Weapon_ChainFist(entity, sys);
 

@@ -25,21 +25,8 @@ export interface GameCreateOptions {
 }
 
 import { ServerCommand, EntityState } from '@quake2ts/shared';
-import { MulticastType } from './imports.js';
-export { MulticastType } from './imports.js'; // Export MulticastType
-
-export interface GameEngine {
-    trace(start: Vec3, end: Vec3): unknown;
-    sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
-    soundIndex?(sound: string): number;
-    centerprintf?(entity: Entity, message: string): void;
-    modelIndex?(model: string): number;
-    multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
-    unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
-    configstring?(index: number, value: string): void;
-    serverCommand?(cmd: string): void;
-    cvar?(name: string): { number: number; string: string; value: string } | undefined;
-}
+import { MulticastType, GameEngine } from './imports.js';
+export { MulticastType, GameEngine } from './imports.js'; // Export MulticastType
 
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
@@ -197,7 +184,7 @@ export function createGame(
       serverCommand
   };
 
-  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill);
+  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill, rng);
   (entities as any)._game = {
       // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
       // This is circular, so we must be careful.
@@ -318,10 +305,10 @@ export function createGame(
         client: player?.client,
         health: player?.health ?? 0,
         armor: player?.client?.inventory.armor?.armorCount ?? 0,
-        ammo: 0, // TODO: get current weapon ammo
+        ammo: player?.client?.currentAmmoCount ?? 0,
         blend: calculateBlend(player, frameLoop.time),
         pickupIcon,
-        damageAlpha: 0, // TODO
+        damageAlpha: player?.client?.damage_alpha ?? 0,
         damageIndicators: [],
 
         stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
@@ -403,6 +390,12 @@ export function createGame(
     player.origin = newState.origin;
     player.velocity = newState.velocity;
     player.angles = newState.viewAngles;
+
+    if (player.client) {
+        player.client.pm_flags = newState.pm_flags;
+        player.client.pm_type = newState.pm_type;
+        player.client.pm_time = newState.pm_time;
+    }
   };
 
   const gameExports: GameExports = {
@@ -550,7 +543,11 @@ export function createGame(
         levelState: levelClock.snapshot(),
         entitySystem: entities,
         rngState: rng.getState(),
-        player: player?.client?.inventory
+        player: player?.client?.inventory,
+        gameState: {
+          origin: { ...origin },
+          velocity: { ...velocity },
+        }
       });
     },
     loadSave(save: GameSaveFile): void {
@@ -562,8 +559,17 @@ export function createGame(
         player: player?.client?.inventory
       });
       // After load, sync engine state
-      origin = player ? { ...player.origin } : { ...ZERO_VEC3 };
-      velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
+      if (save.gameState && save.gameState.origin) {
+        origin = { ...(save.gameState.origin as Vec3) };
+      } else {
+        origin = player ? { ...player.origin } : { ...ZERO_VEC3 };
+      }
+
+      if (save.gameState && save.gameState.velocity) {
+        velocity = { ...(save.gameState.velocity as Vec3) };
+      } else {
+        velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
+      }
       frameLoop.reset(save.level.timeSeconds * 1000);
     }
   };

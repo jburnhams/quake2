@@ -178,13 +178,13 @@ function medic_cable_attack(self: Entity, context: EntitySystem): void {
 
   const end = self.enemy.origin;
 
-  context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, {
-      te: TempEntity.MEDIC_CABLE_ATTACK,
-      entId: self.index,
-      targetId: self.enemy.index,
-      start: start,
-      end: end
-  } as any);
+  context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity,
+      TempEntity.MEDIC_CABLE_ATTACK,
+      self.index,
+      self.enemy.index,
+      start,
+      end
+  );
 }
 
 function medic_hook_launch(self: Entity, context: EntitySystem): void {

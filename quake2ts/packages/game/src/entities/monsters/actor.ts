@@ -7,6 +7,7 @@ import { monster_fire_bullet } from './attack.js';
 import { angleVectors, vectorToYaw as vectoyaw, SoundChannel, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '@quake2ts/shared';
 import { Vec3, subtractVec3 as subVec3, normalizeVec3, scaleVec3, addVec3, copyVec3, lengthVec3 } from '@quake2ts/shared';
 import { setMovedir } from '../utils.js';
+import { EntitySystem } from '../system.js';
 
 type MutableVec3 = { -readonly [P in keyof Vec3]: Vec3[P] };
 
@@ -85,27 +86,27 @@ let actor_move_death1: MonsterMove;
 let actor_move_death2: MonsterMove;
 let actor_move_attack: MonsterMove;
 
-function m(ai: any, dist: number = 0, think?: (self: Entity, context: any) => void): MonsterFrame {
+function m(ai: any, dist: number = 0, think?: (self: Entity, context: EntitySystem) => void): MonsterFrame {
     return { ai: (s, d, c) => {
         if (think) think(s, c);
         ai(s, dist, MONSTER_TICK, c);
     }, dist };
 }
 
-function actor_stand(self: Entity, context: any) {
+function actor_stand(self: Entity, context: EntitySystem) {
     self.monsterinfo.current_move = actor_move_stand;
 
     // randomize on startup
     if (context.timeSeconds < 1.0) {
-        self.frame = FRAME_stand101 + Math.floor(Math.random() * (FRAME_stand140 - FRAME_stand101 + 1));
+        self.frame = FRAME_stand101 + context.rng.irandom(0, FRAME_stand140 - FRAME_stand101);
     }
 }
 
-function actor_walk(self: Entity, context: any) {
+function actor_walk(self: Entity, context: EntitySystem) {
     self.monsterinfo.current_move = actor_move_walk;
 }
 
-function actor_run(self: Entity, context: any) {
+function actor_run(self: Entity, context: EntitySystem) {
     if ((context.timeSeconds < self.pain_debounce_time) && (!self.enemy)) {
         if (self.movetarget)
             actor_walk(self, context);
@@ -132,7 +133,7 @@ const messages = [
 function actor_pain(self: Entity, other: Entity | null, kick: number, damage: number) {
     // context and fire_wait are not in MonsterInfo type, so we access via context property we added or passed via closure?
     // In SP_misc_actor we stored context in self.monsterinfo as 'any'.
-    const context = (self.monsterinfo as any).context;
+    const context: EntitySystem = (self.monsterinfo as any).context;
 
     // Check if context exists to avoid crashes in tests/edge cases
     if (!context) return;
@@ -143,28 +144,28 @@ function actor_pain(self: Entity, other: Entity | null, kick: number, damage: nu
     self.pain_debounce_time = context.timeSeconds + 3;
 
     // Pick random pain sound
-    const n = Math.floor(Math.random() * 3);
+    const n = context.rng.irandom(0, 2);
     let sound = sound_pain1;
     if (n === 1) sound = sound_pain2;
     if (n === 2) sound = sound_pain3;
 
     context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
 
-    const random = Math.random();
+    const randomVal = context.rng.frandom();
 
-    if (other && other.client && random < 0.4) {
+    if (other && other.client && randomVal < 0.4) {
         const v = subVec3(other.origin, self.origin);
         self.ideal_yaw = vectoyaw(v);
 
-        if (Math.random() < 0.5)
+        if (context.rng.frandom() < 0.5)
             self.monsterinfo.current_move = actor_move_flipoff;
         else
             self.monsterinfo.current_move = actor_move_taunt;
 
         // const name = actor_names[(self - g_edicts) % q_countof(actor_names)];
         // We don't have direct access to index, so use random name
-        const name = actor_names[Math.floor(Math.random() * actor_names.length)];
-        const message = messages[Math.floor(Math.random() * messages.length)];
+        const name = actor_names[context.rng.irandom(0, actor_names.length - 1)];
+        const message = messages[context.rng.irandom(0, messages.length - 1)];
 
         context.centerprintf(other, `${name}: ${message}!\n`);
         return;
@@ -178,14 +179,14 @@ function actor_pain(self: Entity, other: Entity | null, kick: number, damage: nu
         self.monsterinfo.current_move = actor_move_pain3;
 }
 
-function actor_setskin(self: Entity, context: any) {
+function actor_setskin(self: Entity, context: EntitySystem) {
     if (self.health < (self.max_health / 2))
         self.skin = 1;
     else
         self.skin = 0;
 }
 
-function actorMachineGun(self: Entity, context: any) {
+function actorMachineGun(self: Entity, context: EntitySystem) {
     // MZ2_ACTOR_MACHINEGUN_1 offset
     const flashOffset: Vec3 = { x: 0, y: 0, z: 0 }; // TODO: verify offset
 
@@ -219,7 +220,7 @@ function actorMachineGun(self: Entity, context: any) {
     monster_fire_bullet(self, start, dir, 3, 4, 0, 0, MZ2_ACTOR_MACHINEGUN_1, context); // spread default 0 for now
 }
 
-function actor_dead(self: Entity, context: any) {
+function actor_dead(self: Entity, context: EntitySystem) {
     self.mins = { x: -16, y: -16, z: -24 };
     self.maxs = { x: 16, y: 16, z: -8 };
     self.movetype = MoveType.Toss;
@@ -229,7 +230,7 @@ function actor_dead(self: Entity, context: any) {
 }
 
 function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod) {
-    const context = (self.monsterinfo as any).context;
+    const context: EntitySystem = (self.monsterinfo as any).context;
 
     // Check if context exists
     if (!context) return;
@@ -247,7 +248,7 @@ function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
         return;
 
     // regular death
-    const n = Math.floor(Math.random() * 2);
+    const n = context.rng.irandom(0, 1);
     const sound = n === 0 ? sound_die1 : sound_die2;
     context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
 
@@ -260,7 +261,7 @@ function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
         self.monsterinfo.current_move = actor_move_death2;
 }
 
-function actor_fire(self: Entity, context: any) {
+function actor_fire(self: Entity, context: EntitySystem) {
     actorMachineGun(self, context);
 
     const fire_wait = (self.monsterinfo as any).fire_wait ?? 0;
@@ -271,13 +272,13 @@ function actor_fire(self: Entity, context: any) {
         self.monsterinfo.aiflags |= AIFlags.HoldFrame;
 }
 
-function actor_attack(self: Entity, context: any) {
+function actor_attack(self: Entity, context: EntitySystem) {
     self.monsterinfo.current_move = actor_move_attack;
-    (self.monsterinfo as any).fire_wait = context.timeSeconds + 1.0 + Math.random() * 1.6;
+    (self.monsterinfo as any).fire_wait = context.timeSeconds + 1.0 + context.rng.frandom() * 1.6;
 }
 
 function actor_use(self: Entity, other: Entity | null, activator: Entity | null) {
-    const context = (self.monsterinfo as any).context;
+    const context: EntitySystem = (self.monsterinfo as any).context;
     // self->goalentity = self->movetarget = G_PickTarget(self->target);
     const target = context.pickTarget(self.target);
     self.goalentity = target;
@@ -287,7 +288,7 @@ function actor_use(self: Entity, other: Entity | null, activator: Entity | null)
         console.log(`${self.classname}: bad target ${self.target}`);
         self.target = undefined;
         self.monsterinfo.pausetime = 100000000; // HOLD_FOREVER
-        if (self.monsterinfo.stand) self.monsterinfo.stand(self, context);
+        if (self.monsterinfo.stand) self.monsterinfo.stand(self); // context passed in wrap
         return;
     }
 
@@ -296,11 +297,11 @@ function actor_use(self: Entity, other: Entity | null, activator: Entity | null)
     self.ideal_yaw = vectoyaw(v);
     // Cast to MutableVec3 to assign y
     (self.angles as MutableVec3).y = self.ideal_yaw;
-    if (self.monsterinfo.walk) self.monsterinfo.walk(self, context);
+    if (self.monsterinfo.walk) self.monsterinfo.walk(self);
     self.target = undefined;
 }
 
-function actor_stand_wrapper(self: Entity, context: any) {
+function actor_stand_wrapper(self: Entity, context: EntitySystem) {
     actor_stand(self, context);
 }
 
@@ -463,9 +464,9 @@ export function SP_misc_actor(self: Entity, context: SpawnContext) {
     self.monsterinfo = {
         ...self.monsterinfo, // Preserve default properties like last_sighting, trail_time, pausetime
         stand: (s) => actor_stand_wrapper(s, context.entities), // Wrap to match signature
-        walk: actor_walk,
-        run: actor_run,
-        attack: actor_attack,
+        walk: (s) => actor_walk(s, context.entities),
+        run: (s) => actor_run(s, context.entities),
+        attack: (s) => actor_attack(s, context.entities),
         melee: undefined,
         sight: undefined,
         setskin: (s) => actor_setskin(s, context.entities), // Wrap to match signature
@@ -501,7 +502,7 @@ const SPAWNFLAG_TARGET_ACTOR_BRUTAL = 32;
 
 function target_actor_touch(self: Entity, other: Entity | null, plane: any, surf: any) {
     if (!other) return;
-    const context = (self.monsterinfo as any).context;
+    const context: EntitySystem = (self.monsterinfo as any).context;
 
     if (other.movetarget !== self)
         return;
@@ -520,7 +521,7 @@ function target_actor_touch(self: Entity, other: Entity | null, plane: any, surf
         // We'll just broadcast to all for now as TS port might not have per-client broadcast easy here?
         // Actually context has centerprintf.
 
-        const name = actor_names[Math.floor(Math.random() * actor_names.length)];
+        const name = actor_names[context.rng.irandom(0, actor_names.length - 1)];
         // TODO: iterate clients and print
     }
 
@@ -569,8 +570,8 @@ function target_actor_touch(self: Entity, other: Entity | null, plane: any, surf
         other.goalentity = other.movetarget;
 
     if (!other.movetarget && !other.enemy) {
-        other.monsterinfo.pausetime = 100000000;
-        if (other.monsterinfo.stand) other.monsterinfo.stand(other, context);
+        other.monsterinfo.pausetime = 100000000; // HOLD_FOREVER
+        if (other.monsterinfo.stand) other.monsterinfo.stand(other);
     } else if (other.movetarget === other.goalentity && other.movetarget) {
         const v = subVec3(other.movetarget.origin, other.origin);
         other.ideal_yaw = vectoyaw(v);

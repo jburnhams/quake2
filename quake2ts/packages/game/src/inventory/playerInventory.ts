@@ -135,6 +135,11 @@ export interface PlayerClient {
     anim_time?: number;
     // Earthquakes
     quake_time?: number;
+    // Damage feedback
+    damage_alpha?: number;
+    damage_blend?: [number, number, number];
+    // Ammo cache for snapshot
+    currentAmmoCount?: number;
     // Additional fields
     landmark_name?: string | null;
     landmark_rel_pos?: Vec3;

@@ -41,11 +41,6 @@ type MutableVec3 = { -readonly [P in keyof Vec3]: Vec3[P] };
 
 const MONSTER_TICK = 0.1;
 
-// Helper to access deterministic RNG or Math.random
-const random = () => Math.random();
-const frandom = () => Math.random();
-const irandom = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -105,30 +100,30 @@ const GIB_HEALTH = -30;
 // Functions
 function gekk_check_underwater(self: Entity, context: EntitySystem): void {
     if (!(self.spawnflags & SPAWNFLAG_GEKK_NOSWIM) && (self.waterlevel >= WATER_WAIST)) {
-        land_to_water(self);
+        land_to_water(self, context);
     }
 }
 
-function gekk_stand(self: Entity): void {
+function gekk_stand(self: Entity, context: EntitySystem): void {
     if (self.waterlevel >= WATER_WAIST) {
         self.flags |= EntityFlags.Swim;
-        self.monsterinfo.current_move = gekk_move_standunderwater;
+        M_SetAnimation(self, gekk_move_standunderwater, context);
     } else {
         if (self.monsterinfo.current_move !== gekk_move_chant) {
-             self.monsterinfo.current_move = gekk_move_stand;
+             M_SetAnimation(self, gekk_move_stand, context);
         }
     }
 }
 
-function gekk_swim_loop_func(self: Entity): void {
+function gekk_swim_loop_func(self: Entity, context: EntitySystem): void {
     self.flags |= EntityFlags.Swim;
-    self.monsterinfo.current_move = gekk_move_swim_loop;
+    M_SetAnimation(self, gekk_move_swim_loop, context);
 }
 
 function gekk_hit_left(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
-    const damage = irandom(5, 10);
+    const damage = context.rng.irandom(5, 10);
     const range = 100;
     const dir = subtractVec3(self.enemy.origin, self.origin);
     const dist = lengthVec3(dir);
@@ -143,7 +138,7 @@ function gekk_hit_left(self: Entity, context: EntitySystem): void {
 
 function gekk_hit_right(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
-    const damage = irandom(5, 10);
+    const damage = context.rng.irandom(5, 10);
     const range = 100;
     const dir = subtractVec3(self.enemy.origin, self.origin);
     const dist = lengthVec3(dir);
@@ -189,7 +184,7 @@ function gekk_check_jump(self: Entity, context: EntitySystem): boolean {
 
     if (distance < 100) return false;
     if (distance > 100) {
-        if (frandom() < (self.waterlevel >= WATER_WAIST ? 0.2 : 0.9))
+        if (context.rng.frandom() < (self.waterlevel >= WATER_WAIST ? 0.2 : 0.9))
             return false;
     }
 
@@ -226,29 +221,29 @@ function gekk_checkattack(self: Entity, context: EntitySystem): boolean {
     return false;
 }
 
-function gekk_swim(self: Entity): void {
-    self.monsterinfo.current_move = gekk_move_swim_start;
+function gekk_swim(self: Entity, context: EntitySystem): void {
+    M_SetAnimation(self, gekk_move_swim_start, context);
 }
 
-function gekk_chant(self: Entity): void {
-    self.monsterinfo.current_move = gekk_move_chant;
+function gekk_chant(self: Entity, context: EntitySystem): void {
+    M_SetAnimation(self, gekk_move_chant, context);
 }
 
-function gekk_idle_loop(self: Entity): void {
-    if (frandom() > 0.75 && self.health < self.max_health) {
+function gekk_idle_loop(self: Entity, context: EntitySystem): void {
+    if (context.rng.frandom() > 0.75 && self.health < self.max_health) {
         self.monsterinfo.nextframe = 0; // FRAME_idle_01
     }
 }
 
 function gekk_step(self: Entity, context: EntitySystem): void {
-    const n = irandom(0, 2);
+    const n = context.rng.irandom(0, 2);
     const sounds = ['gek/gk_step1.wav', 'gek/gk_step2.wav', 'gek/gk_step3.wav'];
     context.engine.sound?.(self, 0, sounds[n], 1, 1, 0);
 }
 
 function gekk_search(self: Entity, context: EntitySystem): void {
     if (self.spawnflags & SPAWNFLAG_GEKK_CHANT) {
-        const r = frandom();
+        const r = context.rng.frandom();
         if (r < 0.33) context.engine.sound?.(self, 0, 'gek/gek_low.wav', 1, 1, 0);
         else if (r < 0.66) context.engine.sound?.(self, 0, 'gek/gek_mid.wav', 1, 1, 0);
         else context.engine.sound?.(self, 0, 'gek/gek_high.wav', 1, 1, 0);
@@ -256,7 +251,7 @@ function gekk_search(self: Entity, context: EntitySystem): void {
         context.engine.sound?.(self, 0, 'gek/gk_idle1.wav', 1, 1, 0);
     }
 
-    self.health += irandom(10, 20);
+    self.health += context.rng.irandom(10, 20);
     if (self.health > self.max_health) self.health = self.max_health;
 
     // setskin logic
@@ -265,30 +260,30 @@ function gekk_search(self: Entity, context: EntitySystem): void {
     else self.skin = 0;
 }
 
-function gekk_run_start(self: Entity): void {
+function gekk_run_start(self: Entity, context: EntitySystem): void {
     if (!(self.spawnflags & SPAWNFLAG_GEKK_NOSWIM) && self.waterlevel >= WATER_WAIST) {
-        self.monsterinfo.current_move = gekk_move_swim_start;
+        M_SetAnimation(self, gekk_move_swim_start, context);
     } else {
-        self.monsterinfo.current_move = gekk_move_run_start;
+        M_SetAnimation(self, gekk_move_run_start, context);
     }
 }
 
-function gekk_run(self: Entity): void {
+function gekk_run(self: Entity, context: EntitySystem): void {
     if (!(self.spawnflags & SPAWNFLAG_GEKK_NOSWIM) && self.waterlevel >= WATER_WAIST) {
-        self.monsterinfo.current_move = gekk_move_swim_start;
+        M_SetAnimation(self, gekk_move_swim_start, context);
     } else {
-        self.monsterinfo.current_move = gekk_move_run;
+        M_SetAnimation(self, gekk_move_run, context);
     }
 }
 
-function gekk_check_refire(self: Entity): void {
+function gekk_check_refire(self: Entity, context: EntitySystem): void {
     if (!self.enemy || self.enemy.health <= 0) return;
     const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
     if (dist <= RANGE_MELEE) {
         if (self.frame === 114) { // FRAME_clawatk3_09
-            self.monsterinfo.current_move = gekk_move_attack2;
+            M_SetAnimation(self, gekk_move_attack2, context);
         } else if (self.frame === 123) { // FRAME_clawatk5_09
-             self.monsterinfo.current_move = gekk_move_attack1;
+             M_SetAnimation(self, gekk_move_attack1, context);
         }
     }
 }
@@ -318,15 +313,15 @@ function loogie_fire(self: Entity, context: EntitySystem): void {
     context.engine.sound?.(self, 0, 'gek/gk_atck4.wav', 1, 1, 0);
 }
 
-function reloogie(self: Entity): void {
-    if (frandom() > 0.8 && self.health < self.max_health) {
-        self.monsterinfo.current_move = gekk_move_idle2;
+function reloogie(self: Entity, context: EntitySystem): void {
+    if (context.rng.frandom() > 0.8 && self.health < self.max_health) {
+        M_SetAnimation(self, gekk_move_idle2, context);
         return;
     }
     if (self.enemy && self.enemy.health > 0) {
          const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
-         if (frandom() > 0.7 && dist <= RANGE_NEAR) {
-              self.monsterinfo.current_move = gekk_move_spit;
+         if (context.rng.frandom() > 0.7 && dist <= RANGE_NEAR) {
+              M_SetAnimation(self, gekk_move_spit, context);
          }
     }
 }
@@ -361,7 +356,7 @@ function gekk_check_landing(self: Entity, context: EntitySystem): void {
     }
 }
 
-function gekk_stop_skid(self: Entity): void {
+function gekk_stop_skid(self: Entity, context: EntitySystem): void {
     if (self.groundentity) self.velocity = ZERO_VEC3;
 }
 
@@ -369,7 +364,7 @@ function gekk_preattack(self: Entity, context: EntitySystem): void {
     // sound
 }
 
-function gekk_dead(self: Entity): void {
+function gekk_dead(self: Entity, context: EntitySystem): void {
     self.mins = { x: -16, y: -16, z: -24 };
     self.maxs = { x: 16, y: 16, z: -8 };
     self.nextthink = -1;
@@ -381,27 +376,27 @@ function gekk_gibfest(self: Entity, context: EntitySystem): void {
 }
 
 function isgibfest(self: Entity, context: EntitySystem): void {
-    if (frandom() > 0.9) gekk_gibfest(self, context);
+    if (context.rng.frandom() > 0.9) gekk_gibfest(self, context);
 }
 
-function gekk_shrink(self: Entity): void {
+function gekk_shrink(self: Entity, context: EntitySystem): void {
     (self.maxs as MutableVec3).z = 0;
 }
 
-function water_to_land(self: Entity): void {
+function water_to_land(self: Entity, context: EntitySystem): void {
     self.flags &= ~EntityFlags.Swim;
     self.yaw_speed = 20;
     self.viewheight = 25;
-    self.monsterinfo.current_move = gekk_move_leapatk2;
+    M_SetAnimation(self, gekk_move_leapatk2, context);
     self.mins = { x: -18, y: -18, z: -24 };
     self.maxs = { x: 18, y: 18, z: 24 };
 }
 
-function land_to_water(self: Entity): void {
+function land_to_water(self: Entity, context: EntitySystem): void {
     self.flags |= EntityFlags.Swim;
     self.yaw_speed = 10;
     self.viewheight = 10;
-    self.monsterinfo.current_move = gekk_move_swim_start;
+    M_SetAnimation(self, gekk_move_swim_start, context);
     self.mins = { x: -18, y: -18, z: -24 };
     self.maxs = { x: 18, y: 18, z: 16 };
 }
@@ -470,7 +465,7 @@ gekk_move_idle2 = {
     firstframe: 71,
     lastframe: 102,
     frames: frames_idle2,
-    endfunc: (s) => M_SetAnimation(s, gekk_move_stand) // or face
+    endfunc: (s, ctx) => M_SetAnimation(s, gekk_move_stand, ctx) // or face
 };
 
 gekk_move_chant = {
@@ -673,10 +668,10 @@ function gekk_pain(self: Entity, other: Entity | null, kick: number, damage: num
          if (!(self.flags & EntityFlags.Swim)) {
               self.flags |= EntityFlags.Swim;
          }
-         self.monsterinfo.current_move = gekk_move_pain;
+         M_SetAnimation(self, gekk_move_pain, context);
     } else {
-        if (random() > 0.5) self.monsterinfo.current_move = gekk_move_pain1;
-        else self.monsterinfo.current_move = gekk_move_pain2;
+        if (context.rng.frandom() > 0.5) M_SetAnimation(self, gekk_move_pain1, context);
+        else M_SetAnimation(self, gekk_move_pain2, context);
     }
 }
 
@@ -731,13 +726,13 @@ function gekk_die(self: Entity, inflictor: Entity | null, attacker: Entity | nul
     self.takedamage = true;
 
     if (self.waterlevel >= WATER_WAIST) {
-        gekk_shrink(self);
-        self.monsterinfo.current_move = gekk_move_wdeath;
+        gekk_shrink(self, context);
+        M_SetAnimation(self, gekk_move_wdeath, context);
     } else {
-        const r = frandom();
-        if (r > 0.66) self.monsterinfo.current_move = gekk_move_death1;
-        else if (r > 0.33) self.monsterinfo.current_move = gekk_move_death3;
-        else self.monsterinfo.current_move = gekk_move_death4;
+        const r = context.rng.frandom();
+        if (r > 0.66) M_SetAnimation(self, gekk_move_death1, context);
+        else if (r > 0.33) M_SetAnimation(self, gekk_move_death3, context);
+        else M_SetAnimation(self, gekk_move_death4, context);
     }
 }
 
@@ -759,19 +754,19 @@ export function SP_monster_gekk(self: Entity, context: SpawnContext): void {
     self.pain = (e, o, k, d) => gekk_pain(e, o, k, d, context.entities);
     self.die = (e, i, a, d, p, m) => gekk_die(e, i, a, d, p, m, context.entities);
 
-    self.monsterinfo.stand = gekk_stand;
-    self.monsterinfo.walk = (s) => M_SetAnimation(s, gekk_move_walk);
-    self.monsterinfo.run = gekk_run_start;
+    self.monsterinfo.stand = (s) => gekk_stand(s, context.entities);
+    self.monsterinfo.walk = (s) => M_SetAnimation(s, gekk_move_walk, context.entities);
+    self.monsterinfo.run = (s) => gekk_run_start(s, context.entities);
     // self.monsterinfo.dodge = gekk_dodge;
     self.monsterinfo.attack = (s) => gekk_attack(s, context.entities);
-    self.monsterinfo.melee = gekk_melee;
+    self.monsterinfo.melee = (s) => gekk_melee(s, context.entities);
     self.monsterinfo.sight = (s, o) => context.entities.sound?.(s, 0, 'gek/gk_sght1.wav', 1, 1, 0);
     self.monsterinfo.search = (s) => gekk_search(s, context.entities);
     self.monsterinfo.idle = (s) => {
          if (s.spawnflags & SPAWNFLAG_GEKK_NOSWIM || s.waterlevel < WATER_WAIST) {
-             M_SetAnimation(s, gekk_move_idle);
+             M_SetAnimation(s, gekk_move_idle, context.entities);
          } else {
-             M_SetAnimation(s, gekk_move_swim_start);
+             M_SetAnimation(s, gekk_move_swim_start, context.entities);
          }
     };
     self.monsterinfo.checkattack = (s) => gekk_checkattack(s, context.entities);
@@ -780,17 +775,17 @@ export function SP_monster_gekk(self: Entity, context: SpawnContext): void {
 
     context.entities.linkentity(self);
 
-    M_SetAnimation(self, gekk_move_stand);
+    M_SetAnimation(self, gekk_move_stand, context.entities);
 
     self.think = monster_think;
     self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
 
     if (self.spawnflags & SPAWNFLAG_GEKK_CHANT) {
-        M_SetAnimation(self, gekk_move_chant);
+        M_SetAnimation(self, gekk_move_chant, context.entities);
     }
 }
 
-function M_SetAnimation(self: Entity, move: MonsterMove): void {
+function M_SetAnimation(self: Entity, move: MonsterMove, context: EntitySystem): void {
     self.monsterinfo.current_move = move;
 }
 
@@ -804,36 +799,36 @@ function gekk_attack(self: Entity, context: EntitySystem): void {
 
         self.flags &= ~EntityFlags.Swim;
         // self.monsterinfo.aiflags &= ~AI_ALTERNATE_FLY;
-        M_SetAnimation(self, gekk_move_leapatk);
+        M_SetAnimation(self, gekk_move_leapatk, context);
         // self.monsterinfo.nextframe = FRAME_leapatk_05; // 144
         self.frame = 144;
     } else {
         if (r >= RANGE_MID) {
-            if (frandom() > 0.5) {
-                M_SetAnimation(self, gekk_move_spit);
+            if (context.rng.frandom() > 0.5) {
+                M_SetAnimation(self, gekk_move_spit, context);
             } else {
-                M_SetAnimation(self, gekk_move_run_start);
+                M_SetAnimation(self, gekk_move_run_start, context);
                 // self.monsterinfo.attack_finished = level.time + 2;
             }
-        } else if (frandom() > 0.7) {
-            M_SetAnimation(self, gekk_move_spit);
+        } else if (context.rng.frandom() > 0.7) {
+            M_SetAnimation(self, gekk_move_spit, context);
         } else {
-            if ((self.spawnflags & SPAWNFLAG_GEKK_NOJUMPING) || frandom() > 0.7) {
-                M_SetAnimation(self, gekk_move_run_start);
+            if ((self.spawnflags & SPAWNFLAG_GEKK_NOJUMPING) || context.rng.frandom() > 0.7) {
+                M_SetAnimation(self, gekk_move_run_start, context);
                 // self.monsterinfo.attack_finished = level.time + 1.4;
             } else {
-                M_SetAnimation(self, gekk_move_leapatk);
+                M_SetAnimation(self, gekk_move_leapatk, context);
             }
         }
     }
 }
 
-function gekk_melee(self: Entity): void {
+function gekk_melee(self: Entity, context: EntitySystem): void {
     if (self.waterlevel >= WATER_WAIST) {
-        M_SetAnimation(self, gekk_move_attack);
+        M_SetAnimation(self, gekk_move_attack, context);
     } else {
-        if (frandom() > 0.66) M_SetAnimation(self, gekk_move_attack1);
-        else M_SetAnimation(self, gekk_move_attack2);
+        if (context.rng.frandom() > 0.66) M_SetAnimation(self, gekk_move_attack1, context);
+        else M_SetAnimation(self, gekk_move_attack2, context);
     }
 }
 

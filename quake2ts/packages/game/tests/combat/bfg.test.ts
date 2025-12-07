@@ -129,4 +129,89 @@ describe('BFG10K', () => {
 
         expect(createBfgBall).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 200, 400, 200);
     });
+
+    it('should fire in-flight lasers at nearby enemies every 100ms', () => {
+        const trace = vi.fn();
+        const pointcontents = vi.fn();
+        const multicast = vi.fn();
+        const unicast = vi.fn();
+        // Spy on T_Damage to verify lasers hitting
+        const T_DamageSpy = vi.spyOn(damage, 'T_Damage');
+
+        const engine = {
+            trace: vi.fn(),
+            sound: vi.fn(),
+            centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
+        };
+        const game = createGame(
+            { trace, pointcontents, linkentity: vi.fn(), multicast, unicast },
+            engine,
+            { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true }
+        );
+
+        const player = game.entities.spawn();
+        player.classname = 'player';
+        player.origin = { x: 0, y: 0, z: 0 };
+        game.entities.finalizeSpawn(player);
+
+        // Create a target within 256 units
+        const target = game.entities.spawn();
+        target.classname = 'monster_gladiator';
+        target.origin = { x: 100, y: 0, z: 0 };
+        target.takedamage = true;
+        target.svflags = 4; // ServerFlags.Monster = 1 << 2 = 4
+        target.absmin = { x: 90, y: -10, z: -10 };
+        target.absmax = { x: 110, y: 10, z: 10 };
+
+        game.entities.finalizeSpawn(target);
+
+        // Create BFG ball
+        projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 200);
+        const bfgBall = game.entities.find(e => e.classname === 'bfg blast')!;
+
+        // Initial think scheduled?
+        expect(bfgBall.think).toBeDefined();
+
+        // Spy on findByRadius to return our target
+        const findByRadiusSpy = vi.spyOn(game.entities, 'findByRadius');
+        findByRadiusSpy.mockReturnValue([target]);
+
+        // Trace for visibility (LOS check)
+        // bfgThink calls trace(self.origin, ..., point, ...)
+        // trace.mockReturnValue({ fraction: 1.0 });
+
+        // Also fireBfgPiercingLaser calls trace twice.
+        // 1. Pierce trace -> Needs to HIT target
+        // 2. Final trace for effect
+
+        trace
+            .mockReturnValueOnce({ fraction: 1.0 }) // LOS Check: Clear
+            .mockReturnValueOnce({ fraction: 0.1, ent: target, endpos: target.origin }) // Laser Trace: Hit Target
+            .mockReturnValueOnce({ fraction: 1.0 }) // Laser Trace Next: Miss (stop piercing)
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 200, y: 0, z: 0 } }); // Effect Trace
+
+        // Execute think
+        const thinkFn = bfgBall.think!;
+        thinkFn(bfgBall, game.entities);
+
+        // Should have damaged the target (laser hit)
+        expect(T_DamageSpy).toHaveBeenCalledWith(
+            target,
+            bfgBall,
+            player,
+            expect.anything(), // dir
+            expect.anything(), // point
+            expect.anything(), // normal
+            5, // damage (DM=5)
+            1, // kick
+            expect.anything(),
+            DamageMod.BFG_LASER,
+            expect.anything(),
+            expect.anything()
+        );
+
+        // Should reschedule for 100ms later
+        expect(bfgBall.nextthink).toBeCloseTo(game.entities.timeSeconds + 0.1);
+    });
 });

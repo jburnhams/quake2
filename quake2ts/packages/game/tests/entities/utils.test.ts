@@ -60,10 +60,15 @@ describe('touchTriggers', () => {
 
 describe('velocityForDamage', () => {
     it('should return a vector scaled by damage and kick', () => {
-        const v = velocityForDamage(10, 5);
+        const mockRng = {
+            crandom: vi.fn().mockReturnValue(0.5)
+        };
+
+        const v = velocityForDamage(10, 5, mockRng);
         // length should be approx 50
         const len = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
         expect(len).toBeCloseTo(50);
+        expect(mockRng.crandom).toHaveBeenCalledTimes(3);
     });
 });
 

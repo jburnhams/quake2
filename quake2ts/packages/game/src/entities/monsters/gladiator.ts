@@ -22,6 +22,7 @@ import { DamageMod } from '../../combat/damageMods.js';
 import { throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront } from '../../ai/perception.js';
 import { monster_fire_railgun } from './attack.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -55,15 +56,15 @@ let attack_gun_move: MonsterMove;
 let pain_move: MonsterMove;
 let death_move: MonsterMove;
 
-function gladiator_stand(self: Entity): void {
+function gladiator_stand(self: Entity, context: EntitySystem): void {
   self.monsterinfo.current_move = stand_move;
 }
 
-function gladiator_walk(self: Entity): void {
+function gladiator_walk(self: Entity, context: EntitySystem): void {
   self.monsterinfo.current_move = walk_move;
 }
 
-function gladiator_run(self: Entity): void {
+function gladiator_run(self: Entity, context: EntitySystem): void {
   if (self.enemy && self.enemy.health > 0) {
     self.monsterinfo.current_move = run_move;
   } else {
@@ -78,7 +79,7 @@ function classifyRange(distance: number): RangeCategory {
   return RangeCategory.Far;
 }
 
-function gladiator_attack(self: Entity): void {
+function gladiator_attack(self: Entity, context: EntitySystem): void {
   if (!self.enemy) return;
 
   const dist = rangeTo(self, self.enemy);
@@ -129,15 +130,15 @@ function gladiator_fire_railgun(self: Entity, context: any): void {
 }
 
 
-function gladiator_pain(self: Entity): void {
+function gladiator_pain(self: Entity, context: EntitySystem): void {
   self.monsterinfo.current_move = pain_move;
 }
 
-function gladiator_die(self: Entity): void {
+function gladiator_die(self: Entity, context: EntitySystem): void {
   self.monsterinfo.current_move = death_move;
 }
 
-function gladiator_dead(self: Entity): void {
+function gladiator_dead(self: Entity, context: EntitySystem): void {
   self.monsterinfo.nextframe = death_move.lastframe;
   self.nextthink = -1;
 }
@@ -189,7 +190,7 @@ attack_melee_move = {
     firstframe: 90,
     lastframe: 99,
     frames: attack_melee_frames,
-    endfunc: gladiator_run
+    endfunc: gladiator_run,
 };
 
 const attack_gun_frames: MonsterFrame[] = Array.from({ length: 12 }, (_, i) => ({
@@ -202,7 +203,7 @@ attack_gun_move = {
     firstframe: 100,
     lastframe: 111,
     frames: attack_gun_frames,
-    endfunc: gladiator_run
+    endfunc: gladiator_run,
 };
 
 const pain_frames: MonsterFrame[] = Array.from({ length: 6 }, () => ({
@@ -244,7 +245,7 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
   self.viewheight = 40; // Gladiator viewheight
 
   self.pain = (self, other, kick, damage) => {
-    if (Math.random() < 0.5) {
+    if (context.entities.rng.frandom() < 0.5) {
         context.entities.sound?.(self, 0, 'gladiator/pain.wav', 1, 1, 0);
     } else {
         context.entities.sound?.(self, 0, 'gladiator/gldpain2.wav', 1, 1, 0);
@@ -270,17 +271,17 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
         return;
     }
 
-    gladiator_die(self);
+    gladiator_die(self, context.entities);
   };
 
-  self.monsterinfo.stand = gladiator_stand;
-  self.monsterinfo.walk = gladiator_walk;
-  self.monsterinfo.run = gladiator_run;
-  self.monsterinfo.attack = gladiator_attack;
+  self.monsterinfo.stand = (s) => gladiator_stand(s, context.entities);
+  self.monsterinfo.walk = (s) => gladiator_walk(s, context.entities);
+  self.monsterinfo.run = (s) => gladiator_run(s, context.entities);
+  self.monsterinfo.attack = (s) => gladiator_attack(s, context.entities);
 
   self.think = monster_think;
 
-  gladiator_stand(self);
+  gladiator_stand(self, context.entities);
   self.nextthink = self.timestamp + MONSTER_TICK;
 }
 

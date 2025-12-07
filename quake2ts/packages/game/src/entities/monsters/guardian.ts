@@ -282,9 +282,9 @@ function guardian_fire_blaster_func(self: Entity, context: EntitySystem): void {
     const target: MutableVec3 = { ...self.enemy.origin };
     target.z += self.enemy.viewheight || 0;
 
-    target.x += (Math.random() * 2 - 1) * 5;
-    target.y += (Math.random() * 2 - 1) * 5;
-    target.z += (Math.random() * 2 - 1) * 5;
+    target.x += context.rng.crandom() * 5;
+    target.y += context.rng.crandom() * 5;
+    target.z += context.rng.crandom() * 5;
 
     const dir = normalizeVec3(subtractVec3(target, start));
 
@@ -338,7 +338,7 @@ guardian_move_atk1_spin_loop = {
 
 function guardian_atk1(self: Entity, context: EntitySystem): void {
     M_SetAnimation(self, guardian_move_atk1_spin, context);
-    self.timestamp = context.timeSeconds + 0.65 + Math.random() * 1.5;
+    self.timestamp = context.timeSeconds + 0.65 + context.rng.frandom() * 1.5;
 }
 
 const guardian_frames_atk1_in: MonsterFrame[] = [
@@ -402,9 +402,9 @@ function guardian_fire_update(laser: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     const target: MutableVec3 = addVec3(self.enemy.origin, self.enemy.mins);
-    target.x += Math.random() * self.enemy.size.x;
-    target.y += Math.random() * self.enemy.size.y;
-    target.z += Math.random() * self.enemy.size.z;
+    target.x += context.rng.frandom() * self.enemy.size.x;
+    target.y += context.rng.frandom() * self.enemy.size.y;
+    target.z += context.rng.frandom() * self.enemy.size.z;
 
     const dir = normalizeVec3(subtractVec3(target, start));
 
@@ -514,9 +514,9 @@ function guardian_attack(self: Entity, context: EntitySystem): void {
 
 function guardian_explode(self: Entity, context: EntitySystem): void {
     const org = {
-        x: self.origin.x + self.mins.x + Math.random() * self.size.x,
-        y: self.origin.y + self.mins.y + Math.random() * self.size.y,
-        z: self.origin.z + self.mins.z + Math.random() * self.size.z,
+        x: self.origin.x + self.mins.x + context.rng.frandom() * self.size.x,
+        y: self.origin.y + self.mins.y + context.rng.frandom() * self.size.y,
+        z: self.origin.z + self.mins.z + context.rng.frandom() * self.size.z,
     };
     context.multicast(self.origin, MulticastType.All, ServerCommand.temp_entity, TempEntity.EXPLOSION1_BIG, org);
 }
@@ -612,10 +612,10 @@ export function SP_monster_guardian(self: Entity, context: SpawnContext): void {
       M_SetAnimation(ent, guardian_move_death, context.entities);
   };
 
-  self.monsterinfo.stand = guardian_stand;
-  self.monsterinfo.walk = guardian_walk;
-  self.monsterinfo.run = guardian_run;
-  self.monsterinfo.attack = guardian_attack;
+  self.monsterinfo.stand = (s) => guardian_stand(s, context.entities);
+  self.monsterinfo.walk = (s) => guardian_walk(s, context.entities);
+  self.monsterinfo.run = (s) => guardian_run(s, context.entities);
+  self.monsterinfo.attack = (s) => guardian_attack(s, context.entities);
   self.monsterinfo.melee_debounce_time = 0;
 
   context.entities.linkentity(self);

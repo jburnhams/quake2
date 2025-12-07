@@ -1,31 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_gekk } from '../../../src/entities/monsters/gekk.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-
-// Mock dependencies
-const mockSound = vi.fn();
-const mockLinkEntity = vi.fn();
-const mockFree = vi.fn();
-
-const mockContext: any = {
-  entities: {
-    engine: {
-      sound: mockSound,
-    },
-    sound: mockSound,
-    linkentity: mockLinkEntity,
-    free: mockFree,
-    timeSeconds: 10,
-    checkGround: vi.fn(),
-    trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-  },
-  health_multiplier: 1,
-};
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_gekk', () => {
   let entity: Entity;
+  let mockContext: any;
 
   beforeEach(() => {
     entity = new Entity();
@@ -33,6 +14,7 @@ describe('monster_gekk', () => {
     entity.origin = { ...ZERO_VEC3 };
     entity.angles = { ...ZERO_VEC3 };
     vi.clearAllMocks();
+    mockContext = createTestContext();
   });
 
   it('should spawn with correct properties', () => {
@@ -60,7 +42,7 @@ describe('monster_gekk', () => {
     SP_monster_gekk(entity, mockContext);
     if (entity.monsterinfo.sight) {
         entity.monsterinfo.sight(entity, new Entity());
-        expect(mockSound).toHaveBeenCalledWith(entity, 0, 'gek/gk_sght1.wav', 1, 1, 0);
+        expect(mockContext.entities.engine.sound).toHaveBeenCalledWith(entity, 0, 'gek/gk_sght1.wav', 1, 1, 0);
     }
   });
 

@@ -2,11 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_fixbot } from '../../../src/entities/monsters/fixbot.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-
-// Mock dependencies
-const mockSound = vi.fn();
-const mockLinkEntity = vi.fn();
-const mockFree = vi.fn();
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_fixbot', () => {
   let entity: Entity;
@@ -19,35 +15,7 @@ describe('monster_fixbot', () => {
     entity.angles = { ...ZERO_VEC3 };
     vi.clearAllMocks();
 
-    mockContext = {
-      entities: {
-        engine: {
-          sound: mockSound,
-        },
-        sound: mockSound,
-        linkentity: mockLinkEntity,
-        free: mockFree,
-        spawn: vi.fn().mockImplementation(() => {
-            return {
-                origin: { x: 0, y: 0, z: 0 },
-                velocity: { x: 0, y: 0, z: 0 },
-                angles: { x: 0, y: 0, z: 0 },
-                size: { x: 0, y: 0, z: 0 },
-                mins: { x: 0, y: 0, z: 0 },
-                maxs: { x: 0, y: 0, z: 0 },
-                absmin: { x: 0, y: 0, z: 0 },
-                absmax: { x: 0, y: 0, z: 0 },
-            };
-        }),
-        timeSeconds: 10,
-        checkGround: vi.fn(),
-        trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-        modelIndex: vi.fn().mockReturnValue(0),
-        scheduleThink: vi.fn(),
-        finalizeSpawn: vi.fn(),
-      },
-      health_multiplier: 1,
-    };
+    mockContext = createTestContext();
   });
 
   it('should spawn with correct properties', () => {
@@ -72,7 +40,7 @@ describe('monster_fixbot', () => {
       expect(entity.pain).toBeDefined();
       if (entity.pain) {
           entity.pain(entity, null, 0, 10);
-          expect(mockSound).toHaveBeenCalledWith(entity, 0, 'flyer/flypain1.wav', 1, 1, 0);
+          expect(mockContext.entities.engine.sound).toHaveBeenCalledWith(entity, 0, 'flyer/flypain1.wav', 1, 1, 0);
       }
   });
 
@@ -84,8 +52,8 @@ describe('monster_fixbot', () => {
       // We can check sound and free call
       if (entity.die) {
           entity.die(entity, null, null, 100, ZERO_VEC3, 0 as any);
-          expect(mockSound).toHaveBeenCalledWith(entity, 0, 'flyer/flydeth1.wav', 1, 1, 0);
-          expect(mockFree).toHaveBeenCalledWith(entity);
+          expect(mockContext.entities.engine.sound).toHaveBeenCalledWith(entity, 0, 'flyer/flydeth1.wav', 1, 1, 0);
+          expect(mockContext.entities.free).toHaveBeenCalledWith(entity);
       }
   });
 

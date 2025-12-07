@@ -4,11 +4,11 @@
 
 import { Entity, MoveType, Solid } from './entity.js';
 import { EntitySystem } from './system.js';
-import { createRandomGenerator, Vec3, scaleVec3 } from '@quake2ts/shared';
+import { Vec3, TempEntity, ServerCommand } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 import { EntityEffects } from './enums.js';
-
-const random = createRandomGenerator();
+import { MulticastType } from '../imports.js';
+import { velocityForDamage } from './utils.js';
 
 export const GIB_ORGANIC = 0;
 export const GIB_METALLIC = 1;
@@ -23,23 +23,6 @@ export interface GibDef {
     count: number;
     model: string;
     flags?: number; // GIB_METALLIC | GIB_DEBRIS
-}
-
-function velocityForDamage(damage: number): Vec3 {
-    let x = 100.0 * random.crandom();
-    let y = 100.0 * random.crandom();
-    let z = 200.0 + 100.0 * random.frandom();
-
-    if (damage < 50) {
-        x *= 0.7;
-        y *= 0.7;
-        z *= 0.7;
-    } else {
-        x *= 1.2;
-        y *= 1.2;
-        z *= 1.2;
-    }
-    return { x, y, z };
 }
 
 function clipGibVelocity(ent: Entity) {
@@ -74,9 +57,9 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
     gib.classname = 'gib';
 
     gib.origin = {
-        x: origin.x + random.crandom() * 20,
-        y: origin.y + random.crandom() * 20,
-        z: origin.z + random.crandom() * 20
+        x: origin.x + sys.rng.crandom() * 20,
+        y: origin.y + sys.rng.crandom() * 20,
+        z: origin.z + sys.rng.crandom() * 20
     };
 
     const modelName = model || 'models/objects/gibs/sm_meat/tris.md2';
@@ -115,26 +98,61 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
         gib.effects |= EntityEffects.Gib;
     }
 
-    const vd = velocityForDamage(damage);
+    // Use sys.rng for velocityForDamage in utils.ts
+    // The previous local velocityForDamage had specific logic:
+    // x *= 100 * crandom, y *= 100 * crandom, z = 200 + 100 * frandom
+    // utils.velocityForDamage uses normalized vector * damage * kick.
+    // The original code was:
+    // velocityForDamage(damage) {
+    //    x = 100 * crandom; y = 100 * crandom; z = 200 + 100 * frandom;
+    //    if (damage < 50) scale 0.7 else scale 1.2
+    // }
+    //
+    // I should implement that logic inline here or adapt, since utils.velocityForDamage is generic "kick".
+    // Actually, `velocityForDamage` in utils is for "damage push".
+    // The logic in `gibs.ts` was specific to gibs scattering.
+
+    // Let's reimplement the gib specific scattering here using sys.rng,
+    // instead of using utils.velocityForDamage which seems to be for player knockback?
+    // Wait, the `velocityForDamage` in utils calls `normalizeVec3`. The one in gibs didn't.
+    // So I should inline the logic using sys.rng.
+
+    let vx = 100.0 * sys.rng.crandom();
+    let vy = 100.0 * sys.rng.crandom();
+    let vz = 200.0 + 100.0 * sys.rng.frandom();
+
+    if (damage < 50) {
+        vx *= 0.7;
+        vy *= 0.7;
+        vz *= 0.7;
+    } else {
+        vx *= 1.2;
+        vy *= 1.2;
+        vz *= 1.2;
+    }
 
     gib.velocity = {
-        x: vd.x * vscale,
-        y: vd.y * vscale,
-        z: vd.z * vscale
+        x: vx * vscale,
+        y: vy * vscale,
+        z: vz * vscale
     };
 
     clipGibVelocity(gib);
 
     gib.avelocity = {
-        x: random.frandom() * 600,
-        y: random.frandom() * 600,
-        z: random.frandom() * 600
+        x: sys.rng.frandom() * 600,
+        y: sys.rng.frandom() * 600,
+        z: sys.rng.frandom() * 600
     };
+
+    if (type === GIB_ORGANIC && mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
+        sys.multicast(gib.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLOOD, gib.origin, gib.velocity);
+    }
 
     gib.think = (self: Entity) => {
         sys.free(self);
     };
-    sys.scheduleThink(gib, sys.timeSeconds + 10 + random.frandom() * 10);
+    sys.scheduleThink(gib, sys.timeSeconds + 10 + sys.rng.frandom() * 10);
 
     sys.finalizeSpawn(gib);
     return gib;
@@ -148,7 +166,7 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
     // Randomize between skull (skin 0) and player head (skin 1)
     // irandom(maxExclusive) -> irandom(2) returns 0 or 1.
     let gibname: string;
-    if (random.irandom(2) === 1) {
+    if (sys.rng.irandom(0, 1) === 1) {
         gibname = "models/objects/gibs/head2/tris.md2";
         head.skin = 1; // second skin is player
     } else {
@@ -187,22 +205,35 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
         head.effects |= EntityEffects.Gib;
     }
 
-    const vd = velocityForDamage(damage);
+    // Inline velocity logic again
+    let vx = 100.0 * sys.rng.crandom();
+    let vy = 100.0 * sys.rng.crandom();
+    let vz = 200.0 + 100.0 * sys.rng.frandom();
+
+    if (damage < 50) {
+        vx *= 0.7;
+        vy *= 0.7;
+        vz *= 0.7;
+    } else {
+        vx *= 1.2;
+        vy *= 1.2;
+        vz *= 1.2;
+    }
 
     head.velocity = {
-        x: vd.x * vscale,
-        y: vd.y * vscale,
-        z: vd.z * vscale
+        x: vx * vscale,
+        y: vy * vscale,
+        z: vz * vscale
     };
 
     clipGibVelocity(head);
 
-    head.avelocity = { x: 0, y: random.crandom() * 600, z: 0 };
+    head.avelocity = { x: 0, y: sys.rng.crandom() * 600, z: 0 };
 
     head.think = (self: Entity) => {
         sys.free(self);
     };
-    sys.scheduleThink(head, sys.timeSeconds + 10 + random.frandom() * 10);
+    sys.scheduleThink(head, sys.timeSeconds + 10 + sys.rng.frandom() * 10);
 
     sys.finalizeSpawn(head);
     return head;

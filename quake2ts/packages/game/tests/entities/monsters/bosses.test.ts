@@ -4,6 +4,7 @@ import { SP_monster_boss2 } from '../../../src/entities/monsters/boss2.js';
 import { SP_monster_floater } from '../../../src/entities/monsters/floater.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
+import { createTestContext } from '../../test-helpers.js';
 
 describe('Boss/Monster Spawns', () => {
   let entity: Entity;
@@ -11,28 +12,7 @@ describe('Boss/Monster Spawns', () => {
 
   beforeEach(() => {
     entity = new Entity(1);
-    const engine = {
-        sound: vi.fn(),
-        modelIndex: vi.fn(() => 0),
-    };
-    context = {
-      keyValues: {},
-      entities: {
-        spawn: () => new Entity(2),
-        free: vi.fn(),
-        finalizeSpawn: vi.fn(),
-        freeImmediate: vi.fn(),
-        timeSeconds: 10,
-        modelIndex: vi.fn(() => 0),
-        scheduleThink: vi.fn(),
-        linkentity: vi.fn(),
-        engine, // Attach mocked engine
-        sound: engine.sound,
-      } as any,
-      health_multiplier: 1,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
+    context = createTestContext();
     entity.timestamp = 10;
   });
 

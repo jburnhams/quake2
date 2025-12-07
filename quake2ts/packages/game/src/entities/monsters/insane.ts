@@ -3,6 +3,7 @@ import { monster_think, ai_stand, ai_walk, ai_run, ai_move, AIFlags } from '../.
 import { throwGibs } from '../gibs.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { DamageMod } from '../../combat/damageMods.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -84,100 +85,104 @@ const sound_screams = [
     'insane/insane10.wav'
 ];
 
-function insane_fist(self: Entity, context: any) {
+function insane_fist(self: Entity, context: EntitySystem) {
     context.sound(self, 2, sound_fist, 1, 1, 0);
 }
 
-function insane_shake(self: Entity, context: any) {
+function insane_shake(self: Entity, context: EntitySystem) {
     if ((self.spawnflags & SPAWNFLAG_INSANE_QUIET) === 0) {
         context.sound(self, 2, sound_shake, 1, 1, 0);
     }
 }
 
-function insane_moan(self: Entity, context: any) {
+function insane_moan(self: Entity, context: EntitySystem) {
     if (self.spawnflags & SPAWNFLAG_INSANE_QUIET) return;
 
     if ((self.monsterinfo.attack_finished ?? 0) < context.timeSeconds) {
         context.sound(self, 2, sound_moan, 1, 1, 0);
-        self.monsterinfo.attack_finished = context.timeSeconds + 1 + Math.random() * 2;
+        self.monsterinfo.attack_finished = context.timeSeconds + 1 + context.rng.frandom() * 2;
     }
 }
 
-function insane_scream(self: Entity, context: any) {
+function insane_scream(self: Entity, context: EntitySystem) {
     if (self.spawnflags & SPAWNFLAG_INSANE_QUIET) return;
 
     if ((self.monsterinfo.attack_finished ?? 0) < context.timeSeconds) {
-        const sound = sound_screams[Math.floor(Math.random() * sound_screams.length)];
+        const sound = sound_screams[context.rng.irandom(0, sound_screams.length - 1)];
         context.sound(self, 2, sound, 1, 1, 0);
-        self.monsterinfo.attack_finished = context.timeSeconds + 1 + Math.random() * 2;
+        self.monsterinfo.attack_finished = context.timeSeconds + 1 + context.rng.frandom() * 2;
     }
 }
 
-function monster_footstep(self: Entity, context: any) {
+function monster_footstep(self: Entity, context: EntitySystem) {
     // Footsteps
 }
 
+function M_SetAnimation(self: Entity, move: MonsterMove, context: EntitySystem): void {
+    self.monsterinfo.current_move = move;
+}
+
 // Logic functions
-function insane_checkdown(self: Entity, context: any) {
+function insane_checkdown(self: Entity, context: EntitySystem) {
     if (self.spawnflags & SPAWNFLAG_INSANE_ALWAYS_STAND) return;
-    if (Math.random() < 0.3) {
-        if (Math.random() < 0.5) {
-            self.monsterinfo.current_move = insane_move_uptodown;
+    if (context.rng.frandom() < 0.3) {
+        if (context.rng.frandom() < 0.5) {
+            M_SetAnimation(self, insane_move_uptodown, context);
         } else {
-            self.monsterinfo.current_move = insane_move_jumpdown;
+            M_SetAnimation(self, insane_move_jumpdown, context);
         }
     }
 }
 
-function insane_checkup(self: Entity, context: any) {
+function insane_checkup(self: Entity, context: EntitySystem) {
     if ((self.spawnflags & SPAWNFLAG_INSANE_CRAWL) && (self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND)) return;
-    if (Math.random() < 0.5) {
-        self.monsterinfo.current_move = insane_move_downtoup;
+    if (context.rng.frandom() < 0.5) {
+        M_SetAnimation(self, insane_move_downtoup, context);
     }
 }
 
-function insane_onground(self: Entity, context: any) {
-    self.monsterinfo.current_move = insane_move_down;
+function insane_onground(self: Entity, context: EntitySystem) {
+    M_SetAnimation(self, insane_move_down, context);
 }
 
-function insane_cross_func(self: Entity, context: any) {
-    if (Math.random() < 0.8) {
-        self.monsterinfo.current_move = insane_move_cross;
+function insane_cross_func(self: Entity, context: EntitySystem) {
+    if (context.rng.frandom() < 0.8) {
+        M_SetAnimation(self, insane_move_cross, context);
     } else {
-        self.monsterinfo.current_move = insane_move_struggle_cross;
+        M_SetAnimation(self, insane_move_struggle_cross, context);
     }
 }
 
-function insane_stand(self: Entity, context: any) {
+function insane_stand(self: Entity, context: EntitySystem) {
     if (self.spawnflags & SPAWNFLAG_INSANE_CRUCIFIED) {
-        self.monsterinfo.current_move = insane_move_cross;
+        M_SetAnimation(self, insane_move_cross, context);
         self.monsterinfo.aiflags |= AIFlags.StandGround;
     } else if ((self.spawnflags & SPAWNFLAG_INSANE_CRAWL) && (self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND)) {
-        self.monsterinfo.current_move = insane_move_down;
-    } else if (Math.random() < 0.5) {
-        self.monsterinfo.current_move = insane_move_stand_normal;
+        M_SetAnimation(self, insane_move_down, context);
+    } else if (context.rng.frandom() < 0.5) {
+        M_SetAnimation(self, insane_move_stand_normal, context);
     } else {
-        self.monsterinfo.current_move = insane_move_stand_insane;
+        M_SetAnimation(self, insane_move_stand_insane, context);
     }
 }
 
-function insane_walk(self: Entity, context: any) {
+function insane_walk(self: Entity, context: EntitySystem) {
     if ((self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND) && self.frame === FRAME_cr_pain10) {
-        self.monsterinfo.current_move = insane_move_down;
+        M_SetAnimation(self, insane_move_down, context);
         return;
     }
     if (self.spawnflags & SPAWNFLAG_INSANE_CRAWL) {
-        self.monsterinfo.current_move = insane_move_crawl;
-    } else if (Math.random() <= 0.5) {
-        self.monsterinfo.current_move = insane_move_walk_normal;
+        M_SetAnimation(self, insane_move_crawl, context);
+    } else if (context.rng.frandom() <= 0.5) {
+        M_SetAnimation(self, insane_move_walk_normal, context);
     } else {
-        self.monsterinfo.current_move = insane_move_walk_insane;
+        M_SetAnimation(self, insane_move_walk_insane, context);
     }
 }
 
-function insane_run(self: Entity, context: any) {
+function insane_run(self: Entity, context: EntitySystem) {
     if ((self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND) && self.frame === FRAME_cr_pain10) {
-        self.monsterinfo.current_move = insane_move_down;
+        M_SetAnimation(self, insane_move_down, context);
         return;
     }
 
@@ -188,15 +193,15 @@ function insane_run(self: Entity, context: any) {
         (frame >= FRAME_stand100 && frame <= FRAME_stand160);
 
     if (isCrawling) {
-        self.monsterinfo.current_move = insane_move_runcrawl;
-    } else if (Math.random() <= 0.5) {
-        self.monsterinfo.current_move = insane_move_run_normal;
+        M_SetAnimation(self, insane_move_runcrawl, context);
+    } else if (context.rng.frandom() <= 0.5) {
+        M_SetAnimation(self, insane_move_run_normal, context);
     } else {
-        self.monsterinfo.current_move = insane_move_run_insane;
+        M_SetAnimation(self, insane_move_run_insane, context);
     }
 }
 
-function insane_dead(self: Entity, context: any) {
+function insane_dead(self: Entity, context: EntitySystem) {
     if (self.spawnflags & SPAWNFLAG_INSANE_CRUCIFIED) {
         self.flags |= EntityFlags.Fly;
     } else {
@@ -209,7 +214,7 @@ function insane_dead(self: Entity, context: any) {
     self.nextthink = -1;
 }
 
-function m(ai: any, dist: number = 0, think?: (self: Entity, context: any) => void): MonsterFrame {
+function m(ai: any, dist: number = 0, think?: (self: Entity, context: EntitySystem) => void): MonsterFrame {
     return { ai: (s, d, c) => {
         if (think) think(s, c);
         ai(s, dist, MONSTER_TICK, c);
@@ -467,7 +472,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
         if (context.entities.timeSeconds < self.pain_debounce_time) return;
         self.pain_debounce_time = context.entities.timeSeconds + 3;
 
-        const r = 1 + Math.floor(Math.random() * 2);
+        const r = 1 + context.entities.rng.irandom(0, 1);
         let l = 100;
         if (self.health < 25) l = 25;
         else if (self.health < 50) l = 50;
@@ -476,7 +481,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
         context.entities.sound(self, 2, `player/male/pain${l}_${r}.wav`, 1, 1, 0);
 
         if (self.spawnflags & SPAWNFLAG_INSANE_CRUCIFIED) {
-            self.monsterinfo.current_move = insane_move_struggle_cross;
+            M_SetAnimation(self, insane_move_struggle_cross, context.entities);
             return;
         }
 
@@ -484,9 +489,9 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
         if ((frame >= FRAME_crawl1 && frame <= FRAME_crawl9) ||
             (frame >= FRAME_stand100 && frame <= FRAME_stand160) ||
             (frame >= FRAME_stand1 && frame <= FRAME_stand40)) {
-            self.monsterinfo.current_move = insane_move_crawl_pain;
+            M_SetAnimation(self, insane_move_crawl_pain, context.entities);
         } else {
-            self.monsterinfo.current_move = insane_move_stand_pain;
+            M_SetAnimation(self, insane_move_stand_pain, context.entities);
         }
     };
 
@@ -502,7 +507,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
 
         if (self.deadflag === DeadFlag.Dead) return;
 
-        const deathSound = `player/male/death${1 + Math.floor(Math.random() * 5)}.wav`;
+        const deathSound = `player/male/death${1 + context.entities.rng.irandom(0, 4)}.wav`;
         context.entities.sound(self, 2, deathSound, 1, 1, 0);
 
         self.deadflag = DeadFlag.Dead;
@@ -514,18 +519,18 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
             const frame = self.frame;
             if ((frame >= FRAME_crawl1 && frame <= FRAME_crawl9) ||
                 (frame >= FRAME_stand100 && frame <= FRAME_stand160)) {
-                self.monsterinfo.current_move = insane_move_crawl_death;
+                M_SetAnimation(self, insane_move_crawl_death, context.entities);
             } else {
-                self.monsterinfo.current_move = insane_move_stand_death;
+                M_SetAnimation(self, insane_move_stand_death, context.entities);
             }
         }
     };
 
     self.monsterinfo = {
         ...self.monsterinfo,
-        stand: insane_stand,
-        walk: insane_walk,
-        run: insane_run,
+        stand: (s) => insane_stand(s, context.entities),
+        walk: (s) => insane_walk(s, context.entities),
+        run: (s) => insane_run(s, context.entities),
         attack: undefined,
         melee: undefined,
         sight: undefined,
@@ -538,7 +543,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
         self.monsterinfo.aiflags |= AIFlags.StandGround;
     }
 
-    self.monsterinfo.current_move = insane_move_stand_normal;
+    M_SetAnimation(self, insane_move_stand_normal, context.entities);
     self.monsterinfo.scale = 1.0;
 
     self.think = monster_think;
@@ -549,7 +554,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
     }
 
     // Random skin
-    self.skin = Math.floor(Math.random() * 3);
+    self.skin = context.entities.rng.irandom(0, 2);
 }
 
 export function registerInsaneSpawns(registry: SpawnRegistry): void {
