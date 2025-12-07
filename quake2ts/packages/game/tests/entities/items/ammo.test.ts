@@ -42,7 +42,7 @@ describe('Ammo Pickup Entities', () => {
 
         expect(player.client.inventory.ammo.counts[1]).toBe(10); // default shell count
         expect(mockGame.sound).toHaveBeenCalled();
-        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got 10 shells');
+        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got 10 Shells');
         expect(ammo.solid).toBe(Solid.Not);
         expect(ammo.nextthink).toBe(130);
     });
