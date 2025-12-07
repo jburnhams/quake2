@@ -2,39 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_mutant } from '../../../src/entities/monsters/mutant.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
-import { SpawnContext } from '../../../src/entities/spawn.js';
-import { GameEngine } from '../../../src/engine.js';
-import { GameImports } from '../../../src/game.js';
-import { DamageMod } from '../../../src/combat/damageMods.js';
-import * as damageModule from '../../../src/combat/damage.js';
-import * as gibsModule from '../../../src/entities/gibs.js';
-
-const mockEngine = {
-  sound: vi.fn(),
-} as unknown as GameEngine;
-
-const mockImports = {
-  trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-  pointcontents: vi.fn().mockReturnValue(0),
-  linkentity: vi.fn(),
-} as unknown as GameImports;
-
-const mockContext = {
-  entities: {
-    engine: mockEngine,
-    free: vi.fn(),
-    trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
-    multicast: vi.fn(),
-    spawn: vi.fn().mockReturnValue({} as Entity),
-  } as unknown as EntitySystem,
-  health_multiplier: 1,
-} as unknown as SpawnContext;
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_mutant', () => {
   let mutant: Entity;
+  let mockContext: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockContext = createTestContext();
     mutant = new Entity(1);
     mutant.timestamp = 10;
     SP_monster_mutant(mutant, mockContext);
@@ -88,9 +64,9 @@ describe('monster_mutant', () => {
       enemy.health = 100;
 
       // Mock random to trigger jump ( < 0.3 )
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      vi.spyOn(mockContext.entities.rng, 'frandom').mockReturnValue(0.1);
 
-      const result = mutant.monsterinfo.checkattack!(mutant, mockContext as unknown as EntitySystem);
+      const result = mutant.monsterinfo.checkattack!(mutant, mockContext.entities as unknown as EntitySystem);
 
       expect(result).toBe(true);
       // Jump move firstframe 93
@@ -105,9 +81,9 @@ describe('monster_mutant', () => {
       enemy.health = 100;
 
       // Mock random to trigger attack ( < 0.5 )
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      vi.spyOn(mockContext.entities.rng, 'frandom').mockReturnValue(0.1);
 
-      const result = mutant.monsterinfo.checkattack!(mutant, mockContext as unknown as EntitySystem);
+      const result = mutant.monsterinfo.checkattack!(mutant, mockContext.entities as unknown as EntitySystem);
 
       expect(result).toBe(true);
       // Attack move firstframe 70

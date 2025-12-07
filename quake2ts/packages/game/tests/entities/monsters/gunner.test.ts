@@ -39,8 +39,6 @@ describe('monster_gunner', () => {
     spawnRegistry = {
         register: vi.fn(),
     } as unknown as SpawnRegistry;
-
-    vi.clearAllMocks();
   });
 
   it('registerGunnerSpawns registers monster_gunner', () => {
@@ -69,17 +67,17 @@ describe('monster_gunner', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
 
-    // Mock RNG
+    // Mock RNG to deterministic values
     // Case 1: > 0.5 -> Chain
-    sys.rng.frandom = vi.fn().mockReturnValue(0.6);
-    gunner.monsterinfo.attack!(gunner, sys); // Pass context!
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.6);
+    gunner.monsterinfo.attack!(gunner, context.entities as any);
     const moveChain = gunner.monsterinfo.current_move;
     expect(moveChain).toBeDefined();
     expect(moveChain?.frames.length).toBe(7);
 
     // Case 2: <= 0.5 -> Grenade
-    sys.rng.frandom = vi.fn().mockReturnValue(0.4);
-    gunner.monsterinfo.attack!(gunner, sys);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.4);
+    gunner.monsterinfo.attack!(gunner, context.entities as any);
     const moveGrenade = gunner.monsterinfo.current_move;
     expect(moveGrenade).toBeDefined();
     expect(moveGrenade?.frames.length).toBe(21);
@@ -95,8 +93,8 @@ describe('monster_gunner', () => {
     gunner.origin = { x: 0, y: 0, z: 0 };
 
     // Transition to fire chain move
-    sys.rng.frandom = vi.fn().mockReturnValue(0.6);
-    gunner.monsterinfo.attack!(gunner, sys);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.6);
+    gunner.monsterinfo.attack!(gunner, context.entities as any);
 
     const attackMove = gunner.monsterinfo.current_move!;
     const endFunc = attackMove.endfunc!;
@@ -132,8 +130,8 @@ describe('monster_gunner', () => {
     gunner.enemy.origin = { x: 100, y: 0, z: 0 };
     gunner.origin = { x: 0, y: 0, z: 0 };
 
-    sys.rng.frandom = vi.fn().mockReturnValue(0.4);
-    gunner.monsterinfo.attack!(gunner, sys);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.4); // Grenade
+    gunner.monsterinfo.attack!(gunner, context.entities as any);
     const move = gunner.monsterinfo.current_move!;
 
     const fireFn = move.frames[4].think!;
@@ -149,13 +147,7 @@ describe('monster_gunner', () => {
       const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
       spawnFn(gunner, context);
 
-      // Mock RNG sequence for pain
-      // gunner_pain:
-      // 1. sound RNG (< 0.5)
-      // 2. move RNG
-
-      const mockFrandom = vi.fn();
-      sys.rng.frandom = mockFrandom;
+      const spy = vi.spyOn(sys.rng, 'frandom');
 
       // Pain 3 (< 0.33)
       mockFrandom.mockReturnValue(0.1); // Both calls return 0.1
@@ -192,8 +184,9 @@ describe('monster_gunner', () => {
       const checkFidget = standMove.frames[29].think!;
       expect(checkFidget).toBeDefined();
 
-      sys.rng.frandom = vi.fn().mockReturnValue(0.01);
-      checkFidget(gunner, sys); // Pass context!
+      // Mock random <= 0.05
+      vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
+      checkFidget(gunner, sys);
 
       expect(gunner.monsterinfo.current_move?.firstframe).toBe(30);
   });
@@ -203,10 +196,12 @@ describe('monster_gunner', () => {
       const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
       spawnFn(gunner, context);
 
-      sys.rng.frandom = vi.fn().mockReturnValue(0.1);
+      // Should invoke duck if random allows (mock it)
+      // Actually dodge uses random > 0.25 return, so <= 0.25 to proceed
+      vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
       gunner.monsterinfo.dodge!(gunner, new Entity(2), 0);
 
-      expect(gunner.monsterinfo.current_move?.firstframe).toBe(201);
+      expect(gunner.monsterinfo.current_move?.firstframe).toBe(201); // Duck start
 
       const downFn = gunner.monsterinfo.current_move?.frames[0].think!;
       const originalMaxsZ = gunner.maxs.z;
@@ -224,5 +219,4 @@ describe('monster_gunner', () => {
       expect(gunner.maxs.z).toBe(originalMaxsZ);
       expect(gunner.monsterinfo.aiflags & AIFlags.Ducked).toBeFalsy();
   });
-
 });

@@ -100,7 +100,7 @@ function gunner_runandshoot(self: Entity): void {
     self.monsterinfo.current_move = runandshoot_move;
 }
 
-function gunner_attack(self: Entity, context: any): void {
+function gunner_attack(self: Entity, context: EntitySystem): void {
     if (context.rng.frandom() > 0.5) {
         self.monsterinfo.current_move = attack_chain_move;
     } else {
@@ -545,7 +545,7 @@ export function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.monsterinfo.stand = gunner_stand;
     self.monsterinfo.walk = gunner_walk;
     self.monsterinfo.run = gunner_run;
-    self.monsterinfo.attack = gunner_attack;
+    self.monsterinfo.attack = (ent) => gunner_attack(ent, context.entities);
     self.monsterinfo.dodge = (self, attacker, eta) => gunner_dodge(self, attacker, eta, context.entities);
     self.monsterinfo.sight = (self, other) => {
         context.entities.sound?.(self, 0, 'gunner/sight1.wav', 1, 1, 0);
