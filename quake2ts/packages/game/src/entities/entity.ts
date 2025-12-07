@@ -212,6 +212,13 @@ export interface MonsterInfo {
   engine_sound?: number;
 }
 
+export interface Reinforcement {
+  classname: string;
+  strength: number;
+  mins: Vec3;
+  maxs: Vec3;
+}
+
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
   aiflags: 0,
   last_sighting: ZERO,
