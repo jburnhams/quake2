@@ -1,5 +1,5 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
+import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameEngine } from '../index.js';
@@ -150,7 +150,7 @@ export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
-  private readonly random = createRandomGenerator();
+  private readonly random: RandomGenerator;
   private readonly callbackToName: Map<AnyCallback, string>;
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
@@ -202,13 +202,15 @@ export class EntitySystem {
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry,
     deathmatch?: boolean,
-    skill?: number
+    skill?: number,
+    random?: RandomGenerator
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
     this.skill = skill ?? 1; // Default to medium
+    this.random = random ?? createRandomGenerator();
 
     // Default imports
     const defaultImports: GameImports = {

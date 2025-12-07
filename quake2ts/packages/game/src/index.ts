@@ -197,7 +197,7 @@ export function createGame(
       serverCommand
   };
 
-  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill);
+  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill, rng);
   (entities as any)._game = {
       // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
       // This is circular, so we must be careful.
@@ -550,7 +550,11 @@ export function createGame(
         levelState: levelClock.snapshot(),
         entitySystem: entities,
         rngState: rng.getState(),
-        player: player?.client?.inventory
+        player: player?.client?.inventory,
+        gameState: {
+          origin: { ...origin },
+          velocity: { ...velocity },
+        }
       });
     },
     loadSave(save: GameSaveFile): void {
@@ -562,8 +566,17 @@ export function createGame(
         player: player?.client?.inventory
       });
       // After load, sync engine state
-      origin = player ? { ...player.origin } : { ...ZERO_VEC3 };
-      velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
+      if (save.gameState && save.gameState.origin) {
+        origin = { ...(save.gameState.origin as Vec3) };
+      } else {
+        origin = player ? { ...player.origin } : { ...ZERO_VEC3 };
+      }
+
+      if (save.gameState && save.gameState.velocity) {
+        velocity = { ...(save.gameState.velocity as Vec3) };
+      } else {
+        velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
+      }
       frameLoop.reset(save.level.timeSeconds * 1000);
     }
   };
