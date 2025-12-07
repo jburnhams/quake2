@@ -115,11 +115,11 @@ describe('monster_medic', () => {
         medic.origin,
         MulticastType.Pvs,
         ServerCommand.temp_entity,
-        expect.objectContaining({
-            te: TempEntity.MEDIC_CABLE_ATTACK,
-            entId: medic.index,
-            targetId: deadMonster.index
-        })
+        TempEntity.MEDIC_CABLE_ATTACK,
+        medic.index,
+        deadMonster.index,
+        expect.objectContaining({ x: 24, y: 0, z: 6 }), // start (relative to origin 0,0,0 + offset)
+        deadMonster.origin // end
     );
   });
 
