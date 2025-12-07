@@ -5,6 +5,7 @@ import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameEngine } from '../../../src/index.js';
 import { AIFlags } from '../../../src/ai/constants.js';
+import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_gunner jump', () => {
   let sys: EntitySystem;
@@ -13,21 +14,10 @@ describe('monster_gunner jump', () => {
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
-    const soundMock = vi.fn();
-    sys = {
-        spawn: () => new Entity(1),
-        modelIndex: (s: string) => 1,
-        timeSeconds: 10,
-        multicast: vi.fn(),
-        scheduleThink: vi.fn(),
-        finalizeSpawn: vi.fn(),
-        engine: { sound: soundMock },
-        sound: soundMock,
-    } as unknown as EntitySystem;
-
-    context = {
-        entities: sys,
-    } as unknown as SpawnContext;
+    vi.clearAllMocks();
+    const testContext = createTestContext();
+    sys = testContext.entities as unknown as EntitySystem;
+    context = testContext;
 
     gunner = new Entity(1);
     spawnRegistry = { register: vi.fn() } as unknown as SpawnRegistry;
@@ -44,7 +34,7 @@ describe('monster_gunner jump', () => {
     gunner.groundentity = new Entity(3);
 
     // Mock random < 0.1
-    vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
     // Call run to set state
     gunner.monsterinfo.run!(gunner, 10, sys);
@@ -69,7 +59,7 @@ describe('monster_gunner jump', () => {
     gunner.enemy.origin = { x: 300, y: 0, z: 0 };
     gunner.groundentity = new Entity(3);
 
-    vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
     gunner.monsterinfo.run!(gunner, 10, sys);
 
@@ -96,7 +86,7 @@ describe('monster_gunner jump', () => {
       const runMove = gunner.monsterinfo.current_move!;
 
       // Trigger jump logic
-      vi.spyOn(Math, 'random').mockReturnValue(0.01);
+      vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
       const checkJump = runMove.frames[0].think!;
       checkJump(gunner, sys); // This sets current_move to jump_move
 
@@ -126,7 +116,7 @@ describe('monster_gunner jump', () => {
       gunner.enemy = new Entity(2);
       gunner.enemy.origin = { x: 300, y: 0, z: 0 };
       gunner.groundentity = new Entity(3);
-      vi.spyOn(Math, 'random').mockReturnValue(0.01);
+      vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
       // Enter run
       gunner.monsterinfo.run!(gunner, 10, sys);

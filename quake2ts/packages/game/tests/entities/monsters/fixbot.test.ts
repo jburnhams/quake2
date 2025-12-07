@@ -26,6 +26,7 @@ describe('monster_fixbot', () => {
         },
         sound: mockSound,
         linkentity: mockLinkEntity,
+        multicast: vi.fn(),
         free: mockFree,
         spawn: vi.fn().mockImplementation(() => {
             return {

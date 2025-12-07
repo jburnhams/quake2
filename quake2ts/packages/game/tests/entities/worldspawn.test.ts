@@ -2,15 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_worldspawn } from '../../src/entities/worldspawn.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { SpawnContext } from '../../src/entities/spawn.js';
+import { ConfigStringIndex } from '@quake2ts/shared';
 
 describe('SP_worldspawn', () => {
   let entity: Entity;
   let context: SpawnContext;
   let keyValues: Record<string, string>;
+  let configstringMock: any;
 
   beforeEach(() => {
     entity = new Entity(0);
     keyValues = {};
+    configstringMock = vi.fn();
     context = {
       keyValues,
       entities: {
@@ -18,10 +21,14 @@ describe('SP_worldspawn', () => {
         spawn: () => new Entity(1),
         free: vi.fn(),
         finalizeSpawn: vi.fn(),
-        freeImmediate: vi.fn()
+        freeImmediate: vi.fn(),
+        imports: {
+            configstring: configstringMock
+        }
       } as any,
       warn: vi.fn(),
       free: vi.fn(),
+      health_multiplier: 1
     };
   });
 
@@ -47,13 +54,14 @@ describe('SP_worldspawn', () => {
 
     SP_worldspawn(entity, context);
 
-    // Since logic is console.log/TODO, we just ensure execution completes
-    expect(entity.classname).toBe('worldspawn');
+    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.Sky, 'unit1_sky');
+    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.SkyRotate, '0 10 0');
+    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.SkyAxis, '0 0 1');
   });
 
   it('parses sounds key', () => {
      context.keyValues['sounds'] = '5';
      SP_worldspawn(entity, context);
-     // Logic is TODO, just verify it runs
+     expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.CdTrack, '5');
   });
 });

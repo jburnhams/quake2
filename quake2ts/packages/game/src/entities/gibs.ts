@@ -4,9 +4,10 @@
 
 import { Entity, MoveType, Solid } from './entity.js';
 import { EntitySystem } from './system.js';
-import { createRandomGenerator, Vec3, scaleVec3 } from '@quake2ts/shared';
+import { createRandomGenerator, Vec3, scaleVec3, TempEntity, ServerCommand } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 import { EntityEffects } from './enums.js';
+import { MulticastType } from '../imports.js';
 
 const random = createRandomGenerator();
 
@@ -130,6 +131,10 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
         y: random.frandom() * 600,
         z: random.frandom() * 600
     };
+
+    if (type === GIB_ORGANIC && mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
+        sys.multicast(gib.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLOOD, gib.origin, gib.velocity);
+    }
 
     gib.think = (self: Entity) => {
         sys.free(self);
