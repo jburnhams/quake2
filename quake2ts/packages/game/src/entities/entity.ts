@@ -187,6 +187,19 @@ export interface MonsterInfo {
   jump_height?: number;
   drop_height?: number;
   can_jump?: boolean;
+
+  // Medic Commander Reinforcements
+  reinforcements?: Reinforcement[];
+  monster_slots?: number;
+  monster_used?: number;
+  chosen_reinforcements?: number[];
+}
+
+export interface Reinforcement {
+  classname: string;
+  strength: number;
+  mins: Vec3;
+  maxs: Vec3;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
