@@ -398,7 +398,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
         // Don't fire laser if blocked by world
         // Based on rerelease/g_weapon.cpp:1116-1120
         const sightTrace = sys.trace(self.origin, null, null, point, null, MASK_SOLID);
-        if (sightTrace.fraction < 1.0) {
+        if (sightTrace.fraction < 1.0 && sightTrace.ent !== ent) {
             continue; // Blocked by world
         }
 
