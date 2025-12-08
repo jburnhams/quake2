@@ -21,7 +21,6 @@ import { throwGibs } from '../gibs.js';
 import { rangeTo, RangeCategory, infront, visible } from '../../ai/perception.js';
 import { monster_fire_bullet_v2, monster_fire_rocket, monster_fire_grenade, monster_fire_heat } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
-import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -110,7 +109,7 @@ function checkClearShot(self: Entity, offset: Vec3, context: any): boolean {
     return false;
 }
 
-function supertank_attack(self: Entity, context: EntitySystem): void {
+function supertank_attack(self: Entity): void {
     if (!self.enemy) return;
 
     const vec = subtractVec3(self.enemy.origin, self.origin);
@@ -129,7 +128,7 @@ function supertank_attack(self: Entity, context: EntitySystem): void {
     const isAbove = (self.enemy.origin.z - self.origin.z) > 120;
     const isFar = range > 540;
 
-    const rng = context.rng.frandom();
+    const rng = Math.random();
 
     // Simplify:
     // 1. If far or random, try rocket
@@ -188,27 +187,27 @@ function supertank_fire_machinegun(self: Entity, context: any): void {
 }
 
 
-function supertank_reattack1(self: Entity, context: EntitySystem): void {
+function supertank_reattack1(self: Entity, context: any): void {
     const traceFn = (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, ignore: Entity | null, mask: number) => {
         const tr = context.trace(start, mins, maxs, end, ignore, mask);
         return { fraction: tr.fraction, ent: tr.ent };
     };
 
-    if (self.enemy && visible(self, self.enemy, traceFn) && (context.rng.frandom() < 0.3 || (self.timestamp && self.timestamp >= (Date.now() / 1000)))) {
+    if (self.enemy && visible(self, self.enemy, traceFn) && (Math.random() < 0.3 || (self.timestamp && self.timestamp >= (Date.now() / 1000)))) {
         self.monsterinfo.current_move = attack_chain_move;
     } else {
         self.monsterinfo.current_move = attack_chain_end_move;
     }
 }
 
-function supertank_pain(self: Entity, context: EntitySystem): void {
+function supertank_pain(self: Entity, context: any): void {
     if (self.monsterinfo.current_move === pain1_move ||
         self.monsterinfo.current_move === pain2_move ||
         self.monsterinfo.current_move === pain3_move) return;
 
   // Logic to choose pain animation based on damage?
   // Just random for now or sequential
-  const r = context.rng.frandom();
+  const r = Math.random();
   if (r < 0.33) self.monsterinfo.current_move = pain1_move;
   else if (r < 0.66) self.monsterinfo.current_move = pain2_move;
   else self.monsterinfo.current_move = pain3_move;
@@ -358,7 +357,7 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
   self.monsterinfo.stand = supertank_stand;
   self.monsterinfo.walk = supertank_walk;
   self.monsterinfo.run = supertank_run;
-  self.monsterinfo.attack = (ent) => supertank_attack(ent, context.entities);
+  self.monsterinfo.attack = supertank_attack;
   self.monsterinfo.sight = (self, other) => {
       context.entities.sound?.(self, 0, 'boss1/sight1.wav', 1, 1, 0);
   };

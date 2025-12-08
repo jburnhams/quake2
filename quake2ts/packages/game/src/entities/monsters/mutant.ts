@@ -37,6 +37,9 @@ import { M_CheckBottom } from '../../ai/movement.js';
 
 const MONSTER_TICK = 0.1;
 
+// Helper to access deterministic RNG or Math.random
+const random = () => Math.random();
+
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -188,12 +191,12 @@ function mutant_check_attack(self: Entity, context: EntitySystem): boolean {
         const diff = subtractVec3(self.enemy.origin, self.origin);
         const dist = lengthVec3(diff);
 
-        if (dist < 128 && context.rng.frandom() < 0.5) {
+        if (dist < 128 && random() < 0.5) {
              self.monsterinfo.current_move = attack_move;
              return true;
         }
 
-        if (dist >= 128 && dist < 512 && context.rng.frandom() < 0.3) {
+        if (dist >= 128 && dist < 512 && random() < 0.3) {
             self.monsterinfo.current_move = jump_move;
             return true;
         }
@@ -209,10 +212,10 @@ function mutant_pain_func(self: Entity, other: Entity | null, kick: number, dama
     if (self.timestamp < (self.pain_finished_time || 0)) return;
     self.pain_finished_time = self.timestamp + 3;
 
-    if (context.rng.frandom() < 0.5) {
+    if (random() < 0.5) {
          context.engine.sound?.(self, 0, 'mutant/mutpain1.wav', 1, 1, 0);
          self.monsterinfo.current_move = pain1_move;
-    } else if (context.rng.frandom() < 0.5) {
+    } else if (random() < 0.5) {
          context.engine.sound?.(self, 0, 'mutant/mutpain2.wav', 1, 1, 0);
          self.monsterinfo.current_move = pain2_move;
     } else {

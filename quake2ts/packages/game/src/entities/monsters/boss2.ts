@@ -22,7 +22,6 @@ import { monster_fire_rocket, monster_fire_bullet, monster_fire_blaster } from '
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { rangeTo, infront, visible } from '../../ai/perception.js';
-import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -84,12 +83,12 @@ function boss2_run(self: Entity): void {
   }
 }
 
-function boss2_attack(self: Entity, context: EntitySystem): void {
+function boss2_attack(self: Entity): void {
     if (!self.enemy) return;
 
     const range = rangeTo(self, self.enemy);
 
-    if (range <= 125 || context.rng.frandom() <= 0.6) {
+    if (range <= 125 || Math.random() <= 0.6) {
         self.monsterinfo.current_move = attack_pre_mg_move;
     } else {
         self.monsterinfo.current_move = attack_rocket_move;
@@ -100,8 +99,8 @@ function boss2_attack_mg(self: Entity): void {
     self.monsterinfo.current_move = attack_mg_move;
 }
 
-function boss2_reattack_mg(self: Entity, context: EntitySystem): void {
-    if (self.enemy && infront(self, self.enemy) && context.rng.frandom() <= 0.7) {
+function boss2_reattack_mg(self: Entity): void {
+    if (self.enemy && infront(self, self.enemy) && Math.random() <= 0.7) {
         boss2_attack_mg(self);
     } else {
         self.monsterinfo.current_move = attack_post_mg_move;
@@ -145,7 +144,7 @@ function boss2_fire_rocket(self: Entity, context: any): void {
     // We'll approximate by firing from one of the pods randomly or cycling.
 
     const offsets = [BOSS2_ROCKET_OFFSET_1, BOSS2_ROCKET_OFFSET_2, BOSS2_ROCKET_OFFSET_3, BOSS2_ROCKET_OFFSET_4];
-    const offset = offsets[Math.floor(context.rng.frandom() * offsets.length)];
+    const offset = offsets[Math.floor(Math.random() * offsets.length)];
 
     const start = getProjectedOffset(self, offset);
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
@@ -283,7 +282,7 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = boss2_stand;
   self.monsterinfo.walk = boss2_walk;
   self.monsterinfo.run = boss2_run;
-  self.monsterinfo.attack = (ent) => boss2_attack(ent, context.entities);
+  self.monsterinfo.attack = boss2_attack;
   self.monsterinfo.sight = (self, other) => {
       context.entities.sound?.(self, 0, 'boss2/sight.wav', 1, 1, 0);
   };

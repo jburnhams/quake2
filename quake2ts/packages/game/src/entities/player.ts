@@ -24,14 +24,6 @@ import { firingRandom } from '../combat/weapons/firing.js';
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
 
-    // Decay damage alpha
-    if (ent.client.damage_alpha) {
-        ent.client.damage_alpha -= 0.1 * 2.0;
-        if (ent.client.damage_alpha < 0) {
-            ent.client.damage_alpha = 0;
-        }
-    }
-
     // Animation update
     const client = ent.client;
     let animChanged = false;
@@ -114,8 +106,6 @@ export function player_pain(self: Entity, damage: number) {
     }
 
     self.client.anim_priority = ANIM_PAIN;
-    self.client.damage_alpha = 1.0;
-    self.client.damage_blend = [1, 0, 0];
 
     const r = firingRandom.frandom();
     if (r < 0.33) {
@@ -216,17 +206,8 @@ export function player_think(self: Entity, sys: EntitySystem) {
     const weaponId = self.client.inventory.currentWeapon;
     if (weaponId) {
         const weaponItem = Object.values(WEAPON_ITEMS).find(item => item.weaponId === weaponId);
-        if (weaponItem) {
-            // Update ammo count cache
-            if (weaponItem.ammoType !== null) {
-                self.client.currentAmmoCount = self.client.inventory.ammo.counts[weaponItem.ammoType];
-            } else {
-                self.client.currentAmmoCount = 0;
-            }
-
-            if (weaponItem.think) {
-                weaponItem.think(self, sys);
-            }
+        if (weaponItem && weaponItem.think) {
+            weaponItem.think(self, sys);
         }
     }
 

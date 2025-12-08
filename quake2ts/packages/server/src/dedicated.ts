@@ -330,6 +330,15 @@ export class DedicatedServer implements GameEngine {
     }
 
     private handleConnection(ws: any) {
+        const driver = new WebSocketNetDriver();
+        driver.attach(ws);
+
+        // Defer client creation until we verify not a reconnect or if it is a new connection
+        // Actually, in Q2, SV_GetChallenge handles potential reconnects, but here we have a full connection
+        // established at the transport layer (WebSocket) before we even get a challenge request.
+        // We assign a temporary client slot or wait for 'getchallenge' to assign a slot?
+        // No, we need a client object to handle the NetChan processing of 'getchallenge'.
+
         // Find free client slot
         let clientIndex = -1;
         for (let i = 0; i < MAX_CLIENTS; i++) {
@@ -340,12 +349,10 @@ export class DedicatedServer implements GameEngine {
         }
 
         if (clientIndex === -1) {
+            console.log('Server full, rejecting connection');
             ws.close(); // Server full
             return;
         }
-
-        const driver = new WebSocketNetDriver();
-        driver.attach(ws);
 
         const client = createClient(clientIndex, driver);
         // Initialize lastMessage to current frame to prevent immediate timeout
@@ -353,6 +360,8 @@ export class DedicatedServer implements GameEngine {
         // Initialize lastCommandTime to prevent immediate reset of command count
         client.lastCommandTime = Date.now();
         this.svs.clients[clientIndex] = client;
+
+        console.log(`Client ${clientIndex} attached to slot from ${ws._socket?.remoteAddress || 'unknown'}`);
 
         driver.onMessage((data) => this.onClientMessage(client, data));
         driver.onClose(() => this.onClientDisconnect(client));

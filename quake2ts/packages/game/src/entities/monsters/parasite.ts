@@ -38,6 +38,9 @@ import { DamageFlags } from '../../combat/damageFlags.js';
 
 const MONSTER_TICK = 0.1;
 
+// Helper to access deterministic RNG or Math.random
+const random = () => Math.random();
+
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -114,8 +117,8 @@ function parasite_do_fidget(self: Entity): void {
   self.monsterinfo.current_move = fidget_move;
 }
 
-function parasite_refidget(self: Entity, context: EntitySystem): void {
-  if (context.rng.frandom() <= 0.8) {
+function parasite_refidget(self: Entity): void {
+  if (random() <= 0.8) {
     self.monsterinfo.current_move = fidget_move;
   } else {
     self.monsterinfo.current_move = end_fidget_move;
@@ -264,7 +267,7 @@ function parasite_pain_func(self: Entity, other: Entity | null, kick: number, da
 
   self.pain_finished_time = self.timestamp + 3;
 
-  if (context.rng.frandom() < 0.5) {
+  if (random() < 0.5) {
       context.engine.sound?.(self, 0, 'parasite/parpain1.wav', 1, 1, 0);
   } else {
       context.engine.sound?.(self, 0, 'parasite/parpain2.wav', 1, 1, 0);

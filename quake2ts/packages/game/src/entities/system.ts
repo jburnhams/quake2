@@ -1,8 +1,9 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
+import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
-import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
+import { GameEngine } from '../index.js';
+import { GameImports, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -149,7 +150,7 @@ export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
-  private readonly random: RandomGenerator;
+  private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
@@ -201,15 +202,13 @@ export class EntitySystem {
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry,
     deathmatch?: boolean,
-    skill?: number,
-    random?: RandomGenerator
+    skill?: number
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
     this.skill = skill ?? 1; // Default to medium
-    this.random = random ?? createRandomGenerator();
 
     // Default imports
     const defaultImports: GameImports = {
@@ -394,7 +393,6 @@ export class EntitySystem {
   findInBox(mins: Vec3, maxs: Vec3): Entity[] {
     const indices = this.imports.areaEdicts(mins, maxs);
     if (indices === null) {
-      // Optimization TODO: Add spatial hash/tree to EntitySystem for fast box queries (P2 task).
       // Fallback: iterate all entities
       const results: Entity[] = [];
       const bounds = { min: mins, max: maxs };

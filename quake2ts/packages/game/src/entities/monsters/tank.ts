@@ -9,7 +9,7 @@ import {
   AIFlags,
   AttackState
 } from '../../ai/index.js';
-import { M_ShouldReactToPain, M_AdjustBlindfireTarget } from './common.js';
+import { M_ShouldReactToPain } from './common.js';
 import {
   DeadFlag,
   Entity,
@@ -26,6 +26,31 @@ import { DamageMod } from '../../combat/damageMods.js';
 import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
+
+// Helper to check if a blindfire shot is viable
+function M_AdjustBlindfireTarget(self: Entity, start: Vec3, target: Vec3, right: Vec3, context: any): Vec3 | null {
+  const tr = context.trace(start, target, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
+
+  if (!tr.startsolid && !tr.allsolid && tr.fraction >= 0.5) {
+    return normalizeVec3(subtractVec3(target, start));
+  }
+
+  // Try left
+  const leftTarget = addVec3(target, scaleVec3(right, -20));
+  const trLeft = context.trace(start, leftTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
+  if (!trLeft.startsolid && !trLeft.allsolid && trLeft.fraction >= 0.5) {
+    return normalizeVec3(subtractVec3(leftTarget, start));
+  }
+
+  // Try right
+  const rightTarget = addVec3(target, scaleVec3(right, 20));
+  const trRight = context.trace(start, rightTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
+  if (!trRight.startsolid && !trRight.allsolid && trRight.fraction >= 0.5) {
+    return normalizeVec3(subtractVec3(rightTarget, start));
+  }
+
+  return null;
+}
 
 function tank_blind_check(self: Entity, context: any): void {
   if (self.monsterinfo.aiflags & AIFlags.ManualSteering) {
@@ -133,7 +158,7 @@ function tank_checkattack(self: Entity, context: any): boolean {
   else if (dist <= 1000) chance = 0.06; // Mid
   else chance = 0.0; // Far
 
-  if (context.rng.frandom() < chance) {
+  if (Math.random() < chance) {
       self.monsterinfo.attack_state = AttackState.Missile;
       self.attack_finished_time = context.timeSeconds;
       return true;
@@ -142,7 +167,7 @@ function tank_checkattack(self: Entity, context: any): boolean {
   return false;
 }
 
-function tank_attack(self: Entity, context: EntitySystem): void {
+function tank_attack(self: Entity): void {
   if (!self.enemy) return;
 
   // Blindfire check
@@ -152,9 +177,9 @@ function tank_attack(self: Entity, context: EntitySystem): void {
       else if ((self.monsterinfo.blind_fire_delay || 0) < 7.5) chance = 0.4;
       else chance = 0.1;
 
-      if (context.rng.frandom() > chance) return;
+      if (Math.random() > chance) return;
 
-      self.monsterinfo.blind_fire_delay = (self.monsterinfo.blind_fire_delay || 0) + 5.2 + (context.rng.frandomMax(3.0));
+      self.monsterinfo.blind_fire_delay = (self.monsterinfo.blind_fire_delay || 0) + 5.2 + (Math.random() * 3.0);
 
       if (!self.monsterinfo.blind_fire_target) return;
 
@@ -162,7 +187,7 @@ function tank_attack(self: Entity, context: EntitySystem): void {
       self.monsterinfo.aiflags |= AIFlags.ManualSteering;
 
       // Randomly choose between rocket and blaster
-      if (context.rng.frandom() < 0.5) {
+      if (Math.random() < 0.5) {
           self.monsterinfo.current_move = attack_rocket_move;
       } else {
           self.monsterinfo.current_move = attack_blaster_move;
@@ -177,13 +202,13 @@ function tank_attack(self: Entity, context: EntitySystem): void {
   const range = classifyRange(dist);
 
   if (range === RangeCategory.Melee || range === RangeCategory.Near) {
-      if (context.rng.frandom() < 0.4) {
+      if (Math.random() < 0.4) {
           self.monsterinfo.current_move = attack_machinegun_move;
       } else {
           self.monsterinfo.current_move = attack_blaster_move;
       }
   } else if (range === RangeCategory.Mid) {
-      if (context.rng.frandom() < 0.5) {
+      if (Math.random() < 0.5) {
           self.monsterinfo.current_move = attack_machinegun_move;
       } else {
           self.monsterinfo.current_move = attack_rocket_move;
@@ -293,7 +318,7 @@ function tank_refire_rocket(self: Entity, context: any): void {
 }
 
 function tank_idle(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() < 0.2) {
+    if (Math.random() < 0.2) {
         context.sound?.(self, 0, 'tank/tnkidle.wav', 1, 2, 0);
     }
 }
@@ -451,7 +476,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
     }
 
     // Small chance to ignore pain if not severe
-    if (damage <= 10 && context.entities.rng.frandom() < 0.5) return;
+    if (damage <= 10 && Math.random() < 0.5) return;
 
     self.monsterinfo.current_move = pain_move;
   };
@@ -472,7 +497,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = tank_stand;
   self.monsterinfo.walk = tank_walk;
   self.monsterinfo.run = tank_run;
-  self.monsterinfo.attack = (ent) => tank_attack(ent, context.entities);
+  self.monsterinfo.attack = tank_attack;
   self.monsterinfo.attack_machinegun = attack_machinegun_move;
   self.monsterinfo.checkattack = tank_checkattack;
   self.monsterinfo.blindfire = true;

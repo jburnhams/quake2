@@ -26,7 +26,6 @@ describe('Boss/Monster Spawns', () => {
         modelIndex: vi.fn(() => 0),
         scheduleThink: vi.fn(),
         linkentity: vi.fn(),
-        multicast: vi.fn(),
         engine, // Attach mocked engine
         sound: engine.sound,
       } as any,

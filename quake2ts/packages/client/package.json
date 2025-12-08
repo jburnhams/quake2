@@ -27,6 +27,7 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
+    "build:test": "tsup --no-minify",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {

@@ -203,6 +203,7 @@ export function createClient(imports: ClientImports): ClientExports {
       get skin() { return imports.host?.cvars?.get('skin')?.string || 'grunt'; },
       get fov() { return fovValue; }
   });
+  multiplayer.setPrediction(prediction);
   multiplayer.setDemoRecorder(demoRecorder);
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);

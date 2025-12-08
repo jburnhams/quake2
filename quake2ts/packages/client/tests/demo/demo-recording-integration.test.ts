@@ -43,6 +43,7 @@ vi.mock('../../src/net/connection.js', () => ({
     MultiplayerConnection: vi.fn().mockImplementation(() => {
         mockMultiplayerInstance = {
             setDemoRecorder: vi.fn(),
+            setPrediction: vi.fn(),
             isConnected: vi.fn().mockReturnValue(true),
             disconnect: vi.fn(),
             sendCommand: vi.fn()

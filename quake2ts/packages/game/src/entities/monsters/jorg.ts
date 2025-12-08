@@ -89,7 +89,7 @@ function jorg_attack(self: Entity, context: EntitySystem): void {
     // Attack 1: Dual Machineguns
     // Attack 2: BFG
 
-    if (context.rng.frandom() <= 0.75) {
+    if (Math.random() <= 0.75) {
         // Attack 1
         context.sound(self, 0, 'boss3/bs3atck1.wav', 1, 1, 0);
         self.monsterinfo.current_move = attack1_move; // Using start_attack1 logic from C
@@ -107,7 +107,7 @@ function jorg_reattack1(self: Entity, context: EntitySystem): void {
     };
 
     if (self.enemy && visible(self, self.enemy, traceFn)) {
-        if (context.rng.frandom() < 0.9) {
+        if (Math.random() < 0.9) {
             self.monsterinfo.current_move = attack1_move; // Re-loop attack1
         } else {
             self.monsterinfo.current_move = attack1_end_move;
@@ -153,19 +153,19 @@ function jorg_fire_bfg(self: Entity, context: any): void {
     (monster_fire_bfg as any)(self, start, dir, 50, 300, 100, 200, 0, context);
 }
 
-function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
+function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
     if (self.health < (self.max_health / 2)) {
       self.skin = 1;
     }
 
     if (self.timestamp < (self.pain_finished_time || 0)) return;
 
-    if (damage <= 40 && context.rng.frandom() <= 0.6) return;
+    if (damage <= 40 && Math.random() <= 0.6) return;
 
     // Lessen chance if attacking
     // Simplified: just check if in attack move
     if (self.monsterinfo.current_move === attack1_move || self.monsterinfo.current_move === attack2_move) {
-        if (context.rng.frandom() <= 0.005) return;
+        if (Math.random() <= 0.005) return;
     }
 
     self.pain_finished_time = self.timestamp + 3.0;
@@ -177,7 +177,7 @@ function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: num
         context.engine.sound?.(self, 0, 'boss3/bs3pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain2_move;
     } else {
-        if (context.rng.frandom() <= 0.3) {
+        if (Math.random() <= 0.3) {
             context.engine.sound?.(self, 0, 'boss3/bs3pain3.wav', 1, 1, 0);
             self.monsterinfo.current_move = pain3_move;
         }

@@ -80,7 +80,14 @@
                 const mockEngine = {
                     renderer: mockRenderer,
                     assets: mockAssets,
-                    trace: () => ({ fraction: 1.0, contents: 0 })
+                    trace: (start, end) => ({
+                        fraction: 1.0,
+                        contents: 0,
+                        allSolid: false,
+                        startSolid: false,
+                        endpos: { x: end.x, y: end.y, z: end.z },
+                        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
+                    })
                 };
 
                 const mockHost = {
@@ -128,6 +135,46 @@
                 console.log('Initializing client...');
                 client.init({ state: dummyState, timeMs: 0 });
 
+                // Start Render Loop to drive processing
+                function loop() {
+                    try {
+                        const now = performance.now();
+                        const cmd = window.testInput || {
+                            angles: {x:0, y:0, z:0},
+                            forwardmove: 0,
+                            sidemove: 0,
+                            upmove: 0,
+                            buttons: 0,
+                            impulse: 0,
+                            msec: 16, // approx 60fps
+                            time: now
+                        };
+                        // Ensure time is updated if using override
+                        if (window.testInput) {
+                            cmd.time = now;
+                        }
+
+                        // Predict/Update state
+                        client.predict(cmd);
+
+                        // Render (drives frame logic)
+                        client.render({
+                            nowMs: now,
+                            alpha: 1.0,
+                            latest: { timeMs: now, state: client.lastRendered || dummyState },
+                            previous: { timeMs: now - 16, state: client.lastRendered || dummyState }
+                        });
+
+                        // Use setTimeout instead of requestAnimationFrame for headless reliability
+                        setTimeout(loop, 16);
+                    } catch (loopErr) {
+                         console.error('Render loop crashed:', loopErr);
+                         debug.innerText = `Crash: ${loopErr.message}`;
+                    }
+                }
+                // Start the loop IMMEDIATELY
+                loop();
+
                 debug.innerText = `Client initialized. Connecting to ${serverUrl}...`;
                 console.log('Client initialized.');
 
@@ -143,40 +190,6 @@
                      console.error(`Connection failed: ${err.message}`);
                      throw err;
                 }
-
-                // Start Render Loop to drive processing
-                function loop() {
-                    try {
-                        const now = performance.now();
-                        const cmd = {
-                            angles: {x:0, y:0, z:0},
-                            forwardmove: 0,
-                            sidemove: 0,
-                            upmove: 0,
-                            buttons: 0,
-                            impulse: 0,
-                            msec: 16, // approx 60fps
-                            time: now
-                        };
-
-                        // Predict/Update state
-                        client.predict(cmd);
-
-                        // Render (drives frame logic)
-                        client.render({
-                            nowMs: now,
-                            alpha: 1.0,
-                            latest: { timeMs: now, state: client.lastRendered || dummyState },
-                            previous: { timeMs: now - 16, state: client.lastRendered || dummyState }
-                        });
-
-                        requestAnimationFrame(loop);
-                    } catch (loopErr) {
-                         console.error('Render loop crashed:', loopErr);
-                         debug.innerText = `Crash: ${loopErr.message}`;
-                    }
-                }
-                requestAnimationFrame(loop);
 
             } catch (e) {
                 debug.innerText = `Error: ${e.message}\n${e.stack}`;

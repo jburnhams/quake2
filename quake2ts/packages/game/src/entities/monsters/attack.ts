@@ -7,6 +7,10 @@ import type { EntitySystem } from '../system.js';
 import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette, createHeatSeekingMissile } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
 
+function crandom(): number {
+  return 2 * Math.random() - 1;
+}
+
 function getDamageScale(skill: number): number {
   if (skill >= 3) return 1.5;
   if (skill === 2) return 1.25;
@@ -52,8 +56,8 @@ export function monster_fire_bullet_v2(
     const angles = vectorToAngles(dir);
     const { right, up } = angleVectors(angles);
 
-    const r = context.rng.crandom() * scaledHSpread;
-    const u = context.rng.crandom() * scaledVSpread;
+    const r = crandom() * scaledHSpread;
+    const u = crandom() * scaledVSpread;
 
     direction = {
       x: dir.x + right.x * r + up.x * u,
