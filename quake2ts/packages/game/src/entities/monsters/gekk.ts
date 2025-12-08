@@ -123,8 +123,7 @@ function gekk_swim_loop_func(self: Entity): void {
 function gekk_hit_left(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
-    // Use game.random
-    const damage = 5 + Math.floor(context.game.random.frandom() * 6); // 5 to 10
+    const damage = 5 + Math.floor(context.rng.frandom() * 6); // 5 to 10
     const range = 100;
     const dir = subtractVec3(self.enemy.origin, self.origin);
     const dist = lengthVec3(dir);
@@ -139,7 +138,7 @@ function gekk_hit_left(self: Entity, context: EntitySystem): void {
 
 function gekk_hit_right(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
-    const damage = 5 + Math.floor(context.game.random.frandom() * 6); // 5 to 10
+    const damage = 5 + Math.floor(context.rng.frandom() * 6); // 5 to 10
     const range = 100;
     const dir = subtractVec3(self.enemy.origin, self.origin);
     const dist = lengthVec3(dir);
@@ -185,7 +184,7 @@ function gekk_check_jump(self: Entity, context: EntitySystem): boolean {
 
     if (distance < 100) return false;
     if (distance > 100) {
-        if (context.game.random.frandom() < (self.waterlevel >= WATER_WAIST ? 0.2 : 0.9))
+        if (context.rng.frandom() < (self.waterlevel >= WATER_WAIST ? 0.2 : 0.9))
             return false;
     }
 
@@ -231,20 +230,20 @@ function gekk_chant(self: Entity): void {
 }
 
 function gekk_idle_loop(self: Entity, context: EntitySystem): void {
-    if (context.game.random.frandom() > 0.75 && self.health < self.max_health) {
+    if (context.rng.frandom() > 0.75 && self.health < self.max_health) {
         self.monsterinfo.nextframe = 0; // FRAME_idle_01
     }
 }
 
 function gekk_step(self: Entity, context: EntitySystem): void {
-    const n = Math.floor(context.game.random.frandom() * 3); // 0 to 2
+    const n = Math.floor(context.rng.frandom() * 3); // 0 to 2
     const sounds = ['gek/gk_step1.wav', 'gek/gk_step2.wav', 'gek/gk_step3.wav'];
     context.engine.sound?.(self, 0, sounds[n], 1, 1, 0);
 }
 
 function gekk_search(self: Entity, context: EntitySystem): void {
     if (self.spawnflags & SPAWNFLAG_GEKK_CHANT) {
-        const r = context.game.random.frandom();
+        const r = context.rng.frandom();
         if (r < 0.33) context.engine.sound?.(self, 0, 'gek/gek_low.wav', 1, 1, 0);
         else if (r < 0.66) context.engine.sound?.(self, 0, 'gek/gek_mid.wav', 1, 1, 0);
         else context.engine.sound?.(self, 0, 'gek/gek_high.wav', 1, 1, 0);
@@ -252,7 +251,7 @@ function gekk_search(self: Entity, context: EntitySystem): void {
         context.engine.sound?.(self, 0, 'gek/gk_idle1.wav', 1, 1, 0);
     }
 
-    self.health += 10 + Math.floor(context.game.random.frandom() * 11); // 10 to 20
+    self.health += 10 + Math.floor(context.rng.frandom() * 11); // 10 to 20
     if (self.health > self.max_health) self.health = self.max_health;
 
     // setskin logic
@@ -315,13 +314,13 @@ function loogie_fire(self: Entity, context: EntitySystem): void {
 }
 
 function reloogie(self: Entity, context: EntitySystem): void {
-    if (context.game.random.frandom() > 0.8 && self.health < self.max_health) {
+    if (context.rng.frandom() > 0.8 && self.health < self.max_health) {
         self.monsterinfo.current_move = gekk_move_idle2;
         return;
     }
     if (self.enemy && self.enemy.health > 0) {
          const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
-         if (context.game.random.frandom() > 0.7 && dist <= RANGE_NEAR) {
+         if (context.rng.frandom() > 0.7 && dist <= RANGE_NEAR) {
               self.monsterinfo.current_move = gekk_move_spit;
          }
     }
@@ -377,7 +376,7 @@ function gekk_gibfest(self: Entity, context: EntitySystem): void {
 }
 
 function isgibfest(self: Entity, context: EntitySystem): void {
-    if (context.game.random.frandom() > 0.9) gekk_gibfest(self, context);
+    if (context.rng.frandom() > 0.9) gekk_gibfest(self, context);
 }
 
 function gekk_shrink(self: Entity): void {
@@ -671,7 +670,7 @@ function gekk_pain(self: Entity, other: Entity | null, kick: number, damage: num
          }
          self.monsterinfo.current_move = gekk_move_pain;
     } else {
-        if (context.game.random.frandom() > 0.5) self.monsterinfo.current_move = gekk_move_pain1;
+        if (context.rng.frandom() > 0.5) self.monsterinfo.current_move = gekk_move_pain1;
         else self.monsterinfo.current_move = gekk_move_pain2;
     }
 }
@@ -730,7 +729,7 @@ function gekk_die(self: Entity, inflictor: Entity | null, attacker: Entity | nul
         gekk_shrink(self);
         self.monsterinfo.current_move = gekk_move_wdeath;
     } else {
-        const r = context.game.random.frandom();
+        const r = context.rng.frandom();
         if (r > 0.66) self.monsterinfo.current_move = gekk_move_death1;
         else if (r > 0.33) self.monsterinfo.current_move = gekk_move_death3;
         else self.monsterinfo.current_move = gekk_move_death4;
@@ -760,7 +759,7 @@ export function SP_monster_gekk(self: Entity, context: SpawnContext): void {
     self.monsterinfo.run = gekk_run_start;
     // self.monsterinfo.dodge = gekk_dodge;
     self.monsterinfo.attack = (s) => gekk_attack(s, context.entities);
-    self.monsterinfo.melee = gekk_melee;
+    self.monsterinfo.melee = (s) => gekk_melee(s, context.entities);
     self.monsterinfo.sight = (s, o) => context.entities.sound?.(s, 0, 'gek/gk_sght1.wav', 1, 1, 0);
     self.monsterinfo.search = (s) => gekk_search(s, context.entities);
     self.monsterinfo.idle = (s) => {
@@ -805,16 +804,16 @@ function gekk_attack(self: Entity, context: EntitySystem): void {
         self.frame = 144;
     } else {
         if (r >= RANGE_MID) {
-            if (context.game.random.frandom() > 0.5) {
+            if (context.rng.frandom() > 0.5) {
                 M_SetAnimation(self, gekk_move_spit);
             } else {
                 M_SetAnimation(self, gekk_move_run_start);
                 // self.monsterinfo.attack_finished = level.time + 2;
             }
-        } else if (context.game.random.frandom() > 0.7) {
+        } else if (context.rng.frandom() > 0.7) {
             M_SetAnimation(self, gekk_move_spit);
         } else {
-            if ((self.spawnflags & SPAWNFLAG_GEKK_NOJUMPING) || context.game.random.frandom() > 0.7) {
+            if ((self.spawnflags & SPAWNFLAG_GEKK_NOJUMPING) || context.rng.frandom() > 0.7) {
                 M_SetAnimation(self, gekk_move_run_start);
                 // self.monsterinfo.attack_finished = level.time + 1.4;
             } else {
@@ -824,15 +823,12 @@ function gekk_attack(self: Entity, context: EntitySystem): void {
     }
 }
 
-function gekk_melee(self: Entity): void {
-    // TODO: Need context access here for deterministic RNG. Using Math.random() as fallback for now.
-    // Ideally this function should accept context or access it via the entity if possible.
-    const random = Math.random();
-
+function gekk_melee(self: Entity, context: EntitySystem): void {
     if (self.waterlevel >= WATER_WAIST) {
         M_SetAnimation(self, gekk_move_attack);
     } else {
-        if (random > 0.66) M_SetAnimation(self, gekk_move_attack1);
+        const r = context.rng.frandom();
+        if (r > 0.66) M_SetAnimation(self, gekk_move_attack1);
         else M_SetAnimation(self, gekk_move_attack2);
     }
 }

@@ -22,7 +22,8 @@ const mockContext: any = {
     trace: vi.fn().mockReturnValue({ fraction: 1.0, ent: null }),
     game: {
       random: createRandomGenerator({ seed: 12345 })
-    }
+    },
+    rng: createRandomGenerator({ seed: 12345 })
   },
   health_multiplier: 1,
 };

@@ -125,7 +125,7 @@ function infantry_duck(self: Entity): void {
 }
 
 function infantry_idle(self: Entity, context: EntitySystem): void {
-    if (Math.random() < INFANTRY_IDLE_SOUND_CHANCE) {
+    if (context.rng.frandom() < INFANTRY_IDLE_SOUND_CHANCE) {
         context.sound?.(self, 0, 'infantry/idle1.wav', 1, 2, 0);
     }
 }
@@ -232,7 +232,7 @@ function infantry_dodge(self: Entity, context: EntitySystem): boolean {
     }
 
     // 30% chance to duck
-    if (Math.random() > INFANTRY_DODGE_CHANCE) return false;
+    if (context.rng.frandom() > INFANTRY_DODGE_CHANCE) return false;
 
     // Trigger duck
     infantry_duck(self);
@@ -255,7 +255,7 @@ function infantry_checkattack(self: Entity, context: EntitySystem): boolean {
          // 50% chance to attack if possible, to avoid instant reaction every frame?
          // Actually in ai_run it checks every frame.
          // Let's make it likely but not guaranteed to allow closing distance
-         if (Math.random() < INFANTRY_ATTACK_CHANCE) {
+         if (context.rng.frandom() < INFANTRY_ATTACK_CHANCE) {
              self.monsterinfo.attack?.(self, context);
              return true;
          }
