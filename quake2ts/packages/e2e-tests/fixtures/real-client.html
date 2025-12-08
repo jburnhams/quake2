@@ -174,11 +174,13 @@
                         client.predict(cmd);
 
                         // Render (drives frame logic)
+                        // We pass null for latest/previous to avoid overwriting the authoritative state
+                        // maintained by the MultiplayerConnection and ClientPrediction logic.
                         client.render({
                             nowMs: now,
                             alpha: 1.0,
-                            latest: { timeMs: now, state: client.lastRendered || dummyState },
-                            previous: { timeMs: now - 16, state: client.lastRendered || dummyState }
+                            latest: null,
+                            previous: null
                         });
 
                         requestAnimationFrame(loop);
