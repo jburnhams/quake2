@@ -5,11 +5,22 @@ import type { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
 import type { RegularArmorState, PowerArmorState } from '../combat/armor.js';
 import { AmmoType } from '../inventory/ammo.js';
-import { EntityFlags, EntityEffects } from './enums.js';
-import type { ReinforcementList } from './monsters/rogue/common.js'; // Import ReinforcementList type
+import { EntityFlags, EntityEffects, MuzzleFlash } from './enums.js';
 
 export { RenderFx }; // Export RenderFx from shared for convenience if imported from entity.js
-export { EntityFlags, EntityEffects }; // Re-export for compatibility
+export { EntityFlags, EntityEffects, MuzzleFlash }; // Re-export for compatibility
+
+export * from '../ai/constants.js';
+
+export interface Reinforcement {
+  classname: string;
+  strength: number;
+  mins: Vec3;
+  maxs: Vec3;
+}
+
+// Changed to array to match medic.ts usage
+export type ReinforcementList = Reinforcement[];
 
 export enum MoveType {
   None = 0,
@@ -37,6 +48,30 @@ export const SPAWNFLAG_NOT_MEDIUM = 0x00000200;
 export const SPAWNFLAG_NOT_HARD = 0x00000400;
 export const SPAWNFLAG_NOT_DEATHMATCH = 0x00000800;
 export const SPAWNFLAG_NOT_COOP = 0x00001000;
+
+export { DamageMod as ModId };
+export type Mod = DamageMod;
+
+export enum DamageFlags {
+  None = 0,
+  NoArmor = 1,
+  Energy = 2,
+  NoKnockback = 4,
+  Bullet = 8,
+  Radius = 16,
+}
+
+export enum GibType {
+  Organic = 0,
+  Metallic = 1,
+}
+
+export const SpawnFlag = {
+    MonsterAmbush: 1,
+};
+
+export interface EntityState {
+}
 
 export enum ServerFlags {
   None = 0,
@@ -75,10 +110,8 @@ export type DieCallback = (
   mod: DamageMod
 ) => void;
 
-// Simple Pain Callback for player (no kick/other needed?) or matched signature
 export type PlayerPainCallback = (self: Entity, damage: number) => void;
 
-// Monster specific blocked callback
 export type MonsterBlockedCallback = (self: Entity, dist: number, context: EntitySystem) => boolean | void;
 
 export type EntityFieldType =
@@ -164,7 +197,6 @@ export interface MonsterInfo {
   scale?: number;
   melee_debounce_time?: number;
   attack_finished?: number;
-  // Added fields
   power_armor_type?: number;
   power_armor_power?: number;
   blind_fire_target?: Vec3;
@@ -181,15 +213,13 @@ export interface MonsterInfo {
   sidestep?: (self: Entity) => boolean;
   blocked?: MonsterBlockedCallback;
   setskin?: (self: Entity) => void;
-  freeze_time?: number; // For ETF Rifle freeze effect
+  freeze_time?: number;
 
-  // [Paril-KEX] Jump/Drop support
   jump_time?: number;
   jump_height?: number;
   drop_height?: number;
   can_jump?: boolean;
 
-  // Rogue Mission Pack
   monster_slots?: number;
   monster_used?: number;
   reinforcements?: ReinforcementList;
@@ -210,13 +240,6 @@ export interface MonsterInfo {
   react_to_damage_time?: number;
   weapon_sound?: number;
   engine_sound?: number;
-}
-
-export interface Reinforcement {
-  classname: string;
-  strength: number;
-  mins: Vec3;
-  maxs: Vec3;
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
@@ -255,6 +278,7 @@ export class Entity {
   angles: Vec3 = copyVec3();
   pos1: Vec3 = copyVec3();
   pos2: Vec3 = copyVec3();
+  gravityVector: Vec3 = copyVec3();
 
   viewheight = 0;
 
@@ -280,8 +304,8 @@ export class Entity {
   spawn_count = 0;
   takedamage = false;
   dmg = 0;
-  radius_dmg = 0; // Damage amount for radius damage (used by BFG, rockets, etc.)
-  dmg_radius = 0; // Radius for damage effects
+  radius_dmg = 0;
+  dmg_radius = 0;
   speed = 0;
   accel = 0;
   decel = 0;
@@ -325,11 +349,11 @@ export class Entity {
   touch?: TouchCallback;
   use?: UseCallback;
   blocked?: BlockedCallback;
-  pain?: PainCallback | PlayerPainCallback; // Allow looser signature for player
+  pain?: PainCallback | PlayerPainCallback;
   die?: DieCallback;
-  postthink?: ThinkCallback; // Added for beam updates
+  postthink?: ThinkCallback;
   activator: Entity | null = null;
-  alpha = 0; // Added for rendering transparency
+  alpha = 0;
 
   solid: Solid = Solid.Not;
   clipmask = 0;
@@ -345,19 +369,17 @@ export class Entity {
   light_level = 0;
 
   owner: Entity | null = null;
-  beam: Entity | null = null; // Added
-  beam2: Entity | null = null; // Added
-  chain: Entity | null = null; // Added
+  beam: Entity | null = null;
+  beam2: Entity | null = null;
+  chain: Entity | null = null;
 
   client?: PlayerClient;
 
-  // Additions for combat integration
   _regularArmor?: RegularArmorState;
   _powerArmor?: PowerArmorState;
 
   get regularArmor(): RegularArmorState | undefined {
     if (this.client?.inventory.armor) {
-      // Return a proxy that writes back to inventory
       const invArmor = this.client.inventory.armor;
       return {
         get armorType() { return invArmor.armorType; },
@@ -374,7 +396,6 @@ export class Entity {
 
   get powerArmor(): PowerArmorState | undefined {
     if (this.client) {
-        // Determine type from inventory
         let type: 'screen' | 'shield' | null = null;
         if (hasItem(this.client.inventory, 'item_power_shield')) {
             type = 'shield';
@@ -384,9 +405,6 @@ export class Entity {
 
         if (type) {
              const ammo = this.client.inventory.ammo;
-             // Use v_angle (view angles) for player if available, as they represent where player is looking
-             // This matches Quake 2's use of ent->client->v_angle for Power Screen direction check.
-             // If v_angle is missing, fall back to entity angles.
              const angles = this.client.v_angle || this.angles;
 
              return {
@@ -437,6 +455,7 @@ export class Entity {
     this.angles = copyVec3();
     this.pos1 = copyVec3();
     this.pos2 = copyVec3();
+    this.gravityVector = copyVec3();
     this.viewheight = 0;
 
     this.mins = copyVec3();
@@ -513,6 +532,7 @@ export class Entity {
     this.monsterinfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
     this.moveinfo = undefined;
     this.hackflags = 0;
+
     this.combattarget = undefined;
     this.show_hostile = 0;
     this.light_level = 0;
@@ -538,18 +558,17 @@ export enum AiFlags {
   FixTarget = 0x00000080,
   GoodGuy = 0x00000100,
   BrtMove = 0x00000200,
-  DoNotCount = 0x00000400, // [Paril-KEX]
+  DoNotCount = 0x00000400,
   ManualTarget = 0x00000800,
   CombatPoint = 0x00001000,
   Medic = 0x00002000,
   HoldFrame = 0x00004000,
 
-  // Rogue specific
-  SpawnedCarrier = 0x00400000, // Matches AI_SPAWNED_CARRIER bit 22
-  IgnoreShots = 0x00100000, // Matches AI_IGNORE_SHOTS bit 20
-  ManualSteering = 0x00008000, // Matches AI_MANUAL_STEERING bit 15
-  Charging = 0x00040000, // Matches AI_CHARGING bit 18
-  AlternateFly = 0x200000000, // Matches AI_ALTERNATE_FLY bit 33 (requires expanding aiflags type if used directly as bitmask beyond 32bit or mapped carefully)
+  SpawnedCarrier = 0x00400000,
+  IgnoreShots = 0x00100000,
+  ManualSteering = 0x00008000,
+  Charging = 0x00040000,
+  AlternateFly = 0x200000000,
 }
 
 export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
@@ -572,6 +591,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'angles', type: 'vec3', save: true },
   { name: 'pos1', type: 'vec3', save: true },
   { name: 'pos2', type: 'vec3', save: true },
+  { name: 'gravityVector', type: 'vec3', save: true },
   { name: 'viewheight', type: 'int', save: true },
   { name: 'mins', type: 'vec3', save: true },
   { name: 'maxs', type: 'vec3', save: true },
@@ -637,10 +657,10 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'blocked', type: 'callback', save: false },
   { name: 'pain', type: 'callback', save: false },
   { name: 'die', type: 'callback', save: false },
-  { name: 'postthink', type: 'callback', save: false }, // Added
-  { name: 'beam', type: 'entity', save: true }, // Added
-  { name: 'beam2', type: 'entity', save: true }, // Added
-  { name: 'chain', type: 'entity', save: true }, // Added
+  { name: 'postthink', type: 'callback', save: false },
+  { name: 'beam', type: 'entity', save: true },
+  { name: 'beam2', type: 'entity', save: true },
+  { name: 'chain', type: 'entity', save: true },
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
 ];
