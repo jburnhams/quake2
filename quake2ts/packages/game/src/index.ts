@@ -63,6 +63,7 @@ export interface GameStateSnapshot {
   readonly gun_frame: number;
   readonly rdflags: number;
   readonly fov: number;
+  readonly renderfx: number;
 
   // Compatibility fields for snake_case protocol
   readonly pm_type: number;
@@ -320,6 +321,7 @@ export function createGame(
         gun_frame: player?.client?.gun_frame ?? 0,
         rdflags: player?.client?.rdflags ?? 0,
         fov: player?.client?.fov ?? 90,
+        renderfx: player?.renderfx ?? 0,
 
         // Populate new compatibility fields
         pm_type: player?.client?.pm_type ?? 0,
@@ -370,7 +372,8 @@ export function createGame(
         pm_flags: 0,
         gun_frame: 0,
         rdflags: 0,
-        fov: 90
+        fov: 90,
+        renderfx: player.renderfx
     };
 
     const traceAdapter = (start: Vec3, end: Vec3) => {

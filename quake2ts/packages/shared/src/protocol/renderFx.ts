@@ -18,4 +18,5 @@ export enum RenderFx {
   MinLightPlus = 262144,
   ExtraLight = 524288,
   BeamLightning = 1048576,
+  Flashlight = 2097152, // 1 << 21
 }
