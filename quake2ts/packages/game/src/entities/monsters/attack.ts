@@ -1,4 +1,4 @@
-import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SHOT } from '@quake2ts/shared';
+import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SHOT, distance } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';

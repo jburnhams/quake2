@@ -75,3 +75,59 @@ export enum EntityEffects {
   Hologram = 0,
   Flashlight = 0,
 }
+
+export enum MuzzleFlash {
+    Blaster = 0,
+    MachineGun = 1,
+    Shotgun = 2,
+    Chaingun1 = 3,
+    Chaingun2 = 4,
+    Chaingun3 = 5,
+    Railgun = 6,
+    Rocket = 7,
+    Grenade = 8,
+    Login = 9,
+    Logout = 10,
+    Respawn = 11,
+    Bfg = 12,
+    SShotgun = 13,
+    HyperBlaster = 14,
+    ItemRespawn = 15,
+    IonRipper = 16,
+    BlueHyperBlaster = 17,
+    Phalanx = 18,
+    Bfg2 = 19,
+    Phalanx2 = 20,
+    EtfRifle = 30,
+    Prox = 31,
+    EtfRifle2 = 32,
+    HeatBeam = 33,
+    Blaster2 = 34,
+    Tracker = 35,
+    Nuke1 = 36,
+    Nuke2 = 37,
+    Nuke4 = 38,
+    Nuke8 = 39,
+
+    // Rogue / MZ2
+    TankBlaster1 = 1, // These are MZ2 indices, likely passed differently or offset
+    // For now assuming we pass them as-is if the engine handles it.
+    // Actually the engine takes a `flashtype` index which maps to `monster_flash_offset` array in C.
+    // In TS we likely need to handle this mapping or pass the index.
+    // I'll add the ones needed for Carrier with assumed indices.
+
+    // Carrier
+    CarrierMachineGunL1 = 133,
+    CarrierMachineGunR1 = 134,
+    CarrierGrenade = 135,
+    CarrierRailgun = 147,
+    CarrierMachineGunL2 = 152,
+    CarrierMachineGunR2 = 153,
+    CarrierRocket1 = 191,
+    CarrierRocket2 = 192,
+    CarrierRocket3 = 193,
+    CarrierRocket4 = 194,
+
+    // Gunner
+    GunnerGrenade1 = 53,
+}

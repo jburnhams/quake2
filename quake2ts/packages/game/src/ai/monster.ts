@@ -1,4 +1,5 @@
 import type { Entity, MonsterMove } from '../entities/entity.js';
+import { MoveType, Solid } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { AIFlags, AttackState } from './constants.js';
 import { RenderFx, MASK_SHOT, MASK_SOLID, ZERO_VEC3, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
