@@ -2,9 +2,9 @@
 // Quake II - Prox Mine
 // =================================================================
 
-import { Entity, Solid, MoveType } from '../entity.js';
+import { Entity, Solid, MoveType, CollisionSurface } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { Vec3, ZERO_VEC3, copyVec3, scaleVec3, ServerCommand, TempEntity, normalizeVec3, dotVec3, addVec3, MASK_SHOT } from '@quake2ts/shared';
+import { Vec3, ZERO_VEC3, copyVec3, scaleVec3, ServerCommand, TempEntity, normalizeVec3, dotVec3, addVec3, MASK_SHOT, CollisionPlane } from '@quake2ts/shared';
 import { T_RadiusDamage } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -119,7 +119,7 @@ export function createProxMine(
         self.nextthink = entities.timeSeconds + 0.1;
     };
 
-    const proxMineTouch = (self: Entity, other: Entity | null, plane?: any, surf?: any) => {
+    const proxMineTouch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (surf && (surf.flags & 4)) { // SURF_SKY
             entities.free(self);
             return;
