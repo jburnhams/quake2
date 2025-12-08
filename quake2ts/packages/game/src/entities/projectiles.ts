@@ -678,7 +678,7 @@ function heatThink(self: Entity, sys: EntitySystem): void {
         };
         self.angles = vectorToAngles(normalizedNewDir);
 
-        if (!self.enemy) {
+        if (self.enemy !== best) {
             sys.sound(self, 0, 'weapons/railgr1a.wav', 1, 0.25, 0);
             self.enemy = best;
         }
