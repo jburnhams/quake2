@@ -184,6 +184,7 @@ export class EntitySystem {
   private readonly gravity: Vec3;
   readonly deathmatch: boolean;
   readonly skill: number;
+  readonly coop: boolean;
 
   get trace(): TraceFunction {
     return this.imports.trace;
@@ -205,12 +206,14 @@ export class EntitySystem {
     callbackRegistry?: CallbackRegistry,
     deathmatch?: boolean,
     skill?: number,
-    random?: RandomGenerator
+    random?: RandomGenerator,
+    coop?: boolean
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
+    this.coop = coop ?? false;
     this.skill = skill ?? 1; // Default to medium
     this.random = random ?? createRandomGenerator();
     this.spatialGrid = new SpatialGrid();
