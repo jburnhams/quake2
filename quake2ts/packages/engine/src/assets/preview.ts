@@ -28,8 +28,8 @@ export class AssetPreviewGenerator {
       if (bsp.models.length > 0) {
         const world = bsp.models[0];
         return {
-          mins: world.mins,
-          maxs: world.maxs,
+          mins: { x: world.mins[0], y: world.mins[1], z: world.mins[2] },
+          maxs: { x: world.maxs[0], y: world.maxs[1], z: world.maxs[2] },
         };
       }
       return null;
