@@ -4,6 +4,7 @@ import { SP_monster_boss2 } from '../../../src/entities/monsters/boss2.js';
 import { SP_monster_floater } from '../../../src/entities/monsters/floater.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
+import { createRandomGenerator } from '@quake2ts/shared';
 
 describe('Boss/Monster Spawns', () => {
   let entity: Entity;
@@ -29,6 +30,7 @@ describe('Boss/Monster Spawns', () => {
         multicast: vi.fn(),
         engine, // Attach mocked engine
         sound: engine.sound,
+        rng: createRandomGenerator(12345),
       } as any,
       health_multiplier: 1,
       warn: vi.fn(),

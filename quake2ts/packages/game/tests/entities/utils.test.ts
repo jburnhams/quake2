@@ -58,9 +58,12 @@ describe('touchTriggers', () => {
   });
 });
 
+import { createRandomGenerator } from '@quake2ts/shared';
+
 describe('velocityForDamage', () => {
     it('should return a vector scaled by damage and kick', () => {
-        const v = velocityForDamage(10, 5);
+        const rng = createRandomGenerator(12345);
+        const v = velocityForDamage(10, 5, rng);
         // length should be approx 50
         const len = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
         expect(len).toBeCloseTo(50);
