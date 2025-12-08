@@ -58,8 +58,11 @@ describe('traceBox optimization', () => {
 
     // Trace 1: Entirely in x > 0 (Leaf 0, Empty)
     // Start: (100, 0, 0), End: (50, 0, 0)
-    // Should hit Node 0, go to child[0] (Leaf 0).
-    // Should NOT visit Leaf 1 or check Brush 0.
+    // Trace is bounded entirely on the front side of plane x=0.
+    // The traversal logic (recursiveHullCheck) checks if startDist >= offset and endDist >= offset.
+    // Since start.x=100 and end.x=50, both are > offset (approx 1).
+    // So it should recurse only down the front child (Leaf 0).
+    // It should NOT visit the back child (Leaf 1) or check Brush 0 inside it.
 
     traceBox({
       model,

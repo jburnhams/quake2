@@ -107,7 +107,7 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
 
     // Apply effects based on damage mod
     if (mod === DamageMod.LAVA || mod === DamageMod.TRAP) {
-        // Burn gibs: No blood, maybe smoke?
+        // Burn gibs: No blood, TODO: implement smoke effect
         // Using EF_ROCKET for a smoke trail effect, although it might be too much.
         // For now, simply avoiding EF_GIB stops the blood trail.
         // gib.effects |= EntityEffects.Rocket;

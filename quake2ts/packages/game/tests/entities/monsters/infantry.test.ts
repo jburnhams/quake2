@@ -24,6 +24,11 @@ describe('monster_infantry', () => {
         timeSeconds: 10,
         multicast: vi.fn(),
         sound: vi.fn(),
+        rng: {
+            frandom: vi.fn(() => 0.5),
+            irandom: vi.fn(() => 0),
+            crandom: vi.fn(() => 0),
+        },
     } as unknown as EntitySystem;
 
     context = {
@@ -99,8 +104,8 @@ describe('monster_infantry', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(infantry, context);
 
-    // Mock Math.random to trigger the sound
-    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    // Mock rng to trigger the sound
+    vi.mocked(sys.rng.frandom).mockReturnValue(0.1);
 
     // Execute the idle function
     infantry.monsterinfo.idle!(infantry);

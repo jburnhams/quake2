@@ -365,7 +365,7 @@ export function M_walkmove(self: Entity, yawDegrees: number, distance: number, c
   //   move down STEPSIZE + extra
 
   if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
-      return false; // Flying/Swimming monsters don't step up stairs? Or maybe they do?
+      return false; // Flying/Swimming monsters do not use step logic.
       // Original sv_movestep handles flying by just returning false if blocked (flymove handled elsewhere?)
       // Actually M_walkmove calls SV_movestep.
       // If flying, SV_movestep might try to slide?
