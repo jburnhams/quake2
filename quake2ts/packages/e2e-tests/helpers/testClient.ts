@@ -16,6 +16,7 @@ export interface TestClientOptions {
   clientUrl?: string; // URL where the web client is hosted
   width?: number;
   height?: number;
+  queryParams?: Record<string, string>;
 }
 
 export interface TestClient {
@@ -117,7 +118,15 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
   });
 
   // Navigate to the client application
-  const fullUrl = `${clientUrl}?connect=${encodeURIComponent(serverUrl)}`;
+  const params = new URLSearchParams();
+  params.set('connect', serverUrl);
+  if (options.queryParams) {
+      for (const [k, v] of Object.entries(options.queryParams)) {
+          params.set(k, v);
+      }
+  }
+
+  const fullUrl = `${clientUrl}?${params.toString()}`;
   console.log(`Navigating to: ${fullUrl}`);
 
   try {

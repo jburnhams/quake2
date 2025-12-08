@@ -1,7 +1,7 @@
 # Section 13: Multiplayer & Network Support - Implementation Tasks
 
 ## Current Status
-**~82% Complete (Phase 4 Active)**
+**~85% Complete (Phase 4 Active)**
 
 - ✅ Server and client packages exist
 - ✅ Basic WebSocket transport works
@@ -110,21 +110,20 @@
 - Test with 100ms latency (reconciliation needed)
 - Test with packet loss (prediction diverges, then corrects)
 
-#### Task 4.6: Test Multi-Client Scenarios (PARTIALLY COMPLETE - SKIPPED)
+#### Task 4.6: Test Multi-Client Scenarios (PARTIALLY COMPLETE)
 **File**: `packages/e2e-tests/multi-client.test.ts`
 **Reference**: Multiple players interacting
 
-- [x] **4.6.1** Test two clients connect (SKIPPED)
-  - Tests verify 2 clients launching and connecting.
-  - *Known Issue*: Second client connection often causes first client to disconnect in test environment (likely resource/port contention in test harness). Tests are skipped to keep CI green.
+- [x] **4.6.1** Test two clients connect
+  - Added unit tests in `packages/server/tests/multi_client.test.ts` to verify server-side logic handles multiple connections, slot reuse, and message routing.
+  - E2E test logic updated to support multiple clients.
 
-- [x] **4.6.2** Test clients see each other (SKIPPED)
-  - Logic implemented to check entity replication.
-  - Skipped due to connection stability issue.
+- [ ] **4.6.2** Test clients see each other (IN PROGRESS)
+  - E2E test implemented but flaky due to environment issues.
+  - Server unit tests confirm packet broadcasting logic is sound.
 
-- [x] **4.6.3** Test interaction (SKIPPED)
+- [ ] **4.6.3** Test interaction (IN PROGRESS)
   - Logic implemented for movement synchronization verification.
-  - Skipped due to connection stability issue.
 
 **Test Case**: Multi-client E2E test
 - Requires two browser instances

@@ -5,11 +5,7 @@ import { DedicatedServer } from '@quake2ts/server';
 
 const GAME_SERVER_PORT_MULTI = 27916;
 
-// SKIPPED: These tests are currently failing due to an issue where the second client connecting
-// causes the first client to disconnect (Client 0 disconnected). This is likely an issue with
-// qport collision or resource contention in the test environment (same browser instance/context interactions).
-// The core multiplayer logic (prediction, reconciliation) is verified in prediction.test.ts.
-describe.skip('E2E Multi-Client Test', () => {
+describe('E2E Multi-Client Test', () => {
   let server: DedicatedServer;
   let client1: TestClient;
   let client2: TestClient;
@@ -27,7 +23,8 @@ describe.skip('E2E Multi-Client Test', () => {
   it('should allow two clients to connect (Task 4.6.1)', async () => {
       // Launch Client 1
       client1 = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_MULTI}`, {
-          headless: true
+          headless: true,
+          queryParams: { name: 'Player1' }
       });
 
       console.log('Client 1 launched, waiting for active...');
@@ -39,7 +36,8 @@ describe.skip('E2E Multi-Client Test', () => {
 
       // Launch Client 2
       client2 = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_MULTI}`, {
-          headless: true
+          headless: true,
+          queryParams: { name: 'Player2' }
       });
 
       console.log('Client 2 launched, waiting for active...');
@@ -49,29 +47,50 @@ describe.skip('E2E Multi-Client Test', () => {
       }, undefined, { timeout: 30000 });
       console.log('Client 2 active.');
 
-      // Check server state
+      // Check server state - wait for propagation
+      await new Promise<void>((resolve, reject) => {
+          const start = Date.now();
+          const interval = setInterval(() => {
+              const clients = (server as any).svs.clients;
+              const activeClients = clients.filter((c: any) => c && c.state >= 4);
+              if (activeClients.length >= 2) {
+                  clearInterval(interval);
+                  resolve();
+              } else if (Date.now() - start > 10000) {
+                  clearInterval(interval);
+                  reject(new Error(`Timeout waiting for server clients. Active: ${activeClients.length}`));
+              }
+          }, 100);
+      });
+
       const clients = (server as any).svs.clients;
       const activeClients = clients.filter((c: any) => c && c.state >= 4);
-
-      console.log('Server Clients:', clients.map((c: any, i: number) => c ? `[${i}] State: ${c.state}` : `[${i}] null`).join(', '));
-
       expect(activeClients.length).toBeGreaterThanOrEqual(2);
   });
 
   it('should replicate player entities to other clients (Task 4.6.2)', async () => {
-      // Wait for a frame update to propagate
+      // Wait for a few frame updates to propagate entities
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const client2SeeClient1 = await client2.page.evaluate(() => {
           const client = (window as any).clientInstance;
-          const myNum = client.multiplayer.playerNum + 1;
+          // PlayerNum is 0-based index. Entity number is playerNum + 1.
+          const myEntNum = client.multiplayer.playerNum + 1;
 
+          // demoHandler.entities is a Map<number, EntityState>
           const entities = Array.from(client.demoHandler.entities.values());
-          // Log entities for debug
-          console.log('Client 2 Entities:', entities.map((e: any) => `Num: ${e.number}, Model: ${e.modelindex}`));
 
+          // Debug info
+          const debugInfo = entities.map((e: any) => ({
+              num: e.number,
+              model: e.modelIndex, // Note: modelIndex, not modelindex (JS convention in some parts? Check interface)
+              origin: e.origin
+          }));
+          console.log('Client 2 Entities:', JSON.stringify(debugInfo));
+
+          // Look for other players (modelIndex > 0 usually indicates visibility/existence)
           const others = entities.filter((e: any) => {
-              return e.number !== myNum && e.modelindex > 0;
+              return e.number !== myEntNum && (e.modelIndex > 0 || e.modelindex > 0);
           });
 
           return others.length;
@@ -87,6 +106,8 @@ describe.skip('E2E Multi-Client Test', () => {
           const client = (window as any).clientInstance;
           return { ...client.prediction.getPredictedState().origin };
       });
+
+      console.log('Client 1 Start Pos:', startPosC1);
 
       // Move forward
       await client1.page.evaluate(() => {
@@ -114,23 +135,22 @@ describe.skip('E2E Multi-Client Test', () => {
           return { ...client.prediction.getPredictedState().origin };
       });
 
+      console.log('Client 1 End Pos:', endPosC1);
       expect(endPosC1.x).not.toBe(startPosC1.x);
 
       // Wait for Client 2 to receive update
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Verify Client 2 saw Client 1 move
       const client1PosInClient2 = await client2.page.evaluate(() => {
           const client = (window as any).clientInstance;
-          // Find the other player entity
-          const myNum = client.multiplayer.playerNum + 1;
+          const myEntNum = client.multiplayer.playerNum + 1;
           const entities = Array.from(client.demoHandler.entities.values());
-          const other = entities.find((e: any) => e.number !== myNum && e.modelindex > 0);
+          const other = entities.find((e: any) => e.number !== myEntNum && (e.modelIndex > 0 || e.modelindex > 0));
 
           return other ? { ...other.origin } : null;
       });
 
-      console.log('Client 1 Pos:', endPosC1);
       console.log('Client 1 Pos in Client 2:', client1PosInClient2);
 
       expect(client1PosInClient2).not.toBeNull();
@@ -138,7 +158,7 @@ describe.skip('E2E Multi-Client Test', () => {
       if (client1PosInClient2) {
           const dist = Math.abs(client1PosInClient2.x - endPosC1.x);
           // Tolerance due to network latency/interpolation/compression (integers)
-          // Entity origin in protocol is often integers or scaled.
+          console.log(`Distance delta: ${dist}`);
           expect(dist).toBeLessThan(50);
       }
   });

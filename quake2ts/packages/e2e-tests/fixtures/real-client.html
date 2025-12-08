@@ -37,6 +37,7 @@
                 // Parse query params for connection info
                 const params = new URLSearchParams(window.location.search);
                 const serverUrl = params.get('connect');
+                const playerName = params.get('name') || 'Player';
 
                 if (!serverUrl) {
                     debug.innerText = 'No server URL provided in ?connect=';
@@ -44,8 +45,8 @@
                     return;
                 }
 
-                debug.innerText = `Connecting to ${serverUrl}...`;
-                console.log(`Connecting to ${serverUrl}...`);
+                debug.innerText = `Connecting to ${serverUrl} as ${playerName}...`;
+                console.log(`Connecting to ${serverUrl} as ${playerName}...`);
 
                 if (typeof Quake2Client === 'undefined') {
                     throw new Error('Quake2Client global not found. Bundle might be missing or invalid.');
@@ -96,7 +97,11 @@
                         execute: () => {}
                     },
                     cvars: {
-                        get: () => ({ string: 'Player', number: 90, flags: 0 }),
+                        get: (name) => {
+                            if (name === 'name') return { string: playerName, number: 0, flags: 0 };
+                            if (name === 'fov') return { string: '90', number: 90, flags: 0 };
+                            return { string: 'default', number: 0, flags: 0 };
+                        },
                         register: () => {},
                         list: () => [],
                         setValue: () => {}
