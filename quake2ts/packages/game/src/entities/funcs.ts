@@ -77,6 +77,23 @@ function angle_move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (
     // Linear speed for now (TODO: accel/decel support matching move_calc)
     let currentSpeed = speed;
 
+    // Accel
+    if (ent.accel) {
+        currentSpeed = lengthVec3(ent.avelocity) + ent.accel * dt;
+    }
+
+    // Decel
+    if (ent.decel) {
+        const distToStop = (currentSpeed * currentSpeed) / (2 * ent.decel);
+        if (dist <= distToStop) {
+            currentSpeed -= ent.decel * dt;
+            if (currentSpeed < 10) currentSpeed = 10;
+        }
+    }
+
+    // Clamp
+    if (currentSpeed > speed) currentSpeed = speed;
+
     const move = currentSpeed * dt;
 
     if (dist <= move) {
@@ -583,7 +600,6 @@ enum PlatState {
     GoingDown,
 }
 
-// TODO: Update plats to use move_calc too?
 // Plats have accel/decel properties by default.
 
 function plat_hit_top(ent: Entity, context: EntitySystem) {
