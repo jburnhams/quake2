@@ -44,9 +44,31 @@ describe('Collision Physics', () => {
 
       resolveImpact(ent, trace, system);
 
-      // The implementation passes undefined for surface because GameTraceResult doesn't have it
-      expect(ent.touch).toHaveBeenCalledWith(ent, other, trace.plane, undefined);
-      expect(other.touch).toHaveBeenCalledWith(other, ent, trace.plane, undefined);
+      // The implementation now passes null for surface if flags are 0 or constructed object if flags exist
+      // Since surfaceFlags is 0, it passes null
+      expect(ent.touch).toHaveBeenCalledWith(ent, other, trace.plane, null);
+      expect(other.touch).toHaveBeenCalledWith(other, ent, trace.plane, null);
+    });
+
+    it('should pass surface flags if present', () => {
+      ent.touch = vi.fn();
+      other.touch = vi.fn();
+
+      const trace: GameTraceResult = {
+        fraction: 0.5,
+        endpos: { x: 0, y: 0, z: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+        surfaceFlags: 123,
+        contents: 0,
+        allsolid: false,
+        startsolid: false,
+        ent: other
+      };
+
+      resolveImpact(ent, trace, system);
+
+      expect(ent.touch).toHaveBeenCalledWith(ent, other, trace.plane, { name: '', flags: 123, value: 0 });
+      expect(other.touch).toHaveBeenCalledWith(other, ent, trace.plane, { name: '', flags: 123, value: 0 });
     });
 
     it('should do nothing if no entity hit', () => {

@@ -44,7 +44,7 @@ describe('Gibs', () => {
     describe('spawnHead', () => {
         it('should set basic properties correctly', () => {
             // Mock irandom to control skin choice
-            sys.rng.irandom.mockReturnValue(0);
+            vi.spyOn(sys.rng, 'irandom').mockReturnValue(0);
             const head = spawnHead(sys, { x: 0, y: 0, z: 0 }, 10);
             expect(head.solid).toBeDefined(); // Solid.Not
             expect(head.takedamage).toBe(true);

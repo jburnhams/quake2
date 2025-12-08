@@ -280,11 +280,24 @@ export interface ClipBoxParams {
   trace: TraceResult;
 }
 
+/**
+ * Clips a movement box against a brush using the Liang-Barsky algorithm.
+ *
+ * This function determines if and where the swept box (from start to end) intersects the brush.
+ * It updates the trace result with the earliest collision fraction, plane, and contents.
+ *
+ * Based on CM_ClipBoxToBrush in qcommon/cm_trace.c.
+ *
+ * @param params ClipBoxParams containing start/end vectors, box mins/maxs, target brush, and trace result to update.
+ */
 export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBoxParams): void {
   if (brush.sides.length === 0) return;
 
   const isPoint = mins.x === 0 && mins.y === 0 && mins.z === 0 && maxs.x === 0 && maxs.y === 0 && maxs.z === 0;
 
+  // Initialize entry and exit fractions.
+  // enterfrac tracks the latest entry time into the brush intersection volume.
+  // leavefrac tracks the earliest exit time from the brush intersection volume.
   let enterfrac = -1;
   let leavefrac = 1;
   let clipplane: CollisionPlane | null = null;
@@ -296,6 +309,8 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
   for (const side of brush.sides) {
     const { plane } = side;
     let dist = plane.dist;
+
+    // If tracing a box, we effectively push the planes out by the box extents.
     if (!isPoint) {
       const ofsX = plane.normal.x < 0 ? maxs.x : mins.x;
       const ofsY = plane.normal.y < 0 ? maxs.y : mins.y;
@@ -303,35 +318,45 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
       dist -= plane.normal.x * ofsX + plane.normal.y * ofsY + plane.normal.z * ofsZ;
     }
 
+    // d1 is the distance of the start point from the plane.
+    // d2 is the distance of the end point from the plane.
     const d1 = start.x * plane.normal.x + start.y * plane.normal.y + start.z * plane.normal.z - dist;
     const d2 = end.x * plane.normal.x + end.y * plane.normal.y + end.z * plane.normal.z - dist;
 
-    if (d2 > 0) getout = true;
-    if (d1 > 0) startout = true;
+    if (d2 > 0) getout = true; // End point is in front of this plane
+    if (d1 > 0) startout = true; // Start point is in front of this plane
 
+    // If both points are in front of the plane, the line is completely outside the brush.
+    // Note: > 0 check is correct because planes face OUTWARD from the brush.
     if (d1 > 0 && d2 >= d1) {
       return;
     }
 
+    // If both points are behind the plane, this plane doesn't clip the line segment range we care about
+    // (though the segment is "inside" regarding this plane).
     if (d1 <= 0 && d2 <= 0) {
       continue;
     }
 
-    if (d1 > d2) {
+    // Line crosses the plane.
+    if (d1 > d2) { // Entering the brush (from front to back)
       const f = (d1 - DIST_EPSILON) / (d1 - d2);
       if (f > enterfrac) {
         enterfrac = f;
         clipplane = plane;
         leadside = side;
       }
-    } else {
+    } else { // Leaving the brush (from back to front)
       const f = (d1 + DIST_EPSILON) / (d1 - d2);
       if (f < leavefrac) leavefrac = f;
     }
   }
 
+  // If we never started outside any plane, we started inside the brush.
   if (!startout) {
     trace.startsolid = true;
+    // If we also never got out of any plane (meaning we stayed behind all planes),
+    // then the entire movement is inside the brush (allsolid).
     if (!getout) {
       trace.allsolid = true;
     }
@@ -339,8 +364,10 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
     return;
   }
 
+  // If the entry fraction is less than the exit fraction, we have a valid intersection interval.
   if (enterfrac < leavefrac && enterfrac > -1 && enterfrac < trace.fraction) {
-    trace.fraction = enterfrac < 0 ? 0 : enterfrac;
+    if (enterfrac < 0) enterfrac = 0;
+    trace.fraction = enterfrac;
     trace.plane = clipplane;
     trace.contents = brush.contents;
     trace.surfaceFlags = leadside?.surfaceFlags ?? 0;
@@ -465,6 +492,12 @@ function clusterVisible(
   return (byte & (1 << (to & 7))) !== 0;
 }
 
+/**
+ * Recursively checks a hull sweep against a BSP tree.
+ * Implements a Liang-Barsky like clipping algorithm against the BSP planes.
+ *
+ * Based on CM_RecursiveHullCheck in qcommon/cm_trace.c.
+ */
 function recursiveHullCheck(params: {
   readonly model: CollisionModel;
   readonly nodeIndex: number;
@@ -496,10 +529,13 @@ function recursiveHullCheck(params: {
     brushCheckCount,
   } = params;
 
+  // If we've already hit something earlier in the trace than where we are starting this check,
+  // we can stop.
   if (trace.fraction <= startFraction) {
     return;
   }
 
+  // If we reached a leaf, check the brushes in it.
   if (nodeIndex < 0) {
     if (traceDebugInfo) {
       traceDebugInfo.leafsReached++;
@@ -517,6 +553,7 @@ function recursiveHullCheck(params: {
 
       if ((brush.contents & contentMask) === 0) continue;
       if (!brush.sides.length) continue;
+      // Optimization: Avoid checking the same brush multiple times in a single trace.
       if (brush.checkcount === brushCheckCount) continue;
 
       brush.checkcount = brushCheckCount;
@@ -539,13 +576,17 @@ function recursiveHullCheck(params: {
 
   const node = model.nodes[nodeIndex];
   const plane = node.plane;
-  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271)
-  // which uses fabs() on each component
+
+  // Calculate the distance from the plane to the box's nearest corner.
+  // This effectively expands the plane by the box extents.
+  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271).
   const offset = planeOffsetMagnitude(plane, mins, maxs);
 
   const startDist = planeDistanceToPoint(plane, start);
   const endDist = planeDistanceToPoint(plane, end);
 
+  // If both start and end points are in front of the plane (including offset),
+  // we only need to check the front child.
   if (startDist >= offset && endDist >= offset) {
     recursiveHullCheck({
       model,
@@ -565,6 +606,8 @@ function recursiveHullCheck(params: {
     return;
   }
 
+  // If both start and end points are behind the plane (including offset),
+  // we only need to check the back child.
   if (startDist < -offset && endDist < -offset) {
     recursiveHullCheck({
       model,
@@ -584,7 +627,8 @@ function recursiveHullCheck(params: {
     return;
   }
 
-  // Put the crosspoint DIST_EPSILON pixels on the near side
+  // The segment straddles the plane. We need to split the segment and recurse down both sides.
+  // Put the crosspoint DIST_EPSILON pixels on the near side to avoid precision issues.
   // See full/qcommon/cmodel.c:1293-1313 (CM_RecursiveHullCheck)
   // fraction1 (frac) is used for "move up to node" - the near-side recursion
   // fraction2 (frac2) is used for "go past the node" - the far-side recursion
@@ -611,6 +655,7 @@ function recursiveHullCheck(params: {
   const midFraction = startFraction + (endFraction - startFraction) * fraction1;
   const midPoint = lerpPoint(start, end, fraction1);
 
+  // Recurse down the near side
   recursiveHullCheck({
     model,
     nodeIndex: node.children[side],
@@ -629,6 +674,7 @@ function recursiveHullCheck(params: {
 
   const updatedFraction = trace.fraction;
 
+  // Optimisation: if we hit something closer than the split point, we don't need to check the far side
   if (updatedFraction <= midFraction) {
     return;
   }
@@ -636,6 +682,7 @@ function recursiveHullCheck(params: {
   const midFraction2 = startFraction + (endFraction - startFraction) * fraction2;
   const midPoint2 = lerpPoint(start, end, fraction2);
 
+  // Recurse down the far side
   recursiveHullCheck({
     model,
     nodeIndex: node.children[1 - side],

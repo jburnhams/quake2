@@ -244,7 +244,7 @@ export function SP_monster_gladiator(self: Entity, context: SpawnContext): void 
   self.viewheight = 40; // Gladiator viewheight
 
   self.pain = (self, other, kick, damage) => {
-    if (Math.random() < 0.5) {
+    if (context.entities.rng.frandom() < 0.5) {
         context.entities.sound?.(self, 0, 'gladiator/pain.wav', 1, 1, 0);
     } else {
         context.entities.sound?.(self, 0, 'gladiator/gldpain2.wav', 1, 1, 0);

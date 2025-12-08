@@ -92,10 +92,10 @@ function flyer_fire(self: Entity, context: any): void {
     monster_fire_blaster(self, start, forward, 5, 1000, 0, 0, context, DamageMod.BLASTER);
 }
 
-function flyer_slash(self: Entity, context: any): void {
+function flyer_slash(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
-    const damage = 5 + Math.random() * 5;
+    const damage = 5 + context.rng.frandomMax(5);
     const dist = rangeTo(self, self.enemy);
     if (dist <= 80 && infront(self, self.enemy)) {
         T_Damage(self.enemy as any, self as any, self as any,

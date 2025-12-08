@@ -22,8 +22,24 @@ import { monster_fire_rocket, monster_fire_bullet, monster_fire_blaster } from '
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { rangeTo, infront, visible } from '../../ai/perception.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
+
+// Constants - Source: rerelease/m_boss2.c
+const BOSS2_HEALTH = 3000;
+const BOSS2_MASS = 1000;
+const BOSS2_VIEWHEIGHT = 64;
+const BOSS2_GIB_HEALTH = -80;
+const BOSS2_MACHINEGUN_RANGE = 125;
+const BOSS2_MACHINEGUN_CHANCE = 0.6;
+const BOSS2_MACHINEGUN_REFIRE_CHANCE = 0.7;
+const BOSS2_ROCKET_DAMAGE = 50;
+const BOSS2_ROCKET_SPEED = 500;
+const BOSS2_MACHINEGUN_DAMAGE = 6;
+const BOSS2_MACHINEGUN_KICK = 4;
+const BOSS2_MACHINEGUN_HSPREAD = 0.1;
+const BOSS2_MACHINEGUN_VSPREAD = 0.05;
 
 // Offsets
 const BOSS2_ROCKET_OFFSET_1: Vec3 = { x: 0, y: 30, z: -15 };
@@ -83,12 +99,12 @@ function boss2_run(self: Entity): void {
   }
 }
 
-function boss2_attack(self: Entity): void {
+function boss2_attack(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     const range = rangeTo(self, self.enemy);
 
-    if (range <= 125 || Math.random() <= 0.6) {
+    if (range <= BOSS2_MACHINEGUN_RANGE || context.rng.frandom() <= BOSS2_MACHINEGUN_CHANCE) {
         self.monsterinfo.current_move = attack_pre_mg_move;
     } else {
         self.monsterinfo.current_move = attack_rocket_move;
@@ -99,8 +115,8 @@ function boss2_attack_mg(self: Entity): void {
     self.monsterinfo.current_move = attack_mg_move;
 }
 
-function boss2_reattack_mg(self: Entity): void {
-    if (self.enemy && infront(self, self.enemy) && Math.random() <= 0.7) {
+function boss2_reattack_mg(self: Entity, context: EntitySystem): void {
+    if (self.enemy && infront(self, self.enemy) && context.rng.frandom() <= BOSS2_MACHINEGUN_REFIRE_CHANCE) {
         boss2_attack_mg(self);
     } else {
         self.monsterinfo.current_move = attack_post_mg_move;
@@ -126,12 +142,12 @@ function boss2_fire_mg(self: Entity, context: any): void {
     // Fire left
     const startL = getProjectedOffset(self, BOSS2_MG_LEFT_OFFSET);
     const dirL = normalizeVec3(subtractVec3(self.enemy.origin, startL));
-    monster_fire_bullet(self, startL, dirL, 6, 4, 0.1, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet(self, startL, dirL, BOSS2_MACHINEGUN_DAMAGE, BOSS2_MACHINEGUN_KICK, BOSS2_MACHINEGUN_HSPREAD, BOSS2_MACHINEGUN_VSPREAD, 0, context, DamageMod.MACHINEGUN);
 
     // Fire right
     const startR = getProjectedOffset(self, BOSS2_MG_RIGHT_OFFSET);
     const dirR = normalizeVec3(subtractVec3(self.enemy.origin, startR));
-    monster_fire_bullet(self, startR, dirR, 6, 4, 0.1, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet(self, startR, dirR, BOSS2_MACHINEGUN_DAMAGE, BOSS2_MACHINEGUN_KICK, BOSS2_MACHINEGUN_HSPREAD, BOSS2_MACHINEGUN_VSPREAD, 0, context, DamageMod.MACHINEGUN);
 }
 
 function boss2_fire_rocket(self: Entity, context: any): void {
@@ -144,12 +160,12 @@ function boss2_fire_rocket(self: Entity, context: any): void {
     // We'll approximate by firing from one of the pods randomly or cycling.
 
     const offsets = [BOSS2_ROCKET_OFFSET_1, BOSS2_ROCKET_OFFSET_2, BOSS2_ROCKET_OFFSET_3, BOSS2_ROCKET_OFFSET_4];
-    const offset = offsets[Math.floor(Math.random() * offsets.length)];
+    const offset = offsets[Math.floor(context.rng.frandom() * offsets.length)];
 
     const start = getProjectedOffset(self, offset);
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
 
-    monster_fire_rocket(self, start, forward, 50, 500, 0, context);
+    monster_fire_rocket(self, start, forward, BOSS2_ROCKET_DAMAGE, BOSS2_ROCKET_SPEED, 0, context);
 }
 
 function boss2_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: any): void {
@@ -245,15 +261,15 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
   if (context.health_multiplier) {
-    self.health = 3000 * context.health_multiplier;
+    self.health = BOSS2_HEALTH * context.health_multiplier;
   } else {
-    self.health = 3000;
+    self.health = BOSS2_HEALTH;
   }
   self.max_health = self.health;
-  self.mass = 1000;
+  self.mass = BOSS2_MASS;
   self.takedamage = true;
   self.flags |= EntityFlags.Fly;
-  self.viewheight = 64;
+  self.viewheight = BOSS2_VIEWHEIGHT;
 
   self.pain = (self, other, kick, damage) => {
     // Skin change
@@ -269,7 +285,7 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
     self.deadflag = DeadFlag.Dead;
     self.solid = Solid.Not;
 
-    if (self.health < -80) {
+    if (self.health < BOSS2_GIB_HEALTH) {
         context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
         throwGibs(context.entities, self.origin, damage);
         context.entities.free(self);
@@ -282,7 +298,7 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = boss2_stand;
   self.monsterinfo.walk = boss2_walk;
   self.monsterinfo.run = boss2_run;
-  self.monsterinfo.attack = boss2_attack;
+  self.monsterinfo.attack = (ent) => boss2_attack(ent, context.entities);
   self.monsterinfo.sight = (self, other) => {
       context.entities.sound?.(self, 0, 'boss2/sight.wav', 1, 1, 0);
   };

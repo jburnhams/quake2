@@ -18,6 +18,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 } as const;
 export interface GameCreateOptions {
   gravity: Vec3;
   deathmatch?: boolean;
+  coop?: boolean;
   skill?: number;
   rogue?: boolean;
   xatrix?: boolean;
@@ -25,21 +26,8 @@ export interface GameCreateOptions {
 }
 
 import { ServerCommand, EntityState } from '@quake2ts/shared';
-import { MulticastType } from './imports.js';
-export { MulticastType } from './imports.js'; // Export MulticastType
-
-export interface GameEngine {
-    trace(start: Vec3, end: Vec3): unknown;
-    sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
-    soundIndex?(sound: string): number;
-    centerprintf?(entity: Entity, message: string): void;
-    modelIndex?(model: string): number;
-    multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
-    unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
-    configstring?(index: number, value: string): void;
-    serverCommand?(cmd: string): void;
-    cvar?(name: string): { number: number; string: string; value: string } | undefined;
-}
+import { MulticastType, GameEngine } from './imports.js';
+export { MulticastType, GameEngine } from './imports.js'; // Export MulticastType
 
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
@@ -76,6 +64,7 @@ export interface GameStateSnapshot {
   readonly gun_frame: number;
   readonly rdflags: number;
   readonly fov: number;
+  readonly renderfx: number;
 
   // Compatibility fields for snake_case protocol
   readonly pm_type: number;
@@ -103,6 +92,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   readonly skill: number;
   readonly rogue: boolean;
   readonly xatrix: boolean;
+  readonly coop: boolean;
   readonly random: RandomGenerator;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
@@ -141,6 +131,7 @@ export function createGame(
 ): GameExports {
   const gravity = options.gravity;
   const deathmatch = options.deathmatch ?? false;
+  const coop = options.coop ?? false;
   const skill = options.skill ?? 1;
   const rogue = options.rogue ?? false;
   const xatrix = options.xatrix ?? false;
@@ -197,7 +188,7 @@ export function createGame(
       serverCommand
   };
 
-  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill, rng);
+  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill, rng, coop);
   (entities as any)._game = {
       // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
       // This is circular, so we must be careful.
@@ -318,10 +309,10 @@ export function createGame(
         client: player?.client,
         health: player?.health ?? 0,
         armor: player?.client?.inventory.armor?.armorCount ?? 0,
-        ammo: 0, // TODO: get current weapon ammo
+        ammo: player?.client?.currentAmmoCount ?? 0,
         blend: calculateBlend(player, frameLoop.time),
         pickupIcon,
-        damageAlpha: 0, // TODO
+        damageAlpha: player?.client?.damage_alpha ?? 0,
         damageIndicators: [],
 
         stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
@@ -333,6 +324,7 @@ export function createGame(
         gun_frame: player?.client?.gun_frame ?? 0,
         rdflags: player?.client?.rdflags ?? 0,
         fov: player?.client?.fov ?? 90,
+        renderfx: player?.renderfx ?? 0,
 
         // Populate new compatibility fields
         pm_type: player?.client?.pm_type ?? 0,
@@ -383,7 +375,8 @@ export function createGame(
         pm_flags: 0,
         gun_frame: 0,
         rdflags: 0,
-        fov: 90
+        fov: 90,
+        renderfx: player.renderfx
     };
 
     const traceAdapter = (start: Vec3, end: Vec3) => {
@@ -403,6 +396,12 @@ export function createGame(
     player.origin = newState.origin;
     player.velocity = newState.velocity;
     player.angles = newState.viewAngles;
+
+    if (player.client) {
+        player.client.pm_flags = newState.pm_flags;
+        player.client.pm_type = newState.pm_type;
+        player.client.pm_time = newState.pm_time;
+    }
   };
 
   const gameExports: GameExports = {
@@ -525,6 +524,7 @@ export function createGame(
     skill,
     rogue,
     xatrix,
+    coop,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
       multicast(origin, type, event, ...args);
     },

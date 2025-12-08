@@ -18,12 +18,12 @@ export enum AIFlags {
   GoodGuy = 1 << 8,
   Brutal = 1 << 9,
   NoStep = 1 << 10,
-  Ducked = 1 << 11,
-  CombatPoint = 1 << 12,
-  Medic = 1 << 13,
-  Resurrecting = 1 << 14,
-  ManualSteering = 1 << 15,
-  Pathing = 1 << 30,
+  ManualSteering = 1 << 11,
+  Ducked = 1 << 12,
+  CombatPoint = 1 << 13,
+  Medic = 1 << 14,
+  Resurrecting = 1 << 15,
+  Pathing = 1 << 30, // Custom?
 }
 
 export enum AttackState {

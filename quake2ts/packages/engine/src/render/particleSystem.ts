@@ -1,6 +1,7 @@
 import { Vec3 } from '@quake2ts/shared';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
+import { RandomGenerator } from '@quake2ts/shared';
 
 export type ParticleBlendMode = 'alpha' | 'additive';
 
@@ -40,7 +41,7 @@ const DEFAULT_COLOR: [number, number, number, number] = [1, 1, 1, 1];
 
 export class ParticleSystem {
   readonly maxParticles: number;
-  readonly random: () => number;
+  readonly rng: RandomGenerator;
 
   private readonly alive: Uint8Array;
   private readonly positionX: Float32Array;
@@ -62,9 +63,9 @@ export class ParticleSystem {
   private readonly fade: Uint8Array;
   private readonly blendMode: Uint8Array; // 0 alpha, 1 additive
 
-  constructor(maxParticles: number, random: () => number = Math.random) {
+  constructor(maxParticles: number, rng: RandomGenerator) {
     this.maxParticles = maxParticles;
-    this.random = random;
+    this.rng = rng;
     this.alive = new Uint8Array(maxParticles);
     this.positionX = new Float32Array(maxParticles);
     this.positionY = new Float32Array(maxParticles);
@@ -410,18 +411,18 @@ export interface ParticleEffectContext {
 export function spawnBulletImpact(context: ParticleEffectContext): void {
   const { system, origin, normal = { x: 0, y: 0, z: 1 } } = context;
   for (let i = 0; i < 12; i += 1) {
-    const speed = 200 + system.random() * 180;
-    const spread = system.random() * 0.35;
+    const speed = 200 + system.rng.frandom() * 180;
+    const spread = system.rng.frandom() * 0.35;
     system.spawn({
       position: origin,
       velocity: {
-        x: normal.x * speed + (system.random() - 0.5) * 80,
-        y: normal.y * speed + (system.random() - 0.5) * 80,
+        x: normal.x * speed + (system.rng.frandom() - 0.5) * 80,
+        y: normal.y * speed + (system.rng.frandom() - 0.5) * 80,
         z: Math.max(normal.z * speed, 120) + spread * 80,
       },
       color: [1, 0.8, 0.4, 1],
       size: 2.5,
-      lifetime: 0.45 + system.random() * 0.1,
+      lifetime: 0.45 + system.rng.frandom() * 0.1,
       gravity: 600,
       damping: 2,
       bounce: 0.45,
@@ -433,7 +434,7 @@ export function spawnBulletImpact(context: ParticleEffectContext): void {
   for (let i = 0; i < 8; i += 1) {
     system.spawn({
       position: origin,
-      velocity: { x: (system.random() - 0.5) * 40, y: (system.random() - 0.5) * 40, z: 80 + system.random() * 40 },
+      velocity: { x: (system.rng.frandom() - 0.5) * 40, y: (system.rng.frandom() - 0.5) * 40, z: 80 + system.rng.frandom() * 40 },
       color: [0.45, 0.45, 0.45, 0.75],
       size: 6,
       lifetime: 0.6,
@@ -449,9 +450,9 @@ export function spawnBulletImpact(context: ParticleEffectContext): void {
 export function spawnExplosion(context: ParticleEffectContext): void {
   const { system, origin } = context;
   for (let i = 0; i < 40; i += 1) {
-    const theta = system.random() * Math.PI * 2;
-    const phi = Math.acos(2 * system.random() - 1);
-    const speed = 220 + system.random() * 260;
+    const theta = system.rng.frandom() * Math.PI * 2;
+    const phi = Math.acos(2 * system.rng.frandom() - 1);
+    const speed = 220 + system.rng.frandom() * 260;
     const dir = {
       x: Math.sin(phi) * Math.cos(theta),
       y: Math.sin(phi) * Math.sin(theta),
@@ -474,7 +475,7 @@ export function spawnExplosion(context: ParticleEffectContext): void {
   for (let i = 0; i < 16; i += 1) {
     system.spawn({
       position: origin,
-      velocity: { x: (system.random() - 0.5) * 30, y: (system.random() - 0.5) * 30, z: 120 + system.random() * 120 },
+      velocity: { x: (system.rng.frandom() - 0.5) * 30, y: (system.rng.frandom() - 0.5) * 30, z: 120 + system.rng.frandom() * 120 },
       color: [0.25, 0.25, 0.25, 0.9],
       size: 12,
       lifetime: 1.2,
@@ -489,13 +490,13 @@ export function spawnExplosion(context: ParticleEffectContext): void {
 export function spawnBlood(context: ParticleEffectContext): void {
   const { system, origin, direction = { x: 0, y: 0, z: 1 } } = context;
   for (let i = 0; i < 24; i += 1) {
-    const speed = 120 + system.random() * 180;
+    const speed = 120 + system.rng.frandom() * 180;
     system.spawn({
       position: origin,
       velocity: {
-        x: direction.x * speed + (system.random() - 0.5) * 70,
-        y: direction.y * speed + (system.random() - 0.5) * 70,
-        z: direction.z * speed + system.random() * 80,
+        x: direction.x * speed + (system.rng.frandom() - 0.5) * 70,
+        y: direction.y * speed + (system.rng.frandom() - 0.5) * 70,
+        z: direction.z * speed + system.rng.frandom() * 80,
       },
       color: [0.6, 0, 0, 0.95],
       size: 3,
@@ -512,11 +513,11 @@ export function spawnBlood(context: ParticleEffectContext): void {
 export function spawnTeleportFlash(context: ParticleEffectContext): void {
   const { system, origin } = context;
   for (let i = 0; i < 30; i += 1) {
-    const angle = system.random() * Math.PI * 2;
-    const radius = 8 + system.random() * 8;
+    const angle = system.rng.frandom() * Math.PI * 2;
+    const radius = 8 + system.rng.frandom() * 8;
     system.spawn({
       position: origin,
-      velocity: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, z: 100 + system.random() * 80 },
+      velocity: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, z: 100 + system.rng.frandom() * 80 },
       color: [0.4, 0.6, 1, 0.9],
       size: 4,
       lifetime: 0.5,
@@ -531,13 +532,13 @@ export function spawnTeleportFlash(context: ParticleEffectContext): void {
 export function spawnMuzzleFlash(context: ParticleEffectContext): void {
   const { system, origin, direction = { x: 1, y: 0, z: 0 } } = context;
   for (let i = 0; i < 10; i += 1) {
-    const speed = 350 + system.random() * 100;
+    const speed = 350 + system.rng.frandom() * 100;
     system.spawn({
       position: origin,
       velocity: {
-        x: direction.x * speed + (system.random() - 0.5) * 30,
-        y: direction.y * speed + (system.random() - 0.5) * 30,
-        z: direction.z * speed + (system.random() - 0.5) * 30,
+        x: direction.x * speed + (system.rng.frandom() - 0.5) * 30,
+        y: direction.y * speed + (system.rng.frandom() - 0.5) * 30,
+        z: direction.z * speed + (system.rng.frandom() - 0.5) * 30,
       },
       color: [1, 0.8, 0.3, 1],
       size: 3,
@@ -559,7 +560,7 @@ export function spawnTrail(context: ParticleEffectContext): void {
         y: origin.y + direction.y * i * 2,
         z: origin.z + direction.z * i * 2,
       },
-      velocity: { x: (system.random() - 0.5) * 15, y: (system.random() - 0.5) * 15, z: 20 + system.random() * 15 },
+      velocity: { x: (system.rng.frandom() - 0.5) * 15, y: (system.rng.frandom() - 0.5) * 15, z: 20 + system.rng.frandom() * 15 },
       color: [0.6, 0.6, 0.6, 0.8],
       size: 2.2,
       lifetime: 0.6,

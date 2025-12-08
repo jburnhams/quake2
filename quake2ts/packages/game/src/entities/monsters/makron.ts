@@ -22,6 +22,7 @@ import { monster_fire_blaster, monster_fire_railgun, monster_fire_bfg } from './
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3, vectorToAngles } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
 import { visible, rangeTo } from '../../ai/perception.js';
+import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -80,14 +81,14 @@ function makron_run(self: Entity): void {
   }
 }
 
-function makron_attack(self: Entity): void {
+function makron_attack(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     // Attack 3: BFG
     // Attack 4: Hyperblaster
     // Attack 5: Railgun
 
-    const r = Math.random();
+    const r = context.rng.frandom();
 
     if (r <= 0.3) {
         self.monsterinfo.current_move = attack_bfg_move;
@@ -194,7 +195,7 @@ function makron_pain(self: Entity, other: Entity | null, kick: number, damage: n
 
     if (self.timestamp < (self.pain_finished_time || 0)) return;
 
-    if (damage <= 25 && Math.random() < 0.2) return;
+    if (damage <= 25 && context.rng.frandom() < 0.2) return;
 
     self.pain_finished_time = self.timestamp + 3.0;
 
@@ -205,7 +206,7 @@ function makron_pain(self: Entity, other: Entity | null, kick: number, damage: n
         context.engine.sound?.(self, 0, 'makron/pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain5_move;
     } else {
-        if (Math.random() <= 0.45) {
+        if (context.rng.frandom() <= 0.45) {
              context.engine.sound?.(self, 0, 'makron/pain3.wav', 1, 1, 0);
              self.monsterinfo.current_move = pain6_move;
         }
@@ -389,7 +390,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = makron_stand;
   self.monsterinfo.walk = makron_walk;
   self.monsterinfo.run = makron_run;
-  self.monsterinfo.attack = makron_attack;
+  self.monsterinfo.attack = (ent) => makron_attack(ent, context.entities);
   self.monsterinfo.sight = (self, other) => {
       context.entities.sound?.(self, 0, 'makron/sight.wav', 1, 1, 0);
       self.monsterinfo.current_move = sight_move;

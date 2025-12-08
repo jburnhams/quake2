@@ -154,9 +154,9 @@ export function parseEntityLump(text: string): ParsedEntity[] {
     }
     if (open.token !== '{') {
       // In some BSPs, there might be garbage at the end of the entity lump?
-      // Or maybe our token consumption logic is too strict.
-      // If we encounter a token that is not { but we are at top level, maybe just skip it if it's whitespace-ish or similar?
-      // Or maybe previous parseToken consumed something weird.
+      // Token consumption logic might be too strict.
+      // If we encounter a token that is not { but we are at top level, check if it's whitespace-ish or similar.
+      // Alternatively, previous parseToken might have consumed something weird.
 
       // Let's try to just skip until we find { or EOF.
       // This matches more resilient C parsing.
@@ -268,8 +268,11 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
       return null;
     }
 
-    // TODO: Co-op filtering
-    // if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && options.entities.coop) { ... }
+    // Co-op filtering
+    if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && (options.entities as any).coop) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
   }
 
   const context: SpawnContext = {

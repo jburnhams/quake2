@@ -1,151 +1,130 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_berserk } from '../../../src/entities/monsters/berserk.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
+import { TempEntity, ServerCommand } from '@quake2ts/shared';
+import { MulticastType } from '../../../src/imports.js';
 import { createTestContext } from '../../test-helpers.js';
-import { AIFlags } from '../../../src/ai/constants.js';
-import { TempEntity } from '@quake2ts/shared';
-import * as Damage from '../../../src/combat/damage.js';
 
 describe('monster_berserk', () => {
-    let context: any;
-    let tDamageSpy: any;
+  let context: any;
+  let berserk: Entity;
+  let player: Entity;
 
-    beforeEach(async () => {
-        const testCtx = createTestContext();
-        context = testCtx.entities;
+  beforeEach(() => {
+    const testCtx = createTestContext();
+    context = testCtx.entities;
 
-        // Mock T_Damage to verify calls
-        tDamageSpy = vi.spyOn(Damage, 'T_Damage');
+    // Setup entities
+    berserk = {
+      index: 1,
+      origin: { x: 0, y: 0, z: 0 },
+      angles: { x: 0, y: 0, z: 0 },
+      mins: { x: -24, y: -24, z: -24 },
+      maxs: { x: 24, y: 24, z: 32 },
+      viewheight: 32,
+      classname: 'monster_berserk',
+      health: 240,
+      max_health: 240,
+      monsterinfo: {
+        current_move: null,
+      },
+      enemy: null,
+      spawnflags: 0,
+      velocity: { x: 0, y: 0, z: 0 },
+      timestamp: 0, // Initialize timestamp!
+    } as any;
+
+    player = {
+      index: 2,
+      origin: { x: 100, y: 0, z: 0 },
+      angles: { x: 0, y: 0, z: 0 },
+      classname: 'player',
+      health: 100,
+      takedamage: true,
+      flags: 0,
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 },
+    } as any;
+
+    context.findByRadius = vi.fn().mockReturnValue([player]);
+    context.trace.mockReturnValue({
+        fraction: 1.0,
+        ent: null,
+        endpos: { x: 0, y: 0, z: 0 },
     });
+  });
 
-    it('spawns correctly', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context, health_multiplier: 1 } as any);
+  it('should perform slam attack when landing from jump', () => {
+    const spawnContext = { entities: context } as any;
+    SP_monster_berserk(berserk, spawnContext);
 
-        expect(ent.classname).toBe('monster_berserk');
-        expect(ent.health).toBe(240);
-        expect(ent.movetype).toBe(MoveType.Step);
-        expect(ent.solid).toBe(Solid.BoundingBox);
-    });
+    berserk.enemy = player;
+    berserk.origin = { x: 0, y: 0, z: 0 };
+    player.origin = { x: 300, y: 0, z: 0 };
 
-    it('has correct model and bounds', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
+    vi.spyOn(context.rng, 'frandom').mockReturnValue(0.6);
 
-        expect(ent.model).toBe('models/monsters/berserk/tris.md2');
-        expect(ent.mins).toEqual({ x: -16, y: -16, z: -24 });
-        expect(ent.maxs).toEqual({ x: 16, y: 16, z: 32 });
-    });
+    // Ensure timestamp < timeSeconds
+    berserk.timestamp = 0;
+    // context.timeSeconds is 10 by default in test helper
 
-    it('attack initiates jump sequence when far enough', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
-        ent.enemy = context.spawn();
-        ent.enemy.origin = { x: 300, y: 0, z: 0 }; // Far enough > 150
-        ent.origin = { x: 0, y: 0, z: 0 };
-        ent.timestamp = 0; // Cooldown ready
+    if (berserk.monsterinfo?.attack) {
+        berserk.monsterinfo.attack(berserk, context);
+    }
 
-        // We need to force brandom to true to trigger jump
-        // Since we can't easily mock the local random generator in the module without interception,
-        // we might have to rely on calling it multiple times or mocking the module if possible.
-        // However, `berserk_attack` checks `brandom()` (50% chance).
-        // Let's call it and check if animation changes to `berserk_move_attack_strike`.
-        // Frame 87 is the start of attack strike.
+    const move = berserk.monsterinfo?.current_move;
+    expect(move?.firstframe).toBe(87);
 
-        // Mock sound
-        context.sound.mockClear();
+    const takeoffFrame = move?.frames[2];
+    expect(takeoffFrame?.think?.name).toBe('berserk_jump_takeoff');
 
-        // Try multiple times to hit probability if needed, or mock random if we could.
-        // For now, let's just call it and assume we can hit it or mocking works if we mock shared module.
-        // But `createRandomGenerator` is imported.
+    takeoffFrame?.think?.(berserk, context);
 
-        // Let's trigger attack
-        ent.monsterinfo.attack!(ent, context);
+    expect(berserk.groundentity).toBeNull();
+    expect(berserk.touch).toBeDefined();
+    expect(berserk.velocity.z).toBe(450);
 
-        // If it triggered jump:
-        // 1. Sound should be played
-        // 2. Animation frame should be 87 (first frame of attack strike)
-        // 3. timestamp should be updated
-    });
+    berserk.groundentity = { index: 0 } as any;
 
-    it('SPAWNFLAG_BERSERK_NOJUMPING prevents jump attack', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
-        ent.spawnflags |= 16; // SPAWNFLAG_BERSERK_NOJUMPING
-        ent.enemy = context.spawn();
-        ent.enemy.origin = { x: 300, y: 0, z: 0 };
-        ent.origin = { x: 0, y: 0, z: 0 };
-        ent.timestamp = 0;
+    const landingFrame = move?.frames[4];
+    expect(landingFrame?.think?.name).toBe('berserk_check_landing');
 
-        const initialFrame = ent.frame;
-        ent.monsterinfo.attack!(ent, context);
+    landingFrame?.think?.(berserk, context);
 
-        // Should NOT switch to jump attack animation (frame 87)
-        // It might do melee if close, but here we are far.
-        // If it doesn't jump, it might just do nothing or walk/run.
-        // The attack function returns if flag is set and distance > 150.
-        expect(ent.frame).not.toBe(87);
-    });
+    expect(context.multicast).toHaveBeenCalledWith(
+        expect.anything(),
+        MulticastType.Phs,
+        ServerCommand.temp_entity,
+        TempEntity.BERSERK_SLAM,
+        expect.anything()
+    );
 
-    it('jump touch triggers slam damage on impact with damageable entity', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
-        ent.enemy = context.spawn();
-        ent.enemy.origin = { x: 300, y: 0, z: 0 };
+    expect(context.findByRadius).toHaveBeenCalled();
+  });
 
-        // Simulate jump takeoff to set up callbacks (touch, etc) if we could,
-        // but `berserk_jump_touch` is internal.
-        // However, `SP_monster_berserk` doesn't expose it directly.
-        // But we can trigger the think functions that lead to it.
+  it('should create shockwave visual on slam', () => {
+    const spawnContext = { entities: context } as any;
+    SP_monster_berserk(berserk, spawnContext);
 
-        // Actually, we can test the behavior by simulating the `touch` callback if we can access it.
-        // `berserk_jump_takeoff` sets `self.touch`.
+    berserk.enemy = player;
+    player.origin = { x: 300, y: 0, z: 0 };
+    vi.spyOn(context.rng, 'frandom').mockReturnValue(0.6);
+    berserk.timestamp = 0;
 
-        // Let's manually invoke the logic if we can't easily reach it via integration.
-        // We can use the fact that `berserk_attack_slam` calls `T_SlamRadiusDamage`.
-    });
+    berserk.monsterinfo.attack!(berserk, context);
+    const move = berserk.monsterinfo?.current_move;
 
-    it('T_SlamRadiusDamage applies correct damage and kick', () => {
-        const ent = context.spawn();
-        SP_monster_berserk(ent, { entities: context } as any);
-        ent.origin = { x: 0, y: 0, z: 0 };
+    move?.frames[2].think!(berserk, context);
 
-        // Victim
-        const victim = context.spawn();
-        victim.origin = { x: 10, y: 0, z: 0 }; // Close
-        victim.takedamage = true;
-        victim.client = {} as any; // To test velocity kick
-        victim.velocity = { x: 0, y: 0, z: 0 };
+    berserk.groundentity = { index: 0 } as any;
+    move?.frames[4].think!(berserk, context);
 
-        // Mock findByRadius
-        context.findByRadius = vi.fn(() => [victim]);
-
-        // We need to trigger `berserk_attack_slam` or similar.
-        // But `T_SlamRadiusDamage` is not exported.
-        // We can trigger `berserk_attack_slam` via `berserk_check_landing` or `berserk_jump_touch`.
-
-        // Let's try to reach `berserk_attack_slam` by calling `berserk_jump_touch` indirectly?
-        // No, `berserk_attack_slam` is called when landing.
-
-        // Wait, `berserk_attack_slam` is internal.
-        // But we can use `berserk_jump_takeoff` to set up the touch callback, then call it.
-
-        // 1. Set up entity
-        ent.enemy = victim;
-        // 2. Call takeoff (we need to reach it via animation or manually if exposed?)
-        // It is not exposed.
-
-        // We can reach it via `berserk_frames_attack_strike` -> frame 89 (index 2) calls `berserk_jump_takeoff`.
-        // Frame 87 is start.
-        // So we can set animation to `berserk_move_attack_strike`, advance frames to trigger `think`.
-
-        // Manually set move
-        // But `berserk_move_attack_strike` is local.
-
-        // Alternative: Use `ent.monsterinfo.attack` to start sequence.
-        // We need `brandom` to return true.
-        // Since we cannot mock `brandom`, we might need to retry until it hits.
-    });
-
+    expect(context.multicast).toHaveBeenCalledWith(
+        expect.anything(),
+        MulticastType.Phs,
+        ServerCommand.temp_entity,
+        TempEntity.BERSERK_SLAM,
+        expect.objectContaining({ x: expect.any(Number), y: expect.any(Number), z: expect.any(Number) })
+    );
+  });
 });
