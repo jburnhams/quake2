@@ -1,4 +1,4 @@
-import type { Vec3 } from '@quake2ts/shared';
+import type { Vec3, CollisionPlane } from '@quake2ts/shared';
 import { ZERO_VEC3, RenderFx } from '@quake2ts/shared';
 import { PlayerClient, hasItem } from '../inventory/playerInventory.js';
 import type { EntitySystem } from './system.js';
@@ -60,8 +60,15 @@ export enum DeadFlag {
   Respawnable = 3,
 }
 
-export type ThinkCallback = (self: Entity, context: any) => void;
-export type TouchCallback = (self: Entity, other: Entity | null, plane?: any, surf?: any) => void;
+export interface CollisionSurface {
+  name: string;
+  flags: number;
+  value: number;
+}
+
+export type ThinkCallback = (self: Entity, context: EntitySystem) => void;
+// Replaced 'any' with specific types or explicitly kept 'any' where uncertain but documented
+export type TouchCallback = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type BlockedCallback = (self: Entity, other: Entity | null, context?: EntitySystem) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;

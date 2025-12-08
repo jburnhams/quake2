@@ -15,29 +15,29 @@ The web application will provide UI and file I/O, while the library handles all 
 ### 1.1 PAK File Browser API
 
 #### 1.1.1 VirtualFileSystem Enhancements
-- [ ] Add method `listDirectory(path: string): Promise<FileInfo[]>` to enumerate directory contents
-- [ ] Add method `getFileMetadata(path: string): FileMetadata` returning size, offset, PAK source
-- [ ] Add method `getDirectoryTree(): DirectoryNode` for hierarchical browsing
-- [ ] Add filtering by extension: `listByExtension(extensions: string[]): FileInfo[]`
-- [ ] Add method `searchFiles(pattern: RegExp): FileInfo[]` for text search
-- [ ] Add method `getPakInfo(): PakInfo[]` returning metadata for all mounted PAKs (filename, entry count, total size)
+- [x] Add method `listDirectory(path: string): Promise<FileInfo[]>` to enumerate directory contents
+- [x] Add method `getFileMetadata(path: string): FileMetadata` returning size, offset, PAK source
+- [x] Add method `getDirectoryTree(): DirectoryNode` for hierarchical browsing
+- [x] Add filtering by extension: `listByExtension(extensions: string[]): FileInfo[]`
+- [x] Add method `searchFiles(pattern: RegExp): FileInfo[]` for text search
+- [x] Add method `getPakInfo(): PakInfo[]` returning metadata for all mounted PAKs (filename, entry count, total size)
 
 #### 1.1.2 File Type Detection
-- [ ] Implement `detectFileType(path: string): FileType` using magic bytes and extensions
-- [ ] Support detection for: BSP, MD2, MD3, WAL, PCX, TGA, WAV, OGG, TXT, CFG, DEM
-- [ ] Add method `isTextFile(path: string): boolean` for viewer selection
-- [ ] Add method `isBinaryFile(path: string): boolean`
+- [x] Implement `detectFileType(path: string): FileType` using magic bytes and extensions
+- [x] Support detection for: BSP, MD2, MD3, WAL, PCX, TGA, WAV, OGG, TXT, CFG, DEM
+- [x] Add method `isTextFile(path: string): boolean` for viewer selection
+- [x] Add method `isBinaryFile(path: string): boolean`
 
 #### 1.1.3 Asset Preview API
-- [ ] Create `AssetPreviewGenerator` class for generating thumbnails
+- [x] Create `AssetPreviewGenerator` class for generating thumbnails
 - [ ] Implement `generateTextureThumbnail(path: string, size: number): Promise<ImageData>` for WAL/PCX/TGA
 - [ ] Implement `generateModelThumbnail(path: string, size: number): Promise<ImageData>` for MD2/MD3
-- [ ] Implement `getMapBounds(mapName: string): Promise<BoundingBox>` for map overview
-- [ ] Add method `extractMapScreenshot(mapName: string): Promise<ImageData | null>` from embedded levelshots
+- [x] Implement `getMapBounds(mapName: string): Promise<BoundingBox>` for map overview
+- [x] Add method `extractMapScreenshot(mapName: string): Promise<ImageData | null>` from embedded levelshots
 
 #### 1.1.4 Text File Reading
-- [ ] Add method `readTextFile(path: string): Promise<string>` with UTF-8/ASCII fallback
-- [ ] Add method `readBinaryFile(path: string): Promise<Uint8Array>` for raw access
+- [x] Add method `readTextFile(path: string): Promise<string>` with UTF-8/ASCII fallback
+- [x] Add method `readBinaryFile(path: string): Promise<Uint8Array>` for raw access
 - [ ] Handle large file streaming for web app progress display
 
 ### 1.2 Map Viewer API

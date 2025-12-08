@@ -2,7 +2,7 @@
 // Quake II - Projectile Entities
 // =================================================================
 
-import { Entity, MoveType, Solid, ServerFlags } from './entity.js';
+import { Entity, MoveType, Solid, ServerFlags, CollisionSurface } from './entity.js';
 import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
@@ -20,7 +20,7 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
     rocket.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
     rocket.mins = { x: -4, y: -4, z: -4 };
     rocket.maxs = { x: 4, y: 4, z: 4 };
-    rocket.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    rocket.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -83,7 +83,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
         sys.free(self);
     };
 
-    grenade.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    grenade.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -138,7 +138,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     bolt.mins = { x: -2, y: -2, z: -2 };
     bolt.maxs = { x: 2, y: 2, z: 2 };
 
-    bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -199,7 +199,7 @@ export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, d
     // m_soldier.cpp uses EF_IONRIPPER. This might be a rogue/xatrix specific flag.
     // We'll skip setting unknown flags and rely on model.
 
-    ion.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    ion.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -504,7 +504,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
     // Touch handler for when BFG hits something
     // Based on rerelease/g_weapon.cpp:989-1025 (bfg_touch)
-    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -576,7 +576,7 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
     ball.mins = { x: -2, y: -2, z: -2 };
     ball.maxs = { x: 2, y: 2, z: 2 };
 
-    ball.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    ball.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -708,7 +708,7 @@ export function createHeatSeekingMissile(sys: EntitySystem, owner: Entity, start
     heat.radius_dmg = damage; // Usually same as direct?
     heat.dmg_radius = 120;
 
-    heat.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    heat.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) return;
 
         if (other && other.takedamage) {
@@ -746,7 +746,7 @@ export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, d
     // Set angle to direction
     flechette.angles = vectorToAngles(dir);
 
-    flechette.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    flechette.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
