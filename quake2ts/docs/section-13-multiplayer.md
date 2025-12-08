@@ -1,7 +1,7 @@
 # Section 13: Multiplayer & Network Support - Implementation Tasks
 
 ## Current Status
-**~80% Complete (Phase 4 Active)**
+**~82% Complete (Phase 4 Active)**
 
 - ✅ Server and client packages exist
 - ✅ Basic WebSocket transport works
@@ -56,23 +56,23 @@
   - Created `real-connection.test.ts`.
   - Verified connection state transition to 'Connected' in browser harness.
 
-#### Task 4.4: Test Command Flow
+#### Task 4.4: Test Command Flow (COMPLETE)
 **File**: `packages/e2e-tests/commands.test.ts`
 **Reference**: User command processing
 
-- [ ] **4.4.1** Test client sends commands
+- [x] **4.4.1** Test client sends commands
   - Client in active state (Real Client)
   - Simulate user input (movement)
   - Verify `clc_move` packets sent
   - Verify NetChan sequence numbers increment
 
-- [ ] **4.4.2** Test server receives commands
+- [x] **4.4.2** Test server receives commands
   - Server receives `clc_move` packets
   - Verify NetChan processes them
   - Verify `UserCommand` parsed
   - Verify `ge->ClientThink` called with command
 
-- [ ] **4.4.3** Test command rate limiting
+- [x] **4.4.3** Test command rate limiting
   - Send excessive commands (>40/sec)
   - Verify server drops excess
   - Verify no crash or overflow
