@@ -268,8 +268,11 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
       return null;
     }
 
-    // TODO: Co-op filtering
-    // if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && options.entities.coop) { ... }
+    // Co-op filtering
+    if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && (options.entities as any).coop) {
+      options.entities.freeImmediate(entity);
+      return null;
+    }
   }
 
   const context: SpawnContext = {
