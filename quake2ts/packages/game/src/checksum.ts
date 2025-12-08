@@ -1,5 +1,6 @@
 import type { GameStateSnapshot } from './index.js';
 import type { EntitySystemSnapshot, SerializedEntityState } from './entities/system.js';
+import type { EntityState } from '@quake2ts/shared';
 
 export const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -29,6 +30,27 @@ export function hashString(hash: number, value: string): number {
   return hashBytes(hash, bytes);
 }
 
+function hashEntityState(hash: number, entity: EntityState): number {
+    hash = hashNumber(hash, entity.number);
+    hash = hashNumber(hash, entity.modelIndex);
+    hash = hashNumber(hash, entity.frame);
+    hash = hashNumber(hash, entity.skinNum);
+    hash = hashNumber(hash, entity.effects);
+    hash = hashNumber(hash, entity.renderfx);
+    hash = hashNumber(hash, entity.solid);
+    hash = hashNumber(hash, entity.sound);
+
+    hash = hashNumber(hash, entity.origin.x);
+    hash = hashNumber(hash, entity.origin.y);
+    hash = hashNumber(hash, entity.origin.z);
+
+    hash = hashNumber(hash, entity.angles.x);
+    hash = hashNumber(hash, entity.angles.y);
+    hash = hashNumber(hash, entity.angles.z);
+
+    return hash;
+}
+
 export function hashGameState(state: GameStateSnapshot): number {
   let hash = FNV_OFFSET_BASIS;
 
@@ -51,6 +73,15 @@ export function hashGameState(state: GameStateSnapshot): number {
 
   hash = hashNumber(hash, state.entities.activeCount);
   hash = hashString(hash, state.entities.worldClassname);
+
+  // Include packetEntities in hash
+  if (state.packetEntities) {
+      // Sort to ensure stable hash
+      const sorted = [...state.packetEntities].sort((a, b) => a.number - b.number);
+      for (const ent of sorted) {
+          hash = hashEntityState(hash, ent);
+      }
+  }
 
   return hash >>> 0;
 }
