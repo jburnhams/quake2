@@ -173,6 +173,13 @@ function door_go_down(door: Entity, context: EntitySystem) {
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
 
+  if (door.max_health) {
+      door.takedamage = true;
+      door.health = door.max_health;
+  }
+
+  door.state = DoorState.Closing;
+
   if (door.classname === 'func_door_rotating') {
        // Check if reversing for safe_open
        let dest = door.pos1; // Default to closed (pos1)
