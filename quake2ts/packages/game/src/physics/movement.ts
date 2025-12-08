@@ -71,7 +71,8 @@ export function runBouncing(ent: Entity, system: EntitySystem, imports: GameImpo
     } else {
       // Hit world
       if (ent.touch) {
-        ent.touch(ent, system.world, traceResult.plane, undefined);
+        const surf = traceResult.surfaceFlags ? { name: '', flags: traceResult.surfaceFlags, value: 0 } : null;
+        ent.touch(ent, system.world, traceResult.plane, surf);
       }
     }
   }

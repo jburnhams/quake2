@@ -60,9 +60,15 @@ export enum DeadFlag {
   Respawnable = 3,
 }
 
+export interface CollisionSurface {
+  name: string;
+  flags: number;
+  value: number;
+}
+
 export type ThinkCallback = (self: Entity, context: EntitySystem) => void;
 // Replaced 'any' with specific types or explicitly kept 'any' where uncertain but documented
-export type TouchCallback = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => void;
+export type TouchCallback = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type BlockedCallback = (self: Entity, other: Entity | null, context?: EntitySystem) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
