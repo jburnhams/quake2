@@ -520,7 +520,7 @@ export function M_MoveToGoal(self: Entity, dist: number, context: EntitySystem):
   // Note: Simplified check compared to rerelease which checks bad_move_time etc.
   if (facingIdeal(self)) {
       // Check visibility/trace to goal
-      const trace = context.trace(self.origin, undefined, undefined, goal.origin, self, MASK_MONSTERSOLID);
+      const trace = context.trace(self.origin, null, null, goal.origin, self, MASK_MONSTERSOLID);
       if (trace.fraction === 1.0 || trace.ent === goal) {
          const dirToGoal = {
              x: goal.origin.x - self.origin.x,
