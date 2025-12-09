@@ -74,7 +74,6 @@ export class GameSession {
                     dist: 0, // Unknown distance
                     type: 0, // Unknown type
                     signbits: 0, // Unknown
-                    pad: [0, 0]
                 };
             }
 
