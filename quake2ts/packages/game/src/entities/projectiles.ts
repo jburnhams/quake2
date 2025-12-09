@@ -2,7 +2,7 @@
 // Quake II - Projectile Entities
 // =================================================================
 
-import { Entity, MoveType, Solid, ServerFlags } from './entity.js';
+import { Entity, MoveType, Solid, ServerFlags, CollisionSurface } from './entity.js';
 import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
@@ -20,7 +20,7 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
     rocket.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
     rocket.mins = { x: -4, y: -4, z: -4 };
     rocket.maxs = { x: 4, y: 4, z: 4 };
-    rocket.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    rocket.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -83,7 +83,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
         sys.free(self);
     };
 
-    grenade.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    grenade.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -138,7 +138,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
     bolt.mins = { x: -2, y: -2, z: -2 };
     bolt.maxs = { x: 2, y: 2, z: 2 };
 
-    bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    bolt.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -199,7 +199,7 @@ export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, d
     // m_soldier.cpp uses EF_IONRIPPER. This might be a rogue/xatrix specific flag.
     // We'll skip setting unknown flags and rely on model.
 
-    ion.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    ion.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -398,7 +398,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
         // Don't fire laser if blocked by world
         // Based on rerelease/g_weapon.cpp:1116-1120
         const sightTrace = sys.trace(self.origin, null, null, point, null, MASK_SOLID);
-        if (sightTrace.fraction < 1.0) {
+        if (sightTrace.fraction < 1.0 && sightTrace.ent !== ent) {
             continue; // Blocked by world
         }
 
@@ -504,7 +504,7 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
     // Touch handler for when BFG hits something
     // Based on rerelease/g_weapon.cpp:989-1025 (bfg_touch)
-    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    bfgBall.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -548,13 +548,13 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
         self.enemy = other;
 
         // Start multi-frame explosion with laser effects
-        self.think = (self: Entity, context: any) => bfgExplode(self, context);
+        self.think = (self: Entity, context: EntitySystem) => bfgExplode(self, context);
         sys.scheduleThink(self, sys.timeSeconds + 0.1);
     };
 
     // Set up in-flight laser think function
     // Based on rerelease/g_weapon.cpp:1166-1167
-    bfgBall.think = (self: Entity, context: any) => bfgThink(self, context);
+    bfgBall.think = (self: Entity, context: EntitySystem) => bfgThink(self, context);
 
     // Start thinking immediately (FRAME_TIME_S)
     // Based on rerelease/g_weapon.cpp:1167
@@ -576,7 +576,7 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
     ball.mins = { x: -2, y: -2, z: -2 };
     ball.maxs = { x: 2, y: 2, z: 2 };
 
-    ball.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    ball.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }
@@ -678,7 +678,7 @@ function heatThink(self: Entity, sys: EntitySystem): void {
         };
         self.angles = vectorToAngles(normalizedNewDir);
 
-        if (!self.enemy) {
+        if (self.enemy !== best) {
             sys.sound(self, 0, 'weapons/railgr1a.wav', 1, 0.25, 0);
             self.enemy = best;
         }
@@ -708,7 +708,7 @@ export function createHeatSeekingMissile(sys: EntitySystem, owner: Entity, start
     heat.radius_dmg = damage; // Usually same as direct?
     heat.dmg_radius = 120;
 
-    heat.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    heat.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) return;
 
         if (other && other.takedamage) {
@@ -746,7 +746,7 @@ export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, d
     // Set angle to direction
     flechette.angles = vectorToAngles(dir);
 
-    flechette.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: any) => {
+    flechette.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
         if (other === self.owner) {
             return;
         }

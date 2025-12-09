@@ -130,7 +130,7 @@ function shambler_idle(self: Entity, context: EntitySystem): void {
 }
 
 function shambler_maybe_idle(self: Entity, context: EntitySystem): void {
-  if (Math.random() > 0.8) {
+  if (context.rng.frandom() > 0.8) {
     context.engine.sound?.(self, 0, sound_idle, 1, 0.5, 0);
   }
 }
@@ -260,7 +260,7 @@ function shambler_pain(self: Entity, other: Entity | null, kick: number, damage:
 
     // DamageMod check needs logic or argument passing.
     // If not MOD_CHAINFIST and damage <= 30 ...
-    if (damage <= 30 && Math.random() > 0.2) return;
+    if (damage <= 30 && context.rng.frandom() > 0.2) return;
 
     // Check attacking frames to avoid interruption
     if (self.frame >= FRAME_smash01 && self.frame <= FRAME_smash12) return;
@@ -316,7 +316,7 @@ function ShamblerCastLightning(self: Entity, context: EntitySystem): void {
     // damage 15 * random(8, 12) ~ 150 average? No, fire_bullet damage is per shot?
     // C: fire_bullet(self, start, dir, irandom(8, 12), 15, 0, 0, MOD_TESLA);
     // count = 8-12, damage = 15.
-    const count = 8 + Math.floor(Math.random() * 5);
+    const count = 8 + context.rng.irandom(4);
     monster_fire_bullet(self, start, aimdir, 15, 15, 0, 0, count, context, DamageMod.TESLA);
 }
 
@@ -359,7 +359,7 @@ function sham_smash10(self: Entity, context: EntitySystem): void {
 
     const aim = { x: MELEE_DISTANCE, y: self.mins.x, z: -4 };
     // damage: irandom(110, 120), kick: 120
-    const damage = 110 + Math.random() * 10;
+    const damage = 110 + context.rng.frandom() * 10;
     if (monster_fire_hit(self, aim, damage, 120, context)) {
         context.engine.sound?.(self, 0, sound_smack, 1, 1, 0);
     }
@@ -371,7 +371,7 @@ function ShamClaw(self: Entity, context: EntitySystem): void {
 
     const aim = { x: MELEE_DISTANCE, y: self.mins.x, z: -4 };
     // damage: irandom(70, 80), kick: 80
-    const damage = 70 + Math.random() * 10;
+    const damage = 70 + context.rng.frandom() * 10;
     if (monster_fire_hit(self, aim, damage, 80, context)) {
         context.engine.sound?.(self, 0, sound_smack, 1, 1, 0);
     }
@@ -399,7 +399,7 @@ shambler_attack_smash = {
 
 function sham_swingl9(self: Entity, context: EntitySystem): void {
     shambler_ai_charge(self, 8, context);
-    if (Math.random() < 0.5 && self.enemy && rangeTo(self, self.enemy) < MELEE_DISTANCE) {
+    if (context.rng.frandom() < 0.5 && self.enemy && rangeTo(self, self.enemy) < MELEE_DISTANCE) {
         M_SetAnimation(self, shambler_attack_swingr, context);
     }
 }
@@ -407,7 +407,7 @@ function sham_swingl9(self: Entity, context: EntitySystem): void {
 function sham_swingr9(self: Entity, context: EntitySystem): void {
     shambler_ai_charge(self, 1, context);
     shambler_ai_charge(self, 10, context); // Original calls ai_charge twice
-    if (Math.random() < 0.5 && self.enemy && rangeTo(self, self.enemy) < MELEE_DISTANCE) {
+    if (context.rng.frandom() < 0.5 && self.enemy && rangeTo(self, self.enemy) < MELEE_DISTANCE) {
         M_SetAnimation(self, shambler_attack_swingl, context);
     }
 }
@@ -448,7 +448,7 @@ shambler_attack_swingr = {
 };
 
 function shambler_melee(self: Entity, context: EntitySystem): void {
-    const chance = Math.random();
+    const chance = context.rng.frandom();
     if (chance > 0.6 || self.health === 600) {
         M_SetAnimation(self, shambler_attack_smash, context);
     } else if (chance > 0.3) {

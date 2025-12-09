@@ -42,12 +42,35 @@ describe('E2E Command Flow Test', () => {
         return (window as any).clientInstance.multiplayer.netchan.outgoingSequence;
     });
 
-    // Wait for a few frames
-    await page.waitForTimeout(1000);
+    // Inject specific input to verify data integrity
+    const testAngles = { x: 10, y: 20, z: 5 };
+    await page.evaluate((angles) => {
+        (window as any).testInput = {
+            angles: angles,
+            forwardmove: 100,
+            sidemove: -50,
+            upmove: 0,
+            buttons: 0,
+            impulse: 0,
+            msec: 16,
+            lightlevel: 0,
+            serverFrame: 0
+        };
+    }, testAngles);
 
-    const newSequence = await page.evaluate(() => {
-        return (window as any).clientInstance.multiplayer.netchan.outgoingSequence;
-    });
+    // Wait for command to be processed by server
+    // Polling loop to wait for sequence increase
+    let newSequence = initialSequence;
+    const startTime = Date.now();
+    while (newSequence <= initialSequence + 5) {
+        if (Date.now() - startTime > 5000) {
+            throw new Error('Timeout waiting for sequence to increase');
+        }
+        await page.waitForTimeout(100);
+        newSequence = await page.evaluate(() => {
+            return (window as any).clientInstance.multiplayer.netchan.outgoingSequence;
+        });
+    }
 
     expect(newSequence).toBeGreaterThan(initialSequence);
 
@@ -64,8 +87,23 @@ describe('E2E Command Flow Test', () => {
     // We expect lastCmd to be populated and sequence numbers to align
     expect(connectedClient.lastCmd).toBeDefined();
 
-    // The client harness sends empty commands with msec=16
+    // Verify the specific content of the command matches what we injected
+    // Note: angles might be quantized or processed, but for raw usercmd they should match closely
+    // Quake 2 uses 16-bit angles (65536/360), so there might be slight precision loss if converted
+    // but here we are checking the parsed usercommand.
+
+    // Check msec
     expect(connectedClient.lastCmd.msec).toBe(16);
+
+    // Check movement
+    expect(connectedClient.lastCmd.forwardmove).toBe(100);
+    expect(connectedClient.lastCmd.sidemove).toBe(-50);
+
+    // Check angles - use x/y/z accessors (UserCommand.angles is a Vec3)
+    // Use toBeCloseTo for robust float comparison
+    expect(connectedClient.lastCmd.angles.x).toBeCloseTo(testAngles.x, 1);
+    expect(connectedClient.lastCmd.angles.y).toBeCloseTo(testAngles.y, 1);
+    expect(connectedClient.lastCmd.angles.z).toBeCloseTo(testAngles.z, 1);
 
     await closeBrowser({ browser, page } as any);
     await stopServer(server);
@@ -88,7 +126,7 @@ describe('E2E Command Flow Test', () => {
     // Flood commands from client
     await page.evaluate(() => {
         const client = (window as any).clientInstance;
-        // Send 300 commands instantly
+        // Send 300 commands instantly (limit is usually much lower, e.g., packet limit)
         for(let i=0; i<300; i++) {
              client.multiplayer.sendCommand({
                 angles: {x:0, y:0, z:0},
@@ -105,38 +143,22 @@ describe('E2E Command Flow Test', () => {
     });
 
     // Wait for server to process and kick
+    // The server should detect the flood and drop the client
     await page.waitForTimeout(2000);
 
     // Verify client is disconnected
-    // The client might not know it's disconnected immediately if the server just drops it without a packet,
-    // but the WebSocket should close.
-    // Or the server sends a disconnect packet.
-
     const isConnected = await page.evaluate(() => {
          const client = (window as any).clientInstance;
          return client.multiplayer.isConnected();
     });
 
-    // Server logic: `this.dropClient(client)` calls `client.net.disconnect()`.
-    // This should close the socket.
-
-    // However, depending on timing, it might still be in 'Active' state on client if the close event hasn't fired yet
-    // or if the server just stopped processing but didn't close socket (unlikely with dropClient).
-
-    // Let's verify on server side first
+    // Verify on server side
     const serverClients = (server as any).svs.clients;
-    // The client slot should be null or Free (0)
-    // Or if it's still there, it should be marked as dropped?
-    // In DedicatedServer.dropClient, it sets state to Free via onClose callback mostly.
-
-    // Note: The websocket close might take a moment to propagate.
 
     // Check if any client is still Active (4)
     // We poll briefly because the server frame loop processes disconnects asynchronously
-    // Wait for server to update state - increase wait time as the client might retry or timeout slow
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Server side check
     const activeClients = serverClients.filter((c: any) => c && c.state === 4);
     expect(activeClients.length).toBe(0);
 

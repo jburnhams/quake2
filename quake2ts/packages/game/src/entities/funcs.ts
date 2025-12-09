@@ -77,6 +77,23 @@ function angle_move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (
     // Linear speed for now (TODO: accel/decel support matching move_calc)
     let currentSpeed = speed;
 
+    // Accel
+    if (ent.accel) {
+        currentSpeed = lengthVec3(ent.avelocity) + ent.accel * dt;
+    }
+
+    // Decel
+    if (ent.decel) {
+        const distToStop = (currentSpeed * currentSpeed) / (2 * ent.decel);
+        if (dist <= distToStop) {
+            currentSpeed -= ent.decel * dt;
+            if (currentSpeed < 10) currentSpeed = 10;
+        }
+    }
+
+    // Clamp
+    if (currentSpeed > speed) currentSpeed = speed;
+
     const move = currentSpeed * dt;
 
     if (dist <= move) {
@@ -172,6 +189,13 @@ function door_go_down(door: Entity, context: EntitySystem) {
   if (moveinfo && moveinfo.sound_start) {
       context.sound(door, 0, moveinfo.sound_start, 1, 1, 0);
   }
+
+  if (door.max_health) {
+      door.takedamage = true;
+      door.health = door.max_health;
+  }
+
+  door.state = DoorState.Closing;
 
   if (door.classname === 'func_door_rotating') {
        // Check if reversing for safe_open
@@ -583,7 +607,6 @@ enum PlatState {
     GoingDown,
 }
 
-// TODO: Update plats to use move_calc too?
 // Plats have accel/decel properties by default.
 
 function plat_hit_top(ent: Entity, context: EntitySystem) {

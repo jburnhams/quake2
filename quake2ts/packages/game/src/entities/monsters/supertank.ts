@@ -312,7 +312,11 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
   self.max_health = self.health;
   self.mass = 800;
   self.takedamage = true;
-  self.viewheight = 64; // Guess, maybe higher?
+
+  // Calculate viewheight based on maxs to match C behavior:
+  // if (!self->viewheight) self->viewheight = (int) (self->maxs[2] - 8.f);
+  // maxs.z is 112, so 112 - 8 = 104.
+  self.viewheight = 104;
 
   self.pain = (self, other, kick, damage) => {
     // Skin change on damage

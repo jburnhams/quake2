@@ -29,6 +29,32 @@ import { PredictAim } from '../../ai/rogue.js';
 
 const MONSTER_TICK = 0.1;
 
+// Constants - Source: game/m_boss31.c
+const JORG_HEALTH = 3000;
+const JORG_MASS = 1000;
+const JORG_GIB_HEALTH = -2000;
+const JORG_VIEWHEIGHT = 25; // Source: full/game/g_monster.c:walkmonster_start_go
+const JORG_ATTACK_CHANCE_1 = 0.75; // game/m_boss31.c:380
+const JORG_REFIRE_CHANCE = 0.9;
+const JORG_PAIN_DAMAGE_THRESHOLD_1 = 50;
+const JORG_PAIN_DAMAGE_THRESHOLD_2 = 100;
+const JORG_PAIN_CHANCE_LOW = 0.6;
+const JORG_PAIN_CHANCE_ATTACK = 0.005;
+const JORG_PAIN_CHANCE_HIGH = 0.3;
+
+const JORG_MACHINEGUN_DAMAGE = 6;
+const JORG_MACHINEGUN_KICK = 4;
+const JORG_MACHINEGUN_HSPREAD = 0.05;
+const JORG_MACHINEGUN_VSPREAD = 0.05;
+
+const JORG_BFG_DAMAGE = 50;
+const JORG_BFG_SPEED = 300;
+const JORG_BFG_KICK = 100;
+const JORG_BFG_RADIUS = 200;
+
+const MAKRON_TOSS_SPEED = 400;
+const MAKRON_TOSS_Z = 200;
+
 // Offsets
 const JORG_MACHINEGUN_R1_OFFSET: Vec3 = { x: 40, y: -20, z: 20 }; // Approx
 const JORG_MACHINEGUN_L1_OFFSET: Vec3 = { x: 40, y: 20, z: 20 };
@@ -89,7 +115,7 @@ function jorg_attack(self: Entity, context: EntitySystem): void {
     // Attack 1: Dual Machineguns
     // Attack 2: BFG
 
-    if (context.rng.frandom() <= 0.75) {
+    if (context.rng.frandom() <= JORG_ATTACK_CHANCE_1) {
         // Attack 1
         context.sound(self, 0, 'boss3/bs3atck1.wav', 1, 1, 0);
         self.monsterinfo.current_move = attack1_move; // Using start_attack1 logic from C
@@ -107,7 +133,7 @@ function jorg_reattack1(self: Entity, context: EntitySystem): void {
     };
 
     if (self.enemy && visible(self, self.enemy, traceFn)) {
-        if (context.rng.frandom() < 0.9) {
+        if (context.rng.frandom() < JORG_REFIRE_CHANCE) {
             self.monsterinfo.current_move = attack1_move; // Re-loop attack1
         } else {
             self.monsterinfo.current_move = attack1_end_move;
@@ -134,12 +160,12 @@ function jorg_fire_bullet(self: Entity, context: any): void {
     // Fire left
     const startL = getProjectedOffset(self, JORG_MACHINEGUN_L1_OFFSET);
     const { aimdir: dirL } = PredictAim(context, self, self.enemy, startL, 0, false, 0.2);
-    monster_fire_bullet_v2(self, startL, dirL, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet_v2(self, startL, dirL, JORG_MACHINEGUN_DAMAGE, JORG_MACHINEGUN_KICK, JORG_MACHINEGUN_HSPREAD, JORG_MACHINEGUN_VSPREAD, 0, context, DamageMod.MACHINEGUN);
 
     // Fire right
     const startR = getProjectedOffset(self, JORG_MACHINEGUN_R1_OFFSET);
     const { aimdir: dirR } = PredictAim(context, self, self.enemy, startR, 0, false, -0.2);
-    monster_fire_bullet_v2(self, startR, dirR, 6, 4, 0.05, 0.05, 0, context, DamageMod.MACHINEGUN);
+    monster_fire_bullet_v2(self, startR, dirR, JORG_MACHINEGUN_DAMAGE, JORG_MACHINEGUN_KICK, JORG_MACHINEGUN_HSPREAD, JORG_MACHINEGUN_VSPREAD, 0, context, DamageMod.MACHINEGUN);
 }
 
 function jorg_fire_bfg(self: Entity, context: any): void {
@@ -150,7 +176,7 @@ function jorg_fire_bfg(self: Entity, context: any): void {
     target.z += (self.enemy.viewheight || 0);
     const dir = normalizeVec3(subtractVec3(target, start));
 
-    (monster_fire_bfg as any)(self, start, dir, 50, 300, 100, 200, 0, context);
+    (monster_fire_bfg as any)(self, start, dir, JORG_BFG_DAMAGE, JORG_BFG_SPEED, JORG_BFG_KICK, JORG_BFG_RADIUS, 0, context);
 }
 
 function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
@@ -160,24 +186,24 @@ function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: num
 
     if (self.timestamp < (self.pain_finished_time || 0)) return;
 
-    if (damage <= 40 && context.rng.frandom() <= 0.6) return;
+    if (damage <= 40 && context.rng.frandom() <= JORG_PAIN_CHANCE_LOW) return;
 
     // Lessen chance if attacking
     // Simplified: just check if in attack move
     if (self.monsterinfo.current_move === attack1_move || self.monsterinfo.current_move === attack2_move) {
-        if (context.rng.frandom() <= 0.005) return;
+        if (context.rng.frandom() > JORG_PAIN_CHANCE_ATTACK) return;
     }
 
     self.pain_finished_time = self.timestamp + 3.0;
 
-    if (damage <= 50) {
+    if (damage <= JORG_PAIN_DAMAGE_THRESHOLD_1) {
         context.engine.sound?.(self, 0, 'boss3/bs3pain1.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain1_move;
-    } else if (damage <= 100) {
+    } else if (damage <= JORG_PAIN_DAMAGE_THRESHOLD_2) {
         context.engine.sound?.(self, 0, 'boss3/bs3pain2.wav', 1, 1, 0);
         self.monsterinfo.current_move = pain2_move;
     } else {
-        if (context.rng.frandom() <= 0.3) {
+        if (context.rng.frandom() <= JORG_PAIN_CHANCE_HIGH) {
             context.engine.sound?.(self, 0, 'boss3/bs3pain3.wav', 1, 1, 0);
             self.monsterinfo.current_move = pain3_move;
         }
@@ -220,8 +246,8 @@ function makron_toss(self: Entity, context: any): void {
         makron.angles = { ...makron.angles, y: vectorToYaw(vec) };
         const dir = normalizeVec3(vec);
         // We cannot assign directly to readonly properties of Vec3
-        const vel = scaleVec3(dir, 400);
-        makron.velocity = { x: vel.x, y: vel.y, z: 200 };
+        const vel = scaleVec3(dir, MAKRON_TOSS_SPEED);
+        makron.velocity = { x: vel.x, y: vel.y, z: MAKRON_TOSS_Z };
         // For physics to update, we need to ensure velocity is used
         // Typically gravity/physics runs every frame.
         // Also ensure groundentity is cleared
@@ -313,14 +339,14 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
   if (context.health_multiplier) {
-    self.health = 3000 * context.health_multiplier;
+    self.health = JORG_HEALTH * context.health_multiplier;
   } else {
-    self.health = 3000;
+    self.health = JORG_HEALTH;
   }
   self.max_health = self.health;
-  self.mass = 1000;
+  self.mass = JORG_MASS;
   self.takedamage = true;
-  self.viewheight = 90; // Guess
+  self.viewheight = JORG_VIEWHEIGHT;
 
   self.pain = (ent, other, kick, dmg) => jorg_pain(ent, other, kick, dmg, context.entities);
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -328,7 +354,7 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     // Check for gibs? C code allows gibbing (-2000 health)
-    if (self.health < -2000) {
+    if (self.health < JORG_GIB_HEALTH) {
         throwGibs(context.entities, self.origin, damage);
         context.entities.free(self);
         return;
