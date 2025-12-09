@@ -103,6 +103,10 @@ describe('Gibbing System', () => {
             ServerCommand.temp_entity,
             TempEntity.BLOOD,
             expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
             expect.anything()
         );
     });
