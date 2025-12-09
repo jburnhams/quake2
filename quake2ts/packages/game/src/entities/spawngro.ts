@@ -41,9 +41,9 @@ function spawngrow_think(self: Entity, context: EntitySystem): void {
   self.nextthink = context.timeSeconds + 0.1;
 }
 
-function SpawnGro_laser_pos(ent: Entity): any {
-    const theta = Math.random() * 2 * Math.PI;
-    const phi = Math.acos((Math.random() * 2) - 1);
+function SpawnGro_laser_pos(ent: Entity, context: EntitySystem): any {
+    const theta = context.rng.frandom() * 2 * Math.PI;
+    const phi = Math.acos((context.rng.frandom() * 2) - 1);
 
     const dx = Math.sin(phi) * Math.cos(theta);
     const dy = Math.sin(phi) * Math.sin(theta);
@@ -63,7 +63,7 @@ function SpawnGro_laser_think(self: Entity, context: EntitySystem): void {
         context.free(self);
         return;
     }
-    self.old_origin = SpawnGro_laser_pos(self);
+    self.old_origin = SpawnGro_laser_pos(self, context);
     context.linkentity(self);
     self.nextthink = context.timeSeconds + 0.001; // 1ms
 }
@@ -73,15 +73,15 @@ export function SpawnGrow_Spawn(context: EntitySystem, startpos: any, start_size
   ent.origin = { ...startpos };
 
   ent.angles = {
-      x: Math.random() * 360,
-      y: Math.random() * 360,
-      z: Math.random() * 360
+      x: context.rng.frandom() * 360,
+      y: context.rng.frandom() * 360,
+      z: context.rng.frandom() * 360
   };
 
   ent.avelocity = {
-      x: (Math.random() * 80 + 280) * 2,
-      y: (Math.random() * 80 + 280) * 2,
-      z: (Math.random() * 80 + 280) * 2
+      x: (context.rng.frandom() * 80 + 280) * 2,
+      y: (context.rng.frandom() * 80 + 280) * 2,
+      z: (context.rng.frandom() * 80 + 280) * 2
   };
 
   ent.solid = Solid.Not;
@@ -126,7 +126,7 @@ export function SpawnGrow_Spawn(context: EntitySystem, startpos: any, start_size
   beam.origin = { ...ent.origin };
   beam.think = SpawnGro_laser_think;
   beam.nextthink = context.timeSeconds + 0.001;
-  beam.old_origin = SpawnGro_laser_pos(beam);
+  beam.old_origin = SpawnGro_laser_pos(beam, context);
 
   context.linkentity(beam);
 }
