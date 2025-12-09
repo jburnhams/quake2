@@ -143,6 +143,17 @@ export function walkmonster_start(self: Entity, context: any): void {
   self.nextthink = context.timeSeconds + MONSTER_TICK;
 }
 
+export function flymonster_start(self: Entity, context: any): void {
+    if (self.health <= 0) return;
+
+    self.movetype = MoveType.Step;
+    self.takedamage = true;
+    self.solid = Solid.BoundingBox;
+
+    // walkmonster_start sets think and nextthink
+    walkmonster_start(self, context);
+}
+
 export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, right: Vec3): Vec3 {
   const start = addVec3(self.origin, scaleVec3(forward, offset.x));
   const start2 = addVec3(start, scaleVec3(right, offset.y));
