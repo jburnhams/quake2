@@ -57,15 +57,36 @@ export class GameSession {
         trace: (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: any, contentmask: number) => {
             const tr = this.engine.trace(start, end, mins || undefined, maxs || undefined);
 
+            // Map Engine TraceResult to Game GameTraceResult
+            // PmoveTraceResult doesn't have plane (CollisionPlane) or ent (Entity).
+            // It has planeNormal.
+
+            let plane: CollisionPlane | null = null;
+            if (tr.planeNormal) {
+                // If the engine returns a plane normal, we can construct a partial plane.
+                // Distance is missing, which might be critical for some physics.
+                // However, engine.trace likely returns a plane object if it's a full trace implementation.
+                // But types say PmoveTraceResult.
+
+                // If type definition is strictly PmoveTraceResult, we only have planeNormal.
+                plane = {
+                    normal: tr.planeNormal,
+                    dist: 0, // Unknown distance
+                    type: 0, // Unknown type
+                    signbits: 0, // Unknown
+                    pad: [0, 0]
+                };
+            }
+
             return {
                 allsolid: tr.allsolid,
                 startsolid: tr.startsolid,
                 fraction: tr.fraction,
                 endpos: tr.endpos,
-                plane: tr.plane ? (tr.plane as CollisionPlane) : null,
+                plane: plane,
                 surfaceFlags: tr.surfaceFlags ?? 0,
                 contents: tr.contents ?? 0,
-                ent: tr.ent ? (tr.ent as any) : null
+                ent: null // Engine trace does not return Entity
             };
         },
         pointcontents: (p: Vec3) => {
