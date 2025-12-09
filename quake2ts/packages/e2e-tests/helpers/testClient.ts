@@ -57,14 +57,6 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
               {
                 key: 'Access-Control-Allow-Origin',
                 value: '*'
-              },
-              {
-                key: 'Cross-Origin-Opener-Policy',
-                value: 'same-origin'
-              },
-              {
-                key: 'Cross-Origin-Embedder-Policy',
-                value: 'require-corp'
               }
             ]
           }

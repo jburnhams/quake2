@@ -29,6 +29,9 @@ import { RANGE_NEAR } from '../../ai/constants.js';
 const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
 
+// Helper to access deterministic RNG or Math.random
+const random = Math.random;
+
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -95,7 +98,7 @@ function brain_swing_right(self: Entity, context: any): void {
 
 function brain_hit_right(self: Entity, context: any): void {
   const aim = { x: MELEE_DISTANCE, y: self.maxs.x, z: 8 };
-  if (monster_fire_hit(self, aim, 15 + context.rng.irandom(5), 40, context)) {
+  if (monster_fire_hit(self, aim, 15 + Math.floor(random() * 5), 40, context)) {
     context.engine.sound?.(self, 0, 'brain/melee3.wav', 1, 1, 0);
   } else {
     self.monsterinfo.melee_debounce_time = context.timeSeconds + 3.0;
@@ -108,7 +111,7 @@ function brain_swing_left(self: Entity, context: any): void {
 
 function brain_hit_left(self: Entity, context: any): void {
   const aim = { x: MELEE_DISTANCE, y: self.mins.x, z: 8 };
-  if (monster_fire_hit(self, aim, 15 + context.rng.irandom(5), 40, context)) {
+  if (monster_fire_hit(self, aim, 15 + Math.floor(random() * 5), 40, context)) {
     context.engine.sound?.(self, 0, 'brain/melee3.wav', 1, 1, 0);
   } else {
     self.monsterinfo.melee_debounce_time = context.timeSeconds + 3.0;
@@ -123,7 +126,7 @@ function brain_chest_open(self: Entity, context: any): void {
 
 function brain_tentacle_attack(self: Entity, context: any): void {
   const aim = { x: MELEE_DISTANCE, y: 0, z: 8 };
-  if (monster_fire_hit(self, aim, 10 + context.rng.irandom(5), -600, context)) {
+  if (monster_fire_hit(self, aim, 10 + Math.floor(random() * 5), -600, context)) {
     self.count = 1;
   } else {
     self.monsterinfo.melee_debounce_time = context.timeSeconds + 3.0;
@@ -139,8 +142,8 @@ function brain_chest_closed(self: Entity): void {
   }
 }
 
-function brain_melee(self: Entity, context: EntitySystem): void {
-  if (context.rng.frandom() <= 0.5) {
+function brain_melee(self: Entity): void {
+  if (random() <= 0.5) {
     self.monsterinfo.current_move = attack1_move;
   } else {
     self.monsterinfo.current_move = attack2_move;
@@ -256,8 +259,8 @@ function brain_laserbeam(self: Entity, context: EntitySystem): void {
     monster_fire_dabeam(self, 1, true, brain_left_eye_laser_update, context);
 }
 
-function brain_laserbeam_reattack(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() < 0.5) {
+function brain_laserbeam_reattack(self: Entity): void {
+    if (random() < 0.5) {
        // if visible and alive, restart attack4 sequence (set frame to walk101 which is start of attack4)
        if (self.enemy && self.enemy.health > 0) {
            self.frame = 0; // FRAME_walk101
@@ -269,7 +272,7 @@ function brain_laserbeam_reattack(self: Entity, context: EntitySystem): void {
 function brain_attack(self: Entity, context: EntitySystem): void {
     const r = range(self, self.enemy!);
     if (r <= RANGE_NEAR) {
-        if (context.rng.frandom() < 0.5) {
+        if (random() < 0.5) {
             self.monsterinfo.current_move = attack3_move;
         } else {
              // Check spawnflag for no lasers?
@@ -303,8 +306,8 @@ function brain_duck_up(self: Entity): void {
   // gi.linkentity(self);
 }
 
-function brain_dodge(self: Entity, attacker: Entity, eta: number, context: EntitySystem): void {
-  if (context.rng.frandom() > 0.25) return;
+function brain_dodge(self: Entity, attacker: Entity, eta: number): void {
+  if (random() > 0.25) return;
   if (!self.enemy) self.enemy = attacker;
   self.monsterinfo.pausetime = self.timestamp + eta + 0.5;
   self.monsterinfo.current_move = duck_move;
@@ -591,7 +594,7 @@ function brain_pain(self: Entity, other: Entity | null, kick: number, damage: nu
 
   self.pain_debounce_time = self.timestamp + 3;
 
-  const r = context.rng.frandom();
+  const r = random();
   if (r < 0.33) {
     context.engine.sound?.(self, 0, 'brain/brnpain1.wav', 1, 1, 0);
     self.monsterinfo.current_move = pain1_move;
@@ -620,7 +623,7 @@ function brain_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
   self.deadflag = DeadFlag.Dead;
   self.takedamage = true;
 
-  if (context.rng.frandom() <= 0.5) {
+  if (random() <= 0.5) {
     self.monsterinfo.current_move = death1_move;
   } else {
     self.monsterinfo.current_move = death2_move;
@@ -653,16 +656,16 @@ export function SP_monster_brain(self: Entity, context: SpawnContext): void {
   self.monsterinfo.stand = brain_stand;
   self.monsterinfo.walk = brain_walk;
   self.monsterinfo.run = brain_run;
-  self.monsterinfo.dodge = (ent, attacker, eta) => brain_dodge(ent, attacker, eta, context.entities);
+  self.monsterinfo.dodge = brain_dodge;
   self.monsterinfo.duck = brain_duck_down; // Approximate interface
   self.monsterinfo.unduck = brain_duck_up;
-  self.monsterinfo.attack = (ent) => brain_attack(ent, context.entities);
-  self.monsterinfo.melee = (ent) => brain_melee(ent, context.entities);
+  self.monsterinfo.attack = brain_attack;
+  self.monsterinfo.melee = brain_melee;
   self.monsterinfo.sight = (s, o) => {
       context.entities.sound?.(s, 2, 'brain/brnsght1.wav', 1, 1, 0);
   };
   self.monsterinfo.search = (s) => {
-    if (context.entities.rng.frandom() < 0.5) {
+    if (random() < 0.5) {
       context.entities.sound?.(s, 2, 'brain/brnidle2.wav', 1, 1, 0);
     } else {
       context.entities.sound?.(s, 2, 'brain/brnsrch1.wav', 1, 1, 0);

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_fixbot } from '../../../src/entities/monsters/fixbot.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
-import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
+import { ZERO_VEC3 } from '@quake2ts/shared';
 
 // Mock dependencies
 const mockSound = vi.fn();
@@ -26,7 +26,6 @@ describe('monster_fixbot', () => {
         },
         sound: mockSound,
         linkentity: mockLinkEntity,
-        multicast: vi.fn(),
         free: mockFree,
         spawn: vi.fn().mockImplementation(() => {
             return {
@@ -46,7 +45,6 @@ describe('monster_fixbot', () => {
         modelIndex: vi.fn().mockReturnValue(0),
         scheduleThink: vi.fn(),
         finalizeSpawn: vi.fn(),
-        rng: createRandomGenerator(12345),
       },
       health_multiplier: 1,
     };

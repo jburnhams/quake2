@@ -75,11 +75,11 @@ function gunner_stand(self: Entity): void {
     self.monsterinfo.current_move = stand_move;
 }
 
-function gunner_fidget(self: Entity, context: EntitySystem): void {
+function gunner_fidget(self: Entity): void {
     if (self.monsterinfo.aiflags & AIFlags.StandGround) {
         return;
     }
-    if (context.rng.frandom() <= 0.05) {
+    if (Math.random() <= 0.05) {
         self.monsterinfo.current_move = fidget_move;
     }
 }
@@ -100,8 +100,8 @@ function gunner_runandshoot(self: Entity): void {
     self.monsterinfo.current_move = runandshoot_move;
 }
 
-function gunner_attack(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() > 0.5) {
+function gunner_attack(self: Entity, context: any): void {
+    if (Math.random() > 0.5) {
         self.monsterinfo.current_move = attack_chain_move;
     } else {
         self.monsterinfo.current_move = attack_grenade_move;
@@ -120,7 +120,7 @@ function gunner_refire_chain(self: Entity, context: any): void {
     if (self.enemy && self.enemy.health > 0) {
         // Correct behavior: don't keep firing if blocked
         if (visible(self, self.enemy, context.trace)) {
-            if (context.rng.frandom() <= 0.5) {
+            if (Math.random() <= 0.5) {
                 self.monsterinfo.current_move = fire_chain_move;
                 return;
             }
@@ -179,13 +179,13 @@ function gunner_pain(self: Entity, context: any): void {
         return;
     }
 
-    if (context.rng.frandom() < 0.5) {
+    if (Math.random() < 0.5) {
         context.engine.sound?.(self, 0, 'gunner/gunpain1.wav', 1, 1, 0);
     } else {
         context.engine.sound?.(self, 0, 'gunner/gunpain2.wav', 1, 1, 0);
     }
 
-    const r = context.rng.frandom();
+    const r = Math.random();
     if (r < 0.33) {
         self.monsterinfo.current_move = pain3_move;
     } else if (r < 0.66) {
@@ -204,7 +204,7 @@ function gunner_duck_down(self: Entity, context: any): void {
     if (self.monsterinfo.aiflags & AIFlags.Ducked) return;
     self.monsterinfo.aiflags |= AIFlags.Ducked;
 
-    if (context.rng.frandom() > 0.5) {
+    if (Math.random() > 0.5) {
          gunner_fire_grenade(self, context);
     }
 
@@ -228,7 +228,7 @@ function gunner_duck_up(self: Entity, context: any): void {
 }
 
 function gunner_dodge(self: Entity, attacker: Entity, eta: number, context: any): void {
-    if (context.rng.frandom() > 0.25) return;
+    if (Math.random() > 0.25) return;
 
     if (!self.enemy) self.enemy = attacker;
 
@@ -290,7 +290,7 @@ function gunner_jump_takeoff(self: Entity, context: any): void {
 
      // Jump if far away and random chance
      // Match rerelease logic if possible, or reasonable approx
-     if (dist > 256 && context.rng.frandom() < 0.02) {
+     if (dist > 256 && Math.random() < 0.02) {
          context.engine.sound?.(self, 0, 'gunner/gunatck3.wav', 1, 1, 0);
          self.monsterinfo.current_move = jump_move;
      }
@@ -545,7 +545,7 @@ export function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.monsterinfo.stand = gunner_stand;
     self.monsterinfo.walk = gunner_walk;
     self.monsterinfo.run = gunner_run;
-    self.monsterinfo.attack = (ent) => gunner_attack(ent, context.entities);
+    self.monsterinfo.attack = gunner_attack;
     self.monsterinfo.dodge = (self, attacker, eta) => gunner_dodge(self, attacker, eta, context.entities);
     self.monsterinfo.sight = (self, other) => {
         context.entities.sound?.(self, 0, 'gunner/sight1.wav', 1, 1, 0);

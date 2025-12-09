@@ -24,18 +24,6 @@ import type { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
-const INFANTRY_HEALTH = 100;
-const INFANTRY_MASS = 200;
-const INFANTRY_MACHINEGUN_DAMAGE = 5;
-const INFANTRY_MACHINEGUN_KICK = 2;
-const INFANTRY_MACHINEGUN_HSPREAD = 0.05;
-const INFANTRY_MACHINEGUN_VSPREAD = 0.05;
-const INFANTRY_ATTACK_RANGE = 600;
-const INFANTRY_DODGE_CHANCE = 0.3;
-const INFANTRY_ATTACK_CHANCE = 0.2;
-const INFANTRY_IDLE_SOUND_CHANCE = 0.2;
-const GIB_HEALTH = -40;
-
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -99,11 +87,11 @@ function infantry_fire(self: Entity, context: any): void {
     };
 
     const forward = normalizeVec3(subtractVec3(target, start));
-    const damage = INFANTRY_MACHINEGUN_DAMAGE;
-    const kick = INFANTRY_MACHINEGUN_KICK;
+    const damage = 5;
+    const kick = 2;
     // Infantry has decent aim
-    const hspread = INFANTRY_MACHINEGUN_HSPREAD;
-    const vspread = INFANTRY_MACHINEGUN_VSPREAD;
+    const hspread = 0.05;
+    const vspread = 0.05;
 
     monster_fire_bullet(self, start, forward, damage, kick, hspread, vspread, 0, context, DamageMod.MACHINEGUN);
 }
@@ -125,7 +113,7 @@ function infantry_duck(self: Entity): void {
 }
 
 function infantry_idle(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() < INFANTRY_IDLE_SOUND_CHANCE) {
+    if (Math.random() < 0.2) {
         context.sound?.(self, 0, 'infantry/idle1.wav', 1, 2, 0);
     }
 }
@@ -232,7 +220,7 @@ function infantry_dodge(self: Entity, context: EntitySystem): boolean {
     }
 
     // 30% chance to duck
-    if (context.rng.frandom() > INFANTRY_DODGE_CHANCE) return false;
+    if (Math.random() > 0.3) return false;
 
     // Trigger duck
     infantry_duck(self);
@@ -251,11 +239,11 @@ function infantry_checkattack(self: Entity, context: EntitySystem): boolean {
 
     // Logic: Attack if visible and close enough (machinegun range is effective at mid range)
     // 600 units seems reasonable for machinegun engagement
-    if (dist < INFANTRY_ATTACK_RANGE && visible(self, self.enemy, context.trace)) {
+    if (dist < 600 && visible(self, self.enemy, context.trace)) {
          // 50% chance to attack if possible, to avoid instant reaction every frame?
          // Actually in ai_run it checks every frame.
          // Let's make it likely but not guaranteed to allow closing distance
-         if (context.rng.frandom() < INFANTRY_ATTACK_CHANCE) {
+         if (Math.random() < 0.2) {
              self.monsterinfo.attack?.(self, context);
              return true;
          }
@@ -270,11 +258,15 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-
-    const h = INFANTRY_HEALTH * context.health_multiplier;
+    // DEBUG LOG
+    console.log(`SP_monster_infantry: health_multiplier=${context.health_multiplier}`);
+    console.log(`SP_monster_infantry: context keys=${Object.keys(context)}`);
+    const h = 100 * context.health_multiplier;
+    console.log(`calculated health: ${h}`);
     self.health = h;
+    console.log(`self.health after assign: ${self.health}`);
     self.max_health = self.health;
-    self.mass = INFANTRY_MASS;
+    self.mass = 200;
     self.takedamage = true;
 
     self.pain = (self, other, kick, damage) => {
@@ -287,7 +279,7 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
         self.deadflag = DeadFlag.Dead;
         self.solid = Solid.Not;
 
-        if (self.health < GIB_HEALTH) {
+        if (self.health < -40) {
             throwGibs(context.entities, self.origin, damage);
             context.entities.free(self);
             return;

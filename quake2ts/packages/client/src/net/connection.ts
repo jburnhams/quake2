@@ -161,7 +161,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private handleMessage(data: Uint8Array): void {
     // Check if buffer is SharedArrayBuffer and copy if necessary
     let buffer = data.buffer;
-    if (typeof SharedArrayBuffer !== 'undefined' && buffer instanceof SharedArrayBuffer) {
+    if (buffer instanceof SharedArrayBuffer) {
         // Copy to ArrayBuffer
         const newBuffer = new ArrayBuffer(data.byteLength);
         new Uint8Array(newBuffer).set(data);

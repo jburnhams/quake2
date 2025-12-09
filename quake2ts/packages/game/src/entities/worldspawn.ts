@@ -1,6 +1,5 @@
 import { Entity, MoveType, Solid } from './entity.js';
 import { SpawnContext, SpawnRegistry } from './spawn.js';
-import { ConfigStringIndex } from '@quake2ts/shared';
 
 export function SP_worldspawn(self: Entity, context: SpawnContext): void {
   self.classname = 'worldspawn';
@@ -15,22 +14,23 @@ export function SP_worldspawn(self: Entity, context: SpawnContext): void {
   const sounds = context.keyValues['sounds'];
 
   if (sky) {
-    context.entities.imports.configstring(ConfigStringIndex.Sky, sky);
+    // TODO: Set configstring CS_SKY
+    // console.log(`World sky: ${sky}`);
   }
 
   if (skyrotate) {
-    context.entities.imports.configstring(ConfigStringIndex.SkyRotate, skyrotate);
+    // TODO: Set configstring CS_SKYROTATE
+    // console.log(`World skyrotate: ${skyrotate}`);
   }
 
   if (skyaxis) {
-     context.entities.imports.configstring(ConfigStringIndex.SkyAxis, skyaxis);
+     // TODO: Set configstring CS_SKYAXIS
+     // console.log(`World skyaxis: ${skyaxis}`);
   }
 
   if (sounds) {
-      // Logic from g_spawn.c: sounds key maps to CD track
-      // It sets "1" if 1, etc.
-      // But sounds is int.
-      context.entities.imports.configstring(ConfigStringIndex.CdTrack, sounds);
+      const track = parseInt(sounds, 10);
+      // TODO: Set CD track (usually via configstring CS_CDTRACK)
   }
 
   // "message" is already parsed by applyEntityKeyValues into self.message

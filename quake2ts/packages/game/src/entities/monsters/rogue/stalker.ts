@@ -68,12 +68,12 @@ import { MulticastType } from '../../../imports.js';
 const MONSTER_TICK = 0.1;
 
 // Wrapper for random functions since they are not directly exported
-function crandom(context: EntitySystem): number {
-  return context.rng.crandom();
+function crandom(): number {
+  return 2.0 * (Math.random() - 0.5);
 }
 
-function random_time(min: number, max: number, context: EntitySystem): number {
-    return min + context.rng.frandom() * (max - min);
+function random_time(min: number, max: number): number {
+    return min + Math.random() * (max - min);
 }
 
 function has_valid_enemy(self: Entity): boolean {
@@ -160,7 +160,7 @@ function stalker_idle_noise(self: Entity, context: EntitySystem) {
 }
 
 function stalker_stand(self: Entity, context: EntitySystem): void {
-   if (context.rng.frandom() < 0.25)
+   if (Math.random() < 0.25)
         M_SetAnimation(self, stalker_move_stand, context);
     else
         M_SetAnimation(self, stalker_move_idle2, context);
@@ -219,7 +219,7 @@ stalker_move_idle2 = {
 };
 
 function stalker_idle(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() < 0.35)
+    if (Math.random() < 0.35)
         M_SetAnimation(self, stalker_move_idle, context);
     else
         M_SetAnimation(self, stalker_move_idle2, context);
@@ -453,7 +453,7 @@ function stalker_shoot_attack(self: Entity, context: EntitySystem): void {
 }
 
 function stalker_shoot_attack2(self: Entity, context: EntitySystem): void {
-    if (context.rng.frandom() < 0.5)
+    if (Math.random() < 0.5)
         stalker_shoot_attack(self, context);
 }
 
@@ -518,7 +518,7 @@ stalker_move_swing_r = {
 
 function stalker_attack_melee(self: Entity, context: EntitySystem): void {
     if (!has_valid_enemy(self)) return;
-    if (context.rng.frandom() < 0.5)
+    if (Math.random() < 0.5)
         M_SetAnimation(self, stalker_move_swing_l, context);
     else
         M_SetAnimation(self, stalker_move_swing_r, context);

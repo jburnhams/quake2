@@ -1,11 +1,10 @@
-import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { angleMod, degToRad, vectorToYaw } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { MoveType, EntityFlags } from '../entities/entity.js';
 import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
 import { AIFlags } from './constants.js';
-import { M_CheckAttack } from './monster.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
 
@@ -92,24 +91,13 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
   self.ideal_yaw = vectorToYaw(toTarget);
 }
 
-import { rangeTo, visible } from './perception.js';
+import { rangeTo } from './perception.js';
 import { findTarget } from './targeting.js';
 
 export function ai_stand(self: Entity, deltaSeconds: number, context: EntitySystem): void {
   if (findTarget(self, context.targetAwareness, context, context.trace)) {
      return;
   }
-
-  if (self.enemy && self.enemy.inUse) {
-      // If we have an enemy, we might need to update blind_fire_target if visible
-      // See ai_stand in g_ai.cpp: it calls ai_checkattack which implicitly checks visibility.
-      // But we also update blind_fire_target in ai_charge.
-
-      // In ai_stand, we mainly check if we should wake up.
-      // The logic in g_ai.cpp ai_stand is quite complex, checking for stand ground, looking for players, etc.
-      // For now, minimal port.
-  }
-
   changeYaw(self, deltaSeconds);
 }
 
@@ -168,18 +156,13 @@ export function ai_run(self: Entity, distance: number, deltaSeconds: number, con
       // For now, assume findTarget handles the switching/activation.
   }
 
-  if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
-      self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
-  }
-
   // ROGUE
   if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, self.enemy ?? self.goalentity);
   }
   changeYaw(self, deltaSeconds);
 
-  const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
-  if (checkAttack(self, context)) {
+  if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {
     return;
   }
 
@@ -208,19 +191,13 @@ export function ai_face(
 }
 
 export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
-  // PMM - save blindfire target
-  if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
-      self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
-  }
-
   // ROGUE
   if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, self.enemy);
   }
   changeYaw(self, deltaSeconds);
 
-  const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
-  if (checkAttack(self, context)) {
+  if (self.monsterinfo.checkattack && self.monsterinfo.checkattack(self, context)) {
     return;
   }
 
@@ -365,11 +342,12 @@ export function M_walkmove(self: Entity, yawDegrees: number, distance: number, c
   //   move down STEPSIZE + extra
 
   if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
-      return false; // Flying/Swimming monsters do not use step logic.
+      return false; // Flying/Swimming monsters don't step up stairs? Or maybe they do?
       // Original sv_movestep handles flying by just returning false if blocked (flymove handled elsewhere?)
       // Actually M_walkmove calls SV_movestep.
       // If flying, SV_movestep might try to slide?
-      // But standard Q2 monsters (Flyer/Icarus) use MoveType.Step + EntityFlags.Fly.
+      // But standard Q2 monsters (Flyer/Icarus) use MoveType.Step too?
+      // Wait, Flyer uses MoveType.Step + EntityFlags.Fly.
       // So they enter this block.
       // If they hit a wall, they stop. They don't step up walls.
   }

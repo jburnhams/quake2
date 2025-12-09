@@ -1,8 +1,9 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
+import { createRandomGenerator, scaleVec3 } from '@quake2ts/shared';
 import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
-import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
+import { GameEngine } from '../index.js';
+import { GameImports, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
   DeadFlag,
   ENTITY_FIELD_METADATA,
@@ -18,7 +19,6 @@ import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
-import { SpatialGrid } from './spatial.js';
 
 interface Bounds {
   min: Vec3;
@@ -150,14 +150,12 @@ export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
-  private readonly random: RandomGenerator;
+  private readonly random = createRandomGenerator();
   private readonly callbackToName: Map<AnyCallback, string>;
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
   private frameNumber = 0;
   private spawnCount = 0;
-
-  private spatialGrid: SpatialGrid;
 
   readonly targetAwareness: TargetAwarenessState;
 
@@ -184,7 +182,6 @@ export class EntitySystem {
   private readonly gravity: Vec3;
   readonly deathmatch: boolean;
   readonly skill: number;
-  readonly coop: boolean;
 
   get trace(): TraceFunction {
     return this.imports.trace;
@@ -205,18 +202,13 @@ export class EntitySystem {
     maxEntities?: number,
     callbackRegistry?: CallbackRegistry,
     deathmatch?: boolean,
-    skill?: number,
-    random?: RandomGenerator,
-    coop?: boolean
+    skill?: number
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
-    this.coop = coop ?? false;
     this.skill = skill ?? 1; // Default to medium
-    this.random = random ?? createRandomGenerator();
-    this.spatialGrid = new SpatialGrid();
 
     // Default imports
     const defaultImports: GameImports = {
@@ -252,28 +244,6 @@ export class EntitySystem {
 
     // Merge defaults with provided imports
     this.imports = { ...defaultImports, ...imports };
-
-    // Wrap linkentity to update spatial grid
-    const originalLinkEntity = this.imports.linkentity;
-    this.imports.linkentity = (ent: Entity) => {
-        if (originalLinkEntity) {
-             originalLinkEntity(ent);
-        } else {
-             // Fallback logic if original didn't exist (but defaultImports ensures it does)
-             ent.absmin = {
-                x: ent.origin.x + ent.mins.x,
-                y: ent.origin.y + ent.mins.y,
-                z: ent.origin.z + ent.mins.z,
-              };
-              ent.absmax = {
-                x: ent.origin.x + ent.maxs.x,
-                y: ent.origin.y + ent.maxs.y,
-                z: ent.origin.z + ent.maxs.z,
-              };
-        }
-        // Always update spatial grid
-        this.spatialGrid.update(ent);
-    };
 
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
     this.callbackToName = new Map<AnyCallback, string>();
@@ -351,14 +321,12 @@ export class EntitySystem {
   free(entity: Entity): void {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
-    this.spatialGrid.remove(entity);
     this.pool.deferFree(entity);
   }
 
   freeImmediate(entity: Entity): void {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
-    this.spatialGrid.remove(entity);
     this.pool.freeImmediate(entity);
   }
 
@@ -402,7 +370,6 @@ export class EntitySystem {
       return;
     }
     this.registerTarget(entity);
-    this.linkentity(entity); // Ensure it's in the spatial grid
   }
 
   findByClassname(classname: string): Entity[] {
@@ -426,16 +393,14 @@ export class EntitySystem {
   findInBox(mins: Vec3, maxs: Vec3): Entity[] {
     const indices = this.imports.areaEdicts(mins, maxs);
     if (indices === null) {
-      // Use our spatial grid optimization
-      const candidates = this.spatialGrid.query(mins, maxs);
+      // Fallback: iterate all entities
       const results: Entity[] = [];
       const bounds = { min: mins, max: maxs };
-
-      for (const entity of candidates) {
-         if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;
-         if (boundsIntersect(bounds, computeBounds(entity))) {
-            results.push(entity);
-         }
+      for (const entity of this.pool) {
+        if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;
+        if (boundsIntersect(bounds, computeBounds(entity))) {
+          results.push(entity);
+        }
       }
       return results;
     }
@@ -481,11 +446,7 @@ export class EntitySystem {
 
   killBox(entity: Entity): void {
     const targetBounds = computeBounds(entity);
-    // killBox typically only cares about damageable entities inside the box
-    // Using findInBox is much better than iterating all entities
-    const potentialVictims = this.findInBox(targetBounds.min, targetBounds.max);
-
-    for (const other of potentialVictims) {
+    for (const other of this.pool) {
       if (other === entity || other === this.pool.world) {
         continue;
       }
@@ -632,7 +593,6 @@ export class EntitySystem {
   }
 
   restore(snapshot: EntitySystemSnapshot, callbackRegistry?: CallbackRegistry): void {
-    this.spatialGrid.clear(); // Clear grid before restoring
     this.currentTimeSeconds = snapshot.timeSeconds;
     this.crossLevelFlags = snapshot.crossLevelFlags ?? 0;
     this.crossUnitFlags = snapshot.crossUnitFlags ?? 0;
@@ -714,9 +674,6 @@ export class EntitySystem {
             break;
         }
       }
-
-      // Re-add to spatial grid AFTER fields are restored
-      this.spatialGrid.insert(entity);
     }
 
     for (const ref of pendingEntityRefs) {
@@ -733,8 +690,6 @@ export class EntitySystem {
     const activeEntities: Entity[] = [];
 
     // Collect active entities that can touch or be touched
-    // Optimizing this collection might be hard without a separate "active" list,
-    // but the nested loop is the killer.
     for (const entity of this.pool) {
       if (entity === world) continue;
       if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;

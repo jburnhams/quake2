@@ -97,7 +97,7 @@ function actor_stand(self: Entity, context: any) {
 
     // randomize on startup
     if (context.timeSeconds < 1.0) {
-        self.frame = FRAME_stand101 + Math.floor(context.game.random.frandom() * (FRAME_stand140 - FRAME_stand101 + 1));
+        self.frame = FRAME_stand101 + Math.floor(Math.random() * (FRAME_stand140 - FRAME_stand101 + 1));
     }
 }
 
@@ -143,28 +143,28 @@ function actor_pain(self: Entity, other: Entity | null, kick: number, damage: nu
     self.pain_debounce_time = context.timeSeconds + 3;
 
     // Pick random pain sound
-    const n = Math.floor(context.game.random.frandom() * 3);
+    const n = Math.floor(Math.random() * 3);
     let sound = sound_pain1;
     if (n === 1) sound = sound_pain2;
     if (n === 2) sound = sound_pain3;
 
     context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
 
-    const random = context.game.random.frandom();
+    const random = Math.random();
 
     if (other && other.client && random < 0.4) {
         const v = subVec3(other.origin, self.origin);
         self.ideal_yaw = vectoyaw(v);
 
-        if (context.game.random.frandom() < 0.5)
+        if (Math.random() < 0.5)
             self.monsterinfo.current_move = actor_move_flipoff;
         else
             self.monsterinfo.current_move = actor_move_taunt;
 
         // const name = actor_names[(self - g_edicts) % q_countof(actor_names)];
         // We don't have direct access to index, so use random name
-        const name = actor_names[Math.floor(context.game.random.frandom() * actor_names.length)];
-        const message = messages[Math.floor(context.game.random.frandom() * messages.length)];
+        const name = actor_names[Math.floor(Math.random() * actor_names.length)];
+        const message = messages[Math.floor(Math.random() * messages.length)];
 
         context.centerprintf(other, `${name}: ${message}!\n`);
         return;
@@ -247,7 +247,7 @@ function actor_die(self: Entity, inflictor: Entity | null, attacker: Entity | nu
         return;
 
     // regular death
-    const n = Math.floor(context.game.random.frandom() * 2);
+    const n = Math.floor(Math.random() * 2);
     const sound = n === 0 ? sound_die1 : sound_die2;
     context.sound(self, SoundChannel.Voice, sound, 1, ATTN_NORM, 0);
 
@@ -273,7 +273,7 @@ function actor_fire(self: Entity, context: any) {
 
 function actor_attack(self: Entity, context: any) {
     self.monsterinfo.current_move = actor_move_attack;
-    (self.monsterinfo as any).fire_wait = context.timeSeconds + 1.0 + context.game.random.frandom() * 1.6;
+    (self.monsterinfo as any).fire_wait = context.timeSeconds + 1.0 + Math.random() * 1.6;
 }
 
 function actor_use(self: Entity, other: Entity | null, activator: Entity | null) {
@@ -520,7 +520,7 @@ function target_actor_touch(self: Entity, other: Entity | null, plane: any, surf
         // We'll just broadcast to all for now as TS port might not have per-client broadcast easy here?
         // Actually context has centerprintf.
 
-        const name = actor_names[Math.floor(context.game.random.frandom() * actor_names.length)];
+        const name = actor_names[Math.floor(Math.random() * actor_names.length)];
         // TODO: iterate clients and print
     }
 

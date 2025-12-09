@@ -8,25 +8,6 @@ export interface VirtualFileHandle {
   readonly sourcePak: string;
 }
 
-export interface FileMetadata extends VirtualFileHandle {
-  readonly offset: number;
-}
-
-export interface FileInfo extends VirtualFileHandle {}
-
-export interface DirectoryNode {
-  readonly name: string;
-  readonly path: string;
-  readonly files: FileInfo[];
-  readonly directories: DirectoryNode[];
-}
-
-export interface PakInfo {
-  readonly filename: string;
-  readonly entryCount: number;
-  readonly totalSize: number;
-}
-
 export interface DirectoryListing {
   readonly files: VirtualFileHandle[];
   readonly directories: string[];
@@ -64,34 +45,12 @@ export class VirtualFileSystem {
     return { path: source.entry.name, size: source.entry.length, sourcePak: source.archive.name };
   }
 
-  getFileMetadata(path: string): FileMetadata | undefined {
-    const source = this.files.get(normalizePath(path));
-    if (!source) {
-      return undefined;
-    }
-    return {
-      path: source.entry.name,
-      size: source.entry.length,
-      sourcePak: source.archive.name,
-      offset: source.entry.offset,
-    };
-  }
-
   async readFile(path: string): Promise<Uint8Array> {
     const source = this.files.get(normalizePath(path));
     if (!source) {
       throw new Error(`File not found in VFS: ${path}`);
     }
     return source.archive.readFile(path);
-  }
-
-  async readBinaryFile(path: string): Promise<Uint8Array> {
-    return this.readFile(path);
-  }
-
-  async readTextFile(path: string): Promise<string> {
-    const data = await this.readFile(path);
-    return new TextDecoder('utf-8').decode(data);
   }
 
   list(directory = ''): DirectoryListing {
@@ -118,11 +77,6 @@ export class VirtualFileSystem {
     return { files, directories: [...directories].sort() };
   }
 
-  async listDirectory(path: string): Promise<FileInfo[]> {
-    const listing = this.list(path);
-    return listing.files;
-  }
-
   findByExtension(extension: string): VirtualFileHandle[] {
     const normalizedExt = extension.startsWith('.') ? extension.toLowerCase() : `.${extension.toLowerCase()}`;
     const results: VirtualFileHandle[] = [];
@@ -132,98 +86,5 @@ export class VirtualFileSystem {
       }
     }
     return results.sort((a, b) => a.path.localeCompare(b.path));
-  }
-
-  listByExtension(extensions: string[]): FileInfo[] {
-    const normalizedExts = new Set(
-      extensions.map((ext) => (ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`)),
-    );
-    const results: FileInfo[] = [];
-    for (const source of this.files.values()) {
-      const name = source.entry.name.toLowerCase();
-      for (const ext of normalizedExts) {
-        if (name.endsWith(ext)) {
-          results.push({
-            path: source.entry.name,
-            size: source.entry.length,
-            sourcePak: source.archive.name,
-          });
-          break;
-        }
-      }
-    }
-    return results.sort((a, b) => a.path.localeCompare(b.path));
-  }
-
-  searchFiles(pattern: RegExp): FileInfo[] {
-    const results: FileInfo[] = [];
-    for (const source of this.files.values()) {
-      if (pattern.test(source.entry.name)) {
-        results.push({
-          path: source.entry.name,
-          size: source.entry.length,
-          sourcePak: source.archive.name,
-        });
-      }
-    }
-    return results.sort((a, b) => a.path.localeCompare(b.path));
-  }
-
-  getPakInfo(): PakInfo[] {
-    return this.mounts.map((pak) => ({
-      filename: pak.name,
-      entryCount: pak.listEntries().length,
-      totalSize: pak.size,
-    }));
-  }
-
-  getDirectoryTree(): DirectoryNode {
-    const root: DirectoryNode = {
-      name: '',
-      path: '',
-      files: [],
-      directories: [],
-    };
-
-    const nodeMap = new Map<string, DirectoryNode>();
-    nodeMap.set('', root);
-
-    // Get all files and sort them to ensure consistent tree
-    const allFiles = Array.from(this.files.values())
-      .map((s) => ({
-        path: s.entry.name,
-        size: s.entry.length,
-        sourcePak: s.archive.name,
-      }))
-      .sort((a, b) => a.path.localeCompare(b.path));
-
-    for (const file of allFiles) {
-      const parts = file.path.split('/');
-      const fileName = parts.pop()!;
-      let currentPath = '';
-      let currentNode = root;
-
-      for (const part of parts) {
-        const parentPath = currentPath;
-        currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-        let nextNode = nodeMap.get(currentPath);
-        if (!nextNode) {
-          nextNode = {
-            name: part,
-            path: currentPath,
-            files: [],
-            directories: [],
-          };
-          currentNode.directories.push(nextNode);
-          nodeMap.set(currentPath, nextNode);
-        }
-        currentNode = nextNode;
-      }
-
-      currentNode.files.push(file);
-    }
-
-    return root;
   }
 }

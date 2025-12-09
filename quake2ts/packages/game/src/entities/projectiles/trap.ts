@@ -7,7 +7,7 @@ import { DamageMod } from '../../combat/damageMods.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { MASK_SOLID, MASK_PROJECTILE, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, CONTENTS_MONSTER } from '@quake2ts/shared';
 import { createFoodCubePickupEntity } from '../items/foodcube.js';
-import { ServerCommand, ZERO_VEC3, copyVec3, subtractVec3, normalizeVec3, addVec3, scaleVec3, dotVec3, distance, Vec3 } from '@quake2ts/shared';
+import { ServerCommand, ZERO_VEC3, copyVec3, subtractVec3, normalizeVec3, addVec3, scaleVec3, dotVec3, distance } from '@quake2ts/shared';
 import { MulticastType } from '../../imports.js';
 import { Damageable } from '../../combat/damage.js';
 
@@ -46,7 +46,7 @@ export function trapGibThink(self: Entity, context: EntitySystem) {
     self.nextthink = context.timeSeconds + 0.1;
 }
 
-function trapDie(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod) {
+function trapDie(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: any, mod: any) {
     // We need to set a think function that will run immediately/soon to free the entity.
     // The context isn't passed directly to Die, so we rely on the scheduler running 'think'.
     self.think = (ent: Entity, ctx: EntitySystem) => {
@@ -252,7 +252,7 @@ export function trapThink(self: Entity, context: EntitySystem) {
     }
 }
 
-export function createTrap(context: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, speed: number) {
+export function createTrap(context: EntitySystem, owner: Entity, start: any, dir: any, speed: number) {
     const trap = context.spawn();
     trap.classname = 'food_cube_trap';
     trap.origin = { ...start };

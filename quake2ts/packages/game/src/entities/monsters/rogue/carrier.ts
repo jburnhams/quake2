@@ -1,128 +1,91 @@
 import {
-  angleVectors as AngleVectors,
+  AngleVectors,
+  Entity,
+  EntityFlags,
+  MoveType,
+  SOLID_BBOX,
   Vec3,
-  angleMod as anglemod,
+  anglemod,
   copyVec3,
   lengthVec3,
   scaleVec3,
   subtractVec3,
-  vectorToYaw as vectoyaw,
+  vectoyaw,
   addVec3,
   SoundChannel,
+  MathUtils,
   ServerCommand,
+  MulticastType,
   normalizeVec3,
-  dotVec3 as dotProduct,
-  radToDeg as toDegrees,
-  degToRad as toRadians,
-  ZERO_VEC3,
-  MASK_SHOT,
+  dotProduct,
+  setMovedir,
+  M_PI,
+  toDegrees,
+  toRadians,
 } from '@quake2ts/shared';
-
-// Local types
-type MutableVec3 = { -readonly [P in keyof Vec3]: Vec3[P] };
-
-// Helpers if missing
-const M_PI = Math.PI;
-function setMovedir(ent: Entity) {
-  if (ent.movetype === MoveType.None) return;
-  const angles = ent.angles;
-  const rad = toRadians(angles.y);
-  ent.movedir = {
-    x: Math.cos(rad),
-    y: Math.sin(rad),
-    z: 0
-  };
-}
-
 import {
+  AIAction,
+  AI_ALTERNATE_FLY,
+  AI_CHARGING,
+  AI_DO_NOT_COUNT,
+  AI_HOLD_FRAME,
+  AI_IGNORE_SHOTS,
+  AI_MANUAL_STEERING,
+  AI_SPAWNED_CARRIER,
+  AI_STAND_GROUND,
+  MonsterMove,
   M_AllowSpawn,
+  M_CheckAttack_Base,
   M_ProjectFlashSource,
   M_SetAnimation,
   M_ShouldReactToPain,
-  flymonster_start, // Imported from common.js
+  below,
+  inback,
+  infront,
+  visible,
+  random_time,
 } from '../common.js';
 import {
-  Entity,
-  EntityFlags,
   ModId,
   Mod,
   DamageFlags,
   GibType,
+  throwGibs,
   SpawnFlag,
   EntityState,
-  AiFlags,
-  DeadFlag,
-  MuzzleFlash,
-  MoveType,
-  Solid,
-  AIAction,
-  MonsterMove,
-} from '../../entity.js';
-import { throwGibs } from '../../gibs.js';
-import { EntitySystem } from '../../system.js';
-import { monster_fire_rocket } from '../attack.js';
+} from '../../../entity.js';
+import { EntitySystem } from '../../../system.js';
+import { MuzzleFlash } from '../../../combat/muzzleflash.js';
+import { monster_fire_rocket } from '../../attack.js';
 import {
   monster_fire_bullet,
   monster_fire_grenade,
   monster_fire_railgun,
-} from '../attack.js';
-import { ai_run, ai_stand, ai_walk, ai_charge, ai_move } from '../../../ai/index.js';
-import { findSpawnPoint } from '../../../ai/spawn_utils.js';
-
+  PredictAim,
+} from '../../attack.js';
+import { ai_run, ai_stand, ai_walk, ai_charge, ai_move } from '../../../ai/movement.js';
+import {
+  ATTN_NONE,
+  ATTN_NORM,
+  CHAN_BODY,
+  CHAN_VOICE,
+  CHAN_WEAPON,
+  PRINT_HIGH,
+  PRINT_MEDIUM,
+} from '../../../constants.js';
+import { G_FreeEdict, findSpawnPoint } from '../../../spawn.js';
+import { registerMonsterSpawns, registerMonster } from '../../index.js';
 import { createFlyer } from '../flyer.js';
+// import { createKamikaze } from '../kamikaze.js'; // Mocked or removed for now
 import { M_SetupReinforcementsWithContext, M_PickReinforcements, M_SlotsLeft } from './common.js';
-import { T_Damage as damage } from '../../../combat/damage.js';
-import { M_CheckAttack_Base } from '../../../ai/monster.js';
-import { visible, infront } from '../../../ai/perception.js';
-import { PredictAim } from '../../../ai/rogue.js';
-import { SpawnContext, SpawnRegistry } from '../../spawn.js';
-import { MulticastType } from '../../../imports.js';
-
-// Wrappers for AI functions to match AIAction signature (self, dist, context)
-const MONSTER_TICK = 0.1;
-
-function monster_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
-  ai_stand(self, MONSTER_TICK, context);
-}
-
-function monster_ai_walk(self: Entity, dist: number, context: EntitySystem): void {
-  ai_walk(self, dist, MONSTER_TICK, context);
-}
-
-function monster_ai_run(self: Entity, dist: number, context: EntitySystem): void {
-  ai_run(self, dist, MONSTER_TICK, context);
-}
-
-function monster_ai_charge(self: Entity, dist: number, context: EntitySystem): void {
-  ai_charge(self, dist, MONSTER_TICK, context);
-}
-
-function monster_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-  ai_move(self, dist);
-}
-
-// Constants fallback
-const ATTN_NONE = 0;
-const ATTN_NORM = 1;
-const CHAN_BODY = 0;
-const CHAN_WEAPON = 1;
-const CHAN_VOICE = 2;
-const PRINT_HIGH = 0;
-const PRINT_MEDIUM = 1;
+import { flymonster_start } from '../../../ai/fly.js';
+import { damage } from '../../../combat/damage.js';
+import { GameExports } from '../../../game.js';
 
 // Local Random Helpers
 const frandom = (min = 0, max = 1): number => min + Math.random() * (max - min);
 const crandom = (): number => 2.0 * (Math.random() - 0.5);
 const irandom = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
-const random_time = frandom;
-
-function below(self: Entity, other: Entity): boolean {
-    return other.origin.z < self.origin.z;
-}
-
-function inback(self: Entity, other: Entity): boolean {
-    return !infront(self, other);
-}
 
 // Constants
 const MODEL_SCALE = 1.0;
@@ -187,15 +150,15 @@ const carrier_flash_offset = {
 
 function CarrierCoopCheck(self: Entity, context: EntitySystem): void {
   if (!self.monsterinfo.fire_wait) self.monsterinfo.fire_wait = 0;
-  if (self.monsterinfo.fire_wait > context.timeSeconds) return;
+  if (self.monsterinfo.fire_wait > context.entities.timeSeconds) return;
 
   const targets: Entity[] = [];
 
-  context.game.clients.forEach((client: any) => {
+  context.game.clients.forEach((client) => {
     const ent = client.ent;
     if (!ent || !ent.inUse) return;
     if (inback(self, ent) || below(self, ent)) {
-      const tr = context.trace(self.origin, ZERO_VEC3, ZERO_VEC3, ent.origin, self, MASK_SHOT);
+      const tr = context.trace(self.origin, ent.origin, self, Solid.BoundingBox);
       if (tr.fraction === 1.0) {
         targets.push(ent);
       }
@@ -206,7 +169,7 @@ function CarrierCoopCheck(self: Entity, context: EntitySystem): void {
 
   const target = targets[irandom(0, targets.length - 1)];
 
-  self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
+  self.monsterinfo.fire_wait = context.entities.timeSeconds + CARRIER_ROCKET_TIME;
 
   const oldEnemy = self.enemy;
   self.enemy = target;
@@ -222,7 +185,7 @@ function CarrierGrenade(self: Entity, context: EntitySystem): void {
   const direction = frandom() < 0.5 ? -1.0 : 1.0;
 
   if (!self.timestamp) self.timestamp = 0;
-  const mytime = Math.floor((context.timeSeconds - self.timestamp) / 0.4);
+  const mytime = Math.floor((context.entities.timeSeconds - self.timestamp) / 0.4);
 
   let spreadR = 0;
   let spreadU = 0;
@@ -244,7 +207,10 @@ function CarrierGrenade(self: Entity, context: EntitySystem): void {
     spreadU = 0;
   }
 
-  const { forward, right, up } = AngleVectors(self.angles);
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
+  const up = { x: 0, y: 0, z: 0 };
+  AngleVectors(self.angles, forward, right, up);
 
   const start = M_ProjectFlashSource(self, carrier_flash_offset.MZ2_CARRIER_GRENADE, forward, right);
 
@@ -255,7 +221,7 @@ function CarrierGrenade(self: Entity, context: EntitySystem): void {
   const rightSpread = scaleVec3(right, spreadR);
   const upSpread = scaleVec3(up, spreadU);
 
-  const finalAim = addVec3(addVec3(normalizedAim, rightSpread), upSpread) as MutableVec3;
+  const finalAim = addVec3(addVec3(normalizedAim, rightSpread), upSpread);
 
   if (finalAim.z > 0.15) finalAim.z = 0.15;
   else if (finalAim.z < -0.5) finalAim.z = -0.5;
@@ -265,7 +231,9 @@ function CarrierGrenade(self: Entity, context: EntitySystem): void {
 }
 
 function CarrierPredictiveRocket(self: Entity, context: EntitySystem): void {
-  const { forward, right } = AngleVectors(self.angles);
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
+  AngleVectors(self.angles, forward, right, null);
 
   const offsets = [
     { offset: carrier_flash_offset.MZ2_CARRIER_ROCKET_1, flash: MuzzleFlash.CarrierRocket1, scale: -0.3 },
@@ -276,9 +244,9 @@ function CarrierPredictiveRocket(self: Entity, context: EntitySystem): void {
 
   for (const item of offsets) {
     const start = M_ProjectFlashSource(self, item.offset, forward, right);
-    // Destructure result from rogue.ts PredictAim
-    const { aimdir } = PredictAim(context, self, self.enemy!, start, CARRIER_ROCKET_SPEED, false, item.scale);
-    monster_fire_rocket(self, start, aimdir, 50, CARRIER_ROCKET_SPEED, item.flash, context);
+    const dir = { x: 0, y: 0, z: 0 };
+    PredictAim(context, self, self.enemy!, start, CARRIER_ROCKET_SPEED, false, item.scale);
+    monster_fire_rocket(self, start, dir, 50, CARRIER_ROCKET_SPEED, item.flash, context);
   }
 }
 
@@ -292,11 +260,13 @@ function CarrierRocket(self: Entity, context: EntitySystem): void {
     return;
   }
 
-  const { forward, right } = AngleVectors(self.angles);
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
+  AngleVectors(self.angles, forward, right, null);
 
   const fire = (offset: Vec3, zAdjust: number, rightScale: number, flash: number) => {
     const start = M_ProjectFlashSource(self, offset, forward, right);
-    const vec = copyVec3(self.enemy!.origin) as MutableVec3;
+    const vec = copyVec3(self.enemy!.origin);
     vec.z -= zAdjust;
     const dir = subtractVec3(vec, start);
     const normalizedDir = normalizeVec3(dir);
@@ -312,34 +282,39 @@ function CarrierRocket(self: Entity, context: EntitySystem): void {
 }
 
 function carrier_firebullet_right(self: Entity, context: EntitySystem): void {
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
   let flashnum: number;
 
-  if (self.monsterinfo.aiflags & AiFlags.ManualSteering) {
+  if (self.monsterinfo.aiflags & AI_MANUAL_STEERING) {
     flashnum = MuzzleFlash.CarrierMachineGunR2;
   } else {
     flashnum = MuzzleFlash.CarrierMachineGunR1;
   }
 
-  const { forward, right } = AngleVectors(self.angles);
+  AngleVectors(self.angles, forward, right, null);
   const start = M_ProjectFlashSource(self, carrier_flash_offset.MZ2_CARRIER_MACHINEGUN_R1, forward, right);
-
-  const { aimdir } = PredictAim(context, self, self.enemy!, start, 0, true, -0.3);
-  monster_fire_bullet(self, start, aimdir, 6, 4, 0, 0, flashnum, context);
+  const dir = { x: 0, y: 0, z: 0 };
+  PredictAim(context, self, self.enemy!, start, 0, true, -0.3);
+  monster_fire_bullet(self, start, dir, 6, 4, 0, 0, flashnum, context);
 }
 
 function carrier_firebullet_left(self: Entity, context: EntitySystem): void {
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
   let flashnum: number;
 
-  if (self.monsterinfo.aiflags & AiFlags.ManualSteering) {
+  if (self.monsterinfo.aiflags & AI_MANUAL_STEERING) {
     flashnum = MuzzleFlash.CarrierMachineGunL2;
   } else {
     flashnum = MuzzleFlash.CarrierMachineGunL1;
   }
 
-  const { forward, right } = AngleVectors(self.angles);
+  AngleVectors(self.angles, forward, right, null);
   const start = M_ProjectFlashSource(self, carrier_flash_offset.MZ2_CARRIER_MACHINEGUN_L1, forward, right);
-  const { aimdir } = PredictAim(context, self, self.enemy!, start, 0, true, -0.3);
-  monster_fire_bullet(self, start, aimdir, 6, 4, 0, 0, flashnum, context);
+  const dir = { x: 0, y: 0, z: 0 };
+  PredictAim(context, self, self.enemy!, start, 0, true, -0.3);
+  monster_fire_bullet(self, start, dir, 6, 4, 0, 0, flashnum, context);
 }
 
 function CarrierMachineGun(self: Entity, context: EntitySystem): void {
@@ -348,28 +323,28 @@ function CarrierMachineGun(self: Entity, context: EntitySystem): void {
   if (self.enemy) carrier_firebullet_right(self, context);
 }
 
-import { findSpawnPoint as _findSpawnPoint } from '../../../ai/spawn_utils.js';
-
 function CarrierSpawn(self: Entity, context: EntitySystem): void {
-  const { forward: f, right: r } = AngleVectors(self.angles);
+  const f = { x: 0, y: 0, z: 0 };
+  const r = { x: 0, y: 0, z: 0 };
   const offset = { x: 105, y: 0, z: -58 };
+  AngleVectors(self.angles, f, r, null);
 
   const startpoint = M_ProjectFlashSource(self, offset, f, r);
 
   if (!self.monsterinfo.chosen_reinforcements) return;
   if (self.monsterinfo.chosen_reinforcements[0] === 255) return;
 
-  const reinforcement = self.monsterinfo.reinforcements![self.monsterinfo.chosen_reinforcements[0]];
+  const reinforcement = self.monsterinfo.reinforcements!.reinforcements[self.monsterinfo.chosen_reinforcements[0]];
 
-  const spawnpoint = { x: 0, y: 0, z: 0 } as MutableVec3;
+  const spawnpoint = { x: 0, y: 0, z: 0 };
 
-  if (_findSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, context)) {
+  if (findSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, context)) {
     let ent: Entity | null = null;
 
     ent = context.spawn();
     ent.classname = reinforcement.classname;
-    ent.origin = copyVec3(spawnpoint);
-    ent.angles = copyVec3(self.angles);
+    copyVec3(spawnpoint, ent.origin);
+    copyVec3(self.angles, ent.angles);
 
     if (ent.classname === 'monster_flyer') {
        createFlyer(ent, context);
@@ -386,12 +361,12 @@ function CarrierSpawn(self: Entity, context: EntitySystem): void {
 
     if (!ent.inUse) return;
 
-    context.sound(self, SoundChannel.Body, 'medic_commander/monsterspawn1.wav', 1, ATTN_NONE, 0);
+    context.sound(self, SoundChannel.Body, sound_spawn, 1, ATTN_NONE, 0);
 
-    ent.nextthink = context.timeSeconds;
+    ent.nextthink = context.entities.timeSeconds;
     if (ent.think) ent.think(ent, context);
 
-    ent.monsterinfo.aiflags |= AiFlags.SpawnedCarrier | AiFlags.DoNotCount | AiFlags.IgnoreShots;
+    ent.monsterinfo.aiflags |= AI_SPAWNED_CARRIER | AI_DO_NOT_COUNT | AI_IGNORE_SHOTS;
     ent.monsterinfo.commander = self;
     ent.monsterinfo.monster_slots = reinforcement.strength;
 
@@ -406,8 +381,8 @@ function CarrierSpawn(self: Entity, context: EntitySystem): void {
 
 function carrier_prep_spawn(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
-  self.monsterinfo.aiflags |= AiFlags.ManualSteering;
-  self.timestamp = context.timeSeconds;
+  self.monsterinfo.aiflags |= AI_MANUAL_STEERING;
+  self.timestamp = context.entities.timeSeconds;
   self.yaw_speed = 10;
 }
 
@@ -415,8 +390,8 @@ function carrier_spawn_check(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
   CarrierSpawn(self, context);
 
-  if (context.timeSeconds > self.timestamp + 2.0) {
-    self.monsterinfo.aiflags &= ~AiFlags.ManualSteering;
+  if (context.entities.timeSeconds > self.timestamp + 2.0) {
+    self.monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
     self.yaw_speed = self.monsterinfo.orig_yaw_speed!;
   } else {
     self.monsterinfo.nextframe = FRAME_spawn08;
@@ -428,12 +403,12 @@ function carrier_ready_spawn(self: Entity, context: EntitySystem): void {
 
   const current_yaw = anglemod(self.angles.y);
   if (Math.abs(current_yaw - self.ideal_yaw) > 0.1) {
-    self.monsterinfo.aiflags |= AiFlags.HoldFrame;
+    self.monsterinfo.aiflags |= AI_HOLD_FRAME;
     self.timestamp += 0.1;
     return;
   }
 
-  self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
+  self.monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
   // Pick reinforcements
   const result = M_PickReinforcements(self, 1);
@@ -442,14 +417,16 @@ function carrier_ready_spawn(self: Entity, context: EntitySystem): void {
 
   if (!num_summoned) return;
 
-  const reinforcement = self.monsterinfo.reinforcements![self.monsterinfo.chosen_reinforcements[0]];
+  const reinforcement = self.monsterinfo.reinforcements!.reinforcements[self.monsterinfo.chosen_reinforcements[0]];
 
   const offset = { x: 105, y: 0, z: -58 };
-  const { forward: f, right: r } = AngleVectors(self.angles);
+  const f = { x: 0, y: 0, z: 0 };
+  const r = { x: 0, y: 0, z: 0 };
+  AngleVectors(self.angles, f, r, null);
   const startpoint = M_ProjectFlashSource(self, offset, f, r);
   const spawnpoint = { x: 0, y: 0, z: 0 };
 
-  if (_findSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, context)) {
+  if (findSpawnPoint(startpoint, reinforcement.mins, reinforcement.maxs, spawnpoint, 32, context)) {
      // SpawnGrow_Spawn
   }
 }
@@ -462,7 +439,7 @@ function carrier_start_spawn(self: Entity, context: EntitySystem): void {
 
   if (!self.enemy) return;
 
-  const mytime = Math.floor((context.timeSeconds - self.timestamp) / 0.5);
+  const mytime = Math.floor((context.entities.timeSeconds - self.timestamp) / 0.5);
 
   const temp = subtractVec3(self.enemy.origin, self.origin);
   const enemy_yaw = vectoyaw(temp);
@@ -477,8 +454,8 @@ function carrier_start_spawn(self: Entity, context: EntitySystem): void {
 }
 
 function carrier_run(self: Entity, context: EntitySystem): void {
-  self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
-  if (self.monsterinfo.aiflags & AiFlags.StandGround) {
+  self.monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+  if (self.monsterinfo.aiflags & AI_STAND_GROUND) {
     M_SetAnimation(self, carrier_move_stand, context);
   } else {
     M_SetAnimation(self, carrier_move_run, context);
@@ -487,38 +464,39 @@ function carrier_run(self: Entity, context: EntitySystem): void {
 
 function carrier_dead(self: Entity, context: EntitySystem): void {
   // Explosion effect
-  context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, 1, self.origin); // 1 = TE_EXPLOSION1, placeholder
+  context.game.multicast(self.origin, MulticastType.Pbs, ServerCommand.temp_entity, 1, self.origin); // 1 = TE_EXPLOSION1, placeholder
 
-  self.skin = Math.floor(self.skin / 2);
-  if (!self.gravityVector) self.gravityVector = { x: 0, y: 0, z: 0 } as MutableVec3;
-  (self.gravityVector as MutableVec3).z = -1.0;
+  self.s.sound = 0;
+  self.s.skinnum = Math.floor(self.s.skinnum / 2);
+  if (!self.gravityVector) self.gravityVector = { x: 0, y: 0, z: 0 };
+  self.gravityVector.z = -1.0;
 
-  throwGibs(context, self.origin, 500, GibType.Metallic, ModId.UNKNOWN);
+  throwGibs(context.entities, self.origin, 500, GibType.Metallic, ModId.Unknown);
 }
 
 function CarrierSpool(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
-  context.sound(self, SoundChannel.Body, 'weapons/chngnu1a.wav', 1, 0.5, 0);
+  context.sound(self, SoundChannel.Body, sound_cg_up, 1, 0.5, 0);
   self.monsterinfo.weapon_sound = sound_cg_loop;
 }
 
 function carrier_attack_mg_start(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
   M_SetAnimation(self, carrier_move_attack_mg, context);
-  self.monsterinfo.melee_debounce_time = context.timeSeconds + random_time(1.2, 2.0);
+  self.monsterinfo.melee_debounce_time = context.entities.timeSeconds + random_time(1.2, 2.0);
 }
 
 function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
   CarrierMachineGun(self, context);
   CarrierCoopCheck(self, context);
 
-  if (visible(self, self.enemy!, context.trace) && infront(self, self.enemy!)) {
+  if (visible(self, self.enemy!, context) && infront(self, self.enemy!)) {
     if (frandom() < 0.6) {
       if (!self.monsterinfo.melee_debounce_time) self.monsterinfo.melee_debounce_time = 0;
       self.monsterinfo.melee_debounce_time += random_time(0.25, 0.5);
       M_SetAnimation(self, carrier_move_attack_mg, context);
       return;
-    } else if (self.monsterinfo.melee_debounce_time && self.monsterinfo.melee_debounce_time > context.timeSeconds) {
+    } else if (self.monsterinfo.melee_debounce_time && self.monsterinfo.melee_debounce_time > context.entities.timeSeconds) {
        M_SetAnimation(self, carrier_move_attack_mg, context);
        return;
     }
@@ -526,19 +504,19 @@ function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
 
   M_SetAnimation(self, carrier_move_attack_post_mg, context);
   self.monsterinfo.weapon_sound = 0;
-  context.sound(self, SoundChannel.Body, 'weapons/chngnd1a.wav', 1, 0.5, 0);
+  context.sound(self, SoundChannel.Body, sound_cg_down, 1, 0.5, 0);
 }
 
 function carrier_attack_gren(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
-  self.timestamp = context.timeSeconds;
+  self.timestamp = context.entities.timeSeconds;
   M_SetAnimation(self, carrier_move_attack_gren, context);
 }
 
 function carrier_reattack_gren(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
   if (infront(self, self.enemy!)) {
-    if (self.timestamp + 1.3 > context.timeSeconds) {
+    if (self.timestamp + 1.3 > context.entities.timeSeconds) {
       M_SetAnimation(self, carrier_move_attack_gren, context);
       return;
     }
@@ -548,38 +526,40 @@ function carrier_reattack_gren(self: Entity, context: EntitySystem): void {
 
 function CarrierRail(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
-  const { forward, right } = AngleVectors(self.angles);
+  const forward = { x: 0, y: 0, z: 0 };
+  const right = { x: 0, y: 0, z: 0 };
+  AngleVectors(self.angles, forward, right, null);
   const start = M_ProjectFlashSource(self, carrier_flash_offset.MZ2_CARRIER_RAILGUN, forward, right);
 
   const dir = subtractVec3(self.pos1, start);
   const normalizedDir = normalizeVec3(dir);
 
   monster_fire_railgun(self, start, normalizedDir, 50, 100, MuzzleFlash.CarrierRailgun, context);
-  self.monsterinfo.attack_finished = context.timeSeconds + RAIL_FIRE_TIME;
+  self.monsterinfo.attack_finished = context.entities.timeSeconds + RAIL_FIRE_TIME;
 }
 
 function CarrierSaveLoc(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
-  self.pos1 = copyVec3(self.enemy!.origin);
-  (self.pos1 as MutableVec3).z += self.enemy!.viewheight;
+  copyVec3(self.enemy!.origin, self.pos1);
+  self.pos1.z += self.enemy!.viewheight;
 }
 
 // Animation definitions
 
 const carrier_frames_stand = [
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 },
-  { think: monster_ai_stand, dist: 0 }
+  { think: ai_stand, dist: 0 }, // dist required by MonsterFrame
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 },
+  { think: ai_stand, dist: 0 }
 ];
 
 const carrier_move_stand: MonsterMove = {
@@ -590,19 +570,19 @@ const carrier_move_stand: MonsterMove = {
 };
 
 const carrier_frames_walk = [
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 },
-  { think: monster_ai_walk, dist: 4 }
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 },
+  { think: ai_walk, dist: 4 }
 ];
 
 const carrier_move_walk: MonsterMove = {
@@ -613,19 +593,19 @@ const carrier_move_walk: MonsterMove = {
 };
 
 const carrier_frames_run = [
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck }, // Using think prop for action for now if mapped
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck },
-  { think: monster_ai_run, dist: 6, action: CarrierCoopCheck }
+  { think: ai_run, dist: 6, action: CarrierCoopCheck }, // Using think prop for action for now if mapped
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck },
+  { think: ai_run, dist: 6, action: CarrierCoopCheck }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_run: MonsterMove = {
@@ -636,14 +616,14 @@ const carrier_move_run: MonsterMove = {
 };
 
 const carrier_frames_attack_pre_mg = [
-  { think: monster_ai_charge, dist: 4, action: CarrierSpool },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: carrier_attack_mg_start }
+  { think: ai_charge, dist: 4, action: CarrierSpool },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: carrier_attack_mg_start }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_pre_mg: MonsterMove = {
@@ -654,9 +634,9 @@ const carrier_move_attack_pre_mg: MonsterMove = {
 };
 
 const carrier_frames_attack_mg = [
-  { think: monster_ai_charge, dist: -2, action: CarrierMachineGun },
-  { think: monster_ai_charge, dist: -2, action: CarrierMachineGun },
-  { think: monster_ai_charge, dist: -2, action: carrier_reattack_mg }
+  { think: ai_charge, dist: -2, action: CarrierMachineGun },
+  { think: ai_charge, dist: -2, action: CarrierMachineGun },
+  { think: ai_charge, dist: -2, action: carrier_reattack_mg }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_mg: MonsterMove = {
@@ -667,10 +647,10 @@ const carrier_move_attack_mg: MonsterMove = {
 };
 
 const carrier_frames_attack_post_mg = [
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck }
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_post_mg: MonsterMove = {
@@ -681,12 +661,12 @@ const carrier_move_attack_post_mg: MonsterMove = {
 };
 
 const carrier_frames_attack_pre_gren = [
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: carrier_attack_gren }
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: carrier_attack_gren }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_pre_gren: MonsterMove = {
@@ -697,10 +677,10 @@ const carrier_move_attack_pre_gren: MonsterMove = {
 };
 
 const carrier_frames_attack_gren = [
-  { think: monster_ai_charge, dist: -15, action: CarrierGrenade },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: carrier_reattack_gren }
+  { think: ai_charge, dist: -15, action: CarrierGrenade },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: carrier_reattack_gren }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_gren: MonsterMove = {
@@ -711,12 +691,12 @@ const carrier_move_attack_gren: MonsterMove = {
 };
 
 const carrier_frames_attack_post_gren = [
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 4, action: CarrierCoopCheck }
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 4, action: CarrierCoopCheck }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_post_gren: MonsterMove = {
@@ -727,7 +707,7 @@ const carrier_move_attack_post_gren: MonsterMove = {
 };
 
 const carrier_frames_attack_rocket = [
-  { think: monster_ai_charge, dist: 15, action: CarrierRocket }
+  { think: ai_charge, dist: 15, action: CarrierRocket }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_rocket: MonsterMove = {
@@ -738,15 +718,15 @@ const carrier_move_attack_rocket: MonsterMove = {
 };
 
 const carrier_frames_attack_rail = [
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 2, action: CarrierSaveLoc },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: -20, action: CarrierRail },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck },
-  { think: monster_ai_charge, dist: 2, action: CarrierCoopCheck }
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 2, action: CarrierSaveLoc },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: -20, action: CarrierRail },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck },
+  { think: ai_charge, dist: 2, action: CarrierCoopCheck }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_attack_rail: MonsterMove = {
@@ -757,24 +737,24 @@ const carrier_move_attack_rail: MonsterMove = {
 };
 
 const carrier_frames_spawn = [
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2, action: carrier_prep_spawn },
-  { think: monster_ai_charge, dist: -2, action: carrier_start_spawn },
-  { think: monster_ai_charge, dist: -2, action: carrier_ready_spawn },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -10, action: carrier_spawn_check },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 },
-  { think: monster_ai_charge, dist: -2 }
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2, action: carrier_prep_spawn },
+  { think: ai_charge, dist: -2, action: carrier_start_spawn },
+  { think: ai_charge, dist: -2, action: carrier_ready_spawn },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -10, action: carrier_spawn_check },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 },
+  { think: ai_charge, dist: -2 }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_spawn: MonsterMove = {
@@ -785,16 +765,16 @@ const carrier_move_spawn: MonsterMove = {
 };
 
 const carrier_frames_pain_heavy = [
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 }
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 }
 ].map(f => ({ ai: f.think, dist: f.dist, think: undefined }));
 
 const carrier_move_pain_heavy: MonsterMove = {
@@ -805,10 +785,10 @@ const carrier_move_pain_heavy: MonsterMove = {
 };
 
 const carrier_frames_pain_light = [
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 }
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 }
 ].map(f => ({ ai: f.think, dist: f.dist, think: undefined }));
 
 const carrier_move_pain_light: MonsterMove = {
@@ -819,22 +799,22 @@ const carrier_move_pain_light: MonsterMove = {
 };
 
 const carrier_frames_death = [
-  { think: monster_ai_move, dist: 0, action: carrier_dead }, // Using carrier_dead as BossExplode equivalent logic inside
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 },
-  { think: monster_ai_move, dist: 0 }
+  { think: ai_move, dist: 0, action: carrier_dead }, // Using carrier_dead as BossExplode equivalent logic inside
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 },
+  { think: ai_move, dist: 0 }
 ].map(f => ({ ai: f.think, dist: f.dist, think: f.action }));
 
 const carrier_move_death: MonsterMove = {
@@ -850,7 +830,7 @@ const carrier_move_death: MonsterMove = {
 };
 
 function carrier_pain(self: Entity, other: Entity | null, kick: number, damage: number): void {
-  const context = (self as any).context || (self.monsterinfo.commander as any)?.context; // Hack to get context or pass it in signatures
+  const context = self.monsterinfo.commander?.monsterinfo.commander?.['context'] || (self as any)['context']; // Hack to get context or pass it in signatures
   // Actually pain signature doesn't pass context. EntitySystem needs to be available or bound.
   // For now assuming we can't access context easily here unless we bind it.
   // Skipping sound/logic requiring context for a moment to fix build.
@@ -865,13 +845,13 @@ function carrier_pain(self: Entity, other: Entity | null, kick: number, damage: 
 }
 
 function carrier_pain_with_context(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
-  if (context.timeSeconds < self.pain_debounce_time) return;
+  if (context.entities.timeSeconds < self.pain_debounce_time) return;
 
-  self.pain_debounce_time = context.timeSeconds + 5.0;
+  self.pain_debounce_time = context.entities.timeSeconds + 5.0;
 
-  if (damage < 10) context.sound(self, SoundChannel.Voice, 'carrier/pain_sm.wav', 1, ATTN_NONE, 0);
-  else if (damage < 30) context.sound(self, SoundChannel.Voice, 'carrier/pain_md.wav', 1, ATTN_NONE, 0);
-  else context.sound(self, SoundChannel.Voice, 'carrier/pain_lg.wav', 1, ATTN_NONE, 0);
+  if (damage < 10) context.sound(self, SoundChannel.Voice, sound_pain3, 1, ATTN_NONE, 0);
+  else if (damage < 30) context.sound(self, SoundChannel.Voice, sound_pain1, 1, ATTN_NONE, 0);
+  else context.sound(self, SoundChannel.Voice, sound_pain2, 1, ATTN_NONE, 0);
 
   if (!M_ShouldReactToPain(self, context)) return;
 
@@ -891,21 +871,21 @@ function carrier_pain_with_context(self: Entity, other: Entity | null, kick: num
   }
 
   if (changed) {
-    self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
-    self.monsterinfo.aiflags &= ~AiFlags.ManualSteering;
+    self.monsterinfo.aiflags &= ~AI_HOLD_FRAME;
+    self.monsterinfo.aiflags &= ~AI_MANUAL_STEERING;
     self.yaw_speed = self.monsterinfo.orig_yaw_speed!;
   }
 }
 
 function carrier_die_with_context(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: Mod, context: EntitySystem): void {
-  context.sound(self, SoundChannel.Voice, 'carrier/death.wav', 1, ATTN_NONE, 0);
+  context.sound(self, SoundChannel.Voice, sound_death, 1, ATTN_NONE, 0);
   self.deadflag = DeadFlag.Dead;
   self.takedamage = false;
   self.count = 0;
   M_SetAnimation(self, carrier_move_death, context);
   self.velocity = { x: 0, y: 0, z: 0 };
   if (!self.gravityVector) self.gravityVector = { x: 0, y: 0, z: 0 };
-  (self.gravityVector as MutableVec3).z *= 0.01;
+  self.gravityVector.z *= 0.01;
   self.monsterinfo.weapon_sound = 0;
 }
 
@@ -916,8 +896,8 @@ function carrier_checkattack(self: Entity, context: EntitySystem): boolean {
 
   if (enemy_inback || (!enemy_infront && enemy_below)) {
     if (!self.monsterinfo.fire_wait) self.monsterinfo.fire_wait = 0;
-    if (context.timeSeconds >= self.monsterinfo.fire_wait) {
-      self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
+    if (context.entities.timeSeconds >= self.monsterinfo.fire_wait) {
+      self.monsterinfo.fire_wait = context.entities.timeSeconds + CARRIER_ROCKET_TIME;
       self.monsterinfo.attack!(self, context);
       if (frandom() < 0.6) {
         // AS_SLIDING - Not fully implemented in TS port usually, but we can set it.
@@ -928,11 +908,11 @@ function carrier_checkattack(self: Entity, context: EntitySystem): boolean {
     }
   }
 
-  return M_CheckAttack_Base(self, context, 0.4, 0.8, 0.8, 0.8, 0.5, 0);
+  return M_CheckAttack_Base(self, 0.4, 0.8, 0.8, 0.8, 0.5, 0, context);
 }
 
 function carrier_attack_with_context(self: Entity, context: EntitySystem): void {
-  self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
+  self.monsterinfo.aiflags &= ~AI_HOLD_FRAME;
 
   if (!self.enemy || !self.enemy.inUse) return;
 
@@ -942,7 +922,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
 
   // Helper to handle probability logic
   const maybe = (prob: number) => frandom() < prob;
-  const attackReady = () => context.timeSeconds < (self.monsterinfo.attack_finished || 0);
+  const attackReady = () => context.entities.timeSeconds < (self.monsterinfo.attack_finished || 0);
 
   // bad_area check skipped for now as property not on Entity yet?
   // if (self.bad_area) ...
@@ -953,7 +933,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
     if (maybe(0.1) || attackReady()) {
       M_SetAnimation(self, carrier_move_attack_pre_mg, context);
     } else {
-      context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
+      context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
       M_SetAnimation(self, carrier_move_attack_rail, context);
     }
     return;
@@ -967,7 +947,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
       if (maybe(0.8) || attackReady()) {
         M_SetAnimation(self, carrier_move_attack_pre_mg, context);
       } else {
-        context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
+        context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
         M_SetAnimation(self, carrier_move_attack_rail, context);
       }
     } else if (range < 600) {
@@ -976,7 +956,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
         if (luck <= 0.20) M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         else if (luck <= 0.40) M_SetAnimation(self, carrier_move_attack_pre_gren, context);
         else if (luck <= 0.7 && !attackReady()) {
-          context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
+          context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
           M_SetAnimation(self, carrier_move_attack_rail, context);
         } else {
           M_SetAnimation(self, carrier_move_spawn, context);
@@ -984,8 +964,8 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
       } else {
         if (luck <= 0.30) M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         else if (luck <= 0.65) M_SetAnimation(self, carrier_move_attack_pre_gren, context);
-        else if (context.timeSeconds >= (self.monsterinfo.attack_finished || 0)) {
-           context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
+        else if (context.entities.timeSeconds >= (self.monsterinfo.attack_finished || 0)) {
+           context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
            M_SetAnimation(self, carrier_move_attack_rail, context);
         } else {
            M_SetAnimation(self, carrier_move_attack_pre_mg, context);
@@ -996,9 +976,9 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
       if (M_SlotsLeft(self) > 2) {
         if (luck < 0.3) M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         else if (luck < 0.65 && !attackReady()) {
-          context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
-          self.pos1 = copyVec3(self.enemy.origin);
-          (self.pos1 as MutableVec3).z += self.enemy.viewheight;
+          context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
+          copyVec3(self.enemy.origin, self.pos1);
+          self.pos1.z += self.enemy.viewheight;
           M_SetAnimation(self, carrier_move_attack_rail, context);
         } else {
           M_SetAnimation(self, carrier_move_spawn, context);
@@ -1007,7 +987,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
         if (luck < 0.45 || attackReady()) {
           M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         } else {
-          context.sound(self, SoundChannel.Weapon, 'gladiator/railgun.wav', 1, ATTN_NORM, 0);
+          context.sound(self, SoundChannel.Weapon, sound_rail, 1, ATTN_NORM, 0);
           M_SetAnimation(self, carrier_move_attack_rail, context);
         }
       }
@@ -1025,48 +1005,42 @@ function carrier_setskin(self: Entity): void {
   }
 }
 
-export function createCarrier(self: Entity, context: SpawnContext): void {
-  // Use context.entities to access entity system features
-  const sys = context.entities;
-
-  if (!M_AllowSpawn(self, sys)) {
-    sys.free(self);
+export function createCarrier(self: Entity, context: EntitySystem): void {
+  if (!M_AllowSpawn(self, context)) {
+    G_FreeEdict(self, context);
     return;
   }
 
-  // Precache sounds
-  sound_pain1 = sys.soundIndex('carrier/pain_md.wav');
-  sound_pain2 = sys.soundIndex('carrier/pain_lg.wav');
-  sound_pain3 = sys.soundIndex('carrier/pain_sm.wav');
-  sound_death = sys.soundIndex('carrier/death.wav');
-  sound_rail = sys.soundIndex('gladiator/railgun.wav');
-  sound_sight = sys.soundIndex('carrier/sight.wav');
-  sound_spawn = sys.soundIndex('medic_commander/monsterspawn1.wav');
+  sound_pain1 = context.soundIndex('carrier/pain_md.wav');
+  sound_pain2 = context.soundIndex('carrier/pain_lg.wav');
+  sound_pain3 = context.soundIndex('carrier/pain_sm.wav');
+  sound_death = context.soundIndex('carrier/death.wav');
+  sound_rail = context.soundIndex('gladiator/railgun.wav');
+  sound_sight = context.soundIndex('carrier/sight.wav');
+  sound_spawn = context.soundIndex('medic_commander/monsterspawn1.wav');
 
-  sound_cg_down = sys.soundIndex('weapons/chngnd1a.wav');
-  sound_cg_loop = sys.soundIndex('weapons/chngnl1a.wav');
-  sound_cg_up = sys.soundIndex('weapons/chngnu1a.wav');
+  sound_cg_down = context.soundIndex('weapons/chngnd1a.wav');
+  sound_cg_loop = context.soundIndex('weapons/chngnl1a.wav');
+  sound_cg_up = context.soundIndex('weapons/chngnu1a.wav');
 
-  self.monsterinfo.engine_sound = sys.soundIndex('bosshovr/bhvengn1.wav');
+  self.monsterinfo.engine_sound = context.soundIndex('bosshovr/bhvengn1.wav');
 
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.modelindex = sys.modelIndex('models/monsters/carrier/tris.md2');
+  self.modelindex = context.modelIndex('models/monsters/carrier/tris.md2');
 
   // Precache gibs
-  sys.modelIndex('models/monsters/carrier/gibs/base.md2');
-  sys.modelIndex('models/monsters/carrier/gibs/chest.md2');
+  context.modelIndex('models/monsters/carrier/gibs/base.md2');
+  context.modelIndex('models/monsters/carrier/gibs/chest.md2');
   // ... others
 
   self.mins = { x: -56, y: -56, z: -44 };
   self.maxs = { x: 56, y: 56, z: 44 };
 
   // Health
-  const skill = sys.skill; // Using sys.skill
+  const skill = context.game.cvars.skill.value;
   self.health = Math.max(2000, 2000 + 1000 * (skill - 1));
-  self.health *= context.health_multiplier;
-
-  if (sys.deathmatch) { // coop check usually
+  if (context.game.deathmatch) { // coop check usually
      // self.health += 500 * skill;
   }
 
@@ -1077,25 +1051,25 @@ export function createCarrier(self: Entity, context: SpawnContext): void {
   self.monsterinfo.orig_yaw_speed = self.yaw_speed;
 
   self.flags |= EntityFlags.ImmuneLaser;
-  self.monsterinfo.aiflags |= AiFlags.IgnoreShots;
+  self.monsterinfo.aiflags |= AI_IGNORE_SHOTS;
 
-  self.pain = (ent, other, kick, damage) => carrier_pain_with_context(ent, other, kick, damage, sys);
-  self.die = (ent, infl, att, dmg, pt, mod) => carrier_die_with_context(ent, infl, att, dmg, pt, mod, sys);
+  self.pain = (ent, other, kick, damage) => carrier_pain_with_context(ent, other, kick, damage, context);
+  self.die = (ent, infl, att, dmg, pt, mod) => carrier_die_with_context(ent, infl, att, dmg, pt, mod, context);
 
   self.monsterinfo.stand = (ent, ctx) => M_SetAnimation(ent, carrier_move_stand, ctx);
   self.monsterinfo.walk = (ent, ctx) => M_SetAnimation(ent, carrier_move_walk, ctx);
   self.monsterinfo.run = (ent, ctx) => carrier_run(ent, ctx);
   self.monsterinfo.attack = (ent, ctx) => carrier_attack_with_context(ent, ctx);
-  self.monsterinfo.sight = (ent, other) => sys.sound(ent, SoundChannel.Voice, 'carrier/sight.wav', 1, ATTN_NORM, 0);
+  self.monsterinfo.sight = (ent, other) => context.sound(ent, SoundChannel.Voice, sound_sight, 1, ATTN_NORM, 0);
   self.monsterinfo.checkattack = carrier_checkattack;
   self.monsterinfo.setskin = carrier_setskin;
 
-  sys.linkentity(self);
+  context.linkentity(self);
 
-  M_SetAnimation(self, carrier_move_stand, sys);
+  M_SetAnimation(self, carrier_move_stand, context);
   self.monsterinfo.scale = MODEL_SCALE;
 
-  flymonster_start(self, sys);
+  flymonster_start(self, context);
 
   self.monsterinfo.attack_finished = 0;
 
@@ -1110,11 +1084,11 @@ export function createCarrier(self: Entity, context: SpawnContext): void {
       self.monsterinfo.monster_slots += Math.floor(self.monsterinfo.monster_slots * (skill / 2.0));
     }
     // M_SetupReinforcements(reinforcements, self.monsterinfo.reinforcements!);
-    self.monsterinfo.reinforcements = [];
-    M_SetupReinforcementsWithContext(reinforcements, self.monsterinfo.reinforcements, sys);
+    self.monsterinfo.reinforcements = { reinforcements: [], num_reinforcements: 0 };
+    M_SetupReinforcementsWithContext(reinforcements, self.monsterinfo.reinforcements, context);
   }
 
-  self.monsterinfo.aiflags |= AiFlags.AlternateFly;
+  self.monsterinfo.aiflags |= AI_ALTERNATE_FLY;
   self.monsterinfo.fly_acceleration = 5;
   self.monsterinfo.fly_speed = 50;
   self.monsterinfo.fly_above = true;
@@ -1122,6 +1096,8 @@ export function createCarrier(self: Entity, context: SpawnContext): void {
   self.monsterinfo.fly_max_distance = 1000;
 }
 
-export function registerCarrier(registry: SpawnRegistry): void {
-  registry.register('monster_carrier', createCarrier);
+export function registerCarrier(context: EntitySystem): void {
+  registerMonsterSpawns(context, [
+    ['monster_carrier', createCarrier]
+  ]);
 }

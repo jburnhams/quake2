@@ -24,7 +24,6 @@ import { DamageMod } from '../../combat/damageMods.js';
 import { rangeTo, infront } from '../../ai/perception.js';
 import { T_Damage } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
-import { EntitySystem } from '../system.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -92,10 +91,10 @@ function flyer_fire(self: Entity, context: any): void {
     monster_fire_blaster(self, start, forward, 5, 1000, 0, 0, context, DamageMod.BLASTER);
 }
 
-function flyer_slash(self: Entity, context: EntitySystem): void {
+function flyer_slash(self: Entity, context: any): void {
     if (!self.enemy) return;
 
-    const damage = 5 + context.rng.frandomMax(5);
+    const damage = 5 + Math.random() * 5;
     const dist = rangeTo(self, self.enemy);
     if (dist <= 80 && infront(self, self.enemy)) {
         T_Damage(self.enemy as any, self as any, self as any,
@@ -243,17 +242,6 @@ export function SP_monster_flyer(self: Entity, context: SpawnContext): void {
 
   flyer_stand(self);
   self.nextthink = self.timestamp + MONSTER_TICK;
-}
-
-export function createFlyer(self: Entity, context: EntitySystem): void {
-    const spawnContext: SpawnContext = {
-        entities: context,
-        keyValues: { classname: 'monster_flyer' },
-        health_multiplier: 1.0,
-        warn: () => {},
-        free: (e) => context.free(e)
-    };
-    SP_monster_flyer(self, spawnContext);
 }
 
 export function registerFlyerSpawns(registry: SpawnRegistry): void {

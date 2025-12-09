@@ -38,7 +38,6 @@ describe('Difficulty Scaling - Reaction Time', () => {
         enemy = {
             classname: 'player',
             origin: { x: 100, y: 0, z: 0 },
-            velocity: { x: 0, y: 0, z: 0 }, // Added velocity
             svflags: ServerFlags.Player,
             inUse: true,
             flags: 0,

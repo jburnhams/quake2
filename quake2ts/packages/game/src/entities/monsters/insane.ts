@@ -99,7 +99,7 @@ function insane_moan(self: Entity, context: any) {
 
     if ((self.monsterinfo.attack_finished ?? 0) < context.timeSeconds) {
         context.sound(self, 2, sound_moan, 1, 1, 0);
-        self.monsterinfo.attack_finished = context.timeSeconds + 1 + context.rng.frandom() * 2;
+        self.monsterinfo.attack_finished = context.timeSeconds + 1 + Math.random() * 2;
     }
 }
 
@@ -107,9 +107,9 @@ function insane_scream(self: Entity, context: any) {
     if (self.spawnflags & SPAWNFLAG_INSANE_QUIET) return;
 
     if ((self.monsterinfo.attack_finished ?? 0) < context.timeSeconds) {
-        const sound = sound_screams[Math.floor(context.rng.frandom() * sound_screams.length)];
+        const sound = sound_screams[Math.floor(Math.random() * sound_screams.length)];
         context.sound(self, 2, sound, 1, 1, 0);
-        self.monsterinfo.attack_finished = context.timeSeconds + 1 + context.rng.frandom() * 2;
+        self.monsterinfo.attack_finished = context.timeSeconds + 1 + Math.random() * 2;
     }
 }
 
@@ -120,8 +120,8 @@ function monster_footstep(self: Entity, context: any) {
 // Logic functions
 function insane_checkdown(self: Entity, context: any) {
     if (self.spawnflags & SPAWNFLAG_INSANE_ALWAYS_STAND) return;
-    if (context.rng.frandom() < 0.3) {
-        if (context.rng.frandom() < 0.5) {
+    if (Math.random() < 0.3) {
+        if (Math.random() < 0.5) {
             self.monsterinfo.current_move = insane_move_uptodown;
         } else {
             self.monsterinfo.current_move = insane_move_jumpdown;
@@ -131,7 +131,7 @@ function insane_checkdown(self: Entity, context: any) {
 
 function insane_checkup(self: Entity, context: any) {
     if ((self.spawnflags & SPAWNFLAG_INSANE_CRAWL) && (self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND)) return;
-    if (context.rng.frandom() < 0.5) {
+    if (Math.random() < 0.5) {
         self.monsterinfo.current_move = insane_move_downtoup;
     }
 }
@@ -141,7 +141,7 @@ function insane_onground(self: Entity, context: any) {
 }
 
 function insane_cross_func(self: Entity, context: any) {
-    if (context.rng.frandom() < 0.8) {
+    if (Math.random() < 0.8) {
         self.monsterinfo.current_move = insane_move_cross;
     } else {
         self.monsterinfo.current_move = insane_move_struggle_cross;
@@ -154,7 +154,7 @@ function insane_stand(self: Entity, context: any) {
         self.monsterinfo.aiflags |= AIFlags.StandGround;
     } else if ((self.spawnflags & SPAWNFLAG_INSANE_CRAWL) && (self.spawnflags & SPAWNFLAG_INSANE_STAND_GROUND)) {
         self.monsterinfo.current_move = insane_move_down;
-    } else if (context.rng.frandom() < 0.5) {
+    } else if (Math.random() < 0.5) {
         self.monsterinfo.current_move = insane_move_stand_normal;
     } else {
         self.monsterinfo.current_move = insane_move_stand_insane;
@@ -168,7 +168,7 @@ function insane_walk(self: Entity, context: any) {
     }
     if (self.spawnflags & SPAWNFLAG_INSANE_CRAWL) {
         self.monsterinfo.current_move = insane_move_crawl;
-    } else if (context.rng.frandom() <= 0.5) {
+    } else if (Math.random() <= 0.5) {
         self.monsterinfo.current_move = insane_move_walk_normal;
     } else {
         self.monsterinfo.current_move = insane_move_walk_insane;
@@ -189,7 +189,7 @@ function insane_run(self: Entity, context: any) {
 
     if (isCrawling) {
         self.monsterinfo.current_move = insane_move_runcrawl;
-    } else if (context.rng.frandom() <= 0.5) {
+    } else if (Math.random() <= 0.5) {
         self.monsterinfo.current_move = insane_move_run_normal;
     } else {
         self.monsterinfo.current_move = insane_move_run_insane;
@@ -467,7 +467,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
         if (context.entities.timeSeconds < self.pain_debounce_time) return;
         self.pain_debounce_time = context.entities.timeSeconds + 3;
 
-        const r = 1 + Math.floor(context.entities.rng.frandom() * 2);
+        const r = 1 + Math.floor(Math.random() * 2);
         let l = 100;
         if (self.health < 25) l = 25;
         else if (self.health < 50) l = 50;
@@ -502,7 +502,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
 
         if (self.deadflag === DeadFlag.Dead) return;
 
-        const deathSound = `player/male/death${1 + Math.floor(context.entities.rng.frandom() * 5)}.wav`;
+        const deathSound = `player/male/death${1 + Math.floor(Math.random() * 5)}.wav`;
         context.entities.sound(self, 2, deathSound, 1, 1, 0);
 
         self.deadflag = DeadFlag.Dead;
@@ -549,7 +549,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
     }
 
     // Random skin
-    self.skin = Math.floor(context.entities.rng.frandom() * 3);
+    self.skin = Math.floor(Math.random() * 3);
 }
 
 export function registerInsaneSpawns(registry: SpawnRegistry): void {

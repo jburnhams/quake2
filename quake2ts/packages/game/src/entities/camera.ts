@@ -3,10 +3,9 @@ import { EntitySystem } from './system.js';
 import { scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, lengthVec3, Vec3, ConfigStringIndex } from '@quake2ts/shared';
 import { G_PickTarget } from './utils.js';
 
-// Replaced HACKFLAGs with semantic constants
-const CAMERA_TELEPORT_OUT = 2;
-const CAMERA_SKIPPABLE = 64;
-const CAMERA_END_OF_UNIT = 128;
+const HACKFLAG_TELEPORT_OUT = 2;
+const HACKFLAG_SKIPPABLE = 64;
+const HACKFLAG_END_OF_UNIT = 128;
 
 const YAW = 1;
 const PITCH = 0;
@@ -44,7 +43,7 @@ function update_target_camera(self: Entity, context: EntitySystem) {
     let do_skip = false;
 
     // only allow skipping after 2 seconds
-    if ((self.spawnflags & CAMERA_SKIPPABLE) && context.timeSeconds > 2) {
+    if ((self.hackflags & HACKFLAG_SKIPPABLE) && context.timeSeconds > 2) {
         // Need access to clients to check buttons.
         // Assuming context.entities exposes clients or we iterate.
         // For now, iterate all entities and check for clients.
@@ -76,10 +75,10 @@ function update_target_camera(self: Entity, context: EntitySystem) {
         if (self.moveinfo) self.moveinfo.remaining_distance = remaining_distance;
 
         if (remaining_distance <= 0) {
-            if (self.movetarget.spawnflags & CAMERA_TELEPORT_OUT) {
+            if (self.movetarget.hackflags & HACKFLAG_TELEPORT_OUT) {
                 if (self.enemy) {
                     // self.enemy.s.event = EV_PLAYER_TELEPORT; // TODO
-                    self.enemy.spawnflags |= CAMERA_TELEPORT_OUT;
+                    self.enemy.hackflags = HACKFLAG_TELEPORT_OUT;
                     // self.enemy.pain_debounce_time = ... // Used for alpha fade timing in dummy think
                 }
             }
@@ -108,7 +107,7 @@ function update_target_camera(self: Entity, context: EntitySystem) {
              const dist = self.moveinfo?.distance || 1;
              const frac = 1.0 - (remaining_distance / dist);
 
-             if (self.enemy && (self.enemy.spawnflags & CAMERA_TELEPORT_OUT)) {
+             if (self.enemy && (self.enemy.hackflags & HACKFLAG_TELEPORT_OUT)) {
                  self.enemy.alpha = Math.max(1.0 / 255.0, frac);
              }
 
@@ -160,7 +159,7 @@ function target_camera_dummy_think(self: Entity, context: EntitySystem) {
     // G_SetClientFrame(self);
     // self.client = null;
 
-    if (self.spawnflags & CAMERA_TELEPORT_OUT) {
+    if (self.hackflags & HACKFLAG_TELEPORT_OUT) {
         // Handle alpha fade out
     }
     self.nextthink = context.timeSeconds + 0.1;
@@ -224,7 +223,7 @@ export function useTargetCamera(self: Entity, other: Entity | null, activator: E
     self.moveinfo.remaining_distance = dist;
     self.moveinfo.distance = dist;
 
-    // if (self.spawnflags & CAMERA_END_OF_UNIT) ...
+    // if (self.hackflags & HACKFLAG_END_OF_UNIT) ...
 }
 
 export function registerTargetCamera(registry: any) {

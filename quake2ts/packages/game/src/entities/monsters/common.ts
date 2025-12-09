@@ -2,7 +2,7 @@ import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag } from '..
 import { monster_think, ai_stand, ai_walk, ai_run, ai_charge } from '../../ai/index.js';
 import { SpawnContext } from '../spawn.js';
 import { throwGibs, GIB_ORGANIC } from '../gibs.js';
-import { Vec3, addVec3, scaleVec3, MASK_SHOT, ZERO_VEC3, normalizeVec3, subtractVec3 } from '@quake2ts/shared';
+import { Vec3, addVec3, scaleVec3, MASK_SHOT, ZERO_VEC3 } from '@quake2ts/shared';
 import { EntitySystem } from '../system.js';
 import { DamageMod } from '../../combat/damageMods.js';
 
@@ -143,17 +143,6 @@ export function walkmonster_start(self: Entity, context: any): void {
   self.nextthink = context.timeSeconds + MONSTER_TICK;
 }
 
-export function flymonster_start(self: Entity, context: any): void {
-    if (self.health <= 0) return;
-
-    self.movetype = MoveType.Step;
-    self.takedamage = true;
-    self.solid = Solid.BoundingBox;
-
-    // walkmonster_start sets think and nextthink
-    walkmonster_start(self, context);
-}
-
 export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, right: Vec3): Vec3 {
   const start = addVec3(self.origin, scaleVec3(forward, offset.x));
   const start2 = addVec3(start, scaleVec3(right, offset.y));
@@ -188,29 +177,4 @@ export function M_CheckClearShot(self: Entity, offset: Vec3, context: EntitySyst
     }
 
     return false;
-}
-
-// Helper to check if a blindfire shot is viable
-export function M_AdjustBlindfireTarget(self: Entity, start: Vec3, target: Vec3, right: Vec3, context: any): Vec3 | null {
-  const tr = context.trace(start, target, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-
-  if (!tr.startsolid && !tr.allsolid && tr.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(target, start));
-  }
-
-  // Try left
-  const leftTarget = addVec3(target, scaleVec3(right, -20));
-  const trLeft = context.trace(start, leftTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-  if (!trLeft.startsolid && !trLeft.allsolid && trLeft.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(leftTarget, start));
-  }
-
-  // Try right
-  const rightTarget = addVec3(target, scaleVec3(right, 20));
-  const trRight = context.trace(start, rightTarget, ZERO_VEC3, ZERO_VEC3, self, MASK_SHOT);
-  if (!trRight.startsolid && !trRight.allsolid && trRight.fraction >= 0.5) {
-    return normalizeVec3(subtractVec3(rightTarget, start));
-  }
-
-  return null;
 }

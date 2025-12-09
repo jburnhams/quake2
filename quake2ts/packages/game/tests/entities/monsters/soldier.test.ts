@@ -12,7 +12,6 @@ import {
     monster_fire_blueblaster,
     monster_fire_dabeam
 } from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '../../test-helpers.js';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -39,12 +38,30 @@ describe('monster_soldier', () => {
   } = soldierModule;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    const testContext = createTestContext();
-    sys = testContext.entities as unknown as EntitySystem;
-    context = testContext;
+    // Basic mock of EntitySystem and SpawnContext
+    const soundMock = vi.fn();
+    const engineMock = {
+        modelIndex: vi.fn().mockReturnValue(1),
+        sound: soundMock,
+    } as unknown as GameEngine;
+
+    sys = {
+        spawn: () => new Entity(1),
+        modelIndex: (s: string) => 1,
+        timeSeconds: 10,
+        multicast: vi.fn(),
+        engine: engineMock,
+        sound: soundMock,
+        linkentity: vi.fn(),
+    } as unknown as EntitySystem;
+
+    context = {
+        entities: sys,
+        health_multiplier: 1.0,
+    } as unknown as SpawnContext;
 
     soldier = new Entity(1);
+    vi.clearAllMocks();
   });
 
   it('SP_monster_soldier sets default properties (Blaster)', () => {
@@ -110,7 +127,7 @@ describe('monster_soldier', () => {
 
   it('attack initiates correctly', () => {
     SP_monster_soldier(soldier, context);
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     expect(soldier.monsterinfo.current_move).toBeDefined();
     expect(soldier.monsterinfo.current_move?.firstframe).toBe(90);
   });
@@ -118,7 +135,7 @@ describe('monster_soldier', () => {
   it('machinegun attack uses burst fire', () => {
     soldier.spawnflags = 4; // Machinegun
     SP_monster_soldier(soldier, context);
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
 
     const move = soldier.monsterinfo.current_move;
     expect(move).toBeDefined();
@@ -136,7 +153,7 @@ describe('monster_soldier', () => {
 
     // Simulate attack frame
     const move = soldier.monsterinfo.current_move; // undefined initially
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Frame 5 triggers fire
@@ -155,7 +172,7 @@ describe('monster_soldier', () => {
     soldier.enemy = new Entity(2);
     soldier.enemy.origin = { x: 100, y: 0, z: 0 };
 
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Frame 5
@@ -173,7 +190,7 @@ describe('monster_soldier', () => {
     soldier.enemy = new Entity(2);
     soldier.enemy.origin = { x: 100, y: 0, z: 0 };
 
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Frame 4
@@ -189,7 +206,7 @@ describe('monster_soldier', () => {
     soldier.enemy = new Entity(2);
     soldier.enemy.origin = { x: 100, y: 0, z: 0 };
 
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Frame 5
@@ -205,7 +222,7 @@ describe('monster_soldier', () => {
     soldier.enemy = new Entity(2);
     soldier.enemy.origin = { x: 100, y: 0, z: 0 };
 
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Frame 5
@@ -222,7 +239,7 @@ describe('monster_soldier', () => {
     soldier.enemy.origin = { x: 100, y: 0, z: 0 };
 
     // Should use machinegun/burst frames (attack_move_mg)
-    soldier.monsterinfo.attack!(soldier, context.entities as any);
+    soldier.monsterinfo.attack!(soldier, context as any);
     const attackMove = soldier.monsterinfo.current_move;
 
     // Check it uses the burst frames (frame 4)
@@ -236,8 +253,8 @@ describe('monster_soldier', () => {
   it('soldier plays idle sound periodically', () => {
     SP_monster_soldier(soldier, context);
 
-    // Mock RNG to trigger the sound
-    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
+    // Mock Math.random to trigger the sound
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
     // Execute the idle function
     soldier.monsterinfo.idle!(soldier);

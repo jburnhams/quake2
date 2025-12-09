@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -41,7 +41,7 @@ import { angleVectors } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
 import { DemoControls } from './ui/demo-controls.js';
-import { DemoRecorder, DLight } from '@quake2ts/engine';
+import { DemoRecorder } from '@quake2ts/engine';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -233,7 +233,6 @@ export function createClient(imports: ClientImports): ClientExports {
   // Default FOV
   let fovValue = 90;
   let isZooming = false;
-  let flashlightEnabled = false;
 
   // Initialize Menu Factories
   if (imports.host) {
@@ -312,13 +311,6 @@ export function createClient(imports: ClientImports): ClientExports {
         clientExports.stopRecording();
     }, 'Stop recording demo');
 
-    imports.host.commands.register('flashlight', () => {
-        flashlightEnabled = !flashlightEnabled;
-        if (imports.host?.cvars) {
-            imports.host.cvars.setValue('cl_flashlight', flashlightEnabled ? '1' : '0');
-        }
-    }, 'Toggle flashlight');
-
     if (imports.host.cvars) {
       imports.host.cvars.register({
         name: 'fov',
@@ -331,16 +323,6 @@ export function createClient(imports: ClientImports): ClientExports {
           }
         },
         description: 'Field of view'
-      });
-
-       imports.host.cvars.register({
-        name: 'cl_flashlight',
-        defaultValue: '0',
-        flags: CvarFlags.Archive,
-        onChange: (cvar) => {
-            flashlightEnabled = cvar.number !== 0;
-        },
-        description: 'Flashlight toggle'
       });
 
       // Initialize fovValue from cvar
@@ -571,8 +553,6 @@ export function createClient(imports: ClientImports): ClientExports {
 
       const command = {} as UserCommand;
 
-      const dlights: DLight[] = [];
-
       if (lastRendered) {
         const { origin, viewAngles } = lastRendered;
         camera = new Camera();
@@ -597,20 +577,6 @@ export function createClient(imports: ClientImports): ClientExports {
         // Update aspect from renderer
         if (imports.engine.renderer) {
             camera.aspect = imports.engine.renderer.width / imports.engine.renderer.height;
-        }
-
-        // Flashlight logic
-        if (flashlightEnabled || (lastRendered.renderfx & RenderFx.Flashlight)) {
-            // Flashlight originates from view position
-            const lightOrigin = { x: camera.position[0], y: camera.position[1], z: camera.position[2] };
-
-            dlights.push({
-                origin: lightOrigin,
-                color: { x: 1, y: 1, z: 1 },
-                intensity: 200, // Reduced radius for spotlight effect emulation via attenuation? Standard dlight is point.
-                die: (sample.nowMs / 1000) + 0.1,
-                minLight: 0
-            });
         }
       }
 
@@ -637,7 +603,8 @@ export function createClient(imports: ClientImports): ClientExports {
           imports.engine.renderer.renderFrame({
               camera,
               world,
-              dlights: dlights
+              // Lighting?
+              dlights: [] // TODO: Dynamic lights
           }, renderEntities);
       }
 
@@ -701,8 +668,7 @@ export function createClient(imports: ClientImports): ClientExports {
                 pm_flags: lastRendered.pmFlags,
                 gun_frame: lastRendered.gun_frame ?? 0,
                 rdflags: lastRendered.rdflags ?? 0,
-                fov: lastRendered.fov ?? 90,
-                renderfx: lastRendered.renderfx
+                fov: lastRendered.fov ?? 90
             };
 
             // Populate stats for status bar (Health, Armor, Ammo) if not already populated by server

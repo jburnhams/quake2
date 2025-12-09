@@ -2,18 +2,45 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_tank } from '../../../src/entities/monsters/tank.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
+import { createGame } from '../../../src/index.js';
+import { SpawnContext } from '../../../src/entities/spawn.js';
 import * as attack from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_tank', () => {
   let system: EntitySystem;
-  let context: any;
+  let context: SpawnContext;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    const testContext = createTestContext();
-    system = testContext.entities as unknown as EntitySystem;
-    context = testContext;
+    // Mock game engine and imports
+    const engine = {
+      sound: vi.fn(),
+      modelIndex: vi.fn().mockReturnValue(1),
+    };
+    const imports = {
+      trace: vi.fn().mockReturnValue({
+        allsolid: false,
+        startsolid: false,
+        fraction: 1,
+        endpos: { x: 0, y: 0, z: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+        ent: null,
+      }),
+      pointcontents: vi.fn().mockReturnValue(0),
+      linkentity: vi.fn(),
+      multicast: vi.fn(),
+      unicast: vi.fn(),
+    };
+
+    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
+    system = (gameExports as any).entities;
+
+    context = {
+      keyValues: {},
+      entities: system,
+      warn: vi.fn(),
+      free: vi.fn(),
+      health_multiplier: 1.0,
+    };
   });
 
   it('spawns with correct properties', () => {
@@ -43,7 +70,7 @@ describe('monster_tank', () => {
     ent.health = 300; // Less than half health to trigger pain
 
     // Mock random to bypass the 50% chance to ignore low damage
-    vi.spyOn(system.rng, 'frandom').mockReturnValue(0.6);
+    vi.spyOn(Math, 'random').mockReturnValue(0.6);
 
     // Damage > 10 ensures we don't hit the low damage ignore check
     ent.pain!(ent, system.world, 0, 20);
@@ -96,8 +123,8 @@ describe('monster_tank', () => {
     // Should have an idle function in monsterinfo
     expect(ent.monsterinfo.idle).toBeDefined();
 
-    // Mock RNG to trigger the sound
-    vi.spyOn(system.rng, 'frandom').mockReturnValue(0.1);
+    // Mock Math.random to trigger the sound
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
 
     // Execute the idle function
     ent.monsterinfo.idle!(ent);

@@ -1,4 +1,4 @@
-import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SHOT, distance } from '@quake2ts/shared';
+import { angleVectors, addVec3, scaleVec3, normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, vectorToAngles, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SHOT } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { T_Damage, Damageable, DamageApplicationResult } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
@@ -6,6 +6,10 @@ import { DamageMod } from '../../combat/damageMods.js';
 import type { EntitySystem } from '../system.js';
 import { createBlasterBolt, createGrenade, createRocket, createBfgBall, createIonRipper, createBlueBlaster, createFlechette, createHeatSeekingMissile } from '../projectiles.js';
 import { MulticastType } from '../../imports.js';
+
+function crandom(): number {
+  return 2 * Math.random() - 1;
+}
 
 function getDamageScale(skill: number): number {
   if (skill >= 3) return 1.5;
@@ -52,8 +56,8 @@ export function monster_fire_bullet_v2(
     const angles = vectorToAngles(dir);
     const { right, up } = angleVectors(angles);
 
-    const r = context.rng.crandom() * scaledHSpread;
-    const u = context.rng.crandom() * scaledVSpread;
+    const r = crandom() * scaledHSpread;
+    const u = crandom() * scaledVSpread;
 
     direction = {
       x: dir.x + right.x * r + up.x * u,

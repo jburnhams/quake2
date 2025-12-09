@@ -56,7 +56,7 @@ export function firePlasmaBeam(game: GameExports, player: Entity, inventory: Pla
             trace.endpos,
             trace.plane ? trace.plane.normal : ZERO_VEC3,
             damage,
-            0, // No knockback on hit.
+            0, // No knockback on hit? Or maybe standard?
             DamageFlags.ENERGY,
             DamageMod.HEATBEAM,
             game.time,

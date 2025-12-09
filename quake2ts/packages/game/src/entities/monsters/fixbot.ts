@@ -45,6 +45,11 @@ type MutableVec3 = { -readonly [P in keyof Vec3]: Vec3[P] };
 
 const MONSTER_TICK = 0.1;
 
+// Helper to access deterministic RNG or Math.random
+const random = () => Math.random();
+const frandom = () => Math.random();
+const irandom = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -146,7 +151,7 @@ function fixbot_search(self: Entity, context: EntitySystem): void {
         fixbot_set_fly_parameters(self, true, false);
     } else {
         // Standard search sound or behavior
-        if (context.game.random.frandom() < 0.1) {
+        if (random() < 0.1) {
              context.engine.sound?.(self, 0, 'flyer/flysght1.wav', 1, 1, 0);
         }
     }
@@ -223,8 +228,8 @@ function fixbot_fire_laser(self: Entity, context: EntitySystem): void {
 
 function fixbot_fire_welder(self: Entity, context: EntitySystem): void {
     // Visuals and sounds
-    if (context.game.random.frandom() > 0.8) {
-        const r = context.game.random.frandom();
+    if (frandom() > 0.8) {
+        const r = frandom();
         if (r < 0.33) context.engine.sound?.(self, 0, 'misc/welder1.wav', 1, 1, 0);
         else if (r < 0.66) context.engine.sound?.(self, 0, 'misc/welder2.wav', 1, 1, 0);
         else context.engine.sound?.(self, 0, 'misc/welder3.wav', 1, 1, 0);

@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity } from '../../../src/entities/entity.js';
@@ -10,10 +11,10 @@ describe('Gunner Sound System', () => {
     let mockSound: any;
 
     beforeEach(async () => {
-        const spawnContext = createTestContext(); // No await needed usually, but ok
+        const spawnContext = await createTestContext();
         context = spawnContext.entities;
-        // mockSound is the engine.sound spy
-        mockSound = context.engine.sound;
+        // Access the mocked engine from the context
+        mockSound = (context as any).engine.sound;
 
         // Create gunner
         gunner = {
@@ -27,12 +28,12 @@ describe('Gunner Sound System', () => {
         SP_monster_gunner(gunner, {
             ...spawnContext,
             health_multiplier: 1,
-        } as any);
+            gravity: 800,
+        });
     });
 
     it('plays spin-up sound when opening gun', () => {
-        // Mock rng for attack selection (chain)
-        context.rng.frandom = vi.fn().mockReturnValue(0.6); // > 0.5 triggers chain
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.6); // > 0.5 triggers chain
 
         // Trigger attack which chooses attack_chain_move
         gunner.monsterinfo.attack!(gunner, context);
@@ -52,5 +53,7 @@ describe('Gunner Sound System', () => {
             1,
             0
         );
+
+        randomSpy.mockRestore();
     });
 });

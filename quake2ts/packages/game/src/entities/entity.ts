@@ -1,26 +1,15 @@
-import type { Vec3, CollisionPlane } from '@quake2ts/shared';
+import type { Vec3 } from '@quake2ts/shared';
 import { ZERO_VEC3, RenderFx } from '@quake2ts/shared';
 import { PlayerClient, hasItem } from '../inventory/playerInventory.js';
 import type { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
 import type { RegularArmorState, PowerArmorState } from '../combat/armor.js';
 import { AmmoType } from '../inventory/ammo.js';
-import { EntityFlags, EntityEffects, MuzzleFlash } from './enums.js';
+import { EntityFlags, EntityEffects } from './enums.js';
+import type { ReinforcementList } from './monsters/rogue/common.js'; // Import ReinforcementList type
 
 export { RenderFx }; // Export RenderFx from shared for convenience if imported from entity.js
-export { EntityFlags, EntityEffects, MuzzleFlash }; // Re-export for compatibility
-
-export * from '../ai/constants.js';
-
-export interface Reinforcement {
-  classname: string;
-  strength: number;
-  mins: Vec3;
-  maxs: Vec3;
-}
-
-// Changed to array to match medic.ts usage
-export type ReinforcementList = Reinforcement[];
+export { EntityFlags, EntityEffects }; // Re-export for compatibility
 
 export enum MoveType {
   None = 0,
@@ -49,30 +38,6 @@ export const SPAWNFLAG_NOT_HARD = 0x00000400;
 export const SPAWNFLAG_NOT_DEATHMATCH = 0x00000800;
 export const SPAWNFLAG_NOT_COOP = 0x00001000;
 
-export { DamageMod as ModId };
-export type Mod = DamageMod;
-
-export enum DamageFlags {
-  None = 0,
-  NoArmor = 1,
-  Energy = 2,
-  NoKnockback = 4,
-  Bullet = 8,
-  Radius = 16,
-}
-
-export enum GibType {
-  Organic = 0,
-  Metallic = 1,
-}
-
-export const SpawnFlag = {
-    MonsterAmbush: 1,
-};
-
-export interface EntityState {
-}
-
 export enum ServerFlags {
   None = 0,
   NoClient = 1 << 0,
@@ -96,15 +61,8 @@ export enum DeadFlag {
   Respawnable = 3,
 }
 
-export interface CollisionSurface {
-  name: string;
-  flags: number;
-  value: number;
-}
-
-export type ThinkCallback = (self: Entity, context: EntitySystem) => void;
-// Replaced 'any' with specific types or explicitly kept 'any' where uncertain but documented
-export type TouchCallback = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => void;
+export type ThinkCallback = (self: Entity, context: any) => void;
+export type TouchCallback = (self: Entity, other: Entity | null, plane?: any, surf?: any) => void;
 export type UseCallback = (self: Entity, other: Entity | null, activator?: Entity | null) => void;
 export type BlockedCallback = (self: Entity, other: Entity | null, context?: EntitySystem) => void;
 export type PainCallback = (self: Entity, other: Entity | null, kick: number, damage: number) => void;
@@ -117,8 +75,10 @@ export type DieCallback = (
   mod: DamageMod
 ) => void;
 
+// Simple Pain Callback for player (no kick/other needed?) or matched signature
 export type PlayerPainCallback = (self: Entity, damage: number) => void;
 
+// Monster specific blocked callback
 export type MonsterBlockedCallback = (self: Entity, dist: number, context: EntitySystem) => boolean | void;
 
 export type EntityFieldType =
@@ -204,6 +164,7 @@ export interface MonsterInfo {
   scale?: number;
   melee_debounce_time?: number;
   attack_finished?: number;
+  // Added fields
   power_armor_type?: number;
   power_armor_power?: number;
   blind_fire_target?: Vec3;
@@ -220,13 +181,15 @@ export interface MonsterInfo {
   sidestep?: (self: Entity) => boolean;
   blocked?: MonsterBlockedCallback;
   setskin?: (self: Entity) => void;
-  freeze_time?: number;
+  freeze_time?: number; // For ETF Rifle freeze effect
 
+  // [Paril-KEX] Jump/Drop support
   jump_time?: number;
   jump_height?: number;
   drop_height?: number;
   can_jump?: boolean;
 
+  // Rogue Mission Pack
   monster_slots?: number;
   monster_used?: number;
   reinforcements?: ReinforcementList;
@@ -285,7 +248,6 @@ export class Entity {
   angles: Vec3 = copyVec3();
   pos1: Vec3 = copyVec3();
   pos2: Vec3 = copyVec3();
-  gravityVector: Vec3 = copyVec3();
 
   viewheight = 0;
 
@@ -311,8 +273,8 @@ export class Entity {
   spawn_count = 0;
   takedamage = false;
   dmg = 0;
-  radius_dmg = 0;
-  dmg_radius = 0;
+  radius_dmg = 0; // Damage amount for radius damage (used by BFG, rockets, etc.)
+  dmg_radius = 0; // Radius for damage effects
   speed = 0;
   accel = 0;
   decel = 0;
@@ -356,11 +318,11 @@ export class Entity {
   touch?: TouchCallback;
   use?: UseCallback;
   blocked?: BlockedCallback;
-  pain?: PainCallback | PlayerPainCallback;
+  pain?: PainCallback | PlayerPainCallback; // Allow looser signature for player
   die?: DieCallback;
-  postthink?: ThinkCallback;
+  postthink?: ThinkCallback; // Added for beam updates
   activator: Entity | null = null;
-  alpha = 0;
+  alpha = 0; // Added for rendering transparency
 
   solid: Solid = Solid.Not;
   clipmask = 0;
@@ -376,17 +338,19 @@ export class Entity {
   light_level = 0;
 
   owner: Entity | null = null;
-  beam: Entity | null = null;
-  beam2: Entity | null = null;
-  chain: Entity | null = null;
+  beam: Entity | null = null; // Added
+  beam2: Entity | null = null; // Added
+  chain: Entity | null = null; // Added
 
   client?: PlayerClient;
 
+  // Additions for combat integration
   _regularArmor?: RegularArmorState;
   _powerArmor?: PowerArmorState;
 
   get regularArmor(): RegularArmorState | undefined {
     if (this.client?.inventory.armor) {
+      // Return a proxy that writes back to inventory
       const invArmor = this.client.inventory.armor;
       return {
         get armorType() { return invArmor.armorType; },
@@ -403,6 +367,7 @@ export class Entity {
 
   get powerArmor(): PowerArmorState | undefined {
     if (this.client) {
+        // Determine type from inventory
         let type: 'screen' | 'shield' | null = null;
         if (hasItem(this.client.inventory, 'item_power_shield')) {
             type = 'shield';
@@ -412,6 +377,9 @@ export class Entity {
 
         if (type) {
              const ammo = this.client.inventory.ammo;
+             // Use v_angle (view angles) for player if available, as they represent where player is looking
+             // This matches Quake 2's use of ent->client->v_angle for Power Screen direction check.
+             // If v_angle is missing, fall back to entity angles.
              const angles = this.client.v_angle || this.angles;
 
              return {
@@ -462,7 +430,6 @@ export class Entity {
     this.angles = copyVec3();
     this.pos1 = copyVec3();
     this.pos2 = copyVec3();
-    this.gravityVector = copyVec3();
     this.viewheight = 0;
 
     this.mins = copyVec3();
@@ -539,7 +506,6 @@ export class Entity {
     this.monsterinfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
     this.moveinfo = undefined;
     this.hackflags = 0;
-
     this.combattarget = undefined;
     this.show_hostile = 0;
     this.light_level = 0;
@@ -555,35 +521,28 @@ export class Entity {
 }
 
 export enum AiFlags {
-  StandGround = 1 << 0,
-  TempStandGround = 1 << 1,
-  SoundTarget = 1 << 2,
-  LostSight = 1 << 3,
-  PursuitLastSeen = 1 << 4,
-  PursueNext = 1 << 5,
-  PursueTemp = 1 << 6,
-  HoldFrame = 1 << 7,
-  GoodGuy = 1 << 8,
-  Brutal = 1 << 9,
-  NoStep = 1 << 10,
-  ManualSteering = 1 << 11,
-  Ducked = 1 << 12,
-  CombatPoint = 1 << 13,
-  Medic = 1 << 14,
-  Resurrecting = 1 << 15,
-  SpawnedCarrier = 1 << 16,
-  IgnoreShots = 1 << 17,
-  AlternateFly = 1 << 18,
+  StandGround = 0x00000001,
+  TempStandGround = 0x00000002,
+  SoundTarget = 0x00000004,
+  SightCover = 0x00000008,
+  Chicken = 0x00000010,
+  Flee = 0x00000020,
+  Stand = 0x00000040,
+  FixTarget = 0x00000080,
+  GoodGuy = 0x00000100,
+  BrtMove = 0x00000200,
+  DoNotCount = 0x00000400, // [Paril-KEX]
+  ManualTarget = 0x00000800,
+  CombatPoint = 0x00001000,
+  Medic = 0x00002000,
+  HoldFrame = 0x00004000,
 
-  // Aliases for compatibility
-  SightCover = LostSight,
-  Chicken = PursuitLastSeen,
-  Flee = PursueNext,
-  Stand = PursueTemp,
-  FixTarget = HoldFrame,
-  BrtMove = Brutal,
-  DoNotCount = NoStep,
-  ManualTarget = ManualSteering,
+  // Rogue specific
+  SpawnedCarrier = 0x00400000, // Matches AI_SPAWNED_CARRIER bit 22
+  IgnoreShots = 0x00100000, // Matches AI_IGNORE_SHOTS bit 20
+  ManualSteering = 0x00008000, // Matches AI_MANUAL_STEERING bit 15
+  Charging = 0x00040000, // Matches AI_CHARGING bit 18
+  AlternateFly = 0x200000000, // Matches AI_ALTERNATE_FLY bit 33 (requires expanding aiflags type if used directly as bitmask beyond 32bit or mapped carefully)
 }
 
 export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
@@ -606,7 +565,6 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'angles', type: 'vec3', save: true },
   { name: 'pos1', type: 'vec3', save: true },
   { name: 'pos2', type: 'vec3', save: true },
-  { name: 'gravityVector', type: 'vec3', save: true },
   { name: 'viewheight', type: 'int', save: true },
   { name: 'mins', type: 'vec3', save: true },
   { name: 'maxs', type: 'vec3', save: true },
@@ -672,10 +630,10 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'blocked', type: 'callback', save: false },
   { name: 'pain', type: 'callback', save: false },
   { name: 'die', type: 'callback', save: false },
-  { name: 'postthink', type: 'callback', save: false },
-  { name: 'beam', type: 'entity', save: true },
-  { name: 'beam2', type: 'entity', save: true },
-  { name: 'chain', type: 'entity', save: true },
+  { name: 'postthink', type: 'callback', save: false }, // Added
+  { name: 'beam', type: 'entity', save: true }, // Added
+  { name: 'beam2', type: 'entity', save: true }, // Added
+  { name: 'chain', type: 'entity', save: true }, // Added
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
 ];

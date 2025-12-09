@@ -52,10 +52,11 @@ export function touchTriggers(ent: Entity, system: EntitySystem): void {
   });
 }
 
-export function velocityForDamage(damage: number, kick: number, rng: { crandom: () => number }): Vec3 {
-  const x = rng.crandom();
-  const y = rng.crandom();
-  const z = rng.crandom();
+export function velocityForDamage(damage: number, kick: number): Vec3 {
+  // Simple random spread for now, real implementation might use randomness from system
+  const x = (Math.random() - 0.5) * 2;
+  const y = (Math.random() - 0.5) * 2;
+  const z = (Math.random() - 0.5) * 2;
 
   const dir = normalizeVec3({ x, y, z });
   return scaleVec3(dir, damage * kick);

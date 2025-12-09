@@ -166,7 +166,6 @@ function createEmptyPlayerState(): PlayerState {
         pm_flags: 0,
         gun_frame: 0,
         rdflags: 0,
-        fov: 90,
-        renderfx: 0
+        fov: 90
     };
 }

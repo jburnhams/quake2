@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState, createClient } from '../src/client';
-import { ServerCommand, BinaryStream, NetDriver } from '@quake2ts/shared';
+import { ClientState, Client } from '../src/client';
+import { ServerCommand, BinaryStream } from '@quake2ts/shared';
 
 // Mock dependencies
 vi.mock('ws');
@@ -33,13 +33,11 @@ describe('DedicatedServer Connection Flow', () => {
       shutdown: vi.fn(),
       spawnWorld: vi.fn(),
       clientConnect: vi.fn().mockReturnValue(true),
-      clientDisconnect: vi.fn(),
       clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
       clientThink: vi.fn(),
       frame: vi.fn().mockReturnValue({ state: {} }),
       entities: {
-          forEachEntity: vi.fn(),
-          getByIndex: vi.fn()
+          forEachEntity: vi.fn()
       }
     } as unknown as GameExports;
 
@@ -55,50 +53,54 @@ describe('DedicatedServer Connection Flow', () => {
   });
 
   it('should handle "connect" command', () => {
-    // 1. Setup a client using proper factory
-    const mockNet: NetDriver = {
-        send: vi.fn((data) => {
-            sentMessages.push(data);
-        }),
-        disconnect: vi.fn(),
-        connect: vi.fn(),
-        onMessage: vi.fn(),
-        onClose: vi.fn(),
-        onError: vi.fn(),
-        isConnected: vi.fn().mockReturnValue(true)
-    };
+    // 1. Setup a client in Free state (or check how handleConnection works)
+    // We can simulate a connection via the wss mock, but simpler to inject a client into svs
 
-    const client = createClient(0, mockNet);
-    client.state = ClientState.Connected;
+    const mockSend = vi.fn((data) => {
+        sentMessages.push(data);
+    });
+
+    const fakeClient: Client = {
+      index: 0,
+      state: ClientState.Connected, // Just connected at TCP level
+      edict: null,
+      net: { send: mockSend },
+      messageQueue: [],
+      userInfo: ''
+    } as unknown as Client;
 
     // Inject client
     // @ts-ignore
-    server.svs.clients[0] = client;
+    server.svs.clients[0] = fakeClient;
 
     // 2. Simulate "connect" string command
-    // Use private access for unit testing
+    // We can call handleStringCmd directly or go through onClientMessage
+    // Let's use handleStringCmd via private access for precision, or simulate message parsing
+
     // @ts-ignore
-    server.handleStringCmd(client, 'connect \\name\\Player\\skin\\male/grunt');
+    server.handleStringCmd(fakeClient, 'connect \\name\\Player\\skin\\male/grunt');
 
     // 3. Verify clientConnect was called
     expect(mockGame.clientConnect).toHaveBeenCalledWith(null, '\\name\\Player\\skin\\male/grunt');
 
     // 4. Verify response (ServerData)
-    // Because sendServerData and precache write to the SAME reliable stream,
-    // they might be batched into one packet or split depending on NetChan logic.
-    // The previous test expected sentMessages[0] to be serverdata.
+    expect(mockSend).toHaveBeenCalled();
 
-    // Check if any messages were sent
-    expect(sentMessages.length).toBeGreaterThan(0);
+    // Check for ServerCommand.serverdata (12)
+    // We need to parse the binary data to verify content
+    const data = sentMessages[0];
+    const reader = new BinaryStream(data.buffer);
+    const cmd = reader.readByte();
+    expect(cmd).toBe(ServerCommand.serverdata);
 
-    // We can't easily parse NetChan packets here without a NetChan instance to process them
-    // because of sequence numbers and headers.
-    // However, if we just want to verify flow did not crash, that's a start.
-
-    // If we want to verify content, we must strip the NetChan header (10 bytes) + optional fragment header
-    // But NetChan.transmit() wraps the data.
-
-    // Just verify that client.net.send was called.
-    expect(mockNet.send).toHaveBeenCalled();
+    // Check for "precache" (ServerCommand.stufftext)
+    // It might be in the same packet or next one.
+    // In current impl, it sends separate packets.
+    const data2 = sentMessages[1];
+    const reader2 = new BinaryStream(data2.buffer);
+    const cmd2 = reader2.readByte();
+    expect(cmd2).toBe(ServerCommand.stufftext);
+    const text = reader2.readString();
+    expect(text).toBe("precache\n");
   });
 });

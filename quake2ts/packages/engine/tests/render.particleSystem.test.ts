@@ -12,30 +12,14 @@ import {
   spawnTrail,
 } from '../src/render/particleSystem.js';
 import { createMockGL } from './helpers/mockWebGL.js';
-import { RandomGenerator } from '@quake2ts/shared';
 
-function createMockRng(value: number): RandomGenerator {
-  return {
-    frandom: () => value,
-    frandomMax: (max: number) => value * max,
-    frandomRange: (min: number, max: number) => min + value * (max - min),
-    crandom: () => (value - 0.5) * 2,
-    crandomOpen: () => (value - 0.5) * 2,
-    irandom: (max: number) => Math.floor(value * max),
-    irandomRange: (min: number, max: number) => Math.floor(min + value * (max - min)),
-    irandomUint32: () => Math.floor(value * 0xFFFFFFFF),
-    randomTime: (max: number) => Math.floor(value * max),
-    randomTimeRange: (min: number, max: number) => Math.floor(min + value * (max - min)),
-    randomIndex: (arr: any[]) => Math.floor(value * arr.length),
-    seed: () => {},
-    getState: () => ({ mt: { index: 0, state: [] } }),
-    setState: () => {},
-  } as unknown as RandomGenerator;
+function constantRandom(value: number): () => number {
+  return () => value;
 }
 
 describe('ParticleSystem simulation', () => {
   it('integrates gravity, damping, and floor collision', () => {
-    const system = new ParticleSystem(2, createMockRng(0.5));
+    const system = new ParticleSystem(2, constantRandom(0.5));
     const first = system.spawn({
       position: { x: 0, y: 0, z: 1 },
       velocity: { x: 1, y: 0, z: 0 },
@@ -71,7 +55,7 @@ describe('ParticleSystem simulation', () => {
   });
 
   it('expires particles and reuses pool slots', () => {
-    const system = new ParticleSystem(1, createMockRng(0.1));
+    const system = new ParticleSystem(1, constantRandom(0.1));
     const first = system.spawn({ position: { x: 0, y: 0, z: 0 }, lifetime: 0.5 });
     expect(first).toBe(0);
 
@@ -88,7 +72,7 @@ describe('ParticleSystem simulation', () => {
 
 describe('ParticleSystem rendering data', () => {
   it('builds billboard quads grouped by blend mode with fading alpha', () => {
-    const system = new ParticleSystem(2, createMockRng(0.5));
+    const system = new ParticleSystem(2, constantRandom(0.5));
     system.spawn({
       position: { x: 0, y: 0, z: 0 },
       size: 2,
@@ -127,7 +111,7 @@ describe('ParticleSystem rendering data', () => {
 
   it('renders batches with correct blend state changes', () => {
     const gl = createMockGL();
-    const system = new ParticleSystem(2, createMockRng(0.5));
+    const system = new ParticleSystem(2, constantRandom(0.5));
     system.spawn({ position: { x: 0, y: 0, z: 0 }, lifetime: 1, gravity: 0, blendMode: 'alpha' });
     system.spawn({ position: { x: 1, y: 0, z: 0 }, lifetime: 1, gravity: 0, blendMode: 'additive' });
 
@@ -149,7 +133,7 @@ describe('ParticleSystem rendering data', () => {
 
 describe('particle effects', () => {
   it('spawns deterministic counts for canned effects', () => {
-    const system = new ParticleSystem(120, createMockRng(0.5));
+    const system = new ParticleSystem(120, constantRandom(0.5));
     spawnBulletImpact({ system, origin: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 1 } });
     expect(system.aliveCount()).toBe(20);
 
