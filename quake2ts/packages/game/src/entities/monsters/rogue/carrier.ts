@@ -198,7 +198,7 @@ function CarrierCoopCheck(self: Entity, context: EntitySystem): void {
 
   if (targets.length === 0) return;
 
-  const target = targets[context.rng.irandom(0, targets.length - 1)];
+  const target = targets[context.rng.irandom(targets.length)];
 
   self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
 
@@ -499,7 +499,7 @@ function CarrierSpool(self: Entity, context: EntitySystem): void {
 function carrier_attack_mg_start(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
   M_SetAnimation(self, carrier_move_attack_mg, context);
-  self.monsterinfo.melee_debounce_time = context.timeSeconds + context.rng.frandom(1.2, 2.0);
+  self.monsterinfo.melee_debounce_time = context.timeSeconds + context.rng.frandomRange(1.2, 2.0);
 }
 
 function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
@@ -509,7 +509,7 @@ function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
   if (visible(self, self.enemy!, context.trace) && infront(self, self.enemy!)) {
     if (context.rng.frandom() < 0.6) {
       if (!self.monsterinfo.melee_debounce_time) self.monsterinfo.melee_debounce_time = 0;
-      self.monsterinfo.melee_debounce_time += context.rng.frandom(0.25, 0.5);
+      self.monsterinfo.melee_debounce_time += context.rng.frandomRange(0.25, 0.5);
       M_SetAnimation(self, carrier_move_attack_mg, context);
       return;
     } else if (self.monsterinfo.melee_debounce_time && self.monsterinfo.melee_debounce_time > context.timeSeconds) {

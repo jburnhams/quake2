@@ -49,7 +49,7 @@ export function M_PickReinforcements(self: Entity, context: EntitySystem, countR
   // decide how many things we want to spawn;
   // this is on a logarithmic scale
   // so we don't spawn too much too often.
-  let num_slots = Math.max(1, Math.floor(Math.log2(context.rng.frandom(0, INVERSE_LOG_SLOTS))));
+  let num_slots = Math.max(1, Math.floor(Math.log2(context.rng.frandomMax(INVERSE_LOG_SLOTS))));
 
   // we only have this many slots left to use
   let remaining = (self.monsterinfo.monster_slots || 0) - (self.monsterinfo.monster_used || 0);
@@ -69,7 +69,7 @@ export function M_PickReinforcements(self: Entity, context: EntitySystem, countR
     }
 
     // select monster, TODO fairly
-    const randIndex = context.rng.irandom(0, output.length - 1);
+    const randIndex = context.rng.irandom(output.length);
     chosen[num_chosen] = output[randIndex];
 
     remaining -= self.monsterinfo.reinforcements![chosen[num_chosen]].strength;
