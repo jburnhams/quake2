@@ -215,7 +215,7 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
 
         if (type === GIB_METALLIC) {
              // Debris 1, 2, 3
-             // Based on func_explosive but scaled down a bit maybe?
+             // Spawns multiple debris pieces similar to func_explosive but using generic gib logic.
              // func_explosive_explode spawns multiple debris based on mass.
              // Here we are generic.
              spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type, mod);

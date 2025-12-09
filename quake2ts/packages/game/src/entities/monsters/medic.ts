@@ -215,7 +215,7 @@ function medic_hook_retract(self: Entity, context: EntitySystem): void {
       if (ent.monsterinfo && ent.monsterinfo.stand) {
           ent.monsterinfo.stand(ent, context);
       }
-      // If we couldn't properly spawn, maybe mark as bad?
+      // If spawn fails, mark as 'bad_medic' to prevent endless retry loops.
       (ent as any).bad_medic = self;
   } else {
       const spawnContext: SpawnContext = {

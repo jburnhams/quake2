@@ -71,7 +71,7 @@ export function G_PickTarget(targetName: string | undefined | null, context: Ent
   }
 
   let found: Entity | null = null;
-  // TODO: This should probably use findByTargetname if/when available on context, or context.find()
+  // TODO: Optimize using a targetname lookup map (e.g. context.find(targetname))
   context.forEachEntity((ent) => {
     if (ent.targetname === targetName) {
       found = ent;
