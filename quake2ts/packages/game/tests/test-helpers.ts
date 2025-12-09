@@ -61,9 +61,11 @@ export function createTestContext(): SpawnContext {
         // Implement simple iteration over a few mocked entities if needed,
         // or just rely on the fact that G_PickTarget iterates.
         // For testing G_PickTarget, we can look at the targetNameIndex we just added
-        for (const bucket of (entities as any).targetNameIndex.values()) {
-            for (const ent of bucket) {
-                callback(ent);
+        if ((entities as any).targetNameIndex) {
+            for (const bucket of (entities as any).targetNameIndex.values()) {
+                for (const ent of bucket) {
+                    callback(ent);
+                }
             }
         }
     }),

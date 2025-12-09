@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { SpawnRegistry } from '../spawn.js';
+import { SpawnRegistry, SpawnContext } from '../spawn.js';
 import { createRandomGenerator, scaleVec3, normalizeVec3, subtractVec3 } from '@quake2ts/shared';
 import { G_PickTarget } from '../utils.js';
 
@@ -101,7 +101,7 @@ function func_clock_use(self: Entity, other: Entity | null, activator: Entity | 
 }
 
 export function registerFuncClock(registry: SpawnRegistry) {
-    registry.register('func_clock', (entity: Entity, context: any) => {
+    registry.register('func_clock', (entity: Entity, context: SpawnContext) => {
         if (!entity.target) {
             context.warn("func_clock with no target");
             context.free(entity);
@@ -170,14 +170,14 @@ function target_string_use(self: Entity, other: Entity | null, activator: Entity
 }
 
 export function registerTargetString(registry: SpawnRegistry) {
-    registry.register('target_string', (entity: Entity, context: any) => {
+    registry.register('target_string', (entity: Entity, context: SpawnContext) => {
         if (!entity.message) entity.message = "";
         entity.use = (self, other, activator) => target_string_use(self, other, activator ?? null, context.entities);
     });
 }
 
 export function registerTargetCharacter(registry: SpawnRegistry) {
-    registry.register('target_character', (entity: Entity, context: any) => {
+    registry.register('target_character', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.Push;
         entity.solid = Solid.Bsp;
         entity.frame = 12;
@@ -195,7 +195,7 @@ const SPAWNFLAG_FLARE_BLUE = 4;
 const SPAWNFLAG_FLARE_LOCK_ANGLE = 8;
 
 export function registerMiscFlare(registry: SpawnRegistry) {
-    registry.register('misc_flare', (entity: Entity, context: any) => {
+    registry.register('misc_flare', (entity: Entity, context: SpawnContext) => {
         entity.modelindex = 1;
         entity.renderfx |= 128; // RF_FLARE ? Need constant
         // RF_FLARE is 128 (0x80) from shared/protocol/renderFx.ts
@@ -237,7 +237,7 @@ function misc_hologram_think(self: Entity, context: EntitySystem) {
 }
 
 export function registerMiscHologram(registry: SpawnRegistry) {
-    registry.register('misc_hologram', (entity: Entity, context: any) => {
+    registry.register('misc_hologram', (entity: Entity, context: SpawnContext) => {
         entity.solid = Solid.Not;
         entity.modelindex = context.entities.modelIndex("models/ships/strogg1/tris.md2");
         entity.mins = { x: -16, y: -16, z: 0 };
@@ -299,7 +299,7 @@ function fire_fly(self: Entity, context: EntitySystem) {
 }
 
 export function registerMiscFireball(registry: SpawnRegistry) {
-    registry.register('misc_fireball', (entity: Entity, context: any) => {
+    registry.register('misc_fireball', (entity: Entity, context: SpawnContext) => {
         // SP_misc_lavaball
         entity.classname = "fireball"; // Actually spawner stays? No, SP_misc_lavaball sets classname to fireball but acts as spawner?
         // Wait, SP_misc_lavaball makes the entity the spawner.
@@ -316,7 +316,7 @@ export function registerMiscFireball(registry: SpawnRegistry) {
 // ============================================================================
 
 export function registerInfoLandmark(registry: SpawnRegistry) {
-    registry.register('info_landmark', (entity: Entity, context: any) => {
+    registry.register('info_landmark', (entity: Entity, context: SpawnContext) => {
         entity.absmin = { ...entity.origin };
         entity.absmax = { ...entity.origin };
     });
@@ -330,7 +330,7 @@ function info_world_text_think(self: Entity, context: EntitySystem) {
 }
 
 export function registerInfoWorldText(registry: SpawnRegistry) {
-    registry.register('info_world_text', (entity: Entity, context: any) => {
+    registry.register('info_world_text', (entity: Entity, context: SpawnContext) => {
         if (!entity.message) {
             context.free(entity);
             return;
@@ -341,7 +341,7 @@ export function registerInfoWorldText(registry: SpawnRegistry) {
 }
 
 export function registerMiscPlayerMannequin(registry: SpawnRegistry) {
-    registry.register('misc_player_mannequin', (entity: Entity, context: any) => {
+    registry.register('misc_player_mannequin', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.modelindex = 255; // Player
@@ -356,7 +356,7 @@ export function registerMiscPlayerMannequin(registry: SpawnRegistry) {
 // ============================================================================
 
 export function registerMiscModel(registry: SpawnRegistry) {
-    registry.register('misc_model', (entity: Entity, context: any) => {
+    registry.register('misc_model', (entity: Entity, context: SpawnContext) => {
         if (!entity.model) {
             context.warn(`${entity.classname} with no model`);
             context.free(entity);

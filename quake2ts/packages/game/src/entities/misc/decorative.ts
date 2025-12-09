@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid, ServerFlags, EntityEffects } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { SpawnRegistry } from '../spawn.js';
+import { SpawnRegistry, SpawnContext } from '../spawn.js';
 import { createRandomGenerator, RenderFx } from '@quake2ts/shared';
 
 const random = createRandomGenerator();
@@ -23,7 +23,7 @@ function misc_satellite_dish_use(self: Entity, other: Entity | null, activator: 
 }
 
 export function registerMiscSatelliteDish(registry: SpawnRegistry) {
-    registry.register('misc_satellite_dish', (entity: Entity, context: any) => {
+    registry.register('misc_satellite_dish', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.mins = { x: -64, y: -64, z: 0 };
@@ -66,7 +66,7 @@ function misc_blackhole_use(self: Entity, other: Entity | null, activator: Entit
 }
 
 export function registerMiscBlackhole(registry: SpawnRegistry) {
-    registry.register('misc_blackhole', (entity: Entity, context: any) => {
+    registry.register('misc_blackhole', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.Not;
         entity.mins = { x: -64, y: -64, z: 0 };
@@ -102,7 +102,7 @@ function misc_eastertank_think(self: Entity, context: EntitySystem) {
 }
 
 export function registerMiscEasterTank(registry: SpawnRegistry) {
-    registry.register('misc_eastertank', (entity: Entity, context: any) => {
+    registry.register('misc_eastertank', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.mins = { x: -32, y: -32, z: -16 };
@@ -126,7 +126,7 @@ function misc_easterchick_think(self: Entity, context: EntitySystem) {
 }
 
 export function registerMiscEasterChick(registry: SpawnRegistry) {
-    registry.register('misc_easterchick', (entity: Entity, context: any) => {
+    registry.register('misc_easterchick', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.mins = { x: -32, y: -32, z: 0 };
@@ -150,7 +150,7 @@ function misc_easterchick2_think(self: Entity, context: EntitySystem) {
 }
 
 export function registerMiscEasterChick2(registry: SpawnRegistry) {
-    registry.register('misc_easterchick2', (entity: Entity, context: any) => {
+    registry.register('misc_easterchick2', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.mins = { x: -32, y: -32, z: 0 };
