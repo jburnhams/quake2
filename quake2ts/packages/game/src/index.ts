@@ -102,6 +102,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   clientBegin(client: PlayerClient): Entity;
   clientDisconnect(ent: Entity): void;
   clientThink(ent: Entity, cmd: UserCommand): void;
+  getClientState(ent: Entity): GameStateSnapshot;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -264,7 +265,12 @@ export function createGame(
     // Collect packet entities
     const packetEntities: EntityState[] = [];
     entities.forEachEntity((ent) => {
-        if (!ent.inUse || ent === player) return; // Skip player in this list if handled separately (or keep if needed for 3rd person?)
+        if (!ent.inUse) return;
+
+        // In SP, exclude the player from packet entities (sent separately/predicted).
+        // In MP, we must include everyone so the server can filter per-client.
+        if (!deathmatch && ent === player) return;
+
         // Usually player is sent as entity 1, but also has dedicated state.
         // For now let's include all non-player entities that have a model.
         if (ent.modelindex > 0 || ent.solid === Solid.Bsp) {
@@ -326,6 +332,60 @@ export function createGame(
         pm_flags: player?.client?.pm_flags ?? 0
       },
     };
+  };
+
+  const getClientState = (ent: Entity): GameStateSnapshot => {
+      // Re-use global snapshot baseline, but override client specific fields
+      const globalSnapshot = snapshot(frameLoop.frameNumber); // This is slightly inefficient but safe
+
+      // Calculate pickup icon expiration for this client
+      let pickupIcon: string | undefined = undefined;
+      if (ent.client?.inventory.pickupItem && ent.client.inventory.pickupTime) {
+          if (levelClock.current.timeSeconds * 1000 < ent.client.inventory.pickupTime + 3000) {
+              pickupIcon = ent.client.inventory.pickupItem;
+          }
+      }
+
+      return {
+          ...globalSnapshot.state,
+          gravity: { ...gravity },
+          level: { ...levelClock.current },
+          entities: {
+            activeCount: entities.activeCount,
+            worldClassname: entities.world.classname,
+          },
+          packetEntities: globalSnapshot.state?.packetEntities || [],
+          origin: { ...ent.origin },
+          velocity: { ...ent.velocity },
+          viewangles: { ...ent.angles },
+          pmFlags: ent.client?.pm_flags ?? 0,
+          pmType: ent.client?.pm_type ?? 0,
+          pm_time: ent.client?.pm_time ?? 0,
+          waterlevel: ent.waterlevel,
+          deltaAngles: { x: 0, y: 0, z: 0 }, // TODO: delta angles
+          client: ent.client,
+          health: ent.health,
+          armor: ent.client?.inventory.armor?.armorCount ?? 0,
+          ammo: ent.client?.currentAmmoCount ?? 0,
+          blend: calculateBlend(ent, frameLoop.time),
+          pickupIcon,
+          damageAlpha: ent.client?.damage_alpha ?? 0,
+          damageIndicators: [],
+
+          stats: populatePlayerStats(ent, levelClock.current.timeSeconds),
+          kick_angles: ent.client?.kick_angles ?? ZERO_VEC3,
+          kick_origin: ent.client?.kick_origin ?? ZERO_VEC3,
+          gunoffset: ZERO_VEC3, // Computed by client usually? Or server logic?
+          gunangles: ZERO_VEC3,
+          gunindex: 0,
+          gun_frame: ent.client?.gun_frame ?? 0,
+          rdflags: ent.client?.rdflags ?? 0,
+          fov: ent.client?.fov ?? 90,
+
+          // Compat
+          pm_type: ent.client?.pm_type ?? 0,
+          pm_flags: ent.client?.pm_flags ?? 0
+      };
   };
 
   const resetState = (startTimeMs: number) => {
@@ -491,6 +551,7 @@ export function createGame(
     clientThink(ent: Entity, cmd: UserCommand) {
         runPlayerMove(ent, cmd);
     },
+    getClientState,
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
       // Note: In MP, we should iterate all players. For SP compatibility we find 'player'.

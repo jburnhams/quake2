@@ -760,26 +760,34 @@ export class DedicatedServer implements GameEngine {
         // Player info
         writer.writeByte(ServerCommand.playerinfo);
 
+        // Get authoritative state for this specific client from game logic
+        let clientState: GameStateSnapshot;
+        if (client.edict && this.game) {
+            clientState = this.game.getClientState(client.edict);
+        } else {
+            clientState = snapshot; // Fallback to global snapshot (likely spectator or connecting)
+        }
+
         // Map GameStateSnapshot to ProtocolPlayerState
         const ps: ProtocolPlayerState = {
-            pm_type: snapshot.pmType,
-            origin: snapshot.origin,
-            velocity: snapshot.velocity,
-            pm_time: snapshot.pm_time,
-            pm_flags: snapshot.pmFlags,
-            gravity: Math.abs(snapshot.gravity.z), // Usually only Z is relevant for gravity value
-            delta_angles: snapshot.deltaAngles,
+            pm_type: clientState.pmType,
+            origin: clientState.origin,
+            velocity: clientState.velocity,
+            pm_time: clientState.pm_time,
+            pm_flags: clientState.pmFlags,
+            gravity: Math.abs(clientState.gravity.z), // Usually only Z is relevant for gravity value
+            delta_angles: clientState.deltaAngles,
             viewoffset: { x: 0, y: 0, z: 22 }, // Default view offset if not in snapshot
-            viewangles: snapshot.viewangles,
-            kick_angles: snapshot.kick_angles,
-            gun_index: snapshot.gunindex,
-            gun_frame: snapshot.gun_frame,
-            gun_offset: snapshot.gunoffset,
-            gun_angles: snapshot.gunangles,
-            blend: snapshot.blend,
-            fov: snapshot.fov,
-            rdflags: snapshot.rdflags,
-            stats: snapshot.stats
+            viewangles: clientState.viewangles,
+            kick_angles: clientState.kick_angles,
+            gun_index: clientState.gunindex,
+            gun_frame: clientState.gun_frame,
+            gun_offset: clientState.gunoffset,
+            gun_angles: clientState.gunangles,
+            blend: clientState.blend,
+            fov: clientState.fov,
+            rdflags: clientState.rdflags,
+            stats: clientState.stats
         };
 
         writePlayerState(writer, ps);
@@ -787,7 +795,8 @@ export class DedicatedServer implements GameEngine {
         // Packet entities
         writer.writeByte(ServerCommand.packetentities);
 
-        const entities = snapshot.packetEntities || [];
+        // Filter entities: Exclude the client's own entity from packet entities to prevent self-prediction conflicts
+        const entities = (snapshot.packetEntities || []).filter(e => e.number !== client.edict?.index);
         const currentEntityIds: number[] = [];
 
         // Store current frame entities in client history
