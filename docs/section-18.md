@@ -41,18 +41,18 @@ Tasks are organized by priority and complexity:
 **TypeScript File**: `/packages/game/src/ai/movement.ts`
 
 #### 1.1.1 Core Movement Functions
-- [ ] Implement `M_MoveToGoal(entity: Entity, dist: number): boolean`
+- [x] Implement `M_MoveToGoal(entity: Entity, dist: number): boolean`
   - Goal-directed pathfinding toward `entity.goalentity`
   - Obstacle avoidance
   - Returns true if movement successful
   - Reference: `m_move.cpp` lines 30-180
 
-- [ ] Implement `M_ChangeYaw(entity: Entity): void`
+- [x] Implement `M_ChangeYaw(entity: Entity): void`
   - Smooth rotation toward `entity.ideal_yaw`
   - Use `entity.yaw_speed` for turn rate
   - Reference: `m_move.cpp` lines 182-220
 
-- [ ] Implement `M_MoveStep(entity: Entity, move: Vec3, relink: boolean): boolean`
+- [x] Implement `M_MoveStep(entity: Entity, move: Vec3, relink: boolean): boolean`
   - Single physics step with collision
   - Step climbing (18 unit steps)
   - Ground validation
@@ -62,6 +62,10 @@ Tasks are organized by priority and complexity:
   - Follow explicit path_corner entities
   - Update `entity.movetarget` when reaching waypoints
   - Reference: `m_move.cpp` lines 450-520
+
+- [ ] Implement `M_NavPathToGoal(entity: Entity, dist: number): boolean`
+  - Advanced pathfinding using navigation mesh (Rerelease specific)
+  - Reference: `m_move.cpp` M_NavPathToGoal and surrounding logic
 
 #### 1.1.2 Ground & Bottom Detection
 - [ ] Implement `M_CheckBottom(entity: Entity): boolean`

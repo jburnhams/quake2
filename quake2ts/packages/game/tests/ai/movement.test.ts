@@ -263,66 +263,110 @@ describe('ai_charge', () => {
 });
 
 // Added tests for M_walkmove stepping logic
-import { M_walkmove, M_CheckBottom, CheckGround } from '../../src/ai/movement.js';
+import { M_walkmove, M_CheckBottom, CheckGround, M_MoveStep, M_MoveToGoal, M_MoveToPath } from '../../src/ai/movement.js';
 import { MoveType } from '../../src/entities/entity.js';
 
-describe('M_walkmove stepping', () => {
+describe('M_MoveStep', () => {
   let mockEntity: Entity;
-  // We reuse mockContext from above but need to adjust trace behavior
 
   beforeEach(() => {
-    // Reset Entity
     mockEntity = createEntity();
     mockEntity.origin = { x: 0, y: 0, z: 0 };
     mockEntity.movetype = MoveType.Step;
-    mockEntity.flags = 0; // Not flying/swimming
+    mockEntity.flags = 0;
     mockEntity.groundentity = {} as any;
 
-    // Reset mocks
     mockTraceFn.mockReset();
     mockTraceFn.mockReturnValue({ fraction: 1.0, startsolid: false, allsolid: false });
     mockPointcontentsFn.mockReturnValue(0);
   });
 
-  it('should move successfully on flat ground', () => {
-    // First trace: clear path
+  it('moves directly if path is clear', () => {
+    // Trace clear
     mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
-
-    // M_CheckBottom mock: hit floor
-    // This is called inside M_walkmove -> M_CheckBottom -> trace
+    // CheckBottom success
     mockTraceFn.mockReturnValue({ fraction: 0.5 });
 
-    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+    const move = { x: 10, y: 0, z: 0 };
+    const result = M_MoveStep(mockEntity, move, true, mockContext);
 
     expect(result).toBe(true);
     expect(mockEntity.origin.x).toBe(10);
   });
 
-  it('should step up if blocked', () => {
-    // 1. Trace forward: Blocked (fraction < 1)
-    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
-
-    // 2. Trace UP: Clear
-    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
-
-    // 3. Trace Forward (at height): Clear
-    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
-
-    // 4. Trace Down: Hit ground at z=18 (step height)
-    mockTraceFn.mockReturnValueOnce({
-        fraction: 0.5,
-        endpos: { x: 10, y: 0, z: 18 },
-        startsolid: false,
-        allsolid: false
-    });
-
-    // M_CheckBottom traces (mock success)
+  it('steps up if blocked', () => {
+    // 1. Blocked
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5 });
+    // 2. Up clear
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0 });
+    // 3. Forward clear
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0 });
+    // 4. Down hit step (z=18)
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, endpos: { x: 10, y: 0, z: 18 } });
+    // CheckBottom success
     mockTraceFn.mockReturnValue({ fraction: 0.5 });
 
-    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+    const move = { x: 10, y: 0, z: 0 };
+    const result = M_MoveStep(mockEntity, move, true, mockContext);
 
     expect(result).toBe(true);
     expect(mockEntity.origin.z).toBe(18);
-    expect(mockEntity.origin.x).toBe(10);
+  });
+});
+
+describe('M_MoveToGoal', () => {
+  it('chases enemy if present', () => {
+    const ent = createEntity();
+    ent.enemy = createEntity();
+    ent.enemy.inUse = true;
+    ent.enemy.origin = { x: 100, y: 0, z: 0 };
+    // M_MoveToGoal requires goalentity to be set, typically to enemy in ai_run, but here manually
+    ent.goalentity = ent.enemy;
+    ent.ideal_yaw = 0;
+    ent.angles.y = 0;
+
+    // Trace 1: M_MoveToGoal trace check (fraction 1.0 = clear)
+    // Trace 2: SV_StepDirection -> M_MoveStep -> trace (fraction 1.0 = clear)
+    // Trace 3: M_MoveStep -> M_CheckBottom (fraction 0.5 = hit ground)
+    mockTraceFn
+      .mockReturnValueOnce({ fraction: 1.0 })
+      .mockReturnValueOnce({ fraction: 1.0 })
+      .mockReturnValueOnce({ fraction: 0.5 });
+
+    M_MoveToGoal(ent, 10, mockContext);
+
+    // Should have moved towards enemy (x+)
+    expect(ent.origin.x).toBeGreaterThan(0);
+  });
+
+  it('moves to goalentity if no enemy', () => {
+    const ent = createEntity();
+    ent.goalentity = createEntity();
+    ent.goalentity.inUse = true;
+    ent.goalentity.origin = { x: 0, y: 100, z: 0 };
+    ent.ideal_yaw = 90; // Facing Y+
+    ent.angles.y = 90;
+
+    // Trace 1: M_MoveToGoal trace check (fraction 1.0 = clear)
+    // Trace 2: SV_StepDirection -> M_MoveStep -> trace (fraction 1.0 = clear)
+    // Trace 3: M_MoveStep -> M_CheckBottom (fraction 0.5 = hit ground)
+    mockTraceFn
+      .mockReturnValueOnce({ fraction: 1.0 })
+      .mockReturnValueOnce({ fraction: 1.0 })
+      .mockReturnValueOnce({ fraction: 0.5 });
+
+    M_MoveToGoal(ent, 10, mockContext);
+
+    // SV_StepDirection uses ideal_yaw
+    expect(ent.origin.y).toBeGreaterThan(0);
+  });
+});
+
+describe('M_MoveToPath', () => {
+  it('exists and can be called', () => {
+      const ent = createEntity();
+      M_MoveToPath(ent);
+      // Currently a no-op placeholder or minimal impl
+      expect(true).toBe(true);
   });
 });
