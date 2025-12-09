@@ -2,9 +2,9 @@
 // Quake II - Gibs
 // =================================================================
 
-import { Entity, MoveType, Solid } from './entity.js';
+import { Entity, MoveType, Solid, CollisionSurface } from './entity.js';
 import { EntitySystem } from './system.js';
-import { Vec3, TempEntity, ServerCommand } from '@quake2ts/shared';
+import { createRandomGenerator, Vec3, scaleVec3, TempEntity, ServerCommand, CollisionPlane } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 import { EntityEffects } from './enums.js';
 import { MulticastType } from '../imports.js';
@@ -56,7 +56,7 @@ function clipGibVelocity(ent: Entity) {
     ent.velocity = { x, y, z };
 }
 
-function gib_touch(self: Entity, other: Entity | null, plane: any, surf: any, sys: EntitySystem) {
+function gib_touch(self: Entity, other: Entity | null, plane: CollisionPlane | null | undefined, surf: CollisionSurface | null | undefined, sys: EntitySystem) {
     if (!self.groundentity) return;
 
     self.touch = undefined; // NULL in C

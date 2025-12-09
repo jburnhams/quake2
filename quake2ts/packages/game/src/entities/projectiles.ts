@@ -548,13 +548,13 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
         self.enemy = other;
 
         // Start multi-frame explosion with laser effects
-        self.think = (self: Entity, context: any) => bfgExplode(self, context);
+        self.think = (self: Entity, context: EntitySystem) => bfgExplode(self, context);
         sys.scheduleThink(self, sys.timeSeconds + 0.1);
     };
 
     // Set up in-flight laser think function
     // Based on rerelease/g_weapon.cpp:1166-1167
-    bfgBall.think = (self: Entity, context: any) => bfgThink(self, context);
+    bfgBall.think = (self: Entity, context: EntitySystem) => bfgThink(self, context);
 
     // Start thinking immediately (FRAME_TIME_S)
     // Based on rerelease/g_weapon.cpp:1167
