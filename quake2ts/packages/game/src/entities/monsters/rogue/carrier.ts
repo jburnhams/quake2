@@ -110,12 +110,6 @@ const CHAN_VOICE = 2;
 const PRINT_HIGH = 0;
 const PRINT_MEDIUM = 1;
 
-// Local Random Helpers
-const frandom = (min = 0, max = 1): number => min + Math.random() * (max - min);
-const crandom = (): number => 2.0 * (Math.random() - 0.5);
-const irandom = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
-const random_time = frandom;
-
 function below(self: Entity, other: Entity): boolean {
     return other.origin.z < self.origin.z;
 }
@@ -204,7 +198,7 @@ function CarrierCoopCheck(self: Entity, context: EntitySystem): void {
 
   if (targets.length === 0) return;
 
-  const target = targets[irandom(0, targets.length - 1)];
+  const target = targets[context.rng.irandom(targets.length)];
 
   self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
 
@@ -219,7 +213,7 @@ function CarrierGrenade(self: Entity, context: EntitySystem): void {
 
   if (!self.enemy) return;
 
-  const direction = frandom() < 0.5 ? -1.0 : 1.0;
+  const direction = context.rng.frandom() < 0.5 ? -1.0 : 1.0;
 
   if (!self.timestamp) self.timestamp = 0;
   const mytime = Math.floor((context.timeSeconds - self.timestamp) / 0.4);
@@ -284,7 +278,7 @@ function CarrierPredictiveRocket(self: Entity, context: EntitySystem): void {
 
 function CarrierRocket(self: Entity, context: EntitySystem): void {
   if (self.enemy) {
-    if (self.enemy.client && frandom() < 0.5) {
+    if (self.enemy.client && context.rng.frandom() < 0.5) {
       CarrierPredictiveRocket(self, context);
       return;
     }
@@ -436,7 +430,7 @@ function carrier_ready_spawn(self: Entity, context: EntitySystem): void {
   self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
 
   // Pick reinforcements
-  const result = M_PickReinforcements(self, 1);
+  const result = M_PickReinforcements(self, context, 1);
   self.monsterinfo.chosen_reinforcements = result.chosen;
   const num_summoned = result.count;
 
@@ -505,7 +499,7 @@ function CarrierSpool(self: Entity, context: EntitySystem): void {
 function carrier_attack_mg_start(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
   M_SetAnimation(self, carrier_move_attack_mg, context);
-  self.monsterinfo.melee_debounce_time = context.timeSeconds + random_time(1.2, 2.0);
+  self.monsterinfo.melee_debounce_time = context.timeSeconds + context.rng.frandomRange(1.2, 2.0);
 }
 
 function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
@@ -513,9 +507,9 @@ function carrier_reattack_mg(self: Entity, context: EntitySystem): void {
   CarrierCoopCheck(self, context);
 
   if (visible(self, self.enemy!, context.trace) && infront(self, self.enemy!)) {
-    if (frandom() < 0.6) {
+    if (context.rng.frandom() < 0.6) {
       if (!self.monsterinfo.melee_debounce_time) self.monsterinfo.melee_debounce_time = 0;
-      self.monsterinfo.melee_debounce_time += random_time(0.25, 0.5);
+      self.monsterinfo.melee_debounce_time += context.rng.frandomRange(0.25, 0.5);
       M_SetAnimation(self, carrier_move_attack_mg, context);
       return;
     } else if (self.monsterinfo.melee_debounce_time && self.monsterinfo.melee_debounce_time > context.timeSeconds) {
@@ -843,7 +837,6 @@ const carrier_move_death: MonsterMove = {
   frames: carrier_frames_death,
   endfunc: carrier_dead // Actually invalid, usually death anim stays on last frame or removes.
   // Code uses carrier_dead as endfunc but carrier_dead throws gibs.
-  // Wait, carrier_dead in C++ throws gibs.
   // The animation frames loop from death01 to death16.
   // The first frame calls BossExplode.
   // The last frame calls carrier_dead.
@@ -880,7 +873,7 @@ function carrier_pain_with_context(self: Entity, other: Entity | null, kick: num
   let changed = false;
   if (damage >= 10) {
     if (damage < 30) {
-      if (frandom() < 0.5) { // MOD check removed for simplicity
+      if (context.rng.frandom() < 0.5) { // MOD check removed for simplicity
         changed = true;
         M_SetAnimation(self, carrier_move_pain_light, context);
       }
@@ -919,7 +912,7 @@ function carrier_checkattack(self: Entity, context: EntitySystem): boolean {
     if (context.timeSeconds >= self.monsterinfo.fire_wait) {
       self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
       self.monsterinfo.attack!(self, context);
-      if (frandom() < 0.6) {
+      if (context.rng.frandom() < 0.6) {
         // AS_SLIDING - Not fully implemented in TS port usually, but we can set it.
       } else {
         // AS_STRAIGHT
@@ -941,7 +934,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
   const enemy_below = below(self, self.enemy);
 
   // Helper to handle probability logic
-  const maybe = (prob: number) => frandom() < prob;
+  const maybe = (prob: number) => context.rng.frandom() < prob;
   const attackReady = () => context.timeSeconds < (self.monsterinfo.attack_finished || 0);
 
   // bad_area check skipped for now as property not on Entity yet?
@@ -971,7 +964,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
         M_SetAnimation(self, carrier_move_attack_rail, context);
       }
     } else if (range < 600) {
-      const luck = frandom();
+      const luck = context.rng.frandom();
       if (M_SlotsLeft(self) > 2) {
         if (luck <= 0.20) M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         else if (luck <= 0.40) M_SetAnimation(self, carrier_move_attack_pre_gren, context);
@@ -992,7 +985,7 @@ function carrier_attack_with_context(self: Entity, context: EntitySystem): void 
         }
       }
     } else {
-      const luck = frandom();
+      const luck = context.rng.frandom();
       if (M_SlotsLeft(self) > 2) {
         if (luck < 0.3) M_SetAnimation(self, carrier_move_attack_pre_mg, context);
         else if (luck < 0.65 && !attackReady()) {
