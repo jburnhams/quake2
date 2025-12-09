@@ -156,10 +156,6 @@ function update_target_camera(self: Entity, context: EntitySystem) {
 function target_camera_dummy_think(self: Entity, context: EntitySystem) {
     if (!self.owner || !self.owner.client) return;
 
-    // self.client = self.owner.client; // Hack to make it move like player?
-    // G_SetClientFrame(self);
-    // self.client = null;
-
     if (self.spawnflags & CAMERA_TELEPORT_OUT) {
         // Handle alpha fade out
     }
