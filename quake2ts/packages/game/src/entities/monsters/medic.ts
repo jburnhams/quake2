@@ -557,7 +557,8 @@ function medic_finish_spawn(self: Entity, context: EntitySystem): void {
 
         if (!ent) continue;
 
-        ent.monsterinfo.aiflags |= AiFlags.DoNotCount;
+        ent.monsterinfo.aiflags |= AiFlags.DoNotCount | AiFlags.SpawnedMedicC | AiFlags.IgnoreShots;
+        ent.monsterinfo.commander = self;
         ent.monsterinfo.monster_slots = reinforcement.strength;
 
         self.monsterinfo.monster_used = (self.monsterinfo.monster_used || 0) + reinforcement.strength;
