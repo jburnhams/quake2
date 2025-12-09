@@ -40,6 +40,7 @@ export interface PlayerState {
   gun_frame: number;
   rdflags: number;
   fov: number;
+  renderfx: number;
 
   // Rerelease fields
   gunskin?: number;

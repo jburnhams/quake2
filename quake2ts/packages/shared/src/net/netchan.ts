@@ -62,6 +62,7 @@ export class NetChan {
     this.lastSent = now;
 
     // Random qport by default (can be overridden)
+    // Ensure we use global Math.random which is usually seeded or random enough for basic collision avoidance
     this.qport = Math.floor(Math.random() * 65536);
   }
 

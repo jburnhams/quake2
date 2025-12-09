@@ -398,7 +398,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
         // Don't fire laser if blocked by world
         // Based on rerelease/g_weapon.cpp:1116-1120
         const sightTrace = sys.trace(self.origin, null, null, point, null, MASK_SOLID);
-        if (sightTrace.fraction < 1.0) {
+        if (sightTrace.fraction < 1.0 && sightTrace.ent !== ent) {
             continue; // Blocked by world
         }
 
@@ -678,7 +678,7 @@ function heatThink(self: Entity, sys: EntitySystem): void {
         };
         self.angles = vectorToAngles(normalizedNewDir);
 
-        if (!self.enemy) {
+        if (self.enemy !== best) {
             sys.sound(self, 0, 'weapons/railgr1a.wav', 1, 0.25, 0);
             self.enemy = best;
         }

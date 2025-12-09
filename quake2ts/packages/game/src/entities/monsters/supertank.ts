@@ -316,8 +316,6 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
   // Calculate viewheight based on maxs to match C behavior:
   // if (!self->viewheight) self->viewheight = (int) (self->maxs[2] - 8.f);
   // maxs.z is 112, so 112 - 8 = 104.
-  // The comment said 64? "Guess, maybe higher?".
-  // 104 seems correct per source logic.
   self.viewheight = 104;
 
   self.pain = (self, other, kick, damage) => {

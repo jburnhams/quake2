@@ -26,6 +26,11 @@ describe('monster_infantry dodge', () => {
             multicast: vi.fn(),
             trace: vi.fn(),
             engine: { sound: vi.fn() },
+            rng: {
+                frandom: vi.fn(() => 0.5),
+                irandom: vi.fn(() => 0),
+                crandom: vi.fn(() => 0),
+            },
         } as unknown as EntitySystem;
 
         context = {
@@ -44,8 +49,8 @@ describe('monster_infantry dodge', () => {
         infantry.enemy = new Entity(2);
         infantry.enemy.health = 100;
 
-        // Mock random to be < 0.3 (0.1)
-        vi.spyOn(Math, 'random').mockReturnValue(0.1);
+        // Mock rng to be < 0.3 (0.1)
+        vi.mocked(sys.rng.frandom).mockReturnValue(0.1);
 
         const result = infantry.monsterinfo.checkattack!(infantry, sys);
 
@@ -58,9 +63,8 @@ describe('monster_infantry dodge', () => {
         infantry.enemy = new Entity(2);
         infantry.enemy.health = 100;
 
-        // Mock random to be > 0.3 (0.5)
-        // Also force second random check (for attack) to be > 0.2 (0.9) to fail attack too
-        vi.spyOn(Math, 'random').mockReturnValue(0.5);
+        // Mock rng to be > 0.3 (0.5)
+        vi.mocked(sys.rng.frandom).mockReturnValue(0.5);
 
         const result = infantry.monsterinfo.checkattack!(infantry, sys);
 
@@ -80,9 +84,9 @@ describe('monster_infantry dodge', () => {
         vi.mocked(aiIndex.visible).mockReturnValue(true);
 
         // Random > 0.3 (fail dodge), < 0.2 (pass attack)
-        const randomSpy = vi.spyOn(Math, 'random');
-        randomSpy.mockReturnValueOnce(0.5); // Fail dodge
-        randomSpy.mockReturnValueOnce(0.1); // Pass attack
+        vi.mocked(sys.rng.frandom)
+            .mockReturnValueOnce(0.5) // Fail dodge
+            .mockReturnValueOnce(0.1); // Pass attack
 
         const result = infantry.monsterinfo.checkattack!(infantry, sys);
 

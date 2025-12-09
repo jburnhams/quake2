@@ -1,69 +1,54 @@
-import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from '../entity.js';
+import { Entity, EntityFlags, ServerFlags, Solid } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { lengthVec3, normalizeVec3 } from '@quake2ts/shared';
-import { setMovedir } from '../utils.js';
+import { RenderFx } from '@quake2ts/shared';
+import { SpawnRegistry } from '../spawn.js';
 
-const SPAWNFLAG_FLASHLIGHT_CLIPPED = 1;
+export const registerTriggerFlashlight = (registry: SpawnRegistry) => {
+  registry.register('trigger_flashlight', (self: Entity, context) => {
+    // "style" default to 0, set to 1 to always turn flashlight on, 2 to always turn off
+    self.solid = Solid.Trigger;
+    self.movetype = 0; // MOVETYPE_NONE
+    self.svflags |= ServerFlags.NoClient;
 
-function P_ToggleFlashlight(player: Entity, on: boolean, context: EntitySystem) {
-    if (on) {
-        player.flags |= EntityFlags.Flashlight;
-        // In Rerelease this also sets EF_FLASHLIGHT on s.effects
-        // For now we just set the flag and play sound
-        context.sound(player, 0, 'items/flashlight_on.wav', 1, 3, 0); // CHAN_AUTO, ATTN_STATIC
-    } else {
-        player.flags &= ~EntityFlags.Flashlight;
-        // Clear EF_FLASHLIGHT
-        context.sound(player, 0, 'items/flashlight_off.wav', 1, 3, 0);
-    }
-}
+    self.touch = (self: Entity, other: Entity | null, plane?: any, surf?: any) => {
+        if (!other || !other.client) return;
 
-function trigger_flashlight_touch(self: Entity, other: Entity | null, context: EntitySystem) {
-    if (!other || !other.client) return;
+        const style = self.style || 0;
+        let sound = '';
 
-    if (self.spawnflags & SPAWNFLAG_FLASHLIGHT_CLIPPED) {
-        // Clipping check omitted for MVP (requires complex trace)
-    }
-
-    if (self.style === 1) {
-        P_ToggleFlashlight(other, true, context);
-    } else if (self.style === 2) {
-        P_ToggleFlashlight(other, false, context);
-    } else {
-        const lenSq = lengthVec3(other.velocity); // Actually we need squared length or check length > 32
-        // lengthVec3 returns length. 32*32 = 1024.
-        if (lenSq * lenSq > 1024) { // Oops, lengthVec3 returns magnitude.
-             if (lenSq > 32) {
-                 const forward = normalizeVec3(other.velocity);
-                 const dot = forward.x * self.movedir.x + forward.y * self.movedir.y + forward.z * self.movedir.z;
-                 P_ToggleFlashlight(other, dot > 0, context);
-             }
-        }
-    }
-}
-
-export function registerTriggerFlashlight(registry: any) {
-    registry.register('trigger_flashlight', (entity: Entity, context: any) => {
-        if (entity.angles.y === 0) {
-            entity.angles = { ...entity.angles, y: 360 };
+        if (style === 0) {
+            if ((other.flags & EntityFlags.Flashlight)) {
+                other.flags &= ~EntityFlags.Flashlight;
+                sound = 'items/flashlight_off.wav';
+            } else {
+                other.flags |= EntityFlags.Flashlight;
+                sound = 'items/flashlight_on.wav';
+            }
+        } else if (style === 1) {
+            if (!(other.flags & EntityFlags.Flashlight)) {
+                 other.flags |= EntityFlags.Flashlight;
+                 sound = 'items/flashlight_on.wav';
+            }
+        } else if (style === 2) {
+            if (other.flags & EntityFlags.Flashlight) {
+                other.flags &= ~EntityFlags.Flashlight;
+                sound = 'items/flashlight_off.wav';
+            }
         }
 
-        // InitTrigger logic
-        entity.solid = Solid.Trigger;
-        entity.movetype = MoveType.None;
-        entity.svflags |= ServerFlags.NoClient;
-
-        entity.movedir = setMovedir(entity.angles);
-        entity.angles = { x: 0, y: 0, z: 0 };
-
-        entity.movedir = { ...entity.movedir, z: entity.height || 0 }; // st.height
-
-        if (entity.spawnflags & SPAWNFLAG_FLASHLIGHT_CLIPPED) {
-            entity.svflags |= 2048; // SVF_HULL ?
+        // Update renderfx for client visual
+        if (other.flags & EntityFlags.Flashlight) {
+            other.renderfx |= RenderFx.Flashlight;
+        } else {
+            other.renderfx &= ~RenderFx.Flashlight;
         }
 
-        context.entities.linkentity(entity);
+        if (sound) {
+            // gi.sound(ent, CHAN_AUTO, gi.soundindex(...), 1.f, ATTN_STATIC, 0);
+            context.entities.sound(other, 0, sound, 1, 3, 0); // 3 = ATTN_STATIC
+        }
+    };
 
-        entity.touch = (self, other) => trigger_flashlight_touch(self, other, context.entities);
-    });
-}
+    context.entities.linkentity(self);
+  });
+};

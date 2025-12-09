@@ -249,7 +249,7 @@ function arachnid_pain(self: Entity, other: Entity | null, kick: number, damage:
     return;
   }
 
-  if (Math.random() < 0.5) {
+  if (context.rng.frandom() < 0.5) {
     M_SetAnimation(self, arachnid_move_pain1, context);
   } else {
     M_SetAnimation(self, arachnid_move_pain2, context);

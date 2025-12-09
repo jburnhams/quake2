@@ -518,21 +518,32 @@ export class Entity {
 }
 
 export enum AiFlags {
-  StandGround = 0x00000001,
-  TempStandGround = 0x00000002,
-  SoundTarget = 0x00000004,
-  SightCover = 0x00000008,
-  Chicken = 0x00000010,
-  Flee = 0x00000020,
-  Stand = 0x00000040,
-  FixTarget = 0x00000080,
-  GoodGuy = 0x00000100,
-  BrtMove = 0x00000200,
-  DoNotCount = 0x00000400, // [Paril-KEX]
-  ManualTarget = 0x00000800,
-  CombatPoint = 0x00001000,
-  Medic = 0x00002000,
-  HoldFrame = 0x00004000,
+  StandGround = 1 << 0,
+  TempStandGround = 1 << 1,
+  SoundTarget = 1 << 2,
+  LostSight = 1 << 3,
+  PursuitLastSeen = 1 << 4,
+  PursueNext = 1 << 5,
+  PursueTemp = 1 << 6,
+  HoldFrame = 1 << 7,
+  GoodGuy = 1 << 8,
+  Brutal = 1 << 9,
+  NoStep = 1 << 10,
+  ManualSteering = 1 << 11,
+  Ducked = 1 << 12,
+  CombatPoint = 1 << 13,
+  Medic = 1 << 14,
+  Resurrecting = 1 << 15,
+
+  // Aliases for compatibility
+  SightCover = LostSight,
+  Chicken = PursuitLastSeen,
+  Flee = PursueNext,
+  Stand = PursueTemp,
+  FixTarget = HoldFrame,
+  BrtMove = Brutal,
+  DoNotCount = NoStep,
+  ManualTarget = ManualSteering,
 }
 
 export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
