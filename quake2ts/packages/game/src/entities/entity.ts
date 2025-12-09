@@ -574,6 +574,7 @@ export enum AiFlags {
   SpawnedCarrier = 1 << 16,
   IgnoreShots = 1 << 17,
   AlternateFly = 1 << 18,
+  SpawnedMedicC = 1 << 23,
 
   // Aliases for compatibility
   SightCover = LostSight,
