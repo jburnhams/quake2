@@ -251,6 +251,20 @@ export function createGame(
            blend[3] = 0.04;
       }
 
+      // Damage blend
+      if (player.client.damage_alpha > 0) {
+          blend[3] = player.client.damage_alpha;
+          if (player.client.damage_blend) {
+              blend[0] = player.client.damage_blend[0];
+              blend[1] = player.client.damage_blend[1];
+              blend[2] = player.client.damage_blend[2];
+          } else {
+              blend[0] = 1; // Default to red
+              blend[1] = 0;
+              blend[2] = 0;
+          }
+      }
+
       return blend;
   };
 
@@ -294,7 +308,7 @@ export function createGame(
         gravity: { ...gravity },
         origin: player ? { ...player.origin } : { ...origin },
         velocity: player ? { ...player.velocity } : { ...velocity },
-        viewangles: player ? { ...player.angles } : { x:0, y:0, z:0 },
+        viewangles: player ? { ...player.angles } : { x:0, y:0, z:0 }, // Default viewangles, overridden below if client present
         level: { ...levelClock.current },
         entities: {
           activeCount: entities.activeCount,

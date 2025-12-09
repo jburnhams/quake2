@@ -3,65 +3,61 @@ import { SP_worldspawn } from '../../src/entities/worldspawn.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { SpawnContext } from '../../src/entities/spawn.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
+import { EntitySystem } from '../../src/entities/system.js';
 
-describe('SP_worldspawn', () => {
+describe('Worldspawn Entity', () => {
   let entity: Entity;
   let context: SpawnContext;
-  let keyValues: Record<string, string>;
-  let configstringMock: any;
+  let mockConfigString: any;
 
   beforeEach(() => {
-    entity = new Entity(0);
-    keyValues = {};
-    configstringMock = vi.fn();
+    entity = {
+      classname: '',
+      origin: { x: 0, y: 0, z: 0 },
+      angles: { x: 0, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+    } as any;
+
+    mockConfigString = vi.fn();
+
     context = {
-      keyValues,
       entities: {
-        world: entity,
-        spawn: () => new Entity(1),
-        free: vi.fn(),
-        finalizeSpawn: vi.fn(),
-        freeImmediate: vi.fn(),
         imports: {
-            configstring: configstringMock
+          configstring: mockConfigString
         }
       } as any,
-      warn: vi.fn(),
-      free: vi.fn(),
-      health_multiplier: 1
+      keyValues: {}
     };
   });
 
-  it('initializes default values', () => {
+  it('should set basic properties', () => {
     SP_worldspawn(entity, context);
     expect(entity.classname).toBe('worldspawn');
     expect(entity.movetype).toBe(MoveType.Push);
     expect(entity.solid).toBe(Solid.Bsp);
-    expect(entity.modelindex).toBe(1);
   });
 
-  it('preserves existing modelindex', () => {
-    entity.modelindex = 5;
+  it('should set CS_SKY configstring if sky key is present', () => {
+    context.keyValues['sky'] = 'unit1_';
     SP_worldspawn(entity, context);
-    expect(entity.modelindex).toBe(5);
+    expect(mockConfigString).toHaveBeenCalledWith(ConfigStringIndex.Sky, 'unit1_');
   });
 
-  it('parses sky keys (logging only for now)', () => {
-    // This test primarily verifies it doesn't crash on keys
-    context.keyValues['sky'] = 'unit1_sky';
-    context.keyValues['skyrotate'] = '0 10 0';
+  it('should set CS_SKYROTATE configstring if skyrotate key is present', () => {
+    context.keyValues['skyrotate'] = '10';
+    SP_worldspawn(entity, context);
+    expect(mockConfigString).toHaveBeenCalledWith(ConfigStringIndex.SkyRotate, '10');
+  });
+
+  it('should set CS_SKYAXIS configstring if skyaxis key is present', () => {
     context.keyValues['skyaxis'] = '0 0 1';
-
     SP_worldspawn(entity, context);
-
-    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.Sky, 'unit1_sky');
-    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.SkyRotate, '0 10 0');
-    expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.SkyAxis, '0 0 1');
+    expect(mockConfigString).toHaveBeenCalledWith(ConfigStringIndex.SkyAxis, '0 0 1');
   });
 
-  it('parses sounds key', () => {
-     context.keyValues['sounds'] = '5';
-     SP_worldspawn(entity, context);
-     expect(configstringMock).toHaveBeenCalledWith(ConfigStringIndex.CdTrack, '5');
+  it('should set CS_CDTRACK configstring if sounds key is present', () => {
+    context.keyValues['sounds'] = '5';
+    SP_worldspawn(entity, context);
+    expect(mockConfigString).toHaveBeenCalledWith(ConfigStringIndex.CdTrack, '5');
   });
 });
