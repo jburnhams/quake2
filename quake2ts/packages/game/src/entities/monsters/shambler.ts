@@ -129,7 +129,7 @@ function shambler_idle(self: Entity, context: EntitySystem): void {
   context.engine.sound?.(self, 0, sound_idle, 1, 0.5, 0);
 }
 
-function shambler_maybe_idle(self: Entity, context: EntitySystem): void {
+function shambler_check_idle_sound(self: Entity, context: EntitySystem): void {
   if (context.rng.frandom() > 0.8) {
     context.engine.sound?.(self, 0, sound_idle, 1, 0.5, 0);
   }
@@ -214,7 +214,7 @@ shambler_move_walk = {
         { ai: shambler_ai_walk, dist: 3 },
         { ai: shambler_ai_walk, dist: 13 },
         { ai: shambler_ai_walk, dist: 9 },
-        { ai: shambler_ai_walk, dist: 7, think: shambler_maybe_idle },
+        { ai: shambler_ai_walk, dist: 7, think: shambler_check_idle_sound },
         { ai: shambler_ai_walk, dist: 5 },
     ],
     endfunc: null
@@ -239,7 +239,7 @@ shambler_move_run = {
         { ai: shambler_ai_run, dist: 20 },
         { ai: shambler_ai_run, dist: 20 },
         { ai: shambler_ai_run, dist: 24 },
-        { ai: shambler_ai_run, dist: 20, think: shambler_maybe_idle },
+        { ai: shambler_ai_run, dist: 20, think: shambler_check_idle_sound },
     ],
     endfunc: null
 };

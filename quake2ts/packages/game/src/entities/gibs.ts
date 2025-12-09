@@ -2,15 +2,12 @@
 // Quake II - Gibs
 // =================================================================
 
-import { Entity, MoveType, Solid } from './entity.js';
+import { Entity, MoveType, Solid, CollisionSurface } from './entity.js';
 import { EntitySystem } from './system.js';
-import { createRandomGenerator, Vec3, scaleVec3, TempEntity, ServerCommand } from '@quake2ts/shared';
+import { createRandomGenerator, Vec3, scaleVec3, TempEntity, ServerCommand, CollisionPlane } from '@quake2ts/shared';
 import { DamageMod } from '../combat/damageMods.js';
 import { EntityEffects } from './enums.js';
 import { MulticastType } from '../imports.js';
-import { velocityForDamage as utilsVelocityForDamage } from './utils.js';
-
-// const random = createRandomGenerator(); // REMOVED non-deterministic
 
 export const GIB_ORGANIC = 0;
 export const GIB_METALLIC = 1;
@@ -27,16 +24,7 @@ export interface GibDef {
     flags?: number; // GIB_METALLIC | GIB_DEBRIS
 }
 
-// NOTE: This local function shadows the imported one but didn't take RNG.
-// Since we are refactoring, we should use the one from utils which is now deterministic,
-// OR update this one to be deterministic.
-// The one in utils takes (damage, kick, rng).
-// This local one took (damage) and hardcoded logic.
-// Let's update this local one to take RNG and match the pattern, or simply delegate if possible.
-// Looking at the previous implementation, it had specific logic for gibs (scaling by 100/200).
-// Let's keep it but make it deterministic.
-
-function localVelocityForDamage(damage: number, rng: { crandom: () => number, frandom: () => number }): Vec3 {
+function velocityForDamage(damage: number, rng: { crandom: () => number, frandom: () => number }): Vec3 {
     let x = 100.0 * rng.crandom();
     let y = 100.0 * rng.crandom();
     let z = 200.0 + 100.0 * rng.frandom();
@@ -68,15 +56,13 @@ function clipGibVelocity(ent: Entity) {
     ent.velocity = { x, y, z };
 }
 
-function gib_touch(self: Entity, other: Entity | null, plane: any, surf: any, sys: EntitySystem) {
+function gib_touch(self: Entity, other: Entity | null, plane: CollisionPlane | null | undefined, surf: CollisionSurface | null | undefined, sys: EntitySystem) {
     if (!self.groundentity) return;
 
     self.touch = undefined; // NULL in C
 
     if (plane) {
         sys.sound(self, 0, 'misc/fhit3.wav', 1, 1, 0); // CHAN_VOICE, ATTN_NORM
-
-        // Align logic ignored for now as it requires matrix math or setting angles directly.
     }
 }
 
@@ -118,16 +104,14 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
 
     // Apply effects based on damage mod
     if (mod === DamageMod.LAVA || mod === DamageMod.TRAP) {
-        // Burn gibs: No blood, TODO: implement smoke effect
-        // Using EF_ROCKET for a smoke trail effect, although it might be too much.
-        // For now, simply avoiding EF_GIB stops the blood trail.
-        // gib.effects |= EntityEffects.Rocket;
+        // Burn gibs: No blood
+        gib.effects |= EntityEffects.Rocket; // Smoke trail effect
     } else if (type !== GIB_METALLIC && type !== GIB_DEBRIS) {
         // Organic gibs bleed unless burned
         gib.effects |= EntityEffects.Gib;
     }
 
-    const vd = localVelocityForDamage(damage, sys.rng);
+    const vd = velocityForDamage(damage, sys.rng);
 
     gib.velocity = {
         x: vd.x * vscale,
@@ -144,7 +128,19 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
     };
 
     if (type === GIB_ORGANIC && mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
-        sys.multicast(gib.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLOOD, gib.origin, gib.velocity);
+        // Correct usage of TempEntity.BLOOD (1)
+        // Original Source: g_phys.c -> ThrowGib
+        // gi.WriteByte (TE_BLOOD);
+        // gi.WritePosition (self->s.origin);
+        // gi.WriteDir (self->velocity);
+        sys.multicast(
+            gib.origin,
+            MulticastType.Pvs,
+            ServerCommand.temp_entity, // Use correct lowercase enum member
+            TempEntity.BLOOD, // ID
+            gib.origin.x, gib.origin.y, gib.origin.z, // Pos
+            gib.velocity.x, gib.velocity.y, gib.velocity.z // Dir (using velocity as in original source)
+        );
     }
 
     gib.think = (self: Entity) => {
@@ -199,11 +195,12 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
 
     if (mod === DamageMod.LAVA || mod === DamageMod.TRAP) {
         // Burn gibs: No blood
+        head.effects |= EntityEffects.Rocket; // Smoke trail effect
     } else {
         head.effects |= EntityEffects.Gib;
     }
 
-    const vd = localVelocityForDamage(damage, sys.rng);
+    const vd = velocityForDamage(damage, sys.rng);
 
     head.velocity = {
         x: vd.x * vscale,
@@ -230,7 +227,7 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
 
         if (type === GIB_METALLIC) {
              // Debris 1, 2, 3
-             // Based on func_explosive but scaled down a bit maybe?
+             // Spawns multiple debris pieces similar to func_explosive but using generic gib logic.
              // func_explosive_explode spawns multiple debris based on mass.
              // Here we are generic.
              spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type, mod);

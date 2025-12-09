@@ -17,7 +17,7 @@ import {
   PainCallback
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 import { monster_fire_rocket, monster_fire_bullet, monster_fire_blaster } from './attack.js';
 import { normalizeVec3, subtractVec3, Vec3, angleVectors, scaleVec3, addVec3, ZERO_VEC3, lengthVec3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -287,7 +287,7 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
 
     if (self.health < BOSS2_GIB_HEALTH) {
         context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-        throwGibs(context.entities, self.origin, damage);
+        throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
         context.entities.free(self);
         return;
     }

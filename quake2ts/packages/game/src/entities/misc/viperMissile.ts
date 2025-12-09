@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { SpawnRegistry } from '../spawn.js';
+import { SpawnRegistry, SpawnContext } from '../spawn.js';
 import { normalizeVec3, scaleVec3, subtractVec3, addVec3, distance } from '@quake2ts/shared';
 import { G_PickTarget } from '../utils.js';
 import { createRocket } from '../projectiles.js';
@@ -33,7 +33,7 @@ function misc_viper_missile_use(self: Entity, other: Entity | null, activator: E
 }
 
 export function registerMiscViperMissile(registry: SpawnRegistry) {
-    registry.register('misc_viper_missile', (entity: Entity, context: any) => {
+    registry.register('misc_viper_missile', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.Not;
         entity.mins = { x: -8, y: -8, z: -8 };

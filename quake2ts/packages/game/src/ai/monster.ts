@@ -1,4 +1,5 @@
 import type { Entity, MonsterMove } from '../entities/entity.js';
+import { MoveType, Solid } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { AIFlags, AttackState } from './constants.js';
 import { RenderFx, MASK_SHOT, MASK_SOLID, ZERO_VEC3, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
@@ -101,7 +102,7 @@ export function M_CheckAttack_Base(self: Entity, context: EntitySystem, stand_gr
     }
 
     // PGM - go ahead and shoot every time if it's a info_notnull
-    if ((!self.enemy.client && self.enemy.solid === 0) || (Math.random() < chance)) {
+    if ((!self.enemy.client && self.enemy.solid === 0) || (context.rng.frandom() < chance)) {
         self.monsterinfo.attack_state = AttackState.Missile;
         self.attack_finished_time = context.timeSeconds;
         return true;

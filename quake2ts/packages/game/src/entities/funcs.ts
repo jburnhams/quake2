@@ -74,12 +74,14 @@ function angle_move_calc(ent: Entity, dest: Vec3, context: EntitySystem, done: (
     const dir = normalizeVec3(vec);
     const speed = ent.speed || 100;
 
-    // Linear speed for now (TODO: accel/decel support matching move_calc)
-    let currentSpeed = speed;
+    // Current speed from angular velocity (approximate)
+    let currentSpeed = lengthVec3(ent.avelocity);
 
     // Accel
     if (ent.accel) {
-        currentSpeed = lengthVec3(ent.avelocity) + ent.accel * dt;
+        currentSpeed += ent.accel * dt;
+    } else {
+        currentSpeed = speed;
     }
 
     // Decel
@@ -732,7 +734,7 @@ const SPAWNFLAG_DOOR_ROTATING_Y_AXIS = 128;
 const SPAWNFLAG_DOOR_ROTATING_INACTIVE = 0x10000;
 const SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN = 0x20000;
 
-const func_door_rotating: SpawnFunction = (entity, context) => {
+export const func_door_rotating: SpawnFunction = (entity, context) => {
     // Handling SAFE_OPEN
     if (entity.spawnflags & SPAWNFLAG_DOOR_ROTATING_SAFE_OPEN) {
         // G_SetMovedir logic is slightly different, but let's assume standard angular logic

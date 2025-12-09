@@ -79,7 +79,7 @@ describe('misc_viper', () => {
     // In test-helpers.ts, forEachEntity uses targetNameIndex. We can hack it by adding to targetNameIndex with a fake name or updating mock.
     // Or we can assume misc_viper_bomb_use logic works if we mock forEachEntity to yield our viper.
 
-    context.entities.forEachEntity = vi.fn((cb) => cb(viper));
+    context.entities.find = vi.fn((predicate) => predicate(viper) ? viper : undefined);
 
     // Create bomb
     const bomb = context.entities.spawn();

@@ -33,7 +33,7 @@ const MONSTER_TICK = 0.1;
 const JORG_HEALTH = 3000;
 const JORG_MASS = 1000;
 const JORG_GIB_HEALTH = -2000;
-const JORG_VIEWHEIGHT = 90; // Approx based on C code logic or guessed
+const JORG_VIEWHEIGHT = 25; // Source: full/game/g_monster.c:walkmonster_start_go
 const JORG_ATTACK_CHANCE_1 = 0.75; // game/m_boss31.c:380
 const JORG_REFIRE_CHANCE = 0.9;
 const JORG_PAIN_DAMAGE_THRESHOLD_1 = 50;
@@ -61,23 +61,23 @@ const JORG_MACHINEGUN_L1_OFFSET: Vec3 = { x: 40, y: 20, z: 20 };
 const JORG_BFG_OFFSET: Vec3 = { x: 30, y: 0, z: 40 };
 
 // Wrappers
-function monster_ai_stand(self: Entity, dist: number, context: any): void {
+function monster_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
   ai_stand(self, MONSTER_TICK, context);
 }
 
-function monster_ai_walk(self: Entity, dist: number, context: any): void {
+function monster_ai_walk(self: Entity, dist: number, context: EntitySystem): void {
   ai_walk(self, dist, MONSTER_TICK, context);
 }
 
-function monster_ai_run(self: Entity, dist: number, context: any): void {
+function monster_ai_run(self: Entity, dist: number, context: EntitySystem): void {
   ai_run(self, dist, MONSTER_TICK, context);
 }
 
-function monster_ai_charge(self: Entity, dist: number, context: any): void {
+function monster_ai_charge(self: Entity, dist: number, context: EntitySystem): void {
   ai_charge(self, dist, MONSTER_TICK, context);
 }
 
-function monster_ai_move(self: Entity, dist: number, context: any): void {
+function monster_ai_move(self: Entity, dist: number, context: EntitySystem): void {
   ai_move(self, dist);
 }
 
@@ -154,7 +154,7 @@ function getProjectedOffset(self: Entity, offset: Vec3): Vec3 {
     return addVec3(addVec3(addVec3(start, x), y), z);
 }
 
-function jorg_fire_bullet(self: Entity, context: any): void {
+function jorg_fire_bullet(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     // Fire left
@@ -168,7 +168,7 @@ function jorg_fire_bullet(self: Entity, context: any): void {
     monster_fire_bullet_v2(self, startR, dirR, JORG_MACHINEGUN_DAMAGE, JORG_MACHINEGUN_KICK, JORG_MACHINEGUN_HSPREAD, JORG_MACHINEGUN_VSPREAD, 0, context, DamageMod.MACHINEGUN);
 }
 
-function jorg_fire_bfg(self: Entity, context: any): void {
+function jorg_fire_bfg(self: Entity, context: EntitySystem): void {
     if (!self.enemy) return;
 
     const start = getProjectedOffset(self, JORG_BFG_OFFSET);
@@ -176,7 +176,7 @@ function jorg_fire_bfg(self: Entity, context: any): void {
     target.z += (self.enemy.viewheight || 0);
     const dir = normalizeVec3(subtractVec3(target, start));
 
-    (monster_fire_bfg as any)(self, start, dir, JORG_BFG_DAMAGE, JORG_BFG_SPEED, JORG_BFG_KICK, JORG_BFG_RADIUS, 0, context);
+    monster_fire_bfg(self, start, dir, JORG_BFG_DAMAGE, JORG_BFG_SPEED, JORG_BFG_KICK, JORG_BFG_RADIUS, 0, context);
 }
 
 function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: number, context: EntitySystem): void {
@@ -210,7 +210,7 @@ function jorg_pain(self: Entity, other: Entity | null, kick: number, damage: num
     }
 }
 
-function jorg_die(self: Entity, context: any): void {
+function jorg_die(self: Entity, context: EntitySystem): void {
   context.engine.sound?.(self, 0, 'boss3/bs3deth1.wav', 1, 1, 0);
   self.monsterinfo.current_move = death_move;
 }
@@ -223,7 +223,7 @@ function jorg_dead(self: Entity): void {
     self.nextthink = -1;
 }
 
-function makron_toss(self: Entity, context: any): void {
+function makron_toss(self: Entity, context: EntitySystem): void {
     const makron = context.spawn();
     makron.classname = 'monster_makron';
     makron.origin = { ...self.origin };
@@ -231,13 +231,14 @@ function makron_toss(self: Entity, context: any): void {
     makron.enemy = self.enemy;
 
     // Use SP_monster_makron to initialize
-    // We need to pass context which is usually SpawnContext.
-    // Here 'context' is likely EntitySystem (passed from think).
-    // SP_monster_makron expects { entities: EntitySystem, ... } as SpawnContext.
-    // We can construct a minimal mock or cast if SP function structure allows.
-    // SP functions typically only use .entities from context.
-    // Ensure health_multiplier defaults to 1 if not present on context (which it isn't on EntitySystem)
-    const spawnContext = { entities: context, health_multiplier: 1 } as any as SpawnContext;
+    const spawnContext: SpawnContext = {
+      keyValues: {},
+      entities: context,
+      health_multiplier: 1,
+      warn: () => {},
+      free: (e) => context.free(e)
+    };
+
     SP_monster_makron(makron, spawnContext);
 
     // Jump at player
