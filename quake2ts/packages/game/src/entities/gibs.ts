@@ -128,7 +128,19 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
     };
 
     if (type === GIB_ORGANIC && mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
-        sys.multicast(gib.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.BLOOD, gib.origin, gib.velocity);
+        // Correct usage of TempEntity.BLOOD (1)
+        // Original Source: g_phys.c -> ThrowGib
+        // gi.WriteByte (TE_BLOOD);
+        // gi.WritePosition (self->s.origin);
+        // gi.WriteDir (self->velocity);
+        sys.multicast(
+            gib.origin,
+            MulticastType.Pvs,
+            ServerCommand.temp_entity, // Use correct lowercase enum member
+            TempEntity.BLOOD, // ID
+            gib.origin.x, gib.origin.y, gib.origin.z, // Pos
+            gib.velocity.x, gib.velocity.y, gib.velocity.z // Dir (using velocity as in original source)
+        );
     }
 
     gib.think = (self: Entity) => {
