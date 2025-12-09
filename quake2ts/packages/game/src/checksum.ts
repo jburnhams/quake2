@@ -32,13 +32,13 @@ export function hashString(hash: number, value: string): number {
 
 function hashEntityState(hash: number, entity: EntityState): number {
     hash = hashNumber(hash, entity.number);
-    hash = hashNumber(hash, entity.modelIndex);
-    hash = hashNumber(hash, entity.frame);
-    hash = hashNumber(hash, entity.skinNum);
-    hash = hashNumber(hash, entity.effects);
-    hash = hashNumber(hash, entity.renderfx);
-    hash = hashNumber(hash, entity.solid);
-    hash = hashNumber(hash, entity.sound);
+    hash = hashNumber(hash, entity.modelIndex ?? 0);
+    hash = hashNumber(hash, entity.frame ?? 0);
+    hash = hashNumber(hash, entity.skinNum ?? 0);
+    hash = hashNumber(hash, entity.effects ?? 0);
+    hash = hashNumber(hash, entity.renderfx ?? 0);
+    hash = hashNumber(hash, entity.solid ?? 0);
+    hash = hashNumber(hash, entity.sound ?? 0);
 
     hash = hashNumber(hash, entity.origin.x);
     hash = hashNumber(hash, entity.origin.y);
@@ -66,10 +66,11 @@ export function hashGameState(state: GameStateSnapshot): number {
   hash = hashNumber(hash, state.velocity.y);
   hash = hashNumber(hash, state.velocity.z);
 
-  hash = hashNumber(hash, state.level.frameNumber);
-  hash = hashNumber(hash, state.level.timeSeconds);
-  hash = hashNumber(hash, state.level.previousTimeSeconds);
-  hash = hashNumber(hash, state.level.deltaSeconds);
+  // Safely handle potential undefined values in state.level
+  hash = hashNumber(hash, state.level.frameNumber ?? 0);
+  hash = hashNumber(hash, state.level.timeSeconds ?? 0);
+  hash = hashNumber(hash, state.level.previousTimeSeconds ?? 0);
+  hash = hashNumber(hash, state.level.deltaSeconds ?? 0);
 
   hash = hashNumber(hash, state.entities.activeCount);
   hash = hashString(hash, state.entities.worldClassname);
