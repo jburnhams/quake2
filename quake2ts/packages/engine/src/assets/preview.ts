@@ -87,7 +87,7 @@ export class AssetPreviewGenerator {
         dstHeight
       );
 
-      return new ImageData(resizedData, dstWidth, dstHeight);
+      return new ImageData(resizedData as unknown as Uint8ClampedArray<ArrayBuffer>, dstWidth, dstHeight);
     } catch (e) {
       console.error(`Failed to generate thumbnail for ${path}`, e);
       return null;
