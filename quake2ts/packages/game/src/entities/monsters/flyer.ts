@@ -17,7 +17,7 @@ import {
   EntityFlags
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 import { monster_fire_blaster } from './attack.js';
 import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -226,7 +226,7 @@ export function SP_monster_flyer(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -40) {
-        throwGibs(context.entities, self.origin, damage);
+        throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
         context.entities.free(self);
         return;
     }

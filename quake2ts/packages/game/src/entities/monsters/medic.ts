@@ -20,7 +20,7 @@ import {
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { T_Damage } from '../../combat/damage.js';
 import { DamageMod } from '../../combat/damageMods.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 import { rangeTo, RangeCategory, infront, visible, TraceResult } from '../../ai/perception.js';
 import { checkGroundSpawnPoint, findSpawnPoint } from '../../ai/spawn_utils.js';
 import { monster_fire_blaster } from './attack.js';
@@ -740,7 +740,7 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
     self.solid = Solid.Not;
 
     if (self.health < -40) {
-        throwGibs(context.entities, self.origin, damage);
+        throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
         context.entities.free(self);
         return;
     }

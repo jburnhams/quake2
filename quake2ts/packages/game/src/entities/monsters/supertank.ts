@@ -17,7 +17,7 @@ import {
   EntityFlags
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 import { rangeTo, RangeCategory, infront, visible } from '../../ai/perception.js';
 import { monster_fire_bullet_v2, monster_fire_rocket, monster_fire_grenade, monster_fire_heat } from './attack.js';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -351,7 +351,7 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
 
     if (self.health < -80) { // Big boss needs big damage to gib
         context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-        throwGibs(context.entities, self.origin, damage);
+        throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
         context.entities.free(self);
         return;
     }
