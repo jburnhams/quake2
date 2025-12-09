@@ -169,11 +169,7 @@ function misc_viper_bomb_prethink(self: Entity, context: EntitySystem) {
 }
 
 function misc_viper_bomb_use(self: Entity, other: Entity | null, activator: Entity | null, context: EntitySystem) {
-    let viper: Entity | null = null;
-    // Find viper
-    context.forEachEntity((ent) => {
-        if (ent.classname === 'misc_viper') viper = ent;
-    });
+    const viper = context.find((ent) => ent.classname === 'misc_viper');
 
     if (viper && viper.moveinfo && viper.moveinfo.dir) {
         self.velocity = scaleVec3(viper.moveinfo.dir, viper.moveinfo.speed || 0);

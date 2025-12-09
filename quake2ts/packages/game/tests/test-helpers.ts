@@ -69,6 +69,17 @@ export function createTestContext(): SpawnContext {
             }
         }
     }),
+    find: vi.fn((predicate: (ent: Entity) => boolean) => {
+        // Simple mock implementation of find
+        if ((entities as any).targetNameIndex) {
+             for (const bucket of (entities as any).targetNameIndex.values()) {
+                for (const ent of bucket) {
+                    if (predicate(ent)) return ent;
+                }
+            }
+        }
+        return undefined;
+    }),
   } as unknown as EntitySystem;
 
   return {
