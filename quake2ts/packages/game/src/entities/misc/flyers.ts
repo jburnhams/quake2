@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid, ServerFlags } from '../entity.js';
 import { EntitySystem } from '../system.js';
-import { SpawnRegistry } from '../spawn.js';
+import { SpawnRegistry, SpawnContext } from '../spawn.js';
 import { normalizeVec3, scaleVec3, subtractVec3, addVec3, distance } from '@quake2ts/shared';
 import { G_PickTarget } from '../utils.js';
 
@@ -66,7 +66,7 @@ const func_train_find = (self: Entity, context: EntitySystem) => {
 }
 
 export function registerMiscViper(registry: SpawnRegistry) {
-    registry.register('misc_viper', (entity: Entity, context: any) => {
+    registry.register('misc_viper', (entity: Entity, context: SpawnContext) => {
         if (!entity.target) {
             context.warn(`${entity.classname} without a target`);
             context.free(entity);
@@ -110,7 +110,7 @@ const misc_strogg_ship_use = (self: Entity, other: Entity | null, activator: Ent
 }
 
 export function registerMiscStroggShip(registry: SpawnRegistry) {
-    registry.register('misc_strogg_ship', (entity: Entity, context: any) => {
+    registry.register('misc_strogg_ship', (entity: Entity, context: SpawnContext) => {
         if (!entity.target) {
             context.warn(`${entity.classname} without a target`);
             context.free(entity);
@@ -169,17 +169,11 @@ function misc_viper_bomb_prethink(self: Entity, context: EntitySystem) {
 }
 
 function misc_viper_bomb_use(self: Entity, other: Entity | null, activator: Entity | null, context: EntitySystem) {
-    let viper: Entity | null = null;
-    // Find viper
-    context.forEachEntity((ent) => {
-        if (ent.classname === 'misc_viper') viper = ent;
-    });
+    const viper = context.find((ent) => ent.classname === 'misc_viper');
 
-    // Cast to any to access moveinfo if strict checking is on
-    const v = viper as any;
-    if (v && v.moveinfo && v.moveinfo.dir) {
-        self.velocity = scaleVec3(v.moveinfo.dir, v.moveinfo.speed || 0);
-        self.moveinfo = { dir: { ...v.moveinfo.dir } };
+    if (viper && viper.moveinfo && viper.moveinfo.dir) {
+        self.velocity = scaleVec3(viper.moveinfo.dir, viper.moveinfo.speed || 0);
+        self.moveinfo = { dir: { ...viper.moveinfo.dir } };
     }
 
     self.solid = Solid.BoundingBox;
@@ -200,7 +194,7 @@ function misc_viper_bomb_use(self: Entity, other: Entity | null, activator: Enti
 }
 
 export function registerMiscViperBomb(registry: SpawnRegistry) {
-    registry.register('misc_viper_bomb', (entity: Entity, context: any) => {
+    registry.register('misc_viper_bomb', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.Not;
         entity.mins = { x: -8, y: -8, z: -8 };
@@ -221,7 +215,7 @@ export function registerMiscViperBomb(registry: SpawnRegistry) {
 // ============================================================================
 
 export function registerMiscBigViper(registry: SpawnRegistry) {
-    registry.register('misc_bigviper', (entity: Entity, context: any) => {
+    registry.register('misc_bigviper', (entity: Entity, context: SpawnContext) => {
         entity.movetype = MoveType.None;
         entity.solid = Solid.BoundingBox;
         entity.mins = { x: -176, y: -120, z: -24 };
