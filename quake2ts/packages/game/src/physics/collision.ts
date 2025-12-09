@@ -21,14 +21,12 @@ export function resolveImpact(ent: Entity, trace: GameTraceResult, system: Entit
     // We pass undefined or null if not available, or mock it.
     // Actually GameImports trace return GameTraceResult which only has surfaceFlags.
     // We can cast or change the type if needed, but for now passing undefined is safe as most logic uses plane/flags.
-    const surf = trace.surfaceFlags ? { name: '', flags: trace.surfaceFlags, value: 0 } : null;
-    other.touch(other, ent, trace.plane, surf);
+    other.touch(other, ent, trace.plane, undefined);
   }
 
   // Call touch on the moving entity
   if (ent.touch) {
-    const surf = trace.surfaceFlags ? { name: '', flags: trace.surfaceFlags, value: 0 } : null;
-    ent.touch(ent, other, trace.plane, surf);
+    ent.touch(ent, other, trace.plane, undefined);
   }
 }
 

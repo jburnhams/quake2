@@ -14,10 +14,10 @@ describe('monster_gunner jump', () => {
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
-    // Use createTestContext to get rng and mocks
-    const testCtx = createTestContext();
-    sys = testCtx.entities;
-    context = testCtx;
+    vi.clearAllMocks();
+    const testContext = createTestContext();
+    sys = testContext.entities as unknown as EntitySystem;
+    context = testContext;
 
     gunner = new Entity(1);
     spawnRegistry = { register: vi.fn() } as unknown as SpawnRegistry;
@@ -43,7 +43,7 @@ describe('monster_gunner jump', () => {
     // run_move has jump check at frame 0
     const runMove = gunner.monsterinfo.current_move!;
     const checkJump = runMove.frames[0].think!;
-    checkJump(gunner, sys); // Pass sys/context
+    checkJump(gunner, sys);
 
     // Should switch to jump move
     expect(gunner.monsterinfo.current_move?.firstframe).toBe(209);
@@ -80,13 +80,15 @@ describe('monster_gunner jump', () => {
       gunner.origin = { x: 0, y: 0, z: 0 };
       gunner.groundentity = new Entity(3);
 
+      // Force jump move state manually because run() just sets run_move
+      // We need to simulate the transition to jump_move which happens inside gunner_jump
       gunner.monsterinfo.run!(gunner, 10, sys);
       const runMove = gunner.monsterinfo.current_move!;
 
       // Trigger jump logic
       vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
       const checkJump = runMove.frames[0].think!;
-      checkJump(gunner, sys);
+      checkJump(gunner, sys); // This sets current_move to jump_move
 
       // Now we are in jump_move
       const jumpMove = gunner.monsterinfo.current_move!;
@@ -98,7 +100,7 @@ describe('monster_gunner jump', () => {
 
       expect(gunner.velocity.z).toBe(270);
       expect(gunner.monsterinfo.aiflags & AIFlags.Ducked).toBeTruthy();
-      expect(gunner.origin.z).toBe(1);
+      expect(gunner.origin.z).toBe(1); // Lifted off ground
   });
 
   it('gunner_check_landing handles landing', () => {
@@ -106,28 +108,31 @@ describe('monster_gunner jump', () => {
       const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
       spawnFn(gunner, context);
 
+      // Setup landing state
       gunner.monsterinfo.aiflags |= AIFlags.Ducked;
-      gunner.groundentity = new Entity(3);
+      gunner.groundentity = new Entity(3); // Landed
 
+      // Force jump move manually to simulate state
       gunner.enemy = new Entity(2);
       gunner.enemy.origin = { x: 300, y: 0, z: 0 };
       gunner.groundentity = new Entity(3);
       vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
+      // Enter run
       gunner.monsterinfo.run!(gunner, 10, sys);
       const runMove = gunner.monsterinfo.current_move!;
 
+      // Trigger jump via run frame 0 logic
       const checkJump = runMove.frames[0].think!;
       checkJump(gunner, sys);
 
+      // Now in jump_move
       const jumpMove = gunner.monsterinfo.current_move!;
-      const checkLanding = jumpMove.frames[3].think!;
+      const checkLanding = jumpMove.frames[3].think!; // Frame 3 is check_landing
 
       checkLanding(gunner, sys);
 
       expect(gunner.monsterinfo.aiflags & AIFlags.Ducked).toBeFalsy();
-
-      // Check engine.sound directly as that's what gunner calls
       expect(sys.engine.sound).toHaveBeenCalledWith(gunner, 0, 'mutant/thud1.wav', 1, 1, 0);
   });
 });

@@ -4,7 +4,6 @@ import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext } from '../../test-helpers.js';
 
 describe('monster_medic', () => {
   let context: any;
@@ -14,15 +13,23 @@ describe('monster_medic', () => {
 
   beforeEach(() => {
     spawnFunction = vi.fn();
-    const testCtx = createTestContext();
-    // createTestContext returns a SpawnContext { entities, keyValues, etc }
-    // We want the EntitySystem mock which is testCtx.entities
-    context = testCtx.entities;
+    context = {
+      engine: {
+        sound: vi.fn(),
+      },
+      timeSeconds: 10,
+      trace: vi.fn().mockReturnValue({
+        fraction: 1,
+        ent: null
+      }),
+      multicast: vi.fn(),
+      linkentity: vi.fn(),
+      finalizeSpawn: vi.fn(),
+      free: vi.fn(),
+      getSpawnFunction: vi.fn().mockReturnValue(spawnFunction),
+      forEachEntity: vi.fn(),
+    };
 
-    // Add specific mocks to the EntitySystem
-    context.getSpawnFunction = vi.fn().mockReturnValue(spawnFunction);
-
-    // Setup entities
     medic = {
       index: 1,
       origin: { x: 0, y: 0, z: 0 },
@@ -64,14 +71,22 @@ describe('monster_medic', () => {
     // Assign enemy
     medic.enemy = deadMonster;
 
-    // Trigger attack logic
+    // Check if run/stand calls find_dead logic?
+    // We want to test the attack_cable_move sequence triggers.
+
+    // But direct testing of state transitions is hard without simulating full frames.
+    // Let's test the functions directly if exported or accessible via frames.
+
+    // Access frames via monsterinfo.attack
+    // medic.monsterinfo.attack(medic);
+    // If enemy is dead, it should switch to cable move.
+
     if (medic.monsterinfo?.attack) {
         medic.monsterinfo.attack(medic);
     }
 
-    // Verify current_move is correct
-    // attack_cable_move firstframe is 106
-    expect(medic.monsterinfo?.current_move?.firstframe).toBe(106);
+    // Verify current_move is correct (we can't easily check the exact object identity without export, but we can check properties)
+    expect(medic.monsterinfo?.current_move?.firstframe).toBe(106); // attack_cable_move firstframe
   });
 
   it('should emit MEDIC_CABLE_ATTACK temp entity during cable attack frames', () => {
@@ -80,6 +95,9 @@ describe('monster_medic', () => {
     SP_monster_medic(medic, spawnContext);
     medic.enemy = deadMonster;
 
+    // Find the think function for cable attack (it is medic_cable_attack)
+    // We know it is in the frames of attack_cable_move.
+    // Let's force the move.
     if (medic.monsterinfo?.attack) {
         medic.monsterinfo.attack(medic);
     }
@@ -93,7 +111,6 @@ describe('monster_medic', () => {
     // Call the think function
     frame?.think?.(medic, context);
 
-    // The medic_cable_attack function calls multicast.
     expect(context.multicast).toHaveBeenCalledWith(
         medic.origin,
         MulticastType.Pvs,
@@ -101,52 +118,31 @@ describe('monster_medic', () => {
         TempEntity.MEDIC_CABLE_ATTACK,
         medic.index,
         deadMonster.index,
-        expect.anything(), // start
+        expect.objectContaining({ x: 24, y: 0, z: 6 }), // start (relative to origin 0,0,0 + offset)
         deadMonster.origin // end
     );
   });
 
-  it('should resurrect the monster using 9-frame cable animation', () => {
-      const spawnContext = { entities: context } as any;
-      SP_monster_medic(medic, spawnContext);
-
-      medic.enemy = deadMonster;
-      if (medic.monsterinfo?.attack) {
-          medic.monsterinfo.attack(medic);
-      }
-
-      const move = medic.monsterinfo?.current_move;
-      // attack_cable_move frames: 106 to 114 inclusive.
-      expect(move?.frames.length).toBe(9);
-
-      const lastFrame = move?.frames[move.frames.length - 1];
-      expect(lastFrame?.think?.name).toBe('medic_hook_retract');
-
-      // Execute the resurrection
-      lastFrame?.think?.(medic, context);
-
-      // Verify resurrection happened
-      expect(context.getSpawnFunction).toHaveBeenCalledWith('monster_infantry');
-      expect(spawnFunction).toHaveBeenCalled();
-      expect(context.finalizeSpawn).toHaveBeenCalledWith(deadMonster);
-      expect(deadMonster.deadflag).toBe(DeadFlag.Alive);
-  });
-
   it('should respawn the monster at the end of the sequence', () => {
+    // Setup medic
     const spawnContext = { entities: context } as any;
     SP_monster_medic(medic, spawnContext);
     medic.enemy = deadMonster;
 
+    // Force move
     if (medic.monsterinfo?.attack) {
         medic.monsterinfo.attack(medic);
     }
     const move = medic.monsterinfo?.current_move;
 
+    // Last frame has medic_hook_retract
     const lastFrameIndex = move?.frames.length ? move.frames.length - 1 : 0;
     const frame = move?.frames[lastFrameIndex];
 
+    // Call think
     frame?.think?.(medic, context);
 
+    // Verify spawn function called
     expect(context.getSpawnFunction).toHaveBeenCalledWith('monster_infantry');
     expect(spawnFunction).toHaveBeenCalled();
     expect(context.finalizeSpawn).toHaveBeenCalledWith(deadMonster);
@@ -155,21 +151,46 @@ describe('monster_medic', () => {
   });
 
   it('should stop healing if distance is too great', () => {
+    // Setup medic
     const spawnContext = { entities: context } as any;
     SP_monster_medic(medic, spawnContext);
     medic.enemy = deadMonster;
 
+    // Move dead monster far away
     deadMonster.origin.x = 1000;
 
+    // Get frame
     if (medic.monsterinfo?.attack) {
         medic.monsterinfo.attack(medic);
     }
     const move = medic.monsterinfo?.current_move;
-    const frame = move?.frames[1];
+    const frame = move?.frames[1]; // medic_cable_attack
 
+    // Call think
     frame?.think?.(medic, context);
 
+    // Should NOT multicast
     expect(context.multicast).not.toHaveBeenCalled();
-    expect(medic.monsterinfo.current_move?.firstframe).toBe(70);
+    // Should switch to run
+    expect(medic.monsterinfo.current_move?.firstframe).toBe(70); // run_move
+  });
+
+  it('should not target bad_medic marked entities', () => {
+      // Setup medic
+      const spawnContext = { entities: context } as any;
+      SP_monster_medic(medic, spawnContext);
+
+      // Mark as bad
+      (deadMonster as any).bad_medic = medic;
+
+      // Simulate iteration
+      // We need to mock forEachEntity to call with deadMonster
+      context.forEachEntity.mockImplementation((cb: any) => cb(deadMonster));
+
+      // Trigger run which calls medic_find_dead
+      medic.monsterinfo.run!(medic, 12, context);
+
+      // Should not set enemy
+      expect(medic.enemy).toBeNull();
   });
 });

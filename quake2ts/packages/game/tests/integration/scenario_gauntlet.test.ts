@@ -152,13 +152,7 @@ describe('Scenario 2: Combat Gauntlet', () => {
 
     const spawnFn = registry.get('monster_soldier');
     if (spawnFn) {
-        spawnFn(monster, {
-          entities: game.entities,
-          health_multiplier: 1,
-          keyValues: {},
-          warn: () => {},
-          free: (e) => game.entities.free(e)
-        });
+        spawnFn(monster, {});
     } else {
         // Fallback manual setup
         monster.health = 50;

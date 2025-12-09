@@ -106,7 +106,6 @@ export function defaultPredictionState(): PredictionState {
     gun_frame: 0,
     rdflags: 0,
     fov: 90,
-    renderfx: 0,
 
     // Optional fields
     pickupIcon: undefined,

@@ -1,8 +1,8 @@
 import type { SpawnRegistry, SpawnFunction } from './spawn.js';
-import { MoveType, Solid, ServerFlags, Entity, EntityFlags, CollisionSurface } from './entity.js';
+import { MoveType, Solid, ServerFlags, Entity, EntityFlags } from './entity.js';
 import { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { closestPointToBox, createRandomGenerator, CollisionPlane, Vec3 } from '@quake2ts/shared';
+import { closestPointToBox, createRandomGenerator } from '@quake2ts/shared';
 import { T_Damage } from '../combat/damage.js';
 import { registerMiscViper, registerMiscViperBomb, registerMiscStroggShip, registerMiscBigViper } from './misc/flyers.js';
 import { registerMiscViperMissile } from './misc/viperMissile.js';
@@ -19,7 +19,7 @@ const SPAWNFLAGS_OBJECT_TRIGGER_SPAWN = 1;
 const SPAWNFLAGS_OBJECT_ANIMATED = 2;
 const SPAWNFLAGS_OBJECT_ANIMATED_FAST = 4;
 
-function func_object_touch(self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) {
+function func_object_touch(self: Entity, other: Entity | null, plane?: any, surf?: any) {
     if (!other || !self.dmg) return;
     if (other === self) return;
 
@@ -44,8 +44,6 @@ function func_object_touch(self: Entity, other: Entity | null, plane?: Collision
 
     // We also lack access to multicast for effects, so we pass undefined.
 
-    // Cast other/self to any to bypass strict function covariance check between Entity and Damageable
-    // TODO: Fix Entity vs Damageable type hierarchy for callbacks
     T_Damage(other as any, self as any, self as any, {x:0, y:0, z:0}, point, plane?.normal || {x:0, y:0, z:1}, damage, 1, 0, DamageMod.CRUSH, time);
 }
 
@@ -105,7 +103,7 @@ const func_object: SpawnFunction = (entity, context) => {
 // GIBS
 // ============================================================================
 
-function gib_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod) {
+function gib_die(self: any, inflictor: any, attacker: any, damage: number) {
     // G_FreeEdict(self); // If using context.free, we need context.
     // We can attach a free helper via closure in spawn function?
     // Or just set think to free.

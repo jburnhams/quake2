@@ -506,8 +506,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             pm_flags: ps.pm_flags,
             gun_frame: ps.gun_frame,
             rdflags: ps.rdflags,
-            fov: ps.fov,
-            renderfx: 0
+            fov: ps.fov
         };
     }
 

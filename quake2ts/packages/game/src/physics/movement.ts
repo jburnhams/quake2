@@ -13,17 +13,6 @@ import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
 import { resolveImpact, checkTriggers } from './collision.js';
 
-// Physics constants derived from Quake 2 source
-const WATER_FRICTION = 2.0;
-const WATER_GRAVITY_SCALE = 0.1;
-const OVERBOUNCE_BOUNCE = 1.6;
-const OVERBOUNCE_WALLBOUNCE = 2.0;
-
-/**
- * Runs gravity for an entity.
- * Handles normal gravity and water movement physics.
- * Based on G_RunObject in g_phys.c
- */
 export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
   if (ent.movetype === MoveType.Toss || ent.movetype === MoveType.Bounce || ent.movetype === MoveType.WallBounce) {
     // Basic null checks before using vectors
@@ -31,10 +20,13 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
     if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
 
     if (ent.waterlevel > 1) {
-      // Water physics: apply friction and reduced gravity
+      // In water, entities drift down slowly if dense, or up if buoyant?
+      // Quake 2 simply runs custom water physics and skips gravity.
+      // For now, let's assume they sink slowly or are neutrally buoyant.
+
       const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
       if (speed > 1) {
-        const newspeed = speed - frametime * speed * WATER_FRICTION;
+        const newspeed = speed - frametime * speed * 2; // friction 2
         if (newspeed < 0) {
             ent.velocity = { x: 0, y: 0, z: 0 };
         } else {
@@ -43,7 +35,9 @@ export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void 
         }
       }
 
-      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * WATER_GRAVITY_SCALE));
+      // 0.1 * gravity matches previous implementation's attempt to simulate buoyancy/slow sink.
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * 0.1));
+
       ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
     } else {
       ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
@@ -71,24 +65,32 @@ export function runBouncing(ent: Entity, system: EntitySystem, imports: GameImpo
     } else {
       // Hit world
       if (ent.touch) {
-        const surf = traceResult.surfaceFlags ? { name: '', flags: traceResult.surfaceFlags, value: 0 } : null;
-        ent.touch(ent, system.world, traceResult.plane, surf);
+        ent.touch(ent, system.world, traceResult.plane, undefined);
       }
     }
   }
 
   if (traceResult.fraction > 0 && traceResult.fraction < 1 && traceResult.plane) {
-    // Determine overbounce factor based on movement type
-    // SV_Physics_Toss in sv_phys.c uses 1.6 for Bounce and 2.0 for WallBounce
-    let overbounce = OVERBOUNCE_BOUNCE;
+    let overbounce = 1.01; // Default clipping (slide mostly, slightly bounce if ent.bounce > 1?)
+    // Note: Quake 2 logic uses 1.5/1.6 for Bounce, 2.0 for WallBounce.
+    // The previous implementation used 1.01 in `clipVelocityVec3` and then multiplied by `ent.bounce`.
+    // If we want to be faithful to Q2 `SV_Physics_Toss`:
+    // It calls ClipVelocity(ent->velocity, trace.plane.normal, backoff);
+    // where backoff is 1.6 (Bounce) or 2.0 (WallBounce).
+
     if (ent.movetype === MoveType.WallBounce) {
-      overbounce = OVERBOUNCE_WALLBOUNCE;
+      overbounce = 2.0;
+    } else {
+      overbounce = 1.6;
     }
 
     const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, overbounce);
     ent.velocity = clipped;
+    // ent.velocity = scaleVec3(clipped, ent.bounce); // Removing this multiplication to match Q2 logic unless ent.bounce is explicitly desired.
+    // Given the previous code had it, maybe `ent.bounce` is used as restitution.
+    // However, for WallBounce, we want explicit behavior.
 
-    // WallBounce also updates angles to face the new direction
+    // WallBounce also updates angles
     if (ent.movetype === MoveType.WallBounce) {
       ent.angles = vectorToAngles(ent.velocity);
     }

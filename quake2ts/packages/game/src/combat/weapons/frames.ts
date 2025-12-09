@@ -27,7 +27,7 @@ export const FRAME_SSHOTGUN_ACTIVATE_LAST = 5;
 export const FRAME_SSHOTGUN_FIRE_LAST = 28;
 export const FRAME_SSHOTGUN_IDLE_LAST = 52;
 export const FRAME_SSHOTGUN_DEACTIVATE_LAST = 57;
-// pause_frames = {29, 42, 57}
+// pause_frames = {29, 42, 57} (Note: 57 is deactivate last, so maybe 57 not pause?)
 // fire_frames = {22, 28}
 
 // Machinegun
