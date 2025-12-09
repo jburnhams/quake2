@@ -284,9 +284,22 @@ export interface ClipBoxParams {
  * Clips a movement box against a brush using the Liang-Barsky algorithm.
  *
  * This function determines if and where the swept box (from start to end) intersects the brush.
- * It updates the trace result with the earliest collision fraction, plane, and contents.
+ * It works by clipping the movement line segment against the infinite planes defined by the brush sides.
  *
- * Based on CM_ClipBoxToBrush in qcommon/cm_trace.c.
+ * Algorithm Overview (Liang-Barsky):
+ * The movement is treated as a parameterized line P(t) = Start + t * (End - Start), for t in [0, 1].
+ * We maintain an interval [enterfrac, leavefrac] (initially [-1, 1]) representing the portion of the
+ * line that is potentially inside the brush.
+ * For each plane:
+ * 1. We determine the distance of Start (d1) and End (d2) from the plane.
+ *    - For box traces, planes are expanded by the box extents, effectively treating the box as a point.
+ * 2. If both points are in front (outside), the line is outside the brush.
+ * 3. If the line crosses the plane:
+ *    - If entering (d1 > d2), we update `enterfrac` (max of entry times).
+ *    - If leaving (d1 < d2), we update `leavefrac` (min of exit times).
+ * 4. If at any point enterfrac > leavefrac, the line misses the brush.
+ *
+ * @see CM_ClipBoxToBrush in qcommon/cm_trace.c:145-220
  *
  * @param params ClipBoxParams containing start/end vectors, box mins/maxs, target brush, and trace result to update.
  */
@@ -295,22 +308,23 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
 
   const isPoint = mins.x === 0 && mins.y === 0 && mins.z === 0 && maxs.x === 0 && maxs.y === 0 && maxs.z === 0;
 
-  // Initialize entry and exit fractions.
-  // enterfrac tracks the latest entry time into the brush intersection volume.
-  // leavefrac tracks the earliest exit time from the brush intersection volume.
+  // enterfrac: The fraction of movement where the box FIRST fully enters the brush volume (intersection start).
+  // leavefrac: The fraction of movement where the box STARTS to leave the brush volume (intersection end).
+  // Initialized to -1 and 1 to cover the full potential range + buffers.
   let enterfrac = -1;
   let leavefrac = 1;
   let clipplane: CollisionPlane | null = null;
   let leadside: CollisionBrushSide | null = null;
 
-  let getout = false;
-  let startout = false;
+  let getout = false; // True if the end point is outside at least one plane (not trapped in brush)
+  let startout = false; // True if the start point is outside at least one plane (not starting stuck)
 
   for (const side of brush.sides) {
     const { plane } = side;
     let dist = plane.dist;
 
-    // If tracing a box, we effectively push the planes out by the box extents.
+    // Expand the plane by the box extents to perform a point-plane test.
+    // This reduces the AABB sweep vs convex brush problem to a line segment vs expanded planes problem.
     if (!isPoint) {
       const ofsX = plane.normal.x < 0 ? maxs.x : mins.x;
       const ofsY = plane.normal.y < 0 ? maxs.y : mins.y;
@@ -318,35 +332,44 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
       dist -= plane.normal.x * ofsX + plane.normal.y * ofsY + plane.normal.z * ofsZ;
     }
 
-    // d1 is the distance of the start point from the plane.
-    // d2 is the distance of the end point from the plane.
+    // d1: Distance of start point from the (expanded) plane. Positive = in front (outside).
+    // d2: Distance of end point from the (expanded) plane.
     const d1 = start.x * plane.normal.x + start.y * plane.normal.y + start.z * plane.normal.z - dist;
     const d2 = end.x * plane.normal.x + end.y * plane.normal.y + end.z * plane.normal.z - dist;
 
-    if (d2 > 0) getout = true; // End point is in front of this plane
-    if (d1 > 0) startout = true; // Start point is in front of this plane
+    if (d2 > 0) getout = true;
+    if (d1 > 0) startout = true;
 
-    // If both points are in front of the plane, the line is completely outside the brush.
-    // Note: > 0 check is correct because planes face OUTWARD from the brush.
+    // Case 1: Entirely outside this plane.
+    // Since brushes are convex intersections of half-spaces (defined by planes pointing OUT),
+    // being in front of ANY plane means being outside the brush.
+    // The d2 >= d1 check handles the case where the line is parallel or moving away from the plane.
     if (d1 > 0 && d2 >= d1) {
       return;
     }
 
-    // If both points are behind the plane, this plane doesn't clip the line segment range we care about
-    // (though the segment is "inside" regarding this plane).
+    // Case 2: Entirely inside this plane (back side).
+    // Does not restrict the entry/exit interval further than other planes might.
     if (d1 <= 0 && d2 <= 0) {
       continue;
     }
 
-    // Line crosses the plane.
-    if (d1 > d2) { // Entering the brush (from front to back)
+    // Case 3: Line intersects the plane.
+    // d1 > d2 means we are moving from Front (outside) to Back (inside) -> Entering.
+    if (d1 > d2) {
+      // Calculate intersection fraction f.
+      // DIST_EPSILON is subtracted to ensure we stop slightly *before* the plane,
+      // preventing the object from getting stuck in the next frame due to float precision.
       const f = (d1 - DIST_EPSILON) / (d1 - d2);
       if (f > enterfrac) {
         enterfrac = f;
         clipplane = plane;
         leadside = side;
       }
-    } else { // Leaving the brush (from back to front)
+    } else {
+      // Moving from Back (inside) to Front (outside) -> Leaving.
+      // DIST_EPSILON is added to push the exit point slightly further out (or in depending on perspective),
+      // effectively narrowing the "inside" interval.
       const f = (d1 + DIST_EPSILON) / (d1 - d2);
       if (f < leavefrac) leavefrac = f;
     }
