@@ -24,18 +24,18 @@ This section focuses on making `quake2ts` usable by client applications, refinin
 **Priority**: **HIGH**
 **Description**: Address "TODO" comments that mark features as complete but are actually missing implementation.
 **Tasks**:
-- [ ] **Player State**: Wire up `pmFlags`, `viewangles`, `fov`, `ammo`, `damageAlpha` in `packages/game/src/index.ts`.
-- [ ] **Worldspawn Configstrings**: Set `CS_SKY`, `CS_SKYROTATE`, `CS_SKYAXIS`, `CS_CDTRACK` in `packages/game/src/entities/worldspawn.ts`.
-- [ ] **Gib Effects**: Add `TE_BLOOD` shower in `packages/game/src/entities/gibs.ts`.
-- [ ] **Medic Cable**: Add `TE_MEDIC_CABLE_ATTACK` visual effect in `packages/game/src/entities/monsters/medic.ts`.
+- [x] **Player State**: Wire up `pmFlags`, `viewangles`, `fov`, `ammo`, `damageAlpha` in `packages/game/src/index.ts`.
+- [x] **Worldspawn Configstrings**: Set `CS_SKY`, `CS_SKYROTATE`, `CS_SKYAXIS`, `CS_CDTRACK` in `packages/game/src/entities/worldspawn.ts`.
+- [x] **Gib Effects**: Add `TE_BLOOD` shower in `packages/game/src/entities/gibs.ts`.
+- [x] **Medic Cable**: Add `TE_MEDIC_CABLE_ATTACK` visual effect in `packages/game/src/entities/monsters/medic.ts`.
 
 ### 3. Improve Code Quality & Type Safety
 **Priority**: **MEDIUM**
 **Description**: Enhance type definitions and remove magic numbers.
 **Tasks**:
-- [ ] **Loose Entity Typing**: Define stricter interfaces for `DamageableEntity` and `MonsterEntity`.
-- [ ] **Magic Numbers**: Extract constants for values like `BFG_LASER_RADIUS`, `JORG_ATTACK_CHANCE`.
-- [ ] **Source References**: Add comments referencing original C++ source locations.
+- [x] **Loose Entity Typing**: Define stricter interfaces for `DamageableEntity` and `MonsterEntity`.
+- [x] **Magic Numbers**: Extract constants for values like `BFG_LASER_RADIUS`, `JORG_ATTACK_CHANCE`.
+- [x] **Source References**: Add comments referencing original C++ source locations.
 
 ### 4. Build & Test Pipeline Improvements
 **Priority**: **MEDIUM**

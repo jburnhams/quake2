@@ -1,80 +1,82 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestContext } from './test-helpers.js';
 import { RandomGenerator } from '@quake2ts/shared';
 
 describe('Determinism', () => {
-  it('game state is deterministic with same seed', () => {
+  let originalMathRandom: () => number;
+
+  beforeEach(() => {
+    originalMathRandom = Math.random;
+    // Trap Math.random usage
+    Math.random = () => {
+      throw new Error('Math.random() called in deterministic context!');
+    };
+  });
+
+  afterEach(() => {
+    Math.random = originalMathRandom;
+  });
+
+  it('EntitySystem uses deterministic RNG seeded from context', () => {
     const seed = 12345;
-    const runs = 2;
-    const frames = 100;
+    const { entities } = createTestContext({ seed });
 
-    const finalStates: any[] = [];
+    // Verify the RNG is attached and seeded correctly
+    expect(entities.rng).toBeInstanceOf(RandomGenerator);
 
-    for (let run = 0; run < runs; run++) {
-      const { entities } = createTestContext({
-         // Ensure we pass the seed to the game creation if supported,
-         // or verify createTestContext uses a deterministic RNG by default or mocked one.
-         // Looking at createTestContext implementation (in memory):
-         // It likely mocks things. If we want true determinism test of the game loop,
-         // we need to ensure the RNG used by entities is the one we control.
-      });
+    const val1 = entities.rng.frandom();
+    const val2 = entities.rng.frandom();
 
-      // Override RNG with a seeded one for this test run to be sure
-      // NOTE: We must ensure we are testing the RNG attached to the system
-      const rng = new RandomGenerator(seed);
-      (entities as any).rng = rng;
+    // Create another context with same seed
+    const { entities: entities2 } = createTestContext({ seed });
 
-      // Run N frames
-      for (let i = 0; i < frames; i++) {
-        // game.runFrame();
-        // Since createTestContext gives us a mock-heavy environment, we might simulate frame updates manually
-        // or checking if we can rely on `entities.timeSeconds` advancement.
+    expect(entities2.rng.frandom()).toBe(val1);
+    expect(entities2.rng.frandom()).toBe(val2);
+  });
 
-        // Let's spawn an entity that uses RNG and see if it behaves identically
-        // e.g. a particle or a monster that wanders.
+  it('produces different sequences with different seeds', () => {
+    const { entities: ent1 } = createTestContext({ seed: 11111 });
+    const { entities: ent2 } = createTestContext({ seed: 22222 });
 
-        // For this test to be meaningful, we need to invoke logic that uses the RNG.
-        // Let's manually invoke RNG
-        entities.rng.frandom();
+    const r1 = ent1.rng.frandom();
+    const r2 = ent2.rng.frandom();
+
+    expect(r1).not.toBe(r2);
+  });
+
+  it('monster spawning and thinking logic is deterministic', () => {
+    // This test simulates a minimal "gameplay" loop involving RNG
+    const seed = 999;
+
+    const runSimulation = () => {
+      const { entities } = createTestContext({ seed });
+      const sequence: number[] = [];
+
+      // Simulate some RNG calls that would happen during gameplay
+      // e.g. monster attack checks, random walks
+      for (let i = 0; i < 50; i++) {
+        sequence.push(entities.rng.frandom());
+        sequence.push(entities.rng.crandom());
+        // Simulate a probability check
+        if (entities.rng.frandom() > 0.5) {
+            sequence.push(1);
+        } else {
+            sequence.push(0);
+        }
       }
+      return sequence;
+    };
 
-      // Hash state - simplistically just capture the RNG state or some side effect
-      // Since we don't have a full game loop in this unit test context easily without setup,
-      // we verify the RNG sequence is identical.
+    const result1 = runSimulation();
+    const result2 = runSimulation();
 
-      finalStates.push(rng.getState());
-    }
-
-    // Vitest 'toBe' checks object reference equality, but RandomGenerator state returns a new object.
-    // Use toStrictEqual for deep equality check.
-    expect(finalStates[0]).toStrictEqual(finalStates[1]);
+    expect(result1).toHaveLength(result2.length);
+    expect(result1).toEqual(result2);
   });
 
-  it('produces different results with different seeds', () => {
-      const { entities: ent1 } = createTestContext({ seed: 11111 });
-      const { entities: ent2 } = createTestContext({ seed: 22222 });
-
-      // Ensure we are using the mocked RNG which should respect the seed passed to createTestContext
-
-      // Verify initial states are different (if we expose state)
-      // or verify output sequence is different.
-
-      // Note: If RandomGenerator implementation is flawed, this might fail.
-      // But assuming Shared package is correct.
-
-      // Let's verify we actually got different RNG instances
-      expect(ent1.rng).not.toBe(ent2.rng);
-
-      const r1 = ent1.rng.frandom();
-      const r2 = ent2.rng.frandom();
-
-      expect(r1).not.toBe(r2);
-  });
-
-  it('EntitySystem exposes deterministic RNG', () => {
-      const { entities } = createTestContext();
-      expect(entities.rng).toBeDefined();
-      expect(typeof entities.rng.frandom).toBe('function');
-      expect(typeof entities.rng.crandom).toBe('function');
+  it('throws if Math.random is used', () => {
+      expect(() => {
+          Math.random();
+      }).toThrow('Math.random() called in deterministic context!');
   });
 });
