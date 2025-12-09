@@ -16,7 +16,7 @@ import {
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { monster_fire_blaster } from './attack.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 
 const MONSTER_TICK = 0.1;
 
@@ -191,7 +191,7 @@ export function SP_monster_turret(self: Entity, context: SpawnContext): void {
             self.deadflag = DeadFlag.Dead;
             self.solid = Solid.Not;
             context.entities.sound?.(self, 0, 'misc/udeath.wav', 1, 1, 0);
-            throwGibs(context.entities, self.origin, damage);
+            throwGibs(context.entities, self.origin, damage, GIB_METALLIC);
             context.entities.free(self);
             return;
         }

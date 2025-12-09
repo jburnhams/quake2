@@ -33,7 +33,7 @@ import {
   EntityFlags,
 } from '../entity.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
-import { throwGibs } from '../gibs.js';
+import { throwGibs, GIB_METALLIC } from '../gibs.js';
 import { T_Damage, Damageable } from '../../combat/damage.js';
 import { DamageFlags } from '../../combat/damageFlags.js';
 import { M_CheckBottom } from '../../ai/movement.js';
@@ -163,7 +163,7 @@ function fixbot_dead(self: Entity): void {
 function fixbot_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod, context: EntitySystem): void {
     context.engine.sound?.(self, 0, 'flyer/flydeth1.wav', 1, 1, 0);
     // BecomeExplosion1(self); // TODO: implement explosion effect
-    throwGibs(context, self.origin, damage); // Placeholder for explosion
+    throwGibs(context, self.origin, damage, GIB_METALLIC); // Placeholder for explosion
     self.deadflag = DeadFlag.Dead;
     self.takedamage = false; // Usually dead things don't take damage unless gibbed
     context.free(self); // Explodes, so free?
