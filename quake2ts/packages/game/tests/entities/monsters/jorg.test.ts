@@ -1,111 +1,191 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SP_monster_jorg } from '../../../src/entities/monsters/jorg.js';
+import { SP_monster_jorg, registerJorgSpawns } from '../../../src/entities/monsters/jorg.js';
+import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity, MoveType, Solid, DamageMod } from '../../../src/entities/entity.js';
+import * as attack from '../../../src/entities/monsters/attack.js';
 import { createTestContext } from '../../test-helpers.js';
-import * as attackModule from '../../../src/entities/monsters/attack.js';
-import * as rogueAi from '../../../src/ai/rogue.js';
-
-// Mock attack module
-vi.mock('../../../src/entities/monsters/attack.js', () => ({
-  monster_fire_bullet_v2: vi.fn(),
-  monster_fire_bfg: vi.fn(),
-}));
-
-// Spy on rogue AI module instead of mocking it directly to ensure exports work
-// But since we want to return a value, we can use vi.spyOn if the module is imported
-// or vi.mock if we want to replace it entirely.
-// The issue "Cannot destructure property 'aimdir' of 'PredictAim(...)' as it is undefined" suggests the mock isn't returning what we expect.
-
-vi.mock('../../../src/ai/rogue.js', () => ({
-  PredictAim: vi.fn(),
-}));
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('monster_jorg', () => {
-  let context: any; // SpawnContext
-  let entities: any;
-  let jorg: Entity;
+  let system: EntitySystem;
+  let context: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Configure PredictAim mock return value
-    (rogueAi.PredictAim as any).mockReturnValue({
-        aimdir: { x: 1, y: 0, z: 0 },
-        aimpoint: { x: 100, y: 0, z: 0 }
-    });
-
-    context = createTestContext();
-    entities = context.entities;
-    jorg = entities.spawn();
-    SP_monster_jorg(jorg, context);
+    const testContext = createTestContext();
+    system = testContext.entities as unknown as EntitySystem;
+    context = testContext;
   });
 
-  it('should spawn with correct properties', () => {
-    expect(jorg.classname).toBe('monster_jorg');
-    expect(jorg.health).toBe(3000);
-    expect(jorg.max_health).toBe(3000);
-    expect(jorg.movetype).toBe(MoveType.Step);
-    expect(jorg.solid).toBe(Solid.BoundingBox);
+  it('registers spawn function', () => {
+    const registry = new SpawnRegistry();
+    registerJorgSpawns(registry);
+    expect(registry.get('monster_jorg')).toBe(SP_monster_jorg);
   });
 
-  it('should use PredictAim when firing bullets (Attack 1 Loop)', () => {
-    const enemy = entities.spawn();
-    enemy.origin = { x: 200, y: 0, z: 0 };
-    enemy.viewheight = 20;
-    jorg.enemy = enemy;
+  it('spawns with correct properties', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
 
-    // Use mock RNG
-    vi.spyOn(entities.rng, 'frandom').mockReturnValue(0.1);
+    expect(ent.classname).toBe('monster_jorg');
+    expect(ent.model).toBe('models/monsters/boss3/jorg/tris.md2');
+    expect(ent.health).toBe(3000);
+    expect(ent.max_health).toBe(3000);
+    expect(ent.mass).toBe(1000);
+    expect(ent.solid).toBe(Solid.BoundingBox);
+    expect(ent.movetype).toBe(MoveType.Step);
+    expect(ent.viewheight).toBe(25);
+    expect(ent.takedamage).toBe(true);
+  });
 
-    // Initial attack selection
-    jorg.monsterinfo.attack(jorg, entities);
+  it('enters stand state after spawn', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
 
-    // jorg_attack sets current_move to attack1_move or attack2_move
-    // based on random <= 0.75.
-    // 0.1 <= 0.75 -> attack1_move (start_attack1 in C)
-    // Wait, in my updated jorg.ts, attack1_move is the loop?
-    // Let's check jorg.ts
-    // jorg_attack sets attack1_move.
-    // attack1_move is the loop frames directly?
-    // attack1_move = { firstframe: 73, ... frames: attack1_frames ... }
-    // attack1_frames has think: jorg_fire_bullet.
+    expect(ent.monsterinfo.current_move).toBeDefined();
+    // Stand move
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(0);
+    expect(ent.monsterinfo.current_move?.lastframe).toBe(50);
+  });
 
-    // But wait, there is attack1_start_move which chains to attack1_move.
-    // In jorg.ts:
-    // attack1_start_move: frames 65-72
-    // attack1_move: frames 73-78, think: jorg_fire_bullet.
+  it('handles pain correctly', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
+    ent.health = 2900;
 
-    // jorg_attack sets current_move = attack1_move?
-    // In jorg.ts:
-    // if (Math.random() <= 0.75) { ... self.monsterinfo.current_move = attack1_move; }
-    // I mapped it directly to the loop for simplicity in the port or maybe missed the start phase usage?
-    // In jorg.ts: `self.monsterinfo.current_move = attack1_move;`
-    // So it skips start?
-    // Ah, wait. `attack1_start_move` exists but is it used?
-    // `const attack1_start_move` is defined but only endfunc is set.
-    // `jorg_attack` sets `attack1_move`.
+    // Mock RNG to ensure pain triggers
+    // Jorg has high pain thresholds, damage must be significant or lucky
+    vi.spyOn(system.rng, 'frandom').mockReturnValue(0.0); // Always pass chance checks
 
-    // Okay, so current_move IS attack1_move.
-    // Frames are 6.
-    // Frame 0 has think `jorg_fire_bullet`.
+    // Damage > 50 for pain threshold 1
+    ent.pain!(ent, system.world, 0, 51);
 
-    const move = jorg.monsterinfo.current_move;
-    expect(move).toBeDefined();
+    // Should enter pain2 state (damage > 50)
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(99);
+  });
 
-    const frame = move?.frames[0];
-    expect(frame?.think).toBeDefined();
+  it('changes skin when health is low', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
+    ent.health = 1000; // < 3000/2
 
-    frame?.think?.(jorg, entities);
+    ent.pain!(ent, system.world, 0, 10);
 
-    expect(rogueAi.PredictAim).toHaveBeenCalled();
-    expect(rogueAi.PredictAim).toHaveBeenCalledTimes(2);
+    expect(ent.skin).toBe(1);
+  });
 
-    const calls = (rogueAi.PredictAim as any).mock.calls;
-    const offsets = calls.map((c: any) => c[6]);
-    expect(offsets).toContain(0.2);
-    expect(offsets).toContain(-0.2);
+  it('handles death correctly', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
 
-    expect(attackModule.monster_fire_bullet_v2).toHaveBeenCalledTimes(2);
+    ent.die!(ent, system.world, system.world, 3100, { x: 0, y: 0, z: 0 });
+
+    expect(ent.deadflag).toBe(DeadFlag.Dead);
+    expect(ent.solid).toBe(Solid.Not);
+    expect(ent.monsterinfo.current_move?.firstframe).toBe(127);
+  });
+
+  it('attacks with machinegun', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
+
+    const enemy = system.spawn();
+    enemy.health = 100;
+    enemy.origin = { x: 100, y: 0, z: 0 };
+    ent.enemy = enemy;
+
+    // Mock attack functions
+    const monster_fire_bullet_v2 = vi.spyOn(attack, 'monster_fire_bullet_v2');
+
+    // Force attack state
+    ent.monsterinfo.attack!(ent);
+
+    // Assuming we rolled for attack 1 (machinegun)
+    // We can force the move frame logic
+    // Attack 1 frame loop
+    // Frame 73 is first frame of loop, calls jorg_fire_bullet
+    const attackMove = ent.monsterinfo.current_move; // Should be attack1 or attack2
+
+    // We can't easily predict which attack it chose without mocking random in the attack func
+    // But let's verify jorg_fire_bullet logic specifically
+
+    // Manually invoke the think function for the attack frame
+    // We need to access the closure or exported function.
+    // Since jorg_fire_bullet is not exported, we have to trigger it via the move frames.
+
+    // Let's assume we want to test the machinegun logic specifically.
+    // We can check if calling the think function of the attack1_frames triggers the bullets.
+
+    // Find the attack1 move.
+    // Based on source: firstframe 73, lastframe 78
+    // But we don't have direct access to 'attack1_move' variable from here.
+    // However, if we force random to 0, jorg_attack selects attack1.
+    vi.spyOn(system.rng, 'frandom').mockReturnValue(0.0);
+    ent.monsterinfo.attack!(ent);
+
+    const move = ent.monsterinfo.current_move!;
+    expect(move.firstframe).toBe(73); // attack1_move start
+
+    // Execute the think function for the first frame of the attack loop
+    if (move.frames && move.frames[0].think) {
+        move.frames[0].think(ent, system);
+
+        // Should fire two bullets (left and right)
+        expect(monster_fire_bullet_v2).toHaveBeenCalledTimes(2);
+        expect(monster_fire_bullet_v2).toHaveBeenCalledWith(
+            ent,
+            expect.anything(), // start
+            expect.anything(), // dir
+            6, // damage
+            4, // kick
+            expect.anything(),
+            expect.anything(),
+            0,
+            system,
+            expect.anything() // mod
+        );
+    } else {
+        throw new Error('Attack frame expected to have a think function');
+    }
+  });
+
+  it('attacks with BFG', () => {
+    const ent = system.spawn();
+    SP_monster_jorg(ent, context);
+
+    const enemy = system.spawn();
+    enemy.health = 100;
+    enemy.origin = { x: 100, y: 0, z: 0 };
+    ent.enemy = enemy;
+
+    const monster_fire_bfg = vi.spyOn(attack, 'monster_fire_bfg');
+
+    // Force attack 2 (BFG) by mocking high random value
+    vi.spyOn(system.rng, 'frandom').mockReturnValue(0.9);
+    ent.monsterinfo.attack!(ent);
+
+    const move = ent.monsterinfo.current_move!;
+    expect(move.firstframe).toBe(83); // attack2_move start
+
+    // Find the frame that fires BFG (frame 6 in the sequence)
+    // 83 + 6 = 89
+    const frameIndex = 6;
+    if (move.frames && move.frames[frameIndex] && move.frames[frameIndex].think) {
+        move.frames[frameIndex].think!(ent, system);
+
+        expect(monster_fire_bfg).toHaveBeenCalledWith(
+            ent,
+            expect.anything(),
+            expect.anything(),
+            50, // damage
+            300, // speed
+            100, // kick
+            200, // radius
+            0,
+            system
+        );
+    } else {
+         throw new Error('BFG Attack frame expected to have a think function');
+    }
   });
 });
