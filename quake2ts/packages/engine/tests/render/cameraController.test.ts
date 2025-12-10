@@ -64,4 +64,42 @@ describe('FreeCameraController', () => {
     controller.update(1.0, input);
     expect(camera.angles[0]).toBe(-89);
   });
+
+  it('respects collision toggle and checkPosition callback', () => {
+    const checkPosition = vi.fn((pos: vec3) => {
+      // Simulate hitting a wall at x=50
+      if (pos[0] > 50) {
+        return vec3.fromValues(50, pos[1], pos[2]);
+      }
+      return pos;
+    });
+
+    controller = new FreeCameraController(camera, {
+      speed: 100,
+      sensitivity: 1,
+      checkPosition
+    });
+
+    const input: CameraInput = {
+      moveForward: true, moveBackward: false,
+      moveLeft: false, moveRight: false,
+      moveUp: false, moveDown: false,
+      pitch: 0, yaw: 0
+    };
+
+    // 1. Collision disabled (default)
+    controller.setCollision(false);
+    controller.update(1.0, input); // moves 100 units
+    expect(camera.position[0]).toBeCloseTo(100);
+    expect(checkPosition).not.toHaveBeenCalled();
+
+    // Reset position
+    camera.position = vec3.create();
+
+    // 2. Collision enabled
+    controller.setCollision(true);
+    controller.update(1.0, input); // moves 100 units but clamped to 50
+    expect(checkPosition).toHaveBeenCalled();
+    expect(camera.position[0]).toBeCloseTo(50);
+  });
 });
