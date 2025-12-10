@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AssetPreviewGenerator } from '../../src/assets/preview.js';
 import { AssetManager } from '../../src/assets/manager.js';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { Md2Model } from '../../src/assets/md2.js';
+import { Md3Model } from '../../src/assets/md3.js';
+import { Vec3 } from '@quake2ts/shared';
 
 describe('AssetPreviewGenerator', () => {
   let assetManager: AssetManager;
@@ -79,5 +82,87 @@ describe('AssetPreviewGenerator', () => {
     // Should scale to 2x1 to maintain aspect ratio within 2x2 box
     expect(result!.width).toBe(2);
     expect(result!.height).toBe(1);
+  });
+
+  it('generateModelThumbnail creates wireframe for MD2', async () => {
+    const mockVertices: Vec3[] = [
+      { x: -10, y: -10, z: -10 },
+      { x: 10, y: -10, z: -10 },
+      { x: 0, y: 10, z: 0 }
+    ];
+
+    // Triangle: 0-1-2
+    const mockTriangles = [
+      { vertexIndices: [0, 1, 2] as [number, number, number], texCoordIndices: [0, 0, 0] as [number, number, number] }
+    ];
+
+    const mockMd2: Md2Model = {
+      header: {} as any,
+      skins: [],
+      texCoords: [],
+      triangles: mockTriangles,
+      frames: [{
+        name: 'frame1',
+        vertices: mockVertices.map(p => ({ position: p, normalIndex: 0, normal: {x:0,y:0,z:1} })),
+        minBounds: {x:-10,y:-10,z:-10},
+        maxBounds: {x:10,y:10,z:0}
+      }],
+      glCommands: []
+    };
+
+    vi.spyOn(assetManager, 'loadMd2Model').mockResolvedValue(mockMd2);
+
+    const size = 64;
+    const result = await generator.generateModelThumbnail('test.md2', size);
+
+    expect(result).not.toBeNull();
+    expect(result!.width).toBe(size);
+    expect(result!.height).toBe(size);
+
+    // Check if we drew something (green pixels)
+    let foundGreen = false;
+    for (let i = 0; i < result!.data.length; i += 4) {
+      if (result!.data[i+1] === 255 && result!.data[i+3] === 255) {
+        foundGreen = true;
+        break;
+      }
+    }
+    expect(foundGreen).toBe(true);
+  });
+
+  it('generateModelThumbnail creates wireframe for MD3', async () => {
+    const mockVertices = [
+      { position: { x: -10, y: -10, z: -10 } },
+      { position: { x: 10, y: -10, z: -10 } },
+      { position: { x: 0, y: 10, z: 0 } }
+    ];
+
+    const mockMd3: Md3Model = {
+      header: {} as any,
+      frames: [],
+      tags: [],
+      surfaces: [{
+        shaders: [],
+        triangles: [{ indices: [0, 1, 2] }],
+        texCoords: [],
+        vertices: [mockVertices as any]
+      } as any]
+    };
+
+    vi.spyOn(assetManager, 'loadMd3Model').mockResolvedValue(mockMd3);
+
+    const size = 64;
+    const result = await generator.generateModelThumbnail('test.md3', size);
+
+    expect(result).not.toBeNull();
+    // Check green pixels
+    let foundGreen = false;
+    for (let i = 0; i < result!.data.length; i += 4) {
+      if (result!.data[i+1] === 255 && result!.data[i+3] === 255) {
+        foundGreen = true;
+        break;
+      }
+    }
+    expect(foundGreen).toBe(true);
   });
 });
