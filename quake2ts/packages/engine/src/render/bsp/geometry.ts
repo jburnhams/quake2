@@ -1,5 +1,6 @@
 import { BspMap } from '../../assets/bsp.js';
 import { VertexArray, VertexBuffer, IndexBuffer, Texture2D } from '../resources.js';
+import { generateBspGeometryData } from './generator.js';
 
 export interface BspSurfaceLightmap {
   width: number;
@@ -24,8 +25,7 @@ export interface BspBatch {
   flags: number;
   styleIndices: readonly number[];
   styleLayers: readonly number[]; // [layer0, layer1, layer2, layer3] - -1 for none
-  lightmapOffset?: number; // Offset into lightmap atlas if we had one?
-  // Actually, BspPipeline has u_lightmapAtlas.
+  lightmapOffset?: number;
 }
 
 export interface BspGeometry {
@@ -37,43 +37,6 @@ export interface BspGeometry {
   lightmapAtlas: Texture2D | null;
 }
 
-// Simple shelf packer for lightmaps
-class LightmapPacker {
-  width: number;
-  height: number;
-  private x = 0;
-  private y = 0;
-  private rowHeight = 0;
-
-  // Storing placement info: key -> {x, y, w, h}
-  placements = new Map<number, {x: number, y: number, w: number, h: number}>();
-
-  constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
-
-  pack(id: number, w: number, h: number): boolean {
-    if (this.x + w > this.width) {
-      this.x = 0;
-      this.y += this.rowHeight;
-      this.rowHeight = 0;
-    }
-
-    if (this.y + h > this.height) {
-      return false; // Atlas full
-    }
-
-    this.placements.set(id, { x: this.x, y: this.y, w, h });
-    this.x += w;
-    if (h > this.rowHeight) {
-      this.rowHeight = h;
-    }
-
-    return true;
-  }
-}
-
 export function buildBspGeometry(
   gl: WebGL2RenderingContext,
   surfaces: BspSurfaceInput[],
@@ -82,7 +45,12 @@ export function buildBspGeometry(
     hiddenClassnames?: Set<string>;
   },
 ): BspGeometry {
-  // 1. Filter surfaces based on hidden classnames
+
+  // Reuse the logic in map parameter to filter faces in the generator if needed,
+  // but for now let's just do the filtering here before passing to generator if we want to be consistent
+  // with previous logic.
+  // Actually, the previous logic filtered the surfaces list itself.
+
   let filteredSurfaces = surfaces;
 
   if (map && options?.hiddenClassnames && options.hiddenClassnames.size > 0) {
@@ -108,203 +76,16 @@ export function buildBspGeometry(
     }
   }
 
-  // 2. Pack Lightmaps
-  // We'll use a fixed size atlas for now, say 2048x2048 or 4096.
-  // Quake 2 lightmaps are small but there are many.
-  const ATLAS_SIZE = 2048;
-  const packer = new LightmapPacker(ATLAS_SIZE, ATLAS_SIZE);
+  // Use the generator
+  const data = generateBspGeometryData(filteredSurfaces);
 
-  // Collect all surfaces with lightmaps
-  const lightmappedSurfaces = filteredSurfaces.filter((s) => s.lightmap);
-
-  // Sort by height for better packing? (Naive shelf packing doesn't strictly require it but helps)
-  // Height should include all styles
-  lightmappedSurfaces.sort((a, b) => {
-    // Estimate total height
-    const hA = a.lightmap!.data.length / (a.lightmap!.width * 3);
-    const hB = b.lightmap!.data.length / (b.lightmap!.width * 3);
-    return hB - hA;
-  });
-
-  const atlasData = new Uint8Array(ATLAS_SIZE * ATLAS_SIZE * 4); // RGBA (alpha unused or 255)
-  // Initialize with black/transparent
-
-  for (const surf of lightmappedSurfaces) {
-    const lm = surf.lightmap!;
-    // Calculate total height needed for all styles
-    const totalHeight = lm.data.length / (lm.width * 3);
-
-    if (packer.pack(surf.faceIndex, lm.width, totalHeight)) {
-      const placement = packer.placements.get(surf.faceIndex)!;
-      // Copy data to atlas
-      // lm.data is RGB (3 bytes)
-      for (let ly = 0; ly < totalHeight; ly++) {
-        for (let lx = 0; lx < lm.width; lx++) {
-          const srcIdx = (ly * lm.width + lx) * 3;
-          const dstIdx = ((placement.y + ly) * ATLAS_SIZE + (placement.x + lx)) * 4;
-
-          atlasData[dstIdx + 0] = lm.data[srcIdx + 0];
-          atlasData[dstIdx + 1] = lm.data[srcIdx + 1];
-          atlasData[dstIdx + 2] = lm.data[srcIdx + 2];
-          atlasData[dstIdx + 3] = 255;
-        }
-      }
-    } else {
-      console.warn(`Failed to pack lightmap for face ${surf.faceIndex}`);
-    }
-  }
-
-  // 2. Generate Geometry (Vertices & Indices)
-  // We need to re-iterate surfaces and update lightmap UVs based on packing.
-  // Also triangulate fans.
-
-  const allVertices: number[] = [];
-  const allIndices: number[] = [];
-  const batches: BspBatch[] = [];
-
-  // Group by texture AND light styles for batches
-  // Ideally we sort by texture to minimize draw calls, but `renderBsp` might handle sorting.
-  // But here we are building a single big buffer.
-  // Let's sort surfaces by texture first to create contiguous batches.
-
-  // Note: Modifying the input array order (copy).
-  const surfacesToProcess = [...filteredSurfaces];
-  surfacesToProcess.sort((a, b) => {
-    const texDiff = a.textureName.localeCompare(b.textureName);
-    if (texDiff !== 0) return texDiff;
-    // Secondary sort by styles
-    for (let i = 0; i < 4; i++) {
-      if (a.styles[i] !== b.styles[i]) return a.styles[i] - b.styles[i];
-    }
-    return 0;
-  });
-
-  let currentTexture = '';
-  let currentStyles: number[] = [];
-  let batchStart = 0;
-  let batchCount = 0;
-  let batchFlags = 0;
-
-  let vertexOffset = 0; // Base vertex index for current surface
-
-  const createBatch = (
-      textureName: string,
-      offset: number,
-      count: number,
-      flags: number,
-      styles: number[]
-  ) => {
-       // Calculate Style Layers
-       // Map slot index (0..3) to packed layer index (0, 1, 2...)
-       // styles: [0, 255, 1, 255] -> Slot 0 is map 0. Slot 2 is map 1.
-       const styleLayers = [-1, -1, -1, -1];
-       let layerCounter = 0;
-       for (let i=0; i<4; i++) {
-           if (styles[i] !== 255) {
-               styleLayers[i] = layerCounter;
-               layerCounter++;
-           }
-       }
-
-       batches.push({
-          textureName,
-          offset,
-          count,
-          flags,
-          styleIndices: [...styles],
-          styleLayers
-        });
-  };
-
-  for (const surf of surfacesToProcess) {
-    let newBatch = false;
-    if (surf.textureName !== currentTexture) {
-      newBatch = true;
-    } else {
-      for (let i = 0; i < 4; i++) {
-        if (surf.styles[i] !== currentStyles[i]) {
-          newBatch = true;
-          break;
-        }
-      }
-    }
-
-    if (newBatch) {
-      if (batchCount > 0) {
-        createBatch(currentTexture, batchStart, batchCount, batchFlags, currentStyles);
-      }
-      currentTexture = surf.textureName;
-      currentStyles = [...surf.styles];
-      batchStart = allIndices.length; // Offset in element count
-      batchCount = 0;
-      batchFlags = surf.flags;
-    }
-
-    // Add Vertices
-    const placement = packer.placements.get(surf.faceIndex);
-    const hasLightmap = !!placement;
-
-    // Original UVs in vertices are local to face or something?
-    // In `createBspSurfaces`, we put:
-    // v[5] = l[0] (u)
-    // v[6] = l[1] (v)
-    // These were normalized to 0..1 relative to the lightmap rect?
-    // No, I set them as `(dot(...) / 16) - min`. So they are pixel coordinates relative to lightmap origin (0,0).
-    // I need to offset them by placement.x and placement.y, then normalize to atlas size.
-
-    const startV = allVertices.length / 8; // Stride is now 8 floats (32 bytes)
-
-    for (let i = 0; i < surf.vertexCount; i++) {
-      const src = surf.vertices;
-      const x = src[i*7+0];
-      const y = src[i*7+1];
-      const z = src[i*7+2];
-      const u = src[i*7+3];
-      const v = src[i*7+4];
-      let lu = src[i*7+5];
-      let lv = src[i*7+6];
-
-      let lStep = 0;
-
-      if (hasLightmap) {
-        // Adjust to atlas position and normalize
-        // Add 0.5 to sample center of texel?
-        lu = (placement!.x + lu + 0.5) / ATLAS_SIZE;
-        lv = (placement!.y + lv + 0.5) / ATLAS_SIZE;
-        // height of ONE style
-        lStep = surf.lightmap!.height / ATLAS_SIZE;
-      } else {
-          lu = 0; lv = 0;
-      }
-
-      allVertices.push(x, y, z, u, v, lu, lv, lStep);
-    }
-
-    // Add Indices (Triangulate Fan)
-    // Vertices 0, 1, 2; 0, 2, 3; ...
-    // Vertex indices are relative to `startV`
-    for (let i = 2; i < surf.vertexCount; i++) {
-        allIndices.push(startV + 0);
-        allIndices.push(startV + i - 1);
-        allIndices.push(startV + i);
-        batchCount += 3;
-    }
-
-    vertexOffset += surf.vertexCount;
-  }
-
-  // Push last batch
-  if (batchCount > 0) {
-     createBatch(currentTexture, batchStart, batchCount, batchFlags, currentStyles);
-  }
-
-  // 3. Create GPU Resources
+  // Create GPU Resources
   const vao = new VertexArray(gl);
   const vbo = new VertexBuffer(gl, gl.STATIC_DRAW);
   const ibo = new IndexBuffer(gl, gl.STATIC_DRAW);
 
-  vbo.upload(new Float32Array(allVertices));
-  ibo.upload(new Uint32Array(allIndices)); // Or Uint16 if small enough
+  vbo.upload(data.vertices as any);
+  ibo.upload(data.indices as any);
 
   // Stride 8 floats = 32 bytes
   // 0: pos (3)
@@ -320,7 +101,7 @@ export function buildBspGeometry(
 
   // Lightmap Texture
   let lmTexture: Texture2D | null = null;
-  if (lightmappedSurfaces.length > 0) {
+  if (data.lightmapAtlas) {
     lmTexture = new Texture2D(gl);
     lmTexture.bind();
     lmTexture.setParameters({
@@ -329,15 +110,15 @@ export function buildBspGeometry(
         wrapS: gl.CLAMP_TO_EDGE,
         wrapT: gl.CLAMP_TO_EDGE
     });
-    lmTexture.upload(ATLAS_SIZE, ATLAS_SIZE, atlasData);
+    lmTexture.upload(data.atlasSize, data.atlasSize, data.lightmapAtlas);
   }
 
   return {
     vao,
     vbo,
     ibo,
-    indexCount: allIndices.length,
-    batches,
+    indexCount: data.indices.length,
+    batches: data.batches,
     lightmapAtlas: lmTexture
   };
 }
