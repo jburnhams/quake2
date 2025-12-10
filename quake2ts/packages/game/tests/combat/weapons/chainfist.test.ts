@@ -69,9 +69,6 @@ describe('Chainfist Weapon', () => {
       timeSeconds: 100,
       sound: vi.fn(),
       game: gameMock,
-      rng: {
-        frandom: vi.fn().mockReturnValue(0.01),
-      }
     } as unknown as EntitySystem;
 
     entity = {
@@ -162,8 +159,8 @@ describe('Chainfist Weapon', () => {
           // So we set 42.
           entity.client!.gun_frame = 42;
 
-          // Note: Math.random is NOT mocked here because the code now uses sys.rng.frandom().
-          // We mocked sys.rng.frandom above in beforeEach.
+          // Mock Math.random to return low value for both checks
+          const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
           Weapon_ChainFist(entity, sys);
 
@@ -174,6 +171,8 @@ describe('Chainfist Weapon', () => {
               TempEntity.CHAINFIST_SMOKE,
               expect.anything()
           );
+
+          randomSpy.mockRestore();
       });
   });
 });

@@ -228,8 +228,8 @@ export function createGame(
       const client = player.client;
 
       // Damage blend
-      if (client.damage_alpha > 0) {
-        const da = client.damage_alpha;
+      if ((client.damage_alpha ?? 0) > 0) {
+        const da = client.damage_alpha!;
         blend[3] += da * 0.5;
         blend[0] += (client.damage_blend?.[0] ?? 1) * da;
         blend[1] += (client.damage_blend?.[1] ?? 0) * da;
