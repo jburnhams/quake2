@@ -28,21 +28,6 @@ import { visible } from '../../ai/perception.js';
 
 const MONSTER_TICK = 0.1;
 
-// Constants extracted from m_gunner.c
-const GUNNER_HEALTH = 175;
-const GUNNER_MASS = 200;
-const GUNNER_PAIN_DEBOUNCE = 3;
-const GUNNER_BULLET_DAMAGE = 3;
-const GUNNER_BULLET_KICK = 4;
-const GUNNER_BULLET_HSPREAD = 300;
-const GUNNER_BULLET_VSPREAD = 500;
-const GUNNER_GRENADE_DAMAGE = 50;
-const GUNNER_GRENADE_SPEED = 600;
-const GUNNER_JUMP_SPEED_FWD = 600;
-const GUNNER_JUMP_SPEED_UP = 270;
-const GUNNER_MIN_JUMP_DIST = 256;
-const GUNNER_ATTACK_FINISHED_DELAY = 3.0;
-
 // Wrappers for AI functions to match AIAction signature (self, dist)
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
     ai_stand(self, MONSTER_TICK, context);
@@ -154,10 +139,14 @@ function gunner_fire_bullet_logic(self: Entity, context: any): void {
     };
 
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+    const damage = 3;
+    const kick = 4;
 
     context.engine.sound?.(self, 0, 'gunner/gunatck2.wav', 1, 1, 0);
 
-    monster_fire_bullet(self, start, forward, GUNNER_BULLET_DAMAGE, GUNNER_BULLET_KICK, GUNNER_BULLET_HSPREAD, GUNNER_BULLET_VSPREAD, 0, context, DamageMod.CHAINGUN);
+    // DEFAULT_BULLET_HSPREAD = 300
+    // DEFAULT_BULLET_VSPREAD = 500
+    monster_fire_bullet(self, start, forward, damage, kick, 300, 500, 0, context, DamageMod.CHAINGUN);
 }
 
 function gunner_fire_grenade(self: Entity, context: any): void {
@@ -170,10 +159,12 @@ function gunner_fire_grenade(self: Entity, context: any): void {
     };
 
     const forward = normalizeVec3(subtractVec3(self.enemy.origin, start));
+    const damage = 50;
+    const speed = 600;
 
     context.engine.sound?.(self, 0, 'gunner/gunatck3.wav', 1, 1, 0);
 
-    createGrenade(context as EntitySystem, self, start, forward, GUNNER_GRENADE_DAMAGE, GUNNER_GRENADE_SPEED);
+    createGrenade(context as EntitySystem, self, start, forward, damage, speed);
 }
 
 function gunner_pain(self: Entity, context: any): void {
@@ -182,7 +173,7 @@ function gunner_pain(self: Entity, context: any): void {
     }
 
     if (self.pain_debounce_time && context.timeSeconds < self.pain_debounce_time) return;
-    self.pain_debounce_time = context.timeSeconds + GUNNER_PAIN_DEBOUNCE;
+    self.pain_debounce_time = context.timeSeconds + 3;
 
     if (!M_ShouldReactToPain(self, context)) {
         return;
@@ -249,6 +240,9 @@ function gunner_jump_takeoff(self: Entity, context: any): void {
     if (!self.enemy) return;
 
     const diff = subtractVec3(self.enemy.origin, self.origin);
+    const dist = Math.sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z);
+    // speed 600
+    const fwd_speed = 600;
 
     const forward = normalizeVec3({x: diff.x, y: diff.y, z: 0});
     const angles = vectorToAngles(forward);
@@ -259,13 +253,13 @@ function gunner_jump_takeoff(self: Entity, context: any): void {
     self.origin = origin;
 
     self.velocity = {
-      x: forward.x * GUNNER_JUMP_SPEED_FWD,
-      y: forward.y * GUNNER_JUMP_SPEED_FWD,
-      z: GUNNER_JUMP_SPEED_UP
+      x: forward.x * fwd_speed,
+      y: forward.y * fwd_speed,
+      z: 270
     };
     self.groundentity = null;
     self.monsterinfo.aiflags |= AIFlags.Ducked;
-    self.monsterinfo.attack_finished = context.timeSeconds + GUNNER_ATTACK_FINISHED_DELAY;
+    self.monsterinfo.attack_finished = context.timeSeconds + 3.0;
   }
 
   function gunner_check_landing(self: Entity, context: any): void {
@@ -296,7 +290,7 @@ function gunner_jump_takeoff(self: Entity, context: any): void {
 
      // Jump if far away and random chance
      // Match rerelease logic if possible, or reasonable approx
-     if (dist > GUNNER_MIN_JUMP_DIST && context.rng.frandom() < 0.02) {
+     if (dist > 256 && context.rng.frandom() < 0.02) {
          context.engine.sound?.(self, 0, 'gunner/gunatck3.wav', 1, 1, 0);
          self.monsterinfo.current_move = jump_move;
      }
@@ -525,9 +519,9 @@ export function SP_monster_gunner(self: Entity, context: SpawnContext): void {
     self.maxs = { x: 16, y: 16, z: 32 };
     self.movetype = MoveType.Step;
     self.solid = Solid.BoundingBox;
-    self.health = GUNNER_HEALTH * context.health_multiplier;
+    self.health = 175 * context.health_multiplier;
     self.max_health = self.health;
-    self.mass = GUNNER_MASS;
+    self.mass = 200;
     self.takedamage = true;
 
     self.pain = (self, other, kick, damage) => {

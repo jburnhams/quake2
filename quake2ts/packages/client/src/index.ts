@@ -70,8 +70,6 @@ export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
 
-export * from './session.js';
-
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
 export interface ClientImports {
@@ -540,7 +538,7 @@ export function createClient(imports: ClientImports): ClientExports {
           // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
           // demoHandler is ClientNetworkHandler.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
-              currentPacketEntities = demoHandler.latestFrame.packetEntities;
+              currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
           }
 
           if (lastRendered) {

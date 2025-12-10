@@ -26,13 +26,15 @@ import {
     U_OLD_FRAME_HIGH,
     FogData,
     DamageIndicator,
-    RenderableEntity
+    RenderableEntity,
+    DLight // Import DLight
 } from '@quake2ts/engine';
 import {
     Vec3, ZERO_VEC3,
     G_GetPowerupStat, PowerupId,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
-    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
+    addVec3, TempEntity
 } from '@quake2ts/shared';
 // Import from cgame
 import { PredictionState, defaultPredictionState, interpolatePredictionState, ViewEffects } from '@quake2ts/cgame';
@@ -57,6 +59,8 @@ export interface DemoHandlerCallbacks {
     onDamage?: (indicators: DamageIndicator[]) => void;
     onServerData?: (protocol: number, tickRate?: number) => void;
     onLocPrint?: (flags: number, base: string, args: string[]) => void;
+    // New: Allow demo handler to pass transient dlights
+    onTransientDLight?: (light: DLight) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -262,9 +266,69 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
-        // TODO: Trigger temp entities in renderer
-        // The Renderer interface does not currently expose the particle system or generic temp entity spawning functions.
-        // Once Renderer is updated to support particles, this can be implemented.
+        // Handle Explosion Lights
+        if (this.callbacks?.onTransientDLight) {
+            let dlight: DLight | undefined;
+            const now = Date.now() / 1000;
+
+            switch(type) {
+                case TempEntity.EXPLOSION1:
+                case TempEntity.ROCKET_EXPLOSION:
+                case TempEntity.ROCKET_EXPLOSION_WATER:
+                case TempEntity.GRENADE_EXPLOSION:
+                case TempEntity.GRENADE_EXPLOSION_WATER:
+                    dlight = {
+                        origin: pos,
+                        color: { x: 1.0, y: 0.5, z: 0.2 },
+                        intensity: 350,
+                        die: now + 0.5,
+                        minLight: 0
+                    };
+                    break;
+                case TempEntity.EXPLOSION2:
+                    dlight = {
+                        origin: pos,
+                        color: { x: 1.0, y: 0.5, z: 0.2 },
+                        intensity: 350,
+                        die: now + 0.5,
+                        minLight: 0
+                    };
+                    break;
+                case TempEntity.BFG_EXPLOSION:
+                    dlight = {
+                        origin: pos,
+                        color: { x: 0.0, y: 1.0, z: 0.0 },
+                        intensity: 500,
+                        die: now + 1.0,
+                        minLight: 0
+                    };
+                    break;
+                case TempEntity.BFG_BIGEXPLOSION:
+                    dlight = {
+                        origin: pos,
+                        color: { x: 0.0, y: 1.0, z: 0.0 },
+                        intensity: 500,
+                        die: now + 1.0,
+                        minLight: 0
+                    };
+                    break;
+                case TempEntity.PLASMA_EXPLOSION:
+                    dlight = {
+                        origin: pos,
+                        color: { x: 0.2, y: 0.5, z: 1.0 },
+                        intensity: 300,
+                        die: now + 0.5,
+                        minLight: 0
+                    };
+                    break;
+            }
+
+            if (dlight) {
+                this.callbacks.onTransientDLight(dlight);
+            }
+        }
+
+        // TODO: Trigger temp entities in renderer (particles, etc)
     }
 
     onLayout(layout: string): void {
@@ -275,9 +339,11 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onMuzzleFlash(ent: number, weapon: number): void {
+        this.onMuzzleFlash3(ent, weapon);
     }
 
     onMuzzleFlash2(ent: number, weapon: number): void {
+        this.onMuzzleFlash3(ent, weapon);
     }
 
     onMuzzleFlash3(ent: number, weapon: number): void {
@@ -346,6 +412,56 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                      // P_AddWeaponKick only scales kick_angles.
                  });
              }
+        }
+
+        // Add DLight for Muzzle Flash
+        // Retrieve entity position
+        const entity = this.entities.get(ent);
+        if (entity) {
+            // Default color (yellow)
+            let color: [number, number, number] = [1, 1, 0];
+            let intensity = 300;
+
+            switch (weapon) {
+                case MZ_BLASTER:
+                case MZ_HYPERBLASTER:
+                    color = [1, 1, 0];
+                    break;
+                case MZ_ROCKET:
+                case MZ_GRENADE:
+                    color = [1, 0.5, 0.2];
+                    break;
+                case MZ_BFG:
+                    color = [0, 1, 0]; // Green
+                    break;
+                case MZ_RAILGUN:
+                    color = [0.5, 0.5, 1]; // Blue-ish
+                    break;
+                default:
+                    color = [1, 1, 0];
+                    break;
+            }
+
+            // If silenced (not passed here but theoretically possible), dampen light?
+            // In standard Q2, muzzle flash always lights up.
+
+            if (this.callbacks?.onTransientDLight) {
+                // Determine origin. For player, ideally view origin or weapon bone.
+                // For now, use entity origin.
+                // If local player, use view origin?
+                let origin = entity.origin;
+                // If we have access to local player view, use that for local player?
+                // But view origin might be camera position, muzzle flash should be slightly offset.
+                // cl_fx.c uses CL_NewDlight(ent->origin...);
+
+                this.callbacks.onTransientDLight({
+                    origin: { x: origin.x, y: origin.y, z: origin.z },
+                    color: { x: color[0], y: color[1], z: color[2] },
+                    intensity: intensity,
+                    die: (Date.now() / 1000) + 0.1, // Short lived
+                    minLight: 0
+                });
+            }
         }
 
         if (this.callbacks?.onMuzzleFlash3) {

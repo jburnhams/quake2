@@ -7,8 +7,8 @@
 ## 4.1 Game Initialization API
 
 ### 4.1.1 Game Session Management
-- [x] Create `GameSession` class wrapping game, client, and engine lifecycle
-- [x] Add method `createSession(options: SessionOptions): GameSession`
+- [ ] Create `GameSession` class wrapping game, client, and engine lifecycle
+- [ ] Add method `createSession(options: SessionOptions): GameSession`
 - [ ] Options: map name, skill level, render mode, audio enabled
 - [ ] Add method `startNewGame(mapName: string, skill: number): void`
 - [ ] Add method `loadSavedGame(saveData: SaveData): void`

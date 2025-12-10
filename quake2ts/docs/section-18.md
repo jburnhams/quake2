@@ -24,10 +24,10 @@ This section focuses on making `quake2ts` usable by client applications, refinin
 **Priority**: **HIGH**
 **Description**: Address "TODO" comments that mark features as complete but are actually missing implementation.
 **Tasks**:
-- [x] **Player State**: Wire up `pmFlags`, `viewangles`, `fov`, `ammo`, `damageAlpha` in `packages/game/src/index.ts`.
-- [x] **Worldspawn Configstrings**: Set `CS_SKY`, `CS_SKYROTATE`, `CS_SKYAXIS`, `CS_CDTRACK` in `packages/game/src/entities/worldspawn.ts`.
-- [x] **Gib Effects**: Add `TE_BLOOD` shower in `packages/game/src/entities/gibs.ts`.
-- [x] **Medic Cable**: Add `TE_MEDIC_CABLE_ATTACK` visual effect in `packages/game/src/entities/monsters/medic.ts`.
+- [ ] **Player State**: Wire up `pmFlags`, `viewangles`, `fov`, `ammo`, `damageAlpha` in `packages/game/src/index.ts`.
+- [ ] **Worldspawn Configstrings**: Set `CS_SKY`, `CS_SKYROTATE`, `CS_SKYAXIS`, `CS_CDTRACK` in `packages/game/src/entities/worldspawn.ts`.
+- [ ] **Gib Effects**: Add `TE_BLOOD` shower in `packages/game/src/entities/gibs.ts`.
+- [ ] **Medic Cable**: Add `TE_MEDIC_CABLE_ATTACK` visual effect in `packages/game/src/entities/monsters/medic.ts`.
 
 ### 3. Improve Code Quality & Type Safety
 **Priority**: **MEDIUM**

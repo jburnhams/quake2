@@ -22,7 +22,7 @@
 
 ### 1.1.3 Asset Preview API
 - [x] Create `AssetPreviewGenerator` class for generating thumbnails
-- [x] Implement `generateTextureThumbnail(path: string, size: number): Promise<ImageData>` for WAL/PCX/TGA
+- [ ] Implement `generateTextureThumbnail(path: string, size: number): Promise<ImageData>` for WAL/PCX/TGA
 - [ ] Implement `generateModelThumbnail(path: string, size: number): Promise<ImageData>` for MD2/MD3
 - [x] Implement `getMapBounds(mapName: string): Promise<BoundingBox>` for map overview
 - [x] Add method `extractMapScreenshot(mapName: string): Promise<ImageData | null>` from embedded levelshots

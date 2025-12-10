@@ -38,17 +38,6 @@ import { DamageFlags } from '../../combat/damageFlags.js';
 
 const MONSTER_TICK = 0.1;
 
-// Constants extracted from m_parasite.c
-const PARASITE_HEALTH = 175;
-const PARASITE_MASS = 250;
-const PARASITE_GIB_HEALTH = -50;
-const PARASITE_PAIN_DEBOUNCE = 3.0;
-const PARASITE_DRAIN_DAMAGE = 2;
-const PARASITE_DRAIN_DAMAGE_HIGH = 5;
-const PARASITE_MAX_DRAIN_DIST = 256;
-const PARASITE_FIDGET_CHANCE = 0.8;
-const PARASITE_ATTACK_ANGLE_LIMIT = 30;
-
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
   ai_stand(self, MONSTER_TICK, context);
@@ -126,7 +115,7 @@ function parasite_do_fidget(self: Entity): void {
 }
 
 function parasite_refidget(self: Entity, context: EntitySystem): void {
-  if (context.rng.frandom() <= PARASITE_FIDGET_CHANCE) {
+  if (context.rng.frandom() <= 0.8) {
     self.monsterinfo.current_move = fidget_move;
   } else {
     self.monsterinfo.current_move = end_fidget_move;
@@ -168,14 +157,14 @@ function parasite_run(self: Entity): void {
 function parasite_drain_attack_ok(start: Vec3, end: Vec3): boolean {
   const dir = subtractVec3(end, start);
   const dist = lengthVec3(dir);
-  if (dist > PARASITE_MAX_DRAIN_DIST) return false;
+  if (dist > 256) return false;
 
   const angles = vectorToAngles(dir);
   let pitch = angles.x;
   // Normalize pitch
   if (pitch < -180) pitch += 360;
 
-  if (Math.abs(pitch) > PARASITE_ATTACK_ANGLE_LIMIT) return false;
+  if (Math.abs(pitch) > 30) return false;
 
   return true;
 }
@@ -215,19 +204,19 @@ function parasite_drain_attack(self: Entity, context: EntitySystem): void {
     return;
   }
 
-  let damage = PARASITE_DRAIN_DAMAGE;
+  let damage = 2;
   const currentFrame = self.frame;
 
   // FRAME_drain03 is 41 (index 2 relative to 39)
   if (currentFrame === 41) {
-    damage = PARASITE_DRAIN_DAMAGE_HIGH;
+    damage = 5;
     context.engine.sound?.(self.enemy, 0, 'parasite/paratck2.wav', 1, 1, 0);
   } else {
     // FRAME_drain04 is 42
     if (currentFrame === 42) {
       context.engine.sound?.(self, 0, 'parasite/paratck3.wav', 1, 1, 0);
     }
-    damage = PARASITE_DRAIN_DAMAGE;
+    damage = 2;
   }
 
   context.multicast(self.origin, 0 /* MulticastType.PVS */, ServerCommand.temp_entity, {
@@ -273,7 +262,7 @@ function parasite_pain_func(self: Entity, other: Entity | null, kick: number, da
 
   if (self.timestamp < (self.pain_finished_time || 0)) return;
 
-  self.pain_finished_time = self.timestamp + PARASITE_PAIN_DEBOUNCE;
+  self.pain_finished_time = self.timestamp + 3;
 
   if (context.rng.frandom() < 0.5) {
       context.engine.sound?.(self, 0, 'parasite/parpain1.wav', 1, 1, 0);
@@ -508,9 +497,9 @@ export function SP_monster_parasite(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 24 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = PARASITE_HEALTH * context.health_multiplier;
+  self.health = 175 * context.health_multiplier;
   self.max_health = self.health;
-  self.mass = PARASITE_MASS;
+  self.mass = 250;
   self.takedamage = true;
 
   self.pain = (ent, other, kick, dmg) => {
@@ -521,7 +510,7 @@ export function SP_monster_parasite(self: Entity, context: SpawnContext): void {
     ent.deadflag = DeadFlag.Dead;
     ent.solid = Solid.Not;
 
-    if (ent.health < PARASITE_GIB_HEALTH) {
+    if (ent.health < -50) {
         throwGibs(context.entities, ent.origin, damage);
         context.entities.free(ent);
         return;

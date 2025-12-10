@@ -9,7 +9,7 @@ import {
   ReinforcementList
 } from '../../entity.js';
 import { EntitySystem } from '../../system.js';
-import { Vec3, copyVec3, vectorToAngles, RandomGenerator } from '@quake2ts/shared';
+import { Vec3, copyVec3, vectorToAngles } from '@quake2ts/shared';
 import { registerMonsterSpawns } from '../index.js';
 
 // Helper constants
@@ -41,7 +41,7 @@ function M_PickValidReinforcements(self: Entity, space: number, output: number[]
 // M_PickReinforcements
 // pick an array of reinforcements to use; note that this does not modify `self`
 // Returns: { chosen: number[], count: number }
-export function M_PickReinforcements(self: Entity, rng: RandomGenerator, countRef: number, max_slots: number = 0): { chosen: number[], count: number } {
+export function M_PickReinforcements(self: Entity, context: EntitySystem, countRef: number, max_slots: number = 0): { chosen: number[], count: number } {
   const output: number[] = [];
   const chosen: number[] = new Array(MAX_REINFORCEMENTS).fill(255);
   let num_chosen = 0;
@@ -49,7 +49,7 @@ export function M_PickReinforcements(self: Entity, rng: RandomGenerator, countRe
   // decide how many things we want to spawn;
   // this is on a logarithmic scale
   // so we don't spawn too much too often.
-  let num_slots = Math.max(1, Math.floor(Math.log2(rng.frandomRange(0, INVERSE_LOG_SLOTS))));
+  let num_slots = Math.max(1, Math.floor(Math.log2(context.rng.frandomMax(INVERSE_LOG_SLOTS))));
 
   // we only have this many slots left to use
   let remaining = (self.monsterinfo.monster_slots || 0) - (self.monsterinfo.monster_used || 0);
@@ -69,9 +69,7 @@ export function M_PickReinforcements(self: Entity, rng: RandomGenerator, countRe
     }
 
     // select monster, TODO fairly
-    // irandom(min, max) was inclusive. irandomRange(min, max) is exclusive.
-    // So irandom(0, len - 1) becomes irandomRange(0, len).
-    const randIndex = rng.irandomRange(0, output.length);
+    const randIndex = context.rng.irandom(output.length);
     chosen[num_chosen] = output[randIndex];
 
     remaining -= self.monsterinfo.reinforcements![chosen[num_chosen]].strength;

@@ -102,7 +102,7 @@ export function M_CheckAttack_Base(self: Entity, context: EntitySystem, stand_gr
     }
 
     // PGM - go ahead and shoot every time if it's a info_notnull
-    if ((!self.enemy.client && self.enemy.solid === 0) || (context.rng.frandom() < chance)) {
+    if ((!self.enemy.client && self.enemy.solid === 0) || (Math.random() < chance)) {
         self.monsterinfo.attack_state = AttackState.Missile;
         self.attack_finished_time = context.timeSeconds;
         return true;
