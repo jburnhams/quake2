@@ -37,11 +37,16 @@
 ## 1.2 Map Viewer API
 
 ### 1.2.1 Headless Rendering Mode
-- [ ] Create `RenderMode` enum: `WebGL` | `Headless`
-- [ ] Implement headless BSP loading: parse geometry without GPU upload
-- [ ] Add `getMapGeometry(mapName: string): Promise<MapGeometry>` returning vertices, indices, bounds
-- [ ] Add `getMapTextures(mapName: string): Promise<TextureReference[]>` listing required textures
-- [ ] Add `getMapLightmaps(mapName: string): Promise<LightmapData[]>` for custom rendering
+- [x] Create `RenderMode` enum: `WebGL` | `Headless`
+- [x] Implement headless BSP loading: parse geometry without GPU upload
+- [x] Add `getMapGeometry(mapName: string): Promise<MapGeometry>` returning vertices, indices, bounds
+- [x] Add `getMapTextures(mapName: string): Promise<TextureReference[]>` listing required textures
+- [x] Add `getMapLightmaps(mapName: string): Promise<LightmapData[]>` for custom rendering
+
+**Implementation Notes:**
+- Defined `RenderMode`, `MapGeometry`, `TextureReference`, `LightmapData` in `packages/engine/src/render/types.ts`.
+- Refactored geometry generation logic into `packages/engine/src/render/bsp/generator.ts` (platform-agnostic).
+- Implemented `HeadlessMapLoader` in `packages/engine/src/assets/headlessLoader.ts`.
 
 ### 1.2.2 Camera Control API
 - [ ] Expose `Camera` class from engine with configurable properties
@@ -66,10 +71,6 @@
 - [x] Add method `getUsedTextures(mapName: string): Promise<string[]>` for missing texture detection
 - [x] Add method `getUsedModels(mapName: string): Promise<string[]>` for missing model detection
 - [x] Add method `getUsedSounds(mapName: string): Promise<string[]>` for missing sound detection
-
-**Notes:**
-- `MapAnalyzer` class implemented in `packages/engine/src/assets/mapStatistics.ts` covers these requirements.
-- Uses existing `BspLoader` for parsing.
 
 ---
 
