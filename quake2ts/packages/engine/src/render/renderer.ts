@@ -16,6 +16,8 @@ import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './cul
 import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
+import { RenderOptions } from './options.js';
+import { DebugRenderer } from './debug.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -24,8 +26,9 @@ export interface Renderer {
     readonly width: number;
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
+    readonly debug: DebugRenderer;
     readonly stats: GpuProfilerStats;
-    renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[]): void;
+    renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
     // HUD Methods
     registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
@@ -56,6 +59,7 @@ export const createRenderer = (
     const md3Pipeline = new Md3Pipeline(gl);
     const spriteRenderer = new SpriteRenderer(gl);
     const collisionVis = new CollisionVisRenderer(gl);
+    const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
@@ -65,7 +69,7 @@ export const createRenderer = (
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
-    const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[]) => {
+    const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
 
         // 1. Clear buffers, render world, sky, and viewmodel
@@ -73,13 +77,30 @@ export const createRenderer = (
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
 
+        // Apply Render Options to pipelines/rendering
+        // Note: Currently FrameRenderer handles world/skybox internally.
+        // We might need to pass options down or control it here.
+        // For now, let's assume FrameRenderOptions could be augmented or FrameRenderer updated.
+        // But since FrameRenderer is imported, let's look at it later if needed.
+        // Actually, frameRenderer.renderFrame uses options.renderMode which is for entities?
+        // No, it's FrameRenderOptions.
+
+        // Hack: modifying global state or pipeline state if needed.
+        // Wireframe is usually per-draw call.
+        // For simplicity, let's focus on what we can control here.
+
+        if (renderOptions?.showSkybox === false) {
+             // We can't easily disable skybox inside frameRenderer without changing its API.
+             // But we can check if we should skip calling frameRenderer fully? No, it renders BSP too.
+        }
+
         const stats = frameRenderer.renderFrame(options);
         const viewProjection = options.camera.viewProjectionMatrix;
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
         // Determine view cluster for PVS culling
         let viewCluster = -1;
-        if (options.world) {
+        if (options.world && renderOptions?.cullingEnabled !== false) {
             const cameraPosition = {
                 x: options.camera.position[0],
                 y: options.camera.position[1],
@@ -93,8 +114,39 @@ export const createRenderer = (
 
         // Render collision vis debug lines (if any)
         collisionVis.render(viewProjection as Float32Array);
-        // Clear the lines after rendering (immediate mode style)
         collisionVis.clear();
+
+        // Render debug renderer
+        if (renderOptions?.showBounds) {
+             for (const entity of entities) {
+                  // Calculate bounds and draw
+                  // (Simplified logic reuse from culling)
+                  let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
+                  let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
+
+                  if (entity.type === 'md2') {
+                      const frame = entity.model.frames[entity.blend.frame0];
+                      minBounds = frame.minBounds;
+                      maxBounds = frame.maxBounds;
+                  } else if (entity.type === 'md3') {
+                      const frame = entity.model.frames[entity.blend.frame0];
+                      if (frame) {
+                          minBounds = frame.minBounds;
+                          maxBounds = frame.maxBounds;
+                      }
+                  }
+
+                  const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
+                  debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 });
+             }
+        }
+
+        if (renderOptions?.showNormals) {
+             // Not easily implemented for models without pipeline changes
+        }
+
+        debugRenderer.render(viewProjection as Float32Array);
+        debugRenderer.clear();
 
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
@@ -393,6 +445,7 @@ export const createRenderer = (
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
+        get debug() { return debugRenderer; },
         get stats() { return gpuProfiler.stats; },
         renderFrame,
         registerPic,

@@ -84,8 +84,8 @@ export function buildBspGeometry(
   const vbo = new VertexBuffer(gl, gl.STATIC_DRAW);
   const ibo = new IndexBuffer(gl, gl.STATIC_DRAW);
 
-  vbo.upload(data.vertices);
-  ibo.upload(data.indices);
+  vbo.upload(data.vertices as any);
+  ibo.upload(data.indices as any);
 
   // Stride 8 floats = 32 bytes
   // 0: pos (3)
