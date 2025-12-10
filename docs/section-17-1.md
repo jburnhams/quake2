@@ -43,27 +43,27 @@
 - [x] Add `getMapTextures(mapName: string): Promise<TextureReference[]>` listing required textures
 - [x] Add `getMapLightmaps(mapName: string): Promise<LightmapData[]>` for custom rendering
 
-**Implementation Notes:**
-- Defined `RenderMode`, `MapGeometry`, `TextureReference`, `LightmapData` in `packages/engine/src/render/types.ts`.
-- Refactored geometry generation logic into `packages/engine/src/render/bsp/generator.ts` (platform-agnostic).
-- Implemented `HeadlessMapLoader` in `packages/engine/src/assets/headlessLoader.ts`.
-
 ### 1.2.2 Camera Control API
-- [ ] Expose `Camera` class from engine with configurable properties
-- [ ] Add method `setPosition(x: number, y: number, z: number): void`
-- [ ] Add method `setRotation(pitch: number, yaw: number, roll: number): void`
-- [ ] Add method `setFov(fov: number): void`
-- [ ] Add method `setAspectRatio(aspect: number): void`
-- [ ] Add method `lookAt(target: Vec3): void`
-- [ ] Add event callback `onCameraMove?: (camera: CameraState) => void`
+- [x] Expose `Camera` class from engine with configurable properties
+- [x] Add method `setPosition(x: number, y: number, z: number): void`
+- [x] Add method `setRotation(pitch: number, yaw: number, roll: number): void`
+- [x] Add method `setFov(fov: number): void`
+- [x] Add method `setAspectRatio(aspect: number): void`
+- [x] Add method `lookAt(target: Vec3): void`
+- [x] Add event callback `onCameraMove?: (camera: CameraState) => void`
 
 ### 1.2.3 Free Camera Movement
-- [ ] Implement `FreeCameraController` class independent of player input
-- [ ] Add WASD + QE (up/down) movement in world space
-- [ ] Add mouse drag for pitch/yaw rotation
-- [ ] Add configurable movement speed and acceleration
-- [ ] Add method `update(deltaTime: number, input: CameraInput): void`
+- [x] Implement `FreeCameraController` class independent of player input
+- [x] Add WASD + QE (up/down) movement in world space
+- [x] Add mouse drag for pitch/yaw rotation
+- [x] Add configurable movement speed and acceleration
+- [x] Add method `update(deltaTime: number, input: CameraInput): void`
 - [ ] Add collision toggle: fly-through vs collision-aware movement
+
+**Implementation Notes:**
+- Enhanced `Camera` class in `packages/engine/src/render/camera.ts` with requested API methods.
+- Created `FreeCameraController` in `packages/engine/src/render/cameraController.ts` handling WASD/QE and mouse look.
+- Collision toggle not yet implemented in `FreeCameraController` (needs `checkPosition` callback or similar).
 
 ### 1.2.4 Map Statistics API
 - [x] Add method `getMapStatistics(mapName: string): Promise<MapStatistics>`

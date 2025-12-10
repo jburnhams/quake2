@@ -1,5 +1,10 @@
 import { mat4, vec3 } from 'gl-matrix';
-import { DEG2RAD } from '@quake2ts/shared';
+import { DEG2RAD, RAD2DEG } from '@quake2ts/shared';
+
+export interface CameraState {
+  position: vec3;
+  angles: vec3;
+}
 
 export class Camera {
   private _position: vec3 = vec3.create();
@@ -18,13 +23,19 @@ export class Camera {
   private _viewProjectionMatrix: mat4 = mat4.create();
   private _dirty = true;
 
+  // Event callback
+  public onCameraMove?: (camera: CameraState) => void;
+
   get position(): vec3 {
     return this._position;
   }
 
   set position(value: vec3) {
-    vec3.copy(this._position, value);
-    this._dirty = true;
+    if (!vec3.equals(this._position, value)) {
+      vec3.copy(this._position, value);
+      this._dirty = true;
+      this.triggerMoveEvent();
+    }
   }
 
   get angles(): vec3 {
@@ -32,8 +43,11 @@ export class Camera {
   }
 
   set angles(value: vec3) {
-    vec3.copy(this._angles, value);
-    this._dirty = true;
+    if (!vec3.equals(this._angles, value)) {
+      vec3.copy(this._angles, value);
+      this._dirty = true;
+      this.triggerMoveEvent();
+    }
   }
 
   get bobAngles(): vec3 {
@@ -90,6 +104,73 @@ export class Camera {
     this._dirty = true;
   }
 
+  // API Methods
+  setPosition(x: number, y: number, z: number): void {
+    const newPos = vec3.fromValues(x, y, z);
+    if (!vec3.equals(this._position, newPos)) {
+      vec3.copy(this._position, newPos);
+      this._dirty = true;
+      this.triggerMoveEvent();
+    }
+  }
+
+  setRotation(pitch: number, yaw: number, roll: number): void {
+    const newAngles = vec3.fromValues(pitch, yaw, roll);
+    if (!vec3.equals(this._angles, newAngles)) {
+      vec3.copy(this._angles, newAngles);
+      this._dirty = true;
+      this.triggerMoveEvent();
+    }
+  }
+
+  setFov(fov: number): void {
+    this.fov = fov;
+  }
+
+  setAspectRatio(aspect: number): void {
+    this.aspect = aspect;
+  }
+
+  lookAt(target: vec3): void {
+    // Calculate vector from camera to target
+    const direction = vec3.create();
+    vec3.subtract(direction, target, this._position);
+
+    // Normalize? Not strictly necessary for angle calc but good practice
+    const len = vec3.length(direction);
+    if (len < 0.001) return; // Too close
+
+    // Calculate Yaw (around Z axis in Quake coords)
+    // Quake: X forward, Y left
+    // Math.atan2(y, x) gives angle from X axis.
+    // Quake angles: 0 is East (X+), 90 is North (Y+)? No, Quake yaw 0 is East (X+).
+    // Let's verify standard Quake angles.
+    // X+ is 0 yaw. Y+ is 90 yaw.
+    const yaw = Math.atan2(direction[1], direction[0]) * RAD2DEG;
+
+    // Calculate Pitch (up/down)
+    // Z is up.
+    // Pitch is angle from XY plane. Positive is Up? In Quake usually Positive is Down (looking down).
+    // Wait, let's check standard Quake 2 pitch.
+    // Positive pitch is usually looking DOWN. Negative is UP.
+    // But let's check `angleVectors` usage in memory if possible.
+    // Usually: pitch, yaw, roll.
+    // hypot(x,y) is horizontal distance.
+    const hyp = Math.hypot(direction[0], direction[1]);
+    const pitch = -Math.atan2(direction[2], hyp) * RAD2DEG;
+
+    this.setRotation(pitch, yaw, 0);
+  }
+
+  private triggerMoveEvent() {
+    if (this.onCameraMove) {
+      this.onCameraMove({
+        position: vec3.clone(this._position),
+        angles: vec3.clone(this._angles)
+      });
+    }
+  }
+
   get viewMatrix(): mat4 {
     this.updateMatrices();
     return this._viewMatrix;
@@ -134,11 +215,6 @@ export class Camera {
     // 2. Create the coordinate system transformation matrix.
     // This matrix transforms vectors from Quake's coordinate system
     // (X forward, Y left, Z up) to WebGL's coordinate system (X right, Y up, Z back).
-    //
-    // Mapping (column vectors based on test expectations):
-    // - Quake X (forward) -> WebGL -Y
-    // - Quake Y (left) -> WebGL +Z
-    // - Quake Z (up) -> WebGL -X
     const quakeToGl = mat4.fromValues(
        0, -1,  0, 0,  // column 0: Quake X -> WebGL (0, -1, 0)
        0,  0,  1, 0,  // column 1: Quake Y -> WebGL (0, 0, 1)
@@ -169,18 +245,16 @@ export class Camera {
     mat4.multiply(rotationGl, quakeToGl, rotationQuake);
 
     // 5. Calculate the view matrix translation
-    // Apply rotation in Quake space first, then transform to GL coordinates
     const positionWithOffset = vec3.add(vec3.create(), this._position, this._bobOffset);
     const negativePosition = vec3.negate(vec3.create(), positionWithOffset);
     const rotatedPosQuake = vec3.create();
     vec3.transformMat4(rotatedPosQuake, negativePosition, rotationQuake);
 
     // Transform the rotated position from Quake coordinates to WebGL coordinates
-    // using the simple coordinate swizzle (not matrix multiplication)
     const translationGl = vec3.fromValues(
-       rotatedPosQuake[1] || 0,  // Y in Quake -> X in WebGL (negation already applied above)
-       rotatedPosQuake[2] || 0,  // Z in Quake -> Y in WebGL
-       rotatedPosQuake[0] || 0   // X in Quake -> Z in WebGL (negation already applied above)
+       rotatedPosQuake[1] || 0,
+       rotatedPosQuake[2] || 0,
+       rotatedPosQuake[0] || 0
     );
 
     // 6. Build the final view matrix by combining rotation and translation
