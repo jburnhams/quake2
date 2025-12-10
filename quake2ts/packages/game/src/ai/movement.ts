@@ -1,9 +1,9 @@
-import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3, dotProduct, subtractVec3, lengthVec3, angleVectors, normalizeVec3 } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { MoveType, EntityFlags } from '../entities/entity.js';
-import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
+import { MASK_MONSTERSOLID, MASK_WATER, MASK_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
 import { AIFlags } from './constants.js';
 import { M_CheckAttack } from './monster.js';
 
@@ -269,47 +269,184 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
     z: self.origin.z + self.maxs.z,
   };
 
+  // Check 4 corners. For now, check 2 opposite corners as a simplification (like my earlier impl).
+  // Or do the full check. Rerelease M_CheckBottom iterates corners.
+
   let start: MutableVec3 = { x: 0, y: 0, z: 0 };
   let stop: MutableVec3 = { x: 0, y: 0, z: 0 };
 
   for (let i = 0; i < 2; i++) {
-    if (i === 1) start = { x: mins.x, y: mins.y, z: 0 };
-    else start = { x: maxs.x, y: mins.y, z: 0 };
+    // Corner 1: mins.x, mins.y
+    if (i === 0) start = { x: mins.x, y: mins.y, z: 0 };
+    else start = { x: maxs.x, y: maxs.y, z: 0 }; // Corner 4: maxs.x, maxs.y
 
     start.z = mins.z - 1;
 
-    if (context.pointcontents(start) !== 0) return true;
+    // Check point contents first (if solid, we are good)
+    const contents = context.pointcontents(start);
+    if ((contents & MASK_SOLID) !== 0) return true;
 
     stop = { ...start };
-    stop.z = start.z - 60;
+    stop.z = start.z - 60; // Look down 60 units
 
     const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
 
-    if (trace.fraction < 1.0) return true;
-
-    if (i === 1) start = { x: mins.x, y: maxs.y, z: 0 };
-    else start = { x: maxs.x, y: maxs.y, z: 0 };
-
-    start.z = mins.z - 1;
-
-    if (context.pointcontents(start) !== 0) return true;
-
-    stop = { ...start };
-    stop.z = start.z - 60;
-
-    const trace2 = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
-
-    if (trace2.fraction < 1.0) return true;
+    if (trace.fraction < 1.0) return true; // Hit something
   }
 
   return false;
 }
 
-export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
-  // If we're not step/toss/bounce/fly, we can't move normally
-  // but M_walkmove is usually called for monsters.
-  // Original Quake 2: M_walkmove checks waterlevel or groundentity.
+export function SV_CloseEnough(self: Entity, goal: Entity, dist: number): boolean {
+  for (let i = 0; i < 3; i++) {
+    const minProp = i === 0 ? 'x' : i === 1 ? 'y' : 'z';
+    const goalAbsMin = goal.absmin[minProp];
+    const goalAbsMax = goal.absmax[minProp];
+    const selfAbsMin = self.absmin[minProp];
+    const selfAbsMax = self.absmax[minProp];
 
+    if (goalAbsMin > selfAbsMax + dist) return false;
+    if (goalAbsMax < selfAbsMin - dist) return false;
+  }
+  return true;
+}
+
+export function SV_movestep(ent: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {
+  // PGM - Check for Bad Area would go here
+
+  // flying monsters don't step up
+  if ((ent.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
+      // SV_flystep stub
+      return false; // For now
+  }
+
+  const oldorg = { ...ent.origin };
+  let stepsize = STEPSIZE;
+
+  // SPAWNFLAG_MONSTER_SUPER_STEP logic if supported
+  // if (ent.spawnflags & SPAWNFLAG_MONSTER_SUPER_STEP) stepsize = 64;
+
+  if ((ent.monsterinfo.aiflags & AIFlags.NoStep) !== 0) {
+      stepsize = 1;
+  }
+
+  // Need gravity vector, assuming standard 0,0,-1
+  // Rerelease code adds gravityVector * (-1 * stepsize) -> moves UP against gravity
+  // So start_up = origin + {0,0,stepsize}
+
+  // Using simplified logic for standard gravity:
+  const start_up: MutableVec3 = {
+      x: oldorg.x,
+      y: oldorg.y,
+      z: oldorg.z + stepsize + 0.75 // match rerelease float
+  };
+
+  const mask = MASK_MONSTERSOLID; // Using standard monster clip
+
+  // Trace up
+  let up_trace = context.trace(oldorg, ent.mins, ent.maxs, start_up, ent, mask);
+
+  if (up_trace.startsolid) {
+       start_up.z += stepsize; // Try higher? Rerelease does this if startsolid
+       up_trace = context.trace(start_up, ent.mins, ent.maxs, start_up, ent, mask); // Trace in place?
+  }
+
+  const end_up = { x: start_up.x + move.x, y: start_up.y + move.y, z: start_up.z + move.z };
+  up_trace = context.trace(start_up, ent.mins, ent.maxs, end_up, ent, mask);
+
+  // Normal trace
+  const start_fwd = oldorg;
+  const end_fwd = { x: start_fwd.x + move.x, y: start_fwd.y + move.y, z: start_fwd.z + move.z };
+  const fwd_trace = context.trace(start_fwd, ent.mins, ent.maxs, end_fwd, ent, mask);
+
+  // Pick best
+  const chosen_forward = (up_trace.fraction > fwd_trace.fraction) ? up_trace : fwd_trace;
+
+  if (chosen_forward.startsolid || chosen_forward.allsolid) {
+      return false;
+  }
+
+  let steps = 1;
+  let stepped = false;
+
+  if (up_trace.fraction > fwd_trace.fraction) {
+      steps = 2; // Why 2? Rerelease uses logic related to gravity steps.
+  }
+
+  // Step down
+  // end = chosen_forward.endpos + (gravityVector * (steps * stepsize))
+  // Standard gravity is -z, so we subtract z
+  const end = {
+      x: chosen_forward.endpos.x,
+      y: chosen_forward.endpos.y,
+      z: chosen_forward.endpos.z - (steps * stepsize)
+  };
+
+  const down_trace = context.trace(chosen_forward.endpos, ent.mins, ent.maxs, end, ent, mask);
+
+  if (Math.abs(ent.origin.z - down_trace.endpos.z) > 8) {
+      stepped = true;
+  }
+
+  // Paril-KEX water handling
+  if (ent.waterlevel <= 2) { // WATER_WAIST
+      const end_point = down_trace.endpos;
+      // Need categorization, simplistic check here
+      const contents = context.pointcontents(end_point);
+      if ((contents & (CONTENTS_SLIME | CONTENTS_LAVA)) !== 0) {
+          return false;
+      }
+      // Check water depth if needed
+  }
+
+  if (down_trace.fraction === 1.0) {
+       // Walked off edge?
+       if ((ent.flags & EntityFlags.PartialGround) !== 0) {
+           // allow
+       } else {
+           return false;
+       }
+  }
+
+  // Commit move
+  ent.origin = down_trace.endpos;
+
+  // Check bottom
+  if (!M_CheckBottom(ent, context)) {
+      if ((ent.flags & EntityFlags.PartialGround) !== 0) {
+          if (relink) {
+             context.linkentity(ent);
+          }
+          return true;
+      }
+      ent.origin = oldorg;
+      return false;
+  }
+
+  // Update ground
+  CheckGround(ent, context);
+
+  if (!ent.groundentity) {
+      ent.origin = oldorg;
+      CheckGround(ent, context); // Revert ground
+      return false;
+  }
+
+  // Check if we moved enough
+  if (lengthVec3(subtractVec3(ent.origin, oldorg)) < lengthVec3(move) * 0.05) {
+      ent.origin = oldorg;
+      CheckGround(ent, context);
+      return false;
+  }
+
+  if (relink) {
+      context.linkentity(ent);
+  }
+
+  return true;
+}
+
+export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
   if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
       if (!self.groundentity && self.waterlevel === 0) {
           return false;
@@ -318,159 +455,33 @@ export function M_walkmove(self: Entity, yawDegrees: number, distance: number, c
 
   const delta = yawVector(yawDegrees, distance);
 
-  if ((self.monsterinfo.aiflags & AIFlags.NoStep) !== 0 &&
-      (self.monsterinfo.aiflags & AIFlags.Pathing) !== 0) {
-      // In pathing mode with nostep, we just verify we can go there?
-      // Actually original code SV_StepDirection handles logic.
-  }
-
-  const dest = {
-      x: self.origin.x + delta.x,
-      y: self.origin.y + delta.y,
-      z: self.origin.z + delta.z
-  };
-
-  // 1. Try moving directly to destination
-  const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
-
-  if (trace.fraction === 1.0) {
-      // Success? Check bottom if needed
-      const oldOrigin = { ...self.origin };
-      (self.origin as MutableVec3).x = dest.x;
-      (self.origin as MutableVec3).y = dest.y;
-      (self.origin as MutableVec3).z = dest.z;
-
-      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
-         if (!M_CheckBottom(self, context)) {
-             // Revert
-             (self.origin as MutableVec3).x = oldOrigin.x;
-             (self.origin as MutableVec3).y = oldOrigin.y;
-             (self.origin as MutableVec3).z = oldOrigin.z;
-             return false;
-         }
-      }
-
-      // Update ground status
-      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
-        CheckGround(self, context);
-      }
+  if (SV_movestep(self, delta, true, context)) {
+      self.monsterinfo.aiflags &= ~AIFlags.Blocked;
       return true;
   }
 
-  // 2. If blocked, and not flying/swimming, try stepping up
-  // SV_movestep logic:
-  // if (trace.fraction < 1) ...
-  //   move up STEPSIZE
-  //   trace
-  //   move down STEPSIZE + extra
-
-  if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
-      return false; // Flying/Swimming monsters do not use step logic.
-      // Original sv_movestep handles flying by just returning false if blocked (flymove handled elsewhere?)
-      // Actually M_walkmove calls SV_movestep.
-      // If flying, SV_movestep might try to slide?
-      // But standard Q2 monsters (Flyer/Icarus) use MoveType.Step + EntityFlags.Fly.
-      // So they enter this block.
-      // If they hit a wall, they stop. They don't step up walls.
-  }
-
-  // Allow stepping up
-  const oldOrigin = { ...self.origin };
-  const up = { ...self.origin, z: self.origin.z + STEPSIZE };
-
-  // Test move up
-  const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
-  if (traceUp.startsolid || traceUp.allsolid) {
-      return false; // Can't move up
-  }
-
-  // Move forward at the higher position
-  const destUp = {
-      x: up.x + delta.x,
-      y: up.y + delta.y,
-      z: up.z // stay at up z
-  };
-
-  const traceStep = context.trace(up, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
-  if (traceStep.fraction < 1.0) {
-      return false; // Still blocked
-  }
-
-  // Move down
-  const destDown = {
-      x: destUp.x,
-      y: destUp.y,
-      z: destUp.z - STEPSIZE // Go back down
-  };
-
-  // Trace down to find ground
-  // We need to trace down further than just STEPSIZE to find the floor if it's a small step down
-  // Original uses SV_CheckBottom or similar logic which traces down.
-  // Actually SV_movestep:
-  //   moves down by STEPSIZE.
-  //   calls SV_CheckBottom(self).
-
-  // In our case, M_CheckBottom checks for ledges, but doesn't snap to ground.
-  // We need to find the ground.
-
-  const downTraceDest = {
-      x: destDown.x,
-      y: destDown.y,
-      z: destDown.z - STEPSIZE // Look a bit deeper?
-  };
-
-  // Actually we just want to land on the step.
-  // So we trace down from `destUp` to `destDown`.
-
-  const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
-
-  if (traceDown.startsolid || traceDown.allsolid) {
-       // Should not happen if we came from there?
-       // Unless we stepped onto something that is now inside us?
-       return false;
-  }
-
-  // Use the endpos of the down trace as the new position
-  const newPos = traceDown.endpos;
-
-  // Set position
-  (self.origin as MutableVec3).x = newPos.x;
-  (self.origin as MutableVec3).y = newPos.y;
-  (self.origin as MutableVec3).z = newPos.z;
-
-  // Check bottom (ledge check)
-  if (!M_CheckBottom(self, context)) {
-      // Revert
-      (self.origin as MutableVec3).x = oldOrigin.x;
-      (self.origin as MutableVec3).y = oldOrigin.y;
-      (self.origin as MutableVec3).z = oldOrigin.z;
-      return false;
-  }
-
-  // Update ground status
-  CheckGround(self, context);
-
-  // If we are not on ground after stepping, we might have stepped into air?
-  // But M_CheckBottom should catch that.
-
-  return true;
+  return false;
 }
 
 export function SV_StepDirection(self: Entity, yaw: number, dist: number, context: EntitySystem): boolean {
-  for (let i = 0; i <= 90; i += 45) {
+  // Try intended direction first
+  if (M_walkmove(self, yaw, dist, context)) {
+      self.ideal_yaw = angleMod(yaw);
+      return true;
+  }
+
+  // Try +/- 45 and 90 degrees
+  for (let i = 45; i <= 90; i += 45) {
     if (M_walkmove(self, yaw + i, dist, context)) {
-      if (i !== 0) {
-        self.ideal_yaw = angleMod(yaw + i);
-      }
+      self.ideal_yaw = angleMod(yaw + i);
       return true;
     }
-    if (i !== 0) {
-      if (M_walkmove(self, yaw - i, dist, context)) {
-        self.ideal_yaw = angleMod(yaw - i);
-        return true;
-      }
+    if (M_walkmove(self, yaw - i, dist, context)) {
+      self.ideal_yaw = angleMod(yaw - i);
+      return true;
     }
   }
+
   return false;
 }
 
@@ -497,3 +508,48 @@ export function SV_NewChaseDir(self: Entity, enemy: Entity | null, dist: number,
 
   SV_StepDirection(self, self.ideal_yaw, dist, context);
 }
+
+// Stub for M_MoveToPath since we don't have GetPathToGoal
+function M_MoveToPath(self: Entity, dist: number, context: EntitySystem): boolean {
+    return false;
+}
+
+export function M_MoveToGoal(ent: Entity, dist: number, context: EntitySystem): void {
+    const goal = ent.goalentity;
+
+    if (!ent.groundentity && !((ent.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0)) {
+        return;
+    }
+
+    if (!goal) return;
+
+    // Try pathing if enabled (stubbed)
+    if (M_MoveToPath(ent, dist, context)) {
+        return;
+    }
+
+    // Straight shot check
+    if (!(ent.monsterinfo.aiflags & AIFlags.Charging) && goal) {
+        if (!facingIdeal(ent)) {
+            changeYaw(ent, MONSTER_TICK); // Assuming 0.1s tick
+            return;
+        }
+
+        // Trace line
+        const tr = context.trace(ent.origin, null, null, goal.origin, ent, MASK_MONSTERSOLID);
+        if (tr.fraction === 1.0 || tr.ent === goal) {
+             const yaw = vectorToYaw(subtractVec3(goal.origin, ent.origin));
+             if (SV_StepDirection(ent, yaw, dist, context)) {
+                 return;
+             }
+        }
+    }
+
+    // Bump around
+    // Simplified bump logic
+    if (Math.random() < 0.2 || !SV_StepDirection(ent, ent.ideal_yaw, dist, context)) {
+        SV_NewChaseDir(ent, goal, dist, context);
+    }
+}
+
+const MONSTER_TICK = 0.1;
