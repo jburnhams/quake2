@@ -317,3 +317,4 @@ export type {
 } from './demo/parser.js';
 export { FileType, detectFileType, isTextFile, isBinaryFile } from './assets/fileType.js';
 export { AssetPreviewGenerator } from './assets/preview.js';
+export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
