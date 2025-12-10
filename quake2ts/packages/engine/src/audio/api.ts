@@ -64,6 +64,10 @@ export class AudioApi {
     this.system.stopEntitySounds(entnum);
   }
 
+  setPlaybackRate(rate: number): void {
+    this.system.setPlaybackRate(rate);
+  }
+
   set_listener(listener: Parameters<AudioSystem['setListener']>[0]): void {
     this.system.setListener(listener);
   }

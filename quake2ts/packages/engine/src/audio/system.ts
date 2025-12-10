@@ -102,6 +102,7 @@ export class AudioSystem {
   private listener: ListenerState;
   private sfxVolume: number;
   private masterVolume: number;
+  private playbackRate: number = 1.0;
 
   constructor(options: AudioSystemOptions) {
     this.contextController = options.context;
@@ -127,6 +128,18 @@ export class AudioSystem {
 
   setSfxVolume(volume: number): void {
     this.sfxVolume = volume;
+  }
+
+  setPlaybackRate(rate: number): void {
+    this.playbackRate = rate;
+    // Iterate active sources and update rate
+    for (const active of this.activeSources.values()) {
+        if (active.source.playbackRate) {
+            active.source.playbackRate.value = rate;
+        }
+        // Apply muting if rate is not 1.0 (to avoid pitch shift artifacts)
+        this.updateSourceGain(active);
+    }
   }
 
   async ensureRunning(): Promise<void> {
@@ -156,6 +169,9 @@ export class AudioSystem {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = request.looping ?? false;
+    if (source.playbackRate) {
+        source.playbackRate.value = this.playbackRate;
+    }
 
     const origin = request.origin ?? this.listener.origin;
     const gain = ctx.createGain();
@@ -171,7 +187,11 @@ export class AudioSystem {
 
     const attenuationScale = request.volume === 0 ? 0 : Math.max(spatial.left, spatial.right) / Math.max(1, request.volume);
     const gainValue = attenuationScale * (request.volume / 255) * this.masterVolume * this.sfxVolume;
-    gain.gain.value = gainValue * occlusionScale;
+
+    // Mute if playback rate is not 1.0
+    const playbackRateMute = Math.abs(this.playbackRate - 1.0) < 0.001 ? 1 : 0;
+
+    gain.gain.value = gainValue * occlusionScale * playbackRateMute;
 
     const startTimeSec = ctx.currentTime + (request.timeOffsetMs ?? 0) / 1000;
     const endTimeMs = (request.looping ? Number.POSITIVE_INFINITY : buffer.duration * 1000) + startTimeSec * 1000;
@@ -345,9 +365,17 @@ export class AudioSystem {
     return filter;
   }
 
+  private updateSourceGain(active: ActiveSound) {
+      // Re-calculate effective gain based on baseGain, occlusion, and playback rate
+      const occlusionScale = active.occlusion?.scale ?? 1;
+      const playbackRateMute = Math.abs(this.playbackRate - 1.0) < 0.001 ? 1 : 0;
+      active.gain.gain.value = active.baseGain * occlusionScale * playbackRateMute;
+  }
+
   private applyOcclusion(active: ActiveSound, occlusion?: OcclusionResult): void {
     const scale = clamp01(occlusion?.gainScale ?? 1);
-    active.gain.gain.value = active.baseGain * scale;
+    const playbackRateMute = Math.abs(this.playbackRate - 1.0) < 0.001 ? 1 : 0;
+    active.gain.gain.value = active.baseGain * scale * playbackRateMute;
     if (active.occlusion?.filter) {
       const cutoff = occlusion?.lowpassHz ?? 20000;
       active.occlusion.filter.frequency.value = clamp(cutoff, 10, 20000);

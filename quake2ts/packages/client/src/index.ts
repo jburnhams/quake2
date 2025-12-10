@@ -163,7 +163,20 @@ export function createClient(imports: ClientImports): ClientExports {
   const prediction = new ClientPrediction(imports.engine.trace, pointContents);
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
-  const demoControls = new DemoControls(demoPlayback);
+  const demoControls = new DemoControls(demoPlayback, (speed) => {
+      // Propagate speed change to AudioSystem if available
+      if (imports.engine.audio) {
+          // Assuming AudioApi has setPlaybackRate or we need to cast/access internal
+          // AudioApi from host usually has setPlaybackRate if we added it to interface
+          // But AudioApi is an interface in engine/src/audio/api.ts.
+          // We implemented setPlaybackRate in AudioSystem, but AudioApi needs to expose it.
+          // Let's check AudioApi. If not, we cast or assume for now, then fix interface.
+          const audio = imports.engine.audio as any;
+          if (typeof audio.setPlaybackRate === 'function') {
+              audio.setPlaybackRate(speed);
+          }
+      }
+  });
   const demoHandler = new ClientNetworkHandler(imports);
   const demoRecorder = new DemoRecorder();
   demoHandler.setView(view);
@@ -585,9 +598,23 @@ export function createClient(imports: ClientImports): ClientExports {
                       camOrigin.y -= forward.y * dist;
                       camOrigin.z -= forward.z * dist;
 
-                      // TODO: Add collision check here (trace) to prevent clipping through walls
+                      // Check for collision using trace
+                      const traceStart = demoCamera.origin;
+                      const traceEnd = camOrigin;
+                      // Trace against solids (MASK_SOLID = 1)
+                      // We need to define a small bounding box for the camera or use point trace
+                      const mins = { x: -4, y: -4, z: -4 };
+                      const maxs = { x: 4, y: 4, z: 4 };
 
-                      lastRendered.origin = camOrigin;
+                      const trace = imports.engine.trace(traceStart, traceEnd, mins, maxs);
+
+                      if (trace.fraction < 1.0) {
+                          // Hit something, clamp to hit position (endpos)
+                          // Add a small buffer to prevent clipping right into the wall
+                          lastRendered.origin = trace.endpos;
+                      } else {
+                          lastRendered.origin = camOrigin;
+                      }
                       lastRendered.viewAngles = demoCamera.angles;
                   }
              } else if (demoCameraState.mode === DemoCameraMode.Free) {

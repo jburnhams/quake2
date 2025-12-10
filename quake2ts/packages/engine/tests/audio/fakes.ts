@@ -45,6 +45,7 @@ class FakeBiquadFilterNode extends FakeAudioNode implements BiquadFilterNodeLike
 class FakeBufferSource extends FakeAudioNode implements AudioBufferSourceNodeLike {
   buffer: AudioBufferLike | null = null;
   loop = false;
+  playbackRate = new FakeAudioParam(1);
   onended: (() => void) | null = null;
   startedAt?: number;
   stoppedAt?: number;
@@ -129,3 +130,6 @@ export class FakeAudioContext implements AudioContextLike {
 }
 
 export const createBuffer = (duration: number): AudioBufferLike => ({ duration });
+
+export const mockAudioContextFactory = (): FakeAudioContext => new FakeAudioContext();
+export { FakeBufferSource as MockAudioBufferSourceNode };
