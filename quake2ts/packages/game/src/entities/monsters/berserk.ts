@@ -38,6 +38,15 @@ import { rangeTo } from '../../ai/perception.js';
 const MONSTER_TICK = 0.1;
 const MELEE_DISTANCE = 80;
 const SPAWNFLAG_BERSERK_NOJUMPING = 16;
+const BERSERK_HEALTH = 240;
+const BERSERK_MASS = 250;
+const BERSERK_GIB_HEALTH = -60;
+const BERSERK_PAIN_DEBOUNCE = 3.0;
+const BERSERK_JUMP_RECOVERY = 3.0;
+const BERSERK_JUMP_CHANCE_DIST = 150;
+const BERSERK_ATTACK_CHANCE = 0.15; // Random chance to fidget or idle
+const BERSERK_MELEE_DEBOUNCE_SPIKE = 1.2;
+const BERSERK_MELEE_DEBOUNCE_CLUB = 2.5;
 
 // Wrappers to match function signatures
 function monster_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
@@ -113,7 +122,7 @@ function berserk_stand(self: Entity, context: EntitySystem): void {
 function berserk_fidget(self: Entity, context: EntitySystem): void {
   if (self.monsterinfo.aiflags & AIFlags.StandGround) return;
   if (self.enemy) return;
-  if (context.game.random.frandom() > 0.15) return;
+  if (context.game.random.frandom() > BERSERK_ATTACK_CHANCE) return;
 
   M_SetAnimation(self, berserk_move_stand_fidget);
   context.sound(self, 1, SOUNDS.idle, 1, 2, 0);
@@ -243,7 +252,7 @@ function fire_hit(self: Entity, aim: Vec3, damage: number, kick: number, context
 
 function berserk_attack_spike(self: Entity, context: EntitySystem): void {
   if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -24}, context.rng.irandomRange(5, 11), 80, context)) {
-    self.monsterinfo.melee_debounce_time = context.timeSeconds + 1.2;
+    self.monsterinfo.melee_debounce_time = context.timeSeconds + BERSERK_MELEE_DEBOUNCE_SPIKE;
   }
 }
 
@@ -271,7 +280,7 @@ berserk_move_attack_spike = {
 
 function berserk_attack_club(self: Entity, context: EntitySystem): void {
   if (!fire_hit(self, {x: MELEE_DISTANCE, y: 0, z: -4}, context.rng.irandomRange(15, 21), 400, context)) {
-    self.monsterinfo.melee_debounce_time = context.timeSeconds + 2.5;
+    self.monsterinfo.melee_debounce_time = context.timeSeconds + BERSERK_MELEE_DEBOUNCE_CLUB;
   }
 }
 
@@ -397,7 +406,7 @@ function berserk_jump_takeoff(self: Entity, context: EntitySystem): void {
   };
   self.groundentity = null;
   self.monsterinfo.aiflags |= AIFlags.Ducked;
-  self.monsterinfo.attack_finished = context.timeSeconds + 3.0;
+  self.monsterinfo.attack_finished = context.timeSeconds + BERSERK_JUMP_RECOVERY;
 
   // Bind context to callback
   self.touch = (s, o, p, su) => {
@@ -478,7 +487,7 @@ function berserk_attack(self: Entity, context: EntitySystem): void {
 
   if ((self.monsterinfo.melee_debounce_time || 0) <= context.timeSeconds && dist < MELEE_DISTANCE) {
     berserk_melee(self, context);
-  } else if (self.timestamp < context.timeSeconds && context.rng.frandom() > 0.5 && dist > 150) {
+  } else if (self.timestamp < context.timeSeconds && context.rng.frandom() > 0.5 && dist > BERSERK_JUMP_CHANCE_DIST) {
     // Check for NOJUMPING flag
     if (self.spawnflags & SPAWNFLAG_BERSERK_NOJUMPING) return;
 
@@ -520,7 +529,7 @@ function berserk_pain(self: Entity, other: Entity | null, kick: number, damage: 
 
   if (context.timeSeconds < self.pain_debounce_time) return;
 
-  self.pain_debounce_time = context.timeSeconds + 3.0;
+  self.pain_debounce_time = context.timeSeconds + BERSERK_PAIN_DEBOUNCE;
   context.sound(self, 2, SOUNDS.pain, 1, 1, 0);
 
   if (damage <= 50 || context.rng.frandom() < 0.5) {
@@ -582,7 +591,7 @@ berserk_move_death2 = {
 };
 
 function berserk_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, context: EntitySystem): void {
-  if (self.health <= -60) { // gib_health
+  if (self.health <= BERSERK_GIB_HEALTH) { // gib_health
     context.sound(self, 2, "misc/udeath.wav", 1, 1, 0);
     throwGibs(context, self.origin, damage);
     context.free(self);
@@ -626,9 +635,9 @@ export function SP_monster_berserk(self: Entity, context: SpawnContext): void {
   self.maxs = { x: 16, y: 16, z: 32 };
   self.movetype = MoveType.Step;
   self.solid = Solid.BoundingBox;
-  self.health = 240 * context.health_multiplier;
+  self.health = BERSERK_HEALTH * context.health_multiplier;
   self.max_health = self.health;
-  self.mass = 250;
+  self.mass = BERSERK_MASS;
   self.takedamage = true;
 
   self.pain = (s, o, k, d) => berserk_pain(s, o, k, d, context.entities);
