@@ -680,3 +680,18 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
 ];
+
+export interface Damageable {
+  health: number;
+  max_health: number;
+  takedamage: boolean;
+  deadflag: DeadFlag;
+  die?: DieCallback;
+  pain?: PainCallback | PlayerPainCallback;
+  origin: Vec3;
+}
+
+export interface Monster extends Damageable {
+   monsterinfo: MonsterInfo;
+   enemy: Entity | null;
+}
