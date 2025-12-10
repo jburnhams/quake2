@@ -117,6 +117,63 @@ export class Camera {
     return projectionMatrix;
   }
 
+  screenToWorldRay(
+    screenX: number,
+    screenY: number
+  ): { origin: vec3; direction: vec3 } {
+    // 1. Calculate Normalized Device Coordinates (NDC)
+    // screenX, screenY are in [0, 1] range
+    // NDC: [-1, 1]
+    const ndcX = (screenX * 2) - 1;
+    const ndcY = 1 - (screenY * 2); // Flip Y because screen Y is down, NDC Y is up
+
+    // 2. Create ray in clip space
+    // Z = -1 for near plane, Z = 1 for far plane
+    const clipStart = vec3.fromValues(ndcX, ndcY, -1);
+    const clipEnd = vec3.fromValues(ndcX, ndcY, 1);
+
+    // 3. Inverse View-Projection Matrix
+    const invViewProj = mat4.create();
+    mat4.invert(invViewProj, this.viewProjectionMatrix);
+
+    // 4. Transform to World Space
+    const worldStart = vec3.create();
+    const worldEnd = vec3.create();
+
+    vec3.transformMat4(worldStart, clipStart, invViewProj);
+    vec3.transformMat4(worldEnd, clipEnd, invViewProj);
+
+    // 5. Construct Ray
+    // The start point is the camera position (or near plane intersection)
+    // But for picking, we usually want the ray from the camera origin.
+    // However, unprojecting ndcX, ndcY, -1 gives point on near plane.
+
+    // Direction is normalized vector from start to end
+    const direction = vec3.create();
+    vec3.subtract(direction, worldEnd, worldStart);
+    vec3.normalize(direction, direction);
+
+    // The previous test expectation was failing because of coordinate space confusion.
+    // If the test expects +X forward, and we get -0, 0, 0, it means the ray is pointing somewhere else.
+    // Let's debug the coordinate transform.
+    // Quake X (Forward) -> GL -Z.
+    // NDC (0, 0, -1) -> Near Plane Center.
+    // Inverse ViewProj should map NDC (0,0,-1) to World Position + Forward * NearDist.
+
+    // If we are at 0,0,0 looking +X.
+    // Quake +X is GL -Z.
+    // So forward in GL is -Z.
+    // NDC 0,0 is center.
+    // Unprojecting should give direction -Z in GL space.
+    // But we are transforming back to World Space (Quake space).
+    // So GL -Z should map back to Quake +X.
+
+    return {
+      origin: vec3.clone(this._position),
+      direction,
+    };
+  }
+
   private updateMatrices(): void {
     if (!this._dirty) {
       return;
@@ -136,13 +193,23 @@ export class Camera {
     // (X forward, Y left, Z up) to WebGL's coordinate system (X right, Y up, Z back).
     //
     // Mapping (column vectors based on test expectations):
-    // - Quake X (forward) -> WebGL -Y
-    // - Quake Y (left) -> WebGL +Z
-    // - Quake Z (up) -> WebGL -X
+    // - Quake X (forward) -> WebGL -Z  <-- FIXED from -Y to -Z
+    // - Quake Y (left) -> WebGL -X     <-- FIXED from +Z to -X
+    // - Quake Z (up) -> WebGL +Y       <-- FIXED from -X to +Y
+    //
+    // Let's re-verify the standard mapping.
+    // Quake: X Forward, Y Left, Z Up.
+    // GL: -Z Forward, X Right, Y Up.
+    //
+    // So:
+    // Quake X (Forward) -> GL -Z
+    // Quake Y (Left) -> GL -X  (Since GL X is Right, Left is -X)
+    // Quake Z (Up) -> GL Y
+
     const quakeToGl = mat4.fromValues(
-       0, -1,  0, 0,  // column 0: Quake X -> WebGL (0, -1, 0)
-       0,  0,  1, 0,  // column 1: Quake Y -> WebGL (0, 0, 1)
-      -1,  0,  0, 0,  // column 2: Quake Z -> WebGL (-1, 0, 0)
+       0,  0, -1, 0,  // column 0: Quake X -> WebGL -Z
+      -1,  0,  0, 0,  // column 1: Quake Y -> WebGL -X
+       0,  1,  0, 0,  // column 2: Quake Z -> WebGL Y
        0,  0,  0, 1   // column 3: no translation
     );
 
@@ -178,9 +245,9 @@ export class Camera {
     // Transform the rotated position from Quake coordinates to WebGL coordinates
     // using the simple coordinate swizzle (not matrix multiplication)
     const translationGl = vec3.fromValues(
-       rotatedPosQuake[1] || 0,  // Y in Quake -> X in WebGL (negation already applied above)
+       rotatedPosQuake[1] ? -rotatedPosQuake[1] : 0,  // Y in Quake -> -X in WebGL
        rotatedPosQuake[2] || 0,  // Z in Quake -> Y in WebGL
-       rotatedPosQuake[0] || 0   // X in Quake -> Z in WebGL (negation already applied above)
+       rotatedPosQuake[0] ? -rotatedPosQuake[0] : 0   // X in Quake -> -Z in WebGL
     );
 
     // 6. Build the final view matrix by combining rotation and translation
