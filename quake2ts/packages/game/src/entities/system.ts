@@ -190,6 +190,10 @@ export class EntitySystem {
     return this.imports.trace;
   }
 
+  get traceModel() {
+    return this.imports.traceModel;
+  }
+
   get pointcontents(): PointContentsFunction {
     return this.imports.pointcontents;
   }

@@ -24,6 +24,12 @@ export type TraceFunction = (
 
 export type PointContentsFunction = (point: Vec3) => number;
 
+export type TraceModelFunction = (
+  entity: Entity,
+  start: Vec3,
+  end: Vec3
+) => GameTraceResult;
+
 export enum MulticastType {
   All = 0,
   Pvs = 1,
@@ -32,6 +38,7 @@ export enum MulticastType {
 
 export interface GameImports {
   trace: TraceFunction;
+  traceModel?: TraceModelFunction;
 
   pointcontents: PointContentsFunction;
 
@@ -48,6 +55,7 @@ export interface GameImports {
 
 export interface GameEngine {
     trace(start: Vec3, end: Vec3): unknown;
+    traceModel?(entity: Entity, start: Vec3, end: Vec3): unknown;
     sound?(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
     soundIndex?(sound: string): number;
     centerprintf?(entity: Entity, message: string): void;

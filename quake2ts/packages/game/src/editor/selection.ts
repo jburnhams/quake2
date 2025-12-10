@@ -1,7 +1,7 @@
 import { Entity } from '../entities/entity.js';
 import { EntitySystem } from '../entities/system.js';
 import { vec3 } from 'gl-matrix';
-import { Bounds3 } from '@quake2ts/shared';
+import { Bounds3, scaleVec3 } from '@quake2ts/shared';
 
 export interface EntityHit {
   entity: Entity;
@@ -30,18 +30,45 @@ export function rayCastEntities(
     // Basic AABB check first
     if (!entity.inUse) return;
 
+    // Check if it is a brush model and we have traceModel capability
+    if (entity.model && entity.model.startsWith('*') && entities.traceModel) {
+      const end = vec3.create();
+      vec3.scaleAndAdd(end, ray.origin, ray.direction, MAX_DISTANCE);
+
+      const trace = entities.traceModel(entity,
+        { x: ray.origin[0], y: ray.origin[1], z: ray.origin[2] },
+        { x: end[0], y: end[1], z: end[2] }
+      );
+
+      if (trace.fraction < 1.0) {
+         // Convert result back to gl-matrix vec3
+         const point = vec3.fromValues(trace.endpos.x, trace.endpos.y, trace.endpos.z);
+         const normal = trace.plane ? vec3.fromValues(trace.plane.normal.x, trace.plane.normal.y, trace.plane.normal.z) : vec3.create();
+
+         const distance = trace.fraction * MAX_DISTANCE; // approximate distance
+
+         hits.push({
+           entity,
+           distance,
+           point,
+           normal
+         });
+         return;
+      }
+    }
+
+    // Fallback or Standard AABB check
+
     // Use absmin/absmax if available, otherwise calculate from origin + mins/maxs
     // Convert to Bounds3 format (expects {x,y,z}, entity has gl-matrix vec3)
     const bounds: Bounds3 = {
-      mins: { x: entity.absmin[0], y: entity.absmin[1], z: entity.absmin[2] },
-      maxs: { x: entity.absmax[0], y: entity.absmax[1], z: entity.absmax[2] }
+      mins: { x: entity.absmin.x, y: entity.absmin.y, z: entity.absmin.z },
+      maxs: { x: entity.absmax.x, y: entity.absmax.y, z: entity.absmax.z }
     };
 
     const intersection = intersectRayAABB(ray, bounds);
 
     if (intersection) {
-      // If we have a hit, we might want to do more precise checks (BSP/Mesh)
-      // For now, AABB is the baseline requirement.
       if (intersection.distance < MAX_DISTANCE) {
          hits.push({
            entity,
