@@ -20,7 +20,7 @@ import {
   ai_turn,
   ai_face
 } from '../../ai/index.js';
-import { M_ShouldReactToPain } from './common.js';
+import { M_ShouldReactToPain, monster_done_dodge } from './common.js';
 import { DamageMod } from '../../combat/damageMods.js';
 import {
   DeadFlag,
@@ -88,7 +88,7 @@ function chick_walk(self: Entity): void {
 
 function chick_run(self: Entity): void {
   // Clear blindfire flag
-  // monster_done_dodge(self) omitted
+  monster_done_dodge(self);
 
   if (self.monsterinfo.aiflags & 4) { // AI_STAND_GROUND
     self.monsterinfo.current_move = stand_move;
