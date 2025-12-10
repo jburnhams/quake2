@@ -1,5 +1,5 @@
 import { DemoReader } from './demoReader.js';
-import { NetworkMessageParser, NetworkMessageHandler } from './parser.js';
+import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState, ProtocolPlayerState } from './parser.js';
 
 export enum PlaybackState {
   Stopped,
@@ -8,17 +8,38 @@ export enum PlaybackState {
   Finished
 }
 
+export interface DemoPlaybackCallbacks {
+  onPlaybackStateChange?: (state: PlaybackState) => void;
+  onTimeUpdate?: (time: number) => void;
+  onPlaybackComplete?: () => void;
+  onSeekComplete?: () => void;
+  onCaptureSnapshot?: (frame: number) => any;
+  onRestoreSnapshot?: (snapshot: any) => void;
+  // Forwarded events
+  onFrameUpdate?: (frame: FrameData) => void;
+  onPlaybackError?: (error: Error) => void;
+}
+
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
   private state: PlaybackState = PlaybackState.Stopped;
   private playbackSpeed: number = 1.0;
   private handler?: NetworkMessageHandler;
+  private callbacks?: DemoPlaybackCallbacks;
+
   private currentProtocolVersion: number = 0;
   private currentFrameIndex: number = -1; // -1 means no frames processed yet
+
+  // Last parsed frame data for accessors
+  private lastFrameData: FrameData | null = null;
 
   // Timing
   private accumulatedTime: number = 0;
   private frameDuration: number = 100; // ms (10Hz default)
+
+  // Snapshots
+  private snapshotInterval: number = 100; // frames
+  private snapshots: Map<number, any> = new Map();
 
   constructor() {}
 
@@ -26,34 +47,50 @@ export class DemoPlaybackController {
       this.handler = handler;
   }
 
+  public setCallbacks(callbacks: DemoPlaybackCallbacks) {
+      this.callbacks = callbacks;
+  }
+
   public loadDemo(buffer: ArrayBuffer) {
     this.reader = new DemoReader(buffer);
-    this.state = PlaybackState.Stopped;
+    this.transitionState(PlaybackState.Stopped);
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
     this.currentFrameIndex = -1;
+    this.snapshots.clear();
+    this.lastFrameData = null;
   }
 
   public play() {
-    if (this.reader) {
-      this.state = PlaybackState.Playing;
+    if (this.reader && this.state !== PlaybackState.Playing) {
+      this.transitionState(PlaybackState.Playing);
     }
   }
 
   public pause() {
     if (this.state === PlaybackState.Playing) {
-      this.state = PlaybackState.Paused;
+      this.transitionState(PlaybackState.Paused);
     }
   }
 
   public stop() {
-    this.state = PlaybackState.Stopped;
+    this.transitionState(PlaybackState.Stopped);
     if (this.reader) {
       this.reader.reset();
     }
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
     this.currentFrameIndex = -1;
+    this.lastFrameData = null;
+  }
+
+  private transitionState(newState: PlaybackState) {
+      if (this.state !== newState) {
+          this.state = newState;
+          if (this.callbacks?.onPlaybackStateChange) {
+              this.callbacks.onPlaybackStateChange(newState);
+          }
+      }
   }
 
   public setFrameDuration(ms: number) {
@@ -61,7 +98,6 @@ export class DemoPlaybackController {
   }
 
   public setSpeed(speed: number) {
-      // Clamp speed between 0.1x and 16x as per requirements
       this.playbackSpeed = Math.max(0.1, Math.min(speed, 16.0));
   }
 
@@ -82,12 +118,19 @@ export class DemoPlaybackController {
             return;
         }
         this.accumulatedTime -= this.frameDuration;
+
+        if (this.callbacks?.onTimeUpdate) {
+            this.callbacks.onTimeUpdate(this.getCurrentTime());
+        }
     }
   }
 
   public stepForward() {
     if (!this.reader) return;
     this.processNextFrame();
+    if (this.callbacks?.onTimeUpdate) {
+        this.callbacks.onTimeUpdate(this.getCurrentTime());
+    }
   }
 
   public stepBackward() {
@@ -97,6 +140,15 @@ export class DemoPlaybackController {
       if (this.currentFrameIndex > 0) {
           this.seek(this.currentFrameIndex - 1);
       }
+  }
+
+  public seekToTime(seconds: number) {
+      const frameIndex = Math.floor((seconds * 1000) / this.frameDuration);
+      this.seek(frameIndex);
+  }
+
+  public seekToFrame(frameIndex: number) {
+      this.seek(frameIndex);
   }
 
   /**
@@ -109,35 +161,130 @@ export class DemoPlaybackController {
       if (frameNumber < 0) frameNumber = 0;
       if (frameNumber >= total) frameNumber = total - 1;
 
-      if (this.reader.seekToMessage(frameNumber)) {
-          // Set index to frameNumber - 1, so that processing next frame brings us to frameNumber
-          this.currentFrameIndex = frameNumber - 1;
-          this.accumulatedTime = 0;
-
-          // Process the frame to update state
+      // Optimization: If seeking to next frame, just process it
+      if (frameNumber === this.currentFrameIndex + 1) {
           this.processNextFrame();
-          // Now currentFrameIndex should be frameNumber
+          if (this.callbacks?.onSeekComplete) this.callbacks.onSeekComplete();
+          return;
+      }
+
+      // 1. Determine best start point
+      let startIndex = -1;
+      let snapshotData: any = null;
+
+      // Check current position
+      if (frameNumber > this.currentFrameIndex && this.currentFrameIndex !== -1) {
+          startIndex = this.currentFrameIndex;
+      }
+
+      // Check snapshots (find closest snapshot <= frameNumber)
+      if (this.callbacks?.onRestoreSnapshot) {
+          // Iterate snapshots to find best match
+          for (const [frame, data] of this.snapshots) {
+              if (frame <= frameNumber && frame > startIndex) {
+                  startIndex = frame;
+                  snapshotData = data;
+              }
+          }
+      }
+
+      // If no better start point found, restart from 0
+      if (startIndex === -1 && this.currentFrameIndex > frameNumber) {
+          this.reader.reset();
+          this.currentFrameIndex = -1;
+          this.currentProtocolVersion = 0;
+      } else if (startIndex === -1) {
+          this.reader.reset();
+          this.currentFrameIndex = -1;
+          this.currentProtocolVersion = 0;
+      }
+
+      // Restore snapshot if we found one better than current
+      if (snapshotData && this.callbacks?.onRestoreSnapshot) {
+          this.callbacks.onRestoreSnapshot(snapshotData);
+          if (this.reader.seekToMessage(startIndex + 1)) {
+              this.currentFrameIndex = startIndex;
+          } else {
+               this.reader.reset();
+               this.currentFrameIndex = -1;
+               this.currentProtocolVersion = 0;
+          }
+      }
+
+      // 2. Fast forward loop
+      while (this.currentFrameIndex < frameNumber) {
+          if (this.callbacks?.onCaptureSnapshot && (this.currentFrameIndex + 1) % this.snapshotInterval === 0) {
+             // Capture happens in processNextFrame
+          }
+
+          if (!this.processNextFrame()) {
+              break;
+          }
+      }
+
+      this.accumulatedTime = 0;
+
+      if (this.callbacks?.onSeekComplete) {
+          this.callbacks.onSeekComplete();
+      }
+
+      if (this.callbacks?.onTimeUpdate) {
+          this.callbacks.onTimeUpdate(this.getCurrentTime());
       }
   }
 
   private processNextFrame(): boolean {
       if (!this.reader || !this.reader.hasMore()) {
-          this.state = PlaybackState.Finished;
+          this.transitionState(PlaybackState.Finished);
+          if (this.callbacks?.onPlaybackComplete) {
+              this.callbacks.onPlaybackComplete();
+          }
           return false;
       }
 
       const block = this.reader.readNextBlock();
       if (!block) {
-          this.state = PlaybackState.Finished;
+          this.transitionState(PlaybackState.Finished);
+          if (this.callbacks?.onPlaybackComplete) {
+              this.callbacks.onPlaybackComplete();
+          }
           return false;
       }
 
       this.currentFrameIndex++;
 
-      const parser = new NetworkMessageParser(block.data, this.handler);
-      parser.setProtocolVersion(this.currentProtocolVersion);
-      parser.parseMessage();
-      this.currentProtocolVersion = parser.getProtocolVersion();
+      // Parsing
+      try {
+          // Wrap handler to capture onFrame
+          const proxyHandler: NetworkMessageHandler = {
+              ...this.handler!,
+              onFrame: (frame: FrameData) => {
+                  this.lastFrameData = frame; // Capture last frame
+                  if (this.handler?.onFrame) this.handler.onFrame(frame);
+                  if (this.callbacks?.onFrameUpdate) this.callbacks.onFrameUpdate(frame);
+              }
+          };
+
+          const parser = new NetworkMessageParser(block.data, this.handler ? proxyHandler : undefined);
+          parser.setProtocolVersion(this.currentProtocolVersion);
+          parser.parseMessage();
+          this.currentProtocolVersion = parser.getProtocolVersion();
+
+          // Snapshot capture
+          if (this.callbacks?.onCaptureSnapshot && this.currentFrameIndex % this.snapshotInterval === 0 && this.currentFrameIndex > 0) {
+              const snapshot = this.callbacks.onCaptureSnapshot(this.currentFrameIndex);
+              if (snapshot) {
+                  this.snapshots.set(this.currentFrameIndex, snapshot);
+              }
+          }
+
+      } catch (e) {
+          console.error("Error processing demo frame", e);
+          if (this.callbacks?.onPlaybackError) {
+              this.callbacks.onPlaybackError(e instanceof Error ? e : new Error(String(e)));
+          }
+          return false;
+      }
 
       return true;
   }
@@ -147,23 +294,88 @@ export class DemoPlaybackController {
   }
 
   public getCurrentTime(): number {
-      // If index is -1, time is 0.
       if (this.currentFrameIndex < 0) return this.accumulatedTime;
       return (this.currentFrameIndex * this.frameDuration) + this.accumulatedTime;
   }
 
-  public getTotalFrames(): number {
+  public getFrameCount(): number {
       return this.reader ? this.reader.getMessageCount() : 0;
+  }
+
+  public getTotalFrames(): number {
+      return this.getFrameCount();
   }
 
   public getCurrentFrame(): number {
       return this.currentFrameIndex < 0 ? 0 : this.currentFrameIndex;
   }
 
-  /**
-   * Returns estimated duration in milliseconds.
-   */
   public getDuration(): number {
-      return this.getTotalFrames() * this.frameDuration;
+      return (this.getFrameCount() * this.frameDuration) / 1000;
+  }
+
+  public getTotalBytes(): number {
+      return this.reader ? this.reader.getProgress().total : 0;
+  }
+
+  public getProcessedBytes(): number {
+      return this.reader ? this.reader.getOffset() : 0;
+  }
+
+  // 3.2.1 Frame Data Extraction
+
+  public getFrameData(frameIndex: number): FrameData | null {
+      // If requesting current frame, return cached
+      if (frameIndex === this.currentFrameIndex && this.lastFrameData) {
+          return this.lastFrameData;
+      }
+
+      // If we are playing, seeking might interrupt playback flow.
+      // Ideally we clone the controller for analysis, but for now we seek.
+      // We must save current state? No, seek moves the playhead.
+      const previousState = this.state;
+      this.pause(); // Pause while seeking
+
+      this.seek(frameIndex);
+
+      if (previousState === PlaybackState.Playing) {
+          this.play();
+      }
+
+      return this.lastFrameData;
+  }
+
+  public getFramePlayerState(frameIndex: number): ProtocolPlayerState | null {
+      // First check if handler exposes state directly for "current" frame
+      if (frameIndex === this.currentFrameIndex && this.handler?.getPlayerState) {
+          const state = this.handler.getPlayerState();
+          if (state) return state;
+      }
+
+      const frame = this.getFrameData(frameIndex);
+      return frame ? frame.playerState : null;
+  }
+
+  public getFrameEntities(frameIndex: number): EntityState[] {
+      // If requesting current frame, try to use handler's fully resolved state
+      if (frameIndex === this.currentFrameIndex && this.handler?.getEntities) {
+          const entitiesMap = this.handler.getEntities();
+          if (entitiesMap) return Array.from(entitiesMap.values());
+      }
+
+      // Otherwise we fall back to seeking.
+      // But getFrameData only returns DELTA entities unless we are tracking state!
+      // The `lastFrameData` stores what the parser emitted.
+      // If we seek, `processNextFrame` runs, which updates the `handler` state.
+      // So if we seek to `frameIndex`, the `handler` should have the state for `frameIndex`.
+
+      this.seek(frameIndex);
+
+      if (this.handler?.getEntities) {
+          const entitiesMap = this.handler.getEntities();
+          return entitiesMap ? Array.from(entitiesMap.values()) : [];
+      }
+
+      return [];
   }
 }

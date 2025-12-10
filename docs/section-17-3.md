@@ -7,39 +7,39 @@
 ## 3.1 Demo Player API Enhancements
 
 ### 3.1.1 Timeline Control Improvements
-- [ ] Expose `DemoPlaybackController` as public API
-- [ ] Add method `getDuration(): number` returning total demo time in seconds
-- [ ] Add method `getCurrentTime(): number` returning current playback position
-- [ ] Add method `getFrameCount(): number` returning total frames
-- [ ] Add method `getCurrentFrame(): number` returning current frame index
-- [ ] Add method `getTotalBytes(): number` for progress display
-- [ ] Add method `getProcessedBytes(): number` for progress display
+- [x] Expose `DemoPlaybackController` as public API
+- [x] Add method `getDuration(): number` returning total demo time in seconds
+- [x] Add method `getCurrentTime(): number` returning current playback position
+- [x] Add method `getFrameCount(): number` returning total frames
+- [x] Add method `getCurrentFrame(): number` returning current frame index
+- [x] Add method `getTotalBytes(): number` for progress display
+- [x] Add method `getProcessedBytes(): number` for progress display
 
 ### 3.1.2 Seeking Improvements
-- [ ] Implement fast seek by frame index without full replay
-- [ ] Add method `seekToTime(seconds: number): void` for timeline scrubbing
-- [ ] Add method `seekToFrame(frameIndex: number): void` for frame-perfect seeking
-- [ ] Cache snapshots at regular intervals for faster backward seeking
-- [ ] Add event `onSeekComplete?: () => void` for webapp feedback
+- [x] Implement fast seek by frame index without full replay
+- [x] Add method `seekToTime(seconds: number): void` for timeline scrubbing
+- [x] Add method `seekToFrame(frameIndex: number): void` for frame-perfect seeking
+- [x] Cache snapshots at regular intervals for faster backward seeking
+- [x] Add event `onSeekComplete?: () => void` for webapp feedback
 
 ### 3.1.3 Playback State Events
-- [ ] Add event `onPlaybackStateChange?: (state: PlaybackState) => void`
-- [ ] Add event `onFrameUpdate?: (frame: FrameData) => void` for per-frame callbacks
-- [ ] Add event `onTimeUpdate?: (time: number) => void` for timeline UI
-- [ ] Add event `onPlaybackError?: (error: Error) => void` for error handling
-- [ ] Add event `onPlaybackComplete?: () => void` for loop/stop decisions
+- [x] Add event `onPlaybackStateChange?: (state: PlaybackState) => void`
+- [x] Add event `onFrameUpdate?: (frame: FrameData) => void` for per-frame callbacks
+- [x] Add event `onTimeUpdate?: (time: number) => void` for timeline UI
+- [x] Add event `onPlaybackError?: (error: Error) => void` for error handling
+- [x] Add event `onPlaybackComplete?: () => void` for loop/stop decisions
 
 ---
 
 ## 3.2 Frame-by-Frame Analysis
 
 ### 3.2.1 Frame Data Extraction
-- [ ] Add method `getFrameData(frameIndex: number): FrameData` for specific frame
-- [ ] Return player state: position, velocity, angles, weapon, health, ammo
-- [ ] Return entity states: positions, models, animations, effects
-- [ ] Return events: weapon fire, damage, pickups, deaths
-- [ ] Add method `getFramePlayerState(frameIndex: number): PlayerState`
-- [ ] Add method `getFrameEntities(frameIndex: number): EntityState[]`
+- [x] Add method `getFrameData(frameIndex: number): FrameData` for specific frame
+- [x] Return player state: position, velocity, angles, weapon, health, ammo
+- [x] Return entity states: positions, models, animations, effects
+- [x] Return events: weapon fire, damage, pickups, deaths
+- [x] Add method `getFramePlayerState(frameIndex: number): PlayerState`
+- [x] Add method `getFrameEntities(frameIndex: number): EntityState[]`
 
 ### 3.2.2 Frame Comparison
 - [ ] Add method `compareFrames(frameA: number, frameB: number): FrameDiff`
