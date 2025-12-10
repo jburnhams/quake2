@@ -28,10 +28,10 @@ export function findEntitiesInRadius(system: EntitySystem, origin: vec3, radius:
   system.forEachEntity((entity: any) => {
     if (!entity.inUse) return;
 
-    // Check distance squared
-    const dx = entity.origin[0] - origin[0];
-    const dy = entity.origin[1] - origin[1];
-    const dz = entity.origin[2] - origin[2];
+    // Check distance squared using Vec3 properties
+    const dx = entity.origin.x - origin[0];
+    const dy = entity.origin.y - origin[1];
+    const dz = entity.origin.z - origin[2];
     const d2 = dx*dx + dy*dy + dz*dz;
 
     if (d2 <= r2) {
@@ -49,10 +49,10 @@ export function findEntitiesInBounds(system: EntitySystem, mins: vec3, maxs: vec
     const eMins = entity.absmin;
     const eMaxs = entity.absmax;
 
-    // Check overlap
-    if (eMins[0] > maxs[0] || eMaxs[0] < mins[0]) return;
-    if (eMins[1] > maxs[1] || eMaxs[1] < mins[1]) return;
-    if (eMins[2] > maxs[2] || eMaxs[2] < mins[2]) return;
+    // Check overlap using Vec3 properties
+    if (eMins.x > maxs[0] || eMaxs.x < mins[0]) return;
+    if (eMins.y > maxs[1] || eMaxs.y < mins[1]) return;
+    if (eMins.z > maxs[2] || eMaxs.z < mins[2]) return;
 
     ids.push(entity.index);
   });

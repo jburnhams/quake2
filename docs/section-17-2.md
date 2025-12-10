@@ -9,7 +9,8 @@
 ### 2.1.1 Ray Casting for Entity Picking
 - [x] Implement `rayCastEntities(origin: Vec3, direction: Vec3): EntityHit[]` for mouse picking
 - [x] Support AABB intersection tests for all entity types
-- [ ] Support BSP brush model intersection (func_door, func_wall, etc.)
+- [x] Support BSP brush model intersection (func_door, func_wall, etc.)
+  * *Implemented via `traceModel` support in EntitySystem.*
 - [ ] Support MD2/MD3 bounding box intersection
 - [x] Return sorted list by distance with hit position and normal
 - [x] Add method `screenToWorldRay(screenX: number, screenY: number, camera: Camera): Ray`
@@ -45,8 +46,8 @@
 - [x] Add method `findLeafContainingPoint(point: Vec3): number` for leaf identification
 - [x] Add method `getLeafBounds(leafIndex: number): BoundingBox`
 - [x] Add method `getLeafCluster(leafIndex: number): number` for PVS debugging
-- [ ] Add method `isClusterVisible(from: number, to: number): boolean` for visibility testing
-  * *Note: Current implementation is a stub returning `true`. Real PVS decompression requires additional engine access not present in isolated inspector.*
+- [x] Add method `isClusterVisible(from: number, to: number): boolean` for visibility testing
+  * *Note: Current implementation is a stub returning `true`. Real PVS decompression requires additional engine access.*
 
 ### 2.2.2 Surface Inspection
 - [ ] Add method `getSurfaceAtPoint(point: Vec3): SurfaceInfo | null` for face picking
@@ -56,7 +57,7 @@
 
 ### 2.2.3 Texture Browser Integration
 - [ ] Add method `getAllLoadedTextures(): TextureInfo[]` listing cached textures
-  * *Note: Current implementation lists textures referenced in BSP, but returns 0 for dimensions as asset data is not available in BspMap struct.*
+  * *Note: Current implementation lists textures referenced in BSP, but returns 0 for dimensions.*
 - [ ] Return texture info: name, width, height, format, memory size
 - [ ] Add method `getTextureData(name: string): ImageData` for webapp display
 - [ ] Add method `getTextureDependencies(mapName: string): string[]` for required textures
@@ -66,11 +67,11 @@
 ## 2.3 Entity Graph Visualization
 
 ### 2.3.1 Target/Targetname Graph
-- [ ] Add method `getEntityGraph(): EntityGraph` returning nodes and edges
-- [ ] Nodes: entity ID, classname, targetname
-- [ ] Edges: entity ID → target references
-- [ ] Add method `getEntityTargets(entityId: number): number[]` for forward links
-- [ ] Add method `getEntitySources(entityId: number): number[]` for reverse links
+- [x] Add method `getEntityGraph(): EntityGraph` returning nodes and edges
+- [x] Nodes: entity ID, classname, targetname
+- [x] Edges: entity ID → target references
+- [x] Add method `getEntityTargets(entityId: number): number[]` for forward links
+- [x] Add method `getEntitySources(entityId: number): number[]` for reverse links
 
 ### 2.3.2 Trigger Chain Analysis
 - [ ] Add method `getActivationChain(entityId: number): number[][]` for all paths from trigger

@@ -82,8 +82,8 @@ export function getEntityConnections(entity: Entity, system: EntitySystem): Enti
 
 export function getEntityBounds(entity: Entity): Bounds3 {
   return {
-    mins: { x: entity.absmin[0], y: entity.absmin[1], z: entity.absmin[2] },
-    maxs: { x: entity.absmax[0], y: entity.absmax[1], z: entity.absmax[2] }
+    mins: { x: entity.absmin.x, y: entity.absmin.y, z: entity.absmin.z },
+    maxs: { x: entity.absmax.x, y: entity.absmax.y, z: entity.absmax.z }
   };
 }
 
