@@ -130,16 +130,13 @@ export function spawnGib(sys: EntitySystem, origin: Vec3, damage: number, model?
     if (type === GIB_ORGANIC && mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
         // Correct usage of TempEntity.BLOOD (1)
         // Original Source: g_phys.c -> ThrowGib
-        // gi.WriteByte (TE_BLOOD);
-        // gi.WritePosition (self->s.origin);
-        // gi.WriteDir (self->velocity);
         sys.multicast(
             gib.origin,
             MulticastType.Pvs,
-            ServerCommand.temp_entity, // Use correct lowercase enum member
+            ServerCommand.temp_entity,
             TempEntity.BLOOD, // ID
             gib.origin.x, gib.origin.y, gib.origin.z, // Pos
-            gib.velocity.x, gib.velocity.y, gib.velocity.z // Dir (using velocity as in original source)
+            gib.velocity.x, gib.velocity.y, gib.velocity.z // Dir
         );
     }
 
@@ -158,7 +155,6 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
     const head = sys.spawn();
 
     // Randomize between skull (skin 0) and player head (skin 1)
-    // irandom(maxExclusive) -> irandom(2) returns 0 or 1.
     let gibname: string;
     if (sys.rng.irandom(2) === 1) {
         gibname = "models/objects/gibs/head2/tris.md2";
@@ -187,7 +183,6 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
     };
 
     // Generic head is organic
-    // const type = GIB_ORGANIC;
     let vscale = 0.5;
 
     head.movetype = MoveType.Toss;
@@ -212,6 +207,18 @@ export function spawnHead(sys: EntitySystem, origin: Vec3, damage: number, mod: 
 
     head.avelocity = { x: 0, y: sys.rng.crandom() * 600, z: 0 };
 
+    if (mod !== DamageMod.LAVA && mod !== DamageMod.TRAP) {
+        // Blood shower for head too
+        sys.multicast(
+            head.origin,
+            MulticastType.Pvs,
+            ServerCommand.temp_entity,
+            TempEntity.BLOOD, // ID
+            head.origin.x, head.origin.y, head.origin.z, // Pos
+            head.velocity.x, head.velocity.y, head.velocity.z // Dir
+        );
+    }
+
     head.think = (self: Entity) => {
         sys.free(self);
     };
@@ -226,10 +233,6 @@ export function throwGibs(sys: EntitySystem, origin: Vec3, damageOrDefs: number 
         const damage = damageOrDefs;
 
         if (type === GIB_METALLIC) {
-             // Debris 1, 2, 3
-             // Spawns multiple debris pieces similar to func_explosive but using generic gib logic.
-             // func_explosive_explode spawns multiple debris based on mass.
-             // Here we are generic.
              spawnGib(sys, origin, damage, 'models/objects/debris1/tris.md2', type, mod);
              spawnGib(sys, origin, damage, 'models/objects/debris2/tris.md2', type, mod);
              spawnGib(sys, origin, damage, 'models/objects/debris3/tris.md2', type, mod);

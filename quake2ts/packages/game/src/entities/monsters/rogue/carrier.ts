@@ -198,7 +198,7 @@ function CarrierCoopCheck(self: Entity, context: EntitySystem): void {
 
   if (targets.length === 0) return;
 
-  const target = targets[context.rng.irandom(targets.length)];
+  const target = targets[context.rng.irandomRange(0, targets.length)]; // irandomRange takes maxExclusive
 
   self.monsterinfo.fire_wait = context.timeSeconds + CARRIER_ROCKET_TIME;
 
@@ -430,7 +430,7 @@ function carrier_ready_spawn(self: Entity, context: EntitySystem): void {
   self.monsterinfo.aiflags &= ~AiFlags.HoldFrame;
 
   // Pick reinforcements
-  const result = M_PickReinforcements(self, context, 1);
+  const result = M_PickReinforcements(self, context.rng, 1);
   self.monsterinfo.chosen_reinforcements = result.chosen;
   const num_summoned = result.count;
 

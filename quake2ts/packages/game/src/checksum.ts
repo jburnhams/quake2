@@ -1,5 +1,6 @@
 import type { GameStateSnapshot } from './index.js';
 import type { EntitySystemSnapshot, SerializedEntityState } from './entities/system.js';
+import type { EntityState } from '@quake2ts/shared';
 
 export const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -29,6 +30,27 @@ export function hashString(hash: number, value: string): number {
   return hashBytes(hash, bytes);
 }
 
+function hashEntityState(hash: number, entity: EntityState): number {
+    hash = hashNumber(hash, entity.number);
+    hash = hashNumber(hash, entity.modelIndex ?? 0);
+    hash = hashNumber(hash, entity.frame ?? 0);
+    hash = hashNumber(hash, entity.skinNum ?? 0);
+    hash = hashNumber(hash, entity.effects ?? 0);
+    hash = hashNumber(hash, entity.renderfx ?? 0);
+    hash = hashNumber(hash, entity.solid ?? 0);
+    hash = hashNumber(hash, entity.sound ?? 0);
+
+    hash = hashNumber(hash, entity.origin.x);
+    hash = hashNumber(hash, entity.origin.y);
+    hash = hashNumber(hash, entity.origin.z);
+
+    hash = hashNumber(hash, entity.angles.x);
+    hash = hashNumber(hash, entity.angles.y);
+    hash = hashNumber(hash, entity.angles.z);
+
+    return hash;
+}
+
 export function hashGameState(state: GameStateSnapshot): number {
   let hash = FNV_OFFSET_BASIS;
 
@@ -44,13 +66,23 @@ export function hashGameState(state: GameStateSnapshot): number {
   hash = hashNumber(hash, state.velocity.y);
   hash = hashNumber(hash, state.velocity.z);
 
-  hash = hashNumber(hash, state.level.frameNumber);
-  hash = hashNumber(hash, state.level.timeSeconds);
-  hash = hashNumber(hash, state.level.previousTimeSeconds);
-  hash = hashNumber(hash, state.level.deltaSeconds);
+  // Safely handle potential undefined values in state.level
+  hash = hashNumber(hash, state.level.frameNumber ?? 0);
+  hash = hashNumber(hash, state.level.timeSeconds ?? 0);
+  hash = hashNumber(hash, state.level.previousTimeSeconds ?? 0);
+  hash = hashNumber(hash, state.level.deltaSeconds ?? 0);
 
   hash = hashNumber(hash, state.entities.activeCount);
   hash = hashString(hash, state.entities.worldClassname);
+
+  // Include packetEntities in hash
+  if (state.packetEntities) {
+      // Sort to ensure stable hash
+      const sorted = [...state.packetEntities].sort((a, b) => a.number - b.number);
+      for (const ent of sorted) {
+          hash = hashEntityState(hash, ent);
+      }
+  }
 
   return hash >>> 0;
 }

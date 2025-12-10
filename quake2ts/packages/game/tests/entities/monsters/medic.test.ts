@@ -101,8 +101,10 @@ describe('monster_medic', () => {
         TempEntity.MEDIC_CABLE_ATTACK,
         medic.index,
         deadMonster.index,
-        expect.anything(), // start
-        deadMonster.origin // end
+        // Expanded start components
+        expect.any(Number), expect.any(Number), expect.any(Number),
+        // Expanded end components
+        expect.any(Number), expect.any(Number), expect.any(Number)
     );
   });
 
