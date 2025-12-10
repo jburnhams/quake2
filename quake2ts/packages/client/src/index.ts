@@ -37,11 +37,12 @@ import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
 import { LoadingScreen } from './ui/loading/screen.js';
 import { ErrorDialog } from './ui/error.js';
 import { WheelMenuSystem } from './ui/wheels/index.js';
-import { angleVectors } from '@quake2ts/shared';
+import { angleVectors, vectorToAngles } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
 import { DemoControls } from './ui/demo-controls.js';
 import { DemoRecorder, DLight } from '@quake2ts/engine';
+import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -70,6 +71,7 @@ export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 export { ClientConfigStrings } from './configStrings.js';
 
 export * from './session.js';
+export * from './demo/camera.js'; // Export DemoCameraMode
 
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
@@ -108,6 +110,12 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly mode: ClientMode;
   startDemoPlayback(buffer: ArrayBuffer, filename: string): void;
   stopDemoPlayback(): void;
+
+  // Demo Camera
+  setDemoCameraMode(mode: DemoCameraMode): void;
+  setDemoThirdPersonDistance(dist: number): void;
+  setDemoThirdPersonOffset(offset: Vec3): void;
+  setDemoFreeCamera(origin: Vec3, angles: Vec3): void;
 
   // Networking
   multiplayer: MultiplayerConnection;
@@ -162,6 +170,16 @@ export function createClient(imports: ClientImports): ClientExports {
   let isDemoPlaying = false;
   let currentDemoName: string | null = null;
   let clientMode: ClientMode = ClientMode.Normal;
+
+  // Demo Camera State
+  const demoCameraState: DemoCameraState = {
+      mode: DemoCameraMode.FirstPerson,
+      thirdPersonDistance: 80,
+      thirdPersonOffset: { x: 0, y: 0, z: 0 },
+      freeCameraOrigin: { x: 0, y: 0, z: 0 },
+      freeCameraAngles: { x: 0, y: 0, z: 0 },
+      followEntityId: -1
+  };
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
@@ -412,6 +430,14 @@ export function createClient(imports: ClientImports): ClientExports {
 
     handleInput(key: string, down: boolean): boolean {
         if (isDemoPlaying) {
+             // Handle camera inputs if in Free mode
+             if (demoCameraState.mode === DemoCameraMode.Free) {
+                 // Simple free camera movement
+                 // We need to track keys for continuous movement in render()
+                 // But handleInput is event based.
+                 // For now, let's just use DemoControls for everything
+             }
+
              if (demoControls.handleInput(key, down)) {
                  return true;
              }
@@ -517,29 +543,63 @@ export function createClient(imports: ClientImports): ClientExports {
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // Calculate alpha for interpolation
-          const frameDuration = 100; // Assume 10Hz
-          // Ideally demoPlayback should provide alpha or exact times
-          // For now, let's use 1.0 (latest) or calculate from demoPlayback.getCurrentTime()
-          // But demoHandler.getPredictionState(time) already does interpolation.
-          // However, getRenderableEntities needs explicit alpha.
-          // Let's assume demoPlayback.getCurrentTime() returns absolute time in demo timeline.
-          // We need alpha relative to the two frames in demoHandler.
-
-          // HACK: Calculate alpha from sub-frame time in demo playback?
-          // For now, pass 1.0 to render latest entities.
-          // TODO: Improve demo time tracking to provide correct interpolation alpha
+          // For now, let's use 1.0 (latest)
           renderEntities = demoHandler.getRenderableEntities(1.0, configStrings);
 
           if (lastRendered) {
              const demoCamera = demoHandler.getDemoCamera(1.0);
-             if (demoCamera) {
-                 // Override camera properties derived from lastRendered with specific demo camera data
-                 // (e.g. correct view origin including viewheight)
-                 lastRendered.origin = demoCamera.origin;
-                 lastRendered.viewAngles = demoCamera.angles;
-                 if (demoCamera.fov) {
-                    lastRendered.fov = demoCamera.fov;
-                 }
+             // Apply Demo Camera Modes logic
+             if (demoCameraState.mode === DemoCameraMode.FirstPerson) {
+                  if (demoCamera) {
+                      lastRendered.origin = demoCamera.origin;
+                      lastRendered.viewAngles = demoCamera.angles;
+                      if (demoCamera.fov) {
+                         lastRendered.fov = demoCamera.fov;
+                      }
+                  }
+             } else if (demoCameraState.mode === DemoCameraMode.ThirdPerson) {
+                  if (demoCamera) {
+                      // Simple third person: Move back along view angles
+                      const vectors = angleVectors(demoCamera.angles);
+                      const forward = vectors.forward;
+
+                      const dist = demoCameraState.thirdPersonDistance;
+
+                      // Calculate new origin
+                      // origin - forward * dist
+                      const camOrigin = { ...demoCamera.origin };
+                      camOrigin.x -= forward.x * dist;
+                      camOrigin.y -= forward.y * dist;
+                      camOrigin.z -= forward.z * dist;
+
+                      // TODO: Add collision check here (trace) to prevent clipping through walls
+
+                      lastRendered.origin = camOrigin;
+                      lastRendered.viewAngles = demoCamera.angles;
+                  }
+             } else if (demoCameraState.mode === DemoCameraMode.Free) {
+                  lastRendered.origin = demoCameraState.freeCameraOrigin;
+                  lastRendered.viewAngles = demoCameraState.freeCameraAngles;
+             } else if (demoCameraState.mode === DemoCameraMode.Follow) {
+                  if (demoCameraState.followEntityId !== -1) {
+                      // Find entity in renderEntities
+                      const ent = renderEntities.find(e => e.id === demoCameraState.followEntityId);
+                      if (ent) {
+                          // RenderableEntity has transform, not origin/angles directly
+                          // Extract position from matrix
+                          const mat = ent.transform;
+                          lastRendered.origin = { x: mat[12], y: mat[13], z: mat[14] };
+
+                          // Angles are tricky from matrix, but usually entities have angles stored separately if needed
+                          // Or we can just look at origin
+                          // For Follow mode, we probably want to look AT the entity, or from its POV?
+                          // "Follow: smooth camera tracking player with lag" usually means Third Person but dynamic target.
+                          // But if we track *entities*, we can just use their origin.
+
+                          // Assuming we just position camera at entity origin for now
+                          // View angles might remain user controlled or fixed.
+                      }
+                  }
              }
           }
       } else {
@@ -579,9 +639,11 @@ export function createClient(imports: ClientImports): ClientExports {
         const { origin, viewAngles } = lastRendered;
         camera = new Camera();
         camera.position = vec3.fromValues(origin.x, origin.y, origin.z);
-        // Add view offset
-        const viewOffset = lastView?.offset ?? { x: 0, y: 0, z: 0 };
-        vec3.add(camera.position, camera.position, [viewOffset.x, viewOffset.y, viewOffset.z]);
+        // Add view offset if FirstPerson
+        if (!isDemoPlaying || demoCameraState.mode === DemoCameraMode.FirstPerson) {
+            const viewOffset = lastView?.offset ?? { x: 0, y: 0, z: 0 };
+            vec3.add(camera.position, camera.position, [viewOffset.x, viewOffset.y, viewOffset.z]);
+        }
 
         // Add view effects angles
         const effectAngles = lastView?.angles ?? { x: 0, y: 0, z: 0 };
@@ -852,7 +914,22 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     demoHandler,
     multiplayer,
-    configStrings
+    configStrings,
+
+    // Demo Camera API
+    setDemoCameraMode(mode: DemoCameraMode) {
+        demoCameraState.mode = mode;
+    },
+    setDemoThirdPersonDistance(dist: number) {
+        demoCameraState.thirdPersonDistance = dist;
+    },
+    setDemoThirdPersonOffset(offset: Vec3) {
+        demoCameraState.thirdPersonOffset = offset;
+    },
+    setDemoFreeCamera(origin: Vec3, angles: Vec3) {
+        demoCameraState.freeCameraOrigin = origin;
+        demoCameraState.freeCameraAngles = angles;
+    }
   };
 
   return clientExports;

@@ -1,6 +1,7 @@
 import { DemoReader } from './demoReader.js';
 import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState, ProtocolPlayerState } from './parser.js';
-import { FrameDiff, DemoEvent, DemoEventType, EventSummary } from './analysis.js';
+import { FrameDiff, DemoEvent, DemoEventType, EventSummary, DemoHeader, ServerInfo, DemoStatistics, PlayerStatistics, WeaponStatistics } from './analysis.js';
+import { DemoAnalyzer } from './analyzer.js';
 import { Vec3 } from '@quake2ts/shared';
 
 export enum PlaybackState {
@@ -24,6 +25,7 @@ export interface DemoPlaybackCallbacks {
 
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
+  private buffer: ArrayBuffer | null = null; // Keep reference for analysis
   private state: PlaybackState = PlaybackState.Stopped;
   private playbackSpeed: number = 1.0;
   private handler?: NetworkMessageHandler;
@@ -43,6 +45,14 @@ export class DemoPlaybackController {
   private snapshotInterval: number = 100; // frames
   private snapshots: Map<number, any> = new Map();
 
+  // Analysis Cache
+  private cachedEvents: DemoEvent[] | null = null;
+  private cachedSummary: EventSummary | null = null;
+  private cachedHeader: DemoHeader | null = null;
+  private cachedConfigStrings: Map<number, string> | null = null;
+  private cachedServerInfo: ServerInfo | null = null;
+  private cachedStatistics: DemoStatistics | null = null;
+
   constructor() {}
 
   public setHandler(handler: NetworkMessageHandler) {
@@ -54,6 +64,7 @@ export class DemoPlaybackController {
   }
 
   public loadDemo(buffer: ArrayBuffer) {
+    this.buffer = buffer;
     this.reader = new DemoReader(buffer);
     this.transitionState(PlaybackState.Stopped);
     this.accumulatedTime = 0;
@@ -61,6 +72,14 @@ export class DemoPlaybackController {
     this.currentFrameIndex = -1;
     this.snapshots.clear();
     this.lastFrameData = null;
+
+    // Clear cache
+    this.cachedEvents = null;
+    this.cachedSummary = null;
+    this.cachedHeader = null;
+    this.cachedConfigStrings = null;
+    this.cachedServerInfo = null;
+    this.cachedStatistics = null;
   }
 
   public play() {
@@ -466,5 +485,65 @@ export class DemoPlaybackController {
 
       this.seek(originalFrame); // Restore
       return trajectory;
+  }
+
+  // 3.2.3 Event Log Extraction & 3.3 Metadata
+
+  public getDemoEvents(): DemoEvent[] {
+      this.ensureAnalysis();
+      return this.cachedEvents || [];
+  }
+
+  public filterEvents(type: DemoEventType, entityId?: number): DemoEvent[] {
+      const events = this.getDemoEvents();
+      return events.filter(e => {
+          if (e.type !== type) return false;
+          if (entityId !== undefined && e.entityId !== entityId) return false;
+          return true;
+      });
+  }
+
+  public getEventSummary(): EventSummary {
+      this.ensureAnalysis();
+      return this.cachedSummary || {
+          totalKills: 0,
+          totalDeaths: 0,
+          damageDealt: 0,
+          damageReceived: 0,
+          weaponUsage: new Map()
+      };
+  }
+
+  public getDemoHeader(): DemoHeader | null {
+      this.ensureAnalysis();
+      return this.cachedHeader;
+  }
+
+  public getDemoConfigStrings(): Map<number, string> {
+      this.ensureAnalysis();
+      return this.cachedConfigStrings || new Map();
+  }
+
+  public getDemoServerInfo(): ServerInfo {
+      this.ensureAnalysis();
+      return this.cachedServerInfo || {};
+  }
+
+  public getDemoStatistics(): DemoStatistics | null {
+      this.ensureAnalysis();
+      return this.cachedStatistics;
+  }
+
+  private ensureAnalysis() {
+      if (!this.cachedEvents && this.buffer) {
+          const analyzer = new DemoAnalyzer(this.buffer);
+          const result = analyzer.analyze();
+          this.cachedEvents = result.events;
+          this.cachedSummary = result.summary;
+          this.cachedHeader = result.header;
+          this.cachedConfigStrings = result.configStrings;
+          this.cachedServerInfo = result.serverInfo;
+          this.cachedStatistics = result.statistics;
+      }
   }
 }
