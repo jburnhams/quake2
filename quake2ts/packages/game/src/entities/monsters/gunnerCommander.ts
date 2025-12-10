@@ -37,6 +37,7 @@ import {
   M_ProjectFlashSource,
   M_CheckClearShot,
   M_ShouldReactToPain,
+  monster_done_dodge,
 } from './common.js';
 import {
   PredictAim,
@@ -167,10 +168,6 @@ function guncmdr_stand(self: Entity, context: EntitySystem): void {
 
 function guncmdr_walk(self: Entity, context: EntitySystem): void {
   M_SetAnimation(self, walk_move, context);
-}
-
-function monster_done_dodge(self: Entity): void {
-    self.monsterinfo.aiflags &= ~AIFlags.Ducked;
 }
 
 function guncmdr_run(self: Entity, context: EntitySystem): void {

@@ -30,6 +30,7 @@ import { registerGunCommanderSpawns } from './gunnerCommander.js';
 import { registerGuardianSpawns } from './guardian.js';
 import { registerStalkerSpawns } from './rogue/stalker.js';
 import { registerShamblerSpawns } from './shambler.js';
+import { registerWidow } from './rogue/widow.js';
 
 export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerSoldierSpawns(registry);
@@ -63,4 +64,5 @@ export function registerMonsterSpawns(registry: SpawnRegistry): void {
   registerGuardianSpawns(registry);
   registerStalkerSpawns(registry);
   registerShamblerSpawns(registry);
+  registerWidow(registry);
 }

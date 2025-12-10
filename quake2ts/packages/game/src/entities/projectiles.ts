@@ -10,6 +10,9 @@ import { DamageMod } from '../combat/damageMods.js';
 import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID, vectorToAngles } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
+const BFG_LASER_RADIUS = 256;
+const BFG_LASER_RANGE = 2048;
+
 export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number, flashtype: number = 0) {
     const rocket = sys.spawn();
     rocket.classname = 'rocket';
@@ -278,9 +281,9 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
 
     const dir = normalizeVec3(subtractVec3(targetCenter, start));
     const end: Vec3 = {
-        x: start.x + dir.x * 2048,
-        y: start.y + dir.y * 2048,
-        z: start.z + dir.z * 2048,
+        x: start.x + dir.x * BFG_LASER_RANGE,
+        y: start.y + dir.y * BFG_LASER_RANGE,
+        z: start.z + dir.z * BFG_LASER_RANGE,
     };
 
     // Piercing laser - continues through multiple entities
@@ -363,7 +366,7 @@ function bfgThink(self: Entity, sys: EntitySystem): void {
 
     // Find all entities within 256 units
     // Based on rerelease/g_weapon.cpp:1088
-    const nearbyEntities = sys.findByRadius(self.origin, 256);
+    const nearbyEntities = sys.findByRadius(self.origin, BFG_LASER_RADIUS);
 
     for (const ent of nearbyEntities) {
         // Skip self and owner

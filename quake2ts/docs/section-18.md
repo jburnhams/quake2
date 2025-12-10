@@ -33,9 +33,9 @@ This section focuses on making `quake2ts` usable by client applications, refinin
 **Priority**: **MEDIUM**
 **Description**: Enhance type definitions and remove magic numbers.
 **Tasks**:
-- [ ] **Loose Entity Typing**: Define stricter interfaces for `DamageableEntity` and `MonsterEntity`.
-- [ ] **Magic Numbers**: Extract constants for values like `BFG_LASER_RADIUS`, `JORG_ATTACK_CHANCE`.
-- [ ] **Source References**: Add comments referencing original C++ source locations.
+- [x] **Loose Entity Typing**: Define stricter interfaces for `DamageableEntity` and `MonsterEntity`.
+- [x] **Magic Numbers**: Extract constants for values like `BFG_LASER_RADIUS`, `JORG_ATTACK_CHANCE`.
+- [x] **Source References**: Add comments referencing original C++ source locations.
 
 ### 4. Build & Test Pipeline Improvements
 **Priority**: **MEDIUM**

@@ -101,8 +101,8 @@ describe('monster_medic', () => {
         TempEntity.MEDIC_CABLE_ATTACK,
         medic.index,
         deadMonster.index,
-        expect.anything(), // start
-        deadMonster.origin // end
+        24, 0, 6, // Start coordinates (calculated from offset and 0 angles)
+        50, 0, 0  // End coordinates
     );
   });
 

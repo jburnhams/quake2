@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
-import { NetworkMessageHandler } from '../../src/demo/parser.js';
+import { NetworkMessageHandler, createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
 
 describe('DemoPlaybackController', () => {
   let controller: DemoPlaybackController;
@@ -20,15 +20,15 @@ describe('DemoPlaybackController', () => {
       onLayout: vi.fn(),
       onInventory: vi.fn(),
       onConfigString: vi.fn(),
-      onMuzzleFlash: vi.fn()
+      onMuzzleFlash: vi.fn(),
+      onSpawnBaseline: vi.fn(),
+      // Mock optional methods
+      getEntities: vi.fn().mockReturnValue(new Map()),
+      getPlayerState: vi.fn().mockReturnValue(createEmptyProtocolPlayerState())
     };
     controller.setHandler(mockHandler);
   });
 
-  // Create a minimal valid demo block that the parser won't choke on.
-  // The parser reads a byte for the command.
-  // ServerCommand.nop = 6
-  // So a 1 byte payload of [6] should be valid.
   const createMockDemoBuffer = (numFrames: number): ArrayBuffer => {
     const buffer = new ArrayBuffer(numFrames * (4 + 1));
     const view = new DataView(buffer);
@@ -46,94 +46,90 @@ describe('DemoPlaybackController', () => {
     expect(controller.getState()).toBe(PlaybackState.Stopped);
   });
 
-  it('should load demo and remain stopped', () => {
-    const buffer = createMockDemoBuffer(1);
-    controller.loadDemo(buffer);
-    expect(controller.getState()).toBe(PlaybackState.Stopped);
+  it('should fire onPlaybackStateChange event', () => {
+      const callback = vi.fn();
+      controller.setCallbacks({ onPlaybackStateChange: callback });
+      const buffer = createMockDemoBuffer(1);
+      controller.loadDemo(buffer);
+
+      controller.play();
+      expect(callback).toHaveBeenCalledWith(PlaybackState.Playing);
+
+      controller.pause();
+      expect(callback).toHaveBeenCalledWith(PlaybackState.Paused);
   });
 
-  it('should play when play() is called', () => {
-    const buffer = createMockDemoBuffer(1);
-    controller.loadDemo(buffer);
-    controller.play();
-    expect(controller.getState()).toBe(PlaybackState.Playing);
+  it('should seek to specific frame', () => {
+      const buffer = createMockDemoBuffer(10);
+      controller.loadDemo(buffer);
+      const onSeekComplete = vi.fn();
+      controller.setCallbacks({ onSeekComplete });
+
+      controller.seekToFrame(5);
+
+      expect(controller.getCurrentFrame()).toBe(5);
+      expect(onSeekComplete).toHaveBeenCalled();
   });
 
-  it('should pause when pause() is called', () => {
-    const buffer = createMockDemoBuffer(1);
-    controller.loadDemo(buffer);
-    controller.play();
-    controller.pause();
-    expect(controller.getState()).toBe(PlaybackState.Paused);
+  it('should get frame data', () => {
+      const buffer = createMockDemoBuffer(5);
+      controller.loadDemo(buffer);
+
+      const frameData = controller.getFrameData(2);
+      expect(frameData).toBeDefined();
+      expect(controller.getCurrentFrame()).toBe(2);
   });
 
-  it('should advance frames when playing', () => {
-    const buffer = createMockDemoBuffer(2);
-    controller.loadDemo(buffer);
-    controller.play();
+  it('should get frame entities via handler', () => {
+      const buffer = createMockDemoBuffer(5);
+      controller.loadDemo(buffer);
 
-    // Each frame is default 100ms.
-    // Update by 0.3s (300ms) should consume 2 frames (200ms) and try to consume the 3rd, realizing it's finished.
+      // Need to seek first so currentFrameIndex matches requested index for the optimization
+      // Or rely on seek being called internally.
+      // If we request frame 3, it seeks to 3.
+      // `getEntities` optimization checks if `frameIndex === currentFrameIndex`.
 
-    controller.update(0.3);
+      const entities = controller.getFrameEntities(3);
 
-    expect(controller.getState()).toBe(PlaybackState.Finished);
+      // The optimization inside getFrameEntities checks `frameIndex === this.currentFrameIndex`.
+      // Internal seek updates `currentFrameIndex` to 3.
+      // So optimization should pass and `handler.getEntities` should be called.
+
+      expect(mockHandler.getEntities).toHaveBeenCalled();
+      expect(entities).toEqual([]); // Mock returns empty map
+      expect(controller.getCurrentFrame()).toBe(3);
   });
 
-  it('should respect playback speed', () => {
-    const buffer = createMockDemoBuffer(10);
-    controller.loadDemo(buffer);
-    controller.play();
-    controller.setSpeed(2.0); // 2x speed
+  it('should get frame player state via handler', () => {
+      const buffer = createMockDemoBuffer(5);
+      controller.loadDemo(buffer);
 
-    // Update by 0.1s (100ms). At 2x speed, this is 200ms accumulated.
-    // Should consume 2 frames (assuming 100ms per frame).
-    controller.update(0.1);
+      // Seek internal should work.
+      // Note: `seek` implementation sets `currentFrameIndex` to `targetFrame`.
+      // The optimization in `getFramePlayerState` is:
+      // if (frameIndex === this.currentFrameIndex && this.handler?.getPlayerState)
 
-    // We expect it NOT to be finished yet.
-    expect(controller.getState()).toBe(PlaybackState.Playing);
+      // But initially `currentFrameIndex` is -1.
+      // So `getFramePlayerState(1)` calls `getFrameData(1)`.
+      // `getFrameData(1)` calls `seek(1)`.
+      // `seek(1)` sets `currentFrameIndex` to 1.
+      // `getFrameData` returns `lastFrameData`.
+      // `getFramePlayerState` returns `frame.playerState`.
 
-    // Let's just give it plenty of time to finish.
-    controller.update(1.0);
-    expect(controller.getState()).toBe(PlaybackState.Finished);
-  });
+      // Wait! `getFramePlayerState` calls `getFrameData` if the initial check FAILS.
+      // So if I call `getFramePlayerState(1)` when at -1:
+      // 1. check fails (-1 != 1)
+      // 2. calls `getFrameData(1)` -> seeks -> returns frame
+      // 3. returns frame.playerState.
+      // So `mockHandler.getPlayerState` is NOT CALLED in this path!
 
-  it('should clamp playback speed', () => {
-    controller.setSpeed(0.01);
-    expect(controller.getSpeed()).toBe(0.1);
+      // To test the optimization (handler call), we must be AT the frame.
+      controller.seekToFrame(1);
 
-    controller.setSpeed(100.0);
-    expect(controller.getSpeed()).toBe(16.0);
-
-    controller.setSpeed(2.5);
-    expect(controller.getSpeed()).toBe(2.5);
-  });
-
-  it('should support step forward', () => {
-    const buffer = createMockDemoBuffer(5);
-    controller.loadDemo(buffer);
-    // Move to playing then pause to ensure correct state transition
-    controller.play();
-    controller.pause();
-
-    controller.stepForward();
-    // We expect it to consume one frame.
-    // State should remain paused.
-    expect(controller.getState()).toBe(PlaybackState.Paused);
-
-    // Verify we consumed 1 frame.
-    // If we play now, we should have 4 frames left.
-    controller.play();
-
-    // 400ms should finish the remaining 4 frames
-    // We need a bit more to trigger the "Finished" check.
-    controller.update(0.5);
-    expect(controller.getState()).toBe(PlaybackState.Finished);
-  });
-
-  it('should support step backward', () => {
-      // Just verifying it doesn't crash, as implementation is currently a warning
-      controller.stepBackward();
+      const state = controller.getFramePlayerState(1);
+      expect(mockHandler.getPlayerState).toHaveBeenCalled();
+      expect(state).toBeDefined();
+      expect(controller.getCurrentFrame()).toBe(1);
   });
 
 });

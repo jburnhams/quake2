@@ -231,6 +231,10 @@ export interface NetworkMessageHandler {
     onReconnect(): void;
     onDownload(size: number, percent: number, data?: Uint8Array): void;
 
+    // Optional State Accessors for Demo Analysis
+    getEntities?(): Map<number, EntityState>;
+    getPlayerState?(): ProtocolPlayerState | null;
+
     // New Rerelease Handlers
     onSplitClient?(clientNum: number): void;
     onConfigBlast?(index: number, data: Uint8Array): void;

@@ -23,6 +23,7 @@ export enum AIFlags {
   CombatPoint = 1 << 13,
   Medic = 1 << 14,
   Resurrecting = 1 << 15,
+  Dodging = 1 << 19,
   Pathing = 1 << 30, // Custom?
 }
 

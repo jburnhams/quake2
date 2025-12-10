@@ -1,4 +1,4 @@
-import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag } from '../entity.js';
+import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag, AiFlags, AttackState } from '../entity.js';
 import { monster_think, ai_stand, ai_walk, ai_run, ai_charge } from '../../ai/index.js';
 import { SpawnContext } from '../spawn.js';
 import { throwGibs, GIB_ORGANIC } from '../gibs.js';
@@ -163,6 +163,13 @@ export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, 
 
 export function M_MonsterDodge(self: Entity, attacker: Entity, eta: number): void {
     // Stub implementation
+}
+
+export function monster_done_dodge(self: Entity): void {
+  self.monsterinfo.aiflags &= ~AiFlags.Dodging;
+  if (self.monsterinfo.attack_state === AttackState.Sliding) {
+    self.monsterinfo.attack_state = AttackState.Straight;
+  }
 }
 
 export function M_CheckClearShot(self: Entity, offset: Vec3, context: EntitySystem): boolean {
