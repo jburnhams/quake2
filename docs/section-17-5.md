@@ -7,12 +7,12 @@
 ## 5.1 Multiplayer Client
 
 ### 5.1.1 Server Connection API
-- [ ] Expose `connectToServer(address: string, port: number): Promise<void>`
-- [ ] Add connection state events: connecting, challenge, connected, disconnected
-- [ ] Add method `disconnect(): void` with graceful cleanup
-- [ ] Add event `onConnectionStateChange?: (state: ConnectionState) => void`
-- [ ] Add event `onConnectionError?: (error: Error) => void`
-- [ ] Add latency/ping reporting: `getPing(): number`
+- [x] Expose `connectToServer(address: string, port: number): Promise<void>`
+- [x] Add connection state events: connecting, challenge, connected, disconnected
+- [x] Add method `disconnect(): void` with graceful cleanup
+- [x] Add event `onConnectionStateChange?: (state: ConnectionState) => void`
+- [x] Add event `onConnectionError?: (error: Error) => void`
+- [x] Add latency/ping reporting: `getPing(): number`
 
 ### 5.1.2 Client Prediction and Interpolation
 - [ ] Ensure client prediction works correctly in multiplayer
