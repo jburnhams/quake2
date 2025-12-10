@@ -19,9 +19,9 @@ describe('Entity Selection', () => {
 
   function createEntity(mins: number[], maxs: number[]): Entity {
     const e = {
-      inuse: true,
-      absmin: vec3.fromValues(mins[0], mins[1], mins[2]),
-      absmax: vec3.fromValues(maxs[0], maxs[1], maxs[2])
+      inUse: true,
+      absmin: { x: mins[0], y: mins[1], z: mins[2] },
+      absmax: { x: maxs[0], y: maxs[1], z: maxs[2] }
     } as any;
     entities.push(e);
     return e;

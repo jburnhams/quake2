@@ -1,6 +1,6 @@
-import { Entity } from '../entities/entity';
-import { EntitySystem } from '../entities/system';
-import { BoundingBox } from '@quake2ts/shared';
+import { Entity } from '../entities/entity.js';
+import { EntitySystem } from '../entities/system.js';
+import { Bounds3 } from '@quake2ts/shared';
 import { vec3 } from 'gl-matrix';
 
 export interface EntityMetadata {
@@ -29,16 +29,16 @@ export interface ModelReference {
 
 export function getEntityMetadata(entity: Entity): EntityMetadata {
   return {
-    id: entity.s.number,
+    id: entity.index,
     classname: entity.classname,
-    origin: vec3.clone(entity.s.origin),
-    angles: vec3.clone(entity.s.angles),
+    origin: vec3.fromValues(entity.origin.x, entity.origin.y, entity.origin.z),
+    angles: vec3.fromValues(entity.angles.x, entity.angles.y, entity.angles.z),
     model: entity.model || null,
     targetname: entity.targetname || null,
     target: entity.target || null,
     spawnflags: entity.spawnflags,
     health: entity.health,
-    inuse: entity.inuse
+    inuse: entity.inUse
   };
 }
 
@@ -64,10 +64,10 @@ export function getEntityConnections(entity: Entity, system: EntitySystem): Enti
 
   if (entity.target) {
     // Find entities with matching targetname
-    system.forEachEntity((other) => {
+    system.forEachEntity((other: any) => {
       if (other.targetname === entity.target) {
         connections.push({
-          targetId: other.s.number,
+          targetId: other.index,
           targetName: other.classname,
           type: 'target'
         });
@@ -80,10 +80,10 @@ export function getEntityConnections(entity: Entity, system: EntitySystem): Enti
   return connections;
 }
 
-export function getEntityBounds(entity: Entity): BoundingBox {
+export function getEntityBounds(entity: Entity): Bounds3 {
   return {
-    mins: vec3.clone(entity.absmin),
-    maxs: vec3.clone(entity.absmax)
+    mins: { x: entity.absmin[0], y: entity.absmin[1], z: entity.absmin[2] },
+    maxs: { x: entity.absmax[0], y: entity.absmax[1], z: entity.absmax[2] }
   };
 }
 
@@ -91,7 +91,7 @@ export function getEntityModel(entity: Entity): ModelReference | null {
   if (entity.model) {
     return {
       modelName: entity.model,
-      modelIndex: entity.s.modelindex
+      modelIndex: entity.modelindex
     };
   }
   return null;

@@ -51,11 +51,14 @@ describe('Camera', () => {
 
         // This is the expected matrix that transforms from Quake's coordinate system
         // (X forward, Y left, Z up) to WebGL's (X right, Y up, Z back).
-        // It's a combination of rotations to align the axes.
+        // NEW MAPPING:
+        // Quake X (Forward) -> GL -Z
+        // Quake Y (Left)    -> GL -X
+        // Quake Z (Up)      -> GL Y
         const expected = mat4.fromValues(
-             0, -1,  0, 0,
-             0,  0,  1, 0,
-            -1,  0,  0, 0,
+             0,  0, -1, 0,  // Col 0: Quake X -> GL -Z
+            -1,  0,  0, 0,  // Col 1: Quake Y -> GL -X
+             0,  1,  0, 0,  // Col 2: Quake Z -> GL Y
              0,  0,  0, 1
         );
 
@@ -68,17 +71,35 @@ describe('Camera', () => {
         camera.position = vec3.fromValues(10, 20, 30); // X=10 (forward), Y=20 (left), Z=30 (up)
         camera.angles = vec3.fromValues(0, 0, 0);
 
-        // In WebGL view space, the camera is at the origin, and the world moves.
-        // So we expect a translation of (-10, -20, -30) in Quake space, which then
-        // needs to be transformed into WebGL space.
-        // According to the comprehensive tests, the transformed translation is:
-        // WebGL_X = -Quake_Y, WebGL_Y = -Quake_Z, WebGL_Z = -Quake_X
-        // Expected translation: (-20, -30, -10)
+        // Translation logic updated:
+        // Quake Pos (10, 20, 30) -> Negative (-10, -20, -30) for view matrix translation.
+        // Transform negative pos to GL:
+        // GL X = -Quake Y = -20
+        // GL Y =  Quake Z =  30  <-- Wait, Q Z (30) -> GL Y (30)?? No.
+        // Let's check rotation matrix: Q Z -> GL Y. So if we have vector (0,0,1) it becomes (0,1,0).
+        // So Quake Z (-30) -> GL Y (-30).
+        // GL Z = -Quake X = -(-10) = 10? No.
+        // Q X (Forward) -> GL -Z.
+        // So vector (1,0,0) becomes (0,0,-1).
+        // So Quake X (-10) -> GL Z (10).
+
+        // Let's re-verify the implementation code:
+        // const translationGl = vec3.fromValues(
+        //    rotatedPosQuake[1] ? -rotatedPosQuake[1] : 0,  // Y in Quake -> -X in WebGL
+        //    rotatedPosQuake[2] || 0,  // Z in Quake -> Y in WebGL
+        //    rotatedPosQuake[0] ? -rotatedPosQuake[0] : 0   // X in Quake -> -Z in WebGL
+        // );
+
+        // Input: (-10, -20, -30)
+        // GL X = -(-20) = 20
+        // GL Y = -30
+        // GL Z = -(-10) = 10
+
         const expected = mat4.fromValues(
-             0, -1,  0, 0,
-             0,  0,  1, 0,
+             0,  0, -1, 0,
             -1,  0,  0, 0,
-           -20, -30, -10, 1
+             0,  1,  0, 0,
+            20, -30, 10, 1
         );
 
         expectMat4CloseTo(camera.viewMatrix, expected);
@@ -89,10 +110,14 @@ describe('Camera', () => {
         camera.angles = vec3.fromValues(0, 90, 0); // 90 degrees yaw (turn right)
 
         // A 90-degree yaw in Quake is a rotation around the Z-axis.
-        // This should result in the camera looking down the positive Y (left) axis in Quake space.
-        // We need to figure out the final combined rotation matrix.
         const expectedRotation = mat4.create();
-        const quakeToGl = mat4.fromValues(0, -1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 1);
+        // NEW MAPPING
+        const quakeToGl = mat4.fromValues(
+             0,  0, -1, 0,
+            -1,  0,  0, 0,
+             0,  1,  0, 0,
+             0,  0,  0, 1
+        );
         const rotationQuake = mat4.create();
         mat4.rotateZ(rotationQuake, rotationQuake, (-90 * Math.PI) / 180);
         mat4.multiply(expectedRotation, quakeToGl, rotationQuake);

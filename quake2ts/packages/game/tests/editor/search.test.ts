@@ -25,13 +25,11 @@ describe('Entity Search', () => {
 
   function addEntity(props: Partial<Entity> & { id: number }) {
     const e = {
-      s: {
-        number: props.id,
-        origin: props.s?.origin || vec3.create()
-      },
-      absmin: vec3.create(),
-      absmax: vec3.create(),
-      inuse: true,
+      index: props.id,
+      origin: props.origin || { x: 0, y: 0, z: 0 },
+      absmin: { x: 0, y: 0, z: 0 },
+      absmax: { x: 0, y: 0, z: 0 },
+      inUse: true,
       ...props
     } as any;
     entities.push(e);
@@ -56,9 +54,9 @@ describe('Entity Search', () => {
   });
 
   it('should find entities in radius', () => {
-    addEntity({ id: 1, s: { number: 1, origin: vec3.fromValues(0, 0, 0) } } as any);
-    addEntity({ id: 2, s: { number: 2, origin: vec3.fromValues(10, 0, 0) } } as any);
-    addEntity({ id: 3, s: { number: 3, origin: vec3.fromValues(20, 0, 0) } } as any);
+    addEntity({ id: 1, origin: { x: 0, y: 0, z: 0 } } as any);
+    addEntity({ id: 2, origin: { x: 10, y: 0, z: 0 } } as any);
+    addEntity({ id: 3, origin: { x: 20, y: 0, z: 0 } } as any);
 
     const results = findEntitiesInRadius(mockSystem, vec3.fromValues(0, 0, 0), 15);
     expect(results).toEqual([1, 2]);
@@ -67,18 +65,18 @@ describe('Entity Search', () => {
   it('should find entities in bounds', () => {
     // Entity inside
     const e1 = addEntity({ id: 1 });
-    vec3.set(e1.absmin, 0, 0, 0);
-    vec3.set(e1.absmax, 10, 10, 10);
+    e1.absmin = { x: 0, y: 0, z: 0 };
+    e1.absmax = { x: 10, y: 10, z: 10 };
 
     // Entity outside
     const e2 = addEntity({ id: 2 });
-    vec3.set(e2.absmin, 20, 20, 20);
-    vec3.set(e2.absmax, 30, 30, 30);
+    e2.absmin = { x: 20, y: 20, z: 20 };
+    e2.absmax = { x: 30, y: 30, z: 30 };
 
     // Entity overlapping
     const e3 = addEntity({ id: 3 });
-    vec3.set(e3.absmin, 5, 5, 5);
-    vec3.set(e3.absmax, 15, 15, 15);
+    e3.absmin = { x: 5, y: 5, z: 5 };
+    e3.absmax = { x: 15, y: 15, z: 15 };
 
     const mins = vec3.fromValues(-5, -5, -5);
     const maxs = vec3.fromValues(12, 12, 12);

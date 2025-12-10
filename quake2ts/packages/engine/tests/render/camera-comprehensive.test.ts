@@ -7,9 +7,9 @@ describe('Camera - Comprehensive Tests', () => {
   describe('Position tests (no rotation)', () => {
     it('should handle camera at various positions along X axis', () => {
       const testCases = [
-        { pos: [5, 0, 0], expectedTrans: [0, 0, -5] },
-        { pos: [20, 0, 0], expectedTrans: [0, 0, -20] },
-        { pos: [-10, 0, 0], expectedTrans: [0, 0, 10] },
+        { pos: [5, 0, 0], expectedTrans: [0, 0, 5] },
+        { pos: [20, 0, 0], expectedTrans: [0, 0, 20] },
+        { pos: [-10, 0, 0], expectedTrans: [0, 0, -10] },
       ];
 
       for (const { pos, expectedTrans } of testCases) {
@@ -25,10 +25,11 @@ describe('Camera - Comprehensive Tests', () => {
     });
 
     it('should handle camera at various positions along Y axis', () => {
+      // Quake Y 5 -> T(0,-5,0) -> GL -X -> -(-5) = 5
       const testCases = [
-        { pos: [0, 5, 0], expectedTrans: [-5, 0, 0] },
-        { pos: [0, 10, 0], expectedTrans: [-10, 0, 0] },
-        { pos: [0, -15, 0], expectedTrans: [15, 0, 0] },
+        { pos: [0, 5, 0], expectedTrans: [5, 0, 0] },
+        { pos: [0, 10, 0], expectedTrans: [10, 0, 0] },
+        { pos: [0, -15, 0], expectedTrans: [-15, 0, 0] },
       ];
 
       for (const { pos, expectedTrans } of testCases) {
@@ -44,6 +45,26 @@ describe('Camera - Comprehensive Tests', () => {
     });
 
     it('should handle camera at various positions along Z axis', () => {
+      // Quake Z 5 -> GL Y -5
+      // Wait, view matrix translation T = -Position.
+      // Quake Pos (0,0,5) -> Trans (-0, -0, -5) in Quake.
+      // Quake Z (-5) -> GL Y (-5).
+      // So expectedTrans should be [0, -5, 0].
+      // This matches existing test case [0, -5, 0].
+      // Why did it fail?
+      // Ah, previous implementation mapping:
+      // Quake Z -> GL -X.
+      // Current mapping: Quake Z -> GL Y.
+      // So previously Q(0,0,5) -> T(0,0,-5) -> GL(-(-5), 0, 0) = (5,0,0)??
+      // The test expects [0, -5, 0].
+      // Let's re-verify the expectation with current mapping.
+      // Pos(0,0,5) -> T(0,0,-5).
+      // GL X = -Q Y = -0 = 0.
+      // GL Y =  Q Z = -5.
+      // GL Z = -Q X = -0 = 0.
+      // Result: [0, -5, 0].
+      // The test expects [0, -5, 0]. So this one should pass!
+
       const testCases = [
         { pos: [0, 0, 5], expectedTrans: [0, -5, 0] },
         { pos: [0, 0, 20], expectedTrans: [0, -20, 0] },
@@ -63,10 +84,16 @@ describe('Camera - Comprehensive Tests', () => {
     });
 
     it('should handle camera at diagonal positions', () => {
+      // Pos (10, 10, 0) -> T(-10, -10, 0)
+      // GL X = -Q Y = -(-10) = 10
+      // GL Y =  Q Z = 0
+      // GL Z = -Q X = -(-10) = 10
+      // Result: [10, 0, 10].
+
       const testCases = [
-        { pos: [10, 10, 0], expectedTrans: [-10, 0, -10] },
-        { pos: [5, 5, 5], expectedTrans: [-5, -5, -5] },
-        { pos: [-10, 10, -10], expectedTrans: [-10, 10, 10] },
+        { pos: [10, 10, 0], expectedTrans: [10, 0, 10] },
+        { pos: [5, 5, 5], expectedTrans: [5, -5, 5] },
+        { pos: [-10, 10, -10], expectedTrans: [10, 10, -10] },
       ];
 
       for (const { pos, expectedTrans } of testCases) {

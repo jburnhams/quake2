@@ -1,6 +1,6 @@
-import { BspMap, BspNode, BspLeaf, BspSurface, BspTexture } from '../bsp/bsp';
+import { BspMap } from '../assets/bsp.js';
 import { vec3 } from 'gl-matrix';
-import { BoundingBox } from '@quake2ts/shared';
+import { Bounds3 } from '@quake2ts/shared';
 
 export interface BspNodeTree {
   // Representation of the tree structure for visualization
@@ -34,9 +34,13 @@ export class BspInspector {
     let nodeIndex = 0;
     while (nodeIndex >= 0) {
       const node = this.bsp.nodes[nodeIndex];
-      const plane = this.bsp.planes[node.planeId];
+      const plane = this.bsp.planes[node.planeIndex];
 
-      const dist = vec3.dot(point, plane.normal) - plane.dist;
+      // bsp.planes[].normal is [x,y,z] tuple (Vec3 type in bsp.ts), not Float32Array.
+      // gl-matrix vec3.dot expects Float32Array or array.
+      // We can use direct calculation.
+      const dot = point[0] * plane.normal[0] + point[1] * plane.normal[1] + point[2] * plane.normal[2];
+      const dist = dot - plane.dist;
       if (dist >= 0) {
         nodeIndex = node.children[0];
       } else {
@@ -46,16 +50,17 @@ export class BspInspector {
     return -(nodeIndex + 1);
   }
 
-  getLeafBounds(leafIndex: number): BoundingBox {
-    const leaf = this.bsp.leaves[leafIndex];
+  getLeafBounds(leafIndex: number): Bounds3 {
+    const leaf = this.bsp.leafs[leafIndex];
+    // leaf.mins is [number, number, number]
     return {
-      mins: vec3.clone(leaf.mins),
-      maxs: vec3.clone(leaf.maxs)
+      mins: { x: leaf.mins[0], y: leaf.mins[1], z: leaf.mins[2] },
+      maxs: { x: leaf.maxs[0], y: leaf.maxs[1], z: leaf.maxs[2] }
     };
   }
 
   getLeafCluster(leafIndex: number): number {
-    const leaf = this.bsp.leaves[leafIndex];
+    const leaf = this.bsp.leafs[leafIndex];
     return leaf.cluster;
   }
 
@@ -72,8 +77,8 @@ export class BspInspector {
 
   getSurfacesByTexture(textureName: string): number[] {
     const indices: number[] = [];
-    this.bsp.surfaces.forEach((surf, i) => {
-      const texInfo = this.bsp.texInfo[surf.texInfoId];
+    this.bsp.faces.forEach((face, i) => {
+      const texInfo = this.bsp.texInfo[face.texInfo];
       if (texInfo && texInfo.texture === textureName) {
         indices.push(i);
       }
@@ -89,7 +94,7 @@ export class BspInspector {
 
     const textures = new Map<string, TextureInfo>();
 
-    this.bsp.texInfo.forEach(ti => {
+    this.bsp.texInfo.forEach((ti: any) => {
       if (ti.texture) {
          textures.set(ti.texture, {
            name: ti.texture,

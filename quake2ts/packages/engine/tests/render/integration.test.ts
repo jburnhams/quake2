@@ -284,20 +284,29 @@ describe('Renderer Integration', () => {
 
     renderer.renderFrame(options, []);
 
-    // Capture the matrix passed
-    const call1 = vi.mocked(gl.uniformMatrix4fv).mock.lastCall;
-    const matrix1 = call1?.[2];
+    // Capture the matrix passed immediately!
+    // The renderer uses the camera's view matrix which is a reused Float32Array.
+    // We must copy the values NOW before they are mutated by the next frame.
+    // We must also ensure we capture 'u_modelViewProjection', not some other matrix (like model matrix).
+    const calls1 = vi.mocked(gl.uniformMatrix4fv).mock.calls;
+    const call1 = calls1.find(c => c[0] === 'u_modelViewProjection');
+    const matrix1 = new Float32Array(call1?.[2] as Float32Array);
 
     // Frame 2 - Move camera
     camera.position = [100, 0, 0];
     // Force matrix update
     const _2 = camera.viewMatrix;
 
+    // Reset mock to clear previous calls so we can find the new one easily
+    vi.mocked(gl.uniformMatrix4fv).mockClear();
+
     renderer.renderFrame(options, []);
 
-    const call2 = vi.mocked(gl.uniformMatrix4fv).mock.lastCall;
-    const matrix2 = call2?.[2];
+    const calls2 = vi.mocked(gl.uniformMatrix4fv).mock.calls;
+    const call2 = calls2.find(c => c[0] === 'u_modelViewProjection');
+    const matrix2 = new Float32Array(call2?.[2] as Float32Array);
 
+    // Compare values
     expect(matrix1).not.toEqual(matrix2);
   });
 });

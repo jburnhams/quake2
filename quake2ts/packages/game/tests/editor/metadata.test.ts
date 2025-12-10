@@ -15,21 +15,19 @@ describe('Entity Metadata', () => {
 
   beforeEach(() => {
     mockEntity = {
-      s: {
-        number: 42,
-        origin: vec3.fromValues(10, 20, 30),
-        angles: vec3.fromValues(0, 90, 0),
-        modelindex: 10
-      },
+      index: 42,
+      origin: { x: 10, y: 20, z: 30 },
+      angles: { x: 0, y: 90, z: 0 },
+      modelindex: 10,
       classname: 'func_door',
       model: '*1',
       targetname: 'door1',
       target: 'trigger1',
       spawnflags: 1,
       health: 100,
-      inuse: true,
-      absmin: vec3.fromValues(0, 0, 0),
-      absmax: vec3.fromValues(10, 10, 10),
+      inUse: true,
+      absmin: { x: 0, y: 0, z: 0 },
+      absmax: { x: 10, y: 10, z: 10 },
       // Arbitrary field
       speed: 200
     } as any;
@@ -38,7 +36,7 @@ describe('Entity Metadata', () => {
       forEachEntity: (cb: (e: Entity) => void) => {
         // Mock a target entity
         const targetEntity = {
-            s: { number: 99 },
+            index: 99,
             classname: 'target_speaker',
             targetname: 'trigger1'
         } as any;
@@ -73,8 +71,8 @@ describe('Entity Metadata', () => {
 
   it('should return entity bounds', () => {
     const bounds = getEntityBounds(mockEntity);
-    expect(bounds.mins[0]).toBe(0);
-    expect(bounds.maxs[0]).toBe(10);
+    expect(bounds.mins.x).toBe(0);
+    expect(bounds.maxs.x).toBe(10);
   });
 
   it('should return entity model', () => {

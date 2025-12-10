@@ -1,7 +1,7 @@
-import { Entity } from '../entities/entity';
-import { EntitySystem } from '../entities/system';
+import { Entity } from '../entities/entity.js';
+import { EntitySystem } from '../entities/system.js';
 import { vec3 } from 'gl-matrix';
-import { BoundingBox } from '@quake2ts/shared';
+import { Bounds3 } from '@quake2ts/shared';
 
 export interface EntityHit {
   entity: Entity;
@@ -28,12 +28,13 @@ export function rayCastEntities(
 
   entities.forEachEntity((entity) => {
     // Basic AABB check first
-    if (!entity.inuse) return;
+    if (!entity.inUse) return;
 
     // Use absmin/absmax if available, otherwise calculate from origin + mins/maxs
-    const bounds: BoundingBox = {
-      mins: entity.absmin,
-      maxs: entity.absmax
+    // Convert to Bounds3 format (expects {x,y,z}, entity has gl-matrix vec3)
+    const bounds: Bounds3 = {
+      mins: { x: entity.absmin[0], y: entity.absmin[1], z: entity.absmin[2] },
+      maxs: { x: entity.absmax[0], y: entity.absmax[1], z: entity.absmax[2] }
     };
 
     const intersection = intersectRayAABB(ray, bounds);
@@ -57,7 +58,7 @@ export function rayCastEntities(
 
 function intersectRayAABB(
   ray: Ray,
-  aabb: BoundingBox
+  aabb: Bounds3
 ): { distance: number; point: vec3; normal: vec3 } | null {
   const tmin = vec3.fromValues(-Infinity, -Infinity, -Infinity);
   const tmax = vec3.fromValues(Infinity, Infinity, Infinity);
@@ -65,9 +66,13 @@ function intersectRayAABB(
   const invDir = vec3.create();
   vec3.set(invDir, 1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]);
 
+  // Bounds3 uses .x, .y, .z. Ray/vec3 uses [0], [1], [2].
+  const mins = [aabb.mins.x, aabb.mins.y, aabb.mins.z];
+  const maxs = [aabb.maxs.x, aabb.maxs.y, aabb.maxs.z];
+
   for (let i = 0; i < 3; i++) {
-    const t1 = (aabb.mins[i] - ray.origin[i]) * invDir[i];
-    const t2 = (aabb.maxs[i] - ray.origin[i]) * invDir[i];
+    const t1 = (mins[i] - ray.origin[i]) * invDir[i];
+    const t2 = (maxs[i] - ray.origin[i]) * invDir[i];
 
     tmin[i] = Math.min(t1, t2);
     tmax[i] = Math.max(t1, t2);
@@ -92,12 +97,12 @@ function intersectRayAABB(
   const epsilon = 0.001;
 
   // A crude way to determine normal for AABB
-  if (Math.abs(point[0] - aabb.mins[0]) < epsilon) normal[0] = -1;
-  else if (Math.abs(point[0] - aabb.maxs[0]) < epsilon) normal[0] = 1;
-  else if (Math.abs(point[1] - aabb.mins[1]) < epsilon) normal[1] = -1;
-  else if (Math.abs(point[1] - aabb.maxs[1]) < epsilon) normal[1] = 1;
-  else if (Math.abs(point[2] - aabb.mins[2]) < epsilon) normal[2] = -1;
-  else if (Math.abs(point[2] - aabb.maxs[2]) < epsilon) normal[2] = 1;
+  if (Math.abs(point[0] - mins[0]) < epsilon) normal[0] = -1;
+  else if (Math.abs(point[0] - maxs[0]) < epsilon) normal[0] = 1;
+  else if (Math.abs(point[1] - mins[1]) < epsilon) normal[1] = -1;
+  else if (Math.abs(point[1] - maxs[1]) < epsilon) normal[1] = 1;
+  else if (Math.abs(point[2] - mins[2]) < epsilon) normal[2] = -1;
+  else if (Math.abs(point[2] - maxs[2]) < epsilon) normal[2] = 1;
 
   return { distance, point, normal };
 }

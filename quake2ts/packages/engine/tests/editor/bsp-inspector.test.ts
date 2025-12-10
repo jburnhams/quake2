@@ -10,28 +10,28 @@ describe('BspInspector', () => {
   beforeEach(() => {
     mockBsp = {
       planes: [
-        { normal: vec3.fromValues(1, 0, 0), dist: 0, type: 0 } // x = 0 plane
+        { normal: [1, 0, 0], dist: 0, type: 0 } // x = 0 plane. Normal is [x,y,z] array
       ],
       nodes: [
         {
-          planeId: 0,
+          planeIndex: 0,
           children: [-2, -3], // Leaf 1 (index 1), Leaf 2 (index 2)
-          mins: vec3.create(),
-          maxs: vec3.create(),
+          mins: [0,0,0],
+          maxs: [0,0,0],
           firstFace: 0,
           numFaces: 0
         }
       ],
-      leaves: [
-        { cluster: -1, area: 0, mins: vec3.create(), maxs: vec3.create(), firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }, // Leaf 0 (dummy)
-        { cluster: 0, area: 0, mins: vec3.fromValues(0, -10, -10), maxs: vec3.fromValues(10, 10, 10), firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }, // Leaf 1 (front)
-        { cluster: 1, area: 0, mins: vec3.fromValues(-10, -10, -10), maxs: vec3.fromValues(0, 10, 10), firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }  // Leaf 2 (back)
+      leafs: [
+        { cluster: -1, area: 0, mins: [0,0,0], maxs: [0,0,0], firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }, // Leaf 0 (dummy)
+        { cluster: 0, area: 0, mins: [0, -10, -10], maxs: [10, 10, 10], firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }, // Leaf 1 (front)
+        { cluster: 1, area: 0, mins: [-10, -10, -10], maxs: [0, 10, 10], firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0, contents: 0 }  // Leaf 2 (back)
       ],
-      surfaces: [
-        { texInfoId: 0, planeId: 0, side: 0, firstEdge: 0, numEdges: 0, styles: [], lightmapId: 0 }
+      faces: [
+        { texInfo: 0, planeIndex: 0, side: 0, firstEdge: 0, numEdges: 0, styles: [], lightOffset: 0 }
       ],
       texInfo: [
-        { texture: 'wall_tex', flags: 0, value: 0, nextTexInfo: -1, vecS: vec3.create(), distS: 0, vecT: vec3.create(), distT: 0 }
+        { texture: 'wall_tex', flags: 0, value: 0, nextTexInfo: -1, s: [0,0,0], sOffset: 0, t: [0,0,0], tOffset: 0 }
       ],
       // ... other fields
     } as any;
@@ -56,8 +56,8 @@ describe('BspInspector', () => {
 
   it('should get leaf bounds', () => {
     const bounds = inspector.getLeafBounds(1);
-    expect(bounds.mins[0]).toBe(0);
-    expect(bounds.maxs[0]).toBe(10);
+    expect(bounds.mins.x).toBe(0);
+    expect(bounds.maxs.x).toBe(10);
   });
 
   it('should get leaf cluster', () => {
