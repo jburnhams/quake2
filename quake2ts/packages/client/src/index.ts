@@ -41,9 +41,10 @@ import { angleVectors, vectorToAngles } from '@quake2ts/shared';
 import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
 import { DemoControls } from './ui/demo-controls.js';
-import { DemoRecorder, DLight } from '@quake2ts/engine';
+import { DemoRecorder, DLight, DynamicLightManager, FogData, DamageIndicator } from '@quake2ts/engine';
 import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 import { processEntityEffects } from './effects.js';
+import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -140,6 +141,8 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // New UI components
   readonly loadingScreen: LoadingScreen;
   readonly errorDialog: ErrorDialog;
+
+  readonly dlightManager: DynamicLightManager;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -180,6 +183,34 @@ export function createClient(imports: ClientImports): ClientExports {
   const demoHandler = new ClientNetworkHandler(imports);
   const demoRecorder = new DemoRecorder();
   demoHandler.setView(view);
+
+  const dlightManager = new DynamicLightManager();
+
+  // Entity Provider for effects system
+  // Needs to handle both demo playback and multiplayer/prediction states
+  // We need to cast types because 'EntityState' definition varies slightly between shared/engine/parser context
+  // The 'EntityState' imported in effects-system.ts is from @quake2ts/engine
+  const entityProvider: EntityProvider = {
+      getEntity(entNum: number) {
+          if (isDemoPlaying) {
+              // Demo handler maintains current frame entities
+              return demoHandler.entities.get(entNum);
+          } else {
+              // Multiplayer / Local
+              // Check multiplayer connection first
+              if (multiplayer.isConnected()) {
+                  // MultiplayerConnection needs to expose entities map
+                  return multiplayer.entities.get(entNum);
+              }
+          }
+          return undefined;
+      },
+      getPlayerNum(): number {
+          return multiplayer.playerNum; // Or demoHandler.playerNum
+      }
+  };
+
+  const effectSystem = new ClientEffectSystem(dlightManager, imports.engine, entityProvider);
 
   let isDemoPlaying = false;
   let currentDemoName: string | null = null;
@@ -238,6 +269,7 @@ export function createClient(imports: ClientImports): ClientExports {
       get fov() { return fovValue; }
   });
   multiplayer.setDemoRecorder(demoRecorder);
+  multiplayer.setEffectSystem(effectSystem); // Inject Effect System
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
 
@@ -254,6 +286,20 @@ export function createClient(imports: ClientImports): ClientExports {
             demoPlayback.setFrameDuration(1000 / tickRate);
         } else {
             demoPlayback.setFrameDuration(100); // 10Hz fallback
+        }
+    },
+    // New hooks for effects
+    onMuzzleFlash: (ent: number, weapon: number) => {
+         const time = demoPlayback.getCurrentTime() / 1000.0;
+         effectSystem.onMuzzleFlash(ent, weapon, time);
+    },
+    onMuzzleFlash2: (ent: number, weapon: number) => {
+         // TODO: Implement MZ2 handling
+    },
+    onTempEntity: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
+        const time = demoPlayback.getCurrentTime() / 1000.0;
+        if (pos) {
+            effectSystem.onTempEntity(type, pos, time);
         }
     }
   });
@@ -391,6 +437,7 @@ export function createClient(imports: ClientImports): ClientExports {
   const clientExports: ClientExports = {
     loadingScreen,
     errorDialog,
+    dlightManager,
 
     init(initial) {
       this.Init(initial);
@@ -677,10 +724,17 @@ export function createClient(imports: ClientImports): ClientExports {
 
       const command = {} as UserCommand;
 
-      const dlights: DLight[] = [];
-
-      // Process Entity Effects
+      // Update Dynamic Light Manager
       const timeSeconds = sample.nowMs / 1000.0;
+      dlightManager.update(timeSeconds);
+
+      // Collect lights (persistent + per-frame)
+      // Copy active lights from manager
+      const dlights: DLight[] = [...dlightManager.getActiveLights()];
+
+      // Process Entity Effects (Per-frame lights)
+      // These are not stateful in DLightManager usually (unless we want them to linger?)
+      // processEntityEffects currently pushes to array.
       for (const ent of currentPacketEntities) {
           processEntityEffects(ent, dlights, timeSeconds);
       }

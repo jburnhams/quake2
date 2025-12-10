@@ -8,7 +8,8 @@ import {
   writeUserCommand,
   BinaryWriter,
   CMD_BACKUP,
-  NetChan
+  NetChan,
+  Vec3
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -17,11 +18,14 @@ import {
   FrameData,
   createEmptyEntityState,
   PROTOCOL_VERSION_RERELEASE,
-  DemoRecorder
+  DemoRecorder,
+  FogData,
+  DamageIndicator
 } from '@quake2ts/engine';
 import { BrowserWebSocketNetDriver } from './browserWsDriver.js';
 import { ClientPrediction, PredictionState, defaultPredictionState } from '@quake2ts/cgame';
 import { GameFrameResult } from '@quake2ts/engine';
+import { ClientEffectSystem } from '../effects-system.js';
 
 export enum ConnectionState {
   Disconnected,
@@ -55,6 +59,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   public levelName = '';
   public configStrings = new Map<number, string>();
   public baselines = new Map<number, EntityState>();
+  public entities = new Map<number, EntityState>();
 
   private challenge = 0;
   private connectPacketCount = 0;
@@ -77,6 +82,8 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private lastPingTime = 0;
   private currentPing = 0;
 
+  private effectSystem?: ClientEffectSystem;
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -98,6 +105,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   public setDemoRecorder(recorder: DemoRecorder) {
       this.demoRecorder = recorder;
+  }
+
+  public setEffectSystem(system: ClientEffectSystem) {
+      this.effectSystem = system;
   }
 
   public async connectToServer(address: string, port: number): Promise<void> {
@@ -143,6 +154,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private cleanup(): void {
     this.configStrings.clear();
     this.baselines.clear();
+    this.entities.clear();
     this.commandHistory = [];
     this.latestServerFrame = 0;
     this.parser = null;
@@ -329,6 +341,17 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.latestServerFrame = frame.serverFrame;
     }
 
+    // Update Entities Map
+    const packetEntities = frame.packetEntities;
+
+    if (!packetEntities.delta) {
+        this.entities.clear();
+    }
+
+    for (const ent of packetEntities.entities) {
+        this.entities.set(ent.number, ent);
+    }
+
     if (this.prediction && frame.playerState) {
         const ps = frame.playerState;
         const predState: PredictionState = {
@@ -355,13 +378,51 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onCenterPrint(msg: string): void {}
   onPrint(level: number, msg: string): void {}
-  onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: any): void {}
-  onTempEntity(type: number, pos: any, pos2?: any, dir?: any, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {}
+  onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {}
+
+  onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0; // Use local time for now
+          this.effectSystem.onTempEntity(type, pos, time);
+      }
+  }
+
   onLayout(layout: string): void {}
   onInventory(inventory: number[]): void {}
-  onMuzzleFlash(ent: number, weapon: number): void {}
-  onMuzzleFlash2(ent: number, weapon: number): void {}
+
+  onMuzzleFlash(ent: number, weapon: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0;
+          this.effectSystem.onMuzzleFlash(ent, weapon, time);
+      }
+  }
+
+  onMuzzleFlash2(ent: number, weapon: number): void {
+      // Helper for MZ2 types?
+  }
+
+  onMuzzleFlash3(ent: number, weapon: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0;
+          this.effectSystem.onMuzzleFlash(ent, weapon, time);
+      }
+  }
+
   onDisconnect(): void { this.disconnect(); }
   onReconnect(): void {}
   onDownload(size: number, percent: number, data?: Uint8Array): void {}
+
+  // New handlers stubs
+  onSplitClient(clientNum: number): void {}
+  onConfigBlast(index: number, data: Uint8Array): void {}
+  onSpawnBaselineBlast(entity: EntityState): void {}
+  onLevelRestart(): void {}
+  onDamage(indicators: DamageIndicator[]): void {}
+  onLocPrint(flags: number, base: string, args: string[]): void {}
+  onFog(data: FogData): void {}
+  onWaitingForPlayers(count: number): void {}
+  onBotChat(msg: string): void {}
+  onPoi(flags: number, pos: Vec3): void {}
+  onHelpPath(pos: Vec3): void {}
+  onAchievement(id: string): void {}
 }
