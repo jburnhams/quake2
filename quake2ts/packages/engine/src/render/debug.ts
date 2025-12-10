@@ -1,6 +1,7 @@
 import { Mat4, Vec3 } from '@quake2ts/shared';
 import { VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
+import { vec4 } from 'gl-matrix';
 
 // Simple shader for debug lines
 const VS_SOURCE = `
@@ -30,6 +31,11 @@ export interface Color {
     b: number;
 }
 
+interface TextLabel {
+    text: string;
+    position: Vec3;
+}
+
 export class DebugRenderer {
     private gl: WebGL2RenderingContext;
     private shader: ShaderProgram;
@@ -37,6 +43,7 @@ export class DebugRenderer {
     private vbo: VertexBuffer;
 
     private vertices: number[] = [];
+    private labels: TextLabel[] = [];
 
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl;
@@ -89,6 +96,10 @@ export class DebugRenderer {
         );
     }
 
+    drawText3D(text: string, position: Vec3) {
+        this.labels.push({ text, position });
+    }
+
     render(viewProjection: Float32Array) {
         if (this.vertices.length === 0) return;
 
@@ -104,7 +115,51 @@ export class DebugRenderer {
         this.gl.drawArrays(this.gl.LINES, 0, this.vertices.length / 6);
     }
 
+    // New method to retrieve 2D projected labels for external rendering (e.g. by Renderer using drawString)
+    // Returns list of { text, x, y } where x,y are canvas coords
+    getLabels(viewProjection: Float32Array, width: number, height: number): { text: string, x: number, y: number }[] {
+         const results: { text: string, x: number, y: number }[] = [];
+
+         for (const label of this.labels) {
+             const v = vec4.fromValues(label.position.x, label.position.y, label.position.z, 1.0);
+             const clip = vec4.create();
+             // Assuming viewProjection is compatible with gl-matrix vec4.transformMat4
+             // But viewProjection here is Float32Array (16 elements).
+             // We can map it.
+             const vp = viewProjection as unknown as [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+
+             // Manually transform or use gl-matrix
+             // transformMat4(out, a, m)
+             // m is mat4
+             const m = vp;
+             const x = v[0], y = v[1], z = v[2], w = v[3];
+             clip[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
+             clip[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
+             clip[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+             clip[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
+
+             if (clip[3] > 0) { // In front of camera
+                 const ndcX = clip[0] / clip[3];
+                 const ndcY = clip[1] / clip[3];
+
+                 // Map NDC to viewport
+                 // x: [-1, 1] -> [0, width]
+                 // y: [-1, 1] -> [height, 0] (since canvas y is down, but GL y is up. Wait, GL NDC y is up, Canvas y is down.)
+
+                 const screenX = (ndcX + 1) * 0.5 * width;
+                 const screenY = (1 - ndcY) * 0.5 * height; // Flip Y
+
+                 // Simple bounds check?
+                 if (screenX >= 0 && screenX <= width && screenY >= 0 && screenY <= height) {
+                     results.push({ text: label.text, x: screenX, y: screenY });
+                 }
+             }
+         }
+         return results;
+    }
+
     clear() {
         this.vertices = [];
+        this.labels = [];
     }
 }
