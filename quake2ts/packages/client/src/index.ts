@@ -540,7 +540,7 @@ export function createClient(imports: ClientImports): ClientExports {
           // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
           // demoHandler is ClientNetworkHandler.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
-              currentPacketEntities = demoHandler.latestFrame.packetEntities;
+              currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
           }
 
           if (lastRendered) {
