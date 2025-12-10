@@ -61,11 +61,15 @@
 - [ ] Add collision toggle: fly-through vs collision-aware movement
 
 ### 1.2.4 Map Statistics API
-- [ ] Add method `getMapStatistics(mapName: string): Promise<MapStatistics>`
-- [ ] Return statistics: entity count, surface count, lightmap count, vertex count, bounds
-- [ ] Add method `getUsedTextures(mapName: string): Promise<string[]>` for missing texture detection
-- [ ] Add method `getUsedModels(mapName: string): Promise<string[]>` for missing model detection
-- [ ] Add method `getUsedSounds(mapName: string): Promise<string[]>` for missing sound detection
+- [x] Add method `getMapStatistics(mapName: string): Promise<MapStatistics>`
+- [x] Return statistics: entity count, surface count, lightmap count, vertex count, bounds
+- [x] Add method `getUsedTextures(mapName: string): Promise<string[]>` for missing texture detection
+- [x] Add method `getUsedModels(mapName: string): Promise<string[]>` for missing model detection
+- [x] Add method `getUsedSounds(mapName: string): Promise<string[]>` for missing sound detection
+
+**Notes:**
+- `MapAnalyzer` class implemented in `packages/engine/src/assets/mapStatistics.ts` covers these requirements.
+- Uses existing `BspLoader` for parsing.
 
 ---
 
