@@ -225,6 +225,16 @@ export function createGame(
       if (!player || !player.client) return blend;
 
       const inventory = player.client.inventory;
+      const client = player.client;
+
+      // Damage blend
+      if ((client.damage_alpha ?? 0) > 0) {
+        const da = client.damage_alpha!;
+        blend[3] += da * 0.5;
+        blend[0] += (client.damage_blend?.[0] ?? 1) * da;
+        blend[1] += (client.damage_blend?.[1] ?? 0) * da;
+        blend[2] += (client.damage_blend?.[2] ?? 0) * da;
+      }
 
       // Powerup blends
       // Quad Damage: Blue
@@ -250,6 +260,10 @@ export function createGame(
            blend[2] = 0.4;
            blend[3] = 0.04;
       }
+
+      // Clamp alpha
+      if (blend[3] > 1) blend[3] = 1;
+      if (blend[3] < 0) blend[3] = 0;
 
       return blend;
   };

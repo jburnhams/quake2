@@ -237,8 +237,8 @@ export function Weapon_ChainFist(player: Entity, sys: EntitySystem) {
     if (player.client) {
         const gunframe = player.client.gun_frame;
 
-        if ((gunframe === 42 || gunframe === 51) && Math.random() < 0.125) {
-             if (Math.random() < 0.4) {
+        if ((gunframe === 42 || gunframe === 51) && sys.rng.frandom() < 0.125) {
+             if (sys.rng.frandom() < 0.4) {
                  chainfistSmoke(game, player);
              }
         }

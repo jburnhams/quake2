@@ -24,8 +24,8 @@ describe('DemoPlaybackController Metadata & Seek', () => {
   });
 
   it('should report correct duration (default 10Hz)', () => {
-    // 10 frames * 100ms = 1000ms
-    expect(controller.getDuration()).toBe(1000);
+    // 10 frames * 100ms = 1000ms = 1.0s
+    expect(controller.getDuration()).toBe(1.0);
   });
 
   it('should update current frame during playback', () => {

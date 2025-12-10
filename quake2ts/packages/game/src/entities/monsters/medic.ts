@@ -178,12 +178,14 @@ function medic_cable_attack(self: Entity, context: EntitySystem): void {
 
   const end = self.enemy.origin;
 
+  // Source: m_medic.c : medic_cable_attack
+  // "gi.WriteByte (TE_MEDIC_CABLE_ATTACK);"
   context.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity,
       TempEntity.MEDIC_CABLE_ATTACK,
       self.index,
       self.enemy.index,
-      start,
-      end
+      start.x, start.y, start.z,
+      end.x, end.y, end.z
   );
 }
 
