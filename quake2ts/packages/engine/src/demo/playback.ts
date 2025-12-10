@@ -1,5 +1,7 @@
 import { DemoReader } from './demoReader.js';
 import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState, ProtocolPlayerState } from './parser.js';
+import { FrameDiff, DemoEvent, DemoEventType, EventSummary } from './analysis.js';
+import { Vec3 } from '@quake2ts/shared';
 
 export enum PlaybackState {
   Stopped,
@@ -330,9 +332,6 @@ export class DemoPlaybackController {
           return this.lastFrameData;
       }
 
-      // If we are playing, seeking might interrupt playback flow.
-      // Ideally we clone the controller for analysis, but for now we seek.
-      // We must save current state? No, seek moves the playhead.
       const previousState = this.state;
       this.pause(); // Pause while seeking
 
@@ -346,7 +345,6 @@ export class DemoPlaybackController {
   }
 
   public getFramePlayerState(frameIndex: number): ProtocolPlayerState | null {
-      // First check if handler exposes state directly for "current" frame
       if (frameIndex === this.currentFrameIndex && this.handler?.getPlayerState) {
           const state = this.handler.getPlayerState();
           if (state) return state;
@@ -357,17 +355,10 @@ export class DemoPlaybackController {
   }
 
   public getFrameEntities(frameIndex: number): EntityState[] {
-      // If requesting current frame, try to use handler's fully resolved state
       if (frameIndex === this.currentFrameIndex && this.handler?.getEntities) {
           const entitiesMap = this.handler.getEntities();
           if (entitiesMap) return Array.from(entitiesMap.values());
       }
-
-      // Otherwise we fall back to seeking.
-      // But getFrameData only returns DELTA entities unless we are tracking state!
-      // The `lastFrameData` stores what the parser emitted.
-      // If we seek, `processNextFrame` runs, which updates the `handler` state.
-      // So if we seek to `frameIndex`, the `handler` should have the state for `frameIndex`.
 
       this.seek(frameIndex);
 
@@ -377,5 +368,103 @@ export class DemoPlaybackController {
       }
 
       return [];
+  }
+
+  // 3.2.2 Frame Comparison
+
+  public compareFrames(frameA: number, frameB: number): FrameDiff {
+      const stateA = this.getFramePlayerState(frameA);
+      const entitiesA = this.getFrameEntities(frameA); // This seeks to A
+
+      // Need to capture entities map for efficient diffing
+      const mapA = new Map<number, EntityState>();
+      entitiesA.forEach(e => mapA.set(e.number, e));
+
+      const stateB = this.getFramePlayerState(frameB); // This seeks to B
+      const entitiesB = this.getFrameEntities(frameB);
+      const mapB = new Map<number, EntityState>();
+      entitiesB.forEach(e => mapB.set(e.number, e));
+
+      const diff: FrameDiff = {
+          frameA,
+          frameB,
+          playerStateDiff: {
+              origin: null,
+              viewangles: null,
+              health: null,
+              ammo: null
+          },
+          entityDiffs: {
+              added: [],
+              removed: [],
+              moved: []
+          }
+      };
+
+      if (stateA && stateB) {
+          if (stateA.origin.x !== stateB.origin.x || stateA.origin.y !== stateB.origin.y || stateA.origin.z !== stateB.origin.z) {
+             diff.playerStateDiff.origin = { x: stateB.origin.x - stateA.origin.x, y: stateB.origin.y - stateA.origin.y, z: stateB.origin.z - stateA.origin.z };
+          }
+          // Simple health/ammo diff
+          if (stateA.stats[1] !== stateB.stats[1]) diff.playerStateDiff.health = stateB.stats[1] - stateA.stats[1];
+          if (stateA.stats[2] !== stateB.stats[2]) diff.playerStateDiff.ammo = stateB.stats[2] - stateA.stats[2];
+      }
+
+      // Entity diffs
+      for (const [id, entB] of mapB) {
+          const entA = mapA.get(id);
+          if (!entA) {
+              diff.entityDiffs.added.push(id);
+          } else {
+              if (entA.origin.x !== entB.origin.x || entA.origin.y !== entB.origin.y || entA.origin.z !== entB.origin.z) {
+                  diff.entityDiffs.moved.push({
+                      id,
+                      delta: { x: entB.origin.x - entA.origin.x, y: entB.origin.y - entA.origin.y, z: entB.origin.z - entA.origin.z }
+                  });
+              }
+          }
+      }
+
+      for (const [id, entA] of mapA) {
+          if (!mapB.has(id)) {
+              diff.entityDiffs.removed.push(id);
+          }
+      }
+
+      return diff;
+  }
+
+  public getEntityTrajectory(entityId: number, startFrame: number, endFrame: number): Vec3[] {
+      const trajectory: Vec3[] = [];
+      const originalFrame = this.getCurrentFrame();
+
+      this.seek(startFrame);
+
+      while (this.getCurrentFrame() <= endFrame) {
+          // Check if we are done
+          if (this.state === PlaybackState.Finished) break;
+
+          let pos: Vec3 | null = null;
+
+          if (entityId === -1) { // Player
+               const ps = this.getFramePlayerState(this.getCurrentFrame());
+               if (ps) pos = { ...ps.origin };
+          } else {
+              // Entities
+              if (this.handler?.getEntities) {
+                  const ent = this.handler.getEntities().get(entityId);
+                  if (ent) pos = { ...ent.origin };
+              }
+          }
+
+          if (pos) trajectory.push(pos);
+
+          if (this.getCurrentFrame() === endFrame) break;
+
+          this.stepForward();
+      }
+
+      this.seek(originalFrame); // Restore
+      return trajectory;
   }
 }

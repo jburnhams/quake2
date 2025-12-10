@@ -42,10 +42,10 @@
 - [x] Add method `getFrameEntities(frameIndex: number): EntityState[]`
 
 ### 3.2.2 Frame Comparison
-- [ ] Add method `compareFrames(frameA: number, frameB: number): FrameDiff`
-- [ ] Return differences in player state, entity positions, events
-- [ ] Add method `getEntityTrajectory(entityId: number, startFrame: number, endFrame: number): Vec3[]`
-- [ ] Useful for movement analysis and debugging
+- [x] Add method `compareFrames(frameA: number, frameB: number): FrameDiff`
+- [x] Return differences in player state, entity positions, events
+- [x] Add method `getEntityTrajectory(entityId: number, startFrame: number, endFrame: number): Vec3[]`
+- [x] Useful for movement analysis and debugging
 
 ### 3.2.3 Event Log Extraction
 - [ ] Add method `getDemoEvents(): DemoEvent[]` returning all events chronologically
