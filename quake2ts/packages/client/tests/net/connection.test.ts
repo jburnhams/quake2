@@ -46,27 +46,44 @@ describe('MultiplayerConnection', () => {
 
     it('should initialize in disconnected state', () => {
         expect(connection.isConnected()).toBe(false);
+        expect(connection.getPing()).toBe(0);
     });
 
     it('should transition to Connecting and then Challenge state on connect', async () => {
+        const stateChangeSpy = vi.fn();
+        connection.onConnectionStateChange = stateChangeSpy;
+
         await connection.connect('ws://localhost:27910');
         expect(mockDriver.connect).toHaveBeenCalledWith('ws://localhost:27910');
         expect((connection as any).state).toBe(ConnectionState.Challenge);
         // Verify it sends getchallenge
         expect(mockDriver.send).toHaveBeenCalled();
+
+        // Check state change events
+        // 1. Connecting
+        // 2. Challenge
+        expect(stateChangeSpy).toHaveBeenCalledTimes(2);
+        expect(stateChangeSpy).toHaveBeenNthCalledWith(1, ConnectionState.Connecting);
+        expect(stateChangeSpy).toHaveBeenNthCalledWith(2, ConnectionState.Challenge);
     });
 
-    it('should complete handshake sequence', async () => {
+    it('should support connectToServer with address and port', async () => {
+        await connection.connectToServer('localhost', 27910);
+        expect(mockDriver.connect).toHaveBeenCalledWith('ws://localhost:27910');
+    });
+
+    it('should complete handshake sequence and emit events', async () => {
+        const stateChangeSpy = vi.fn();
+        connection.onConnectionStateChange = stateChangeSpy;
+
         await connection.connect('ws://localhost:27910');
+        stateChangeSpy.mockClear();
 
         // Wait for next tick to ensure async operations complete if any
         await new Promise(resolve => setTimeout(resolve, 0));
 
         // Create a server-side NetChan to format packets correctly
         const serverNetChan = new NetChan();
-        // Set qport to match what client sent?
-        // Actually, the client just initialized and sent a packet.
-        // We can inspect the sent packet to get the qport.
         const sentPacket = mockDriver.send.mock.calls[0][0] as Uint8Array;
         const view = new DataView(sentPacket.buffer, sentPacket.byteOffset, sentPacket.byteLength);
         const qport = view.getUint16(8, true);
@@ -100,6 +117,7 @@ describe('MultiplayerConnection', () => {
         onMessage(serverDataPacket);
 
         expect((connection as any).state).toBe(ConnectionState.Loading);
+        expect(stateChangeSpy).toHaveBeenCalledWith(ConnectionState.Loading);
 
         // --- 3. Server sends precache (end of loading) ---
         // Simulate "precache" which finishes loading
@@ -112,6 +130,57 @@ describe('MultiplayerConnection', () => {
 
         expect(connection.isConnected()).toBe(true);
         expect((connection as any).state).toBe(ConnectionState.Active);
+        expect(stateChangeSpy).toHaveBeenCalledWith(ConnectionState.Active);
+    });
+
+    it('should handle disconnection and cleanup', async () => {
+        const stateChangeSpy = vi.fn();
+        connection.onConnectionStateChange = stateChangeSpy;
+
+        await connection.connect('ws://localhost:27910');
+        connection.disconnect();
+
+        expect(mockDriver.disconnect).toHaveBeenCalled();
+        expect((connection as any).state).toBe(ConnectionState.Disconnected);
+        expect(stateChangeSpy).toHaveBeenLastCalledWith(ConnectionState.Disconnected);
+        expect((connection as any).configStrings.size).toBe(0);
+        expect((connection as any).baselines.size).toBe(0);
+    });
+
+    it('should handle connection errors', async () => {
+        const errorSpy = vi.fn();
+        connection.onConnectionError = errorSpy;
+
+        const error = new Error('Connection failed');
+        mockDriver.connect.mockRejectedValueOnce(error);
+
+        await expect(connection.connect('ws://bad-url')).rejects.toThrow('Connection failed');
+        expect(errorSpy).toHaveBeenCalledWith(error);
+        expect((connection as any).state).toBe(ConnectionState.Disconnected);
+    });
+
+    it('should update ping on message receipt', async () => {
+        await connection.connect('ws://localhost:27910');
+
+        // Setup initial ping time
+        const now = Date.now();
+        (connection as any).lastPingTime = now - 50; // Simulate 50ms ago
+
+        // Receive a packet
+        const serverNetChan = new NetChan();
+        const sentPacket = mockDriver.send.mock.calls[0][0] as Uint8Array;
+        const view = new DataView(sentPacket.buffer, sentPacket.byteOffset, sentPacket.byteLength);
+        const qport = view.getUint16(8, true);
+        serverNetChan.setup(qport);
+
+        const writer = new BinaryWriter();
+        writer.writeByte(ServerCommand.nop);
+        const packet = serverNetChan.transmit(writer.getData());
+
+        const onMessage = mockDriver.onMessage.mock.calls[0][0];
+        onMessage(packet);
+
+        expect(connection.getPing()).toBeGreaterThanOrEqual(50);
     });
 
     it('should buffer last 64 commands', async () => {

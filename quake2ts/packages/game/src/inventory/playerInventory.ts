@@ -147,6 +147,7 @@ export interface PlayerClient {
     oldviewangles?: Vec3;
     oldgroundentity?: any; // Entity
     owned_sphere?: any; // Entity
+    score?: number; // Added score property for scoreboard
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {
@@ -177,6 +178,25 @@ export function createPlayerInventory(init: PlayerInventoryOptions = {}): Player
   }
 
   return inv;
+}
+
+export function resetInventory(inventory: PlayerInventory) {
+    // Keep caps?
+    // Reset ammo counts
+    inventory.ammo.counts.fill(0);
+
+    // Clear weapons except default? Usually handled by caller giving Blaster.
+    // We clear all.
+    inventory.ownedWeapons.clear();
+    inventory.currentWeapon = undefined;
+
+    inventory.armor = null;
+    inventory.powerups.clear();
+    inventory.keys.clear();
+    inventory.items.clear();
+
+    inventory.pickupItem = undefined;
+    inventory.pickupTime = undefined;
 }
 
 function setPickup(inventory: PlayerInventory, item: string, time: number) {

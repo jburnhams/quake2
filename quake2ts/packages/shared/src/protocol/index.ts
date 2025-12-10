@@ -12,4 +12,5 @@ export * from './stats.js';
 export * from './writeUserCmd.js';
 export * from './renderFx.js';
 export * from './crc.js';
+export * from './effects.js';
 export * from './entityEvent.js';
