@@ -45,3 +45,41 @@ export interface EventSummary {
     damageReceived: number;
     weaponUsage: Map<number, number>; // WeaponID -> Count
 }
+
+export interface DemoHeader {
+    protocolVersion: number;
+    gameDir: string;
+    levelName: string;
+    playerNum: number;
+    serverCount?: number; // Legacy
+    spawnCount?: number; // Rerelease
+    tickRate?: number; // Rerelease
+    demoType?: number; // Rerelease
+}
+
+export interface ServerInfo {
+    [key: string]: string;
+}
+
+export interface DemoStatistics {
+    duration: number;
+    frameCount: number;
+    averageFps: number;
+    mapName: string;
+    playerCount: number; // Inferred from scoreboards or similar
+}
+
+export interface PlayerStatistics {
+    kills: number;
+    deaths: number;
+    damageDealt: number;
+    damageReceived: number;
+    suicides: number;
+}
+
+export interface WeaponStatistics {
+    weaponId: number;
+    shotsFired: number;
+    hits: number; // Hard to track without server help, maybe implied damage
+    kills: number;
+}
