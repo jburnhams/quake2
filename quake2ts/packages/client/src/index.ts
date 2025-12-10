@@ -42,6 +42,7 @@ import { buildRenderableEntities } from './entities.js';
 import { MultiplayerConnection } from './net/connection.js';
 import { DemoControls } from './ui/demo-controls.js';
 import { DemoRecorder, DLight } from '@quake2ts/engine';
+import { processEntityEffects } from './effects.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -506,6 +507,7 @@ export function createClient(imports: ClientImports): ClientExports {
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       // Keep track of entities to render
       let renderEntities: RenderableEntity[] = [];
+      let currentPacketEntities: any[] = []; // Store raw packet entities for effect processing
 
       if (isDemoPlaying) {
           // Update demo playback with delta time since last frame
@@ -529,6 +531,17 @@ export function createClient(imports: ClientImports): ClientExports {
           // For now, pass 1.0 to render latest entities.
           // TODO: Improve demo time tracking to provide correct interpolation alpha
           renderEntities = demoHandler.getRenderableEntities(1.0, configStrings);
+
+          // Get packet entities for effect processing.
+          // demoHandler doesn't expose getPacketEntities directly yet, but getRenderableEntities builds from them.
+          // We might need to expose them or iterate renderEntities if they retain enough info.
+          // RenderableEntity has model, transform, skin... but not raw effects flags unless we added them.
+          // But we need effects flags.
+          // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
+          // demoHandler is ClientNetworkHandler.
+          if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
+              currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
+          }
 
           if (lastRendered) {
              const demoCamera = demoHandler.getDemoCamera(1.0);
@@ -554,13 +567,17 @@ export function createClient(imports: ClientImports): ClientExports {
 
             // Interpolate entities
             if ((sample.latest.state as any).packetEntities && (sample.previous.state as any).packetEntities) {
+                const latestPacketEntities = (sample.latest.state as any).packetEntities;
+                const previousPacketEntities = (sample.previous.state as any).packetEntities;
                 renderEntities = buildRenderableEntities(
-                    (sample.latest.state as any).packetEntities,
-                    (sample.previous.state as any).packetEntities,
+                    latestPacketEntities,
+                    previousPacketEntities,
                     sample.alpha,
                     configStrings,
                     imports
                 );
+                // Use latest packet entities for effects (or interpolate if we get fancy)
+                currentPacketEntities = latestPacketEntities;
             }
 
           } else {
@@ -574,6 +591,12 @@ export function createClient(imports: ClientImports): ClientExports {
       const command = {} as UserCommand;
 
       const dlights: DLight[] = [];
+
+      // Process Entity Effects
+      const timeSeconds = sample.nowMs / 1000.0;
+      for (const ent of currentPacketEntities) {
+          processEntityEffects(ent, dlights, timeSeconds);
+      }
 
       if (lastRendered) {
         const { origin, viewAngles } = lastRendered;
