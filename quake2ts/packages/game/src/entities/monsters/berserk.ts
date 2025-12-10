@@ -25,6 +25,7 @@ import {
   MoveType,
   Solid
 } from '../entity.js';
+import { monster_done_dodge } from './common.js';
 import { SpawnContext, SpawnRegistry } from '../spawn.js';
 import { T_Damage, T_RadiusDamage } from '../../combat/damage.js';
 import { DamageMod } from '../../combat/damageMods.js';
@@ -93,10 +94,6 @@ function M_SetAnimation(self: Entity, move: MonsterMove): void {
   self.monsterinfo.nextframe = move.firstframe;
   self.frame = move.firstframe;
   self.monsterinfo.aiflags &= ~AIFlags.HoldFrame;
-}
-
-function monster_done_dodge(self: Entity, context: EntitySystem): void {
-  // Placeholder
 }
 
 // Forward declarations
@@ -200,7 +197,7 @@ berserk_move_run1 = {
 };
 
 function berserk_run(self: Entity, context: EntitySystem): void {
-  monster_done_dodge(self, context);
+  monster_done_dodge(self);
   if (self.monsterinfo.aiflags & AIFlags.StandGround) {
     M_SetAnimation(self, berserk_move_stand);
   } else {

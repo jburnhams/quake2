@@ -89,6 +89,43 @@ export class VirtualFileSystem {
     return this.readFile(path);
   }
 
+  streamFile(path: string, chunkSize = 1024 * 1024): ReadableStream<Uint8Array> {
+    const source = this.files.get(normalizePath(path));
+    if (!source) {
+      throw new Error(`File not found in VFS: ${path}`);
+    }
+
+    const { archive, entry } = source;
+    // We access the underlying buffer directly via the archive
+    // PakArchive exposes readFile but not the raw offset/buffer publicly in a convenient way for chunking
+    // without reading the whole thing first if we use readFile.
+    // However, readFile creates a view (Uint8Array) on the buffer, it doesn't copy unless we slice it again.
+    // So getting the full view is cheap.
+    const fullData = archive.readFile(path);
+
+    let offset = 0;
+    const totalSize = fullData.length;
+
+    return new ReadableStream({
+      pull(controller) {
+        if (offset >= totalSize) {
+          controller.close();
+          return;
+        }
+
+        const end = Math.min(offset + chunkSize, totalSize);
+        // subarray is a view, slice is a copy.
+        // For streaming, a copy (slice) is usually safer if the consumer modifies it,
+        // but subarray is faster. Since the underlying buffer is the whole PAK,
+        // using slice guarantees we yield a distinct chunk.
+        // Let's use slice to follow standard stream behavior of emitting distinct chunks.
+        const chunk = fullData.slice(offset, end);
+        offset = end;
+        controller.enqueue(chunk);
+      }
+    });
+  }
+
   async readTextFile(path: string): Promise<string> {
     const data = await this.readFile(path);
     return new TextDecoder('utf-8').decode(data);

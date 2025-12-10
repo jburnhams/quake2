@@ -100,8 +100,17 @@ export class Cvar {
   }
 }
 
+export interface CvarInfo {
+  name: string;
+  value: string;
+  defaultValue: string;
+  flags: CvarFlags;
+  description?: string;
+}
+
 export class CvarRegistry {
   private readonly cvars = new Map<string, Cvar>();
+  public onCvarChange?: (name: string, value: string) => void;
 
   register(def: {
     name: string;
@@ -115,13 +124,24 @@ export class CvarRegistry {
       return existing;
     }
 
-    const cvar = new Cvar(def);
+    // Wrap the onChange handler to also trigger the registry's onCvarChange
+    const originalOnChange = def.onChange;
+    const wrappedOnChange: CvarChangeHandler = (cvar, prev) => {
+      originalOnChange?.(cvar, prev);
+      this.onCvarChange?.(cvar.name, cvar.string);
+    };
+
+    const cvar = new Cvar({ ...def, onChange: wrappedOnChange });
     this.cvars.set(def.name, cvar);
     return cvar;
   }
 
   get(name: string): Cvar | undefined {
     return this.cvars.get(name);
+  }
+
+  getCvar(name: string): Cvar | undefined {
+    return this.get(name);
   }
 
   setValue(name: string, value: string): Cvar {
@@ -132,6 +152,10 @@ export class CvarRegistry {
 
     cvar.set(value);
     return cvar;
+  }
+
+  setCvar(name: string, value: string): void {
+    this.setValue(name, value);
   }
 
   resetAll(): void {
@@ -150,5 +174,15 @@ export class CvarRegistry {
 
   list(): Cvar[] {
     return [...this.cvars.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  listCvars(): CvarInfo[] {
+    return this.list().map(cvar => ({
+      name: cvar.name,
+      value: cvar.string,
+      defaultValue: cvar.defaultValue,
+      flags: cvar.flags,
+      description: cvar.description
+    }));
   }
 }

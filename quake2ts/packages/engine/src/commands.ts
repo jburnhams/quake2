@@ -19,11 +19,16 @@ export class Command {
 
 export class CommandRegistry {
   private readonly commands = new Map<string, Command>();
+  public onConsoleOutput?: (message: string) => void;
 
   register(name: string, callback: CommandCallback, description?: string): Command {
     const command = new Command(name, callback, description);
     this.commands.set(name, command);
     return command;
+  }
+
+  registerCommand(name: string, callback: CommandCallback): void {
+    this.register(name, callback);
   }
 
   get(name: string): Command | undefined {
@@ -45,12 +50,37 @@ export class CommandRegistry {
       return true;
     }
 
+    this.onConsoleOutput?.(`Unknown command "${name}"`);
     return false;
   }
 
+  executeCommand(cmd: string): void {
+    this.execute(cmd);
+  }
+
   private tokenize(text: string): string[] {
-    // Simple whitespace splitting for now, could handle quotes later
-    return text.trim().split(/\s+/);
+    const args: string[] = [];
+    let currentArg = '';
+    let inQuote = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        inQuote = !inQuote;
+      } else if (char === ' ' && !inQuote) {
+        if (currentArg.length > 0) {
+          args.push(currentArg);
+          currentArg = '';
+        }
+      } else {
+        currentArg += char;
+      }
+    }
+    if (currentArg.length > 0) {
+      args.push(currentArg);
+    }
+
+    return args;
   }
 
   list(): Command[] {

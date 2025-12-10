@@ -8,7 +8,8 @@ import {
   writeUserCommand,
   BinaryWriter,
   CMD_BACKUP,
-  NetChan
+  NetChan,
+  Vec3
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -17,11 +18,14 @@ import {
   FrameData,
   createEmptyEntityState,
   PROTOCOL_VERSION_RERELEASE,
-  DemoRecorder
+  DemoRecorder,
+  FogData,
+  DamageIndicator
 } from '@quake2ts/engine';
 import { BrowserWebSocketNetDriver } from './browserWsDriver.js';
 import { ClientPrediction, PredictionState, defaultPredictionState } from '@quake2ts/cgame';
 import { GameFrameResult } from '@quake2ts/engine';
+import { ClientEffectSystem } from '../effects-system.js';
 
 export enum ConnectionState {
   Disconnected,
@@ -55,6 +59,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   public levelName = '';
   public configStrings = new Map<number, string>();
   public baselines = new Map<number, EntityState>();
+  public entities = new Map<number, EntityState>();
 
   private challenge = 0;
   private connectPacketCount = 0;
@@ -69,6 +74,16 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   // Demo Recording
   private demoRecorder: DemoRecorder | null = null;
 
+  // Events
+  public onConnectionStateChange?: (state: ConnectionState) => void;
+  public onConnectionError?: (error: Error) => void;
+
+  // Ping calculation
+  private lastPingTime = 0;
+  private currentPing = 0;
+
+  private effectSystem?: ClientEffectSystem;
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -76,7 +91,12 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
     this.driver.onMessage((data) => this.handleMessage(data));
     this.driver.onClose(() => this.handleDisconnect());
-    this.driver.onError((err) => console.error('Network Error:', err));
+    this.driver.onError((err) => {
+        console.error('Network Error:', err);
+        if (this.onConnectionError) {
+            this.onConnectionError(err);
+        }
+    });
   }
 
   public setPrediction(prediction: ClientPrediction) {
@@ -87,28 +107,38 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.demoRecorder = recorder;
   }
 
+  public setEffectSystem(system: ClientEffectSystem) {
+      this.effectSystem = system;
+  }
+
+  public async connectToServer(address: string, port: number): Promise<void> {
+    const url = `ws://${address}:${port}`;
+    return this.connect(url);
+  }
+
   public async connect(url: string): Promise<void> {
     if (this.state !== ConnectionState.Disconnected) {
       this.disconnect();
     }
 
     console.log(`Connecting to ${url}...`);
-    this.state = ConnectionState.Connecting;
+    this.setState(ConnectionState.Connecting);
 
     // Reset netchan state for new connection
-    // Note: qport is preserved or randomized in constructor.
-    // We should probably re-randomize or keep it if we want to be same client.
-    // For now, simple reset.
     this.netchan.reset();
 
     try {
       await this.driver.connect(url);
       console.log('WebSocket connected.');
-      this.state = ConnectionState.Challenge;
+      this.setState(ConnectionState.Challenge);
       this.sendChallenge();
+      this.lastPingTime = Date.now();
     } catch (e) {
       console.error('Connection failed:', e);
-      this.state = ConnectionState.Disconnected;
+      this.setState(ConnectionState.Disconnected);
+      if (this.onConnectionError) {
+          this.onConnectionError(e instanceof Error ? e : new Error(String(e)));
+      }
       throw e;
     }
   }
@@ -117,18 +147,37 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     if (this.state === ConnectionState.Disconnected) return;
 
     this.driver.disconnect();
-    this.state = ConnectionState.Disconnected;
+    this.setState(ConnectionState.Disconnected);
+    this.cleanup();
+  }
+
+  private cleanup(): void {
     this.configStrings.clear();
     this.baselines.clear();
+    this.entities.clear();
     this.commandHistory = [];
     this.latestServerFrame = 0;
+    this.parser = null;
+    // Note: Do not clear options or listeners as they might be reused
+  }
+
+  private setState(newState: ConnectionState): void {
+      if (this.state !== newState) {
+          this.state = newState;
+          if (this.onConnectionStateChange) {
+              this.onConnectionStateChange(newState);
+          }
+      }
+  }
+
+  public getPing(): number {
+      return this.currentPing;
   }
 
   public sendCommand(cmd: UserCommand): void {
       if (this.state !== ConnectionState.Active) return;
 
       // Assign the last acknowledged server frame to this command
-      // This is crucial for prediction reconciliation
       const commandWithFrame: UserCommand = {
           ...cmd,
           serverFrame: cmd.serverFrame ?? this.latestServerFrame
@@ -169,36 +218,37 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     }
 
     // Process via NetChan
-    // NetChan handles sequence numbers, acks, reliable message assembly
     const processedData = this.netchan.process(new Uint8Array(buffer));
 
     if (!processedData) {
-        // Packet discarded (duplicate, out of order, or invalid qport)
         return;
     }
 
     // Process the payload
     if (processedData.byteLength > 0) {
-        // If recording, write the raw message (decrypted/assembled payload)
-        // Note: Demo files usually store the NetChan payload (sequence, ack, etc removed?)
-        // Or do they store the raw packet?
-        // Quake 2 demos store the message block *after* NetChan processing (the raw commands).
-        // The format is [Length][MessageData].
-        // MessageData is exactly `processedData`.
         if (this.demoRecorder && this.demoRecorder.getIsRecording()) {
             this.demoRecorder.recordMessage(processedData);
         }
 
         const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
-        // Create parser for the message content
         this.parser = new NetworkMessageParser(stream, this);
         this.parser.parseMessage();
+
+        // Update ping on receiving frame or valid response
+        const now = Date.now();
+        if (this.lastPingTime > 0) {
+            // Very rough ping estimation (RTT)
+            // Real ping should be based on ack of commands but this is a start
+             this.currentPing = now - this.lastPingTime;
+        }
+        this.lastPingTime = now;
     }
   }
 
   private handleDisconnect(): void {
     console.log('Disconnected from server.');
-    this.state = ConnectionState.Disconnected;
+    this.setState(ConnectionState.Disconnected);
+    this.cleanup();
   }
 
   private sendChallenge(): void {
@@ -206,7 +256,6 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     builder.writeByte(ClientCommand.stringcmd);
     builder.writeString('getchallenge');
 
-    // Send directly via NetChan
     const packet = this.netchan.transmit(builder.getData());
     this.driver.send(packet);
   }
@@ -217,7 +266,6 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
     const userinfo = `\\name\\${this.options.username}\\model\\${this.options.model}\\skin\\${this.options.skin}\\hand\\${this.options.hand ?? 0}\\fov\\${this.options.fov ?? 90}`;
 
-    // Use the client's supported protocol version
     builder.writeString(`connect ${PROTOCOL_VERSION_RERELEASE} ${challenge} ${userinfo}`);
 
     const packet = this.netchan.transmit(builder.getData());
@@ -240,7 +288,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.playerNum = playerNum;
       this.levelName = levelName;
 
-      this.state = ConnectionState.Connected;
+      this.setState(ConnectionState.Connected);
 
       // Send "new" command to acknowledge we are loading
       const builder = new NetworkMessageBuilder();
@@ -250,7 +298,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       const packet = this.netchan.transmit(builder.getData());
       this.driver.send(packet);
 
-      this.state = ConnectionState.Loading;
+      this.setState(ConnectionState.Loading);
   }
 
   onConfigString(index: number, str: string): void {
@@ -263,12 +311,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onStuffText(msg: string): void {
       console.log(`Server StuffText: ${msg}`);
-      // Handle "precache" command which usually signals end of loading
       if (msg.startsWith('precache')) {
           this.finishLoading();
       }
 
-      // Handle challenge response
       if (msg.startsWith('challenge ')) {
           const parts = msg.split(' ');
           if (parts.length > 1) {
@@ -287,28 +333,29 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       const packet = this.netchan.transmit(builder.getData());
       this.driver.send(packet);
 
-      this.state = ConnectionState.Active;
+      this.setState(ConnectionState.Active);
   }
 
   onFrame(frame: FrameData): void {
-    // Keep track of the latest server frame received for ack/prediction
     if (frame.serverFrame > this.latestServerFrame) {
       this.latestServerFrame = frame.serverFrame;
     }
 
-    // Process player state for prediction reconciliation
-    if (this.prediction && frame.playerState) {
-        // Convert to GameFrameResult<PredictionState>
-        // Note: FrameData.playerState is PlayerState (from @quake2ts/engine or shared)
-        // We need to cast or convert it.
-        // Assuming frame.playerState is compatible with PredictionState structure
-        // (PredictionState extends PlayerState)
+    // Update Entities Map
+    const packetEntities = frame.packetEntities;
 
-        // Construct a safe default state if fields are missing
+    if (!packetEntities.delta) {
+        this.entities.clear();
+    }
+
+    for (const ent of packetEntities.entities) {
+        this.entities.set(ent.number, ent);
+    }
+
+    if (this.prediction && frame.playerState) {
         const ps = frame.playerState;
         const predState: PredictionState = {
             ...defaultPredictionState(),
-            // Manual mapping due to type mismatch (MutableVec3 vs Vec3, and property names)
             origin: { x: ps.origin.x, y: ps.origin.y, z: ps.origin.z },
             velocity: { x: ps.velocity.x, y: ps.velocity.y, z: ps.velocity.z },
             viewAngles: { x: ps.viewangles.x, y: ps.viewangles.y, z: ps.viewangles.z },
@@ -316,14 +363,12 @@ export class MultiplayerConnection implements NetworkMessageHandler {
             pmFlags: ps.pm_flags,
             pmType: ps.pm_type,
             gravity: ps.gravity,
-            // Copy other matching fields
-            health: ps.stats[0], // Assuming stat 0 is health? Or generic copy
-            // ...
+            health: ps.stats[0],
         };
 
         const gameFrame: GameFrameResult<PredictionState> = {
             frame: frame.serverFrame,
-            timeMs: 0, // Should be server time, but frame doesn't always have it explicitly?
+            timeMs: 0,
             state: predState
         };
 
@@ -331,16 +376,53 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     }
   }
 
-  // Stubs for other handlers
   onCenterPrint(msg: string): void {}
   onPrint(level: number, msg: string): void {}
-  onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: any): void {}
-  onTempEntity(type: number, pos: any, pos2?: any, dir?: any, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {}
+  onSound(flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {}
+
+  onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0; // Use local time for now
+          this.effectSystem.onTempEntity(type, pos, time);
+      }
+  }
+
   onLayout(layout: string): void {}
   onInventory(inventory: number[]): void {}
-  onMuzzleFlash(ent: number, weapon: number): void {}
-  onMuzzleFlash2(ent: number, weapon: number): void {}
+
+  onMuzzleFlash(ent: number, weapon: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0;
+          this.effectSystem.onMuzzleFlash(ent, weapon, time);
+      }
+  }
+
+  onMuzzleFlash2(ent: number, weapon: number): void {
+      // Helper for MZ2 types?
+  }
+
+  onMuzzleFlash3(ent: number, weapon: number): void {
+      if (this.effectSystem) {
+          const time = Date.now() / 1000.0;
+          this.effectSystem.onMuzzleFlash(ent, weapon, time);
+      }
+  }
+
   onDisconnect(): void { this.disconnect(); }
   onReconnect(): void {}
   onDownload(size: number, percent: number, data?: Uint8Array): void {}
+
+  // New handlers stubs
+  onSplitClient(clientNum: number): void {}
+  onConfigBlast(index: number, data: Uint8Array): void {}
+  onSpawnBaselineBlast(entity: EntityState): void {}
+  onLevelRestart(): void {}
+  onDamage(indicators: DamageIndicator[]): void {}
+  onLocPrint(flags: number, base: string, args: string[]): void {}
+  onFog(data: FogData): void {}
+  onWaitingForPlayers(count: number): void {}
+  onBotChat(msg: string): void {}
+  onPoi(flags: number, pos: Vec3): void {}
+  onHelpPath(pos: Vec3): void {}
+  onAchievement(id: string): void {}
 }

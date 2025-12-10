@@ -7,11 +7,11 @@
 ## 6.1 Rendering Enhancements
 
 ### 6.1.1 Dynamic Lights
-- [ ] Implement GPU-based dynamic lighting for entities
-- [ ] Support point lights with configurable radius and color
-- [ ] Add muzzle flash lights with timed decay
-- [ ] Add explosion lights
-- [ ] Optimize light batching for multiple sources
+- [x] Implement GPU-based dynamic lighting for entities
+- [x] Support point lights with configurable radius and color
+- [x] Add muzzle flash lights with timed decay
+- [x] Add explosion lights
+- [x] Optimize light batching for multiple sources
 
 ### 6.1.2 Water and Transparent Surfaces
 - [ ] Implement water surface rendering with refraction
@@ -37,19 +37,19 @@
 ## 6.2 Console and Configuration
 
 ### 6.2.1 Console System
-- [ ] Expose `ConsoleSystem` for command execution
-- [ ] Add method `executeCommand(cmd: string): void`
-- [ ] Add method `registerCommand(name: string, handler: CommandHandler): void`
-- [ ] Add event `onConsoleOutput?: (message: string) => void`
+- [x] Expose `ConsoleSystem` for command execution
+- [x] Add method `executeCommand(cmd: string): void`
+- [x] Add method `registerCommand(name: string, handler: CommandHandler): void`
+- [x] Add event `onConsoleOutput?: (message: string) => void`
 - [ ] Support command history and autocomplete data
 
 ### 6.2.2 Cvar System
-- [ ] Expose `CvarSystem` for configuration management
-- [ ] Add method `setCvar(name: string, value: string): void`
-- [ ] Add method `getCvar(name: string): Cvar`
-- [ ] Add method `listCvars(): CvarInfo[]`
-- [ ] Support cvar flags (archive, cheat, server-only)
-- [ ] Add event `onCvarChange?: (name: string, value: string) => void`
+- [x] Expose `CvarSystem` for configuration management
+- [x] Add method `setCvar(name: string, value: string): void`
+- [x] Add method `getCvar(name: string): Cvar`
+- [x] Add method `listCvars(): CvarInfo[]`
+- [x] Support cvar flags (archive, cheat, server-only)
+- [x] Add event `onCvarChange?: (name: string, value: string) => void`
 
 ---
 

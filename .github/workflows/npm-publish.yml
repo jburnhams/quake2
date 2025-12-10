@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '25'
@@ -26,4 +26,6 @@ jobs:
           cache-dependency-path: quake2ts/pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install
-      - run: pnpm publish --no-git-checks
+      - run: pnpm run build
+      - run: pnpm exec playwright install chromium --with-deps
+      - run: pnpm publish --no-git-checks        

@@ -245,7 +245,7 @@ export {
   type Md2DrawVertex,
 } from './render/md2Pipeline.js';
 export { Camera } from './render/camera.js';
-export { DLight } from './render/dlight.js';
+export { DLight, DynamicLightManager } from './render/dlight.js';
 export {
   MD3_FRAGMENT_SHADER,
   MD3_VERTEX_SHADER,
@@ -317,3 +317,4 @@ export type {
 } from './demo/parser.js';
 export { FileType, detectFileType, isTextFile, isBinaryFile } from './assets/fileType.js';
 export { AssetPreviewGenerator } from './assets/preview.js';
+export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';

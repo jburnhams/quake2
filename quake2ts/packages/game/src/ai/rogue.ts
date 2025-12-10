@@ -34,7 +34,7 @@ import {
 import { EntitySystem } from '../entities/system.js';
 import { M_CheckBottom, CheckGround, walkMove, changeYaw, facingIdeal } from './movement.js';
 import { visible, rangeTo } from './perception.js';
-import { M_SetAnimation } from '../entities/monsters/common.js';
+import { M_SetAnimation, monster_done_dodge } from '../entities/monsters/common.js';
 // Removed checkWater import as it is not readily available or needed for basic logic yet
 
 const STEPSIZE = 18;
@@ -314,11 +314,7 @@ export function blocked_checkplat(context: EntitySystem, self: Entity, dist: num
 }
 
 export function monster_jump_start(context: EntitySystem, self: Entity): void {
-  // monster_done_dodge(self); // TODO: implement if needed
-  // Check if we are dodging, if so stop dodging?
-  // aiflags not fully exposed in types for 'Dodging' yet?
-  // Let's assume AiFlags needs update or we skip for now.
-
+  monster_done_dodge(self);
   self.monsterinfo.jump_time = context.timeSeconds + 3.0;
 }
 
