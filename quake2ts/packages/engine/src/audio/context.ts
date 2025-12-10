@@ -25,6 +25,7 @@ export interface AudioBufferLike {
 export interface AudioBufferSourceNodeLike extends AudioNodeLike {
   buffer: AudioBufferLike | null;
   loop: boolean;
+  playbackRate: AudioParamLike;
   onended: (() => void) | null;
   start(when?: number, offset?: number, duration?: number): void;
   stop(when?: number): void;

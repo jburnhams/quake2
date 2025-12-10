@@ -4,9 +4,11 @@ export class DemoControls {
   private playback: DemoPlaybackController;
   private isVisible: boolean = true;
   private demoName: string | null = null;
+  private onSpeedChange?: (speed: number) => void;
 
-  constructor(playback: DemoPlaybackController) {
+  constructor(playback: DemoPlaybackController, onSpeedChange?: (speed: number) => void) {
     this.playback = playback;
+    this.onSpeedChange = onSpeedChange;
   }
 
   public setDemoName(name: string | null) {
@@ -120,6 +122,9 @@ export class DemoControls {
       if (newSpeed < 0.1) newSpeed = 0.1;
       if (newSpeed > 16) newSpeed = 16;
       this.playback.setSpeed(newSpeed);
+      if (this.onSpeedChange) {
+          this.onSpeedChange(newSpeed);
+      }
   }
 
   private formatTime(ms: number): string {
