@@ -9,8 +9,10 @@ import {
   clipVelocityAgainstPlanes,
   closestPointToBox,
   concatRotationMatrices,
+  copyVec3,
   createEmptyBounds3,
   crossVec3,
+  distance,
   distanceBetweenBoxesSquared,
   dotVec3,
   lengthVec3,
@@ -27,21 +29,35 @@ import {
   slerpVec3,
   slideClipVelocityVec3,
   subtractVec3,
+  vec3Equals,
 } from '../src/index.js';
 import type { Mat3, Vec3 } from '../src/index.js';
 
 describe('vec3 helpers', () => {
-  it('adds and subtracts vectors component-wise', () => {
-    expect(addVec3({ x: 1, y: 2, z: -1 }, { x: -3, y: 0.5, z: 4 })).toEqual({
-      x: -2,
-      y: 2.5,
-      z: 3,
-    });
-    expect(subtractVec3({ x: 5, y: -1, z: 2 }, { x: 2, y: 3, z: -6 })).toEqual({
-      x: 3,
-      y: -4,
-      z: 8,
-    });
+  it('performs basic arithmetic: copy, add, subtract, equals', () => {
+    const a = { x: 1, y: 2, z: 3 };
+    const b = { x: 4, y: 5, z: 6 };
+
+    // Copy
+    const cp = copyVec3(a);
+    expect(cp).toEqual(a);
+    expect(cp).not.toBe(a); // Ensure new object reference
+
+    // Equals
+    expect(vec3Equals(a, cp)).toBe(true);
+    expect(vec3Equals(a, b)).toBe(false);
+
+    // Add
+    expect(addVec3(a, b)).toEqual({ x: 5, y: 7, z: 9 });
+
+    // Subtract
+    expect(subtractVec3(b, a)).toEqual({ x: 3, y: 3, z: 3 });
+  });
+
+  it('computes distance between vectors', () => {
+    const a = { x: 1, y: 1, z: 1 };
+    const b = { x: 4, y: 5, z: 13 }; // diff: 3, 4, 12 -> length 13
+    expect(distance(a, b)).toBe(13);
   });
 
   it('supports component multiplication, scaling, and negation', () => {
