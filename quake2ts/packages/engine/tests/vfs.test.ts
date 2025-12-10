@@ -142,4 +142,26 @@ describe('VirtualFileSystem', () => {
     expect(content).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder().decode(content)).toBe('BIN');
   });
+
+  it('streams file content in chunks', async () => {
+    const dataStr = '0123456789'.repeat(10); // 100 bytes
+    const pak = makePak('base.pak', [{ path: 'stream.txt', data: dataStr }]);
+    const vfs = new VirtualFileSystem([pak]);
+
+    const stream = vfs.streamFile('stream.txt', 10); // 10 bytes per chunk
+    const reader = stream.getReader();
+
+    let result = '';
+    let chunks = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result += new TextDecoder().decode(value);
+      chunks++;
+      expect(value?.length).toBeLessThanOrEqual(10);
+    }
+
+    expect(result).toBe(dataStr);
+    expect(chunks).toBe(10);
+  });
 });

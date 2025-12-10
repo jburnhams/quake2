@@ -30,7 +30,7 @@
 ### 1.1.4 Text File Reading
 - [x] Add method `readTextFile(path: string): Promise<string>` with UTF-8/ASCII fallback
 - [x] Add method `readBinaryFile(path: string): Promise<Uint8Array>` for raw access
-- [ ] Handle large file streaming for web app progress display
+- [x] Handle large file streaming for web app progress display
 
 ---
 
@@ -58,12 +58,12 @@
 - [x] Add mouse drag for pitch/yaw rotation
 - [x] Add configurable movement speed and acceleration
 - [x] Add method `update(deltaTime: number, input: CameraInput): void`
-- [ ] Add collision toggle: fly-through vs collision-aware movement
+- [x] Add collision toggle: fly-through vs collision-aware movement
 
 **Implementation Notes:**
 - Enhanced `Camera` class in `packages/engine/src/render/camera.ts` with requested API methods.
 - Created `FreeCameraController` in `packages/engine/src/render/cameraController.ts` handling WASD/QE and mouse look.
-- Collision toggle not yet implemented in `FreeCameraController` (needs `checkPosition` callback or similar).
+- Implemented collision toggle in `FreeCameraController` with `setCollision(boolean)` and `checkPosition` callback.
 
 ### 1.2.4 Map Statistics API
 - [x] Add method `getMapStatistics(mapName: string): Promise<MapStatistics>`

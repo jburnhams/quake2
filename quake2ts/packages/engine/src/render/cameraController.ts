@@ -1,6 +1,6 @@
 import { vec3 } from 'gl-matrix';
 import { Camera } from './camera.js';
-import { DEG2RAD, RAD2DEG } from '@quake2ts/shared';
+import { DEG2RAD } from '@quake2ts/shared';
 
 // Use shared angleVectors if available, otherwise implement local helper
 function angleVectors(angles: vec3, forward: vec3, right: vec3, up: vec3): void {
@@ -46,6 +46,8 @@ export interface CameraInput {
 export interface CameraControllerOptions {
   speed: number;
   sensitivity: number;
+  collisionEnabled: boolean;
+  checkPosition?: (pos: vec3) => vec3; // Returns corrected position
 }
 
 export class FreeCameraController {
@@ -57,17 +59,18 @@ export class FreeCameraController {
     this.options = {
       speed: 300,
       sensitivity: 0.1,
+      collisionEnabled: false,
       ...options
     };
   }
 
   update(deltaTime: number, input: CameraInput): void {
     const angles = this.camera.angles;
-    const position = this.camera.position;
+    const position = vec3.clone(this.camera.position);
 
     // Rotation
     angles[0] += input.pitch * this.options.sensitivity;
-    angles[1] -= input.yaw * this.options.sensitivity; // Yaw is usually inverted for mouse? Or input is deltaX
+    angles[1] -= input.yaw * this.options.sensitivity;
 
     // Clamp pitch
     if (angles[0] > 89) angles[0] = 89;
@@ -85,7 +88,6 @@ export class FreeCameraController {
     const up = vec3.create();
 
     // In Quake: Pitch, Yaw, Roll
-    // We want movement relative to view
     angleVectors(angles, forward, right, up);
 
     const moveDir = vec3.create();
@@ -105,11 +107,25 @@ export class FreeCameraController {
     if (vec3.length(moveDir) > 0) {
         vec3.normalize(moveDir, moveDir);
         vec3.scaleAndAdd(position, position, moveDir, speed);
+
+        if (this.options.collisionEnabled && this.options.checkPosition) {
+          const corrected = this.options.checkPosition(position);
+          vec3.copy(position, corrected);
+        }
+
         this.camera.position = position;
     }
   }
 
   setSpeed(speed: number): void {
     this.options.speed = speed;
+  }
+
+  setCollision(enabled: boolean): void {
+    this.options.collisionEnabled = enabled;
+  }
+
+  getCollision(): boolean {
+    return this.options.collisionEnabled;
   }
 }
