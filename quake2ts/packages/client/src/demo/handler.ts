@@ -52,7 +52,10 @@ export interface DemoHandlerCallbacks {
     onConfigString?: (index: number, str: string) => void;
     onLevelRestart?: () => void;
     onWaitingForPlayers?: () => void;
+    onMuzzleFlash?: (ent: number, weapon: number) => void;
+    onMuzzleFlash2?: (ent: number, weapon: number) => void;
     onMuzzleFlash3?: (ent: number, weapon: number) => void;
+    onTempEntity?: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => void;
     onFog?: (data: FogData) => void;
     onDamage?: (indicators: DamageIndicator[]) => void;
     onServerData?: (protocol: number, tickRate?: number) => void;
@@ -262,9 +265,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
-        // TODO: Trigger temp entities in renderer
-        // The Renderer interface does not currently expose the particle system or generic temp entity spawning functions.
-        // Once Renderer is updated to support particles, this can be implemented.
+        if (this.callbacks?.onTempEntity) {
+            this.callbacks.onTempEntity(type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt);
+        }
     }
 
     onLayout(layout: string): void {
@@ -275,9 +278,15 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onMuzzleFlash(ent: number, weapon: number): void {
+        if (this.callbacks?.onMuzzleFlash) {
+            this.callbacks.onMuzzleFlash(ent, weapon);
+        }
     }
 
     onMuzzleFlash2(ent: number, weapon: number): void {
+        if (this.callbacks?.onMuzzleFlash2) {
+            this.callbacks.onMuzzleFlash2(ent, weapon);
+        }
     }
 
     onMuzzleFlash3(ent: number, weapon: number): void {

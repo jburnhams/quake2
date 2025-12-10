@@ -7,11 +7,11 @@
 ## 6.1 Rendering Enhancements
 
 ### 6.1.1 Dynamic Lights
-- [ ] Implement GPU-based dynamic lighting for entities
-- [ ] Support point lights with configurable radius and color
-- [ ] Add muzzle flash lights with timed decay
-- [ ] Add explosion lights
-- [ ] Optimize light batching for multiple sources
+- [x] Implement GPU-based dynamic lighting for entities
+- [x] Support point lights with configurable radius and color
+- [x] Add muzzle flash lights with timed decay
+- [x] Add explosion lights
+- [x] Optimize light batching for multiple sources
 
 ### 6.1.2 Water and Transparent Surfaces
 - [ ] Implement water surface rendering with refraction
