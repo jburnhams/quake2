@@ -291,6 +291,7 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
   const halfStepQuadrant = {
       x: stepQuadrantSize.x * 0.5,
       y: stepQuadrantSize.y * 0.5,
+      z: 0
   };
 
   const halfStepQuadrantMins = {
