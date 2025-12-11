@@ -9,7 +9,7 @@ import {
 } from '@quake2ts/shared';
 import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
-import { RenderModeConfig, RenderMode } from './frame.js';
+import { RenderModeConfig } from './frame.js';
 import { BspSurfaceGeometry } from './bsp.js';
 import { IndexBuffer } from './resources.js';
 import { generateWireframeIndices } from './geometry.js';
@@ -149,7 +149,7 @@ void main() {
         // If hasLight is false, it means no styles are active.
         if (!hasLight) light = vec3(1.0);
 
-        totalLight = light; // Dynamic lights add on top or multiply? Q2 adds.
+        totalLight = light;
 
         // Add dynamic lights
         for (int i = 0; i < MAX_DLIGHTS; i++) {
@@ -157,9 +157,10 @@ void main() {
           DLight dlight = u_dlights[i];
 
           float dist = distance(v_position, dlight.position);
+          // Quake 2 dlight formula
           if (dist < dlight.intensity) {
-             float intensity = (dlight.intensity - dist) / dlight.intensity;
-             totalLight += dlight.color * intensity;
+             float contribution = (dlight.intensity - dist) * (1.0 / 255.0);
+             totalLight += dlight.color * contribution;
           }
         }
       }
@@ -353,15 +354,12 @@ export class BspSurfacePipeline {
       if (renderMode.color) {
           color = [...renderMode.color];
       } else if (renderMode.generateRandomColor) {
-         // Generate based on something? For map surfaces, we don't have a unique ID passed here easily yet.
-         // Maybe just white default if not specified.
          color = [1, 1, 1, 1];
       }
     }
 
     this.gl.uniform1i(this.uniformRenderMode, modeInt);
     this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
-
 
     // Bind Dlights
     const numDlights = Math.min(dlights.length, MAX_DLIGHTS);
