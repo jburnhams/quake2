@@ -41,7 +41,7 @@
 - [x] Add method `executeCommand(cmd: string): void`
 - [x] Add method `registerCommand(name: string, handler: CommandHandler): void`
 - [x] Add event `onConsoleOutput?: (message: string) => void`
-- [ ] Support command history and autocomplete data
+- [x] Support command history and autocomplete data
 
 ### 6.2.2 Cvar System
 - [x] Expose `CvarSystem` for configuration management
