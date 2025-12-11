@@ -37,13 +37,13 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Reference: `m_move.cpp` lines 450-520
 
 ### 1.1.2 Ground & Bottom Detection
-- [ ] Implement `M_CheckBottom(entity: Entity): boolean`
+- [x] Implement `M_CheckBottom(entity: Entity): boolean`
   - Validate entity is on solid ground
   - Check all 4 corners of bounding box
   - Detect slopes and edges
   - Reference: `m_move.cpp` lines 382-448
 
-- [ ] Implement `M_CheckBottomEx(entity: Entity): number`
+- [x] Implement `M_CheckBottomEx(entity: Entity): number`
   - Extended version returning bottom type
   - Returns: BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA, BOTTOM_NONE
   - Reference: `m_move.cpp` lines 522-590

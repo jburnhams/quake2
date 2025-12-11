@@ -42,3 +42,9 @@ export enum TraceMask {
   Opaque = 1 << 0,
   Window = 1 << 1,
 }
+
+export const BOTTOM_EMPTY = 0;
+export const BOTTOM_SOLID = 1;
+export const BOTTOM_WATER = 2;
+export const BOTTOM_SLIME = 3;
+export const BOTTOM_LAVA = 4;
