@@ -636,8 +636,8 @@ export function createClient(imports: ClientImports): ClientExports {
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // Calculate alpha for interpolation
-          // For now, let's use 1.0 (latest)
-          renderEntities = demoHandler.getRenderableEntities(1.0, configStrings);
+          const alpha = demoPlayback.getInterpolationFactor();
+          renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
 
           // Get packet entities for effect processing.
           // demoHandler doesn't expose getPacketEntities directly yet, but getRenderableEntities builds from them.

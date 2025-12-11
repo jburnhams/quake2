@@ -93,7 +93,7 @@
 - [x] Add method `setThirdPersonOffset(offset: Vec3): void`
 
 ### 3.4.3 Slow Motion and Speed Control
-- [ ] Enhance `setSpeed()` to support fractional rates: 0.1x, 0.25x, 0.5x, 1x, 2x, 4x, 8x
-- [ ] Add frame interpolation for smooth slow-motion playback
-- [ ] Add method `getPlaybackSpeed(): number`
-- [ ] Ensure audio pitch correction at non-1x speeds (or mute)
+- [x] Enhance `setSpeed()` to support fractional rates: 0.1x, 0.25x, 0.5x, 1x, 2x, 4x, 8x
+- [x] Add frame interpolation for smooth slow-motion playback
+- [x] Add method `getPlaybackSpeed(): number`
+- [x] Ensure audio pitch correction at non-1x speeds (or mute)
