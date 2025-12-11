@@ -153,14 +153,22 @@ describe('Demo Camera Modes and Collision', () => {
         vi.spyOn(client.demoHandler, 'getPredictionState').mockReturnValue(mockState as any);
         vi.spyOn(client.demoHandler, 'getRenderableEntities').mockReturnValue([]);
 
+        // Initialize time at 100
+        client.render({
+            nowMs: 100,
+            latest: { timeMs: 100, state: mockState } as any,
+            previous: { timeMs: 0, state: mockState } as any,
+            alpha: 1.0
+        });
+
         // Simulate 'w' key down
         client.handleInput('w', true);
 
         // Render with dt = 100ms
         const sample: GameRenderSample<any> = {
-            nowMs: 100, // +100ms
-            latest: { timeMs: 100, state: mockState } as any,
-            previous: { timeMs: 0, state: mockState } as any,
+            nowMs: 200, // +100ms
+            latest: { timeMs: 200, state: mockState } as any,
+            previous: { timeMs: 100, state: mockState } as any,
             alpha: 1.0
         };
 
@@ -178,9 +186,9 @@ describe('Demo Camera Modes and Collision', () => {
 
         // Render another 100ms
          const sample2: GameRenderSample<any> = {
-            nowMs: 200, // +100ms
-            latest: { timeMs: 200, state: mockState } as any,
-            previous: { timeMs: 0, state: mockState } as any,
+            nowMs: 300, // +100ms
+            latest: { timeMs: 300, state: mockState } as any,
+            previous: { timeMs: 200, state: mockState } as any,
             alpha: 1.0
         };
         client.render(sample2);
