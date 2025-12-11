@@ -19,6 +19,7 @@ import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { SpatialGrid } from './spatial.js';
+import { ScriptHookRegistry } from '../scripting/hooks.js';
 
 interface Bounds {
   min: Vec3;
@@ -159,6 +160,7 @@ export class EntitySystem {
   private spawnCount = 0;
 
   private spatialGrid: SpatialGrid;
+  public readonly scriptHooks = new ScriptHookRegistry();
 
   readonly targetAwareness: TargetAwarenessState;
 
@@ -174,6 +176,10 @@ export class EntitySystem {
 
   setSpawnRegistry(registry: SpawnRegistry): void {
     this.spawnRegistry = registry;
+  }
+
+  registerEntityClass(classname: string, factory: SpawnFunction): void {
+    this.spawnRegistry?.register(classname, factory);
   }
 
   getSpawnFunction(classname: string): SpawnFunction | undefined {
@@ -355,10 +361,12 @@ export class EntitySystem {
     this.spawnCount++;
     ent.spawn_count = this.spawnCount;
     ent.timestamp = this.currentTimeSeconds;
+    this.scriptHooks.onEntitySpawn?.(ent);
     return ent;
   }
 
   free(entity: Entity): void {
+    this.scriptHooks.onEntityRemove?.(entity);
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);

@@ -32,6 +32,7 @@ import {
     FRAME_attack1, FRAME_attack8,
     ANIM_ATTACK, ANIM_REVERSE
 } from '../../entities/player_anim.js';
+import { fireCustomWeapon } from './registry.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -645,6 +646,11 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
     }
 
     const weaponState = getWeaponState(player.client.weaponStates, weaponId);
+
+    // Check for custom weapon first
+    if (fireCustomWeapon(game, player, weaponId, weaponState)) {
+        return;
+    }
 
     if (weaponId === WeaponId.HandGrenade) {
         fireHandGrenade(game, player, inventory, weaponState);
