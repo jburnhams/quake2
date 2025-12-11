@@ -63,14 +63,26 @@ function setPlayerAttackAnim(player: Entity) {
 
 function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: any, damage: number, knockback: number, mod: DamageMod) {
     const end = { x: start.x + forward.x * 8192, y: start.y + forward.y * 8192, z: start.z + forward.z * 8192 };
-    const trace = game.trace(
-        start,
-        null,
-        null,
-        end,
-        player,
-        0
-    );
+
+    if (game.setLagCompensation && player.client) {
+        game.setLagCompensation(true, player, player.client.ping);
+    }
+
+    let trace;
+    try {
+        trace = game.trace(
+            start,
+            null,
+            null,
+            end,
+            player,
+            0
+        );
+    } finally {
+        if (game.setLagCompensation) {
+            game.setLagCompensation(false);
+        }
+    }
 
     if (trace.ent && trace.ent.takedamage) {
         T_Damage(
@@ -96,31 +108,41 @@ function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: an
 }
 
 function fireMultiplePellets(game: GameExports, player: Entity, start: Vec3, forward: Vec3, right: Vec3, up: Vec3, count: number, damage: number, knockback: number, hspread: number, vspread: number, mod: DamageMod) {
-    for (let i = 0; i < count; i++) {
-        const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
-        const dir = addVec3(forward, spread);
-        const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
-        const trace = game.trace(start, null, null, end, player, 0);
+    if (game.setLagCompensation && player.client) {
+        game.setLagCompensation(true, player, player.client.ping);
+    }
 
-        if (trace.ent && trace.ent.takedamage) {
-            T_Damage(
-                trace.ent as any,
-                player as any,
-                player as any,
-                ZERO_VEC3,
-                trace.endpos,
-                trace.plane ? trace.plane.normal : ZERO_VEC3,
-                damage,
-                knockback,
-                DamageFlags.BULLET,
-                mod,
-                game.time,
-                game.multicast
-            );
-        } else if (trace.plane) {
-            if (random.frandom() > 0.9) {
-                game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+    try {
+        for (let i = 0; i < count; i++) {
+            const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
+            const dir = addVec3(forward, spread);
+            const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
+            const trace = game.trace(start, null, null, end, player, 0);
+
+            if (trace.ent && trace.ent.takedamage) {
+                T_Damage(
+                    trace.ent as any,
+                    player as any,
+                    player as any,
+                    ZERO_VEC3,
+                    trace.endpos,
+                    trace.plane ? trace.plane.normal : ZERO_VEC3,
+                    damage,
+                    knockback,
+                    DamageFlags.BULLET,
+                    mod,
+                    game.time,
+                    game.multicast
+                );
+            } else if (trace.plane) {
+                if (random.frandom() > 0.9) {
+                    game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                }
             }
+        }
+    } finally {
+        if (game.setLagCompensation) {
+            game.setLagCompensation(false);
         }
     }
 }
@@ -133,40 +155,50 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
     let count = 0;
     let finalEnd = end;
 
-    while (count < 16) { // Safety break
-        count++;
-        const trace = game.trace(currentStart, null, null, end, ignore, 0);
+    if (game.setLagCompensation && player.client) {
+        game.setLagCompensation(true, player, player.client.ping);
+    }
 
-        finalEnd = trace.endpos;
+    try {
+        while (count < 16) { // Safety break
+            count++;
+            const trace = game.trace(currentStart, null, null, end, ignore, 0);
 
-        if (trace.fraction >= 1.0) {
-            break;
+            finalEnd = trace.endpos;
+
+            if (trace.fraction >= 1.0) {
+                break;
+            }
+
+            if (trace.ent && trace.ent.takedamage) {
+                T_Damage(
+                    trace.ent as any,
+                    player as any,
+                    player as any,
+                    ZERO_VEC3,
+                    trace.endpos,
+                    trace.plane ? trace.plane.normal : ZERO_VEC3,
+                    damage,
+                    knockback,
+                    DamageFlags.ENERGY,
+                    DamageMod.RAILGUN,
+                    game.time,
+                    game.multicast
+                );
+            }
+
+            // Continue trace from hit point
+            ignore = trace.ent as Entity;
+            currentStart = trace.endpos;
+
+            // If we hit world geometry, we stop.
+            if (!trace.ent || trace.ent === game.entities.world) {
+                break;
+            }
         }
-
-        if (trace.ent && trace.ent.takedamage) {
-             T_Damage(
-                trace.ent as any,
-                player as any,
-                player as any,
-                ZERO_VEC3,
-                trace.endpos,
-                trace.plane ? trace.plane.normal : ZERO_VEC3,
-                damage,
-                knockback,
-                DamageFlags.ENERGY,
-                DamageMod.RAILGUN,
-                game.time,
-                game.multicast
-            );
-        }
-
-        // Continue trace from hit point
-        ignore = trace.ent as Entity;
-        currentStart = trace.endpos;
-
-        // If we hit world geometry, we stop.
-        if (!trace.ent || trace.ent === game.entities.world) {
-            break;
+    } finally {
+        if (game.setLagCompensation) {
+            game.setLagCompensation(false);
         }
     }
 

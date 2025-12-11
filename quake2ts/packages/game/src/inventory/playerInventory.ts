@@ -150,6 +150,7 @@ export interface PlayerClient {
     oldgroundentity?: any; // Entity
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
+    ping?: number; // Added for lag compensation
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {

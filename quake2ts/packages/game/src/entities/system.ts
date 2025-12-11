@@ -257,6 +257,7 @@ export class EntitySystem {
       unicast: () => {},
       configstring: () => {},
       serverCommand: () => {},
+      setLagCompensation: () => {},
     };
 
     // Merge defaults with provided imports
