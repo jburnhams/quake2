@@ -14,24 +14,24 @@ This phase covers the foundational AI systems required for monster behavior and 
 **TypeScript File**: `/packages/game/src/ai/movement.ts`
 
 ### 1.1.1 Core Movement Functions
-- [ ] Implement `M_MoveToGoal(entity: Entity, dist: number): boolean`
+- [x] Implement `M_MoveToGoal(entity: Entity, dist: number): boolean`
   - Goal-directed pathfinding toward `entity.goalentity`
   - Obstacle avoidance
   - Returns true if movement successful
   - Reference: `m_move.cpp` lines 30-180
 
-- [ ] Implement `M_ChangeYaw(entity: Entity): void`
+- [x] Implement `M_ChangeYaw(entity: Entity): void`
   - Smooth rotation toward `entity.ideal_yaw`
   - Use `entity.yaw_speed` for turn rate
   - Reference: `m_move.cpp` lines 182-220
 
-- [ ] Implement `M_MoveStep(entity: Entity, move: Vec3, relink: boolean): boolean`
+- [x] Implement `M_MoveStep(entity: Entity, move: Vec3, relink: boolean): boolean`
   - Single physics step with collision
   - Step climbing (18 unit steps)
   - Ground validation
   - Reference: `m_move.cpp` lines 222-380
 
-- [ ] Implement `M_MoveToPath(entity: Entity): void`
+- [x] Implement `M_MoveToPath(entity: Entity): void`
   - Follow explicit path_corner entities
   - Update `entity.movetarget` when reaching waypoints
   - Reference: `m_move.cpp` lines 450-520

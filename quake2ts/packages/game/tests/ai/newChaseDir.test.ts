@@ -58,9 +58,9 @@ describe('SV_NewChaseDir', () => {
     // Mock trace success
     traceMock.mockImplementation((start, mins, maxs, end) => {
          // If checking bottom (downwards trace)
-        if (end.z < start.z - 10) return { fraction: 0.5 };
+        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // If moving (horizontal)
-        return { fraction: 1.0 };
+        return { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
     });
     pointContentsMock.mockReturnValue(0);
 
@@ -76,18 +76,26 @@ describe('SV_NewChaseDir', () => {
 
      // Mock trace failure for straight move
     traceMock.mockImplementation((start, mins, maxs, end) => {
+        const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
         // Checking bottom always succeeds
-        if (end.z < start.z - 10) return { fraction: 0.5 };
+        if (end.z < start.z - 10) {
+            result.fraction = 0.5;
+            return result;
+        }
 
         // Horizontal move
         const dx = end.x - start.x;
         const dy = end.y - start.y;
 
         // 0 degrees is blocked (positive x)
-        if (dx > 0 && Math.abs(dy) < 0.1) return { fraction: 0.5 };
+        if (dx > 0 && Math.abs(dy) < 0.1) {
+             result.fraction = 0.5;
+             result.endpos = start;
+             return result;
+        }
 
         // 45 degrees is clear
-        return { fraction: 1.0 };
+        return result;
     });
     pointContentsMock.mockReturnValue(0);
 

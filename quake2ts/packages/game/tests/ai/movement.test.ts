@@ -12,16 +12,25 @@ import {
   AIFlags,
   changeYaw,
   walkMove,
+  M_MoveStep,
+  M_MoveToGoal,
+  M_MoveToPath,
+  SV_StepDirection,
+  M_CheckBottom,
+  CheckGround,
+  M_walkmove
 } from '../../src/index.js';
 // Import EntityFlags directly to avoid potential circular dependency issues or undefined exports
-import { EntityFlags } from '../../src/entities/entity.js';
+import { EntityFlags, MoveType } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 
 function createEntity(): Entity {
   const ent = new Entity(0);
   ent.inUse = true;
-  // Set FLY flag to bypass ground checks in M_walkmove during these pure math/logic tests
+  ent.origin = { x: 0, y: 0, z: 0 };
+  // Set FLY flag to bypass ground checks in M_walkmove during these pure math/logic tests unless specified
   ent.flags |= EntityFlags.Fly;
+  ent.movetype = MoveType.Step;
   return ent;
 }
 
@@ -50,13 +59,17 @@ const mockContext = {
 
 beforeEach(() => {
   // Reset and reconfigure mocks before each test
+  mockTraceFn.mockReset();
   mockTraceFn.mockReturnValue({
     fraction: 1.0,
     allsolid: false,
     startsolid: false,
-    ent: null
+    ent: null,
+    endpos: { x: 0, y: 0, z: 0 } // default
   });
+  mockPointcontentsFn.mockReset();
   mockPointcontentsFn.mockReturnValue(0);
+  mockPickTargetFn.mockReset();
   mockPickTargetFn.mockReturnValue(undefined);
   mockTargetAwareness.frameNumber = 0;
   mockTargetAwareness.sightEntity = null;
@@ -196,6 +209,9 @@ describe('ai_walk', () => {
     goal.origin = { x: 0, y: 10, z: 0 };
     ent.goalentity = goal;
 
+    // Must mock M_walkmove success
+    mockTraceFn.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 4, z: 0 }, allsolid: false, startsolid: false });
+
     ai_walk(ent, 4, 0.1, mockContext);
 
     expect(ent.ideal_yaw).toBeCloseTo(90, 6);
@@ -262,53 +278,44 @@ describe('ai_charge', () => {
   });
 });
 
-// Added tests for M_walkmove stepping logic
-import { M_walkmove, M_CheckBottom, CheckGround } from '../../src/ai/movement.js';
-import { MoveType } from '../../src/entities/entity.js';
-
-describe('M_walkmove stepping', () => {
+describe('M_MoveStep (Logic from M_walkmove)', () => {
   let mockEntity: Entity;
-  // We reuse mockContext from above but need to adjust trace behavior
 
   beforeEach(() => {
-    // Reset Entity
     mockEntity = createEntity();
     mockEntity.origin = { x: 0, y: 0, z: 0 };
     mockEntity.movetype = MoveType.Step;
     mockEntity.flags = 0; // Not flying/swimming
     mockEntity.groundentity = {} as any;
 
-    // Reset mocks
     mockTraceFn.mockReset();
     mockTraceFn.mockReturnValue({ fraction: 1.0, startsolid: false, allsolid: false });
     mockPointcontentsFn.mockReturnValue(0);
   });
 
   it('should move successfully on flat ground', () => {
-    // First trace: clear path
+    // 1. Move
     mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
+    // 2. M_CheckBottom trace (success)
+    mockTraceFn.mockReturnValue({ fraction: 0.5 }); // hit something
 
-    // M_CheckBottom mock: hit floor
-    // This is called inside M_walkmove -> M_CheckBottom -> trace
-    mockTraceFn.mockReturnValue({ fraction: 0.5 });
-
-    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+    const result = M_MoveStep(mockEntity, { x: 10, y: 0, z: 0 }, true, mockContext);
 
     expect(result).toBe(true);
     expect(mockEntity.origin.x).toBe(10);
   });
 
   it('should step up if blocked', () => {
-    // 1. Trace forward: Blocked (fraction < 1)
-    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+    // 1. Trace forward: Blocked
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false, endpos: { x: 0, y: 0, z: 0 } });
 
     // 2. Trace UP: Clear
-    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false, endpos: { x: 0, y: 0, z: 18 } });
 
     // 3. Trace Forward (at height): Clear
-    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false, endpos: { x: 10, y: 0, z: 18 } });
 
-    // 4. Trace Down: Hit ground at z=18 (step height)
+    // 4. Trace Down: Hit ground at z=18
     mockTraceFn.mockReturnValueOnce({
         fraction: 0.5,
         endpos: { x: 10, y: 0, z: 18 },
@@ -319,10 +326,88 @@ describe('M_walkmove stepping', () => {
     // M_CheckBottom traces (mock success)
     mockTraceFn.mockReturnValue({ fraction: 0.5 });
 
-    const result = M_walkmove(mockEntity, 0, 10, mockContext);
+    const result = M_MoveStep(mockEntity, { x: 10, y: 0, z: 0 }, true, mockContext);
 
     expect(result).toBe(true);
     expect(mockEntity.origin.z).toBe(18);
     expect(mockEntity.origin.x).toBe(10);
+  });
+
+  it('should fail if blocked and cannot step up', () => {
+    // 1. Trace forward: Blocked
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false, endpos: { x: 0, y: 0, z: 0 } });
+
+    // 2. Trace UP: Blocked (ceiling) but not allsolid, so it returns endpos
+    mockTraceFn.mockReturnValueOnce({
+        fraction: 0.5,
+        startsolid: false,
+        allsolid: false,
+        endpos: { x: 0, y: 0, z: 9 } // Partial up
+    });
+
+    // 3. Trace Step (Forward): Blocked
+    mockTraceFn.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+
+    const result = M_MoveStep(mockEntity, { x: 10, y: 0, z: 0 }, true, mockContext);
+
+    expect(result).toBe(false);
+    expect(mockEntity.origin.x).toBe(0);
+  });
+});
+
+describe('M_MoveToGoal', () => {
+  it('returns true if close enough to enemy', () => {
+    const ent = createEntity();
+    ent.enemy = createEntity();
+    ent.enemy.origin = { x: 10, y: 0, z: 0 };
+    ent.origin = { x: 0, y: 0, z: 0 };
+    ent.groundentity = {} as any; // On ground
+
+    const result = M_MoveToGoal(ent, 15, mockContext);
+    expect(result).toBe(true);
+  });
+
+  it('moves towards goal using SV_StepDirection if not close enough', () => {
+    const ent = createEntity();
+    ent.ideal_yaw = 0;
+    ent.groundentity = {} as any;
+
+    // Mock M_walkmove success inside SV_StepDirection
+    // 1. Trace forward success
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
+    // M_CheckBottom
+    mockTraceFn.mockReturnValue({ fraction: 0.5 });
+
+    const result = M_MoveToGoal(ent, 10, mockContext);
+    expect(result).toBe(true);
+    // Entity moved
+    expect(ent.origin.x).toBe(10);
+  });
+});
+
+describe('M_MoveToPath', () => {
+  it('switches to next target when reached path_corner', () => {
+    const ent = createEntity();
+    const pathCorner = createEntity();
+    pathCorner.classname = 'path_corner';
+    pathCorner.target = 'next_path';
+    pathCorner.origin = { x: 10, y: 0, z: 0 };
+
+    ent.goalentity = pathCorner;
+    ent.origin = { x: 10, y: 0, z: 0 }; // At goal
+    ent.groundentity = {} as any;
+
+    const nextPath = createEntity();
+    nextPath.origin = { x: 20, y: 0, z: 0 };
+
+    mockPickTargetFn.mockReturnValue(nextPath);
+
+    // M_MoveToGoal calls M_MoveToPath internally
+    const result = M_MoveToGoal(ent, 5, mockContext);
+
+    expect(result).toBe(true);
+    expect(mockPickTargetFn).toHaveBeenCalledWith('next_path');
+    expect(ent.goalentity).toBe(nextPath);
+    expect(ent.ideal_yaw).toBe(0); // Vector to next (20,0,0) from (10,0,0) is yaw 0
   });
 });

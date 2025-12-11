@@ -45,9 +45,9 @@ describe('SV_StepDirection', () => {
     // Second/Third trace in checkBottom -> success (fraction < 1.0 means ground hit)
     traceMock.mockImplementation((start, mins, maxs, end) => {
         // If checking bottom (downwards trace)
-        if (end.z < start.z - 10) return { fraction: 0.5 };
+        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // If moving (horizontal)
-        return { fraction: 1.0 };
+        return { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
     });
 
     const result = SV_StepDirection(entity, 0, 10, context);
@@ -57,18 +57,26 @@ describe('SV_StepDirection', () => {
   it('should try alternate angles if straight move fails', () => {
      // Mock trace failure for straight move
     traceMock.mockImplementation((start, mins, maxs, end) => {
+        const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
         // Checking bottom always succeeds
-        if (end.z < start.z - 10) return { fraction: 0.5 };
+        if (end.z < start.z - 10) {
+            result.fraction = 0.5;
+            return result;
+        }
 
         // Horizontal move
         const dx = end.x - start.x;
         const dy = end.y - start.y;
 
         // 0 degrees is blocked (positive x)
-        if (dx > 0 && Math.abs(dy) < 0.1) return { fraction: 0.5 };
+        if (dx > 0 && Math.abs(dy) < 0.1) {
+             result.fraction = 0.5;
+             result.endpos = start; // Blocked at start
+             return result;
+        }
 
         // 45 degrees is clear
-        return { fraction: 1.0 };
+        return result;
     });
 
     pointContentsMock.mockReturnValue(0);
@@ -96,9 +104,9 @@ describe('SV_StepDirection', () => {
     // All blocked
      traceMock.mockImplementation((start, mins, maxs, end) => {
         // Checking bottom always succeeds
-        if (end.z < start.z - 10) return { fraction: 0.5 };
+        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // Move always fails
-        return { fraction: 0.5 };
+        return { fraction: 0.5, endpos: start, allsolid: false, startsolid: false };
     });
     pointContentsMock.mockReturnValue(0);
 
