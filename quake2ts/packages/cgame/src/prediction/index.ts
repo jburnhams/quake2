@@ -50,6 +50,8 @@ export interface PredictionSettings {
   readonly pmDuckSpeed: number;
   readonly pmWaterSpeed: number;
   readonly groundIsSlick: boolean;
+  readonly errorTolerance: number;
+  readonly errorSnapThreshold: number;
 }
 
 const DEFAULTS: PredictionSettings = {
@@ -63,6 +65,8 @@ const DEFAULTS: PredictionSettings = {
   pmDuckSpeed: 100,
   pmWaterSpeed: 400,
   groundIsSlick: false,
+  errorTolerance: 0.1,
+  errorSnapThreshold: 10,
 };
 
 const DEFAULT_GRAVITY = 800;
@@ -283,11 +287,11 @@ export class ClientPrediction {
         const error = subtractVec3(predictedAtFrame.origin, normalized.origin);
         const errorLen = lengthVec3(error);
 
-        // If error is large (> 10 units), snap immediately (reset error)
+        // If error is large (> errorSnapThreshold), snap immediately (reset error)
         // If error is small, add it to existing error to smooth out
-        if (errorLen > 10) {
+        if (errorLen > this.settings.errorSnapThreshold) {
             this.predictionError = ZERO_VEC3;
-        } else if (errorLen > 0.1) {
+        } else if (errorLen > this.settings.errorTolerance) {
              // Accumulate error? Or just set it?
              // Usually we set it, and then decay it in simulateCommand or frame update.
              // But wait, "prediction error" is usually added to the view position to keep the camera

@@ -16,7 +16,7 @@
 
 ### 5.1.2 Client Prediction and Interpolation
 - [x] Ensure client prediction works correctly in multiplayer
-- [ ] Add configurable prediction error tolerance
+- [x] Add configurable prediction error tolerance
 - [x] Implement entity interpolation for smooth remote player movement
 - [ ] Add lag compensation for weapon firing
 - [ ] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
