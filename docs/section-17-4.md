@@ -10,9 +10,9 @@
 - [x] Create `GameSession` class wrapping game, client, and engine lifecycle
 - [x] Add method `createSession(options: SessionOptions): GameSession`
 - [ ] Options: map name, skill level, render mode, audio enabled
-- [ ] Add method `startNewGame(mapName: string, skill: number): void`
-- [ ] Add method `loadSavedGame(saveData: SaveData): void`
-- [ ] Add method `shutdown(): void` for cleanup
+- [x] Add method `startNewGame(mapName: string, skill: number): void`
+- [x] Add method `loadSavedGame(saveData: SaveData): void`
+- [x] Add method `shutdown(): void` for cleanup
 
 ### 4.1.2 Input Integration
 - [ ] Expose `InputController` with method `bindInputSource(source: InputSource): void`
