@@ -81,8 +81,8 @@
 - [x] Add method `setCameraMode(mode: DemoCameraMode): void`
 - [x] First person: use demo player viewangles
 - [x] Third person: offset behind player with configurable distance
-- [x] Free: user-controlled camera independent of demo
-- [x] Follow: smooth camera tracking player with lag
+- [ ] Free: user-controlled camera independent of demo
+- [ ] Follow: smooth camera tracking player with lag
 
 ### 3.4.2 Third-Person Camera
 - [x] Add configurable offset and distance parameters
