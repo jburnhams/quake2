@@ -107,6 +107,7 @@ export interface LevelState {
   helpmessage2: string;
   help1changed: number;
   help2changed: number;
+  mapname?: string; // Added mapname
 }
 
 
@@ -192,6 +193,10 @@ export class EntitySystem {
 
   get pointcontents(): PointContentsFunction {
     return this.imports.pointcontents;
+  }
+
+  get areaEdicts() {
+      return this.imports.areaEdicts;
   }
 
   get game(): any {
