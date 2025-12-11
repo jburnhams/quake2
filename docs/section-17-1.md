@@ -99,3 +99,12 @@
 - [x] Add timings: frame time, render time, culling time
 - [x] Add memory stats: texture memory used, buffer memory used
 - [x] Add method `getPerformanceReport(): PerformanceReport`
+
+---
+
+## Status Update
+
+**Verification:**
+- All tasks listed in this section have been verified as fully implemented in the codebase.
+- Tests in `@quake2ts/engine` covering `vfs.ts`, `fileType.ts`, `preview.ts`, `headlessLoader.ts`, `camera.ts`, `cameraController.ts`, `mapStatistics.ts`, `options.ts`, `debug.ts`, and `gpuProfiler.ts` are passing.
+- Fixed `packages/engine/tests/assets/preview.test.ts` to correctly handle expected errors during invalid BSP parsing.
