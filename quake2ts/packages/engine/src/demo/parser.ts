@@ -278,9 +278,12 @@ export class NetworkMessageParser {
   }
 
   private translateCommand(cmd: number): number {
+    // When protocolVersion is unknown (0), try to detect serverdata
+    // Protocol 25: serverdata = 7
+    // Protocol 34+: serverdata = 12
     if (this.protocolVersion === 0) {
-        if (cmd === 7) return ServerCommand.serverdata;
-        if (cmd === 12) return ServerCommand.serverdata;
+        if (cmd === 7) return ServerCommand.serverdata;  // Protocol 25
+        if (cmd === 12) return ServerCommand.serverdata; // Protocol 34+
     }
 
     // Rerelease Protocol 2023+
@@ -288,11 +291,48 @@ export class NetworkMessageParser {
       return cmd;
     }
 
-    // Vanilla Q2 (Protocol 34) and Protocol 25 (v3.00) use the same base opcodes (mostly).
-    // Mapping is 1:1 for base commands up to svc_frame (20).
-    // We must ensure we don't accidentally interpret Rerelease extensions (21+)
-    // as valid commands if the protocol is legacy.
-    if (this.protocolVersion === 34 || this.protocolVersion === 25) {
+    // Protocol 25 (Quake 2 v3.00 / v3.14) and Protocol 26:
+    // In these older protocols, commands 1-5 (muzzleflash, muzzleflash2, temp_entity, layout, inventory)
+    // didn't exist yet. They were added in protocol 34.
+    // Therefore, all command values in protocol 25/26 are offset by +5 compared to the modern enum.
+    // Protocol 25 mapping:
+    //   0 = svc_bad (modern 0)
+    //   1 = svc_nop (modern 6)
+    //   2 = svc_disconnect (modern 7)
+    //   3 = svc_reconnect (modern 8)
+    //   4 = svc_sound (modern 9)
+    //   5 = svc_print (modern 10)
+    //   6 = svc_stufftext (modern 11)
+    //   7 = svc_serverdata (modern 12)
+    //   8 = svc_configstring (modern 13)
+    //   9 = svc_spawnbaseline (modern 14)
+    //   10 = svc_centerprint (modern 15)
+    //   11 = svc_download (modern 16)
+    //   12 = svc_playerinfo (modern 17)
+    //   13 = svc_packetentities (modern 18)
+    //   14 = svc_deltapacketentities (modern 19) - may not exist in protocol 25
+    //   15 = svc_frame (modern 20)
+    if (this.protocolVersion === 25 || this.protocolVersion === 26) {
+        // Special case for svc_bad (command 0) - maps to itself
+        if (cmd === 0) {
+            return ServerCommand.bad;
+        }
+
+        // Add 5 to map protocol 25/26 commands to modern enum
+        const translated = cmd + 5;
+
+        // Protocol 25 valid range: 1-15
+        // After translation: 6-20 (svc_nop to svc_frame)
+        // This includes playerinfo (12+5=17), packetentities (13+5=18), and frame (15+5=20)
+        if (translated >= ServerCommand.nop && translated <= ServerCommand.frame) {
+            return translated;
+        }
+
+        return ServerCommand.bad;
+    }
+
+    // Vanilla Q2 Protocol 34 and modern protocols
+    if (this.protocolVersion === 34) {
         if (cmd <= ServerCommand.frame) {
             return cmd;
         }
@@ -303,9 +343,7 @@ export class NetworkMessageParser {
         return ServerCommand.bad;
     }
 
-    // Default / Unknown Protocol (usually treated as Vanilla-compatible until proven otherwise)
-    // But if we have a specific version set that isn't handled above, we should be careful.
-    // For now, if version is 0 (parsing serverdata), we return as is.
+    // Default / Unknown Protocol
     if (this.protocolVersion === 0) {
         return cmd;
     }

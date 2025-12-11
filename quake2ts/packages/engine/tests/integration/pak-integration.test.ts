@@ -111,12 +111,19 @@ describe('PAK Integration Test', () => {
           case '.dm2': {
             const reader = new DemoReader(buffer);
             let blockCount = 0;
+            let protocolVersion = 0;
             while (reader.hasMore()) {
               const block = reader.readNextBlock();
               if (!block) break;
               blockCount++;
               const parser = new NetworkMessageParser(block.data);
+              // Preserve protocol version across blocks
+              if (protocolVersion !== 0) {
+                parser.setProtocolVersion(protocolVersion);
+              }
               parser.parseMessage();
+              // Remember protocol for next block
+              protocolVersion = parser.getProtocolVersion();
             }
             expect(blockCount).toBeGreaterThan(0);
             break;
