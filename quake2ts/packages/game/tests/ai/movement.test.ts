@@ -295,9 +295,9 @@ describe('M_MoveStep (Logic from M_walkmove)', () => {
 
   it('should move successfully on flat ground', () => {
     // 1. Move
-    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
+    mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 }, startsolid: false, allsolid: false });
     // 2. M_CheckBottom trace (success)
-    mockTraceFn.mockReturnValue({ fraction: 0.5 }); // hit something
+    mockTraceFn.mockReturnValue({ fraction: 0.5, endpos: { x: 10, y: 0, z: -18 }, startsolid: false, allsolid: false }); // hit something
 
     const result = M_MoveStep(mockEntity, { x: 10, y: 0, z: 0 }, true, mockContext);
 
@@ -324,7 +324,7 @@ describe('M_MoveStep (Logic from M_walkmove)', () => {
     });
 
     // M_CheckBottom traces (mock success)
-    mockTraceFn.mockReturnValue({ fraction: 0.5 });
+    mockTraceFn.mockReturnValue({ fraction: 0.5, endpos: { x: 10, y: 0, z: 0 }, startsolid: false, allsolid: false });
 
     const result = M_MoveStep(mockEntity, { x: 10, y: 0, z: 0 }, true, mockContext);
 
@@ -376,7 +376,7 @@ describe('M_MoveToGoal', () => {
     // 1. Trace forward success
     mockTraceFn.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 0 } });
     // M_CheckBottom
-    mockTraceFn.mockReturnValue({ fraction: 0.5 });
+    mockTraceFn.mockReturnValue({ fraction: 0.5, endpos: { x: 10, y: 0, z: -10 } });
 
     const result = M_MoveToGoal(ent, 10, mockContext);
     expect(result).toBe(true);

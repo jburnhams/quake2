@@ -3,8 +3,8 @@ import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { MoveType, EntityFlags } from '../entities/entity.js';
-import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
-import { AIFlags } from './constants.js';
+import { MASK_MONSTERSOLID, MASK_WATER, CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
+import { AIFlags, BOTTOM_EMPTY, BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA } from './constants.js';
 import { M_CheckAttack } from './monster.js';
 import { rangeTo, visible } from './perception.js';
 import { findTarget } from './targeting.js';
@@ -229,7 +229,7 @@ export function CheckGround(self: Entity, context: EntitySystem): void {
   }
 }
 
-export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
+export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
   const mins = {
     x: self.origin.x + self.mins.x,
     y: self.origin.y + self.mins.y,
@@ -242,39 +242,95 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
   };
 
   let start: MutableVec3 = { x: 0, y: 0, z: 0 };
-  let stop: MutableVec3 = { x: 0, y: 0, z: 0 };
 
-  for (let i = 0; i < 2; i++) {
-    if (i === 1) start = { x: mins.x, y: mins.y, z: 0 };
-    else start = { x: maxs.x, y: mins.y, z: 0 };
+  // Fast check: if all corners are in solid, we are good
+  let allSolid = true;
+  for (let x = 0; x <= 1; x++) {
+    for (let y = 0; y <= 1; y++) {
+      start.x = x ? maxs.x : mins.x;
+      start.y = y ? maxs.y : mins.y;
+      start.z = mins.z - 1;
 
-    start.z = mins.z - 1;
-
-    if (context.pointcontents(start) !== 0) return true;
-
-    stop = { ...start };
-    stop.z = start.z - 60;
-
-    const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
-
-    if (trace.fraction < 1.0) return true;
-
-    if (i === 1) start = { x: mins.x, y: maxs.y, z: 0 };
-    else start = { x: maxs.x, y: maxs.y, z: 0 };
-
-    start.z = mins.z - 1;
-
-    if (context.pointcontents(start) !== 0) return true;
-
-    stop = { ...start };
-    stop.z = start.z - 60;
-
-    const trace2 = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
-
-    if (trace2.fraction < 1.0) return true;
+      const content = context.pointcontents(start);
+      if (content !== CONTENTS_SOLID) {
+        allSolid = false;
+        break;
+      }
+    }
+    if (!allSolid) break;
   }
 
-  return false;
+  if (allSolid) return BOTTOM_SOLID;
+
+  // Slow check
+  start.x = self.origin.x;
+  start.y = self.origin.y;
+  start.z = self.origin.z + self.mins.z;
+
+  const stop = { ...start };
+  stop.z = start.z - STEPSIZE * 2;
+
+  const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
+
+  if (trace.fraction === 1.0) return BOTTOM_EMPTY;
+
+  const mid = trace.endpos.z;
+  const bottomType = context.pointcontents(trace.endpos);
+  let result = BOTTOM_SOLID;
+
+  if (bottomType & CONTENTS_WATER) result = BOTTOM_WATER;
+  else if (bottomType & CONTENTS_SLIME) result = BOTTOM_SLIME;
+  else if (bottomType & CONTENTS_LAVA) result = BOTTOM_LAVA;
+
+  // Check quadrants
+  const stepQuadrantSize = {
+      x: (self.maxs.x - self.mins.x) * 0.5,
+      y: (self.maxs.y - self.mins.y) * 0.5,
+  };
+
+  const halfStepQuadrant = {
+      x: stepQuadrantSize.x * 0.5,
+      y: stepQuadrantSize.y * 0.5,
+      z: 0
+  };
+
+  const halfStepQuadrantMins = {
+      x: -halfStepQuadrant.x,
+      y: -halfStepQuadrant.y,
+      z: 0
+  };
+
+  const centerStart = {
+      x: self.origin.x + (self.mins.x + self.maxs.x) * 0.5,
+      y: self.origin.y + (self.mins.y + self.maxs.y) * 0.5,
+      z: 0
+  };
+
+  for (let x = 0; x <= 1; x++) {
+    for (let y = 0; y <= 1; y++) {
+        const quadrantStart = { ...centerStart };
+        if (x) quadrantStart.x += halfStepQuadrant.x;
+        else quadrantStart.x -= halfStepQuadrant.x;
+
+        if (y) quadrantStart.y += halfStepQuadrant.y;
+        else quadrantStart.y -= halfStepQuadrant.y;
+
+        quadrantStart.z = start.z;
+        const quadrantEnd = { ...quadrantStart, z: stop.z };
+
+        const subTrace = context.trace(quadrantStart, halfStepQuadrantMins, halfStepQuadrant, quadrantEnd, self, MASK_MONSTERSOLID);
+
+        if (subTrace.fraction === 1.0 || mid - subTrace.endpos.z > STEPSIZE) {
+            return BOTTOM_EMPTY;
+        }
+    }
+  }
+
+  return result;
+}
+
+export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
+  return M_CheckBottomEx(self, context) !== BOTTOM_EMPTY;
 }
 
 export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {

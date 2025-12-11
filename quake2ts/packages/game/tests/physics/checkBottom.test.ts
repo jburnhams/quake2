@@ -47,7 +47,7 @@ describe('M_CheckBottom', () => {
 
   it('should return true if trace hits something (solid ground)', () => {
     pointContentsMock.mockReturnValue(0);
-    traceMock.mockReturnValue({ fraction: 0.5 }); // Hit something
+    traceMock.mockReturnValue({ fraction: 0.5, endpos: { x: 0, y: 0, z: 50 } }); // Hit something
 
     const result = M_CheckBottom(entity, context);
     expect(result).toBe(true);
