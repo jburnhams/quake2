@@ -129,6 +129,8 @@ export interface PlayerClient {
     grenade_time?: number | null;
     grenade_finished_time?: number | null;
     grenade_blew_up?: boolean;
+    // Weapon charging
+    weapon_charge_start_time?: number;
     // Animation
     anim_priority?: number;
     anim_end?: number;
