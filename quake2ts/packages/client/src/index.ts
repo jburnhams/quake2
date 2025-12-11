@@ -430,6 +430,16 @@ export function createClient(imports: ClientImports): ClientExports {
         description: 'Flashlight toggle'
       });
 
+      imports.host.cvars.register({
+          name: 'cl_predict',
+          defaultValue: '1',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              prediction.setPredictionEnabled(cvar.number !== 0);
+          },
+          description: 'Toggle client-side prediction'
+      });
+
       // Initialize fovValue from cvar
       const initialFov = imports.host.cvars.get('fov');
       if (initialFov) {

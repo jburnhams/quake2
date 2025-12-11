@@ -18,14 +18,14 @@
 - [x] Ensure client prediction works correctly in multiplayer
 - [x] Add configurable prediction error tolerance
 - [x] Implement entity interpolation for smooth remote player movement
-- [ ] Add lag compensation for weapon firing
-- [ ] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
+- [x] Add lag compensation for weapon firing
+- [x] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
 
 ### 5.1.3 Server Browser (optional library support)
 - [x] Add method `queryServerInfo(address: string): Promise<ServerInfo>` for server ping
 - [x] Return: map name, player count, max players, game mode, hostname
-- [ ] Add method `getPlayerList(): PlayerInfo[]` for scoreboard
-- [ ] Return: name, score, ping, team (if applicable)
+- [x] Add method `getPlayerList(): PlayerInfo[]` for scoreboard
+- [x] Return: name, score, ping, team (if applicable)
 
 ---
 

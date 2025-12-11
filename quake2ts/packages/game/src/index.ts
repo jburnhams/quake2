@@ -99,6 +99,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
   configstring(index: number, value: string): void;
   serverCommand(cmd: string): void;
+  setLagCompensation?(active: boolean, client?: Entity, lagMs?: number): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
   clientConnect(ent: Entity | null, userInfo: string): string | true;
@@ -550,6 +551,11 @@ export function createGame(
     },
     serverCommand(cmd: string): void {
       serverCommand(cmd);
+    },
+    setLagCompensation(active: boolean, client?: Entity, lagMs?: number) {
+        if (engine.setLagCompensation) {
+            engine.setLagCompensation(active, client, lagMs);
+        }
     },
     get time() {
       return levelClock.current.timeSeconds;
