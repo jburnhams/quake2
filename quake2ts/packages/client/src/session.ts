@@ -6,6 +6,7 @@ import { UserCommand, Vec3, CollisionPlane } from '@quake2ts/shared';
 export interface SessionOptions {
   mapName?: string;
   skill?: number;
+  renderMode?: string;
   audioEnabled?: boolean;
   engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
 }
@@ -134,7 +135,115 @@ export class GameSession {
   }
 
   public loadSavedGame(saveData: GameSaveFile): void {
-     // TODO: Implement load logic
+     if (this.host) {
+         this.shutdown();
+     }
+
+     // Reuse startNewGame logic but without executing 'map' command initially,
+     // or rather, we need to initialize the game with the map from the save file.
+     // However, loading the save overwrites the state anyway.
+     // But we need the map loaded in the engine.
+
+     const mapName = saveData.map;
+     // Skill is in saveData too but startNewGame takes it.
+     const skill = saveData.difficulty;
+
+     // Initialize game session similar to startNewGame
+     // Duplicate code for now, can be refactored.
+     const gameOptions: GameCreateOptions = {
+        gravity: { x: 0, y: 0, z: -800 },
+        skill: skill,
+        deathmatch: false,
+        coop: false
+     };
+
+     const gameEngineAdapter: GameEngine = {
+         trace: (start: Vec3, end: Vec3) => {
+           return this.engine.trace(start, end);
+         },
+         centerprintf: (ent, msg) => {
+           if (this.client) {
+               this.client.ParseCenterPrint(msg);
+           }
+         },
+         configstring: (idx, val) => {
+            if (this.client) {
+              this.client.ParseConfigString(idx, val);
+            }
+         },
+         multicast: () => {},
+         unicast: () => {},
+         serverCommand: () => {},
+      };
+
+      const gameImports = {
+          trace: (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: any, contentmask: number) => {
+              const tr = this.engine.trace(start, end, mins || undefined, maxs || undefined);
+              let plane: CollisionPlane | null = null;
+              if (tr.planeNormal) {
+                  plane = {
+                      normal: tr.planeNormal,
+                      dist: 0,
+                      type: 0,
+                      signbits: 0,
+                  };
+              }
+              return {
+                  allsolid: tr.allsolid,
+                  startsolid: tr.startsolid,
+                  fraction: tr.fraction,
+                  endpos: tr.endpos,
+                  plane: plane,
+                  surfaceFlags: tr.surfaceFlags ?? 0,
+                  contents: tr.contents ?? 0,
+                  ent: null
+              };
+          },
+          pointcontents: (p: Vec3) => {
+               const t = this.engine.trace(p, p, undefined, undefined);
+               return t.contents || 0;
+          },
+          multicast: () => {},
+          unicast: () => {},
+          configstring: (idx: number, val: string) => {
+               if (this.client) {
+                   this.client.ParseConfigString(idx, val);
+               }
+          },
+          serverCommand: (cmd: string) => {}
+      };
+
+      this.game = createGame(gameImports, gameEngineAdapter, gameOptions);
+
+      const clientProxy: any = {
+          init: (initial: any) => this.client?.init(initial),
+          render: (sample: any) => this.client?.render(sample),
+          shutdown: () => this.client?.shutdown(),
+          get camera() { return this.client?.camera; }
+      };
+
+      this.host = new EngineHost(this.game, clientProxy);
+
+      const clientImports: ClientImports = {
+          engine: this.engine,
+          host: this.host
+      };
+
+      this.client = createClient(clientImports);
+
+      // We need to load the map first so the engine has the collision model etc.
+      if (this.engine.cmd) {
+           this.engine.cmd.executeText(`map ${mapName}`);
+      } else if (this.host.commands) {
+           this.host.commands.execute(`map ${mapName}`);
+      }
+
+      // Now load the save data into the game
+      if (this.game) {
+          this.game.loadSave(saveData);
+      }
+
+      this.host.start();
   }
 
   public shutdown(): void {
@@ -142,7 +251,10 @@ export class GameSession {
         this.host.stop();
         this.host = null;
     }
-    this.client = null;
+    if (this.client) {
+        this.client.shutdown();
+        this.client = null;
+    }
     this.game = null;
   }
 

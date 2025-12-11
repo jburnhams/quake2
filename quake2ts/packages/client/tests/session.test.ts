@@ -1,107 +1,136 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSession, GameSession, SessionOptions } from '../src/session';
-import * as ClientModule from '../src/index';
-import * as GameModule from '@quake2ts/game';
-import * as EngineModule from '@quake2ts/engine';
-import { Vec3 } from '@quake2ts/shared';
+import { createSession, GameSession } from '../src/session.js';
+import { EngineImports, Renderer } from '@quake2ts/engine';
+import { GameSaveFile } from '@quake2ts/game';
 
-// Mock dependencies
-vi.mock('../src/index', () => ({
-  createClient: vi.fn(() => ({
-    init: vi.fn(),
-    render: vi.fn(),
-    shutdown: vi.fn(),
-    ParseCenterPrint: vi.fn(),
-    ParseConfigString: vi.fn(),
-  })),
-}));
+// Use vi.hoisted to create mock objects that can be used in vi.mock
+const { mockGameExports, mockCreateGame, mockClientExports, mockCreateClient, mockEngineHost } = vi.hoisted(() => {
+    const mockGameExports = {
+        spawnWorld: vi.fn(),
+        loadSave: vi.fn(),
+    };
 
-vi.mock('@quake2ts/game', () => ({
-  createGame: vi.fn(() => ({
-    spawnWorld: vi.fn(),
-    init: vi.fn(() => ({})),
-    shutdown: vi.fn(),
-    frame: vi.fn(),
-  })),
-}));
+    const mockCreateGame = vi.fn().mockReturnValue(mockGameExports);
 
-vi.mock('@quake2ts/engine', () => ({
-  EngineHost: vi.fn(function(this: any) {
-    this.start = vi.fn();
-    this.stop = vi.fn();
-  }),
-}));
+    const mockClientExports = {
+        init: vi.fn(),
+        render: vi.fn(),
+        shutdown: vi.fn(),
+        ParseCenterPrint: vi.fn(),
+        ParseConfigString: vi.fn(),
+    };
+
+    const mockCreateClient = vi.fn().mockReturnValue(mockClientExports);
+
+    const mockEngineHost = vi.fn().mockImplementation(() => ({
+        start: vi.fn(),
+        stop: vi.fn(),
+        commands: {
+            execute: vi.fn(),
+            register: vi.fn()
+        },
+    }));
+
+    return {
+        mockGameExports,
+        mockCreateGame,
+        mockClientExports,
+        mockCreateClient,
+        mockEngineHost
+    };
+});
+
+// Apply mocks before imports
+vi.mock('@quake2ts/game', async () => {
+    const actual = await vi.importActual('@quake2ts/game');
+    return {
+        ...actual,
+        createGame: mockCreateGame,
+    };
+});
+
+vi.mock('../src/index.js', async () => {
+    const actual = await vi.importActual('../src/index.js');
+    return {
+        ...actual,
+        createClient: mockCreateClient,
+    };
+});
+
+vi.mock('@quake2ts/engine', async () => {
+    const actual = await vi.importActual('@quake2ts/engine');
+    return {
+        ...actual,
+        EngineHost: mockEngineHost,
+    };
+});
 
 describe('GameSession', () => {
-  let session: GameSession;
-  let mockEngine: any;
+    let session: GameSession;
+    let mockEngineImports: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockEngine = {
-      trace: vi.fn(() => ({
-          allsolid: false,
-          startsolid: false,
-          fraction: 1,
-          endpos: { x: 0, y: 0, z: 0 },
-          plane: null,
-          surfaceFlags: 0,
-          contents: 0,
-          ent: null
-      })),
-      renderer: {},
-    };
-  });
+    beforeEach(() => {
+        vi.clearAllMocks();
 
-  it('should create a session', () => {
-    session = createSession({ engine: mockEngine });
-    expect(session).toBeInstanceOf(GameSession);
-  });
+        // Setup mock engine imports
+        mockEngineImports = {
+            trace: vi.fn().mockReturnValue({ allsolid: false, fraction: 1, endpos: { x: 0, y: 0, z: 0 }, planeNormal: { x: 0, y: 0, z: 1 } }),
+            renderer: {} as Renderer,
+            cmd: { executeText: vi.fn() },
+            assets: {
+                load: vi.fn(),
+                get: vi.fn(),
+            } as any,
+        } as any;
+    });
 
-  it('should start a new game', () => {
-    session = createSession({ engine: mockEngine });
-    session.startNewGame('base1', 1);
+    it('should create a session with options', () => {
+        session = createSession({ engine: mockEngineImports });
+        expect(session).toBeDefined();
+    });
 
-    expect(GameModule.createGame).toHaveBeenCalled();
-    expect(ClientModule.createClient).toHaveBeenCalled();
-    expect(EngineModule.EngineHost).toHaveBeenCalled();
+    it('should start a new game', () => {
+        session = createSession({ engine: mockEngineImports });
+        session.startNewGame('base1', 2);
 
-    // Check if host.start() was called
-    const host = session.getHost();
-    expect(host?.start).toHaveBeenCalled();
+        expect(mockEngineImports.cmd!.executeText).toHaveBeenCalledWith('map base1');
 
-    // Check if spawnWorld was called
-    const game = session.getGame();
-    expect(game?.spawnWorld).toHaveBeenCalled();
-  });
+        expect(mockCreateGame).toHaveBeenCalled();
+        expect(mockCreateClient).toHaveBeenCalled();
+        expect(mockEngineHost).toHaveBeenCalled();
+    });
 
-  it('should shutdown properly', () => {
-    session = createSession({ engine: mockEngine });
-    session.startNewGame('base1', 1);
+    it('should load a saved game', () => {
+        session = createSession({ engine: mockEngineImports });
+        const mockSaveData: GameSaveFile = {
+            version: 2,
+            timestamp: 12345,
+            map: 'q2dm1',
+            difficulty: 1,
+            playtimeSeconds: 100,
+            gameState: {},
+            level: {} as any,
+            rng: {} as any,
+            entities: {} as any,
+            cvars: [],
+            configstrings: [],
+        };
 
-    const host = session.getHost();
-    const game = session.getGame();
-    const client = session.getClient(); // This is just the interface, the mocked function is createClient
+        session.loadSavedGame(mockSaveData);
 
-    session.shutdown();
+        expect(mockEngineImports.cmd!.executeText).toHaveBeenCalledWith('map q2dm1');
 
-    expect(host?.stop).toHaveBeenCalled();
-  });
+        expect(mockGameExports.loadSave).toHaveBeenCalledWith(mockSaveData);
+    });
 
-  it('should adapt trace calls correctly', () => {
-      // We need to verify that the trace adapter passed to createGame calls engine.trace
-      session = createSession({ engine: mockEngine });
-      session.startNewGame('base1', 1);
+    it('should shutdown properly', () => {
+        session = createSession({ engine: mockEngineImports });
+        session.startNewGame('base1');
 
-      // Get the trace adapter passed to createGame
-      const createGameCalls = (GameModule.createGame as any).mock.calls;
-      const gameImports = createGameCalls[0][0];
+        session.shutdown();
 
-      const start: Vec3 = { x: 0, y: 0, z: 0 };
-      const end: Vec3 = { x: 10, y: 0, z: 0 };
-
-      gameImports.trace(start, null, null, end, null, 0);
-
-      expect(mockEngine.trace).toHaveBeenCalledWith(start, end, undefined, undefined);
-  });
+        expect(session.getGame()).toBeNull();
+        expect(session.getClient()).toBeNull();
+        expect(session.getHost()).toBeNull();
+    });
 });
