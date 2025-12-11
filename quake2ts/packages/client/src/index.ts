@@ -720,6 +720,12 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
+
+      // Decay prediction error
+      if (frameTimeMs > 0) {
+          prediction.decayError(frameTimeMs / 1000.0);
+      }
+
       lastView = view.sample(lastRendered, frameTimeMs);
 
       const command = {} as UserCommand;

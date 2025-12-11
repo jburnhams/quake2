@@ -15,15 +15,15 @@
 - [x] Add latency/ping reporting: `getPing(): number`
 
 ### 5.1.2 Client Prediction and Interpolation
-- [ ] Ensure client prediction works correctly in multiplayer
+- [x] Ensure client prediction works correctly in multiplayer
 - [ ] Add configurable prediction error tolerance
-- [ ] Implement entity interpolation for smooth remote player movement
+- [x] Implement entity interpolation for smooth remote player movement
 - [ ] Add lag compensation for weapon firing
 - [ ] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
 
 ### 5.1.3 Server Browser (optional library support)
-- [ ] Add method `queryServerInfo(address: string): Promise<ServerInfo>` for server ping
-- [ ] Return: map name, player count, max players, game mode, hostname
+- [x] Add method `queryServerInfo(address: string): Promise<ServerInfo>` for server ping
+- [x] Return: map name, player count, max players, game mode, hostname
 - [ ] Add method `getPlayerList(): PlayerInfo[]` for scoreboard
 - [ ] Return: name, score, ping, team (if applicable)
 

@@ -434,7 +434,49 @@ export class DedicatedServer implements GameEngine {
             this.handleConnect(client, userInfo);
         } else if (cmd === 'begin') {
             this.handleBegin(client);
+        } else if (cmd === 'status') {
+            this.handleStatus(client);
         }
+    }
+
+    private handleStatus(client: Client) {
+        let activeClients = 0;
+        for (const c of this.svs.clients) {
+            if (c && c.state >= ClientState.Connected) {
+                activeClients++;
+            }
+        }
+
+        // Q2 Style status response:
+        // print\n
+        // map: <mapname>\n
+        // num score ping name            lastmsg address               qport rate\n
+        // --- ----- ---- --------------- ------- --------------------- ----- -----\n
+        //   0     0    0 PlayerName            0 127.0.0.1             12345  2500\n
+
+        let status = `map: ${this.sv.name}\n`;
+        status += `players: ${activeClients} active (${MAX_CLIENTS} max)\n\n`;
+        status += `num score ping name            lastmsg address               qport rate\n`;
+        status += `--- ----- ---- --------------- ------- --------------------- ----- -----\n`;
+
+        for (const c of this.svs.clients) {
+            if (c && c.state >= ClientState.Connected) {
+                 const score = 0; // TODO: Get score from game/player info
+                 const ping = 0; // TODO: Calculate ping
+                 const lastMsg = this.sv.frame - c.lastMessage;
+                 // We don't track address/rate yet in Client struct but driver has it?
+                 const address = 'unknown';
+                 // Simple formatted line
+                 status += `${c.index.toString().padStart(3)} ${score.toString().padStart(5)} ${ping.toString().padStart(4)} ${c.userInfo.substring(0, 15).padEnd(15)} ${lastMsg.toString().padStart(7)} ${address.padEnd(21)} ${c.netchan.qport.toString().padStart(5)} 0\n`;
+            }
+        }
+
+        const writer = new BinaryWriter();
+        writer.writeByte(ServerCommand.print);
+        writer.writeByte(2); // PRINT_HIGH
+        writer.writeString(status);
+        const packet = client.netchan.transmit(writer.getData());
+        client.net.send(packet);
     }
 
     private handleGetChallenge(client: Client) {
