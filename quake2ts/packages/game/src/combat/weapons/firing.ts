@@ -16,7 +16,7 @@ import {
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
-import { createRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
+import { createRocket, createGuidedRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
 import { P_ProjectSource } from './projectSource.js';
@@ -437,10 +437,17 @@ export function fireRocket(game: GameExports, player: Entity) {
 
     const damage = 100 + game.random.irandom(21);
     const radiusDamage = 120;
-    createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
+
+    // Check for Alt-Fire (Guided Rocket)
+    // 1 << 5 = 32
+    if ((player.client.buttons & 32)) {
+        createGuidedRocket(game.entities, player, source, forward, damage, radiusDamage, 400); // Slower speed
+    } else {
+        createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
+    }
 }
 
-export function fireGrenadeLauncher(game: GameExports, player: Entity) {
+export function fireGrenadeLauncher(game: GameExports, player: Entity, timer?: number) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
@@ -456,7 +463,64 @@ export function fireGrenadeLauncher(game: GameExports, player: Entity) {
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    createGrenade(game.entities, player, source, forward, 120, 600);
+    createGrenade(game.entities, player, source, forward, 120, 600, timer);
+}
+
+export function fireHyperBlasterBeam(game: GameExports, player: Entity, weaponState: WeaponState) {
+    if (!player.client) return;
+    const inventory = player.client.inventory;
+
+    // Beam consumes 2 cells
+    if (inventory.ammo.counts[AmmoType.Cells] < 2) {
+        return;
+    }
+
+    // Heat check
+    if ((weaponState.heat || 0) > 20) {
+        // Overheated
+        game.sound(player, 0, 'weapons/lashit.wav', 1, 1, 0); // Fizzle sound
+        return;
+    }
+
+    inventory.ammo.counts[AmmoType.Cells] -= 2;
+    weaponState.heat = (weaponState.heat || 0) + 1;
+
+    // No muzzle flash event? Or use standard?
+    // game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
+
+    applyKick(player, -1, 0, 0);
+    setPlayerAttackAnim(player);
+
+    const { forward, right, up } = angleVectors(player.angles);
+    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+
+    // Beam trace
+    const damage = 25;
+    const end = { x: source.x + forward.x * 2048, y: source.y + forward.y * 2048, z: source.z + forward.z * 2048 };
+    const trace = game.trace(source, null, null, end, player, 0x10000001 /* MASK_SHOT */);
+
+    if (trace.ent && trace.ent.takedamage) {
+        T_Damage(
+            trace.ent as any,
+            player as any,
+            player as any,
+            ZERO_VEC3,
+            trace.endpos,
+            trace.plane ? trace.plane.normal : ZERO_VEC3,
+            damage,
+            2,
+            DamageFlags.ENERGY,
+            DamageMod.HYPERBLASTER, // Or new mod?
+            game.time,
+            game.multicast
+        );
+    }
+
+    // Visuals: Railtrail or custom?
+    // Use BFG Laser effect logic?
+    // game.multicast(source, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, source, trace.endpos);
+    // Or just a line.
+    game.multicast(source, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, source, trace.endpos);
 }
 
 export function fireBFG(game: GameExports, player: Entity) {
