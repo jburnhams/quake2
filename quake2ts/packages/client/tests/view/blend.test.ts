@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createBlendState, updateBlend } from '../../src/view/blend.js';
+import { createBlendState, updateBlend } from '../../src/blend.js';
 import { PlayerState, PlayerStat } from '@quake2ts/shared';
 
 describe('view/blend', () => {

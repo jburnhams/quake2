@@ -45,7 +45,7 @@ import { DemoRecorder, DLight, DynamicLightManager, FogData, DamageIndicator } f
 import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
-import { createBlendState, updateBlend } from './view/blend.js';
+import { createBlendState, updateBlend } from './blend.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -242,6 +242,7 @@ export function createClient(imports: ClientImports): ClientExports {
 
   const configStrings = new ClientConfigStrings();
   const blendState = createBlendState();
+  let currentBlend: [number, number, number, number] = [0, 0, 0, 0];
   let pendingDamage = 0;
 
   // Define State Provider for CGame first
@@ -729,10 +730,11 @@ export function createClient(imports: ClientImports): ClientExports {
       lastView = view.sample(lastRendered, frameTimeMs);
 
       // Update screen blend (damage/pickup flashes)
-      let currentBlend: number[] = [0, 0, 0, 0];
       if (lastRendered) {
           currentBlend = updateBlend(blendState, lastRendered as unknown as PlayerState, frameTimeMs / 1000.0, pendingDamage);
           pendingDamage = 0;
+      } else {
+          currentBlend = [0, 0, 0, 0];
       }
 
       const command = {} as UserCommand;
