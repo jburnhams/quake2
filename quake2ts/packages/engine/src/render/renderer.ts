@@ -13,7 +13,7 @@ import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
-import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
+import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
@@ -146,11 +146,61 @@ export const createRenderer = (
 
                   const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
                   debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 });
+
+                  // Also draw origin/axes as requested in task 1.3.2
+                  const origin = {
+                      x: entity.transform[12],
+                      y: entity.transform[13],
+                      z: entity.transform[14]
+                  };
+                  debugRenderer.drawAxes(origin, 8); // 8 units size
              }
         }
 
-        if (renderOptions?.showNormals) {
-             // Not implemented yet
+
+        if (renderOptions?.showNormals && options.world) {
+             // Draw BSP surface normals
+             const frustum = extractFrustumPlanes(viewProjection);
+             const cameraPosition = {
+                 x: options.camera.position[0],
+                 y: options.camera.position[1],
+                 z: options.camera.position[2],
+             };
+             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
+
+             for (const { faceIndex } of visibleFaces) {
+                  const face = options.world.map.faces[faceIndex];
+                  const plane = options.world.map.planes[face.planeIndex];
+                  const geometry = options.world.surfaces[faceIndex];
+
+                  if (!geometry) continue;
+
+                  // Calculate center of face
+                  let cx = 0, cy = 0, cz = 0;
+                  const count = geometry.vertexCount;
+                  // vertexData stride is 7 floats. Position is at offset 0, 1, 2.
+                  for (let i = 0; i < count; i++) {
+                       const idx = i * 7;
+                       cx += geometry.vertexData[idx];
+                       cy += geometry.vertexData[idx+1];
+                       cz += geometry.vertexData[idx+2];
+                  }
+                  if (count > 0) {
+                      cx /= count;
+                      cy /= count;
+                      cz /= count;
+
+                      const center = { x: cx, y: cy, z: cz };
+                      // Normal is plane.normal. Make sure to respect face.side (0 or 1)
+
+                      const nx = face.side === 0 ? plane.normal[0] : -plane.normal[0];
+                      const ny = face.side === 0 ? plane.normal[1] : -plane.normal[1];
+                      const nz = face.side === 0 ? plane.normal[2] : -plane.normal[2];
+
+                      const end = { x: cx + nx * 8, y: cy + ny * 8, z: cz + nz * 8 };
+                      debugRenderer.drawLine(center, end, { r: 1, g: 1, b: 0 }); // Yellow normal
+                  }
+             }
         }
 
         debugRenderer.render(viewProjection as Float32Array);
