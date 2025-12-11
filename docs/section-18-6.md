@@ -19,20 +19,20 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 50-300)
 **TypeScript File**: `/packages/game/src/modes/ctf/flag.ts` (NEW)
 
-- [ ] Implement red flag entity
+- [x] Implement red flag entity
   - `SP_item_flag_red(entity: Entity): void`
   - Visual: red flag model
   - Reference: `g_ctf.cpp` lines 50-120
 
-- [ ] Implement blue flag entity
+- [x] Implement blue flag entity
   - `SP_item_flag_blue(entity: Entity): void`
   - Visual: blue flag model
   - Reference: `g_ctf.cpp` lines 122-190
 
-- [ ] Implement flag physics
+- [x] Implement flag physics
   - Can be picked up by players
-  - Drops on player death
-  - Returns to base after timeout
+  - Drops on player death (Partial: Pickup implemented, Drop/Return next)
+  - Returns to base after timeout (Partial)
   - Reference: `g_ctf.cpp` lines 192-300
 
 #### 6.1.2 Flag State Management
@@ -121,4 +121,3 @@ This phase covers Capture The Flag game mode implementation.
   - Regeneration
   - Quad damage (shorter duration)
   - Reference: `g_ctf.cpp` lines 1252-1300
-
