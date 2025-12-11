@@ -20,6 +20,8 @@ vi.mock('@quake2ts/engine', async () => {
             getDuration: vi.fn().mockReturnValue(100),
             getState: vi.fn(),
             getSpeed: vi.fn().mockReturnValue(1),
+            getPlaybackSpeed: vi.fn().mockReturnValue(1),
+            getInterpolationFactor: vi.fn().mockReturnValue(0),
             play: vi.fn(),
             pause: vi.fn(),
             stepForward: vi.fn(),
