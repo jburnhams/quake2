@@ -11,7 +11,8 @@
 - [ ] Test edge cases: empty PAK files, corrupted BSP, invalid demo data
 - [x] Test math operations: vector math, matrix transformations, quaternions
   - *Note: Quake 2 uses Euler angles; Quaternions are not used in this codebase. Verified comprehensive coverage for vec3, mat4, angles, color, and random.*
-- [ ] Test serialization: save/load round-trip, network message encoding/decoding
+- [x] Test serialization: save/load round-trip, network message encoding/decoding
+  - *Note: Added `packages/shared/tests/serialization.test.ts` to verify `BinaryWriter`/`BinaryStream` and `NetChan` header serialization. Existing `packages/server/tests/protocol.test.ts` covers `ClientMessageParser` (clc_move, userinfo). `packages/game/tests/save/save.test.ts` covers game save round-trips.*
 
 ### 7.1.2 Integration Tests
 - [ ] Test full game loop: init → frame → shutdown
