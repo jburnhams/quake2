@@ -20,8 +20,8 @@
 - [ ] Add surface ripple effects (optional)
 
 ### 6.1.3 Post-Processing Effects
-- [ ] Implement damage screen flash (red overlay)
-- [ ] Implement pickup flash (yellow overlay)
+- [x] Implement damage screen flash (red overlay)
+- [x] Implement pickup flash (yellow overlay)
 - [ ] Implement underwater distortion
 - [ ] Add bloom/glow for bright surfaces
 - [ ] Add configurable gamma/brightness adjustment

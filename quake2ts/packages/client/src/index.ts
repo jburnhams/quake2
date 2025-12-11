@@ -45,6 +45,7 @@ import { DemoRecorder, DLight, DynamicLightManager, FogData, DamageIndicator } f
 import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
+import { createBlendState, updateBlend } from './view/blend.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -240,6 +241,8 @@ export function createClient(imports: ClientImports): ClientExports {
   let optionsFactory: OptionsMenuFactory | undefined;
 
   const configStrings = new ClientConfigStrings();
+  const blendState = createBlendState();
+  let pendingDamage = 0;
 
   // Define State Provider for CGame first
   let latestFrame: GameFrameResult<PredictionState> | undefined;
@@ -301,6 +304,9 @@ export function createClient(imports: ClientImports): ClientExports {
         if (pos) {
             effectSystem.onTempEntity(type, pos, time);
         }
+    },
+    onDamage: (indicators: DamageIndicator[]) => {
+        pendingDamage = 0.5;
     }
   });
 
@@ -722,6 +728,13 @@ export function createClient(imports: ClientImports): ClientExports {
       const frameTimeMs = sample.latest && sample.previous ? Math.max(0, sample.latest.timeMs - sample.previous.timeMs) : 0;
       lastView = view.sample(lastRendered, frameTimeMs);
 
+      // Update screen blend (damage/pickup flashes)
+      let currentBlend: number[] = [0, 0, 0, 0];
+      if (lastRendered) {
+          currentBlend = updateBlend(blendState, lastRendered as unknown as PlayerState, frameTimeMs / 1000.0, pendingDamage);
+          pendingDamage = 0;
+      }
+
       const command = {} as UserCommand;
 
       // Update Dynamic Light Manager
@@ -849,7 +862,7 @@ export function createClient(imports: ClientImports): ClientExports {
                 maxs: { x: 16, y: 16, z: 32 },
                 damageAlpha: lastRendered.damageAlpha ?? 0,
                 damageIndicators: lastRendered.damageIndicators ?? [],
-                blend: lastRendered.blend ?? [0, 0, 0, 0],
+                blend: currentBlend,
                 pickupIcon: lastRendered.pickupIcon,
                 centerPrint: undefined, // Handled by CGame MessageSystem now
                 notify: undefined,
