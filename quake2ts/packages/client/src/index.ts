@@ -119,6 +119,7 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   setDemoThirdPersonDistance(dist: number): void;
   setDemoThirdPersonOffset(offset: Vec3): void;
   setDemoFreeCamera(origin: Vec3, angles: Vec3): void;
+  setDemoFollowEntity(entityId: number): void;
 
   // Networking
   multiplayer: MultiplayerConnection;
@@ -225,6 +226,16 @@ export function createClient(imports: ClientImports): ClientExports {
       freeCameraOrigin: { x: 0, y: 0, z: 0 },
       freeCameraAngles: { x: 0, y: 0, z: 0 },
       followEntityId: -1
+  };
+
+  // State to track key inputs for free camera movement
+  const inputState = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false,
+    down: false
   };
 
   // Initialize persistent Menu System
@@ -500,10 +511,13 @@ export function createClient(imports: ClientImports): ClientExports {
         if (isDemoPlaying) {
              // Handle camera inputs if in Free mode
              if (demoCameraState.mode === DemoCameraMode.Free) {
-                 // Simple free camera movement
-                 // We need to track keys for continuous movement in render()
-                 // But handleInput is event based.
-                 // For now, let's just use DemoControls for everything
+                 const lowerKey = key.toLowerCase();
+                 if (lowerKey === 'arrowup' || lowerKey === 'w') inputState.forward = down;
+                 if (lowerKey === 'arrowdown' || lowerKey === 's') inputState.backward = down;
+                 if (lowerKey === 'arrowleft' || lowerKey === 'a') inputState.left = down;
+                 if (lowerKey === 'arrowright' || lowerKey === 'd') inputState.right = down;
+                 if (lowerKey === 'q') inputState.up = down;
+                 if (lowerKey === 'e') inputState.down = down;
              }
 
              if (demoControls.handleInput(key, down)) {
@@ -672,8 +686,44 @@ export function createClient(imports: ClientImports): ClientExports {
                       lastRendered.viewAngles = demoCamera.angles;
                   }
              } else if (demoCameraState.mode === DemoCameraMode.Free) {
-                  lastRendered.origin = demoCameraState.freeCameraOrigin;
+                  // Update free camera position based on input state
+                  const speed = 300 * (dt / 1000);
+                  const vectors = angleVectors(demoCameraState.freeCameraAngles);
+                  const forward = vectors.forward;
+                  const right = vectors.right;
+                  const up = vectors.up;
+
+                  // Use a temporary mutable vector for calculation
+                  const newOrigin = vec3.fromValues(
+                      demoCameraState.freeCameraOrigin.x,
+                      demoCameraState.freeCameraOrigin.y,
+                      demoCameraState.freeCameraOrigin.z
+                  );
+
+                  if (inputState.forward) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [forward.x, forward.y, forward.z], speed);
+                  }
+                  if (inputState.backward) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [forward.x, forward.y, forward.z], -speed);
+                  }
+                  if (inputState.right) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [right.x, right.y, right.z], speed);
+                  }
+                  if (inputState.left) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [right.x, right.y, right.z], -speed);
+                  }
+                  if (inputState.up) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [0, 0, 1], speed);
+                  }
+                  if (inputState.down) {
+                      vec3.scaleAndAdd(newOrigin, newOrigin, [0, 0, 1], -speed);
+                  }
+
+                  // Update state with new values
+                  demoCameraState.freeCameraOrigin = { x: newOrigin[0], y: newOrigin[1], z: newOrigin[2] };
+                  lastRendered.origin = { ...demoCameraState.freeCameraOrigin };
                   lastRendered.viewAngles = demoCameraState.freeCameraAngles;
+
              } else if (demoCameraState.mode === DemoCameraMode.Follow) {
                   if (demoCameraState.followEntityId !== -1) {
                       // Find entity in renderEntities
@@ -682,16 +732,46 @@ export function createClient(imports: ClientImports): ClientExports {
                           // RenderableEntity has transform, not origin/angles directly
                           // Extract position from matrix
                           const mat = ent.transform;
-                          lastRendered.origin = { x: mat[12], y: mat[13], z: mat[14] };
+                          const targetOrigin = { x: mat[12], y: mat[13], z: mat[14] };
 
-                          // Angles are tricky from matrix, but usually entities have angles stored separately if needed
-                          // Or we can just look at origin
-                          // For Follow mode, we probably want to look AT the entity, or from its POV?
-                          // "Follow: smooth camera tracking player with lag" usually means Third Person but dynamic target.
-                          // But if we track *entities*, we can just use their origin.
+                          // Smoothing: Linear interpolation towards target
+                          const smoothingFactor = 0.1; // Adjust for lag effect
 
-                          // Assuming we just position camera at entity origin for now
-                          // View angles might remain user controlled or fixed.
+                          // Initialize if missing
+                          if (!demoCameraState.currentFollowOrigin) {
+                              demoCameraState.currentFollowOrigin = { ...targetOrigin };
+                          }
+
+                          const current = demoCameraState.currentFollowOrigin;
+
+                          // If far away, snap
+                          if (Math.abs(current.x - targetOrigin.x) > 1000 ||
+                              Math.abs(current.y - targetOrigin.y) > 1000 ||
+                              Math.abs(current.z - targetOrigin.z) > 1000) {
+                              demoCameraState.currentFollowOrigin = { ...targetOrigin };
+                          } else {
+                              const nextX = current.x + (targetOrigin.x - current.x) * smoothingFactor;
+                              const nextY = current.y + (targetOrigin.y - current.y) * smoothingFactor;
+                              const nextZ = current.z + (targetOrigin.z - current.z) * smoothingFactor;
+                              demoCameraState.currentFollowOrigin = { x: nextX, y: nextY, z: nextZ };
+                          }
+
+                          lastRendered.origin = { ...demoCameraState.currentFollowOrigin };
+
+                          // Optionally look AT the target or just position camera there
+                          // "Follow" usually implies third person view OF the target, or first person view FROM the target?
+                          // Let's assume third-person-like follow.
+                          // We need view angles. If the entity has angles, we can use them.
+                          // RenderableEntity doesn't expose angles directly, but we can assume they are encoded in the model transform
+                          // or passed separately. But we don't have them easily here without decomping matrix.
+                          // For now, let's just position camera AT the entity and keep previous view angles (or user controlled?)
+                          // If we want "tracking", we might want to update angles to look at it?
+                          // Let's stick to positioning for now, effectively a "spectate" mode.
+                          // If we want third person follow, we need to know the entity's forward vector.
+
+                          // For now, minimal "smooth camera tracking player" (positional)
+                          // Assuming camera angles are manually controlled or we default to looking at it from fixed offset?
+                          // Let's keep existing view angles to allow user to look around while following position.
                       }
                   }
              }
@@ -1052,6 +1132,9 @@ export function createClient(imports: ClientImports): ClientExports {
     setDemoFreeCamera(origin: Vec3, angles: Vec3) {
         demoCameraState.freeCameraOrigin = origin;
         demoCameraState.freeCameraAngles = angles;
+    },
+    setDemoFollowEntity(entityId: number) {
+        demoCameraState.followEntityId = entityId;
     }
   };
 
