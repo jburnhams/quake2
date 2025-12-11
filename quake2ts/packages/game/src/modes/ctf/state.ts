@@ -4,6 +4,7 @@
 
 import { Entity } from '../../entities/entity.js';
 import { EntitySystem } from '../../entities/system.js';
+import { Vec3 } from '@quake2ts/shared';
 
 export enum FlagState {
     AT_BASE = 0,
@@ -14,22 +15,11 @@ export enum FlagState {
 export interface FlagEntity extends Entity {
     flagState: FlagState;
     flagTeam: 'red' | 'blue';
-    baseOrigin: [number, number, number]; // Where to respawn/return
+    baseOrigin: Vec3; // Where to respawn/return
 }
 
 export function setFlagState(flag: FlagEntity, newState: FlagState, context: EntitySystem): void {
     flag.flagState = newState;
 
-    // Logic for state changes
-    switch (newState) {
-        case FlagState.AT_BASE:
-            // Visible, at base position, solid, etc.
-            break;
-        case FlagState.CARRIED:
-            // Hidden (or attached to player model), non-solid
-            break;
-        case FlagState.DROPPED:
-            // Visible at drop location, solid, timeout enabled
-            break;
-    }
+    // Logic for state changes could go here if needed
 }

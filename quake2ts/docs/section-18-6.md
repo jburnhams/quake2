@@ -60,17 +60,17 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 552-720)
 **TypeScript File**: `/packages/game/src/modes/ctf/capture.ts` (NEW)
 
-- [ ] Implement flag capture detection
+- [x] Implement flag capture detection
   - Must be touching own flag base
   - Must have enemy flag
   - Own flag must be at base
   - Reference: `g_ctf.cpp` lines 552-620
 
-- [ ] Implement capture scoring
-  - Award team points
-  - Award individual capture bonus
-  - Reset flags to bases
-  - Play capture sound/effect
+- [x] Implement capture scoring
+  - Award team points (Pending scoreboard logic)
+  - Award individual capture bonus (Implemented)
+  - Reset flags to bases (Implemented)
+  - Play capture sound/effect (Implemented)
   - Reference: `g_ctf.cpp` lines 622-720
 
 #### 6.1.4 Team System

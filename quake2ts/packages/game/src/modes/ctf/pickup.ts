@@ -11,13 +11,6 @@ export function handleFlagPickup(
 ): boolean {
     if (!player.client) return false;
 
-    // TODO: Retrieve actual player team.
-    // For now we assume a property 'team' on client or pers, or default to opposite for testing.
-    // Since we don't have team system yet (Task 6.1.4), we will defer strict team checks
-    // OR we can implement a basic interface here.
-
-    // Hack: Infer team from model skin or something? No, that's unreliable.
-    // Let's assume for now everyone is Red team for testing, unless configured otherwise.
     const playerTeam = (player.client as any).team || 'red';
 
     const sameTeam = flag.flagTeam === playerTeam;
@@ -32,7 +25,7 @@ export function handleFlagPickup(
              game.centerprintf?.(player, `You returned the ${flag.flagTeam} flag!`);
 
              setFlagState(flag, FlagState.AT_BASE, context);
-             flag.origin = [...flag.baseOrigin];
+             flag.origin = { ...flag.baseOrigin };
              return true;
         }
     } else {
@@ -44,13 +37,6 @@ export function handleFlagPickup(
          setFlagState(flag, FlagState.CARRIED, context);
          flag.owner = player;
 
-         // Give flag item to player inventory
-         // We need to know which item ID corresponds to this flag
-         // flag.classname should be 'item_flag_team1' or 'item_flag_team2'
-
-         // In original code, player gets the item.
-         // We should call pickupFlag() here or rely on the caller doing it?
-         // The caller (touch) usually handles inventory.
          return true;
     }
 

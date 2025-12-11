@@ -15,8 +15,8 @@ describe('CTF Flag Pickup', () => {
         flag = {
             flagState: FlagState.AT_BASE,
             flagTeam: 'red',
-            baseOrigin: [100, 100, 0],
-            origin: [100, 100, 0],
+            baseOrigin: { x: 100, y: 100, z: 0 },
+            origin: { x: 100, y: 100, z: 0 },
             owner: undefined,
             classname: 'item_flag_team1'
         } as unknown as FlagEntity;
@@ -48,7 +48,7 @@ describe('CTF Flag Pickup', () => {
 
     it('should return own flag if dropped', () => {
         flag.flagState = FlagState.DROPPED;
-        flag.origin = [200, 200, 0];
+        flag.origin = { x: 200, y: 200, z: 0 };
 
         const result = handleFlagPickup(flag, player, game, context);
 

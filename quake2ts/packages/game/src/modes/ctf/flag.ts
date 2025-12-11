@@ -2,36 +2,40 @@
 // Quake II - CTF Flag Logic
 // =================================================================
 
-import { Entity, Solid, EntityFlags } from '../../entities/entity.js';
+import { Entity, Solid, MoveType } from '../../entities/entity.js';
 import { GameExports } from '../../index.js';
 import { FlagItem } from '../../inventory/items.js';
 import { pickupFlag } from '../../inventory/playerInventory.js';
 import { EntitySystem } from '../../entities/system.js';
 import { FlagState, setFlagState, FlagEntity } from './state.js';
+import { Vec3 } from '@quake2ts/shared';
 
 export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): Partial<Entity> {
     const isRed = flagItem.team === 'red';
 
     const respawn = (self: FlagEntity) => {
-        setFlagState(self, FlagState.AT_BASE, game.entities as unknown as EntitySystem); // TODO: Pass context properly
+        setFlagState(self, FlagState.AT_BASE, game.entities as unknown as EntitySystem);
         self.solid = Solid.Trigger;
         self.model = isRed ? 'players/male/flag1.md2' : 'players/male/flag2.md2';
-        self.origin = [...self.baseOrigin]; // Reset to base
-        self.svflags &= ~1; // Clear SVF_NOCLIENT (assuming 1 is SVF_NOCLIENT if defined, or just ensure visible)
-        // self.effects?
+        self.origin = { ...self.baseOrigin }; // Reset to base
+        self.svflags &= ~1;
     };
 
     return {
         classname: flagItem.id,
         solid: Solid.Trigger,
         model: isRed ? 'players/male/flag1.md2' : 'players/male/flag2.md2',
-        flags: EntityFlags.NoGravity, // Usually flags at base float or sit? Q2 flags drop to floor on spawn.
-        // We'll assume spawn logic handles dropping to floor.
+        movetype: MoveType.None, // Base flag is stationary
 
         // Initialize extended properties
+        // We cast this object to Partial<Entity> which includes FlagEntity props if we extend definition
+        // or we just assign them dynamically.
+        // For type safety, we might need to cast to any here or define these props on Entity.
+        // Since we can't easily modify Entity definition right now without a big refactor,
+        // we assume runtime extensions are allowed or these are custom fields.
         flagState: FlagState.AT_BASE,
         flagTeam: flagItem.team,
-        baseOrigin: [0,0,0], // Will be set on spawn finalize
+        baseOrigin: { x: 0, y: 0, z: 0 },
 
         touch: (selfEntity, other) => {
             const self = selfEntity as FlagEntity;
@@ -40,8 +44,6 @@ export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): P
             }
 
             // Determine player team
-            // Use 'team' property if available, otherwise default to 'red'
-            // This allows tests to override team by setting client.team
             const playerTeam = (other.client as any).team || 'red';
 
             const sameTeam = self.flagTeam === playerTeam;
@@ -75,10 +77,8 @@ export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): P
         think: (selfEntity, context) => {
              const self = selfEntity as FlagEntity;
              if (self.flagState === FlagState.DROPPED) {
-                 // Check timeout (30s default)
-                 // If timeout, return
-                 // respawn(self);
+                 // Check timeout (30s default) is handled by nextthink in drop.ts
              }
         }
-    };
+    } as Partial<Entity>;
 }

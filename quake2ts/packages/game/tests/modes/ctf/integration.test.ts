@@ -4,12 +4,14 @@ import { FlagEntity, FlagState } from '../../../src/modes/ctf/state.js';
 import { Entity, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { KeyId } from '../../../src/inventory/playerInventory.js';
+import { GameExports } from '../../../src/index.js';
 
 describe('CTF Integration', () => {
     let player: Entity;
     let flag: FlagEntity;
     let context: EntitySystem;
     let entities: Entity[];
+    let mockGame: GameExports;
 
     beforeEach(() => {
         player = {
@@ -18,29 +20,32 @@ describe('CTF Integration', () => {
                     keys: new Set()
                 }
             },
-            origin: [100, 100, 0]
+            origin: { x: 100, y: 100, z: 0 }
         } as unknown as Entity;
 
         flag = {
             flagState: FlagState.CARRIED,
             classname: 'item_flag_team2',
             owner: player,
-            origin: [0, 0, 0],
-            baseOrigin: [1000, 1000, 0],
+            origin: { x: 0, y: 0, z: 0 },
+            baseOrigin: { x: 1000, y: 1000, z: 0 },
             flagTeam: 'blue'
         } as unknown as FlagEntity;
 
         entities = [player, flag];
 
+        mockGame = {
+            time: 100,
+            sound: vi.fn(),
+            multicast: vi.fn(),
+            centerprintf: vi.fn()
+        } as unknown as GameExports;
+
         context = {
             forEachEntity: (cb) => entities.forEach(cb),
-            game: {
-                time: 100,
-                sound: vi.fn(),
-                multicast: vi.fn(),
-                bprint: vi.fn()
-            }
+            timeSeconds: 100
         } as unknown as EntitySystem;
+        (context as any)._game = mockGame;
     });
 
     it('should drop flag if player has key and owns flag entity', () => {
@@ -49,8 +54,8 @@ describe('CTF Integration', () => {
         checkPlayerFlagDrop(player, context);
 
         expect(flag.flagState).toBe(FlagState.DROPPED);
-        expect(flag.owner).toBeUndefined();
-        expect(flag.origin[0]).toBe(100); // Dropped at player origin
+        expect(flag.owner).toBeNull();
+        expect(flag.origin.x).toBe(100); // Dropped at player origin
         expect(player.client!.inventory.keys.has(KeyId.BlueFlag)).toBe(false);
     });
 
