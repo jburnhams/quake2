@@ -831,17 +831,15 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       if (imports.engine.renderer && lastRendered && lastRendered.client) {
-        const stats: FrameRenderStats = imports.engine.renderer.stats ? {
-             ...imports.engine.renderer.stats,
-             batches: 0, facesDrawn: 0, drawCalls: 0, skyDrawn: false, viewModelDrawn: false, fps: 0, vertexCount: 0
-        } : {
-          batches: 0,
-          facesDrawn: 0,
-          drawCalls: 0,
-          skyDrawn: false,
-          viewModelDrawn: false,
+        const perfReport = imports.engine.renderer.getPerformanceReport();
+        const stats: FrameRenderStats = {
+          batches: perfReport.textureBinds,
+          facesDrawn: perfReport.triangles, // approximate
+          drawCalls: perfReport.drawCalls,
+          skyDrawn: false, // Not exposed in report
+          viewModelDrawn: false, // Not exposed in report
           fps: 0,
-          vertexCount: 0,
+          vertexCount: perfReport.vertices,
         };
         const timeMs = sample.latest?.timeMs ?? 0;
 

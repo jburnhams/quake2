@@ -11,7 +11,7 @@ import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
-import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
+import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
@@ -27,7 +27,7 @@ export interface Renderer {
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
     readonly debug: DebugRenderer;
-    readonly stats: GpuProfilerStats;
+    getPerformanceReport(): RenderStatistics;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
     // HUD Methods
@@ -66,6 +66,7 @@ export const createRenderer = (
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
     let font: Pic | null = null;
+    let lastFrameStats = { drawCalls: 0, vertexCount: 0, batches: 0 };
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -78,23 +79,32 @@ export const createRenderer = (
         gl.depthMask(true);
 
         // Apply Render Options to pipelines/rendering
-        // Note: Currently FrameRenderer handles world/skybox internally.
-        // We might need to pass options down or control it here.
-        // For now, let's assume FrameRenderOptions could be augmented or FrameRenderer updated.
-        // But since FrameRenderer is imported, let's look at it later if needed.
-        // Actually, frameRenderer.renderFrame uses options.renderMode which is for entities?
-        // No, it's FrameRenderOptions.
+        const currentRenderMode = options.renderMode;
 
-        // Hack: modifying global state or pipeline state if needed.
-        // Wireframe is usually per-draw call.
-        // For simplicity, let's focus on what we can control here.
-
-        if (renderOptions?.showSkybox === false) {
-             // We can't easily disable skybox inside frameRenderer without changing its API.
-             // But we can check if we should skip calling frameRenderer fully? No, it renders BSP too.
+        // Handle wireframe option
+        let effectiveRenderMode: RenderModeConfig | undefined = currentRenderMode;
+        if (renderOptions?.wireframe) {
+            effectiveRenderMode = {
+                mode: 'wireframe',
+                applyToAll: true,
+                color: [1, 1, 1, 1] // White wireframe
+            };
         }
 
-        const stats = frameRenderer.renderFrame(options);
+        // Handle showSkybox option
+        let effectiveSky = options.sky;
+        if (renderOptions?.showSkybox === false) {
+            effectiveSky = undefined;
+        }
+
+        const augmentedOptions = {
+            ...options,
+            sky: effectiveSky,
+            renderMode: effectiveRenderMode,
+            disableLightmaps: renderOptions?.showLightmaps === false
+        };
+
+        const stats = frameRenderer.renderFrame(augmentedOptions);
         const viewProjection = options.camera.viewProjectionMatrix;
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
@@ -116,11 +126,9 @@ export const createRenderer = (
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
 
-        // Render debug renderer
+        // Render debug renderer (Bounds, Normals)
         if (renderOptions?.showBounds) {
              for (const entity of entities) {
-                  // Calculate bounds and draw
-                  // (Simplified logic reuse from culling)
                   let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
                   let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
 
@@ -142,19 +150,31 @@ export const createRenderer = (
         }
 
         if (renderOptions?.showNormals) {
-             // Not easily implemented for models without pipeline changes
+             // Not implemented yet
         }
 
         debugRenderer.render(viewProjection as Float32Array);
+
+        // Draw 3D Text Labels as 2D overlay
+        const labels = debugRenderer.getLabels(viewProjection as Float32Array, gl.canvas.width, gl.canvas.height);
+        if (labels.length > 0) {
+            begin2D();
+            for (const label of labels) {
+                drawString(label.x, label.y, label.text, [1, 1, 1, 1]);
+            }
+            end2D();
+        }
+
         debugRenderer.clear();
 
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
+        let entityDrawCalls = 0;
+        let entityVertices = 0;
 
         for (const entity of entities) {
             // PVS Culling
             if (options.world && viewCluster >= 0) {
-                // Use entity origin from transform (last column)
                 const origin = {
                     x: entity.transform[12],
                     y: entity.transform[13],
@@ -176,7 +196,6 @@ export const createRenderer = (
             if (entity.type === 'md2') {
                 const frame0 = entity.model.frames[entity.blend.frame0];
                 const frame1 = entity.model.frames[entity.blend.frame1];
-                // Conservative bounds: union of both frames
                 minBounds = {
                     x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
                     y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
@@ -202,7 +221,6 @@ export const createRenderer = (
                         z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
                     };
                 } else {
-                    // Fallback if frames missing (shouldn't happen)
                      minBounds = { x: -32, y: -32, z: -32 };
                      maxBounds = { x: 32, y: 32, z: 32 };
                 }
@@ -216,7 +234,6 @@ export const createRenderer = (
             }
 
             // Calculate ambient light for the entity
-            // We can extract position from the transform matrix (last column)
             const position = {
                 x: entity.transform[12],
                 y: entity.transform[13],
@@ -244,7 +261,7 @@ export const createRenderer = (
                         }
 
                         // Determine render mode
-                        let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
+                        let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
                         if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                             activeRenderMode = undefined;
                         } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
@@ -254,7 +271,6 @@ export const createRenderer = (
                         // Handle Random Color Generation logic
                         if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
                             const randColor = colorFromId(entity.id);
-                            // Clone and override color
                             activeRenderMode = { ...activeRenderMode, color: randColor };
                         }
 
@@ -267,20 +283,20 @@ export const createRenderer = (
                             tint: entity.tint,
                         });
                         md2Pipeline.draw(mesh, activeRenderMode);
+                        entityDrawCalls++;
+                        entityVertices += mesh.geometry.vertices.length;
                     }
                     break;
                 case 'md3':
                     {
                         let mesh = md3MeshCache.get(entity.model);
 
-                        // Convert DLight to Md3DynamicLight
                         const md3Dlights = options.dlights ? options.dlights.map(d => ({
                             origin: d.origin,
                             color: [d.color.x, d.color.y, d.color.z] as const,
                             radius: d.intensity
                         })) : undefined;
 
-                        // Merge calculated light into lighting options if provided, or create new
                         const lighting = {
                             ...entity.lighting,
                             ambient: [light, light, light] as const,
@@ -309,27 +325,33 @@ export const createRenderer = (
                                     lastTexture = texture;
                                 }
 
-                                // Determine render mode
-                                let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
+                                let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
                                 if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                                     activeRenderMode = undefined;
                                 } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
-                                    // Apply default override for missing texture
                                 }
 
-                                // Handle Random Color Generation logic
                                 if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
                                     const randColor = colorFromId(entity.id);
                                     activeRenderMode = { ...activeRenderMode, color: randColor };
                                 }
 
                                 md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
+                                entityDrawCalls++;
+                                entityVertices += surfaceMesh.geometry.vertices.length;
                             }
                         }
                     }
                     break;
             }
         }
+
+        // Aggregate stats
+        lastFrameStats = {
+            drawCalls: stats.drawCalls + entityDrawCalls,
+            vertexCount: stats.vertexCount + entityVertices,
+            batches: stats.batches // Approximation
+        };
 
         gpuProfiler.endFrame();
     };
@@ -359,7 +381,6 @@ export const createRenderer = (
         }
 
         const tex = new Texture2D(gl);
-        // Assume level 0 for 2D drawing
         const level = texture.levels[0];
         tex.upload(level.width, level.height, level.rgba);
 
@@ -430,7 +451,6 @@ export const createRenderer = (
 
     const drawCenterString = (y: number, text: string) => {
         const charWidth = 8;
-        // Strip color codes for width calculation
         const stripped = text.replace(/\^[0-9]/g, '');
         const width = stripped.length * charWidth;
         const x = (gl.canvas.width - width) / 2;
@@ -446,7 +466,7 @@ export const createRenderer = (
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
         get debug() { return debugRenderer; },
-        get stats() { return gpuProfiler.stats; },
+        getPerformanceReport: () => gpuProfiler.getPerformanceReport(lastFrameStats),
         renderFrame,
         registerPic,
         registerTexture,

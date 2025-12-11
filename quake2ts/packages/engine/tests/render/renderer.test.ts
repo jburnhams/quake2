@@ -33,21 +33,34 @@ const mockMd3Pipeline = {
     bind: vi.fn(),
     drawSurface: vi.fn(),
 };
+
+// Properly mocked Md3ModelMesh with geometry.vertices for stats tracking
 vi.mock('../../src/render/md3Pipeline.js', async () => {
     const actual = await vi.importActual('../../src/render/md3Pipeline.js') as any;
     return {
         ...actual,
         Md3Pipeline: vi.fn(() => mockMd3Pipeline),
         Md3ModelMesh: vi.fn(() => ({
-            surfaces: new Map([['test', {}]]),
+            surfaces: new Map([['test', {
+                geometry: { vertices: new Array(10) }, // Mock 10 vertices
+                update: vi.fn()
+            }]]),
             update: vi.fn(),
         })),
     };
 });
 
-
+// Mock FrameRenderer with stats return
 const mockFrameRenderer: FrameRenderer = {
-    renderFrame: vi.fn(),
+    renderFrame: vi.fn().mockReturnValue({
+        drawCalls: 0,
+        vertexCount: 0,
+        batches: 0,
+        facesDrawn: 0,
+        skyDrawn: false,
+        viewModelDrawn: false,
+        fps: 60
+    }),
 };
 
 // Mock the frame renderer factory
@@ -111,7 +124,10 @@ describe('Renderer', () => {
         expect(mockGl.disable).toHaveBeenCalled();
         expect(mockGl.enable).toHaveBeenCalled();
         expect(mockGl.depthMask).toHaveBeenCalled();
-        expect(mockFrameRenderer.renderFrame).toHaveBeenCalledWith(options);
+        expect(mockFrameRenderer.renderFrame).toHaveBeenCalledWith(expect.objectContaining({
+            camera: options.camera,
+            disableLightmaps: false
+        }));
     });
 
     it('should render an MD3 entity', () => {
@@ -229,6 +245,5 @@ describe('Renderer', () => {
 
         const callArgs = mockMd3Pipeline.drawSurface.mock.calls[0][1];
         expect(callArgs.renderMode.color).toHaveLength(4);
-        // Different ID should produce different color (conceptually, but hard to test randomness stability without copying algorithm here)
     });
 });
