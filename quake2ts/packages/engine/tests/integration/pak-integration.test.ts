@@ -112,6 +112,7 @@ describe('PAK Integration Test', () => {
             const reader = new DemoReader(buffer);
             let blockCount = 0;
             let protocolVersion = 0;
+            let totalErrors = 0;
             while (reader.hasMore()) {
               const block = reader.readNextBlock();
               if (!block) break;
@@ -124,8 +125,13 @@ describe('PAK Integration Test', () => {
               parser.parseMessage();
               // Remember protocol for next block
               protocolVersion = parser.getProtocolVersion();
+              // Track parsing errors
+              totalErrors += parser.getErrorCount();
             }
             expect(blockCount).toBeGreaterThan(0);
+            if (totalErrors > 0) {
+              throw new Error(`Demo file ${entry.name} had ${totalErrors} parsing errors (unknown commands or parse failures)`);
+            }
             break;
           }
           case '.cfg':
