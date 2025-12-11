@@ -32,21 +32,21 @@ This phase covers dynamic lighting, particle effects, view effects, water render
   - Reference: `/packages/engine/src/render/renderer.ts`
 
 #### 4.1.2 Muzzle Flash Lights
-- [ ] Create muzzle flash lights on weapon fire
+- [x] Create muzzle flash lights on weapon fire
   - Duration: 100ms
   - Color: yellow-orange
   - Intensity based on weapon
   - Reference: client handling in `cl_fx.cpp` lines 50-120
 
 #### 4.1.3 Explosion Lights
-- [ ] Create explosion lights
+- [x] Create explosion lights
   - Duration: 500ms with fade
   - Expanding radius
   - Orange-red color
   - Reference: `cl_fx.cpp` lines 122-200
 
 #### 4.1.4 Rocket/Projectile Lights
-- [ ] Attach lights to projectiles
+- [x] Attach lights to projectiles
   - Follow projectile position
   - Color based on projectile type
   - Trail effect

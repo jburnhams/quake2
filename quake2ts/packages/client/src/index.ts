@@ -602,13 +602,13 @@ export function createClient(imports: ClientImports): ClientExports {
       let renderEntities: RenderableEntity[] = [];
       let currentPacketEntities: any[] = []; // Store raw packet entities for effect processing
 
+      const now = sample.nowMs;
+      const dtMs = lastRenderTime > 0 ? Math.max(0, now - lastRenderTime) : 0;
+      lastRenderTime = now;
+
       if (isDemoPlaying) {
           // Update demo playback with delta time since last frame
-          const now = sample.nowMs;
-          const dt = lastRenderTime > 0 ? Math.max(0, now - lastRenderTime) : 0;
-          lastRenderTime = now;
-
-          demoPlayback.update(dt);
+          demoPlayback.update(dtMs);
 
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // Calculate alpha for interpolation
@@ -697,7 +697,6 @@ export function createClient(imports: ClientImports): ClientExports {
              }
           }
       } else {
-          lastRenderTime = sample.nowMs;
           if (sample.latest?.state) {
             prediction.setAuthoritative(sample.latest);
             latestFrame = sample.latest;
@@ -747,7 +746,7 @@ export function createClient(imports: ClientImports): ClientExports {
 
       // Update Dynamic Light Manager
       const timeSeconds = sample.nowMs / 1000.0;
-      dlightManager.update(timeSeconds);
+      dlightManager.update(timeSeconds, dtMs / 1000.0);
 
       // Collect lights (persistent + per-frame)
       // Copy active lights from manager
