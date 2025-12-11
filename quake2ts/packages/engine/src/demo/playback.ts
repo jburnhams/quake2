@@ -136,6 +136,19 @@ export class DemoPlaybackController {
       return this.playbackSpeed;
   }
 
+  public getPlaybackSpeed(): number {
+      return this.playbackSpeed;
+  }
+
+  /**
+   * Returns the interpolation factor (0.0 to 1.0) for the current frame.
+   * Used for smooth rendering between demo frames.
+   */
+  public getInterpolationFactor(): number {
+      if (this.frameDuration <= 0) return 0;
+      return Math.max(0, Math.min(1, this.accumulatedTime / this.frameDuration));
+  }
+
   public update(dt: number) {
     if (this.state !== PlaybackState.Playing || !this.reader) {
       return;
