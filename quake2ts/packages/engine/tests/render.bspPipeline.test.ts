@@ -32,12 +32,16 @@ describe('deriveSurfaceRenderState', () => {
 });
 
 describe('BspSurfacePipeline', () => {
-  it('binds shader uniforms and returns the render state', () => {
+  it('binds shader uniforms including dlights and returns the render state', () => {
     const gl = createMockGL();
 
     // Ensure uniform4f is mocked
     if (!gl.uniform4f) {
         (gl as any).uniform4f = vi.fn();
+    }
+    // Ensure uniform3f is mocked
+    if (!gl.uniform3f) {
+        (gl as any).uniform3f = vi.fn();
     }
 
     const uniformNames = [
@@ -53,6 +57,9 @@ describe('BspSurfacePipeline', () => {
       'u_lightmapAtlas',
       'u_renderMode',
       'u_solidColor',
+      'u_numDlights',
+      // Dlights
+      'u_dlights[0].position', 'u_dlights[0].color', 'u_dlights[0].intensity'
     ];
     for (const name of uniformNames) {
       gl.uniformLocations.set(name, {} as WebGLUniformLocation);
@@ -61,6 +68,14 @@ describe('BspSurfacePipeline', () => {
     const pipeline = new BspSurfacePipeline(gl as unknown as WebGL2RenderingContext);
     const mvp = new Float32Array(16);
     mvp[0] = 1;
+
+    const dlights = [{
+       origin: { x: 10, y: 20, z: 30 },
+       color: { x: 1, y: 0, z: 0 },
+       intensity: 200,
+       die: 0
+    }];
+
     const state = pipeline.bind({
       modelViewProjection: mvp,
       styleIndices: [0, 2, 255, 255],
@@ -69,6 +84,7 @@ describe('BspSurfacePipeline', () => {
       timeSeconds: 1.5,
       diffuseSampler: 3,
       lightmapSampler: 4,
+      dlights: dlights
     });
 
     const mvpLoc = gl.uniformLocations.get('u_modelViewProjection');
@@ -80,6 +96,13 @@ describe('BspSurfacePipeline', () => {
     expect(gl.uniform1f).toHaveBeenCalledWith(gl.uniformLocations.get('u_time'), 1.5);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_diffuseMap'), 3);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_lightmapAtlas'), 4);
+
+    // Check Dlights
+    expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_numDlights'), 1);
+    expect(gl.uniform3f).toHaveBeenCalledWith(gl.uniformLocations.get('u_dlights[0].position'), 10, 20, 30);
+    expect(gl.uniform3f).toHaveBeenCalledWith(gl.uniformLocations.get('u_dlights[0].color'), 1, 0, 0);
+    expect(gl.uniform1f).toHaveBeenCalledWith(gl.uniformLocations.get('u_dlights[0].intensity'), 200);
+
     expect(state.alpha).toBeCloseTo(0.33);
     expect(state.flowOffset[0]).toBeCloseTo(-0.375);
 

@@ -101,7 +101,7 @@ export const createRenderer = (
             ...options,
             sky: effectiveSky,
             renderMode: effectiveRenderMode,
-            disableLightmaps: renderOptions?.showLightmaps === false
+            disableLightmaps: renderOptions?.showLightmaps === false,
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);

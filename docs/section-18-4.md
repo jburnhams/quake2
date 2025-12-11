@@ -16,14 +16,14 @@ This phase covers dynamic lighting, particle effects, view effects, water render
 **TypeScript File**: `/packages/engine/src/render/dlight.ts`
 
 #### 4.1.1 GPU Dynamic Light Implementation
-- [ ] Implement per-pixel dynamic lighting shader
+- [x] Implement per-pixel dynamic lighting shader
   - Point light attenuation
   - Multiple lights per fragment
   - Reference: existing `dlight.ts` structure
 
-- [ ] Integrate dynamic lights with BSP renderer
+- [x] Integrate dynamic lights with BSP renderer
   - Add light uniforms to BSP shader
-  - Limit to nearest 8 lights per surface
+  - Limit to nearest 8 lights per surface (Note: Implemented as global MAX_ACTIVE_LIGHTS=32 in shader for batching efficiency)
   - Reference: `/packages/engine/src/render/pipelines/bsp.ts`
 
 - [ ] Add dynamic light culling
@@ -220,4 +220,3 @@ This phase covers dynamic lighting, particle effects, view effects, water render
   - Dual-layer skybox
   - Independent scroll speeds
   - Reference: BSP sky surface handling
-
