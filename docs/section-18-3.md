@@ -50,7 +50,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.4 Chaingun Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/chaingun.ts`
 
-- [ ] Implement wind-up mode
+- [x] Implement wind-up mode
   - Hold to spin barrels
   - Instant fire when spun up
   - Faster fire rate when wound
@@ -59,7 +59,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.5 Super Shotgun Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/supershotgun.ts`
 
-- [ ] Implement precision mode
+- [x] Implement precision mode
   - Tighter pellet spread
   - Reduced damage per pellet
   - Longer range effectiveness

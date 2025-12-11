@@ -36,6 +36,19 @@ import {
 const random = createRandomGenerator();
 export { random as firingRandom };
 
+// Constants based on g_local.h and original p_weapon.c values
+export const DEFAULT_BULLET_HSPREAD = 300;
+export const DEFAULT_BULLET_VSPREAD = 500;
+export const DEFAULT_SHOTGUN_HSPREAD = 500;  // Standard Shotgun Spread
+export const DEFAULT_SHOTGUN_VSPREAD = 500;
+export const DEFAULT_SSHOTGUN_HSPREAD = 1000; // Super Shotgun Spread
+export const DEFAULT_SSHOTGUN_VSPREAD = 500;
+export const DEFAULT_DEATHMATCH_SHOTGUN_COUNT = 12;
+export const DEFAULT_SHOTGUN_COUNT = 12;
+export const DEFAULT_SSHOTGUN_COUNT = 20;
+
+const BUTTON_ATTACK2 = 32;
+
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {
         player.client.kick_angles = { x: pitch, y: yaw, z: 0 };
@@ -293,7 +306,8 @@ export function fireShotgun(game: GameExports, player: Entity) {
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    fireMultiplePellets(game, player, source, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
+    const count = game.deathmatch ? DEFAULT_DEATHMATCH_SHOTGUN_COUNT : DEFAULT_SHOTGUN_COUNT;
+    fireMultiplePellets(game, player, source, forward, right, up, count, 4, 1, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DamageMod.SHOTGUN);
 }
 
 export function fireSuperShotgun(game: GameExports, player: Entity) {
@@ -304,6 +318,10 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
         return;
     }
 
+    // Check Alt-Fire (Attack2 = 32)
+    // Precision mode
+    const isPrecision = (player.client.buttons & BUTTON_ATTACK2) !== 0;
+
     inventory.ammo.counts[AmmoType.Shells] -= 2;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
     applyKick(player, -4, 0, -4);
@@ -312,10 +330,21 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
+    const count = DEFAULT_SSHOTGUN_COUNT / 2;
+    let hspread = DEFAULT_SSHOTGUN_HSPREAD; // Default 1000
+    let vspread = DEFAULT_SSHOTGUN_VSPREAD;
+    let damage = 6;
+
+    if (isPrecision) {
+        hspread = 300; // Tighter spread
+        vspread = 150; // Tighter spread
+        damage = 4;    // Reduced damage per pellet
+    }
+
     const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
-    fireMultiplePellets(game, player, source, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+    fireMultiplePellets(game, player, source, forward1, right1, up1, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
     const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
-    fireMultiplePellets(game, player, source, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
+    fireMultiplePellets(game, player, source, forward2, right2, up2, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
 }
 
 export function fireMachinegun(game: GameExports, player: Entity) {
