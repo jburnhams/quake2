@@ -2,64 +2,83 @@
 // Quake II - CTF Flag Logic
 // =================================================================
 
-import { Entity, Solid } from '../../entities/entity.js';
+import { Entity, Solid, MoveType } from '../../entities/entity.js';
 import { GameExports } from '../../index.js';
 import { FlagItem } from '../../inventory/items.js';
 import { pickupFlag } from '../../inventory/playerInventory.js';
 import { EntitySystem } from '../../entities/system.js';
+import { FlagState, setFlagState, FlagEntity } from './state.js';
+import { Vec3 } from '@quake2ts/shared';
 
 export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): Partial<Entity> {
-    const drop = (self: Entity, context: EntitySystem) => {
-        // TODO: Implement drop behavior
-        // If dropped, count down to return
-    };
+    const isRed = flagItem.team === 'red';
 
-    const respawn = (self: Entity) => {
+    const respawn = (self: FlagEntity) => {
+        setFlagState(self, FlagState.AT_BASE, game.entities as unknown as EntitySystem);
         self.solid = Solid.Trigger;
-        // Reset model, etc.
+        self.model = isRed ? 'players/male/flag1.md2' : 'players/male/flag2.md2';
+        self.origin = { ...self.baseOrigin }; // Reset to base
+        self.svflags &= ~1;
     };
 
     return {
         classname: flagItem.id,
         solid: Solid.Trigger,
-        model: flagItem.team === 'red' ? 'players/male/flag1.md2' : 'players/male/flag2.md2',
-        // Note: Models might need adjustment based on how Q2 handles skins for flags
-        // Original: "players/male/flag1.md2" (red) "players/male/flag2.md2" (blue)
-        // Usually it's just one model with skin change, but Q2 uses separate models for dropped flags often?
-        // Checking g_ctf.c: SP_item_flag_team1 sets ent->s.modelindex = gi.modelindex ("players/male/flag1.md2");
+        model: isRed ? 'players/male/flag1.md2' : 'players/male/flag2.md2',
+        movetype: MoveType.None, // Base flag is stationary
 
-        touch: (self, other) => {
+        // Initialize extended properties
+        // We cast this object to Partial<Entity> which includes FlagEntity props if we extend definition
+        // or we just assign them dynamically.
+        // For type safety, we might need to cast to any here or define these props on Entity.
+        // Since we can't easily modify Entity definition right now without a big refactor,
+        // we assume runtime extensions are allowed or these are custom fields.
+        flagState: FlagState.AT_BASE,
+        flagTeam: flagItem.team,
+        baseOrigin: { x: 0, y: 0, z: 0 },
+
+        touch: (selfEntity, other) => {
+            const self = selfEntity as FlagEntity;
             if (!other || !other.client) {
                 return;
             }
 
-            if (pickupFlag(other.client, flagItem, game.time * 1000)) {
-                // Sound: CTF specific?
-                // g_ctf.c: CTFPickup_Flag calls CTFTeam_GetFlagMsg which prints messages and plays sounds.
-                // For now, basic pickup sound.
-                game.sound?.(other, 0, 'ctf/flagpk.wav', 1, 1, 0);
-                // Note: sound might need to be precached or verified.
+            // Determine player team
+            const playerTeam = (other.client as any).team || 'red';
 
-                game.centerprintf?.(other, `You got the ${flagItem.name}`);
+            const sameTeam = self.flagTeam === playerTeam;
 
-                // Flags don't disappear like normal items, they attach to player?
-                // Or if at base, they disappear.
-                // In Q2 CTF, the flag entity on the ground disappears (solid=NOT, modelindex=0)
-                // and the player gets a flag icon and effects.
+            if (sameTeam) {
+                // If touching own flag
+                if (self.flagState === FlagState.AT_BASE) {
+                    return; // Do nothing
+                }
+                if (self.flagState === FlagState.DROPPED) {
+                    // Return flag
+                    game.sound?.(other, 0, 'ctf/flagret.wav', 1, 1, 0);
+                    game.centerprintf?.(other, `You returned the ${flagItem.name}!`);
+                    respawn(self);
+                }
+            } else {
+                // Enemy flag
+                // Can pick up if AT_BASE or DROPPED
+                if (pickupFlag(other.client, flagItem, game.time * 1000)) {
+                    game.sound?.(other, 0, 'ctf/flagpk.wav', 1, 1, 0);
+                    game.centerprintf?.(other, `You got the ${flagItem.name}!`);
 
-                self.solid = Solid.Not;
-                self.model = undefined; // Hide it
-
-                // In CTF, the flag entity stays alive to track state (DROPPED, CARRIED, AT_BASE).
-                // If picked up from base, it goes to CARRIED.
-                // If picked up from dropped, it goes to CARRIED.
-
-                // For MVP, just hide it. State management comes in next task.
+                    setFlagState(self, FlagState.CARRIED, game.entities as unknown as EntitySystem);
+                    self.solid = Solid.Not;
+                    self.model = undefined;
+                    self.owner = other;
+                }
             }
         },
-        think: (self, context) => {
-            // Flag think logic (return timer, etc.)
-            // For now, nothing.
+
+        think: (selfEntity, context) => {
+             const self = selfEntity as FlagEntity;
+             if (self.flagState === FlagState.DROPPED) {
+                 // Check timeout (30s default) is handled by nextthink in drop.ts
+             }
         }
-    };
+    } as Partial<Entity>;
 }

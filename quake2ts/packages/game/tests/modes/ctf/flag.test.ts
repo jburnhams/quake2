@@ -58,6 +58,9 @@ describe('CTF Flag Entities', () => {
         // Mock entity instance for "self"
         const self = { ...entity } as Entity;
 
+        // Mock player to be on opposite team (blue)
+        (mockPlayer.client as any).team = 'blue';
+
         if (entity.touch) {
             entity.touch(self, mockPlayer, undefined, undefined);
         }
@@ -69,7 +72,7 @@ describe('CTF Flag Entities', () => {
         expect(mockGame.sound).toHaveBeenCalledWith(mockPlayer, 0, 'ctf/flagpk.wav', 1, 1, 0);
 
         // Check message
-        expect(mockGame.centerprintf).toHaveBeenCalledWith(mockPlayer, 'You got the Red Flag');
+        expect(mockGame.centerprintf).toHaveBeenCalledWith(mockPlayer, 'You got the Red Flag!');
 
         // Check entity state change (hidden)
         expect(self.solid).toBe(Solid.Not);

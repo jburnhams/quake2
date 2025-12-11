@@ -20,6 +20,7 @@ import {
     ANIM_BASIC, ANIM_DEATH, ANIM_PAIN, ANIM_REVERSE, ANIM_ATTACK
 } from './player_anim.js';
 import { firingRandom } from '../combat/weapons/firing.js';
+import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
 
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
@@ -135,6 +136,11 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
     self.solid = Solid.Not;
     self.movetype = MoveType.Toss;
     self.takedamage = false; // Can be gibbed? If dead, further damage usually gibs.
+
+    // CTF: Drop flag if carrying
+    if (sys) {
+        checkPlayerFlagDrop(self, sys);
+    }
 
     // Check for gibbing
     if (self.health < -40 && sys) {
