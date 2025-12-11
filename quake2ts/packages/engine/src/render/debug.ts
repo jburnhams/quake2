@@ -96,6 +96,12 @@ export class DebugRenderer {
         );
     }
 
+    drawAxes(position: Vec3, size: number) {
+        this.drawLine(position, { x: position.x + size, y: position.y, z: position.z }, { r: 1, g: 0, b: 0 }); // X - Red
+        this.drawLine(position, { x: position.x, y: position.y + size, z: position.z }, { r: 0, g: 1, b: 0 }); // Y - Green
+        this.drawLine(position, { x: position.x, y: position.y, z: position.z + size }, { r: 0, g: 0, b: 1 }); // Z - Blue
+    }
+
     drawText3D(text: string, position: Vec3) {
         this.labels.push({ text, position });
     }

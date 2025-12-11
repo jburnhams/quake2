@@ -77,25 +77,25 @@
 ## 1.3 Basic Rendering Improvements
 
 ### 1.3.1 Render Options API
-- [ ] Create `RenderOptions` interface for webapp control
-- [ ] Add option `wireframe: boolean` for wireframe overlay
-- [ ] Add option `showLightmaps: boolean` to toggle lightmap vs fullbright
-- [ ] Add option `showSkybox: boolean` to toggle skybox rendering
-- [ ] Add option `showBounds: boolean` to display entity bounding boxes
-- [ ] Add option `showNormals: boolean` to display surface normals (debug)
-- [ ] Add option `cullingEnabled: boolean` to toggle PVS/frustum culling
+- [x] Create `RenderOptions` interface for webapp control
+- [x] Add option `wireframe: boolean` for wireframe overlay
+- [x] Add option `showLightmaps: boolean` to toggle lightmap vs fullbright
+- [x] Add option `showSkybox: boolean` to toggle skybox rendering
+- [x] Add option `showBounds: boolean` to display entity bounding boxes
+- [x] Add option `showNormals: boolean` to display surface normals (debug)
+- [x] Add option `cullingEnabled: boolean` to toggle PVS/frustum culling
 
 ### 1.3.2 Debug Visualization
-- [ ] Implement `DebugRenderer` class for overlay rendering
-- [ ] Add method `drawBoundingBox(mins: Vec3, maxs: Vec3, color: Color): void`
-- [ ] Add method `drawLine(start: Vec3, end: Vec3, color: Color): void`
-- [ ] Add method `drawPoint(position: Vec3, size: number, color: Color): void`
-- [ ] Add method `drawText3D(text: string, position: Vec3): void` for in-world labels
-- [ ] Add support for drawing entity origins and axes
+- [x] Implement `DebugRenderer` class for overlay rendering
+- [x] Add method `drawBoundingBox(mins: Vec3, maxs: Vec3, color: Color): void`
+- [x] Add method `drawLine(start: Vec3, end: Vec3, color: Color): void`
+- [x] Add method `drawPoint(position: Vec3, size: number, color: Color): void`
+- [x] Add method `drawText3D(text: string, position: Vec3): void` for in-world labels
+- [x] Add support for drawing entity origins and axes
 
 ### 1.3.3 Rendering Performance Metrics
-- [ ] Expose `RenderStatistics` from GPUProfiler
-- [ ] Add counters: draw calls, triangles rendered, vertices processed, texture binds
-- [ ] Add timings: frame time, render time, culling time
-- [ ] Add memory stats: texture memory used, buffer memory used
-- [ ] Add method `getPerformanceReport(): PerformanceReport`
+- [x] Expose `RenderStatistics` from GPUProfiler
+- [x] Add counters: draw calls, triangles rendered, vertices processed, texture binds
+- [x] Add timings: frame time, render time, culling time
+- [x] Add memory stats: texture memory used, buffer memory used
+- [x] Add method `getPerformanceReport(): PerformanceReport`
