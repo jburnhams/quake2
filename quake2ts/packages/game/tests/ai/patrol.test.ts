@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
-import { Entity } from '../../src/entities/entity.js';
+import { Entity, EntityFlags } from '../../src/entities/entity.js';
 import { ai_walk } from '../../src/ai/movement.js';
 
 describe('AI Patrol (path_corner)', () => {
@@ -42,6 +42,7 @@ describe('AI Patrol (path_corner)', () => {
 
     // Spawn entities
     monster = system.spawn();
+    monster.flags |= EntityFlags.Fly;
     monster.origin = { x: 0, y: 0, z: 0 };
     monster.angles = { x: 0, y: 0, z: 0 };
     monster.monsterinfo = {
@@ -84,7 +85,9 @@ describe('AI Patrol (path_corner)', () => {
 
   it('monster switches to next path_corner when close', () => {
     // Move monster close to pathCorner1 (< 64 units)
-    monster.origin = { x: 90, y: 0, z: 0 };
+    // M_MoveToGoal uses strict SV_CloseEnough with passed dist.
+    // If we pass 0 dist, we must be exactly there.
+    monster.origin = { x: 100, y: 0, z: 0 };
     monster.mins = { x: -16, y: -16, z: -24 };
     monster.maxs = { x: 16, y: 16, z: 32 };
 

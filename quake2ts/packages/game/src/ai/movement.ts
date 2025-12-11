@@ -6,6 +6,8 @@ import { MoveType, EntityFlags } from '../entities/entity.js';
 import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
 import { AIFlags } from './constants.js';
 import { M_CheckAttack } from './monster.js';
+import { rangeTo, visible } from './perception.js';
+import { findTarget } from './targeting.js';
 
 type MutableVec3 = { x: number; y: number; z: number };
 
@@ -66,6 +68,9 @@ export function changeYaw(self: Entity, deltaSeconds: number): void {
   (self.angles as MutableVec3).y = angleMod(current + move);
 }
 
+// Alias for strict adherence
+export const M_ChangeYaw = changeYaw;
+
 export function facingIdeal(self: Entity): boolean {
   const delta = angleMod(self.angles.y - self.ideal_yaw);
   const hasPathing = (self.monsterinfo.aiflags & AIFlags.Pathing) !== 0;
@@ -92,24 +97,12 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
   self.ideal_yaw = vectorToYaw(toTarget);
 }
 
-import { rangeTo, visible } from './perception.js';
-import { findTarget } from './targeting.js';
-
 export function ai_stand(self: Entity, deltaSeconds: number, context: EntitySystem): void {
   if (findTarget(self, context.targetAwareness, context, context.trace)) {
      return;
   }
 
-  if (self.enemy && self.enemy.inUse) {
-      // If we have an enemy, we might need to update blind_fire_target if visible
-      // See ai_stand in g_ai.cpp: it calls ai_checkattack which implicitly checks visibility.
-      // But we also update blind_fire_target in ai_charge.
-
-      // In ai_stand, we mainly check if we should wake up.
-      // The logic in g_ai.cpp ai_stand is quite complex, checking for stand ground, looking for players, etc.
-      // For now, minimal port.
-  }
-
+  // Minimal port logic
   changeYaw(self, deltaSeconds);
 }
 
@@ -122,21 +115,13 @@ export function ai_walk(self: Entity, distance: number, deltaSeconds: number, co
   setIdealYawTowards(self, self.goalentity);
   changeYaw(self, deltaSeconds);
 
-  if (distance !== 0) {
-    walkMove(self, self.angles.y, distance);
-  }
-
-  // Check if we reached goal (path_corner logic)
-  if (self.goalentity && self.goalentity.classname === 'path_corner') {
-    const dist = rangeTo(self, self.goalentity);
-    if (dist < 64) {
-      if (self.goalentity.target) {
-        const next = context.pickTarget(self.goalentity.target);
-        if (next) {
-          self.goalentity = next;
-          self.ideal_yaw = self.angles.y;
-        }
-      }
+  // Replaced inline logic with M_MoveToGoal
+  if (self.goalentity) {
+    M_MoveToGoal(self, distance, context);
+  } else {
+    // Fallback if no goal (shouldn't happen in pathing, but maybe wandering?)
+    if (distance !== 0) {
+       M_walkmove(self, self.angles.y, distance, context);
     }
   }
 }
@@ -146,7 +131,6 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
     walkMove(self, self.angles.y, distance);
   }
 
-  // ROGUE
   if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     changeYaw(self, deltaSeconds);
   }
@@ -159,20 +143,13 @@ export function ai_run(self: Entity, distance: number, deltaSeconds: number, con
   }
 
   if (findTarget(self, context.targetAwareness, context, context.trace)) {
-      // In original code, ai_run calls FindTarget, if found and it's a new enemy (or we are not fighting), we might switch.
-      // Actually FindTarget usually returns true if it found a valid target.
-      // If we already have an enemy, FindTarget might check for better one or just return.
-      // But typically we rely on self.enemy being set.
-
-      // If we found a target and it's DIFFERENT or we didn't have one?
-      // For now, assume findTarget handles the switching/activation.
+      // Logic for switching targets if new one is found
   }
 
   if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
       self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
   }
 
-  // ROGUE
   if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, self.enemy ?? self.goalentity);
   }
@@ -184,7 +161,6 @@ export function ai_run(self: Entity, distance: number, deltaSeconds: number, con
   }
 
   if (distance !== 0) {
-    // Using M_walkmove logic equivalent
     M_walkmove(self, self.angles.y, distance, context);
   }
 }
@@ -195,7 +171,6 @@ export function ai_face(
   distance: number,
   deltaSeconds: number,
 ): void {
-  // ROGUE
   if (enemy && (self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, enemy);
   }
@@ -208,12 +183,10 @@ export function ai_face(
 }
 
 export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
-  // PMM - save blindfire target
   if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
       self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
   }
 
-  // ROGUE
   if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
     setIdealYawTowards(self, self.enemy);
   }
@@ -245,10 +218,9 @@ export function CheckGround(self: Entity, context: EntitySystem): void {
   self.groundentity = trace.ent;
 
   if (!self.groundentity && !trace.allsolid && !trace.startsolid && trace.fraction === 1.0) {
-      // check water
       const content = context.pointcontents(point);
       if (content & MASK_WATER) {
-          self.waterlevel = 1; // Simplification, real check is more complex
+          self.waterlevel = 1;
           self.watertype = content;
       } else {
           self.waterlevel = 0;
@@ -305,155 +277,97 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
   return false;
 }
 
-export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
-  // If we're not step/toss/bounce/fly, we can't move normally
-  // but M_walkmove is usually called for monsters.
-  // Original Quake 2: M_walkmove checks waterlevel or groundentity.
-
-  if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
+export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {
+    if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
       if (!self.groundentity && self.waterlevel === 0) {
           return false;
       }
-  }
+    }
 
+    const dest = {
+        x: self.origin.x + move.x,
+        y: self.origin.y + move.y,
+        z: self.origin.z + move.z
+    };
+
+    const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
+
+    if (trace.fraction === 1.0) {
+        const oldOrigin = { ...self.origin };
+        (self.origin as MutableVec3).x = dest.x;
+        (self.origin as MutableVec3).y = dest.y;
+        (self.origin as MutableVec3).z = dest.z;
+
+        if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
+           if (!M_CheckBottom(self, context)) {
+               (self.origin as MutableVec3).x = oldOrigin.x;
+               (self.origin as MutableVec3).y = oldOrigin.y;
+               (self.origin as MutableVec3).z = oldOrigin.z;
+               return false;
+           }
+        }
+
+        if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
+          CheckGround(self, context);
+        }
+        return true;
+    }
+
+    if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
+        return false;
+    }
+
+    const oldOrigin = { ...self.origin };
+    const up = { ...self.origin, z: self.origin.z + STEPSIZE };
+
+    const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
+    if (traceUp.startsolid || traceUp.allsolid) {
+        return false;
+    }
+
+    const stepOrigin = traceUp.endpos;
+
+    const destUp = {
+        x: stepOrigin.x + move.x,
+        y: stepOrigin.y + move.y,
+        z: stepOrigin.z
+    };
+
+    const traceStep = context.trace(stepOrigin, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
+    if (traceStep.fraction < 1.0) {
+        return false;
+    }
+
+    const destDown = {
+        x: destUp.x,
+        y: destUp.y,
+        z: destUp.z - STEPSIZE
+    };
+
+    const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
+    if (traceDown.startsolid || traceDown.allsolid) {
+         return false;
+    }
+
+    const newPos = traceDown.endpos;
+    (self.origin as MutableVec3).x = newPos.x;
+    (self.origin as MutableVec3).y = newPos.y;
+    (self.origin as MutableVec3).z = newPos.z;
+
+    if (!M_CheckBottom(self, context)) {
+        (self.origin as MutableVec3).x = oldOrigin.x;
+        (self.origin as MutableVec3).y = oldOrigin.y;
+        (self.origin as MutableVec3).z = oldOrigin.z;
+        return false;
+    }
+
+    CheckGround(self, context);
+    return true;
+}
+
+export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
   const delta = yawVector(yawDegrees, distance);
-
-  if ((self.monsterinfo.aiflags & AIFlags.NoStep) !== 0 &&
-      (self.monsterinfo.aiflags & AIFlags.Pathing) !== 0) {
-      // In pathing mode with nostep, we just verify we can go there?
-      // Actually original code SV_StepDirection handles logic.
-  }
-
-  const dest = {
-      x: self.origin.x + delta.x,
-      y: self.origin.y + delta.y,
-      z: self.origin.z + delta.z
-  };
-
-  // 1. Try moving directly to destination
-  const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
-
-  if (trace.fraction === 1.0) {
-      // Success? Check bottom if needed
-      const oldOrigin = { ...self.origin };
-      (self.origin as MutableVec3).x = dest.x;
-      (self.origin as MutableVec3).y = dest.y;
-      (self.origin as MutableVec3).z = dest.z;
-
-      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
-         if (!M_CheckBottom(self, context)) {
-             // Revert
-             (self.origin as MutableVec3).x = oldOrigin.x;
-             (self.origin as MutableVec3).y = oldOrigin.y;
-             (self.origin as MutableVec3).z = oldOrigin.z;
-             return false;
-         }
-      }
-
-      // Update ground status
-      if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
-        CheckGround(self, context);
-      }
-      return true;
-  }
-
-  // 2. If blocked, and not flying/swimming, try stepping up
-  // SV_movestep logic:
-  // if (trace.fraction < 1) ...
-  //   move up STEPSIZE
-  //   trace
-  //   move down STEPSIZE + extra
-
-  if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
-      return false; // Flying/Swimming monsters do not use step logic.
-      // Original sv_movestep handles flying by just returning false if blocked (flymove handled elsewhere?)
-      // Actually M_walkmove calls SV_movestep.
-      // If flying, SV_movestep might try to slide?
-      // But standard Q2 monsters (Flyer/Icarus) use MoveType.Step + EntityFlags.Fly.
-      // So they enter this block.
-      // If they hit a wall, they stop. They don't step up walls.
-  }
-
-  // Allow stepping up
-  const oldOrigin = { ...self.origin };
-  const up = { ...self.origin, z: self.origin.z + STEPSIZE };
-
-  // Test move up
-  const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
-  if (traceUp.startsolid || traceUp.allsolid) {
-      return false; // Can't move up
-  }
-
-  // Move forward at the higher position
-  const destUp = {
-      x: up.x + delta.x,
-      y: up.y + delta.y,
-      z: up.z // stay at up z
-  };
-
-  const traceStep = context.trace(up, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
-  if (traceStep.fraction < 1.0) {
-      return false; // Still blocked
-  }
-
-  // Move down
-  const destDown = {
-      x: destUp.x,
-      y: destUp.y,
-      z: destUp.z - STEPSIZE // Go back down
-  };
-
-  // Trace down to find ground
-  // We need to trace down further than just STEPSIZE to find the floor if it's a small step down
-  // Original uses SV_CheckBottom or similar logic which traces down.
-  // Actually SV_movestep:
-  //   moves down by STEPSIZE.
-  //   calls SV_CheckBottom(self).
-
-  // In our case, M_CheckBottom checks for ledges, but doesn't snap to ground.
-  // We need to find the ground.
-
-  const downTraceDest = {
-      x: destDown.x,
-      y: destDown.y,
-      z: destDown.z - STEPSIZE // Look a bit deeper?
-  };
-
-  // Actually we just want to land on the step.
-  // So we trace down from `destUp` to `destDown`.
-
-  const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
-
-  if (traceDown.startsolid || traceDown.allsolid) {
-       // Should not happen if we came from there?
-       // Unless we stepped onto something that is now inside us?
-       return false;
-  }
-
-  // Use the endpos of the down trace as the new position
-  const newPos = traceDown.endpos;
-
-  // Set position
-  (self.origin as MutableVec3).x = newPos.x;
-  (self.origin as MutableVec3).y = newPos.y;
-  (self.origin as MutableVec3).z = newPos.z;
-
-  // Check bottom (ledge check)
-  if (!M_CheckBottom(self, context)) {
-      // Revert
-      (self.origin as MutableVec3).x = oldOrigin.x;
-      (self.origin as MutableVec3).y = oldOrigin.y;
-      (self.origin as MutableVec3).z = oldOrigin.z;
-      return false;
-  }
-
-  // Update ground status
-  CheckGround(self, context);
-
-  // If we are not on ground after stepping, we might have stepped into air?
-  // But M_CheckBottom should catch that.
-
-  return true;
+  return M_MoveStep(self, delta, true, context);
 }
 
 export function SV_StepDirection(self: Entity, yaw: number, dist: number, context: EntitySystem): boolean {
@@ -496,4 +410,55 @@ export function SV_NewChaseDir(self: Entity, enemy: Entity | null, dist: number,
   }
 
   SV_StepDirection(self, self.ideal_yaw, dist, context);
+}
+
+function SV_CloseEnough(self: Entity, goal: Entity, dist: number): boolean {
+    if (!goal) return false;
+
+    // Using box distance check similar to Quake 2
+    const dx = Math.abs(self.origin.x - goal.origin.x);
+    const dy = Math.abs(self.origin.y - goal.origin.y);
+    const dz = Math.abs(self.origin.z - goal.origin.z);
+
+    return dx <= dist && dy <= dist && dz <= dist;
+}
+
+export function M_MoveToPath(self: Entity, context: EntitySystem): void {
+    const goal = self.goalentity;
+    if (goal && goal.target) {
+        const next = context.pickTarget(goal.target);
+        if (next) {
+            self.goalentity = next;
+            self.ideal_yaw = vectorToYaw({
+                x: next.origin.x - self.origin.x,
+                y: next.origin.y - self.origin.y,
+                z: next.origin.z - self.origin.z
+            });
+        }
+    }
+}
+
+export function M_MoveToGoal(self: Entity, dist: number, context: EntitySystem): boolean {
+    const goal = self.goalentity;
+
+    if (!self.groundentity && !((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
+        return false;
+    }
+
+    if (self.enemy && SV_CloseEnough(self, self.enemy, dist)) {
+        return true;
+    }
+
+    if (goal && goal.classname === 'path_corner') {
+         if (SV_CloseEnough(self, goal, dist)) {
+             M_MoveToPath(self, context);
+             return true;
+         }
+    }
+
+    if (!SV_StepDirection(self, self.ideal_yaw, dist, context)) {
+        return false;
+    }
+
+    return true;
 }

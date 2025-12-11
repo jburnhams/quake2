@@ -64,13 +64,13 @@ describe('M_walkmove', () => {
 
   it('should return false if move hits a wall (and stepping fails)', () => {
     // 1. Forward trace: Hit wall
-    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false, endpos: { x: 5, y: 0, z: 100 } });
 
     // 2. Step Up trace: Clear
-    traceMock.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false });
+    traceMock.mockReturnValueOnce({ fraction: 1.0, startsolid: false, allsolid: false, endpos: { x: 0, y: 0, z: 118 } });
 
     // 3. Step Forward (High) trace: Hit wall again (Too tall to step)
-    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false });
+    traceMock.mockReturnValueOnce({ fraction: 0.5, startsolid: false, allsolid: false, endpos: { x: 5, y: 0, z: 118 } });
 
     const result = M_walkmove(entity, 0, 10, context);
 
