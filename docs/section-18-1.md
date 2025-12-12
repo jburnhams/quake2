@@ -37,35 +37,35 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Reference: `m_move.cpp` lines 450-520
 
 ### 1.1.2 Ground & Bottom Detection
-- [ ] Implement `M_CheckBottom(entity: Entity): boolean`
+- [x] Implement `M_CheckBottom(entity: Entity): boolean`
   - Validate entity is on solid ground
   - Check all 4 corners of bounding box
   - Detect slopes and edges
   - Reference: `m_move.cpp` lines 382-448
 
-- [ ] Implement `M_CheckBottomEx(entity: Entity): number`
+- [x] Implement `M_CheckBottomEx(entity: Entity): number`
   - Extended version returning bottom type
   - Returns: BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA, BOTTOM_NONE
   - Reference: `m_move.cpp` lines 522-590
 
 ### 1.1.3 Flying Monster Movement
-- [ ] Implement `SV_flystep(entity: Entity, move: Vec3, relink: boolean): boolean`
+- [x] Implement `SV_flystep(entity: Entity, move: Vec3, relink: boolean): boolean`
   - Flying monster physics (no ground constraint)
   - Collision detection for flyers
   - Reference: `m_move.cpp` lines 592-680
 
-- [ ] Implement `G_IdealHoverPosition(entity: Entity): Vec3`
+- [x] Implement `G_IdealHoverPosition(entity: Entity): Vec3`
   - Calculate ideal hover height for flying monsters
   - Terrain following for hovers
   - Reference: `m_move.cpp` lines 890-950
 
 ### 1.1.4 Advanced Movement Features
-- [ ] Implement `M_walkmove(entity: Entity, yaw: number, dist: number): boolean`
+- [x] Implement `M_walkmove(entity: Entity, yaw: number, dist: number): boolean`
   - High-level walk function
   - Direction-based movement
   - Reference: `m_move.cpp` lines 682-750
 
-- [ ] Implement `M_droptofloor(entity: Entity): void`
+- [x] Implement `M_droptofloor(entity: Entity): void`
   - Drop entity to ground on spawn
   - Prevent spawning in air
   - Reference: `m_move.cpp` lines 752-810
@@ -101,7 +101,7 @@ This phase covers the foundational AI systems required for monster behavior and 
 **TypeScript File**: `/packages/game/src/ai/targeting.ts`
 
 ### 1.2.1 Sight & Sound Perception
-- [ ] Implement `AI_GetSightClient(entity: Entity): Entity | null`
+- [x] Implement `AI_GetSightClient(entity: Entity): Entity | null`
   - Find visible player from monster perspective
   - Line-of-sight checks
   - FOV restrictions

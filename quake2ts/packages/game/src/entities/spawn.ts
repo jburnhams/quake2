@@ -319,6 +319,26 @@ export function spawnEntitiesFromText(text: string, options: SpawnOptions): Enti
   return spawned;
 }
 
+export function SelectDeathmatchSpawnPoint(entities: EntitySystem): Entity | undefined {
+  const spots = entities.findByClassname('info_player_deathmatch');
+  if (spots.length === 0) {
+    return undefined;
+  }
+
+  // Simple random selection for now
+  // TODO: Add telefrag avoidance and better selection logic (furthest from other players)
+  const index = Math.floor(entities.rng.frandom() * spots.length);
+  return spots[index];
+}
+
+export function SelectSpawnPoint(entities: EntitySystem): Entity | undefined {
+  if (entities.deathmatch) {
+    const spot = SelectDeathmatchSpawnPoint(entities);
+    if (spot) return spot;
+  }
+  return findPlayerStart(entities);
+}
+
 export function findPlayerStart(entities: EntitySystem): Entity | undefined {
   return entities.find(
     (entity: Entity) => entity.classname === 'info_player_start'

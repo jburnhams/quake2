@@ -5,13 +5,12 @@
 import { Entity } from '../entity.js';
 import { canPickupHealth, HealthItem } from '../../inventory/index.js';
 import { GameExports } from '../../index.js';
+import { handleItemPickup, createItemRespawnFunction } from './common.js';
 
 import { Solid } from '../entity.js';
 
 export function createHealthPickupEntity(game: GameExports, healthItem: HealthItem): Partial<Entity> {
-    const respawn = (self: Entity) => {
-        self.solid = Solid.Trigger;
-    };
+    const modelName = `models/items/healing/${healthItem.id.replace('item_health_', '')}/tris.md2`; // Approximate, specific mapping might be needed
 
     return {
         classname: healthItem.id,
@@ -31,13 +30,10 @@ export function createHealthPickupEntity(game: GameExports, healthItem: HealthIt
                 }
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${healthItem.name}`);
-                self.solid = Solid.Not;
-                if (game.deathmatch) {
-                    self.nextthink = game.time + 30;
-                    game.entities.scheduleThink(self, self.nextthink);
-                }
+
+                handleItemPickup(game, self, other);
             }
         },
-        think: respawn,
+        think: createItemRespawnFunction(game, modelName)
     };
 }

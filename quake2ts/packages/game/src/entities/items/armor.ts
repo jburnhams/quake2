@@ -5,13 +5,12 @@
 import { Entity } from '../entity.js';
 import { pickupArmor, ArmorItem } from '../../inventory/index.js';
 import { GameExports } from '../../index.js';
+import { handleItemPickup, createItemRespawnFunction } from './common.js';
 
 import { Solid } from '../entity.js';
 
 export function createArmorPickupEntity(game: GameExports, armorItem: ArmorItem): Partial<Entity> {
-    const respawn = (self: Entity) => {
-        self.solid = Solid.Trigger;
-    };
+    const modelName = `models/items/armor/${armorItem.id.replace('item_armor_', '')}/tris.md2`;
 
     return {
         classname: armorItem.id,
@@ -27,13 +26,10 @@ export function createArmorPickupEntity(game: GameExports, armorItem: ArmorItem)
 
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${armorItem.name}`);
-                self.solid = Solid.Not;
-                if (game.deathmatch) {
-                    self.nextthink = game.time + 30;
-                    game.entities.scheduleThink(self, self.nextthink);
-                }
+
+                handleItemPickup(game, self, other);
             }
         },
-        think: respawn,
+        think: createItemRespawnFunction(game, modelName)
     };
 }

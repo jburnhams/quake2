@@ -150,6 +150,31 @@ function classifyClientVisibility(
   return true;
 }
 
+export function AI_GetSightClient(
+  self: Entity,
+  context: EntitySystem,
+  trace: TraceFunction,
+): Entity | null {
+  if ((self.monsterinfo.aiflags & AIFlags.NoStep) !== 0) {
+    return null;
+  }
+
+  for (let i = 1; i <= context.maxClients; i++) {
+    const ent = context.entities[i];
+    if (!ent || !ent.inUse || ent.health <= 0) {
+      continue;
+    }
+    if ((ent.flags & FL_NOTARGET) !== 0) {
+      continue;
+    }
+    if (visible(self, ent, trace, { throughGlass: false })) {
+      return ent;
+    }
+  }
+
+  return null;
+}
+
 function updateSoundChase(
   self: Entity,
   client: Entity,
