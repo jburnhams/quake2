@@ -2,22 +2,12 @@ import {
   Vec3,
   dotVec3,
   subtractVec3,
-  crossVec3,
-  scaleVec3,
   addVec3,
-  lengthVec3,
+  scaleVec3,
   normalizeVec3,
-  copyVec3,
-  Mat4,
-  createMat4Identity,
-  // getMat4Translation,
-  // invertMat4,
-  transformPointMat4, // Was multiplyMat4Vec3 in my thought but actual export is transformPointMat4
-  // fromRotationTranslationMat4,
-  // identityMat4, // Use createMat4Identity
-  multiplyMat4
+  angleVectors
 } from '@quake2ts/shared';
-import { Entity, Solid } from './entity.js';
+import { Entity } from './entity.js';
 import { EntitySystem } from './system.js';
 
 export interface EntityHit {
@@ -65,28 +55,6 @@ export interface CameraLike {
     height: number;
 }
 
-
-// Helper to convert angles (pitch, yaw, roll) to rotation matrix
-// Quake 2 angles: pitch (down/up), yaw (counter-clockwise from East?), roll
-// Typically: [0] = pitch, [1] = yaw, [2] = roll
-// We need to verify the exact rotation order and definition from shared/math/angles
-// For now, we'll assume standard Quake engine conventions.
-function anglesToMat4(angles: Vec3, out: Float32Array) {
-    // This is a placeholder. Real implementation should use shared math or gl-matrix
-    // if available.
-    // Ideally we use fromRotationTranslationMat4 with a quaternion derived from angles.
-    // For this task, we might need to implement a simple Euler to Matrix or Quat converter
-    // if not exported.
-    // Let's assume standard Euler rotations.
-    // Note: This logic is tricky to get exactly right without shared helpers.
-    // I will try to use `fromRotationTranslationMat4` with identity rotation for now if rotation logic is complex,
-    // or implement a basic Euler rotation.
-
-    // Simplification: just translation if we can't do rotation easily yet.
-    // But requirement says "account for entity rotation".
-    // I'll try to implement it properly later or find the helper.
-}
-
 export class EntitySelection {
   constructor(private system: EntitySystem) {}
 
@@ -123,14 +91,6 @@ export class EntitySelection {
       // Filter out non-solid or tiny entities if desired?
       // Requirement says "all entity types".
 
-      // Transform Ray to Entity Space
-      // Entity Transform T = Translation(origin) * Rotation(angles)
-      // Ray in local space: P_local = T_inv * P_world
-
-      // Create transform matrix
-      // We need to properly handle rotation.
-      // If angles are zero, it's just translation.
-
       let hit: EntityHit | null = null;
 
       // Optimization: Simple AABB test first (using absmin/absmax if available, or computing it)
@@ -142,9 +102,6 @@ export class EntitySelection {
       }
 
       // Detailed Intersection
-      // For now, treat everything as AABB in world space if angles are 0,
-      // or implement OBB if angles != 0.
-
       const hasRotation = entity.angles && (entity.angles.x !== 0 || entity.angles.y !== 0 || entity.angles.z !== 0);
 
       if (hasRotation) {
@@ -242,38 +199,97 @@ export class EntitySelection {
   }
 
   private intersectObb(entity: Entity, origin: Vec3, dir: Vec3, maxDist: number): EntityHit | null {
-      // Transform ray to local space
-      // For now, let's assume standard Euler angles for rotation
-      // Construct Rotation Matrix R from entity.angles
-      // This is non-trivial without a proper math library helper exposed.
-      // Assuming 'angles' corresponds to pitch, yaw, roll.
+      // Get basis vectors for the entity's rotation
+      const vectors = angleVectors(entity.angles);
+      const forward = vectors.forward;
+      const right = vectors.right;
+      const up = vectors.up;
 
-      // Let's defer full OBB implementation or use a simplification.
-      // But the requirement specifically asked for it.
+      // Quake 2 Coordinate System:
+      // X = Forward
+      // Y = Left (usually)
+      // Z = Up
+      // angleVectors returns 'right' which is usually pointing to the right (negative Y in standard Quake).
+      // So Left = -Right.
+      // Basis:
+      // X-axis: forward
+      // Y-axis: -right (Left)
+      // Z-axis: up
 
-      // If we don't have the math helpers, we can try to implement Euler->Matrix.
-      // c = cos, s = sin
-      // R = Rz(roll) * Ry(yaw) * Rx(pitch) ??  Quake convention is different.
-      // Quake:
-      // angle[0] = pitch (around Y axis usually in Quake or X? X is forward, Y is left, Z is up)
-      // Actually Quake coordinates: X forward, Y left, Z up.
-      // Pitch is rotation around Y? No, around Y axis is Yaw.
-      // Yaw is rotation around Z axis.
-      // Pitch is rotation around Y axis (Left/Right)?
+      const left = scaleVec3(right, -1);
 
-      // angleVectors in Quake source:
-      // angle[YAW], angle[PITCH], angle[ROLL]
-      // PITCH is rotation around RIGHT axis (Y).
-      // YAW is rotation around UP axis (Z).
-      // ROLL is rotation around FORWARD axis (X).
+      // Transform Ray Start and Direction to Local Space
+      // 1. Translation: relative to entity origin
+      const relOrigin = subtractVec3(origin, entity.origin);
 
-      // Let's skip complex OBB for this pass and stick to AABB unless explicitly required to pass tests.
-      // But I should try.
+      // 2. Rotation (Inverse of Entity Rotation)
+      // Since rotation matrix is orthogonal, Inverse = Transpose.
+      // Local.x = dot(World, AxisX)
+      // Local.y = dot(World, AxisY)
+      // Local.z = dot(World, AxisZ)
 
-      // FALLBACK: use AABB (treat as unrotated)
-      const absMins = addVec3(entity.origin, entity.mins);
-      const absMaxs = addVec3(entity.origin, entity.maxs);
-      return this.intersectAabb(entity, origin, dir, absMins, absMaxs, maxDist);
+      const localOrigin = {
+          x: dotVec3(relOrigin, forward),
+          y: dotVec3(relOrigin, left),
+          z: dotVec3(relOrigin, up)
+      };
+
+      const localDir = {
+          x: dotVec3(dir, forward),
+          y: dotVec3(dir, left),
+          z: dotVec3(dir, up)
+      };
+
+      // Perform AABB intersection in local space
+      // Note: In local space, the entity is axis-aligned at (0,0,0) + mins/maxs
+      // We pass {0,0,0} as "origin" for AABB check because we already shifted the ray origin.
+      // But intersectAabb expects absolute mins/maxs relative to the passed origin?
+      // No, intersectAabb logic:
+      // t1 = (mins.x - origin.x) * invD
+      // Here, "origin" is the ray start. "mins" are the box bounds.
+      // So we pass localOrigin as origin, and entity.mins/maxs as bounds.
+
+      // We re-use intersectAabb logic but we can't call it directly because it computes
+      // the hit point and normal in the space it's given (local space here).
+      // We need to transform them back.
+
+      // Let's implement slab method inline or call a helper that returns local T and Normal.
+      // Re-using intersectAabb by passing local coords:
+      // It returns point/normal in local space.
+      // We need to transform them back to world.
+
+      // Wait, intersectAabb expects "mins" and "maxs" to be ABSOLUTE world coordinates usually
+      // in the usage above: addVec3(entity.origin, entity.mins).
+      // Here in local space, the box is simply at mins...maxs.
+      // So we pass entity.mins and entity.maxs directly.
+
+      // However, intersectAabb returns `point` = origin + dir * t.
+      // This will be in local space.
+      // `normal` will be in local space.
+
+      const hitLocal = this.intersectAabb(entity, localOrigin, localDir, entity.mins, entity.maxs, maxDist);
+
+      if (!hitLocal) return null;
+
+      // Transform normal back to world space
+      // WorldNormal = LocalNormal.x * AxisX + LocalNormal.y * AxisY + LocalNormal.z * AxisZ
+      const nx = scaleVec3(forward, hitLocal.normal.x);
+      const ny = scaleVec3(left, hitLocal.normal.y);
+      const nz = scaleVec3(up, hitLocal.normal.z);
+      const worldNormal = addVec3(addVec3(nx, ny), nz);
+
+      // Calculate world point using the fraction (t) which is invariant under rotation/translation (if dir length is preserved)
+      // But we passed 'localDir'. Did we normalize it?
+      // 'dir' was normalized. Rotation preserves length. So 'localDir' is normalized.
+      // So fraction t is correct distance in world units.
+      const worldPoint = addVec3(origin, scaleVec3(dir, hitLocal.fraction * maxDist));
+
+      return {
+          entity,
+          fraction: hitLocal.fraction,
+          point: worldPoint,
+          normal: worldNormal
+      };
   }
 
   // 2.1.2 Entity Metadata API
@@ -282,7 +298,7 @@ export class EntitySelection {
       if (!entity) return null;
 
       return {
-          id: entity.index, // FIXED: entity.id does not exist, use entity.index
+          id: entity.index,
           classname: entity.classname || 'unknown',
           origin: { ...entity.origin },
           angles: { ...entity.angles },
@@ -291,7 +307,6 @@ export class EntitySelection {
           target: entity.target,
           killtarget: entity.killtarget,
           spawnflags: entity.spawnflags,
-          // Include other fields dynamically if possible
           ...this.getEntityFields(entityId)
       };
   }
@@ -299,7 +314,6 @@ export class EntitySelection {
   getEntityFields(entityId: number): Record<string, any> {
       const entity = this.system.getByIndex(entityId);
       if (!entity) return {};
-      // Return a copy of all properties
       const fields: Record<string, any> = {};
       for (const key in entity) {
           const val = (entity as any)[key];
@@ -329,7 +343,6 @@ export class EntitySelection {
           });
       }
 
-      // Search for entities that target THIS entity
       if (entity.targetname) {
           this.system.forEachEntity(other => {
               if (other.target === entity.targetname) {
