@@ -36,14 +36,15 @@ export class ClientEffectSystem {
     }
 
     // Helper to add dlight
-    private addLight(key: number | undefined, origin: Vec3, color: Vec3, radius: number, minLight: number, time: number) {
+    private addLight(key: number | undefined, origin: Vec3, color: Vec3, radius: number, minLight: number, die: number, radiusSpeed: number = 0) {
         this.dlightManager.addLight({
             key,
             origin: copyVec3(origin),
             color,
             intensity: radius,
             minLight,
-            die: time
+            die: die,
+            radiusSpeed
         }, 0);
     }
 
@@ -74,43 +75,60 @@ export class ClientEffectSystem {
         const silenced = (weapon & 128) !== 0;
         weapon &= ~128;
 
-        let radius = silenced ? 100 + (Math.random() * 31) : 200 + (Math.random() * 31);
         const minLight = 32;
         const duration = 0.1;
         const die = time + duration;
         const volume = silenced ? 0.2 : 1.0;
 
+        let radius = silenced ? 100 : 200;
+        if (Math.random() < 0.5) radius += Math.random() * 31;
+
         let color: Vec3 = { x: 1, y: 1, z: 0 }; // Default yellow
 
         switch (weapon) {
             case MZ_BLASTER:
-            case MZ_HYPERBLASTER:
+                radius = 150;
+                color = { x: 1, y: 1, z: 0 };
+                break;
             case MZ_MACHINEGUN:
-            case MZ_SHOTGUN:
-            case MZ_SSHOTGUN:
             case MZ_CHAINGUN1:
             case MZ_CHAINGUN2:
             case MZ_CHAINGUN3:
+                 radius = 150;
                  color = { x: 1, y: 1, z: 0 };
                  break;
-
+            case MZ_SHOTGUN:
+            case MZ_SSHOTGUN:
+                 radius = 200;
+                 color = { x: 1, y: 1, z: 0 };
+                 break;
+            case MZ_HYPERBLASTER:
+                 radius = 250;
+                 color = { x: 1, y: 1, z: 0 };
+                 break;
             case MZ_BLUEHYPERBLASTER:
+                radius = 250;
                 color = { x: 0, y: 0, z: 1 };
                 break;
 
             case MZ_RAILGUN:
+                radius = 150;
                 color = { x: 0.5, y: 0.5, z: 1.0 };
                 break;
 
             case MZ_ROCKET:
             case MZ_GRENADE:
+                radius = 300;
                 color = { x: 1, y: 0.5, z: 0.2 };
                 break;
 
             case MZ_BFG:
+                radius = 400;
                 color = { x: 0, y: 1, z: 0 };
                 break;
         }
+
+        if (silenced) radius *= 0.75;
 
         this.addLight(entNum, flashOrigin, color, radius, minLight, die);
 
@@ -152,8 +170,12 @@ export class ClientEffectSystem {
                  {
                      const color: Vec3 = { x: 1, y: 0.5, z: 0.2 };
                      const duration = 0.5;
+                     const startRadius = 50;
+                     const endRadius = 400; // Expanding to 400
+                     // Speed = delta / duration = 350 / 0.5 = 700
+                     const speed = (endRadius - startRadius) / duration;
 
-                     this.addLight(undefined, pos, color, 300, 0, time + duration);
+                     this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/rocklx1a.wav", 1.0, 0.5);
                  }
                  break;
@@ -162,7 +184,11 @@ export class ClientEffectSystem {
              case TempEntity.BFG_BIGEXPLOSION:
                  {
                      const color: Vec3 = { x: 0, y: 1, z: 0 };
-                     this.addLight(undefined, pos, color, 300, 0, time + 0.5);
+                     const duration = 0.5;
+                     const startRadius = 200;
+                     const endRadius = 500;
+                     const speed = (endRadius - startRadius) / duration;
+                     this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/bfg__x1b.wav", 1.0, 0.5);
                  }
                  break;

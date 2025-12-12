@@ -11,13 +11,16 @@ export interface DLight {
   readonly color: Vec3;
 
   /** Intensity/Radius of the light. */
-  readonly intensity: number;
+  intensity: number;
 
   /** Minimum lighting value to add (usually 0). */
   readonly minLight?: number;
 
   /** Time when the light should be removed (seconds). */
   die: number;
+
+  /** Rate of change for intensity (units per second). Default 0. */
+  readonly radiusSpeed?: number;
 }
 
 export const MAX_DLIGHTS = 32;
@@ -53,11 +56,23 @@ export class DynamicLightManager {
   }
 
   /**
-   * Updates the list of active lights, removing expired ones.
+   * Updates the list of active lights, removing expired ones and animating properties.
    * @param time Current game time in seconds.
+   * @param dt Delta time in seconds.
    */
-  update(time: number): void {
+  update(time: number, dt: number = 0): void {
+    // Filter dead lights
     this.lights = this.lights.filter(l => l.die > time);
+
+    // Animate lights
+    if (dt > 0) {
+        for (const light of this.lights) {
+            if (light.radiusSpeed !== undefined && light.radiusSpeed !== 0) {
+                light.intensity += light.radiusSpeed * dt;
+                if (light.intensity < 0) light.intensity = 0;
+            }
+        }
+    }
   }
 
   /**

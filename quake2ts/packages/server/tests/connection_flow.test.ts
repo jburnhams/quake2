@@ -24,9 +24,13 @@ describe('DedicatedServer Connection Flow', () => {
   let server: DedicatedServer;
   let mockGame: GameExports;
   let sentMessages: Uint8Array[] = [];
+  let consoleLogSpy: any;
+  let consoleWarnSpy: any;
 
   beforeEach(async () => {
     sentMessages = [];
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     mockGame = {
       init: vi.fn(),
@@ -52,6 +56,8 @@ describe('DedicatedServer Connection Flow', () => {
   afterEach(() => {
     server.stop();
     vi.clearAllMocks();
+    consoleLogSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 
   it('should handle "connect" command', () => {
