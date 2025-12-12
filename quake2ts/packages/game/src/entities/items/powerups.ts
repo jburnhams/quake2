@@ -5,13 +5,13 @@
 import { Entity } from '../entity.js';
 import { pickupPowerup, PowerupItem } from '../../inventory/index.js';
 import { GameExports } from '../../index.js';
+import { handleItemPickup, createItemRespawnFunction } from './common.js';
 
 import { Solid } from '../entity.js';
 
 export function createPowerupPickupEntity(game: GameExports, powerupItem: PowerupItem): Partial<Entity> {
-    const respawn = (self: Entity) => {
-        self.solid = Solid.Trigger;
-    };
+    const respawnTime = powerupItem.id === 'item_quad' || powerupItem.id === 'item_invulnerability' ? 60 : 30;
+    const modelName = `models/items/powerups/${powerupItem.id.replace('item_', '')}/tris.md2`;
 
     return {
         classname: powerupItem.id,
@@ -24,13 +24,10 @@ export function createPowerupPickupEntity(game: GameExports, powerupItem: Poweru
             if (pickupPowerup(other.client, powerupItem, game.time * 1000)) {
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${powerupItem.name}`);
-                self.solid = Solid.Not;
-                if (game.deathmatch) {
-                    self.nextthink = game.time + 30;
-                    game.entities.scheduleThink(self, self.nextthink);
-                }
+
+                handleItemPickup(game, self, other, respawnTime);
             }
         },
-        think: respawn,
+        think: createItemRespawnFunction(game, modelName)
     };
 }
