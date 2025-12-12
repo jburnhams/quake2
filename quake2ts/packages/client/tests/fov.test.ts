@@ -19,6 +19,7 @@ const mockRenderer = {
   drawCenterString: vi.fn(),
   drawString: vi.fn(),
   renderFrame: vi.fn(),
+  getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
   width: 800,
   height: 600,
 } as unknown as Renderer;

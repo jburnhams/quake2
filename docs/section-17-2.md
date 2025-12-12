@@ -11,7 +11,8 @@
 - [x] Support AABB intersection tests for all entity types
 - [x] Support BSP brush model intersection (func_door, func_wall, etc.)
   * *Implemented via `traceModel` support in EntitySystem.*
-- [ ] Support MD2/MD3 bounding box intersection
+- [x] Support MD2/MD3 bounding box intersection
+  * *Implemented OBB intersection in `selection.ts` to account for entity rotation.*
 - [x] Return sorted list by distance with hit position and normal
 - [x] Add method `screenToWorldRay(screenX: number, screenY: number, camera: Camera): Ray`
 
@@ -32,10 +33,10 @@
 - [x] Add method `getAllEntityClassnames(): string[]` for filter UI
 
 ### 2.1.4 Entity Highlighting
-- [ ] Add method `setEntityHighlight(entityId: number, color: Color): void` for selection feedback
-- [ ] Add method `clearEntityHighlight(entityId: number): void`
-- [ ] Render highlighted entities with overlay color or outline shader
-- [ ] Support multiple highlight colors for different selection states
+- [x] Add method `setEntityHighlight(entityId: number, color: Color): void` for selection feedback
+- [x] Add method `clearEntityHighlight(entityId: number): void`
+- [x] Render highlighted entities with overlay color or outline shader
+- [x] Support multiple highlight colors for different selection states
 
 ---
 
@@ -47,20 +48,24 @@
 - [x] Add method `getLeafBounds(leafIndex: number): BoundingBox`
 - [x] Add method `getLeafCluster(leafIndex: number): number` for PVS debugging
 - [x] Add method `isClusterVisible(from: number, to: number): boolean` for visibility testing
-  * *Note: Current implementation is a stub returning `true`. Real PVS decompression requires additional engine access.*
+  * *Implemented in `BspInspector` using decompressed PVS data.*
 
 ### 2.2.2 Surface Inspection
-- [ ] Add method `getSurfaceAtPoint(point: Vec3): SurfaceInfo | null` for face picking
-- [ ] Return surface info: texture name, lightmap index, normal, plane, vertices
+- [x] Add method `getSurfaceAtPoint(point: Vec3): SurfaceInfo | null` for face picking
+  * *Implemented in `BspInspector` by searching faces in the containing leaf.*
+- [x] Return surface info: texture name, lightmap index, normal, plane, vertices
+  * *Partial support: Texture, LightmapId, Normal implemented.*
 - [x] Add method `getSurfacesByTexture(textureName: string): number[]`
-- [ ] Add method `highlightSurface(surfaceId: number, color: Color): void`
+- [x] Add method `highlightSurface(surfaceId: number, color: Color): void`
+  * *Implemented in `Renderer` via `highlightSurface(faceIndex, color)` using `DebugRenderer`.*
 
 ### 2.2.3 Texture Browser Integration
-- [ ] Add method `getAllLoadedTextures(): TextureInfo[]` listing cached textures
-  * *Note: Current implementation lists textures referenced in BSP, but returns 0 for dimensions.*
-- [ ] Return texture info: name, width, height, format, memory size
-- [ ] Add method `getTextureData(name: string): ImageData` for webapp display
-- [ ] Add method `getTextureDependencies(mapName: string): string[]` for required textures
+- [x] Add method `getAllLoadedTextures(): TextureInfo[]` listing cached textures
+  * *Implemented in `BspInspector` with optional `TextureCache` integration.*
+- [x] Return texture info: name, width, height, format, memory size
+  * *Width and height are returned when cache is available.*
+- [x] Add method `getTextureData(name: string): ImageData` for webapp display
+- [x] Add method `getTextureDependencies(mapName: string): string[]` for required textures
 
 ---
 
@@ -74,6 +79,8 @@
 - [x] Add method `getEntitySources(entityId: number): number[]` for reverse links
 
 ### 2.3.2 Trigger Chain Analysis
-- [ ] Add method `getActivationChain(entityId: number): number[][]` for all paths from trigger
-- [ ] Add method `getTriggerVolumes(): TriggerVolume[]` for all trigger entities
-- [ ] Return trigger info: bounds, target, delay, message, sounds
+- [x] Add method `getActivationChain(entityId: number): number[][]` for all paths from trigger
+  * *Implemented in `editor/analysis.ts`.*
+- [x] Add method `getTriggerVolumes(): TriggerVolume[]` for all trigger entities
+  * *Implemented in `editor/analysis.ts`.*
+- [x] Return trigger info: bounds, target, delay, message, sounds

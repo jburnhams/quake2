@@ -50,6 +50,8 @@ export interface PredictionSettings {
   readonly pmDuckSpeed: number;
   readonly pmWaterSpeed: number;
   readonly groundIsSlick: boolean;
+  readonly errorTolerance: number;
+  readonly errorSnapThreshold: number;
 }
 
 const DEFAULTS: PredictionSettings = {
@@ -63,6 +65,8 @@ const DEFAULTS: PredictionSettings = {
   pmDuckSpeed: 100,
   pmWaterSpeed: 400,
   groundIsSlick: false,
+  errorTolerance: 0.1,
+  errorSnapThreshold: 10,
 };
 
 const DEFAULT_GRAVITY = 800;
@@ -236,6 +240,7 @@ export class ClientPrediction {
   private readonly settings: PredictionSettings;
   private readonly trace: PmoveTraceFn;
   private readonly pointContents: (p: Vec3) => number;
+  private enabled = true;
   private baseFrame: GameFrameResult<PredictionState> = {
     frame: 0,
     timeMs: 0,
@@ -252,6 +257,10 @@ export class ClientPrediction {
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
+  setPredictionEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
   setAuthoritative(frame: GameFrameResult<PredictionState>): PredictionState {
     const normalized = normalizeState(frame.state);
 
@@ -259,48 +268,52 @@ export class ClientPrediction {
         return this.predicted; // Ignore old or duplicate frames
     }
 
-    // Calculate prediction error before updating baseFrame
-    // We need to know what we *thought* the state was at this frame.
-    // Since we don't store history, we'll re-simulate from the OLD base frame up to this new frame's sequence.
+    if (this.enabled) {
+      // Calculate prediction error before updating baseFrame
+      // We need to know what we *thought* the state was at this frame.
+      // Since we don't store history, we'll re-simulate from the OLD base frame up to this new frame's sequence.
 
-    // 1. Find the command that matches the new frame's sequence (if we have it)
-    // The new frame corresponds to state AFTER executing command with sequence = frame.frame
+      // 1. Find the command that matches the new frame's sequence (if we have it)
+      // The new frame corresponds to state AFTER executing command with sequence = frame.frame
 
-    let predictedAtFrame: PredictionState | undefined;
+      let predictedAtFrame: PredictionState | undefined;
 
-    // We can only check error if we have the commands to reproduce the state up to this point
-    const relevantCommands = this.commands.filter(c => c.sequence <= frame.frame && c.sequence > this.baseFrame.frame);
+      // We can only check error if we have the commands to reproduce the state up to this point
+      const relevantCommands = this.commands.filter(c => c.sequence <= frame.frame && c.sequence > this.baseFrame.frame);
 
-    if (relevantCommands.length > 0 || this.baseFrame.frame === frame.frame) {
-         let tempState = normalizeState(this.baseFrame.state);
-         for (const cmd of relevantCommands) {
-             tempState = simulateCommand(tempState, cmd, this.settings, this.trace, this.pointContents);
-         }
-         predictedAtFrame = tempState;
-    }
+      if (relevantCommands.length > 0 || this.baseFrame.frame === frame.frame) {
+          let tempState = normalizeState(this.baseFrame.state);
+          for (const cmd of relevantCommands) {
+              tempState = simulateCommand(tempState, cmd, this.settings, this.trace, this.pointContents);
+          }
+          predictedAtFrame = tempState;
+      }
 
-    if (predictedAtFrame) {
-        const error = subtractVec3(predictedAtFrame.origin, normalized.origin);
-        const errorLen = lengthVec3(error);
+      if (predictedAtFrame) {
+          const error = subtractVec3(predictedAtFrame.origin, normalized.origin);
+          const errorLen = lengthVec3(error);
 
-        // If error is large (> 10 units), snap immediately (reset error)
-        // If error is small, add it to existing error to smooth out
-        if (errorLen > 10) {
-            this.predictionError = ZERO_VEC3;
-        } else if (errorLen > 0.1) {
-             // Accumulate error? Or just set it?
-             // Usually we set it, and then decay it in simulateCommand or frame update.
-             // But wait, "prediction error" is usually added to the view position to keep the camera
-             // where the client PREDICTED it was, then slowly slide it to the server position.
-             // So if we predicted X, and server says X-5, we are at X-5 but we want to render at X-5+5 = X.
-             // So error = predicted - server.
-             this.predictionError = error;
-        } else {
-            this.predictionError = ZERO_VEC3;
-        }
+          // If error is large (> errorSnapThreshold), snap immediately (reset error)
+          // If error is small, add it to existing error to smooth out
+          if (errorLen > this.settings.errorSnapThreshold) {
+              this.predictionError = ZERO_VEC3;
+          } else if (errorLen > this.settings.errorTolerance) {
+              // Accumulate error? Or just set it?
+              // Usually we set it, and then decay it in simulateCommand or frame update.
+              // But wait, "prediction error" is usually added to the view position to keep the camera
+              // where the client PREDICTED it was, then slowly slide it to the server position.
+              // So if we predicted X, and server says X-5, we are at X-5 but we want to render at X-5+5 = X.
+              // So error = predicted - server.
+              this.predictionError = error;
+          } else {
+              this.predictionError = ZERO_VEC3;
+          }
+      } else {
+          // Can't verify prediction, reset error
+          this.predictionError = ZERO_VEC3;
+      }
     } else {
-        // Can't verify prediction, reset error
-        this.predictionError = ZERO_VEC3;
+      this.predictionError = ZERO_VEC3;
     }
 
     this.baseFrame = { ...frame, state: normalized };
@@ -344,8 +357,10 @@ export class ClientPrediction {
   private recompute(): PredictionState {
     let state = normalizeState(this.baseFrame.state);
 
-    for (const cmd of this.commands) {
-      state = simulateCommand(state, cmd, this.settings, this.trace, this.pointContents);
+    if (this.enabled) {
+      for (const cmd of this.commands) {
+        state = simulateCommand(state, cmd, this.settings, this.trace, this.pointContents);
+      }
     }
 
     this.predicted = state;

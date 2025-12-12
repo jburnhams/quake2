@@ -53,7 +53,7 @@ describe('M_walkmove', () => {
     traceMock.mockReturnValueOnce({ fraction: 1.0, endpos: { x: 10, y: 0, z: 100 } });
 
     // 2. M_CheckBottom traces: succeed (hit ground)
-    traceMock.mockReturnValue({ fraction: 0.5 });
+    traceMock.mockReturnValue({ fraction: 0.5, endpos: { x: 10, y: 0, z: 80 } });
     pointContentsMock.mockReturnValue(0);
 
     const result = M_walkmove(entity, 0, 10, context);

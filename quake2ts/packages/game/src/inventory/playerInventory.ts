@@ -12,7 +12,7 @@ import {
   PowerupId
 } from '@quake2ts/shared';
 import { ArmorType, ARMOR_INFO, type RegularArmorState } from '../combat/armor.js';
-import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem } from './items.js';
+import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem, FlagItem } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { WeaponStateEnum } from '../combat/weapons/state.js';
@@ -129,6 +129,8 @@ export interface PlayerClient {
     grenade_time?: number | null;
     grenade_finished_time?: number | null;
     grenade_blew_up?: boolean;
+    // Weapon charging
+    weapon_charge_start_time?: number;
     // Animation
     anim_priority?: number;
     anim_end?: number;
@@ -148,6 +150,7 @@ export interface PlayerClient {
     oldgroundentity?: any; // Entity
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
+    ping?: number; // Added for lag compensation
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {
@@ -449,6 +452,37 @@ export function pickupKey(inventory: PlayerInventory, item: KeyItem, time: numbe
         return res;
     }
 
+    return false;
+}
+
+export function pickupFlag(client: PlayerClient, item: FlagItem, time: number): boolean {
+    const inventory = client.inventory;
+    let keyId: KeyId | null = null;
+    let icon = '';
+
+    if (item.team === 'red') {
+        keyId = KeyId.RedFlag;
+        icon = 'i_ctf1';
+    } else {
+        keyId = KeyId.BlueFlag;
+        icon = 'i_ctf2';
+    }
+
+    // TODO: Verify if player can pick up this flag (team check)
+    // For now, assume yes and let caller handle logic or strict checks here later
+
+    if (keyId) {
+        // Flag pickup logic in CTF often replaces existing flag if carrying one?
+        // Usually you can only carry one.
+        // And you shouldn't be able to carry your own flag (unless returning it).
+
+        // Using addKey for now as storage
+        const res = addKey(inventory, keyId);
+        if (res) setPickup(inventory, icon, time);
+        return true;
+        // Always return true for pickup success even if we already had it?
+        // In Q2, touching a flag usually does something.
+    }
     return false;
 }
 

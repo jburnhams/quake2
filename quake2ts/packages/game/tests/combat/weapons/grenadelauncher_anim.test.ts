@@ -45,7 +45,7 @@ describe('Grenade Launcher Animation', () => {
         game.init(0);
 
         sys = game.entities;
-        game.init(1.0);
+        game.init(1000);
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -64,7 +64,7 @@ describe('Grenade Launcher Animation', () => {
         player.client.weapon_think_time = 0;
     });
 
-    it('should fire and play animation when button is pressed', () => {
+    it('should start charging when button is pressed', () => {
         player.client.buttons = 1; // BUTTON_ATTACK
 
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
@@ -73,27 +73,57 @@ describe('Grenade Launcher Animation', () => {
 
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
         expect(player.client.gun_frame).toBe(FRAME_GRENADELAUNCHER_ACTIVATE_LAST + 1); // 6
+        expect(player.client.weapon_charge_start_time).toBeDefined();
 
-        // Advance time to trigger fire logic
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
-        player.client.weapon_think_time = 0;
-
-        grenadeLauncherThink(player, sys);
-
-        // Frame 6 is fire frame.
-        expect(player.client.inventory.ammo.counts[AmmoType.Grenades]).toBe(9);
+        // Should NOT fire yet (holding)
+        expect(player.client.inventory.ammo.counts[AmmoType.Grenades]).toBe(10);
     });
 
-    it('should cycle through fire animation', () => {
-        player.client.buttons = 0;
-        player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
-        player.client.gun_frame = 6;
+    it('should fire on release (tap)', () => {
+        player.client.buttons = 1; // BUTTON_ATTACK
+        grenadeLauncherThink(player, sys); // Ready -> Firing
 
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
+        // Release button
+        player.client.buttons = 0;
+        player.client.weapon_think_time = 0; // ready to think
+
+        grenadeLauncherThink(player, sys);
+
+        // Should fire
+        expect(player.client.inventory.ammo.counts[AmmoType.Grenades]).toBe(9);
+        // Advance frame
+        expect(player.client.gun_frame).toBe(7);
+        expect(player.client.weapon_charge_start_time).toBeUndefined();
+    });
+
+    it('should fire on max hold', () => {
+        player.client.buttons = 1; // BUTTON_ATTACK
+        grenadeLauncherThink(player, sys); // Ready -> Firing
+
+        const startTime = player.client.weapon_charge_start_time; // in seconds
+
+        // Hold for 3.1 seconds
+        // game.init takes milliseconds
+        game.init((startTime + 3.1) * 1000);
         player.client.weapon_think_time = 0;
 
         grenadeLauncherThink(player, sys);
+
+        // Should fire due to timeout
+        expect(player.client.inventory.ammo.counts[AmmoType.Grenades]).toBe(9);
         expect(player.client.gun_frame).toBe(7);
+        expect(player.client.weapon_charge_start_time).toBeUndefined();
+    });
+
+    it('should cycle through fire animation after firing', () => {
+        player.client.buttons = 0;
+        player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
+        player.client.gun_frame = 7; // Already fired
+
+        player.client.weapon_think_time = 0;
+
+        grenadeLauncherThink(player, sys);
+        expect(player.client.gun_frame).toBe(8);
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
     });
 });

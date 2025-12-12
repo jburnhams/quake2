@@ -3,6 +3,7 @@ import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState, Pr
 import { FrameDiff, DemoEvent, DemoEventType, EventSummary, DemoHeader, ServerInfo, DemoStatistics, PlayerStatistics, WeaponStatistics } from './analysis.js';
 import { DemoAnalyzer } from './analyzer.js';
 import { Vec3 } from '@quake2ts/shared';
+import { DemoCameraMode } from './camera.js';
 
 export enum PlaybackState {
   Stopped,
@@ -52,6 +53,13 @@ export class DemoPlaybackController {
   private cachedConfigStrings: Map<number, string> | null = null;
   private cachedServerInfo: ServerInfo | null = null;
   private cachedStatistics: DemoStatistics | null = null;
+  private cachedPlayerStats: Map<number, PlayerStatistics> | null = null;
+  private cachedWeaponStats: Map<number, WeaponStatistics[]> | null = null;
+
+  // Camera State
+  private cameraMode: DemoCameraMode = DemoCameraMode.FirstPerson;
+  private thirdPersonDistance: number = 80;
+  private thirdPersonOffset: Vec3 = { x: 0, y: 0, z: 0 };
 
   constructor() {}
 
@@ -80,6 +88,8 @@ export class DemoPlaybackController {
     this.cachedConfigStrings = null;
     this.cachedServerInfo = null;
     this.cachedStatistics = null;
+    this.cachedPlayerStats = null;
+    this.cachedWeaponStats = null;
   }
 
   public play() {
@@ -124,6 +134,19 @@ export class DemoPlaybackController {
 
   public getSpeed(): number {
       return this.playbackSpeed;
+  }
+
+  public getPlaybackSpeed(): number {
+      return this.playbackSpeed;
+  }
+
+  /**
+   * Returns the interpolation factor (0.0 to 1.0) for the current frame.
+   * Used for smooth rendering between demo frames.
+   */
+  public getInterpolationFactor(): number {
+      if (this.frameDuration <= 0) return 0;
+      return Math.max(0, Math.min(1, this.accumulatedTime / this.frameDuration));
   }
 
   public update(dt: number) {
@@ -534,6 +557,16 @@ export class DemoPlaybackController {
       return this.cachedStatistics;
   }
 
+  public getPlayerStatistics(playerIndex: number): PlayerStatistics | null {
+      this.ensureAnalysis();
+      return this.cachedPlayerStats?.get(playerIndex) || null;
+  }
+
+  public getWeaponStatistics(entityId: number): WeaponStatistics[] | null {
+      this.ensureAnalysis();
+      return this.cachedWeaponStats?.get(entityId) || null;
+  }
+
   private ensureAnalysis() {
       if (!this.cachedEvents && this.buffer) {
           const analyzer = new DemoAnalyzer(this.buffer);
@@ -544,6 +577,24 @@ export class DemoPlaybackController {
           this.cachedConfigStrings = result.configStrings;
           this.cachedServerInfo = result.serverInfo;
           this.cachedStatistics = result.statistics;
+          this.cachedPlayerStats = result.playerStats;
+          this.cachedWeaponStats = result.weaponStats;
       }
+  }
+
+  public setCameraMode(mode: DemoCameraMode) {
+      this.cameraMode = mode;
+  }
+
+  public getCameraMode(): DemoCameraMode {
+      return this.cameraMode;
+  }
+
+  public setThirdPersonDistance(distance: number) {
+      this.thirdPersonDistance = distance;
+  }
+
+  public setThirdPersonOffset(offset: Vec3) {
+      this.thirdPersonOffset = offset;
   }
 }

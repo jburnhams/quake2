@@ -66,6 +66,7 @@ interface FrameRenderOptions {
   readonly timeSeconds?: number;
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
+  readonly disableLightmaps?: boolean; // New option to toggle lightmaps
 }
 
 interface FrameRendererDependencies {
@@ -234,7 +235,7 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode } = options;
+    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode, disableLightmaps } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -284,9 +285,15 @@ export const createFrameRenderer = (
            activeRenderMode = renderMode;
         }
 
+        // Apply lightmap disable override
+        let effectiveLightmap = resolvedTextures.lightmap;
+        if (disableLightmaps) {
+            effectiveLightmap = undefined;
+        }
+
         const batchKey: BatchKey = {
           diffuse: resolvedTextures.diffuse,
-          lightmap: resolvedTextures.lightmap,
+          lightmap: effectiveLightmap,
           surfaceFlags: geometry.surfaceFlags,
           styleKey: faceStyles?.join(',') ?? '',
         };
@@ -298,18 +305,15 @@ export const createFrameRenderer = (
           lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
           lastBatchKey.styleKey === batchKey.styleKey;
 
-        // Note: Batching logic doesn't strictly account for renderMode changes per-face
-        // (e.g. mixed missing/present textures). However, breaking batch on texture change
-        // implicitly handles this for now.
-
         if (!isSameBatch) {
           stats.batches += 1;
           cache.diffuse = undefined;
           cache.lightmap = undefined;
 
-          const textures = bindSurfaceTextures(geometry, world, cache, resolvedTextures);
+          // Note: we pass resolvedTextures manually constructed to respect disableLightmaps
+          const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
+          const textures = bindSurfaceTextures(geometry, world, cache, effectiveTextures);
 
-          // Use material properties if available
           const texScroll = material ? material.scrollOffset : undefined;
           const warp = material ? material.warp : undefined;
 
@@ -329,8 +333,8 @@ export const createFrameRenderer = (
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;
         } else {
-          // Even if batch is same, ensure texture units are active
-          bindSurfaceTextures(geometry, world, cache, resolvedTextures);
+          const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
+          bindSurfaceTextures(geometry, world, cache, effectiveTextures);
           if (cachedState) {
             applySurfaceState(gl, cachedState);
           }
