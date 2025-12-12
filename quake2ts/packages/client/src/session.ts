@@ -1,10 +1,8 @@
 import { ClientExports, createClient, ClientImports } from './index.js';
 import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine, SaveStorage } from '@quake2ts/game';
 import { EngineImports, Renderer, EngineHost, TraceResult } from '@quake2ts/engine';
-import { UserCommand, Vec3, CollisionPlane } from '@quake2ts/shared';
-import { InputController, InputBindings } from './input/controller.js';
-// We need to import InputBindings class but it is not exported from controller.
-// It is exported from bindings.js which is re-exported from index.js
+import { UserCommand, Vec3, CollisionPlane, PlayerState } from '@quake2ts/shared';
+import { InputController } from './input/controller.js';
 import { InputBindings as InputBindingsClass } from './input/bindings.js';
 import { MenuSystem } from './ui/menu/system.js';
 
