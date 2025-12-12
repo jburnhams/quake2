@@ -325,7 +325,7 @@ insane_move_run_normal = {
     frames: frames_walk_normal.map(f => ({
         ai: (s, d, c) => {
             if (f.ai === frames_walk_normal[0].ai) insane_scream(s, c);
-            ai_run(s, d as number, MONSTER_TICK, c);
+            ai_run(s, d as number, c);
         },
         dist: f.dist
     })),
@@ -353,7 +353,7 @@ insane_move_run_insane = {
     frames: frames_walk_insane.map(f => ({
         ai: (s, d, c) => {
             if (f.ai === frames_walk_insane[0].ai) insane_scream(s, c);
-            ai_run(s, d as number, MONSTER_TICK, c);
+            ai_run(s, d as number, c);
         },
         dist: f.dist
     })),

@@ -52,19 +52,19 @@ const BOSS2_MG_RIGHT_OFFSET: Vec3 = { x: 30, y: -20, z: 0 };
 
 // Wrappers
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-  ai_stand(self, MONSTER_TICK, context);
+  ai_stand(self, dist, context);
 }
 
 function monster_ai_walk(self: Entity, dist: number, context: any): void {
-  ai_walk(self, dist, MONSTER_TICK, context);
+  ai_walk(self, dist, context);
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
-  ai_run(self, dist, MONSTER_TICK, context);
+  ai_run(self, dist, context);
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-  ai_charge(self, dist, MONSTER_TICK, context);
+  ai_charge(self, dist, context);
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {

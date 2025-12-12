@@ -156,6 +156,7 @@ export class EntitySystem {
   private readonly callbackToName: Map<AnyCallback, string>;
   private spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
+  private currentDeltaSeconds = 0;
   private frameNumber = 0;
   private spawnCount = 0;
 
@@ -227,6 +228,10 @@ export class EntitySystem {
       }
     }
     return arr;
+  }
+
+  get deltaSeconds(): number {
+      return this.currentDeltaSeconds;
   }
 
   constructor(
@@ -425,6 +430,7 @@ export class EntitySystem {
   }
 
   beginFrame(timeSeconds: number): void {
+    this.currentDeltaSeconds = timeSeconds - this.currentTimeSeconds;
     this.currentTimeSeconds = timeSeconds;
     this.frameNumber++;
     this.targetAwareness.timeSeconds = timeSeconds;

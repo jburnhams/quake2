@@ -107,7 +107,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - FOV restrictions
   - Reference: `g_ai.cpp` lines 50-150
 
-- [ ] Implement `ai_checkattack(entity: Entity): boolean`
+- [x] Implement `ai_checkattack(entity: Entity): boolean`
   - Decide whether to attack or move
   - Range checks for different attack types
   - Cover detection
@@ -120,25 +120,25 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Reference: `g_ai.cpp` lines 352-450
 
 ### 1.2.2 AI Movement Routines
-- [ ] Implement `ai_stand(entity: Entity, dist: number): void`
+- [x] Implement `ai_stand(entity: Entity, dist: number): void`
   - Standing idle behavior
   - Look for targets while standing
   - Ground check integration
   - Reference: `g_ai.cpp` lines 452-550
 
-- [ ] Implement `ai_walk(entity: Entity, dist: number): void`
+- [x] Implement `ai_walk(entity: Entity, dist: number): void`
   - Walking patrol behavior
   - Call M_MoveToGoal internally
   - Animation frame advancement
   - Reference: `g_ai.cpp` lines 552-650
 
-- [ ] Implement `ai_run(entity: Entity, dist: number): void`
+- [x] Implement `ai_run(entity: Entity, dist: number): void`
   - Running/chasing behavior
   - Aggressive pursuit
   - Melee range detection
   - Reference: `g_ai.cpp` lines 652-750
 
-- [ ] Implement `ai_charge(entity: Entity, dist: number): void`
+- [x] Implement `ai_charge(entity: Entity, dist: number): void`
   - Charging attack movement
   - Close-range rush
   - Reference: `g_ai.cpp` lines 752-820
