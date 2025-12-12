@@ -61,11 +61,6 @@ export interface KeyItem extends BaseItem {
     type: 'key';
 }
 
-export interface FlagItem extends BaseItem {
-    type: 'flag';
-    team: 'red' | 'blue';
-}
-
 export const WEAPON_ITEMS: Record<string, WeaponItem> = {
     'weapon_blaster': {
         type: 'weapon',
@@ -388,20 +383,5 @@ export const KEY_ITEMS: Record<string, KeyItem> = {
         type: 'key',
         id: 'key_yellow',
         name: 'Yellow Key',
-    },
-};
-
-export const FLAG_ITEMS: Record<string, FlagItem> = {
-    'item_flag_team1': {
-        type: 'flag',
-        id: 'item_flag_team1',
-        name: 'Red Flag',
-        team: 'red',
-    },
-    'item_flag_team2': {
-        type: 'flag',
-        id: 'item_flag_team2',
-        name: 'Blue Flag',
-        team: 'blue',
     },
 };

@@ -18,7 +18,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.1 Grenade Launcher Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/grenadelauncher.ts`
 
-- [x] Implement timed grenade mode
+- [ ] Implement timed grenade mode
   - Hold to set timer (1-3 seconds)
   - Explode after timer expires
   - Reference: `p_weapon.cpp` lines 850-950
@@ -26,13 +26,13 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.2 Rocket Launcher Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/rocketlauncher.ts`
 
-- [x] Implement guided missile mode
+- [ ] Implement guided missile mode
   - Laser-guided rocket
   - Follow crosshair aim
   - Reduced speed but perfect accuracy
   - Reference: `p_weapon.cpp` lines 1050-1180
 
-- [x] Implement missile tracking logic
+- [ ] Implement missile tracking logic
   - Update missile trajectory each frame
   - Steer toward aim point
   - Max turn rate limit
@@ -41,7 +41,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.3 Hyperblaster Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/hyperblaster.ts`
 
-- [x] Implement sustained beam mode
+- [ ] Implement sustained beam mode
   - Hold fire for continuous beam
   - Increased ammo consumption
   - Heat buildup mechanic
@@ -50,7 +50,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.4 Chaingun Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/chaingun.ts`
 
-- [x] Implement wind-up mode
+- [ ] Implement wind-up mode
   - Hold to spin barrels
   - Instant fire when spun up
   - Faster fire rate when wound
@@ -59,7 +59,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.5 Super Shotgun Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/supershotgun.ts`
 
-- [x] Implement precision mode
+- [ ] Implement precision mode
   - Tighter pellet spread
   - Reduced damage per pellet
   - Longer range effectiveness

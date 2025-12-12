@@ -7,7 +7,7 @@ import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID, vectorToAngles, angleVectors } from '@quake2ts/shared';
+import { ZERO_VEC3, lengthVec3, subtractVec3, normalizeVec3, Vec3, CollisionPlane, ServerCommand, TempEntity, CONTENTS_SOLID, CONTENTS_MONSTER, CONTENTS_PLAYER, CONTENTS_DEADMONSTER, MASK_SOLID, vectorToAngles } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 
 const BFG_LASER_RADIUS = 256;
@@ -54,102 +54,6 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
 
         sys.free(self);
     };
-
-    sys.finalizeSpawn(rocket);
-}
-
-// Guided Rocket Think
-function guidedRocketThink(self: Entity, sys: EntitySystem) {
-    // If owner is gone or dead, stop guiding but keep flying
-    if (!self.owner || !self.owner.inUse || self.owner.health <= 0) {
-        // Just fly straight
-        return;
-    }
-
-    const owner = self.owner;
-    // Get owner's aim direction
-    // Use v_angle if available (client), else angles
-    const angles = owner.client ? owner.client.v_angle : owner.angles;
-    if (!angles) return;
-
-    const { forward: targetDir } = angleVectors(angles);
-    const currentDir = normalizeVec3(self.velocity);
-
-    // Turn towards target
-    // Max turn rate: e.g. 45 degrees per second?
-    // At 10Hz, that's 4.5 degrees per frame.
-    // Or use a dot product check and interpolation.
-
-    // Simple interpolation:
-    // newDir = normalize(currentDir + targetDir * turnRate)
-    const turnRate = 0.3; // Tunable
-
-    const newDir = {
-        x: currentDir.x + (targetDir.x - currentDir.x) * turnRate,
-        y: currentDir.y + (targetDir.y - currentDir.y) * turnRate,
-        z: currentDir.z + (targetDir.z - currentDir.z) * turnRate
-    };
-
-    const normalizedNewDir = normalizeVec3(newDir);
-    const speed = lengthVec3(self.velocity); // Maintain current speed
-
-    self.velocity = {
-        x: normalizedNewDir.x * speed,
-        y: normalizedNewDir.y * speed,
-        z: normalizedNewDir.z * speed
-    };
-
-    self.angles = vectorToAngles(normalizedNewDir);
-
-    sys.scheduleThink(self, sys.timeSeconds + 0.1);
-}
-
-export function createGuidedRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number) {
-    const rocket = sys.spawn();
-    rocket.classname = 'guided_rocket';
-    rocket.movetype = MoveType.FlyMissile;
-    rocket.solid = Solid.BoundingBox;
-    rocket.owner = owner;
-    rocket.origin = { ...start };
-    rocket.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
-    rocket.mins = { x: -4, y: -4, z: -4 };
-    rocket.maxs = { x: 4, y: 4, z: 4 };
-    rocket.angles = vectorToAngles(dir);
-
-    // Use rocket model
-    rocket.modelindex = sys.modelIndex('models/objects/rocket/tris.md2');
-
-    rocket.touch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
-        if (other === self.owner) {
-            return;
-        }
-
-        if (other && other.takedamage) {
-            T_Damage(
-                other as any,
-                self as any,
-                self.owner as any,
-                self.velocity,
-                self.origin,
-                plane ? plane.normal : ZERO_VEC3,
-                damage,
-                0,
-                DamageFlags.NONE,
-                DamageMod.ROCKET,
-                sys.timeSeconds,
-                sys.multicast.bind(sys)
-            );
-        }
-
-        const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, {}, sys.multicast.bind(sys));
-
-        sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
-        sys.free(self);
-    };
-
-    rocket.think = (self: Entity, context: EntitySystem) => guidedRocketThink(self, context);
-    sys.scheduleThink(rocket, sys.timeSeconds + 0.1);
 
     sys.finalizeSpawn(rocket);
 }

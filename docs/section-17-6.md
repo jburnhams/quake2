@@ -41,7 +41,7 @@
 - [x] Add method `executeCommand(cmd: string): void`
 - [x] Add method `registerCommand(name: string, handler: CommandHandler): void`
 - [x] Add event `onConsoleOutput?: (message: string) => void`
-- [x] Support command history and autocomplete data
+- [ ] Support command history and autocomplete data
 
 ### 6.2.2 Cvar System
 - [x] Expose `CvarSystem` for configuration management
@@ -56,15 +56,15 @@
 ## 6.3 Modding Support
 
 ### 6.3.1 Custom Entity Registration
-- [x] Add method `registerEntityClass(classname: string, factory: EntityFactory): void`
-- [x] Allow webapp to add custom entity types
-- [x] Expose entity spawn/think/touch hooks
-- [x] Document entity lifecycle and callbacks
+- [ ] Add method `registerEntityClass(classname: string, factory: EntityFactory): void`
+- [ ] Allow webapp to add custom entity types
+- [ ] Expose entity spawn/think/touch hooks
+- [ ] Document entity lifecycle and callbacks
 
 ### 6.3.2 Custom Weapon Registration
-- [x] Add method `registerWeapon(weapon: WeaponDefinition): void`
-- [x] Allow custom firing logic, ammo types, animations
-- [x] Expose weapon state machine hooks
+- [ ] Add method `registerWeapon(weapon: WeaponDefinition): void`
+- [ ] Allow custom firing logic, ammo types, animations
+- [ ] Expose weapon state machine hooks
 
 ### 6.3.3 Script Hooks
 - [ ] Add lifecycle hooks: `onMapLoad`, `onMapUnload`, `onPlayerSpawn`, `onPlayerDeath`

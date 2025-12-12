@@ -8,7 +8,6 @@
 
 ### 7.1.1 Unit Tests
 - [ ] Add tests for all public API methods in each package
-  - *Note: Completed coverage for `@quake2ts/shared` (audio, items, io, protocol).*
 - [ ] Test edge cases: empty PAK files, corrupted BSP, invalid demo data
 - [x] Test math operations: vector math, matrix transformations, quaternions
   - *Note: Quake 2 uses Euler angles; Quaternions are not used in this codebase. Verified comprehensive coverage for vec3, mat4, angles, color, and random.*

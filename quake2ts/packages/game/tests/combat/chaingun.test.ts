@@ -9,10 +9,6 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { Entity } from '../../src/entities/entity.js';
-import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
-import { getWeaponState } from '../../src/combat/weapons/state.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { WeaponStateEnum } from '../../src/combat/weapons/state.js';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -20,23 +16,19 @@ describe('Chaingun', () => {
     let target: Entity;
     let trace: any;
     let T_Damage: any;
-    let engine: any;
 
     beforeEach(() => {
         const multicast = vi.fn();
         trace = vi.fn();
         T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        engine = {
+        const engine = {
             sound: vi.fn(),
             centerprintf: vi.fn(),
             modelIndex: vi.fn(),
         };
 
         game = createGame({ trace, multicast, pointcontents: vi.fn(), unicast: vi.fn(), linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
-
-        // Ensure circular reference for tests using sys.game using defineProperty to bypass readonly
-        Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
 
         game.spawnWorld();
 
@@ -48,9 +40,6 @@ describe('Chaingun', () => {
                 ammo: { [AmmoType.Bullets]: 50 },
             }),
             weaponStates: { states: new Map() },
-            buttons: 0,
-            gun_frame: 0,
-            weaponstate: WeaponStateEnum.WEAPON_READY
         } as any;
         player.angles = { x: 0, y: 0, z: 0 };
         player.origin = { x: 0, y: 0, z: 0 };
@@ -125,8 +114,6 @@ describe('Chaingun', () => {
                 modelIndex: vi.fn(),
             }, { gravity: { x: 0, y: 0, z: -800 } });
 
-            Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
-
             let currentTime = 0;
             vi.spyOn(game, 'time', 'get').mockImplementation(() => currentTime);
             game.advanceTime = (ms: number) => {
@@ -145,9 +132,6 @@ describe('Chaingun', () => {
                 weaponStates: { states: new Map() },
                 kick_angles: {x: 0, y: 0, z: 0},
                 kick_origin: {x: 0, y: 0, z: 0},
-                buttons: 1, // Attack
-                gun_frame: 0,
-                weaponstate: WeaponStateEnum.WEAPON_READY
             } as any;
             player.angles = { x: 0, y: 0, z: 0 };
             player.origin = { x: 0, y: 0, z: 0 };
@@ -208,86 +192,52 @@ describe('Chaingun', () => {
             expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
         });
     });
+});
 
-    describe('Wind-up Mode (Alt-Fire)', () => {
-        it('should spin up without firing when Alt-Fire is held', () => {
-             // Arrange
-             player.client!.buttons = 32; // Attack2
-             const weaponState = getWeaponState(player.client!.weaponStates, WeaponId.Chaingun);
-             weaponState.spinupCount = 0;
-             const initialAmmo = player.client!.inventory.ammo.counts[AmmoType.Bullets];
+import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
+import { getWeaponState } from '../../src/combat/weapons/state.js';
+import { EntitySystem } from '../../src/entities/system.js';
 
-             // Act - multiple frames
-             for (let i = 0; i < 20; i++) {
-                 chaingunThink(player, game.entities);
-                 // Need to advance lastFireTime? handled in think.
-             }
+describe('Chaingun Spin-down', () => {
+    let game: GameExports;
+    let player: Entity;
 
-             // Assert
-             expect(weaponState.spinupCount).toBeGreaterThan(15);
-             expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(initialAmmo); // No ammo consumed
-             expect(engine.sound).toHaveBeenCalledWith(player, 0, expect.stringContaining('weapons/chngn'), expect.anything(), expect.anything(), expect.anything());
+    beforeEach(() => {
+        const sound = vi.fn();
+        const engine = {
+            sound,
+            centerprintf: vi.fn(),
+            modelIndex: vi.fn(),
+        };
 
-             // Check animation frame cycling
-             expect(player.client!.gun_frame).toBeGreaterThanOrEqual(5);
-             expect(player.client!.gun_frame).toBeLessThanOrEqual(21);
-        });
+        game = createGame({ trace: vi.fn(), multicast: vi.fn(), pointcontents: vi.fn(), unicast: vi.fn(), linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        game.sound = sound;
 
-        it('should fire immediately at high rate if Fire is pressed while wound up', () => {
-             // Arrange
-             player.client!.buttons = 32; // Attack2
-             const weaponState = getWeaponState(player.client!.weaponStates, WeaponId.Chaingun);
+        game.spawnWorld();
 
-             // Mock timing
-             let mockTime = 1000;
-             vi.spyOn(game, 'time', 'get').mockImplementation(() => mockTime);
-             Object.defineProperty(game.entities, 'timeSeconds', { get: () => mockTime / 1000 });
+        player = game.entities.spawn();
+        player.classname = 'player';
+        player.client = {
+            inventory: createPlayerInventory({
+                weapons: [WeaponId.Chaingun],
+                ammo: { [AmmoType.Bullets]: 50 },
+            }),
+            weaponStates: { states: new Map() },
+            buttons: 0,
+        } as any;
+        game.entities.finalizeSpawn(player);
+    });
 
-             // Spin up first
-             for (let i = 0; i < 20; i++) {
-                 chaingunThink(player, game.entities);
-             }
-             const woundUpCount = weaponState.spinupCount!;
-             expect(woundUpCount).toBeGreaterThan(10);
+    it('should play spin-down sound when fire button is released', () => {
+        // Arrange
+        const weaponState = getWeaponState(player.client.weaponStates, WeaponId.Chaingun);
+        weaponState.spinupCount = 1;
 
-             // Now press Fire (Attack + Attack2)
-             player.client!.buttons = 1 | 32;
+        // Act
+        chaingunThink(player, game as unknown as EntitySystem);
 
-             // Clear mocks to check fire
-             trace.mockClear();
-
-             // 1st tick: Transitions to FIRING state
-             chaingunThink(player, game.entities);
-             expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
-
-             // 2nd tick: Should fire
-             // Advance time by 0.1s (100ms)
-             mockTime += 100;
-
-             chaingunThink(player, game.entities);
-
-             // Assert
-             // fireChaingun increments spinupCount by 1 more
-             expect(weaponState.spinupCount).toBe(woundUpCount + 1);
-
-             // Check if it fired 3 shots (because spinup > 10)
-             // 1 trace for ProjectSource, 3 for bullets = 4 traces
-             expect(trace).toHaveBeenCalledTimes(4);
-             expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(47); // 50 - 3
-        });
-
-         it('should spin down when Alt-Fire is released', () => {
-            // Arrange
-            player.client!.buttons = 0; // Released
-            const weaponState = getWeaponState(player.client!.weaponStates, WeaponId.Chaingun);
-            weaponState.spinupCount = 10;
-
-            // Act
-            chaingunThink(player, game.entities);
-
-            // Assert
-            expect(weaponState.spinupCount).toBe(0);
-            expect(engine.sound).toHaveBeenCalledWith(player, 0, 'weapons/chngnd1a.wav', 1, 0, 0);
-        });
+        // Assert
+        expect(game.sound).toHaveBeenCalledWith(player, 0, 'weapons/chngnd1a.wav', 1, 0, 0);
+        expect(weaponState.spinupCount).toBe(0);
     });
 });

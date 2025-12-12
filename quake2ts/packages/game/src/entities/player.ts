@@ -20,7 +20,6 @@ import {
     ANIM_BASIC, ANIM_DEATH, ANIM_PAIN, ANIM_REVERSE, ANIM_ATTACK
 } from './player_anim.js';
 import { firingRandom } from '../combat/weapons/firing.js';
-import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
 
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
@@ -137,11 +136,6 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
     self.movetype = MoveType.Toss;
     self.takedamage = false; // Can be gibbed? If dead, further damage usually gibs.
 
-    // CTF: Drop flag if carrying
-    if (sys) {
-        checkPlayerFlagDrop(self, sys);
-    }
-
     // Check for gibbing
     if (self.health < -40 && sys) {
         throwGibs(sys, self.origin, damage);
@@ -180,27 +174,6 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
 
 export function player_think(self: Entity, sys: EntitySystem) {
     if (!self.client) return;
-
-    // Check for respawn if dead
-    if (self.deadflag) {
-        // Wait for any button press
-        // Also ensure a minimum delay after death so they don't accidentally respawn instantly
-        // In Q2, there's usually a short delay or checks on specific buttons
-        if (self.client.buttons) {
-             // Try to respawn
-             if (sys.game && sys.game.respawn) {
-                 sys.game.respawn(self);
-                 return;
-             }
-        }
-
-        // Continue animation or dead frame logic
-        P_PlayerThink(self, sys);
-
-        self.nextthink = sys.timeSeconds + 0.1;
-        sys.scheduleThink(self, self.nextthink);
-        return;
-    }
 
     // Check powerups
     const nowMs = sys.timeSeconds * 1000;

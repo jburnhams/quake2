@@ -16,7 +16,7 @@ import {
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
-import { createRocket, createGuidedRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
+import { createRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
 import { P_ProjectSource } from './projectSource.js';
@@ -32,23 +32,9 @@ import {
     FRAME_attack1, FRAME_attack8,
     ANIM_ATTACK, ANIM_REVERSE
 } from '../../entities/player_anim.js';
-import { fireCustomWeapon } from './registry.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
-
-// Constants based on g_local.h and original p_weapon.c values
-export const DEFAULT_BULLET_HSPREAD = 300;
-export const DEFAULT_BULLET_VSPREAD = 500;
-export const DEFAULT_SHOTGUN_HSPREAD = 500;  // Standard Shotgun Spread
-export const DEFAULT_SHOTGUN_VSPREAD = 500;
-export const DEFAULT_SSHOTGUN_HSPREAD = 1000; // Super Shotgun Spread
-export const DEFAULT_SSHOTGUN_VSPREAD = 500;
-export const DEFAULT_DEATHMATCH_SHOTGUN_COUNT = 12;
-export const DEFAULT_SHOTGUN_COUNT = 12;
-export const DEFAULT_SSHOTGUN_COUNT = 20;
-
-const BUTTON_ATTACK2 = 32;
 
 function applyKick(player: Entity, pitch: number, yaw: number = 0, kickOrigin: number = 0) {
     if (player.client) {
@@ -77,26 +63,14 @@ function setPlayerAttackAnim(player: Entity) {
 
 function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: any, damage: number, knockback: number, mod: DamageMod) {
     const end = { x: start.x + forward.x * 8192, y: start.y + forward.y * 8192, z: start.z + forward.z * 8192 };
-
-    if (game.setLagCompensation && player.client) {
-        game.setLagCompensation(true, player, player.client.ping);
-    }
-
-    let trace;
-    try {
-        trace = game.trace(
-            start,
-            null,
-            null,
-            end,
-            player,
-            0
-        );
-    } finally {
-        if (game.setLagCompensation) {
-            game.setLagCompensation(false);
-        }
-    }
+    const trace = game.trace(
+        start,
+        null,
+        null,
+        end,
+        player,
+        0
+    );
 
     if (trace.ent && trace.ent.takedamage) {
         T_Damage(
@@ -122,41 +96,31 @@ function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: an
 }
 
 function fireMultiplePellets(game: GameExports, player: Entity, start: Vec3, forward: Vec3, right: Vec3, up: Vec3, count: number, damage: number, knockback: number, hspread: number, vspread: number, mod: DamageMod) {
-    if (game.setLagCompensation && player.client) {
-        game.setLagCompensation(true, player, player.client.ping);
-    }
+    for (let i = 0; i < count; i++) {
+        const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
+        const dir = addVec3(forward, spread);
+        const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
+        const trace = game.trace(start, null, null, end, player, 0);
 
-    try {
-        for (let i = 0; i < count; i++) {
-            const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
-            const dir = addVec3(forward, spread);
-            const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
-            const trace = game.trace(start, null, null, end, player, 0);
-
-            if (trace.ent && trace.ent.takedamage) {
-                T_Damage(
-                    trace.ent as any,
-                    player as any,
-                    player as any,
-                    ZERO_VEC3,
-                    trace.endpos,
-                    trace.plane ? trace.plane.normal : ZERO_VEC3,
-                    damage,
-                    knockback,
-                    DamageFlags.BULLET,
-                    mod,
-                    game.time,
-                    game.multicast
-                );
-            } else if (trace.plane) {
-                if (random.frandom() > 0.9) {
-                    game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
-                }
+        if (trace.ent && trace.ent.takedamage) {
+            T_Damage(
+                trace.ent as any,
+                player as any,
+                player as any,
+                ZERO_VEC3,
+                trace.endpos,
+                trace.plane ? trace.plane.normal : ZERO_VEC3,
+                damage,
+                knockback,
+                DamageFlags.BULLET,
+                mod,
+                game.time,
+                game.multicast
+            );
+        } else if (trace.plane) {
+            if (random.frandom() > 0.9) {
+                game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
             }
-        }
-    } finally {
-        if (game.setLagCompensation) {
-            game.setLagCompensation(false);
         }
     }
 }
@@ -169,50 +133,40 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
     let count = 0;
     let finalEnd = end;
 
-    if (game.setLagCompensation && player.client) {
-        game.setLagCompensation(true, player, player.client.ping);
-    }
+    while (count < 16) { // Safety break
+        count++;
+        const trace = game.trace(currentStart, null, null, end, ignore, 0);
 
-    try {
-        while (count < 16) { // Safety break
-            count++;
-            const trace = game.trace(currentStart, null, null, end, ignore, 0);
+        finalEnd = trace.endpos;
 
-            finalEnd = trace.endpos;
-
-            if (trace.fraction >= 1.0) {
-                break;
-            }
-
-            if (trace.ent && trace.ent.takedamage) {
-                T_Damage(
-                    trace.ent as any,
-                    player as any,
-                    player as any,
-                    ZERO_VEC3,
-                    trace.endpos,
-                    trace.plane ? trace.plane.normal : ZERO_VEC3,
-                    damage,
-                    knockback,
-                    DamageFlags.ENERGY,
-                    DamageMod.RAILGUN,
-                    game.time,
-                    game.multicast
-                );
-            }
-
-            // Continue trace from hit point
-            ignore = trace.ent as Entity;
-            currentStart = trace.endpos;
-
-            // If we hit world geometry, we stop.
-            if (!trace.ent || trace.ent === game.entities.world) {
-                break;
-            }
+        if (trace.fraction >= 1.0) {
+            break;
         }
-    } finally {
-        if (game.setLagCompensation) {
-            game.setLagCompensation(false);
+
+        if (trace.ent && trace.ent.takedamage) {
+             T_Damage(
+                trace.ent as any,
+                player as any,
+                player as any,
+                ZERO_VEC3,
+                trace.endpos,
+                trace.plane ? trace.plane.normal : ZERO_VEC3,
+                damage,
+                knockback,
+                DamageFlags.ENERGY,
+                DamageMod.RAILGUN,
+                game.time,
+                game.multicast
+            );
+        }
+
+        // Continue trace from hit point
+        ignore = trace.ent as Entity;
+        currentStart = trace.endpos;
+
+        // If we hit world geometry, we stop.
+        if (!trace.ent || trace.ent === game.entities.world) {
+            break;
         }
     }
 
@@ -307,8 +261,7 @@ export function fireShotgun(game: GameExports, player: Entity) {
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    const count = game.deathmatch ? DEFAULT_DEATHMATCH_SHOTGUN_COUNT : DEFAULT_SHOTGUN_COUNT;
-    fireMultiplePellets(game, player, source, forward, right, up, count, 4, 1, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DamageMod.SHOTGUN);
+    fireMultiplePellets(game, player, source, forward, right, up, 12, 4, 1, 500, 500, DamageMod.SHOTGUN);
 }
 
 export function fireSuperShotgun(game: GameExports, player: Entity) {
@@ -319,10 +272,6 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
         return;
     }
 
-    // Check Alt-Fire (Attack2 = 32)
-    // Precision mode
-    const isPrecision = (player.client.buttons & BUTTON_ATTACK2) !== 0;
-
     inventory.ammo.counts[AmmoType.Shells] -= 2;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SSHOTGUN);
     applyKick(player, -4, 0, -4);
@@ -331,21 +280,10 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    const count = DEFAULT_SSHOTGUN_COUNT / 2;
-    let hspread = DEFAULT_SSHOTGUN_HSPREAD; // Default 1000
-    let vspread = DEFAULT_SSHOTGUN_VSPREAD;
-    let damage = 6;
-
-    if (isPrecision) {
-        hspread = 300; // Tighter spread
-        vspread = 150; // Tighter spread
-        damage = 4;    // Reduced damage per pellet
-    }
-
     const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
-    fireMultiplePellets(game, player, source, forward1, right1, up1, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
+    fireMultiplePellets(game, player, source, forward1, right1, up1, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
     const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
-    fireMultiplePellets(game, player, source, forward2, right2, up2, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
+    fireMultiplePellets(game, player, source, forward2, right2, up2, 10, 6, 1, 700, 700, DamageMod.SSHOTGUN);
 }
 
 export function fireMachinegun(game: GameExports, player: Entity) {
@@ -499,17 +437,10 @@ export function fireRocket(game: GameExports, player: Entity) {
 
     const damage = 100 + game.random.irandom(21);
     const radiusDamage = 120;
-
-    // Check for Alt-Fire (Guided Rocket)
-    // 1 << 5 = 32
-    if ((player.client.buttons & 32)) {
-        createGuidedRocket(game.entities, player, source, forward, damage, radiusDamage, 400); // Slower speed
-    } else {
-        createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
-    }
+    createRocket(game.entities, player, source, forward, damage, radiusDamage, 650);
 }
 
-export function fireGrenadeLauncher(game: GameExports, player: Entity, timer?: number) {
+export function fireGrenadeLauncher(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
@@ -525,64 +456,7 @@ export function fireGrenadeLauncher(game: GameExports, player: Entity, timer?: n
     const { forward, right, up } = angleVectors(player.angles);
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    createGrenade(game.entities, player, source, forward, 120, 600, timer);
-}
-
-export function fireHyperBlasterBeam(game: GameExports, player: Entity, weaponState: WeaponState) {
-    if (!player.client) return;
-    const inventory = player.client.inventory;
-
-    // Beam consumes 2 cells
-    if (inventory.ammo.counts[AmmoType.Cells] < 2) {
-        return;
-    }
-
-    // Heat check
-    if ((weaponState.heat || 0) > 20) {
-        // Overheated
-        game.sound(player, 0, 'weapons/lashit.wav', 1, 1, 0); // Fizzle sound
-        return;
-    }
-
-    inventory.ammo.counts[AmmoType.Cells] -= 2;
-    weaponState.heat = (weaponState.heat || 0) + 1;
-
-    // No muzzle flash event? Or use standard?
-    // game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
-
-    applyKick(player, -1, 0, 0);
-    setPlayerAttackAnim(player);
-
-    const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
-
-    // Beam trace
-    const damage = 25;
-    const end = { x: source.x + forward.x * 2048, y: source.y + forward.y * 2048, z: source.z + forward.z * 2048 };
-    const trace = game.trace(source, null, null, end, player, 0x10000001 /* MASK_SHOT */);
-
-    if (trace.ent && trace.ent.takedamage) {
-        T_Damage(
-            trace.ent as any,
-            player as any,
-            player as any,
-            ZERO_VEC3,
-            trace.endpos,
-            trace.plane ? trace.plane.normal : ZERO_VEC3,
-            damage,
-            2,
-            DamageFlags.ENERGY,
-            DamageMod.HYPERBLASTER, // Or new mod?
-            game.time,
-            game.multicast
-        );
-    }
-
-    // Visuals: Railtrail or custom?
-    // Use BFG Laser effect logic?
-    // game.multicast(source, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, source, trace.endpos);
-    // Or just a line.
-    game.multicast(source, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.BFG_LASER, source, trace.endpos);
+    createGrenade(game.entities, player, source, forward, 120, 600);
 }
 
 export function fireBFG(game: GameExports, player: Entity) {
@@ -646,11 +520,6 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
     }
 
     const weaponState = getWeaponState(player.client.weaponStates, weaponId);
-
-    // Check for custom weapon first
-    if (fireCustomWeapon(game, player, weaponId, weaponState)) {
-        return;
-    }
 
     if (weaponId === WeaponId.HandGrenade) {
         fireHandGrenade(game, player, inventory, weaponState);

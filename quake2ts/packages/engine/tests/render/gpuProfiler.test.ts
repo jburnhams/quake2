@@ -75,7 +75,7 @@ describe('GpuProfiler', () => {
     profiler.endFrame();
 
     // Stats should be updated immediately because we mocked it to be available
-    expect(profiler.getPerformanceReport({ drawCalls: 0, vertexCount: 0, batches: 0 }).gpuTimeMs).toBe(2);
+    expect(profiler.stats.gpuTimeMs).toBe(2);
     expect(gl.getQueryParameter).toHaveBeenCalledWith(query, gl.QUERY_RESULT);
   });
 

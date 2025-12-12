@@ -16,25 +16,25 @@
 
 ### 5.1.2 Client Prediction and Interpolation
 - [x] Ensure client prediction works correctly in multiplayer
-- [x] Add configurable prediction error tolerance
+- [ ] Add configurable prediction error tolerance
 - [x] Implement entity interpolation for smooth remote player movement
-- [x] Add lag compensation for weapon firing
-- [x] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
+- [ ] Add lag compensation for weapon firing
+- [ ] Expose `setPredictionEnabled(enabled: boolean): void` for debugging
 
 ### 5.1.3 Server Browser (optional library support)
 - [x] Add method `queryServerInfo(address: string): Promise<ServerInfo>` for server ping
 - [x] Return: map name, player count, max players, game mode, hostname
-- [x] Add method `getPlayerList(): PlayerInfo[]` for scoreboard
-- [x] Return: name, score, ping, team (if applicable)
+- [ ] Add method `getPlayerList(): PlayerInfo[]` for scoreboard
+- [ ] Return: name, score, ping, team (if applicable)
 
 ---
 
 ## 5.2 Deathmatch Features
 
 ### 5.2.1 Deathmatch Game Rules
-- [x] Implement player respawning at spawn points
-- [x] Implement frag scoring and leaderboard updates
-- [x] Implement weapon/item respawn timers (DM vs single-player)
+- [ ] Implement player respawning at spawn points
+- [ ] Implement frag scoring and leaderboard updates
+- [ ] Implement weapon/item respawn timers (DM vs single-player)
 - [ ] Implement self-damage (rocket jumping, grenade jumping)
 - [ ] Add telefrag detection and scoring
 

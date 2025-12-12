@@ -19,13 +19,11 @@ describe('Weapon Pickup Entities', () => {
     beforeEach(() => {
         mockGame = {
             sound: vi.fn(),
-            multicast: vi.fn(),
             centerprintf: vi.fn(),
             time: 100,
             deathmatch: true,
             entities: {
                 scheduleThink: vi.fn(),
-                modelIndex: vi.fn().mockReturnValue(1),
             },
         } as unknown as GameExports;
     });

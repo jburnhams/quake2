@@ -82,9 +82,6 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
         }
         return undefined;
     }),
-    beginFrame: vi.fn((timeSeconds: number) => {
-        (entities as any).timeSeconds = timeSeconds;
-    }),
   } as unknown as EntitySystem;
 
   return {

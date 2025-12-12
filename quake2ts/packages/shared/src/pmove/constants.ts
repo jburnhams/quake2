@@ -89,6 +89,5 @@ export const enum PlayerButton {
   Holster = 1 << 2,
   Jump = 1 << 3,
   Crouch = 1 << 4,
-  Attack2 = 1 << 5,
   Any = 1 << 7,
 }

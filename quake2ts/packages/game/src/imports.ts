@@ -51,7 +51,6 @@ export interface GameImports {
 
   configstring(index: number, value: string): void;
   serverCommand(cmd: string): void;
-  setLagCompensation(active: boolean, client?: Entity, lagMs?: number): void;
 }
 
 export interface GameEngine {
@@ -66,5 +65,4 @@ export interface GameEngine {
     configstring?(index: number, value: string): void;
     serverCommand?(cmd: string): void;
     cvar?(name: string): { number: number; string: string; value: string } | undefined;
-    setLagCompensation?(active: boolean, client?: Entity, lagMs?: number): void;
 }

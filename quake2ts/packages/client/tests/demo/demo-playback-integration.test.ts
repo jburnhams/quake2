@@ -9,27 +9,27 @@ vi.mock('@quake2ts/engine', async () => {
     const actual = await vi.importActual('@quake2ts/engine');
     return {
         ...actual,
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            loadDemo: vi.fn(),
-            setHandler: vi.fn(),
-            update: vi.fn(),
-            stop: vi.fn(),
-            setSpeed: vi.fn(),
-            setFrameDuration: vi.fn(),
-            getCurrentTime: vi.fn().mockReturnValue(0),
-            getDuration: vi.fn().mockReturnValue(100),
-            getState: vi.fn(),
-            getSpeed: vi.fn().mockReturnValue(1),
-            getPlaybackSpeed: vi.fn().mockReturnValue(1),
-            getInterpolationFactor: vi.fn().mockReturnValue(0),
-            play: vi.fn(),
-            pause: vi.fn(),
-            stepForward: vi.fn(),
-            stepBackward: vi.fn(),
-            seek: vi.fn(),
-            getCurrentFrame: vi.fn().mockReturnValue(0),
-            getTotalFrames: vi.fn().mockReturnValue(100)
-        })),
+        DemoPlaybackController: vi.fn(function() {
+            return {
+                loadDemo: vi.fn(),
+                setHandler: vi.fn(),
+                update: vi.fn(),
+                stop: vi.fn(),
+                setSpeed: vi.fn(),
+                setFrameDuration: vi.fn(),
+                getCurrentTime: vi.fn().mockReturnValue(0),
+                getDuration: vi.fn().mockReturnValue(100),
+                getState: vi.fn(),
+                getSpeed: vi.fn().mockReturnValue(1),
+                play: vi.fn(),
+                pause: vi.fn(),
+                stepForward: vi.fn(),
+                stepBackward: vi.fn(),
+                seek: vi.fn(),
+                getCurrentFrame: vi.fn().mockReturnValue(0),
+                getTotalFrames: vi.fn().mockReturnValue(100)
+            };
+        }),
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
@@ -138,8 +138,7 @@ describe('Demo Playback Integration', () => {
             drawString: vi.fn(),
             drawCenterString: vi.fn(),
             registerTexture: vi.fn(),
-            registerPic: vi.fn(),
-            getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 })
+            registerPic: vi.fn()
         };
 
         mockEngine = {

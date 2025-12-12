@@ -3,15 +3,8 @@ export interface GpuTimerResult {
   readonly timeElapsedNs: number;
 }
 
-export interface RenderStatistics {
+export interface GpuProfilerStats {
   readonly gpuTimeMs: number;
-  readonly cpuFrameTimeMs: number;
-  readonly drawCalls: number;
-  readonly triangles: number;
-  readonly vertices: number;
-  readonly textureBinds: number;
-  readonly textureMemoryBytes: number;
-  readonly bufferMemoryBytes: number;
 }
 
 export class GpuProfiler {
@@ -21,14 +14,6 @@ export class GpuProfiler {
   private readonly queryPool: WebGLQuery[] = [];
   private currentQuery: WebGLQuery | null = null;
   private lastGpuTimeMs: number = 0;
-
-  // CPU-side counters
-  private frameStartTime: number = 0;
-  private lastCpuFrameTimeMs: number = 0;
-
-  // Resource Tracking
-  private textureMemoryBytes: number = 0;
-  private bufferMemoryBytes: number = 0;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -40,25 +25,17 @@ export class GpuProfiler {
     return !!this.ext;
   }
 
-  // To be called by Renderer to construct the final report
-  getPerformanceReport(frameStats: { drawCalls: number; vertexCount: number; batches: number }): RenderStatistics {
-      return {
-          gpuTimeMs: this.lastGpuTimeMs,
-          cpuFrameTimeMs: this.lastCpuFrameTimeMs,
-          drawCalls: frameStats.drawCalls,
-          triangles: Math.floor(frameStats.vertexCount / 3), // Approximation if mostly triangles
-          vertices: frameStats.vertexCount,
-          textureBinds: frameStats.batches, // Using batches as proxy for texture binds
-          textureMemoryBytes: this.textureMemoryBytes,
-          bufferMemoryBytes: this.bufferMemoryBytes
-      };
+  get stats(): GpuProfilerStats {
+    return {
+      gpuTimeMs: this.lastGpuTimeMs,
+    };
   }
 
   startFrame(): void {
-    this.frameStartTime = performance.now();
-
     if (!this.ext) return;
 
+    // If we are already in a query (nested?), ignore or warn.
+    // For now, assume simple one-frame-at-a-time.
     if (this.currentQuery) {
         return;
     }
@@ -71,8 +48,6 @@ export class GpuProfiler {
   }
 
   endFrame(): void {
-    this.lastCpuFrameTimeMs = performance.now() - this.frameStartTime;
-
     if (!this.ext || !this.currentQuery) return;
 
     this.gl.endQuery(this.ext.TIME_ELAPSED_EXT);
@@ -80,14 +55,6 @@ export class GpuProfiler {
     this.currentQuery = null;
 
     this.pollQueries();
-  }
-
-  trackTextureMemory(bytes: number) {
-      this.textureMemoryBytes += bytes;
-  }
-
-  trackBufferMemory(bytes: number) {
-      this.bufferMemoryBytes += bytes;
   }
 
   private getQuery(): WebGLQuery | null {

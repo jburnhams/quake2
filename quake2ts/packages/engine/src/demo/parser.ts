@@ -1019,8 +1019,7 @@ export class NetworkMessageParser {
       // Protocol 26 (legacy) hack:
       // In original Quake 2, protocol 26 demos did NOT include the suppressCount byte.
       // See full/client/cl_ents.c:679-681
-      // Protocol 25 also seems to lack this byte based on testing with demo1.dm2
-      if (this.protocolVersion !== 26 && this.protocolVersion !== 25) {
+      if (this.protocolVersion !== 26) {
           surpressCount = this.stream.readByte();
       }
 

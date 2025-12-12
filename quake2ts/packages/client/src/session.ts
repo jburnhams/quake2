@@ -194,19 +194,53 @@ export class GameSession {
       const ammo = state.ammo ?? 0;
       const armor = state.armor ?? 0;
 
-      // Icons need to be resolved via configStrings from ClientExports
-      // But we don't have easy access to configstring index logic here unless we duplicate it
-      // or expose helper from client.
+      let weaponIcon = '';
+      let ammoIcon = '';
+      let armorIcon = '';
+      const pickupIcon = state.pickupIcon ? this.client.configStrings.getImageName(state.pickupIcon) ?? '' : '';
+
+      // stats[PlayerStat.STAT_AMMO_ICON] -> configstring index for image
+      if (state.stats) {
+          // STAT_AMMO_ICON = 13 (from q_shared.h/game.ts if exported, assuming 13 based on standard Q2)
+          // STAT_ARMOR_ICON = 14
+          // STAT_WEAPON = 12 (Model index?) No, HUD uses image usually.
+          // In Q2:
+          // STAT_FLASHES = 10, STAT_CHASE = 11, STAT_LAYOUTS = 12
+          // STAT_AMMO_ICON = 13
+          // STAT_ARMOR_ICON = 14
+          // STAT_WEAPON = 12 is layouts? No.
+          // Weapon icon is usually drawn based on inventory or separate stat?
+          // Standard Q2 client uses cl.frame.stats[STAT_PICKUP_ICON] etc.
+
+          // Using hardcoded indices for standard Q2 stats for now
+          // TODO: Import PlayerStat enum from shared if available
+
+          const STAT_AMMO_ICON = 13;
+          const STAT_ARMOR_ICON = 14;
+          // Weapon icon in Q2 is often just current weapon image, handled by client logic
+          // But for getHudData we need string.
+          // If we had inventory we could map it.
+          // Let's check configstrings if available.
+
+          const ammoIconIdx = state.stats[STAT_AMMO_ICON];
+          if (ammoIconIdx) ammoIcon = this.client.configStrings.getImageName(ammoIconIdx) ?? '';
+
+          const armorIconIdx = state.stats[STAT_ARMOR_ICON];
+          if (armorIconIdx) armorIcon = this.client.configStrings.getImageName(armorIconIdx) ?? '';
+      }
+
+      // Inventory is a placeholder for now as full inventory replication requires more state
+      const inventory: any[] = [];
 
       return {
           health,
           armor,
           ammo,
-          weaponIcon: '', // TODO: Resolve icon
-          ammoIcon: '',
-          armorIcon: '',
-          pickupIcon: '', // state.pickupIcon?
-          inventory: []
+          weaponIcon, // Populated if we can map it, currently empty
+          ammoIcon,
+          armorIcon,
+          pickupIcon,
+          inventory
       };
   }
 
@@ -401,7 +435,18 @@ export class GameSession {
     const clientProxy: any = {
         init: (initial: any) => this.client?.init(initial),
           render: (sample: any) => {
-              if (!this.client) return null;
+              if (!this.client) return {
+                  msec: 0,
+                  buttons: 0,
+                  angles: { x: 0, y: 0, z: 0 },
+                  forwardmove: 0,
+                  sidemove: 0,
+                  upmove: 0,
+                  serverFrame: 0,
+                  sequence: 0,
+                  lightlevel: 0,
+                  impulse: 0
+              };
               const cmd = this.client.render(sample);
               if (this.onInputCommand) {
                   this.onInputCommand(cmd);

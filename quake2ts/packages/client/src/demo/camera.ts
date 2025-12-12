@@ -14,5 +14,4 @@ export interface DemoCameraState {
     freeCameraOrigin: Vec3;
     freeCameraAngles: Vec3;
     followEntityId: number;
-    currentFollowOrigin?: Vec3;
 }

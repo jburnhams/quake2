@@ -63,11 +63,6 @@ export class EngineHost<FrameState = unknown> {
       },
       { ...options.loop, startTimeMs: this.startTimeMs },
     );
-
-    // Wire up cvar autocomplete provider
-    this.commands.registerAutocompleteProvider(() => {
-      return this.cvars.list().map(cvar => cvar.name);
-    });
   }
 
   start(): void {

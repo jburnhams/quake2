@@ -1,6 +1,5 @@
 
 export type CommandCallback = (args: string[]) => void;
-export type AutocompleteProvider = () => string[];
 
 export class Command {
   readonly name: string;
@@ -20,9 +19,6 @@ export class Command {
 
 export class CommandRegistry {
   private readonly commands = new Map<string, Command>();
-  private readonly history: string[] = [];
-  private readonly historyLimit = 64;
-  private readonly autocompleteProviders: AutocompleteProvider[] = [];
   public onConsoleOutput?: (message: string) => void;
 
   register(name: string, callback: CommandCallback, description?: string): Command {
@@ -35,28 +31,11 @@ export class CommandRegistry {
     this.register(name, callback);
   }
 
-  registerAutocompleteProvider(provider: AutocompleteProvider): void {
-    this.autocompleteProviders.push(provider);
-  }
-
   get(name: string): Command | undefined {
     return this.commands.get(name);
   }
 
   execute(commandString: string): boolean {
-    const trimmed = commandString.trim();
-    if (trimmed.length === 0) {
-      return false;
-    }
-
-    // Add to history if not duplicate of last
-    if (this.history.length === 0 || this.history[this.history.length - 1] !== trimmed) {
-      this.history.push(trimmed);
-      if (this.history.length > this.historyLimit) {
-        this.history.shift();
-      }
-    }
-
     const parts = this.tokenize(commandString);
     if (parts.length === 0) {
       return false;
@@ -77,33 +56,6 @@ export class CommandRegistry {
 
   executeCommand(cmd: string): void {
     this.execute(cmd);
-  }
-
-  getHistory(): string[] {
-    return [...this.history];
-  }
-
-  getSuggestions(prefix: string): string[] {
-    const suggestions = new Set<string>();
-
-    // Command suggestions
-    for (const name of this.commands.keys()) {
-      if (name.startsWith(prefix)) {
-        suggestions.add(name);
-      }
-    }
-
-    // Provider suggestions (e.g. cvars)
-    for (const provider of this.autocompleteProviders) {
-      const providerSuggestions = provider();
-      for (const suggestion of providerSuggestions) {
-        if (suggestion.startsWith(prefix)) {
-          suggestions.add(suggestion);
-        }
-      }
-    }
-
-    return Array.from(suggestions).sort();
   }
 
   private tokenize(text: string): string[] {

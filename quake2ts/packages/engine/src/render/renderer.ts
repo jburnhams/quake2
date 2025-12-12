@@ -11,9 +11,9 @@ import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
-import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
+import { GpuProfiler, GpuProfilerStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
-import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
+import { findLeafForPoint, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
@@ -27,7 +27,7 @@ export interface Renderer {
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
     readonly debug: DebugRenderer;
-    getPerformanceReport(): RenderStatistics;
+    readonly stats: GpuProfilerStats;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
     // HUD Methods
@@ -39,14 +39,6 @@ export interface Renderer {
     drawString(x: number, y: number, text: string, color?: [number, number, number, number]): void;
     drawCenterString(y: number, text: string): void;
     drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
-
-    // Entity Highlighting
-    setEntityHighlight(entityId: number, color: [number, number, number, number]): void;
-    clearEntityHighlight(entityId: number): void;
-
-    // Surface Highlighting
-    highlightSurface(faceIndex: number, color: [number, number, number, number]): void;
-    removeSurfaceHighlight(faceIndex: number): void;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -74,9 +66,6 @@ export const createRenderer = (
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
     let font: Pic | null = null;
-    let lastFrameStats = { drawCalls: 0, vertexCount: 0, batches: 0 };
-    const highlightedEntities = new Map<number, [number, number, number, number]>();
-    const highlightedSurfaces = new Map<number, [number, number, number, number]>();
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -89,32 +78,23 @@ export const createRenderer = (
         gl.depthMask(true);
 
         // Apply Render Options to pipelines/rendering
-        const currentRenderMode = options.renderMode;
+        // Note: Currently FrameRenderer handles world/skybox internally.
+        // We might need to pass options down or control it here.
+        // For now, let's assume FrameRenderOptions could be augmented or FrameRenderer updated.
+        // But since FrameRenderer is imported, let's look at it later if needed.
+        // Actually, frameRenderer.renderFrame uses options.renderMode which is for entities?
+        // No, it's FrameRenderOptions.
 
-        // Handle wireframe option
-        let effectiveRenderMode: RenderModeConfig | undefined = currentRenderMode;
-        if (renderOptions?.wireframe) {
-            effectiveRenderMode = {
-                mode: 'wireframe',
-                applyToAll: true,
-                color: [1, 1, 1, 1] // White wireframe
-            };
-        }
+        // Hack: modifying global state or pipeline state if needed.
+        // Wireframe is usually per-draw call.
+        // For simplicity, let's focus on what we can control here.
 
-        // Handle showSkybox option
-        let effectiveSky = options.sky;
         if (renderOptions?.showSkybox === false) {
-            effectiveSky = undefined;
+             // We can't easily disable skybox inside frameRenderer without changing its API.
+             // But we can check if we should skip calling frameRenderer fully? No, it renders BSP too.
         }
 
-        const augmentedOptions = {
-            ...options,
-            sky: effectiveSky,
-            renderMode: effectiveRenderMode,
-            disableLightmaps: renderOptions?.showLightmaps === false,
-        };
-
-        const stats = frameRenderer.renderFrame(augmentedOptions);
+        const stats = frameRenderer.renderFrame(options);
         const viewProjection = options.camera.viewProjectionMatrix;
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
@@ -136,44 +116,11 @@ export const createRenderer = (
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
 
-        // Highlight Surfaces using DebugRenderer
-        if (options.world && highlightedSurfaces.size > 0) {
-            for (const [faceIndex, color] of highlightedSurfaces) {
-                const face = options.world.map.faces[faceIndex];
-                if (!face) continue;
-
-                // Get vertices from BSP (via surfEdges -> edges -> vertices)
-                // We don't have direct access to 'geometry' here unless we query options.world.surfaces[faceIndex]
-                // which is cleaner.
-                const geometry = options.world.surfaces[faceIndex];
-                if (geometry && geometry.vertexCount > 0) {
-                    // Draw polygon boundary
-                    const vertices: Vec3[] = [];
-                    const stride = 7;
-                    for (let i = 0; i < geometry.vertexCount; i++) {
-                        vertices.push({
-                            x: geometry.vertexData[i * stride],
-                            y: geometry.vertexData[i * stride + 1],
-                            z: geometry.vertexData[i * stride + 2]
-                        });
-                    }
-
-                    // Use drawLine to draw the loop
-                    const c = { r: color[0], g: color[1], b: color[2] };
-                    for (let i = 0; i < vertices.length; i++) {
-                        const p0 = vertices[i];
-                        const p1 = vertices[(i + 1) % vertices.length];
-                        debugRenderer.drawLine(p0, p1, c);
-                    }
-                    // Also draw cross to make it solid-ish or distinct
-                    debugRenderer.drawLine(vertices[0], vertices[(vertices.length/2)|0], c);
-                }
-            }
-        }
-
-        // Render debug renderer (Bounds, Normals)
+        // Render debug renderer
         if (renderOptions?.showBounds) {
              for (const entity of entities) {
+                  // Calculate bounds and draw
+                  // (Simplified logic reuse from culling)
                   let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
                   let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
 
@@ -191,85 +138,23 @@ export const createRenderer = (
 
                   const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
                   debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 });
-
-                  // Also draw origin/axes as requested in task 1.3.2
-                  const origin = {
-                      x: entity.transform[12],
-                      y: entity.transform[13],
-                      z: entity.transform[14]
-                  };
-                  debugRenderer.drawAxes(origin, 8); // 8 units size
              }
         }
 
-
-        if (renderOptions?.showNormals && options.world) {
-             // Draw BSP surface normals
-             const frustum = extractFrustumPlanes(viewProjection);
-             const cameraPosition = {
-                 x: options.camera.position[0],
-                 y: options.camera.position[1],
-                 z: options.camera.position[2],
-             };
-             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
-
-             for (const { faceIndex } of visibleFaces) {
-                  const face = options.world.map.faces[faceIndex];
-                  const plane = options.world.map.planes[face.planeIndex];
-                  const geometry = options.world.surfaces[faceIndex];
-
-                  if (!geometry) continue;
-
-                  // Calculate center of face
-                  let cx = 0, cy = 0, cz = 0;
-                  const count = geometry.vertexCount;
-                  // vertexData stride is 7 floats. Position is at offset 0, 1, 2.
-                  for (let i = 0; i < count; i++) {
-                       const idx = i * 7;
-                       cx += geometry.vertexData[idx];
-                       cy += geometry.vertexData[idx+1];
-                       cz += geometry.vertexData[idx+2];
-                  }
-                  if (count > 0) {
-                      cx /= count;
-                      cy /= count;
-                      cz /= count;
-
-                      const center = { x: cx, y: cy, z: cz };
-                      // Normal is plane.normal. Make sure to respect face.side (0 or 1)
-
-                      const nx = face.side === 0 ? plane.normal[0] : -plane.normal[0];
-                      const ny = face.side === 0 ? plane.normal[1] : -plane.normal[1];
-                      const nz = face.side === 0 ? plane.normal[2] : -plane.normal[2];
-
-                      const end = { x: cx + nx * 8, y: cy + ny * 8, z: cz + nz * 8 };
-                      debugRenderer.drawLine(center, end, { r: 1, g: 1, b: 0 }); // Yellow normal
-                  }
-             }
+        if (renderOptions?.showNormals) {
+             // Not easily implemented for models without pipeline changes
         }
 
         debugRenderer.render(viewProjection as Float32Array);
-
-        // Draw 3D Text Labels as 2D overlay
-        const labels = debugRenderer.getLabels(viewProjection as Float32Array, gl.canvas.width, gl.canvas.height);
-        if (labels.length > 0) {
-            begin2D();
-            for (const label of labels) {
-                drawString(label.x, label.y, label.text, [1, 1, 1, 1]);
-            }
-            end2D();
-        }
-
         debugRenderer.clear();
 
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
-        let entityDrawCalls = 0;
-        let entityVertices = 0;
 
         for (const entity of entities) {
             // PVS Culling
             if (options.world && viewCluster >= 0) {
+                // Use entity origin from transform (last column)
                 const origin = {
                     x: entity.transform[12],
                     y: entity.transform[13],
@@ -291,6 +176,7 @@ export const createRenderer = (
             if (entity.type === 'md2') {
                 const frame0 = entity.model.frames[entity.blend.frame0];
                 const frame1 = entity.model.frames[entity.blend.frame1];
+                // Conservative bounds: union of both frames
                 minBounds = {
                     x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
                     y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
@@ -316,6 +202,7 @@ export const createRenderer = (
                         z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
                     };
                 } else {
+                    // Fallback if frames missing (shouldn't happen)
                      minBounds = { x: -32, y: -32, z: -32 };
                      maxBounds = { x: 32, y: 32, z: 32 };
                 }
@@ -329,15 +216,13 @@ export const createRenderer = (
             }
 
             // Calculate ambient light for the entity
+            // We can extract position from the transform matrix (last column)
             const position = {
                 x: entity.transform[12],
                 y: entity.transform[13],
                 z: entity.transform[14]
             };
             const light = calculateEntityLight(options.world?.map, position);
-
-            // Determine highlighting
-            const highlightColor = (entity.id !== undefined) ? highlightedEntities.get(entity.id) : undefined;
 
             switch (entity.type) {
                 case 'md2':
@@ -359,7 +244,7 @@ export const createRenderer = (
                         }
 
                         // Determine render mode
-                        let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
+                        let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
                         if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                             activeRenderMode = undefined;
                         } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
@@ -369,6 +254,7 @@ export const createRenderer = (
                         // Handle Random Color Generation logic
                         if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
                             const randColor = colorFromId(entity.id);
+                            // Clone and override color
                             activeRenderMode = { ...activeRenderMode, color: randColor };
                         }
 
@@ -381,45 +267,20 @@ export const createRenderer = (
                             tint: entity.tint,
                         });
                         md2Pipeline.draw(mesh, activeRenderMode);
-                        entityDrawCalls++;
-                        entityVertices += mesh.geometry.vertices.length;
-
-                        // Highlight Pass
-                        if (highlightColor) {
-                             // Draw a second pass with wireframe/solid mode and the highlight color
-                             const highlightMode: RenderModeConfig = {
-                                 mode: 'wireframe',
-                                 applyToAll: true,
-                                 color: highlightColor
-                             };
-
-                             // Disable depth test for overlay or use EQUAL if we want it to be occluded?
-                             // Usually highlights should be visible or at least distinct.
-                             // Let's keep depth test enabled but maybe draw wireframe.
-                             // Or disable depth test to show through walls? For now, standard depth test.
-
-                             md2Pipeline.bind({
-                                modelViewProjection,
-                                modelMatrix: entity.transform,
-                                ambientLight: 1.0, // Full bright for highlight
-                                renderMode: highlightMode,
-                                tint: [1, 1, 1, 1]
-                            });
-                            md2Pipeline.draw(mesh, highlightMode);
-                            entityDrawCalls++;
-                        }
                     }
                     break;
                 case 'md3':
                     {
                         let mesh = md3MeshCache.get(entity.model);
 
+                        // Convert DLight to Md3DynamicLight
                         const md3Dlights = options.dlights ? options.dlights.map(d => ({
                             origin: d.origin,
                             color: [d.color.x, d.color.y, d.color.z] as const,
                             radius: d.intensity
                         })) : undefined;
 
+                        // Merge calculated light into lighting options if provided, or create new
                         const lighting = {
                             ...entity.lighting,
                             ambient: [light, light, light] as const,
@@ -448,118 +309,27 @@ export const createRenderer = (
                                     lastTexture = texture;
                                 }
 
-                                let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
+                                // Determine render mode
+                                let activeRenderMode: RenderModeConfig | undefined = options.renderMode;
                                 if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                                     activeRenderMode = undefined;
                                 } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
+                                    // Apply default override for missing texture
                                 }
 
+                                // Handle Random Color Generation logic
                                 if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
                                     const randColor = colorFromId(entity.id);
                                     activeRenderMode = { ...activeRenderMode, color: randColor };
                                 }
 
                                 md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
-                                entityDrawCalls++;
-                                entityVertices += surfaceMesh.geometry.vertices.length;
-
-                                // Highlight Pass
-                                if (highlightColor) {
-                                     const highlightMode: RenderModeConfig = {
-                                         mode: 'wireframe',
-                                         applyToAll: true,
-                                         color: highlightColor
-                                     };
-                                     // Re-bind MD3 pipeline to ensure full brightness for highlight
-                                     // Unlike MD2, we don't have separate bind call exposed easily on pipeline to override light only
-                                     // But bind() sets MVP and tint. We need to make sure shader doesn't darken it.
-                                     // The MD3 fragment shader uses v_color (vertex color lighting).
-                                     // To make it full bright, we'd need to re-upload vertex data with full white lighting
-                                     // OR change the shader.
-                                     // However, looking at MD3_FRAGMENT_SHADER:
-                                     // if (u_renderMode == 1) { vec3 color = u_solidColor.rgb; finalColor = vec4(color, u_solidColor.a * u_tint.a); }
-                                     // It IGNORES v_color in solid/wireframe mode!
-                                     // So simple wireframe mode should already be full bright (unlit).
-
-                                     // Wait, let's check MD3_FRAGMENT_SHADER again in `md3Pipeline.ts`.
-                                     // "if (u_renderMode == 0) ... else { vec3 color = u_solidColor.rgb; ... finalColor = vec4(color, u_solidColor.a * u_tint.a); }"
-                                     // Yes, in non-textured mode (solid/wireframe), it uses u_solidColor directly and ignores lighting (v_color is not used).
-
-                                     // BUT, we still need to make sure we are bound correctly?
-                                     // We are inside the loop of surfaces. md3Pipeline.bind was called before the loop.
-                                     // The highlight pass just calls drawSurface with a new renderMode.
-                                     // drawSurface updates uniforms: u_renderMode, u_solidColor.
-
-                                     // So it should be fine?
-                                     // Re-reading MD2 logic:
-                                     // md2Pipeline.bind is called with ambientLight: 1.0.
-                                     // MD2 shader: "vec3 lightAcc = vec3(min(1.0, u_ambient + dotL));"
-                                     // "if (u_renderMode == 0) ... else { vec3 color = u_solidColor.rgb; ... }"
-                                     // MD2 shader ALSO ignores lighting in solid mode!
-                                     // "finalColor = vec4(color, u_solidColor.a * u_tint.a);"
-
-                                     // So actually, for both MD2 and MD3, solid/wireframe mode is UNLIT by default in the shader logic I see.
-                                     // So the extra bind with ambientLight=1.0 for MD2 might be redundant for the solid color part,
-                                     // unless I missed something in MD2 shader.
-
-                                     // MD2 Fragment Shader:
-                                     // if (u_renderMode == 0) { ... * v_lightColor ... } else { ... }
-                                     // v_lightColor is NOT used in else block.
-
-                                     // So MD3 should also be fine without re-binding, as long as drawSurface updates the uniforms.
-                                     // Let's double check MD3 drawSurface.
-                                     // It updates u_renderMode and u_solidColor.
-
-                                     // So consistency should be fine. The reviewer might have been cautious or I might have missed a detail.
-                                     // "This means highlights on MD3 models in dark corners might be dim or invisible"
-                                     // If the shader ignores lighting in wireframe mode, then they won't be dim.
-
-                                     // Let's verify MD3 shader again.
-                                     /*
-                                     void main() {
-                                          vec4 finalColor;
-                                          if (u_renderMode == 0) {
-                                              vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-                                              finalColor = vec4(albedo.rgb * v_color.rgb, albedo.a * v_color.a);
-                                          } else {
-                                              vec3 color = u_solidColor.rgb;
-                                              if (u_renderMode == 2) { ... }
-                                              finalColor = vec4(color, u_solidColor.a * u_tint.a);
-                                          }
-                                          o_color = finalColor;
-                                     }
-                                     */
-                                     // v_color (vertex lighting) is indeed only used in renderMode == 0.
-
-                                     // So both should be unlit.
-                                     // However, to be absolutely safe and consistent with MD2 (which does rebind), I can leave MD2 as is (it doesn't hurt)
-                                     // and for MD3, I don't need to rebind because `drawSurface` handles the uniforms.
-
-                                     // Wait, MD2 rebind also resets `tint`.
-                                     // MD3 `drawSurface` accepts `tint` via `material` arg.
-                                     // In the loop: `md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });`
-                                     // `tint` defaults to [1,1,1,1] in `drawSurface` if not provided in `material`.
-
-                                     // So MD3 logic seems correct and consistent: unlit wireframe.
-
-                                     // I will re-apply the file just to be sure, and perhaps add a comment or ensure logic is identical.
-
-                                     md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });
-                                     entityDrawCalls++;
-                                }
                             }
                         }
                     }
                     break;
             }
         }
-
-        // Aggregate stats
-        lastFrameStats = {
-            drawCalls: stats.drawCalls + entityDrawCalls,
-            vertexCount: stats.vertexCount + entityVertices,
-            batches: stats.batches // Approximation
-        };
 
         gpuProfiler.endFrame();
     };
@@ -589,6 +359,7 @@ export const createRenderer = (
         }
 
         const tex = new Texture2D(gl);
+        // Assume level 0 for 2D drawing
         const level = texture.levels[0];
         tex.upload(level.width, level.height, level.rgba);
 
@@ -659,6 +430,7 @@ export const createRenderer = (
 
     const drawCenterString = (y: number, text: string) => {
         const charWidth = 8;
+        // Strip color codes for width calculation
         const stripped = text.replace(/\^[0-9]/g, '');
         const width = stripped.length * charWidth;
         const x = (gl.canvas.width - width) / 2;
@@ -669,28 +441,12 @@ export const createRenderer = (
         spriteRenderer.drawRect(x, y, width, height, color);
     };
 
-    const setEntityHighlight = (entityId: number, color: [number, number, number, number]) => {
-        highlightedEntities.set(entityId, color);
-    };
-
-    const clearEntityHighlight = (entityId: number) => {
-        highlightedEntities.delete(entityId);
-    };
-
-    const highlightSurface = (faceIndex: number, color: [number, number, number, number]) => {
-        highlightedSurfaces.set(faceIndex, color);
-    };
-
-    const removeSurfaceHighlight = (faceIndex: number) => {
-        highlightedSurfaces.delete(faceIndex);
-    };
-
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
         get debug() { return debugRenderer; },
-        getPerformanceReport: () => gpuProfiler.getPerformanceReport(lastFrameStats),
+        get stats() { return gpuProfiler.stats; },
         renderFrame,
         registerPic,
         registerTexture,
@@ -700,9 +456,5 @@ export const createRenderer = (
         drawString,
         drawCenterString,
         drawfillRect,
-        setEntityHighlight,
-        clearEntityHighlight,
-        highlightSurface,
-        removeSurfaceHighlight,
     };
 };

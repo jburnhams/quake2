@@ -11,32 +11,10 @@ import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity, writeRemoveEntity } from './protocol/entity.js';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
 import { writeServerCommand } from './protocol/write.js';
-import { Vec3, lerpAngle } from '@quake2ts/shared';
-
-function lerp(a: number, b: number, t: number): number {
-    return a + (b - a) * t;
-}
 
 const MAX_CLIENTS = 16;
 const FRAME_RATE = 10; // 10Hz dedicated server loop (Q2 standard)
 const FRAME_TIME_MS = 1000 / FRAME_RATE;
-
-// Lag Compensation History
-interface EntityHistory {
-    time: number;
-    origin: Vec3;
-    mins: Vec3;
-    maxs: Vec3;
-    angles: Vec3;
-}
-
-interface EntityBackup {
-    origin: Vec3;
-    mins: Vec3;
-    maxs: Vec3;
-    angles: Vec3;
-    link: boolean;
-}
 
 export class DedicatedServer implements GameEngine {
     private wss: WebSocketServer | null = null;
@@ -45,10 +23,6 @@ export class DedicatedServer implements GameEngine {
     private game: GameExports | null = null;
     private frameTimeout: NodeJS.Timeout | null = null;
     private entityIndex: CollisionEntityIndex | null = null;
-
-    // History buffer: Map<EntityIndex, HistoryArray>
-    private history = new Map<number, EntityHistory[]>();
-    private backup = new Map<number, EntityBackup>();
 
     constructor(private port: number = 27910) {
         this.svs = {
@@ -298,8 +272,7 @@ export class DedicatedServer implements GameEngine {
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
             unicast: (ent, reliable, event, ...args) => this.unicast(ent, reliable, event, ...args),
             configstring: (index, value) => this.SV_SetConfigString(index, value),
-            serverCommand: (cmd) => { console.log(`Server command: ${cmd}`); },
-            setLagCompensation: (active, client, lagMs) => this.setLagCompensation(active, client, lagMs)
+            serverCommand: (cmd) => { console.log(`Server command: ${cmd}`); }
         };
 
         this.game = createGame(imports, this, {
@@ -744,11 +717,6 @@ export class DedicatedServer implements GameEngine {
         for (const client of this.svs.clients) {
             if (!client || client.state === ClientState.Free) continue;
 
-            // Sync ping
-            if (client.edict && client.edict.client) {
-                client.edict.client.ping = client.ping;
-            }
-
             // Check timeout
             // Timeout if no packet received for 30 seconds (assuming 10Hz = 300 frames)
             if (client.state >= ClientState.Connected) {
@@ -785,9 +753,6 @@ export class DedicatedServer implements GameEngine {
             deltaMs: FRAME_TIME_MS,
             nowMs: Date.now()
         });
-
-        // 3.1 Record History for Lag Compensation
-        this.recordHistory();
 
         // 4. Send Updates
         if (snapshot && snapshot.state) {
@@ -1026,158 +991,5 @@ export class DedicatedServer implements GameEngine {
 
     configstring(index: number, value: string): void {
         this.SV_SetConfigString(index, value);
-    }
-
-    private recordHistory() {
-        if (!this.game) return;
-        const now = Date.now();
-        const HISTORY_MAX_MS = 1000;
-
-        this.game.entities.forEachEntity((ent) => {
-            // Track solid or takedamage entities
-            if (ent.solid !== Solid.Not || ent.takedamage) {
-                let hist = this.history.get(ent.index);
-                if (!hist) {
-                    hist = [];
-                    this.history.set(ent.index, hist);
-                }
-
-                // Add current state
-                hist.push({
-                    time: now,
-                    origin: { ...ent.origin },
-                    mins: { ...ent.mins },
-                    maxs: { ...ent.maxs },
-                    angles: { ...ent.angles }
-                });
-
-                // Prune old
-                while (hist.length > 0 && hist[0].time < now - HISTORY_MAX_MS) {
-                    hist.shift();
-                }
-            }
-        });
-    }
-
-    setLagCompensation(active: boolean, client?: Entity, lagMs?: number): void {
-        if (!this.game || !this.entityIndex) return;
-
-        if (active) {
-            // Enable Lag Compensation
-            if (!client || lagMs === undefined) return;
-
-            const now = Date.now();
-            const targetTime = now - lagMs;
-
-            // Backup and Shift entities
-            this.game.entities.forEachEntity((ent) => {
-                if (ent === client) return; // Don't shift the attacker
-                if (ent.solid === Solid.Not && !ent.takedamage) return;
-
-                const hist = this.history.get(ent.index);
-                if (!hist || hist.length === 0) return;
-
-                // Find samples
-                // We want: sample1.time <= targetTime <= sample2.time
-                let i = hist.length - 1;
-                while (i >= 0 && hist[i].time > targetTime) {
-                    i--;
-                }
-
-                if (i < 0) {
-                    // All samples are newer than targetTime (too much lag?), use oldest
-                    i = 0;
-                } else if (i >= hist.length - 1) {
-                    // All samples are older than targetTime (negative lag?), use newest
-                    // i = hist.length - 1;
-                    // We already set i to index where hist[i].time <= targetTime
-                    // If i is last element, we just use it.
-                }
-
-                const s1 = hist[i];
-                const s2 = (i + 1 < hist.length) ? hist[i + 1] : s1;
-
-                let frac = 0;
-                if (s1.time !== s2.time) {
-                    frac = (targetTime - s1.time) / (s2.time - s1.time);
-                }
-                if (frac < 0) frac = 0;
-                if (frac > 1) frac = 1;
-
-                // Interpolate
-                const origin = {
-                    x: s1.origin.x + (s2.origin.x - s1.origin.x) * frac,
-                    y: s1.origin.y + (s2.origin.y - s1.origin.y) * frac,
-                    z: s1.origin.z + (s2.origin.z - s1.origin.z) * frac
-                };
-
-                const angles = {
-                    x: lerpAngle(s1.angles.x, s2.angles.x, frac),
-                    y: lerpAngle(s1.angles.y, s2.angles.y, frac),
-                    z: lerpAngle(s1.angles.z, s2.angles.z, frac)
-                };
-
-                // Backup
-                this.backup.set(ent.index, {
-                    origin: { ...ent.origin },
-                    mins: { ...ent.mins },
-                    maxs: { ...ent.maxs },
-                    angles: { ...ent.angles },
-                    link: true // assume linked if we are tracking it
-                });
-
-                // Apply
-                ent.origin = origin;
-                ent.angles = angles;
-                // Mins/Maxs usually don't change for player models but might for ducks
-                // Interpolating mins/maxs might be needed for duck transitions
-                // But for now let's just use s1 (closest past) or s2?
-                // Or interpolate? Mins/maxs interpolation can be risky for collision logic if we assume boxes.
-                // Let's interpolate for completeness
-                 ent.mins = {
-                    x: s1.mins.x + (s2.mins.x - s1.mins.x) * frac,
-                    y: s1.mins.y + (s2.mins.y - s1.mins.y) * frac,
-                    z: s1.mins.z + (s2.mins.z - s1.mins.z) * frac
-                };
-                 ent.maxs = {
-                    x: s1.maxs.x + (s2.maxs.x - s1.maxs.x) * frac,
-                    y: s1.maxs.y + (s2.maxs.y - s1.maxs.y) * frac,
-                    z: s1.maxs.z + (s2.maxs.z - s1.maxs.z) * frac
-                };
-
-                // Relink in collision index
-                this.entityIndex!.link({
-                    id: ent.index,
-                    origin: ent.origin,
-                    mins: ent.mins,
-                    maxs: ent.maxs,
-                    contents: ent.solid === 0 ? 0 : 1, // Simplified
-                    surfaceFlags: 0
-                });
-            });
-
-        } else {
-            // Disable Lag Compensation - Restore
-            this.backup.forEach((state, id) => {
-                const ent = this.game?.entities.getByIndex(id);
-                if (ent) {
-                    ent.origin = state.origin;
-                    ent.mins = state.mins;
-                    ent.maxs = state.maxs;
-                    ent.angles = state.angles;
-
-                    // Relink original
-                    this.entityIndex!.link({
-                        id: ent.index,
-                        origin: ent.origin,
-                        mins: ent.mins,
-                        maxs: ent.maxs,
-                        contents: ent.solid === 0 ? 0 : 1,
-                        surfaceFlags: 0
-                    });
-                }
-            });
-            this.backup.clear();
-        }
     }
 }

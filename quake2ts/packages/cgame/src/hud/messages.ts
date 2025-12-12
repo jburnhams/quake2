@@ -87,7 +87,7 @@ export class MessageSystem {
     let y = 10; // Start near top-left
     for (const msg of this.notifyMessages) {
       cgi.SCR_DrawFontString(10, y, msg.text); // Use SCR_DrawFontString instead of drawString
-      y += cgi.SCR_FontLineHeight();
+      y += 10; // Line height - TODO: use cgi.SCR_FontLineHeight()
     }
   }
 }

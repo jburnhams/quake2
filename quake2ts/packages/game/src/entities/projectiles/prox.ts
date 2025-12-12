@@ -54,11 +54,6 @@ export function createProxMine(
     mine.movedir = { x: 0, y: 0, z: 1 };
 
     const proxMineExplode = (self: Entity) => {
-        // Prevent recursion if T_RadiusDamage damages the mine itself
-        self.takedamage = false;
-        self.health = 0;
-        self.deadflag = 2; // DeadFlag.Dead
-
         // console.log('DEBUG: proxMineExplode called');
         const targets = Array.from(entities.findByRadius(self.origin, PROX_MINE_RADIUS));
         // console.log('DEBUG: targets found:', targets.length);
@@ -94,7 +89,6 @@ export function createProxMine(
         for (const ent of nearby) {
             if (!ent.takedamage) continue;
             if (ent === self.owner) continue;
-            if (ent === self) continue; // Ignore self
 
             if (ent.health > 0) {
                 trigger = true;
@@ -132,8 +126,6 @@ export function createProxMine(
         }
 
         if (other && other.takedamage) {
-            if (other === self.owner) return; // Don't explode on owner
-
             proxMineExplode(self);
             return;
         }

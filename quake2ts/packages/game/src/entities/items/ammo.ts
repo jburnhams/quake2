@@ -5,7 +5,6 @@
 import { Entity, Solid } from '../entity.js';
 import { GameExports } from '../../index.js';
 import { AmmoItemId, getAmmoItemDefinition, pickupAmmo } from '../../inventory/ammo.js';
-import { handleItemPickup, createItemRespawnFunction } from './common.js';
 
 const AMMO_DISPLAY_NAMES: Record<AmmoItemId, string> = {
   [AmmoItemId.Shells]: 'Shells',
@@ -24,7 +23,9 @@ const AMMO_DISPLAY_NAMES: Record<AmmoItemId, string> = {
 
 export function createAmmoPickupEntity(game: GameExports, itemId: AmmoItemId): Partial<Entity> {
   const def = getAmmoItemDefinition(itemId);
-  const modelName = `models/items/ammo/${itemId.replace('ammo_', '')}/tris.md2`; // Approximate
+  const respawn = (self: Entity) => {
+    self.solid = Solid.Trigger;
+  };
 
   return {
     classname: itemId,
@@ -40,10 +41,13 @@ export function createAmmoPickupEntity(game: GameExports, itemId: AmmoItemId): P
 
         const name = AMMO_DISPLAY_NAMES[itemId] || itemId.replace('ammo_', '');
         game.centerprintf?.(other, `You got ${def.quantity} ${name}`);
-
-        handleItemPickup(game, self, other);
+        self.solid = Solid.Not;
+        if (game.deathmatch) {
+          self.nextthink = game.time + 30;
+          game.entities.scheduleThink(self, self.nextthink);
+        }
       }
     },
-    think: createItemRespawnFunction(game, modelName),
+    think: respawn,
   };
 }

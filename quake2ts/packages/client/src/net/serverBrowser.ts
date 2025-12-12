@@ -9,12 +9,6 @@ import {
 import { BrowserWebSocketNetDriver } from './browserWsDriver.js';
 import { NetworkMessageParser } from '@quake2ts/engine';
 
-export interface PlayerInfo {
-    name: string;
-    score: number;
-    ping: number;
-}
-
 export interface ServerInfo {
   address: string;
   hostName: string;
@@ -24,7 +18,6 @@ export interface ServerInfo {
   protocol: number;
   gameMode: string;
   ping: number;
-  players: PlayerInfo[];
 }
 
 export class ServerBrowser {
@@ -152,17 +145,11 @@ export class ServerBrowser {
       // Parse the Q2 status text
       // map: base1
       // players: 1 active (16 max)
-      // num score ping name
-      // --- ----- ---- ----
-      // 0 0 10 Player
 
       const lines = text.split('\n');
       let mapName = 'unknown';
       let playerCount = 0;
       let maxPlayers = 0;
-      const players: PlayerInfo[] = [];
-
-      let parsingPlayers = false;
 
       for (const line of lines) {
           if (line.startsWith('map:')) {
@@ -173,19 +160,6 @@ export class ServerBrowser {
               if (parts) {
                   playerCount = parseInt(parts[1], 10);
                   maxPlayers = parseInt(parts[2], 10);
-              }
-          } else if (line.trim().startsWith('num score ping name') || line.trim().startsWith('---')) {
-              parsingPlayers = true;
-          } else if (parsingPlayers) {
-              // 0 0 10 Player
-              // Regex to match: number number number string
-              const match = line.match(/^\s*\d+\s+(-?\d+)\s+(\d+)\s+(.+)$/);
-              if (match) {
-                  players.push({
-                      score: parseInt(match[1], 10),
-                      ping: parseInt(match[2], 10),
-                      name: match[3].trim()
-                  });
               }
           }
       }
@@ -198,8 +172,7 @@ export class ServerBrowser {
           playerCount,
           maxPlayers,
           protocol: 34,
-          gameMode: "deathmatch",
-          players
+          gameMode: "deathmatch"
       };
   }
 }
