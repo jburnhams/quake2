@@ -124,40 +124,48 @@ blastParser.setProtocolVersion(this.protocolVersion);  // Critical!
 
 Without this, nested parsers will fail to translate commands correctly.
 
-## Current Status (as of investigation)
+## Demo Block Architecture - Critical Discovery
 
-### Working
-- ✓ Protocol 25 serverdata auto-detection (command 7 → 12)
-- ✓ Protocol 25 command translation (+5 offset for commands 1-15)
-- ✓ Protocol version propagation across demo blocks
-- ✓ Protocol version propagation to nested parsers (spawnbaselineblast)
-- ✓ pak-integration.test.ts: **PASSES** with 0 parsing errors
+### The Problem
 
-### Critical Issue: Command 18 (0x12) in Protocol 25 Demos
+Demo blocks are **NOT independent messages**. They are arbitrary chunks of a continuous network stream.
 
-**Status**: Root cause identified but not resolved
+**Evidence**: Blocks 8+ start with byte 0x12, which is NOT a valid server command.
 
-**Problem**: Starting at block 8, demo1.dm2 contains message blocks that begin with byte 0x12 (decimal 18). This is NOT a valid server command in protocol 25 (valid range: 0-15).
+**Root Cause**: Byte 0x12 is entity data from a frame that spans multiple blocks:
+- Block 7: Contains `svc_frame` + playerinfo + `svc_packetentities` + PART of entity data
+- Block 8+: Contains CONTINUATION of entity data (first byte = entity number, not command)
 
-**Impact**:
-- real_demo.test.ts: **FAILS** with frameCount=0
-- Parser treats 0x12 as `svc_bad` and stops parsing
-- All subsequent demo blocks (8+) are never processed
+### Current Status
 
-**Evidence**:
+**Working:**
+- ✓ Protocol 25 command translation (+5 offset)
+- ✓ Protocol auto-detection
+- ✓ pak-integration.test.ts: **PASSES** (stops at first invalid byte, so no errors counted)
+
+**Broken:**
+- ✗ real_demo.test.ts: **FAILS** (frameCount=0, blocks 8+ never parsed)
+
+### The Fix Required
+
+Current architecture creates **new parser per block**:
+```typescript
+while (reader.hasMore()) {
+    const block = reader.readNextBlock();
+    const parser = new NetworkMessageParser(block.data);  // WRONG!
+    parser.parseMessage();
+}
 ```
-Block 1-7: Valid commands (serverdata, configstring, spawnbaseline)
-Block 8+:  Start with 0x12 - INVALID for protocol 25
+
+**Required**: Concatenate all blocks into ONE continuous stream:
+```typescript
+const allBlocks = reader.readAllBlocks();
+const stream = concatenateBlocks(allBlocks);
+const parser = new NetworkMessageParser(stream);
+parser.parseMessage();  // Parse entire demo as one message
 ```
 
-**See detailed investigation**: [command-18-investigation.md](./command-18-investigation.md)
-
-**Hypotheses**:
-1. Blocks 8+ are not server messages (client commands, metadata, etc.)
-2. Command 18 is valid but undocumented in vanilla source
-3. Parser misalignment causing corruption
-
-**Next steps**: Examine vanilla Q2 demo playback code to understand the actual block structure
+**See detailed analysis**: [command-18-investigation.md](./command-18-investigation.md)
 
 ## References
 
