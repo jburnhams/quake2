@@ -148,22 +148,33 @@ Demo blocks are **NOT independent messages**. They are arbitrary chunks of a con
 
 ### The Fix Required
 
-Current architecture creates **new parser per block**:
+Demo blocks must be parsed as a **continuous stream**, not independent messages.
+
+**For demo files** (current use case - all data available):
 ```typescript
+// Concatenate all blocks into one continuous stream
+const allBlocks = [];
 while (reader.hasMore()) {
-    const block = reader.readNextBlock();
-    const parser = new NetworkMessageParser(block.data);  // WRONG!
-    parser.parseMessage();
+    allBlocks.push(reader.readNextBlock().data);
+}
+const stream = BinaryStream.concatenate(allBlocks);
+const parser = new NetworkMessageParser(stream);
+parser.parseMessage();  // Parse entire demo as one continuous message
+```
+
+**For live network streams** (future - data arrives incrementally):
+```typescript
+// Streaming parser maintains state across blocks
+const stream = new GrowableStream();
+const parser = new NetworkMessageParser(stream);
+
+while (newBlockArrives) {
+    stream.append(newBlock.data);  // Append to growing buffer
+    parser.parseMessage();  // Continues from last position
 }
 ```
 
-**Required**: Concatenate all blocks into ONE continuous stream:
-```typescript
-const allBlocks = reader.readAllBlocks();
-const stream = concatenateBlocks(allBlocks);
-const parser = new NetworkMessageParser(stream);
-parser.parseMessage();  // Parse entire demo as one message
-```
+Both approaches use **one continuous stream parser** instead of creating new parsers per block.
 
 **See detailed analysis**: [command-18-investigation.md](./command-18-investigation.md)
 
