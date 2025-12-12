@@ -33,12 +33,12 @@ export class BspInspector {
   findLeafContainingPoint(point: vec3): number {
     let nodeIndex = 0;
     while (nodeIndex >= 0) {
+      if (nodeIndex >= this.bsp.nodes.length) return -1;
+
       const node = this.bsp.nodes[nodeIndex];
       const plane = this.bsp.planes[node.planeIndex];
 
       // bsp.planes[].normal is [x,y,z] tuple (Vec3 type in bsp.ts), not Float32Array.
-      // gl-matrix vec3.dot expects Float32Array or array.
-      // We can use direct calculation.
       const dot = point[0] * plane.normal[0] + point[1] * plane.normal[1] + point[2] * plane.normal[2];
       const dist = dot - plane.dist;
       if (dist >= 0) {
@@ -51,6 +51,9 @@ export class BspInspector {
   }
 
   getLeafBounds(leafIndex: number): Bounds3 {
+    if (leafIndex < 0 || leafIndex >= this.bsp.leafs.length) {
+        return { mins: { x: 0, y: 0, z: 0 }, maxs: { x: 0, y: 0, z: 0 } };
+    }
     const leaf = this.bsp.leafs[leafIndex];
     // leaf.mins is [number, number, number]
     return {
@@ -60,6 +63,7 @@ export class BspInspector {
   }
 
   getLeafCluster(leafIndex: number): number {
+    if (leafIndex < 0 || leafIndex >= this.bsp.leafs.length) return -1;
     const leaf = this.bsp.leafs[leafIndex];
     return leaf.cluster;
   }
@@ -68,11 +72,64 @@ export class BspInspector {
     if (fromCluster === -1 || toCluster === -1) return true; // Usually -1 means always visible or error
     if (fromCluster === toCluster) return true;
 
-    // STUB: This requires PVS data access which involves decompressing the visibility data from the BSP.
-    // The current BspMap interface stores raw visibility bytes but does not expose a high-level PVS checker here.
-    // In a full implementation, we would use the `vis` offset from `dvis_t` and decompress the bit vector.
-    // For now, we assume everything is visible to avoid blocking inspection.
-    return true;
+    if (!this.bsp.visibility || !this.bsp.visibility.clusters) {
+        return true; // No PVS data means no occlusion
+    }
+
+    if (fromCluster >= this.bsp.visibility.clusters.length) {
+        return true; // Invalid cluster, assume visible
+    }
+
+    const clusterData = this.bsp.visibility.clusters[fromCluster];
+    if (!clusterData) return true;
+
+    const pvs = clusterData.pvs;
+    const byteIndex = toCluster >> 3;
+    const bitIndex = 1 << (toCluster & 7);
+
+    if (byteIndex >= pvs.length) return false;
+
+    return (pvs[byteIndex] & bitIndex) !== 0;
+  }
+
+  getSurfaceAtPoint(point: vec3): SurfaceInfo | null {
+      const leafIndex = this.findLeafContainingPoint(point);
+      if (leafIndex < 0 || leafIndex >= this.bsp.leafs.length) return null;
+
+      const leaf = this.bsp.leafs[leafIndex];
+      // Access leaf faces via leafLists
+      // bsp.ts: const leafLists = parseLeafLists(...)
+      // map.leafLists.leafFaces is number[][]
+
+      const faceIndices = this.bsp.leafLists.leafFaces[leafIndex];
+      if (!faceIndices) return null;
+
+      const EPSILON = 1.0; // Tolerance for "on surface"
+
+      for (const faceIndex of faceIndices) {
+          const face = this.bsp.faces[faceIndex];
+          const plane = this.bsp.planes[face.planeIndex];
+
+          // Check distance to plane
+          const dot = point[0] * plane.normal[0] + point[1] * plane.normal[1] + point[2] * plane.normal[2];
+          const dist = Math.abs(dot - plane.dist);
+
+          if (dist < EPSILON) {
+              // Found a candidate face.
+              // Ideally check winding inclusion here, but for now closest plane in leaf is a good guess.
+              // Assuming user clicked on a visible surface in this leaf.
+
+              const texInfo = this.bsp.texInfo[face.texInfo];
+
+              return {
+                  textureName: texInfo ? texInfo.texture : 'unknown',
+                  lightmapId: face.styles[0], // Primary lightmap style? Or offset?
+                  normal: vec3.fromValues(plane.normal[0], plane.normal[1], plane.normal[2])
+              };
+          }
+      }
+
+      return null;
   }
 
   getSurfacesByTexture(textureName: string): number[] {
