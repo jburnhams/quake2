@@ -32,7 +32,7 @@ import { PauseMenuFactory } from './ui/menu/pause.js';
 import { MultiplayerMenuFactory } from './ui/menu/multiplayer.js';
 import { DemoMenuFactory } from './ui/menu/demo.js';
 import { Draw_Menu } from './ui/menu/render.js';
-import { InputBindings } from './input/bindings.js';
+import { InputBindings, createDefaultBindings } from './input/bindings.js';
 import { BrowserSettings, LocalStorageSettings } from './ui/storage.js';
 import { LoadingScreen } from './ui/loading/screen.js';
 import { ErrorDialog } from './ui/error.js';
@@ -46,6 +46,7 @@ import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
+import { InputController } from './input/controller.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -129,6 +130,7 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
 
   // Menu System
   createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+  readonly menuSystem: MenuSystem;
 
   // Input handling
   handleInput(key: string, down: boolean): boolean;
@@ -144,6 +146,17 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly errorDialog: ErrorDialog;
 
   readonly dlightManager: DynamicLightManager;
+
+  // Input
+  readonly input: InputController;
+  readonly bindings: InputBindings;
+
+  // Events
+  onCenterPrint?: (message: string, duration: number) => void;
+  onNotify?: (message: string) => void;
+  onPickupMessage?: (item: string) => void;
+  onObituaryMessage?: (message: string) => void;
+  onHudUpdate?: (data: any) => void; // Defined as any to avoid type complexity for now
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -229,6 +242,10 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
+
+  // Initialize Input
+  const bindings = createDefaultBindings();
+  const input = new InputController({}, bindings);
 
   // Initialize UI components
   const loadingScreen = new LoadingScreen();
@@ -445,6 +462,8 @@ export function createClient(imports: ClientImports): ClientExports {
     loadingScreen,
     errorDialog,
     dlightManager,
+    input,
+    bindings,
 
     init(initial) {
       this.Init(initial);
@@ -597,6 +616,10 @@ export function createClient(imports: ClientImports): ClientExports {
         return { menuSystem, factory };
     },
 
+    get menuSystem() {
+        return menuSystem;
+    },
+
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       // Keep track of entities to render
       let renderEntities: RenderableEntity[] = [];
@@ -704,6 +727,10 @@ export function createClient(imports: ClientImports): ClientExports {
           }
 
           if (sample.previous?.state && sample.latest?.state) {
+            // Ensure both states have necessary properties for interpolation
+            if (!sample.previous.state.viewAngles) sample.previous.state.viewAngles = { x: 0, y: 0, z: 0 };
+            if (!sample.latest.state.viewAngles) sample.latest.state.viewAngles = { x: 0, y: 0, z: 0 };
+
             lastRendered = interpolatePredictionState(sample.previous.state, sample.latest.state, sample.alpha);
 
             // Interpolate entities
@@ -733,7 +760,13 @@ export function createClient(imports: ClientImports): ClientExports {
           prediction.decayError(frameTimeMs / 1000.0);
       }
 
-      lastView = view.sample(lastRendered, frameTimeMs);
+      if (lastRendered) {
+          // Ensure viewAngles exists
+          if (!lastRendered.viewAngles) {
+              lastRendered.viewAngles = { x: 0, y: 0, z: 0 };
+          }
+          lastView = view.sample(lastRendered, frameTimeMs);
+      }
 
       // Update screen blend (damage/pickup flashes)
       if (lastRendered) {
@@ -1026,9 +1059,18 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
+      if (clientExports.onCenterPrint) {
+          // Duration? CG usually knows. Hardcode or expose.
+          clientExports.onCenterPrint(msg, 2);
+      }
     },
     ParseNotify(msg: string) {
       cg.NotifyMessage(0, msg, false);
+      if (clientExports.onNotify) {
+          clientExports.onNotify(msg);
+      }
+      // TODO: Distinguish pickup vs obituary based on msg content or add more hooks?
+      // For now, raw notify.
     },
     showSubtitle(text: string, soundName: string) {
       cg.ShowSubtitle(text, soundName);

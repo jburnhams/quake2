@@ -104,6 +104,10 @@ export class EngineHost<FrameState = unknown> {
     return this.loop.isRunning();
   }
 
+  get paused(): boolean {
+    return !this.loop.isRunning();
+  }
+
   private stepSimulation = (step: FixedStepContext): void => {
     this.previousFrame = this.latestFrame;
     this.latestFrame = this.game.frame(step, this.latestCommand);
