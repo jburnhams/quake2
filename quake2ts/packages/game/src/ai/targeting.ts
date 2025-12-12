@@ -16,6 +16,7 @@ import { RangeCategory, classifyRange, infront, rangeTo, visible, type TraceFunc
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { ServerFlags } from '../entities/entity.js';
+import { M_CheckAttack } from './monster.js';
 
 export { rangeTo as range, RangeCategory as Range } from './perception.js';
 
@@ -277,4 +278,20 @@ export function findTarget(
   }
 
   return true;
+}
+
+// Reference: g_ai.c lines 152-350
+export function ai_checkattack(self: Entity, dist: number, context: EntitySystem): boolean {
+  // this is the main combat logic loop
+
+  if (!self.enemy) {
+    return false;
+  }
+
+  // if the enemy is dead, find a new target
+  // (Assuming check_target_dead or similar logic is handled elsewhere or inline here if needed)
+  // In Quake 2, CheckAttack is called.
+
+  const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
+  return checkAttack(self, context);
 }
