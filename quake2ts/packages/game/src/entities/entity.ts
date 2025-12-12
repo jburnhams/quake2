@@ -377,6 +377,7 @@ export class Entity {
   monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
   moveinfo?: MoveInfo;
   hackflags = 0;
+  plat2flags = 0;
 
   fov = 0;
 
@@ -689,6 +690,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'chain', type: 'entity', save: true },
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
+  { name: 'plat2flags', type: 'int', save: true },
   { name: 'fov', type: 'float', save: true },
 ];
 

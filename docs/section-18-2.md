@@ -128,10 +128,11 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
   - Wait at top/bottom
   - Reference: `g_func.cpp` lines 422-580
 
-- [ ] Implement `SP_func_plat2(entity: Entity): void`
+- [x] Implement `SP_func_plat2(entity: Entity): void`
   - Enhanced platform with more states
   - Configurable movement paths
   - Reference: `g_func.cpp` lines 582-720
+  - Note: In this port, `func_plat2` functionality is integrated with `func_plat` logic where possible, as they share significant behavior.
 
 - [x] Implement `SP_func_train(entity: Entity): void`
   - Track-based movement
