@@ -6,14 +6,16 @@ import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver';
 // Mock dependencies
 vi.mock('../../src/net/browserWsDriver', () => {
     return {
-        BrowserWebSocketNetDriver: vi.fn().mockImplementation(() => ({
-            connect: vi.fn().mockResolvedValue(undefined),
-            disconnect: vi.fn(),
-            send: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn()
-        }))
+        BrowserWebSocketNetDriver: vi.fn(function() {
+            return {
+                connect: vi.fn().mockResolvedValue(undefined),
+                disconnect: vi.fn(),
+                send: vi.fn(),
+                onMessage: vi.fn(),
+                onClose: vi.fn(),
+                onError: vi.fn()
+            };
+        })
     };
 });
 

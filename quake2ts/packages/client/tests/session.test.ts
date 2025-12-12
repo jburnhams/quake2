@@ -22,14 +22,20 @@ const { mockGameExports, mockCreateGame, mockClientExports, mockCreateClient, mo
 
     const mockCreateClient = vi.fn().mockReturnValue(mockClientExports);
 
-    const mockEngineHost = vi.fn().mockImplementation(() => ({
-        start: vi.fn(),
-        stop: vi.fn(),
-        commands: {
+    const mockEngineHost = vi.fn(function(this: any) {
+        this.start = vi.fn();
+        this.stop = vi.fn();
+        this.commands = {
             execute: vi.fn(),
             register: vi.fn()
-        },
-    }));
+        };
+        this.cvars = {
+            get: vi.fn(),
+            register: vi.fn(),
+            setValue: vi.fn()
+        };
+        this.paused = false;
+    });
 
     return {
         mockGameExports,

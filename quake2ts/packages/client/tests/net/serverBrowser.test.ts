@@ -43,7 +43,7 @@ class MockNetDriver implements NetDriver {
 
 vi.mock('../../src/net/browserWsDriver.js', () => {
     return {
-        BrowserWebSocketNetDriver: vi.fn().mockImplementation(() => {
+        BrowserWebSocketNetDriver: vi.fn(function() {
             return new MockNetDriver();
         })
     };
@@ -70,7 +70,7 @@ describe('ServerBrowser', () => {
         let driverInstance: MockNetDriver | null = null;
 
         const { BrowserWebSocketNetDriver } = await import('../../src/net/browserWsDriver.js');
-        (BrowserWebSocketNetDriver as any).mockImplementation(() => {
+        (BrowserWebSocketNetDriver as any).mockImplementation(function() {
             driverInstance = new MockNetDriver();
             // Spy on send to simulate server response
             vi.spyOn(driverInstance, 'send').mockImplementation((data) => {
@@ -127,7 +127,7 @@ describe('ServerBrowser', () => {
     it('should handle timeout', async () => {
         // Mock driver that never responds
         const { BrowserWebSocketNetDriver } = await import('../../src/net/browserWsDriver.js');
-        (BrowserWebSocketNetDriver as any).mockImplementation(() => {
+        (BrowserWebSocketNetDriver as any).mockImplementation(function() {
             const d = new MockNetDriver();
             vi.spyOn(d, 'send').mockImplementation(() => {
                 // Do nothing

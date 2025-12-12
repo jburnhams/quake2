@@ -9,58 +9,64 @@ vi.mock('@quake2ts/engine', async () => {
     const actual = await vi.importActual('@quake2ts/engine');
     return {
         ...actual,
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            loadDemo: vi.fn(),
-            setHandler: vi.fn(),
-            update: vi.fn(),
-            stop: vi.fn(),
-            setSpeed: vi.fn(),
-            setFrameDuration: vi.fn(),
-            getCurrentTime: vi.fn().mockReturnValue(0),
-            getDuration: vi.fn().mockReturnValue(100),
-            getState: vi.fn(),
-            getSpeed: vi.fn().mockReturnValue(1),
-            play: vi.fn(),
-            pause: vi.fn(),
-            stepForward: vi.fn(),
-            stepBackward: vi.fn(),
-            seek: vi.fn(),
-            getCurrentFrame: vi.fn().mockReturnValue(0),
-            getTotalFrames: vi.fn().mockReturnValue(100)
-        })),
+        DemoPlaybackController: vi.fn(function() {
+            return {
+                loadDemo: vi.fn(),
+                setHandler: vi.fn(),
+                update: vi.fn(),
+                stop: vi.fn(),
+                setSpeed: vi.fn(),
+                setFrameDuration: vi.fn(),
+                getCurrentTime: vi.fn().mockReturnValue(0),
+                getDuration: vi.fn().mockReturnValue(100),
+                getState: vi.fn(),
+                getSpeed: vi.fn().mockReturnValue(1),
+                play: vi.fn(),
+                pause: vi.fn(),
+                stepForward: vi.fn(),
+                stepBackward: vi.fn(),
+                seek: vi.fn(),
+                getCurrentFrame: vi.fn().mockReturnValue(0),
+                getTotalFrames: vi.fn().mockReturnValue(100)
+            };
+        }),
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
 });
 
 vi.mock('../../src/demo/handler.js', () => ({
-    ClientNetworkHandler: vi.fn().mockImplementation(() => ({
-        setView: vi.fn(),
-        setCallbacks: vi.fn(),
-        getPredictionState: vi.fn().mockReturnValue({
-             origin: { x: 0, y: 0, z: 0 },
-             velocity: { x: 0, y: 0, z: 0 },
-             viewAngles: { x: 0, y: 0, z: 0 },
-             pmFlags: 0,
-             fov: 90,
-             client: {} // Added client property to satisfy rendering condition
-        }),
-        getRenderableEntities: vi.fn().mockReturnValue([]),
-        getDemoCamera: vi.fn().mockReturnValue({
-             origin: { x: 0, y: 0, z: 0 },
-             angles: { x: 0, y: 0, z: 0 },
-             fov: 90
-        }),
-        latestServerFrame: 100
-    }))
+    ClientNetworkHandler: vi.fn(function() {
+        return {
+            setView: vi.fn(),
+            setCallbacks: vi.fn(),
+            getPredictionState: vi.fn().mockReturnValue({
+                 origin: { x: 0, y: 0, z: 0 },
+                 velocity: { x: 0, y: 0, z: 0 },
+                 viewAngles: { x: 0, y: 0, z: 0 },
+                 pmFlags: 0,
+                 fov: 90,
+                 client: {} // Added client property to satisfy rendering condition
+            }),
+            getRenderableEntities: vi.fn().mockReturnValue([]),
+            getDemoCamera: vi.fn().mockReturnValue({
+                 origin: { x: 0, y: 0, z: 0 },
+                 angles: { x: 0, y: 0, z: 0 },
+                 fov: 90
+            }),
+            latestServerFrame: 100
+        };
+    })
 }));
 
 vi.mock('../../src/ui/demo-controls.js', () => ({
-    DemoControls: vi.fn().mockImplementation(() => ({
-        render: vi.fn(),
-        handleInput: vi.fn().mockReturnValue(false),
-        setDemoName: vi.fn()
-    }))
+    DemoControls: vi.fn(function() {
+        return {
+            render: vi.fn(),
+            handleInput: vi.fn().mockReturnValue(false),
+            setDemoName: vi.fn()
+        };
+    })
 }));
 
 // Mock cgameBridge to avoid complex dependencies
@@ -76,15 +82,19 @@ vi.mock('../../src/hud.js', () => ({
 
 vi.mock('@quake2ts/cgame', async () => {
   return {
-    ClientPrediction: vi.fn().mockImplementation(() => ({
-        setAuthoritative: vi.fn(),
-        enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn()
-    })),
+    ClientPrediction: vi.fn(function() {
+        return {
+            setAuthoritative: vi.fn(),
+            enqueueCommand: vi.fn(),
+            getPredictedState: vi.fn()
+        };
+    }),
     interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(() => ({
-        sample: vi.fn()
-    })),
+    ViewEffects: vi.fn(function() {
+        return {
+            sample: vi.fn()
+        };
+    }),
     GetCGameAPI: vi.fn().mockReturnValue({
         Init: vi.fn(),
         Shutdown: vi.fn(),
@@ -98,14 +108,16 @@ vi.mock('@quake2ts/cgame', async () => {
 });
 
 vi.mock('../../src/ui/menu/system.js', () => ({
-    MenuSystem: vi.fn().mockImplementation(() => ({
-        isActive: vi.fn().mockReturnValue(false),
-        closeAll: vi.fn(),
-        pushMenu: vi.fn(),
-        render: vi.fn(),
-        handleInput: vi.fn(),
-        getState: vi.fn().mockReturnValue({})
-    }))
+    MenuSystem: vi.fn(function() {
+        return {
+            isActive: vi.fn().mockReturnValue(false),
+            closeAll: vi.fn(),
+            pushMenu: vi.fn(),
+            render: vi.fn(),
+            handleInput: vi.fn(),
+            getState: vi.fn().mockReturnValue({})
+        };
+    })
 }));
 
 describe('Demo Playback Integration', () => {

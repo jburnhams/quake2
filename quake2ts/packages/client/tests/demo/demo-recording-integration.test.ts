@@ -12,7 +12,7 @@ vi.mock('@quake2ts/engine', async () => {
     const actual = await vi.importActual('@quake2ts/engine');
     return {
         ...actual,
-        DemoRecorder: vi.fn().mockImplementation(() => {
+        DemoRecorder: vi.fn(function() {
             mockRecorderInstance = {
                 startRecording: vi.fn(),
                 recordMessage: vi.fn(),
@@ -21,46 +21,52 @@ vi.mock('@quake2ts/engine', async () => {
             };
             return mockRecorderInstance;
         }),
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            setHandler: vi.fn(),
-            loadDemo: vi.fn(),
-            setSpeed: vi.fn(),
-            setFrameDuration: vi.fn(),
-            getCurrentTime: vi.fn(),
-            getDuration: vi.fn(),
-            getState: vi.fn(),
-            getSpeed: vi.fn(),
-            play: vi.fn(),
-            pause: vi.fn(),
-            stop: vi.fn()
-        })),
+        DemoPlaybackController: vi.fn(function() {
+            return {
+                setHandler: vi.fn(),
+                loadDemo: vi.fn(),
+                setSpeed: vi.fn(),
+                setFrameDuration: vi.fn(),
+                getCurrentTime: vi.fn(),
+                getDuration: vi.fn(),
+                getState: vi.fn(),
+                getSpeed: vi.fn(),
+                play: vi.fn(),
+                pause: vi.fn(),
+                stop: vi.fn()
+            };
+        }),
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
 });
 
 vi.mock('../../src/net/connection.js', () => ({
-    MultiplayerConnection: vi.fn().mockImplementation(() => {
+    MultiplayerConnection: vi.fn(function() {
         mockMultiplayerInstance = {
             setDemoRecorder: vi.fn(),
             setEffectSystem: vi.fn(),
             isConnected: vi.fn().mockReturnValue(true),
             disconnect: vi.fn(),
-            sendCommand: vi.fn()
+            sendCommand: vi.fn(),
+            entities: new Map(),
+            get playerNum() { return 0; }
         };
         return mockMultiplayerInstance;
     })
 }));
 
 vi.mock('../../src/ui/menu/system.js', () => ({
-    MenuSystem: vi.fn().mockImplementation(() => ({
-        isActive: vi.fn(),
-        pushMenu: vi.fn(),
-        closeAll: vi.fn(),
-        render: vi.fn(),
-        handleInput: vi.fn(),
-        getState: vi.fn().mockReturnValue({})
-    }))
+    MenuSystem: vi.fn(function() {
+        return {
+            isActive: vi.fn(),
+            pushMenu: vi.fn(),
+            closeAll: vi.fn(),
+            render: vi.fn(),
+            handleInput: vi.fn(),
+            getState: vi.fn().mockReturnValue({})
+        };
+    })
 }));
 
 vi.mock('../../src/hud.js', () => ({
@@ -70,13 +76,17 @@ vi.mock('../../src/hud.js', () => ({
 
 vi.mock('@quake2ts/cgame', async () => {
   return {
-    ClientPrediction: vi.fn().mockImplementation(() => ({})),
+    ClientPrediction: vi.fn(function() { return { setAuthoritative: vi.fn(), enqueueCommand: vi.fn(), getPredictedState: vi.fn(), decayError: vi.fn() }; }),
     interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(() => ({})),
+    ViewEffects: vi.fn(function() { return { sample: vi.fn() }; }),
     GetCGameAPI: vi.fn().mockReturnValue({
         Init: vi.fn(),
         Shutdown: vi.fn(),
-        DrawHUD: vi.fn()
+        DrawHUD: vi.fn(),
+        ParseCenterPrint: vi.fn(),
+        NotifyMessage: vi.fn(),
+        ParseConfigString: vi.fn(),
+        ShowSubtitle: vi.fn()
     })
   }
 });
