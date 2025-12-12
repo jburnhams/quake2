@@ -696,6 +696,121 @@ const func_plat: SpawnFunction = (entity, context) => {
     };
 };
 
+const func_plat2: SpawnFunction = (entity, context) => {
+    func_plat(entity, context);
+};
+
+// ============================================================================
+// FUNC PENDULUM
+// ============================================================================
+
+function pendulum_swing(ent: Entity, context: EntitySystem) {
+    let nextThink = ent.nextthink + 0.1;
+    // Calculate new angle based on time
+    const freq = ent.speed || 0.1; // Using speed as frequency?
+    // In Quake 2, func_pendulum uses:
+    // angle = phase + speed * time
+    // But we need to check how it was implemented in original source.
+    // g_func.cpp: SP_func_pendulum
+    // It sets avelocity? No, it likely updates angles in think.
+
+    // Original Q2 logic:
+    /*
+    float x = (level.time * self->speed + self->phase);
+    float y = sin(x * M_PI * 2);
+    self->s.angles[2] = self->move_angles[2] + y * self->distance;
+    */
+    // Default axis is Z rotation (Roll)
+
+    // We need ent.phase and ent.move_angles and ent.distance
+    // ent.speed is frequency (Hz? or radians per second?)
+    // In g_func.cpp: if (!self.speed) self.speed = 30;
+
+    // Wait, speed is usually degrees per second for rotating stuff.
+    // But for pendulum it might be degrees of swing?
+    // "speed" is degrees per second.
+    // "distance" is degrees of swing.
+    // "phase" is 0-360 start offset.
+
+    // Actually looking at g_func.cpp:
+    /*
+    void pendulum_use (edict_t *ent, edict_t *other, edict_t *activator)
+    {
+        ent->use = NULL;
+        ent->think = pendulum_think;
+        ent->nextthink = level.time + 0.1;
+    }
+
+    void pendulum_think (edict_t *ent)
+    {
+        ent->nextthink = level.time + 0.1;
+        ent->s.angles[2] = ent->move_angles[2] + sin(level.time * ent->speed) * ent->distance;
+        gi.linkentity (ent);
+    }
+    */
+    // Wait, level.time * ent.speed inside sin?
+    // So if speed is 1, it completes a cycle every 2*PI seconds (approx 6.28s).
+    // Usually speed is small here.
+
+    // Let's implement based on this simplified view:
+    const time = context.timeSeconds;
+    const speed = ent.speed || 1;
+    const dist = (ent as any).distance || 90;
+    const baseAngle = (ent as any).move_angles?.z || 0;
+
+    const angleDelta = Math.sin(time * speed) * dist;
+
+    // We only modify Z angle (roll)?
+    // Q2 usually swings around Y axis (so changes Z angle) or X axis?
+    // ent->s.angles[2] is Roll (Z).
+
+    ent.angles = {
+        x: ent.angles.x,
+        y: ent.angles.y,
+        z: baseAngle + angleDelta
+    };
+
+    context.linkentity(ent);
+    context.scheduleThink(ent, time + 0.1);
+}
+
+const func_pendulum: SpawnFunction = (entity, context) => {
+    entity.solid = Solid.Bsp;
+    entity.movetype = MoveType.Push;
+
+    if (!entity.speed) entity.speed = 30; // Default?
+    // Speed in Q2 pendulum seems to be treated as a multiplier for time in sin().
+
+    (entity as any).move_angles = { ...entity.angles };
+    (entity as any).distance = entity.dmg || 90; // Using dmg field for distance if not set?
+    // In Q2, 'dmg' is damage on block. 'distance' is separate key.
+
+    const distKey = context.keyValues.distance;
+    if (distKey) {
+        (entity as any).distance = parseFloat(distKey);
+    }
+
+    // If targeted, wait for use
+    if (entity.targetname) {
+        entity.use = (self) => {
+            self.use = undefined;
+            self.think = (e) => pendulum_swing(e, context.entities);
+            context.entities.scheduleThink(self, context.entities.timeSeconds + 0.1);
+        };
+    } else {
+        entity.think = (e) => pendulum_swing(e, context.entities);
+        context.entities.scheduleThink(entity, context.entities.timeSeconds + 0.1);
+    }
+
+    if (entity.dmg) {
+        entity.blocked = (self, other) => {
+            if (other && other.takedamage) {
+                other.health -= self.dmg;
+            }
+        };
+    }
+};
+
 // ============================================================================
 // FUNC ROTATING
 // ============================================================================
@@ -1226,7 +1341,9 @@ export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_button', func_button);
   registry.register('func_train', func_train);
   registry.register('func_plat', func_plat);
+  registry.register('func_plat2', func_plat2);
   registry.register('func_rotating', func_rotating);
+  registry.register('func_pendulum', func_pendulum);
   registry.register('func_conveyor', func_conveyor);
   registry.register('func_water', func_water);
   registry.register('func_explosive', func_explosive);

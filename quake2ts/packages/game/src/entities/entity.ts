@@ -378,6 +378,8 @@ export class Entity {
   moveinfo?: MoveInfo;
   hackflags = 0;
 
+  fov = 0;
+
   combattarget?: string;
   show_hostile = 0;
   light_level = 0;
@@ -687,6 +689,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'chain', type: 'entity', save: true },
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
+  { name: 'fov', type: 'float', save: true },
 ];
 
 export interface Damageable {
