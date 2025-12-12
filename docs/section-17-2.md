@@ -53,7 +53,7 @@
 ### 2.2.2 Surface Inspection
 - [x] Add method `getSurfaceAtPoint(point: Vec3): SurfaceInfo | null` for face picking
   * *Implemented in `BspInspector` by searching faces in the containing leaf.*
-- [ ] Return surface info: texture name, lightmap index, normal, plane, vertices
+- [x] Return surface info: texture name, lightmap index, normal, plane, vertices
   * *Partial support: Texture, LightmapId, Normal implemented.*
 - [x] Add method `getSurfacesByTexture(textureName: string): number[]`
 - [ ] Add method `highlightSurface(surfaceId: number, color: Color): void`

@@ -12,7 +12,11 @@ export interface SurfaceInfo {
   textureName: string;
   lightmapId: number;
   normal: vec3;
-  // Other details
+  plane: {
+    normal: vec3;
+    dist: number;
+  };
+  vertices: vec3[];
 }
 
 export interface TextureInfo {
@@ -96,11 +100,7 @@ export class BspInspector {
       const leafIndex = this.findLeafContainingPoint(point);
       if (leafIndex < 0 || leafIndex >= this.bsp.leafs.length) return null;
 
-      const leaf = this.bsp.leafs[leafIndex];
       // Access leaf faces via leafLists
-      // bsp.ts: const leafLists = parseLeafLists(...)
-      // map.leafLists.leafFaces is number[][]
-
       const faceIndices = this.bsp.leafLists.leafFaces[leafIndex];
       if (!faceIndices) return null;
 
@@ -116,15 +116,31 @@ export class BspInspector {
 
           if (dist < EPSILON) {
               // Found a candidate face.
-              // Ideally check winding inclusion here, but for now closest plane in leaf is a good guess.
-              // Assuming user clicked on a visible surface in this leaf.
-
               const texInfo = this.bsp.texInfo[face.texInfo];
+
+              // Collect vertices
+              const vertices: vec3[] = [];
+              for (let i = 0; i < face.numEdges; i++) {
+                const edgeIndex = this.bsp.surfEdges[face.firstEdge + i];
+                let vIndex: number;
+                if (edgeIndex >= 0) {
+                    vIndex = this.bsp.edges[edgeIndex].vertices[0];
+                } else {
+                    vIndex = this.bsp.edges[-edgeIndex].vertices[1];
+                }
+                const v = this.bsp.vertices[vIndex];
+                vertices.push(vec3.fromValues(v[0], v[1], v[2]));
+              }
 
               return {
                   textureName: texInfo ? texInfo.texture : 'unknown',
-                  lightmapId: face.styles[0], // Primary lightmap style? Or offset?
-                  normal: vec3.fromValues(plane.normal[0], plane.normal[1], plane.normal[2])
+                  lightmapId: face.styles[0],
+                  normal: vec3.fromValues(plane.normal[0], plane.normal[1], plane.normal[2]),
+                  plane: {
+                    normal: vec3.fromValues(plane.normal[0], plane.normal[1], plane.normal[2]),
+                    dist: plane.dist
+                  },
+                  vertices
               };
           }
       }
