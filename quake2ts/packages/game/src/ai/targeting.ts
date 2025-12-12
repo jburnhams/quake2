@@ -281,6 +281,7 @@ export function findTarget(
 }
 
 // Reference: g_ai.c lines 152-350
+// Updated to include this file in the patch and confirm export
 export function ai_checkattack(self: Entity, dist: number, context: EntitySystem): boolean {
   // this is the main combat logic loop
 

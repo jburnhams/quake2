@@ -4,14 +4,15 @@ import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { MoveType, EntityFlags } from '../entities/entity.js';
 import { MASK_MONSTERSOLID, MASK_WATER, CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
-import { AIFlags, BOTTOM_EMPTY, BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA } from './constants.js';
+import { AIFlags, BOTTOM_EMPTY, BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA, AttackState } from './constants.js';
 import { M_CheckAttack } from './monster.js';
 import { rangeTo, visible } from './perception.js';
-import { findTarget } from './targeting.js';
+import { findTarget, ai_checkattack } from './targeting.js';
 
 export type MutableVec3 = { x: number; y: number; z: number };
 
 const STEPSIZE = 18;
+const MONSTER_TICK = 0.1;
 
 function yawVector(yawDegrees: number, distance: number): Vec3 {
   if (distance === 0) {
@@ -97,32 +98,58 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
   self.ideal_yaw = vectorToYaw(toTarget);
 }
 
-export function ai_stand(self: Entity, deltaSeconds: number, context: EntitySystem): void {
-  if (findTarget(self, context.targetAwareness, context, context.trace)) {
-     return;
+// g_ai.c: ai_stand
+export function ai_stand(self: Entity, dist: number, context: EntitySystem): void {
+  if (dist) {
+    M_walkmove(self, self.angles.y, dist, context);
   }
 
-  // Minimal port logic
-  changeYaw(self, deltaSeconds);
-}
+  changeYaw(self, MONSTER_TICK);
 
-export function ai_walk(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
-  // Check for enemy
+  if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
+    if (self.enemy) {
+      ai_run(self, dist, context);
+      return;
+    }
+  }
+
   if (findTarget(self, context.targetAwareness, context, context.trace)) {
     return;
   }
 
-  setIdealYawTowards(self, self.goalentity);
-  changeYaw(self, deltaSeconds);
+  if (self.enemy && self.enemy.inUse) {
+    ai_run(self, dist, context);
+  }
 
-  // Replaced inline logic with M_MoveToGoal
-  if (self.goalentity) {
-    M_MoveToGoal(self, distance, context);
-  } else {
-    // Fallback if no goal (shouldn't happen in pathing, but maybe wandering?)
-    if (distance !== 0) {
-       M_walkmove(self, self.angles.y, distance, context);
+  // TODO: Check for talking monsters? (Not in base Q2)
+}
+
+// g_ai.c: ai_walk
+export function ai_walk(self: Entity, dist: number, context: EntitySystem): void {
+  M_MoveToGoal(self, dist, context);
+
+  // check for noticing a player
+  if (findTarget(self, context.targetAwareness, context, context.trace)) {
+    return;
+  }
+
+  if ((self.search_time) && (context.timeSeconds > self.search_time)) {
+    if (self.goalentity) {
+      self.goalentity = null;
     }
+    self.enemy = null;
+    self.search_time = 0;
+    // In original: logic for standing or searching
+    // Here we might just clear flags or transition state if needed
+  }
+
+  if ((self.monsterinfo.aiflags & AIFlags.IgnoreShots) !== 0) {
+    // ignore shots
+  } else {
+    // check for attack
+    // Note: ai_walk is generally for patrolling, but if we have an enemy we might want to attack?
+    // In Q2 source, ai_walk calls ai_checkattack IF it has an enemy?
+    // Actually, standard ai_walk just moves.
   }
 }
 
@@ -136,33 +163,54 @@ export function ai_turn(self: Entity, distance: number, deltaSeconds: number): v
   }
 }
 
-export function ai_run(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
+// g_ai.c: ai_run
+export function ai_run(self: Entity, dist: number, context: EntitySystem): void {
   if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
     self.monsterinfo.stand?.(self, context);
     return;
   }
 
-  if (findTarget(self, context.targetAwareness, context, context.trace)) {
-      // Logic for switching targets if new one is found
+  if (self.monsterinfo.aiflags & AIFlags.ManualSteering) {
+    // Manual steering
+  } else {
+    setIdealYawTowards(self, self.enemy ?? self.goalentity);
   }
+
+  changeYaw(self, MONSTER_TICK);
 
   if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
       self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
   }
 
-  if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
-    setIdealYawTowards(self, self.enemy ?? self.goalentity);
-  }
-  changeYaw(self, deltaSeconds);
-
-  const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
-  if (checkAttack(self, context)) {
+  if (ai_checkattack(self, dist, context)) {
     return;
   }
 
-  if (distance !== 0) {
-    M_walkmove(self, self.angles.y, distance, context);
+  if (self.monsterinfo.attack_state === AttackState.Straight) {
+      M_walkmove(self, self.angles.y, dist, context);
+      self.monsterinfo.attack_state = AttackState.Straight; // redundant but harmless
+      return;
   }
+
+  if (self.monsterinfo.attack_state === AttackState.Sliding) {
+      // SV_run_slide logic - for now simple move
+      M_walkmove(self, self.angles.y, dist, context);
+      return;
+  }
+
+  M_MoveToGoal(self, dist, context);
+}
+
+// g_ai.c: ai_charge
+export function ai_charge(self: Entity, dist: number, context: EntitySystem): void {
+  setIdealYawTowards(self, self.enemy);
+  changeYaw(self, MONSTER_TICK);
+
+  if (ai_checkattack(self, dist, context)) {
+    return;
+  }
+
+  M_walkmove(self, self.angles.y, dist, context);
 }
 
 export function ai_face(
@@ -179,26 +227,6 @@ export function ai_face(
 
   if (distance !== 0) {
     walkMove(self, self.angles.y, distance);
-  }
-}
-
-export function ai_charge(self: Entity, distance: number, deltaSeconds: number, context: EntitySystem): void {
-  if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
-      self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
-  }
-
-  if ((self.monsterinfo.aiflags & AIFlags.ManualSteering) === 0) {
-    setIdealYawTowards(self, self.enemy);
-  }
-  changeYaw(self, deltaSeconds);
-
-  const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
-  if (checkAttack(self, context)) {
-    return;
-  }
-
-  if (distance !== 0) {
-    M_walkmove(self, self.angles.y, distance, context);
   }
 }
 
@@ -697,11 +725,6 @@ export function M_droptofloor(ent: Entity, context: EntitySystem): boolean {
 
   context.linkentity(ent);
   CheckGround(ent, context);
-
-  // Categorize position updates waterlevel/watertype
-  // In C++: M_CatagorizePosition(ent, ent->s.origin, ent->waterlevel, ent->watertype);
-  // We can use CheckGround logic or separate categorization if needed.
-  // CheckGround already does some of this but M_CatagorizePosition is more thorough.
 
   return true;
 }

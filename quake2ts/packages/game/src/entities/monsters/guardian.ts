@@ -106,19 +106,19 @@ let guardian_move_atk1_spin_loop: MonsterMove;
 
 // Helpers to wrap AI functions to match AIAction signature
 function guardian_ai_stand(self: Entity, dist: number, context: EntitySystem): void {
-  ai_stand(self, MONSTER_TICK, context);
+  ai_stand(self, dist, context);
 }
 
 function guardian_ai_walk(self: Entity, dist: number, context: EntitySystem): void {
-  ai_walk(self, dist, MONSTER_TICK, context);
+  ai_walk(self, dist, context);
 }
 
 function guardian_ai_run(self: Entity, dist: number, context: EntitySystem): void {
-  ai_run(self, dist, MONSTER_TICK, context);
+  ai_run(self, dist, context);
 }
 
 function guardian_ai_charge(self: Entity, dist: number, context: EntitySystem): void {
-  ai_charge(self, dist, MONSTER_TICK, context);
+  ai_charge(self, dist, context);
 }
 
 function guardian_ai_move(self: Entity, dist: number, context: EntitySystem): void {

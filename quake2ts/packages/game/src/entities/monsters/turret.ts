@@ -22,16 +22,16 @@ const MONSTER_TICK = 0.1;
 
 // Wrappers for AI functions
 function monster_ai_stand(self: Entity, dist: number, context: any): void {
-    ai_stand(self, MONSTER_TICK, context);
+    ai_stand(self, dist, context);
 }
 
 function monster_ai_run(self: Entity, dist: number, context: any): void {
     // Turrets don't move, but they track enemies (rotate)
-    ai_run(self, dist, MONSTER_TICK, context);
+    ai_run(self, dist, context);
 }
 
 function monster_ai_charge(self: Entity, dist: number, context: any): void {
-    ai_charge(self, dist, MONSTER_TICK, context);
+    ai_charge(self, dist, context);
 }
 
 // Forward declarations

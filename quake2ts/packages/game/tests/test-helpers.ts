@@ -13,6 +13,16 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
   };
 
   const seed = options?.seed ?? 12345;
+  const traceFn = vi.fn(() => ({
+        fraction: 1.0,
+        ent: null,
+        allsolid: false,
+        startsolid: false,
+        endpos: { x: 0, y: 0, z: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+        surfaceFlags: 0,
+        contents: 0
+    }));
 
   const entities = {
     spawn: vi.fn(() => new Entity(1)),
@@ -21,19 +31,13 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     freeImmediate: vi.fn(),
     setSpawnRegistry: vi.fn(),
     timeSeconds: 10,
+    deltaSeconds: 0.1, // Added deltaSeconds
     modelIndex: vi.fn(() => 0),
     scheduleThink: vi.fn((entity: Entity, time: number) => {
       entity.nextthink = time;
     }),
     linkentity: vi.fn(),
-    trace: vi.fn(() => ({
-        fraction: 1.0,
-        ent: null,
-        allsolid: false,
-        startsolid: false,
-        endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-    })),
+    trace: traceFn, // Directly provide the mock function property
     pointcontents: vi.fn(() => 0),
     multicast: vi.fn(),
     unicast: vi.fn(),
@@ -53,6 +57,8 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     rng: createRandomGenerator({ seed }), // Use real RNG for determinism or easy mocking if we replace it
     imports: {
         configstring: vi.fn(),
+        trace: traceFn, // Also in imports for good measure
+        pointcontents: vi.fn(() => 0),
     },
     level: {
         intermission_angle: { x: 0, y: 0, z: 0 },
@@ -85,6 +91,12 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     beginFrame: vi.fn((timeSeconds: number) => {
         (entities as any).timeSeconds = timeSeconds;
     }),
+    targetAwareness: {
+      timeSeconds: 10,
+      frameNumber: 1,
+      sightEntity: null,
+      soundEntity: null,
+    }
   } as unknown as EntitySystem;
 
   return {
