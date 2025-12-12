@@ -535,6 +535,7 @@ export class NetworkMessageParser {
   }
 
   private parseServerData(): void {
+    const pos = this.stream.getPosition();
     this.protocolVersion = this.stream.readLong();
 
     if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
