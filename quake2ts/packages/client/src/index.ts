@@ -697,7 +697,7 @@ export function createClient(imports: ClientImports): ClientExports {
                   }
              } else if (demoCameraState.mode === DemoCameraMode.Free) {
                   // Update free camera position based on input state
-                  const speed = 300 * (dt / 1000);
+                  const speed = 300 * (dtMs / 1000);
                   const vectors = angleVectors(demoCameraState.freeCameraAngles);
                   const forward = vectors.forward;
                   const right = vectors.right;

@@ -109,7 +109,9 @@ describe('NetworkMessageParser', () => {
     writeLong(data, 0); writeByte(data, 0); writeString(data, ""); writeShort(data, 0); writeString(data, "");
 
     // svc_frame
-    writeByte(data, ServerCommand.frame);
+    // For Protocol 26, the parser translates cmd + 5. So we need to write opcode that becomes frame (20).
+    // 20 - 5 = 15.
+    writeByte(data, 15);
     writeLong(data, 100);
     writeLong(data, 99);
     // Protocol 26 skips suppressCount reading.
@@ -117,12 +119,14 @@ describe('NetworkMessageParser', () => {
     writeByte(data, 0); // Area count
 
     // svc_playerinfo MUST follow svc_frame
-    writeByte(data, ServerCommand.playerinfo);
+    // For Protocol 26: cmd + 5 = playerinfo(17) => cmd = 12.
+    writeByte(data, 12);
     writeShort(data, 0); // flags
     writeLong(data, 0); // stats
 
     // svc_packetentities
-    writeByte(data, ServerCommand.packetentities);
+    // For Protocol 26: cmd + 5 = packetentities(18) => cmd = 13.
+    writeByte(data, 13);
     writeByte(data, 0); writeByte(data, 0); // Terminate
 
     const stream = createStream(data);
