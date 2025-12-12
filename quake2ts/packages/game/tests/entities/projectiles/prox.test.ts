@@ -2,7 +2,7 @@
 // Quake II - Prox Mine Tests
 // =================================================================
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createProxMine } from '../../../src/entities/projectiles/prox.js';
 import { createGame } from '../../../src/index.js';
 import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
@@ -15,6 +15,10 @@ describe('Prox Mine', () => {
     // Reset mocks between tests
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     const createTestGame = () => {
@@ -41,14 +45,14 @@ describe('Prox Mine', () => {
             linkentity: (ent) => {
                 // Mock linkentity to set absmin/absmax for findInBox
                 ent.absmin = {
-                    x: ent.origin.x + (ent.mins?.x || 0),
-                    y: ent.origin.y + (ent.mins?.y || 0),
-                    z: ent.origin.z + (ent.mins?.z || 0),
+                    x: ent.origin.x + (ent.mins?.x || -16),
+                    y: ent.origin.y + (ent.mins?.y || -16),
+                    z: ent.origin.z + (ent.mins?.z || -24),
                 };
                 ent.absmax = {
-                    x: ent.origin.x + (ent.maxs?.x || 0),
-                    y: ent.origin.y + (ent.maxs?.y || 0),
-                    z: ent.origin.z + (ent.maxs?.z || 0),
+                    x: ent.origin.x + (ent.maxs?.x || 16),
+                    y: ent.origin.y + (ent.maxs?.y || 16),
+                    z: ent.origin.z + (ent.maxs?.z || 32),
                 };
             },
             multicast,
@@ -66,6 +70,7 @@ describe('Prox Mine', () => {
         player.classname = 'player';
         player.origin = { x: 0, y: 0, z: 0 };
         player.angles = { x: 0, y: 0, z: 0 };
+        player.solid = Solid.BoundingBox;
         game.entities.finalizeSpawn(player);
         game.entities.linkentity(player);
 
