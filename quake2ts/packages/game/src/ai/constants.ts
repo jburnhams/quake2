@@ -23,7 +23,13 @@ export enum AIFlags {
   CombatPoint = 1 << 13,
   Medic = 1 << 14,
   Resurrecting = 1 << 15,
+  SpawnedCarrier = 1 << 16,
+  IgnoreShots = 1 << 17,
+  AlternateFly = 1 << 18,
   Dodging = 1 << 19,
+  SpawnedMedicC = 1 << 23,
+  HintPath = 1 << 24, // Added based on m_move.cpp
+  Blocked = 1 << 25, // Added AI_BLOCKED
   Pathing = 1 << 30, // Custom?
 }
 

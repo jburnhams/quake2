@@ -182,6 +182,11 @@ export interface MoveInfo {
   decel_distance?: number;
 }
 
+// TODO: Define stricter types if needed
+export interface NavPath {
+    firstMovePoint: Vec3;
+}
+
 export interface MonsterInfo {
   current_move?: MonsterMove;
   aiflags: number;
@@ -213,6 +218,7 @@ export interface MonsterInfo {
   fly_speed?: number;
   fly_min_distance?: number;
   fly_max_distance?: number;
+  fly_buzzard?: boolean; // Added
   blindfire?: boolean;
   dodge?: (self: Entity, attacker: Entity, eta: number) => void;
   unduck?: (self: Entity) => void;
@@ -247,6 +253,7 @@ export interface MonsterInfo {
   react_to_damage_time?: number;
   weapon_sound?: number;
   engine_sound?: number;
+  nav_path?: NavPath; // Added
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
