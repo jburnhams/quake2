@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
-import { createGame } from '../../src/index.js';
-import { handleItemPickup } from '../../src/entities/items/common.js';
-import { Solid } from '../../src/entities/entity.js';
+import { EntitySystem } from '../src/entities/system.js';
+import { createGame } from '../src/index.js';
+import { handleItemPickup } from '../src/entities/items/common.js';
+import { Solid } from '../src/entities/entity.js';
 
 describe('Item Respawn', () => {
     let game: any;
