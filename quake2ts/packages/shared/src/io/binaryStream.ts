@@ -24,6 +24,10 @@ export class BinaryStream {
     return this.length;
   }
 
+  public getRemaining(): number {
+    return this.length - this.offset;
+  }
+
   public seek(position: number): void {
     if (position < 0 || position > this.length) {
       throw new Error(`Seek out of bounds: ${position} (length: ${this.length})`);

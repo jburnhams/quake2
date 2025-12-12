@@ -13,7 +13,7 @@ export class DemoStream {
     private _isComplete: boolean = false;
 
     constructor(demoData: ArrayBuffer | Uint8Array) {
-        this.reader = new DemoReader(demoData instanceof Uint8Array ? demoData.buffer : demoData);
+        this.reader = new DemoReader(demoData instanceof Uint8Array ? demoData.buffer as ArrayBuffer : demoData);
         this.buffer = new StreamingBuffer();
     }
 

@@ -178,8 +178,9 @@ function createVanillaDemoData(): ArrayBuffer {
   writeLong(0); // Stats bits
 
   // PacketEntities (REQUIRED after playerinfo in parser logic)
-  // For Vanilla (Protocol 34), use legacy opcode 23
-  writeByte(23); // svc_packetentities
+  // For Vanilla (Protocol 34) in our parser implementation, we map 1:1 up to frame(20).
+  // packetentities is 18.
+  writeByte(18); // svc_packetentities
   writeByte(0); // Header
   writeByte(0); // Entity Number 0
 

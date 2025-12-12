@@ -150,6 +150,14 @@ interface MoveInfo {
     sound_end: string | number | null;
     reversing?: boolean;
     dir?: Vec3;
+    speed?: number;
+    accel?: number;
+    decel?: number;
+    wait?: number;
+    start_origin?: Vec3;
+    start_angles?: Vec3;
+    end_origin?: Vec3;
+    end_angles?: Vec3;
 }
 
 function getMoveInfo(ent: Entity): MoveInfo | undefined {
