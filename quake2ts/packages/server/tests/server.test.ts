@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import { WebSocketNetDriver } from '../src/net/nodeWsDriver.js';
 import { WebSocketServer } from 'ws';
@@ -24,16 +24,38 @@ vi.mock('../src/net/nodeWsDriver.js', () => ({
     }))
 }));
 
+// Mock fs to avoid ENOENT errors
+vi.mock('node:fs/promises', () => ({
+    default: {
+        readFile: vi.fn().mockRejectedValue(new Error('Mocked ENOENT'))
+    }
+}));
+
 describe('DedicatedServer', () => {
     let server: DedicatedServer;
+    let consoleWarnSpy: any;
+    let consoleLogSpy: any;
 
     beforeEach(() => {
+        vi.clearAllMocks();
         server = new DedicatedServer(27910);
+        // Suppress expected console warnings and logs
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        consoleWarnSpy.mockRestore();
+        consoleLogSpy.mockRestore();
     });
 
     it('should initialize WebSocketServer on start', async () => {
         await server.start('test_map');
         expect(WebSocketServer).toHaveBeenCalledWith({ port: 27910 });
+
+        // Verify we got the expected warning
+        expect(console.warn).toHaveBeenCalledWith('Failed to load map:', expect.any(Error));
+
         server.stop();
     });
 
