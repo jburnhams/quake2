@@ -124,17 +124,40 @@ blastParser.setProtocolVersion(this.protocolVersion);  // Critical!
 
 Without this, nested parsers will fail to translate commands correctly.
 
-## Current Status
+## Current Status (as of investigation)
 
 ### Working
-- ✓ Protocol 25 serverdata detection (command 7 → 12)
-- ✓ Protocol 25 configstring parsing (command 8 → 13)
-- ✓ pak-integration.test.ts: 0 parsing errors
+- ✓ Protocol 25 serverdata auto-detection (command 7 → 12)
+- ✓ Protocol 25 command translation (+5 offset for commands 1-15)
+- ✓ Protocol version propagation across demo blocks
+- ✓ Protocol version propagation to nested parsers (spawnbaselineblast)
+- ✓ pak-integration.test.ts: **PASSES** with 0 parsing errors
 
-### Issues
-- ✗ real_demo.test.ts: frameCount = 0 (frames not being detected)
-- Frames should appear starting around message 186
-- Investigation ongoing: command 18 appearing where it shouldn't
+### Critical Issue: Command 18 (0x12) in Protocol 25 Demos
+
+**Status**: Root cause identified but not resolved
+
+**Problem**: Starting at block 8, demo1.dm2 contains message blocks that begin with byte 0x12 (decimal 18). This is NOT a valid server command in protocol 25 (valid range: 0-15).
+
+**Impact**:
+- real_demo.test.ts: **FAILS** with frameCount=0
+- Parser treats 0x12 as `svc_bad` and stops parsing
+- All subsequent demo blocks (8+) are never processed
+
+**Evidence**:
+```
+Block 1-7: Valid commands (serverdata, configstring, spawnbaseline)
+Block 8+:  Start with 0x12 - INVALID for protocol 25
+```
+
+**See detailed investigation**: [command-18-investigation.md](./command-18-investigation.md)
+
+**Hypotheses**:
+1. Blocks 8+ are not server messages (client commands, metadata, etc.)
+2. Command 18 is valid but undocumented in vanilla source
+3. Parser misalignment causing corruption
+
+**Next steps**: Examine vanilla Q2 demo playback code to understand the actual block structure
 
 ## References
 

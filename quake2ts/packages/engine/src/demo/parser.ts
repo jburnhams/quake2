@@ -278,6 +278,16 @@ export class NetworkMessageParser {
   }
 
   private translateCommand(cmd: number): number {
+    // When protocol is unknown, try to detect it from serverdata command
+    // Protocol 25: serverdata = 7
+    // Protocol 34+: serverdata = 12
+    if (this.protocolVersion === 0) {
+        if (cmd === 7) return ServerCommand.serverdata;  // Protocol 25
+        if (cmd === 12) return ServerCommand.serverdata; // Protocol 34+
+        // For other commands when protocol unknown, return as-is
+        return cmd;
+    }
+
     // Rerelease Protocol 2023+
     if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
       return cmd;
@@ -336,11 +346,7 @@ export class NetworkMessageParser {
         return ServerCommand.bad;
     }
 
-    // Default / Unknown Protocol
-    if (this.protocolVersion === 0) {
-        return cmd;
-    }
-
+    // Unknown/unsupported protocol - return as-is
     return cmd;
   }
 
