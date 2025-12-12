@@ -22,7 +22,9 @@ export class DemoAnalyzer {
     private serverInfo: ServerInfo = {};
     private statistics: DemoStatistics | null = null;
     private playerStats: Map<number, PlayerStatistics> = new Map(); // By playerNum
-    private weaponStats: Map<number, WeaponStatistics[]> = new Map();
+    private weaponStats: Map<number, WeaponStatistics[]> = new Map(); // By entity ID
+
+    private activeEntities = new Set<number>();
 
     constructor(buffer: ArrayBuffer) {
         this.buffer = buffer;
@@ -34,7 +36,9 @@ export class DemoAnalyzer {
         header: DemoHeader | null,
         configStrings: Map<number, string>,
         serverInfo: ServerInfo,
-        statistics: DemoStatistics | null
+        statistics: DemoStatistics | null,
+        playerStats: Map<number, PlayerStatistics>,
+        weaponStats: Map<number, WeaponStatistics[]>
     } {
         const reader = new DemoReader(this.buffer);
         let currentFrameIndex = -1;
@@ -69,18 +73,52 @@ export class DemoAnalyzer {
             },
             onSpawnBaseline: (entity) => {},
             onFrame: (frame: FrameData) => {
-                // Could update stats based on player state
+                // Detect Spawns
+                const currentFrameEntities = new Set<number>();
+                if (frame.packetEntities && frame.packetEntities.entities) {
+                    for (const ent of frame.packetEntities.entities) {
+                        currentFrameEntities.add(ent.number);
+                        if (!this.activeEntities.has(ent.number)) {
+                             this.recordEvent({
+                                type: DemoEventType.Spawn,
+                                frame: currentFrameIndex,
+                                time: currentTime,
+                                entityId: ent.number,
+                                position: { x: ent.origin.x, y: ent.origin.y, z: ent.origin.z },
+                                description: `Entity ${ent.number} spawned`
+                            });
+                        }
+                    }
+                }
+                this.activeEntities = currentFrameEntities;
+
+                // Update Player Stats from PlayerState if available
+                // Assuming single player demo for now, playerNum is from ServerData
+                if (frame.playerState && this.header) {
+                     // We can track damage dealt if stats[12] (damage_dealt) changes?
+                     // stats array indices depend on game, but generic engine doesn't know layout.
+                }
             },
             onPrint: (level, msg) => {
                  // Check for death messages
-                 // Simple heuristic for now
-                 if (msg.includes("died") || msg.includes("killed")) {
-                     this.summary.totalDeaths++;
+                 if (msg.includes("died") || msg.includes("killed") || msg.includes("suicide")) {
+                     this.summary.totalDeaths++; // Simple count
                      this.recordEvent({
                         type: DemoEventType.Death,
                         frame: currentFrameIndex,
                         time: currentTime,
                         description: msg.trim()
+                     });
+                     // Heuristic: Assign death to current player if mentioned?
+                     // Hard without names.
+                 }
+                 // Check for pickups
+                 if (msg.startsWith("You got the ")) {
+                     this.recordEvent({
+                         type: DemoEventType.Pickup,
+                         frame: currentFrameIndex,
+                         time: currentTime,
+                         description: msg.trim()
                      });
                  }
             },
@@ -115,6 +153,12 @@ export class DemoAnalyzer {
                         description: `Took ${ind.damage} damage`
                     });
                     this.summary.damageReceived += ind.damage;
+
+                    // Update player stats for the recording player
+                    if (this.header) {
+                        const pStats = this.getOrCreatePlayerStats(this.header.playerNum);
+                        pStats.damageReceived += ind.damage;
+                    }
                 }
             }
         };
@@ -148,7 +192,9 @@ export class DemoAnalyzer {
             header: this.header,
             configStrings: this.configStrings,
             serverInfo: this.serverInfo,
-            statistics: this.statistics
+            statistics: this.statistics,
+            playerStats: this.playerStats,
+            weaponStats: this.weaponStats
         };
     }
 
@@ -164,6 +210,9 @@ export class DemoAnalyzer {
 
         const count = this.summary.weaponUsage.get(weapon) || 0;
         this.summary.weaponUsage.set(weapon, count + 1);
+
+        const wStats = this.getOrCreateWeaponStat(ent, weapon);
+        wStats.shotsFired++;
     }
 
     private recordEvent(event: DemoEvent) {
@@ -179,5 +228,34 @@ export class DemoAnalyzer {
                 this.serverInfo[parts[i]] = parts[i+1];
             }
         }
+    }
+
+    private getOrCreatePlayerStats(playerNum: number): PlayerStatistics {
+        let stats = this.playerStats.get(playerNum);
+        if (!stats) {
+            stats = {
+                kills: 0,
+                deaths: 0,
+                damageDealt: 0,
+                damageReceived: 0,
+                suicides: 0
+            };
+            this.playerStats.set(playerNum, stats);
+        }
+        return stats;
+    }
+
+    private getOrCreateWeaponStat(entityId: number, weaponId: number): WeaponStatistics {
+        let statsList = this.weaponStats.get(entityId);
+        if (!statsList) {
+            statsList = [];
+            this.weaponStats.set(entityId, statsList);
+        }
+        let stat = statsList.find(s => s.weaponId === weaponId);
+        if (!stat) {
+            stat = { weaponId, shotsFired: 0, hits: 0, kills: 0 };
+            statsList.push(stat);
+        }
+        return stat;
     }
 }

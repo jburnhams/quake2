@@ -48,51 +48,52 @@
 - [x] Useful for movement analysis and debugging
 
 ### 3.2.3 Event Log Extraction
-- [ ] Add method `getDemoEvents(): DemoEvent[]` returning all events chronologically
-- [ ] Event types: weapon fire, damage dealt, damage received, pickup, death, spawn
-- [ ] Include frame number, timestamp, entity IDs, values
-- [ ] Add method `filterEvents(type: EventType, entityId?: number): DemoEvent[]`
-- [ ] Add method `getEventSummary(): EventSummary` for statistics (kills, deaths, accuracy)
+- [x] Add method `getDemoEvents(): DemoEvent[]` returning all events chronologically
+- [x] Event types: weapon fire, damage dealt, damage received, pickup, death, spawn
+- [x] Include frame number, timestamp, entity IDs, values
+- [x] Add method `filterEvents(type: EventType, entityId?: number): DemoEvent[]`
+- [x] Add method `getEventSummary(): EventSummary` for statistics (kills, deaths, accuracy)
 
 ---
 
 ## 3.3 Demo Metadata
 
 ### 3.3.1 Header Information
-- [ ] Add method `getDemoHeader(): DemoHeader` returning protocol version, server info
-- [ ] Extract map name, player name, game mode from initial server data
-- [ ] Add method `getDemoServerInfo(): ServerInfo` for server cvars
-- [ ] Add method `getDemoConfigStrings(): Record<number, string>` for map resources
+- [x] Add method `getDemoHeader(): DemoHeader` returning protocol version, server info
+- [x] Extract map name, player name, game mode from initial server data
+- [x] Add method `getDemoServerInfo(): ServerInfo` for server cvars
+- [x] Add method `getDemoConfigStrings(): Record<number, string>` for map resources
 
 ### 3.3.2 Demo Statistics
-- [ ] Add method `getDemoStatistics(): DemoStatistics`
-- [ ] Return: duration, frame count, average FPS, player count, map name
-- [ ] Add method `getPlayerStatistics(playerIndex: number): PlayerStatistics`
-- [ ] Return: kills, deaths, accuracy, distance traveled, damage dealt/received
-- [ ] Add method `getWeaponStatistics(playerIndex: number): WeaponStatistics[]`
-- [ ] Return per-weapon: shots, hits, kills, accuracy percentage
+- [x] Add method `getDemoStatistics(): DemoStatistics`
+- [x] Return: duration, frame count, average FPS, player count, map name
+- [x] Add method `getPlayerStatistics(playerIndex: number): PlayerStatistics`
+- [x] Return: kills, deaths, accuracy, distance traveled, damage dealt/received
+- [x] Add method `getWeaponStatistics(playerIndex: number): WeaponStatistics[]`
+- [x] Return per-weapon: shots, hits, kills, accuracy percentage
+  - *Note*: Accuracy currently limited to shots fired due to lack of hit events in standard protocols.
 
 ---
 
 ## 3.4 Camera Modes for Demo Viewing
 
 ### 3.4.1 Multiple Camera Modes
-- [ ] Implement `DemoCameraMode` enum: `FirstPerson` | `ThirdPerson` | `Free` | `Follow`
-- [ ] Add method `setCameraMode(mode: DemoCameraMode): void`
-- [ ] First person: use demo player viewangles
-- [ ] Third person: offset behind player with configurable distance
-- [ ] Free: user-controlled camera independent of demo
-- [ ] Follow: smooth camera tracking player with lag
+- [x] Implement `DemoCameraMode` enum: `FirstPerson` | `ThirdPerson` | `Free` | `Follow`
+- [x] Add method `setCameraMode(mode: DemoCameraMode): void`
+- [x] First person: use demo player viewangles
+- [x] Third person: offset behind player with configurable distance
+- [x] Free: user-controlled camera independent of demo
+- [x] Follow: smooth camera tracking player with lag
 
 ### 3.4.2 Third-Person Camera
-- [ ] Add configurable offset and distance parameters
-- [ ] Add collision detection to prevent camera clipping through walls
-- [ ] Add smooth interpolation for camera movement
-- [ ] Add method `setThirdPersonDistance(distance: number): void`
-- [ ] Add method `setThirdPersonOffset(offset: Vec3): void`
+- [x] Add configurable offset and distance parameters
+- [x] Add collision detection to prevent camera clipping through walls
+- [x] Add smooth interpolation for camera movement
+- [x] Add method `setThirdPersonDistance(distance: number): void`
+- [x] Add method `setThirdPersonOffset(offset: Vec3): void`
 
 ### 3.4.3 Slow Motion and Speed Control
-- [ ] Enhance `setSpeed()` to support fractional rates: 0.1x, 0.25x, 0.5x, 1x, 2x, 4x, 8x
-- [ ] Add frame interpolation for smooth slow-motion playback
-- [ ] Add method `getPlaybackSpeed(): number`
-- [ ] Ensure audio pitch correction at non-1x speeds (or mute)
+- [x] Enhance `setSpeed()` to support fractional rates: 0.1x, 0.25x, 0.5x, 1x, 2x, 4x, 8x
+- [x] Add frame interpolation for smooth slow-motion playback
+- [x] Add method `getPlaybackSpeed(): number`
+- [x] Ensure audio pitch correction at non-1x speeds (or mute)

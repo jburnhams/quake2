@@ -1,15 +1,15 @@
-import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3, lengthVec3 } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
 import { MoveType, EntityFlags } from '../entities/entity.js';
-import { MASK_MONSTERSOLID, MASK_WATER } from '@quake2ts/shared';
-import { AIFlags } from './constants.js';
+import { MASK_MONSTERSOLID, MASK_WATER, CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA } from '@quake2ts/shared';
+import { AIFlags, BOTTOM_EMPTY, BOTTOM_SOLID, BOTTOM_WATER, BOTTOM_SLIME, BOTTOM_LAVA } from './constants.js';
 import { M_CheckAttack } from './monster.js';
 import { rangeTo, visible } from './perception.js';
 import { findTarget } from './targeting.js';
 
-type MutableVec3 = { x: number; y: number; z: number };
+export type MutableVec3 = { x: number; y: number; z: number };
 
 const STEPSIZE = 18;
 
@@ -229,7 +229,7 @@ export function CheckGround(self: Entity, context: EntitySystem): void {
   }
 }
 
-export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
+export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
   const mins = {
     x: self.origin.x + self.mins.x,
     y: self.origin.y + self.mins.y,
@@ -242,39 +242,95 @@ export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
   };
 
   let start: MutableVec3 = { x: 0, y: 0, z: 0 };
-  let stop: MutableVec3 = { x: 0, y: 0, z: 0 };
 
-  for (let i = 0; i < 2; i++) {
-    if (i === 1) start = { x: mins.x, y: mins.y, z: 0 };
-    else start = { x: maxs.x, y: mins.y, z: 0 };
+  // Fast check: if all corners are in solid, we are good
+  let allSolid = true;
+  for (let x = 0; x <= 1; x++) {
+    for (let y = 0; y <= 1; y++) {
+      start.x = x ? maxs.x : mins.x;
+      start.y = y ? maxs.y : mins.y;
+      start.z = mins.z - 1;
 
-    start.z = mins.z - 1;
-
-    if (context.pointcontents(start) !== 0) return true;
-
-    stop = { ...start };
-    stop.z = start.z - 60;
-
-    const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
-
-    if (trace.fraction < 1.0) return true;
-
-    if (i === 1) start = { x: mins.x, y: maxs.y, z: 0 };
-    else start = { x: maxs.x, y: maxs.y, z: 0 };
-
-    start.z = mins.z - 1;
-
-    if (context.pointcontents(start) !== 0) return true;
-
-    stop = { ...start };
-    stop.z = start.z - 60;
-
-    const trace2 = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
-
-    if (trace2.fraction < 1.0) return true;
+      const content = context.pointcontents(start);
+      if (content !== CONTENTS_SOLID) {
+        allSolid = false;
+        break;
+      }
+    }
+    if (!allSolid) break;
   }
 
-  return false;
+  if (allSolid) return BOTTOM_SOLID;
+
+  // Slow check
+  start.x = self.origin.x;
+  start.y = self.origin.y;
+  start.z = self.origin.z + self.mins.z;
+
+  const stop = { ...start };
+  stop.z = start.z - STEPSIZE * 2;
+
+  const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
+
+  if (trace.fraction === 1.0) return BOTTOM_EMPTY;
+
+  const mid = trace.endpos.z;
+  const bottomType = context.pointcontents(trace.endpos);
+  let result = BOTTOM_SOLID;
+
+  if (bottomType & CONTENTS_WATER) result = BOTTOM_WATER;
+  else if (bottomType & CONTENTS_SLIME) result = BOTTOM_SLIME;
+  else if (bottomType & CONTENTS_LAVA) result = BOTTOM_LAVA;
+
+  // Check quadrants
+  const stepQuadrantSize = {
+      x: (self.maxs.x - self.mins.x) * 0.5,
+      y: (self.maxs.y - self.mins.y) * 0.5,
+  };
+
+  const halfStepQuadrant = {
+      x: stepQuadrantSize.x * 0.5,
+      y: stepQuadrantSize.y * 0.5,
+      z: 0
+  };
+
+  const halfStepQuadrantMins = {
+      x: -halfStepQuadrant.x,
+      y: -halfStepQuadrant.y,
+      z: 0
+  };
+
+  const centerStart = {
+      x: self.origin.x + (self.mins.x + self.maxs.x) * 0.5,
+      y: self.origin.y + (self.mins.y + self.maxs.y) * 0.5,
+      z: 0
+  };
+
+  for (let x = 0; x <= 1; x++) {
+    for (let y = 0; y <= 1; y++) {
+        const quadrantStart = { ...centerStart };
+        if (x) quadrantStart.x += halfStepQuadrant.x;
+        else quadrantStart.x -= halfStepQuadrant.x;
+
+        if (y) quadrantStart.y += halfStepQuadrant.y;
+        else quadrantStart.y -= halfStepQuadrant.y;
+
+        quadrantStart.z = start.z;
+        const quadrantEnd = { ...quadrantStart, z: stop.z };
+
+        const subTrace = context.trace(quadrantStart, halfStepQuadrantMins, halfStepQuadrant, quadrantEnd, self, MASK_MONSTERSOLID);
+
+        if (subTrace.fraction === 1.0 || mid - subTrace.endpos.z > STEPSIZE) {
+            return BOTTOM_EMPTY;
+        }
+    }
+  }
+
+  return result;
+}
+
+export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
+  return M_CheckBottomEx(self, context) !== BOTTOM_EMPTY;
 }
 
 export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {
@@ -314,7 +370,7 @@ export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: E
     }
 
     if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
-        return false;
+        return SV_flystep(self, move, relink, context);
     }
 
     const oldOrigin = { ...self.origin };
@@ -367,7 +423,12 @@ export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: E
 
 export function M_walkmove(self: Entity, yawDegrees: number, distance: number, context: EntitySystem): boolean {
   const delta = yawVector(yawDegrees, distance);
-  return M_MoveStep(self, delta, true, context);
+  // Matches rerelease M_walkmove implementation
+  // SV_movestep call via M_MoveStep
+  const retval = M_MoveStep(self, delta, true, context);
+  // Clears AI_BLOCKED flag
+  self.monsterinfo.aiflags &= ~AIFlags.Blocked;
+  return retval;
 }
 
 export function SV_StepDirection(self: Entity, yaw: number, dist: number, context: EntitySystem): boolean {
@@ -461,4 +522,186 @@ export function M_MoveToGoal(self: Entity, dist: number, context: EntitySystem):
     }
 
     return true;
+}
+
+export function G_IdealHoverPosition(ent: Entity, context: EntitySystem): Vec3 {
+  if ((!ent.enemy && !(ent.monsterinfo.aiflags & AIFlags.Medic)) ||
+      (ent.monsterinfo.aiflags & (AIFlags.CombatPoint | AIFlags.SoundTarget | AIFlags.HintPath | AIFlags.Pathing))) {
+    return { x: 0, y: 0, z: 0 };
+  }
+
+  const theta = context.rng.frandom() * 2 * Math.PI;
+  let phi: number;
+
+  if (ent.monsterinfo.fly_above) {
+    phi = Math.acos(0.7 + context.rng.frandom() * 0.3);
+  } else if (ent.monsterinfo.fly_buzzard || (ent.monsterinfo.aiflags & AIFlags.Medic)) {
+    phi = Math.acos(context.rng.frandom());
+  } else {
+    phi = Math.acos(context.rng.crandom() * 0.06);
+  }
+
+  const sinPhi = Math.sin(phi);
+  const d = {
+    x: sinPhi * Math.cos(theta),
+    y: sinPhi * Math.sin(theta),
+    z: Math.cos(phi),
+  };
+
+  const minDist = ent.monsterinfo.fly_min_distance ?? 0;
+  const maxDist = ent.monsterinfo.fly_max_distance ?? 0;
+  const dist = minDist + context.rng.frandom() * (maxDist - minDist);
+  return scaleVec3(d, dist);
+}
+
+export function SV_flystep(ent: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {
+  if (ent.monsterinfo.aiflags & AIFlags.AlternateFly) {
+    // TODO: Implement SV_alternate_flystep
+    // if (SV_alternate_flystep(ent, move, relink, context)) return true;
+  }
+
+  const oldOrg = { ...ent.origin };
+
+  // carrier hack
+  let minheight = 40;
+  if (ent.classname === 'monster_carrier') minheight = 104;
+
+  for (let i = 0; i < 2; i++) {
+    let newMove = { ...move };
+
+    if (i === 0 && ent.enemy) {
+      let goalEntity = ent.goalentity;
+      if (!goalEntity) goalEntity = ent.enemy;
+
+      // Pathing logic placeholder - simplified
+      let goalPos = goalEntity.origin;
+      if (ent.monsterinfo.aiflags & AIFlags.Pathing && ent.monsterinfo.nav_path) {
+          goalPos = ent.monsterinfo.nav_path.firstMovePoint;
+      }
+
+      const dz = ent.origin.z - goalPos.z;
+      const dist = lengthVec3(move);
+
+      if (goalEntity.client) {
+        if (dz > minheight) {
+          newMove = scaleVec3(newMove, 0.5);
+          newMove.z -= dist;
+        }
+        if (!((ent.flags & EntityFlags.Swim) && ent.waterlevel < 2)) { // WATER_WAIST = 2
+          if (dz < (minheight - 10)) {
+            newMove = scaleVec3(newMove, 0.5);
+            newMove.z += dist;
+          }
+        }
+      } else {
+        if (ent.classname === 'monster_fixbot') {
+            // Fixbot special movement
+            // Using simplified logic from reference or just standard fallback for now as fixbot isn't fully implemented
+        } else {
+          if (dz > 0) {
+            newMove = scaleVec3(newMove, 0.5);
+            newMove.z -= Math.min(dist, dz);
+          } else if (dz < 0) {
+            newMove = scaleVec3(newMove, 0.5);
+            newMove.z += -Math.max(-dist, dz);
+          }
+        }
+      }
+    }
+
+    const newOrg = addVec3(ent.origin, newMove);
+    const trace = context.trace(ent.origin, ent.mins, ent.maxs, newOrg, ent, MASK_MONSTERSOLID);
+
+    if (ent.flags & EntityFlags.Fly) {
+      if (!ent.waterlevel) {
+        const test = { x: trace.endpos.x, y: trace.endpos.y, z: trace.endpos.z + ent.mins.z + 1 };
+        if (context.pointcontents(test) & MASK_WATER) return false;
+      }
+    }
+
+    if (ent.flags & EntityFlags.Swim) {
+      if (ent.waterlevel < 2) { // WATER_WAIST
+        const test = { x: trace.endpos.x, y: trace.endpos.y, z: trace.endpos.z + ent.mins.z + 1 };
+        if (!(context.pointcontents(test) & MASK_WATER)) return false;
+      }
+    }
+
+    if (trace.fraction === 1 && !trace.allsolid && !trace.startsolid) {
+      (ent.origin as MutableVec3).x = trace.endpos.x;
+      (ent.origin as MutableVec3).y = trace.endpos.y;
+      (ent.origin as MutableVec3).z = trace.endpos.z;
+
+      if (relink) {
+        context.linkentity(ent);
+      }
+      return true;
+    }
+
+    if (!ent.enemy) break;
+  }
+
+  return false;
+}
+
+export function M_droptofloor_generic(
+  origin: MutableVec3,
+  mins: Vec3,
+  maxs: Vec3,
+  ceiling: boolean,
+  ignore: Entity,
+  mask: number,
+  allow_partial: boolean,
+  context: EntitySystem
+): boolean {
+  // Check if we start in solid
+  // NOTE: origin is modified by ref in C++. Here we mutate the passed object.
+
+  if (context.trace(origin, mins, maxs, origin, ignore, mask).startsolid) {
+    if (!ceiling) {
+      origin.z += 1;
+    } else {
+      origin.z -= 1;
+    }
+  }
+
+  const end = { ...origin };
+  if (!ceiling) {
+    end.z -= 256;
+  } else {
+    end.z += 256;
+  }
+
+  const trace = context.trace(origin, mins, maxs, end, ignore, mask);
+
+  if (trace.fraction === 1 || trace.allsolid || (!allow_partial && trace.startsolid)) {
+    return false;
+  }
+
+  origin.x = trace.endpos.x;
+  origin.y = trace.endpos.y;
+  origin.z = trace.endpos.z;
+
+  return true;
+}
+
+export function M_droptofloor(ent: Entity, context: EntitySystem): boolean {
+  // Use MASK_MONSTERSOLID generally for monsters as per g_monster.cpp M_droptofloor
+  const mask = MASK_MONSTERSOLID; // Or G_GetClipMask(ent) logic
+
+  // SPAWNFLAG_MONSTER_NO_DROP check? Assuming 0x00000000 for now or add to constants if needed
+  // Not checking spawnflags for now as they are not fully ported/imported here
+
+  if (!M_droptofloor_generic(ent.origin as MutableVec3, ent.mins, ent.maxs, ent.gravityVector.z > 0, ent, mask, true, context)) {
+    return false;
+  }
+
+  context.linkentity(ent);
+  CheckGround(ent, context);
+
+  // Categorize position updates waterlevel/watertype
+  // In C++: M_CatagorizePosition(ent, ent->s.origin, ent->waterlevel, ent->watertype);
+  // We can use CheckGround logic or separate categorization if needed.
+  // CheckGround already does some of this but M_CatagorizePosition is more thorough.
+
+  return true;
 }

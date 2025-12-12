@@ -15,6 +15,7 @@ export interface WeaponState {
     lastFireTime: number;
     spinupCount?: number; // For Chaingun spin-up
     grenadeTimer?: number; // For Hand Grenade cooking start time
+    heat?: number; // For heat-based weapons (Hyperblaster Alt)
 }
 
 export interface PlayerWeaponStates {

@@ -18,8 +18,18 @@ describe('AssetPreviewGenerator', () => {
   });
 
   it('getMapBounds returns null for invalid data', async () => {
-    const bounds = await generator.getMapBounds('test.bsp', new ArrayBuffer(10));
-    expect(bounds).toBeNull();
+    // Suppress console.error for this test as we expect it to fail gracefully
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const bounds = await generator.getMapBounds('test.bsp', new ArrayBuffer(10));
+      expect(bounds).toBeNull();
+
+      // Check that it logged the error
+      expect(consoleSpy).toHaveBeenCalled();
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 
   it('generateTextureThumbnail resizes texture correctly', async () => {

@@ -724,8 +724,15 @@ export class NetworkMessageParser {
       const serverFrame = this.stream.readLong();
       const deltaFrame = this.stream.readLong();
       let surpressCount = 0;
-      // Fixed logic: Protocol 25 and 26 do NOT have surpressCount.
-      if (this.protocolVersion >= 27) surpressCount = this.stream.readByte();
+
+      // Protocol 26 (legacy) hack:
+      // In original Quake 2, protocol 26 demos did NOT include the suppressCount byte.
+      // See full/client/cl_ents.c:679-681
+      // Protocol 25 also seems to lack this byte based on testing with demo1.dm2
+      if (this.protocolVersion !== 26 && this.protocolVersion !== 25) {
+          surpressCount = this.stream.readByte();
+      }
+
       const areaBytes = this.stream.readByte();
       const areaBits = this.stream.readData(areaBytes);
 

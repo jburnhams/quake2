@@ -19,6 +19,7 @@ import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { SpatialGrid } from './spatial.js';
+import { ScriptHookRegistry } from '../scripting/hooks.js';
 
 interface Bounds {
   min: Vec3;
@@ -159,6 +160,7 @@ export class EntitySystem {
   private spawnCount = 0;
 
   private spatialGrid: SpatialGrid;
+  public readonly scriptHooks = new ScriptHookRegistry();
 
   readonly targetAwareness: TargetAwarenessState;
 
@@ -174,6 +176,10 @@ export class EntitySystem {
 
   setSpawnRegistry(registry: SpawnRegistry): void {
     this.spawnRegistry = registry;
+  }
+
+  registerEntityClass(classname: string, factory: SpawnFunction): void {
+    this.spawnRegistry?.register(classname, factory);
   }
 
   getSpawnFunction(classname: string): SpawnFunction | undefined {
@@ -205,6 +211,22 @@ export class EntitySystem {
 
   get game(): any {
       return (this as any)._game;
+  }
+
+  get maxClients(): number {
+    return 32; // Default, can be configurable or from engine
+  }
+
+  get entities(): ArrayLike<Entity | null> {
+    // This is a rough approximation to allow index-based access like g_edicts
+    // for legacy code ports. It's not efficient.
+    const arr: (Entity | null)[] = new Array(this.pool.capacity + 1).fill(null);
+    for (const ent of this.pool) {
+      if (ent.index >= 0 && ent.index < arr.length) {
+        arr[ent.index] = ent;
+      }
+    }
+    return arr;
   }
 
   constructor(
@@ -257,6 +279,7 @@ export class EntitySystem {
       unicast: () => {},
       configstring: () => {},
       serverCommand: () => {},
+      setLagCompensation: () => {},
     };
 
     // Merge defaults with provided imports
@@ -354,10 +377,12 @@ export class EntitySystem {
     this.spawnCount++;
     ent.spawn_count = this.spawnCount;
     ent.timestamp = this.currentTimeSeconds;
+    this.scriptHooks.onEntitySpawn?.(ent);
     return ent;
   }
 
   free(entity: Entity): void {
+    this.scriptHooks.onEntityRemove?.(entity);
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);

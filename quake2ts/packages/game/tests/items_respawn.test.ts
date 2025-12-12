@@ -49,7 +49,8 @@ describe('Item Respawn Logic', () => {
 
         // Correct SP behavior: Respawns should NOT be scheduled.
         expect(scheduleThinkSpy).not.toHaveBeenCalled();
-        expect(pickup.solid).toBe(Solid.Not);
+        // In SP, item is freed. Since free is deferred, we check freePending/inUse.
+        expect(pickup.freePending).toBe(true);
     });
 
     it('should schedule respawn in Deathmatch mode', () => {

@@ -283,6 +283,11 @@ export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
 export { DemoValidator, type DemoValidationResult } from './demo/validator.js';
+export { DemoAnalyzer } from './demo/analyzer.js';
+export { DemoEventType } from './demo/analysis.js';
+export { DemoCameraMode } from './demo/camera.js';
+export type { DemoCameraState } from './demo/camera.js';
+export type { DemoEvent, EventSummary, DemoHeader, ServerInfo, DemoStatistics, PlayerStatistics, WeaponStatistics, FrameDiff } from './demo/analysis.js';
 export {
     PROTOCOL_VERSION_RERELEASE,
     createEmptyEntityState,
