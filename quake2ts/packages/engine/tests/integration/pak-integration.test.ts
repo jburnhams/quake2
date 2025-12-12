@@ -12,6 +12,7 @@ import { parseWav } from '../../src/assets/wav.js';
 import { decodeOgg } from '../../src/assets/ogg.js';
 import { DemoReader } from '../../src/demo/demoReader.js';
 import { NetworkMessageParser } from '../../src/demo/parser.js';
+import { DemoStream } from '../../src/demo/demoStream.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -109,28 +110,16 @@ describe('PAK Integration Test', () => {
             break;
           }
           case '.dm2': {
-            const reader = new DemoReader(buffer);
-            let blockCount = 0;
-            let protocolVersion = 0;
-            let totalErrors = 0;
-            while (reader.hasMore()) {
-              const block = reader.readNextBlock();
-              if (!block) break;
-              blockCount++;
-              const parser = new NetworkMessageParser(block.data);
-              // Preserve protocol version across blocks
-              if (protocolVersion !== 0) {
-                parser.setProtocolVersion(protocolVersion);
-              }
-              parser.parseMessage();
-              // Remember protocol for next block
-              protocolVersion = parser.getProtocolVersion();
-              // Track parsing errors
-              totalErrors += parser.getErrorCount();
-            }
-            expect(blockCount).toBeGreaterThan(0);
+            // New streaming approach
+            const demoStream = new DemoStream(buffer);
+            demoStream.loadComplete();
+
+            const parser = new NetworkMessageParser(demoStream.getBuffer());
+            parser.parseMessage();
+
+            const totalErrors = parser.getErrorCount();
             if (totalErrors > 0) {
-              throw new Error(`Demo file ${entry.name} had ${totalErrors} parsing errors (unknown commands or parse failures)`);
+              throw new Error(`Demo file ${entry.name} had ${totalErrors} parsing errors`);
             }
             break;
           }

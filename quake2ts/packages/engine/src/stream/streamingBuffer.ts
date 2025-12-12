@@ -60,7 +60,7 @@ export class StreamingBuffer {
      */
     readByte(): number {
         if (!this.hasBytes(1)) {
-            throw new Error('StreamingBuffer: Not enough bytes to read byte');
+            throw new Error('Buffer underflow');
         }
         return this.buffer[this.readOffset++];
     }
@@ -71,7 +71,7 @@ export class StreamingBuffer {
      */
     readShort(): number {
         if (!this.hasBytes(2)) {
-            throw new Error('StreamingBuffer: Not enough bytes to read short');
+            throw new Error('Buffer underflow');
         }
         const value = this.buffer[this.readOffset] |
                      (this.buffer[this.readOffset + 1] << 8);
@@ -86,7 +86,7 @@ export class StreamingBuffer {
      */
     readLong(): number {
         if (!this.hasBytes(4)) {
-            throw new Error('StreamingBuffer: Not enough bytes to read long');
+            throw new Error('Buffer underflow');
         }
         const value = this.buffer[this.readOffset] |
                      (this.buffer[this.readOffset + 1] << 8) |
@@ -95,6 +95,19 @@ export class StreamingBuffer {
         this.readOffset += 4;
         // JavaScript bitwise operations return signed 32-bit integers
         return value;
+    }
+
+    /**
+     * Read 4-byte float (little-endian) and advance position
+     */
+    readFloat(): number {
+        if (!this.hasBytes(4)) {
+            throw new Error('Buffer underflow');
+        }
+        const view = new DataView(this.buffer.buffer, this.buffer.byteOffset + this.readOffset, 4);
+        const val = view.getFloat32(0, true); // Little endian
+        this.readOffset += 4;
+        return val;
     }
 
     /**
@@ -114,7 +127,11 @@ export class StreamingBuffer {
         }
 
         if (length >= maxLength) {
-            throw new Error('StreamingBuffer: String not null-terminated or exceeds max length');
+            // Check if we hit end of buffer or max string length
+            if (this.writeOffset - this.readOffset <= maxLength) {
+                 throw new Error('Buffer underflow');
+            }
+             throw new Error('String exceeds max length');
         }
 
         // Read string bytes (excluding null terminator)
@@ -130,7 +147,7 @@ export class StreamingBuffer {
      */
     peekBytes(count: number): Uint8Array {
         if (!this.hasBytes(count)) {
-            throw new Error('StreamingBuffer: Not enough bytes to peek');
+            throw new Error('Buffer underflow');
         }
         return this.buffer.slice(this.readOffset, this.readOffset + count);
     }
@@ -140,11 +157,18 @@ export class StreamingBuffer {
      */
     readBytes(count: number): Uint8Array {
         if (!this.hasBytes(count)) {
-            throw new Error('StreamingBuffer: Not enough bytes to read');
+            throw new Error('Buffer underflow');
         }
         const bytes = this.buffer.slice(this.readOffset, this.readOffset + count);
         this.readOffset += count;
         return bytes;
+    }
+
+    /**
+     * Alias for readBytes to match tests
+     */
+    readData(count: number): Uint8Array {
+        return this.readBytes(count);
     }
 
     /**
@@ -166,7 +190,7 @@ export class StreamingBuffer {
      */
     setReadPosition(position: number): void {
         if (position < 0 || position > this.writeOffset) {
-            throw new Error('StreamingBuffer: Invalid read position');
+            throw new Error('Invalid read position');
         }
         this.readOffset = position;
     }
