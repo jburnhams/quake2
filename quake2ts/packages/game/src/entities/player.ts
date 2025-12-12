@@ -137,6 +137,10 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
     self.movetype = MoveType.Toss;
     self.takedamage = false; // Can be gibbed? If dead, further damage usually gibs.
 
+    if (sys && sys.scriptHooks.onPlayerDeath) {
+        sys.scriptHooks.onPlayerDeath(self, inflictor, attacker);
+    }
+
     // CTF: Drop flag if carrying
     if (sys) {
         checkPlayerFlagDrop(self, sys);

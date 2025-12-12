@@ -17,6 +17,9 @@ export function createFoodCubePickupEntity(game: GameExports): Partial<Entity> {
                 return;
             }
 
+            // Trigger pickup hook
+            game.entities.scriptHooks.onPickup?.(other, 'item_foodcube');
+
             // "self->style = HEALTH_IGNORE_MAX;" implies ignoring max health cap.
             // We assume count is set by the spawner, default to 2 (Small Health).
             const amount = self.count || 2;

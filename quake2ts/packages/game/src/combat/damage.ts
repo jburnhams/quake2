@@ -6,6 +6,7 @@ import type { Entity } from '../entities/entity.js';
 import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { throwGibs } from '../entities/gibs.js';
+import type { EntitySystem } from '../entities/system.js';
 
 export interface DamageableCallbacks {
   pain?: (self: Damageable, attacker: Damageable | null, knockback: number, take: number, mod: DamageMod) => void;
@@ -158,7 +159,8 @@ export function T_Damage(
   dflags: number,
   mod: DamageMod,
   time: number,
-  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
+  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void,
+  sys?: EntitySystem
 ): DamageApplicationResult | null {
   if (!targ.takedamage) {
     return null;
@@ -208,6 +210,16 @@ export function T_Damage(
   if (actualTake > 0) {
     targ.health -= actualTake;
 
+    // Trigger script hook
+    if (sys && sys.scriptHooks.onDamage) {
+        sys.scriptHooks.onDamage(
+            targ as unknown as Entity,
+            inflictor as unknown as Entity | null,
+            attacker as unknown as Entity | null,
+            actualTake
+        );
+    }
+
     // Spawn blood/sparks if multicast is available and we did damage
     if (multicast && !hasAnyDamageFlag(dflags, DamageFlags.NO_DAMAGE_EFFECTS)) {
         if ((targ as any).classname === 'player' || (targ as any).monsterinfo) {
@@ -253,7 +265,8 @@ export function T_RadiusDamage(
   mod: DamageMod,
   time: number,
   options: RadiusDamageOptions = {},
-  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
+  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void,
+  sys?: EntitySystem
 ): RadiusDamageHit[] {
   const hits: RadiusDamageHit[] = [];
   const inflictorCenter = targetCenter(inflictor);
@@ -283,7 +296,7 @@ export function T_RadiusDamage(
     // We pass damage as both damage and knockback (or logic differs?)
     // Quake 2: T_Damage (ent, inflictor, attacker, dir, ent->s.origin, vec3_origin, points, points, DAMAGE_RADIUS, mod);
     // Yes, damage equals knockback for radius damage.
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, time, multicast);
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, time, multicast, sys);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 

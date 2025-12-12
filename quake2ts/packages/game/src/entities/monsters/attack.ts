@@ -85,6 +85,8 @@ export function monster_fire_bullet_v2(
       DamageFlags.BULLET | DamageFlags.NO_ARMOR,
       mod,
       context.timeSeconds,
+      undefined,
+      context
   );
 }
 
@@ -217,6 +219,8 @@ export function monster_fire_railgun(
             DamageFlags.ENERGY | DamageFlags.NO_ARMOR,
             DamageMod.RAILGUN,
             context.timeSeconds,
+            undefined,
+            context
         );
     }
 }
@@ -259,6 +263,8 @@ export function monster_fire_hit(
             0,
             DamageMod.UNKNOWN,
             context.timeSeconds,
+            undefined,
+            context
         );
         return true;
     }
@@ -301,7 +307,7 @@ function dabeam_update(self: Entity, context: EntitySystem): void {
         }
 
         if (self.dmg > 0 && tr.ent.takedamage && tr.ent !== self.owner) {
-             T_Damage(tr.ent as unknown as Damageable, self as unknown as Damageable, self.owner as unknown as Damageable, self.movedir, tr.endpos, ZERO_VEC3, self.dmg, 0, DamageFlags.ENERGY, DamageMod.TARGET_LASER, context.timeSeconds);
+             T_Damage(tr.ent as unknown as Damageable, self as unknown as Damageable, self.owner as unknown as Damageable, self.movedir, tr.endpos, ZERO_VEC3, self.dmg, 0, DamageFlags.ENERGY, DamageMod.TARGET_LASER, context.timeSeconds, undefined, context);
         }
 
         // Draw sparks if we hit something that isn't a monster/player

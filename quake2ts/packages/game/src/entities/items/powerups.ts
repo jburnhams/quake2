@@ -22,6 +22,9 @@ export function createPowerupPickupEntity(game: GameExports, powerupItem: Poweru
             }
 
             if (pickupPowerup(other.client, powerupItem, game.time * 1000)) {
+                // Trigger pickup hook
+                game.entities.scriptHooks.onPickup?.(other, powerupItem.id);
+
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${powerupItem.name}`);
                 self.solid = Solid.Not;

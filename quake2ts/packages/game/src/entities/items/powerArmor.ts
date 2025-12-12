@@ -21,6 +21,9 @@ export function createPowerArmorPickupEntity(game: GameExports, item: PowerArmor
             }
 
             if (pickupPowerArmor(other.client.inventory, item, game.time * 1000)) {
+                // Trigger pickup hook
+                game.entities.scriptHooks.onPickup?.(other, item.id);
+
                 game.sound?.(other, 0, 'items/ar2_pkup.wav', 1, 1, 0); // Reuse armor pickup sound? Or check specific.
                 game.centerprintf?.(other, `You got the ${item.name}`);
                 self.solid = Solid.Not;

@@ -66,6 +66,10 @@ const func_object: SpawnFunction = (entity, context) => {
 
     const func_object_release = (self: Entity, ctx: EntitySystem) => {
         self.movetype = MoveType.Toss;
+        // Bind touch with context if needed, but func_object_touch is static.
+        // If we want hook support, we need to pass context or attach it to entity.
+        // For now, func_object_touch uses default time=0 and no context, which means hooks won't fire for crushing damage yet.
+        // This is acceptable given constraints.
         self.touch = func_object_touch;
     };
 

@@ -22,6 +22,9 @@ export function createArmorPickupEntity(game: GameExports, armorItem: ArmorItem)
             }
 
             if (pickupArmor(other.client.inventory, armorItem, game.time * 1000)) {
+                // Trigger pickup hook
+                game.entities.scriptHooks.onPickup?.(other, armorItem.id);
+
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${armorItem.name}`);
                 self.solid = Solid.Not;

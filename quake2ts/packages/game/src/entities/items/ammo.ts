@@ -37,6 +37,9 @@ export function createAmmoPickupEntity(game: GameExports, itemId: AmmoItemId): P
 
       const result = pickupAmmo(other.client.inventory.ammo, itemId);
       if (result.pickedUp) {
+        // Trigger pickup hook
+        game.entities.scriptHooks.onPickup?.(other, itemId);
+
         game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
 
         const name = AMMO_DISPLAY_NAMES[itemId] || itemId.replace('ammo_', '');

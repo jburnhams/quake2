@@ -22,6 +22,9 @@ export function createKeyPickupEntity(game: GameExports, keyItem: KeyItem): Part
             }
 
             if (pickupKey(other.client.inventory, keyItem, game.time * 1000)) {
+                // Trigger pickup hook
+                game.entities.scriptHooks.onPickup?.(other, keyItem.id);
+
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${keyItem.name}`);
                 self.solid = Solid.Not;

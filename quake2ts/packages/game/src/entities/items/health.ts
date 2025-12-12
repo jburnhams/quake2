@@ -22,6 +22,9 @@ export function createHealthPickupEntity(game: GameExports, healthItem: HealthIt
             }
 
             if (canPickupHealth(other.client.inventory, other.health, healthItem)) {
+                // Trigger pickup hook
+                game.entities.scriptHooks.onPickup?.(other, healthItem.id);
+
                 other.health += healthItem.amount;
                 if (other.health > healthItem.max) {
                     other.health = healthItem.max;

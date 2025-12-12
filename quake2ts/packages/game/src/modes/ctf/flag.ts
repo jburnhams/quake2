@@ -55,6 +55,9 @@ export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): P
                 }
                 if (self.flagState === FlagState.DROPPED) {
                     // Return flag
+                    // Hook for returning flag? Maybe distinct from pickup.
+                    // game.entities.scriptHooks.onFlagReturn?.(other, self.flagTeam);
+
                     game.sound?.(other, 0, 'ctf/flagret.wav', 1, 1, 0);
                     game.centerprintf?.(other, `You returned the ${flagItem.name}!`);
                     respawn(self);
@@ -63,6 +66,9 @@ export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): P
                 // Enemy flag
                 // Can pick up if AT_BASE or DROPPED
                 if (pickupFlag(other.client, flagItem, game.time * 1000)) {
+                    // Trigger pickup hook
+                    game.entities.scriptHooks.onPickup?.(other, flagItem.id);
+
                     game.sound?.(other, 0, 'ctf/flagpk.wav', 1, 1, 0);
                     game.centerprintf?.(other, `You got the ${flagItem.name}!`);
 

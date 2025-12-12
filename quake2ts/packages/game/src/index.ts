@@ -425,7 +425,8 @@ export function createGame(
       return snapshot(0);
     },
     shutdown() {
-      /* placeholder shutdown */
+      // Trigger unload hook
+      entities.scriptHooks.onMapUnload?.();
     },
     spawnWorld() {
       // In Q2, spawnWorld is called to load entities from map string.
@@ -433,6 +434,11 @@ export function createGame(
       // For multiplayer, we might just spawn world entities here.
       // For now, I'll keep the existing single-player logic but handle it gracefully if called.
       const playerStart = findPlayerStart(entities);
+
+      // Trigger map load hook
+      const mapName = entities.level?.mapname || 'unknown';
+      entities.scriptHooks.onMapLoad?.(mapName);
+
       // We don't necessarily want to spawn a player automatically in MP unless requested
       // But since this function is also used for SP bootstrap...
 
@@ -500,6 +506,9 @@ export function createGame(
 
        // Update global state for SP compatibility (if needed)
        origin = { ...player.origin };
+
+       // Trigger player spawn hook
+       entities.scriptHooks.onPlayerSpawn?.(player);
 
        return player;
     },
