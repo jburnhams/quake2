@@ -58,7 +58,7 @@ describe('Prox Mine', () => {
             multicast,
             unicast,
             areaEdicts: vi.fn().mockReturnValue(null) // Use fallback iteration
-        }, engine, { gravity: { x: 0, y: 0, z: 0 } }); // Disable gravity
+        }, engine, { gravity: { x: 0, y: 0, z: 0 }, deathmatch: true }); // Disable gravity, enable deathmatch to skip auto-spawn player
 
         game.init(0);
 
