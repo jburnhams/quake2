@@ -3,8 +3,9 @@ import { Entity } from '../src/entities/entity.js';
 import type { SpawnContext } from '../src/entities/spawn.js';
 import type { EntitySystem } from '../src/entities/system.js';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { ScriptHookRegistry } from '../src/scripting/hooks.js';
 
-export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
+export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any, sys: EntitySystem } & SpawnContext {
   const engine = {
     sound: vi.fn(),
     soundIndex: vi.fn(() => 0),
@@ -59,6 +60,8 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
         intermission_origin: { x: 0, y: 0, z: 0 },
     },
     targetNameIndex: new Map(),
+    scriptHooks: new ScriptHookRegistry(),
+    findByRadius: vi.fn(() => []),
     forEachEntity: vi.fn((callback) => {
         // Implement simple iteration over a few mocked entities if needed,
         // or just rely on the fact that G_PickTarget iterates.
@@ -82,14 +85,12 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
         }
         return undefined;
     }),
-    beginFrame: vi.fn((timeSeconds: number) => {
-        (entities as any).timeSeconds = timeSeconds;
-    }),
   } as unknown as EntitySystem;
 
   return {
     keyValues: {},
     entities,
+    sys: entities,
     game: (entities as any).game,
     health_multiplier: 1,
     warn: vi.fn(),
@@ -98,7 +99,7 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     precacheModel: vi.fn(),
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),
-  } as unknown as SpawnContext & { entities: EntitySystem, game: any };
+  } as unknown as SpawnContext & { entities: EntitySystem, game: any, sys: EntitySystem };
 }
 
 export function createSpawnContext(): SpawnContext {

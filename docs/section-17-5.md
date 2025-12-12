@@ -32,9 +32,9 @@
 ## 5.2 Deathmatch Features
 
 ### 5.2.1 Deathmatch Game Rules
-- [x] Implement player respawning at spawn points
-- [x] Implement frag scoring and leaderboard updates
-- [x] Implement weapon/item respawn timers (DM vs single-player)
+- [ ] Implement player respawning at spawn points
+- [ ] Implement frag scoring and leaderboard updates
+- [ ] Implement weapon/item respawn timers (DM vs single-player)
 - [ ] Implement self-damage (rocket jumping, grenade jumping)
 - [ ] Add telefrag detection and scoring
 

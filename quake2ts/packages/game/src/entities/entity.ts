@@ -182,11 +182,6 @@ export interface MoveInfo {
   decel_distance?: number;
 }
 
-// TODO: Define stricter types if needed
-export interface NavPath {
-    firstMovePoint: Vec3;
-}
-
 export interface MonsterInfo {
   current_move?: MonsterMove;
   aiflags: number;
@@ -218,7 +213,6 @@ export interface MonsterInfo {
   fly_speed?: number;
   fly_min_distance?: number;
   fly_max_distance?: number;
-  fly_buzzard?: boolean; // Added
   blindfire?: boolean;
   dodge?: (self: Entity, attacker: Entity, eta: number) => void;
   unduck?: (self: Entity) => void;
@@ -253,7 +247,6 @@ export interface MonsterInfo {
   react_to_damage_time?: number;
   weapon_sound?: number;
   engine_sound?: number;
-  nav_path?: NavPath; // Added
 }
 
 const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
@@ -377,8 +370,6 @@ export class Entity {
   monsterinfo: MonsterInfo = { ...DEFAULT_MONSTER_INFO, last_sighting: copyVec3() };
   moveinfo?: MoveInfo;
   hackflags = 0;
-
-  fov = 0;
 
   combattarget?: string;
   show_hostile = 0;
@@ -689,7 +680,6 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'chain', type: 'entity', save: true },
   { name: 'alpha', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
-  { name: 'fov', type: 'float', save: true },
 ];
 
 export interface Damageable {

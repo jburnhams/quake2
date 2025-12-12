@@ -11,7 +11,10 @@ describe('Ammo Pickup Entities', () => {
         time: 100,
         deathmatch: true,
         entities: {
-            scheduleThink: vi.fn()
+            scheduleThink: vi.fn(),
+            scriptHooks: {
+                onPickup: vi.fn()
+            }
         }
     };
 

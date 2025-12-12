@@ -14,75 +14,75 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
 **TypeScript File**: `/packages/game/src/entities/triggers.ts`
 
 ### 2.1.1 Basic Triggers
-- [x] Implement `SP_trigger_multiple(entity: Entity): void`
+- [ ] Implement `SP_trigger_multiple(entity: Entity): void`
   - Repeatable trigger with wait time
   - Touch detection for players/monsters
   - Target activation
   - Reference: `g_trigger.cpp` lines 50-150
 
-- [x] Implement `SP_trigger_once(entity: Entity): void`
+- [ ] Implement `SP_trigger_once(entity: Entity): void`
   - Single-use trigger
   - Auto-remove after activation
   - Reference: `g_trigger.cpp` lines 152-200
 
-- [x] Implement `SP_trigger_relay(entity: Entity): void`
+- [ ] Implement `SP_trigger_relay(entity: Entity): void`
   - Relay signal to other entities
   - Delay support
   - Reference: `g_trigger.cpp` lines 202-280
 
-- [x] Implement `SP_trigger_counter(entity: Entity): void`
+- [ ] Implement `SP_trigger_counter(entity: Entity): void`
   - Count activations before firing
   - Multi-activation requirement
   - Reference: `g_trigger.cpp` lines 282-360
 
 ### 2.1.2 Movement Triggers
-- [x] Implement `SP_trigger_push(entity: Entity): void`
+- [ ] Implement `SP_trigger_push(entity: Entity): void`
   - Apply velocity to entities in volume
   - Jump pads, wind tunnels
   - Configurable push speed and angle
   - Reference: `g_trigger.cpp` lines 362-480
 
-- [x] Implement `SP_trigger_hurt(entity: Entity): void`
+- [ ] Implement `SP_trigger_hurt(entity: Entity): void`
   - Damage entities in volume
   - Configurable damage amount and type
   - Death triggers (lava, slime)
   - Reference: `g_trigger.cpp` lines 482-580
 
-- [x] Implement `SP_trigger_gravity(entity: Entity): void`
+- [ ] Implement `SP_trigger_gravity(entity: Entity): void`
   - Modify gravity in volume
   - Low-gravity zones
   - Reference: `g_trigger.cpp` lines 582-650
 
 ### 2.1.3 Special Triggers
-- [x] Implement `SP_trigger_teleport(entity: Entity): void`
+- [ ] Implement `SP_trigger_teleport(entity: Entity): void`
   - Teleport entities to destination
   - info_teleport_destination support
   - Velocity preservation/zeroing
   - Reference: `g_trigger.cpp` lines 652-780
 
-- [x] Implement `SP_trigger_secret(entity: Entity): void`
+- [ ] Implement `SP_trigger_secret(entity: Entity): void`
   - Secret area tracking
   - Update client stats for secrets found
   - Message display
   - Reference: `g_trigger.cpp` lines 782-850
 
-- [x] Implement `SP_trigger_monsterjump(entity: Entity): void`
+- [ ] Implement `SP_trigger_monsterjump(entity: Entity): void`
   - Help monsters navigate jumps
   - Apply jump velocity to monsters only
   - Reference: `g_trigger.cpp` lines 852-920
 
 ### 2.1.4 Advanced Triggers
-- [x] Implement `SP_trigger_always(entity: Entity): void`
+- [ ] Implement `SP_trigger_always(entity: Entity): void`
   - Fire immediately on spawn
   - Level start events
   - Reference: `g_trigger.cpp` lines 922-980
 
-- [x] Implement `SP_trigger_look(entity: Entity): void`
+- [ ] Implement `SP_trigger_look(entity: Entity): void`
   - Activate when player looks at entity
   - FOV-based detection
   - Reference: `g_trigger.cpp` lines 982-1080
 
-- [x] Implement `SP_trigger_key(entity: Entity): void`
+- [ ] Implement `SP_trigger_key(entity: Entity): void`
   - Require specific key item
   - Key consumption or preservation
   - Reference: `g_trigger.cpp` lines 1082-1180
@@ -102,27 +102,27 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
 **TypeScript File**: `/packages/game/src/entities/funcs.ts`
 
 ### 2.2.1 Doors
-- [x] Implement `SP_func_door(entity: Entity): void`
+- [ ] Implement `SP_func_door(entity: Entity): void`
   - Sliding doors (linear movement)
   - Configurable open/close speed
   - Auto-close with wait time
   - Lock support (requires key)
   - Reference: `g_func.cpp` lines 50-250
 
-- [x] Implement `SP_func_door_rotating(entity: Entity): void`
+- [ ] Implement `SP_func_door_rotating(entity: Entity): void`
   - Rotating doors (angular movement)
   - Hinge point configuration
   - Reverse opening direction
   - Reference: `g_func.cpp` lines 252-420
 
-- [x] Implement door state machine
+- [ ] Implement door state machine
   - States: CLOSED, OPENING, OPEN, CLOSING, BLOCKED
   - Crush damage when blocked
   - Sound events (start, stop, locked)
   - Reference: `g_func.cpp` lines 100-180
 
 ### 2.2.2 Platforms & Elevators
-- [x] Implement `SP_func_plat(entity: Entity): void`
+- [ ] Implement `SP_func_plat(entity: Entity): void`
   - Platform elevator
   - Auto-lower when player stands on it
   - Wait at top/bottom
@@ -133,27 +133,27 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
   - Configurable movement paths
   - Reference: `g_func.cpp` lines 582-720
 
-- [x] Implement `SP_func_train(entity: Entity): void`
+- [ ] Implement `SP_func_train(entity: Entity): void`
   - Track-based movement
   - Follow path_corner entities
   - Variable speed
   - Reference: `g_func.cpp` lines 722-900
 
 ### 2.2.3 Buttons
-- [x] Implement `SP_func_button(entity: Entity): void`
+- [ ] Implement `SP_func_button(entity: Entity): void`
   - Pressable button
   - Move distance on activation
   - Return to rest position
   - Activation sounds
   - Reference: `g_func.cpp` lines 902-1020
 
-- [x] Implement touch vs use activation
+- [ ] Implement touch vs use activation
   - Touch: activate on contact
   - Use: require +use button press
   - Reference: `g_func.cpp` lines 950-1000
 
 ### 2.2.4 Movers
-- [x] Implement `SP_func_rotating(entity: Entity): void`
+- [ ] Implement `SP_func_rotating(entity: Entity): void`
   - Continuously rotating entity
   - Configurable rotation axis and speed
   - Fan blades, gears, etc.
@@ -165,39 +165,39 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
   - Swinging blades, chandeliers
   - Reference: `g_func.cpp` lines 1152-1280
 
-- [x] Implement `SP_func_conveyor(entity: Entity): void`
+- [ ] Implement `SP_func_conveyor(entity: Entity): void`
   - Conveyor belt
   - Move entities standing on surface
   - Configurable speed and direction
   - Reference: `g_func.cpp` lines 1282-1380
 
 ### 2.2.5 Walls & Crushers
-- [x] Implement `SP_func_wall(entity: Entity): void`
+- [ ] Implement `SP_func_wall(entity: Entity): void`
   - Movable wall
   - Crush players between wall and obstacle
   - Configurable crush damage
   - Reference: `g_func.cpp` lines 1382-1520
 
-- [x] Implement crusher death sequence
+- [ ] Implement crusher death sequence
   - Instant death if crushed
   - Gib spawning
   - Sound effects
   - Reference: `g_func.cpp` lines 1450-1500
 
 ### 2.2.6 Special Functions
-- [x] Implement `SP_func_timer(entity: Entity): void`
+- [ ] Implement `SP_func_timer(entity: Entity): void`
   - Periodic event trigger
   - Configurable interval
   - Random variance support
   - Reference: `g_func.cpp` lines 1522-1620
 
-- [x] Implement `SP_func_explosive(entity: Entity): void`
+- [ ] Implement `SP_func_explosive(entity: Entity): void`
   - Destructible entity
   - Explode on death
   - Damage radius
   - Reference: `g_func.cpp` lines 1622-1750
 
-- [x] Implement `SP_func_killbox(entity: Entity): void`
+- [ ] Implement `SP_func_killbox(entity: Entity): void`
   - Instant death volume
   - Kill all entities inside
   - Used for level cleanup

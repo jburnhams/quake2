@@ -213,22 +213,6 @@ export class EntitySystem {
       return (this as any)._game;
   }
 
-  get maxClients(): number {
-    return 32; // Default, can be configurable or from engine
-  }
-
-  get entities(): ArrayLike<Entity | null> {
-    // This is a rough approximation to allow index-based access like g_edicts
-    // for legacy code ports. It's not efficient.
-    const arr: (Entity | null)[] = new Array(this.pool.capacity + 1).fill(null);
-    for (const ent of this.pool) {
-      if (ent.index >= 0 && ent.index < arr.length) {
-        arr[ent.index] = ent;
-      }
-    }
-    return arr;
-  }
-
   constructor(
     engine: GameEngine,
     imports?: Partial<GameImports>,

@@ -71,7 +71,7 @@ export interface GameStateSnapshot {
   readonly pm_flags: number;
 }
 
-import { findPlayerStart, SelectSpawnPoint } from './entities/spawn.js';
+import { findPlayerStart } from './entities/spawn.js';
 import { player_die, player_think, player_pain } from './entities/player.js';
 import { populatePlayerStats } from './entities/playerStats.js';
 
@@ -106,14 +106,13 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   clientBegin(client: PlayerClient): Entity;
   clientDisconnect(ent: Entity): void;
   clientThink(ent: Entity, cmd: UserCommand): void;
-  respawn(ent: Entity): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
-import { createPlayerInventory, PlayerClient, PowerupId, WeaponId } from './inventory/index.js';
+import { createPlayerInventory, PlayerClient, PowerupId } from './inventory/index.js';
 import { createPlayerWeaponStates } from './combat/index.js';
 
 // Export these for use in dedicated server
@@ -477,10 +476,17 @@ export function createGame(
         return true;
     },
     clientBegin(client: PlayerClient): Entity {
+       const playerStart = findPlayerStart(entities);
        const player = entities.spawn();
+       player.classname = 'player';
+       player.origin = playerStart ? { ...playerStart.origin } : { x: 0, y: 0, z: 0 };
+       player.angles = playerStart ? { ...playerStart.angles } : { x: 0, y: 0, z: 0 };
+       player.health = 100;
+       player.takedamage = true;
+       player.movetype = MoveType.Toss;
+       player.mins = { x: -16, y: -16, z: -24 };
+       player.maxs = { x: 16, y: 16, z: 32 };
        player.client = client;
-       // Initial spawn logic delegated to respawn (reusing code)
-       this.respawn(player);
 
        player.die = (self, inflictor, attacker, damage, point, mod) => {
            player_die(self, inflictor, attacker, damage, point, mod, entities);
@@ -505,61 +511,6 @@ export function createGame(
        entities.scriptHooks.onPlayerSpawn?.(player);
 
        return player;
-    },
-    respawn(ent: Entity): void {
-       if (!ent.client) return;
-
-       const spawnPoint = SelectSpawnPoint(entities);
-       ent.classname = 'player';
-       ent.origin = spawnPoint ? { ...spawnPoint.origin } : { x: 0, y: 0, z: 0 };
-       ent.angles = spawnPoint ? { ...spawnPoint.angles } : { x: 0, y: 0, z: 0 };
-       ent.health = 100;
-       ent.takedamage = true;
-       ent.movetype = MoveType.Toss;
-       ent.mins = { x: -16, y: -16, z: -24 };
-       ent.maxs = { x: 16, y: 16, z: 32 };
-       ent.solid = Solid.BoundingBox;
-       ent.deadflag = 0; // Alive
-       ent.modelindex = engine.modelIndex?.('players/male/tris.md2') || 0; // Ensure model is set
-
-       // Reset client state
-       ent.client.damage_alpha = 0;
-       ent.client.damage_blend = [0, 0, 0];
-       ent.client.anim_priority = 0;
-       ent.client.anim_end = 0;
-       ent.frame = 0; // Stand
-
-       // Reset Inventory for Deathmatch (or initial spawn)
-       if (deathmatch) {
-           // In DM, reset inventory completely but give starting weapon
-           ent.client.inventory = createPlayerInventory({
-               weapons: [WeaponId.Blaster],
-               currentWeapon: WeaponId.Blaster
-           });
-           // Preserve score
-       } else {
-           // In SP, we might want to keep inventory if this was a level transition?
-           // But if it's a respawn after death in SP (which is basically level restart usually),
-           // we actually reset.
-           // However, existing logic might rely on inventory being passed in clientBegin.
-           // If we are calling respawn from clientBegin, the inventory is already set in ent.client.
-           // If we are calling respawn from death, we should probably reset inventory or reload save?
-           // For now, let's assume respawn resets inventory to defaults if it's a fresh spawn or DM.
-
-           // TODO: SP Respawn usually loads last save game.
-           // If we are here in SP, it might be the initial level start.
-           // If it is initial start, clientBegin passed the inventory.
-           // If it is death, we shouldn't be here in SP normally (we reload).
-       }
-
-       // Link
-       entities.finalizeSpawn(ent);
-
-       // Telefrag check
-       // TODO: killBox(ent);
-
-       // Update global state for SP compatibility
-       origin = { ...ent.origin };
     },
     clientDisconnect(ent: Entity): void {
         if (ent && ent.inUse) {

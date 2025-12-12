@@ -34,9 +34,6 @@ export function ClientObituary(self: Entity, inflictor: Entity | null, attacker:
         return;
     }
 
-    // Increment death count?
-    // self.client.resp.deaths++; (if we had resp structure)
-
     const friendlyName = self.client ? "Player" : "Player"; // Todo: get name from userinfo
     const gender = getGender(self);
     const him = gender === "female" ? "her" : "him";
@@ -48,39 +45,28 @@ export function ClientObituary(self: Entity, inflictor: Entity | null, attacker:
 
     if (mod === DamageMod.SUICIDE) {
         message = `${friendlyName} suicides.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.FALLING) {
         message = `${friendlyName} cratered.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.CRUSH) {
         message = `${friendlyName} was squished.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.WATER) {
         message = `${friendlyName} sank like a rock.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.SLIME) {
         message = `${friendlyName} melted.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.LAVA) {
         message = `${friendlyName} does a back flip into the lava.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.EXPLOSIVE) {
         message = `${friendlyName} blew up.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.TARGET_LASER) {
         message = `${friendlyName} saw the light.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.TARGET_BLASTER) {
         message = `${friendlyName} got blasted.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (mod === DamageMod.BOMB) {
         message = `${friendlyName} was bombed.`;
-        if (self.client) self.client.score = (self.client.score || 0) - 1;
     } else if (attacker && attacker.classname === 'player') {
          // PvP Death
          if (self === attacker) {
             // Suicide by weapon
-             if (self.client) self.client.score = (self.client.score || 0) - 1;
              switch (mod) {
                 case DamageMod.GRENADE:
                 case DamageMod.G_SPLASH:
@@ -110,9 +96,6 @@ export function ClientObituary(self: Entity, inflictor: Entity | null, attacker:
             }
          } else {
              // Killed by other player
-             if (attacker.client) {
-                 attacker.client.score = (attacker.client.score || 0) + 1;
-             }
              const attackerName = "Enemy"; // Todo: get name
              switch (mod) {
                 case DamageMod.BLASTER:
