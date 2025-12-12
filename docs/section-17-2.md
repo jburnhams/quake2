@@ -56,14 +56,16 @@
 - [x] Return surface info: texture name, lightmap index, normal, plane, vertices
   * *Partial support: Texture, LightmapId, Normal implemented.*
 - [x] Add method `getSurfacesByTexture(textureName: string): number[]`
-- [ ] Add method `highlightSurface(surfaceId: number, color: Color): void`
+- [x] Add method `highlightSurface(surfaceId: number, color: Color): void`
+  * *Implemented in `Renderer` via `highlightSurface(faceIndex, color)` using `DebugRenderer`.*
 
 ### 2.2.3 Texture Browser Integration
 - [x] Add method `getAllLoadedTextures(): TextureInfo[]` listing cached textures
-  * *Note: `BspInspector` lists textures referenced by the BSP faces. Integration with Engine TextureManager for dimensions/memory usage is deferred.*
-- [ ] Return texture info: name, width, height, format, memory size
-- [ ] Add method `getTextureData(name: string): ImageData` for webapp display
-- [ ] Add method `getTextureDependencies(mapName: string): string[]` for required textures
+  * *Implemented in `BspInspector` with optional `TextureCache` integration.*
+- [x] Return texture info: name, width, height, format, memory size
+  * *Width and height are returned when cache is available.*
+- [x] Add method `getTextureData(name: string): ImageData` for webapp display
+- [x] Add method `getTextureDependencies(mapName: string): string[]` for required textures
 
 ---
 

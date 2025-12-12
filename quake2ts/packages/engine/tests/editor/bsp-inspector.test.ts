@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BspInspector } from '../../src/editor/bsp-inspector';
 import { BspMap } from '../../src/assets/bsp'; // Fixed import path
 import { vec3 } from 'gl-matrix';
+import { TextureCache, PreparedTexture } from '../../src/assets/texture';
 
 describe('BspInspector', () => {
   let mockBsp: BspMap;
   let inspector: BspInspector;
+  let mockTextureCache: TextureCache;
 
   beforeEach(() => {
     mockBsp = {
@@ -63,7 +65,12 @@ describe('BspInspector', () => {
       // ... other fields
     } as any;
 
-    inspector = new BspInspector(mockBsp);
+    // Mock TextureCache
+    mockTextureCache = {
+        get: vi.fn(),
+    } as unknown as TextureCache;
+
+    inspector = new BspInspector(mockBsp, mockTextureCache);
   });
 
   it('should find leaf containing point', () => {
@@ -94,9 +101,25 @@ describe('BspInspector', () => {
   });
 
   it('should get all loaded textures', () => {
+    // Setup mock cache return
+    const mockTex: PreparedTexture = {
+        width: 64,
+        height: 64,
+        levels: [],
+        source: 'wal'
+    };
+    (mockTextureCache.get as any).mockReturnValue(mockTex);
+
     const textures = inspector.getAllLoadedTextures();
     expect(textures.length).toBe(1);
     expect(textures[0].name).toBe('wall_tex');
+    expect(textures[0].width).toBe(64);
+    expect(textures[0].height).toBe(64);
+  });
+
+  it('should get texture dependencies', () => {
+    const deps = inspector.getTextureDependencies('');
+    expect(deps).toEqual(['wall_tex']);
   });
 
   it('should get surface at point with complete info', () => {
@@ -114,6 +137,7 @@ describe('BspInspector', () => {
 
       expect(surface).not.toBeNull();
       if (surface) {
+          expect(surface.faceIndex).toBe(0);
           expect(surface.textureName).toBe('wall_tex');
           expect(surface.lightmapId).toBe(0);
           expect(surface.normal[0]).toBe(1);
@@ -131,6 +155,30 @@ describe('BspInspector', () => {
           expect(surface.vertices[1][1]).toBe(10);
           // v2: 0,0,10
           expect(surface.vertices[2][2]).toBe(10);
+      }
+  });
+
+  it('should return texture data', () => {
+      const mockTex: PreparedTexture = {
+        width: 2,
+        height: 2,
+        levels: [{
+            level: 0,
+            width: 2,
+            height: 2,
+            rgba: new Uint8Array([255, 0, 0, 255,  0, 255, 0, 255,  0, 0, 255, 255,  255, 255, 255, 255])
+        }],
+        source: 'wal'
+      };
+      (mockTextureCache.get as any).mockReturnValue(mockTex);
+
+      const imageData = inspector.getTextureData('wall_tex');
+      expect(imageData).toBeDefined();
+      if (imageData) {
+          expect(imageData.width).toBe(2);
+          expect(imageData.height).toBe(2);
+          expect(imageData.data.length).toBe(16);
+          expect(imageData.data[0]).toBe(255);
       }
   });
 });

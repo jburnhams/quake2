@@ -43,6 +43,10 @@ export interface Renderer {
     // Entity Highlighting
     setEntityHighlight(entityId: number, color: [number, number, number, number]): void;
     clearEntityHighlight(entityId: number): void;
+
+    // Surface Highlighting
+    highlightSurface(faceIndex: number, color: [number, number, number, number]): void;
+    removeSurfaceHighlight(faceIndex: number): void;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -72,6 +76,7 @@ export const createRenderer = (
     let font: Pic | null = null;
     let lastFrameStats = { drawCalls: 0, vertexCount: 0, batches: 0 };
     const highlightedEntities = new Map<number, [number, number, number, number]>();
+    const highlightedSurfaces = new Map<number, [number, number, number, number]>();
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -130,6 +135,41 @@ export const createRenderer = (
         // Render collision vis debug lines (if any)
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
+
+        // Highlight Surfaces using DebugRenderer
+        if (options.world && highlightedSurfaces.size > 0) {
+            for (const [faceIndex, color] of highlightedSurfaces) {
+                const face = options.world.map.faces[faceIndex];
+                if (!face) continue;
+
+                // Get vertices from BSP (via surfEdges -> edges -> vertices)
+                // We don't have direct access to 'geometry' here unless we query options.world.surfaces[faceIndex]
+                // which is cleaner.
+                const geometry = options.world.surfaces[faceIndex];
+                if (geometry && geometry.vertexCount > 0) {
+                    // Draw polygon boundary
+                    const vertices: Vec3[] = [];
+                    const stride = 7;
+                    for (let i = 0; i < geometry.vertexCount; i++) {
+                        vertices.push({
+                            x: geometry.vertexData[i * stride],
+                            y: geometry.vertexData[i * stride + 1],
+                            z: geometry.vertexData[i * stride + 2]
+                        });
+                    }
+
+                    // Use drawLine to draw the loop
+                    const c = { r: color[0], g: color[1], b: color[2] };
+                    for (let i = 0; i < vertices.length; i++) {
+                        const p0 = vertices[i];
+                        const p1 = vertices[(i + 1) % vertices.length];
+                        debugRenderer.drawLine(p0, p1, c);
+                    }
+                    // Also draw cross to make it solid-ish or distinct
+                    debugRenderer.drawLine(vertices[0], vertices[(vertices.length/2)|0], c);
+                }
+            }
+        }
 
         // Render debug renderer (Bounds, Normals)
         if (renderOptions?.showBounds) {
@@ -637,6 +677,14 @@ export const createRenderer = (
         highlightedEntities.delete(entityId);
     };
 
+    const highlightSurface = (faceIndex: number, color: [number, number, number, number]) => {
+        highlightedSurfaces.set(faceIndex, color);
+    };
+
+    const removeSurfaceHighlight = (faceIndex: number) => {
+        highlightedSurfaces.delete(faceIndex);
+    };
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -654,5 +702,7 @@ export const createRenderer = (
         drawfillRect,
         setEntityHighlight,
         clearEntityHighlight,
+        highlightSurface,
+        removeSurfaceHighlight,
     };
 };

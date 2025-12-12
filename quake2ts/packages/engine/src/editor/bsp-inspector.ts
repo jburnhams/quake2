@@ -1,6 +1,7 @@
 import { BspMap } from '../assets/bsp.js';
 import { vec3 } from 'gl-matrix';
 import { Bounds3 } from '@quake2ts/shared';
+import { TextureCache } from '../assets/texture.js';
 
 export interface BspNodeTree {
   // Representation of the tree structure for visualization
@@ -9,6 +10,7 @@ export interface BspNodeTree {
 }
 
 export interface SurfaceInfo {
+  faceIndex: number;
   textureName: string;
   lightmapId: number;
   normal: vec3;
@@ -26,7 +28,7 @@ export interface TextureInfo {
 }
 
 export class BspInspector {
-  constructor(private bsp: BspMap) {}
+  constructor(private bsp: BspMap, private textureCache?: TextureCache) {}
 
   getBspNodeTree(): BspNodeTree {
     return {
@@ -133,6 +135,7 @@ export class BspInspector {
               }
 
               return {
+                  faceIndex,
                   textureName: texInfo ? texInfo.texture : 'unknown',
                   lightmapId: face.styles[0],
                   normal: vec3.fromValues(plane.normal[0], plane.normal[1], plane.normal[2]),
@@ -160,23 +163,72 @@ export class BspInspector {
   }
 
   getAllLoadedTextures(): TextureInfo[] {
-    // NOTE: This only lists textures referenced in the BSP `texInfo`.
-    // It does not reflect actual loaded texture assets (Images/WebTextures) from the Engine/Renderer,
-    // so `width` and `height` are unavailable and set to 0.
-    // To get full texture metadata, this inspector would need access to the `TextureManager` or `AssetManager`.
-
     const textures = new Map<string, TextureInfo>();
 
     this.bsp.texInfo.forEach((ti: any) => {
       if (ti.texture) {
+         let width = 0;
+         let height = 0;
+
+         if (this.textureCache) {
+             const cached = this.textureCache.get(ti.texture);
+             if (cached) {
+                 width = cached.width;
+                 height = cached.height;
+             }
+         }
+
          textures.set(ti.texture, {
            name: ti.texture,
-           width: 0, // Not available in basic BSP struct
-           height: 0
+           width,
+           height
          });
       }
     });
 
     return Array.from(textures.values());
+  }
+
+  getTextureData(name: string): ImageData | null {
+      if (!this.textureCache) return null;
+      const cached = this.textureCache.get(name);
+      if (!cached) return null;
+
+      // Ensure we have a valid width/height
+      if (cached.width === 0 || cached.height === 0) return null;
+
+      // Extract level 0 data
+      const level0 = cached.levels[0];
+      if (!level0) return null;
+
+      const rgba = level0.rgba;
+      // Convert to ImageData
+      // In browser, ImageData constructor takes (Uint8ClampedArray, width, height)
+      // Note: rgba is Uint8Array, needs casting or copying to Uint8ClampedArray
+
+      const clamped = new Uint8ClampedArray(rgba);
+      try {
+        return new ImageData(clamped, cached.width, cached.height);
+      } catch (e) {
+        // Fallback or error if environment doesn't support ImageData or has different signature
+        // For headless tests (node-canvas), ImageData is available globally usually via polyfill
+        return {
+            data: clamped,
+            width: cached.width,
+            height: cached.height,
+            colorSpace: 'srgb'
+        } as unknown as ImageData;
+      }
+  }
+
+  getTextureDependencies(mapName: string): string[] {
+      // Returns a unique list of texture names referenced by this BSP
+      const names = new Set<string>();
+      this.bsp.texInfo.forEach(ti => {
+          if (ti.texture) {
+              names.add(ti.texture);
+          }
+      });
+      return Array.from(names).sort();
   }
 }
