@@ -7,10 +7,12 @@ import { Vec3, normalizeVec3, addVec3, scaleVec3 } from '@quake2ts/shared';
 // Mock dependencies
 vi.mock('../../src/entities/system.js');
 vi.mock('../../src/entities/entity.js');
+// Important: Ensure shared math works as expected
 vi.mock('@quake2ts/shared', async () => {
-    const actual = await vi.importActual('@quake2ts/shared');
+    const actual = await vi.importActual('@quake2ts/shared') as any;
     return {
         ...actual,
+        // Ensure vector operations work correctly if needed
     };
 });
 
@@ -65,6 +67,41 @@ describe('EntitySelection', () => {
             expect(hits.length).toBe(1);
             expect(hits[0].entity).toBe(entity);
             expect(hits[0].fraction).toBeCloseTo(90 / 8192, 4); // 90 units away
+        });
+
+        it('should detect hits on rotated entities (OBB)', () => {
+            // Rotated 90 degrees around Z (Yaw)
+            // Original X axis becomes Y axis.
+            // Original Y axis becomes -X axis.
+            // Box is long in X: [-20, -5, -5] to [20, 5, 5]
+            // Rotated: long in Y: [-5, -20, -5] to [5, 20, 5]
+            const entity = {
+                index: 10,
+                origin: { x: 100, y: 0, z: 0 },
+                angles: { x: 0, y: 90, z: 0 },
+                mins: { x: -20, y: -5, z: -5 },
+                maxs: { x: 20, y: 5, z: 5 },
+                absmin: { x: 80, y: -20, z: -5 }, // Approx bounds for optimization
+                absmax: { x: 120, y: 20, z: 5 },
+            } as any;
+            (system as any).addEntity(entity);
+
+            const origin = { x: 0, y: 0, z: 0 };
+
+            // Ray along X axis should hit the rotated box (width 10, from x=95 to x=105 in world space)
+            // Wait, entity is at 100,0,0. Rotated 90 deg yaw.
+            // Local box X is [-20, 20]. Local box Y is [-5, 5].
+            // Rotated: X becomes Y, Y becomes -X.
+            // Rotated box spans Y: [-20, 20], X: [-5, 5].
+            // So world bounds around 100,0,0 are: X=[95, 105], Y=[-20, 20].
+
+            const dir = { x: 1, y: 0, z: 0 };
+            const hits = selection.rayCastEntities(origin, dir);
+
+            expect(hits.length).toBe(1);
+            expect(hits[0].entity).toBe(entity);
+            // Distance should be 100 - 5 = 95
+            expect(hits[0].point.x).toBeCloseTo(95, 1);
         });
 
         it('should use traceModel for BSP entities', () => {
