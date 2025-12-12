@@ -81,6 +81,45 @@ export class DemoReader {
   }
 
   /**
+   * Reads all remaining blocks and concatenates them into a single buffer.
+   * Useful for converting discrete blocks into a continuous stream.
+   */
+  public readAllBlocksToBuffer(): ArrayBuffer {
+      // First pass: Calculate total size
+      let totalLength = 0;
+      const currentOffset = this.offset;
+      const blockInfos: { offset: number, length: number }[] = [];
+
+      // Scan ahead without modifying this.offset yet
+      let tempOffset = this.offset;
+      while (tempOffset + 4 <= this.buffer.byteLength) {
+          const length = this.view.getInt32(tempOffset, true);
+          if (length < 0 || tempOffset + 4 + length > this.buffer.byteLength) {
+              break;
+          }
+          blockInfos.push({ offset: tempOffset + 4, length });
+          totalLength += length;
+          tempOffset += 4 + length;
+      }
+
+      // Allocate result buffer
+      const result = new Uint8Array(totalLength);
+      let resultOffset = 0;
+
+      // Copy data
+      const srcBytes = new Uint8Array(this.buffer);
+      for (const info of blockInfos) {
+          result.set(srcBytes.subarray(info.offset, info.offset + info.length), resultOffset);
+          resultOffset += info.length;
+      }
+
+      // Update reader state
+      this.offset = tempOffset;
+
+      return result.buffer;
+  }
+
+  /**
    * Resets the reader to the beginning.
    */
   public reset(): void {
