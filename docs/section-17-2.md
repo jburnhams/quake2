@@ -33,10 +33,10 @@
 - [x] Add method `getAllEntityClassnames(): string[]` for filter UI
 
 ### 2.1.4 Entity Highlighting
-- [ ] Add method `setEntityHighlight(entityId: number, color: Color): void` for selection feedback
-- [ ] Add method `clearEntityHighlight(entityId: number): void`
-- [ ] Render highlighted entities with overlay color or outline shader
-- [ ] Support multiple highlight colors for different selection states
+- [x] Add method `setEntityHighlight(entityId: number, color: Color): void` for selection feedback
+- [x] Add method `clearEntityHighlight(entityId: number): void`
+- [x] Render highlighted entities with overlay color or outline shader
+- [x] Support multiple highlight colors for different selection states
 
 ---
 
