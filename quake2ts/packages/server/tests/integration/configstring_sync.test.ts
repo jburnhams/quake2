@@ -60,9 +60,15 @@ describe('Integration: Config String & Stats Sync', () => {
     let server: DedicatedServer;
     let mockClient: Client;
     let mockDriver: any;
+    let consoleLogSpy: any;
+    let consoleWarnSpy: any;
 
     beforeEach(async () => {
         vi.useFakeTimers();
+        // Suppress logs for cleaner output
+        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
         server = new DedicatedServer(27910);
 
         // Start server
@@ -108,6 +114,8 @@ describe('Integration: Config String & Stats Sync', () => {
     afterEach(() => {
         server.stop();
         vi.useRealTimers();
+        consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
         vi.clearAllMocks();
     });
 

@@ -62,9 +62,14 @@ function getPrivate(obj: any, key: string) {
 
 describe('DedicatedServer Timeout', () => {
     let server: DedicatedServer;
+    let consoleLogSpy: any;
+    let consoleWarnSpy: any;
 
     beforeEach(async () => {
         vi.useFakeTimers();
+        consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
         server = new DedicatedServer(27910);
         await server.start('maps/test.bsp');
     });
@@ -72,6 +77,8 @@ describe('DedicatedServer Timeout', () => {
     afterEach(() => {
         server.stop();
         vi.clearAllMocks();
+        consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
         vi.useRealTimers();
     });
 

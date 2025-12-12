@@ -64,9 +64,13 @@ const createMockClient = (index: number): Client => {
 describe('DedicatedServer', () => {
   let server: DedicatedServer;
   let mockGame: GameExports;
+  let consoleLogSpy: any;
+  let consoleWarnSpy: any;
 
   beforeEach(async () => {
     vi.useFakeTimers();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Setup mock game with complete snapshot return to avoid errors in DedicatedServer
     mockGame = {
@@ -109,6 +113,8 @@ describe('DedicatedServer', () => {
     server.stop();
     vi.useRealTimers();
     vi.clearAllMocks();
+    consoleLogSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 
   it('should initialize the game and start the frame loop', () => {
