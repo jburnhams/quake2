@@ -101,7 +101,7 @@ This phase covers the foundational AI systems required for monster behavior and 
 **TypeScript File**: `/packages/game/src/ai/targeting.ts`
 
 ### 1.2.1 Sight & Sound Perception
-- [ ] Implement `AI_GetSightClient(entity: Entity): Entity | null`
+- [x] Implement `AI_GetSightClient(entity: Entity): Entity | null`
   - Find visible player from monster perspective
   - Line-of-sight checks
   - FOV restrictions
