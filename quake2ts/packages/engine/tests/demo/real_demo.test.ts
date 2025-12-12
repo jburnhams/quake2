@@ -72,12 +72,6 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
 
             parser.parseMessage();
 
-            // We can check if parser encountered errors
-            if (parser.getErrorCount() > 0) {
-                // If needed we can log here, but for now we expect robustness
-                // console.warn(`Message ${messageCount} had errors`);
-            }
-
             protocolVersion = parser.getProtocolVersion();
 
             if (handler.onServerData.mock.calls.length > 0) {

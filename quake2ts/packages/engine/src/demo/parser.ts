@@ -283,14 +283,53 @@ export class NetworkMessageParser {
       return cmd;
     }
 
-    // Vanilla Q2 (Protocol 25, 26, and 34):
-    // All vanilla protocols use the SAME server command enum (0-20).
-    // The differences between protocols are:
-    // - Protocol 26: No suppressCount byte in svc_frame
-    // - Protocol 25/26 vs 34: Different entity delta compression
-    // But the command values themselves are identical across all vanilla versions.
-    if (this.protocolVersion === 25 || this.protocolVersion === 26 || this.protocolVersion === 34) {
-        // Vanilla commands go from 0-20 (svc_bad to svc_frame)
+    // Protocol 25 (Quake 2 v3.00 / v3.14) and Protocol 26:
+    // In these older protocols, commands 1-5 (muzzleflash, muzzleflash2, temp_entity, layout, inventory)
+    // didn't exist yet. They were added in protocol 34.
+    // Therefore, all command values in protocol 25/26 are offset by +5 compared to the modern enum.
+    // Protocol 25 mapping:
+    //   0 = svc_bad (modern 0)
+    //   1 = svc_nop (modern 6)
+    //   2 = svc_disconnect (modern 7)
+    //   3 = svc_reconnect (modern 8)
+    //   4 = svc_sound (modern 9)
+    //   5 = svc_print (modern 10)
+    //   6 = svc_stufftext (modern 11)
+    //   7 = svc_serverdata (modern 12)
+    //   8 = svc_configstring (modern 13)
+    //   9 = svc_spawnbaseline (modern 14)
+    //   10 = svc_centerprint (modern 15)
+    //   11 = svc_download (modern 16)
+    //   12 = svc_playerinfo (modern 17)
+    //   13 = svc_packetentities (modern 18)
+    //   14 = svc_deltapacketentities (modern 19) - may not exist in protocol 25
+    //   15 = svc_frame (modern 20)
+    if (this.protocolVersion === 25 || this.protocolVersion === 26) {
+        // Special case for svc_bad (command 0) - maps to itself
+        if (cmd === 0) {
+            return ServerCommand.bad;
+        }
+
+        // Add 5 to map protocol 25/26 commands to modern enum
+        const translated = cmd + 5;
+
+        // Protocol 25 valid commands (1-15) translate to modern (6-20):
+        //   1 = svc_nop (modern 6)
+        //   2 = svc_disconnect (modern 7)
+        //   ...
+        //   15 = svc_frame (modern 20)
+        //
+        // Vanilla protocol 25 ends at svc_frame. Commands beyond 15 did not exist.
+        // (splitclient, configblast, etc. are rerelease additions)
+        if (translated >= ServerCommand.nop && translated <= ServerCommand.frame) {
+            return translated;
+        }
+
+        return ServerCommand.bad;
+    }
+
+    // Vanilla Q2 Protocol 34 and modern protocols
+    if (this.protocolVersion === 34) {
         if (cmd <= ServerCommand.frame) {
             return cmd;
         }
@@ -599,7 +638,8 @@ export class NetworkMessageParser {
           }
 
           const blastStream = new BinaryStream(decompressed.buffer);
-          const blastParser = new NetworkMessageParser(blastStream, this.handler);
+          const blastParser = new NetworkMessageParser(blastStream, this.handler, this.strictMode);
+          blastParser.setProtocolVersion(this.protocolVersion);
 
           while (blastStream.hasMore()) {
               blastParser.parseSpawnBaseline();
@@ -1025,7 +1065,12 @@ export class NetworkMessageParser {
       // Strict Protocol Check:
       // In standard Q2 protocol, `svc_playerinfo` MUST follow the frame header.
       if (piCmd !== ServerCommand.playerinfo) {
-          throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd} (translated)`);
+          if (this.strictMode) {
+              throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd} (translated)`);
+          }
+          // In non-strict mode, we can't safely continue parsing the frame
+          // since we don't know the format. Return to avoid cascading errors.
+          return;
       }
       const playerState = this.parsePlayerState();
 
@@ -1035,7 +1080,11 @@ export class NetworkMessageParser {
 
       // In standard Q2 protocol, `svc_packetentities` MUST follow `svc_playerinfo`.
       if (peCmd !== ServerCommand.packetentities) {
-           throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd} (translated)`);
+          if (this.strictMode) {
+              throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd} (translated)`);
+          }
+          // In non-strict mode, we can't safely continue parsing the frame
+          return;
       }
       const entities = this.collectPacketEntities();
 
