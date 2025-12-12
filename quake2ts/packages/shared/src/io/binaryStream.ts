@@ -20,6 +20,10 @@ export class BinaryStream {
     return this.offset;
   }
 
+  public getReadPosition(): number {
+    return this.offset;
+  }
+
   public getLength(): number {
     return this.length;
   }
@@ -35,8 +39,16 @@ export class BinaryStream {
     this.offset = position;
   }
 
+  public setReadPosition(position: number): void {
+    this.seek(position);
+  }
+
   public hasMore(): boolean {
     return this.offset < this.length;
+  }
+
+  public hasBytes(count: number): boolean {
+    return this.offset + count <= this.length;
   }
 
   public readChar(): number {
