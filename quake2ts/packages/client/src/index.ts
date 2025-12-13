@@ -166,6 +166,13 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   getStatusBar(): StatusBarData | null;
   getCrosshairInfo(): CrosshairInfo;
   onHudUpdate?: (data: HudData) => void;
+
+  // Event Handlers (Section 4.2)
+  onCenterPrint?: (msg: string) => void;
+  onNotify?: (msg: string) => void;
+  onPickupMessage?: (item: string, icon?: string) => void;
+  onObituaryMessage?: (victim: string, killer?: string, method?: string) => void;
+  onMenuStateChange?: (active: boolean) => void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -269,6 +276,12 @@ export function createClient(imports: ClientImports): ClientExports {
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
 
+  menuSystem.addListener((state) => {
+      if (clientExports.onMenuStateChange) {
+          clientExports.onMenuStateChange(state.activeMenu !== null);
+      }
+  });
+
   // Initialize UI components
   const loadingScreen = new LoadingScreen();
   const errorDialog = new ErrorDialog();
@@ -320,8 +333,47 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
-    onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
-    onPrint: (level: number, msg: string) => cg.NotifyMessage(0, msg, false),
+    onCenterPrint: (msg: string) => {
+        cg.ParseCenterPrint(msg, 0, false);
+        if (clientExports.onCenterPrint) {
+            clientExports.onCenterPrint(msg);
+        }
+    },
+    onPrint: (level: number, msg: string) => {
+        cg.NotifyMessage(0, msg, false);
+        if (clientExports.onNotify) {
+            clientExports.onNotify(msg);
+        }
+
+        // Pickup Heuristic: "You got the ..."
+        if (msg.startsWith('You got the ')) {
+            const itemName = msg.substring(12);
+            if (clientExports.onPickupMessage) {
+                clientExports.onPickupMessage(itemName, undefined);
+            }
+        } else if (clientExports.onObituaryMessage) {
+             // Obituary Heuristic
+             // "Player1 died."
+             if (msg.endsWith(' died.')) {
+                 const victim = msg.substring(0, msg.length - 6);
+                 clientExports.onObituaryMessage(victim, undefined, 'died.');
+             } else {
+                 // "Player1 was railed by Player2"
+                 const byIndex = msg.lastIndexOf(' by ');
+                 if (byIndex !== -1) {
+                     const killer = msg.substring(byIndex + 4);
+                     // Look for " was "
+                     const wasIndex = msg.indexOf(' was ');
+                     if (wasIndex !== -1) {
+                         const victim = msg.substring(0, wasIndex);
+                         // method = "was railed by"
+                         const method = msg.substring(wasIndex + 1, byIndex + 3); // "was railed by"
+                         clientExports.onObituaryMessage(victim, killer, method);
+                     }
+                 }
+             }
+        }
+    },
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
@@ -687,12 +739,6 @@ export function createClient(imports: ClientImports): ClientExports {
           renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
 
           // Get packet entities for effect processing.
-          // demoHandler doesn't expose getPacketEntities directly yet, but getRenderableEntities builds from them.
-          // We might need to expose them or iterate renderEntities if they retain enough info.
-          // RenderableEntity has model, transform, skin... but not raw effects flags unless we added them.
-          // But we need effects flags.
-          // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
-          // demoHandler is ClientNetworkHandler.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
               currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
           }
@@ -814,21 +860,6 @@ export function createClient(imports: ClientImports): ClientExports {
                           }
 
                           lastRendered.origin = { ...demoCameraState.currentFollowOrigin };
-
-                          // Optionally look AT the target or just position camera there
-                          // "Follow" usually implies third person view OF the target, or first person view FROM the target?
-                          // Let's assume third-person-like follow.
-                          // We need view angles. If the entity has angles, we can use them.
-                          // RenderableEntity doesn't expose angles directly, but we can assume they are encoded in the model transform
-                          // or passed separately. But we don't have them easily here without decomping matrix.
-                          // For now, let's just position camera AT the entity and keep previous view angles (or user controlled?)
-                          // If we want "tracking", we might want to update angles to look at it?
-                          // Let's stick to positioning for now, effectively a "spectate" mode.
-                          // If we want third person follow, we need to know the entity's forward vector.
-
-                          // For now, minimal "smooth camera tracking player" (positional)
-                          // Assuming camera angles are manually controlled or we default to looking at it from fixed offset?
-                          // Let's keep existing view angles to allow user to look around while following position.
                       }
                   }
              }
@@ -947,20 +978,14 @@ export function createClient(imports: ClientImports): ClientExports {
 
       // RENDER THE WORLD
       if (imports.engine.renderer && camera) {
-          // Retrieve current map if available
-          // Usually index 1 in configstrings is map model: "maps/base1.bsp"
-          // NOTE: Q2 configstring CS_MODELS+1 is the world model.
           let world: WorldRenderState | undefined;
 
           if (imports.engine.assets) {
-              // CS_MODELS is 32. So model index 1 is at 33.
               const mapName = configStrings.getModelName(1);
               if (mapName) {
                   const bspMap = imports.engine.assets.getMap(mapName);
-
                   if (bspMap) {
                       // Construct world state.
-                      // For now we mock surfaces/lightmaps as they are built in renderer internals usually?
                   }
               }
           }
@@ -1093,14 +1118,6 @@ export function createClient(imports: ClientImports): ClientExports {
             alpha: ind.strength
         }));
 
-        // Inventory is not directly in PredictionState, but Client has it?
-        // Wait, Client Exports doesn't have inventory.
-        // PredictionState has 'client' property which is PlayerClient, which has inventory.
-        // But PredictionState interface doesn't strictly enforce client structure.
-        // Let's assume we can access it if available.
-        // Or if in single player, we query game session?
-        // But client exports shouldn't depend on game session.
-
         return {
             health,
             armor,
@@ -1192,7 +1209,6 @@ export function createClient(imports: ClientImports): ClientExports {
         isDemoPlaying = false;
         currentDemoName = null;
         clientMode = ClientMode.Normal;
-        // Clean up
     },
     startRecording(filename: string) {
         if (multiplayer.isConnected()) {
@@ -1206,8 +1222,6 @@ export function createClient(imports: ClientImports): ClientExports {
         if (demoRecorder.getIsRecording()) {
              const data = demoRecorder.stopRecording();
              console.log(`Recording stopped. Size: ${data?.length} bytes.`);
-             // Auto-save to VFS or download?
-             // For now, let's offer download if in browser
              if (data && typeof document !== 'undefined') {
                  const blob = new Blob([data as any], { type: 'application/octet-stream' });
                  const url = URL.createObjectURL(blob);
@@ -1223,9 +1237,51 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
+      if (clientExports.onCenterPrint) {
+          clientExports.onCenterPrint(msg);
+      }
     },
     ParseNotify(msg: string) {
       cg.NotifyMessage(0, msg, false);
+      if (clientExports.onNotify) {
+          clientExports.onNotify(msg);
+      }
+
+      // Pickup Heuristic: "You got the ..."
+      if (msg.startsWith('You got the ')) {
+          const itemName = msg.substring(12);
+          if (clientExports.onPickupMessage) {
+              clientExports.onPickupMessage(itemName, undefined);
+          }
+      } else if (clientExports.onObituaryMessage) {
+           // Obituary Heuristic
+           // "Player1 died."
+           if (msg.endsWith(' died.')) {
+               const victim = msg.substring(0, msg.length - 6);
+               clientExports.onObituaryMessage(victim, undefined, 'died.');
+           } else {
+               // "Player1 was railed by Player2"
+               const byIndex = msg.lastIndexOf(' by ');
+               if (byIndex !== -1) {
+                   const killer = msg.substring(byIndex + 4);
+                   // Look for " was "
+                   const wasIndex = msg.indexOf(' was ');
+                   if (wasIndex !== -1) {
+                       const victim = msg.substring(0, wasIndex);
+                       // method = "was railed by"
+                       // substring from wasIndex + 1 to byIndex + 3 (inclusive of " by")
+                       // actually byIndex is start of " by ". So byIndex + 4 is start of killer.
+                       // We want "was railed by".
+                       // "Player1 was railed by Player2"
+                       // victim = "Player1"
+                       // method = "was railed by"
+                       // killer = "Player2"
+                       const method = msg.substring(wasIndex + 1, byIndex + 3); // "was railed by"
+                       clientExports.onObituaryMessage(victim, killer, method);
+                   }
+               }
+           }
+      }
     },
     showSubtitle(text: string, soundName: string) {
       cg.ShowSubtitle(text, soundName);
