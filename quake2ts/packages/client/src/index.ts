@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -46,6 +46,7 @@ import { DemoCameraMode, DemoCameraState } from './demo/camera.js';
 import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
+import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -72,6 +73,7 @@ export { ViewEffects } from '@quake2ts/cgame';
 export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
+export * from './scoreboard.js';
 
 export * from './session.js';
 export * from './demo/camera.js'; // Export DemoCameraMode
@@ -145,6 +147,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   readonly errorDialog: ErrorDialog;
 
   readonly dlightManager: DynamicLightManager;
+
+  // Scoreboard API
+  getScoreboard(): ScoreboardData;
+  onScoreboardUpdate?: (scoreboard: ScoreboardData) => void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -252,6 +258,8 @@ export function createClient(imports: ClientImports): ClientExports {
   let optionsFactory: OptionsMenuFactory | undefined;
 
   const configStrings = new ClientConfigStrings();
+  const scoreboardManager = new ScoreboardManager(configStrings);
+
   const blendState = createBlendState();
   let currentBlend: [number, number, number, number] = [0, 0, 0, 0];
   let pendingDamage = 0;
@@ -295,6 +303,11 @@ export function createClient(imports: ClientImports): ClientExports {
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
+      // Trigger scoreboard update if player skin changes
+      if (index >= ConfigStringIndex.PlayerSkins && index < ConfigStringIndex.PlayerSkins + MAX_CLIENTS) {
+        scoreboardManager.parseConfigString(index, str);
+        scoreboardManager.notifyUpdate();
+      }
     },
     onServerData: (protocol: number, tickRate?: number) => {
         if (tickRate && tickRate > 0) {
@@ -1144,8 +1157,20 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     setDemoFollowEntity(entityId: number) {
         demoCameraState.followEntityId = entityId;
+    },
+
+    // Scoreboard API
+    getScoreboard() {
+      return scoreboardManager.getScoreboard();
     }
   };
+
+  // Hook up scoreboard listener
+  scoreboardManager.addListener((data) => {
+    if (clientExports.onScoreboardUpdate) {
+      clientExports.onScoreboardUpdate(data);
+    }
+  });
 
   return clientExports;
 }
