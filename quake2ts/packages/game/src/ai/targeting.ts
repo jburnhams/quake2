@@ -260,12 +260,20 @@ export function findTarget(
   }
 
   const { candidate, heardit } = chooseCandidate(self, level);
-  if (!candidate || !candidate.inUse) return false;
-  if (candidate === self.enemy) return true;
-  if (rejectNotargetEntity(candidate)) return false;
+  if (!candidate || !candidate.inUse) {
+    return false;
+  }
+  if (candidate === self.enemy) {
+    return true;
+  }
+  if (rejectNotargetEntity(candidate)) {
+    return false;
+  }
 
   if (!heardit) {
-    if (!classifyClientVisibility(self, candidate, level, trace)) return false;
+    if (!classifyClientVisibility(self, candidate, level, trace)) {
+        return false;
+    }
     self.monsterinfo.aiflags &= ~AIFlags.SoundTarget;
     self.enemy = candidate;
   } else if (!updateSoundChase(self, candidate, level, hearability, trace)) {

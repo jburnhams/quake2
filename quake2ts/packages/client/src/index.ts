@@ -47,6 +47,7 @@ import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
 import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
+import { ChatManager } from './chat.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
@@ -161,6 +162,12 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Scoreboard API
   getScoreboard(): ScoreboardData;
   onScoreboardUpdate?: (scoreboard: ScoreboardData) => void;
+
+  // Chat API
+  sendChatMessage(message: string, team?: boolean): void;
+  onChatMessage?: (sender: string, message: string, team: boolean) => void;
+  getChatHistory(): any[];
+
   // HUD Data API
   getHudData(): HudData | null;
   getStatusBar(): StatusBarData | null;
@@ -295,6 +302,12 @@ export function createClient(imports: ClientImports): ClientExports {
   const configStrings = new ClientConfigStrings();
   const scoreboardManager = new ScoreboardManager(configStrings);
 
+  const chatManager = new ChatManager((cmd) => {
+      if (imports.engine.cmd) {
+          imports.engine.cmd.executeText(cmd);
+      }
+  });
+
   const blendState = createBlendState();
   let currentBlend: [number, number, number, number] = [0, 0, 0, 0];
   let pendingDamage = 0;
@@ -406,6 +419,10 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     onDamage: (indicators: DamageIndicator[]) => {
         pendingDamage = 0.5;
+    },
+    onLayout: (layout: string) => {
+        scoreboardManager.processScoreboardMessage(layout);
+        scoreboardManager.notifyUpdate();
     }
   });
 
@@ -1315,6 +1332,14 @@ export function createClient(imports: ClientImports): ClientExports {
     // Scoreboard API
     getScoreboard() {
       return scoreboardManager.getScoreboard();
+    },
+
+    // Chat API
+    sendChatMessage(message: string, team: boolean = false) {
+        chatManager.sendChatMessage(message, team);
+    },
+    getChatHistory() {
+        return chatManager.getHistory();
     }
   };
 
@@ -1323,6 +1348,13 @@ export function createClient(imports: ClientImports): ClientExports {
     if (clientExports.onScoreboardUpdate) {
       clientExports.onScoreboardUpdate(data);
     }
+  });
+
+  // Hook up chat listener
+  chatManager.addListener((sender, message, team) => {
+      if (clientExports.onChatMessage) {
+          clientExports.onChatMessage(sender, message, team);
+      }
   });
 
   return clientExports;
