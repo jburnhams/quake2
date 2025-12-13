@@ -8,13 +8,15 @@ import {
   subtractVec3,
   rotatePointAroundVector,
   vectorToAngles,
-  WaterLevel
+  WaterLevel,
+  MASK_WATER
 } from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
 import { resolveImpact, checkTriggers } from './collision.js';
 import { applyFallingDamage } from '../combat/specialDamage.js';
 import type { Damageable } from '../combat/damage.js';
+import { SV_AddCurrents } from './fluid.js';
 
 // Physics constants derived from Quake 2 source
 const WATER_FRICTION = 2.0;
@@ -117,7 +119,19 @@ export function runStep(
   // If not flying or swimming, apply gravity
   const isFlying = (ent.flags & (EntityFlags.Fly | EntityFlags.Swim)) !== 0;
   if (!isFlying) {
-    ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+      // Add gravity
+      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
+  }
+
+  // Apply water currents if applicable
+  // This is typically done in PM_WaterMove for players, but for monsters/step physics
+  // we might want it too. p_move.c adds it to wishvel.
+  // g_phys.c SV_Physics_Step doesn't explicitly call SV_AddCurrents,
+  // but it's part of player movement.
+  // However, the task requests implementing "water current following".
+  // Adding it here ensures entities moved by runStep (monsters) get affected.
+  if (ent.waterlevel > 0) {
+     SV_AddCurrents(ent);
   }
 
   // Q2 physics loop for step movement often clips against world
