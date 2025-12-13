@@ -1,18 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated';
+import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState, Client } from '../src/client';
+import { ClientState, Client } from '../src/client.js';
 import { UserCommand, UPDATE_BACKUP } from '@quake2ts/shared';
+import { MockTransport } from './mocks/transport.js';
 
 // Mock dependencies
-vi.mock('ws');
 vi.mock('node:fs/promises', () => ({
   default: {
     readFile: vi.fn().mockResolvedValue(Buffer.from([0])),
   },
 }));
 vi.mock('@quake2ts/engine', () => ({
-  parseBsp: vi.fn().mockReturnValue({}),
+  parseBsp: vi.fn().mockReturnValue({
+        planes: [],
+        nodes: [],
+        leafs: [],
+        brushes: [],
+        models: [],
+        leafLists: { leafBrushes: [] },
+        texInfo: [],
+        brushSides: [],
+        visibility: { numClusters: 0, clusters: [] }
+  }),
 }));
 vi.mock('@quake2ts/game', () => ({
   createGame: vi.fn(),
@@ -22,7 +32,7 @@ vi.mock('@quake2ts/game', () => ({
 
 const FRAME_TIME_MS = 100; // 10Hz
 
-// Helper to create a proper mock client with frames structure
+// Helper to create a proper mock client
 const createMockClient = (index: number): Client => {
   const frames = [];
   for (let i = 0; i < UPDATE_BACKUP; i++) {
@@ -66,13 +76,16 @@ describe('DedicatedServer', () => {
   let mockGame: GameExports;
   let consoleLogSpy: any;
   let consoleWarnSpy: any;
+  let transport: MockTransport;
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    // Only fake specific timers to avoid blocking internal promises/fs mocks
+    vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
+    });
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // Setup mock game with complete snapshot return to avoid errors in DedicatedServer
     mockGame = {
       init: vi.fn(),
       shutdown: vi.fn(),
@@ -100,17 +113,20 @@ describe('DedicatedServer', () => {
       entities: {
           forEachEntity: vi.fn(),
           getByIndex: vi.fn()
-      }
+      },
+      clientConnect: vi.fn().mockReturnValue(true),
+      clientDisconnect: vi.fn(),
     } as unknown as GameExports;
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 
-    server = new DedicatedServer();
-    await server.start('test.bsp');
+    transport = new MockTransport();
+    server = new DedicatedServer({ transport });
+    await server.startServer('test.bsp');
   });
 
   afterEach(() => {
-    server.stop();
+    server.stopServer();
     vi.useRealTimers();
     vi.clearAllMocks();
     consoleLogSpy.mockRestore();
@@ -122,9 +138,6 @@ describe('DedicatedServer', () => {
     expect(mockGame.init).toHaveBeenCalled();
     expect(mockGame.spawnWorld).toHaveBeenCalled();
 
-    // Check if the loop has started by advancing time
-    // start() calls runFrame() immediately (1st call)
-    // Advance 100ms -> timeout fires -> runFrame() (2nd call)
     vi.advanceTimersByTime(FRAME_TIME_MS);
     expect(mockGame.frame).toHaveBeenCalledTimes(2);
   });
@@ -133,25 +146,18 @@ describe('DedicatedServer', () => {
     const fakeClient = createMockClient(0);
     fakeClient.lastCmd = { msec: 100, angles: {x: 0, y: 90, z: 0}, buttons: 1, forwardmove: 200, sidemove: 0, upmove: 0 };
 
-    // @ts-ignore - Access private property for testing
+    // @ts-ignore
     server.svs.clients[0] = fakeClient;
 
-    // Clear previous calls from start()
     (mockGame.frame as any).mockClear();
     (mockGame.clientThink as any).mockClear();
 
-    // Advance time by one frame
     vi.advanceTimersByTime(FRAME_TIME_MS);
 
-    // Verify clientThink was called for the active client
     expect(mockGame.clientThink).toHaveBeenCalledWith(fakeClient.edict, fakeClient.lastCmd);
-
-    // Verify frame was called
     expect(mockGame.frame).toHaveBeenCalledTimes(1);
-    // Since we cleared mocks, and start() ran frame 1, this should be frame 2
     expect(mockGame.frame).toHaveBeenCalledWith(expect.objectContaining({ frame: 2 }));
 
-    // Advance time again
     vi.advanceTimersByTime(FRAME_TIME_MS);
     expect(mockGame.frame).toHaveBeenCalledTimes(2);
     expect(mockGame.frame).toHaveBeenCalledWith(expect.objectContaining({ frame: 3 }));
@@ -159,59 +165,41 @@ describe('DedicatedServer', () => {
 
   it('should not process commands for clients that are not active', () => {
     const fakeClient = createMockClient(0);
-    fakeClient.state = ClientState.Connected; // Not Active
+    fakeClient.state = ClientState.Connected;
 
-    // @ts-ignore - Access private property for testing
+    // @ts-ignore
     server.svs.clients[0] = fakeClient;
 
     (mockGame.frame as any).mockClear();
     (mockGame.clientThink as any).mockClear();
 
-    // Advance time
     vi.advanceTimersByTime(FRAME_TIME_MS);
 
-    // Verify clientThink was NOT called
     expect(mockGame.clientThink).not.toHaveBeenCalled();
-    // Verify frame was still called
     expect(mockGame.frame).toHaveBeenCalledTimes(1);
   });
 
   it('should compensate for slow frames (drift compensation)', async () => {
-    // 1. Reset server and timers for clean state
     vi.clearAllTimers();
     (mockGame.frame as any).mockClear();
-    server.stop();
-    server = new DedicatedServer();
-    await server.start('test.bsp');
+    server.stopServer();
 
-    // Frame 1 executed immediately.
+    transport = new MockTransport();
+    server = new DedicatedServer({ transport });
+    await server.startServer('test.bsp');
+
     expect(mockGame.frame).toHaveBeenCalledTimes(1);
 
-    // Frame 2 scheduled in 100ms.
-
-    // Prepare Frame 2: simulate taking 40ms by setting system time
     const frameMock2 = vi.fn().mockImplementation(() => {
-        // Advance clock by 40ms WITHOUT triggering other timers
         const now = Date.now();
         vi.setSystemTime(now + 40);
         return { state: { packetEntities: [], stats: [] } };
     });
     mockGame.frame = frameMock2;
 
-    // Advance 100ms to trigger Frame 2
     vi.advanceTimersByTime(100);
-
     expect(frameMock2).toHaveBeenCalledTimes(1);
 
-    // Frame 2 logic:
-    // Start = T
-    // frame() sets Time = T + 40
-    // End = T + 40
-    // Elapsed = 40
-    // Sleep = 100 - 40 = 60
-    // Frame 3 scheduled in 60ms
-
-    // Prepare Frame 3: simulate taking 120ms (overrun)
     const frameMock3 = vi.fn().mockImplementation(() => {
         const now = Date.now();
         vi.setSystemTime(now + 120);
@@ -219,26 +207,15 @@ describe('DedicatedServer', () => {
     });
     mockGame.frame = frameMock3;
 
-    // Advance 59ms -> Frame 3 NOT run
     vi.advanceTimersByTime(59);
     expect(frameMock3).toHaveBeenCalledTimes(0);
 
-    // Advance 1ms -> Frame 3 run
     vi.advanceTimersByTime(1);
     expect(frameMock3).toHaveBeenCalledTimes(1);
 
-    // Frame 3 logic:
-    // Start = T_start
-    // frame() sets Time = T_start + 120
-    // Elapsed = 120
-    // Sleep = max(0, 100 - 120) = 0
-    // Frame 4 scheduled in 0ms (immediate)
-
-    // Prepare Frame 4: normal
     const frameMock4 = vi.fn().mockReturnValue({ state: { packetEntities: [], stats: [] } });
     mockGame.frame = frameMock4;
 
-    // Advance minimal time to trigger immediate timeout
     vi.advanceTimersByTime(1);
     expect(frameMock4).toHaveBeenCalledTimes(1);
   });

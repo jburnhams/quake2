@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated';
+import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState, createClient } from '../src/client';
+import { ClientState, createClient } from '../src/client.js';
 import { ServerCommand, BinaryStream, NetDriver } from '@quake2ts/shared';
+import { MockTransport } from './mocks/transport.js';
 
 // Mock dependencies
-vi.mock('ws');
+// ws mock removed
 vi.mock('node:fs/promises', () => ({
   default: {
     readFile: vi.fn().mockResolvedValue(Buffer.from([0])),
@@ -26,6 +27,7 @@ describe('DedicatedServer Connection Flow', () => {
   let sentMessages: Uint8Array[] = [];
   let consoleLogSpy: any;
   let consoleWarnSpy: any;
+  let transport: MockTransport;
 
   beforeEach(async () => {
     sentMessages = [];
@@ -49,12 +51,13 @@ describe('DedicatedServer Connection Flow', () => {
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 
-    server = new DedicatedServer();
-    await server.start('test.bsp');
+    transport = new MockTransport();
+    server = new DedicatedServer({ transport });
+    await server.startServer('test.bsp');
   });
 
   afterEach(() => {
-    server.stop();
+    server.stopServer();
     vi.clearAllMocks();
     consoleLogSpy.mockRestore();
     consoleWarnSpy.mockRestore();
@@ -90,19 +93,8 @@ describe('DedicatedServer Connection Flow', () => {
     expect(mockGame.clientConnect).toHaveBeenCalledWith(null, '\\name\\Player\\skin\\male/grunt');
 
     // 4. Verify response (ServerData)
-    // Because sendServerData and precache write to the SAME reliable stream,
-    // they might be batched into one packet or split depending on NetChan logic.
-    // The previous test expected sentMessages[0] to be serverdata.
-
     // Check if any messages were sent
     expect(sentMessages.length).toBeGreaterThan(0);
-
-    // We can't easily parse NetChan packets here without a NetChan instance to process them
-    // because of sequence numbers and headers.
-    // However, if we just want to verify flow did not crash, that's a start.
-
-    // If we want to verify content, we must strip the NetChan header (10 bytes) + optional fragment header
-    // But NetChan.transmit() wraps the data.
 
     // Just verify that client.net.send was called.
     expect(mockNet.send).toHaveBeenCalled();
