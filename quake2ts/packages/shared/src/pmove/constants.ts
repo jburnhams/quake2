@@ -92,3 +92,5 @@ export const enum PlayerButton {
   Attack2 = 1 << 5,
   Any = 1 << 7,
 }
+
+export const DEFAULT_GRAVITY = { x: 0, y: 0, z: -800 };

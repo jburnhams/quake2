@@ -6,6 +6,8 @@ import { WaterLevel } from '../pmove/constants.js';
 export interface DamageIndicator {
     direction: Vec3;
     strength: number;
+    angle: number;
+    alpha: number;
 }
 
 export interface PlayerState {

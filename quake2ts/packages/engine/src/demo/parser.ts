@@ -211,6 +211,8 @@ export interface DamageIndicator {
     armor: boolean;
     power: boolean;
     dir: Vec3;
+    angle?: number;
+    alpha?: number;
 }
 
 export interface NetworkMessageHandler {
