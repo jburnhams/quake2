@@ -9,36 +9,36 @@
 ### 4.1.1 Game Session Management
 - [x] Create `GameSession` class wrapping game, client, and engine lifecycle
 - [x] Add method `createSession(options: SessionOptions): GameSession`
-- [ ] Options: map name, skill level, render mode, audio enabled
+- [x] Options: map name, skill level, render mode, audio enabled
 - [x] Add method `startNewGame(mapName: string, skill: number): void`
 - [x] Add method `loadSavedGame(saveData: SaveData): void`
 - [x] Add method `shutdown(): void` for cleanup
 
 ### 4.1.2 Input Integration
-- [ ] Expose `InputController` with method `bindInputSource(source: InputSource): void`
-- [ ] Support keyboard, mouse, gamepad, touch inputs
-- [ ] Add method `setKeyBinding(action: string, keys: string[]): void`
-- [ ] Add method `getDefaultBindings(): KeyBindings` for webapp initialization
-- [ ] Add event `onInputCommand?: (cmd: UserCommand) => void` for input recording
+- [x] Expose `InputController` with method `bindInputSource(source: InputSource): void`
+- [x] Support keyboard, mouse, gamepad, touch inputs
+- [x] Add method `setKeyBinding(action: string, keys: string[]): void`
+- [x] Add method `getDefaultBindings(): KeyBindings` for webapp initialization
+- [x] Add event `onInputCommand?: (cmd: UserCommand) => void` for input recording
 
 ### 4.1.3 Game State Queries
-- [ ] Add method `getPlayerState(): PlayerState` for current player status
-- [ ] Add method `getGameTime(): number` returning elapsed game seconds
-- [ ] Add method `isPaused(): boolean`
-- [ ] Add method `getSkillLevel(): number`
-- [ ] Add method `getMapName(): string`
-- [ ] Add method `getGameMode(): string` (single/deathmatch/coop)
+- [x] Add method `getPlayerState(): PlayerState` for current player status
+- [x] Add method `getGameTime(): number` returning elapsed game seconds
+- [x] Add method `isPaused(): boolean`
+- [x] Add method `getSkillLevel(): number`
+- [x] Add method `getMapName(): string`
+- [x] Add method `getGameMode(): string` (single/deathmatch/coop)
 
 ---
 
 ## 4.2 HUD and UI Integration
 
 ### 4.2.1 HUD Data API
-- [ ] Create `getHudData(): HudData` method for webapp HUD rendering (headless mode)
-- [ ] Return: health, armor, ammo, weapon, inventory, pickups, damage indicators
-- [ ] Add method `getStatusBar(): StatusBarData` for classic Quake 2 HUD
-- [ ] Add method `getCrosshairInfo(): CrosshairInfo` for hit indication
-- [ ] Add event `onHudUpdate?: (data: HudData) => void` for reactive UI
+- [x] Create `getHudData(): HudData` method for webapp HUD rendering (headless mode)
+- [x] Return: health, armor, ammo, weapon, inventory, pickups, damage indicators
+- [x] Add method `getStatusBar(): StatusBarData` for classic Quake 2 HUD
+- [x] Add method `getCrosshairInfo(): CrosshairInfo` for hit indication
+- [x] Add event `onHudUpdate?: (data: HudData) => void` for reactive UI
 
 ### 4.2.2 Message Display
 - [ ] Add event `onCenterPrint?: (message: string, duration: number) => void` for center messages

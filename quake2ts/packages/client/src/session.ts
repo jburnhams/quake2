@@ -1,4 +1,4 @@
-import { ClientExports, createClient, ClientImports } from './index.js';
+import { ClientExports, createClient, ClientImports, InputController, InputSource, InputBindings, HudData, StatusBarData, CrosshairInfo } from './index.js';
 import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine } from '@quake2ts/game';
 import { EngineImports, Renderer, EngineHost, TraceResult } from '@quake2ts/engine';
 import { UserCommand, Vec3, CollisionPlane, PlayerState } from '@quake2ts/shared';
@@ -18,10 +18,14 @@ export class GameSession {
   private host: EngineHost | null = null;
   private options: SessionOptions;
   private currentMapName: string = '';
+  private inputController: InputController;
+  private _onInputCommand?: (cmd: UserCommand) => void;
+  private _onHudUpdate?: (data: HudData) => void;
 
   constructor(options: SessionOptions) {
     this.options = options;
     this.engine = options.engine;
+    this.inputController = new InputController();
   }
 
   public startNewGame(mapName: string, skill: number = 1): void {
@@ -119,10 +123,17 @@ export class GameSession {
 
     const clientImports: ClientImports = {
         engine: this.engine,
-        host: this.host
+        host: this.host,
+        inputController: this.inputController
     };
 
     this.client = createClient(clientImports);
+    if (this._onInputCommand) {
+        this.client.onInputCommand = this._onInputCommand;
+    }
+    if (this._onHudUpdate) {
+        this.client.onHudUpdate = this._onHudUpdate;
+    }
 
     this.game.spawnWorld();
 
@@ -225,10 +236,17 @@ export class GameSession {
 
       const clientImports: ClientImports = {
           engine: this.engine,
-          host: this.host
+          host: this.host,
+          inputController: this.inputController
       };
 
       this.client = createClient(clientImports);
+      if (this._onInputCommand) {
+          this.client.onInputCommand = this._onInputCommand;
+      }
+      if (this._onHudUpdate) {
+          this.client.onHudUpdate = this._onHudUpdate;
+      }
 
       // We need to load the map first so the engine has the collision model etc.
       if (this.engine.cmd) {
@@ -267,6 +285,53 @@ export class GameSession {
 
   public getHost(): EngineHost | null {
       return this.host;
+  }
+
+  public bindInputSource(source: InputSource): void {
+      this.inputController.bindInputSource(source);
+  }
+
+  public setKeyBinding(action: string, keys: string[]): void {
+      this.inputController.setKeyBinding(action, keys);
+  }
+
+  public getDefaultBindings(): InputBindings {
+      return this.inputController.getDefaultBindings();
+  }
+
+  public set onInputCommand(handler: ((cmd: UserCommand) => void) | undefined) {
+      this._onInputCommand = handler;
+      if (this.client) {
+          this.client.onInputCommand = handler;
+      }
+  }
+
+  public get onInputCommand(): ((cmd: UserCommand) => void) | undefined {
+      return this._onInputCommand;
+  }
+
+  // Section 4.2: HUD and UI Integration
+  public getHudData(): HudData | null {
+      return this.client?.getHudData() ?? null;
+  }
+
+  public getStatusBar(): StatusBarData | null {
+      return this.client?.getStatusBar() ?? null;
+  }
+
+  public getCrosshairInfo(): CrosshairInfo | null {
+      return this.client?.getCrosshairInfo() ?? null;
+  }
+
+  public set onHudUpdate(handler: ((data: HudData) => void) | undefined) {
+      this._onHudUpdate = handler;
+      if (this.client) {
+          this.client.onHudUpdate = handler;
+      }
+  }
+
+  public get onHudUpdate(): ((data: HudData) => void) | undefined {
+      return this._onHudUpdate;
   }
 
   // Section 4.1.3: Game State Queries

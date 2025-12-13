@@ -103,11 +103,38 @@
                     }
                 };
 
+                // Mock InputController to allow test injection
+                const mockInputController = {
+                    buildCommand: (dt, now) => {
+                        const cmd = window.testInput || {
+                            angles: {x:0, y:0, z:0},
+                            forwardmove: 0,
+                            sidemove: 0,
+                            upmove: 0,
+                            buttons: 0,
+                            impulse: 0,
+                            msec: 16,
+                            time: now
+                        };
+                        // Ensure time is updated if using override
+                        if (window.testInput) {
+                            cmd.time = now;
+                        }
+                        return cmd;
+                    },
+                    bindInputSource: () => {},
+                    setKeyBinding: () => {},
+                    getDefaultBindings: () => ({}),
+                    set onInputCommand(cb) { this._cb = cb; },
+                    get onInputCommand() { return this._cb; }
+                };
+
                 // Initialize Client
                 console.log('Creating client instance...');
                 const client = Quake2Client.createClient({
                     engine: mockEngine,
-                    host: mockHost
+                    host: mockHost,
+                    inputController: mockInputController
                 });
 
                 window.clientInstance = client;
@@ -155,25 +182,8 @@
                 function loop() {
                     try {
                         const now = performance.now();
-                        const cmd = window.testInput || {
-                            angles: {x:0, y:0, z:0},
-                            forwardmove: 0,
-                            sidemove: 0,
-                            upmove: 0,
-                            buttons: 0,
-                            impulse: 0,
-                            msec: 16, // approx 60fps
-                            time: now
-                        };
-                        // Ensure time is updated if using override
-                        if (window.testInput) {
-                            cmd.time = now;
-                        }
 
-                        // Predict/Update state
-                        client.predict(cmd);
-
-                        // Render (drives frame logic)
+                        // Render (drives frame logic and input generation)
                         // We pass null for latest/previous to avoid overwriting the authoritative state
                         // maintained by the MultiplayerConnection and ClientPrediction logic.
                         client.render({

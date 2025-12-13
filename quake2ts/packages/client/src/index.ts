@@ -50,11 +50,13 @@ import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
+import { InputController, InputSource } from './input/controller.js';
 export {
   GamepadLike,
   GamepadLikeButton,
   InputAction,
   InputController,
+  InputSource,
   TouchInputState,
   type InputControllerOptions,
 } from './input/controller.js';
@@ -76,6 +78,8 @@ export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 export { ClientConfigStrings } from './configStrings.js';
 export * from './scoreboard.js';
 
+export { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
+
 export * from './session.js';
 export * from './demo/camera.js'; // Export DemoCameraMode
 
@@ -84,6 +88,7 @@ const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 export interface ClientImports {
   readonly engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
   readonly host?: EngineHost;
+  readonly inputController?: InputController;
 }
 
 export enum ClientMode {
@@ -137,6 +142,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Input handling
   handleInput(key: string, down: boolean): boolean;
   toggleMenu(): void;
+  bindInputSource(source: InputSource): void;
+  setKeyBinding(action: string, keys: string[]): void;
+  getDefaultBindings(): InputBindings;
+  onInputCommand?: (cmd: UserCommand) => void;
 
   // cgame_export_t equivalents (if explicit names required)
   Init(initial?: GameFrameResult<PredictionState>): void;
@@ -238,6 +247,13 @@ export function createClient(imports: ClientImports): ClientExports {
       freeCameraOrigin: { x: 0, y: 0, z: 0 },
       freeCameraAngles: { x: 0, y: 0, z: 0 },
       followEntityId: -1
+  };
+
+  const inputController = imports.inputController ?? new InputController();
+  inputController.onInputCommand = (cmd) => {
+      if (clientExports.onInputCommand) {
+          clientExports.onInputCommand(cmd);
+      }
   };
 
   // State to track key inputs for free camera movement
@@ -602,6 +618,18 @@ export function createClient(imports: ClientImports): ClientExports {
         }
     },
 
+    bindInputSource(source: InputSource) {
+        inputController.bindInputSource(source);
+    },
+
+    setKeyBinding(action: string, keys: string[]) {
+        inputController.setKeyBinding(action, keys);
+    },
+
+    getDefaultBindings() {
+        return inputController.getDefaultBindings();
+    },
+
     createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory' | 'demoFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
         const saveLoadFactory = new SaveLoadMenuFactory(menuSystem, storage, saveCallback, loadCallback, deleteCallback);
         let optsFactory = optionsFactory;
@@ -851,7 +879,13 @@ export function createClient(imports: ClientImports): ClientExports {
           currentBlend = [0, 0, 0, 0];
       }
 
-      const command = {} as UserCommand;
+      // Generate user command from input controller
+      const command = inputController.buildCommand(dtMs, now, demoHandler.latestServerFrame);
+
+      // Apply prediction
+      if (!isDemoPlaying && !menuSystem.isActive()) {
+         clientExports.predict(command);
+      }
 
       // Update Dynamic Light Manager
       const timeSeconds = sample.nowMs / 1000.0;

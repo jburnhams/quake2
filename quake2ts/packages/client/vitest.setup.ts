@@ -19,6 +19,20 @@ const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', 
 global.window = dom.window as any;
 global.document = dom.window.document;
 global.navigator = dom.window.navigator;
+global.localStorage = dom.window.localStorage;
+global.location = dom.window.location;
+
+if (!global.localStorage) {
+  const storage = new Map<string, string>();
+  global.localStorage = {
+    getItem: (key: string) => storage.get(key) || null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+    clear: () => storage.clear(),
+    key: (index: number) => Array.from(storage.keys())[index] || null,
+    length: 0,
+  } as Storage;
+}
 
 // Override document.createElement for canvas elements to use napi-rs/canvas
 const originalCreateElement = document.createElement.bind(document);
