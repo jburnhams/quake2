@@ -36,6 +36,7 @@ describe('AI Movement', () => {
       aiflags: 0,
       attack_state: AttackState.Straight
     };
+      self.gravityVector = { x: 0, y: 0, z: -1 };
 
     // Setup enemy
     enemy = createEntity();

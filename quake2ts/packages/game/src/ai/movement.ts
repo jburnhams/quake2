@@ -1,4 +1,4 @@
-import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3, lengthVec3 } from '@quake2ts/shared';
+import { angleMod, degToRad, vectorToYaw, addVec3, scaleVec3, lengthVec3, clipVelocityVec3, angleVectors, subtractVec3, lengthSquaredVec3 } from '@quake2ts/shared';
 import type { Vec3 } from '@quake2ts/shared';
 import type { Entity } from '../entities/entity.js';
 import type { EntitySystem } from '../entities/system.js';
@@ -442,84 +442,165 @@ export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: E
       }
     }
 
-    const dest = {
-        x: self.origin.x + move.x,
-        y: self.origin.y + move.y,
-        z: self.origin.z + move.z
-    };
-
-    const trace = context.trace(self.origin, self.mins, self.maxs, dest, self, MASK_MONSTERSOLID);
-
-    if (trace.fraction === 1.0) {
-        const oldOrigin = { ...self.origin };
-        (self.origin as MutableVec3).x = dest.x;
-        (self.origin as MutableVec3).y = dest.y;
-        (self.origin as MutableVec3).z = dest.z;
-
-        if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) && self.movetype !== MoveType.Noclip) {
-           if (!M_CheckBottom(self, context)) {
-               (self.origin as MutableVec3).x = oldOrigin.x;
-               (self.origin as MutableVec3).y = oldOrigin.y;
-               (self.origin as MutableVec3).z = oldOrigin.z;
-               return false;
-           }
-        }
-
-        if (!((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0)) {
-          CheckGround(self, context);
-        }
-        return true;
-    }
-
+    // Flying/Swimming Check
     if ((self.flags & (EntityFlags.Swim | EntityFlags.Fly)) !== 0) {
         return SV_flystep(self, move, relink, context);
     }
 
     const oldOrigin = { ...self.origin };
-    const up = { ...self.origin, z: self.origin.z + STEPSIZE };
 
-    const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
-    if (traceUp.startsolid || traceUp.allsolid) {
+    // Determine step size
+    let stepsize = 1;
+    // Assuming SPAWNFLAG_MONSTER_SUPER_STEP isn't ported, so skip that check.
+    if ((self.monsterinfo.aiflags & AIFlags.NoStep) === 0) {
+        stepsize = STEPSIZE;
+    }
+    stepsize += 0.75; // Matches rerelease
+
+    const mask = MASK_MONSTERSOLID; // Using default monster mask
+
+    // Trace up (step)
+    let start_up = addVec3(self.origin, scaleVec3(self.gravityVector, -1 * stepsize));
+    start_up = context.trace(self.origin, self.mins, self.maxs, start_up, self, mask).endpos;
+
+    let end_up = addVec3(start_up, move);
+    let up_trace = context.trace(start_up, self.mins, self.maxs, end_up, self, mask);
+
+    if (up_trace.startsolid) {
+        start_up = addVec3(start_up, scaleVec3(self.gravityVector, -1 * stepsize));
+        up_trace = context.trace(start_up, self.mins, self.maxs, end_up, self, mask);
+    }
+
+    // Trace forward (direct)
+    let start_fwd = self.origin;
+    let end_fwd = addVec3(start_fwd, move);
+    let fwd_trace = context.trace(start_fwd, self.mins, self.maxs, end_fwd, self, mask);
+
+    if (fwd_trace.startsolid) {
+         start_up = addVec3(start_up, scaleVec3(self.gravityVector, -1 * stepsize));
+         fwd_trace = context.trace(start_fwd, self.mins, self.maxs, end_fwd, self, mask);
+    }
+
+    // Pick the one that went further
+    const chosen_forward = (up_trace.fraction > fwd_trace.fraction) ? up_trace : fwd_trace;
+
+    if (chosen_forward.startsolid || chosen_forward.allsolid) {
         return false;
     }
 
-    const stepOrigin = traceUp.endpos;
+    let steps = 1;
+    let stepped = false;
 
-    const destUp = {
-        x: stepOrigin.x + move.x,
-        y: stepOrigin.y + move.y,
-        z: stepOrigin.z
-    };
+    if (up_trace.fraction > fwd_trace.fraction) {
+        steps = 2;
+    }
 
-    const traceStep = context.trace(stepOrigin, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
-    if (traceStep.fraction < 1.0) {
+    // Step down
+    const end = addVec3(chosen_forward.endpos, scaleVec3(self.gravityVector, steps * stepsize));
+    const trace = context.trace(chosen_forward.endpos, self.mins, self.maxs, end, self, mask);
+
+    if (Math.abs(self.origin.z - trace.endpos.z) > 8.0) {
+        stepped = true;
+    }
+
+    // Water checks (simplified match to rerelease logic)
+    if (self.waterlevel <= 2) { // WATER_WAIST
+        // M_CatagorizePosition not fully ported here, but we check contents
+        const content = context.pointcontents(trace.endpos);
+        if ((content & (CONTENTS_SLIME | CONTENTS_LAVA)) || (content & MASK_WATER && self.waterlevel > 2)) {
+             // Avoid deep water/slime/lava
+             return false;
+        }
+    }
+
+    if (trace.fraction === 1.0) {
+        if (self.flags & EntityFlags.PartialGround) {
+             (self.origin as MutableVec3).x += move.x;
+             (self.origin as MutableVec3).y += move.y;
+             (self.origin as MutableVec3).z += move.z;
+             if (relink) {
+                 context.linkentity(self);
+                 // G_TouchTriggers(self)
+             }
+             self.groundentity = null;
+             return true;
+        } else if (self.health > 0) {
+             // Walked off edge
+             return false;
+        }
+    }
+
+    // Rerelease: check if barely moved
+    const movedDist = lengthVec3(subtractVec3(trace.endpos, oldOrigin));
+    const moveDist = lengthVec3(move);
+
+    if (movedDist < moveDist * 0.05) {
+        self.monsterinfo.bad_move_time = context.timeSeconds + 1.0;
+
+        if (self.monsterinfo.bump_time < context.timeSeconds && chosen_forward.fraction < 1.0) {
+             // Slide logic
+             // const dir = SlideClipVelocity(forward, normal, 1.0)
+             // We need 'forward' vector from ideal_yaw
+             const fwd = angleVectors({ x: 0, y: self.ideal_yaw, z: 0 }).forward;
+             // chosen_forward.plane.normal needed
+             if (chosen_forward.plane && chosen_forward.plane.normal) {
+                 const dir = clipVelocityVec3(fwd, chosen_forward.plane.normal, 1.0);
+                 const new_yaw = vectorToYaw(dir);
+
+                 if (lengthSquaredVec3(dir) > 0.1 && self.ideal_yaw !== new_yaw) {
+                     self.ideal_yaw = new_yaw;
+                     self.monsterinfo.random_change_time = context.timeSeconds + 0.1;
+                     self.monsterinfo.bump_time = context.timeSeconds + 0.2;
+                     return true;
+                 }
+             }
+        }
         return false;
     }
 
-    const destDown = {
-        x: destUp.x,
-        y: destUp.y,
-        z: destUp.z - STEPSIZE
-    };
-
-    const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
-    if (traceDown.startsolid || traceDown.allsolid) {
-         return false;
-    }
-
-    const newPos = traceDown.endpos;
-    (self.origin as MutableVec3).x = newPos.x;
-    (self.origin as MutableVec3).y = newPos.y;
-    (self.origin as MutableVec3).z = newPos.z;
+    (self.origin as MutableVec3).x = trace.endpos.x;
+    (self.origin as MutableVec3).y = trace.endpos.y;
+    (self.origin as MutableVec3).z = trace.endpos.z;
 
     if (!M_CheckBottom(self, context)) {
+        if (self.flags & EntityFlags.PartialGround) {
+            if (relink) {
+                context.linkentity(self);
+            }
+            return true;
+        }
         (self.origin as MutableVec3).x = oldOrigin.x;
         (self.origin as MutableVec3).y = oldOrigin.y;
         (self.origin as MutableVec3).z = oldOrigin.z;
         return false;
     }
 
+    // Check ground again
     CheckGround(self, context);
+
+    if (!self.groundentity) {
+        (self.origin as MutableVec3).x = oldOrigin.x;
+        (self.origin as MutableVec3).y = oldOrigin.y;
+        (self.origin as MutableVec3).z = oldOrigin.z;
+        CheckGround(self, context); // Restore
+        return false;
+    }
+
+    if (self.flags & EntityFlags.PartialGround) {
+        self.flags &= ~EntityFlags.PartialGround;
+    }
+
+    // Rerelease: ent->groundentity = trace.ent; ent->groundentity_linkcount = trace.ent->linkcount;
+    // Already done by CheckGround basically, or we should trust trace result more?
+    // CheckGround does a specific trace down. Here we use `trace` (step down trace).
+    self.groundentity = trace.ent;
+
+    if (relink) {
+        context.linkentity(self);
+    }
+
+    // if (stepped) rf_stair_step
+
     return true;
 }
 
