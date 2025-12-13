@@ -13,6 +13,7 @@ export type MutableVec3 = { x: number; y: number; z: number };
 
 const STEPSIZE = 18;
 const MONSTER_TICK = 0.1;
+const MAX_SIDESTEP = 8.0;
 
 function yawVector(yawDegrees: number, distance: number): Vec3 {
   if (distance === 0) {
@@ -96,6 +97,66 @@ function setIdealYawTowards(self: Entity, target: Entity | null): void {
     z: target.origin.z - self.origin.z,
   };
   self.ideal_yaw = vectorToYaw(toTarget);
+}
+
+export function monster_done_dodge(self: Entity): void {
+  self.monsterinfo.aiflags &= ~AIFlags.Dodging;
+  self.monsterinfo.attack_state = AttackState.Straight;
+}
+
+/**
+ * Implements strafing logic for monsters (Combat Positioning).
+ * Matches rerelease `ai_run_slide` behavior.
+ */
+export function ai_run_slide(self: Entity, distance: number, context: EntitySystem): void {
+    const ideal_yaw = self.ideal_yaw; // already set to enemy yaw in ai_run
+
+    const angle = 90;
+    let ofs: number;
+
+    if (self.monsterinfo.lefty) {
+        ofs = angle;
+    } else {
+        ofs = -angle;
+    }
+
+    if (!(self.monsterinfo.aiflags & AIFlags.ManualSteering)) {
+        changeYaw(self, MONSTER_TICK);
+    }
+
+    // Clamp maximum sideways move for non flyers to make them look less jerky
+    // Reference: g_ai.c PMM check
+    if (!(self.flags & EntityFlags.Fly)) {
+        const scale = 1.0;
+        const maxDist = MAX_SIDESTEP * scale;
+        if (distance > maxDist) distance = maxDist;
+    }
+
+    if (M_walkmove(self, ideal_yaw + ofs, distance, context)) {
+        return;
+    }
+
+    // If we're dodging and move failed, give up and go straight
+    if (self.monsterinfo.aiflags & AIFlags.Dodging) {
+        monster_done_dodge(self);
+        // by setting as_straight, caller will know to try straight move
+        self.monsterinfo.attack_state = AttackState.Straight;
+        return;
+    }
+
+    // Try other direction
+    self.monsterinfo.lefty = self.monsterinfo.lefty ? 0 : 1;
+    if (M_walkmove(self, ideal_yaw - ofs, distance, context)) {
+        return;
+    }
+
+    // If we're dodging and move failed, give up and go straight
+    if (self.monsterinfo.aiflags & AIFlags.Dodging) {
+        monster_done_dodge(self);
+    }
+
+    // The move failed, so signal the caller (ai_run) to try going straight
+    self.monsterinfo.attack_state = AttackState.Straight;
 }
 
 // g_ai.c: ai_stand
@@ -186,16 +247,29 @@ export function ai_run(self: Entity, dist: number, context: EntitySystem): void 
     return;
   }
 
+  // Don't strafe if we can't see our enemy, unless already dodging
+  const enemy_vis = self.enemy && visible(self, self.enemy, context.trace, { throughGlass: false });
+  if ((!enemy_vis) && (self.monsterinfo.attack_state === AttackState.Sliding)) {
+      self.monsterinfo.attack_state = AttackState.Straight;
+  }
+
+  // If we're dodging, ensure we're in sliding state
+  if (self.monsterinfo.aiflags & AIFlags.Dodging) {
+      self.monsterinfo.attack_state = AttackState.Sliding;
+  }
+
+  // If standard movement is requested or strafing failed/finished, proceed to move towards goal
   if (self.monsterinfo.attack_state === AttackState.Straight) {
-      M_walkmove(self, self.angles.y, dist, context);
-      self.monsterinfo.attack_state = AttackState.Straight; // redundant but harmless
-      return;
+      // Fall through to M_MoveToGoal below
   }
 
   if (self.monsterinfo.attack_state === AttackState.Sliding) {
-      // SV_run_slide logic - for now simple move
-      M_walkmove(self, self.angles.y, dist, context);
-      return;
+      ai_run_slide(self, dist, context);
+      // If move succeeded (still sliding), return to avoid double move.
+      if (self.monsterinfo.attack_state === AttackState.Sliding) {
+          return;
+      }
+      // If move failed (state changed to straight), fall through to standard movement below.
   }
 
   M_MoveToGoal(self, dist, context);
