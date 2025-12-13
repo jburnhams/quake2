@@ -9,7 +9,6 @@ export interface ScoreboardEntry {
   id: number;
   skin?: string;
   model?: string;
-  team?: string; // Team name or identifier (e.g. "red", "blue")
 }
 
 export interface ScoreboardData {
@@ -85,7 +84,6 @@ export class ScoreboardManager {
             entry.frags = existing.frags;
             entry.deaths = existing.deaths;
             entry.ping = existing.ping;
-            entry.team = existing.team;
         }
         this.players.set(id, entry);
     }
@@ -146,8 +144,7 @@ export class ScoreboardManager {
       deaths: 0,
       ping: 0,
       skin: info.skin,
-      model: info.model,
-      team: undefined
+      model: info.model
     };
   }
 
@@ -160,79 +157,5 @@ export class ScoreboardManager {
         player.ping = ping;
         this.notifyUpdate();
     }
-  }
-
-  /**
-   * Parses the layout string from svc_layout and updates player scores.
-   * Expected format example:
-   * xv 32 yv 32 string "%4i %4i %-12.12s %4i"
-   * followed by values? No, the string command draws text.
-   * In Q2, the layout message sends a series of drawing commands.
-   * The server formats the string:
-   * "xv 32 yv %i string \"%4i %4i %-12.12s %4i\" "
-   * The client receives the formatting commands AND the string data.
-   * Wait, svc_layout in Q2 sends a single string that the client parses and draws.
-   * The string contains tokens.
-   * Example:
-   * "xv 32 yv 32 string \"  10   50 PlayerName   10\""
-   * We need to regex this.
-   */
-  public processScoreboardMessage(layout: string) {
-      // Regex to find string commands
-      // string "text"
-      // text might contain quotes escaped? Q2 doesn't usually escape quotes inside the string command value like JSON.
-      // It's usually `string "content"`
-      // Content is: Frags Ping Name Time
-      // %4i %4i %-12.12s %4i
-      // Example: "  12   50 Julian         10"
-
-      const stringCmdRegex = /string\s+"([^"]+)"/g;
-      let match;
-
-      // We need to match names to IDs. This is fuzzy if names are duplicates.
-      // But it's the best we can do with standard Q2 layout.
-
-      while ((match = stringCmdRegex.exec(layout)) !== null) {
-          const content = match[1];
-
-          // Check if this looks like a player row
-          // It should have 3 numbers and a name?
-          // Frags (int), Ping (int), Name (string), Time (int)
-          // The name might contain spaces?
-          // The format is fixed width usually.
-          // "%4i %4i %-12.12s %4i"
-          //  Frags: 0-4 chars
-          //  Ping: 5-9 chars
-          //  Name: 10-22 chars (12 chars max)
-          //  Time: 23+ chars
-
-          // Or we can try to split by whitespace, but name can have spaces?
-          // Actually Q2 names can have spaces? I think they can.
-          // But strict Q2 format uses fixed width for the name field in the scoreboard string.
-
-          // Let's try to parse based on the known format.
-          if (content.length > 20) {
-              const fragsStr = content.substring(0, 4).trim();
-              const pingStr = content.substring(5, 9).trim();
-              const nameStr = content.substring(10, 22).trim();
-              // const timeStr = content.substring(23, 27).trim();
-
-              const frags = parseInt(fragsStr, 10);
-              const ping = parseInt(pingStr, 10);
-
-              if (!isNaN(frags) && !isNaN(ping) && nameStr.length > 0) {
-                  // Find player by name
-                  // We iterate all players to find a match
-                  for (const player of this.players.values()) {
-                      if (player.name === nameStr) {
-                          player.frags = frags;
-                          player.ping = ping;
-                          // Deaths are not in standard layout
-                      }
-                  }
-              }
-          }
-      }
-      this.notifyUpdate();
   }
 }
