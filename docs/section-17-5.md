@@ -35,8 +35,8 @@
 - [x] Implement player respawning at spawn points
 - [x] Implement frag scoring and leaderboard updates
 - [x] Implement weapon/item respawn timers (DM vs single-player)
-- [ ] Implement self-damage (rocket jumping, grenade jumping)
-- [ ] Add telefrag detection and scoring
+- [x] Implement self-damage (rocket jumping, grenade jumping)
+- [x] Add telefrag detection and scoring
 
 ### 5.2.2 Scoreboard API
 - [ ] Add method `getScoreboard(): ScoreboardData` returning sorted player list

@@ -278,12 +278,21 @@ export function T_RadiusDamage(
       continue;
     }
 
-    const adjustedDamage = ent === attacker ? points * 0.5 : points;
+    let adjustedDamage = points;
+
+    // In Quake 2, T_RadiusDamage halves 'points' (which is both damage and knockback)
+    // for self-damage. g_combat.c:
+    // if (ent == attacker) points = points * 0.5;
+    if (ent === attacker) {
+      adjustedDamage = points * 0.5;
+    }
+
+    // Since points was halved, both damage and knockback are halved.
+    const adjustedKnockback = adjustedDamage;
+
     const dir = normalizeVec3(subtractVec3(ent.origin, inflictorCenter));
-    // We pass damage as both damage and knockback (or logic differs?)
-    // Quake 2: T_Damage (ent, inflictor, attacker, dir, ent->s.origin, vec3_origin, points, points, DAMAGE_RADIUS, mod);
-    // Yes, damage equals knockback for radius damage.
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedDamage, dflags | DamageFlags.RADIUS, mod, time, multicast);
+
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedKnockback, dflags | DamageFlags.RADIUS, mod, time, multicast);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 
