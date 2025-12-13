@@ -81,7 +81,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Reference: `m_move.cpp` lines 1352-1450
 
 ### 1.1.5 Water & Terrain Interaction
-- [ ] Implement water current following
+- [x] Implement water current following
   - Read CONTENTS_CURRENT_* flags
   - Apply directional force to movement
   - Reference: `m_move.cpp` lines 812-888
