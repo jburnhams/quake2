@@ -102,6 +102,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   setLagCompensation?(active: boolean, client?: Entity, lagMs?: number): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
+  serialize(): SerializedGameState;
+  loadState(state: SerializedGameState): void;
   clientConnect(ent: Entity | null, userInfo: string): string | true;
   clientBegin(client: PlayerClient): Entity;
   clientDisconnect(ent: Entity): void;
@@ -111,6 +113,8 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
+import { SerializedGameState, createSerializedGameState, applySerializedGameState } from './save/adapter.js';
+export { SerializedGameState };
 export * from './combat/index.js';
 export * from './inventory/index.js';
 import { createPlayerInventory, PlayerClient, PowerupId, WeaponId } from './inventory/index.js';
@@ -642,6 +646,30 @@ export function createGame(
         velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
       }
       frameLoop.reset(save.level.timeSeconds * 1000);
+    },
+    serialize(): SerializedGameState {
+      return createSerializedGameState({
+        entitySystem: entities,
+        levelClock,
+        random: rng
+      });
+    },
+    loadState(state: SerializedGameState): void {
+      applySerializedGameState(state, {
+        entitySystem: entities,
+        levelClock,
+        random: rng
+      });
+      // Sync engine state
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+         origin = { ...player.origin };
+         velocity = { ...player.velocity };
+      } else {
+         origin = { ...ZERO_VEC3 };
+         velocity = { ...ZERO_VEC3 };
+      }
+      frameLoop.reset(state.time * 1000);
     }
   };
 
