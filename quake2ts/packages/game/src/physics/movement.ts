@@ -14,6 +14,7 @@ import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
 import { resolveImpact, checkTriggers } from './collision.js';
 import { applyFallingDamage } from '../combat/specialDamage.js';
+import type { Damageable } from '../combat/damage.js';
 
 // Physics constants derived from Quake 2 source
 const WATER_FRICTION = 2.0;
@@ -157,7 +158,7 @@ export function runStep(
       // Check for fall damage on impact with floor
       if (trace.plane.normal.z > 0.7 && velocity.z < 0) {
         const impactDelta = Math.abs(velocity.z);
-        applyFallingDamage(ent, {
+        applyFallingDamage(ent as unknown as Damageable, {
           impactDelta,
           waterLevel: ent.waterlevel as WaterLevel,
           isDead: ent.deadflag !== 0
