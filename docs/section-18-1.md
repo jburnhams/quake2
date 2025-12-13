@@ -144,7 +144,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Reference: `g_ai.cpp` lines 752-820
 
 ### 1.2.3 Combat Positioning
-- [ ] Implement dodge/sidestep logic
+- [x] Implement dodge/sidestep logic
   - Strafe 8 units left/right
   - Avoid incoming projectiles
   - Reference: `g_ai.cpp` lines 822-920
