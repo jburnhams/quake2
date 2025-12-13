@@ -47,6 +47,7 @@ import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
 import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
+import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 export {
@@ -151,6 +152,11 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Scoreboard API
   getScoreboard(): ScoreboardData;
   onScoreboardUpdate?: (scoreboard: ScoreboardData) => void;
+  // HUD Data API
+  getHudData(): HudData | null;
+  getStatusBar(): StatusBarData | null;
+  getCrosshairInfo(): CrosshairInfo;
+  onHudUpdate?: (data: HudData) => void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -948,6 +954,13 @@ export function createClient(imports: ClientImports): ClientExports {
         this.DrawHUD(stats, timeMs);
       }
 
+      if (clientExports.onHudUpdate) {
+          const hudData = clientExports.getHudData();
+          if (hudData) {
+              clientExports.onHudUpdate(hudData);
+          }
+      }
+
       return command;
     },
 
@@ -1030,6 +1043,56 @@ export function createClient(imports: ClientImports): ClientExports {
 
         errorDialog.render(imports.engine.renderer);
         loadingScreen.render(imports.engine.renderer);
+    },
+
+    getHudData(): HudData | null {
+        if (!lastRendered) return null;
+
+        const health = lastRendered.health ?? 0;
+        const armor = lastRendered.armor ?? 0;
+        const ammo = lastRendered.ammo ?? 0;
+        const fps = 60; // TODO: Calculate real FPS
+
+        // Need to extract damage indicators
+        const damageIndicators = (lastRendered.damageIndicators ?? []).map(ind => ({
+            angle: vectorToAngles(ind.direction).y,
+            alpha: ind.strength
+        }));
+
+        // Inventory is not directly in PredictionState, but Client has it?
+        // Wait, Client Exports doesn't have inventory.
+        // PredictionState has 'client' property which is PlayerClient, which has inventory.
+        // But PredictionState interface doesn't strictly enforce client structure.
+        // Let's assume we can access it if available.
+        // Or if in single player, we query game session?
+        // But client exports shouldn't depend on game session.
+
+        return {
+            health,
+            armor,
+            ammo,
+            inventory: [], // Todo
+            damageIndicators,
+            fps,
+            pickupIcon: lastRendered.pickupIcon
+        };
+    },
+
+    getStatusBar(): StatusBarData | null {
+        if (!lastRendered) return null;
+        return {
+            health: lastRendered.health ?? 0,
+            armor: lastRendered.armor ?? 0,
+            ammo: lastRendered.ammo ?? 0,
+            selectedAmmoIndex: 0
+        };
+    },
+
+    getCrosshairInfo(): CrosshairInfo {
+        return {
+            index: 0,
+            name: 'default'
+        };
     },
 
     shutdown() {

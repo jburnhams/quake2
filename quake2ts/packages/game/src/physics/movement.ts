@@ -7,11 +7,14 @@ import {
   Vec3,
   subtractVec3,
   rotatePointAroundVector,
-  vectorToAngles
+  vectorToAngles,
+  WaterLevel
 } from '@quake2ts/shared';
 import type { EntitySystem } from '../entities/system.js';
 import { CheckGround } from '../ai/movement.js';
 import { resolveImpact, checkTriggers } from './collision.js';
+import { applyFallingDamage } from '../combat/specialDamage.js';
+import type { Damageable } from '../combat/damage.js';
 
 // Physics constants derived from Quake 2 source
 const WATER_FRICTION = 2.0;
@@ -152,6 +155,16 @@ export function runStep(
     timeLeft -= timeLeft * trace.fraction;
 
     if (trace.plane) {
+      // Check for fall damage on impact with floor
+      if (trace.plane.normal.z > 0.7 && velocity.z < 0) {
+        const impactDelta = Math.abs(velocity.z);
+        applyFallingDamage(ent as unknown as Damageable, {
+          impactDelta,
+          waterLevel: ent.waterlevel as WaterLevel,
+          isDead: ent.deadflag !== 0
+        });
+      }
+
       // Step movement usually stops on walls or slides along them
       velocity = clipVelocityVec3(velocity, trace.plane.normal, 1.0);
     }
