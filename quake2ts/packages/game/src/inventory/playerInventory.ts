@@ -16,7 +16,6 @@ import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
 import { WeaponStateEnum } from '../combat/weapons/state.js';
-import type { Entity } from '../entities/entity.js';
 
 export { WeaponId, PowerupId };
 
@@ -152,15 +151,6 @@ export interface PlayerClient {
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
     ping?: number; // Added for lag compensation
-
-    // AI Noise Tracking
-    player_noise_entity?: Entity;
-    sight_entity?: Entity;
-    sight_entity_time?: number;
-    sound_entity?: Entity;
-    sound_entity_time?: number;
-    sound2_entity?: Entity;
-    sound2_entity_time?: number;
 }
 
 export function createPlayerInventory(init: PlayerInventoryOptions = {}): PlayerInventory {

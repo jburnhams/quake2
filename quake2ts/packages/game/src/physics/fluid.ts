@@ -3,19 +3,11 @@ import {
   CONTENTS_SLIME,
   CONTENTS_WATER,
   MASK_WATER,
-  MASK_CURRENT,
-  CONTENTS_CURRENT_0,
-  CONTENTS_CURRENT_90,
-  CONTENTS_CURRENT_180,
-  CONTENTS_CURRENT_270,
-  CONTENTS_CURRENT_UP,
-  CONTENTS_CURRENT_DOWN,
   type Vec3,
 } from '@quake2ts/shared';
 import { Entity, EntityFlags } from '../entities/entity.js';
 import { GameImports } from '../imports.js';
 import { EntitySystem } from '../entities/system.js';
-import { MutableVec3 } from '../ai/movement.js';
 
 export function checkWater(ent: Entity, system: EntitySystem, imports: GameImports): void {
   const origin = ent.origin;
@@ -109,38 +101,4 @@ function playLeaveWaterSound(ent: Entity, system: EntitySystem): void {
   } else if (ent.watertype & CONTENTS_WATER) {
     system.sound(ent, 0, 'player/watr_out.wav', 1, 1, 0);
   }
-}
-
-/**
- * Applies current forces to an entity's velocity.
- * @see PM_AddCurrents in p_move.c (Quake 2)
- */
-export function SV_AddCurrents(ent: Entity, currentSpeed: number = 400.0): void {
-  if (!(ent.watertype & MASK_CURRENT)) {
-    return;
-  }
-
-  // Calculate current vector
-  const v = { x: 0, y: 0, z: 0 };
-
-  if (ent.watertype & CONTENTS_CURRENT_0) v.x += 1;
-  if (ent.watertype & CONTENTS_CURRENT_90) v.y += 1;
-  if (ent.watertype & CONTENTS_CURRENT_180) v.x -= 1;
-  if (ent.watertype & CONTENTS_CURRENT_270) v.y -= 1;
-  if (ent.watertype & CONTENTS_CURRENT_UP) v.z += 1;
-  if (ent.watertype & CONTENTS_CURRENT_DOWN) v.z -= 1;
-
-  // Apply speed scaling based on water level
-  // If only feet in water, half speed. If waist or above, full speed.
-  // Note: Q2 p_move logic: if (pm->waterlevel == 1 && pm->groundentity) s /= 2;
-  // We assume if groundentity is set we are on ground.
-  let speed = currentSpeed;
-  if (ent.waterlevel === 1 && ent.groundentity) {
-    speed *= 0.5;
-  }
-
-  const velocity = ent.velocity as MutableVec3;
-  velocity.x += v.x * speed;
-  velocity.y += v.y * speed;
-  velocity.z += v.z * speed;
 }

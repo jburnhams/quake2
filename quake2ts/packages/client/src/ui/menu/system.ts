@@ -1,11 +1,25 @@
 import { Menu, MenuItem, MenuState } from './types.js';
 
+type MenuListener = (state: MenuState) => void;
+
 export class MenuSystem {
   private activeMenu: Menu | null = null;
   private selectedIndex = 0;
   private menuStack: Menu[] = [];
+  private listeners: MenuListener[] = [];
 
   constructor() {}
+
+  addListener(listener: MenuListener): void {
+      this.listeners.push(listener);
+  }
+
+  private notifyListeners(): void {
+      const state = this.getState();
+      for (const listener of this.listeners) {
+          listener(state);
+      }
+  }
 
   pushMenu(menu: Menu): void {
     if (this.activeMenu) {
@@ -17,6 +31,7 @@ export class MenuSystem {
     }
     this.activeMenu = menu;
     this.selectedIndex = 0;
+    this.notifyListeners();
   }
 
   popMenu(): void {
@@ -26,12 +41,14 @@ export class MenuSystem {
     } else {
       this.activeMenu = null;
     }
+    this.notifyListeners();
   }
 
   closeAll(): void {
     this.activeMenu = null;
     this.menuStack = [];
     this.selectedIndex = 0;
+    this.notifyListeners();
   }
 
   handleInput(action: 'up' | 'down' | 'left' | 'right' | 'select' | 'back' | 'char', char?: string): boolean {
@@ -43,11 +60,13 @@ export class MenuSystem {
 
     if (action === 'up') {
       this.selectedIndex = (this.selectedIndex - 1 + this.activeMenu.items.length) % this.activeMenu.items.length;
+      this.notifyListeners();
       return true;
     }
 
     if (action === 'down') {
       this.selectedIndex = (this.selectedIndex + 1) % this.activeMenu.items.length;
+      this.notifyListeners();
       return true;
     }
 

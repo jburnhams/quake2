@@ -2,10 +2,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { MockTransport } from '../mocks/transport.js';
-import { NetDriver } from '@quake2ts/shared';
+import { WebSocketNetDriver } from '../../src/net/nodeWsDriver.js';
+import { WebSocketServer } from 'ws';
 
-// Mock dependencies
+// Mock ws
+vi.mock('ws', () => {
+    return {
+        WebSocketServer: vi.fn().mockImplementation(() => ({
+            on: vi.fn(),
+            close: vi.fn()
+        })),
+        WebSocket: vi.fn().mockImplementation(() => ({
+            on: vi.fn(),
+            close: vi.fn(),
+            send: vi.fn(),
+            readyState: 1
+        }))
+    };
+});
+
+// Mock fs
 vi.mock('node:fs/promises', async () => {
     return {
         default: {
@@ -48,22 +64,18 @@ describe('DedicatedServer Timeout', () => {
     let server: DedicatedServer;
     let consoleLogSpy: any;
     let consoleWarnSpy: any;
-    let transport: MockTransport;
 
     beforeEach(async () => {
-        vi.useFakeTimers({
-            toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
-        });
+        vi.useFakeTimers();
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        transport = new MockTransport();
-        server = new DedicatedServer({ port: 27910, transport });
-        await server.startServer('maps/test.bsp');
+        server = new DedicatedServer(27910);
+        await server.start('maps/test.bsp');
     });
 
     afterEach(() => {
-        server.stopServer();
+        server.stop();
         vi.clearAllMocks();
         consoleLogSpy.mockRestore();
         consoleWarnSpy.mockRestore();
@@ -76,17 +88,16 @@ describe('DedicatedServer Timeout', () => {
         const sv = getPrivate(server, 'sv');
 
         // Mock a connected client
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
+        const mockDriver = new WebSocketNetDriver();
+        const mockSocket = {
+            close: vi.fn(),
+            readyState: 1,
+            onclose: null as any
         };
+        mockDriver.attach(mockSocket as any);
 
+        // Manually trigger handleConnection-like logic or just inject
+        // We'll inject directly into svs.clients for precise control
         const clientIndex = 0;
         const client = {
             index: clientIndex,
@@ -102,17 +113,13 @@ describe('DedicatedServer Timeout', () => {
             name: 'TestClient',
             frameLatency: [],
             messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
+            lastPacketEntities: []
         };
 
         svs.clients[clientIndex] = client;
 
         // Set up cleanup spy
+        // We expect dropClient to be implemented and called
         const dropClientSpy = vi.spyOn(server as any, 'dropClient');
 
         // Advance 29 seconds (290 frames)
@@ -123,7 +130,7 @@ describe('DedicatedServer Timeout', () => {
         // Verify still connected
         expect(svs.clients[clientIndex]).not.toBeNull();
         expect(dropClientSpy).not.toHaveBeenCalled();
-        expect(mockDriver.disconnect).not.toHaveBeenCalled();
+        expect(mockSocket.close).not.toHaveBeenCalled();
 
         // Advance another 20 frames (2 seconds) -> Total 31 seconds
         for(let i=0; i<20; i++) {
@@ -132,23 +139,20 @@ describe('DedicatedServer Timeout', () => {
 
         // Now diff is 310 > 300. Should disconnect.
         expect(dropClientSpy).toHaveBeenCalledWith(client);
-        expect(mockDriver.disconnect).toHaveBeenCalled();
+        expect(mockSocket.close).toHaveBeenCalled();
     });
 
     it('should NOT disconnect a client if they send messages', () => {
         const svs = getPrivate(server, 'svs');
         const sv = getPrivate(server, 'sv');
 
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
+        const mockDriver = new WebSocketNetDriver();
+        const mockSocket = {
+            close: vi.fn(),
+            readyState: 1,
+            onclose: null as any
         };
+        mockDriver.attach(mockSocket as any);
 
         const clientIndex = 0;
         const client = {
@@ -165,12 +169,7 @@ describe('DedicatedServer Timeout', () => {
             name: 'TestClient',
             frameLatency: [],
             messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
+            lastPacketEntities: []
         };
 
         svs.clients[clientIndex] = client;

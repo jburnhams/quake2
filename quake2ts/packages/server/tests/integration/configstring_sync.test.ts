@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { createClient, Client, ClientState } from '../../src/client.js';
-import { ServerCommand, ConfigStringIndex, PlayerStat, MAX_CONFIGSTRINGS, BinaryStream, BinaryWriter, NetDriver } from '@quake2ts/shared';
+import { WebSocketNetDriver } from '../../src/net/nodeWsDriver.js';
+import { ServerCommand, ConfigStringIndex, PlayerStat, MAX_CONFIGSTRINGS, BinaryStream, BinaryWriter } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
-import { MockTransport } from '../mocks/transport.js';
 
 // Mock dependencies
-// ws mock removed
+vi.mock('ws');
 vi.mock('../../src/net/nodeWsDriver.js');
 vi.mock('@quake2ts/game', async (importOriginal) => {
     const actual = await importOriginal() as any;
@@ -52,17 +52,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     };
 });
 vi.mock('@quake2ts/engine', () => ({
-    parseBsp: vi.fn().mockReturnValue({
-        planes: [],
-        nodes: [],
-        leafs: [],
-        brushes: [],
-        models: [],
-        leafLists: { leafBrushes: [] },
-        texInfo: [],
-        brushSides: [],
-        visibility: { numClusters: 0, clusters: [] }
-    })
+    parseBsp: vi.fn().mockReturnValue({})
 }));
 
 
@@ -72,47 +62,57 @@ describe('Integration: Config String & Stats Sync', () => {
     let mockDriver: any;
     let consoleLogSpy: any;
     let consoleWarnSpy: any;
-    let transport: MockTransport;
 
     beforeEach(async () => {
-        vi.useFakeTimers({
-            toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
-        });
+        vi.useFakeTimers();
         // Suppress logs for cleaner output
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        transport = new MockTransport();
-        server = new DedicatedServer({ port: 27910, transport });
+        server = new DedicatedServer(27910);
 
         // Start server
-        await server.startServer('maps/test.bsp');
+        await server.start('maps/test.bsp');
 
-        // Setup mock driver instance
+        // Setup mock driver instance that will be returned by the constructor
         mockDriver = {
             attach: vi.fn(),
             onMessage: vi.fn(),
             onClose: vi.fn(),
             send: vi.fn(),
             close: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true),
-            disconnect: vi.fn()
+            isConnected: vi.fn().mockReturnValue(true)
         };
 
-        // Simulate connection via Transport
-        transport.simulateConnection(mockDriver, {});
+        // Mock the constructor to return our specific mock driver
+        (WebSocketNetDriver as any).mockImplementation(() => mockDriver);
+
+        // Trigger connection handling which will instantiate WebSocketNetDriver
+        const mockWs = {
+            close: vi.fn(),
+            readyState: 1,
+            binaryType: 'arraybuffer',
+            on: vi.fn(),
+            addEventListener: vi.fn()
+        };
+        (server as any).handleConnection(mockWs);
+
+        // The DedicatedServer code creates a NEW WebSocketNetDriver instance inside handleConnection
+        // Since we mocked the class to return mockDriver, 'client.driver' should be 'mockDriver'.
 
         const clients = (server as any).svs.clients;
         // Find client with our mock driver
         mockClient = clients.find((c: Client | null) => c && c.net === mockDriver);
 
         if (!mockClient) {
+            // Fallback: if finding by driver fails (e.g. if mockImplementation behavior is different),
+            // just pick the first connected client.
              mockClient = clients.find((c: Client | null) => c !== null);
         }
     });
 
     afterEach(() => {
-        server.stopServer();
+        server.stop();
         vi.useRealTimers();
         consoleLogSpy.mockRestore();
         consoleWarnSpy.mockRestore();

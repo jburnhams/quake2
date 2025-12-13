@@ -59,7 +59,8 @@ vi.mock('../../src/ui/menu/system.js', () => ({
         closeAll: vi.fn(),
         render: vi.fn(),
         handleInput: vi.fn(),
-        getState: vi.fn().mockReturnValue({})
+        getState: vi.fn().mockReturnValue({}),
+        addListener: vi.fn()
     }))
 }));
 

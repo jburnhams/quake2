@@ -11,6 +11,14 @@ export interface SessionOptions {
   engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
 }
 
+export interface SaveMetadata {
+  timestamp: number;
+  mapName: string;
+  playTime: number;
+  difficulty: number;
+  playerHealth?: number;
+}
+
 export class GameSession {
   private client: ClientExports | null = null;
   private game: GameExports | null = null;
@@ -21,6 +29,7 @@ export class GameSession {
   private inputController: InputController;
   private _onInputCommand?: (cmd: UserCommand) => void;
   private _onHudUpdate?: (data: HudData) => void;
+  private quickSaveData: GameSaveFile | null = null;
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -65,18 +74,8 @@ export class GameSession {
         trace: (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: any, contentmask: number) => {
             const tr = this.engine.trace(start, end, mins || undefined, maxs || undefined);
 
-            // Map Engine TraceResult to Game GameTraceResult
-            // PmoveTraceResult doesn't have plane (CollisionPlane) or ent (Entity).
-            // It has planeNormal.
-
             let plane: CollisionPlane | null = null;
             if (tr.planeNormal) {
-                // If the engine returns a plane normal, we can construct a partial plane.
-                // Distance is missing, which might be critical for some physics.
-                // However, engine.trace likely returns a plane object if it's a full trace implementation.
-                // But types say PmoveTraceResult.
-
-                // If type definition is strictly PmoveTraceResult, we only have planeNormal.
                 plane = {
                     normal: tr.planeNormal,
                     dist: 0, // Unknown distance
@@ -350,12 +349,6 @@ export class GameSession {
         return this.game.time;
     }
     if (this.client && this.client.lastRendered) {
-        // Fallback to client time if game instance not available (e.g. MP)
-        // But getGameTime usually implies level time.
-        // client.lastRendered doesn't have level time directly unless in stats.
-        // Or prediction uses server time?
-        // prediction state has pm_time but that's for events.
-        // For now, return 0 if no local game.
         return 0;
     }
     return 0;
@@ -389,6 +382,68 @@ export class GameSession {
         if (this.game.coop) return 'coop';
     }
     return 'single';
+  }
+
+  // Section 4.3: Save/Load System
+
+  public async saveGame(slotName: string): Promise<GameSaveFile> {
+      if (!this.game) {
+          throw new Error("No active game to save");
+      }
+      const mapName = this.getMapName();
+      const skill = this.getSkillLevel();
+      const time = this.getGameTime();
+
+      const save = this.game.createSave(mapName, skill, time);
+
+      // Note: Actual persistence is up to the caller or we can integrate SaveStorage if needed.
+      // For now, we return the data object.
+      return save;
+  }
+
+  public async quickSave(): Promise<void> {
+      if (!this.game) {
+          return;
+      }
+      this.quickSaveData = await this.saveGame('quick');
+  }
+
+  public async quickLoad(): Promise<void> {
+      if (!this.quickSaveData) {
+          return;
+      }
+      this.loadSavedGame(this.quickSaveData);
+  }
+
+  public hasQuickSave(): boolean {
+      return this.quickSaveData !== null;
+  }
+
+  public getSaveMetadata(saveData: GameSaveFile): SaveMetadata {
+      // Attempt to find player health from entities if possible
+      // This is a bit inefficient to iterate but necessary if not stored in root
+      let health = undefined;
+
+      // Heuristic: If we have entity snapshot, look for player
+      if (saveData.entities && saveData.entities.entities) {
+          // Player is usually index 1, or check classname if we could access fields directly
+          // We can't easily query fields without parsing.
+          // However, we can look at the parsed entity list.
+          // Note: Parsing entire entity list for health might be slow for just metadata.
+          // Ideally GameSaveFile should have it.
+          // We can access 'health' from GameSaveSnapshot.gameState if we put it there.
+          // The createSave function currently doesn't put health in gameState explicitly, but maybe we should?
+
+          // For now, let's leave health undefined or try to find it if we can
+      }
+
+      return {
+          timestamp: saveData.timestamp,
+          mapName: saveData.map,
+          playTime: saveData.playtimeSeconds,
+          difficulty: saveData.difficulty,
+          playerHealth: health
+      };
   }
 }
 

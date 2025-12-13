@@ -1,8 +1,9 @@
+import { WebSocketServer } from 'ws';
 import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8 } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
@@ -11,14 +12,12 @@ import { writeDeltaEntity, writeRemoveEntity } from './protocol/entity.js';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
 import { writeServerCommand } from './protocol/write.js';
 import { Vec3, lerpAngle } from '@quake2ts/shared';
-import { NetworkTransport } from './transport.js';
-import { WebSocketTransport } from './transports/websocket.js';
 
 function lerp(a: number, b: number, t: number): number {
     return a + (b - a) * t;
 }
 
-const DEFAULT_MAX_CLIENTS = 16;
+const MAX_CLIENTS = 16;
 const FRAME_RATE = 10; // 10Hz dedicated server loop (Q2 standard)
 const FRAME_TIME_MS = 1000 / FRAME_RATE;
 
@@ -39,23 +38,8 @@ interface EntityBackup {
     link: boolean;
 }
 
-export interface ClientInfo {
-    id: number;
-    name: string;
-    ping: number;
-    address: string;
-}
-
-export interface ServerOptions {
-    mapName?: string;
-    maxPlayers?: number;
-    deathmatch?: boolean;
-    port?: number;
-    transport?: NetworkTransport;
-}
-
 export class DedicatedServer implements GameEngine {
-    private transport: NetworkTransport;
+    private wss: WebSocketServer | null = null;
     private svs: ServerStatic;
     private sv: Server;
     private game: GameExports | null = null;
@@ -66,30 +50,13 @@ export class DedicatedServer implements GameEngine {
     private history = new Map<number, EntityHistory[]>();
     private backup = new Map<number, EntityBackup>();
 
-    // Events
-    public onClientConnected?: (clientId: number, name: string) => void;
-    public onClientDisconnected?: (clientId: number) => void;
-    public onServerError?: (error: Error) => void;
-
-    private options: ServerOptions;
-
-    constructor(optionsOrPort: ServerOptions | number = {}) {
-        const options = typeof optionsOrPort === 'number' ? { port: optionsOrPort } : optionsOrPort;
-        this.options = {
-            port: 27910,
-            maxPlayers: DEFAULT_MAX_CLIENTS,
-            deathmatch: true,
-            ...options
-        };
-
-        this.transport = this.options.transport || new WebSocketTransport();
-
+    constructor(private port: number = 27910) {
         this.svs = {
             initialized: false,
             realTime: 0,
             mapCmd: '',
             spawnCount: 0,
-            clients: new Array(this.options.maxPlayers!).fill(null),
+            clients: new Array(MAX_CLIENTS).fill(null),
             lastHeartbeat: 0,
             challenges: []
         };
@@ -109,154 +76,42 @@ export class DedicatedServer implements GameEngine {
         this.entityIndex = new CollisionEntityIndex();
     }
 
-    public setTransport(transport: NetworkTransport) {
-        if (this.svs.initialized) {
-            throw new Error('Cannot set transport after server started');
-        }
-        this.transport = transport;
-    }
-
-    public async startServer(mapName?: string) {
-        const map = mapName || this.options.mapName;
-        if (!map) {
-            throw new Error('No map specified');
-        }
-        await this.start(map);
-    }
-
-    public stopServer() {
-        this.stop();
-    }
-
-    public kickPlayer(clientId: number) {
-        if (clientId < 0 || clientId >= this.svs.clients.length) return;
-        const client = this.svs.clients[clientId];
-        if (client && client.state >= ClientState.Connected) {
-            console.log(`Kicking client ${clientId}`);
-            // Send disconnect message if possible
-            if (client.netchan) {
-                const writer = new BinaryWriter();
-                writer.writeByte(ServerCommand.print);
-                writer.writeByte(2);
-                writer.writeString('Kicked by server.\n');
-                try {
-                    const packet = client.netchan.transmit(writer.getData());
-                    client.net.send(packet);
-                } catch (e) {}
-            }
-            this.dropClient(client);
-        }
-    }
-
-    public async changeMap(mapName: string) {
-        console.log(`Changing map to ${mapName}`);
-
-        // Notify clients?
-        this.multicast(
-            {x:0,y:0,z:0},
-            MulticastType.All,
-            ServerCommand.print,
-            2,
-            `Changing map to ${mapName}...\n`
-        );
-
-        // Stop current game loop
-        if (this.frameTimeout) clearTimeout(this.frameTimeout);
-
-        // Reset Server State
-        this.sv.state = ServerState.Loading;
-        this.sv.collisionModel = null;
-        this.sv.time = 0;
-        this.sv.frame = 0;
-        this.sv.configStrings.fill('');
-        this.sv.baselines.fill(null);
-        this.history.clear();
-        this.entityIndex = new CollisionEntityIndex();
-
-        // Load new Map
-        await this.loadMap(mapName);
-
-        // Re-init game
-        this.initGame();
-
-        // Send new serverdata to all connected clients and respawn them
-        for (const client of this.svs.clients) {
-            if (client && client.state >= ClientState.Connected) {
-                // Reset client game state
-                client.edict = null; // Will be respawned
-                client.state = ClientState.Connected; // Move back to connected state to trigger spawn
-
-                // Send new serverdata
-                this.sendServerData(client);
-
-                // Force them to reload/precache
-                client.netchan.writeReliableByte(ServerCommand.stufftext);
-                client.netchan.writeReliableString(`map ${mapName}\n`);
-
-                // Trigger spawn
-                this.handleBegin(client);
-            }
-        }
-
-        // Resume loop
-        this.runFrame();
-    }
-
-    public getConnectedClients(): ClientInfo[] {
-        const list: ClientInfo[] = [];
-        for (const client of this.svs.clients) {
-            if (client && client.state >= ClientState.Connected) {
-                list.push({
-                    id: client.index,
-                    name: 'Player', // TODO: Parse userinfo for name
-                    ping: client.ping,
-                    address: 'unknown'
-                });
-            }
-        }
-        return list;
-    }
-
-    private async start(mapName: string) {
-        console.log(`Starting Dedicated Server on port ${this.options.port}...`);
+    public async start(mapName: string) {
+        console.log(`Starting Dedicated Server on port ${this.port}...`);
         this.sv.name = mapName;
         this.svs.initialized = true;
         this.svs.spawnCount++;
 
         // 1. Initialize Network
-        this.transport.onConnection((driver, info) => {
-            console.log('New connection', info ? `from ${info.socket?.remoteAddress}` : '');
-            this.handleConnection(driver, info);
+        this.wss = new WebSocketServer({ port: this.port });
+        this.wss.on('connection', (ws) => {
+            console.log('New connection');
+            this.handleConnection(ws);
         });
-
-        this.transport.onError((err) => {
-            if (this.onServerError) this.onServerError(err);
-        });
-
-        await this.transport.listen(this.options.port!);
 
         // 2. Load Map
-        await this.loadMap(mapName);
-
-        // 3. Initialize Game
-        this.initGame();
-
-        // 4. Start Loop
-        this.runFrame();
-        console.log('Server started.');
-    }
-
-    private async loadMap(mapName: string) {
         try {
-            console.log(`Loading map ${mapName}...`);
+            console.log(`Loading map ${this.sv.name}...`);
             this.sv.state = ServerState.Loading;
-            this.sv.name = mapName;
 
-            const mapData = await fs.readFile(mapName);
+            // Assuming maps are local files for now. In production this would use VFS.
+            // For tests/dev, we try to load relative path.
+            // If file doesn't exist, we might fail or warn.
+            // Note: parseBsp expects ArrayBuffer.
+
+            // NOTE: Ideally we check if file exists. For now, try/catch.
+            const mapData = await fs.readFile(this.sv.name);
+            // Buffer to ArrayBuffer
             const arrayBuffer = mapData.buffer.slice(mapData.byteOffset, mapData.byteOffset + mapData.byteLength);
             const bspMap = parseBsp(arrayBuffer);
 
             // Convert BspMap to CollisionModel manually
+            // BspMap properties differ slightly from CollisionModel:
+            // - BspPlane lacks signbits (needed for physics)
+            // - BspNode uses planeIndex (CollisionNode uses direct reference)
+            // - BspMap leaf brushes are arrays-of-arrays (leafLists.leafBrushes), CollisionModel needs flat array
+
+            // 1. Planes (with signbits)
             const planes = bspMap.planes.map(p => {
                 const normal = { x: p.normal[0], y: p.normal[1], z: p.normal[2] };
                 let signbits = 0;
@@ -271,10 +126,16 @@ export class DedicatedServer implements GameEngine {
                 };
             });
 
+            // 2. Nodes (resolve plane index)
             const nodes = bspMap.nodes.map(n => ({
                 plane: planes[n.planeIndex],
                 children: n.children
             }));
+
+            // 3. Leaf Brushes & Leaves
+            // `BspMap` stores leaf brushes in `leafLists.leafBrushes[leafIndex]`.
+            // `CollisionModel` expects a single flat `leafBrushes` array and `leaf` having `firstLeafBrush` and `numLeafBrushes`.
+            // We can flatten `leafLists.leafBrushes` and update `firstLeafBrush` indices.
 
             const leafBrushes: number[] = [];
             const leaves = bspMap.leafs.map((l, i) => {
@@ -290,6 +151,7 @@ export class DedicatedServer implements GameEngine {
                 };
             });
 
+            // 4. Brushes & Sides
             const brushes = bspMap.brushes.map(b => {
                 const sides = [];
                 for (let i = 0; i < b.numSides; i++) {
@@ -311,6 +173,7 @@ export class DedicatedServer implements GameEngine {
                 };
             });
 
+            // 5. BModels
             const bmodels = bspMap.models.map(m => ({
                 mins: { x: m.mins[0], y: m.mins[1], z: m.mins[2] },
                 maxs: { x: m.maxs[0], y: m.maxs[1], z: m.maxs[2] },
@@ -318,6 +181,8 @@ export class DedicatedServer implements GameEngine {
                 headnode: m.headNode
             }));
 
+            // 6. Visibility
+            // BspMap visibility matches CollisionVisibility interface (mostly)
             let visibility;
             if (bspMap.visibility) {
                 visibility = {
@@ -339,14 +204,16 @@ export class DedicatedServer implements GameEngine {
             console.log(`Map loaded successfully.`);
         } catch (e) {
             console.warn('Failed to load map:', e);
-            if (this.onServerError) this.onServerError(e as Error);
+            // Proceed without map (empty world)
         }
-    }
 
-    private initGame() {
+        // 3. Initialize Game
         this.sv.startTime = Date.now();
         const imports: GameImports = {
             trace: (start, mins, maxs, end, passent, contentmask) => {
+                // Check against entity spatial index if available.
+                // CollisionEntityIndex.trace will internally perform the world trace if the model is provided,
+                // merging results to return the closest hit.
                 if (this.entityIndex) {
                     const result = this.entityIndex.trace({
                         start,
@@ -358,6 +225,7 @@ export class DedicatedServer implements GameEngine {
                         contentMask: contentmask
                     });
 
+                    // Resolve entity ID to Entity object
                     let hitEntity: Entity | null = null;
                     if (result.entityId !== null && result.entityId !== undefined && this.game) {
                         hitEntity = this.game.entities.getByIndex(result.entityId) ?? null;
@@ -375,6 +243,7 @@ export class DedicatedServer implements GameEngine {
                     };
                 }
 
+                // Fallback: world trace only (e.g. if entity index is not initialized)
                 const worldResult = this.sv.collisionModel ? traceBox({
                    start,
                    end,
@@ -403,20 +272,27 @@ export class DedicatedServer implements GameEngine {
                     ent: null
                 };
             },
-            pointcontents: (p) => 0,
+            pointcontents: (p) => 0, // Empty
             linkentity: (ent) => {
                 if (!this.entityIndex) return;
+                // Update entity in the spatial index
                 this.entityIndex.link({
                     id: ent.index,
                     origin: ent.origin,
                     mins: ent.mins,
                     maxs: ent.maxs,
-                    contents: ent.solid === 0 ? 0 : 1,
+                    contents: ent.solid === 0 ? 0 : 1, // Simplified contents
                     surfaceFlags: 0
                 });
             },
             areaEdicts: (mins, maxs) => {
                  if (!this.entityIndex) return [];
+                 // Use gatherTriggerTouches as a generic box query for now
+                 // or implement areaEdicts in CollisionEntityIndex specifically for general query
+                 // gatherTriggerTouches filters by contents mask, so pass -1 or similar if needed?
+                 // But wait, gatherTriggerTouches accepts mask.
+                 // If we want all entities, we might need to adjust CollisionEntityIndex or use a generic mask.
+                 // Assuming 0xFFFFFFFF for all.
                  return this.entityIndex.gatherTriggerTouches({ x: 0, y: 0, z: 0 }, mins, maxs, 0xFFFFFFFF);
             },
             multicast: (origin, type, event, ...args) => this.multicast(origin, type, event, ...args),
@@ -428,15 +304,20 @@ export class DedicatedServer implements GameEngine {
 
         this.game = createGame(imports, this, {
             gravity: { x: 0, y: 0, z: -800 },
-            deathmatch: this.options.deathmatch !== false
+            deathmatch: true
         });
 
         this.game.init(0);
         this.game.spawnWorld();
 
+        // Populate baselines after world spawn
         this.populateBaselines();
 
         this.sv.state = ServerState.Game;
+
+        // 4. Start Loop
+        this.runFrame();
+        console.log('Server started.');
     }
 
     private populateBaselines() {
@@ -444,6 +325,8 @@ export class DedicatedServer implements GameEngine {
 
         this.game.entities.forEachEntity((ent) => {
             if (ent.index >= MAX_EDICTS) return;
+            // Create baseline state
+            // Only for entities with model or solid
             if (ent.modelindex > 0 || ent.solid !== Solid.Not) {
                 this.sv.baselines[ent.index] = this.entityToState(ent);
             }
@@ -461,21 +344,31 @@ export class DedicatedServer implements GameEngine {
             effects: ent.effects,
             renderfx: ent.renderfx,
             solid: ent.solid,
-            sound: ent.sounds,
+            sound: ent.sounds, // Assuming ent.sounds maps to 'sound' field in EntityState
             event: 0
         };
     }
 
     public stop() {
         if (this.frameTimeout) clearTimeout(this.frameTimeout);
-        this.transport.close();
+        if (this.wss) this.wss.close();
         this.game?.shutdown();
         this.sv.state = ServerState.Dead;
     }
 
-    private handleConnection(driver: NetDriver, info?: any) {
+    private handleConnection(ws: any) {
+        const driver = new WebSocketNetDriver();
+        driver.attach(ws);
+
+        // Defer client creation until we verify not a reconnect or if it is a new connection
+        // Actually, in Q2, SV_GetChallenge handles potential reconnects, but here we have a full connection
+        // established at the transport layer (WebSocket) before we even get a challenge request.
+        // We assign a temporary client slot or wait for 'getchallenge' to assign a slot?
+        // No, we need a client object to handle the NetChan processing of 'getchallenge'.
+
+        // Find free client slot
         let clientIndex = -1;
-        for (let i = 0; i < this.options.maxPlayers!; i++) {
+        for (let i = 0; i < MAX_CLIENTS; i++) {
             if (this.svs.clients[i] === null || this.svs.clients[i]!.state === ClientState.Free) {
                 clientIndex = i;
                 break;
@@ -484,16 +377,18 @@ export class DedicatedServer implements GameEngine {
 
         if (clientIndex === -1) {
             console.log('Server full, rejecting connection');
-            driver.disconnect();
+            ws.close(); // Server full
             return;
         }
 
         const client = createClient(clientIndex, driver);
+        // Initialize lastMessage to current frame to prevent immediate timeout
         client.lastMessage = this.sv.frame;
+        // Initialize lastCommandTime to prevent immediate reset of command count
         client.lastCommandTime = Date.now();
         this.svs.clients[clientIndex] = client;
 
-        console.log(`Client ${clientIndex} attached to slot from ${info?.socket?.remoteAddress || 'unknown'}`);
+        console.log(`Client ${clientIndex} attached to slot from ${ws._socket?.remoteAddress || 'unknown'}`);
 
         driver.onMessage((data) => this.onClientMessage(client, data));
         driver.onClose(() => this.onClientDisconnect(client));
@@ -504,6 +399,7 @@ export class DedicatedServer implements GameEngine {
             ? data.buffer
             : data.slice().buffer;
 
+        // Push raw message to queue
         client.messageQueue.push(new Uint8Array(buffer as ArrayBuffer));
     }
 
@@ -512,11 +408,9 @@ export class DedicatedServer implements GameEngine {
         if (client.edict && this.game) {
             this.game.clientDisconnect(client.edict);
         }
-
-        if (this.onClientDisconnected) {
-            this.onClientDisconnected(client.index);
-        }
-
+        // IMPORTANT: We must clear the client slot so it can be reused, but also
+        // we need to be careful if this is called multiple times.
+        // We set state to Free to be safe.
         client.state = ClientState.Free;
 
         this.svs.clients[client.index] = null;
@@ -526,18 +420,26 @@ export class DedicatedServer implements GameEngine {
     }
 
     private dropClient(client: Client) {
+        // Mark as zombie or free immediately to prevent further processing in this frame loop?
+        // No, let the driver close event handle cleanup.
+        // But we should ensure we don't process it anymore.
+
+        // Disconnect handling will be triggered by onClose callback from net driver
         if (client.net) {
              client.net.disconnect();
         }
     }
 
     private handleMove(client: Client, cmd: UserCommand, checksum: number, lastFrame: number) {
+        // Verify Checksum
         if (lastFrame > 0 && lastFrame <= client.lastFrame && lastFrame > client.lastFrame - UPDATE_BACKUP) {
              const frameIdx = lastFrame % UPDATE_BACKUP;
              const frame = client.frames[frameIdx];
 
+             // Verify
              if (frame.packetCRC !== checksum) {
                  console.warn(`Client ${client.index} checksum mismatch for frame ${lastFrame}: expected ${frame.packetCRC}, got ${checksum}`);
+                 // Q2 behavior: usually ignore or drop. We log for now.
              }
         }
 
@@ -555,7 +457,7 @@ export class DedicatedServer implements GameEngine {
         if (cmd === 'getchallenge') {
             this.handleGetChallenge(client);
         } else if (cmd.startsWith('connect ')) {
-            const userInfo = cmd.substring(8);
+            const userInfo = cmd.substring(8); // "connect ".length
             this.handleConnect(client, userInfo);
         } else if (cmd === 'begin') {
             this.handleBegin(client);
@@ -572,33 +474,45 @@ export class DedicatedServer implements GameEngine {
             }
         }
 
+        // Q2 Style status response:
+        // print\n
+        // map: <mapname>\n
+        // num score ping name            lastmsg address               qport rate\n
+        // --- ----- ---- --------------- ------- --------------------- ----- -----\n
+        //   0     0    0 PlayerName            0 127.0.0.1             12345  2500\n
+
         let status = `map: ${this.sv.name}\n`;
-        status += `players: ${activeClients} active (${this.options.maxPlayers} max)\n\n`;
+        status += `players: ${activeClients} active (${MAX_CLIENTS} max)\n\n`;
         status += `num score ping name            lastmsg address               qport rate\n`;
         status += `--- ----- ---- --------------- ------- --------------------- ----- -----\n`;
 
         for (const c of this.svs.clients) {
             if (c && c.state >= ClientState.Connected) {
-                 const score = 0;
-                 const ping = 0;
+                 const score = 0; // TODO: Get score from game/player info
+                 const ping = 0; // TODO: Calculate ping
                  const lastMsg = this.sv.frame - c.lastMessage;
+                 // We don't track address/rate yet in Client struct but driver has it?
                  const address = 'unknown';
+                 // Simple formatted line
                  status += `${c.index.toString().padStart(3)} ${score.toString().padStart(5)} ${ping.toString().padStart(4)} ${c.userInfo.substring(0, 15).padEnd(15)} ${lastMsg.toString().padStart(7)} ${address.padEnd(21)} ${c.netchan.qport.toString().padStart(5)} 0\n`;
             }
         }
 
         const writer = new BinaryWriter();
         writer.writeByte(ServerCommand.print);
-        writer.writeByte(2);
+        writer.writeByte(2); // PRINT_HIGH
         writer.writeString(status);
         const packet = client.netchan.transmit(writer.getData());
         client.net.send(packet);
     }
 
     private handleGetChallenge(client: Client) {
+        // Generate a challenge number (random for now)
         const challenge = Math.floor(Math.random() * 1000000) + 1;
         client.challenge = challenge;
 
+        // Send challenge back to client
+        // Use NetChan to wrap it (unreliable payload is fine for challenge response)
         const writer = new BinaryWriter();
         writer.writeByte(ServerCommand.stufftext);
         writer.writeString(`challenge ${challenge}\n`);
@@ -609,17 +523,15 @@ export class DedicatedServer implements GameEngine {
     private handleConnect(client: Client, userInfo: string) {
         if (!this.game) return;
 
+        // client.edict is likely null here, but we pass it to match Q2 signature
         const result = this.game.clientConnect(client.edict || null, userInfo);
         if (result === true) {
             client.state = ClientState.Connected;
             client.userInfo = userInfo;
             console.log(`Client ${client.index} connected: ${userInfo}`);
 
-            if (this.onClientConnected) {
-                // Extract name from userinfo if possible, default to Player
-                this.onClientConnected(client.index, 'Player');
-            }
-
+            // Send server data and precache command in a single reliable transmission
+            // Q2 sends "precache\n" via stufftext here
             try {
                 this.sendServerData(client);
 
@@ -634,12 +546,14 @@ export class DedicatedServer implements GameEngine {
             }
         } else {
             console.log(`Client ${client.index} rejected: ${result}`);
+            // Send rejection message
             const writer = new BinaryWriter();
             writer.writeByte(ServerCommand.print);
-            writer.writeByte(2);
+            writer.writeByte(2); // PRINT_HIGH
             writer.writeString(`Connection rejected: ${result}\n`);
             const packet = client.netchan.transmit(writer.getData());
             client.net.send(packet);
+            // TODO: Disconnect client after delay?
         }
     }
 
@@ -652,6 +566,7 @@ export class DedicatedServer implements GameEngine {
     private spawnClient(client: Client) {
         if (!this.game) return;
 
+        // Use Game Exports to spawn player properly
         const ent = this.game.clientBegin({
             inventory: createPlayerInventory(),
             weaponStates: createPlayerWeaponStates(),
@@ -675,18 +590,24 @@ export class DedicatedServer implements GameEngine {
         client.edict = ent;
         client.state = ClientState.Active;
 
+        // In Q2, we don't resend serverdata on begin, but we might ensure client knows it's active.
+        // The game logic will now include this entity in snapshots.
         console.log(`Client ${client.index} entered game`);
     }
 
     private sendServerData(client: Client) {
+        // Send svc_serverdata via reliable stream
+        // This can be large, so we use the reliable buffer of NetChan
+
         client.netchan.writeReliableByte(ServerCommand.serverdata);
-        client.netchan.writeReliableLong(34);
+        client.netchan.writeReliableLong(34); // Protocol version
         client.netchan.writeReliableLong(this.sv.frame);
-        client.netchan.writeReliableByte(0);
+        client.netchan.writeReliableByte(0); // Attract loop
         client.netchan.writeReliableString("baseq2");
         client.netchan.writeReliableShort(client.index);
         client.netchan.writeReliableString(this.sv.name || "maps/test.bsp");
 
+        // Send all configstrings
         for (let i = 0; i < MAX_CONFIGSTRINGS; i++) {
             if (this.sv.configStrings[i]) {
                 client.netchan.writeReliableByte(ServerCommand.configstring);
@@ -695,6 +616,14 @@ export class DedicatedServer implements GameEngine {
             }
         }
 
+        // Send baselines
+        // For baselines, we need a writer helper that writes to netchan buffer...
+        // Since writeDeltaEntity expects a BinaryWriter, we can create a temporary buffer
+        // and write it to reliable stream.
+        // However, baselines can be huge. We might need to chunk or just hope reliable buffer is big enough.
+        // NetChan reliable buffer is 256KB. Baselines should fit unless map is huge.
+
+        // We can reuse a temporary BinaryWriter
         const baselineWriter = new BinaryWriter();
 
         for (let i = 0; i < MAX_EDICTS; i++) {
@@ -704,26 +633,34 @@ export class DedicatedServer implements GameEngine {
                 writeDeltaEntity({} as EntityState, this.sv.baselines[i]!, baselineWriter, true, true);
 
                 const data = baselineWriter.getData();
+                // Write raw bytes to netchan reliable
                 for(let j=0; j<data.length; j++) {
                     client.netchan.writeReliableByte(data[j]);
                 }
             }
         }
+
+        // Note: We do NOT transmit here. We want to batch this with the 'precache' command
+        // in handleConnect to ensure they are sent in the same reliable sequence block.
     }
 
     private SV_SetConfigString(index: number, value: string) {
         if (index < 0 || index >= MAX_CONFIGSTRINGS) return;
 
+        // Update server state
         this.sv.configStrings[index] = value;
 
+        // Broadcast to all active clients
         for (const client of this.svs.clients) {
             if (client && client.state >= ClientState.Connected) {
+                // Config strings are always reliable
                 if (client.netchan) {
                     try {
                         client.netchan.writeReliableByte(ServerCommand.configstring);
                         client.netchan.writeReliableShort(index);
                         client.netchan.writeReliableString(value);
 
+                        // Force transmit immediately for config strings
                         const packet = client.netchan.transmit();
                         client.net.send(packet);
                     } catch (e) {
@@ -749,6 +686,8 @@ export class DedicatedServer implements GameEngine {
                 const rawData = client.messageQueue.shift();
                 if (!rawData) continue;
 
+                // Sync qport from packet (WebSocket guarantees source, so we trust the stream)
+                // This ensures the server accepts the client's chosen qport.
                 if (rawData.byteLength >= 10) {
                     const view = new DataView(rawData.buffer, rawData.byteOffset, rawData.byteLength);
                     const incomingQPort = view.getUint16(8, true);
@@ -757,12 +696,15 @@ export class DedicatedServer implements GameEngine {
                     }
                 }
 
+                // Process through NetChan
                 const data = client.netchan.process(rawData);
                 if (!data) {
+                    // Duplicate or out of order, or invalid qport
                     continue;
                 }
 
                 if (data.length === 0) {
+                    // Just an ack or keepalive
                     continue;
                 }
 
@@ -774,6 +716,7 @@ export class DedicatedServer implements GameEngine {
                     onNop: () => {},
                     onBad: () => {
                         console.warn(`Bad command from client ${client.index}`);
+                        // Don't disconnect immediately in test/dev, but normally yes
                     }
                 });
 
@@ -801,12 +744,15 @@ export class DedicatedServer implements GameEngine {
         for (const client of this.svs.clients) {
             if (!client || client.state === ClientState.Free) continue;
 
+            // Sync ping
             if (client.edict && client.edict.client) {
                 client.edict.client.ping = client.ping;
             }
 
+            // Check timeout
+            // Timeout if no packet received for 30 seconds (assuming 10Hz = 300 frames)
             if (client.state >= ClientState.Connected) {
-                 const timeoutFrames = 300;
+                 const timeoutFrames = 300; // 30 seconds * 10 Hz
                  if (this.sv.frame - client.lastMessage > timeoutFrames) {
                      console.log(`Client ${client.index} timed out`);
                      this.dropClient(client);
@@ -815,6 +761,7 @@ export class DedicatedServer implements GameEngine {
             }
 
             if (client && client.state === ClientState.Active && client.edict) {
+                // Rate limiting
                 const now = Date.now();
                 if (now - client.lastCommandTime >= 1000) {
                     client.lastCommandTime = now;
@@ -827,6 +774,7 @@ export class DedicatedServer implements GameEngine {
                      continue;
                 }
 
+                // console.log(`Processing command for client ${client.index}, count: ${client.commandCount}`);
                 this.game.clientThink(client.edict, client.lastCmd);
             }
         }
@@ -846,16 +794,20 @@ export class DedicatedServer implements GameEngine {
             this.SV_SendClientMessages(snapshot.state);
         }
 
+        // Calculate sleep time
         const endTime = Date.now();
         const elapsed = endTime - startTime;
         const sleepTime = Math.max(0, FRAME_TIME_MS - elapsed);
 
+        // Schedule next frame
         if (this.sv.state === ServerState.Game) {
             this.frameTimeout = setTimeout(() => this.runFrame(), sleepTime);
         }
     }
 
     private SV_SendClientMessages(snapshot: GameStateSnapshot) {
+        // Build snapshot
+        // Send to all clients
         for (const client of this.svs.clients) {
             if (client && client.state === ClientState.Active) {
                 this.SV_SendClientFrame(client, snapshot);
@@ -864,31 +816,37 @@ export class DedicatedServer implements GameEngine {
     }
 
     private SV_SendClientFrame(client: Client, snapshot: GameStateSnapshot) {
+        // Use a buffer starting at 1400 bytes.
+        // We manually enforce MTU by checking writer.getOffset() before adding entities.
         const MTU = 1400;
         const writer = new BinaryWriter(MTU);
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(this.sv.frame);
 
+        // Calculate delta frame
+        // If client.lastFrame is valid and recent, we use it for delta compression
         let deltaFrame = 0;
         if (client.lastFrame && client.lastFrame < this.sv.frame && client.lastFrame >= this.sv.frame - UPDATE_BACKUP) {
             deltaFrame = client.lastFrame;
         }
 
-        writer.writeLong(deltaFrame);
-        writer.writeByte(0);
-        writer.writeByte(0);
+        writer.writeLong(deltaFrame); // Delta frame
+        writer.writeByte(0); // Suppress
+        writer.writeByte(0); // Area bytes
 
+        // Player info
         writer.writeByte(ServerCommand.playerinfo);
 
+        // Map GameStateSnapshot to ProtocolPlayerState
         const ps: ProtocolPlayerState = {
             pm_type: snapshot.pmType,
             origin: snapshot.origin,
             velocity: snapshot.velocity,
             pm_time: snapshot.pm_time,
             pm_flags: snapshot.pmFlags,
-            gravity: Math.abs(snapshot.gravity.z),
+            gravity: Math.abs(snapshot.gravity.z), // Usually only Z is relevant for gravity value
             delta_angles: snapshot.deltaAngles,
-            viewoffset: { x: 0, y: 0, z: 22 },
+            viewoffset: { x: 0, y: 0, z: 22 }, // Default view offset if not in snapshot
             viewangles: snapshot.viewangles,
             kick_angles: snapshot.kick_angles,
             gun_index: snapshot.gunindex,
@@ -903,22 +861,30 @@ export class DedicatedServer implements GameEngine {
 
         writePlayerState(writer, ps);
 
+        // Packet entities
         writer.writeByte(ServerCommand.packetentities);
 
         const entities = snapshot.packetEntities || [];
         const currentEntityIds: number[] = [];
 
+        // Store current frame entities in client history
         const frameIdx = this.sv.frame % UPDATE_BACKUP;
         const currentFrame = client.frames[frameIdx];
+        // FIX: entities is already EntityState[], so we don't need to convert them
         currentFrame.entities = entities;
 
+        // Get old frame entities if delta compression is active
         let oldEntities: EntityState[] = [];
         if (deltaFrame > 0) {
             const oldFrameIdx = deltaFrame % UPDATE_BACKUP;
             oldEntities = client.frames[oldFrameIdx].entities;
         }
 
+        // 1. Write current frame entities
         for (const entityState of currentFrame.entities) {
+            // Check for overflow before writing
+            // A conservative estimate for a delta entity is ~32 bytes
+            // We need to leave room for removals and footer (0 short)
             if (writer.getOffset() > MTU - 200) {
                 console.warn('Packet MTU limit reached, dropping remaining entities');
                 break;
@@ -926,6 +892,7 @@ export class DedicatedServer implements GameEngine {
 
             currentEntityIds.push(entityState.number);
 
+            // Try to find old entity state
             const oldState = oldEntities.find(e => e.number === entityState.number);
 
             if (oldState) {
@@ -935,7 +902,10 @@ export class DedicatedServer implements GameEngine {
             }
         }
 
+        // 2. Identify and write removals
+        // Check entities that were in last packet but are NOT in this packet
         for (const oldId of client.lastPacketEntities) {
+            // Check for overflow
             if (writer.getOffset() > MTU - 10) {
                 console.warn('Packet MTU limit reached, dropping remaining removals');
                 break;
@@ -946,14 +916,18 @@ export class DedicatedServer implements GameEngine {
             }
         }
 
+        // Write 0 to signal end of entities
         writer.writeShort(0);
 
+        // Calculate CRC of the unreliable payload (writer data)
         const frameData = writer.getData();
         currentFrame.packetCRC = crc8(frameData);
 
+        // Send via NetChan
         const packet = client.netchan.transmit(frameData);
         client.net.send(packet);
 
+        // Update client history
         client.lastFrame = this.sv.frame;
         client.lastPacketEntities = currentEntityIds;
     }
@@ -966,9 +940,16 @@ export class DedicatedServer implements GameEngine {
     multicast(origin: any, type: MulticastType, event: ServerCommand, ...args: any[]): void {
         const writer = new BinaryWriter();
 
+        // Write the command
         writeServerCommand(writer, event, ...args);
 
         const data = writer.getData();
+        // Heuristic for reliability if not explicit? Multicast is usually unreliable unless critical.
+        // But Q2 multicast (like muzzleflash) is unreliable.
+        // PRINT and CONFIGSTRING are reliable but handled elsewhere or via reliable=true.
+        // Game code calls multicast for ephemeral effects usually.
+        // If we need reliable multicast, we might need a flag.
+        // Assuming unreliable for multicast unless it's a critical event.
         const reliable = false;
 
         for (const client of this.svs.clients) {
@@ -976,6 +957,7 @@ export class DedicatedServer implements GameEngine {
                 continue;
             }
 
+            // Filter based on MulticastType
             let send = false;
             switch (type) {
                 case MulticastType.All:
@@ -985,14 +967,14 @@ export class DedicatedServer implements GameEngine {
                     if (this.sv.collisionModel) {
                         send = inPVS(origin, client.edict.origin, this.sv.collisionModel);
                     } else {
-                        send = true;
+                        send = true; // Fallback
                     }
                     break;
                 case MulticastType.Phs:
                     if (this.sv.collisionModel) {
                         send = inPHS(origin, client.edict.origin, this.sv.collisionModel);
                     } else {
-                        send = true;
+                        send = true; // Fallback
                     }
                     break;
             }
@@ -1004,8 +986,10 @@ export class DedicatedServer implements GameEngine {
                             client.netchan.writeReliableByte(data[i]);
                         }
                     } catch (e) {
+                        // ignore overflow for multicast?
                     }
                 } else {
+                    // Send as unreliable payload
                     const packet = client.netchan.transmit(data);
                     client.net.send(packet);
                 }
@@ -1014,6 +998,7 @@ export class DedicatedServer implements GameEngine {
     }
 
     unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {
+        // Find client for ent
         const client = this.svs.clients.find(c => c?.edict === ent);
         if (client && client.state >= ClientState.Connected) {
             const writer = new BinaryWriter();
@@ -1025,6 +1010,7 @@ export class DedicatedServer implements GameEngine {
                     for (let i = 0; i < data.length; i++) {
                         client.netchan.writeReliableByte(data[i]);
                     }
+                    // Flush immediately for unicast reliable events (like print)
                     const packet = client.netchan.transmit();
                     client.net.send(packet);
                 } catch (e) {
@@ -1048,6 +1034,7 @@ export class DedicatedServer implements GameEngine {
         const HISTORY_MAX_MS = 1000;
 
         this.game.entities.forEachEntity((ent) => {
+            // Track solid or takedamage entities
             if (ent.solid !== Solid.Not || ent.takedamage) {
                 let hist = this.history.get(ent.index);
                 if (!hist) {
@@ -1055,6 +1042,7 @@ export class DedicatedServer implements GameEngine {
                     this.history.set(ent.index, hist);
                 }
 
+                // Add current state
                 hist.push({
                     time: now,
                     origin: { ...ent.origin },
@@ -1063,6 +1051,7 @@ export class DedicatedServer implements GameEngine {
                     angles: { ...ent.angles }
                 });
 
+                // Prune old
                 while (hist.length > 0 && hist[0].time < now - HISTORY_MAX_MS) {
                     hist.shift();
                 }
@@ -1074,25 +1063,35 @@ export class DedicatedServer implements GameEngine {
         if (!this.game || !this.entityIndex) return;
 
         if (active) {
+            // Enable Lag Compensation
             if (!client || lagMs === undefined) return;
 
             const now = Date.now();
             const targetTime = now - lagMs;
 
+            // Backup and Shift entities
             this.game.entities.forEachEntity((ent) => {
-                if (ent === client) return;
+                if (ent === client) return; // Don't shift the attacker
                 if (ent.solid === Solid.Not && !ent.takedamage) return;
 
                 const hist = this.history.get(ent.index);
                 if (!hist || hist.length === 0) return;
 
+                // Find samples
+                // We want: sample1.time <= targetTime <= sample2.time
                 let i = hist.length - 1;
                 while (i >= 0 && hist[i].time > targetTime) {
                     i--;
                 }
 
                 if (i < 0) {
+                    // All samples are newer than targetTime (too much lag?), use oldest
                     i = 0;
+                } else if (i >= hist.length - 1) {
+                    // All samples are older than targetTime (negative lag?), use newest
+                    // i = hist.length - 1;
+                    // We already set i to index where hist[i].time <= targetTime
+                    // If i is last element, we just use it.
                 }
 
                 const s1 = hist[i];
@@ -1105,6 +1104,7 @@ export class DedicatedServer implements GameEngine {
                 if (frac < 0) frac = 0;
                 if (frac > 1) frac = 1;
 
+                // Interpolate
                 const origin = {
                     x: s1.origin.x + (s2.origin.x - s1.origin.x) * frac,
                     y: s1.origin.y + (s2.origin.y - s1.origin.y) * frac,
@@ -1117,16 +1117,23 @@ export class DedicatedServer implements GameEngine {
                     z: lerpAngle(s1.angles.z, s2.angles.z, frac)
                 };
 
+                // Backup
                 this.backup.set(ent.index, {
                     origin: { ...ent.origin },
                     mins: { ...ent.mins },
                     maxs: { ...ent.maxs },
                     angles: { ...ent.angles },
-                    link: true
+                    link: true // assume linked if we are tracking it
                 });
 
+                // Apply
                 ent.origin = origin;
                 ent.angles = angles;
+                // Mins/Maxs usually don't change for player models but might for ducks
+                // Interpolating mins/maxs might be needed for duck transitions
+                // But for now let's just use s1 (closest past) or s2?
+                // Or interpolate? Mins/maxs interpolation can be risky for collision logic if we assume boxes.
+                // Let's interpolate for completeness
                  ent.mins = {
                     x: s1.mins.x + (s2.mins.x - s1.mins.x) * frac,
                     y: s1.mins.y + (s2.mins.y - s1.mins.y) * frac,
@@ -1138,17 +1145,19 @@ export class DedicatedServer implements GameEngine {
                     z: s1.maxs.z + (s2.maxs.z - s1.maxs.z) * frac
                 };
 
+                // Relink in collision index
                 this.entityIndex!.link({
                     id: ent.index,
                     origin: ent.origin,
                     mins: ent.mins,
                     maxs: ent.maxs,
-                    contents: ent.solid === 0 ? 0 : 1,
+                    contents: ent.solid === 0 ? 0 : 1, // Simplified
                     surfaceFlags: 0
                 });
             });
 
         } else {
+            // Disable Lag Compensation - Restore
             this.backup.forEach((state, id) => {
                 const ent = this.game?.entities.getByIndex(id);
                 if (ent) {
@@ -1157,6 +1166,7 @@ export class DedicatedServer implements GameEngine {
                     ent.maxs = state.maxs;
                     ent.angles = state.angles;
 
+                    // Relink original
                     this.entityIndex!.link({
                         id: ent.index,
                         origin: ent.origin,
@@ -1170,8 +1180,4 @@ export class DedicatedServer implements GameEngine {
             this.backup.clear();
         }
     }
-}
-
-export function createServer(options: ServerOptions = {}): DedicatedServer {
-    return new DedicatedServer(options);
 }
