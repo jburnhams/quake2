@@ -14,6 +14,10 @@ describe('InputController Integration', () => {
 
   describe('bindInputSource', () => {
     it('should handle events from bound input source', () => {
+      // Mock performance.now to ensure consistent timing
+      // Set to 900ms, so when we call buildCommand at 1000ms, we have 100ms delta
+      vi.spyOn(performance, 'now').mockReturnValue(900);
+
       const source: InputSource = {
         on: vi.fn()
       };
