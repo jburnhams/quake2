@@ -40,6 +40,14 @@ export interface TouchInputState {
   readonly buttons?: Partial<Record<InputAction, boolean>>;
 }
 
+export interface InputSource {
+  on(event: 'keydown', handler: (code: string) => void): void;
+  on(event: 'keyup', handler: (code: string) => void): void;
+  on(event: 'mousedown', handler: (button: number) => void): void;
+  on(event: 'mouseup', handler: (button: number) => void): void;
+  on(event: 'mousemove', handler: (dx: number, dy: number) => void): void;
+}
+
 class KeyButton {
   private readonly activeCodes = new Set<InputCode>();
   private downTime = 0;
@@ -197,6 +205,8 @@ export class InputController {
 
   private sequence = 0;
 
+  public onInputCommand?: (cmd: UserCommand) => void;
+
   constructor(options: InputControllerOptions = {}, bindings = new InputBindings()) {
     this.bindings = bindings;
     this.forwardSpeed = options.forwardSpeed ?? DEFAULT_FORWARD_SPEED;
@@ -264,6 +274,25 @@ export class InputController {
 
   setTouchState(state: TouchInputState): void {
     this.pendingTouchState = state;
+  }
+
+  bindInputSource(source: InputSource): void {
+    source.on('keydown', (code) => this.handleKeyDown(code));
+    source.on('keyup', (code) => this.handleKeyUp(code));
+    source.on('mousedown', (button) => this.handleMouseButtonDown(button));
+    source.on('mouseup', (button) => this.handleMouseButtonUp(button));
+    source.on('mousemove', (dx, dy) => this.handleMouseMove(dx, dy));
+  }
+
+  setKeyBinding(action: string, keys: string[]): void {
+    const normalizedAction = normalizeCommand(action);
+    for (const key of keys) {
+      this.bindings.bind(normalizeInputCode(key), normalizedAction);
+    }
+  }
+
+  getDefaultBindings(): InputBindings {
+    return this.bindings;
   }
 
   buildCommand(frameMsec: number, now: number = nowMs(), serverFrame?: number): UserCommand {
@@ -377,7 +406,7 @@ export class InputController {
     // Command sequence number (client-side generated)
     this.sequence++;
 
-    return {
+    const command = {
       msec,
       buttons,
       angles: { ...this.viewAngles },
@@ -389,6 +418,12 @@ export class InputController {
       lightlevel: 0,
       impulse: 0
     } satisfies UserCommand;
+
+    if (this.onInputCommand) {
+        this.onInputCommand(command);
+    }
+
+    return command;
   }
 
   consumeConsoleCommands(): readonly string[] {
@@ -588,4 +623,3 @@ export class InputController {
     return Math.max(-max, Math.min(max, value));
   }
 }
-

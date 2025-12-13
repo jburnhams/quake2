@@ -45,6 +45,7 @@ export class EngineHost<FrameState = unknown> {
   private previousFrame?: GameFrameResult<FrameState>;
   private latestFrame?: GameFrameResult<FrameState>;
   private started = false;
+  private paused_ = false;
   private latestCommand?: UserCommand;
   readonly commands = new CommandRegistry();
   readonly cvars = new CvarRegistry();
@@ -83,6 +84,7 @@ export class EngineHost<FrameState = unknown> {
     }
 
     this.started = true;
+    this.paused_ = false;
     this.loop.start();
   }
 
@@ -95,6 +97,20 @@ export class EngineHost<FrameState = unknown> {
     this.previousFrame = undefined;
     this.latestFrame = undefined;
     this.started = false;
+    this.paused_ = false;
+  }
+
+  setPaused(paused: boolean): void {
+    this.paused_ = paused;
+    if (paused) {
+      this.loop.stop();
+    } else if (this.started) {
+      this.loop.start();
+    }
+  }
+
+  get paused(): boolean {
+    return this.paused_;
   }
 
   pump(elapsedMs: number): void {

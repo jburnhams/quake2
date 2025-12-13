@@ -1,7 +1,7 @@
 import { ClientExports, createClient, ClientImports } from './index.js';
 import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine } from '@quake2ts/game';
 import { EngineImports, Renderer, EngineHost, TraceResult } from '@quake2ts/engine';
-import { UserCommand, Vec3, CollisionPlane } from '@quake2ts/shared';
+import { UserCommand, Vec3, CollisionPlane, PlayerState } from '@quake2ts/shared';
 
 export interface SessionOptions {
   mapName?: string;
@@ -17,6 +17,7 @@ export class GameSession {
   private engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
   private host: EngineHost | null = null;
   private options: SessionOptions;
+  private currentMapName: string = '';
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -27,6 +28,8 @@ export class GameSession {
     if (this.host) {
       this.shutdown();
     }
+
+    this.currentMapName = mapName;
 
     const gameOptions: GameCreateOptions = {
       gravity: { x: 0, y: 0, z: -800 }, // Default gravity
@@ -139,12 +142,8 @@ export class GameSession {
          this.shutdown();
      }
 
-     // Reuse startNewGame logic but without executing 'map' command initially,
-     // or rather, we need to initialize the game with the map from the save file.
-     // However, loading the save overwrites the state anyway.
-     // But we need the map loaded in the engine.
-
      const mapName = saveData.map;
+     this.currentMapName = mapName;
      // Skill is in saveData too but startNewGame takes it.
      const skill = saveData.difficulty;
 
@@ -268,6 +267,63 @@ export class GameSession {
 
   public getHost(): EngineHost | null {
       return this.host;
+  }
+
+  // Section 4.1.3: Game State Queries
+
+  public getPlayerState(): PlayerState | null {
+    // If running a local game or connected, we can use client prediction state
+    if (this.client && this.client.lastRendered) {
+        // PredictionState is compatible with PlayerState
+        return this.client.lastRendered as unknown as PlayerState;
+    }
+    return null;
+  }
+
+  public getGameTime(): number {
+    if (this.game) {
+        return this.game.time;
+    }
+    if (this.client && this.client.lastRendered) {
+        // Fallback to client time if game instance not available (e.g. MP)
+        // But getGameTime usually implies level time.
+        // client.lastRendered doesn't have level time directly unless in stats.
+        // Or prediction uses server time?
+        // prediction state has pm_time but that's for events.
+        // For now, return 0 if no local game.
+        return 0;
+    }
+    return 0;
+  }
+
+  public isPaused(): boolean {
+    if (this.host) {
+        return this.host.paused;
+    }
+    return false;
+  }
+
+  public getSkillLevel(): number {
+    if (this.game) {
+        return this.game.skill;
+    }
+    return this.options.skill ?? 1;
+  }
+
+  public getMapName(): string {
+    // Return stored map name or query game level
+    if (this.game && this.game.entities && this.game.entities.level && this.game.entities.level.mapname) {
+        return this.game.entities.level.mapname;
+    }
+    return this.currentMapName;
+  }
+
+  public getGameMode(): 'single' | 'deathmatch' | 'coop' {
+    if (this.game) {
+        if (this.game.deathmatch) return 'deathmatch';
+        if (this.game.coop) return 'coop';
+    }
+    return 'single';
   }
 }
 
