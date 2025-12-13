@@ -49,7 +49,7 @@ import { createBlendState, updateBlend } from './blend.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
-import { InputController } from './input/controller.js';
+import { InputController, InputSource } from './input/controller.js';
 export {
   GamepadLike,
   GamepadLikeButton,
@@ -604,6 +604,18 @@ export function createClient(imports: ClientImports): ClientExports {
         } else if (pauseMenuFactory) {
             menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
         }
+    },
+
+    bindInputSource(source: InputSource) {
+        inputController.bindInputSource(source);
+    },
+
+    setKeyBinding(action: string, keys: string[]) {
+        inputController.setKeyBinding(action, keys);
+    },
+
+    getDefaultBindings() {
+        return inputController.getDefaultBindings();
     },
 
     createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory' | 'demoFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>) {
