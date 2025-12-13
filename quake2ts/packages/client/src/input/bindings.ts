@@ -5,7 +5,7 @@ export interface BindingEntry {
   readonly command: string;
 }
 
-const DEFAULT_BINDINGS: readonly BindingEntry[] = [
+export const DEFAULT_BINDINGS: readonly BindingEntry[] = [
   { code: 'KeyW', command: '+forward' },
   { code: 'ArrowUp', command: '+forward' },
   { code: 'KeyS', command: '+back' },
@@ -80,4 +80,3 @@ export function normalizeInputCode(code: string): InputCode {
 export function normalizeCommand(command: string): string {
   return command.trim().toLowerCase();
 }
-
