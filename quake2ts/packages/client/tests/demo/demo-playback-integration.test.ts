@@ -81,7 +81,8 @@ vi.mock('@quake2ts/cgame', async () => {
     ClientPrediction: vi.fn().mockImplementation(() => ({
         setAuthoritative: vi.fn(),
         enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn()
+        getPredictedState: vi.fn(),
+        decayError: vi.fn() // Add decayError to mock
     })),
     interpolatePredictionState: vi.fn(),
     ViewEffects: vi.fn().mockImplementation(() => ({
@@ -106,7 +107,8 @@ vi.mock('../../src/ui/menu/system.js', () => ({
         pushMenu: vi.fn(),
         render: vi.fn(),
         handleInput: vi.fn(),
-        getState: vi.fn().mockReturnValue({})
+        getState: vi.fn().mockReturnValue({}),
+        addListener: vi.fn() // Add addListener to mock
     }))
 }));
 
