@@ -113,7 +113,8 @@ describe('HUD Data API', () => {
                 damageIndicators: [],
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },
-                viewAngles: { x: 0, y: 0, z: 0 }
+                viewAngles: { x: 0, y: 0, z: 0 },
+                blend: [0, 0, 0, 0]
             },
             timeMs: 100
         },
@@ -126,7 +127,8 @@ describe('HUD Data API', () => {
                 damageIndicators: [],
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },
-                viewAngles: { x: 0, y: 0, z: 0 }
+                viewAngles: { x: 0, y: 0, z: 0 },
+                blend: [0, 0, 0, 0]
             },
             timeMs: 0
         },
@@ -168,11 +170,23 @@ describe('HUD Data API', () => {
     client.render({
         nowMs: 200,
         latest: {
-            state: { health: 90 },
+            state: {
+                health: 90,
+                blend: [0, 0, 0, 0],
+                origin: { x: 0, y: 0, z: 0 },
+                velocity: { x: 0, y: 0, z: 0 },
+                viewAngles: { x: 0, y: 0, z: 0 }
+            },
             timeMs: 200
         },
         previous: {
-            state: { health: 100 },
+            state: {
+                health: 100,
+                blend: [0, 0, 0, 0],
+                origin: { x: 0, y: 0, z: 0 },
+                velocity: { x: 0, y: 0, z: 0 },
+                viewAngles: { x: 0, y: 0, z: 0 }
+            },
             timeMs: 100
         },
         alpha: 1
