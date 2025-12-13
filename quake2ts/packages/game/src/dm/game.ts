@@ -5,9 +5,12 @@ import { createPlayerInventory, WeaponId, resetInventory } from '../inventory/pl
 import { createPlayerWeaponStates } from '../combat/weapons/state.js';
 import { WEAPON_ITEMS } from '../inventory/items.js';
 import { vec3 } from 'gl-matrix';
-import { ClientCommand, ServerCommand, TempEntity } from '@quake2ts/shared';
+import { ClientCommand, ServerCommand, TempEntity, MASK_PLAYERSOLID } from '@quake2ts/shared';
 import { P_PlayerThink } from '../entities/player.js';
 import { MulticastType } from '../imports.js';
+import { T_Damage, Damageable } from '../combat/damage.js';
+import { DamageMod } from '../combat/damageMods.js';
+import { DamageFlags } from '../combat/damageFlags.js';
 
 export function PutClientInServer(ent: Entity, sys: EntitySystem) {
     // Locate a spawn point
@@ -134,5 +137,25 @@ export function SelectSpawnPoint(ent: Entity, sys: EntitySystem) {
 }
 
 export function KillBox(ent: Entity, sys: EntitySystem) {
-    // Stub
+    // Unlink the entity briefly to trace against other entities
+    // We assume the entity is already linked or we handle it via trace mask?
+    // In Quake 2 G_KillBox:
+    // gi.unlinkentity (ent);
+    // tr = gi.trace (ent->s.origin, ent->mins, ent->maxs, ent->s.origin, NULL, MASK_PLAYERSOLID);
+    // gi.linkentity (ent);
+
+    // In quake2ts, we can't easily unlink/link explicitly via sys.imports.trace?
+    // Actually `sys.linkentity` updates the collision tree.
+    // If we trace with the same entity as 'ignore', it should work without unlinking.
+    // But G_KillBox checks if something is inside the entity's box.
+
+    const trace = sys.imports.trace(ent.origin, ent.mins, ent.maxs, ent.origin, ent, MASK_PLAYERSOLID);
+
+    // If we hit something (startsolid usually if we are inside), kill it.
+    if (trace.startsolid && trace.ent) {
+        const victim = trace.ent as unknown as Damageable;
+        if (victim.takedamage) {
+             T_Damage(victim, ent as unknown as Damageable, ent as unknown as Damageable, {x:0,y:0,z:0}, ent.origin, {x:0,y:0,z:0}, 100000, 0, DamageFlags.NO_PROTECTION, DamageMod.TELEFRAG, sys.timeSeconds);
+        }
+    }
 }
