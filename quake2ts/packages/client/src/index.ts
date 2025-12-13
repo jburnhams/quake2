@@ -1044,8 +1044,8 @@ export function createClient(imports: ClientImports): ClientExports {
 
         // Need to extract damage indicators
         const damageIndicators = (lastRendered.damageIndicators ?? []).map(ind => ({
-            angle: ind.angle,
-            alpha: ind.alpha
+            angle: vectorToAngles(ind.direction).y,
+            alpha: ind.strength
         }));
 
         // Inventory is not directly in PredictionState, but Client has it?
