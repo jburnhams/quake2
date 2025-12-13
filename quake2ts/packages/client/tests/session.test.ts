@@ -1,27 +1,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GameSession, SessionOptions, createSession } from '../../src/session.js';
+import { GameSession, SessionOptions, createSession } from '../src/session.js';
 import { EngineImports, Renderer, EngineHost } from '@quake2ts/engine';
 import { GameExports, EntitySystem } from '@quake2ts/game';
-import { ClientExports } from '../../src/index.js';
+import { ClientExports } from '../src/index.js';
 
 // Mocks
-vi.mock('@quake2ts/game', () => ({
-  createGame: vi.fn(() => ({
-    spawnWorld: vi.fn(),
-    time: 123.45,
-    deathmatch: false,
-    skill: 2,
-    coop: false,
-    entities: {
-      level: {
-        mapname: 'base1'
-      }
-    } as any,
-    loadSave: vi.fn()
-  })),
-}));
+vi.mock('@quake2ts/game', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...(actual as object),
+    createGame: vi.fn(() => ({
+      spawnWorld: vi.fn(),
+      time: 123.45,
+      deathmatch: false,
+      skill: 2,
+      coop: false,
+      entities: {
+        level: {
+          mapname: 'base1'
+        }
+      } as any,
+      loadSave: vi.fn()
+    })),
+  };
+});
 
-vi.mock('../../src/index.js', async (importOriginal) => {
+vi.mock('../src/index.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...(actual as object),
