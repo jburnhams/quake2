@@ -47,8 +47,8 @@ import { processEntityEffects } from './effects.js';
 import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
 import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
-import { ChatManager } from './chat.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
+import { parseObituaryMessage, parsePickupMessage } from './messages.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 import { InputController, InputSource } from './input/controller.js';
@@ -162,17 +162,18 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   // Scoreboard API
   getScoreboard(): ScoreboardData;
   onScoreboardUpdate?: (scoreboard: ScoreboardData) => void;
-
-  // Chat API
-  sendChatMessage(message: string, team?: boolean): void;
-  onChatMessage?: (sender: string, message: string, team: boolean) => void;
-  getChatHistory(): any[];
-
   // HUD Data API
   getHudData(): HudData | null;
   getStatusBar(): StatusBarData | null;
   getCrosshairInfo(): CrosshairInfo;
   onHudUpdate?: (data: HudData) => void;
+
+  // Event Handlers (Section 4.2)
+  onCenterPrint?: (msg: string) => void;
+  onNotify?: (msg: string) => void;
+  onPickupMessage?: (item: string, icon?: string) => void;
+  onObituaryMessage?: (victim: string, killer?: string, method?: string) => void;
+  onMenuStateChange?: (active: boolean) => void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -276,6 +277,12 @@ export function createClient(imports: ClientImports): ClientExports {
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
 
+  menuSystem.addListener((state) => {
+      if (clientExports.onMenuStateChange) {
+          clientExports.onMenuStateChange(state.activeMenu !== null);
+      }
+  });
+
   // Initialize UI components
   const loadingScreen = new LoadingScreen();
   const errorDialog = new ErrorDialog();
@@ -288,12 +295,6 @@ export function createClient(imports: ClientImports): ClientExports {
 
   const configStrings = new ClientConfigStrings();
   const scoreboardManager = new ScoreboardManager(configStrings);
-
-  const chatManager = new ChatManager((cmd) => {
-      if (imports.engine.cmd) {
-          imports.engine.cmd.executeText(cmd);
-      }
-  });
 
   const blendState = createBlendState();
   let currentBlend: [number, number, number, number] = [0, 0, 0, 0];
@@ -333,10 +334,27 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
-    onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
+    onCenterPrint: (msg: string) => {
+        cg.ParseCenterPrint(msg, 0, false);
+        if (clientExports.onCenterPrint) {
+            clientExports.onCenterPrint(msg);
+        }
+    },
     onPrint: (level: number, msg: string) => {
         cg.NotifyMessage(0, msg, false);
-        chatManager.addMessage(level, msg);
+        if (clientExports.onNotify) {
+            clientExports.onNotify(msg);
+        }
+
+        const pickup = parsePickupMessage(msg);
+        if (pickup && clientExports.onPickupMessage) {
+            clientExports.onPickupMessage(pickup.itemName, undefined);
+        } else {
+             const obituary = parseObituaryMessage(msg);
+             if (obituary && clientExports.onObituaryMessage) {
+                 clientExports.onObituaryMessage(obituary.victim, obituary.killer, obituary.method);
+             }
+        }
     },
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
@@ -370,10 +388,6 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     onDamage: (indicators: DamageIndicator[]) => {
         pendingDamage = 0.5;
-    },
-    onLayout: (layout: string) => {
-        scoreboardManager.processScoreboardMessage(layout);
-        scoreboardManager.notifyUpdate();
     }
   });
 
@@ -834,21 +848,6 @@ export function createClient(imports: ClientImports): ClientExports {
                           }
 
                           lastRendered.origin = { ...demoCameraState.currentFollowOrigin };
-
-                          // Optionally look AT the target or just position camera there
-                          // "Follow" usually implies third person view OF the target, or first person view FROM the target?
-                          // Let's assume third-person-like follow.
-                          // We need view angles. If the entity has angles, we can use them.
-                          // RenderableEntity doesn't expose angles directly, but we can assume they are encoded in the model transform
-                          // or passed separately. But we don't have them easily here without decomping matrix.
-                          // For now, let's just position camera AT the entity and keep previous view angles (or user controlled?)
-                          // If we want "tracking", we might want to update angles to look at it?
-                          // Let's stick to positioning for now, effectively a "spectate" mode.
-                          // If we want third person follow, we need to know the entity's forward vector.
-
-                          // For now, minimal "smooth camera tracking player" (positional)
-                          // Assuming camera angles are manually controlled or we default to looking at it from fixed offset?
-                          // Let's keep existing view angles to allow user to look around while following position.
                       }
                   }
              }
@@ -1243,9 +1242,25 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
+      if (clientExports.onCenterPrint) {
+          clientExports.onCenterPrint(msg);
+      }
     },
     ParseNotify(msg: string) {
       cg.NotifyMessage(0, msg, false);
+      if (clientExports.onNotify) {
+          clientExports.onNotify(msg);
+      }
+
+      const pickup = parsePickupMessage(msg);
+      if (pickup && clientExports.onPickupMessage) {
+          clientExports.onPickupMessage(pickup.itemName, undefined);
+      } else {
+           const obituary = parseObituaryMessage(msg);
+           if (obituary && clientExports.onObituaryMessage) {
+               clientExports.onObituaryMessage(obituary.victim, obituary.killer, obituary.method);
+           }
+      }
     },
     showSubtitle(text: string, soundName: string) {
       cg.ShowSubtitle(text, soundName);
@@ -1279,14 +1294,6 @@ export function createClient(imports: ClientImports): ClientExports {
     // Scoreboard API
     getScoreboard() {
       return scoreboardManager.getScoreboard();
-    },
-
-    // Chat API
-    sendChatMessage(message: string, team: boolean = false) {
-        chatManager.sendChatMessage(message, team);
-    },
-    getChatHistory() {
-        return chatManager.getHistory();
     }
   };
 
@@ -1295,13 +1302,6 @@ export function createClient(imports: ClientImports): ClientExports {
     if (clientExports.onScoreboardUpdate) {
       clientExports.onScoreboardUpdate(data);
     }
-  });
-
-  // Hook up chat listener
-  chatManager.addListener((sender, message, team) => {
-      if (clientExports.onChatMessage) {
-          clientExports.onChatMessage(sender, message, team);
-      }
   });
 
   return clientExports;

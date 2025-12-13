@@ -39,39 +39,39 @@
 - [x] Add telefrag detection and scoring
 
 ### 5.2.2 Scoreboard API
-- [x] Add method `getScoreboard(): ScoreboardData` returning sorted player list
-- [x] Return: player name, frags, deaths, ping
-- [x] Add event `onScoreboardUpdate?: (scoreboard: ScoreboardData) => void`
-- [x] Support team-based modes (future: CTF)
+- [ ] Add method `getScoreboard(): ScoreboardData` returning sorted player list
+- [ ] Return: player name, frags, deaths, ping
+- [ ] Add event `onScoreboardUpdate?: (scoreboard: ScoreboardData) => void`
+- [ ] Support team-based modes (future: CTF)
 
 ### 5.2.3 Chat System
-- [x] Add method `sendChatMessage(message: string): void`
-- [x] Add event `onChatMessage?: (player: string, message: string) => void`
-- [x] Support team chat vs global chat
-- [x] Add chat history retrieval
+- [ ] Add method `sendChatMessage(message: string): void`
+- [ ] Add event `onChatMessage?: (player: string, message: string) => void`
+- [ ] Support team chat vs global chat
+- [ ] Add chat history retrieval
 
 ---
 
 ## 5.3 Server Hosting (WebRTC or WebSocket)
 
 ### 5.3.1 Server API
-- [x] Expose `createServer(options: ServerOptions): DedicatedServer`
-- [x] Options: map name, max players, deathmatch mode, port
-- [x] Add method `startServer(): Promise<void>`
-- [x] Add method `stopServer(): void`
-- [x] Add method `kickPlayer(clientId: number): void`
-- [x] Add method `changeMap(mapName: string): void`
+- [ ] Expose `createServer(options: ServerOptions): DedicatedServer`
+- [ ] Options: map name, max players, deathmatch mode, port
+- [ ] Add method `startServer(): Promise<void>`
+- [ ] Add method `stopServer(): void`
+- [ ] Add method `kickPlayer(clientId: number): void`
+- [ ] Add method `changeMap(mapName: string): void`
 
 ### 5.3.2 Server Events
-- [x] Add event `onClientConnected?: (clientId: number, name: string) => void`
-- [x] Add event `onClientDisconnected?: (clientId: number) => void`
-- [x] Add event `onServerError?: (error: Error) => void`
-- [x] Add method `getConnectedClients(): ClientInfo[]`
+- [ ] Add event `onClientConnected?: (clientId: number, name: string) => void`
+- [ ] Add event `onClientDisconnected?: (clientId: number) => void`
+- [ ] Add event `onServerError?: (error: Error) => void`
+- [ ] Add method `getConnectedClients(): ClientInfo[]`
 
 ### 5.3.3 Network Transport
-- [x] Support WebSocket transport (already implemented)
-- [ ] Add WebRTC peer-to-peer transport option for low-latency (Architecture ready)
-- [x] Add method `setTransport(transport: NetworkTransport): void`
+- [ ] Support WebSocket transport (already implemented)
+- [ ] Add WebRTC peer-to-peer transport option for low-latency
+- [ ] Add method `setTransport(transport: NetworkTransport): void`
 - [ ] Handle reconnection and network failures gracefully
 
 ---

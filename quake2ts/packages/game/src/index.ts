@@ -618,6 +618,7 @@ export function createGame(
         gameState: {
           origin: { ...origin },
           velocity: { ...velocity },
+          health: player?.health // Added health to gameState
         }
       });
     },

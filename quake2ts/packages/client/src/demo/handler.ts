@@ -60,7 +60,6 @@ export interface DemoHandlerCallbacks {
     onDamage?: (indicators: DamageIndicator[]) => void;
     onServerData?: (protocol: number, tickRate?: number) => void;
     onLocPrint?: (flags: number, base: string, args: string[]) => void;
-    onLayout?: (layout: string) => void;
 }
 
 export class ClientNetworkHandler implements NetworkMessageHandler {
@@ -272,9 +271,6 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onLayout(layout: string): void {
-        if (this.callbacks?.onLayout) {
-            this.callbacks.onLayout(layout);
-        }
     }
 
     onInventory(inventory: number[]): void {
