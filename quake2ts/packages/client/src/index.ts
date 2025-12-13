@@ -48,6 +48,7 @@ import { ClientEffectSystem, EntityProvider } from './effects-system.js';
 import { createBlendState, updateBlend } from './blend.js';
 import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
+import { parseObituaryMessage, parsePickupMessage } from './messages.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 import { InputController, InputSource } from './input/controller.js';
@@ -345,32 +346,13 @@ export function createClient(imports: ClientImports): ClientExports {
             clientExports.onNotify(msg);
         }
 
-        // Pickup Heuristic: "You got the ..."
-        if (msg.startsWith('You got the ')) {
-            const itemName = msg.substring(12);
-            if (clientExports.onPickupMessage) {
-                clientExports.onPickupMessage(itemName, undefined);
-            }
-        } else if (clientExports.onObituaryMessage) {
-             // Obituary Heuristic
-             // "Player1 died."
-             if (msg.endsWith(' died.')) {
-                 const victim = msg.substring(0, msg.length - 6);
-                 clientExports.onObituaryMessage(victim, undefined, 'died.');
-             } else {
-                 // "Player1 was railed by Player2"
-                 const byIndex = msg.lastIndexOf(' by ');
-                 if (byIndex !== -1) {
-                     const killer = msg.substring(byIndex + 4);
-                     // Look for " was "
-                     const wasIndex = msg.indexOf(' was ');
-                     if (wasIndex !== -1) {
-                         const victim = msg.substring(0, wasIndex);
-                         // method = "was railed by"
-                         const method = msg.substring(wasIndex + 1, byIndex + 3); // "was railed by"
-                         clientExports.onObituaryMessage(victim, killer, method);
-                     }
-                 }
+        const pickup = parsePickupMessage(msg);
+        if (pickup && clientExports.onPickupMessage) {
+            clientExports.onPickupMessage(pickup.itemName, undefined);
+        } else {
+             const obituary = parseObituaryMessage(msg);
+             if (obituary && clientExports.onObituaryMessage) {
+                 clientExports.onObituaryMessage(obituary.victim, obituary.killer, obituary.method);
              }
         }
     },
@@ -739,6 +721,12 @@ export function createClient(imports: ClientImports): ClientExports {
           renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
 
           // Get packet entities for effect processing.
+          // demoHandler doesn't expose getPacketEntities directly yet, but getRenderableEntities builds from them.
+          // We might need to expose them or iterate renderEntities if they retain enough info.
+          // RenderableEntity has model, transform, skin... but not raw effects flags unless we added them.
+          // But we need effects flags.
+          // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
+          // demoHandler is ClientNetworkHandler.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
               currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
           }
@@ -978,14 +966,20 @@ export function createClient(imports: ClientImports): ClientExports {
 
       // RENDER THE WORLD
       if (imports.engine.renderer && camera) {
+          // Retrieve current map if available
+          // Usually index 1 in configstrings is map model: "maps/base1.bsp"
+          // NOTE: Q2 configstring CS_MODELS+1 is the world model.
           let world: WorldRenderState | undefined;
 
           if (imports.engine.assets) {
+              // CS_MODELS is 32. So model index 1 is at 33.
               const mapName = configStrings.getModelName(1);
               if (mapName) {
                   const bspMap = imports.engine.assets.getMap(mapName);
+
                   if (bspMap) {
                       // Construct world state.
+                      // For now we mock surfaces/lightmaps as they are built in renderer internals usually?
                   }
               }
           }
@@ -1118,6 +1112,14 @@ export function createClient(imports: ClientImports): ClientExports {
             alpha: ind.strength
         }));
 
+        // Inventory is not directly in PredictionState, but Client has it?
+        // Wait, Client Exports doesn't have inventory.
+        // PredictionState has 'client' property which is PlayerClient, which has inventory.
+        // But PredictionState interface doesn't strictly enforce client structure.
+        // Let's assume we can access it if available.
+        // Or if in single player, we query game session?
+        // But client exports shouldn't depend on game session.
+
         return {
             health,
             armor,
@@ -1209,6 +1211,7 @@ export function createClient(imports: ClientImports): ClientExports {
         isDemoPlaying = false;
         currentDemoName = null;
         clientMode = ClientMode.Normal;
+        // Clean up
     },
     startRecording(filename: string) {
         if (multiplayer.isConnected()) {
@@ -1222,6 +1225,8 @@ export function createClient(imports: ClientImports): ClientExports {
         if (demoRecorder.getIsRecording()) {
              const data = demoRecorder.stopRecording();
              console.log(`Recording stopped. Size: ${data?.length} bytes.`);
+             // Auto-save to VFS or download?
+             // For now, let's offer download if in browser
              if (data && typeof document !== 'undefined') {
                  const blob = new Blob([data as any], { type: 'application/octet-stream' });
                  const url = URL.createObjectURL(blob);
@@ -1247,39 +1252,13 @@ export function createClient(imports: ClientImports): ClientExports {
           clientExports.onNotify(msg);
       }
 
-      // Pickup Heuristic: "You got the ..."
-      if (msg.startsWith('You got the ')) {
-          const itemName = msg.substring(12);
-          if (clientExports.onPickupMessage) {
-              clientExports.onPickupMessage(itemName, undefined);
-          }
-      } else if (clientExports.onObituaryMessage) {
-           // Obituary Heuristic
-           // "Player1 died."
-           if (msg.endsWith(' died.')) {
-               const victim = msg.substring(0, msg.length - 6);
-               clientExports.onObituaryMessage(victim, undefined, 'died.');
-           } else {
-               // "Player1 was railed by Player2"
-               const byIndex = msg.lastIndexOf(' by ');
-               if (byIndex !== -1) {
-                   const killer = msg.substring(byIndex + 4);
-                   // Look for " was "
-                   const wasIndex = msg.indexOf(' was ');
-                   if (wasIndex !== -1) {
-                       const victim = msg.substring(0, wasIndex);
-                       // method = "was railed by"
-                       // substring from wasIndex + 1 to byIndex + 3 (inclusive of " by")
-                       // actually byIndex is start of " by ". So byIndex + 4 is start of killer.
-                       // We want "was railed by".
-                       // "Player1 was railed by Player2"
-                       // victim = "Player1"
-                       // method = "was railed by"
-                       // killer = "Player2"
-                       const method = msg.substring(wasIndex + 1, byIndex + 3); // "was railed by"
-                       clientExports.onObituaryMessage(victim, killer, method);
-                   }
-               }
+      const pickup = parsePickupMessage(msg);
+      if (pickup && clientExports.onPickupMessage) {
+          clientExports.onPickupMessage(pickup.itemName, undefined);
+      } else {
+           const obituary = parseObituaryMessage(msg);
+           if (obituary && clientExports.onObituaryMessage) {
+               clientExports.onObituaryMessage(obituary.victim, obituary.killer, obituary.method);
            }
       }
     },

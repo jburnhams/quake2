@@ -420,21 +420,11 @@ export class GameSession {
   }
 
   public getSaveMetadata(saveData: GameSaveFile): SaveMetadata {
-      // Attempt to find player health from entities if possible
-      // This is a bit inefficient to iterate but necessary if not stored in root
-      let health = undefined;
+      let health: number | undefined = undefined;
 
-      // Heuristic: If we have entity snapshot, look for player
-      if (saveData.entities && saveData.entities.entities) {
-          // Player is usually index 1, or check classname if we could access fields directly
-          // We can't easily query fields without parsing.
-          // However, we can look at the parsed entity list.
-          // Note: Parsing entire entity list for health might be slow for just metadata.
-          // Ideally GameSaveFile should have it.
-          // We can access 'health' from GameSaveSnapshot.gameState if we put it there.
-          // The createSave function currently doesn't put health in gameState explicitly, but maybe we should?
-
-          // For now, let's leave health undefined or try to find it if we can
+      // Retrieve health from gameState if available
+      if (saveData.gameState && typeof saveData.gameState['health'] === 'number') {
+          health = saveData.gameState['health'];
       }
 
       return {

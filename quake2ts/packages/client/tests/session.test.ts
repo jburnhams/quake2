@@ -46,7 +46,9 @@ describe('GameSession Save/Load', () => {
         map: 'base1',
         difficulty: 1,
         playtimeSeconds: 10,
-        gameState: {},
+        gameState: {
+            health: 85
+        },
         level: {
             frameNumber: 10,
             timeSeconds: 1.0,
@@ -59,7 +61,7 @@ describe('GameSession Save/Load', () => {
         entities: {
             timeSeconds: 1.0,
             pool: {
-                capacity: 1024, // Standard capacity
+                capacity: 1024,
                 activeOrder: [],
                 freeList: [],
                 pendingFree: []
@@ -133,22 +135,9 @@ describe('GameSession Save/Load', () => {
 
         vi.spyOn(game!, 'createSave').mockReturnValue(mockSaveFile);
 
-        // Use a spy that returns a game with a mocked loadSave
-        // Because loadSavedGame creates a NEW game instance, mocking methods on the OLD game instance (which is destroyed) won't work for verify call on the new one.
-        // However, loadSavedGame calls createGame.
-        // We can't easily mock createGame from here as it is imported inside session.ts.
-        // But we can check if session.loadSavedGame was called with the right data.
-
         await session.quickSave();
 
         const loadSpy = vi.spyOn(session, 'loadSavedGame');
-
-        // We must suppress the actual logic of loadSavedGame because it will fail with "capacity" mismatch
-        // if the mock data doesn't perfectly match the EntitySystem capacity created by createGame (which defaults to 1024).
-        // My createMockSaveFile sets capacity to 1024, so it might work if createGame uses 1024.
-        // Let's rely on the real implementation if possible, or mock loadSavedGame to do nothing.
-
-        // If I mock loadSavedGame implementation, I verify quickLoad calls it.
         loadSpy.mockImplementation(() => {});
 
         await session.quickLoad();
@@ -156,7 +145,7 @@ describe('GameSession Save/Load', () => {
         expect(loadSpy).toHaveBeenCalledWith(mockSaveFile);
     });
 
-    it('should return correct metadata', () => {
+    it('should return correct metadata including player health', () => {
         const mockSaveFile = createMockSaveFile();
         mockSaveFile.map = 'q2dm1';
         mockSaveFile.difficulty = 2;
@@ -168,5 +157,6 @@ describe('GameSession Save/Load', () => {
         expect(meta.difficulty).toBe(2);
         expect(meta.playTime).toBe(300);
         expect(meta.timestamp).toBe(123456789);
+        expect(meta.playerHealth).toBe(85);
     });
 });
