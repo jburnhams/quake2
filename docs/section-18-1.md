@@ -86,7 +86,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Apply directional force to movement
   - Reference: `m_move.cpp` lines 812-888
 
-- [ ] Implement fall damage for monsters
+- [x] Implement fall damage for monsters
   - Track falling distance
   - Apply damage on impact
   - Reference: `m_move.cpp` lines 1452-1502
