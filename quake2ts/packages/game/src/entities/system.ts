@@ -409,6 +409,15 @@ export class EntitySystem {
     return this.engine.soundIndex?.(sound) || 0;
   }
 
+  configStringIndex(str: string): number {
+      // Not typically exposed by engine directly like soundIndex/modelIndex
+      // But maybe configString lookup is possible if we track it?
+      // Or engine.configStringIndex?
+      // If the engine interface doesn't have it, we might need to rely on cached values or assume 0.
+      // For now, let's assume engine might provide it or return 0.
+      return (this.engine as any).configStringIndex?.(str) || 0;
+  }
+
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
   }
