@@ -107,6 +107,8 @@ interface GameExports {
 
 **Workaround**: Direct entity manipulation if game instance is exposed, but fragile and library-internal.
 
+**Status**: Implemented.
+
 ---
 
 ## Section 02: Multiplayer Client
@@ -863,7 +865,7 @@ interface MemoryUsage {
 | Enhancement | Package | Priority | Section | Status |
 |-------------|---------|----------|---------|--------|
 | Game State Serialization | game | P0 | 01 | Implemented |
-| Admin/Cheat APIs | game | P1 | 01 | Needed |
+| Admin/Cheat APIs | game | P1 | 01 | Implemented |
 | Master Server Client | client/net | P1 | 02 | Needed |
 | WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
 | Spectator Mode APIs | game/client | P1 | 02 | Needed |
