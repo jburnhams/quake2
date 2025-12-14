@@ -14,6 +14,7 @@ export interface RenderableMd2 {
     readonly alpha?: number;
     readonly id?: number; // Optional numeric ID for stable randomization
     readonly tint?: readonly [number, number, number, number];
+    readonly isViewModel?: boolean;
 }
 
 export interface RenderableMd3 {
@@ -26,6 +27,7 @@ export interface RenderableMd3 {
     readonly alpha?: number;
     readonly id?: number; // Optional numeric ID for stable randomization
     readonly tint?: readonly [number, number, number, number];
+    readonly isViewModel?: boolean;
 }
 
 export type RenderableEntity = RenderableMd2 | RenderableMd3;

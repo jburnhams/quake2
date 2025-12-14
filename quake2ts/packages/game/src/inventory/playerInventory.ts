@@ -108,6 +108,7 @@ export interface PlayerClient {
     pm_time: number;
     pm_flags: number;
     gun_frame: number;
+    gunindex?: number;
     rdflags: number; // View flags
     fov: number;
     // View kick

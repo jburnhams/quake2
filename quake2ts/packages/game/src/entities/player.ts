@@ -355,6 +355,14 @@ export function player_think(self: Entity, sys: EntitySystem) {
     if (weaponId) {
         const weaponItem = Object.values(WEAPON_ITEMS).find(item => item.weaponId === weaponId);
         if (weaponItem) {
+            // Update gunindex for client rendering
+            if (weaponItem.viewModel && sys.configStringIndex) {
+                 const idx = sys.configStringIndex(weaponItem.viewModel);
+                 if (idx > 0) {
+                     self.client.gunindex = idx;
+                 }
+            }
+
             // Update ammo count cache
             if (weaponItem.ammoType !== null) {
                 self.client.currentAmmoCount = self.client.inventory.ammo.counts[weaponItem.ammoType];
