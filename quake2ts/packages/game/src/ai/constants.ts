@@ -27,6 +27,7 @@ export enum AIFlags {
   IgnoreShots = 1 << 17,
   AlternateFly = 1 << 18,
   Dodging = 1 << 19,
+  ThirdEye = 1 << 20,
   SpawnedMedicC = 1 << 23,
   HintPath = 1 << 24, // Added based on m_move.cpp
   Blocked = 1 << 25, // Added AI_BLOCKED

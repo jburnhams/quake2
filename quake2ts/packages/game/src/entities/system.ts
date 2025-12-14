@@ -11,6 +11,7 @@ import {
   ServerFlags,
   type EntityFieldDescriptor,
   Solid,
+  FL_NOTARGET
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
@@ -148,6 +149,12 @@ function deserializeInventory(value: SerializableEntityFieldValue): Record<strin
   return parsed;
 }
 
+interface ExtendedTargetAwarenessState extends TargetAwarenessState {
+  activePlayers: Entity[];
+  monsterAlertedByPlayers(monster: Entity): Entity | null;
+  soundClient(): Entity | null;
+}
+
 export class EntitySystem {
   private readonly pool: EntityPool;
   private readonly thinkScheduler: ThinkScheduler;
@@ -163,7 +170,7 @@ export class EntitySystem {
   private spatialGrid: SpatialGrid;
   public readonly scriptHooks = new ScriptHookRegistry();
 
-  readonly targetAwareness: TargetAwarenessState;
+  readonly targetAwareness: ExtendedTargetAwarenessState;
 
   // Persistent state for cross-level logic
   crossLevelFlags: number = 0;
@@ -330,6 +337,9 @@ export class EntitySystem {
       sound2Entity: null,
       sound2EntityFrame: 0,
       sightClient: null,
+      activePlayers: [],
+      monsterAlertedByPlayers: (monster: Entity) => null, // Default implementation
+      soundClient: () => null // Default implementation
     };
 
     this.level = {
@@ -473,6 +483,16 @@ export class EntitySystem {
     this.frameNumber++;
     this.targetAwareness.timeSeconds = timeSeconds;
     this.targetAwareness.frameNumber = this.frameNumber;
+
+    // Update active players list
+    // This is simple: just iterate and check clients.
+    this.targetAwareness.activePlayers = [];
+    for (let i = 1; i <= this.maxClients; i++) {
+        const ent = this.entities[i];
+        if (ent && ent.inUse && !ent.freePending && (ent.svflags & ServerFlags.Player) && (ent.flags & FL_NOTARGET) === 0) {
+             this.targetAwareness.activePlayers.push(ent);
+        }
+    }
   }
 
   finalizeSpawn(entity: Entity): void {
