@@ -84,7 +84,7 @@ import { throwGibs } from './entities/gibs.js';
 import { CustomEntityRegistration } from './mod.js';
 export { CustomEntityRegistration, ModAPI } from './mod.js';
 
-import { giveItem } from './inventory/give.js';
+import { giveItem } from './inventory/index.js';
 import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
