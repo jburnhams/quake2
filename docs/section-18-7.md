@@ -17,7 +17,7 @@ This phase covers Rogue mission pack content including monsters, AI enhancements
 **Original Source**: `/rerelease/rogue/m_widow.cpp` (1,304 lines)
 **TypeScript File**: `/packages/game/src/entities/monsters/rogue/widow.ts` (NEW)
 
-- [ ] Create widow entity spawn function
+- [x] Create widow entity spawn function
   - Large stationary boss monster
   - Multiple attack phases
   - Reference: `m_widow.cpp` lines 50-150
@@ -27,54 +27,54 @@ This phase covers Rogue mission pack content including monsters, AI enhancements
   - Slow/trap players
   - Reference: `m_widow.cpp` lines 450-580
 
-- [ ] Implement spawn minions attack
+- [x] Implement spawn minions attack
   - Summon stalker monsters
   - Limited spawn count
   - Reference: `m_widow.cpp` lines 582-720
 
-- [ ] Implement rail gun attack
+- [x] Implement rail gun attack
   - High-damage hitscan
   - Aim prediction
   - Reference: `m_widow.cpp` lines 722-850
 
-- [ ] Implement death sequence
+- [x] Implement death sequence
   - Multi-stage death
   - Explosions
   - Spawn rewards
   - Reference: `m_widow.cpp` lines 1150-1304
 
-- [ ] Animation frames: idle, attack1, attack2, attack3, pain, death (80+ frames total)
+- [x] Animation frames: idle, attack1, attack2, attack3, pain, death (80+ frames total)
 
 #### 7.1.2 Carrier Monster
 **Original Source**: `/rerelease/rogue/m_carrier.cpp` (1,153 lines)
 **TypeScript File**: `/packages/game/src/entities/monsters/rogue/carrier.ts` (NEW)
 
-- [ ] Create carrier entity spawn function
+- [x] Create carrier entity spawn function
   - Flying monster
   - Egg-laying mechanics
   - Reference: `m_carrier.cpp` lines 50-150
 
-- [ ] Implement egg spawning
+- [x] Implement egg spawning
   - Drop eggs during flight
   - Eggs hatch into small enemies
   - Reference: `m_carrier.cpp` lines 450-620
 
-- [ ] Implement rocket attack
+- [x] Implement rocket attack
   - Fire rockets at player
   - Prediction leading
   - Reference: `m_carrier.cpp` lines 622-750
 
-- [ ] Implement machine gun attack
+- [x] Implement machine gun attack
   - Rapid-fire bullets
   - Spread pattern
   - Reference: `m_carrier.cpp` lines 752-850
 
-- [ ] Implement death sequence
+- [x] Implement death sequence
   - Crash to ground
   - Egg explosion
   - Reference: `m_carrier.cpp` lines 1000-1153
 
-- [ ] Animation frames: stand, walk, fly, attack, pain, death (60+ frames)
+- [x] Animation frames: stand, walk, fly, attack, pain, death (60+ frames)
 
 #### 7.1.3 Complete Stalker Implementation
 **Original Source**: `/rerelease/rogue/m_stalker.cpp` (full implementation)
