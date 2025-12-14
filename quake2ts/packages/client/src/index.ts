@@ -49,6 +49,7 @@ import { createBlendState, updateBlend } from './blend.js';
 import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard.js';
 import { ChatManager } from './chat.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
+import { MenuState } from './ui/menu/types.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 import { InputController, InputSource } from './input/controller.js';
@@ -139,6 +140,11 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
 
   // Menu System
   createMainMenu(options: Omit<MainMenuOptions, 'optionsFactory' | 'mapsFactory' | 'onSetDifficulty' | 'multiplayerFactory'>, storage: SaveStorage, saveCallback: (name: string) => Promise<void>, loadCallback: (slot: string) => Promise<void>, deleteCallback: (slot: string) => Promise<void>): { menuSystem: MenuSystem, factory: MainMenuFactory };
+  showPauseMenu(): void;
+  hidePauseMenu(): void;
+  isMenuActive(): boolean;
+  onMenuStateChange?: (active: boolean) => void;
+  getMenuState(): MenuState;
 
   // Input handling
   handleInput(key: string, down: boolean): boolean;
@@ -173,6 +179,12 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   getStatusBar(): StatusBarData | null;
   getCrosshairInfo(): CrosshairInfo;
   onHudUpdate?: (data: HudData) => void;
+
+  // Message Events
+  onCenterPrint?: (message: string, duration: number) => void;
+  onNotify?: (message: string) => void;
+  onPickupMessage?: (item: string) => void;
+  onObituaryMessage?: (message: string) => void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -275,6 +287,11 @@ export function createClient(imports: ClientImports): ClientExports {
 
   // Initialize persistent Menu System
   const menuSystem = new MenuSystem();
+  menuSystem.onStateChange = (active) => {
+      if (clientExports.onMenuStateChange) {
+          clientExports.onMenuStateChange(active);
+      }
+  };
 
   // Initialize UI components
   const loadingScreen = new LoadingScreen();
@@ -331,6 +348,28 @@ export function createClient(imports: ClientImports): ClientExports {
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
 
+  // Helper to process CD tracks
+  const processCdTrack = (trackStr: string) => {
+      if (!imports.engine.audio) return;
+
+      const track = parseInt(trackStr, 10);
+      if (!isNaN(track)) {
+          // Tracks 0 and 1 are usually ignored (data)
+          if (track >= 2) {
+              // Use exposed play_track from AudioApi
+              if (imports.engine.audio.play_track) {
+                  void imports.engine.audio.play_track(track);
+              } else {
+                  // Fallback if play_track isn't available (should not happen if engine updated)
+                  const trackName = `music/track${track.toString().padStart(2, '0')}.ogg`;
+                  void imports.engine.audio.play_music(trackName);
+              }
+          } else {
+              imports.engine.audio.stop_music();
+          }
+      }
+  };
+
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
     onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
@@ -341,10 +380,16 @@ export function createClient(imports: ClientImports): ClientExports {
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
+
       // Trigger scoreboard update if player skin changes
       if (index >= ConfigStringIndex.PlayerSkins && index < ConfigStringIndex.PlayerSkins + MAX_CLIENTS) {
         scoreboardManager.parseConfigString(index, str);
         scoreboardManager.notifyUpdate();
+      }
+
+      // Handle CD Track
+      if (index === ConfigStringIndex.CdTrack) {
+          processCdTrack(str);
       }
     },
     onServerData: (protocol: number, tickRate?: number) => {
@@ -365,7 +410,7 @@ export function createClient(imports: ClientImports): ClientExports {
     onTempEntity: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
         const time = demoPlayback.getCurrentTime() / 1000.0;
         if (pos) {
-            effectSystem.onTempEntity(type, pos, time);
+            effectSystem.onTempEntity(type, pos, time, dir);
         }
     },
     onDamage: (indicators: DamageIndicator[]) => {
@@ -688,6 +733,26 @@ export function createClient(imports: ClientImports): ClientExports {
         return { menuSystem, factory };
     },
 
+    showPauseMenu() {
+        if (!menuSystem.isActive() && pauseMenuFactory) {
+            menuSystem.pushMenu(pauseMenuFactory.createPauseMenu());
+        }
+    },
+
+    hidePauseMenu() {
+        if (menuSystem.isActive()) {
+            menuSystem.closeAll();
+        }
+    },
+
+    isMenuActive() {
+        return menuSystem.isActive();
+    },
+
+    getMenuState() {
+        return menuSystem.getState();
+    },
+
     render(sample: GameRenderSample<PredictionState>): UserCommand {
       // Keep track of entities to render
       let renderEntities: RenderableEntity[] = [];
@@ -988,7 +1053,9 @@ export function createClient(imports: ClientImports): ClientExports {
           imports.engine.renderer.renderFrame({
               camera,
               world,
-              dlights: dlights
+              dlights: dlights,
+              deltaTime: dtMs / 1000.0, // Pass Delta Time for particle update
+              timeSeconds
           }, renderEntities);
       }
 
@@ -1243,9 +1310,42 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     ParseCenterPrint(msg: string) {
       cg.ParseCenterPrint(msg, 0, false);
+
+      if (clientExports.onCenterPrint) {
+        // Default duration 3 seconds for now
+        clientExports.onCenterPrint(msg, 3.0);
+      }
+
+      // Simple heuristic for pickup messages
+      // "You got the <item>"
+      if (msg.startsWith('You got the ')) {
+        const item = msg.substring(12).replace('.', '');
+        if (clientExports.onPickupMessage) {
+            clientExports.onPickupMessage(item);
+        }
+      }
     },
     ParseNotify(msg: string) {
       cg.NotifyMessage(0, msg, false);
+
+      if (clientExports.onNotify) {
+        clientExports.onNotify(msg);
+      }
+
+      // Heuristic for obituaries:
+      // Usually contain "died", "killed", "fragged", etc.
+      // But avoid chat messages (handled separately)
+      // For now, if it doesn't look like a chat "Name: Msg" or system "Print: ..."
+      // Quake 2 obituaries are plain strings like "Player was gunned down by Tank"
+      // Chat usually has a prefix or format.
+      // We'll rely on onObituaryMessage being fired for these.
+      // Filter out obvious system messages if needed.
+      if (clientExports.onObituaryMessage) {
+         // TODO: Refine this filter
+         if (!msg.includes(': ')) {
+             clientExports.onObituaryMessage(msg);
+         }
+      }
     },
     showSubtitle(text: string, soundName: string) {
       cg.ShowSubtitle(text, soundName);
@@ -1253,6 +1353,11 @@ export function createClient(imports: ClientImports): ClientExports {
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
       cg.ParseConfigString(index, value);
+
+      // Handle CD Track
+      if (index === ConfigStringIndex.CdTrack) {
+          processCdTrack(value);
+      }
     },
     demoHandler,
     multiplayer,

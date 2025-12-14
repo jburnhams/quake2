@@ -410,6 +410,15 @@ export class EntitySystem {
     return this.engine.soundIndex?.(sound) || 0;
   }
 
+  configStringIndex(str: string): number {
+      // Not typically exposed by engine directly like soundIndex/modelIndex
+      // But maybe configString lookup is possible if we track it?
+      // Or engine.configStringIndex?
+      // If the engine interface doesn't have it, we might need to rely on cached values or assume 0.
+      // For now, let's assume engine might provide it or return 0.
+      return (this.engine as any).configStringIndex?.(str) || 0;
+  }
+
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
   }
@@ -418,8 +427,37 @@ export class EntitySystem {
     this.imports.linkentity(ent);
   }
 
-  multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
-    this.imports.multicast(origin, type, event, ...args);
+  link(ent: Entity): void {
+    this.linkentity(ent);
+  }
+
+  unlink(ent: Entity): void {
+      // In Quake 2, unlinkentity sets active link to false or similar.
+      // Here we might just remove from spatial grid or set to non-solid if engine supported it.
+      // The engine's linkentity is what "links" it.
+      // If we don't have an explicit unlink in engine imports, we might just need to rely on the fact
+      // that linkentity overrides the previous state.
+      // However, to truly "unlink" (remove from physics world), we often just set solid to NOT
+      // and call linkentity again, or remove it from spatial hashes.
+      // Since we wrap linkentity with spatialGrid.update, we can assume spatialGrid.remove is what we want
+      // but 'linkentity' is usually what puts it back.
+      //
+      // In standard Q2 g_phys.c / g_func.c usage for teleport, we unlink, move, link.
+      // Engine unlink usually removes it from the area nodes.
+      // We don't have `unlinkentity` exposed in imports.
+      //
+      // But we have `spatialGrid.remove(ent)` which we call in free().
+      // Let's expose an unlink method that calls spatialGrid.remove
+      // AND maybe tells the engine if it supports it.
+      // Since engine interface doesn't show unlink, we'll assume spatialGrid.remove is our local equivalent
+      // effectively making it invisible to our spatial queries.
+      this.spatialGrid.remove(ent);
+      // We should also clear absmin/absmax?
+      // ent.absmin = ent.origin... ?
+  }
+
+  multicast(origin: Vec3, type: MulticastType, ServerCommand: ServerCommand, ...args: any[]): void {
+    this.imports.multicast(origin, type, ServerCommand, ...args);
   }
 
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void {

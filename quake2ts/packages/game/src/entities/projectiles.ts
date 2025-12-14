@@ -13,6 +13,25 @@ import { MulticastType } from '../imports.js';
 const BFG_LASER_RADIUS = 256;
 const BFG_LASER_RANGE = 2048;
 
+/**
+ * Generic projectile creator.
+ * Replaces specialized functions if desired, or used as a base.
+ */
+export function createProjectile(sys: EntitySystem, start: Vec3, dir: Vec3, speed: number, mod: DamageMod, damage?: number, radiusDamage?: number): Entity {
+    const proj = sys.spawn();
+    proj.movetype = MoveType.FlyMissile;
+    proj.solid = Solid.BoundingBox;
+    proj.origin = { ...start };
+    proj.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
+    proj.mins = { x: -4, y: -4, z: -4 };
+    proj.maxs = { x: 4, y: 4, z: 4 };
+    proj.angles = vectorToAngles(dir);
+    proj.takedamage = false;
+
+    sys.finalizeSpawn(proj);
+    return proj;
+}
+
 export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir: Vec3, damage: number, radiusDamage: number, speed: number, flashtype: number = 0) {
     const rocket = sys.spawn();
     rocket.classname = 'rocket';

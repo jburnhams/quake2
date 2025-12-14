@@ -26,7 +26,7 @@ This phase covers dynamic lighting, particle effects, view effects, water render
   - Limit to nearest 8 lights per surface (Note: Implemented as global MAX_ACTIVE_LIGHTS=32 in shader for batching efficiency)
   - Reference: `/packages/engine/src/render/pipelines/bsp.ts`
 
-- [ ] Add dynamic light culling
+- [x] Add dynamic light culling
   - Frustum cull lights
   - Distance cull based on radius
   - Reference: `/packages/engine/src/render/renderer.ts`
@@ -62,17 +62,17 @@ This phase covers dynamic lighting, particle effects, view effects, water render
 **TypeScript File**: `/packages/engine/src/render/particleSystem.ts`
 
 #### 4.2.1 Weapon Impact Effects
-- [ ] Implement bullet impact particles
+- [x] Implement bullet impact particles
   - Dust puff on wall hit
   - Sparks on metal
   - Reference: `cl_fx.cpp` lines 350-420
 
-- [ ] Implement blood splatter
+- [x] Implement blood splatter
   - Blood spray on flesh hit
-  - Decal on nearby surfaces
+  - Decal on nearby surfaces (Note: Blood particles implemented, decals tracked separately)
   - Reference: `cl_fx.cpp` lines 422-500
 
-- [ ] Implement explosion particles
+- [x] Implement explosion particles
   - Fire ball expanding
   - Smoke trailing
   - Debris chunks
@@ -138,7 +138,7 @@ This phase covers dynamic lighting, particle effects, view effects, water render
 
 #### 4.3.3 Environmental Blends
 - [ ] Implement underwater blue tint
-  - Constant blue when submerged
+  - Constant blue blend when submerged
   - Intensity based on water depth
   - Reference: `p_view.cpp` lines 382-430
 

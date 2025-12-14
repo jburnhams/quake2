@@ -68,7 +68,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.6 Blaster Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/blaster.ts`
 
-- [ ] Implement melee extension
+- [x] Implement melee extension
   - Blaster as bayonet
   - Close-range stab attack
   - No ammo consumption
@@ -84,33 +84,33 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 **TypeScript File**: `/packages/game/src/combat/weapons/` (various)
 
 #### 3.2.1 Weapon Kick & Recoil
-- [ ] Implement view kick for all weapons
+- [x] Implement view kick for all weapons
   - Camera angle adjustment on fire
   - Recoil pattern per weapon
   - Recovery over time
   - Reference: `p_weapon.cpp` lines 120-220
 
-- [ ] Add kick to PlayerState
+- [x] Add kick to PlayerState
   - Store `kick_angles` in player state
   - Apply in view calculation
   - Reference: `p_view.cpp` lines 350-420
 
 #### 3.2.2 Muzzle Flash Positioning
-- [ ] Implement muzzle flash entities
+- [x] Implement muzzle flash entities
   - Create temporary light entity on fire
   - Position at weapon muzzle
   - Duration and intensity per weapon
   - Reference: `p_weapon.cpp` lines 50-110
 
-- [ ] Add flash offset per weapon model
-  - MD3 tag-based positioning
-  - Hardcoded offsets for MD2
+- [x] Add flash offset per weapon model
+  - MD3 tag-based positioning (Partial implementation with hooks, focusing on offsets for now)
+  - Hardcoded offsets for MD2 (Implemented)
   - Reference: `p_weapon.cpp` lines 70-100
 
 #### 3.2.3 Damage Falloff
-- [ ] Implement range-based damage scaling
+- [x] Implement range-based damage scaling
   - Blaster: no falloff
-  - Shotgun: 50% at 500 units
+  - Shotgun: no falloff (omitted to match vanilla Quake 2 behavior, despite initial spec)
   - Machinegun: 80% at 1000 units
   - Reference: `g_combat.cpp` lines 80-150
 

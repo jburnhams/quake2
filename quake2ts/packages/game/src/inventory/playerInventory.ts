@@ -120,6 +120,7 @@ export interface PlayerClient {
     invincible_time?: number;
     breather_time?: number;
     enviro_time?: number;
+    air_finished?: number;
     quadsound_time?: number;
     // Weapon Animation System
     weaponstate?: WeaponStateEnum;
@@ -143,6 +144,8 @@ export interface PlayerClient {
     damage_blend?: [number, number, number];
     // Ammo cache for snapshot
     currentAmmoCount?: number;
+    // Pending weapon switch
+    newWeapon?: WeaponId;
     // Additional fields
     landmark_name?: string | null;
     landmark_rel_pos?: Vec3;
@@ -152,6 +155,7 @@ export interface PlayerClient {
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
     ping?: number; // Added for lag compensation
+    stats?: number[]; // Added stats array for persistence (e.g. CTF HUD)
 
     // AI Noise Tracking
     player_noise_entity?: Entity;
@@ -401,6 +405,12 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             client.quad_time = newExpiresAt / 1000;
         } else if (powerupId === PowerupId.DoubleDamage) {
             client.double_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.Invulnerability) {
+            client.invincible_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.EnviroSuit) {
+            client.enviro_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.Rebreather) {
+            client.breather_time = newExpiresAt / 1000;
         }
 
         setPickup(inventory, icon, time);

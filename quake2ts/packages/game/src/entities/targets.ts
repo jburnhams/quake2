@@ -21,9 +21,9 @@ const SPEAKER_SPAWNFLAGS = {
   Reliable: 1 << 2,
 } as const;
 
-function useChangeLevel(self: Entity) {
+function useChangeLevel(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
   if (self.map) {
-    // Simplified, actual implementation would call engine API
+    context.entities.imports.serverCommand(`changelevel ${self.map}\n`);
   }
 }
 
@@ -561,7 +561,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     const noise = context.keyValues.noise;
     if (noise) {
         entity.message = noise;
-        entity.noise_index = 1;
+        entity.noise_index = context.entities.soundIndex(noise);
     }
 
     const attenuation = context.keyValues.attenuation;
@@ -618,13 +618,14 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     };
   });
 
-  registry.register('target_changelevel', (entity, { keyValues, free }) => {
+  registry.register('target_changelevel', (entity, context) => {
+    const { keyValues, free } = context;
     if (!keyValues.map) {
       free(entity);
       return;
     }
     entity.map = keyValues.map;
-    entity.use = useChangeLevel;
+    entity.use = (self, other, activator) => useChangeLevel(self, other, activator ?? null, context);
     entity.solid = Solid.Trigger; // Make it triggerable
   });
 

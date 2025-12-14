@@ -3,6 +3,7 @@ import { Entity } from '../src/entities/entity.js';
 import type { SpawnContext } from '../src/entities/spawn.js';
 import type { EntitySystem } from '../src/entities/system.js';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { SpawnRegistry } from '../src/entities/spawn.js';
 
 export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
   const engine = {
@@ -24,6 +25,19 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
         contents: 0
     }));
 
+  const spawnRegistry = new SpawnRegistry();
+
+  const game = {
+      random: createRandomGenerator({ seed }),
+      registerEntitySpawn: vi.fn((classname: string, spawnFunc: (entity: Entity) => void) => {
+          spawnRegistry.register(classname, (entity) => spawnFunc(entity));
+      }),
+      unregisterEntitySpawn: vi.fn((classname: string) => {
+          spawnRegistry.unregister(classname);
+      }),
+      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys()))
+  };
+
   const entities = {
     spawn: vi.fn(() => new Entity(1)),
     free: vi.fn(),
@@ -42,9 +56,7 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     multicast: vi.fn(),
     unicast: vi.fn(),
     engine, // Attach mocked engine
-    game: { // Mock game object for random access
-      random: createRandomGenerator({ seed })
-    },
+    game,
     sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
     }),
@@ -102,7 +114,7 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
   return {
     keyValues: {},
     entities,
-    game: (entities as any).game,
+    game: game,
     health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),

@@ -82,7 +82,13 @@ import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
 import { GameTraceResult } from './imports.js';
 import { throwGibs } from './entities/gibs.js';
 
-export interface GameExports extends GameSimulation<GameStateSnapshot> {
+import { CustomEntityRegistration } from './mod.js';
+export { CustomEntityRegistration, ModAPI } from './mod.js';
+
+import { giveItem } from './inventory/index.js';
+import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
+
+export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
   spawnWorld(): void;
   readonly entities: EntitySystem;
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
@@ -104,15 +110,27 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   setLagCompensation?(active: boolean, client?: Entity, lagMs?: number): void;
   createSave(mapName: string, difficulty: number, playtimeSeconds: number): GameSaveFile;
   loadSave(save: GameSaveFile): void;
+  serialize(): SerializedGameState;
+  loadState(state: SerializedGameState): void;
   clientConnect(ent: Entity | null, userInfo: string): string | true;
   clientBegin(client: PlayerClient): Entity;
   clientDisconnect(ent: Entity): void;
   clientThink(ent: Entity, cmd: UserCommand): void;
   respawn(ent: Entity): void;
+
+  // Admin/Cheat APIs
+  setGodMode(enabled: boolean): void;
+  setNoclip(enabled: boolean): void;
+  setNotarget(enabled: boolean): void;
+  giveItem(itemClassname: string): void;
+  damage(amount: number): void;
+  teleport(origin: Vec3): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
+import { SerializedGameState, createSerializedGameState, applySerializedGameState } from './save/adapter.js';
+export { SerializedGameState };
 export * from './combat/index.js';
 export * from './inventory/index.js';
 import { createPlayerInventory, PlayerClient, PowerupId, WeaponId } from './inventory/index.js';
@@ -126,7 +144,8 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export type { GameImports }; // Export GameImports type
-import { createDefaultSpawnRegistry } from './entities/spawn.js';
+import { checkPlayerFlagDrop } from './modes/ctf/integration.js';
+import { createDefaultSpawnRegistry, registerDefaultSpawns, SpawnRegistry } from './entities/spawn.js';
 
 export function createGame(
   imports: Partial<GameImports>,
@@ -361,6 +380,9 @@ export function createGame(
     entities.runFrame();
   };
 
+  // Initialize SpawnRegistry
+  const spawnRegistry = new SpawnRegistry();
+
   const runPlayerMove = (player: Entity, command: UserCommand) => {
     const pcmd = {
       forwardmove: command.forwardmove,
@@ -424,6 +446,21 @@ export function createGame(
   };
 
   const gameExports: GameExports = {
+    // CustomEntityRegistration implementation
+    registerEntitySpawn(classname: string, spawnFunc: (entity: Entity) => void): void {
+      spawnRegistry.register(classname, (entity, context) => {
+          spawnFunc(entity);
+      });
+    },
+
+    unregisterEntitySpawn(classname: string): void {
+      spawnRegistry.unregister(classname);
+    },
+
+    getCustomEntities(): string[] {
+      return Array.from(spawnRegistry.keys());
+    },
+
     init(startTimeMs: number) {
       resetState(startTimeMs);
       return snapshot(0);
@@ -646,10 +683,92 @@ export function createGame(
         velocity = player ? { ...player.velocity } : { ...ZERO_VEC3 };
       }
       frameLoop.reset(save.level.timeSeconds * 1000);
+    },
+    serialize(): SerializedGameState {
+      return createSerializedGameState({
+        entitySystem: entities,
+        levelClock,
+        random: rng
+      });
+    },
+    loadState(state: SerializedGameState): void {
+      applySerializedGameState(state, {
+        entitySystem: entities,
+        levelClock,
+        random: rng
+      });
+      // Sync engine state
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+         origin = { ...player.origin };
+         velocity = { ...player.velocity };
+      } else {
+         origin = { ...ZERO_VEC3 };
+         velocity = { ...ZERO_VEC3 };
+      }
+      frameLoop.reset(state.time * 1000);
+    },
+    setGodMode(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.flags |= EntityFlags.GodMode;
+        } else {
+          player.flags &= ~EntityFlags.GodMode;
+        }
+      }
+    },
+    setNoclip(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.movetype = MoveType.Noclip;
+        } else {
+          player.movetype = MoveType.Walk;
+        }
+      }
+    },
+    setNotarget(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.flags |= EntityFlags.NoTarget;
+        } else {
+          player.flags &= ~EntityFlags.NoTarget;
+        }
+      }
+    },
+    giveItem(itemClassname: string): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        giveItem(player, itemClassname);
+      }
+    },
+    damage(amount: number): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        // Apply damage to player.
+        // We act as if the world (null attacker) damaged the player.
+        T_Damage(player as unknown as Damageable, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN, levelClock.current.timeSeconds);
+      }
+    },
+    teleport(origin: Vec3): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+         entities.unlink(player);
+         player.origin = { ...origin };
+         player.velocity = { ...ZERO_VEC3 };
+         entities.link(player);
+         // Sync engine origin if strictly single player focused with global var
+         // origin = { ...player.origin };
+         // velocity = { ...player.velocity };
+      }
     }
   };
 
-  const spawnRegistry = createDefaultSpawnRegistry(gameExports);
+  // Register default spawns synchronously now that gameExports is defined
+  registerDefaultSpawns(spawnRegistry, gameExports);
+
   entities.setSpawnRegistry(spawnRegistry);
 
   // Patch the circular reference

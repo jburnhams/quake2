@@ -8,6 +8,9 @@ import {
   TempEntity,
   angleVectors
 } from '@quake2ts/shared';
+// Import particle helpers from engine
+import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail, spawnSplash, spawnSteam } from '@quake2ts/engine';
+import { ClientConfigStrings } from './configStrings.js';
 
 // Helper to copy vec3
 const copyVec3 = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z });
@@ -24,15 +27,42 @@ export interface EntityProvider {
     getPlayerNum(): number;
 }
 
+// Muzzle Flash Offsets (Forward, Right, Up)
+const FLASH_OFFSETS: Record<number, Vec3> = {
+    [MZ_BLASTER]: { x: 24, y: 8, z: 0 },
+    [MZ_MACHINEGUN]: { x: 28, y: 8, z: 0 },
+    [MZ_SHOTGUN]: { x: 24, y: 8, z: 0 },
+    [MZ_SSHOTGUN]: { x: 20, y: 8, z: 0 },
+    [MZ_CHAINGUN1]: { x: 30, y: 8, z: -4 },
+    [MZ_CHAINGUN2]: { x: 30, y: 8, z: -4 },
+    [MZ_CHAINGUN3]: { x: 30, y: 8, z: -4 },
+    [MZ_RAILGUN]: { x: 32, y: 8, z: 0 },
+    [MZ_ROCKET]: { x: 30, y: 8, z: 0 },
+    [MZ_GRENADE]: { x: 24, y: 8, z: 0 },
+    [MZ_BFG]: { x: 32, y: 8, z: -2 },
+    [MZ_HYPERBLASTER]: { x: 30, y: 8, z: 0 },
+    [MZ_BLUEHYPERBLASTER]: { x: 30, y: 8, z: 0 },
+    [MZ_PHALANX]: { x: 28, y: 8, z: 0 },
+    [MZ_IONRIPPER]: { x: 28, y: 8, z: 0 },
+    [MZ_ETF_RIFLE]: { x: 30, y: 8, z: 0 },
+    [MZ_HEATBEAM]: { x: 24, y: 8, z: 0 },
+};
+
+const getFlashOffset = (weapon: number): Vec3 => {
+    return FLASH_OFFSETS[weapon] || { x: 18, y: 16, z: 0 };
+};
+
 export class ClientEffectSystem {
     private dlightManager: DynamicLightManager;
     private engine: EngineImports;
     private entityProvider: EntityProvider;
+    private configStrings?: ClientConfigStrings;
 
-    constructor(dlightManager: DynamicLightManager, engine: EngineImports, entityProvider: EntityProvider) {
+    constructor(dlightManager: DynamicLightManager, engine: EngineImports, entityProvider: EntityProvider, configStrings?: ClientConfigStrings) {
         this.dlightManager = dlightManager;
         this.engine = engine;
         this.entityProvider = entityProvider;
+        this.configStrings = configStrings;
     }
 
     // Helper to add dlight
@@ -68,23 +98,25 @@ export class ClientEffectSystem {
         const origin = { x: ent.origin.x, y: ent.origin.y, z: ent.origin.z };
         const angles = { x: ent.angles.x, y: ent.angles.y, z: ent.angles.z };
 
-        const vectors = angleVectors(angles);
-        let flashOrigin = vectorMA(origin, 18, vectors.forward);
-        flashOrigin = vectorMA(flashOrigin, 16, vectors.right);
-
         const silenced = (weapon & 128) !== 0;
         weapon &= ~128;
 
-        const minLight = 32;
-        const duration = 0.1;
-        const die = time + duration;
-        const volume = silenced ? 0.2 : 1.0;
+        let flashOrigin = { ...origin };
+
+        // Determine flash position based on weapon type offsets
+        const vectors = angleVectors(angles);
+        const offset = getFlashOffset(weapon);
+
+        flashOrigin = vectorMA(flashOrigin, offset.x, vectors.forward);
+        flashOrigin = vectorMA(flashOrigin, offset.y, vectors.right);
+        flashOrigin = vectorMA(flashOrigin, offset.z, vectors.up);
 
         let radius = silenced ? 100 : 200;
-        if (Math.random() < 0.5) radius += Math.random() * 31;
-
+        let duration = 0.1;
+        let minLight = 32;
         let color: Vec3 = { x: 1, y: 1, z: 0 }; // Default yellow
 
+        // Vary properties per weapon (Task: Duration and intensity per weapon)
         switch (weapon) {
             case MZ_BLASTER:
                 radius = 150;
@@ -110,27 +142,42 @@ export class ClientEffectSystem {
                 radius = 250;
                 color = { x: 0, y: 0, z: 1 };
                 break;
-
             case MZ_RAILGUN:
                 radius = 150;
                 color = { x: 0.5, y: 0.5, z: 1.0 };
+                duration = 0.15; // Slightly longer for powerful shot
                 break;
-
             case MZ_ROCKET:
             case MZ_GRENADE:
                 radius = 300;
                 color = { x: 1, y: 0.5, z: 0.2 };
                 break;
-
             case MZ_BFG:
                 radius = 400;
                 color = { x: 0, y: 1, z: 0 };
+                duration = 0.2; // BFG Flash lingers
                 break;
         }
 
         if (silenced) radius *= 0.75;
+        // Jitter radius
+        if (Math.random() < 0.5) radius += Math.random() * 31;
+
+        const die = time + duration;
+        const volume = silenced ? 0.2 : 1.0;
 
         this.addLight(entNum, flashOrigin, color, radius, minLight, die);
+
+        // Spawn particle muzzle flash if renderer is available
+        if (this.engine.renderer && this.engine.renderer.particleSystem) {
+             // Muzzle flash direction usually follows view angles or model forward
+             // Here we use vectors.forward from entity angles
+             spawnMuzzleFlash({
+                 system: this.engine.renderer.particleSystem,
+                 origin: flashOrigin,
+                 direction: vectors.forward
+             });
+        }
 
         let soundName = '';
         switch (weapon) {
@@ -147,8 +194,6 @@ export class ClientEffectSystem {
              case MZ_CHAINGUN1:
              case MZ_CHAINGUN2:
              case MZ_CHAINGUN3:
-                 // In C, these play multiple sounds with delays.
-                 // For now, simplify to one primary sound.
                  soundName = `weapons/machgf${Math.floor(Math.random()*5)+1}b.wav`;
                  break;
         }
@@ -158,8 +203,31 @@ export class ClientEffectSystem {
         }
     }
 
-    public onTempEntity(type: number, pos: Vec3, time: number) {
+    public onTempEntity(type: number, pos: Vec3, time: number, dir?: Vec3) {
+         const particleSystem = this.engine.renderer?.particleSystem;
+
          switch (type) {
+             case TempEntity.GUNSHOT:
+                 if (particleSystem) {
+                     spawnBulletImpact({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 this.playSound(pos, 0, "weapons/tink1.wav"); // Generic hit sound, usually localized based on surface type in CL_ParseTEnt
+                 break;
+
+             case TempEntity.BLOOD:
+                 if (particleSystem) {
+                     spawnBlood({
+                         system: particleSystem,
+                         origin: pos,
+                         direction: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 break;
+
              case TempEntity.EXPLOSION1:
              case TempEntity.EXPLOSION1_BIG:
              case TempEntity.EXPLOSION1_NP:
@@ -177,6 +245,13 @@ export class ClientEffectSystem {
 
                      this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/rocklx1a.wav", 1.0, 0.5);
+
+                     if (particleSystem) {
+                         spawnExplosion({
+                             system: particleSystem,
+                             origin: pos
+                         });
+                     }
                  }
                  break;
 
@@ -190,6 +265,34 @@ export class ClientEffectSystem {
                      const speed = (endRadius - startRadius) / duration;
                      this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/bfg__x1b.wav", 1.0, 0.5);
+
+                     if (particleSystem) {
+                        spawnExplosion({
+                             system: particleSystem,
+                             origin: pos
+                             // TODO: Make BFG explosion green/bigger
+                        });
+                     }
+                 }
+                 break;
+
+             case TempEntity.SPLASH:
+                 if (particleSystem) {
+                     spawnSplash({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 this.playSound(pos, 0, "world/splash.wav"); // Or generic splash sound
+                 break;
+
+             case TempEntity.STEAM:
+                 if (particleSystem) {
+                     spawnSteam({
+                         system: particleSystem,
+                         origin: pos
+                     });
                  }
                  break;
          }

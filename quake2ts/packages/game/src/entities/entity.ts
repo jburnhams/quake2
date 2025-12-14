@@ -266,6 +266,7 @@ const DEFAULT_MONSTER_INFO: MonsterInfo = Object.freeze({
 export class Entity {
   readonly index: number;
 
+  linkcount = 0;
   inUse = false;
   freePending = false;
   linkPrevious: Entity | null = null;

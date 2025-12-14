@@ -15,10 +15,12 @@ import {
   type BiquadFilterNodeLike,
   type GainNodeLike,
   type PannerNodeLike,
+  type AudioNodeLike,
 } from './context.js';
 import { SoundRegistry } from './registry.js';
 import { baseChannel, createInitialChannels, pickChannel, type ChannelState } from './channels.js';
 import { spatializeOrigin, type ListenerState } from './spatialization.js';
+import { ReverbSystem, type ReverbPreset } from './reverb.js';
 
 export interface SoundRequest {
   entity: number;
@@ -41,7 +43,7 @@ export interface AudioSystemOptions {
   resolveOcclusion?: OcclusionResolver;
 }
 
-interface ActiveSound {
+export interface ActiveSound {
   channelIndex: number;
   entnum: number;
   entchannel: number;
@@ -104,6 +106,8 @@ export class AudioSystem {
   private masterVolume: number;
   private playbackRate: number = 1.0;
 
+  public readonly reverb: ReverbSystem | undefined;
+
   constructor(options: AudioSystemOptions) {
     this.contextController = options.context;
     this.registry = options.registry;
@@ -115,6 +119,10 @@ export class AudioSystem {
     this.resolveOcclusion = options.resolveOcclusion;
     this.graph = createAudioGraph(this.contextController);
     this.graph.master.gain.value = this.masterVolume;
+
+    if (this.graph.reverb) {
+        this.reverb = new ReverbSystem(this.graph.reverb);
+    }
   }
 
   setListener(listener: ListenerState): void {
@@ -144,6 +152,10 @@ export class AudioSystem {
 
   async ensureRunning(): Promise<void> {
     await this.contextController.resume();
+  }
+
+  setReverbPreset(preset: ReverbPreset | null): void {
+      this.reverb?.setPreset(preset);
   }
 
   play(request: SoundRequest): ActiveSound | undefined {
@@ -197,13 +209,43 @@ export class AudioSystem {
     const endTimeMs = (request.looping ? Number.POSITIVE_INFINITY : buffer.duration * 1000) + startTimeSec * 1000;
 
     source.connect(panner);
+
+    // Connect panner to reverb if available
+    if (this.reverb && this.reverb.getInputNode()) {
+        // We route the panner output to reverb send
+        // But the panner output is stereo, reverb input is stereo or mono.
+        // This is a wet path.
+        // We probably want to send post-panner but pre-gain (or post-gain?)
+        // If we send pre-gain, we need to apply gain to the send.
+        // If we send post-gain, the reverb level scales with source volume, which is correct.
+
+        // Wait, gain is master volume and sfx volume applied.
+        // If we connect gain to master, it's dry.
+        // If we connect gain to reverb, it's wet.
+        // So we can connect gain to both.
+
+        // However, occlusion might filter the sound. Reverb should probably be fed the filtered sound too?
+        // Realistically, occlusion affects the direct path strongly. The reverberant path might be less affected (sound bouncing around obstacles),
+        // but for simplicity, let's feed the occluded signal to reverb.
+    }
+
+    let finalNode: AudioNodeLike = panner;
+
     if (occlusionFilter) {
       panner.connect(occlusionFilter);
       occlusionFilter.connect(gain);
+      finalNode = gain; // Output of this chain is gain
     } else {
       panner.connect(gain);
+      finalNode = gain;
     }
+
     gain.connect(this.graph.master);
+
+    // Send to reverb
+    if (this.reverb) {
+        gain.connect(this.reverb.getInputNode());
+    }
 
     source.start(startTimeSec);
     source.onended = () => {
@@ -391,4 +433,3 @@ export class AudioSystem {
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 const clamp01 = (value: number): number => clamp(value, 0, 1);
-

@@ -571,3 +571,50 @@ export function spawnTrail(context: ParticleEffectContext): void {
     });
   }
 }
+
+export function spawnSplash(context: ParticleEffectContext): void {
+    const { system, origin, normal = { x: 0, y: 0, z: 1 } } = context;
+    for (let i = 0; i < 30; i += 1) {
+        const speed = 100 + system.rng.frandom() * 150;
+        system.spawn({
+            position: origin,
+            velocity: {
+                x: normal.x * speed + (system.rng.frandom() - 0.5) * 80,
+                y: normal.y * speed + (system.rng.frandom() - 0.5) * 80,
+                z: 100 + system.rng.frandom() * 120,
+            },
+            color: [0.5, 0.6, 0.8, 0.5],
+            size: 3,
+            lifetime: 0.5 + system.rng.frandom() * 0.3,
+            gravity: 800,
+            damping: 1.5,
+            blendMode: 'alpha',
+            fade: true,
+        });
+    }
+}
+
+export function spawnSteam(context: ParticleEffectContext): void {
+    const { system, origin } = context;
+    for (let i = 0; i < 8; i += 1) {
+        system.spawn({
+            position: {
+                x: origin.x + (system.rng.frandom() - 0.5) * 10,
+                y: origin.y + (system.rng.frandom() - 0.5) * 10,
+                z: origin.z + (system.rng.frandom() - 0.5) * 10,
+            },
+            velocity: {
+                x: (system.rng.frandom() - 0.5) * 20,
+                y: (system.rng.frandom() - 0.5) * 20,
+                z: 40 + system.rng.frandom() * 20,
+            },
+            color: [0.8, 0.8, 0.8, 0.3],
+            size: 5 + system.rng.frandom() * 4,
+            lifetime: 1.5 + system.rng.frandom() * 0.5,
+            gravity: -50, // Negative gravity for rising steam
+            damping: 0.5,
+            blendMode: 'alpha',
+            fade: true,
+        });
+    }
+}
