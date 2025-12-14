@@ -19,6 +19,7 @@ export interface GameCreateOptions {
   gravity: Vec3;
   deathmatch?: boolean;
   coop?: boolean;
+  friendlyFire?: boolean;
   skill?: number;
   rogue?: boolean;
   xatrix?: boolean;
@@ -93,6 +94,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot> {
   readonly rogue: boolean;
   readonly xatrix: boolean;
   readonly coop: boolean;
+  readonly friendlyFire: boolean;
   readonly random: RandomGenerator;
   trace(start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number): GameTraceResult;
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
@@ -134,6 +136,7 @@ export function createGame(
   const gravity = options.gravity;
   const deathmatch = options.deathmatch ?? false;
   const coop = options.coop ?? false;
+  const friendlyFire = options.friendlyFire ?? false;
   const skill = options.skill ?? 1;
   const rogue = options.rogue ?? false;
   const xatrix = options.xatrix ?? false;
@@ -584,6 +587,7 @@ export function createGame(
     rogue,
     xatrix,
     coop,
+    friendlyFire,
     multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void {
       multicast(origin, type, event, ...args);
     },
