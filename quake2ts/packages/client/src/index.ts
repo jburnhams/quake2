@@ -84,6 +84,7 @@ export { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 
 export * from './session.js';
 export * from './demo/camera.js'; // Export DemoCameraMode
+export { queryMasterServer, type ServerInfo } from './net/master.js';
 
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 
