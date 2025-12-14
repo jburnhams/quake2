@@ -77,17 +77,17 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 722-900)
 **TypeScript File**: `/packages/game/src/modes/ctf/teams.ts` (NEW)
 
-- [ ] Implement team assignment
+- [x] Implement team assignment
   - Auto-assign to balance teams
   - Manual team selection
   - Reference: `g_ctf.cpp` lines 722-800
 
-- [ ] Implement team colors
+- [x] Implement team colors
   - Red vs Blue player skins
   - Team-colored effects
   - Reference: `g_ctf.cpp` lines 802-880
 
-- [ ] Implement friendly fire toggle
+- [x] Implement friendly fire toggle
   - Configurable team damage
   - Default: no friendly fire
   - Reference: `g_ctf.cpp` lines 882-900
