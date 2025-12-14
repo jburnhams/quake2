@@ -1,4 +1,4 @@
-import { Mat4, multiplyMat4, Vec3 } from '@quake2ts/shared';
+import { Mat4, multiplyMat4, Vec3, RandomGenerator } from '@quake2ts/shared';
 import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
@@ -19,6 +19,7 @@ import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
 import { DebugRenderer } from './debug.js';
 import { cullLights } from './lightCulling.js';
+import { ParticleRenderer, ParticleSystem } from './particleSystem.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -28,6 +29,7 @@ export interface Renderer {
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
     readonly debug: DebugRenderer;
+    readonly particleSystem: ParticleSystem;
     getPerformanceReport(): RenderStatistics;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
@@ -70,6 +72,13 @@ export const createRenderer = (
     const collisionVis = new CollisionVisRenderer(gl);
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
+
+    // Create Particle System
+    // Assuming a reasonable max particle count (e.g., 2048) and a default RNG
+    const particleRng = new RandomGenerator({ seed: Date.now() });
+
+    const particleSystem = new ParticleSystem(4096, particleRng);
+    const particleRenderer = new ParticleRenderer(gl, particleSystem);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
@@ -183,6 +192,25 @@ export const createRenderer = (
                 }
             }
         }
+
+        // Render particles (last, before debug?)
+        // Particles are usually transparent, so render after opaque geometry but before debug lines if possible,
+        // or just before debug lines.
+        // The particle renderer handles blending.
+        // We need view parameters.
+        const viewRight = { x: options.camera.viewMatrix[0], y: options.camera.viewMatrix[4], z: options.camera.viewMatrix[8] };
+        const viewUp = { x: options.camera.viewMatrix[1], y: options.camera.viewMatrix[5], z: options.camera.viewMatrix[9] };
+
+        // Update particles (time step needed? options has timeMs, but we need delta)
+        // Ideally the game loop updates the particle system logic, and renderer just draws.
+        // But `ParticleSystem.update` is logic.
+        // Usually the client/game calls update. Here we just render.
+
+        particleRenderer.render({
+            viewProjection: viewProjection as Float32Array,
+            viewRight,
+            viewUp
+        });
 
         // Render debug renderer (Bounds, Normals)
         if (renderOptions?.showBounds) {
@@ -703,6 +731,7 @@ export const createRenderer = (
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
         get debug() { return debugRenderer; },
+        get particleSystem() { return particleSystem; },
         getPerformanceReport: () => gpuProfiler.getPerformanceReport(lastFrameStats),
         renderFrame,
         registerPic,

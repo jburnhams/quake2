@@ -116,7 +116,7 @@ describe('Renderer', () => {
 
     it('should set initial GL state and call the underlying frame renderer', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entities: any[] = [];
 
         renderer.renderFrame(options, entities);
@@ -132,7 +132,7 @@ describe('Renderer', () => {
 
     it('should render an MD3 entity', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entities = [{
             type: 'md3',
             model: {
@@ -156,7 +156,7 @@ describe('Renderer', () => {
         const renderer = createRenderer(mockGl);
         const mockTexture = { bind: vi.fn() } as unknown as Texture2D;
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
+            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] },
             world: {
                 textures: new Map([['test_skin', mockTexture]]),
                 // Mock map with basic structure expected by PVS logic
@@ -188,7 +188,7 @@ describe('Renderer', () => {
         const renderer = createRenderer(mockGl);
         const renderMode: RenderModeConfig = { mode: 'wireframe', applyToAll: false };
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
+            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] },
             renderMode
         } as any;
 
@@ -219,7 +219,7 @@ describe('Renderer', () => {
             generateRandomColor: true
         };
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] },
+            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] },
             renderMode
         } as any;
 
