@@ -50,22 +50,44 @@ layout(location = 3) in float a_lightmapStep;
 uniform mat4 u_modelViewProjection;
 uniform vec2 u_texScroll;
 uniform vec2 u_lightmapScroll;
+uniform float u_time;
+uniform bool u_warp;
 
 out vec2 v_texCoord;
 out vec2 v_lightmapCoord;
 out float v_lightmapStep;
 out vec3 v_position;
 
+// Match gl_warp.c TURBSCALE
+const float TURBSCALE = (256.0 / (2.0 * 3.14159));
+
 vec2 applyScroll(vec2 uv, vec2 scroll) {
   return uv + scroll;
 }
 
 void main() {
-  v_texCoord = applyScroll(a_texCoord, u_texScroll);
-  v_lightmapCoord = applyScroll(a_lightmapCoord, u_lightmapScroll);
+  vec3 pos = a_position;
+  vec2 tex = a_texCoord;
+  vec2 lm = a_lightmapCoord;
+
+  // Vertex Warping (match gl_warp.c)
+
+  if (u_warp) {
+    // Simple sine wave distortion
+    float amp = 0.125;
+
+    // Let's just use sin directly.
+    float s = tex.x + sin((tex.y * 0.125 + u_time) * 1.0) * amp;
+    float t = tex.y + sin((tex.x * 0.125 + u_time) * 1.0) * amp;
+
+    tex = vec2(s, t);
+  }
+
+  v_texCoord = applyScroll(tex, u_texScroll);
+  v_lightmapCoord = applyScroll(lm, u_lightmapScroll);
   v_lightmapStep = a_lightmapStep;
-  v_position = a_position;
-  gl_Position = u_modelViewProjection * vec4(a_position, 1.0);
+  v_position = pos;
+  gl_Position = u_modelViewProjection * vec4(pos, 1.0);
 }`;
 
 export const BSP_SURFACE_FRAGMENT_SOURCE = `#version 300 es
@@ -101,22 +123,12 @@ uniform DLight u_dlights[MAX_DLIGHTS];
 
 out vec4 o_color;
 
-vec2 warpCoords(vec2 uv) {
-  if (!u_warp) {
-    return uv;
-  }
-  float s = uv.x + sin(uv.y * 0.125 + u_time) * 0.125;
-  float t = uv.y + sin(uv.x * 0.125 + u_time) * 0.125;
-  return vec2(s, t);
-}
-
 void main() {
   vec4 finalColor;
 
   if (u_renderMode == 0) {
       // TEXTURED MODE
-      vec2 warpedTex = warpCoords(v_texCoord);
-      vec4 base = texture(u_diffuseMap, warpedTex);
+      vec4 base = texture(u_diffuseMap, v_texCoord);
 
       vec3 totalLight = vec3(1.0);
 
@@ -125,11 +137,8 @@ void main() {
         vec3 light = vec3(0.0);
         bool hasLight = false;
 
-        vec2 lmBase = warpCoords(v_lightmapCoord);
-
         // Loop unrolled-ish
         for (int i = 0; i < 4; i++) {
-             // We can access vec4 components by index in newer GLSL ES, or use direct access
              float layer = u_styleLayerMapping[i];
              float factor = u_lightStyleFactors[i];
 
@@ -137,16 +146,11 @@ void main() {
                   // Offset V by layer * step
                   // Since we packed vertically
                   vec2 offset = vec2(0.0, layer * v_lightmapStep);
-                  light += texture(u_lightmapAtlas, lmBase + offset).rgb * factor;
+                  light += texture(u_lightmapAtlas, v_lightmapCoord + offset).rgb * factor;
                   hasLight = true;
              }
         }
 
-        // If no valid lightmaps found (e.g. unlit surface?), default to full bright?
-        // Or if u_applyLightmap is true, there should be at least one style.
-        // Fallback to 1.0 if accumulator is empty?
-        // In Q2, unlit surfs are fullbright (or use minlight).
-        // If hasLight is false, it means no styles are active.
         if (!hasLight) light = vec3(1.0);
 
         totalLight = light;
@@ -333,7 +337,7 @@ export class BspSurfacePipeline {
     this.gl.uniform4fv(this.uniformLightStyles, styles);
     this.gl.uniform4fv(this.uniformStyleLayerMapping, styleLayers as number[]);
     this.gl.uniform1f(this.uniformAlpha, finalAlpha);
-    const applyLightmap = !state.sky && lightmapSampler !== undefined;
+    const applyLightmap = !state.sky && lightmapSampler !== undefined && !finalWarp; // Warp surfaces have no lightmaps
     this.gl.uniform1i(this.uniformApplyLightmap, applyLightmap ? 1 : 0);
     this.gl.uniform1i(this.uniformWarp, finalWarp ? 1 : 0);
     this.gl.uniform1f(this.uniformTime, timeSeconds);
