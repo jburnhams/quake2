@@ -34,8 +34,9 @@ This phase covers ambient sound systems, environmental audio, and music systems.
   - Auto-restart when complete
   - Reference: existing audio system
   - Note: Basic looping support implemented in `AmbientSoundSystem`. Dynamic enabling/disabling via triggers is handled by `target_speaker` entity logic in `targets.ts` toggling `spawnflags` and `sounds`.
+  - Implemented `EntitySoundSystem` in client to track and play looping sounds (`s.sound`) for entities.
 
-- [ ] Implement ambient sound triggering
+- [x] Implement ambient sound triggering
   - Enable/disable speakers via triggers
   - Change sound file dynamically
   - Reference: `g_target.cpp` lines 420-470
