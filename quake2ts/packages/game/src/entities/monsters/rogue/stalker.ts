@@ -43,7 +43,8 @@ import {
   ATTN_IDLE,
   ATTN_NONE,
   ServerCommand,
-  dotVec3
+  dotVec3,
+  RenderFx
 } from '@quake2ts/shared';
 import { EntitySystem } from '../../system.js';
 import {
@@ -123,6 +124,16 @@ function stalker_ai_move(self: Entity, dist: number, context: EntitySystem): voi
     ai_move(self, dist);
 }
 
+// --- INVISIBILITY ---
+
+function stalker_set_invisible(self: Entity): void {
+  self.renderfx |= RenderFx.Translucent;
+}
+
+function stalker_set_visible(self: Entity): void {
+  self.renderfx &= ~RenderFx.Translucent;
+}
+
 // --- CONSTANTS ---
 const MELEE_DISTANCE = 60;
 
@@ -160,6 +171,7 @@ function stalker_idle_noise(self: Entity, context: EntitySystem) {
 }
 
 function stalker_stand(self: Entity, context: EntitySystem): void {
+   stalker_set_invisible(self);
    if (context.rng.frandom() < 0.25)
         M_SetAnimation(self, stalker_move_stand, context);
     else
@@ -219,6 +231,7 @@ stalker_move_idle2 = {
 };
 
 function stalker_idle(self: Entity, context: EntitySystem): void {
+    stalker_set_invisible(self);
     if (context.rng.frandom() < 0.35)
         M_SetAnimation(self, stalker_move_idle, context);
     else
@@ -271,6 +284,7 @@ stalker_move_run = {
 };
 
 function stalker_run(self: Entity, context: EntitySystem): void {
+    stalker_set_invisible(self);
     if (self.monsterinfo.aiflags & AiFlags.StandGround)
         M_SetAnimation(self, stalker_move_stand, context);
     else
@@ -279,6 +293,7 @@ function stalker_run(self: Entity, context: EntitySystem): void {
 
 // WALK
 function stalker_walk(self: Entity, context: EntitySystem): void {
+    stalker_set_invisible(self);
     M_SetAnimation(self, stalker_move_walk, context);
 }
 
@@ -409,6 +424,7 @@ function stalker_pain(self: Entity, other: Entity | null, kick: number, damage: 
     context.engine.sound?.(self, 0, SOUND_PAIN, 1, ATTN_NORM, 0);
 
     if (M_ShouldReactToPain(self, context)) {
+        stalker_set_visible(self); // Become visible on pain? Logic says "when attacking", but usually pain also reveals.
         self.monsterinfo.current_move = stalker_move_pain;
     }
 }
@@ -472,6 +488,7 @@ stalker_move_shoot = {
 
 function stalker_attack_ranged(self: Entity, context: EntitySystem): void {
     if (!has_valid_enemy(self)) return;
+    stalker_set_visible(self);
     M_SetAnimation(self, stalker_move_shoot, context);
 }
 
@@ -518,6 +535,7 @@ stalker_move_swing_r = {
 
 function stalker_attack_melee(self: Entity, context: EntitySystem): void {
     if (!has_valid_enemy(self)) return;
+    stalker_set_visible(self);
     if (context.rng.frandom() < 0.5)
         M_SetAnimation(self, stalker_move_swing_l, context);
     else
@@ -624,6 +642,7 @@ function stalker_die(
   self.deadflag = DeadFlag.Dead;
   self.takedamage = true;
   self.monsterinfo.current_move = stalker_move_death;
+  stalker_set_visible(self);
 }
 
 // SPAWN
@@ -678,6 +697,9 @@ export function SP_monster_stalker(self: Entity, context: SpawnContext): void {
     self.monsterinfo.can_jump = true;
 
     context.entities.linkentity(self);
+
+    // Stalker starts invisible-ish (translucent)
+    stalker_set_invisible(self);
 
     M_SetAnimation(self, stalker_move_stand, context.entities);
 
