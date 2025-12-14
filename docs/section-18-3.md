@@ -68,7 +68,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.6 Blaster Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/blaster.ts`
 
-- [ ] Implement melee extension
+- [x] Implement melee extension
   - Blaster as bayonet
   - Close-range stab attack
   - No ammo consumption
@@ -84,13 +84,13 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 **TypeScript File**: `/packages/game/src/combat/weapons/` (various)
 
 #### 3.2.1 Weapon Kick & Recoil
-- [ ] Implement view kick for all weapons
+- [x] Implement view kick for all weapons
   - Camera angle adjustment on fire
   - Recoil pattern per weapon
   - Recovery over time
   - Reference: `p_weapon.cpp` lines 120-220
 
-- [ ] Add kick to PlayerState
+- [x] Add kick to PlayerState
   - Store `kick_angles` in player state
   - Apply in view calculation
   - Reference: `p_view.cpp` lines 350-420
