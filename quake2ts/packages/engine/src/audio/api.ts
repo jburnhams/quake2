@@ -80,6 +80,13 @@ export class AudioApi {
     return this.music.play(track, { loop });
   }
 
+  play_track(trackNum: number, loop = true): Promise<void> {
+    if (!this.music) {
+      return Promise.resolve();
+    }
+    return this.music.playTrack(trackNum);
+  }
+
   pause_music(): void {
     this.music?.pause();
   }

@@ -348,6 +348,28 @@ export function createClient(imports: ClientImports): ClientExports {
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
 
+  // Helper to process CD tracks
+  const processCdTrack = (trackStr: string) => {
+      if (!imports.engine.audio) return;
+
+      const track = parseInt(trackStr, 10);
+      if (!isNaN(track)) {
+          // Tracks 0 and 1 are usually ignored (data)
+          if (track >= 2) {
+              // Use exposed play_track from AudioApi
+              if (imports.engine.audio.play_track) {
+                  void imports.engine.audio.play_track(track);
+              } else {
+                  // Fallback if play_track isn't available (should not happen if engine updated)
+                  const trackName = `music/track${track.toString().padStart(2, '0')}.ogg`;
+                  void imports.engine.audio.play_music(trackName);
+              }
+          } else {
+              imports.engine.audio.stop_music();
+          }
+      }
+  };
+
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
     onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
@@ -358,10 +380,16 @@ export function createClient(imports: ClientImports): ClientExports {
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
+
       // Trigger scoreboard update if player skin changes
       if (index >= ConfigStringIndex.PlayerSkins && index < ConfigStringIndex.PlayerSkins + MAX_CLIENTS) {
         scoreboardManager.parseConfigString(index, str);
         scoreboardManager.notifyUpdate();
+      }
+
+      // Handle CD Track
+      if (index === ConfigStringIndex.CdTrack) {
+          processCdTrack(str);
       }
     },
     onServerData: (protocol: number, tickRate?: number) => {
@@ -1323,6 +1351,11 @@ export function createClient(imports: ClientImports): ClientExports {
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
       cg.ParseConfigString(index, value);
+
+      // Handle CD Track
+      if (index === ConfigStringIndex.CdTrack) {
+          processCdTrack(value);
+      }
     },
     demoHandler,
     multiplayer,
