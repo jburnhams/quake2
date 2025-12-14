@@ -91,6 +91,7 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
   - CONTENTS_CURRENT_* application
   - Directional water flow
   - Reference: `g_trigger.cpp` lines 1182-1280
+  - **Issue**: `SP_trigger_current` is not found in the provided source code (`rerelease` or `full`). The referenced lines in `g_trigger.cpp` correspond to `SP_trigger_fog`. `CONTENTS_CURRENT_*` flags exist in `q_shared.h` and are likely applied via brush contents rather than a trigger entity.
 
 ---
 
@@ -165,6 +166,7 @@ This phase covers fundamental game mechanics including triggers, dynamic entitie
   - Arc angle and period configuration
   - Swinging blades, chandeliers
   - Reference: `g_func.cpp` lines 1152-1280
+  - **Issue**: `SP_func_pendulum` is not found in the provided source code (`rerelease` or `full`).
 
 - [x] Implement `SP_func_conveyor(entity: Entity): void`
   - Conveyor belt
