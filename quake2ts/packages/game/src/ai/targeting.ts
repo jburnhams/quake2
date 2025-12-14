@@ -107,7 +107,7 @@ export function foundTarget(
   self.monsterinfo.blind_fire_delay = 0;
 
   // Clear third eye
-  // self.monsterinfo.aiflags &= ~AIFlags.ThirdEye; // Need to define ThirdEye if used
+  self.monsterinfo.aiflags &= ~AIFlags.ThirdEye;
 
   if (!self.combattarget) {
     huntTarget(self, level, context);
@@ -138,7 +138,11 @@ function classifyClientVisibility(
 
   if (range === RangeCategory.Far) return false;
   if (other.light_level <= 5) return false;
-  if (!visible(self, other, trace, { throughGlass: false })) return false;
+
+  // Third eye check: if flag is set, bypass visibility check (simulating x-ray or close sense)
+  if ((self.monsterinfo.aiflags & AIFlags.ThirdEye) === 0) {
+      if (!visible(self, other, trace, { throughGlass: false })) return false;
+  }
 
   if (range === RangeCategory.Near) {
     return level.timeSeconds <= other.show_hostile || infront(self, other);
@@ -168,6 +172,15 @@ export function AI_GetSightClient(
     if ((ent.flags & FL_NOTARGET) !== 0) {
       continue;
     }
+    // Updated to respect ThirdEye in detection loop as well if needed?
+    // Usually ThirdEye is set *after* hearing something or via script.
+    // Standard AI_GetSightClient checks basic visibility.
+    // If we want ThirdEye to work here, we should check it.
+    if ((self.monsterinfo.aiflags & AIFlags.ThirdEye) !== 0) {
+        // Bypass visible check
+        return ent;
+    }
+
     if (visible(self, ent, trace, { throughGlass: false })) {
       return ent;
     }
@@ -303,4 +316,31 @@ export function ai_checkattack(self: Entity, dist: number, context: EntitySystem
 
   const checkAttack = self.monsterinfo.checkattack || M_CheckAttack;
   return checkAttack(self, context);
+}
+
+export function findCover(self: Entity, context: EntitySystem): boolean {
+    if (!self.enemy) return false;
+
+    const spots = context.findByClassname('point_combat');
+    for (const spot of spots) {
+        if (spot.owner) continue; // Occupied
+        if (spot.targetname) continue; // Triggered only
+
+        // Check if spot is visible from self (reachable-ish)
+        // Using context.trace which is available in EntitySystem
+        if (!visible(self, spot, context.trace, { throughGlass: false })) continue;
+
+        // Check if spot is hidden from enemy
+        if (visible(spot, self.enemy, context.trace, { throughGlass: false })) continue;
+
+        self.goalentity = spot;
+        self.movetarget = spot;
+        // Face it
+        setIdealYawTowards(self, spot);
+
+        // Run
+        self.monsterinfo.run?.(self, context);
+        return true;
+    }
+    return false;
 }

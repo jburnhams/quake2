@@ -42,6 +42,11 @@ describe('AI Patrol (path_corner)', () => {
         writable: true
     });
 
+    // Patch targetAwareness with necessary mocks
+    (system.targetAwareness as any).activePlayers = [];
+    (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+    (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
+
     // Mock pickTarget to return entities by name
     system.pickTarget = vi.fn().mockImplementation((name: string) => {
         if (name === 'p1') return pathCorner1;

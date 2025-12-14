@@ -70,12 +70,12 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Prevent spawning in air
   - Reference: `m_move.cpp` lines 752-810
 
-- [ ] Implement gravity vector support for non-standard orientations
+- [x] Implement gravity vector support for non-standard orientations
   - Wall-walking monsters
   - Ceiling crawlers
   - Reference: `m_move.cpp` lines 1200-1350
 
-- [ ] Implement sloping surface traversal
+- [x] Implement sloping surface traversal
   - Smooth movement on slopes
   - Slide prevention on steep angles
   - Reference: `m_move.cpp` lines 1352-1450
@@ -113,7 +113,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Cover detection
   - Reference: `g_ai.cpp` lines 152-350
 
-- [ ] Implement sound-based targeting
+- [x] Implement sound-based targeting
   - Track sound events from players
   - Investigate sound sources
   - Pinger entity support
@@ -149,12 +149,12 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Avoid incoming projectiles
   - Reference: `g_ai.cpp` lines 822-920
 
-- [ ] Implement cover-seeking behavior
+- [x] Implement cover-seeking behavior
   - Find point_combat entities
   - Move to tactical positions
   - Reference: `g_ai.cpp` lines 922-1020
 
-- [ ] Implement third-eye detection
+- [x] Implement third-eye detection
   - Monsters can "see" through obstacles at close range
   - Player detection behind walls
   - Reference: `g_ai.cpp` lines 1022-1100

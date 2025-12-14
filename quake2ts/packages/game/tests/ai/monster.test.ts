@@ -15,6 +15,11 @@ describe('Monster AI - Soldier', () => {
     };
     system = new EntitySystem(gameEngineMock as any);
     registry = createDefaultSpawnRegistry(gameEngineMock);
+
+    // Patch targetAwareness with necessary mocks
+    (system.targetAwareness as any).activePlayers = [];
+    (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+    (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
   });
 
   it('spawns a soldier with default state', () => {
@@ -118,6 +123,11 @@ describe('monster_think (Freeze Logic)', () => {
   beforeEach(() => {
     const testContext = createTestContext();
     context = testContext.entities;
+    // Patch targetAwareness for freeze logic tests as well if needed
+    (context.targetAwareness as any).activePlayers = [];
+    (context.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+    (context.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
+
     entity = context.spawn();
     entity.inUse = true; // Ensure entity is marked active for M_MoveFrame
     entity.monsterinfo = {
