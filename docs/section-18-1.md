@@ -70,7 +70,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Prevent spawning in air
   - Reference: `m_move.cpp` lines 752-810
 
-- [ ] Implement gravity vector support for non-standard orientations
+- [x] Implement gravity vector support for non-standard orientations
   - Wall-walking monsters
   - Ceiling crawlers
   - Reference: `m_move.cpp` lines 1200-1350
