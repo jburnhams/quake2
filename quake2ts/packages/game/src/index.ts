@@ -84,6 +84,9 @@ import { throwGibs } from './entities/gibs.js';
 import { CustomEntityRegistration } from './mod.js';
 export { CustomEntityRegistration, ModAPI } from './mod.js';
 
+import { giveItem } from './inventory/index.js';
+import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
   spawnWorld(): void;
   readonly entities: EntitySystem;
@@ -112,6 +115,14 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
   clientDisconnect(ent: Entity): void;
   clientThink(ent: Entity, cmd: UserCommand): void;
   respawn(ent: Entity): void;
+
+  // Admin/Cheat APIs
+  setGodMode(enabled: boolean): void;
+  setNoclip(enabled: boolean): void;
+  setNotarget(enabled: boolean): void;
+  giveItem(itemClassname: string): void;
+  damage(amount: number): void;
+  teleport(origin: Vec3): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -692,6 +703,62 @@ export function createGame(
          velocity = { ...ZERO_VEC3 };
       }
       frameLoop.reset(state.time * 1000);
+    },
+    setGodMode(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.flags |= EntityFlags.GodMode;
+        } else {
+          player.flags &= ~EntityFlags.GodMode;
+        }
+      }
+    },
+    setNoclip(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.movetype = MoveType.Noclip;
+        } else {
+          player.movetype = MoveType.Walk;
+        }
+      }
+    },
+    setNotarget(enabled: boolean): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        if (enabled) {
+          player.flags |= EntityFlags.NoTarget;
+        } else {
+          player.flags &= ~EntityFlags.NoTarget;
+        }
+      }
+    },
+    giveItem(itemClassname: string): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        giveItem(player, itemClassname);
+      }
+    },
+    damage(amount: number): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+        // Apply damage to player.
+        // We act as if the world (null attacker) damaged the player.
+        T_Damage(player as unknown as Damageable, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN, levelClock.current.timeSeconds);
+      }
+    },
+    teleport(origin: Vec3): void {
+      const player = entities.find(e => e.classname === 'player');
+      if (player) {
+         entities.unlink(player);
+         player.origin = { ...origin };
+         player.velocity = { ...ZERO_VEC3 };
+         entities.link(player);
+         // Sync engine origin if strictly single player focused with global var
+         // origin = { ...player.origin };
+         // velocity = { ...player.velocity };
+      }
     }
   };
 
