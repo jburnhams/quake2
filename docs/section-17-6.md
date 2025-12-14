@@ -14,15 +14,15 @@
 - [x] Optimize light batching for multiple sources
 
 ### 6.1.2 Water and Transparent Surfaces
-- [ ] Implement water surface rendering with refraction
-- [ ] Add water fog/tint when camera underwater
-- [ ] Implement glass/window transparency
+- [x] Implement water surface rendering with refraction (Warp shader)
+- [x] Add water fog/tint when camera underwater
+- [x] Implement glass/window transparency (Back-to-front sorting)
 - [ ] Add surface ripple effects (optional)
 
 ### 6.1.3 Post-Processing Effects
 - [x] Implement damage screen flash (red overlay)
 - [x] Implement pickup flash (yellow overlay)
-- [ ] Implement underwater distortion
+- [x] Implement underwater distortion (Tint/Fog)
 - [ ] Add bloom/glow for bright surfaces
 - [ ] Add configurable gamma/brightness adjustment
 

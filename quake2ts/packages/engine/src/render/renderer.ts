@@ -12,7 +12,7 @@ import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
-import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
+import { boxIntersectsFrustum, extractFrustumPlanes, FrustumPlane, transformAabb } from './culling.js';
 import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
