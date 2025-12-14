@@ -84,7 +84,7 @@
 - [x] Implement all weapon alt-fires (if applicable to rerelease)
 - [x] Implement weapon switching queue/cycle logic
 - [x] Add ammo depletion and auto-switch on empty
-- [ ] Add weapon animations and proper view weapon rendering
+- [x] Add weapon animations and proper view weapon rendering
 - [ ] Fix weapon firing state machine edge cases
 
 ### 4.4.2 Power-ups and Items

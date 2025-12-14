@@ -35,6 +35,7 @@ export interface WeaponItem extends BaseItem {
     initialAmmo: number;
     pickupAmmo: number;
     fireRate: number;
+    viewModel?: string;
 }
 
 export interface HealthItem extends BaseItem {
@@ -78,6 +79,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 0,
         fireRate: 0.5,
         think: blasterThink,
+        viewModel: 'models/weapons/v_blast/tris.md2',
     },
     'weapon_shotgun': {
         type: 'weapon',
@@ -89,6 +91,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 10,
         fireRate: 1,
         think: shotgunThink,
+        viewModel: 'models/weapons/v_shotg/tris.md2',
     },
     'weapon_supershotgun': {
         type: 'weapon',
@@ -100,6 +103,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 10,
         fireRate: 1,
         think: superShotgunThink,
+        viewModel: 'models/weapons/v_sShot/tris.md2',
     },
     'weapon_machinegun': {
         type: 'weapon',
@@ -111,6 +115,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
         think: machinegunThink,
+        viewModel: 'models/weapons/v_machn/tris.md2',
     },
     'weapon_chaingun': {
         type: 'weapon',
@@ -122,6 +127,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
         think: chaingunThink,
+        viewModel: 'models/weapons/v_chain/tris.md2',
     },
     'weapon_grenades': {
         type: 'weapon',
@@ -132,6 +138,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         initialAmmo: 5,
         pickupAmmo: 5,
         fireRate: 1.0,
+        viewModel: 'models/weapons/v_handgr/tris.md2',
     },
     'weapon_grenadelauncher': {
         type: 'weapon',
@@ -143,6 +150,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 10,
         fireRate: 1,
         think: grenadeLauncherThink,
+        viewModel: 'models/weapons/v_launch/tris.md2',
     },
     'weapon_rocketlauncher': {
         type: 'weapon',
@@ -154,6 +162,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 5,
         fireRate: 1,
         think: rocketLauncherThink,
+        viewModel: 'models/weapons/v_rocket/tris.md2',
     },
     'weapon_hyperblaster': {
         type: 'weapon',
@@ -165,6 +174,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 0.1,
         think: hyperBlasterThink,
+        viewModel: 'models/weapons/v_hyperb/tris.md2',
     },
     'weapon_railgun': {
         type: 'weapon',
@@ -176,6 +186,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 10,
         fireRate: 1.5,
         think: railgunThink,
+        viewModel: 'models/weapons/v_rail/tris.md2',
     },
     'weapon_bfg': {
         type: 'weapon',
@@ -187,6 +198,7 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         pickupAmmo: 50,
         fireRate: 1,
         think: bfgThink,
+        viewModel: 'models/weapons/v_bfg/tris.md2',
     },
     // Rogue Weapons
     'weapon_chainfist': {
