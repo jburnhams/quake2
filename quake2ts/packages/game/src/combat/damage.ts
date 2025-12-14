@@ -207,6 +207,17 @@ export function T_Damage(
 
   if (targ.powerArmor && remainingCells !== undefined) {
     (targ.powerArmor as PowerArmorState).cellCount = remainingCells;
+
+    // Visual effect for power armor
+    if (psave > 0 && multicast) {
+        if (targ.powerArmor.type === 'screen') {
+            multicast(point, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SCREEN_SPARKS, point, normal);
+            // TE_SCREEN_SPARKS plays misc/power2.wav on client
+        } else if (targ.powerArmor.type === 'shield') {
+            multicast(point, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SHIELD_SPARKS, point, normal);
+             // TE_SHIELD_SPARKS plays misc/power2.wav on client
+        }
+    }
   }
   if (targ.regularArmor) {
     (targ.regularArmor as RegularArmorState).armorCount = remainingArmor ?? targ.regularArmor.armorCount;
