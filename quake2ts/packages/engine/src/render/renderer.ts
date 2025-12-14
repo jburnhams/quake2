@@ -173,6 +173,7 @@ export const createRenderer = (
                     z: entity.transform[14],
                 };
                 const entityLeafIndex = findLeafForPoint(options.world.map, origin);
+
                 if (entityLeafIndex >= 0) {
                     const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
                     if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
@@ -373,15 +374,17 @@ export const createRenderer = (
 
         // Render particles
         const viewMatrix = options.camera.viewMatrix;
-        // Extract right (row 0) and up (row 1) from view matrix
-        const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
-        const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
+        if (viewMatrix) {
+            // Extract right (row 0) and up (row 1) from view matrix
+            const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
+            const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
 
-        particleRenderer.render({
-            viewProjection: viewProjection as Float32Array,
-            viewRight,
-            viewUp
-        });
+            particleRenderer.render({
+                viewProjection: viewProjection as Float32Array,
+                viewRight,
+                viewUp
+            });
+        }
 
         // Render collision vis debug lines (if any)
         collisionVis.render(viewProjection as Float32Array);

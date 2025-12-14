@@ -51,7 +51,7 @@ describe('Save/Load Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it.skip('should round-trip save and load game state', () => {
+  it('should round-trip save and load game state', () => {
     game.spawnWorld();
     const ent = game.entities.spawn();
     ent.classname = 'monster_soldier';
@@ -85,7 +85,7 @@ describe('Save/Load Integration', () => {
     expect(saveFile.timestamp).toBe(12345);
     expect(typeof saveFile.timestamp).toBe('number');
 
-    const json = JSON.stringify({ save: saveFile });
+    const json = JSON.stringify(saveFile);
 
     // Verify JSON content
     expect(json).toContain('"timestamp":12345');
