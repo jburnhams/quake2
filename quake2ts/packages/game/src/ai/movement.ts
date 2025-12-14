@@ -317,9 +317,30 @@ export function CheckGround(self: Entity, context: EntitySystem): void {
 
   const trace = context.trace(self.origin, self.mins, self.maxs, point, self, MASK_MONSTERSOLID);
 
-  self.groundentity = trace.ent;
+  // Only snap to ground if we actually hit something (fraction < 1.0)
+  // This allows entities to fall freely if they are more than 0.25 units above ground.
+  // Note: trace.ent might be undefined if we hit world, but groundentity expects an Entity.
+  // We should handle that case if needed, but typically trace.ent is null for world.
+  if (!trace.startsolid && !trace.allsolid && trace.fraction < 1.0 && trace.endpos) {
+    if (self.origin) {
+        (self.origin as MutableVec3).x = trace.endpos.x;
+        (self.origin as MutableVec3).y = trace.endpos.y;
+        (self.origin as MutableVec3).z = trace.endpos.z;
+    }
 
-  if (!self.groundentity && !trace.allsolid && !trace.startsolid && trace.fraction === 1.0) {
+    self.groundentity = trace.ent ?? null; // Ensure undefined becomes null
+    self.groundentity_linkcount = trace.ent ? trace.ent.linkcount : 0;
+
+    if (self.velocity) {
+        (self.velocity as MutableVec3).z = 0;
+    }
+  } else {
+    // If trace did not hit (fraction == 1.0), we are airborn
+    self.groundentity = null;
+  }
+
+  // Check water level independently if not on ground or as part of status update
+  if (!self.groundentity) {
       const content = context.pointcontents(point);
       if (content & MASK_WATER) {
           self.waterlevel = 1;
@@ -344,6 +365,8 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
   };
 
   let start: MutableVec3 = { x: 0, y: 0, z: 0 };
+  // Check if gravityVector exists before accessing it (backwards compatibility for tests that mock Entity without it)
+  const ceiling = self.gravityVector ? self.gravityVector.z > 0 : false;
 
   // Fast check: if all corners are in solid, we are good
   let allSolid = true;
@@ -351,7 +374,11 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
     for (let y = 0; y <= 1; y++) {
       start.x = x ? maxs.x : mins.x;
       start.y = y ? maxs.y : mins.y;
-      start.z = mins.z - 1;
+      if (ceiling) {
+        start.z = maxs.z + 1;
+      } else {
+        start.z = mins.z - 1;
+      }
 
       const content = context.pointcontents(start);
       if (content !== CONTENTS_SOLID) {
@@ -367,12 +394,21 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
   // Slow check
   start.x = self.origin.x;
   start.y = self.origin.y;
-  start.z = self.origin.z + self.mins.z;
 
   const stop = { ...start };
-  stop.z = start.z - STEPSIZE * 2;
 
-  const trace = context.trace(start, null, null, stop, self, MASK_MONSTERSOLID);
+  if (ceiling) {
+    start.z = self.origin.z + self.maxs.z;
+    stop.z = start.z + STEPSIZE * 2;
+  } else {
+    start.z = self.origin.z + self.mins.z;
+    stop.z = start.z - STEPSIZE * 2;
+  }
+
+  const mins_no_z = { ...self.mins, z: 0 };
+  const maxs_no_z = { ...self.maxs, z: 0 };
+
+  const trace = context.trace(start, mins_no_z, maxs_no_z, stop, self, MASK_MONSTERSOLID);
 
   if (trace.fraction === 1.0) return BOTTOM_EMPTY;
 
@@ -422,8 +458,14 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
 
         const subTrace = context.trace(quadrantStart, halfStepQuadrantMins, halfStepQuadrant, quadrantEnd, self, MASK_MONSTERSOLID);
 
-        if (subTrace.fraction === 1.0 || mid - subTrace.endpos.z > STEPSIZE) {
-            return BOTTOM_EMPTY;
+        if (ceiling) {
+             if (subTrace.fraction === 1.0 || subTrace.endpos.z - mid > STEPSIZE) {
+                return BOTTOM_EMPTY;
+             }
+        } else {
+             if (subTrace.fraction === 1.0 || mid - subTrace.endpos.z > STEPSIZE) {
+                return BOTTOM_EMPTY;
+             }
         }
     }
   }
@@ -433,6 +475,13 @@ export function M_CheckBottomEx(self: Entity, context: EntitySystem): number {
 
 export function M_CheckBottom(self: Entity, context: EntitySystem): boolean {
   return M_CheckBottomEx(self, context) !== BOTTOM_EMPTY;
+}
+
+function getGravityVector(ent: Entity): Vec3 {
+  if (ent.gravityVector && lengthVec3(ent.gravityVector) > 0.001) {
+    return ent.gravityVector;
+  }
+  return { x: 0, y: 0, z: -1 };
 }
 
 export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: EntitySystem): boolean {
@@ -476,33 +525,29 @@ export function M_MoveStep(self: Entity, move: Vec3, relink: boolean, context: E
     }
 
     const oldOrigin = { ...self.origin };
-    const up = { ...self.origin, z: self.origin.z + STEPSIZE };
 
-    const traceUp = context.trace(self.origin, self.mins, self.maxs, up, self, MASK_MONSTERSOLID);
-    if (traceUp.startsolid || traceUp.allsolid) {
-        return false;
+    // Gravity aware stepping
+    const gravityDir = getGravityVector(self);
+    const stepVector = scaleVec3(gravityDir, -STEPSIZE);
+    const startUp = addVec3(oldOrigin, stepVector);
+
+    const traceUp = context.trace(oldOrigin, self.mins, self.maxs, startUp, self, MASK_MONSTERSOLID);
+
+    // Use the endpos of the upward trace as the new start for the step
+    const effectiveStartUp = traceUp.endpos;
+
+    const endUp = addVec3(effectiveStartUp, move);
+    const traceStep = context.trace(effectiveStartUp, self.mins, self.maxs, endUp, self, MASK_MONSTERSOLID);
+
+    if (traceStep.startsolid || traceStep.allsolid || traceStep.fraction < 1.0) {
+         return false;
     }
 
-    const stepOrigin = traceUp.endpos;
+    // step us down
+    const downVector = scaleVec3(gravityDir, STEPSIZE);
+    const destDown = addVec3(traceStep.endpos, downVector);
 
-    const destUp = {
-        x: stepOrigin.x + move.x,
-        y: stepOrigin.y + move.y,
-        z: stepOrigin.z
-    };
-
-    const traceStep = context.trace(stepOrigin, self.mins, self.maxs, destUp, self, MASK_MONSTERSOLID);
-    if (traceStep.fraction < 1.0) {
-        return false;
-    }
-
-    const destDown = {
-        x: destUp.x,
-        y: destUp.y,
-        z: destUp.z - STEPSIZE
-    };
-
-    const traceDown = context.trace(destUp, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
+    const traceDown = context.trace(traceStep.endpos, self.mins, self.maxs, destDown, self, MASK_MONSTERSOLID);
     if (traceDown.startsolid || traceDown.allsolid) {
          return false;
     }
