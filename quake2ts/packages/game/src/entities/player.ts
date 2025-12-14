@@ -21,6 +21,7 @@ import {
 } from './player_anim.js';
 import { firingRandom } from '../combat/weapons/firing.js';
 import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
+import { EntityDamageFlags } from '../combat/damageFlags.js';
 
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
@@ -204,6 +205,13 @@ export function player_think(self: Entity, sys: EntitySystem) {
 
     // Check powerups
     const nowMs = sys.timeSeconds * 1000;
+
+    // Invulnerability
+    if (self.client.invincible_time && self.client.invincible_time > sys.timeSeconds) {
+        self.flags = (self.flags || 0) | EntityDamageFlags.GODMODE;
+    } else {
+        self.flags = (self.flags || 0) & ~EntityDamageFlags.GODMODE;
+    }
 
     // Quad/Double Damage Sound
     // Ref: rerelease/p_weapon.cpp:656 Weapon_PowerupSound
