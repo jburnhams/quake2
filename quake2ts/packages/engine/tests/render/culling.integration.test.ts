@@ -37,6 +37,8 @@ function createMockWebGL2Context() {
     uniform1f: vi.fn(),
     uniform2f: vi.fn(),
     uniform3f: vi.fn(),
+    uniform3fv: vi.fn(),
+    uniform4f: vi.fn(),
     uniform4fv: vi.fn(),
     uniformMatrix4fv: vi.fn(),
     drawElements: vi.fn(),
@@ -165,14 +167,14 @@ describe('PVS Culling Integration', () => {
       leafLists: { leafFaces: [], leafBrushes: [] },
       edges: [],
       surfEdges: new Int32Array(0),
-      models: [],
+      models: [{ headNode: 0 }],
       brushes: [],
       brushSides: [],
       visibility,
     } as unknown as BspMap;
   });
 
-  it.skip('culls entities in invisible clusters', () => {
+  it('culls entities in invisible clusters', () => {
     // Camera at (0,0,0) -> Leaf 1 -> Cluster 1
     // Entity at (1000, 0, 0) -> Leaf 0 -> Cluster 0
     // Cluster 1 does not see Cluster 0.
@@ -192,10 +194,20 @@ describe('PVS Culling Integration', () => {
           name: 'frame1',
           translate: [0,0,0],
           scale: [1,1,1],
-          vertices: [],
+          vertices: [
+            { x: 0, y: 0, z: 0, normalIndex: 0 },
+            { x: 10, y: 0, z: 0, normalIndex: 0 },
+            { x: 0, y: 10, z: 0, normalIndex: 0 }
+          ],
           minBounds: { x: -10, y: -10, z: -10 },
           maxBounds: { x: 10, y: 10, z: 10 }
       }],
+      triangles: [
+          { vertexIndices: new Uint16Array([0, 1, 2]), texCoordIndices: new Uint16Array([0, 0, 0]) }
+      ],
+      texCoords: [
+          { s: 0, t: 0 }
+      ],
       glCommands: new Int32Array(0)
     } as unknown as Md2Model;
 
@@ -217,13 +229,14 @@ describe('PVS Culling Integration', () => {
         camera,
         timeSeconds: 0,
         world: { map: bsp, surfaces: [], geometry: {} as any, textures: new Map() },
-        sky: { show: false, textures: [] }
+        sky: undefined
     };
 
     renderer.renderFrame(options, [entity]);
 
-    // Expect drawArrays NOT to be called (entity should be culled)
+    // Expect drawArrays/drawElements NOT to be called (entity should be culled)
     expect(gl.drawArrays).not.toHaveBeenCalled();
+    expect(gl.drawElements).not.toHaveBeenCalled();
   });
 
   it('renders entities in visible clusters', () => {
@@ -240,14 +253,38 @@ describe('PVS Culling Integration', () => {
         skins: [],
         texCoords: [],
         triangles: [],
-        frames: [{
-            name: 'frame1',
-            translate: [0,0,0],
-            scale: [1,1,1],
-            vertices: [],
-            minBounds: { x: -10, y: -10, z: -10 },
-            maxBounds: { x: 10, y: 10, z: 10 }
-        }],
+        frames: [
+            {
+                name: 'frame1',
+                translate: [0,0,0],
+                scale: [1,1,1],
+                vertices: [
+                    { position: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 1 }, normalIndex: 0 },
+                    { position: { x: 10, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 1 }, normalIndex: 0 },
+                    { position: { x: 0, y: 10, z: 0 }, normal: { x: 0, y: 0, z: 1 }, normalIndex: 0 }
+                ],
+                minBounds: { x: -10, y: -10, z: -10 },
+                maxBounds: { x: 10, y: 10, z: 10 }
+            },
+            {
+                name: 'frame2',
+                translate: [0,0,0],
+                scale: [1,1,1],
+                vertices: [
+                    { x: 0, y: 0, z: 0, normalIndex: 0 },
+                    { x: 10, y: 0, z: 0, normalIndex: 0 },
+                    { x: 0, y: 10, z: 0, normalIndex: 0 }
+                ],
+                minBounds: { x: -10, y: -10, z: -10 },
+                maxBounds: { x: 10, y: 10, z: 10 }
+            }
+        ],
+        triangles: [
+            { vertexIndices: new Uint16Array([0, 1, 2]), texCoordIndices: new Uint16Array([0, 0, 0]) }
+        ],
+        texCoords: [
+            { s: 0, t: 0 }
+        ],
         glCommands: new Int32Array(0)
       } as unknown as Md2Model;
 
@@ -259,7 +296,7 @@ describe('PVS Culling Integration', () => {
           1, 0, 0, 0,
           0, 1, 0, 0,
           0, 0, 1, 0,
-          0, 0, 50, 1 // Position 0, 0, 50 (Same leaf as camera)
+          50, 0, 0, 1 // Position 50, 0, 0 (Same leaf as camera, in front)
         ]),
         blend: { frame0: 0, frame1: 0, lerp: 0 },
         lighting: { ambient: 1, dynamicLights: [] }
@@ -269,12 +306,12 @@ describe('PVS Culling Integration', () => {
         camera,
         timeSeconds: 0,
         world: { map: bsp, surfaces: [], geometry: {} as any, textures: new Map() },
-        sky: { show: false, textures: [] }
+        sky: undefined
     };
 
     renderer.renderFrame(options, [entity]);
 
-    // Expect drawArrays TO be called
-    expect(gl.drawArrays).toHaveBeenCalled();
+    // Expect drawElements TO be called (MD2 uses indexed drawing)
+    expect(gl.drawElements).toHaveBeenCalled();
   });
 });

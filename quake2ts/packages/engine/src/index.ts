@@ -272,6 +272,8 @@ export {
   spawnMuzzleFlash,
   spawnTeleportFlash,
   spawnTrail,
+  spawnSplash,
+  spawnSteam,
   type ParticleBlendMode,
   type ParticleEffectContext,
   type ParticleMesh,

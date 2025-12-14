@@ -208,7 +208,8 @@ describe('BFG10K', () => {
             expect.anything(),
             DamageMod.BFG_LASER,
             expect.anything(),
-            expect.anything()
+            expect.anything(),
+            expect.objectContaining({ checkFriendlyFire: false, noFriendlyFire: true })
         );
 
         // Should reschedule for 100ms later

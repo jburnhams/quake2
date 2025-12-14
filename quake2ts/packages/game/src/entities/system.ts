@@ -243,7 +243,8 @@ export class EntitySystem {
     deathmatch?: boolean,
     skill?: number,
     random?: RandomGenerator,
-    coop?: boolean
+    coop?: boolean,
+    readonly friendlyFire: boolean = false
   ) {
     this.pool = new EntityPool(maxEntities);
     this.thinkScheduler = new ThinkScheduler();

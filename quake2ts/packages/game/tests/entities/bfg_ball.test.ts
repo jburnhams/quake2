@@ -158,7 +158,8 @@ describe('BFG Ball Projectile', () => {
             expect.anything(), // flags
             DamageMod.BFG_LASER,
             game.time,
-            expect.any(Function)
+            expect.any(Function),
+            expect.objectContaining({ checkFriendlyFire: false, noFriendlyFire: true })
         );
     });
 
@@ -337,7 +338,8 @@ describe('BFG Ball Projectile', () => {
             expect.anything(),
             DamageMod.BFG_LASER,
             game.time,
-            expect.any(Function)
+            expect.any(Function),
+            expect.objectContaining({ checkFriendlyFire: false, noFriendlyFire: true })
         );
     });
 

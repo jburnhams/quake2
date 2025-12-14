@@ -36,6 +36,7 @@ function createMockWebGL2Context() {
     uniform1f: vi.fn(),
     uniform2f: vi.fn(),
     uniform3f: vi.fn(),
+    uniform4f: vi.fn(),
     uniform4fv: vi.fn(),
     uniformMatrix4fv: vi.fn(),
     drawElements: vi.fn(),
@@ -118,7 +119,7 @@ describe('Lightmap Styles Integration', () => {
     } as unknown as BspMap;
   });
 
-  it.skip('updates light style uniforms based on time', () => {
+  it('updates light style uniforms based on time', () => {
     const surfaces = createBspSurfaces(bsp);
     const geometry = buildBspGeometry(gl, surfaces);
     // Populate geometry cache manually as `buildBspGeometry` doesn't return surfaces for FrameRenderer

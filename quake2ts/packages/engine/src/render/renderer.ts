@@ -1,4 +1,4 @@
-import { Mat4, multiplyMat4, Vec3 } from '@quake2ts/shared';
+import { Mat4, multiplyMat4, Vec3, RandomGenerator } from '@quake2ts/shared';
 import { mat4 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
@@ -19,6 +19,7 @@ import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
 import { DebugRenderer } from './debug.js';
 import { cullLights } from './lightCulling.js';
+import { ParticleRenderer, ParticleSystem } from './particleSystem.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -28,6 +29,7 @@ export interface Renderer {
     readonly height: number;
     readonly collisionVis: CollisionVisRenderer;
     readonly debug: DebugRenderer;
+    readonly particleSystem: ParticleSystem;
     getPerformanceReport(): RenderStatistics;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
@@ -71,6 +73,13 @@ export const createRenderer = (
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
 
+    // Create Particle System
+    // Assuming a reasonable max particle count (e.g., 2048) and a default RNG
+    const particleRng = new RandomGenerator({ seed: Date.now() });
+
+    const particleSystem = new ParticleSystem(4096, particleRng);
+    const particleRenderer = new ParticleRenderer(gl, particleSystem);
+
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
@@ -83,6 +92,11 @@ export const createRenderer = (
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
+
+        // Update particles
+        if (options.deltaTime) {
+            particleSystem.update(options.deltaTime);
+        }
 
         // 1. Clear buffers, render world, sky, and viewmodel
         gl.disable(gl.BLEND);
@@ -143,6 +157,233 @@ export const createRenderer = (
             if (viewLeafIndex >= 0) {
                 viewCluster = options.world.map.leafs[viewLeafIndex].cluster;
             }
+        }
+
+        // 2. Render models (entities)
+        let lastTexture: Texture2D | undefined;
+        let entityDrawCalls = 0;
+        let entityVertices = 0;
+
+        for (const entity of entities) {
+            // PVS Culling
+            if (options.world && viewCluster >= 0) {
+                const origin = {
+                    x: entity.transform[12],
+                    y: entity.transform[13],
+                    z: entity.transform[14],
+                };
+                const entityLeafIndex = findLeafForPoint(options.world.map, origin);
+
+                if (entityLeafIndex >= 0) {
+                    const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
+                    if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
+                        continue;
+                    }
+                }
+            }
+
+            // Frustum Culling
+            let minBounds: Vec3 | undefined;
+            let maxBounds: Vec3 | undefined;
+
+            if (entity.type === 'md2') {
+                const frame0 = entity.model.frames[entity.blend.frame0];
+                const frame1 = entity.model.frames[entity.blend.frame1];
+                minBounds = {
+                    x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
+                    y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
+                    z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
+                };
+                maxBounds = {
+                    x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
+                    y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
+                    z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
+                };
+            } else if (entity.type === 'md3') {
+                const frame0 = entity.model.frames[entity.blend.frame0];
+                const frame1 = entity.model.frames[entity.blend.frame1];
+                if (frame0 && frame1) {
+                     minBounds = {
+                        x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
+                        y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
+                        z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
+                    };
+                    maxBounds = {
+                        x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
+                        y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
+                        z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
+                    };
+                } else {
+                     minBounds = { x: -32, y: -32, z: -32 };
+                     maxBounds = { x: 32, y: 32, z: 32 };
+                }
+            }
+
+            if (minBounds && maxBounds) {
+                const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
+                if (!boxIntersectsFrustum(worldBounds.mins, worldBounds.maxs, frustumPlanes)) {
+                    continue;
+                }
+            }
+
+            // Calculate ambient light for the entity
+            const position = {
+                x: entity.transform[12],
+                y: entity.transform[13],
+                z: entity.transform[14]
+            };
+            const light = calculateEntityLight(options.world?.map, position);
+
+            // Determine highlighting
+            const highlightColor = (entity.id !== undefined) ? highlightedEntities.get(entity.id) : undefined;
+
+            switch (entity.type) {
+                case 'md2':
+                    {
+                        let mesh = md2MeshCache.get(entity.model);
+                        if (!mesh) {
+                            mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
+                            md2MeshCache.set(entity.model, mesh);
+                        } else {
+                            mesh.update(entity.model, entity.blend);
+                        }
+
+                        const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
+                        const texture = entity.skin ? options.world?.textures?.get(entity.skin) : undefined;
+
+                        if (texture && texture !== lastTexture) {
+                            texture.bind(0);
+                            lastTexture = texture;
+                        }
+
+                        // Determine render mode
+                        let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
+                        if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
+                            activeRenderMode = undefined;
+                        } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
+                            // Apply default override for missing texture
+                        }
+
+                        // Handle Random Color Generation logic
+                        if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
+                            const randColor = colorFromId(entity.id);
+                            activeRenderMode = { ...activeRenderMode, color: randColor };
+                        }
+
+                        md2Pipeline.bind({
+                            modelViewProjection,
+                            modelMatrix: entity.transform,
+                            ambientLight: light,
+                            dlights: options.dlights,
+                            renderMode: activeRenderMode,
+                            tint: entity.tint,
+                        });
+                        md2Pipeline.draw(mesh, activeRenderMode);
+                        entityDrawCalls++;
+                        entityVertices += mesh.geometry.vertices.length;
+
+                        // Highlight Pass
+                        if (highlightColor) {
+                             // Draw a second pass with wireframe/solid mode and the highlight color
+                             const highlightMode: RenderModeConfig = {
+                                 mode: 'wireframe',
+                                 applyToAll: true,
+                                 color: highlightColor
+                             };
+                            md2Pipeline.bind({
+                                modelViewProjection,
+                                modelMatrix: entity.transform,
+                                ambientLight: 1.0, // Full bright for highlight
+                                renderMode: highlightMode,
+                                tint: [1, 1, 1, 1]
+                            });
+                            md2Pipeline.draw(mesh, highlightMode);
+                            entityDrawCalls++;
+                        }
+                    }
+                    break;
+                case 'md3':
+                    {
+                        let mesh = md3MeshCache.get(entity.model);
+
+                        const md3Dlights = options.dlights ? options.dlights.map(d => ({
+                            origin: d.origin,
+                            color: [d.color.x, d.color.y, d.color.z] as const,
+                            radius: d.intensity
+                        })) : undefined;
+
+                        const lighting = {
+                            ...entity.lighting,
+                            ambient: [light, light, light] as const,
+                            dynamicLights: md3Dlights,
+                            modelMatrix: entity.transform
+                        };
+
+                        if (!mesh) {
+                            mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
+                            md3MeshCache.set(entity.model, mesh);
+                        } else {
+                            mesh.update(entity.blend, lighting);
+                        }
+
+                        const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
+                        md3Pipeline.bind(modelViewProjection);
+
+                        for (const surface of entity.model.surfaces) {
+                            const surfaceMesh = mesh.surfaces.get(surface.name);
+                            if (surfaceMesh) {
+                                const textureName = entity.skins?.get(surface.name);
+                                const texture = textureName ? options.world?.textures?.get(textureName) : undefined;
+
+                                if (texture && texture !== lastTexture) {
+                                    texture.bind(0);
+                                    lastTexture = texture;
+                                }
+
+                                let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
+                                if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
+                                    activeRenderMode = undefined;
+                                } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
+                                }
+
+                                if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
+                                    const randColor = colorFromId(entity.id);
+                                    activeRenderMode = { ...activeRenderMode, color: randColor };
+                                }
+
+                                md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
+                                entityDrawCalls++;
+                                entityVertices += surfaceMesh.geometry.vertices.length;
+
+                                // Highlight Pass
+                                if (highlightColor) {
+                                     const highlightMode: RenderModeConfig = {
+                                         mode: 'wireframe',
+                                         applyToAll: true,
+                                         color: highlightColor
+                                     };
+                                     md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });
+                                     entityDrawCalls++;
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        // Render particles
+        const viewMatrix = options.camera.viewMatrix;
+        if (viewMatrix) {
+            // Extract right (row 0) and up (row 1) from view matrix
+            const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
+            const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
+
+            particleRenderer.render({
+                viewProjection: viewProjection as Float32Array,
+                viewRight,
+                viewUp
+            });
         }
 
         // Render collision vis debug lines (if any)
@@ -274,298 +515,6 @@ export const createRenderer = (
         }
 
         debugRenderer.clear();
-
-        // 2. Render models (entities)
-        let lastTexture: Texture2D | undefined;
-        let entityDrawCalls = 0;
-        let entityVertices = 0;
-
-        for (const entity of entities) {
-            // PVS Culling
-            if (options.world && viewCluster >= 0) {
-                const origin = {
-                    x: entity.transform[12],
-                    y: entity.transform[13],
-                    z: entity.transform[14],
-                };
-                const entityLeafIndex = findLeafForPoint(options.world.map, origin);
-                if (entityLeafIndex >= 0) {
-                    const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
-                    if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
-                        continue;
-                    }
-                }
-            }
-
-            // Frustum Culling
-            let minBounds: Vec3 | undefined;
-            let maxBounds: Vec3 | undefined;
-
-            if (entity.type === 'md2') {
-                const frame0 = entity.model.frames[entity.blend.frame0];
-                const frame1 = entity.model.frames[entity.blend.frame1];
-                minBounds = {
-                    x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
-                    y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
-                    z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
-                };
-                maxBounds = {
-                    x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
-                    y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
-                    z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
-                };
-            } else if (entity.type === 'md3') {
-                const frame0 = entity.model.frames[entity.blend.frame0];
-                const frame1 = entity.model.frames[entity.blend.frame1];
-                if (frame0 && frame1) {
-                     minBounds = {
-                        x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
-                        y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
-                        z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
-                    };
-                    maxBounds = {
-                        x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
-                        y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
-                        z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
-                    };
-                } else {
-                     minBounds = { x: -32, y: -32, z: -32 };
-                     maxBounds = { x: 32, y: 32, z: 32 };
-                }
-            }
-
-            if (minBounds && maxBounds) {
-                const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
-                if (!boxIntersectsFrustum(worldBounds.mins, worldBounds.maxs, frustumPlanes)) {
-                    continue;
-                }
-            }
-
-            // Calculate ambient light for the entity
-            const position = {
-                x: entity.transform[12],
-                y: entity.transform[13],
-                z: entity.transform[14]
-            };
-            const light = calculateEntityLight(options.world?.map, position);
-
-            // Determine highlighting
-            const highlightColor = (entity.id !== undefined) ? highlightedEntities.get(entity.id) : undefined;
-
-            switch (entity.type) {
-                case 'md2':
-                    {
-                        let mesh = md2MeshCache.get(entity.model);
-                        if (!mesh) {
-                            mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
-                            md2MeshCache.set(entity.model, mesh);
-                        } else {
-                            mesh.update(entity.model, entity.blend);
-                        }
-
-                        const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        const texture = entity.skin ? options.world?.textures?.get(entity.skin) : undefined;
-
-                        if (texture && texture !== lastTexture) {
-                            texture.bind(0);
-                            lastTexture = texture;
-                        }
-
-                        // Determine render mode
-                        let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
-                        if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
-                            activeRenderMode = undefined;
-                        } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
-                            // Apply default override for missing texture
-                        }
-
-                        // Handle Random Color Generation logic
-                        if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
-                            const randColor = colorFromId(entity.id);
-                            activeRenderMode = { ...activeRenderMode, color: randColor };
-                        }
-
-                        md2Pipeline.bind({
-                            modelViewProjection,
-                            modelMatrix: entity.transform,
-                            ambientLight: light,
-                            dlights: options.dlights,
-                            renderMode: activeRenderMode,
-                            tint: entity.tint,
-                        });
-                        md2Pipeline.draw(mesh, activeRenderMode);
-                        entityDrawCalls++;
-                        entityVertices += mesh.geometry.vertices.length;
-
-                        // Highlight Pass
-                        if (highlightColor) {
-                             // Draw a second pass with wireframe/solid mode and the highlight color
-                             const highlightMode: RenderModeConfig = {
-                                 mode: 'wireframe',
-                                 applyToAll: true,
-                                 color: highlightColor
-                             };
-
-                             // Disable depth test for overlay or use EQUAL if we want it to be occluded?
-                             // Usually highlights should be visible or at least distinct.
-                             // Let's keep depth test enabled but maybe draw wireframe.
-                             // Or disable depth test to show through walls? For now, standard depth test.
-
-                             md2Pipeline.bind({
-                                modelViewProjection,
-                                modelMatrix: entity.transform,
-                                ambientLight: 1.0, // Full bright for highlight
-                                renderMode: highlightMode,
-                                tint: [1, 1, 1, 1]
-                            });
-                            md2Pipeline.draw(mesh, highlightMode);
-                            entityDrawCalls++;
-                        }
-                    }
-                    break;
-                case 'md3':
-                    {
-                        let mesh = md3MeshCache.get(entity.model);
-
-                        const md3Dlights = options.dlights ? options.dlights.map(d => ({
-                            origin: d.origin,
-                            color: [d.color.x, d.color.y, d.color.z] as const,
-                            radius: d.intensity
-                        })) : undefined;
-
-                        const lighting = {
-                            ...entity.lighting,
-                            ambient: [light, light, light] as const,
-                            dynamicLights: md3Dlights,
-                            modelMatrix: entity.transform
-                        };
-
-                        if (!mesh) {
-                            mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
-                            md3MeshCache.set(entity.model, mesh);
-                        } else {
-                            mesh.update(entity.blend, lighting);
-                        }
-
-                        const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        md3Pipeline.bind(modelViewProjection);
-
-                        for (const surface of entity.model.surfaces) {
-                            const surfaceMesh = mesh.surfaces.get(surface.name);
-                            if (surfaceMesh) {
-                                const textureName = entity.skins?.get(surface.name);
-                                const texture = textureName ? options.world?.textures?.get(textureName) : undefined;
-
-                                if (texture && texture !== lastTexture) {
-                                    texture.bind(0);
-                                    lastTexture = texture;
-                                }
-
-                                let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
-                                if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
-                                    activeRenderMode = undefined;
-                                } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
-                                }
-
-                                if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
-                                    const randColor = colorFromId(entity.id);
-                                    activeRenderMode = { ...activeRenderMode, color: randColor };
-                                }
-
-                                md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
-                                entityDrawCalls++;
-                                entityVertices += surfaceMesh.geometry.vertices.length;
-
-                                // Highlight Pass
-                                if (highlightColor) {
-                                     const highlightMode: RenderModeConfig = {
-                                         mode: 'wireframe',
-                                         applyToAll: true,
-                                         color: highlightColor
-                                     };
-                                     // Re-bind MD3 pipeline to ensure full brightness for highlight
-                                     // Unlike MD2, we don't have separate bind call exposed easily on pipeline to override light only
-                                     // But bind() sets MVP and tint. We need to make sure shader doesn't darken it.
-                                     // The MD3 fragment shader uses v_color (vertex color lighting).
-                                     // To make it full bright, we'd need to re-upload vertex data with full white lighting
-                                     // OR change the shader.
-                                     // However, looking at MD3_FRAGMENT_SHADER:
-                                     // if (u_renderMode == 1) { vec3 color = u_solidColor.rgb; finalColor = vec4(color, u_solidColor.a * u_tint.a); }
-                                     // It IGNORES v_color in solid/wireframe mode!
-                                     // So simple wireframe mode should already be full bright (unlit).
-
-                                     // Wait, let's check MD3_FRAGMENT_SHADER again in `md3Pipeline.ts`.
-                                     // "if (u_renderMode == 0) ... else { vec3 color = u_solidColor.rgb; ... finalColor = vec4(color, u_solidColor.a * u_tint.a); }"
-                                     // Yes, in non-textured mode (solid/wireframe), it uses u_solidColor directly and ignores lighting (v_color is not used).
-
-                                     // BUT, we still need to make sure we are bound correctly?
-                                     // We are inside the loop of surfaces. md3Pipeline.bind was called before the loop.
-                                     // The highlight pass just calls drawSurface with a new renderMode.
-                                     // drawSurface updates uniforms: u_renderMode, u_solidColor.
-
-                                     // So it should be fine?
-                                     // Re-reading MD2 logic:
-                                     // md2Pipeline.bind is called with ambientLight: 1.0.
-                                     // MD2 shader: "vec3 lightAcc = vec3(min(1.0, u_ambient + dotL));"
-                                     // "if (u_renderMode == 0) ... else { vec3 color = u_solidColor.rgb; ... }"
-                                     // MD2 shader ALSO ignores lighting in solid mode!
-                                     // "finalColor = vec4(color, u_solidColor.a * u_tint.a);"
-
-                                     // So actually, for both MD2 and MD3, solid/wireframe mode is UNLIT by default in the shader logic I see.
-                                     // So the extra bind with ambientLight=1.0 for MD2 might be redundant for the solid color part,
-                                     // unless I missed something in MD2 shader.
-
-                                     // MD2 Fragment Shader:
-                                     // if (u_renderMode == 0) { ... * v_lightColor ... } else { ... }
-                                     // v_lightColor is NOT used in else block.
-
-                                     // So MD3 should also be fine without re-binding, as long as drawSurface updates the uniforms.
-                                     // Let's double check MD3 drawSurface.
-                                     // It updates u_renderMode and u_solidColor.
-
-                                     // So consistency should be fine. The reviewer might have been cautious or I might have missed a detail.
-                                     // "This means highlights on MD3 models in dark corners might be dim or invisible"
-                                     // If the shader ignores lighting in wireframe mode, then they won't be dim.
-
-                                     // Let's verify MD3 shader again.
-                                     /*
-                                     void main() {
-                                          vec4 finalColor;
-                                          if (u_renderMode == 0) {
-                                              vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-                                              finalColor = vec4(albedo.rgb * v_color.rgb, albedo.a * v_color.a);
-                                          } else {
-                                              vec3 color = u_solidColor.rgb;
-                                              if (u_renderMode == 2) { ... }
-                                              finalColor = vec4(color, u_solidColor.a * u_tint.a);
-                                          }
-                                          o_color = finalColor;
-                                     }
-                                     */
-                                     // v_color (vertex lighting) is indeed only used in renderMode == 0.
-
-                                     // So both should be unlit.
-                                     // However, to be absolutely safe and consistent with MD2 (which does rebind), I can leave MD2 as is (it doesn't hurt)
-                                     // and for MD3, I don't need to rebind because `drawSurface` handles the uniforms.
-
-                                     // Wait, MD2 rebind also resets `tint`.
-                                     // MD3 `drawSurface` accepts `tint` via `material` arg.
-                                     // In the loop: `md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });`
-                                     // `tint` defaults to [1,1,1,1] in `drawSurface` if not provided in `material`.
-
-                                     // So MD3 logic seems correct and consistent: unlit wireframe.
-
-                                     // I will re-apply the file just to be sure, and perhaps add a comment or ensure logic is identical.
-
-                                     md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });
-                                     entityDrawCalls++;
-                                }
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
 
         // Aggregate stats
         lastFrameStats = {
@@ -703,6 +652,7 @@ export const createRenderer = (
         get height() { return gl.canvas.height; },
         get collisionVis() { return collisionVis; },
         get debug() { return debugRenderer; },
+        get particleSystem() { return particleSystem; },
         getPerformanceReport: () => gpuProfiler.getPerformanceReport(lastFrameStats),
         renderFrame,
         registerPic,
