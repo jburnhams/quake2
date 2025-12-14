@@ -10,7 +10,6 @@ import {
 } from '../../entity.js';
 import { EntitySystem } from '../../system.js';
 import { Vec3, copyVec3, vectorToAngles, RandomGenerator } from '@quake2ts/shared';
-import { registerMonsterSpawns } from '../index.js';
 
 // Helper constants
 const MAX_REINFORCEMENTS = 5;

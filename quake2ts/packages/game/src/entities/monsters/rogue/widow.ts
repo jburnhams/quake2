@@ -41,10 +41,13 @@ import {
   M_ProjectFlashSource,
   createMonsterSpawn
 } from '../common.js';
+import { M_PickReinforcements } from './common.js';
 import { DamageMod } from '../../../combat/damageMods.js';
 import { SpawnContext, SpawnRegistry } from '../../spawn.js';
 import { rangeTo, visible } from '../../../ai/perception.js';
 import { monster_fire_blaster, monster_fire_railgun } from '../attack.js';
+import { SP_monster_stalker } from './stalker.js';
+import { SP_monster_flyer } from '../flyer.js';
 
 // Constants
 const MODEL_SCALE = 1.0;
@@ -216,7 +219,89 @@ function widow_kick(self: Entity, context: EntitySystem): void {
 
 function widow_spawn_check(self: Entity, context: EntitySystem): void {
     if (M_SlotsLeft(self) > 0) {
-        // Spawn logic placeholder
+        const result = M_PickReinforcements(self, context.rng, 1);
+        self.monsterinfo.chosen_reinforcements = result.chosen;
+
+        if (result.count > 0) {
+             const reinforcement = self.monsterinfo.reinforcements![self.monsterinfo.chosen_reinforcements[0]];
+             // Basic spawn logic matching CarrierSpawn style but simplified for Widow
+             // Widow usually spawns from her body or nearby?
+             // Source: m_widow.cpp widow_spawn_check just sets up animation to spawn.
+             // widow_spawn is the one doing the spawning?
+             // Actually widow_spawn logic in original is separate?
+             // Looking at frames: widow_move_spawn calls widow_spawn_check at frame 8.
+
+             // In original m_widow.cpp:
+             // void widow_spawn_check (edict_t *self)
+             // checks slots, if slots > 0:
+             //   widow_start_spawn(self)
+
+             // And widow_start_spawn sets animation to spawn.
+             // But here we are IN the spawn animation?
+
+             // Wait, widow_move_spawn frames:
+             // widow_frames_spawn[8] = { ai: widow_ai_charge, dist: 0, think: widow_spawn_check };
+
+             // If this is the check *during* spawn, then it should spawn.
+             // But usually check is before.
+
+             // Re-reading original logic or inferred logic:
+             // If we are already in spawn animation, this frame might be the trigger to actual spawn.
+             // Let's assume we spawn here.
+
+             // Actually, carrier has CarrierSpawn called from frame action.
+             // Here we have widow_spawn_check called from frame 8.
+
+             // Let's call the spawn helper.
+             WidowSpawn(self, context);
+        }
+    }
+}
+
+function WidowSpawn(self: Entity, context: EntitySystem): void {
+    // Determine spawn point (simple version)
+    const { forward, right } = angleVectors(self.angles);
+    const offset = { x: 50, y: 0, z: 0 };
+    const start = M_ProjectFlashSource(self, offset, forward, right);
+
+    // Pick reinforcement if not already picked (or pick again)
+    if (!self.monsterinfo.chosen_reinforcements) {
+         const result = M_PickReinforcements(self, context.rng, 1);
+         self.monsterinfo.chosen_reinforcements = result.chosen;
+    }
+
+    if (self.monsterinfo.chosen_reinforcements && self.monsterinfo.chosen_reinforcements[0] !== 255) {
+        const rIndex = self.monsterinfo.chosen_reinforcements[0];
+        const reinforcement = self.monsterinfo.reinforcements![rIndex];
+
+        // Spawn entity
+        const ent = context.spawn();
+        ent.origin = { ...start };
+        ent.angles = { ...self.angles };
+
+        // Ensure we invoke the correct spawn function to initialize AI
+        if (reinforcement.classname === 'monster_stalker') {
+            SP_monster_stalker(ent, { entities: context } as any);
+        } else if (reinforcement.classname === 'monster_flyer') {
+            SP_monster_flyer(ent, { entities: context } as any);
+        } else {
+            // Fallback for others using generic
+             createMonsterSpawn({
+                model: "models/monsters/stalker/tris.md2",
+                health: 100,
+                mass: 100
+            })(ent, { entities: context } as any);
+        }
+
+        // Adjust properties based on reinforcement.classname
+        if (ent.inUse) {
+            // Setup relation
+            if (!self.monsterinfo.monster_used) self.monsterinfo.monster_used = 0;
+            self.monsterinfo.monster_used += reinforcement.strength;
+
+            // Effect: Teleport sound/visual?
+            // context.sound(ent, SoundChannel.Body, "misc/spawn1.wav", 1, ATTN_NORM, 0);
+        }
     }
 }
 

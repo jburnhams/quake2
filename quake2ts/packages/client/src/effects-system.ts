@@ -10,6 +10,7 @@ import {
 } from '@quake2ts/shared';
 // Import particle helpers from engine
 import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail, spawnSplash, spawnSteam } from '@quake2ts/engine';
+import { ClientConfigStrings } from './configStrings.js';
 
 // Helper to copy vec3
 const copyVec3 = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z });

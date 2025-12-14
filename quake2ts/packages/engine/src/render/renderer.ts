@@ -73,8 +73,11 @@ export const createRenderer = (
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
 
-    const rng = new RandomGenerator({ seed: Date.now() });
-    const particleSystem = new ParticleSystem(4096, rng);
+    // Create Particle System
+    // Assuming a reasonable max particle count (e.g., 2048) and a default RNG
+    const particleRng = new RandomGenerator({ seed: Date.now() });
+
+    const particleSystem = new ParticleSystem(4096, particleRng);
     const particleRenderer = new ParticleRenderer(gl, particleSystem);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();

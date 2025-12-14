@@ -102,11 +102,11 @@
 - [ ] Implement monster-specific behaviors (flying, swimming, jumping)
 
 ### 4.4.4 Level Triggers and Scripts
-- [ ] Complete trigger_relay, trigger_counter, trigger_always implementations
-- [ ] Implement target_speaker for ambient sounds
-- [ ] Implement target_explosion, target_splash effects
-- [ ] Implement func_timer for repeating events
-- [ ] Implement target_changelevel for map transitions
+- [x] Complete trigger_relay, trigger_counter, trigger_always implementations
+- [x] Implement target_speaker for ambient sounds
+- [x] Implement target_explosion, target_splash effects
+- [x] Implement func_timer for repeating events
+- [x] Implement target_changelevel for map transitions
 - [ ] Fix complex entity chains (multi-target, delayed activation)
 
 ### 4.4.5 Special Effects
