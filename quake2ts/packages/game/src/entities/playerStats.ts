@@ -99,20 +99,5 @@ export function populatePlayerStats(player: Entity, timeSeconds: number): number
         // statArray[PlayerStat.STAT_TIMER_ICON] = ...
     }
 
-    // Frags/Score
-    if (player.client.score !== undefined) {
-        statArray[PlayerStat.STAT_FRAGS] = player.client.score;
-    }
-
-    // Copy stats from client.stats if they exist (for CTF overrides etc)
-    // This allows modules like CTF to write directly to client.stats and have them preserved
-    if (player.client.stats) {
-        for (let i = 0; i < player.client.stats.length; i++) {
-            if (player.client.stats[i] !== 0) {
-                statArray[i] = player.client.stats[i];
-            }
-        }
-    }
-
     return statArray;
 }

@@ -18,7 +18,6 @@ export default defineConfig({
     teardownTimeout: 1000,
     alias: {
       '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
-      '@quake2ts/game': path.resolve(__dirname, './src/index.ts'),
     },
   },
 });

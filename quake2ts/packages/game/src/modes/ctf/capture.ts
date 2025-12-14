@@ -7,7 +7,6 @@ import { EntitySystem } from '../../entities/system.js';
 import { FlagEntity, FlagState, setFlagState } from './state.js';
 import { GameExports } from '../../index.js';
 import { KeyId, hasKey } from '../../inventory/playerInventory.js';
-import { addTeamScore, CtfTeam } from './scoreboard.js';
 
 export function checkCapture(
     flag: FlagEntity,
@@ -52,22 +51,13 @@ export function captureFlag(
 
     // 1. Award points
     // Player capture bonus (usually 5)
-    // We increment the capture count in stats, which will be calculated into score
-    const ctfStats = player.client.ctfStats;
-    if (ctfStats) {
-        ctfStats.captures++;
-    }
-
-    // Also update raw score for compatibility/immediate display?
     if (player.client.score !== undefined) {
-        player.client.score += 5; // Bonus
+        player.client.score += 5;
     } else {
         player.client.score = 5;
     }
 
-    // Team score
-    const teamEnum = playerTeam === 'red' ? CtfTeam.RED : CtfTeam.BLUE;
-    addTeamScore(teamEnum, 1);
+    // Team score (TODO: Implement team score tracking in 6.1.4/6.1.5)
 
     game.sound?.(player, 0, 'ctf/flagcap.wav', 1, 1, 0);
     game.centerprintf?.(player, 'You captured the flag!');

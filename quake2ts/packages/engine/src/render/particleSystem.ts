@@ -406,6 +406,7 @@ export interface ParticleEffectContext {
   readonly origin: Vec3;
   readonly normal?: Vec3;
   readonly direction?: Vec3;
+  readonly color?: readonly [number, number, number, number];
 }
 
 export function spawnBulletImpact(context: ParticleEffectContext): void {
@@ -488,7 +489,7 @@ export function spawnExplosion(context: ParticleEffectContext): void {
 }
 
 export function spawnBlood(context: ParticleEffectContext): void {
-  const { system, origin, direction = { x: 0, y: 0, z: 1 } } = context;
+  const { system, origin, direction = { x: 0, y: 0, z: 1 }, color = [0.6, 0, 0, 0.95] } = context;
   for (let i = 0; i < 24; i += 1) {
     const speed = 120 + system.rng.frandom() * 180;
     system.spawn({
@@ -498,7 +499,7 @@ export function spawnBlood(context: ParticleEffectContext): void {
         y: direction.y * speed + (system.rng.frandom() - 0.5) * 70,
         z: direction.z * speed + system.rng.frandom() * 80,
       },
-      color: [0.6, 0, 0, 0.95],
+      color: color,
       size: 3,
       lifetime: 0.8,
       gravity: 900,

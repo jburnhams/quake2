@@ -43,10 +43,7 @@ describe('CTF Integration', () => {
 
         context = {
             forEachEntity: (cb) => entities.forEach(cb),
-            timeSeconds: 100,
-            engine: {
-                centerprintf: vi.fn(),
-            }
+            timeSeconds: 100
         } as unknown as EntitySystem;
         (context as any)._game = mockGame;
     });

@@ -2,7 +2,6 @@ import { Entity } from '../../entities/entity.js';
 import { FlagEntity, FlagState, setFlagState } from './state.js';
 import { EntitySystem } from '../../entities/system.js';
 import { GameExports } from '../../index.js';
-import { initPlayerCtfStats } from './scoreboard.js';
 
 export function handleFlagPickup(
     flag: FlagEntity,
@@ -24,12 +23,6 @@ export function handleFlagPickup(
             // Return to base
              game.sound?.(player, 0, 'ctf/flagret.wav', 1, 1, 0);
              game.centerprintf?.(player, `You returned the ${flag.flagTeam} flag!`);
-
-             // Stat update
-             initPlayerCtfStats(player.client);
-             if (player.client.ctfStats) {
-                 player.client.ctfStats.returns++;
-             }
 
              setFlagState(flag, FlagState.AT_BASE, context);
              flag.origin = { ...flag.baseOrigin };

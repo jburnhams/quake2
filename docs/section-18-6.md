@@ -96,12 +96,12 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 902-1100)
 **TypeScript File**: `/packages/game/src/modes/ctf/scoreboard.ts` (NEW)
 
-- [x] Implement CTF-specific scoring
+- [ ] Implement CTF-specific scoring
   - Team scores (captures)
   - Individual stats: captures, returns, defends, assists
   - Reference: `g_ctf.cpp` lines 902-1000
 
-- [x] Implement scoreboard display
+- [ ] Implement scoreboard display
   - Two-column team display
   - Team totals at top
   - Player stats sorted by score

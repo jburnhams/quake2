@@ -918,8 +918,9 @@ export function createClient(imports: ClientImports): ClientExports {
       // Process Entity Effects (Per-frame lights)
       // These are not stateful in DLightManager usually (unless we want them to linger?)
       // processEntityEffects currently pushes to array.
+      const particleSystem = imports.engine.renderer?.particleSystem;
       for (const ent of currentPacketEntities) {
-          processEntityEffects(ent, dlights, timeSeconds);
+          processEntityEffects(ent, dlights, particleSystem, timeSeconds);
       }
 
       if (lastRendered) {

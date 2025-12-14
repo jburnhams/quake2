@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, Solid } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
-import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
+import { registerTriggerSpawns } from '../../src/entities/triggers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { createTestContext } from '../test-helpers.js';
 
@@ -137,24 +137,19 @@ describe('Trigger Conditions', () => {
       const player = entities.spawn();
       player.classname = 'player';
       player.inventory = {};
-      player.client = {} as any;
-
-      // Mock centerprintf
-      entities.engine.centerprintf = vi.fn();
-      entities.sound = vi.fn();
 
       // Attempt to use
       trigger.use!(trigger, player, player);
 
       // Should not activate
       expect(target.use).not.toHaveBeenCalled();
-      expect(entities.engine.centerprintf).toHaveBeenCalledWith(player, 'You need the key_pass');
+      expect(warnSpy).toHaveBeenCalledWith('Missing required key item: key_pass');
 
       // Give key
       player.inventory['key_pass'] = 1;
 
       // Attempt to use again
-      (entities.engine.centerprintf as any).mockClear();
+      warnSpy.mockClear();
       trigger.use!(trigger, player, player);
 
       // Should activate

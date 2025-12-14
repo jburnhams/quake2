@@ -79,25 +79,25 @@ This phase covers dynamic lighting, particle effects, view effects, water render
   - Reference: `cl_fx.cpp` lines 502-620
 
 #### 4.2.2 Environmental Effects
-- [ ] Implement water splash
-  - Ripples on water surface
+- [x] Implement water splash
+  - Ripples on water surface (Note: Implemented as particle burst)
   - Spray particles
   - Reference: `cl_fx.cpp` lines 622-700
 
-- [ ] Implement steam effects
+- [x] Implement steam effects
   - Rising steam particles
   - Hot water/lava proximity
   - Reference: `cl_fx.cpp` lines 702-780
 
 #### 4.2.3 Monster Effects
-- [ ] Implement monster blood trail
-  - Leave blood particles when wounded
-  - Different colors per monster type
+- [x] Implement monster blood trail
+  - Leave blood particles when wounded (Implemented via EF_GIB flag handling)
+  - Different colors per monster type (Supported via EF_GREENGIBS)
   - Reference: `cl_fx.cpp` lines 782-850
 
-- [ ] Implement gib particles
-  - Chunks of flesh/metal on death
-  - Physics-based trajectories
+- [x] Implement gib particles
+  - Chunks of flesh/metal on death (Implemented via trail for gib entities)
+  - Physics-based trajectories (Handled by server entity physics + trail)
   - Reference: `cl_fx.cpp` lines 852-950
 
 ---

@@ -102,7 +102,7 @@
 - [ ] Implement monster-specific behaviors (flying, swimming, jumping)
 
 ### 4.4.4 Level Triggers and Scripts
-- [x] Complete trigger_relay, trigger_counter, trigger_always implementations
+- [ ] Complete trigger_relay, trigger_counter, trigger_always implementations
 - [ ] Implement target_speaker for ambient sounds
 - [ ] Implement target_explosion, target_splash effects
 - [ ] Implement func_timer for repeating events

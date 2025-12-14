@@ -1,5 +1,5 @@
 import { EntityEffects, RenderFx, Vec3 } from '@quake2ts/shared';
-import { DLight } from '@quake2ts/engine';
+import { DLight, ParticleSystem, spawnBlood } from '@quake2ts/engine';
 
 // Helper to add dlight
 function addDLight(
@@ -27,6 +27,7 @@ export function processEntityEffects(
     alpha?: number;
   },
   dlights: DLight[],
+  particleSystem: ParticleSystem | undefined,
   time: number
 ) {
   const { effects, origin } = entity;
@@ -42,8 +43,7 @@ export function processEntityEffects(
     addDLight(dlights, origin, [1.0, 1.0, 0.0], 200, 0, lifetime);
   }
 
-  // EF_ROCKET: Red/Orange light + Trail? (Trails handled elsewhere usually)
-  // Task 4.1.4: "Color based on projectile type", "Trail effect" (Trails are particles, here we do lights)
+  // EF_ROCKET: Red/Orange light
   if (effects & EntityEffects.Rocket) {
     addDLight(dlights, origin, [1.0, 0.5, 0.2], 200, 0, lifetime);
   }
@@ -78,6 +78,35 @@ export function processEntityEffects(
     addDLight(dlights, origin, [0.2, 1.0, 0.2], 200, 0, lifetime);
   }
 
-  // EF_COLOR_SHELL (16) often implies power shield or specific coloring?
-  // EF_POWERSCREEN (32)
+  // EF_GIB: Trail of blood (Red)
+  if (particleSystem && (effects & EntityEffects.Gib)) {
+      // Spawn fewer particles for trail than full blood splash
+      // Random direction mostly up/out
+      const rng = particleSystem.rng;
+      spawnBlood({
+          system: particleSystem,
+          origin: origin,
+          direction: {
+              x: (rng.frandom() - 0.5) * 20,
+              y: (rng.frandom() - 0.5) * 20,
+              z: (rng.frandom() - 0.5) * 20
+          },
+          // Color is default red in spawnBlood
+      });
+  }
+
+  // EF_GREENGIBS: Trail of green blood
+  if (particleSystem && (effects & EntityEffects.Greengibs)) {
+      const rng = particleSystem.rng;
+      spawnBlood({
+          system: particleSystem,
+          origin: origin,
+          direction: {
+              x: (rng.frandom() - 0.5) * 20,
+              y: (rng.frandom() - 0.5) * 20,
+              z: (rng.frandom() - 0.5) * 20
+          },
+          color: [0.0, 0.8, 0.0, 0.95]
+      });
+  }
 }

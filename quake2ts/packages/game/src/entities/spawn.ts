@@ -13,7 +13,7 @@ import {
 } from './entity.js';
 import { registerMiscSpawns } from './misc.js';
 import { registerTargetSpawns } from './targets.js';
-import { registerTriggerSpawns } from './triggers/index.js';
+import { registerTriggerSpawns } from './triggers.js';
 import { registerItemSpawns } from './items.js';
 import { registerFuncSpawns } from './funcs.js';
 import { registerPathSpawns } from './paths.js';
