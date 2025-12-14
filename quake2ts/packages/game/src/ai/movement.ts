@@ -168,58 +168,21 @@ export function ai_stand(self: Entity, dist: number, context: EntitySystem): voi
   changeYaw(self, MONSTER_TICK);
 
   if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
-    if (self.enemy && self.enemy.classname !== 'player_noise') {
-        const delta = subtractVec3(self.enemy.origin, self.origin);
-        self.ideal_yaw = vectorToYaw(delta);
-        if (!facingIdeal(self) && (self.monsterinfo.aiflags & AIFlags.TempStandGround)) {
-             self.monsterinfo.aiflags &= ~(AIFlags.StandGround | AIFlags.TempStandGround);
-             ai_run(self, dist, context);
-             return;
-        }
-
-        if (!(self.monsterinfo.aiflags & AIFlags.ManualSteering)) {
-             M_ChangeYaw(self, MONSTER_TICK);
-        }
-
-        // Check attack
-        const retval = ai_checkattack(self, 0, context);
-        if (self.enemy && self.enemy.inUse) {
-             if (visible(self, self.enemy, context.trace, { throughGlass: false })) {
-                 self.monsterinfo.aiflags &= ~AIFlags.LostSight;
-                 self.monsterinfo.last_sighting = { ...self.enemy.origin };
-                 // blind fire target update...
-             } else {
-                 if (findTarget(self, context.targetAwareness, context, context.trace)) return;
-                 self.monsterinfo.aiflags |= AIFlags.LostSight;
-             }
-
-             if ((self.monsterinfo.aiflags & AIFlags.SoundTarget) && !retval) {
-                 if (findTarget(self, context.targetAwareness, context, context.trace)) return;
-             }
-        } else if (!retval) {
-            findTarget(self, context.targetAwareness, context, context.trace);
-            return;
-        }
-    } else {
-        findTarget(self, context.targetAwareness, context, context.trace);
+    if (self.enemy) {
+      ai_run(self, dist, context);
+      return;
     }
-    return;
-  }
-
-  if (self.enemy && !(self.monsterinfo.aiflags & AIFlags.SoundTarget)) {
-       // HuntTarget logic inline? Or just findTarget
-       // Rerelease calls HuntTarget here if enemy exists
-       // But HuntTarget sets goalentity to enemy and calls run/stand.
-       // Here we can just switch to run if we have a valid enemy?
-       ai_run(self, dist, context);
-       return;
   }
 
   if (findTarget(self, context.targetAwareness, context, context.trace)) {
     return;
   }
 
-  // Idle logic if needed
+  if (self.enemy && self.enemy.inUse) {
+    ai_run(self, dist, context);
+  }
+
+  // TODO: Check for talking monsters? (Not in base Q2)
 }
 
 // g_ai.c: ai_walk
@@ -237,6 +200,17 @@ export function ai_walk(self: Entity, dist: number, context: EntitySystem): void
     }
     self.enemy = null;
     self.search_time = 0;
+    // In original: logic for standing or searching
+    // Here we might just clear flags or transition state if needed
+  }
+
+  if ((self.monsterinfo.aiflags & AIFlags.IgnoreShots) !== 0) {
+    // ignore shots
+  } else {
+    // check for attack
+    // Note: ai_walk is generally for patrolling, but if we have an enemy we might want to attack?
+    // In Q2 source, ai_walk calls ai_checkattack IF it has an enemy?
+    // Actually, standard ai_walk just moves.
   }
 }
 
@@ -255,34 +229,6 @@ export function ai_run(self: Entity, dist: number, context: EntitySystem): void 
   if ((self.monsterinfo.aiflags & AIFlags.StandGround) !== 0) {
     self.monsterinfo.stand?.(self, context);
     return;
-  }
-
-  // Sound Target Investigation Logic
-  if (self.monsterinfo.aiflags & AIFlags.SoundTarget) {
-      const v = self.enemy ? subtractVec3(self.origin, self.enemy.origin) : null;
-      // Distance check scaling: dist * (tick_rate / 10). Assuming 10hz base for dist.
-      // We'll use passed dist as is for now, it's typically per-frame.
-      const touching_noise = self.enemy ? SV_CloseEnough(self, self.enemy, dist > 0 ? dist * 2 : 16) : false; // Using slightly generous epsilon
-
-      if (!self.enemy || (touching_noise && facingIdeal(self))) {
-          self.monsterinfo.aiflags |= (AIFlags.StandGround | AIFlags.TempStandGround);
-          (self.angles as MutableVec3).y = self.ideal_yaw;
-          self.monsterinfo.stand?.(self, context);
-          // self.monsterinfo.close_sight_tripped = false;
-          return;
-      }
-
-      if (touching_noise) {
-          changeYaw(self, MONSTER_TICK);
-      } else {
-          M_MoveToGoal(self, dist, context);
-      }
-
-      if (!self.inUse) return;
-
-      if (!findTarget(self, context.targetAwareness, context, context.trace)) {
-          return;
-      }
   }
 
   if (self.monsterinfo.aiflags & AIFlags.ManualSteering) {
