@@ -180,12 +180,15 @@ export function T_Damage(
   let currentMod = mod;
   let currentDamage = damage;
   if (options?.checkFriendlyFire && attacker && targ !== attacker && (targ as any).client && (attacker as any).client) {
-      if (onSameTeam(targ as Entity, attacker as Entity)) {
-          if (options.noFriendlyFire) {
-              currentDamage = 0;
-          } else {
-              currentMod = DamageMod.FRIENDLY_FIRE;
-          }
+    if (onSameTeam(targ as Entity, attacker as Entity)) {
+      if (options.noFriendlyFire) {
+        currentDamage = 0;
+      } else {
+        currentMod = DamageMod.FRIENDLY_FIRE;
+      }
+    }
+  }
+
   // Check for Environment Suit protection
   const client = (targ as Entity).client;
   if (client && client.enviro_time && client.enviro_time > time) {
