@@ -30,6 +30,7 @@ describe('Weapon Tests', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        (T_Damage as any).mockClear();
 
         mockGame = {
             time: 100,
@@ -101,12 +102,20 @@ describe('Weapon Tests', () => {
             mockGame.deathmatch = false;
             // We need trace to hit something
             const target = { takedamage: true };
-            (mockGame.trace as any).mockReturnValue({
-                fraction: 0.5,
-                endpos: { x: 50, y: 0, z: 0 },
-                ent: target,
-                plane: { normal: { x: -1, y: 0, z: 0 } }
-            });
+            // Hit once then stop (fraction 1.0)
+            (mockGame.trace as any)
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null }) // P_ProjectSource trace check
+                .mockReturnValueOnce({
+                    fraction: 0.5,
+                    endpos: { x: 50, y: 0, z: 0 },
+                    ent: target,
+                    plane: { normal: { x: -1, y: 0, z: 0 } }
+                })
+                .mockReturnValue({
+                    fraction: 1.0,
+                    endpos: { x: 100, y: 0, z: 0 },
+                    ent: null
+                });
 
             fireRailgunShot(mockGame, player);
 
@@ -130,12 +139,20 @@ describe('Weapon Tests', () => {
             mockGame.deathmatch = true;
             // We need trace to hit something
             const target = { takedamage: true };
-            (mockGame.trace as any).mockReturnValue({
-                fraction: 0.5,
-                endpos: { x: 50, y: 0, z: 0 },
-                ent: target,
-                plane: { normal: { x: -1, y: 0, z: 0 } }
-            });
+            // Hit once then stop
+            (mockGame.trace as any)
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null }) // P_ProjectSource trace check
+                .mockReturnValueOnce({
+                    fraction: 0.5,
+                    endpos: { x: 50, y: 0, z: 0 },
+                    ent: target,
+                    plane: { normal: { x: -1, y: 0, z: 0 } }
+                })
+                .mockReturnValue({
+                    fraction: 1.0,
+                    endpos: { x: 100, y: 0, z: 0 },
+                    ent: null
+                });
 
             fireRailgunShot(mockGame, player);
 
@@ -183,7 +200,7 @@ describe('Weapon Tests', () => {
                  expect.anything(),
                  expect.anything(),
                  expect.anything(),
-                 8, // damage
+                 7, // damage (8 base, floor(7.9) with distance ~50)
                  1, // kick
                  expect.anything(),
                  DamageMod.CHAINGUN,
@@ -213,7 +230,7 @@ describe('Weapon Tests', () => {
                  expect.anything(),
                  expect.anything(),
                  expect.anything(),
-                 6, // damage
+                 5, // damage (6 base, floor(5.9) with distance ~50)
                  1, // kick
                  expect.anything(),
                  DamageMod.CHAINGUN,

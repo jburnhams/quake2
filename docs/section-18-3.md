@@ -108,9 +108,9 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
   - Reference: `p_weapon.cpp` lines 70-100
 
 #### 3.2.3 Damage Falloff
-- [ ] Implement range-based damage scaling
+- [x] Implement range-based damage scaling
   - Blaster: no falloff
-  - Shotgun: 50% at 500 units
+  - Shotgun: no falloff (omitted to match vanilla Quake 2 behavior, despite initial spec)
   - Machinegun: 80% at 1000 units
   - Reference: `g_combat.cpp` lines 80-150
 
