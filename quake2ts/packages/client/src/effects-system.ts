@@ -9,7 +9,7 @@ import {
   angleVectors
 } from '@quake2ts/shared';
 // Import particle helpers from engine
-import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail } from '@quake2ts/engine';
+import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail, spawnSplash, spawnSteam } from '@quake2ts/engine';
 
 // Helper to copy vec3
 const copyVec3 = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z });
@@ -241,6 +241,26 @@ export class ClientEffectSystem {
                              // TODO: Make BFG explosion green/bigger
                         });
                      }
+                 }
+                 break;
+
+             case TempEntity.SPLASH:
+                 if (particleSystem) {
+                     spawnSplash({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 this.playSound(pos, 0, "world/splash.wav"); // Or generic splash sound
+                 break;
+
+             case TempEntity.STEAM:
+                 if (particleSystem) {
+                     spawnSteam({
+                         system: particleSystem,
+                         origin: pos
+                     });
                  }
                  break;
          }
