@@ -12,7 +12,7 @@ import { MulticastType } from '../../imports.js';
 export function dropFlag(
     flag: FlagEntity,
     origin: Vec3,
-    game: GameExports | null,
+    game: GameExports,
     context: EntitySystem
 ): void {
     if (flag.flagState !== FlagState.CARRIED) {
@@ -31,28 +31,29 @@ export function dropFlag(
     flag.model = flag.flagTeam === 'red' ? 'players/male/flag1.md2' : 'players/male/flag2.md2';
 
     // Set auto-return timer (30 seconds)
-    const time = context.timeSeconds;
+    // context.timeSeconds is preferred over game.time if available
+    const time = (context as any).timeSeconds ?? game.time;
     flag.nextthink = time + 30.0;
 
     // Play sound (using multicast for "event" sound if needed, or just entity sound)
-    // context.sound?.(flag, ...);
+    // game.sound?.(flag, ...);
 
     // Effect?
-    // context.multicast?.(flag.origin, MulticastType.Pvs, ServerCommand.muzzleflash, ...);
+    // game.multicast?.(flag.origin, MulticastType.Pvs, ServerCommand.muzzleflash, ...);
 
-    context.engine.centerprintf?.(flag, `The ${flag.flagTeam} flag was dropped!`);
+    game.centerprintf?.(flag, `The ${flag.flagTeam} flag was dropped!`);
 
     // Ensure the flag has a think function to handle return
-    flag.think = (selfEntity, ctx) => flagThink(selfEntity, ctx);
+    flag.think = (selfEntity, ctx) => flagThink(selfEntity, ctx, game);
 }
 
-export function flagThink(self: Entity, context: EntitySystem): void {
+export function flagThink(self: Entity, context: EntitySystem, game: GameExports): void {
     const flag = self as FlagEntity;
 
     if (flag.flagState === FlagState.DROPPED) {
          // Return flag
-         context.sound(flag, 0, 'ctf/flagret.wav', 1, 1, 0);
-         context.engine.centerprintf?.(flag, `The ${flag.flagTeam} flag returned to base!`);
+         game.sound?.(flag, 0, 'ctf/flagret.wav', 1, 1, 0);
+         game.centerprintf?.(flag, `The ${flag.flagTeam} flag returned to base!`);
 
          setFlagState(flag, FlagState.AT_BASE, context);
          flag.origin = { ...flag.baseOrigin };

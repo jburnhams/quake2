@@ -68,7 +68,7 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 #### 3.1.6 Blaster Alt-Fire
 **TypeScript File**: `/packages/game/src/combat/weapons/blaster.ts`
 
-- [x] Implement melee extension
+- [ ] Implement melee extension
   - Blaster as bayonet
   - Close-range stab attack
   - No ammo consumption
@@ -84,27 +84,27 @@ This phase covers weapon alt-fires, effects, and mission pack weapons.
 **TypeScript File**: `/packages/game/src/combat/weapons/` (various)
 
 #### 3.2.1 Weapon Kick & Recoil
-- [x] Implement view kick for all weapons
+- [ ] Implement view kick for all weapons
   - Camera angle adjustment on fire
   - Recoil pattern per weapon
   - Recovery over time
   - Reference: `p_weapon.cpp` lines 120-220
 
-- [x] Add kick to PlayerState
+- [ ] Add kick to PlayerState
   - Store `kick_angles` in player state
   - Apply in view calculation
   - Reference: `p_view.cpp` lines 350-420
 
 #### 3.2.2 Muzzle Flash Positioning
-- [x] Implement muzzle flash entities
+- [ ] Implement muzzle flash entities
   - Create temporary light entity on fire
   - Position at weapon muzzle
   - Duration and intensity per weapon
   - Reference: `p_weapon.cpp` lines 50-110
 
-- [x] Add flash offset per weapon model
-  - MD3 tag-based positioning (Partial implementation with hooks, focusing on offsets for now)
-  - Hardcoded offsets for MD2 (Implemented)
+- [ ] Add flash offset per weapon model
+  - MD3 tag-based positioning
+  - Hardcoded offsets for MD2
   - Reference: `p_weapon.cpp` lines 70-100
 
 #### 3.2.3 Damage Falloff

@@ -31,26 +31,26 @@ This phase covers Capture The Flag game mode implementation.
 
 - [x] Implement flag physics
   - Can be picked up by players
-  - Drops on player death
-  - Returns to base after timeout
+  - Drops on player death (Partial: Pickup implemented, Drop/Return next)
+  - Returns to base after timeout (Partial)
   - Reference: `g_ctf.cpp` lines 192-300
 
 #### 6.1.2 Flag State Management
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 302-550)
 **TypeScript File**: `/packages/game/src/modes/ctf/state.ts` (NEW)
 
-- [x] Implement flag states
+- [ ] Implement flag states
   - States: AT_BASE, CARRIED, DROPPED
   - State transitions
   - Reference: `g_ctf.cpp` lines 302-380
 
-- [x] Implement flag pickup logic
+- [ ] Implement flag pickup logic
   - Team validation (can't pick up own flag)
   - Can pick up enemy flag
   - Can return own flag to base
   - Reference: `g_ctf.cpp` lines 382-480
 
-- [x] Implement flag drop logic
+- [ ] Implement flag drop logic
   - Drop on death
   - Manual drop with command
   - Auto-return timer (30 seconds)
@@ -60,13 +60,13 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 552-720)
 **TypeScript File**: `/packages/game/src/modes/ctf/capture.ts` (NEW)
 
-- [x] Implement flag capture detection
+- [ ] Implement flag capture detection
   - Must be touching own flag base
   - Must have enemy flag
   - Own flag must be at base
   - Reference: `g_ctf.cpp` lines 552-620
 
-- [x] Implement capture scoring
+- [ ] Implement capture scoring
   - Award team points
   - Award individual capture bonus
   - Reset flags to bases
@@ -77,17 +77,17 @@ This phase covers Capture The Flag game mode implementation.
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 722-900)
 **TypeScript File**: `/packages/game/src/modes/ctf/teams.ts` (NEW)
 
-- [x] Implement team assignment
+- [ ] Implement team assignment
   - Auto-assign to balance teams
   - Manual team selection
   - Reference: `g_ctf.cpp` lines 722-800
 
-- [x] Implement team colors
+- [ ] Implement team colors
   - Red vs Blue player skins
   - Team-colored effects
   - Reference: `g_ctf.cpp` lines 802-880
 
-- [x] Implement friendly fire toggle
+- [ ] Implement friendly fire toggle
   - Configurable team damage
   - Default: no friendly fire
   - Reference: `g_ctf.cpp` lines 882-900

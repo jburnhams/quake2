@@ -13,13 +13,6 @@ export enum DamageFlags {
   NO_DAMAGE_EFFECTS = 0x00000400, // Custom flag to suppress blood/sparks
 }
 
-export enum EntityDamageFlags {
-  GODMODE = 1 << 0,
-  IMMORTAL = 1 << 1,
-  NO_KNOCKBACK = 1 << 2,
-  NO_DAMAGE_EFFECTS = 1 << 3,
-}
-
 export function hasAnyDamageFlag(flags: number, mask: DamageFlags): boolean {
   return (flags & mask) !== 0;
 }

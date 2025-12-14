@@ -16,27 +16,25 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/ambient.ts` (NEW)
 
 #### 5.1.1 Target Speaker Entity
-- [x] Implement `SP_target_speaker(entity: Entity): void`
+- [ ] Implement `SP_target_speaker(entity: Entity): void`
   - Ambient sound emitter
   - Looping vs one-shot mode
   - Volume configuration
   - Attenuation distance
   - Reference: `g_target.cpp` lines 352-480
 
-- [x] Add to entity spawn registry
+- [ ] Add to entity spawn registry
   - Register classname: "target_speaker"
   - Reference: `/packages/game/src/entities/index.ts`
 
 #### 5.1.2 Ambient Sound Playback
-- [x] Implement looping ambient sounds
+- [ ] Implement looping ambient sounds
   - Create looping audio source
   - 3D spatialization
   - Auto-restart when complete
   - Reference: existing audio system
-  - Note: Basic looping support implemented in `AmbientSoundSystem`. Dynamic enabling/disabling via triggers is handled by `target_speaker` entity logic in `targets.ts` toggling `spawnflags` and `sounds`.
-  - Implemented `EntitySoundSystem` in client to track and play looping sounds (`s.sound`) for entities.
 
-- [x] Implement ambient sound triggering
+- [ ] Implement ambient sound triggering
   - Enable/disable speakers via triggers
   - Change sound file dynamically
   - Reference: `g_target.cpp` lines 420-470
@@ -51,36 +49,30 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/reverb.ts` (NEW)
 
 #### 5.2.1 Reverb System
-- [x] Implement convolution reverb using Web Audio API
+- [ ] Implement convolution reverb using Web Audio API
   - ConvolverNode for reverb
   - Impulse response files for different spaces
-  - Implemented in `reverb.ts` and integrated into `AudioSystem` in `system.ts`.
 
-- [x] Implement room size detection
+- [ ] Implement room size detection
   - Estimate room dimensions from BSP
   - Select reverb based on size
   - Small room: short decay
   - Large room: long decay
-  - Implemented in `room.ts` using BSP leaf cluster volume estimation.
 
-- [x] Add reverb to audio system
+- [ ] Add reverb to audio system
   - Route sounds through reverb
   - Configurable wet/dry mix
   - Reference: `/packages/engine/src/audio/system.ts`
-  - Wired into `createAudioGraph` in `context.ts` and `AudioSystem`.
 
 #### 5.2.2 Sound Occlusion
-- [x] Implement sound occlusion
+- [ ] Implement sound occlusion
   - Trace from listener to sound source
   - If blocked, apply low-pass filter
   - BiquadFilterNode in Web Audio
-  - Implemented `createOcclusionResolver` in `occlusion.ts` using engine traces.
-  - Note: Wiring into main application entry point is pending discovery of initialization code.
 
-- [x] Implement distance-based low-pass
+- [ ] Implement distance-based low-pass
   - Attenuate high frequencies at distance
   - Realistic distant sound
-  - Implemented in `AudioOcclusion` resolver logic.
 
 ---
 
@@ -92,21 +84,21 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/music.ts`
 
 #### 5.3.1 CD Track System
-- [x] Implement CD track configstring handling
+- [ ] Implement CD track configstring handling
   - Read CS_CDTRACK from worldspawn
   - Map track numbers to music files
   - Reference: `g_spawn.cpp` lines 920-970
 
-- [x] Add configstring parsing in worldspawn
+- [ ] Add configstring parsing in worldspawn
   - Set CS_CDTRACK in `SP_worldspawn`
   - Reference: `/packages/game/src/entities/worldspawn.ts`
 
 #### 5.3.2 Music Transitions
-- [x] Implement music crossfading
+- [ ] Implement music crossfading
   - Fade out current track
   - Fade in new track
   - Configurable fade duration (1-3 seconds)
 
-- [x] Implement track looping
+- [ ] Implement track looping
   - Seamless loop points
   - Restart on completion

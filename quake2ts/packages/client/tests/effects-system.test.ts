@@ -1,126 +1,91 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ClientEffectSystem, EntityProvider } from '../src/effects-system.js';
+import { DynamicLightManager, EngineImports, EntityState, AudioApi } from '@quake2ts/engine';
+import { MZ_BLASTER, MZ_ROCKET, MZ_MACHINEGUN, TempEntity } from '@quake2ts/shared';
 
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
-import { ClientEffectSystem } from '../src/effects-system.js';
-import { DynamicLightManager } from '@quake2ts/engine';
-import { EngineImports, EntityState } from '@quake2ts/engine';
-import { MZ_BLASTER, MZ_ROCKET, MZ_SHOTGUN, MZ_GRENADE, MZ_RAILGUN } from '@quake2ts/shared';
-import { Vec3 } from '@quake2ts/shared';
-
-// Mock dependencies
-const mockDLightManager = {
-    addLight: vi.fn(),
-    getActiveLights: vi.fn().mockReturnValue([]),
-    update: vi.fn(),
-    clear: vi.fn()
-};
-
+// Mocks
 const mockAudio = {
-    soundindex: vi.fn().mockReturnValue(1),
-    positioned_sound: vi.fn(),
-    sound: vi.fn()
-};
+    soundindex: vi.fn().mockImplementation((name) => name === 'invalid' ? 0 : 1),
+    sound: vi.fn(),
+    positioned_sound: vi.fn()
+} as unknown as AudioApi;
 
 const mockEngine: EngineImports = {
-    trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
-    audio: mockAudio as any,
-    assets: {
-        getModel: vi.fn()
-    } as any
+    audio: mockAudio,
+    trace: vi.fn(),
 };
 
-const mockEntityProvider = {
+const mockDLightManager = {
+    addLight: vi.fn(),
+} as unknown as DynamicLightManager;
+
+const mockEntityProvider: EntityProvider = {
     getEntity: vi.fn(),
     getPlayerNum: vi.fn().mockReturnValue(0)
 };
 
-const mockConfigStrings = {
-    getModelName: vi.fn()
-};
-
-// Mock Math.random to avoid jitter in tests
-const originalRandom = Math.random;
-
 describe('ClientEffectSystem', () => {
-    let effectSystem: ClientEffectSystem;
+    let system: ClientEffectSystem;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        // Override random to return 0.6 so that (0.6 < 0.5) is false
-        // This prevents the radius jitter branch: `if (Math.random() < 0.5) radius += ...`
-        Math.random = () => 0.6;
-
-        effectSystem = new ClientEffectSystem(
-            mockDLightManager as any,
-            mockEngine,
-            mockEntityProvider,
-            mockConfigStrings as any
-        );
+        system = new ClientEffectSystem(mockDLightManager, mockEngine, mockEntityProvider);
     });
 
-    afterAll(() => {
-        Math.random = originalRandom;
+    describe('onMuzzleFlash', () => {
+        it('should add a yellow dlight and play sound for Blaster', () => {
+            const ent: EntityState = {
+                number: 1,
+                origin: { x: 100, y: 100, z: 100 },
+                angles: { x: 0, y: 0, z: 0 },
+            } as any;
+
+            vi.mocked(mockEntityProvider.getEntity).mockReturnValue(ent);
+
+            system.onMuzzleFlash(1, MZ_BLASTER, 10.0);
+
+            // Verify DLight
+            expect(mockDLightManager.addLight).toHaveBeenCalled();
+            const lightCall = vi.mocked(mockDLightManager.addLight).mock.calls[0][0];
+            expect(lightCall.key).toBe(1);
+            expect(lightCall.color).toEqual({ x: 1, y: 1, z: 0 }); // Yellow
+            expect(lightCall.intensity).toBeGreaterThan(100);
+            expect(lightCall.die).toBeCloseTo(10.1);
+
+            // Verify Sound
+            expect(mockAudio.soundindex).toHaveBeenCalledWith('weapons/blastf1a.wav');
+            expect(mockAudio.sound).toHaveBeenCalledWith(1, 0, 1, 1.0, 1.0, 0);
+        });
+
+        it('should handle silenced weapons with reduced volume and radius', () => {
+            const ent: EntityState = {
+                number: 2,
+                origin: { x: 0, y: 0, z: 0 },
+                angles: { x: 0, y: 0, z: 0 },
+            } as any;
+            vi.mocked(mockEntityProvider.getEntity).mockReturnValue(ent);
+
+            // MZ_MACHINEGUN | 128 (Silenced bit)
+            system.onMuzzleFlash(2, MZ_MACHINEGUN | 128, 5.0);
+
+            // Verify Sound Volume
+            expect(mockAudio.sound).toHaveBeenCalledWith(2, 0, 1, 0.2, 1.0, 0);
+        });
     });
 
-    it('should add a light and play sound for Blaster muzzle flash', () => {
-        const ent: EntityState = {
-            origin: { x: 100, y: 100, z: 100 },
-            angles: { x: 0, y: 0, z: 0 },
-        } as any;
+    describe('onTempEntity', () => {
+        it('should spawn explosion light and sound', () => {
+            const pos = { x: 50, y: 50, z: 50 };
+            system.onTempEntity(TempEntity.EXPLOSION1, pos, 20.0);
 
-        mockEntityProvider.getEntity.mockReturnValue(ent);
+            // Verify DLight
+            expect(mockDLightManager.addLight).toHaveBeenCalled();
+            const lightCall = vi.mocked(mockDLightManager.addLight).mock.calls[0][0];
+            expect(lightCall.color).toEqual({ x: 1, y: 0.5, z: 0.2 }); // Orange
+            expect(lightCall.die).toBe(20.5);
 
-        effectSystem.onMuzzleFlash(1, MZ_BLASTER, 1.0);
-
-        expect(mockDLightManager.addLight).toHaveBeenCalled();
-        const callArgs = mockDLightManager.addLight.mock.calls[0][0];
-        expect(callArgs.key).toBe(1);
-        expect(callArgs.intensity).toBe(150);
-        expect(callArgs.color).toEqual({ x: 1, y: 1, z: 0 });
-
-        expect(mockAudio.positioned_sound).not.toHaveBeenCalled();
-        expect(mockAudio.sound).toHaveBeenCalled();
-    });
-
-    it('should calculate correct flash origin based on offsets', () => {
-         const ent: EntityState = {
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
-        } as any;
-
-        mockEntityProvider.getEntity.mockReturnValue(ent);
-
-        effectSystem.onMuzzleFlash(1, MZ_BLASTER, 1.0);
-
-        const callArgs = mockDLightManager.addLight.mock.calls[0][0];
-        // Blaster offset defined as { x: 24, y: 8, z: 0 }
-        expect(callArgs.origin).not.toEqual({ x: 0, y: 0, z: 0 });
-    });
-
-    it('should use different properties for different weapons', () => {
-        const ent: EntityState = {
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
-        } as any;
-        mockEntityProvider.getEntity.mockReturnValue(ent);
-
-        // Test Rocket
-        effectSystem.onMuzzleFlash(1, MZ_ROCKET, 1.0);
-        const rocketArgs = mockDLightManager.addLight.mock.calls[0][0];
-        expect(rocketArgs.intensity).toBe(300);
-        expect(rocketArgs.color).toEqual({ x: 1, y: 0.5, z: 0.2 });
-
-        vi.clearAllMocks();
-
-        // Test Railgun (should have longer duration)
-        effectSystem.onMuzzleFlash(1, MZ_RAILGUN, 1.0);
-        const railArgs = mockDLightManager.addLight.mock.calls[0][0];
-        expect(railArgs.intensity).toBe(150);
-        expect(railArgs.die - 1.0).toBeCloseTo(0.15); // Duration check
-    });
-
-    it('should handle missing entity gracefully', () => {
-        mockEntityProvider.getEntity.mockReturnValue(undefined);
-        effectSystem.onMuzzleFlash(1, MZ_BLASTER, 1.0);
-        expect(mockDLightManager.addLight).not.toHaveBeenCalled();
+            // Verify Sound
+            expect(mockAudio.positioned_sound).toHaveBeenCalledWith(pos, 1, 1.0, 0.5);
+        });
     });
 });

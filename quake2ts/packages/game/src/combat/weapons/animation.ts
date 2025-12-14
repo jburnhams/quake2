@@ -7,8 +7,31 @@ import { EntitySystem } from '../../entities/system.js';
 import { WeaponStateEnum } from './state.js';
 import { PowerupId } from '../../inventory/playerInventory.js';
 import { firingRandom } from './firing.js';
-import { ChangeWeapon } from './switching.js';
-import { Weapon_AnimationTime } from './common.js';
+
+/**
+ * Calculates the animation time frame for weapons.
+ * Handles powerups like Haste (doubles speed) and Quad Fire.
+ *
+ * Source: p_weapon.cpp (implicit in logic)
+ */
+export function Weapon_AnimationTime(ent: Entity): number {
+    // Default 10Hz (0.1s)
+    // Haste doubles weapon speed (halves time)
+    // Quad Fire (Xatrix) quadruples weapon speed
+
+    let time = 0.1;
+
+    if (ent.client?.inventory.powerups.has(PowerupId.TechHaste)) {
+        time *= 0.5;
+    }
+
+    // Check for QuadFire (if implemented)
+    if (ent.client?.inventory.powerups.has(PowerupId.QuadFire)) {
+        time *= 0.25;
+    }
+
+    return time;
+}
 
 /**
  * Generic Weapon Animation Handler
@@ -58,22 +81,18 @@ export function Weapon_Generic(
             return;
         }
         // Switch to new weapon
-        ChangeWeapon(ent);
+        import('./switching.js').then(({ ChangeWeapon }) => {
+             ChangeWeapon(ent);
+        });
         return;
     }
 
     if (client.weaponstate === WeaponStateEnum.WEAPON_READY) {
-        // Check for fire (Primary or Alt-Fire)
-        if ((client.buttons & 1) || (client.buttons & 32)) {
+        // Check for fire
+        if ((client.buttons & 1) /* BUTTON_ATTACK */) {
             client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
             // Start fire sequence at ACTIVATE_LAST + 1
             client.gun_frame = FRAME_ACTIVATE_LAST + 1;
-            return;
-        }
-
-        // Check for pending switch
-        if (client.newWeapon) {
-            ChangeWeapon(ent, client.newWeapon);
             return;
         }
 
@@ -117,12 +136,6 @@ export function Weapon_Generic(
         if (client.gun_frame < FRAME_FIRE_LAST) {
             client.gun_frame++;
             client.weapon_think_time = time + Weapon_AnimationTime(ent);
-            return;
-        }
-
-        // Check for pending switch
-        if (client.newWeapon) {
-            ChangeWeapon(ent, client.newWeapon);
             return;
         }
 
@@ -177,12 +190,6 @@ export function Weapon_Repeating(
         if (!((client.buttons) & 1 /* BUTTON_ATTACK */)) {
             client.gun_frame = FRAME_IDLE_LAST + 1;
             client.weaponstate = WeaponStateEnum.WEAPON_READY;
-
-            // Check for pending switch immediately upon release
-            if (client.newWeapon) {
-                 ChangeWeapon(ent, client.newWeapon);
-                return;
-            }
         }
 
         client.weapon_think_time = sys.timeSeconds + Weapon_AnimationTime(ent);
@@ -229,27 +236,12 @@ export function Throw_Generic(
     }
     client.weapon_think_time = time + 0.1; // Default 10Hz unless modified
 
-    // Handle DROPPING state for grenades.
-    // Since grenades don't have explicit deactivate frames passed in this signature,
-    // we use a safe fallback to finalize the switch immediately or animate if frames are known.
-    // For robust porting, we should finish the switch to avoid getting stuck.
-    if (client.weaponstate === WeaponStateEnum.WEAPON_DROPPING) {
-         ChangeWeapon(ent);
-        return;
-    }
-
     // WEAPON_READY: Can start throw
     if (client.weaponstate === WeaponStateEnum.WEAPON_READY) {
         if ((client.buttons & 1)) { // Attack button
             client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
             client.gun_frame = FRAME_THROW_FIRST;
             // Start cook logic in FIRING state
-            return;
-        }
-
-        // Check pending switch
-        if (client.newWeapon) {
-            ChangeWeapon(ent, client.newWeapon);
             return;
         }
 
@@ -318,11 +310,5 @@ export function Throw_Generic(
         client.gun_frame = FRAME_FIRE_LAST + 1; // Go to idle
         client.grenade_time = 0;
         client.grenade_blew_up = false;
-
-        // Check switch after throw
-        if (client.newWeapon) {
-             ChangeWeapon(ent, client.newWeapon);
-            return;
-        }
     }
 }

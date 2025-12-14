@@ -41,55 +41,55 @@
 - [x] Add event `onHudUpdate?: (data: HudData) => void` for reactive UI
 
 ### 4.2.2 Message Display
-- [x] Add event `onCenterPrint?: (message: string, duration: number) => void` for center messages
-- [x] Add event `onNotify?: (message: string) => void` for console-style notifications
-- [x] Add event `onPickupMessage?: (item: string) => void` for pickup feedback
-- [x] Add event `onObituaryMessage?: (message: string) => void` for death messages
+- [ ] Add event `onCenterPrint?: (message: string, duration: number) => void` for center messages
+- [ ] Add event `onNotify?: (message: string) => void` for console-style notifications
+- [ ] Add event `onPickupMessage?: (item: string) => void` for pickup feedback
+- [ ] Add event `onObituaryMessage?: (message: string) => void` for death messages
 
 ### 4.2.3 Menu Integration
-- [x] Expose `MenuSystem` API for pause/options menus
-- [x] Add method `showPauseMenu(): void` and `hidePauseMenu(): void`
-- [x] Add method `isMenuActive(): boolean` to pause game updates
-- [x] Add event `onMenuStateChange?: (active: boolean) => void`
-- [x] Provide menu data structure for webapp custom rendering
+- [ ] Expose `MenuSystem` API for pause/options menus
+- [ ] Add method `showPauseMenu(): void` and `hidePauseMenu(): void`
+- [ ] Add method `isMenuActive(): boolean` to pause game updates
+- [ ] Add event `onMenuStateChange?: (active: boolean) => void`
+- [ ] Provide menu data structure for webapp custom rendering
 
 ---
 
 ## 4.3 Save/Load System
 
 ### 4.3.1 Save Game API
-- [x] Add method `saveGame(slotName: string): Promise<SaveData>`
-- [x] Return serialized game state as transferable object
-- [x] Include: player state, entity states, inventory, level time, map name
-- [x] Add method `getSaveMetadata(saveData: SaveData): SaveMetadata`
-- [x] Return: timestamp, map name, player health, screenshot (optional)
+- [ ] Add method `saveGame(slotName: string): Promise<SaveData>`
+- [ ] Return serialized game state as transferable object
+- [ ] Include: player state, entity states, inventory, level time, map name
+- [ ] Add method `getSaveMetadata(saveData: SaveData): SaveMetadata`
+- [ ] Return: timestamp, map name, player health, screenshot (optional)
 
 ### 4.3.2 Load Game API
-- [x] Add method `loadGame(saveData: SaveData): Promise<void>`
-- [x] Restore full game state from save data
-- [x] Add validation to detect corrupted saves
-- [x] Add event `onLoadComplete?: () => void`
-- [x] Add event `onLoadError?: (error: Error) => void`
+- [ ] Add method `loadGame(saveData: SaveData): Promise<void>`
+- [ ] Restore full game state from save data
+- [ ] Add validation to detect corrupted saves
+- [ ] Add event `onLoadComplete?: () => void`
+- [ ] Add event `onLoadError?: (error: Error) => void`
 
 ### 4.3.3 Quick Save/Load
-- [x] Add method `quickSave(): Promise<void>` to internal slot
-- [x] Add method `quickLoad(): Promise<void>` from last quick save
-- [x] Add method `hasQuickSave(): boolean`
+- [ ] Add method `quickSave(): Promise<void>` to internal slot
+- [ ] Add method `quickLoad(): Promise<void>` from last quick save
+- [ ] Add method `hasQuickSave(): boolean`
 
 ---
 
 ## 4.4 Missing Game Features
 
 ### 4.4.1 Complete Weapon System
-- [x] Implement all weapon alt-fires (if applicable to rerelease)
-- [x] Implement weapon switching queue/cycle logic
-- [x] Add ammo depletion and auto-switch on empty
+- [ ] Implement all weapon alt-fires (if applicable to rerelease)
+- [ ] Implement weapon switching queue/cycle logic
+- [ ] Add ammo depletion and auto-switch on empty
 - [ ] Add weapon animations and proper view weapon rendering
 - [ ] Fix weapon firing state machine edge cases
 
 ### 4.4.2 Power-ups and Items
-- [x] Implement quad damage visual and damage multiplication
-- [x] Implement invulnerability effect (screen tint, damage immunity)
+- [ ] Implement quad damage visual and damage multiplication
+- [ ] Implement invulnerability effect (screen tint, damage immunity)
 - [ ] Implement environment suit (breathing underwater, lava protection)
 - [ ] Implement power screen/shield effects
 - [ ] Add proper item respawn timers and visual indicators

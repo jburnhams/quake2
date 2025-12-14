@@ -19,20 +19,22 @@ export function checkPlayerFlagDrop(player: Entity, sys: EntitySystem) {
     if (!hasRedFlag && !hasBlueFlag) return;
 
     // Find the flag entity
-    let foundFlag: FlagEntity | null = null;
     sys.forEachEntity((ent) => {
         const flag = ent as FlagEntity;
         if ((flag.classname === 'item_flag_team1' || flag.classname === 'item_flag_team2') && flag.owner === player) {
-            foundFlag = flag;
+            // Drop it
+            // Assuming sys.game is accessible or we need another way to get GameExports
+            // Usually EntitySystem has a reference to game or we can pass it.
+            // But EntitySystem definition doesn't strictly include 'game'.
+            // However, in our index.ts we attach it: (entities as any)._game = gameExports;
+            const game = (sys as any)._game as GameExports;
+            if (game) {
+                dropFlag(flag, player.origin, game, sys);
+
+                // Remove key from inventory
+                player.client!.inventory.keys.delete(KeyId.RedFlag);
+                player.client!.inventory.keys.delete(KeyId.BlueFlag);
+            }
         }
     });
-
-    if (foundFlag) {
-        // We pass null for game, as dropFlag now relies on EntitySystem mostly
-        dropFlag(foundFlag, player.origin, null, sys);
-
-        // Remove key from inventory
-        player.client!.inventory.keys.delete(KeyId.RedFlag);
-        player.client!.inventory.keys.delete(KeyId.BlueFlag);
-    }
 }

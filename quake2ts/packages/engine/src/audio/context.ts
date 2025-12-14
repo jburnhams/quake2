@@ -18,11 +18,6 @@ export interface GainNodeLike extends AudioNodeLike {
 
 export interface DynamicsCompressorNodeLike extends AudioNodeLike {}
 
-export interface ConvolverNodeLike extends AudioNodeLike {
-  buffer: AudioBufferLike | null;
-  normalize: boolean;
-}
-
 export interface AudioBufferLike {
   readonly duration: number;
 }
@@ -59,7 +54,6 @@ export interface AudioContextLike {
   createBufferSource(): AudioBufferSourceNodeLike;
   createPanner?(): PannerNodeLike;
   createBiquadFilter?(): BiquadFilterNodeLike;
-  createConvolver?(): ConvolverNodeLike;
   decodeAudioData?(data: ArrayBuffer): Promise<AudioBufferLike>;
 }
 
@@ -70,13 +64,6 @@ export interface AudioGraph {
   master: GainNodeLike;
   compressor: DynamicsCompressorNodeLike;
   filter?: BiquadFilterNodeLike;
-  reverb?: ReverbNode;
-}
-
-export interface ReverbNode {
-    convolver: ConvolverNodeLike;
-    input: GainNodeLike; // Send to reverb
-    output: GainNodeLike; // Return from reverb
 }
 
 export class AudioContextController {
@@ -109,43 +96,15 @@ export function createAudioGraph(controller: AudioContextController): AudioGraph
   master.gain.value = 1;
   const compressor = context.createDynamicsCompressor();
   const filter = context.createBiquadFilter?.();
-
-  // Create reverb nodes if supported
-  let reverb: ReverbNode | undefined;
-  if (context.createConvolver && context.createGain) {
-      const convolver = context.createConvolver();
-      const input = context.createGain();
-      const output = context.createGain();
-
-      input.connect(convolver);
-      convolver.connect(output);
-      // Connect reverb output to master (will be routed through filter/compressor below)
-
-      reverb = { convolver, input, output };
-  }
-
-  // Routing
-  // Master -> Filter (optional) -> Compressor -> Destination
-
   if (filter) {
     filter.type = 'lowpass';
     filter.frequency.value = 20000;
     filter.Q.value = 0.707;
     master.connect(filter);
     filter.connect(compressor);
-
-    // Connect reverb output to filter so it gets low-passed underwater too
-    if (reverb) {
-        reverb.output.connect(filter);
-    }
   } else {
     master.connect(compressor);
-    if (reverb) {
-        reverb.output.connect(compressor);
-    }
   }
-
   compressor.connect(context.destination);
-
-  return { context, master, compressor, filter, reverb };
+  return { context, master, compressor, filter };
 }

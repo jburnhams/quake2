@@ -8,7 +8,6 @@ import { FlagItem } from '../../inventory/items.js';
 import { pickupFlag } from '../../inventory/playerInventory.js';
 import { EntitySystem } from '../../entities/system.js';
 import { FlagState, setFlagState, FlagEntity } from './state.js';
-import { checkCapture } from './capture.js';
 import { Vec3 } from '@quake2ts/shared';
 
 export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): Partial<Entity> {
@@ -52,11 +51,7 @@ export function createFlagPickupEntity(game: GameExports, flagItem: FlagItem): P
             if (sameTeam) {
                 // If touching own flag
                 if (self.flagState === FlagState.AT_BASE) {
-                     // Check for capture
-                     if (checkCapture(self, other, game, game.entities as unknown as EntitySystem)) {
-                        return;
-                     }
-                     return; // Do nothing else
+                    return; // Do nothing
                 }
                 if (self.flagState === FlagState.DROPPED) {
                     // Return flag

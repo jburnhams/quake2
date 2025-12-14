@@ -1,6 +1,6 @@
 import { addVec3, closestPointToBox, lengthVec3, normalizeVec3, scaleVec3, subtractVec3, type Vec3 } from '@quake2ts/shared';
 import { applyPowerArmor, applyRegularArmor, type PowerArmorState, type RegularArmorState } from './armor.js';
-import { DamageFlags, EntityDamageFlags, hasAnyDamageFlag } from './damageFlags.js';
+import { DamageFlags, hasAnyDamageFlag } from './damageFlags.js';
 import { DamageMod } from './damageMods.js';
 import type { Entity } from '../entities/entity.js';
 import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
@@ -27,7 +27,12 @@ export interface Damageable extends DamageableCallbacks {
   readonly powerArmor?: PowerArmorState;
 }
 
-export { EntityDamageFlags };
+export enum EntityDamageFlags {
+  GODMODE = 1 << 0,
+  IMMORTAL = 1 << 1,
+  NO_KNOCKBACK = 1 << 2,
+  NO_DAMAGE_EFFECTS = 1 << 3,
+}
 
 export interface DamageApplicationResult {
   readonly take: number;
@@ -157,20 +162,6 @@ export function T_Damage(
 ): DamageApplicationResult | null {
   if (!targ.takedamage) {
     return null;
-  }
-
-  // Check for Environment Suit protection
-  const client = (targ as Entity).client;
-  if (client && client.enviro_time && client.enviro_time > time) {
-      if (mod === DamageMod.SLIME || mod === DamageMod.LAVA) {
-          return {
-              take: 0,
-              psave: 0,
-              asave: 0,
-              knocked: { x: 0, y: 0, z: 0 },
-              killed: false,
-          };
-      }
   }
 
   const modifier = getDamageModifier(attacker, time);

@@ -46,9 +46,6 @@ export function PlayerNoise(who: Entity, where: { x: number; y: number; z: numbe
         player_noise(noise, context);
         noise.owner = who;
         who.client.player_noise_entity = noise;
-
-        // Also create second noise entity for impacts if needed, similar to Rerelease
-        // For now, we reuse one or rely on type logic
     }
 
     const noise = who.client.player_noise_entity;
@@ -57,32 +54,22 @@ export function PlayerNoise(who: Entity, where: { x: number; y: number; z: numbe
 
     // Update awareness
     const awareness = context.targetAwareness;
-    if (awareness) {
-        if (type === PNOISE_WEAPON) {
-            if (awareness.soundEntity === noise) {
-                awareness.soundEntityFrame = awareness.frameNumber;
-            } else {
-                awareness.sound2Entity = awareness.soundEntity;
-                awareness.sound2EntityFrame = awareness.soundEntityFrame;
-                awareness.soundEntity = noise;
-                awareness.soundEntityFrame = awareness.frameNumber;
-            }
-        } else if (type === PNOISE_SELF) {
-            if (awareness.sightEntity === noise) {
-                awareness.sightEntityFrame = awareness.frameNumber;
-            } else {
-                awareness.sightClient = noise;
-            }
-        }
-    }
+    if (!awareness) return;
 
-    // Update Client Fields matching Rerelease/Quake 2 logic
-    // This allows AI_GetSoundClient to work correctly
-    if (type === PNOISE_SELF || type === PNOISE_WEAPON) {
-        who.client.sound_entity = noise;
-        who.client.sound_entity_time = context.timeSeconds;
-    } else { // PNOISE_IMPACT or others
-        who.client.sound2_entity = noise;
-        who.client.sound2_entity_time = context.timeSeconds;
+    if (type === PNOISE_WEAPON) {
+        if (awareness.soundEntity === noise) {
+            awareness.soundEntityFrame = awareness.frameNumber;
+        } else {
+            awareness.sound2Entity = awareness.soundEntity;
+            awareness.sound2EntityFrame = awareness.soundEntityFrame;
+            awareness.soundEntity = noise;
+            awareness.soundEntityFrame = awareness.frameNumber;
+        }
+    } else if (type === PNOISE_SELF) {
+        if (awareness.sightEntity === noise) {
+            awareness.sightEntityFrame = awareness.frameNumber;
+        } else {
+            awareness.sightClient = noise;
+        }
     }
 }

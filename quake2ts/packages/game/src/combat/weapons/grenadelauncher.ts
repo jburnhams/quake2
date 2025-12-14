@@ -4,8 +4,7 @@
 
 import { Entity } from '../../entities/entity.js';
 import { EntitySystem } from '../../entities/system.js';
-import { Weapon_Generic } from './animation.js';
-import { Weapon_AnimationTime } from './common.js';
+import { Weapon_Generic, Weapon_AnimationTime } from './animation.js';
 import { fireGrenadeLauncher, firingRandom } from './firing.js';
 import { WeaponStateEnum } from './state.js';
 import {

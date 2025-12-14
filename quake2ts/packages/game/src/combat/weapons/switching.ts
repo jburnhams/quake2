@@ -6,48 +6,13 @@ import { Entity } from '../../entities/entity.js';
 import { PlayerInventory, WeaponId, selectWeapon } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import { WeaponStateEnum } from './state.js';
-import { Weapon_AnimationTime } from './common.js';
-import { WEAPON_ITEMS } from '../../inventory/items.js';
-import {
-    FRAME_GRENADE_IDLE_LAST,
-    FRAME_SHOTGUN_IDLE_LAST,
-    FRAME_SSHOTGUN_IDLE_LAST,
-    FRAME_MACHINEGUN_IDLE_LAST,
-    FRAME_CHAINGUN_IDLE_LAST,
-    FRAME_RAILGUN_IDLE_LAST,
-    FRAME_ROCKET_IDLE_LAST,
-    FRAME_HYPERBLASTER_IDLE_LAST,
-    FRAME_BFG_IDLE_LAST,
-    FRAME_GRENADELAUNCHER_IDLE_LAST,
-    FRAME_BLASTER_IDLE_LAST
-} from './frames.js';
+import { Weapon_AnimationTime } from './animation.js';
 
 // TODO: This should be a cvar or config option
 let instantSwitch = false;
 
 export function setInstantSwitch(enabled: boolean) {
     instantSwitch = enabled;
-}
-
-/**
- * Helper to get the IDLE_LAST frame for the current weapon.
- * This is needed to start the deactivate sequence (usually IDLE_LAST + 1).
- */
-function getWeaponIdleLastFrame(weaponId: WeaponId): number {
-    switch (weaponId) {
-        case WeaponId.HandGrenade: return FRAME_GRENADE_IDLE_LAST;
-        case WeaponId.Shotgun: return FRAME_SHOTGUN_IDLE_LAST;
-        case WeaponId.SuperShotgun: return FRAME_SSHOTGUN_IDLE_LAST;
-        case WeaponId.Machinegun: return FRAME_MACHINEGUN_IDLE_LAST;
-        case WeaponId.Chaingun: return FRAME_CHAINGUN_IDLE_LAST;
-        case WeaponId.Railgun: return FRAME_RAILGUN_IDLE_LAST;
-        case WeaponId.RocketLauncher: return FRAME_ROCKET_IDLE_LAST;
-        case WeaponId.HyperBlaster: return FRAME_HYPERBLASTER_IDLE_LAST;
-        case WeaponId.BFG10K: return FRAME_BFG_IDLE_LAST;
-        case WeaponId.GrenadeLauncher: return FRAME_GRENADELAUNCHER_IDLE_LAST;
-        case WeaponId.Blaster: return FRAME_BLASTER_IDLE_LAST;
-        default: return 0; // Should not happen for standard weapons, or fallback
-    }
 }
 
 /**
@@ -59,47 +24,47 @@ export function ChangeWeapon(ent: Entity, weaponId?: WeaponId) {
 
     const client = ent.client;
 
-    if (weaponId) {
-        // Queue the weapon switch
-        if (client.weaponstate === WeaponStateEnum.WEAPON_DROPPING) {
-            client.newWeapon = weaponId;
-            return;
-        }
-
-        if (client.weaponstate === WeaponStateEnum.WEAPON_READY || client.weaponstate === WeaponStateEnum.WEAPON_FIRING) {
-            client.newWeapon = weaponId;
-            client.weaponstate = WeaponStateEnum.WEAPON_DROPPING;
-
-            // Start deactivate sequence
-            // Usually starts after IDLE_LAST
-            if (client.inventory.currentWeapon) {
-                client.gun_frame = getWeaponIdleLastFrame(client.inventory.currentWeapon) + 1;
-            } else {
-                 client.gun_frame = 0;
-            }
-
-            if (instantSwitch) {
-                selectWeapon(client.inventory, weaponId);
-                client.weaponstate = WeaponStateEnum.WEAPON_READY;
-                client.weapon_think_time = 0;
-                client.newWeapon = undefined;
-            }
-            return;
-        }
-
-        // If activating, we could override? For now, ignore or queue.
-        // Original Q2 sometimes ignores if activating.
-        client.newWeapon = weaponId;
+    // If we are already dropping, do nothing
+    if (client.weaponstate === WeaponStateEnum.WEAPON_DROPPING) {
         return;
     }
 
-    // No weaponId means finalize the switch (called from animation end)
-    if (client.newWeapon) {
-        selectWeapon(client.inventory, client.newWeapon);
+    if (weaponId) {
+        // Direct switch
+        selectWeapon(client.inventory, weaponId);
         client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
         client.gun_frame = 0;
-        client.weapon_think_time = 0;
-        client.newWeapon = undefined; // Clear pending
+
+        // Instant Switch Logic
+        // Source: rerelease/p_weapon.cpp
+        // if (g_instant_weapon_switch->integer) ...
+
+        // In this implementation, we check if instant switch is enabled.
+        // We can expose a global or check ent.context (if we add config access).
+        // For now, let's use a module-level variable that can be toggled,
+        // or check ent.client.pers.instantSwitch if we add it.
+        // The original uses a global cvar `g_instant_weapon_switch`.
+
+        // Assuming we pass this option via GameCreateOptions or similar in future.
+        // But the task is to implement the option.
+
+        if (instantSwitch) {
+             client.weaponstate = WeaponStateEnum.WEAPON_READY;
+             client.weapon_think_time = 0;
+             // Skip activation frames
+             // Actually, if we set state to READY, we might need to set gun_frame to IDLE?
+             // Or rely on Weapon_Generic to handle transitions?
+             // If we set state to READY, Weapon_Generic will start idle loop on next think.
+
+             // However, `ChangeWeapon` is also called to *finish* the drop.
+             // If we are here, we are *starting* the new weapon.
+
+             // If instant switch, we skip raise/lower.
+
+             return;
+        }
+
+        client.weapon_think_time = 0; // Start immediately
     }
 }
 
@@ -111,57 +76,45 @@ export function NoAmmoWeaponChange(ent: Entity) {
     if (!ent.client) return;
 
     // Find best weapon
-    const bestWeapon = getBestWeapon(ent);
-    if (bestWeapon && bestWeapon !== ent.client.inventory.currentWeapon) {
-        // Initiate switch
-        ChangeWeapon(ent, bestWeapon);
-    }
+    switchToBestWeapon(ent);
 }
 
-export function getBestWeapon(player: Entity): WeaponId | null {
+export function switchToBestWeapon(player: Entity) {
     if (!player.client) {
-        return null;
+        return;
     }
+
     const inventory = player.client.inventory;
+    let bestWeapon: WeaponId | null = null;
 
     if (inventory.ownedWeapons.has(WeaponId.BFG10K) && inventory.ammo.counts[AmmoType.Cells] >= 50) {
-        return WeaponId.BFG10K;
+        bestWeapon = WeaponId.BFG10K;
     } else if (inventory.ownedWeapons.has(WeaponId.RocketLauncher) && inventory.ammo.counts[AmmoType.Rockets] >= 1) {
-        return WeaponId.RocketLauncher;
-    } else if (inventory.ownedWeapons.has(WeaponId.HyperBlaster) && inventory.ammo.counts[AmmoType.Cells] >= 1) {
-        return WeaponId.HyperBlaster;
+        bestWeapon = WeaponId.RocketLauncher;
     } else if (inventory.ownedWeapons.has(WeaponId.Railgun) && inventory.ammo.counts[AmmoType.Slugs] >= 1) {
-        return WeaponId.Railgun;
+        bestWeapon = WeaponId.Railgun;
     } else if (inventory.ownedWeapons.has(WeaponId.Chaingun) && inventory.ammo.counts[AmmoType.Bullets] >= 1) {
-        return WeaponId.Chaingun;
-    } else if (inventory.ownedWeapons.has(WeaponId.GrenadeLauncher) && inventory.ammo.counts[AmmoType.Grenades] >= 1) {
-        return WeaponId.GrenadeLauncher;
+        bestWeapon = WeaponId.Chaingun;
     } else if (inventory.ownedWeapons.has(WeaponId.SuperShotgun) && inventory.ammo.counts[AmmoType.Shells] >= 2) {
-        return WeaponId.SuperShotgun;
+        bestWeapon = WeaponId.SuperShotgun;
     } else if (inventory.ownedWeapons.has(WeaponId.Machinegun) && inventory.ammo.counts[AmmoType.Bullets] >= 1) {
-        return WeaponId.Machinegun;
+        bestWeapon = WeaponId.Machinegun;
     } else if (inventory.ownedWeapons.has(WeaponId.Shotgun) && inventory.ammo.counts[AmmoType.Shells] >= 1) {
-        return WeaponId.Shotgun;
+        bestWeapon = WeaponId.Shotgun;
     } else {
-        return WeaponId.Blaster;
+        bestWeapon = WeaponId.Blaster;
     }
-}
 
-// Kept for backward compatibility if needed, but delegates to ChangeWeapon
-export function switchToBestWeapon(player: Entity) {
-    if (!player.client) return;
-    const best = getBestWeapon(player);
-    if (best && best !== player.client.inventory.currentWeapon) {
-        // Old behavior was instant switch? Or forced switch?
-        // Let's use ChangeWeapon to be safe and consistent.
-        // But tests expected immediate effect if instantSwitch is on?
+    if (bestWeapon && bestWeapon !== inventory.currentWeapon) {
+        selectWeapon(inventory, bestWeapon);
 
-        // Use direct manipulation if we want to force it (like on spawn)
-        // selectWeapon(player.client.inventory, best);
-        // player.client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
-        // player.client.gun_frame = 0;
+        player.client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
+        player.client.gun_frame = 0;
 
-        // Better to use ChangeWeapon
-        ChangeWeapon(player, best);
+        if (instantSwitch) {
+             player.client.weaponstate = WeaponStateEnum.WEAPON_READY;
+        }
+
+        player.client.weapon_think_time = 0;
     }
 }

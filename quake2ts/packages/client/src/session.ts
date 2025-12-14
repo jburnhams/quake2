@@ -1,6 +1,5 @@
 import { ClientExports, createClient, ClientImports, InputController, InputSource, InputBindings, HudData, StatusBarData, CrosshairInfo } from './index.js';
-import { MenuState } from './ui/menu/types.js';
-import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine, SaveStorage, SaveSlotMetadata, SaveCreationOptions } from '@quake2ts/game';
+import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine } from '@quake2ts/game';
 import { EngineImports, Renderer, EngineHost, TraceResult } from '@quake2ts/engine';
 import { UserCommand, Vec3, CollisionPlane, PlayerState } from '@quake2ts/shared';
 
@@ -12,13 +11,6 @@ export interface SessionOptions {
   engine: EngineImports & { renderer: Renderer; cmd?: { executeText(text: string): void } };
 }
 
-export interface SaveMetadata {
-    timestamp: number;
-    mapName: string;
-    playtimeSeconds: number;
-    difficulty: number;
-}
-
 export class GameSession {
   private client: ClientExports | null = null;
   private game: GameExports | null = null;
@@ -27,22 +19,13 @@ export class GameSession {
   private options: SessionOptions;
   private currentMapName: string = '';
   private inputController: InputController;
-  private saveStorage: SaveStorage;
   private _onInputCommand?: (cmd: UserCommand) => void;
   private _onHudUpdate?: (data: HudData) => void;
-  private _onCenterPrint?: (message: string, duration: number) => void;
-  private _onNotify?: (message: string) => void;
-  private _onPickupMessage?: (item: string) => void;
-  private _onObituaryMessage?: (message: string) => void;
-  private _onMenuStateChange?: (active: boolean) => void;
-  private _onLoadComplete?: () => void;
-  private _onLoadError?: (error: Error) => void;
 
   constructor(options: SessionOptions) {
     this.options = options;
     this.engine = options.engine;
     this.inputController = new InputController();
-    this.saveStorage = new SaveStorage();
   }
 
   public startNewGame(mapName: string, skill: number = 1): void {
@@ -82,8 +65,18 @@ export class GameSession {
         trace: (start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: any, contentmask: number) => {
             const tr = this.engine.trace(start, end, mins || undefined, maxs || undefined);
 
+            // Map Engine TraceResult to Game GameTraceResult
+            // PmoveTraceResult doesn't have plane (CollisionPlane) or ent (Entity).
+            // It has planeNormal.
+
             let plane: CollisionPlane | null = null;
             if (tr.planeNormal) {
+                // If the engine returns a plane normal, we can construct a partial plane.
+                // Distance is missing, which might be critical for some physics.
+                // However, engine.trace likely returns a plane object if it's a full trace implementation.
+                // But types say PmoveTraceResult.
+
+                // If type definition is strictly PmoveTraceResult, we only have planeNormal.
                 plane = {
                     normal: tr.planeNormal,
                     dist: 0, // Unknown distance
@@ -100,7 +93,7 @@ export class GameSession {
                 plane: plane,
                 surfaceFlags: tr.surfaceFlags ?? 0,
                 contents: tr.contents ?? 0,
-                ent: null
+                ent: null // Engine trace does not return Entity
             };
         },
         pointcontents: (p: Vec3) => {
@@ -141,116 +134,18 @@ export class GameSession {
     if (this._onHudUpdate) {
         this.client.onHudUpdate = this._onHudUpdate;
     }
-      this.client.onCenterPrint = this._onCenterPrint;
-      this.client.onNotify = this._onNotify;
-      this.client.onPickupMessage = this._onPickupMessage;
-      this.client.onObituaryMessage = this._onObituaryMessage;
-      this.client.onMenuStateChange = this._onMenuStateChange;
 
     this.game.spawnWorld();
 
     this.host.start();
 
+    // Trigger map load if command is available
     if (this.engine.cmd) {
          this.engine.cmd.executeText(`map ${mapName}`);
     } else if (this.host.commands) {
+         // Fallback to host commands if engine cmd not directly exposed (though session assumes it)
          this.host.commands.execute(`map ${mapName}`);
     }
-  }
-
-  // 4.3.1 Save Game API
-  public async saveGame(slotName: string): Promise<GameSaveFile> {
-      if (!this.game) {
-          throw new Error("Game not running");
-      }
-
-      // TODO: Track total playtime across levels
-      const playtime = this.game.time;
-      const difficulty = this.game.skill;
-      const mapName = this.getMapName();
-
-      const saveData = this.game.createSave(mapName, difficulty, playtime);
-
-      await this.saveStorage.save(slotName, saveData);
-
-      return saveData;
-  }
-
-  public getSaveMetadata(saveData: GameSaveFile): SaveMetadata {
-      return {
-          timestamp: saveData.timestamp,
-          mapName: saveData.map,
-          playtimeSeconds: saveData.playtimeSeconds,
-          difficulty: saveData.difficulty
-      };
-  }
-
-  // 4.3.2 Load Game API
-  public async loadGame(saveData: GameSaveFile): Promise<void> {
-      try {
-          this.loadSavedGame(saveData);
-          if (this._onLoadComplete) {
-              this._onLoadComplete();
-          }
-      } catch (e: any) {
-          if (this._onLoadError) {
-              this._onLoadError(e);
-          }
-          throw e;
-      }
-  }
-
-  public set onLoadComplete(handler: (() => void) | undefined) {
-      this._onLoadComplete = handler;
-  }
-
-  public get onLoadComplete(): (() => void) | undefined {
-      return this._onLoadComplete;
-  }
-
-  public set onLoadError(handler: ((error: Error) => void) | undefined) {
-      this._onLoadError = handler;
-  }
-
-  public get onLoadError(): ((error: Error) => void) | undefined {
-      return this._onLoadError;
-  }
-
-  // 4.3.3 Quick Save/Load
-  public async quickSave(): Promise<void> {
-      if (!this.game) {
-          throw new Error("Game not running");
-      }
-      const playtime = this.game.time;
-      const difficulty = this.game.skill;
-      const mapName = this.getMapName();
-      const saveData = this.game.createSave(mapName, difficulty, playtime);
-
-      await this.saveStorage.quickSave(saveData);
-  }
-
-  public async quickLoad(): Promise<void> {
-      try {
-          const saveData = await this.saveStorage.quickLoad();
-          this.loadSavedGame(saveData);
-          if (this._onLoadComplete) {
-              this._onLoadComplete();
-          }
-      } catch (e: any) {
-          // If quick load fails (e.g. no file), we should propagate or handle
-          if (this._onLoadError) {
-              this._onLoadError(e);
-          }
-          throw e;
-      }
-  }
-
-  public async hasQuickSave(): Promise<boolean> {
-      const saves = await this.saveStorage.list();
-      // SaveStorage uses 'quicksave' as the ID for quick saves (defined in SaveStorage class but private/static)
-      // We can check if any save has the ID 'quicksave' or name 'Quick Save'
-      // The implementation of SaveStorage.quickSave uses SaveStorage.QUICK_SLOT = 'quicksave'.
-      return saves.some(s => s.id === 'quicksave');
   }
 
   public loadSavedGame(saveData: GameSaveFile): void {
@@ -260,8 +155,11 @@ export class GameSession {
 
      const mapName = saveData.map;
      this.currentMapName = mapName;
+     // Skill is in saveData too but startNewGame takes it.
      const skill = saveData.difficulty;
 
+     // Initialize game session similar to startNewGame
+     // Duplicate code for now, can be refactored.
      const gameOptions: GameCreateOptions = {
         gravity: { x: 0, y: 0, z: -800 },
         skill: skill,
@@ -349,18 +247,15 @@ export class GameSession {
       if (this._onHudUpdate) {
           this.client.onHudUpdate = this._onHudUpdate;
       }
-      this.client.onCenterPrint = this._onCenterPrint;
-      this.client.onNotify = this._onNotify;
-      this.client.onPickupMessage = this._onPickupMessage;
-      this.client.onObituaryMessage = this._onObituaryMessage;
-      this.client.onMenuStateChange = this._onMenuStateChange;
 
+      // We need to load the map first so the engine has the collision model etc.
       if (this.engine.cmd) {
            this.engine.cmd.executeText(`map ${mapName}`);
       } else if (this.host.commands) {
            this.host.commands.execute(`map ${mapName}`);
       }
 
+      // Now load the save data into the game
       if (this.game) {
           this.game.loadSave(saveData);
       }
@@ -390,10 +285,6 @@ export class GameSession {
 
   public getHost(): EngineHost | null {
       return this.host;
-  }
-
-  public getSaveStorage(): SaveStorage {
-      return this.saveStorage;
   }
 
   public bindInputSource(source: InputSource): void {
@@ -443,91 +334,12 @@ export class GameSession {
       return this._onHudUpdate;
   }
 
-  public set onCenterPrint(handler: ((message: string, duration: number) => void) | undefined) {
-      this._onCenterPrint = handler;
-      if (this.client) {
-          this.client.onCenterPrint = handler;
-      }
-  }
-
-  public get onCenterPrint(): ((message: string, duration: number) => void) | undefined {
-      return this._onCenterPrint;
-  }
-
-  public set onNotify(handler: ((message: string) => void) | undefined) {
-      this._onNotify = handler;
-      if (this.client) {
-          this.client.onNotify = handler;
-      }
-  }
-
-  public get onNotify(): ((message: string) => void) | undefined {
-      return this._onNotify;
-  }
-
-  public set onPickupMessage(handler: ((item: string) => void) | undefined) {
-      this._onPickupMessage = handler;
-      if (this.client) {
-          this.client.onPickupMessage = handler;
-      }
-  }
-
-  public get onPickupMessage(): ((item: string) => void) | undefined {
-      return this._onPickupMessage;
-  }
-
-  public set onObituaryMessage(handler: ((message: string) => void) | undefined) {
-      this._onObituaryMessage = handler;
-      if (this.client) {
-          this.client.onObituaryMessage = handler;
-      }
-  }
-
-  public get onObituaryMessage(): ((message: string) => void) | undefined {
-      return this._onObituaryMessage;
-  }
-
-  public set onMenuStateChange(handler: ((active: boolean) => void) | undefined) {
-      this._onMenuStateChange = handler;
-      if (this.client) {
-          this.client.onMenuStateChange = handler;
-      }
-  }
-
-  public get onMenuStateChange(): ((active: boolean) => void) | undefined {
-      return this._onMenuStateChange;
-  }
-
-  public showPauseMenu(): void {
-      if (this.client) {
-          this.client.showPauseMenu();
-      }
-  }
-
-  public hidePauseMenu(): void {
-      if (this.client) {
-          this.client.hidePauseMenu();
-      }
-  }
-
-  public isMenuActive(): boolean {
-      if (this.client) {
-          return this.client.isMenuActive();
-      }
-      return false;
-  }
-
-  public getMenuState(): MenuState | null {
-      if (this.client) {
-          return this.client.getMenuState();
-      }
-      return null;
-  }
-
   // Section 4.1.3: Game State Queries
 
   public getPlayerState(): PlayerState | null {
+    // If running a local game or connected, we can use client prediction state
     if (this.client && this.client.lastRendered) {
+        // PredictionState is compatible with PlayerState
         return this.client.lastRendered as unknown as PlayerState;
     }
     return null;
@@ -538,6 +350,12 @@ export class GameSession {
         return this.game.time;
     }
     if (this.client && this.client.lastRendered) {
+        // Fallback to client time if game instance not available (e.g. MP)
+        // But getGameTime usually implies level time.
+        // client.lastRendered doesn't have level time directly unless in stats.
+        // Or prediction uses server time?
+        // prediction state has pm_time but that's for events.
+        // For now, return 0 if no local game.
         return 0;
     }
     return 0;
@@ -558,6 +376,7 @@ export class GameSession {
   }
 
   public getMapName(): string {
+    // Return stored map name or query game level
     if (this.game && this.game.entities && this.game.entities.level && this.game.entities.level.mapname) {
         return this.game.entities.level.mapname;
     }

@@ -2,20 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_stalker } from '../../../../src/entities/monsters/rogue/stalker.js';
 import { createTestContext } from '../../../test-helpers.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../../src/entities/entity.js';
-import { RenderFx } from '@quake2ts/shared';
 
 describe('monster_stalker', () => {
   let context: any;
   let entity: Entity;
-  let enemy: Entity;
 
   beforeEach(() => {
     context = createTestContext();
     context.health_multiplier = 1.0;
     entity = context.entities.spawn();
-    enemy = context.entities.spawn();
-    enemy.health = 100;
-    entity.enemy = enemy;
     vi.clearAllMocks();
   });
 
@@ -57,53 +52,5 @@ describe('monster_stalker', () => {
     entity.health = 250;
     entity.monsterinfo.setskin!(entity);
     expect(entity.skin).toBe(0); // Normal skin
-  });
-
-  it('should be translucent when spawned', () => {
-    SP_monster_stalker(entity, context);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
-  });
-
-  it('should become visible when attacking', () => {
-    SP_monster_stalker(entity, context);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
-
-    // Trigger ranged attack
-    entity.monsterinfo.attack!(entity, context.entities);
-    expect(entity.renderfx & RenderFx.Translucent).toBeFalsy();
-  });
-
-   it('should become visible when performing melee attack', () => {
-    SP_monster_stalker(entity, context);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
-
-    // Trigger melee attack
-    entity.monsterinfo.melee!(entity, context.entities);
-    expect(entity.renderfx & RenderFx.Translucent).toBeFalsy();
-  });
-
-  it('should become invisible again when returning to stand/run', () => {
-    SP_monster_stalker(entity, context);
-
-    // Simulate being visible from attack
-    entity.renderfx &= ~RenderFx.Translucent;
-
-    // Call stand
-    entity.monsterinfo.stand!(entity, context.entities);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
-
-    // Simulate visible again
-    entity.renderfx &= ~RenderFx.Translucent;
-
-    // Call run
-    entity.monsterinfo.run!(entity, context.entities);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
-
-     // Simulate visible again
-    entity.renderfx &= ~RenderFx.Translucent;
-
-    // Call walk
-    entity.monsterinfo.walk!(entity, context.entities);
-    expect(entity.renderfx & RenderFx.Translucent).toBeTruthy();
   });
 });

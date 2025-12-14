@@ -143,8 +143,6 @@ export interface PlayerClient {
     damage_blend?: [number, number, number];
     // Ammo cache for snapshot
     currentAmmoCount?: number;
-    // Pending weapon switch
-    newWeapon?: WeaponId;
     // Additional fields
     landmark_name?: string | null;
     landmark_rel_pos?: Vec3;
@@ -403,12 +401,6 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             client.quad_time = newExpiresAt / 1000;
         } else if (powerupId === PowerupId.DoubleDamage) {
             client.double_time = newExpiresAt / 1000;
-        } else if (powerupId === PowerupId.Invulnerability) {
-            client.invincible_time = newExpiresAt / 1000;
-        } else if (powerupId === PowerupId.EnviroSuit) {
-            client.enviro_time = newExpiresAt / 1000;
-        } else if (powerupId === PowerupId.Rebreather) {
-            client.breather_time = newExpiresAt / 1000;
         }
 
         setPickup(inventory, icon, time);
