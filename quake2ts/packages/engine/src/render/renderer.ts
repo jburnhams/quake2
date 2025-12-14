@@ -73,8 +73,11 @@ export const createRenderer = (
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
 
-    const rng = new RandomGenerator({ seed: Date.now() });
-    const particleSystem = new ParticleSystem(4096, rng);
+    // Create Particle System
+    // Assuming a reasonable max particle count (e.g., 2048) and a default RNG
+    const particleRng = new RandomGenerator({ seed: Date.now() });
+
+    const particleSystem = new ParticleSystem(4096, particleRng);
     const particleRenderer = new ParticleRenderer(gl, particleSystem);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
@@ -155,6 +158,155 @@ export const createRenderer = (
                 viewCluster = options.world.map.leafs[viewLeafIndex].cluster;
             }
         }
+
+        // Render collision vis debug lines (if any)
+        collisionVis.render(viewProjection as Float32Array);
+        collisionVis.clear();
+
+        // Highlight Surfaces using DebugRenderer
+        if (options.world && highlightedSurfaces.size > 0) {
+            for (const [faceIndex, color] of highlightedSurfaces) {
+                const face = options.world.map.faces[faceIndex];
+                if (!face) continue;
+
+                // Get vertices from BSP (via surfEdges -> edges -> vertices)
+                // We don't have direct access to 'geometry' here unless we query options.world.surfaces[faceIndex]
+                // which is cleaner.
+                const geometry = options.world.surfaces[faceIndex];
+                if (geometry && geometry.vertexCount > 0) {
+                    // Draw polygon boundary
+                    const vertices: Vec3[] = [];
+                    const stride = 7;
+                    for (let i = 0; i < geometry.vertexCount; i++) {
+                        vertices.push({
+                            x: geometry.vertexData[i * stride],
+                            y: geometry.vertexData[i * stride + 1],
+                            z: geometry.vertexData[i * stride + 2]
+                        });
+                    }
+
+                    // Use drawLine to draw the loop
+                    const c = { r: color[0], g: color[1], b: color[2] };
+                    for (let i = 0; i < vertices.length; i++) {
+                        const p0 = vertices[i];
+                        const p1 = vertices[(i + 1) % vertices.length];
+                        debugRenderer.drawLine(p0, p1, c);
+                    }
+                    // Also draw cross to make it solid-ish or distinct
+                    debugRenderer.drawLine(vertices[0], vertices[(vertices.length/2)|0], c);
+                }
+            }
+        }
+
+        // Render particles (last, before debug?)
+        // Particles are usually transparent, so render after opaque geometry but before debug lines if possible,
+        // or just before debug lines.
+        // The particle renderer handles blending.
+        // We need view parameters.
+        const viewRight = { x: options.camera.viewMatrix[0], y: options.camera.viewMatrix[4], z: options.camera.viewMatrix[8] };
+        const viewUp = { x: options.camera.viewMatrix[1], y: options.camera.viewMatrix[5], z: options.camera.viewMatrix[9] };
+
+        // Update particles (time step needed? options has timeMs, but we need delta)
+        // Ideally the game loop updates the particle system logic, and renderer just draws.
+        // But `ParticleSystem.update` is logic.
+        // Usually the client/game calls update. Here we just render.
+
+        particleRenderer.render({
+            viewProjection: viewProjection as Float32Array,
+            viewRight,
+            viewUp
+        });
+
+        // Render debug renderer (Bounds, Normals)
+        if (renderOptions?.showBounds) {
+             for (const entity of entities) {
+                  let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
+                  let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
+
+                  if (entity.type === 'md2') {
+                      const frame = entity.model.frames[entity.blend.frame0];
+                      minBounds = frame.minBounds;
+                      maxBounds = frame.maxBounds;
+                  } else if (entity.type === 'md3') {
+                      const frame = entity.model.frames[entity.blend.frame0];
+                      if (frame) {
+                          minBounds = frame.minBounds;
+                          maxBounds = frame.maxBounds;
+                      }
+                  }
+
+                  const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
+                  debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 });
+
+                  // Also draw origin/axes as requested in task 1.3.2
+                  const origin = {
+                      x: entity.transform[12],
+                      y: entity.transform[13],
+                      z: entity.transform[14]
+                  };
+                  debugRenderer.drawAxes(origin, 8); // 8 units size
+             }
+        }
+
+
+        if (renderOptions?.showNormals && options.world) {
+             // Draw BSP surface normals
+             const frustum = extractFrustumPlanes(viewProjection);
+             const cameraPosition = {
+                 x: options.camera.position[0],
+                 y: options.camera.position[1],
+                 z: options.camera.position[2],
+             };
+             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
+
+             for (const { faceIndex } of visibleFaces) {
+                  const face = options.world.map.faces[faceIndex];
+                  const plane = options.world.map.planes[face.planeIndex];
+                  const geometry = options.world.surfaces[faceIndex];
+
+                  if (!geometry) continue;
+
+                  // Calculate center of face
+                  let cx = 0, cy = 0, cz = 0;
+                  const count = geometry.vertexCount;
+                  // vertexData stride is 7 floats. Position is at offset 0, 1, 2.
+                  for (let i = 0; i < count; i++) {
+                       const idx = i * 7;
+                       cx += geometry.vertexData[idx];
+                       cy += geometry.vertexData[idx+1];
+                       cz += geometry.vertexData[idx+2];
+                  }
+                  if (count > 0) {
+                      cx /= count;
+                      cy /= count;
+                      cz /= count;
+
+                      const center = { x: cx, y: cy, z: cz };
+                      // Normal is plane.normal. Make sure to respect face.side (0 or 1)
+
+                      const nx = face.side === 0 ? plane.normal[0] : -plane.normal[0];
+                      const ny = face.side === 0 ? plane.normal[1] : -plane.normal[1];
+                      const nz = face.side === 0 ? plane.normal[2] : -plane.normal[2];
+
+                      const end = { x: cx + nx * 8, y: cy + ny * 8, z: cz + nz * 8 };
+                      debugRenderer.drawLine(center, end, { r: 1, g: 1, b: 0 }); // Yellow normal
+                  }
+             }
+        }
+
+        debugRenderer.render(viewProjection as Float32Array);
+
+        // Draw 3D Text Labels as 2D overlay
+        const labels = debugRenderer.getLabels(viewProjection as Float32Array, gl.canvas.width, gl.canvas.height);
+        if (labels.length > 0) {
+            begin2D();
+            for (const label of labels) {
+                drawString(label.x, label.y, label.text, [1, 1, 1, 1]);
+            }
+            end2D();
+        }
+
+        debugRenderer.clear();
 
         // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
