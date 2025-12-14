@@ -31,26 +31,26 @@ This phase covers Capture The Flag game mode implementation.
 
 - [x] Implement flag physics
   - Can be picked up by players
-  - Drops on player death (Partial: Pickup implemented, Drop/Return next)
-  - Returns to base after timeout (Partial)
+  - Drops on player death
+  - Returns to base after timeout
   - Reference: `g_ctf.cpp` lines 192-300
 
 #### 6.1.2 Flag State Management
 **Original Source**: `/rerelease/ctf/g_ctf.cpp` (lines 302-550)
 **TypeScript File**: `/packages/game/src/modes/ctf/state.ts` (NEW)
 
-- [ ] Implement flag states
+- [x] Implement flag states
   - States: AT_BASE, CARRIED, DROPPED
   - State transitions
   - Reference: `g_ctf.cpp` lines 302-380
 
-- [ ] Implement flag pickup logic
+- [x] Implement flag pickup logic
   - Team validation (can't pick up own flag)
   - Can pick up enemy flag
   - Can return own flag to base
   - Reference: `g_ctf.cpp` lines 382-480
 
-- [ ] Implement flag drop logic
+- [x] Implement flag drop logic
   - Drop on death
   - Manual drop with command
   - Auto-return timer (30 seconds)
