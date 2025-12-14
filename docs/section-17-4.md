@@ -58,23 +58,23 @@
 ## 4.3 Save/Load System
 
 ### 4.3.1 Save Game API
-- [ ] Add method `saveGame(slotName: string): Promise<SaveData>`
-- [ ] Return serialized game state as transferable object
-- [ ] Include: player state, entity states, inventory, level time, map name
-- [ ] Add method `getSaveMetadata(saveData: SaveData): SaveMetadata`
-- [ ] Return: timestamp, map name, player health, screenshot (optional)
+- [x] Add method `saveGame(slotName: string): Promise<SaveData>`
+- [x] Return serialized game state as transferable object
+- [x] Include: player state, entity states, inventory, level time, map name
+- [x] Add method `getSaveMetadata(saveData: SaveData): SaveMetadata`
+- [x] Return: timestamp, map name, player health, screenshot (optional)
 
 ### 4.3.2 Load Game API
-- [ ] Add method `loadGame(saveData: SaveData): Promise<void>`
-- [ ] Restore full game state from save data
-- [ ] Add validation to detect corrupted saves
-- [ ] Add event `onLoadComplete?: () => void`
-- [ ] Add event `onLoadError?: (error: Error) => void`
+- [x] Add method `loadGame(saveData: SaveData): Promise<void>`
+- [x] Restore full game state from save data
+- [x] Add validation to detect corrupted saves
+- [x] Add event `onLoadComplete?: () => void`
+- [x] Add event `onLoadError?: (error: Error) => void`
 
 ### 4.3.3 Quick Save/Load
-- [ ] Add method `quickSave(): Promise<void>` to internal slot
-- [ ] Add method `quickLoad(): Promise<void>` from last quick save
-- [ ] Add method `hasQuickSave(): boolean`
+- [x] Add method `quickSave(): Promise<void>` to internal slot
+- [x] Add method `quickLoad(): Promise<void>` from last quick save
+- [x] Add method `hasQuickSave(): boolean`
 
 ---
 
