@@ -80,17 +80,17 @@ This phase covers Rogue mission pack content including monsters, AI enhancements
 **Original Source**: `/rerelease/rogue/m_stalker.cpp` (full implementation)
 **TypeScript File**: `/packages/game/src/entities/monsters/rogue/stalker.ts` (partial exists)
 
-- [ ] Complete stalker spawn function
+- [x] Complete stalker spawn function
   - Add missing initialization
   - Reference: existing partial implementation
 
-- [ ] Implement invisibility mechanic
+- [x] Implement invisibility mechanic
   - Cloaking effect
   - Shimmer when moving
   - Fully visible when attacking
   - Reference: `m_stalker.cpp` lines 350-480
 
-- [ ] Complete attack patterns
+- [x] Complete attack patterns
   - Melee slash
   - Plasma bolt ranged attack
   - Reference: `m_stalker.cpp` lines 280-340
