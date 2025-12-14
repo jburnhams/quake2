@@ -403,6 +403,12 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             client.quad_time = newExpiresAt / 1000;
         } else if (powerupId === PowerupId.DoubleDamage) {
             client.double_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.Invulnerability) {
+            client.invincible_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.EnviroSuit) {
+            client.enviro_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.Rebreather) {
+            client.breather_time = newExpiresAt / 1000;
         }
 
         setPickup(inventory, icon, time);
