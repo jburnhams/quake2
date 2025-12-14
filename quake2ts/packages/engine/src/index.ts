@@ -176,6 +176,7 @@ export {
 export { SoundRegistry } from './audio/registry.js';
 export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';
 export { AudioSystem, type AudioSystemOptions, type SoundRequest, type ActiveSound } from './audio/system.js';
+export { createOcclusionResolver, AudioOcclusion, type TraceFn } from './audio/occlusion.js';
 export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
 export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
