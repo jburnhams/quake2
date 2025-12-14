@@ -4,10 +4,12 @@ export class MenuSystem {
   private activeMenu: Menu | null = null;
   private selectedIndex = 0;
   private menuStack: Menu[] = [];
+  public onStateChange?: (active: boolean) => void;
 
   constructor() {}
 
   pushMenu(menu: Menu): void {
+    const wasActive = this.isActive();
     if (this.activeMenu) {
       this.menuStack.push(this.activeMenu);
       // Link parent for back navigation if not already linked
@@ -17,21 +19,35 @@ export class MenuSystem {
     }
     this.activeMenu = menu;
     this.selectedIndex = 0;
+    if (!wasActive && this.onStateChange) {
+      this.onStateChange(true);
+    }
   }
 
   popMenu(): void {
+    const wasActive = this.isActive();
     if (this.menuStack.length > 0) {
       this.activeMenu = this.menuStack.pop()!;
       this.selectedIndex = 0;
     } else {
       this.activeMenu = null;
     }
+
+    const isActive = this.isActive();
+    if (wasActive !== isActive && this.onStateChange) {
+      this.onStateChange(isActive);
+    }
   }
 
   closeAll(): void {
+    const wasActive = this.isActive();
     this.activeMenu = null;
     this.menuStack = [];
     this.selectedIndex = 0;
+
+    if (wasActive && this.onStateChange) {
+      this.onStateChange(false);
+    }
   }
 
   handleInput(action: 'up' | 'down' | 'left' | 'right' | 'select' | 'back' | 'char', char?: string): boolean {

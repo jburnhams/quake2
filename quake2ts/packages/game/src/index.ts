@@ -81,7 +81,10 @@ import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
 import { GameTraceResult } from './imports.js';
 import { throwGibs } from './entities/gibs.js';
 
-export interface GameExports extends GameSimulation<GameStateSnapshot> {
+import { CustomEntityRegistration } from './mod.js';
+export { CustomEntityRegistration, ModAPI } from './mod.js';
+
+export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
   spawnWorld(): void;
   readonly entities: EntitySystem;
   sound(entity: Entity, channel: number, sound: string, volume: number, attenuation: number, timeofs: number): void;
@@ -128,8 +131,8 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export type { GameImports }; // Export GameImports type
-import { createDefaultSpawnRegistry } from './entities/spawn.js';
 import { checkPlayerFlagDrop } from './modes/ctf/integration.js';
+import { createDefaultSpawnRegistry, registerDefaultSpawns, SpawnRegistry } from './entities/spawn.js';
 
 export function createGame(
   imports: Partial<GameImports>,
@@ -363,6 +366,9 @@ export function createGame(
     entities.runFrame();
   };
 
+  // Initialize SpawnRegistry
+  const spawnRegistry = new SpawnRegistry();
+
   const runPlayerMove = (player: Entity, command: UserCommand) => {
     const pcmd = {
       forwardmove: command.forwardmove,
@@ -426,6 +432,21 @@ export function createGame(
   };
 
   const gameExports: GameExports = {
+    // CustomEntityRegistration implementation
+    registerEntitySpawn(classname: string, spawnFunc: (entity: Entity) => void): void {
+      spawnRegistry.register(classname, (entity, context) => {
+          spawnFunc(entity);
+      });
+    },
+
+    unregisterEntitySpawn(classname: string): void {
+      spawnRegistry.unregister(classname);
+    },
+
+    getCustomEntities(): string[] {
+      return Array.from(spawnRegistry.keys());
+    },
+
     init(startTimeMs: number) {
       resetState(startTimeMs);
       return snapshot(0);
@@ -674,7 +695,9 @@ export function createGame(
     }
   };
 
-  const spawnRegistry = createDefaultSpawnRegistry(gameExports);
+  // Register default spawns synchronously now that gameExports is defined
+  registerDefaultSpawns(spawnRegistry, gameExports);
+
   entities.setSpawnRegistry(spawnRegistry);
 
   // Patch the circular reference

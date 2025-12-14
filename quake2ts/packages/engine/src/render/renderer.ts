@@ -18,6 +18,7 @@ import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
 import { DebugRenderer } from './debug.js';
+import { cullLights } from './lightCulling.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -107,16 +108,28 @@ export const createRenderer = (
             effectiveSky = undefined;
         }
 
+        const viewProjection = options.camera.viewProjectionMatrix;
+        const frustumPlanes = extractFrustumPlanes(viewProjection);
+
+        // Cull lights
+        const culledLights = options.dlights
+            ? cullLights(
+                options.dlights,
+                frustumPlanes,
+                { x: options.camera.position[0], y: options.camera.position[1], z: options.camera.position[2] },
+                32
+            )
+            : undefined;
+
         const augmentedOptions = {
             ...options,
             sky: effectiveSky,
             renderMode: effectiveRenderMode,
             disableLightmaps: renderOptions?.showLightmaps === false,
+            dlights: culledLights,
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
-        const viewProjection = options.camera.viewProjectionMatrix;
-        const frustumPlanes = extractFrustumPlanes(viewProjection);
 
         // Determine view cluster for PVS culling
         let viewCluster = -1;

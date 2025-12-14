@@ -26,7 +26,7 @@ This phase covers dynamic lighting, particle effects, view effects, water render
   - Limit to nearest 8 lights per surface (Note: Implemented as global MAX_ACTIVE_LIGHTS=32 in shader for batching efficiency)
   - Reference: `/packages/engine/src/render/pipelines/bsp.ts`
 
-- [ ] Add dynamic light culling
+- [x] Add dynamic light culling
   - Frustum cull lights
   - Distance cull based on radius
   - Reference: `/packages/engine/src/render/renderer.ts`
