@@ -561,7 +561,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     const noise = context.keyValues.noise;
     if (noise) {
         entity.message = noise;
-        entity.noise_index = 1;
+        entity.noise_index = context.entities.soundIndex(noise);
     }
 
     const attenuation = context.keyValues.attenuation;

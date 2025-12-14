@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClientEffectSystem, EntityProvider } from '../src/effects-system.js';
-import { DynamicLightManager, EngineImports, Renderer, ParticleSystem, spawnBulletImpact, spawnBlood, spawnExplosion, spawnMuzzleFlash } from '@quake2ts/engine';
+import { DynamicLightManager, EngineImports, Renderer, ParticleSystem, spawnBulletImpact, spawnBlood, spawnExplosion, spawnMuzzleFlash, spawnSplash, spawnSteam } from '@quake2ts/engine';
 import { TempEntity, Vec3, MZ_BLASTER } from '@quake2ts/shared';
 
 // Mock engine dependencies
@@ -45,6 +45,8 @@ vi.mock('@quake2ts/engine', async (importOriginal) => {
         spawnBlood: vi.fn(),
         spawnExplosion: vi.fn(),
         spawnMuzzleFlash: vi.fn(),
+        spawnSplash: vi.fn(),
+        spawnSteam: vi.fn(),
     };
 });
 
@@ -111,6 +113,30 @@ describe('ClientEffectSystem Integration', () => {
           system: mockRenderer.particleSystem,
           // direction matches angleVectors(0,0,0).forward which is {x:1, y:0, z:0}
           direction: expect.objectContaining({ x: 1 })
+      }));
+  });
+
+  it('should trigger spawnSplash for SPLASH temp entity', () => {
+      const pos: Vec3 = { x: 10, y: 20, z: 30 };
+      const dir: Vec3 = { x: 0, y: 0, z: 1 };
+
+      system.onTempEntity(TempEntity.SPLASH, pos, 0, dir);
+
+      expect(spawnSplash).toHaveBeenCalledWith(expect.objectContaining({
+          system: mockRenderer.particleSystem,
+          origin: pos,
+          normal: dir
+      }));
+  });
+
+  it('should trigger spawnSteam for STEAM temp entity', () => {
+      const pos: Vec3 = { x: 10, y: 20, z: 30 };
+
+      system.onTempEntity(TempEntity.STEAM, pos, 0);
+
+      expect(spawnSteam).toHaveBeenCalledWith(expect.objectContaining({
+          system: mockRenderer.particleSystem,
+          origin: pos
       }));
   });
 });

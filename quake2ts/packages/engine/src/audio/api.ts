@@ -1,7 +1,7 @@
 import { type Vec3 } from '@quake2ts/shared';
 import { MusicSystem } from './music.js';
 import { SoundRegistry } from './registry.js';
-import { AudioSystem, type SoundRequest } from './system.js';
+import { AudioSystem, type SoundRequest, type ActiveSound } from './system.js';
 
 export interface SubtitleClient {
   showSubtitle(text: string, soundName: string): void;
@@ -48,8 +48,8 @@ export class AudioApi {
     this.triggerSubtitle(soundindex);
   }
 
-  loop_sound(entity: number, channel: number, soundindex: number, volume: number, attenuation: number): void {
-    this.system.play({
+  loop_sound(entity: number, channel: number, soundindex: number, volume: number, attenuation: number): ActiveSound | undefined {
+    const active = this.system.play({
       entity,
       channel,
       soundIndex: soundindex,
@@ -58,6 +58,7 @@ export class AudioApi {
       looping: true,
     });
     this.triggerSubtitle(soundindex);
+    return active;
   }
 
   stop_entity_sounds(entnum: number): void {
@@ -77,6 +78,13 @@ export class AudioApi {
       return Promise.resolve();
     }
     return this.music.play(track, { loop });
+  }
+
+  play_track(trackNum: number, loop = true): Promise<void> {
+    if (!this.music) {
+      return Promise.resolve();
+    }
+    return this.music.playTrack(trackNum);
   }
 
   pause_music(): void {
