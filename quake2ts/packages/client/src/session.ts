@@ -1,4 +1,5 @@
 import { ClientExports, createClient, ClientImports, InputController, InputSource, InputBindings, HudData, StatusBarData, CrosshairInfo } from './index.js';
+import { MenuState } from './ui/menu/types.js';
 import { createGame, GameExports, GameSaveFile, GameCreateOptions, GameEngine } from '@quake2ts/game';
 import { EngineImports, Renderer, EngineHost, TraceResult } from '@quake2ts/engine';
 import { UserCommand, Vec3, CollisionPlane, PlayerState } from '@quake2ts/shared';
@@ -21,6 +22,11 @@ export class GameSession {
   private inputController: InputController;
   private _onInputCommand?: (cmd: UserCommand) => void;
   private _onHudUpdate?: (data: HudData) => void;
+  private _onCenterPrint?: (message: string, duration: number) => void;
+  private _onNotify?: (message: string) => void;
+  private _onPickupMessage?: (item: string) => void;
+  private _onObituaryMessage?: (message: string) => void;
+  private _onMenuStateChange?: (active: boolean) => void;
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -134,6 +140,11 @@ export class GameSession {
     if (this._onHudUpdate) {
         this.client.onHudUpdate = this._onHudUpdate;
     }
+      this.client.onCenterPrint = this._onCenterPrint;
+      this.client.onNotify = this._onNotify;
+      this.client.onPickupMessage = this._onPickupMessage;
+      this.client.onObituaryMessage = this._onObituaryMessage;
+      this.client.onMenuStateChange = this._onMenuStateChange;
 
     this.game.spawnWorld();
 
@@ -247,6 +258,11 @@ export class GameSession {
       if (this._onHudUpdate) {
           this.client.onHudUpdate = this._onHudUpdate;
       }
+      this.client.onCenterPrint = this._onCenterPrint;
+      this.client.onNotify = this._onNotify;
+      this.client.onPickupMessage = this._onPickupMessage;
+      this.client.onObituaryMessage = this._onObituaryMessage;
+      this.client.onMenuStateChange = this._onMenuStateChange;
 
       // We need to load the map first so the engine has the collision model etc.
       if (this.engine.cmd) {
@@ -332,6 +348,87 @@ export class GameSession {
 
   public get onHudUpdate(): ((data: HudData) => void) | undefined {
       return this._onHudUpdate;
+  }
+
+  public set onCenterPrint(handler: ((message: string, duration: number) => void) | undefined) {
+      this._onCenterPrint = handler;
+      if (this.client) {
+          this.client.onCenterPrint = handler;
+      }
+  }
+
+  public get onCenterPrint(): ((message: string, duration: number) => void) | undefined {
+      return this._onCenterPrint;
+  }
+
+  public set onNotify(handler: ((message: string) => void) | undefined) {
+      this._onNotify = handler;
+      if (this.client) {
+          this.client.onNotify = handler;
+      }
+  }
+
+  public get onNotify(): ((message: string) => void) | undefined {
+      return this._onNotify;
+  }
+
+  public set onPickupMessage(handler: ((item: string) => void) | undefined) {
+      this._onPickupMessage = handler;
+      if (this.client) {
+          this.client.onPickupMessage = handler;
+      }
+  }
+
+  public get onPickupMessage(): ((item: string) => void) | undefined {
+      return this._onPickupMessage;
+  }
+
+  public set onObituaryMessage(handler: ((message: string) => void) | undefined) {
+      this._onObituaryMessage = handler;
+      if (this.client) {
+          this.client.onObituaryMessage = handler;
+      }
+  }
+
+  public get onObituaryMessage(): ((message: string) => void) | undefined {
+      return this._onObituaryMessage;
+  }
+
+  public set onMenuStateChange(handler: ((active: boolean) => void) | undefined) {
+      this._onMenuStateChange = handler;
+      if (this.client) {
+          this.client.onMenuStateChange = handler;
+      }
+  }
+
+  public get onMenuStateChange(): ((active: boolean) => void) | undefined {
+      return this._onMenuStateChange;
+  }
+
+  public showPauseMenu(): void {
+      if (this.client) {
+          this.client.showPauseMenu();
+      }
+  }
+
+  public hidePauseMenu(): void {
+      if (this.client) {
+          this.client.hidePauseMenu();
+      }
+  }
+
+  public isMenuActive(): boolean {
+      if (this.client) {
+          return this.client.isMenuActive();
+      }
+      return false;
+  }
+
+  public getMenuState(): MenuState | null {
+      if (this.client) {
+          return this.client.getMenuState();
+      }
+      return null;
   }
 
   // Section 4.1.3: Game State Queries

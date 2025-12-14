@@ -41,17 +41,17 @@
 - [x] Add event `onHudUpdate?: (data: HudData) => void` for reactive UI
 
 ### 4.2.2 Message Display
-- [ ] Add event `onCenterPrint?: (message: string, duration: number) => void` for center messages
-- [ ] Add event `onNotify?: (message: string) => void` for console-style notifications
-- [ ] Add event `onPickupMessage?: (item: string) => void` for pickup feedback
-- [ ] Add event `onObituaryMessage?: (message: string) => void` for death messages
+- [x] Add event `onCenterPrint?: (message: string, duration: number) => void` for center messages
+- [x] Add event `onNotify?: (message: string) => void` for console-style notifications
+- [x] Add event `onPickupMessage?: (item: string) => void` for pickup feedback
+- [x] Add event `onObituaryMessage?: (message: string) => void` for death messages
 
 ### 4.2.3 Menu Integration
-- [ ] Expose `MenuSystem` API for pause/options menus
-- [ ] Add method `showPauseMenu(): void` and `hidePauseMenu(): void`
-- [ ] Add method `isMenuActive(): boolean` to pause game updates
-- [ ] Add event `onMenuStateChange?: (active: boolean) => void`
-- [ ] Provide menu data structure for webapp custom rendering
+- [x] Expose `MenuSystem` API for pause/options menus
+- [x] Add method `showPauseMenu(): void` and `hidePauseMenu(): void`
+- [x] Add method `isMenuActive(): boolean` to pause game updates
+- [x] Add event `onMenuStateChange?: (active: boolean) => void`
+- [x] Provide menu data structure for webapp custom rendering
 
 ---
 
