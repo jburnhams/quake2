@@ -113,7 +113,7 @@ This phase covers the foundational AI systems required for monster behavior and 
   - Cover detection
   - Reference: `g_ai.cpp` lines 152-350
 
-- [ ] Implement sound-based targeting
+- [x] Implement sound-based targeting
   - Track sound events from players
   - Investigate sound sources
   - Pinger entity support
