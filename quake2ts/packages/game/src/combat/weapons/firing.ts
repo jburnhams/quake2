@@ -493,9 +493,9 @@ export function fireBlaster(game: GameExports, player: Entity) {
         if (trace.fraction < 1.0) {
             if (trace.ent && trace.ent.takedamage) {
                 T_Damage(
-                    trace.ent as Entity,
-                    player,
-                    player,
+                    trace.ent as any,
+                    player as any,
+                    player as any,
                     forward,
                     trace.endpos,
                     trace.plane ? trace.plane.normal : ZERO_VEC3,
