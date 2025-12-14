@@ -86,21 +86,21 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/music.ts`
 
 #### 5.3.1 CD Track System
-- [ ] Implement CD track configstring handling
+- [x] Implement CD track configstring handling
   - Read CS_CDTRACK from worldspawn
   - Map track numbers to music files
   - Reference: `g_spawn.cpp` lines 920-970
 
-- [ ] Add configstring parsing in worldspawn
+- [x] Add configstring parsing in worldspawn
   - Set CS_CDTRACK in `SP_worldspawn`
   - Reference: `/packages/game/src/entities/worldspawn.ts`
 
 #### 5.3.2 Music Transitions
-- [ ] Implement music crossfading
+- [x] Implement music crossfading
   - Fade out current track
   - Fade in new track
   - Configurable fade duration (1-3 seconds)
 
-- [ ] Implement track looping
+- [x] Implement track looping
   - Seamless loop points
   - Restart on completion
