@@ -82,8 +82,8 @@
 
 ### 4.4.1 Complete Weapon System
 - [ ] Implement all weapon alt-fires (if applicable to rerelease)
-- [ ] Implement weapon switching queue/cycle logic
-- [ ] Add ammo depletion and auto-switch on empty
+- [x] Implement weapon switching queue/cycle logic
+- [x] Add ammo depletion and auto-switch on empty
 - [ ] Add weapon animations and proper view weapon rendering
 - [ ] Fix weapon firing state machine edge cases
 

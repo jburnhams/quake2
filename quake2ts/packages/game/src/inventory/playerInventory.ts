@@ -143,6 +143,8 @@ export interface PlayerClient {
     damage_blend?: [number, number, number];
     // Ammo cache for snapshot
     currentAmmoCount?: number;
+    // Pending weapon switch
+    newWeapon?: WeaponId;
     // Additional fields
     landmark_name?: string | null;
     landmark_rel_pos?: Vec3;
