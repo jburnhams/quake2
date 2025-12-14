@@ -90,8 +90,8 @@
 ### 4.4.2 Power-ups and Items
 - [x] Implement quad damage visual and damage multiplication
 - [x] Implement invulnerability effect (screen tint, damage immunity)
-- [ ] Implement environment suit (breathing underwater, lava protection)
-- [ ] Implement power screen/shield effects
+- [x] Implement environment suit (breathing underwater, lava protection)
+- [x] Implement power screen/shield effects
 - [ ] Add proper item respawn timers and visual indicators
 
 ### 4.4.3 Complete Monster AI
