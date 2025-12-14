@@ -158,6 +158,8 @@ interface ServerInfo {
 
 **Workaround**: Reverse-engineer from library source, but time-consuming and error-prone.
 
+**Status**: Implemented in `docs/websocket-protocol.md`.
+
 ---
 
 ### Enhancement 2.3: Spectator Mode APIs (P1)
@@ -619,6 +621,8 @@ interface GameExports {
 
 **Workaround**: Fork library and modify entity spawn registry, not sustainable.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 7.2: Mod Initialization Hooks (P1)
@@ -861,7 +865,7 @@ interface MemoryUsage {
 | Game State Serialization | game | P0 | 01 | Implemented |
 | Admin/Cheat APIs | game | P1 | 01 | Needed |
 | Master Server Client | client/net | P1 | 02 | Needed |
-| WebSocket Protocol Docs | docs | P0 | 02 | Needed |
+| WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
 | Spectator Mode APIs | game/client | P1 | 02 | Needed |
 | Demo Event Extraction | client | P1 | 03 | Needed |
 | Demo Clip Extraction | client | P2 | 03 | Needed |
@@ -875,7 +879,7 @@ interface MemoryUsage {
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Needed |
 | Entity Templates | game | P2 | 06 | Needed |
 | BSP Entity Lump Replace | tools | P3 | 06 | Nice-to-have |
-| Custom Entity Registration | game | P0 | 07 | Needed |
+| Custom Entity Registration | game | P0 | 07 | Implemented |
 | Mod Initialization Hooks | game | P1 | 07 | Needed |
 | VFS Priority Support | engine | P1 | 07 | Needed |
 | Cvar System | shared/game | P2 | 07 | Needed |

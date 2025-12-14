@@ -219,8 +219,16 @@ export class SpawnRegistry {
     this.registry.set(classname, spawn);
   }
 
+  unregister(classname: string): void {
+    this.registry.delete(classname);
+  }
+
   get(classname: string): SpawnFunction | undefined {
     return this.registry.get(classname);
+  }
+
+  keys(): IterableIterator<string> {
+    return this.registry.keys();
   }
 }
 
@@ -324,9 +332,6 @@ export function SelectDeathmatchSpawnPoint(entities: EntitySystem): Entity | und
   if (spots.length === 0) {
     return undefined;
   }
-
-  // Simple random selection for now
-  // TODO: Add telefrag avoidance and better selection logic (furthest from other players)
   const index = Math.floor(entities.rng.frandom() * spots.length);
   return spots[index];
 }
