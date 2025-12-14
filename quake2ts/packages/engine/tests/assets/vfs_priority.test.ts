@@ -83,4 +83,18 @@ describe('VirtualFileSystem Priority', () => {
         expect(paks[1].pak).toBe(pak2);
         expect(paks[1].priority).toBe(15);
     });
+
+    it('should override same priority with later mount (LWW)', async () => {
+        const pak1 = createMockPak('pak1.pak', { 'file.txt': 'pak1' });
+        const pak2 = createMockPak('pak2.pak', { 'file.txt': 'pak2' });
+
+        const vfs = new VirtualFileSystem();
+        // Default priority 0
+        vfs.mountPak(pak1);
+        vfs.mountPak(pak2);
+
+        // Expect pak2 to win because it was mounted last with same priority
+        const content = await vfs.readTextFile('file.txt');
+        expect(content).toBe('pak2');
+    });
 });
