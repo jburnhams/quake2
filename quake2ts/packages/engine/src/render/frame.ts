@@ -64,6 +64,7 @@ interface FrameRenderOptions {
   readonly viewModel?: ViewModelRenderState;
   readonly dlights?: readonly DLight[];
   readonly timeSeconds?: number;
+  readonly deltaTime?: number;
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly disableLightmaps?: boolean; // New option to toggle lightmaps

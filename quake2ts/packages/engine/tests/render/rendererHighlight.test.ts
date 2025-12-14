@@ -106,7 +106,7 @@ describe('Renderer Highlighting', () => {
 
     it('should render highlighted entity with a second wireframe pass', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entityId = 123;
         const highlightColor: [number, number, number, number] = [1, 0, 0, 1]; // Red
 
@@ -150,7 +150,7 @@ describe('Renderer Highlighting', () => {
 
     it('should clear highlight and stop rendering second pass', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
         const entityId = 123;
         const highlightColor: [number, number, number, number] = [0, 1, 0, 1];
 
@@ -176,7 +176,7 @@ describe('Renderer Highlighting', () => {
 
     it('should handle multiple highlighted entities', () => {
         const renderer = createRenderer(mockGl);
-        const options = { camera: { viewProjectionMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
+        const options = { camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] } } as any;
 
         const entity1 = {
             type: 'md3',

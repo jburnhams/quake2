@@ -8,6 +8,8 @@ import {
   TempEntity,
   angleVectors
 } from '@quake2ts/shared';
+// Import particle helpers from engine
+import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail, spawnSplash, spawnSteam } from '@quake2ts/engine';
 import { ClientConfigStrings } from './configStrings.js';
 
 // Helper to copy vec3
@@ -166,6 +168,17 @@ export class ClientEffectSystem {
 
         this.addLight(entNum, flashOrigin, color, radius, minLight, die);
 
+        // Spawn particle muzzle flash if renderer is available
+        if (this.engine.renderer && this.engine.renderer.particleSystem) {
+             // Muzzle flash direction usually follows view angles or model forward
+             // Here we use vectors.forward from entity angles
+             spawnMuzzleFlash({
+                 system: this.engine.renderer.particleSystem,
+                 origin: flashOrigin,
+                 direction: vectors.forward
+             });
+        }
+
         let soundName = '';
         switch (weapon) {
              case MZ_BLASTER: soundName = "weapons/blastf1a.wav"; break;
@@ -190,8 +203,31 @@ export class ClientEffectSystem {
         }
     }
 
-    public onTempEntity(type: number, pos: Vec3, time: number) {
+    public onTempEntity(type: number, pos: Vec3, time: number, dir?: Vec3) {
+         const particleSystem = this.engine.renderer?.particleSystem;
+
          switch (type) {
+             case TempEntity.GUNSHOT:
+                 if (particleSystem) {
+                     spawnBulletImpact({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 this.playSound(pos, 0, "weapons/tink1.wav"); // Generic hit sound, usually localized based on surface type in CL_ParseTEnt
+                 break;
+
+             case TempEntity.BLOOD:
+                 if (particleSystem) {
+                     spawnBlood({
+                         system: particleSystem,
+                         origin: pos,
+                         direction: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 break;
+
              case TempEntity.EXPLOSION1:
              case TempEntity.EXPLOSION1_BIG:
              case TempEntity.EXPLOSION1_NP:
@@ -209,6 +245,13 @@ export class ClientEffectSystem {
 
                      this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/rocklx1a.wav", 1.0, 0.5);
+
+                     if (particleSystem) {
+                         spawnExplosion({
+                             system: particleSystem,
+                             origin: pos
+                         });
+                     }
                  }
                  break;
 
@@ -222,6 +265,34 @@ export class ClientEffectSystem {
                      const speed = (endRadius - startRadius) / duration;
                      this.addLight(undefined, pos, color, startRadius, 0, time + duration, speed);
                      this.playSound(pos, 0, "weapons/bfg__x1b.wav", 1.0, 0.5);
+
+                     if (particleSystem) {
+                        spawnExplosion({
+                             system: particleSystem,
+                             origin: pos
+                             // TODO: Make BFG explosion green/bigger
+                        });
+                     }
+                 }
+                 break;
+
+             case TempEntity.SPLASH:
+                 if (particleSystem) {
+                     spawnSplash({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 }
+                     });
+                 }
+                 this.playSound(pos, 0, "world/splash.wav"); // Or generic splash sound
+                 break;
+
+             case TempEntity.STEAM:
+                 if (particleSystem) {
+                     spawnSteam({
+                         system: particleSystem,
+                         origin: pos
+                     });
                  }
                  break;
          }
