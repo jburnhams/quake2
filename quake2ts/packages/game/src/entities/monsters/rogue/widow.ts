@@ -46,6 +46,8 @@ import { DamageMod } from '../../../combat/damageMods.js';
 import { SpawnContext, SpawnRegistry } from '../../spawn.js';
 import { rangeTo, visible } from '../../../ai/perception.js';
 import { monster_fire_blaster, monster_fire_railgun } from '../attack.js';
+import { SP_monster_stalker } from './stalker.js';
+import { SP_monster_flyer } from '../flyer.js';
 
 // Constants
 const MODEL_SCALE = 1.0;
@@ -273,18 +275,32 @@ function WidowSpawn(self: Entity, context: EntitySystem): void {
         const reinforcement = self.monsterinfo.reinforcements![rIndex];
 
         // Spawn entity
-        const ent = createMonsterSpawn({
-            model: "models/monsters/stalker/tris.md2", // Placeholder model for all
-            health: 100,
-            mass: 100
-        })(context.spawn(), { entities: context } as any);
+        const ent = context.spawn();
+        ent.origin = { ...start };
+        ent.angles = { ...self.angles };
+
+        // Ensure we invoke the correct spawn function to initialize AI
+        if (reinforcement.classname === 'monster_stalker') {
+            SP_monster_stalker(ent, { entities: context } as any);
+        } else if (reinforcement.classname === 'monster_flyer') {
+            SP_monster_flyer(ent, { entities: context } as any);
+        } else {
+            // Fallback for others using generic
+             createMonsterSpawn({
+                model: "models/monsters/stalker/tris.md2",
+                health: 100,
+                mass: 100
+            })(ent, { entities: context } as any);
+        }
 
         // Adjust properties based on reinforcement.classname
-        // This is a placeholder implementation to pass the test
-        if (ent) {
+        if (ent.inUse) {
             // Setup relation
             if (!self.monsterinfo.monster_used) self.monsterinfo.monster_used = 0;
             self.monsterinfo.monster_used += reinforcement.strength;
+
+            // Effect: Teleport sound/visual?
+            // context.sound(ent, SoundChannel.Body, "misc/spawn1.wav", 1, ATTN_NORM, 0);
         }
     }
 }
