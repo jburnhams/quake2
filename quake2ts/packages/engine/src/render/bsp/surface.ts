@@ -1,11 +1,102 @@
 import { BspMap, Vec3, BspFace, BspTexInfo } from '../../assets/bsp.js';
 import { BspSurfaceInput, BspSurfaceLightmap } from './geometry.js';
 import { createFaceLightmap } from '../../assets/bsp.js';
+import { SURF_WARP } from '@quake2ts/shared';
 
 // Helper to calculate dot product
 function dot(a: Vec3, b: Vec3): number {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
+
+// Helper to check bounds and split
+function getBounds(vertices: Vec3[]): { mins: Vec3, maxs: Vec3 } {
+  const mins: Vec3 = [Infinity, Infinity, Infinity];
+  const maxs: Vec3 = [-Infinity, -Infinity, -Infinity];
+  for (const v of vertices) {
+    for (let i = 0; i < 3; i++) {
+      if (v[i] < mins[i]) mins[i] = v[i];
+      if (v[i] > maxs[i]) maxs[i] = v[i];
+    }
+  }
+  return { mins, maxs };
+}
+
+// Subdivide polygon recursively (approx. 64 units max size)
+// Matches GL_SubdivideSurface / SubdividePolygon from gl_warp.c
+function subdividePolygon(vertices: Vec3[]): Vec3[][] {
+  const SUBDIVIDE_SIZE = 64;
+  const { mins, maxs } = getBounds(vertices);
+
+  for (let i = 0; i < 3; i++) {
+    const min = mins[i];
+    const max = maxs[i];
+    let m = (min + max) * 0.5;
+    m = SUBDIVIDE_SIZE * Math.floor(m / SUBDIVIDE_SIZE + 0.5);
+
+    if (max - m < 8) continue;
+    if (m - min < 8) continue;
+
+    // Cut it
+    const front: Vec3[] = [];
+    const back: Vec3[] = [];
+    const dists: number[] = [];
+
+    for (const v of vertices) {
+      dists.push(v[i] - m);
+    }
+
+    for (let j = 0; j < vertices.length; j++) {
+      const v1 = vertices[j];
+      const d1 = dists[j];
+      const nextIdx = (j + 1) % vertices.length;
+      const v2 = vertices[nextIdx];
+      const d2 = dists[nextIdx];
+
+      if (d1 >= 0) front.push(v1);
+      if (d1 <= 0) back.push(v1);
+
+      if (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) {
+        // Crossing the plane, split
+        const frac = d1 / (d1 - d2);
+        const split: Vec3 = [
+          v1[0] + frac * (v2[0] - v1[0]),
+          v1[1] + frac * (v2[1] - v1[1]),
+          v1[2] + frac * (v2[2] - v1[2])
+        ];
+        front.push(split);
+        back.push(split);
+      }
+    }
+
+    // Recurse
+    return [...subdividePolygon(front), ...subdividePolygon(back)];
+  }
+
+  // If no split needed, check vertex count.
+  // In gl_warp.c, it adds a center point to make a fan if it wasn't split but is a warp surface.
+
+  // Compute centroid
+  const centroid: Vec3 = [0, 0, 0];
+  for (const v of vertices) {
+    centroid[0] += v[0];
+    centroid[1] += v[1];
+    centroid[2] += v[2];
+  }
+  centroid[0] /= vertices.length;
+  centroid[1] /= vertices.length;
+  centroid[2] /= vertices.length;
+
+  // Build fan: Center -> V0 -> V1 -> ... -> VLast -> V0
+  const polys: Vec3[][] = [];
+  for (let k = 0; k < vertices.length; k++) {
+    const v1 = vertices[k];
+    const v2 = vertices[(k + 1) % vertices.length];
+    polys.push([centroid, v1, v2]);
+  }
+
+  return polys;
+}
+
 
 export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
   const surfaces: BspSurfaceInput[] = [];
@@ -15,12 +106,10 @@ export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
     const texInfo = bsp.texInfo[face.texInfo];
 
     // 1. Collect vertices for the face
-    const vertices: Vec3[] = [];
+    let vertices: Vec3[] = [];
     for (let i = 0; i < face.numEdges; i++) {
       const edgeIndex = bsp.surfEdges[face.firstEdge + i];
       let v1: Vec3;
-      // If edgeIndex is positive, use vertices in forward order (0 -> 1)
-      // If negative, use reverse order (1 -> 0)
       if (edgeIndex >= 0) {
         v1 = bsp.vertices[bsp.edges[edgeIndex].vertices[0]];
       } else {
@@ -29,122 +118,108 @@ export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
       vertices.push(v1);
     }
 
-    // 2. Compute Texture Coordinates
-    // u = v . s + s_offset
-    // v = v . t + t_offset
-    const texCoords: [number, number][] = vertices.map(v => [
-      dot(v, texInfo.s) + texInfo.sOffset,
-      dot(v, texInfo.t) + texInfo.tOffset
-    ]);
-
-    // 3. Compute Lightmap Coordinates
-    // For now, we will compute them similar to texture coords but divided by 16 (Quake 2 standard)
-    // Actual lightmap atlas packing happens later, here we just prepare the data.
-    // In Quake 2, lightmap UVs are:
-    // u = (v . s + s_offset) / 16
-    // v = (v . t + t_offset) / 16
-    // Then shifted by the face's lightmap mins.
-
-    let minU = Infinity, minV = Infinity;
-    let maxU = -Infinity, maxV = -Infinity;
-
-    if (face.lightOffset !== -1) {
-       for (const v of vertices) {
-          const u = dot(v, texInfo.s) + texInfo.sOffset;
-          const v_val = dot(v, texInfo.t) + texInfo.tOffset;
-
-          if (u < minU) minU = u;
-          if (u > maxU) maxU = u;
-          if (v_val < minV) minV = v_val;
-          if (v_val > maxV) maxV = v_val;
-       }
-
-       minU = Math.floor(minU / 16);
-       minV = Math.floor(minV / 16);
-       maxU = Math.ceil(maxU / 16);
-       maxV = Math.ceil(maxV / 16);
+    // Check for WARP flag
+    let polygons: Vec3[][] = [vertices];
+    if (texInfo.flags & SURF_WARP) {
+      polygons = subdividePolygon(vertices);
     }
 
-    const lightmapCoords: [number, number][] = vertices.map(v => {
-      if (face.lightOffset === -1) {
-        return [0, 0];
-      }
-      const u = (dot(v, texInfo.s) + texInfo.sOffset) / 16.0 - minU;
-      const v_val = (dot(v, texInfo.t) + texInfo.tOffset) / 16.0 - minV;
-      return [u, v_val];
-    });
+    for (const polyVerts of polygons) {
+        // 2. Compute Texture Coordinates
+        const texCoords: [number, number][] = polyVerts.map(v => [
+          dot(v, texInfo.s) + texInfo.sOffset,
+          dot(v, texInfo.t) + texInfo.tOffset
+        ]);
 
-    // 4. Extract Lightmap Data
-    let lightmap: BspSurfaceLightmap | undefined;
-    if (face.lightOffset !== -1) {
-      const width = maxU - minU + 1;
-      const height = maxV - minV + 1;
-      // Quake 2 lightmaps are 128x128 max usually, packed into raw RGB data.
-      // 3 bytes per pixel (RGB).
-      // createFaceLightmap helper extracts the raw bytes.
-      const info = bsp.lightMapInfo[faceIndex];
-      const data = createFaceLightmap(face, bsp.lightMaps, info);
+        // 3. Compute Lightmap Coordinates
+        // Warp surfaces don't use lightmaps
+        let minU = Infinity, minV = Infinity;
+        let maxU = -Infinity, maxV = -Infinity;
+        const isWarp = (texInfo.flags & SURF_WARP) !== 0;
 
-      if (data) {
-        // Validation: data length should be roughly w * h * 3 (or close, due to alignment?)
-        // Q2 lightmaps might strictly be w * h * 3.
+        if (!isWarp && face.lightOffset !== -1) {
+          for (const v of polyVerts) {
+              const u = dot(v, texInfo.s) + texInfo.sOffset;
+              const v_val = dot(v, texInfo.t) + texInfo.tOffset;
 
-        let numStyles = 0;
-        for (const style of face.styles) {
-            if (style !== 255) numStyles++;
+              if (u < minU) minU = u;
+              if (u > maxU) maxU = u;
+              if (v_val < minV) minV = v_val;
+              if (v_val > maxV) maxV = v_val;
+          }
+
+          minU = Math.floor(minU / 16);
+          minV = Math.floor(minV / 16);
+          maxU = Math.ceil(maxU / 16);
+          maxV = Math.ceil(maxV / 16);
         }
 
-        const requiredLength = width * height * 3 * numStyles;
+        const lightmapCoords: [number, number][] = polyVerts.map(v => {
+          if (isWarp || face.lightOffset === -1) {
+            return [0, 0];
+          }
+          const u = (dot(v, texInfo.s) + texInfo.sOffset) / 16.0 - minU;
+          const v_val = (dot(v, texInfo.t) + texInfo.tOffset) / 16.0 - minV;
+          return [u, v_val];
+        });
 
-        // Ensure we have enough data and slice it exactly
-        if (data.byteLength >= requiredLength) {
-            lightmap = {
-              width,
-              height,
-              data: data.subarray(0, requiredLength)
-            };
-        } else {
-             console.warn(`Insufficient lightmap data for face ${faceIndex}. Expected ${requiredLength}, got ${data.byteLength}`);
-             // Fallback? Use what we have, or null?
-             // If we have at least one map, maybe use it?
-             // But geometry builder expects integrity.
-             if (data.byteLength >= width * height * 3) {
+        // 4. Extract Lightmap Data
+        let lightmap: BspSurfaceLightmap | undefined;
+        if (!isWarp && face.lightOffset !== -1) {
+          const width = maxU - minU + 1;
+          const height = maxV - minV + 1;
+          const info = bsp.lightMapInfo[faceIndex];
+          const data = createFaceLightmap(face, bsp.lightMaps, info);
+
+          if (data) {
+            let numStyles = 0;
+            for (const style of face.styles) {
+                if (style !== 255) numStyles++;
+            }
+            const requiredLength = width * height * 3 * numStyles;
+
+            if (data.byteLength >= requiredLength) {
+                lightmap = {
+                  width,
+                  height,
+                  data: data.subarray(0, requiredLength)
+                };
+            } else if (data.byteLength >= width * height * 3) {
                  lightmap = {
                    width,
                    height,
                    data: data.subarray(0, width * height * 3)
                  };
-             }
+            }
+          }
         }
-      }
+
+        // 5. Interleave Vertex Data
+        const vertexData = new Float32Array(polyVerts.length * 7);
+        for (let i = 0; i < polyVerts.length; i++) {
+          const v = polyVerts[i];
+          const t = texCoords[i];
+          const l = lightmapCoords[i];
+
+          vertexData[i * 7 + 0] = v[0];
+          vertexData[i * 7 + 1] = v[1];
+          vertexData[i * 7 + 2] = v[2];
+          vertexData[i * 7 + 3] = t[0];
+          vertexData[i * 7 + 4] = t[1];
+          vertexData[i * 7 + 5] = l[0];
+          vertexData[i * 7 + 6] = l[1];
+        }
+
+        surfaces.push({
+          faceIndex,
+          textureName: texInfo.texture,
+          flags: texInfo.flags,
+          vertices: vertexData,
+          vertexCount: polyVerts.length,
+          styles: face.styles,
+          lightmap
+        });
     }
-
-    // 5. Interleave Vertex Data
-    // Format: x, y, z, u, v, lu, lv
-    const vertexData = new Float32Array(vertices.length * 7);
-    for (let i = 0; i < vertices.length; i++) {
-      const v = vertices[i];
-      const t = texCoords[i];
-      const l = lightmapCoords[i];
-
-      vertexData[i * 7 + 0] = v[0];
-      vertexData[i * 7 + 1] = v[1];
-      vertexData[i * 7 + 2] = v[2];
-      vertexData[i * 7 + 3] = t[0];
-      vertexData[i * 7 + 4] = t[1];
-      vertexData[i * 7 + 5] = l[0]; // Lightmap coordinates will be adjusted by atlas packer later
-      vertexData[i * 7 + 6] = l[1];
-    }
-
-    surfaces.push({
-      faceIndex,
-      textureName: texInfo.texture,
-      flags: texInfo.flags,
-      vertices: vertexData,
-      vertexCount: vertices.length,
-      styles: face.styles,
-      lightmap
-    });
   }
 
   return surfaces;

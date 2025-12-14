@@ -109,11 +109,15 @@ export function generateBspGeometryData(
   const allIndices: number[] = [];
   const batches: BspBatch[] = [];
 
-  // Group by texture AND light styles for batches
+  // Group by texture AND light styles AND flags for batches
   const surfacesToProcess = [...filteredSurfaces];
   surfacesToProcess.sort((a, b) => {
     const texDiff = a.textureName.localeCompare(b.textureName);
     if (texDiff !== 0) return texDiff;
+
+    // Sort by flags to group warp/trans surfaces
+    if (a.flags !== b.flags) return a.flags - b.flags;
+
     for (let i = 0; i < 4; i++) {
       if (a.styles[i] !== b.styles[i]) return a.styles[i] - b.styles[i];
     }
@@ -156,6 +160,8 @@ export function generateBspGeometryData(
   for (const surf of surfacesToProcess) {
     let newBatch = false;
     if (surf.textureName !== currentTexture) {
+      newBatch = true;
+    } else if (surf.flags !== batchFlags) {
       newBatch = true;
     } else {
       for (let i = 0; i < 4; i++) {
