@@ -51,30 +51,36 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/reverb.ts` (NEW)
 
 #### 5.2.1 Reverb System
-- [ ] Implement convolution reverb using Web Audio API
+- [x] Implement convolution reverb using Web Audio API
   - ConvolverNode for reverb
   - Impulse response files for different spaces
+  - Implemented in `reverb.ts` and integrated into `AudioSystem` in `system.ts`.
 
-- [ ] Implement room size detection
+- [x] Implement room size detection
   - Estimate room dimensions from BSP
   - Select reverb based on size
   - Small room: short decay
   - Large room: long decay
+  - Implemented in `room.ts` using BSP leaf cluster volume estimation.
 
-- [ ] Add reverb to audio system
+- [x] Add reverb to audio system
   - Route sounds through reverb
   - Configurable wet/dry mix
   - Reference: `/packages/engine/src/audio/system.ts`
+  - Wired into `createAudioGraph` in `context.ts` and `AudioSystem`.
 
 #### 5.2.2 Sound Occlusion
-- [ ] Implement sound occlusion
+- [x] Implement sound occlusion
   - Trace from listener to sound source
   - If blocked, apply low-pass filter
   - BiquadFilterNode in Web Audio
+  - Implemented `createOcclusionResolver` in `occlusion.ts` using engine traces.
+  - Note: Wiring into main application entry point is pending discovery of initialization code.
 
-- [ ] Implement distance-based low-pass
+- [x] Implement distance-based low-pass
   - Attenuate high frequencies at distance
   - Realistic distant sound
+  - Implemented in `AudioOcclusion` resolver logic.
 
 ---
 
