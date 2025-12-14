@@ -16,23 +16,24 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 **TypeScript File**: `/packages/engine/src/audio/ambient.ts` (NEW)
 
 #### 5.1.1 Target Speaker Entity
-- [ ] Implement `SP_target_speaker(entity: Entity): void`
+- [x] Implement `SP_target_speaker(entity: Entity): void`
   - Ambient sound emitter
   - Looping vs one-shot mode
   - Volume configuration
   - Attenuation distance
   - Reference: `g_target.cpp` lines 352-480
 
-- [ ] Add to entity spawn registry
+- [x] Add to entity spawn registry
   - Register classname: "target_speaker"
   - Reference: `/packages/game/src/entities/index.ts`
 
 #### 5.1.2 Ambient Sound Playback
-- [ ] Implement looping ambient sounds
+- [x] Implement looping ambient sounds
   - Create looping audio source
   - 3D spatialization
   - Auto-restart when complete
   - Reference: existing audio system
+  - Note: Basic looping support implemented in `AmbientSoundSystem`. Dynamic enabling/disabling via triggers is handled by `target_speaker` entity logic in `targets.ts` toggling `spawnflags` and `sounds`.
 
 - [ ] Implement ambient sound triggering
   - Enable/disable speakers via triggers
@@ -102,4 +103,3 @@ This phase covers ambient sound systems, environmental audio, and music systems.
 - [ ] Implement track looping
   - Seamless loop points
   - Restart on completion
-

@@ -41,7 +41,7 @@ export interface AudioSystemOptions {
   resolveOcclusion?: OcclusionResolver;
 }
 
-interface ActiveSound {
+export interface ActiveSound {
   channelIndex: number;
   entnum: number;
   entchannel: number;
