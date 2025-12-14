@@ -1,7 +1,6 @@
-export interface BspEntity {
-  classname: string;
-  [key: string]: string | number | undefined;
-}
+import { BspEntity } from '../assets/bsp.js';
+
+export { BspEntity };
 
 export interface ValidationResult {
   valid: boolean;
@@ -14,12 +13,10 @@ export interface ValidationResult {
  */
 export function parseEntLump(text: string): BspEntity[] {
     const entities: BspEntity[] = [];
-    let currentEntity: BspEntity | null = null;
+    let currentProperties: Record<string, string> | null = null;
     let lines = text.split('\n');
-    let lineNum = 0;
 
     for (let line of lines) {
-        lineNum++;
         line = line.trim();
 
         // Remove comments
@@ -31,54 +28,39 @@ export function parseEntLump(text: string): BspEntity[] {
         if (line.length === 0) continue;
 
         if (line === '{') {
-            if (currentEntity) {
-                // Nested brace or missing close brace?
-                // Quake 2 format is flat list of {} blocks.
-                // We'll assume previous entity ended implicitly or it's an error.
-                // For robustness, push previous and start new.
-                entities.push(currentEntity);
+            if (currentProperties) {
+                // Nested brace or missing close brace? Push previous.
+                entities.push({
+                    classname: currentProperties['classname'],
+                    properties: currentProperties
+                });
             }
-            currentEntity = { classname: 'unknown' };
+            currentProperties = {};
         } else if (line === '}') {
-            if (currentEntity) {
-                entities.push(currentEntity);
-                currentEntity = null;
+            if (currentProperties) {
+                entities.push({
+                    classname: currentProperties['classname'],
+                    properties: currentProperties
+                });
+                currentProperties = null;
             }
-        } else if (currentEntity) {
+        } else if (currentProperties) {
             // Parse "key" "value"
-            // Handles quoted strings with spaces
             const match = line.match(/"([^"]+)"\s+"([^"]*)"/);
             if (match) {
                 const key = match[1];
                 const value = match[2];
-
-                // Convert numeric values if possible?
-                // Standard Quake 2 practice: everything is a string in the map file.
-                // The game code parses it.
-                // But the interface in enhancement request says "string | number | undefined".
-                // If it looks like a number, should we parse it?
-                // Usually map keys are strings.
-                // "angle" "90" -> 90?
-                // "origin" "10 20 30" -> string "10 20 30" (it's a vector)
-                // "light" "200" -> 200
-
-                // Let's keep it as string to preserve exact formatting for serialization,
-                // OR parse strict numbers.
-                // The prompt says BspEntity properties can be number.
-
-                // Let's try to parse simple numbers, but keep vectors as strings.
-                if (!isNaN(Number(value)) && value.trim() !== '') {
-                     currentEntity[key] = Number(value);
-                } else {
-                     currentEntity[key] = value;
-                }
+                currentProperties[key] = value;
             }
         }
     }
 
     // Catch trailing entity
-    if (currentEntity) {
-        entities.push(currentEntity);
+    if (currentProperties) {
+         entities.push({
+            classname: currentProperties['classname'],
+            properties: currentProperties
+        });
     }
 
     return entities;
@@ -93,17 +75,15 @@ export function serializeEntLump(entities: BspEntity[]): string {
     for (const ent of entities) {
         output += '{\n';
 
-        // Ensure classname is first (convention)
-        if (ent.classname) {
-            output += `"${'classname'}" "${ent.classname}"\n`;
+        const classname = ent.classname || ent.properties['classname'];
+
+        if (classname) {
+            output += `"${'classname'}" "${classname}"\n`;
         }
 
-        for (const key in ent) {
+        for (const [key, value] of Object.entries(ent.properties)) {
             if (key === 'classname') continue;
-            const value = ent[key];
-            if (value !== undefined) {
-                output += `"${key}" "${value}"\n`;
-            }
+            output += `"${key}" "${value}"\n`;
         }
 
         output += '}\n';
@@ -122,27 +102,30 @@ export function validateEntity(entity: BspEntity): ValidationResult {
         warnings: []
     };
 
-    if (!entity.classname || entity.classname === 'unknown') {
+    const classname = entity.classname || entity.properties['classname'];
+
+    if (!classname || classname === 'unknown') {
         result.valid = false;
         result.errors.push('Missing or invalid classname');
     }
 
     // Example validations
-    if (entity.classname === 'worldspawn') {
-        if (!entity.message && !entity.sky) {
+    if (classname === 'worldspawn') {
+        if (!entity.properties['message'] && !entity.properties['sky']) {
              result.warnings.push('worldspawn usually has a message or sky');
         }
     }
 
-    // Check for target/targetname loops or broken references?
-    // That requires global context.
-
     // Check key format
-    for (const key in entity) {
+    for (const key of Object.keys(entity.properties)) {
         if (key.includes(' ')) {
              result.warnings.push(`Key "${key}" contains spaces, which is discouraged`);
         }
     }
 
     return result;
+}
+
+export function serializeBspEntities(entities: BspEntity[]): string {
+    return serializeEntLump(entities);
 }
