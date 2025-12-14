@@ -60,40 +60,64 @@ export function applyEnvironmentalDamage(
   let enteredWater = false;
   let leftWater = false;
 
-  if (target.waterlevel === WaterLevel.None) {
-    if ((flags & EnvironmentalFlags.IN_WATER) !== 0) {
-      flags &= ~EnvironmentalFlags.IN_WATER;
-      leftWater = true;
-    }
-
-    if (target.airFinished < nowMs && target.painDebounceTime <= nowMs) {
-      const elapsedSeconds = Math.floor((nowMs - target.airFinished) / 1000);
-      const amount = Math.min(15, 2 + 2 * elapsedSeconds);
-      const result = applyDamageEvent(target, amount, DamageMod.WATER, nowMs / 1000);
-      target.painDebounceTime = nowMs + 1000;
-      events.push({ mod: DamageMod.WATER, amount, result });
-    }
-  } else {
-    target.airFinished = nowMs + 9000;
-    if ((flags & EnvironmentalFlags.IN_WATER) === 0) {
-      flags |= EnvironmentalFlags.IN_WATER;
-      enteredWater = true;
-      target.damageDebounceTime = 0;
-    }
-
-    if (target.damageDebounceTime <= nowMs) {
-      if ((target.watertype & CONTENTS_LAVA) !== 0 && (flags & EnvironmentalFlags.IMMUNE_LAVA) === 0) {
-        const amount = 10 * target.waterlevel;
-        const result = applyDamageEvent(target, amount, DamageMod.LAVA, nowMs / 1000);
-        target.damageDebounceTime = nowMs + 100;
-        events.push({ mod: DamageMod.LAVA, amount, result });
-      } else if ((target.watertype & CONTENTS_SLIME) !== 0 && (flags & EnvironmentalFlags.IMMUNE_SLIME) === 0) {
-        const amount = 4 * target.waterlevel;
-        const result = applyDamageEvent(target, amount, DamageMod.SLIME, nowMs / 1000);
-        target.damageDebounceTime = nowMs + 100;
-        events.push({ mod: DamageMod.SLIME, amount, result });
+  if (target.waterlevel !== WaterLevel.None) {
+      // In water
+      if ((flags & EnvironmentalFlags.IN_WATER) === 0) {
+          flags |= EnvironmentalFlags.IN_WATER;
+          enteredWater = true;
+          target.damageDebounceTime = 0;
       }
-    }
+
+      // Check for drowning (only if head is under water)
+      if (target.waterlevel === WaterLevel.Under) { // WaterLevel 3
+          // If airFinished is past, we are drowning.
+          if (target.airFinished < nowMs) {
+             if (target.painDebounceTime <= nowMs) {
+                const elapsedSeconds = Math.floor((nowMs - target.airFinished) / 1000);
+                const amount = Math.min(15, 2 + 2 * elapsedSeconds);
+                const result = applyDamageEvent(target, amount, DamageMod.WATER, nowMs / 1000);
+                target.painDebounceTime = nowMs + 1000;
+                events.push({ mod: DamageMod.WATER, amount, result });
+             }
+          }
+      } else {
+          // Reset air if head is not under water
+          target.airFinished = nowMs + 9000;
+      }
+
+      // Check lava/slime damage
+      if (target.damageDebounceTime <= nowMs) {
+        if (target.watertype & CONTENTS_LAVA) {
+          // Lava: 1/3 damage with immunity, full otherwise.
+          const isImmune = (flags & EnvironmentalFlags.IMMUNE_LAVA) !== 0;
+          const damageMult = isImmune ? 1 : 3;
+          const amount = damageMult * target.waterlevel;
+
+          const result = applyDamageEvent(target, amount, DamageMod.LAVA, nowMs / 1000);
+          target.damageDebounceTime = nowMs + 100; // 10Hz
+          events.push({ mod: DamageMod.LAVA, amount, result });
+        }
+
+        if (target.watertype & CONTENTS_SLIME) {
+          // Slime: No damage if immune.
+          const isImmune = (flags & EnvironmentalFlags.IMMUNE_SLIME) !== 0;
+          if (!isImmune) {
+             const amount = 1 * target.waterlevel;
+             const result = applyDamageEvent(target, amount, DamageMod.SLIME, nowMs / 1000);
+             target.damageDebounceTime = nowMs + 100; // 10Hz
+             events.push({ mod: DamageMod.SLIME, amount, result });
+          }
+        }
+      }
+  } else {
+      // Not in water
+      if ((flags & EnvironmentalFlags.IN_WATER) !== 0) {
+          flags &= ~EnvironmentalFlags.IN_WATER;
+          leftWater = true;
+      }
+
+      // Reset air when out of water
+      target.airFinished = nowMs + 9000;
   }
 
   target.environmentFlags = flags;

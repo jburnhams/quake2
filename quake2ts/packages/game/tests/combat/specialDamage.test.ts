@@ -33,11 +33,12 @@ function makeTarget(extra: Partial<Damageable> = {}) {
 describe('applyEnvironmentalDamage', () => {
   it('applies drowning damage that scales over time and respects pain debounce', () => {
     const now = 5000;
-    const target = makeTarget({ airFinished: now - 3000 });
+    const target = makeTarget({ airFinished: now - 3000, waterlevel: WaterLevel.Under });
 
     const result = applyEnvironmentalDamage(target, now);
 
     expect(result.events).toHaveLength(1);
+    // Drowning damage is 2 + 2 * elapsedSeconds. 3 seconds elapsed = 2 + 6 = 8.
     expect(result.events[0]).toMatchObject({ mod: DamageMod.WATER, amount: 8 });
     expect(target.health).toBe(92);
     expect(target.painDebounceTime).toBe(now + 1000);
@@ -57,15 +58,20 @@ describe('applyEnvironmentalDamage', () => {
 
     const result = applyEnvironmentalDamage(target, now);
 
-    expect(result.events[0]).toMatchObject({ mod: DamageMod.LAVA, amount: 20 });
-    expect(target.health).toBe(80);
+    // Lava damage: 3 * waterlevel (Waist=2) = 6
+    expect(result.events[0]).toMatchObject({ mod: DamageMod.LAVA, amount: 6 });
+    expect(target.health).toBe(94);
     expect(target.damageDebounceTime).toBe(now + 100);
 
     target.environmentFlags = EnvironmentalFlags.IMMUNE_LAVA;
     target.health = 100;
+    // Debounce is set to +100ms, so we need to advance time > 100ms
     const immuneResult = applyEnvironmentalDamage(target, now + 200);
-    expect(immuneResult.events).toHaveLength(0);
-    expect(target.health).toBe(100);
+
+    // With immunity, lava damage is 1 * waterlevel = 2
+    expect(immuneResult.events).toHaveLength(1);
+    expect(immuneResult.events[0]).toMatchObject({ mod: DamageMod.LAVA, amount: 2 });
+    expect(target.health).toBe(98);
   });
 
   it('applies slime ticks with the same 100ms cadence and multiplier', () => {
@@ -78,16 +84,18 @@ describe('applyEnvironmentalDamage', () => {
 
     const result = applyEnvironmentalDamage(target, now);
 
-    expect(result.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 12 });
+    // Slime damage: 1 * waterlevel (Under=3) = 3
+    expect(result.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 3 });
     expect(target.damageDebounceTime).toBe(now + 100);
-    expect(target.health).toBe(88);
+    expect(target.health).toBe(97);
   });
 
   it('caps drowning escalation at the rerelease 15 damage ceiling', () => {
     const now = 10_000;
-    const target = makeTarget({ airFinished: now - 10_000 });
+    const target = makeTarget({ airFinished: now - 10_000, waterlevel: WaterLevel.Under });
 
     const first = applyEnvironmentalDamage(target, now);
+    // 10 seconds elapsed -> 2 + 20 = 22, capped at 15
     expect(first.events[0]).toMatchObject({ mod: DamageMod.WATER, amount: 15 });
     expect(target.health).toBe(85);
 
@@ -105,7 +113,8 @@ describe('applyEnvironmentalDamage', () => {
     });
 
     const first = applyEnvironmentalDamage(target, now);
-    expect(first.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 8 });
+    // Slime: 1 * waterlevel (2) = 2
+    expect(first.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 2 });
     expect(target.damageDebounceTime).toBe(100);
 
     target.waterlevel = WaterLevel.None;
@@ -115,7 +124,7 @@ describe('applyEnvironmentalDamage', () => {
     target.waterlevel = WaterLevel.Waist;
     target.watertype = CONTENTS_SLIME;
     const reentered = applyEnvironmentalDamage(target, now + 60);
-    expect(reentered.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 8 });
+    expect(reentered.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 2 });
     expect(target.damageDebounceTime).toBe(160);
   });
 
@@ -143,6 +152,7 @@ describe('applyEnvironmentalDamage', () => {
     expect(first.enteredWater).toBe(true);
     expect(first.leftWater).toBe(false);
     expect((target.environmentFlags ?? 0) & EnvironmentalFlags.IN_WATER).toBe(EnvironmentalFlags.IN_WATER);
+    // WaterLevel is Waist, so not drowning, airFinished should be reset
     expect(target.airFinished).toBe(now + 9000);
 
     target.waterlevel = WaterLevel.None;
