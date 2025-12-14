@@ -64,6 +64,7 @@ export enum DamageMod {
   DOPPLE_HUNTER = 56,
   GRAPPLE = 57,
   BLUEBLASTER = 58,
+  FRIENDLY_FIRE = 59,
 }
 
 /**
@@ -131,6 +132,7 @@ export const ORDERED_DAMAGE_MODS: readonly DamageMod[] = [
   DamageMod.DOPPLE_HUNTER,
   DamageMod.GRAPPLE,
   DamageMod.BLUEBLASTER,
+  DamageMod.FRIENDLY_FIRE,
 ];
 
 /**

@@ -64,6 +64,7 @@ describe('DamageMod enumeration', () => {
       'MOD_DOPPLE_HUNTER',
       'MOD_GRAPPLE',
       'MOD_BLUEBLASTER',
+      'MOD_FRIENDLY_FIRE',
     ];
 
     expect(ORDERED_DAMAGE_MODS.map(damageModName)).toEqual(expectedNames);

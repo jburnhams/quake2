@@ -208,6 +208,7 @@ describe('BFG10K', () => {
             expect.anything(),
             DamageMod.BFG_LASER,
             expect.anything(),
+            expect.anything(),
             expect.objectContaining({ checkFriendlyFire: false, noFriendlyFire: true })
         );
 

@@ -181,8 +181,21 @@ export function T_Damage(
     return null;
   }
 
+  // Friendly fire check
+  let currentMod = mod;
+  let currentDamage = damage;
+  if (options?.checkFriendlyFire && attacker && targ !== attacker && (targ as any).client && (attacker as any).client) {
+      if (onSameTeam(targ as Entity, attacker as Entity)) {
+          if (options.noFriendlyFire) {
+              currentDamage = 0;
+          } else {
+              currentMod = DamageMod.FRIENDLY_FIRE;
+          }
+      }
+  }
+
   const modifier = getDamageModifier(attacker, time);
-  const modifiedDamage = damage * modifier;
+  const modifiedDamage = currentDamage * modifier;
   const modifiedKnockback = knockback * modifier;
 
   const protectedByGod =
@@ -250,10 +263,10 @@ export function T_Damage(
     if (targ.flags && (targ.flags & EntityDamageFlags.IMMORTAL)) {
       targ.health = Math.max(1, targ.health);
     } else if (targ.die) {
-      targ.die(targ, inflictor, attacker, actualTake, point, mod);
+      targ.die(targ, inflictor, attacker, actualTake, point, currentMod);
     }
   } else if (actualTake > 0 && targ.pain) {
-    targ.pain(targ, attacker, knockback, actualTake, mod);
+    targ.pain(targ, attacker, knockback, actualTake, currentMod);
   }
 
   return { take: actualTake, psave, asave, knocked, killed, remainingCells, remainingArmor };
