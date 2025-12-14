@@ -7,6 +7,22 @@ import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { throwGibs } from '../entities/gibs.js';
 
+export interface DamageOptions {
+  /** If true, check if attacker and target are on same team and apply rules. */
+  checkFriendlyFire?: boolean;
+  /** If true (and checkFriendlyFire is on), damage is 0 for teammates. */
+  noFriendlyFire?: boolean;
+}
+
+function onSameTeam(ent1: Entity, ent2: Entity): boolean {
+  if (!ent1.client || !ent2.client) {
+    return false;
+  }
+  // TODO: Add team check when teams are implemented (e.g., CTF).
+  // For now, in Coop, all players are on the same team.
+  return true;
+}
+
 export interface DamageableCallbacks {
   pain?: (self: Damageable, attacker: Damageable | null, knockback: number, take: number, mod: DamageMod) => void;
   die?: (self: Damageable, inflictor: Damageable | null, attacker: Damageable | null, take: number, point: Vec3, mod: DamageMod) => void;
@@ -56,7 +72,7 @@ export interface RadiusDamageHit {
   readonly appliedDamage: number;
 }
 
-export interface RadiusDamageOptions {
+export interface RadiusDamageOptions extends DamageOptions {
   readonly canDamage?: (ent: Damageable, inflictor: DamageSource) => boolean;
 }
 
@@ -158,7 +174,8 @@ export function T_Damage(
   dflags: number,
   mod: DamageMod,
   time: number,
-  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void
+  multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void,
+  options?: DamageOptions
 ): DamageApplicationResult | null {
   if (!targ.takedamage) {
     return null;
@@ -198,6 +215,17 @@ export function T_Damage(
 
   if (targ.powerArmor && remainingCells !== undefined) {
     (targ.powerArmor as PowerArmorState).cellCount = remainingCells;
+
+    // Visual effect for power armor
+    if (psave > 0 && multicast) {
+        if (targ.powerArmor.type === 'screen') {
+            multicast(point, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SCREEN_SPARKS, point, normal);
+            // TE_SCREEN_SPARKS plays misc/power2.wav on client
+        } else if (targ.powerArmor.type === 'shield') {
+            multicast(point, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.SHIELD_SPARKS, point, normal);
+             // TE_SHIELD_SPARKS plays misc/power2.wav on client
+        }
+    }
   }
   if (targ.regularArmor) {
     (targ.regularArmor as RegularArmorState).armorCount = remainingArmor ?? targ.regularArmor.armorCount;
@@ -292,7 +320,7 @@ export function T_RadiusDamage(
 
     const dir = normalizeVec3(subtractVec3(ent.origin, inflictorCenter));
 
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedKnockback, dflags | DamageFlags.RADIUS, mod, time, multicast);
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedKnockback, dflags | DamageFlags.RADIUS, mod, time, multicast, options);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 

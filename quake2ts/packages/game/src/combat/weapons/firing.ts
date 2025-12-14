@@ -11,7 +11,8 @@ import { AmmoType } from '../../inventory/ammo.js';
 import {
     ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
-    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
+    ATTN_NORM, MASK_SHOT, lengthVec3, subtractVec3
 } from '@quake2ts/shared';
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
@@ -99,6 +100,16 @@ function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: an
     }
 
     if (trace.ent && trace.ent.takedamage) {
+        let finalDamage = damage;
+
+        // Machinegun & Chaingun have specific distance falloff in Quake 2.
+        // Drops 2 damage units per 1000 units of distance.
+        if (mod === DamageMod.MACHINEGUN || mod === DamageMod.CHAINGUN) {
+            const dist = lengthVec3(subtractVec3(trace.endpos, start));
+            finalDamage = damage - dist * (2.0 / 1000.0);
+            if (finalDamage < 1) finalDamage = 1;
+        }
+
         T_Damage(
             trace.ent as any,
             player as any,
@@ -106,7 +117,7 @@ function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: an
             ZERO_VEC3,
             trace.endpos,
             trace.plane ? trace.plane.normal : ZERO_VEC3,
-            damage,
+            Math.floor(finalDamage),
             knockback,
             DamageFlags.BULLET,
             mod,
@@ -414,7 +425,11 @@ export function fireChaingun(game: GameExports, player: Entity) {
     applyKick(player, -0.5, random.crandom() * (0.5 + (shots * 0.15)), 0);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.angles);
+    const vectors = angleVectors(player.angles);
+    if (!vectors || !vectors.forward) {
+        console.log('DEBUG: angleVectors returned undefined or missing forward', vectors, 'player.angles:', player.angles);
+    }
+    const { forward, right, up } = vectors;
     const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
     for (let i = 0; i < shots; i++) {

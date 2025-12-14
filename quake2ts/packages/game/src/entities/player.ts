@@ -21,6 +21,110 @@ import {
 } from './player_anim.js';
 import { firingRandom } from '../combat/weapons/firing.js';
 import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
+import { EntityDamageFlags, DamageFlags } from '../combat/damageFlags.js';
+import { updateCtfScoreboard } from '../modes/ctf/scoreboard.js';
+import { T_Damage, Damageable } from '../combat/damage.js';
+import { ZERO_VEC3 } from '@quake2ts/shared';
+
+// Based on rerelease/p_client.cpp: P_WorldEffects
+function P_WorldEffects(ent: Entity, sys: EntitySystem) {
+    if (!ent.client) return;
+
+    if (ent.movetype === MoveType.Noclip) {
+        ent.client.air_finished = sys.timeSeconds + 12; // Always full air
+        return;
+    }
+
+    const waterlevel = ent.waterlevel;
+    const breather = ent.client.breather_time && ent.client.breather_time > sys.timeSeconds;
+    const enviro = ent.client.enviro_time && ent.client.enviro_time > sys.timeSeconds;
+
+    //
+    // Check for drowning
+    //
+    if (waterlevel === 3) {
+        // Head is underwater
+
+        // Breather or Enviro Suit prevents drowning
+        if (breather || enviro) {
+            ent.client.air_finished = sys.timeSeconds + 9;
+        } else if (ent.client.air_finished && ent.client.air_finished < sys.timeSeconds) {
+            // Drown!
+            // Damage every second
+            // In Q2, damage is applied and sound played.
+            // "if (ent->client->next_drown_time < level.time)" ...
+
+            // We simplify by checking if it's been a second since last drown damage?
+            // Actually, T_Damage will be called, but we don't want to call it 10 times a second.
+            // The logic in Q2 checks "next_drown_time". We can abuse air_finished?
+            // "ent->client->air_finished = level.time + 1" after damage.
+
+            ent.client.air_finished = sys.timeSeconds + 1;
+
+            // Drowning damage
+            T_Damage(ent as unknown as Damageable,
+                ent.target_ent as unknown as Damageable, // world
+                ent.target_ent as unknown as Damageable, // world
+                ZERO_VEC3, ent.origin, ZERO_VEC3,
+                2, 0, DamageFlags.NO_ARMOR, DamageMod.WATER, sys.timeSeconds);
+        }
+    } else {
+        // Not underwater (head)
+        ent.client.air_finished = sys.timeSeconds + 12;
+
+        // If we just came out of water?
+        // Sound is handled in checkWater usually for enter/leave.
+        // But "gasp" sound for surfacing after holding breath is here in Q2.
+        // "if (ent->waterlevel == 3 && ent->client->air_finished < level.time + 9)" -> sound.
+        // Here we are already out of waterlevel 3.
+        // We can't easily detect "just surfaced" without previous state or sound logic in checkWater.
+        // However, checkWater handles the splash sounds.
+        // P_WorldEffects handles the GASP.
+        // But we just reset air_finished above.
+    }
+
+    //
+    // Check for sizzling (Lava/Slime)
+    //
+    // In Q2 P_WorldEffects also handles lava/slime damage if not handled elsewhere.
+    // However, T_Damage logic already checks for enviro suit for LAVA/SLIME damage.
+    // The actual APPLICATION of environmental damage (burning in lava)
+    // happens in PlayerThink -> P_WorldEffects -> if (ent.watertype & CONTENTS_LAVA)...
+
+    if (ent.waterlevel > 0) {
+       if (ent.watertype & 8) { // CONTENTS_LAVA
+           if (ent.client.invincible_time && ent.client.invincible_time > sys.timeSeconds) {
+               // No damage
+           } else if (enviro) {
+               // No damage
+           } else {
+               // Damage
+               if (ent.damage_debounce_time < sys.timeSeconds) {
+                   ent.damage_debounce_time = sys.timeSeconds + 0.2;
+                   T_Damage(ent as unknown as Damageable,
+                       null, null,
+                       ZERO_VEC3, ent.origin, ZERO_VEC3,
+                       10 * ent.waterlevel, 0, 0, DamageMod.LAVA, sys.timeSeconds);
+               }
+           }
+       }
+       if (ent.watertype & 16) { // CONTENTS_SLIME
+           if (ent.client.invincible_time && ent.client.invincible_time > sys.timeSeconds) {
+               // No damage
+           } else if (enviro) {
+               // No damage
+           } else {
+                if (ent.damage_debounce_time < sys.timeSeconds) {
+                   ent.damage_debounce_time = sys.timeSeconds + 1;
+                   T_Damage(ent as unknown as Damageable,
+                       null, null,
+                       ZERO_VEC3, ent.origin, ZERO_VEC3,
+                       4 * ent.waterlevel, 0, 0, DamageMod.SLIME, sys.timeSeconds);
+               }
+           }
+       }
+    }
+}
 
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
@@ -259,6 +363,17 @@ export function player_think(self: Entity, sys: EntitySystem) {
 
     // Player Animation
     P_PlayerThink(self, sys);
+
+    // World Effects (Drowning, etc)
+    P_WorldEffects(self, sys);
+
+    // Update CTF Scoreboard/HUD if appropriate
+    if (sys.deathmatch && (sys.configStringIndex ? sys.configStringIndex("pics/ctf_r.pcx") > 0 : true)) {
+         // Naive check for CTF mode: if ctf pics are loaded or just generally checking deathmatch and flag presence
+         // A better check would be sys.game.ctf or checking for flag entities once.
+         // For now, let's call it and let it handle null checks.
+         updateCtfScoreboard(self, sys);
+    }
 
     self.nextthink = sys.timeSeconds + 0.1;
     sys.scheduleThink(self, self.nextthink);

@@ -120,6 +120,7 @@ export interface PlayerClient {
     invincible_time?: number;
     breather_time?: number;
     enviro_time?: number;
+    air_finished?: number;
     quadsound_time?: number;
     // Weapon Animation System
     weaponstate?: WeaponStateEnum;
