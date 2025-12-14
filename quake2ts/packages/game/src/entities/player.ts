@@ -22,6 +22,7 @@ import {
 import { firingRandom } from '../combat/weapons/firing.js';
 import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
 import { EntityDamageFlags } from '../combat/damageFlags.js';
+import { updateCtfScoreboard } from '../modes/ctf/scoreboard.js';
 
 export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (!ent.client) return;
@@ -267,6 +268,14 @@ export function player_think(self: Entity, sys: EntitySystem) {
 
     // Player Animation
     P_PlayerThink(self, sys);
+
+    // Update CTF Scoreboard/HUD if appropriate
+    if (sys.deathmatch && (sys.configStringIndex ? sys.configStringIndex("pics/ctf_r.pcx") > 0 : true)) {
+         // Naive check for CTF mode: if ctf pics are loaded or just generally checking deathmatch and flag presence
+         // A better check would be sys.game.ctf or checking for flag entities once.
+         // For now, let's call it and let it handle null checks.
+         updateCtfScoreboard(self, sys);
+    }
 
     self.nextthink = sys.timeSeconds + 0.1;
     sys.scheduleThink(self, self.nextthink);

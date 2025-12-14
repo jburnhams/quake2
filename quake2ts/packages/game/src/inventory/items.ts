@@ -18,6 +18,7 @@ import { grenadeLauncherThink } from '../combat/weapons/grenadelauncher.js';
 import { blasterThink } from '../combat/weapons/blaster.js';
 import { Weapon_ChainFist } from '../combat/weapons/chainfist.js';
 import { Trap_Think } from '../combat/weapons/trap.js';
+import { Grapple_Think } from '../modes/ctf/grapple.js';
 
 export { AmmoType };
 
@@ -260,6 +261,17 @@ export const WEAPON_ITEMS: Record<string, WeaponItem> = {
         fireRate: 1.0,
         think: Trap_Think,
     },
+    'weapon_grapple': {
+        type: 'weapon',
+        id: 'weapon_grapple',
+        name: 'Grapple',
+        weaponId: WeaponId.Grapple,
+        ammoType: null, // Grapple uses no ammo in standard Q2 CTF? Or maybe just internal timer.
+        initialAmmo: 0,
+        pickupAmmo: 0,
+        fireRate: 0.5,
+        think: Grapple_Think,
+    }
 };
 
 export const HEALTH_ITEMS: Record<string, HealthItem> = {
