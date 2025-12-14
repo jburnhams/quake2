@@ -365,7 +365,7 @@ export function createClient(imports: ClientImports): ClientExports {
     onTempEntity: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
         const time = demoPlayback.getCurrentTime() / 1000.0;
         if (pos) {
-            effectSystem.onTempEntity(type, pos, time);
+            effectSystem.onTempEntity(type, pos, time, dir);
         }
     },
     onDamage: (indicators: DamageIndicator[]) => {
@@ -988,7 +988,9 @@ export function createClient(imports: ClientImports): ClientExports {
           imports.engine.renderer.renderFrame({
               camera,
               world,
-              dlights: dlights
+              dlights: dlights,
+              deltaTime: dtMs / 1000.0, // Pass Delta Time for particle update
+              timeSeconds
           }, renderEntities);
       }
 
