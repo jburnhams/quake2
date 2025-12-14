@@ -11,7 +11,8 @@ import { AmmoType } from '../../inventory/ammo.js';
 import {
     ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
-    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
+    ATTN_NORM, MASK_SHOT
 } from '@quake2ts/shared';
 import { T_Damage, T_RadiusDamage } from '../damage.js';
 import { DamageFlags } from '../damageFlags.js';
@@ -471,14 +472,61 @@ export function fireHyperBlaster(game: GameExports, player: Entity) {
 export function fireBlaster(game: GameExports, player: Entity) {
     if (!player.client) return;
 
-    game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
-    applyKick(player, -0.5, 0, 0);
-    setPlayerAttackAnim(player);
+    // Check for Alt-Fire (Melee)
+    if (player.client.buttons & 32) {
+        // Melee Attack
+        game.sound(player, 0, 'weapons/swing.wav', 1, ATTN_NORM, 0);
+        applyKick(player, -2, 0, 0);
+        setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+        const { forward, right, up } = angleVectors(player.angles);
+        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
 
-    createBlasterBolt(game.entities, player, source, forward, 15, 1500, DamageMod.BLASTER);
+        const range = 64;
+        const damage = 50;
+        const kick = 100;
+
+        const end = { x: source.x + forward.x * range, y: source.y + forward.y * range, z: source.z + forward.z * range };
+
+        const trace = game.trace(source, null, null, end, player, MASK_SHOT);
+
+        if (trace.fraction < 1.0) {
+            if (trace.ent && trace.ent.takedamage) {
+                T_Damage(
+                    trace.ent as Entity,
+                    player,
+                    player,
+                    forward,
+                    trace.endpos,
+                    trace.plane ? trace.plane.normal : ZERO_VEC3,
+                    damage,
+                    kick,
+                    0,
+                    DamageMod.BLASTER,
+                    game.time,
+                    game.multicast
+                );
+                // Hit sound
+                game.sound(player, 0, 'weapons/tink1.wav', 1, ATTN_NORM, 0);
+            } else {
+                // Wall hit
+                game.sound(player, 0, 'weapons/hithard.wav', 1, ATTN_NORM, 0);
+                if (trace.plane) {
+                    game.multicast(trace.endpos, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.GUNSHOT, trace.endpos, trace.plane.normal);
+                }
+            }
+        }
+    } else {
+        // Standard Fire
+        game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_BLASTER);
+        applyKick(player, -0.5, 0, 0);
+        setPlayerAttackAnim(player);
+
+        const { forward, right, up } = angleVectors(player.angles);
+        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+
+        createBlasterBolt(game.entities, player, source, forward, 15, 1500, DamageMod.BLASTER);
+    }
 }
 
 export function fireRocket(game: GameExports, player: Entity) {

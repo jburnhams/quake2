@@ -88,8 +88,8 @@ export function Weapon_Generic(
     }
 
     if (client.weaponstate === WeaponStateEnum.WEAPON_READY) {
-        // Check for fire
-        if ((client.buttons & 1) /* BUTTON_ATTACK */) {
+        // Check for fire (Primary or Alt-Fire)
+        if ((client.buttons & 1) || (client.buttons & 32)) {
             client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
             // Start fire sequence at ACTIVATE_LAST + 1
             client.gun_frame = FRAME_ACTIVATE_LAST + 1;
