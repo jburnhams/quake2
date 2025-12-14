@@ -131,6 +131,7 @@ import { CollisionModel } from '@quake2ts/shared';
 
 import { GameImports } from './imports.js';
 export type { GameImports }; // Export GameImports type
+import { checkPlayerFlagDrop } from './modes/ctf/integration.js';
 import { createDefaultSpawnRegistry, registerDefaultSpawns, SpawnRegistry } from './entities/spawn.js';
 
 export function createGame(

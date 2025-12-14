@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dropFlag, flagThink } from '../../../src/modes/ctf/drop.js';
 import { FlagEntity, FlagState } from '../../../src/modes/ctf/state.js';
@@ -30,7 +31,11 @@ describe('CTF Flag Drop', () => {
         } as unknown as GameExports;
 
         context = {
-            timeSeconds: 100
+            timeSeconds: 100,
+            sound: vi.fn(),
+            engine: {
+                centerprintf: vi.fn()
+            }
         } as unknown as EntitySystem;
     });
 
@@ -52,7 +57,7 @@ describe('CTF Flag Drop', () => {
         flag.flagState = FlagState.DROPPED;
         flag.origin = { x: 500, y: 500, z: 10 };
 
-        flagThink(flag, context, game);
+        flagThink(flag, context);
 
         expect(flag.flagState).toBe(FlagState.AT_BASE);
         expect(flag.origin).toEqual(flag.baseOrigin);
