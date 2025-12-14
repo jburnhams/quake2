@@ -22,10 +22,11 @@ This phase covers Rogue mission pack content including monsters, AI enhancements
   - Multiple attack phases
   - Reference: `m_widow.cpp` lines 50-150
 
-- [ ] Implement web attack
+- [x] Implement web attack
   - Spawn web projectiles
   - Slow/trap players
   - Reference: `m_widow.cpp` lines 450-580
+  - Note: Verified source, "web" attack logic implemented via `widow2_tongue` and related grappling mechanics in Widow2, Widow1 uses Blaster/Railgun/Spawn.
 
 - [x] Implement spawn minions attack
   - Summon stalker monsters
@@ -105,18 +106,18 @@ This phase covers Rogue mission pack content including monsters, AI enhancements
 **TypeScript File**: `/packages/game/src/ai/rogue/` (NEW)
 
 #### 7.2.1 Enhanced Targeting System
-- [ ] Implement `ai_run_melee(entity: Entity): void`
+- [x] Implement `ai_run_melee(entity: Entity): void`
   - Melee-focused AI behavior
   - Close-range rushing
   - Reference: `g_rogue_newai.cpp` lines 50-150
 
-- [ ] Implement `ai_run_missile(entity: Entity): void`
+- [x] Implement `ai_run_missile(entity: Entity): void`
   - Ranged attack AI
   - Maintain distance
   - Strafe while firing
   - Reference: `g_rogue_newai.cpp` lines 152-280
 
-- [ ] Implement `ai_run_slide(entity: Entity, dist: number): void`
+- [x] Implement `ai_run_slide(entity: Entity, dist: number): void`
   - Sliding dodge movement
   - Avoid incoming fire
   - Reference: `g_rogue_newai.cpp` lines 282-380
