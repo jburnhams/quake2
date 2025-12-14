@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { registerTriggerSpawns } from '../../src/entities/triggers.js';
+import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
 import { Entity, Solid } from '../../src/entities/entity.js';
 import { createTestContext } from '../test-helpers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';

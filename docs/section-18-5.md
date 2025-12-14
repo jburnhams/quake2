@@ -69,6 +69,8 @@ This phase covers ambient sound systems, environmental audio, and music systems.
   - Trace from listener to sound source
   - If blocked, apply low-pass filter
   - BiquadFilterNode in Web Audio
+  - Implemented `createOcclusionResolver` in `occlusion.ts` using engine traces.
+  - Validated via `tests/audio/occlusion_integration.test.ts` showing correct integration with `AudioSystem`.
 
 - [ ] Implement distance-based low-pass
   - Attenuate high frequencies at distance
