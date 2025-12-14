@@ -152,6 +152,7 @@ export interface PlayerClient {
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
     ping?: number; // Added for lag compensation
+    stats?: number[]; // Added stats array for persistence (e.g. CTF HUD)
 
     // AI Noise Tracking
     player_noise_entity?: Entity;
