@@ -49,7 +49,11 @@ describe('applyEnvironmentalDamage', () => {
 
   it('damages entities immersed in lava while honoring immunity flags', () => {
     const now = 250;
-    const target = makeTarget({ waterlevel: WaterLevel.Waist, watertype: CONTENTS_LAVA });
+    const target = makeTarget({
+      waterlevel: WaterLevel.Waist,
+      watertype: CONTENTS_LAVA,
+      airFinished: now + 10000 // Ensure not drowning
+    });
 
     const result = applyEnvironmentalDamage(target, now);
 
@@ -66,7 +70,11 @@ describe('applyEnvironmentalDamage', () => {
 
   it('applies slime ticks with the same 100ms cadence and multiplier', () => {
     const now = 1000;
-    const target = makeTarget({ waterlevel: WaterLevel.Under, watertype: CONTENTS_SLIME });
+    const target = makeTarget({
+      waterlevel: WaterLevel.Under,
+      watertype: CONTENTS_SLIME,
+      airFinished: now + 10000 // Ensure not drowning
+    });
 
     const result = applyEnvironmentalDamage(target, now);
 
@@ -90,7 +98,11 @@ describe('applyEnvironmentalDamage', () => {
 
   it('lets water exit and re-entry reset the 100ms lava/slime debounce', () => {
     const now = 0;
-    const target = makeTarget({ waterlevel: WaterLevel.Waist, watertype: CONTENTS_SLIME });
+    const target = makeTarget({
+      waterlevel: WaterLevel.Waist,
+      watertype: CONTENTS_SLIME,
+      airFinished: now + 10000 // Ensure not drowning
+    });
 
     const first = applyEnvironmentalDamage(target, now);
     expect(first.events[0]).toMatchObject({ mod: DamageMod.SLIME, amount: 8 });
@@ -113,6 +125,7 @@ describe('applyEnvironmentalDamage', () => {
       waterlevel: WaterLevel.Under,
       watertype: CONTENTS_SLIME,
       environmentFlags: EnvironmentalFlags.IMMUNE_SLIME,
+      airFinished: now + 10000 // Ensure not drowning
     });
 
     const result = applyEnvironmentalDamage(target, now);
