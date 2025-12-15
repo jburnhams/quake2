@@ -375,6 +375,12 @@ export const POWERUP_ITEMS: Record<string, PowerupItem> = {
         name: 'Enviro Suit',
         timer: 30,
     },
+    'item_invisibility': {
+        type: 'powerup',
+        id: 'item_invisibility',
+        name: 'Invisibility',
+        timer: 30,
+    },
 };
 
 export const POWER_ARMOR_ITEMS: Record<string, PowerArmorItem> = {

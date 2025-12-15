@@ -76,14 +76,58 @@ export function infront(self: Entity, other: Entity): boolean {
   return dot > -0.3;
 }
 
+export interface VisibleOptions {
+    throughGlass?: boolean;
+    timeSeconds?: number;
+    random?: () => number;
+}
+
 export function visible(
   self: Entity,
   other: Entity,
   trace: TraceFunction,
-  options?: { throughGlass?: boolean },
+  options?: VisibleOptions,
 ): boolean {
   if ((other.flags & FL_NOVISIBLE) !== 0) {
     return false;
+  }
+
+  // Invisibility handling
+  if (other.client && options?.timeSeconds !== undefined) {
+      // HACKFLAG_ATTACK_PLAYER handling skipped as it's obscure/debug
+
+      // If invisible
+      if (other.client.invisible_time && other.client.invisible_time > options.timeSeconds) {
+          // If fade time has NOT passed, we are completely invisible
+          if (other.client.invisibility_fade_time && options.timeSeconds < other.client.invisibility_fade_time) {
+              return false;
+          }
+
+          // Otherwise, random chance based on alpha (fading in/out?)
+          // In Q2: if (random() > other->s.alpha) return false;
+          // other.alpha is usually 0..1. If alpha is low (invisible), chance is high to return false.
+          // Wait, alpha 0 means invisible. alpha 1 means visible.
+          // If random() (0..1) > alpha, then return false.
+          // e.g. alpha = 0.1. random()=0.5 -> return false (not seen).
+          // e.g. alpha = 0.9. random()=0.5 -> return true (seen).
+          // Assuming other.alpha is managed correctly by the fade logic in PlayerThink or ClientThink.
+
+          // Note: Entity.alpha is used. Player invisibility usually sets renderfx/effects but also alpha for transparency.
+          // We assume other.alpha is set. Default might be 0? No, default alpha is 0 which usually implies Opaque in Quake/GL unless a flag is set.
+          // But for this logic, we should rely on what `p_client.c` does for alpha.
+          // In Q2 `G_SetClientEffects` handles alpha.
+
+          if (options.random) {
+             // If alpha is 0 (default), this always returns false if random > 0?
+             // We need to be careful. If alpha is 0 but it means "default opaque", we shouldn't use it.
+             // But if invisible_time is active, alpha SHOULD be low.
+             if (other.alpha !== undefined) {
+                  if (options.random() > other.alpha) {
+                      return false;
+                  }
+             }
+          }
+      }
   }
 
   const start: Vec3 = { x: self.origin.x, y: self.origin.y, z: self.origin.z + self.viewheight };

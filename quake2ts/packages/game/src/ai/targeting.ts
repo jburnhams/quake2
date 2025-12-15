@@ -132,6 +132,7 @@ function classifyClientVisibility(
   other: Entity,
   level: TargetAwarenessState,
   trace: TraceFunction,
+  random?: () => number,
 ): boolean {
   const distance = rangeTo(self, other);
   const range = classifyRange(distance);
@@ -141,7 +142,7 @@ function classifyClientVisibility(
 
   // Third eye check: if flag is set, bypass visibility check (simulating x-ray or close sense)
   if ((self.monsterinfo.aiflags & AIFlags.ThirdEye) === 0) {
-      if (!visible(self, other, trace, { throughGlass: false })) return false;
+      if (!visible(self, other, trace, { throughGlass: false, timeSeconds: level.timeSeconds, random })) return false;
   }
 
   if (range === RangeCategory.Near) {
@@ -181,7 +182,7 @@ export function AI_GetSightClient(
         return ent;
     }
 
-    if (visible(self, ent, trace, { throughGlass: false })) {
+    if (visible(self, ent, trace, { throughGlass: false, timeSeconds: context.timeSeconds, random: () => context.rng.frandom() })) {
       return ent;
     }
   }
@@ -195,9 +196,11 @@ function updateSoundChase(
   level: TargetAwarenessState,
   hearability: HearabilityHooks,
   trace: TraceFunction,
+  context: EntitySystem, // Added context to access random
 ): boolean {
   if ((self.spawnflags & SPAWNFLAG_MONSTER_AMBUSH) !== 0) {
-    if (!visible(self, client, trace)) return false;
+    // Check visibility with invisibility logic
+    if (!visible(self, client, trace, { timeSeconds: level.timeSeconds, random: () => context.rng.frandom() })) return false;
   } else if (hearability.canHear && !hearability.canHear(self, client)) {
     return false;
   }
@@ -284,12 +287,12 @@ export function findTarget(
   }
 
   if (!heardit) {
-    if (!classifyClientVisibility(self, candidate, level, trace)) {
+    if (!classifyClientVisibility(self, candidate, level, trace, () => context.rng.frandom())) {
         return false;
     }
     self.monsterinfo.aiflags &= ~AIFlags.SoundTarget;
     self.enemy = candidate;
-  } else if (!updateSoundChase(self, candidate, level, hearability, trace)) {
+  } else if (!updateSoundChase(self, candidate, level, hearability, trace, context)) {
     return false;
   }
 
@@ -328,10 +331,10 @@ export function findCover(self: Entity, context: EntitySystem): boolean {
 
         // Check if spot is visible from self (reachable-ish)
         // Using context.trace which is available in EntitySystem
-        if (!visible(self, spot, context.trace, { throughGlass: false })) continue;
+        if (!visible(self, spot, context.trace, { throughGlass: false, timeSeconds: context.timeSeconds, random: () => context.rng.frandom() })) continue;
 
         // Check if spot is hidden from enemy
-        if (visible(spot, self.enemy, context.trace, { throughGlass: false })) continue;
+        if (visible(spot, self.enemy, context.trace, { throughGlass: false, timeSeconds: context.timeSeconds, random: () => context.rng.frandom() })) continue;
 
         self.goalentity = spot;
         self.movetarget = spot;

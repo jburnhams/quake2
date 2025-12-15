@@ -95,8 +95,8 @@
 - [x] Add proper item respawn timers and visual indicators (Teleport effect + Sound)
 
 ### 4.4.3 Complete Monster AI
-- [ ] Implement pathfinding using monster_path_corner entities
-- [ ] Fix monster sight/sound perception edge cases
+- [x] Implement pathfinding using monster_path_corner entities
+- [x] Fix monster sight/sound perception edge cases
 - [ ] Implement all monster attacks and special moves
 - [ ] Add monster pain/death animations and sounds
 - [ ] Implement monster-specific behaviors (flying, swimming, jumping)
