@@ -462,10 +462,8 @@ export const createRenderer = (
                          if (isClusterVisible(map.visibility, viewCluster, leaf.cluster)) {
                              const color = colorFromId(leaf.cluster);
                              // Iterate leaf faces
-                             const firstFace = leaf.firstFace;
-                             const count = leaf.numFaces;
-                             for (let j = 0; j < count; j++) {
-                                 const faceIdx = map.leafFaces[firstFace + j];
+                             const leafFaces = map.leafLists.leafFaces[i];
+                             for (const faceIdx of leafFaces) {
                                  if (!surfacesToDraw.has(faceIdx)) {
                                      surfacesToDraw.set(faceIdx, color);
                                  }
