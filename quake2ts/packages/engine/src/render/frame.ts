@@ -13,7 +13,7 @@ import {
   type SkyboxBindOptions,
 } from './skybox.js';
 import { mat4 } from 'gl-matrix';
-import { SURF_SKY } from '@quake2ts/shared';
+import { SURF_SKY, SURF_TRANS33, SURF_TRANS66 } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
 
 export { FrameRenderStats, FrameRenderOptions };
@@ -57,6 +57,8 @@ export interface RenderModeConfig {
   readonly generateRandomColor?: boolean; // If true, generates color from entity ID
 }
 
+export type RenderPass = 'opaque' | 'transparent' | 'all';
+
 interface FrameRenderOptions {
   readonly camera: Camera;
   readonly world?: WorldRenderState;
@@ -68,6 +70,7 @@ interface FrameRenderOptions {
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly disableLightmaps?: boolean; // New option to toggle lightmaps
+  readonly renderPass?: RenderPass;
 }
 
 interface FrameRendererDependencies {
@@ -111,8 +114,12 @@ function renderSky(
   skyboxPipeline.gl.depthMask(true);
 }
 
-function sortVisibleFaces(faces: readonly VisibleFace[]): VisibleFace[] {
-  return [...faces].sort((a, b) => b.sortKey - a.sortKey);
+function sortFrontToBack(faces: VisibleFace[]): VisibleFace[] {
+  return faces.sort((a, b) => b.sortKey - a.sortKey);
+}
+
+function sortBackToFront(faces: VisibleFace[]): VisibleFace[] {
+  return faces.sort((a, b) => a.sortKey - b.sortKey);
 }
 
 interface TextureBindingCache {
@@ -236,14 +243,29 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode, disableLightmaps } = options;
+    const {
+        camera,
+        world,
+        sky,
+        clearColor = [0, 0, 0, 1],
+        timeSeconds = 0,
+        viewModel,
+        dlights,
+        renderMode,
+        disableLightmaps,
+        renderPass = 'all'
+    } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
-    gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // Only clear if this is the start of the frame or explicitly requested for the pass.
+    // For now, we assume 'opaque' or 'all' clears. 'transparent' does not clear.
+    if (renderPass === 'all' || renderPass === 'opaque') {
+        gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    renderSky(skyboxPipeline, camera, timeSeconds, sky, deps);
-    stats.skyDrawn = Boolean(sky);
+        renderSky(skyboxPipeline, camera, timeSeconds, sky, deps);
+        stats.skyDrawn = Boolean(sky);
+    }
 
     if (world) {
       // Update material animations
@@ -256,21 +278,42 @@ export const createFrameRenderer = (
         z: camera.position[2] ?? 0,
       };
       const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
-      const sortedFaces = sortVisibleFaces(visibleFaces);
+
+      const opaqueFaces: VisibleFace[] = [];
+      const transFaces: VisibleFace[] = [];
+
+      for (const face of visibleFaces) {
+          const geometry = world.surfaces[face.faceIndex];
+          if (!geometry || (geometry.surfaceFlags & SURF_SKY)) {
+              continue;
+          }
+
+          if (geometry.surfaceFlags & (SURF_TRANS33 | SURF_TRANS66)) {
+              transFaces.push(face);
+          } else {
+              opaqueFaces.push(face);
+          }
+      }
+
+      const facesToDraw: VisibleFace[] = [];
+
+      if (renderPass === 'all' || renderPass === 'opaque') {
+          sortFrontToBack(opaqueFaces);
+          facesToDraw.push(...opaqueFaces);
+      }
+
+      if (renderPass === 'all' || renderPass === 'transparent') {
+          sortBackToFront(transFaces);
+          facesToDraw.push(...transFaces);
+      }
 
       let lastBatchKey: BatchKey | undefined;
       let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
       const cache: TextureBindingCache = {};
 
-      for (const { faceIndex } of sortedFaces) {
+      for (const { faceIndex } of facesToDraw) {
         const geometry = world.surfaces[faceIndex];
-        if (!geometry) {
-          continue;
-        }
-
-        if ((geometry.surfaceFlags & SURF_SKY) !== 0) {
-          continue;
-        }
+        // Geometry check skipped because we already filtered in the loop above
 
         const faceStyles = world.map.faces[faceIndex]?.styles;
         const material = world.materials?.getMaterial(geometry.texture);
@@ -349,8 +392,17 @@ export const createFrameRenderer = (
       }
     }
 
-    if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
-      stats.viewModelDrawn = true;
+    // ViewModel logic:
+    // If 'all', draw it.
+    // If 'opaque', do NOT draw it (usually drawn last on top of transparent stuff).
+    // If 'transparent', draw it?
+    // Let's decide: ViewModel is usually drawn LAST, after all world/entities/transparencies.
+    // So it should be in the 'transparent' pass (or a 'post-transparent' phase).
+    // If renderPass is 'transparent' or 'all', we draw it.
+    if (renderPass === 'all' || renderPass === 'transparent') {
+        if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
+            stats.viewModelDrawn = true;
+        }
     }
 
     return stats;
