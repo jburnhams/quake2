@@ -239,7 +239,7 @@ export function ai_run(self: Entity, dist: number, context: EntitySystem): void 
 
   changeYaw(self, MONSTER_TICK);
 
-  if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false })) {
+  if (self.enemy && self.enemy.inUse && visible(self, self.enemy, context.trace, { throughGlass: false, timeSeconds: context.timeSeconds, random: () => context.rng.frandom() })) {
       self.monsterinfo.blind_fire_target = addVec3(self.enemy.origin, scaleVec3(self.enemy.velocity, -0.1));
   }
 
@@ -248,7 +248,7 @@ export function ai_run(self: Entity, dist: number, context: EntitySystem): void 
   }
 
   // Don't strafe if we can't see our enemy, unless already dodging
-  const enemy_vis = self.enemy && visible(self, self.enemy, context.trace, { throughGlass: false });
+  const enemy_vis = self.enemy && visible(self, self.enemy, context.trace, { throughGlass: false, timeSeconds: context.timeSeconds, random: () => context.rng.frandom() });
   if ((!enemy_vis) && (self.monsterinfo.attack_state === AttackState.Sliding)) {
       self.monsterinfo.attack_state = AttackState.Straight;
   }

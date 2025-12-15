@@ -123,6 +123,8 @@ export interface PlayerClient {
     enviro_time?: number;
     air_finished?: number;
     quadsound_time?: number;
+    invisible_time?: number;
+    invisibility_fade_time?: number;
     // Weapon Animation System
     weaponstate?: WeaponStateEnum;
     weapon_think_time?: number;
@@ -395,6 +397,10 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             powerupId = PowerupId.DoubleDamage;
             icon = 'p_double';
             break;
+        case 'item_invisibility':
+            powerupId = PowerupId.Invisibility;
+            icon = 'p_invisibility';
+            break;
     }
 
     if (powerupId) {
@@ -412,6 +418,9 @@ export function pickupPowerup(client: PlayerClient, item: PowerupItem, time: num
             client.enviro_time = newExpiresAt / 1000;
         } else if (powerupId === PowerupId.Rebreather) {
             client.breather_time = newExpiresAt / 1000;
+        } else if (powerupId === PowerupId.Invisibility) {
+            client.invisible_time = newExpiresAt / 1000;
+            client.invisibility_fade_time = (newExpiresAt / 1000) - 3;
         }
 
         setPickup(inventory, icon, time);

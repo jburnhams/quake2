@@ -136,4 +136,59 @@ describe('visible', () => {
     const glassTracer = createTracer({ fraction: 1, ent: null, expectedMask: TraceMask.Opaque });
     visible(self, other, glassTracer, { throughGlass: true });
   });
+
+  it('handles invisibility powerup correctly', () => {
+      const self = createEntity();
+      const other = createEntity();
+
+      // Mock client inventory/state
+      other.client = {
+          inventory: { armor: null, powerups: new Map(), items: new Set(), keys: new Set(), ammo: { counts: [], caps: [] }, ownedWeapons: new Set() },
+          buttons: 0,
+          fov: 90,
+          gun_frame: 0,
+          pers: {} as any,
+          pm_flags: 0,
+          pm_time: 0,
+          pm_type: 0,
+          rdflags: 0,
+          weaponStates: {} as any
+      };
+
+      const tracer: TraceFunction = () => ({ fraction: 1, ent: null });
+
+      // No invisibility
+      expect(visible(self, other, tracer, { timeSeconds: 10 })).toBe(true);
+
+      // Invisible active, not fading
+      other.client.invisible_time = 20; // expires at 20
+      other.client.invisibility_fade_time = 17; // fades at 17
+
+      // Current time 10: fully invisible
+      expect(visible(self, other, tracer, { timeSeconds: 10 })).toBe(false);
+
+      // Current time 18: fading. Need to check random chance.
+      // alpha assumed handled elsewhere, but let's test the random hook interaction if logic depends on alpha.
+      // Logic: if random > other.alpha return false.
+      // If alpha is 0 (default), any random > 0 returns false.
+      // If we don't set alpha, it is 0.
+
+      const randomMock = () => 0.5;
+
+      // Time 18 > fade 17. So we check random.
+      // alpha 0. random 0.5 > 0 -> return false.
+      expect(visible(self, other, tracer, { timeSeconds: 18, random: randomMock })).toBe(false);
+
+      // Set alpha to 0.8 (mostly visible)
+      other.alpha = 0.8;
+      // random 0.5 <= 0.8 -> return true (visible)
+      // wait: if (random() > other.alpha) return false;
+      // 0.5 > 0.8 is false. So it proceeds to trace and returns true.
+      expect(visible(self, other, tracer, { timeSeconds: 18, random: randomMock })).toBe(true);
+
+      // Set alpha to 0.2 (mostly invisible)
+      other.alpha = 0.2;
+      // random 0.5 > 0.2 is true. Returns false.
+      expect(visible(self, other, tracer, { timeSeconds: 18, random: randomMock })).toBe(false);
+  });
 });
