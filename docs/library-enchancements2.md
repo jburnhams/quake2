@@ -6,16 +6,16 @@ This document outlines the steps to implement the requested features in `quake2t
 
 **Objective**: Enable rendering of solid 3D gizmos.
 
-1.  **Refactor `DebugRenderer`**:
+1.  **Refactor `DebugRenderer`**: [x]
     *   Separate `wireframe` (LINES) and `solid` (TRIANGLES) buffers.
     *   Update `init()` to create two VAOs/Programs if needed, or use a single shader with a uniform for lighting (simple flat shading for solid primitives).
 
-2.  **Implement Primitive Generators**:
+2.  **Implement Primitive Generators**: [x]
     *   `addCone`: Generate vertices/indices for a cone approximation.
     *   `addTorus`: Generate vertices/indices for a ring.
     *   Ensure efficient batching (don't regenerate geometry every frame if possible, or use a "StaticMesh" pattern).
 
-3.  **Depth Control**:
+3.  **Depth Control**: [x]
     *   Add `alwaysOnTop` boolean to `render()` or state method.
     *   When true, call `gl.disable(gl.DEPTH_TEST)` before drawing debug geometry, then restore.
 
@@ -23,18 +23,18 @@ This document outlines the steps to implement the requested features in `quake2t
 
 **Objective**: Reusable Gizmo component in `quake2ts/engine`.
 
-1.  **Create `Gizmo` class**:
+1.  **Create `Gizmo` class**: [x]
     *   Composed of 3 Arrows (Translate) and 3 Rings (Rotate).
     *   Methods: `setPosition`, `setRotation`.
     *   Method: `draw(renderer: DebugRenderer)`.
 
-2.  **Picking Logic**:
+2.  **Picking Logic**: [x]
     *   Implement `intersectRayGizmo(ray: Ray, gizmo: Gizmo): GizmoPart | null`.
     *   Use analytical intersection (ray vs cylinder/cone, ray vs plane/torus) rather than mesh collision for precision.
 
 ## Phase 3: Entity Serialization
 
-1.  **ENT Parser/Serializer**:
+1.  **ENT Parser/Serializer**: [x]
     *   Ensure `BspEntity` structure matches standard Quake 2 definitions.
     *   Write `serializeBspEntities(entities: BspEntity[]): string` that formats output matching the original `.ent` lump (compatible with Q2 compilers).
 
