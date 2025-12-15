@@ -4,7 +4,7 @@
 
 import { Entity } from '../../entities/entity.js';
 import { GameExports } from '../../index.js';
-import { getWeaponState, WeaponState } from './state.js';
+import { getWeaponState, WeaponState, WeaponStateEnum } from './state.js';
 import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
@@ -34,6 +34,7 @@ import {
     ANIM_ATTACK, ANIM_REVERSE
 } from '../../entities/player_anim.js';
 import { fireCustomWeapon } from './registry.js';
+import { NoAmmoWeaponChange } from './switching.js';
 
 const random = createRandomGenerator();
 export { random as firingRandom };
@@ -74,6 +75,27 @@ function setPlayerAttackAnim(player: Entity) {
         player.frame = FRAME_attack1 - 1;
         player.client.anim_end = FRAME_attack8;
     }
+}
+
+function checkAmmo(game: GameExports, player: Entity, ammoType: AmmoType, count: number): boolean {
+    if (!player.client) return false;
+
+    if (player.client.inventory.ammo.counts[ammoType] < count) {
+        // Play no ammo sound
+        // Original logic checks pain_debounce_time to avoid spamming sound,
+        // but here we might not have it exposed easily on entity.
+        // Assuming we can just play it or check time.
+        // Q2 source: if (level.time >= ent->pain_debounce_time) ... ent->pain_debounce_time = level.time + 1;
+
+        // Let's use lastFireTime of the weapon state as a debounce mechanism if needed,
+        // or just add a dedicated property if we can modify Entity.
+        // For now, let's just play sound.
+        game.sound(player, 0, "weapons/noammo.wav", 1, ATTN_NORM, 0);
+
+        NoAmmoWeaponChange(player);
+        return false;
+    }
+    return true;
 }
 
 function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: any, damage: number, knockback: number, mod: DamageMod) {
@@ -233,7 +255,7 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
 // Exported to allow tests to call it directly if needed, but primarily called by fire()
 export function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
     if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
-        // TODO: NoAmmoWeaponChange
+        NoAmmoWeaponChange(player);
     }
 
     Throw_Generic(
@@ -306,9 +328,7 @@ export function fireShotgun(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Shells] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Shells, 1)) return;
 
     inventory.ammo.counts[AmmoType.Shells]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_SHOTGUN);
@@ -326,9 +346,7 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Shells] < 2) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Shells, 2)) return;
 
     // Check Alt-Fire (Attack2 = 32)
     // Precision mode
@@ -363,9 +381,7 @@ export function fireMachinegun(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Bullets] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Bullets, 1)) return;
 
     inventory.ammo.counts[AmmoType.Bullets]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_MACHINEGUN);
@@ -414,6 +430,7 @@ export function fireChaingun(game: GameExports, player: Entity) {
     }
 
     if (shots === 0) {
+        if (!checkAmmo(game, player, AmmoType.Bullets, 1)) return; // Use min 1 to trigger switch
         return;
     }
 
@@ -446,9 +463,7 @@ export function fireRailgunShot(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Slugs] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Slugs, 1)) return;
 
     inventory.ammo.counts[AmmoType.Slugs]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_RAILGUN);
@@ -467,9 +482,7 @@ export function fireHyperBlaster(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Cells] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Cells, 1)) return;
 
     inventory.ammo.counts[AmmoType.Cells]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_HYPERBLASTER);
@@ -547,9 +560,7 @@ export function fireRocket(game: GameExports, player: Entity) {
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Rockets] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Rockets, 1)) return;
 
     inventory.ammo.counts[AmmoType.Rockets]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_ROCKET);
@@ -575,9 +586,7 @@ export function fireGrenadeLauncher(game: GameExports, player: Entity, timer?: n
     if (!player.client) return;
     const inventory = player.client.inventory;
 
-    if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Grenades, 1)) return;
 
     inventory.ammo.counts[AmmoType.Grenades]--;
     game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
@@ -595,9 +604,7 @@ export function fireHyperBlasterBeam(game: GameExports, player: Entity, weaponSt
     const inventory = player.client.inventory;
 
     // Beam consumes 2 cells
-    if (inventory.ammo.counts[AmmoType.Cells] < 2) {
-        return;
-    }
+    if (!checkAmmo(game, player, AmmoType.Cells, 2)) return;
 
     // Heat check
     if ((weaponState.heat || 0) > 20) {
@@ -659,9 +666,7 @@ export function fireBFG(game: GameExports, player: Entity) {
     const isFireFrame = gun_frame === 22 || gun_frame === 0 || gun_frame === undefined;
 
     if (isPrimeFrame) {
-        if (inventory.ammo.counts[AmmoType.Cells] < 50) {
-            return;
-        }
+        if (!checkAmmo(game, player, AmmoType.Cells, 50)) return;
         inventory.ammo.counts[AmmoType.Cells] -= 50;
         game.sound(player, 0, 'weapons/bfg__f1y.wav', 1, 0, 0); // Start sound
     }

@@ -1,6 +1,6 @@
 import { Entity, Solid, ServerFlags } from '../entity.js';
 import { GameExports, MulticastType } from '../../index.js';
-import { ServerCommand } from '@quake2ts/shared';
+import { ServerCommand, TempEntity } from '@quake2ts/shared';
 
 // Helper to handle what happens when an item is picked up
 export function handleItemPickup(game: GameExports, self: Entity, other: Entity, respawnTime: number = 30) {
@@ -48,11 +48,10 @@ export function createItemRespawnFunction(game: GameExports, originalModel: stri
         self.svflags &= ~ServerFlags.NoClient;
 
         // Play respawn effect/sound
-        // Q2: DoRespawn -> spawn_temp(self.s.origin, TE_ITEM_RESPAWN_EFFECT)
-        // TE_ITEM_RESPAWN_EFFECT is not standard, usually it's just a sound or teleport flash.
-        // G_Spawn: multicast(start, MULTICAST_PHS, TE_TELEPORT_EFFECT) if needed.
+        // Q2 uses EV_ITEM_RESPAWN. We use TELEPORT_EFFECT as a visual approximation + Sound.
+        // Also play the sound "items/respawn.wav"
 
-        // We'll play a sound for now
         game.multicast(self.origin, MulticastType.Pvs, ServerCommand.sound, 0, "items/respawn.wav", 1, 0, 0);
+        game.multicast(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.TELEPORT_EFFECT, self.origin);
     };
 }
