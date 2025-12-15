@@ -141,6 +141,8 @@ interface ServerInfo {
 
 **Workaround**: Maintain community JSON file with server list, but requires manual updates.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 2.2: WebSocket Protocol Documentation (P0)
@@ -866,7 +868,7 @@ interface MemoryUsage {
 |-------------|---------|----------|---------|--------|
 | Game State Serialization | game | P0 | 01 | Implemented |
 | Admin/Cheat APIs | game | P1 | 01 | Implemented |
-| Master Server Client | client/net | P1 | 02 | Needed |
+| Master Server Client | client/net | P1 | 02 | Implemented |
 | WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
 | Spectator Mode APIs | game/client | P1 | 02 | Needed |
 | Demo Event Extraction | client | P1 | 03 | Needed |

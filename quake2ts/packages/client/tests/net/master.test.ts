@@ -1,82 +1,100 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { queryMasterServer } from '../../src/net/master.js';
 
-describe('Master Server Client', () => {
-    // Mock global fetch
-    const fetchMock = vi.fn();
+describe('queryMasterServer', () => {
+  // Mock global fetch
+  const originalFetch = global.fetch;
+  const mockFetch = vi.fn();
 
-    beforeEach(() => {
-        vi.stubGlobal('fetch', fetchMock);
+  beforeEach(() => {
+    global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.clearAllMocks();
+  });
+
+  it('should query the master server and return parsed server info', async () => {
+    const mockResponse = [
+      {
+        address: 'ws://server1.com:27910',
+        info: {
+          hostname: 'Quake 2 Server 1',
+          mapname: 'q2dm1',
+          clients: '5',
+          maxclients: '16',
+          gamename: 'baseq2'
+        }
+      },
+      {
+        address: 'server2.com:27910', // Should auto-prefix ws://
+        info: {
+          hostname: 'Quake 2 Server 2',
+          mapname: 'q2dm2',
+          clients: '10',
+          maxclients: '32',
+          gamename: 'ctf'
+        }
+      }
+    ];
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse
+    } as Response);
+
+    const servers = await queryMasterServer('http://master.quake2ts.com');
+
+    expect(mockFetch).toHaveBeenCalledWith('http://master.quake2ts.com');
+    expect(servers).toHaveLength(2);
+
+    expect(servers[0]).toEqual({
+      name: 'Quake 2 Server 1',
+      address: 'ws://server1.com:27910',
+      map: 'q2dm1',
+      players: 5,
+      maxPlayers: 16,
+      gamemode: 'baseq2',
+      ping: undefined
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
+    expect(servers[1]).toEqual({
+      name: 'Quake 2 Server 2',
+      address: 'ws://server2.com:27910',
+      map: 'q2dm2',
+      players: 10,
+      maxPlayers: 32,
+      gamemode: 'ctf',
+      ping: undefined
     });
+  });
 
-    it('should fetch and parse server list correctly', async () => {
-        const mockResponse = [
-            {
-                address: 'ws://server1.com:1234',
-                info: {
-                    hostname: 'My Server',
-                    mapname: 'q2dm1',
-                    clients: '5',
-                    maxclients: '16'
-                }
-            },
-            {
-                address: '1.2.3.4:27910', // Raw IP:Port
-                info: {
-                    hostname: 'Another Server',
-                    mapname: 'base1',
-                    clients: '0',
-                    maxclients: '8'
-                }
-            }
-        ];
+  it('should handle fetch errors gracefully', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error'
+    } as Response);
 
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => mockResponse
-        });
+    const servers = await queryMasterServer('http://master.quake2ts.com');
+    expect(servers).toEqual([]);
+  });
 
-        const servers = await queryMasterServer('http://master.quake2ts.com');
+  it('should handle invalid JSON response', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ error: 'invalid format' }) // Not an array
+    } as Response);
 
-        expect(fetchMock).toHaveBeenCalledWith('http://master.quake2ts.com');
-        expect(servers).toHaveLength(2);
+    const servers = await queryMasterServer('http://master.quake2ts.com');
+    expect(servers).toEqual([]);
+  });
 
-        expect(servers[0]).toEqual({
-            name: 'My Server',
-            address: 'ws://server1.com:1234',
-            map: 'q2dm1',
-            players: 5,
-            maxPlayers: 16,
-            gamemode: 'baseq2',
-            ping: undefined
-        });
+  it('should handle network errors', async () => {
+    mockFetch.mockRejectedValue(new Error('Network error'));
 
-        // Check protocol auto-prefixing
-        expect(servers[1].address).toBe('ws://1.2.3.4:27910');
-    });
-
-    it('should handle fetch errors gracefully', async () => {
-        fetchMock.mockResolvedValue({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error'
-        });
-
-        const servers = await queryMasterServer('http://bad-master.com');
-        expect(servers).toEqual([]);
-    });
-
-    it('should handle invalid JSON response', async () => {
-        fetchMock.mockResolvedValue({
-            ok: true,
-            json: async () => ({ not: 'an array' })
-        });
-
-        const servers = await queryMasterServer('http://master.com');
-        expect(servers).toEqual([]);
-    });
+    const servers = await queryMasterServer('http://master.quake2ts.com');
+    expect(servers).toEqual([]);
+  });
 });
