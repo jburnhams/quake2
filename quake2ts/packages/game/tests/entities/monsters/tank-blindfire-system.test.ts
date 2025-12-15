@@ -80,7 +80,37 @@ describe('Blindfire System (Tank)', () => {
         expect((tank.monsterinfo.aiflags & AIFlags.ManualSteering) !== 0).toBe(true);
     });
 
-    it.todo('Tank updates ideal_yaw based on blind_fire_target when ManualSteering is set');
+    it('Tank updates ideal_yaw based on blind_fire_target when ManualSteering is set', () => {
+        const target = { x: 0, y: 100, z: 0 };
+
+        // Set up ManualSteering and a target
+        tank.monsterinfo.aiflags |= AIFlags.ManualSteering;
+        tank.monsterinfo.blind_fire_target = target;
+        tank.origin = { x: 0, y: 0, z: 0 };
+
+        // Invoke the attack function where blind fire logic resides.
+        // This sets the current_move to attack_rocket_move (or blaster),
+        // which contains the tank_blind_check think function in its frames.
+        tank.monsterinfo.attack_state = AttackState.Blind;
+        tank.monsterinfo.attack!(tank, sys);
+
+        // Verify we are in an attack move
+        expect(tank.monsterinfo.current_move).toBeDefined();
+
+        // Find the frame that has the blind check logic.
+        // In tank.ts, attack_rocket_move has tank_blind_check at frame 0.
+        // We simulate the execution of that frame's think function.
+        const frame = tank.monsterinfo.current_move!.frames.find(f => f.think && f.think.name === 'tank_blind_check');
+        expect(frame).toBeDefined();
+
+        if (frame && frame.think) {
+             frame.think(tank, sys);
+        }
+
+        // The tank uses vectorToYaw from shared utils, not sys.vectoyaw.
+        // For target (0, 100, 0) relative to (0, 0, 0), the yaw should be 90.
+        expect(tank.ideal_yaw).toBe(90);
+    });
 
     it('Tank tracks enemy position for blindfire when visible', () => {
         // Enemy is visible
