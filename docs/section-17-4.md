@@ -85,14 +85,14 @@
 - [x] Implement weapon switching queue/cycle logic
 - [x] Add ammo depletion and auto-switch on empty
 - [x] Add weapon animations and proper view weapon rendering
-- [ ] Fix weapon firing state machine edge cases
+- [x] Fix weapon firing state machine edge cases (interrupted firing, empty click)
 
 ### 4.4.2 Power-ups and Items
 - [x] Implement quad damage visual and damage multiplication
 - [x] Implement invulnerability effect (screen tint, damage immunity)
 - [x] Implement environment suit (breathing underwater, lava protection)
 - [x] Implement power screen/shield effects
-- [ ] Add proper item respawn timers and visual indicators
+- [x] Add proper item respawn timers and visual indicators (Teleport effect + Sound)
 
 ### 4.4.3 Complete Monster AI
 - [ ] Implement pathfinding using monster_path_corner entities
