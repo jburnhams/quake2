@@ -350,6 +350,8 @@ enum DebugMode {
 
 **Workaround**: Separate debug rendering layer in application, but doesn't have access to library internals.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 4.3: Lighting Control APIs (P2)
@@ -875,7 +877,7 @@ interface MemoryUsage {
 | Demo Clip Extraction | client | P2 | 03 | Needed |
 | Demo Metadata Access | client | P2 | 03 | Needed |
 | Renderer Statistics API | engine | P1 | 04 | Needed |
-| Debug Rendering Mode | engine | P1 | 04 | Needed |
+| Debug Rendering Mode | engine | P1 | 04 | Implemented |
 | Lighting Control APIs | engine | P2 | 04 | Needed |
 | Entity Bounds Access | game | P2 | 04 | Needed |
 | Cross-Reference API | engine | P2 | 05 | Needed |

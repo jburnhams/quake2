@@ -37,6 +37,7 @@ export interface BspSurfaceBindOptions {
   readonly warp?: boolean;
   readonly dlights?: readonly DLight[];
   readonly renderMode?: RenderModeConfig;
+  readonly lightmapOnly?: boolean;
 }
 
 export const BSP_SURFACE_VERTEX_SOURCE = `#version 300 es
@@ -113,6 +114,7 @@ uniform vec4 u_styleLayerMapping; // 0, 1, 2... or -1 if invalid
 uniform float u_alpha;
 uniform bool u_applyLightmap;
 uniform bool u_warp;
+uniform bool u_lightmapOnly;
 uniform float u_time;
 
 uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
@@ -128,7 +130,10 @@ void main() {
 
   if (u_renderMode == 0) {
       // TEXTURED MODE
-      vec4 base = texture(u_diffuseMap, v_texCoord);
+      vec4 base = vec4(1.0);
+      if (!u_lightmapOnly) {
+          base = texture(u_diffuseMap, v_texCoord);
+      }
 
       vec3 totalLight = vec3(1.0);
 
@@ -261,6 +266,7 @@ export class BspSurfacePipeline {
   private readonly uniformAlpha: WebGLUniformLocation | null;
   private readonly uniformApplyLightmap: WebGLUniformLocation | null;
   private readonly uniformWarp: WebGLUniformLocation | null;
+  private readonly uniformLightmapOnly: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
   private readonly uniformLightmap: WebGLUniformLocation | null;
   private readonly uniformTime: WebGLUniformLocation | null;
@@ -288,6 +294,7 @@ export class BspSurfacePipeline {
     this.uniformAlpha = this.program.getUniformLocation('u_alpha');
     this.uniformApplyLightmap = this.program.getUniformLocation('u_applyLightmap');
     this.uniformWarp = this.program.getUniformLocation('u_warp');
+    this.uniformLightmapOnly = this.program.getUniformLocation('u_lightmapOnly');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
     this.uniformLightmap = this.program.getUniformLocation('u_lightmapAtlas');
     this.uniformTime = this.program.getUniformLocation('u_time');
@@ -319,7 +326,8 @@ export class BspSurfacePipeline {
       alpha,
       warp,
       dlights = [],
-      renderMode
+      renderMode,
+      lightmapOnly
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
@@ -340,6 +348,7 @@ export class BspSurfacePipeline {
     const applyLightmap = !state.sky && lightmapSampler !== undefined && !finalWarp; // Warp surfaces have no lightmaps
     this.gl.uniform1i(this.uniformApplyLightmap, applyLightmap ? 1 : 0);
     this.gl.uniform1i(this.uniformWarp, finalWarp ? 1 : 0);
+    this.gl.uniform1i(this.uniformLightmapOnly, lightmapOnly ? 1 : 0);
     this.gl.uniform1f(this.uniformTime, timeSeconds);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
     this.gl.uniform1i(this.uniformLightmap, lightmapSampler ?? 0);
