@@ -112,33 +112,30 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 
 ## Phase 4: Demo Manipulation - Clip Extraction
 
-### Task 4.1: Extract Demo Clip to New File
-- [ ] Create `DemoClipper` class in `packages/engine/src/demo/clipper.ts`
-  - [ ] `extractClip(demo: Uint8Array, start: Offset, end: Offset): Uint8Array`
-  - [ ] `extractStandaloneClip(demo: Uint8Array, start: Offset, end: Offset, worldState: WorldState): Uint8Array`
-  - [ ] Extract raw message blocks from DemoReader between offsets
-  - [ ] Re-serialize to valid demo format (length-prefixed blocks, -1 terminator)
-- [ ] Define `WorldState` interface
-  - [ ] `serverData: ServerDataMessage` - protocol, map name, player slot
-  - [ ] `configStrings: Map<number, string>` - all CS_ values
-  - [ ] `entityBaselines: Map<number, EntityState>` - spawn baselines
-  - [ ] `playerState: ProtocolPlayerState` - starting player state at clip offset
-- [ ] Implement world state capture
-  - [ ] `captureWorldState(demo: Uint8Array, atOffset: Offset): Promise<WorldState>`
-  - [ ] Play demo from start to offset, accumulate all state
-  - [ ] Use `ClientNetworkHandler` to process messages and extract state
-  - [ ] Optimize: use snapshot system if available for faster seeks
+### Task 4.1: Basic Clip Extraction & State Capture
+- [x] Create `DemoClipper` class in `packages/engine/src/demo/clipper.ts`
+  - [x] `extractClip(demo: Uint8Array, start: Offset, end: Offset): Uint8Array` (Raw extraction)
+  - [x] `captureWorldState(demo: Uint8Array, atOffset: Offset): Promise<WorldState>`
+- [x] Implement `MessageWriter` in `packages/engine/src/demo/writer.ts`
+  - [x] Support serializing `svc_serverdata`, `svc_configstring`, `svc_spawnbaseline`, `svc_stufftext`
+  - [x] Support `svc_spawnbaseline` entity state serialization
+- [x] Define `WorldState` interface
+  - [x] `serverData: ServerDataMessage` - protocol, map name, player slot
+  - [x] `configStrings: Map<number, string>` - all CS_ values
+  - [x] `entityBaselines: Map<number, EntityState>` - spawn baselines
+  - [x] `playerState: ProtocolPlayerState` - starting player state at clip offset
+  - [x] `currentEntities: Map<number, EntityState>` - active entities at clip start
+- [x] Implement world state capture logic
+  - [x] Play demo from start to offset
+  - [x] Enhance `NetworkMessageHandler` to track entity deltas and reconstruct full entity state
+  - [x] Accumulate configstrings and baselines
 
-**Dependencies:** `packages/engine/src/demo/demoReader.ts`, `packages/engine/src/demo/recorder.ts`, `packages/engine/src/demo/parser.ts`, `packages/client/src/demo/handler.ts`
+**Dependencies:** `packages/engine/src/demo/demoReader.ts`, `packages/engine/src/demo/playback.ts`, `packages/engine/src/demo/parser.ts`
 
 **Test Cases:**
-- Unit: Extract clip from middle of demo, verify message count
-- Unit: Extract from start (offset 0), extract to end (no end offset)
-- Unit: Invalid offsets (start > end, out of bounds)
-- Integration: Extract clip → play in DemoPlaybackController → verify playback succeeds
-- Integration: Standalone clip → verify contains ServerData, configstrings, baselines
-- Integration: World state capture at various offsets, verify completeness
-- Integration: Clip from offset N should look identical to playing full demo and seeking to N
+- Unit: Extract clip from middle of demo, verify message count/size (Raw)
+- Unit: World state capture at various offsets, verify completeness
+- Unit: Verify `MessageWriter` output against known binary patterns
 
 ### Task 4.2: Optimize World State for Clips
 - [ ] Add `WorldStateOptimizer` in `packages/engine/src/demo/worldStateOptimizer.ts`
@@ -159,9 +156,25 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Unit: WorldState with 100 entities, clip references 5 → verify 95 removed
 - Unit: ConfigString removal (unreferenced CS_MODELS, CS_SOUNDS)
 - Unit: Dependency preservation (entity → model → texture chain)
-- Integration: Optimized standalone clip file size < unoptimized
-- Integration: Optimized clip playback identical to unoptimized
-- Integration: Stress test: large map (1000 entities), tiny clip (5 seconds)
+
+### Task 4.3: Frame Re-serialization & Delta Patching
+- [ ] Implement `extractStandaloneClip` in `DemoClipper`
+  - [ ] `extractStandaloneClip(demo: Uint8Array, start: Offset, end: Offset, worldState: WorldState): Uint8Array`
+  - [ ] Generate synthetic Frame 0 (Full Update) from `WorldState`
+  - [ ] Re-serialize subsequent frames from the clip:
+    - [ ] Decode original frame
+    - [ ] Map `delta_frame` references (e.g., if frame 1001 refs 1000, and 1000 is our new Frame 0, update ref)
+    - [ ] Convert delta entities to full updates if the reference frame is dropped
+    - [ ] Re-encode frame using `MessageWriter`
+  - [ ] Write final demo file structure (Header + Messages + EOF)
+
+**Dependencies:** Task 4.1, Task 4.2, `packages/engine/src/demo/writer.ts`
+
+**Test Cases:**
+- Integration: Standalone clip → verify contains ServerData, configstrings, baselines
+- Integration: Playback of standalone clip should be smooth without "delta from unknown frame" errors
+- Integration: Clip from offset N should look identical to playing full demo and seeking to N
+- Performance: Re-serialization speed for large clips
 
 ---
 
