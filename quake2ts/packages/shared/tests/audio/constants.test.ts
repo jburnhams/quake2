@@ -44,9 +44,9 @@ describe('audio/constants', () => {
     // For ATTN_STATIC (3), it multiplies by 0.001
     expect(attenuationToDistanceMultiplier(ATTN_STATIC)).toBe(0.003);
 
-    // For others, it multiplies by 0.0005
-    expect(attenuationToDistanceMultiplier(ATTN_NORM)).toBe(0.0005);
-    expect(attenuationToDistanceMultiplier(ATTN_IDLE)).toBe(0.001); // 2 * 0.0005
+    // For others, it multiplies by 0.001
+    expect(attenuationToDistanceMultiplier(ATTN_NORM)).toBe(0.001);
+    expect(attenuationToDistanceMultiplier(ATTN_IDLE)).toBe(0.002); // 2 * 0.001
     expect(attenuationToDistanceMultiplier(ATTN_NONE)).toBe(0);
   });
 
@@ -61,13 +61,13 @@ describe('audio/constants', () => {
     expect(calculateMaxAudibleDistance(ATTN_STATIC)).toBeCloseTo(80 + 1 / 0.003);
 
     // Test with ATTN_NORM
-    // distMult = 1 * 0.0005 = 0.0005
-    // result = 80 + 1 / 0.0005 = 80 + 2000 = 2080
-    expect(calculateMaxAudibleDistance(ATTN_NORM)).toBe(2080);
+    // distMult = 1 * 0.001 = 0.001
+    // result = 80 + 1 / 0.001 = 80 + 1000 = 1080
+    expect(calculateMaxAudibleDistance(ATTN_NORM)).toBe(1080);
 
     // Test with ATTN_IDLE
-    // distMult = 2 * 0.0005 = 0.001
-    // result = 80 + 1 / 0.001 = 80 + 1000 = 1080
-    expect(calculateMaxAudibleDistance(ATTN_IDLE)).toBe(1080);
+    // distMult = 2 * 0.001 = 0.002
+    // result = 80 + 1 / 0.002 = 80 + 500 = 580
+    expect(calculateMaxAudibleDistance(ATTN_IDLE)).toBe(580);
   });
 });

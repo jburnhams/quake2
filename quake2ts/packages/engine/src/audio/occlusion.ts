@@ -1,5 +1,4 @@
-import type { OcclusionResolver, OcclusionResult } from './system.js';
-import type { ListenerState } from './spatialization.js';
+import type { OcclusionResolver, OcclusionResult, ListenerState } from './system.js';
 import { lengthVec3, subtractVec3, type Vec3 } from '@quake2ts/shared';
 import { calculateMaxAudibleDistance } from './constants.js';
 

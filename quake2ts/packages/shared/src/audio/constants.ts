@@ -26,7 +26,7 @@ export const SOUND_FULLVOLUME = 80;
 export const SOUND_LOOP_ATTENUATE = 0.003;
 
 export function attenuationToDistanceMultiplier(attenuation: number): number {
-  return attenuation === ATTN_STATIC ? attenuation * 0.001 : attenuation * 0.0005;
+  return attenuation * 0.001;
 }
 
 export function calculateMaxAudibleDistance(attenuation: number): number {
