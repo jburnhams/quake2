@@ -41,5 +41,15 @@ describe('Input and UI Integration', () => {
     expect(menuSystem.isActive()).toBe(false);
   });
 
-  it.todo('should verify HUD draw function exists');
+  it('should provide state for rendering', () => {
+    // The MenuSystem doesn't draw itself; it provides state to the renderer.
+    // We verify that the system exposes a getState method that returns the current menu state.
+
+    expect(menuSystem.getState).toBeDefined();
+    expect(typeof menuSystem.getState).toBe('function');
+
+    const state = menuSystem.getState();
+    expect(state).toHaveProperty('activeMenu');
+    expect(state).toHaveProperty('selectedIndex');
+  });
 });
