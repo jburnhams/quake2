@@ -62,20 +62,20 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 3: Foundation - Resource Tracking
 
 ### Task 3.1: Implement Resource Load Tracker
-- [ ] Create `ResourceLoadTracker` class in `packages/engine/src/assets/resourceTracker.ts`
-  - [ ] `startTracking(): void` - begin tracking resource loads
-  - [ ] `stopTracking(): ResourceLoadLog` - end tracking and return log
-  - [ ] `recordLoad(type: ResourceType, path: string, timestamp: number, frame: number): void`
-  - [ ] Define `ResourceType` enum: Texture, Sound, Model, Map, Sprite, ConfigString
-  - [ ] Define `ResourceLoadLog` interface with frame and time-indexed maps
-  - [ ] Track both first load and subsequent accesses
-  - [ ] Store resource metadata (size, pak source)
-- [ ] Integrate with existing asset systems
-  - [ ] Hook `AssetManager` in `packages/engine/src/assets/manager.ts`
-  - [ ] Hook `TextureCache` in `packages/engine/src/assets/texture.ts`
-  - [ ] Hook `AudioRegistry` in `packages/engine/src/assets/audio.ts`
-  - [ ] Hook model loaders (Md2Loader, Md3Loader, SpriteLoader)
-  - [ ] Hook `BspLoader` in `packages/engine/src/loaders/bsp.ts`
+- [x] Create `ResourceLoadTracker` class in `packages/engine/src/assets/resourceTracker.ts`
+  - [x] `startTracking(): void` - begin tracking resource loads
+  - [x] `stopTracking(): ResourceLoadLog` - end tracking and return log
+  - [x] `recordLoad(type: ResourceType, path: string, timestamp: number, frame: number): void`
+  - [x] Define `ResourceType` enum: Texture, Sound, Model, Map, Sprite, ConfigString
+  - [x] Define `ResourceLoadLog` interface with frame and time-indexed maps
+  - [x] Track both first load and subsequent accesses
+  - [x] Store resource metadata (size, pak source)
+- [x] Integrate with existing asset systems
+  - [x] Hook `AssetManager` in `packages/engine/src/assets/manager.ts`
+  - [x] Hook `TextureCache` in `packages/engine/src/assets/texture.ts`
+  - [x] Hook `AudioRegistry` in `packages/engine/src/assets/audio.ts`
+  - [x] Hook model loaders (Md2Loader, Md3Loader, SpriteLoader)
+  - [x] Hook `BspLoader` in `packages/engine/src/loaders/bsp.ts`
 
 **Dependencies:** `packages/engine/src/assets/manager.ts`, loaders in `packages/engine/src/loaders/`
 
@@ -88,16 +88,16 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Integration: Memory leak test (start/stop tracking 1000 times)
 
 ### Task 3.2: Demo Playback with Resource Tracking
-- [ ] Extend `DemoPlaybackController` to support tracking
-  - [ ] `playWithTracking(tracker: ResourceLoadTracker, options?: PlaybackOptions): Promise<ResourceLoadLog>`
-  - [ ] `playRangeWithTracking(start: Offset, end: Offset, tracker: ResourceLoadTracker): Promise<ResourceLoadLog>`
-  - [ ] Automatically associate frame numbers from DemoReader with resource loads
-  - [ ] Associate timestamps from playback timer with resource loads
-  - [ ] Support fast-forward mode (skip rendering, parse only) for analysis speed
-- [ ] Add analysis mode options
-  - [ ] `trackingMode: 'loads' | 'visibility' | 'both'` - what to track
-  - [ ] `skipRendering: boolean` - fast analysis without drawing
-  - [ ] `recordInterval: 'frame' | 'time'` - primary indexing method
+- [x] Extend `DemoPlaybackController` to support tracking
+  - [x] `playWithTracking(tracker: ResourceLoadTracker, options?: PlaybackOptions): Promise<ResourceLoadLog>`
+  - [x] `playRangeWithTracking(start: Offset, end: Offset, tracker: ResourceLoadTracker): Promise<ResourceLoadLog>`
+  - [x] Automatically associate frame numbers from DemoReader with resource loads
+  - [x] Associate timestamps from playback timer with resource loads
+  - [x] Support fast-forward mode (skip rendering, parse only) for analysis speed
+- [x] Add analysis mode options
+  - [x] `trackingMode: 'loads' | 'visibility' | 'both'` - what to track (Impl: Currently tracks all loads)
+  - [x] `skipRendering: boolean` - fast analysis without drawing (Impl: via fastForward option)
+  - [x] `recordInterval: 'frame' | 'time'` - primary indexing method (Impl: Log contains both indices)
 
 **Dependencies:** Task 3.1, `packages/engine/src/demo/playback.ts`
 
