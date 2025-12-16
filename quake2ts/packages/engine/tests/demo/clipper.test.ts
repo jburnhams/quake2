@@ -1,109 +1,182 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoClipper } from '../../src/demo/clipper';
-import { DemoReader } from '../../src/demo/demoReader';
+import { DemoClipper, WorldState } from '../../src/demo/clipper.js';
+import { DemoPlaybackController } from '../../src/demo/playback.js';
+import { BinaryWriter, ServerCommand } from '@quake2ts/shared';
 
-// Mock DemoReader
-vi.mock('../../src/demo/demoReader', () => {
-  return {
-    DemoReader: vi.fn().mockImplementation((buffer) => ({
-      seekToMessage: vi.fn().mockReturnValue(true),
-      getMessageCount: vi.fn().mockReturnValue(100),
-      getOffset: vi.fn().mockReturnValue(0), // Simplified
-      hasMore: vi.fn().mockReturnValue(false), // Stop immediately for default
-      readNextBlock: vi.fn().mockReturnValue(null)
-    }))
-  };
-});
+// Helper to create a dummy demo with a few frames
+function createDummyDemo(): Uint8Array {
+  const writer = new BinaryWriter();
 
-// Mock NetworkMessageParser
-vi.mock('../../src/demo/parser', async (importOriginal) => {
-    const mod = await importOriginal();
-    return {
-        ...(mod as any),
-        NetworkMessageParser: vi.fn().mockImplementation((buffer, handler) => ({
-            setProtocolVersion: vi.fn(),
-            parseMessage: vi.fn().mockImplementation(() => {
-                if (handler && handler.onConfigString) {
-                    handler.onConfigString(1, 'test');
-                }
-            })
-        }))
-    };
-});
+  // Header (no explicit header in demo stream, just blocks)
+
+  // Block 1: ServerData
+  writer.writeLong(50); // Block length
+  writer.writeByte(ServerCommand.serverdata);
+  writer.writeLong(2023); // Protocol
+  writer.writeLong(1234); // Spawn count
+  writer.writeByte(1); // Demo type
+  writer.writeByte(10); // Tick rate
+  writer.writeString("baseq2");
+  writer.writeShort(0); // Player num
+  writer.writeString("map1");
+  // Pad to 50 bytes? No, BinaryWriter handles specific writes.
+  // Wait, block length must match content.
+  // We should write content to a buffer then write length + content.
+
+  return new Uint8Array(0);
+}
+
+function createMessageBlock(content: Uint8Array): Uint8Array {
+    const writer = new BinaryWriter(content.length + 4);
+    writer.writeLong(content.length);
+    const result = new Uint8Array(writer.getData().length + content.length);
+    result.set(writer.getData(), 0);
+    result.set(content, 4);
+    return result;
+}
+
+function createSimpleDemo(): Uint8Array {
+    const blocks: Uint8Array[] = [];
+
+    // 1. Server Data
+    const w1 = new BinaryWriter();
+    w1.writeByte(ServerCommand.serverdata);
+    w1.writeLong(2023);
+    w1.writeLong(1);
+    w1.writeByte(0);
+    w1.writeByte(10);
+    w1.writeString('baseq2');
+    w1.writeShort(0);
+    w1.writeString('test');
+    blocks.push(createMessageBlock(w1.getData()));
+
+    // 2. Frame 0
+    const w2 = new BinaryWriter();
+    w2.writeByte(ServerCommand.frame);
+    w2.writeLong(0); // ServerFrame
+    w2.writeLong(0); // DeltaFrame
+    w2.writeByte(0); // Suppress
+    w2.writeByte(0); // AreaBytes
+    w2.writeByte(ServerCommand.playerinfo);
+    w2.writeShort(0); // Flags
+    w2.writeLong(0); // Stats
+    w2.writeByte(ServerCommand.packetentities);
+    w2.writeByte(0); // End of entities (simplified)
+    blocks.push(createMessageBlock(w2.getData()));
+
+    // 3. Frame 1
+    const w3 = new BinaryWriter();
+    w3.writeByte(ServerCommand.frame);
+    w3.writeLong(1);
+    w3.writeLong(0); // Delta from 0
+    w3.writeByte(0);
+    w3.writeByte(0);
+    w3.writeByte(ServerCommand.playerinfo);
+    w3.writeShort(0);
+    w3.writeLong(0);
+    w3.writeByte(ServerCommand.packetentities);
+    w3.writeByte(0);
+    blocks.push(createMessageBlock(w3.getData()));
+
+    // Combine
+    let totalSize = 0;
+    blocks.forEach(b => totalSize += b.length);
+    const result = new Uint8Array(totalSize);
+    let offset = 0;
+    blocks.forEach(b => {
+        result.set(b, offset);
+        offset += b.length;
+    });
+
+    return result;
+}
 
 describe('DemoClipper', () => {
-  let demoData: ArrayBuffer;
+    let clipper: DemoClipper;
+    let demoData: Uint8Array;
+    let controller: DemoPlaybackController;
 
-  beforeEach(() => {
-    demoData = new ArrayBuffer(1000);
-    vi.clearAllMocks();
-  });
+    beforeEach(() => {
+        clipper = new DemoClipper();
+        demoData = createSimpleDemo();
+        controller = new DemoPlaybackController();
+        controller.loadDemo(demoData.buffer as ArrayBuffer);
+        // We need to set frame duration to match our mock data if we use time
+        controller.setFrameDuration(100);
+    });
 
-  it('should extract clip bytes', () => {
-    // We need to control DemoReader mock return values to test extractClip
-    // The implementation creates a NEW DemoReader(demoData) inside extractClip.
+    it('should extract a simple clip by frame range', () => {
+        // Start at frame 0, end at frame 1
+        const clip = clipper.extractClip(
+            demoData,
+            { type: 'frame', frame: 0 },
+            { type: 'frame', frame: 0 }, // Inclusive? No, usually range is start inclusive, end exclusive? Or inclusive?
+            // The method logic: startByteOffset is startFrame. endByteOffset is endFrame + 1.
+            // So [0, 0] means extract frame 0.
+            controller
+        );
 
-    // We can't easily mock return values per instance unless we use a factory or prototype mock.
-    // Vitest mock factory above sets prototype.
+        // Should contain frame 0 block. Frame 0 is at index 1 (index 0 is serverdata).
+        // Wait, index 0 in seekToMessage(0) maps to the first FRAME message?
+        // DemoReader.scan() indexes ALL blocks.
+        // DemoPlaybackController.seek(0) goes to the first frame.
+        // The controller indexes frames specifically?
+        // No, `seekToMessage` takes an index into `messageOffsets`.
+        // `processNextFrame` consumes one block.
+        // So `frame 0` effectively means `block 0` if every block is a frame.
+        // But block 0 is ServerData.
 
-    // Let's rely on the mock implementation behavior.
-    // seekToMessage returns true.
-    // getOffset returns 0 initially.
+        // DemoPlaybackController.processNextFrame() increments `currentFrameIndex` for every block?
+        // Let's check `processNextFrame` in `playback.ts`.
+        // `currentFrameIndex` starts at -1.
+        // `processNextFrame` reads block, `currentFrameIndex++`.
+        // So yes, block 0 is frame 0.
 
-    // If we want getOffset to return different values for start and end:
-    // We need state in the mock.
+        // Our demo has: Block 0 (ServerData), Block 1 (Frame 0), Block 2 (Frame 1).
 
-    const DemoReaderMock = vi.mocked(DemoReader);
-    let offset = 0;
+        // If we ask for start: frame 1, end: frame 1.
+        // It should extract Block 1.
 
-    DemoReaderMock.mockImplementation(() => ({
-        seekToMessage: vi.fn().mockImplementation((idx) => {
-            if (idx === 10) offset = 100;
-            if (idx === 20) offset = 200;
-            return true;
-        }),
-        getOffset: vi.fn().mockImplementation(() => offset),
-        getMessageCount: vi.fn().mockReturnValue(100),
-        hasMore: vi.fn(),
-        readNextBlock: vi.fn(),
-        reset: vi.fn(),
-        getProgress: vi.fn(),
-        readAllBlocksToBuffer: vi.fn(),
-    }) as any);
+        // Let's test extraction of Block 1.
+        const clip2 = clipper.extractClip(
+            demoData,
+            { type: 'frame', frame: 1 },
+            { type: 'frame', frame: 1 },
+            controller
+        );
 
-    const clip = DemoClipper.extractClip(demoData, 10, 20);
+        // Verify clip2 contains Block 1 and EOF
+        // Block 1 size?
+        // serverdata is ~30 bytes + overhead.
+        // frame is ~30 bytes + overhead.
 
-    // startOffset = 100, endOffset = 200. Length = 100.
-    // Plus 4 bytes for terminator?
-    expect(clip.byteLength).toBe(104);
+        expect(clip2.length).toBeGreaterThan(10);
+        const view = new DataView(clip2.buffer);
+        const lastInt = view.getInt32(clip2.length - 4, true);
+        expect(lastInt).toBe(-1);
+    });
 
-    // Check terminator
-    const view = new DataView(clip.buffer);
-    expect(view.getInt32(100, true)).toBe(-1);
-  });
+    it('should capture world state correctly', async () => {
+        // Capture state at frame 1 (which is after ServerData and Frame 0)
+        // Wait, if block 0 is ServerData, block 1 is Frame 0.
+        // So capturing at frame 1 means we have processed block 0 and block 1.
+        // So we are at the state AFTER Frame 0.
 
-  it('should capture world state', async () => {
-      // Need to mock reader iterating blocks
-      const DemoReaderMock = vi.mocked(DemoReader);
-      let frames = 0;
+        const state = await clipper.captureWorldState(demoData, { type: 'frame', frame: 1 });
 
-      DemoReaderMock.mockImplementation(() => ({
-          hasMore: vi.fn().mockImplementation(() => frames < 5),
-          readNextBlock: vi.fn().mockImplementation(() => {
-              frames++;
-              return { length: 0, data: new Uint8Array(0) }; // Empty block
-          }),
-          seekToMessage: vi.fn(),
-          getMessageCount: vi.fn(),
-          getOffset: vi.fn(),
-          reset: vi.fn(),
-          getProgress: vi.fn(),
-          readAllBlocksToBuffer: vi.fn(),
-      }) as any);
+        expect(state.serverData.protocol).toBe(2023);
+        expect(state.serverData.gameDir).toBe('baseq2');
+        expect(state.serverData.levelName).toBe('test');
+    });
 
-      const state = await DemoClipper.captureWorldState(demoData, 5);
-
-      expect(state.configStrings.has(1)).toBe(true);
-      expect(state.configStrings.get(1)).toBe('test');
-  });
+    it('should throw if start frame is out of bounds', () => {
+        expect(() => {
+            clipper.extractClip(
+                demoData,
+                { type: 'frame', frame: 10 },
+                { type: 'frame', frame: 11 },
+                controller
+            );
+        }).toThrow();
+    });
 });
