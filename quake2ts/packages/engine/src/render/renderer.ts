@@ -174,7 +174,10 @@ export const createRenderer = (
         // But FrameRenderer doesn't expose total faces easily here without querying options.world.map.faces.length
 
         let visibleSurfaces = (stats as any).facesDrawn || 0;
-        let totalSurfaces = options.world ? options.world.map.faces.length : 0;
+        let totalSurfaces = 0;
+        if (options.world && options.world.map && options.world.map.faces) {
+            totalSurfaces = options.world.map.faces.length;
+        }
         let culledSurfaces = totalSurfaces - visibleSurfaces;
 
         // Determine view cluster for PVS culling
