@@ -4,6 +4,9 @@ import { ServerCommand, TempEntity } from '@quake2ts/shared';
 
 // Helper to handle what happens when an item is picked up
 export function handleItemPickup(game: GameExports, self: Entity, other: Entity, respawnTime: number = 30) {
+    // Trigger script hook
+    game.hooks?.onPickup(other, self);
+
     if (!game.deathmatch) {
         // In SP, item is removed
         game.entities.free(self);

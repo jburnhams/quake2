@@ -24,8 +24,6 @@ export function createWeaponPickupEntity(game: GameExports, weaponItem: WeaponIt
                 game.sound?.(other, 0, 'items/pkup.wav', 1, 1, 0);
                 game.centerprintf?.(other, `You got the ${weaponItem.name}`);
 
-                game.entities.scriptHooks?.onPickup?.(other, weaponItem.id);
-
                 handleItemPickup(game, self, other);
             }
         },

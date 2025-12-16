@@ -88,6 +88,8 @@ export { CustomEntityRegistration, ModAPI } from './mod.js';
 import { giveItem } from './inventory/index.js';
 import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
 
+// Script hooks
+import { ScriptHookRegistry, ScriptHooks } from './scripting/hooks.js';
 import { ModAPI } from './mod.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
@@ -128,6 +130,9 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
   damage(amount: number): void;
   teleport(origin: Vec3): void;
 
+  // Script Hooks
+  registerHooks(hooks: ScriptHooks): () => void;
+  hooks: ScriptHookRegistry;
   // Spectator Mode
   setSpectator(playernum: number, spectating: boolean): void;
 
@@ -392,6 +397,9 @@ export function createGame(
   // Initialize SpawnRegistry
   const spawnRegistry = new SpawnRegistry();
 
+  // Initialize ScriptHookRegistry
+  const hookRegistry = new ScriptHookRegistry();
+
   const runPlayerMove = (player: Entity, command: UserCommand) => {
     const pcmd = {
       forwardmove: command.forwardmove,
@@ -470,15 +478,26 @@ export function createGame(
       return Array.from(spawnRegistry.keys());
     },
 
+    // Script hook registration
+    registerHooks(hooks: ScriptHooks): () => void {
+      return hookRegistry.register(hooks);
+    },
+    hooks: hookRegistry,
+
     init(startTimeMs: number) {
       resetState(startTimeMs);
       return snapshot(0);
     },
     shutdown() {
-      entities.scriptHooks?.onMapUnload?.();
+      // Trigger onMapUnload hook
+      hookRegistry.onMapUnload();
     },
     spawnWorld() {
-      entities.scriptHooks?.onMapLoad?.(entities.level.mapname || '');
+      // Trigger onMapLoad hook
+      // Using world message as map name if available
+      const mapName = entities.world?.message || 'unknown';
+      hookRegistry.onMapLoad(mapName);
+
       // In Q2, spawnWorld is called to load entities from map string.
       // Here it does player spawning too for the single player mode.
       // For multiplayer, we might just spawn world entities here.
@@ -526,9 +545,9 @@ export function createGame(
        // Initial spawn logic delegated to respawn (reusing code)
        this.respawn(player);
 
-       entities.scriptHooks?.onPlayerSpawn?.(player);
-
        player.die = (self, inflictor, attacker, damage, point, mod) => {
+           // Hook: onPlayerDeath
+           hookRegistry.onPlayerDeath(self, inflictor, attacker, damage);
            player_die(self, inflictor, attacker, damage, point, mod, entities);
        };
 
@@ -598,6 +617,9 @@ export function createGame(
 
        // Update global state for SP compatibility
        origin = { ...ent.origin };
+
+       // Hook: onPlayerSpawn
+       hookRegistry.onPlayerSpawn(ent);
     },
     clientDisconnect(ent: Entity): void {
         if (ent && ent.inUse) {
@@ -761,7 +783,7 @@ export function createGame(
       if (player) {
         // Apply damage to player.
         // We act as if the world (null attacker) damaged the player.
-        T_Damage(player as unknown as Damageable, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN, levelClock.current.timeSeconds);
+        T_Damage(player as unknown as Damageable, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN, levelClock.current.timeSeconds, undefined, { hooks: hookRegistry });
       }
     },
     teleport(origin: Vec3): void {

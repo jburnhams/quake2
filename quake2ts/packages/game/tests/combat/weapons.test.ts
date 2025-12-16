@@ -59,7 +59,8 @@ describe('Weapon Firing Logic', () => {
             sound: vi.fn(),
             entities: {
                 world: new Entity(999)
-            }
+            },
+            hooks: { onDamage: vi.fn() } as any
         } as unknown as GameExports;
     });
 
@@ -79,7 +80,7 @@ describe('Weapon Firing Logic', () => {
             fire(mockGame, player, WeaponId.Chaingun);
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
-                7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast
+                7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
         });
 
@@ -91,7 +92,7 @@ describe('Weapon Firing Logic', () => {
             // Damage 6 - (100 * 0.002) = 5.8 -> 5.
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
-                5, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast
+                5, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
         });
 
@@ -105,7 +106,7 @@ describe('Weapon Firing Logic', () => {
             fire(mockGame, player, WeaponId.Chaingun);
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
-                7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast
+                7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
         });
     });
@@ -125,7 +126,7 @@ describe('Weapon Firing Logic', () => {
             fire(mockGame, player, WeaponId.Machinegun);
              expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
-                7, 1, DamageFlags.BULLET, DamageMod.MACHINEGUN, mockGame.time, mockGame.multicast
+                7, 1, DamageFlags.BULLET, DamageMod.MACHINEGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
         });
     });
@@ -145,7 +146,7 @@ describe('Weapon Firing Logic', () => {
 
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
-                4, 1, DamageFlags.BULLET, DamageMod.SHOTGUN, mockGame.time, mockGame.multicast
+                4, 1, DamageFlags.BULLET, DamageMod.SHOTGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
         });
     });
@@ -169,11 +170,11 @@ describe('Weapon Firing Logic', () => {
             expect(damage.T_Damage).toHaveBeenCalledTimes(2);
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
-                125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function)
+                125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target2, player, player, ZERO_VEC3, { x: 200, y: 0, z: 0 }, ZERO_VEC3,
-                125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function)
+                125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
         });
 
@@ -189,11 +190,11 @@ describe('Weapon Firing Logic', () => {
             expect(damage.T_Damage).toHaveBeenCalledTimes(2);
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
-                100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function)
+                100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
             expect(damage.T_Damage).toHaveBeenCalledWith(
                 target2, player, player, ZERO_VEC3, { x: 200, y: 0, z: 0 }, ZERO_VEC3,
-                100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function)
+                100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
         });
     });
