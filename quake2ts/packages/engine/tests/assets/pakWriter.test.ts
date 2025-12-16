@@ -3,132 +3,150 @@ import { PakWriter } from '../../src/assets/pakWriter';
 import { PakArchive } from '../../src/assets/pak';
 
 describe('PakWriter', () => {
-  it('should create an empty PAK', () => {
+  it('should create an empty PAK file', () => {
     const writer = new PakWriter();
     const buffer = writer.build();
-    const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.entries.size).toBe(0);
-    expect(pak.size).toBe(12); // Header only
+    // Header only: 12 bytes
+    expect(buffer.byteLength).toBe(12);
+
+    // Check magic
+    const magic = String.fromCharCode(buffer[0], buffer[1], buffer[2], buffer[3]);
+    expect(magic).toBe('PACK');
+
+    // Verify readable by PakArchive
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
+    expect(pak.listEntries().length).toBe(0);
   });
 
-  it('should add a single file', () => {
+  it('should add files and preserve content', () => {
     const writer = new PakWriter();
-    const content = new TextEncoder().encode('hello world');
-    writer.addFile('test.txt', content);
+    const content1 = new TextEncoder().encode('Hello World');
+    const content2 = new Uint8Array([1, 2, 3, 4, 5]);
+
+    writer.addFile('readme.txt', content1);
+    writer.addFile('data.bin', content2);
 
     const buffer = writer.build();
     const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.entries.size).toBe(1);
-    const entry = pak.getEntry('test.txt');
-    expect(entry).toBeDefined();
-    expect(entry?.length).toBe(content.byteLength);
+    expect(pak.listEntries().length).toBe(2);
 
-    const readContent = pak.readFile('test.txt');
-    expect(new TextDecoder().decode(readContent)).toBe('hello world');
-  });
+    const read1 = pak.readFile('readme.txt');
+    expect(new TextDecoder().decode(read1)).toBe('Hello World');
 
-  it('should add multiple files', () => {
-    const writer = new PakWriter();
-    writer.addFile('file1.txt', new Uint8Array([1, 2, 3]));
-    writer.addFile('dir/file2.txt', new Uint8Array([4, 5, 6]));
-
-    const buffer = writer.build();
-    const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
-
-    expect(pak.entries.size).toBe(2);
-    expect(pak.getEntry('file1.txt')).toBeDefined();
-    expect(pak.getEntry('dir/file2.txt')).toBeDefined();
-
-    expect(pak.readFile('file1.txt')).toEqual(new Uint8Array([1, 2, 3]));
-    expect(pak.readFile('dir/file2.txt')).toEqual(new Uint8Array([4, 5, 6]));
+    const read2 = pak.readFile('data.bin');
+    expect(Array.from(read2)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it('should normalize paths', () => {
     const writer = new PakWriter();
-    writer.addFile('FOO/BAR.TXT', new Uint8Array([1]));
-    writer.addFile('\\baz\\qux.txt', new Uint8Array([2]));
+    const content = new Uint8Array([1]);
+
+    writer.addFile('FoLdEr\\FiLe.TxT', content);
 
     const buffer = writer.build();
     const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.getEntry('foo/bar.txt')).toBeDefined();
-    expect(pak.getEntry('baz/qux.txt')).toBeDefined();
+    const entry = pak.getEntry('folder/file.txt');
+    expect(entry).toBeDefined();
+    expect(entry?.name).toBe('folder/file.txt');
   });
 
-  it('should overwrite existing files', () => {
+  it('should reject paths that are too long', () => {
     const writer = new PakWriter();
-    writer.addFile('test.txt', new Uint8Array([1]));
-    writer.addFile('test.txt', new Uint8Array([2]));
+    const longName = 'a'.repeat(57); // Max is 56
+
+    expect(() => {
+      writer.addFile(longName, new Uint8Array([]));
+    }).toThrow('Path too long');
+  });
+
+  it('should allow paths exactly 56 chars', () => {
+    const writer = new PakWriter();
+    const maxName = 'a'.repeat(56);
+
+    writer.addFile(maxName, new Uint8Array([]));
 
     const buffer = writer.build();
     const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.entries.size).toBe(1);
-    expect(pak.readFile('test.txt')).toEqual(new Uint8Array([2]));
+    expect(pak.getEntry(maxName)).toBeDefined();
+  });
+
+  it('should overwrite duplicates', () => {
+    const writer = new PakWriter();
+    writer.addFile('file.txt', new Uint8Array([1]));
+    writer.addFile('FILE.TXT', new Uint8Array([2])); // Should normalize to same key
+
+    const buffer = writer.build();
+    const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
+
+    expect(pak.listEntries().length).toBe(1);
+    const data = pak.readFile('file.txt');
+    expect(data[0]).toBe(2);
   });
 
   it('should remove files', () => {
     const writer = new PakWriter();
-    writer.addFile('test.txt', new Uint8Array([1]));
-    expect(writer.removeFile('test.txt')).toBe(true);
-    expect(writer.removeFile('nonexistent.txt')).toBe(false);
+    writer.addFile('file1.txt', new Uint8Array([1]));
+    writer.addFile('file2.txt', new Uint8Array([2]));
+
+    expect(writer.removeFile('file1.txt')).toBe(true);
+    expect(writer.removeFile('missing.txt')).toBe(false);
 
     const buffer = writer.build();
     const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.entries.size).toBe(0);
+    expect(pak.listEntries().length).toBe(1);
+    expect(pak.getEntry('file2.txt')).toBeDefined();
+    expect(pak.getEntry('file1.txt')).toBeUndefined();
   });
 
-  it('should enforce 56 character limit', () => {
-    const writer = new PakWriter();
-    const longPath = 'a'.repeat(57);
-    expect(() => writer.addFile(longPath, new Uint8Array([]))).toThrow(/Path too long/);
-
-    const okPath = 'a'.repeat(56);
-    expect(() => writer.addFile(okPath, new Uint8Array([]))).not.toThrow();
-  });
-
-  it('should create PAK from static helper', () => {
+  it('should build using static helper', () => {
     const entries = new Map<string, Uint8Array>();
-    entries.set('test.txt', new Uint8Array([1]));
+    entries.set('test.txt', new Uint8Array([1, 2, 3]));
 
     const buffer = PakWriter.buildFromEntries(entries);
     const pak = PakArchive.fromArrayBuffer('test.pak', buffer.buffer);
 
-    expect(pak.entries.size).toBe(1);
-    expect(pak.readFile('test.txt')).toEqual(new Uint8Array([1]));
+    expect(pak.readFile('test.txt')).toHaveLength(3);
   });
 
-  it('should verify exact binary match for round trip', () => {
-    // Manually construct a simple PAK structure to verify against
-    // Header: PACK + dirOffset(16) + dirLength(64)
-    // File: [0xAA, 0xBB]
-    // DirEntry: "test.bin" + pad + offset(12) + length(2)
+  it('should correctly calculate offsets', () => {
+     const writer = new PakWriter();
+     // File 1: 10 bytes
+     const file1 = new Uint8Array(10);
+     file1.fill(1);
+     writer.addFile('a.txt', file1);
 
-    const writer = new PakWriter();
-    writer.addFile('test.bin', new Uint8Array([0xAA, 0xBB]));
-    const buffer = writer.build();
+     // File 2: 20 bytes
+     const file2 = new Uint8Array(20);
+     file2.fill(2);
+     writer.addFile('b.txt', file2);
 
-    const view = new DataView(buffer.buffer);
+     const buffer = writer.build();
+     const view = new DataView(buffer.buffer);
 
-    // Header
-    expect(String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))).toBe('PACK');
-    expect(view.getInt32(4, true)).toBe(12 + 2); // dirOffset: Header + FileData
-    expect(view.getInt32(8, true)).toBe(64); // dirLength: 1 entry * 64 bytes
+     // Header: 12 bytes
+     // File 1 starts at 12
+     // File 2 starts at 22
+     // Directory starts at 42 (12 + 10 + 20)
 
-    // File Data
-    expect(view.getUint8(12)).toBe(0xAA);
-    expect(view.getUint8(13)).toBe(0xBB);
+     const dirOffset = view.getInt32(4, true);
+     expect(dirOffset).toBe(42);
 
-    // Directory Entry
-    const nameBytes: number[] = [];
-    for(let i=0; i<8; i++) nameBytes.push(view.getUint8(14 + i));
-    const name = String.fromCharCode(...nameBytes);
-    expect(name).toBe('test.bin');
+     const dirLength = view.getInt32(8, true);
+     expect(dirLength).toBe(2 * 64); // 2 entries
 
-    expect(view.getInt32(14 + 56, true)).toBe(12); // offset
-    expect(view.getInt32(14 + 60, true)).toBe(2); // length
+     // Directory entries are sorted by name 'a.txt' then 'b.txt'
+
+     // First entry (a.txt) at 42
+     const offset1 = view.getInt32(42 + 56, true);
+     expect(offset1).toBe(12);
+
+     // Second entry (b.txt) at 42 + 64 = 106
+     const offset2 = view.getInt32(106 + 56, true);
+     expect(offset2).toBe(22);
   });
 });

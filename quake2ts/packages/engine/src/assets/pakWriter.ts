@@ -1,99 +1,115 @@
-import { normalizePath } from './pak.js';
+import { normalizePath } from './pak';
 
 const PAK_MAGIC = 'PACK';
 const HEADER_SIZE = 12;
 const DIRECTORY_ENTRY_SIZE = 64;
 
+/**
+ * Utility class for creating Quake 2 PAK archives.
+ */
 export class PakWriter {
-  private files = new Map<string, Uint8Array>();
+  private entries = new Map<string, Uint8Array>();
 
+  /**
+   * Adds a file to the archive.
+   * @param path The file path (will be normalized to lowercase, forward slashes).
+   * @param data The file content.
+   */
   addFile(path: string, data: Uint8Array): void {
     const normalized = normalizePath(path);
-    if (!normalized) {
-      throw new Error(`Invalid path: ${path}`);
-    }
     if (normalized.length > 56) {
-      throw new Error(`Path too long: ${path} (max 56 chars)`);
+      throw new Error(`Path too long: '${normalized}' (max 56 chars)`);
     }
-    this.files.set(normalized, data);
+    this.entries.set(normalized, data);
   }
 
+  /**
+   * Removes a file from the archive.
+   * @param path The file path.
+   * @returns True if the file existed and was removed.
+   */
   removeFile(path: string): boolean {
-    const normalized = normalizePath(path);
-    return this.files.delete(normalized);
+    return this.entries.delete(normalizePath(path));
   }
 
+  /**
+   * Serializes the current entries into a PAK archive buffer.
+   */
   build(): Uint8Array {
-    let currentOffset = HEADER_SIZE;
-
-    // Calculate total size
-    // 1. Header (12 bytes)
-    // 2. File data
-    // 3. Directory
-
-    // Sort keys for deterministic output
-    const sortedPaths = Array.from(this.files.keys()).sort();
-
-    const directorySize = sortedPaths.length * DIRECTORY_ENTRY_SIZE;
-
-    // We'll write files first, then directory at the end
-    // First pass: calculate offsets and total size
+    // Calculate sizes
     let fileDataSize = 0;
-    for (const path of sortedPaths) {
-      fileDataSize += this.files.get(path)!.byteLength;
+    for (const data of this.entries.values()) {
+      fileDataSize += data.byteLength;
     }
 
+    const directorySize = this.entries.size * DIRECTORY_ENTRY_SIZE;
     const totalSize = HEADER_SIZE + fileDataSize + directorySize;
+
     const buffer = new Uint8Array(totalSize);
     const view = new DataView(buffer.buffer);
 
     // Write Header
-    // Magic "PACK"
     view.setUint8(0, 'P'.charCodeAt(0));
     view.setUint8(1, 'A'.charCodeAt(0));
     view.setUint8(2, 'C'.charCodeAt(0));
     view.setUint8(3, 'K'.charCodeAt(0));
 
-    // Directory Offset
-    const directoryOffset = HEADER_SIZE + fileDataSize;
-    view.setInt32(4, directoryOffset, true);
-
-    // Directory Length
+    // Directory Offset (files come first, then directory)
+    const dirOffset = HEADER_SIZE + fileDataSize;
+    view.setInt32(4, dirOffset, true);
     view.setInt32(8, directorySize, true);
 
-    // Write Files and Directory Entries
-    let fileOffset = HEADER_SIZE;
-    let dirEntryOffset = directoryOffset;
+    // Write Files
+    let currentOffset = HEADER_SIZE;
+    const fileOffsets = new Map<string, number>();
 
-    for (const path of sortedPaths) {
-      const data = this.files.get(path)!;
+    // We sort keys to ensure deterministic output for testing, though not strictly required by format
+    const sortedKeys = Array.from(this.entries.keys()).sort();
 
-      // Write File Data
-      buffer.set(data, fileOffset);
+    for (const name of sortedKeys) {
+      const data = this.entries.get(name)!;
+      fileOffsets.set(name, currentOffset);
+      buffer.set(data, currentOffset);
+      currentOffset += data.byteLength;
+    }
 
-      // Write Directory Entry
+    // Write Directory
+    let dirEntryOffset = dirOffset;
+    const encoder = new TextEncoder();
+
+    for (const name of sortedKeys) {
+      const data = this.entries.get(name)!;
+
       // Name (56 bytes)
+      const nameBytes = encoder.encode(name);
+      if (nameBytes.length > 56) {
+         // Should have been caught by addFile, but check again for safety
+         throw new Error(`Path too long after encoding: ${name}`);
+      }
+
       for (let i = 0; i < 56; i++) {
-        if (i < path.length) {
-          view.setUint8(dirEntryOffset + i, path.charCodeAt(i));
+        if (i < nameBytes.length) {
+          view.setUint8(dirEntryOffset + i, nameBytes[i]);
         } else {
-          view.setUint8(dirEntryOffset + i, 0); // Null padding
+          view.setUint8(dirEntryOffset + i, 0); // Padding
         }
       }
 
-      // File Offset
-      view.setInt32(dirEntryOffset + 56, fileOffset, true);
+      // Offset
+      view.setInt32(dirEntryOffset + 56, fileOffsets.get(name)!, true);
 
-      // File Length
+      // Length
       view.setInt32(dirEntryOffset + 60, data.byteLength, true);
 
-      fileOffset += data.byteLength;
       dirEntryOffset += DIRECTORY_ENTRY_SIZE;
     }
 
     return buffer;
   }
 
+  /**
+   * Static helper to build a PAK from a map of entries.
+   */
   static buildFromEntries(entries: Map<string, Uint8Array>): Uint8Array {
     const writer = new PakWriter();
     for (const [path, data] of entries) {

@@ -7,18 +7,18 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 1: Foundation - PAK Writing
 
 ### Task 1.1: Implement PAK Writer
-- [ ] Create `PakWriter` class in `packages/engine/src/assets/pakWriter.ts`
-  - [ ] `addFile(path: string, data: Uint8Array): void` - add file to archive
-  - [ ] `removeFile(path: string): boolean` - remove file from archive
-  - [ ] `build(): Uint8Array` - serialize to PAK format with compression
-  - [ ] `buildFromEntries(entries: Map<string, Uint8Array>): Uint8Array` - static builder
-  - [ ] Support directory structure preservation from existing PAKs
-  - [ ] Implement proper offset/length calculation for directory
-  - [ ] Write PACK header with magic, dirOffset, dirLength
-  - [ ] Normalize paths to Quake 2 format (lowercase, forward slashes, max 56 chars)
-- [ ] Add compression support (if Quake 2 rerelease format supports it)
-- [ ] Export from `packages/engine/src/assets/index.ts`
-- [ ] Export from `packages/engine/src/index.ts`
+- [x] Create `PakWriter` class in `packages/engine/src/assets/pakWriter.ts`
+  - [x] `addFile(path: string, data: Uint8Array): void` - add file to archive
+  - [x] `removeFile(path: string): boolean` - remove file from archive
+  - [x] `build(): Uint8Array` - serialize to PAK format with compression
+  - [x] `buildFromEntries(entries: Map<string, Uint8Array>): Uint8Array` - static builder
+  - [x] Support directory structure preservation from existing PAKs
+  - [x] Implement proper offset/length calculation for directory
+  - [x] Write PACK header with magic, dirOffset, dirLength
+  - [x] Normalize paths to Quake 2 format (lowercase, forward slashes, max 56 chars)
+- [x] Add compression support (if Quake 2 rerelease format supports it)
+- [x] Export from `packages/engine/src/assets/index.ts`
+- [x] Export from `packages/engine/src/index.ts`
 
 **Dependencies:** `packages/engine/src/assets/pak.ts` (PakArchive for format reference)
 
@@ -35,17 +35,17 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 2: Foundation - Demo Playback Offsets
 
 ### Task 2.1: Add Offset Parameters to Demo Playback
-- [ ] Extend `DemoPlaybackController` in `packages/engine/src/demo/playback.ts`
-  - [ ] `playFrom(offset: FrameOffset | TimeOffset): void` - start playback from offset
-  - [ ] `playRange(start: Offset, end: Offset): void` - play specific range
-  - [ ] Add `FrameOffset` type: `{ type: 'frame', frame: number }`
-  - [ ] Add `TimeOffset` type: `{ type: 'time', seconds: number }`
-  - [ ] Update `seek()` logic to handle both offset types
-  - [ ] Add validation for offset bounds (0 to messageCount/duration)
-- [ ] Add offset conversion utilities
-  - [ ] `frameToTime(frame: number): number` - convert frame index to seconds
-  - [ ] `timeToFrame(seconds: number): number` - convert seconds to frame index
-  - [ ] Use existing snapshot system for efficient seeking
+- [x] Extend `DemoPlaybackController` in `packages/engine/src/demo/playback.ts`
+  - [x] `playFrom(offset: FrameOffset | TimeOffset): void` - start playback from offset
+  - [x] `playRange(start: Offset, end: Offset): void` - play specific range
+  - [x] Add `FrameOffset` type: `{ type: 'frame', frame: number }`
+  - [x] Add `TimeOffset` type: `{ type: 'time', seconds: number }`
+  - [x] Update `seek()` logic to handle both offset types
+  - [x] Add validation for offset bounds (0 to messageCount/duration)
+- [x] Add offset conversion utilities
+  - [x] `frameToTime(frame: number): number` - convert frame index to seconds
+  - [x] `timeToFrame(seconds: number): number` - convert seconds to frame index
+  - [x] Use existing snapshot system for efficient seeking
 
 **Dependencies:** `packages/engine/src/demo/demoReader.ts` (DemoReader.seekToMessage), `packages/engine/src/demo/playback.ts` (existing seek methods)
 
