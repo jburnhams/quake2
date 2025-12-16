@@ -25,6 +25,29 @@ export interface DemoPlaybackCallbacks {
   onPlaybackError?: (error: Error) => void;
 }
 
+export type FrameOffset = { type: 'frame'; frame: number };
+export type TimeOffset = { type: 'time'; seconds: number };
+export type PlaybackOffset = FrameOffset | TimeOffset;
+
+const createNoOpHandler = (): NetworkMessageHandler => ({
+    onServerData: () => {},
+    onConfigString: () => {},
+    onSpawnBaseline: () => {},
+    onFrame: () => {},
+    onCenterPrint: () => {},
+    onStuffText: () => {},
+    onPrint: () => {},
+    onSound: () => {},
+    onTempEntity: () => {},
+    onLayout: () => {},
+    onInventory: () => {},
+    onMuzzleFlash: () => {},
+    onMuzzleFlash2: () => {},
+    onDisconnect: () => {},
+    onReconnect: () => {},
+    onDownload: () => {}
+});
+
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
   private buffer: ArrayBuffer | null = null; // Keep reference for analysis
@@ -191,7 +214,7 @@ export class DemoPlaybackController {
   }
 
   public seekToTime(seconds: number) {
-      const frameIndex = Math.floor((seconds * 1000) / this.frameDuration);
+      const frameIndex = this.timeToFrame(seconds);
       this.seek(frameIndex);
   }
 
@@ -207,22 +230,37 @@ export class DemoPlaybackController {
       return Math.floor((seconds * 1000) / this.frameDuration);
   }
 
-  public playFrom(offset: { type: 'frame'; frame: number } | { type: 'time'; seconds: number }): void {
+  public playFrom(offset: PlaybackOffset): void {
       if (offset.type === 'frame') {
           this.seek(offset.frame);
-      } else {
+      } else if (offset.type === 'time') {
           this.seekToTime(offset.seconds);
+      } else {
+          // Should not happen with TS, but runtime check
+          throw new Error(`Invalid offset type: ${(offset as any).type}`);
       }
       this.play();
   }
 
-  public playRange(
-      start: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
-      end: { type: 'frame'; frame: number } | { type: 'time'; seconds: number }
-  ): void {
-      this.playFrom(start);
-
+  public playRange(start: PlaybackOffset, end: PlaybackOffset): void {
+      // Validate bounds
+      const startFrame = start.type === 'frame' ? start.frame : this.timeToFrame(start.seconds);
       const endFrame = end.type === 'frame' ? end.frame : this.timeToFrame(end.seconds);
+      const totalFrames = this.getTotalFrames();
+      const maxFrame = Math.max(0, totalFrames - 1);
+
+      // We allow startFrame == totalFrames (which means start at end, i.e., finish immediately)
+      // but generally we should clamp or error if out of reasonable bounds.
+      if (startFrame < 0) {
+        throw new Error(`Invalid start offset: ${startFrame}`);
+      }
+      // Note: We don't strictly enforce endFrame <= totalFrames because the demo might be streaming or length unknown (though here we know length).
+      // But if endFrame < startFrame, that's invalid.
+      if (endFrame < startFrame) {
+          throw new Error(`End offset (${endFrame}) cannot be before start offset (${startFrame})`);
+      }
+
+      this.playFrom(start);
 
       // We need to stop playback when we reach endFrame
       // We can achieve this by hooking into onFrameUpdate or checking in update()
@@ -256,8 +294,12 @@ export class DemoPlaybackController {
       if (!this.reader) return;
 
       const total = this.getTotalFrames();
+
+      // Allow seeking to total (end state), but clamp if > total
+      // Actually standard behavior is clamp to [0, total-1] usually, but if we want to seek to "end", maybe total is fine.
+      // However, processNextFrame checks hasMore().
+      if (total > 0 && frameNumber >= total) frameNumber = total - 1;
       if (frameNumber < 0) frameNumber = 0;
-      if (frameNumber >= total) frameNumber = total - 1;
 
       // Optimization: If seeking to next frame, just process it
       if (frameNumber === this.currentFrameIndex + 1) {
@@ -266,11 +308,17 @@ export class DemoPlaybackController {
           return;
       }
 
+      // If seeking to current frame, do nothing
+      if (frameNumber === this.currentFrameIndex) {
+          if (this.callbacks?.onSeekComplete) this.callbacks.onSeekComplete();
+          return;
+      }
+
       // 1. Determine best start point
       let startIndex = -1;
       let snapshotData: any = null;
 
-      // Check current position
+      // Check current position (only if we are before target)
       if (frameNumber > this.currentFrameIndex && this.currentFrameIndex !== -1) {
           startIndex = this.currentFrameIndex;
       }
@@ -361,7 +409,7 @@ export class DemoPlaybackController {
       try {
           // Wrap handler to capture onFrame
           const proxyHandler: NetworkMessageHandler = {
-              ...this.handler!,
+              ...(this.handler || createNoOpHandler()),
               onFrame: (frame: FrameData) => {
                   this.lastFrameData = frame; // Capture last frame
                   if (this.handler?.onFrame) this.handler.onFrame(frame);
@@ -369,7 +417,7 @@ export class DemoPlaybackController {
               }
           };
 
-          const parser = new NetworkMessageParser(block.data, this.handler ? proxyHandler : undefined);
+          const parser = new NetworkMessageParser(block.data, proxyHandler);
           parser.setProtocolVersion(this.currentProtocolVersion);
           parser.parseMessage();
           this.currentProtocolVersion = parser.getProtocolVersion();
@@ -733,8 +781,8 @@ export class DemoPlaybackController {
   }
 
   public async playRangeWithTracking(
-      start: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
-      end: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
+      start: PlaybackOffset,
+      end: PlaybackOffset,
       tracker: ResourceLoadTracker
   ): Promise<ResourceLoadLog> {
       this.tracker = tracker;
@@ -748,17 +796,6 @@ export class DemoPlaybackController {
               this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
               this.tracker = null;
           };
-
-          // playRange uses callbacks internally to stop. We need to hook into the existing complete callback if any.
-          // Since playRange sets callbacks, we should probably set our complete callback via setCallbacks AFTER calling playRange?
-          // No, playRange sets a wrapped callback immediately. If we set callbacks after, we overwrite logic in playRange.
-          // We need to pass our completion logic to playRange somehow or wrap the callbacks before calling playRange.
-
-          // But playRange implementation overwrites onFrameUpdate to detect end condition.
-          // It calls onPlaybackComplete when end is reached.
-
-          // So we can set our complete callback, then call playRange.
-          // But playRange calls setCallbacks with a wrapper that delegates to "this.callbacks" (which are our callbacks).
 
           this.setCallbacks({
               ...this.callbacks,
