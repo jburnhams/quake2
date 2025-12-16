@@ -540,7 +540,7 @@ export function createGame(
        // Initial spawn logic delegated to respawn (reusing code)
        this.respawn(player);
 
-       entities.scriptHooks.onPlayerSpawn?.(player);
+       entities.scriptHooks?.onPlayerSpawn?.(player);
 
        player.die = (self, inflictor, attacker, damage, point, mod) => {
            // Hook: onPlayerDeath
