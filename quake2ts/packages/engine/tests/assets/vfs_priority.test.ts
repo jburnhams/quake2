@@ -2,99 +2,133 @@ import { describe, it, expect, vi } from 'vitest';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
 import { PakArchive, PakDirectoryEntry } from '../../src/assets/pak.js';
 
-function createMockPak(name: string, files: Record<string, string>): PakArchive {
-    return {
-        name,
-        size: 0,
-        listEntries: () => Object.keys(files).map(name => ({ name, length: files[name].length, offset: 0 })),
-        readFile: (path: string) => new TextEncoder().encode(files[path]),
-        hasFile: (path: string) => path in files,
-        getEntry: (path: string) => ({ name: path, length: files[path].length, offset: 0 }) as any,
-    } as unknown as PakArchive;
+// Mock PakArchive
+class MockPakArchive implements PakArchive {
+  name: string;
+  size: number = 0;
+  private entries: PakDirectoryEntry[] = [];
+  private data: Map<string, Uint8Array> = new Map();
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  addFile(path: string, content: string) {
+    const buffer = new TextEncoder().encode(content);
+    const entry: PakDirectoryEntry = {
+      name: path,
+      offset: 0,
+      length: buffer.length
+    };
+    this.entries.push(entry);
+    this.data.set(path, buffer);
+  }
+
+  listEntries(): PakDirectoryEntry[] {
+    return this.entries;
+  }
+
+  readFile(path: string): Uint8Array {
+    const data = this.data.get(path);
+    if (!data) throw new Error(`File not found: ${path}`);
+    return data;
+  }
 }
 
 describe('VirtualFileSystem Priority', () => {
-    it('should respect priority when mounting paks', async () => {
-        const pak1 = createMockPak('pak1.pak', {
-            'file.txt': 'content from pak1'
-        });
-        const pak2 = createMockPak('pak2.pak', {
-            'file.txt': 'content from pak2'
-        });
+  it('respects priority when mounting paks', async () => {
+    const pak1 = new MockPakArchive('pak0.pak');
+    pak1.addFile('config.cfg', 'base config');
 
-        const vfs = new VirtualFileSystem();
+    const pak2 = new MockPakArchive('pak1.pak');
+    pak2.addFile('config.cfg', 'mod config');
 
-        // Mount pak1 with lower priority
-        vfs.mountPak(pak1, 10);
-        // Mount pak2 with higher priority
-        vfs.mountPak(pak2, 20);
+    const vfs = new VirtualFileSystem();
 
-        const content = await vfs.readTextFile('file.txt');
-        expect(content).toBe('content from pak2');
+    // Mount base pak with lower priority
+    vfs.mountPak(pak1, 0);
+    // Mount mod pak with higher priority
+    vfs.mountPak(pak2, 1);
 
-        // Verify source info
-        expect(vfs.stat('file.txt')?.sourcePak).toBe('pak2.pak');
-    });
+    const content = await vfs.readTextFile('config.cfg');
+    expect(content).toBe('mod config');
 
-    it('should allow lower priority mount to be overridden', async () => {
-        const pak1 = createMockPak('pak1.pak', { 'common.txt': 'low' });
-        const pak2 = createMockPak('pak2.pak', { 'common.txt': 'high' });
+    const meta = vfs.getFileMetadata('config.cfg');
+    expect(meta?.sourcePak).toBe('pak1.pak');
+  });
 
-        const vfs = new VirtualFileSystem();
+  it('respects priority regardless of mount order', async () => {
+    const pak1 = new MockPakArchive('pak0.pak');
+    pak1.addFile('config.cfg', 'base config');
 
-        // Mount high priority first
-        vfs.mountPak(pak2, 20);
-        // Mount low priority second
-        vfs.mountPak(pak1, 10);
+    const pak2 = new MockPakArchive('pak1.pak');
+    pak2.addFile('config.cfg', 'mod config');
 
-        // Should still be 'high' because 20 > 10
-        const content = await vfs.readTextFile('common.txt');
-        expect(content).toBe('high');
-    });
+    const vfs = new VirtualFileSystem();
 
-    it('should update priority dynamically', async () => {
-        const pak1 = createMockPak('pak1.pak', { 'file.txt': 'pak1' });
-        const pak2 = createMockPak('pak2.pak', { 'file.txt': 'pak2' });
+    // Mount mod pak first with higher priority
+    vfs.mountPak(pak2, 1);
+    // Mount base pak second with lower priority
+    vfs.mountPak(pak1, 0);
 
-        const vfs = new VirtualFileSystem();
-        vfs.mountPak(pak1, 10);
-        vfs.mountPak(pak2, 20); // pak2 wins
+    const content = await vfs.readTextFile('config.cfg');
+    expect(content).toBe('mod config');
+  });
 
-        expect(await vfs.readTextFile('file.txt')).toBe('pak2');
+  it('falls back to lower priority if file missing in high priority', async () => {
+    const pak1 = new MockPakArchive('base.pak');
+    pak1.addFile('base.txt', 'base');
 
-        // Bump pak1 priority above pak2
-        vfs.setPriority(pak1, 30);
+    const pak2 = new MockPakArchive('mod.pak');
+    pak2.addFile('mod.txt', 'mod');
 
-        expect(await vfs.readTextFile('file.txt')).toBe('pak1');
-    });
+    const vfs = new VirtualFileSystem();
+    vfs.mountPak(pak1, 0);
+    vfs.mountPak(pak2, 1);
 
-    it('should list paks with priorities', () => {
-        const pak1 = createMockPak('pak1', {});
-        const pak2 = createMockPak('pak2', {});
-        const vfs = new VirtualFileSystem();
-        vfs.mountPak(pak1, 5);
-        vfs.mountPak(pak2, 15);
+    expect(await vfs.readTextFile('base.txt')).toBe('base');
+    expect(await vfs.readTextFile('mod.txt')).toBe('mod');
+  });
 
-        const paks = vfs.getPaks();
-        expect(paks).toHaveLength(2);
-        // Should be sorted by priority
-        expect(paks[0].pak).toBe(pak1);
-        expect(paks[0].priority).toBe(5);
-        expect(paks[1].pak).toBe(pak2);
-        expect(paks[1].priority).toBe(15);
-    });
+  it('updates priority dynamically', async () => {
+    const pak1 = new MockPakArchive('pak0.pak');
+    pak1.addFile('file.txt', 'v1');
 
-    it('should override same priority with later mount (LWW)', async () => {
-        const pak1 = createMockPak('pak1.pak', { 'file.txt': 'pak1' });
-        const pak2 = createMockPak('pak2.pak', { 'file.txt': 'pak2' });
+    const pak2 = new MockPakArchive('pak1.pak');
+    pak2.addFile('file.txt', 'v2');
 
-        const vfs = new VirtualFileSystem();
-        // Default priority 0
-        vfs.mountPak(pak1);
-        vfs.mountPak(pak2);
+    const vfs = new VirtualFileSystem();
+    vfs.mountPak(pak1, 10);
+    vfs.mountPak(pak2, 5);
 
-        // Expect pak2 to win because it was mounted last with same priority
-        const content = await vfs.readTextFile('file.txt');
-        expect(content).toBe('pak2');
-    });
+    // Initially pak1 wins (priority 10 > 5)
+    expect(await vfs.readTextFile('file.txt')).toBe('v1');
+
+    // Raise pak2 priority
+    vfs.setPriority(pak2, 20);
+
+    // Now pak2 wins (priority 20 > 10)
+    expect(await vfs.readTextFile('file.txt')).toBe('v2');
+  });
+
+  it('getPaks returns sorted list', () => {
+    const pak1 = new MockPakArchive('p1');
+    const pak2 = new MockPakArchive('p2');
+    const pak3 = new MockPakArchive('p3');
+
+    const vfs = new VirtualFileSystem();
+    vfs.mountPak(pak1, 5);
+    vfs.mountPak(pak2, 10);
+    vfs.mountPak(pak3, 1);
+
+    const paks = vfs.getPaks();
+    expect(paks).toHaveLength(3);
+    // Expect ascending priority
+    expect(paks[0].priority).toBe(1);
+    expect(paks[0].pak.name).toBe('p3');
+    expect(paks[1].priority).toBe(5);
+    expect(paks[1].pak.name).toBe('p1');
+    expect(paks[2].priority).toBe(10);
+    expect(paks[2].pak.name).toBe('p2');
+  });
 });

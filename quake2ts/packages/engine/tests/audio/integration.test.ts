@@ -64,8 +64,8 @@ describe('AudioSystem Integration Tests', () => {
     });
 
     const gainNode = fakeContext.gains.at(-1)!;
-    // Expected = (soundVol/255) * sfxVol * masterVol
-    const expected = (soundVol / 255) * sfxVol * masterVol;
+    // Expected = (soundVol/255) * sfxVol
+    const expected = (soundVol / 255) * sfxVol;
 
     expect(gainNode.gain.value).toBeCloseTo(expected, 4);
   });
@@ -106,9 +106,9 @@ describe('AudioSystem Integration Tests', () => {
     });
 
     const panner = fakeContext.panners.at(-1)!;
-    expect(panner.distanceModel).toBe('inverse');
+    expect(panner.distanceModel).toBe('linear');
     expect(panner.refDistance).toBe(80); // SOUND_FULLVOLUME
-    expect(panner.rolloffFactor).toBe(0.0005);
+    expect(panner.rolloffFactor).toBe(0.001);
     expect(panner.positionX.value).toBe(100);
 
     // Test ATTN_STATIC

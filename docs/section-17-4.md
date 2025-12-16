@@ -123,11 +123,11 @@
 ## 4.5 Audio Completeness
 
 ### 4.5.1 Missing Sound Features
-- [ ] Implement ambient sound looping for all entities
-- [ ] Add attenuation curves matching original Quake 2
-- [ ] Implement sound occlusion (muffled through walls)
-- [ ] Add reverb/environment effects for different map areas
-- [ ] Fix spatialization edge cases (inside entity bounds)
+- [x] Implement ambient sound looping for all entities
+- [x] Add attenuation curves matching original Quake 2 (0.001 linear factor)
+- [x] Implement sound occlusion (muffled through walls via `OcclusionResolver`)
+- [x] Add reverb/environment effects for different map areas (added `setUnderwater` and reverb hook)
+- [x] Fix spatialization edge cases (inside entity bounds handled by `PannerNode`)
 
 ### 4.5.2 Music System
 - [ ] Add music track crossfading for smooth transitions

@@ -177,9 +177,8 @@ export {
 } from './audio/context.js';
 export { SoundRegistry } from './audio/registry.js';
 export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';
-export { AudioSystem, type AudioSystemOptions, type SoundRequest, type ActiveSound } from './audio/system.js';
+export { AudioSystem, type AudioSystemOptions, type SoundRequest, type ActiveSound, type ListenerState } from './audio/system.js';
 export { createOcclusionResolver, AudioOcclusion, type TraceFn } from './audio/occlusion.js';
-export { spatializeOrigin, type ListenerState, type SpatializationResult } from './audio/spatialization.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
 export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
 export { AudioApi, type AudioApiOptions } from './audio/api.js';
@@ -330,3 +329,6 @@ export { applyEntityDelta } from './demo/delta.js';
 export { FileType, detectFileType, isTextFile, isBinaryFile } from './assets/fileType.js';
 export { AssetPreviewGenerator } from './assets/preview.js';
 export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
+
+// Export ENT tools
+export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type ValidationResult } from './assets/ent.js';
