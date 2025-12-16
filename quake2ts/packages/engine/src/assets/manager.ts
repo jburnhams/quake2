@@ -151,7 +151,8 @@ export class AssetManager {
 
   async loadTexture(path: string): Promise<PreparedTexture> {
     if (this.resourceTracker) {
-        this.resourceTracker.recordLoad(ResourceType.Texture, path);
+        const stats = this.vfs.stat(path);
+        this.resourceTracker.recordLoad(ResourceType.Texture, path, stats?.size, stats?.sourcePak);
     }
     const cached = this.textures.get(path);
     if (cached) return cached;
@@ -177,7 +178,8 @@ export class AssetManager {
 
   async loadSound(path: string): Promise<DecodedAudio> {
     if (this.resourceTracker) {
-        this.resourceTracker.recordLoad(ResourceType.Sound, path);
+        const stats = this.vfs.stat(path);
+        this.resourceTracker.recordLoad(ResourceType.Sound, path, stats?.size, stats?.sourcePak);
     }
     const audio = await this.audio.load(path);
     const key = this.makeKey('sound', path);
@@ -188,7 +190,8 @@ export class AssetManager {
 
   async loadMd2Model(path: string, textureDependencies: readonly string[] = []): Promise<Md2Model> {
     if (this.resourceTracker) {
-        this.resourceTracker.recordLoad(ResourceType.Model, path);
+        const stats = this.vfs.stat(path);
+        this.resourceTracker.recordLoad(ResourceType.Model, path, stats?.size, stats?.sourcePak);
     }
     const modelKey = this.makeKey('model', path);
     const dependencyKeys = textureDependencies.map((dep) => this.makeKey('texture', dep));
@@ -204,14 +207,16 @@ export class AssetManager {
 
   getMd2Model(path: string): Md2Model | undefined {
       if (this.resourceTracker) {
-          this.resourceTracker.recordLoad(ResourceType.Model, path);
+          const stats = this.vfs.stat(path);
+          this.resourceTracker.recordLoad(ResourceType.Model, path, stats?.size, stats?.sourcePak);
       }
       return this.md2.get(path);
   }
 
   async loadMd3Model(path: string, textureDependencies: readonly string[] = []): Promise<Md3Model> {
     if (this.resourceTracker) {
-        this.resourceTracker.recordLoad(ResourceType.Model, path);
+        const stats = this.vfs.stat(path);
+        this.resourceTracker.recordLoad(ResourceType.Model, path, stats?.size, stats?.sourcePak);
     }
     const modelKey = this.makeKey('model', path);
     const dependencyKeys = textureDependencies.map((dep) => this.makeKey('texture', dep));
@@ -227,14 +232,16 @@ export class AssetManager {
 
   getMd3Model(path: string): Md3Model | undefined {
       if (this.resourceTracker) {
-          this.resourceTracker.recordLoad(ResourceType.Model, path);
+          const stats = this.vfs.stat(path);
+          this.resourceTracker.recordLoad(ResourceType.Model, path, stats?.size, stats?.sourcePak);
       }
       return this.md3.get(path);
   }
 
   async loadSprite(path: string): Promise<SpriteModel> {
     if (this.resourceTracker) {
-        this.resourceTracker.recordLoad(ResourceType.Sprite, path);
+        const stats = this.vfs.stat(path);
+        this.resourceTracker.recordLoad(ResourceType.Sprite, path, stats?.size, stats?.sourcePak);
     }
     const spriteKey = this.makeKey('sprite', path);
     this.dependencyTracker.register(spriteKey);
@@ -245,7 +252,8 @@ export class AssetManager {
 
   async loadMap(path: string): Promise<BspMap> {
       if (this.resourceTracker) {
-          this.resourceTracker.recordLoad(ResourceType.Map, path);
+          const stats = this.vfs.stat(path);
+          this.resourceTracker.recordLoad(ResourceType.Map, path, stats?.size, stats?.sourcePak);
       }
       const mapKey = this.makeKey('map', path);
       if (this.maps.has(path)) {
