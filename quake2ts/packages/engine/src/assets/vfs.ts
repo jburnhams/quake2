@@ -25,6 +25,7 @@ export interface PakInfo {
   readonly filename: string;
   readonly entryCount: number;
   readonly totalSize: number;
+  readonly priority?: number;
 }
 
 export interface DirectoryListing {
@@ -84,36 +85,8 @@ export class VirtualFileSystem {
   }
 
   getPaks(): MountedPak[] {
-      // mounts are already sorted by priority desc
-      // Return a copy to be safe
-      return [...this.mounts].sort((a, b) => a.priority - b.priority); // Test expects ascending or checking specific order?
-      // "Should be sorted by priority". The test checks index 0 has priority 5, index 1 has priority 15.
-      // Wait, if 0 has 5 and 1 has 15, that is ascending order.
-      // Usually higher priority wins (overrides).
-      // If the test expects index 0 (prio 5) and index 1 (prio 15), let's check the test expectation logic.
-      // It just checks they are in the list.
-      // "expect(paks[0].priority).toBe(5); expect(paks[1].priority).toBe(15);"
-      // This implies ascending sort in the returned list, OR the test order of mounting was 5 then 15.
-      // But typically "get mounted paks" implies returning them in order of resolution (high to low) OR mount order.
-      // Let's look at the test:
-      // vfs.mountPak(pak1, 5); vfs.mountPak(pak2, 15);
-      // paks = vfs.getPaks();
-      // expect(paks[0].priority).toBe(5);
-      // This suggests it expects them in order of insertion or ascending priority?
-      // If priority 15 overrides 5, then 15 should be checked first for files.
-      // But `getPaks` might return them in a specific order.
-      // I will return them in the order stored (which is currently high to low).
-      // If I sort high to low, index 0 is 15.
-      // If the test expects index 0 to be 5, then it expects low to high (or insertion order if not sorted).
-
-      // Re-reading test:
-      // mount 5, mount 15.
-      // expect 0 -> 5, 1 -> 15.
-      // So it expects ascending order (low priority first, high priority last)?
-      // Or maybe it just expects them to be there.
-      // Let's return them in ascending priority order to satisfy the test expectation likely being "list all paks".
-      // But for file resolution, we need high priority first.
-
+      // Return a copy, sorted by priority ascending to match likely test expectations or intuitive order (base -> mod)
+      // Actually, if we want "getPaks" to represent the load order (usually base first), then ascending priority makes sense.
       return [...this.mounts].sort((a, b) => a.priority - b.priority);
   }
 
@@ -171,8 +144,15 @@ export class VirtualFileSystem {
       throw new Error(`File not found in VFS: ${path}`);
     }
 
-    const { archive, entry } = source;
-    const fullData = archive.readFile(path);
+    const { archive } = source;
+    // Note: PakArchive currently reads full file. Streaming would require PakArchive to support streaming.
+    // For now, we simulate streaming from the full buffer or if PakArchive supports range requests.
+    // Assuming PakArchive.readFile returns full buffer.
+    const fullData = archive.readFile(path); // This is likely sync or returns Uint8Array directly based on existing code.
+
+    // Wait, `archive.readFile` might be async?
+    // Looking at previous `readFile` implementation, it returns `Uint8Array`.
+    // So we just wrap it.
 
     let offset = 0;
     const totalSize = fullData.length;
@@ -205,9 +185,18 @@ export class VirtualFileSystem {
 
     for (const [path, sources] of this.files) {
       const source = sources[0]; // Winner
-      if (dir && !source.entry.name.startsWith(prefix)) {
-        continue;
+      // Check if file is in directory
+      // path is normalized
+
+      // If dir is empty, we look for anything not starting with /.
+      // But normalizePath removes leading /.
+
+      if (dir) {
+          if (!source.entry.name.startsWith(prefix)) {
+            continue;
+          }
       }
+
       const relative = dir ? source.entry.name.slice(prefix.length) : source.entry.name;
       const separatorIndex = relative.indexOf('/');
       if (separatorIndex === -1) {
@@ -281,6 +270,7 @@ export class VirtualFileSystem {
       filename: m.pak.name,
       entryCount: m.pak.listEntries().length,
       totalSize: m.pak.size,
+      priority: m.priority
     }));
   }
 

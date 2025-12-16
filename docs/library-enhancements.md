@@ -537,6 +537,8 @@ interface ValidationResult {
 
 **Workaround**: Implement custom parser, but ENT format has edge cases.
 
+**Status**: Implemented in `@quake2ts/engine`.
+
 ---
 
 ### Enhancement 6.2: Entity Template Definitions (P2)
@@ -669,6 +671,8 @@ interface ModAPI {
 
 **Workaround**: Declarative JSON-only mods (no code), limited functionality.
 
+**Status**: Implemented in `@quake2ts/game`.
+
 ---
 
 ### Enhancement 7.3: VirtualFileSystem Priority Support (P1)
@@ -699,6 +703,8 @@ class VirtualFileSystem {
 **Rationale**: PAK priority system (Section 07, Task 2) ensures correct mod overrides.
 
 **Workaround**: Wrapper service managing PAK order, but complicates code.
+
+**Status**: Implemented in `@quake2ts/engine`.
 
 ---
 
@@ -888,12 +894,12 @@ interface MemoryUsage {
 | Entity Bounds Access | game | P2 | 04 | Needed |
 | Cross-Reference API | engine | P2 | 05 | Partially Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
-| ENT Parser/Serializer | engine/tools | P1 | 06 | Needed |
+| ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
 | Entity Templates | game | P2 | 06 | Needed |
 | BSP Entity Lump Replace | tools | P3 | 06 | Nice-to-have |
 | Custom Entity Registration | game | P0 | 07 | Implemented |
-| Mod Initialization Hooks | game | P1 | 07 | Needed |
-| VFS Priority Support | engine | P1 | 07 | Needed |
+| Mod Initialization Hooks | game | P1 | 07 | Implemented |
+| VFS Priority Support | engine | P1 | 07 | Implemented |
 | Cvar System | shared/game | P2 | 07 | Needed |
 | Streaming PAK Reader | engine | P2 | 09 | Needed |
 | Instancing API | engine | P2 | 09 | Nice-to-have |
