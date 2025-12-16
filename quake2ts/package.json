@@ -1,6 +1,6 @@
 {
   "name": "quake2ts",
-  "version": "0.0.522",
+  "version": "0.0.523",
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
   "packageManager": "pnpm@8.15.7",
