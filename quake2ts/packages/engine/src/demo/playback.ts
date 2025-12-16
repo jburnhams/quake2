@@ -29,6 +29,25 @@ export type FrameOffset = { type: 'frame'; frame: number };
 export type TimeOffset = { type: 'time'; seconds: number };
 export type PlaybackOffset = FrameOffset | TimeOffset;
 
+const createNoOpHandler = (): NetworkMessageHandler => ({
+    onServerData: () => {},
+    onConfigString: () => {},
+    onSpawnBaseline: () => {},
+    onFrame: () => {},
+    onCenterPrint: () => {},
+    onStuffText: () => {},
+    onPrint: () => {},
+    onSound: () => {},
+    onTempEntity: () => {},
+    onLayout: () => {},
+    onInventory: () => {},
+    onMuzzleFlash: () => {},
+    onMuzzleFlash2: () => {},
+    onDisconnect: () => {},
+    onReconnect: () => {},
+    onDownload: () => {}
+});
+
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
   private buffer: ArrayBuffer | null = null; // Keep reference for analysis
@@ -390,7 +409,7 @@ export class DemoPlaybackController {
       try {
           // Wrap handler to capture onFrame
           const proxyHandler: NetworkMessageHandler = {
-              ...(this.handler || {}),
+              ...(this.handler || createNoOpHandler()),
               onFrame: (frame: FrameData) => {
                   this.lastFrameData = frame; // Capture last frame
                   if (this.handler?.onFrame) this.handler.onFrame(frame);
