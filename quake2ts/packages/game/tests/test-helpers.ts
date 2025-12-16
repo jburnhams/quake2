@@ -4,7 +4,6 @@ import type { SpawnContext } from '../src/entities/spawn.js';
 import type { EntitySystem } from '../src/entities/system.js';
 import { createRandomGenerator } from '@quake2ts/shared';
 import { SpawnRegistry } from '../src/entities/spawn.js';
-import { ScriptHookRegistry } from '../src/scripting/hooks.js';
 
 export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
   const engine = {
@@ -27,7 +26,6 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
     }));
 
   const spawnRegistry = new SpawnRegistry();
-  const hooks = new ScriptHookRegistry();
 
   const game = {
       random: createRandomGenerator({ seed }),
@@ -37,29 +35,12 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
       unregisterEntitySpawn: vi.fn((classname: string) => {
           spawnRegistry.unregister(classname);
       }),
-      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys())),
-      hooks, // Expose hooks registry
-      registerHooks: vi.fn((newHooks) => hooks.register(newHooks)),
-      spawnWorld: vi.fn(() => {
-          hooks.onMapLoad('q2dm1');
-      }),
-      clientBegin: vi.fn(() => {
-          hooks.onPlayerSpawn({} as any);
-      }),
-      damage: vi.fn((amount: number) => {
-          hooks.onDamage({} as any, null, null, amount, 0, 0);
-      })
+      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys()))
   };
 
   const entities = {
-    spawn: vi.fn(() => {
-        const ent = new Entity(1);
-        hooks.onEntitySpawn(ent);
-        return ent;
-    }),
-    free: vi.fn((ent: Entity) => {
-        hooks.onEntityRemove(ent);
-    }),
+    spawn: vi.fn(() => new Entity(1)),
+    free: vi.fn(),
     finalizeSpawn: vi.fn(),
     freeImmediate: vi.fn(),
     setSpawnRegistry: vi.fn(),

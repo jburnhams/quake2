@@ -81,8 +81,7 @@ describe('Super Shotgun', () => {
             expect.anything(),
             DamageMod.SSHOTGUN,
             expect.anything(),
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
+            expect.anything()
         );
     });
 
@@ -106,8 +105,7 @@ describe('Super Shotgun', () => {
             expect.anything(),
             DamageMod.SSHOTGUN,
             expect.anything(),
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
+            expect.anything()
         );
     });
 });

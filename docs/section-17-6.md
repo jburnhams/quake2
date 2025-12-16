@@ -67,9 +67,9 @@
 - [x] Expose weapon state machine hooks
 
 ### 6.3.3 Script Hooks
-- [x] Add lifecycle hooks: `onMapLoad`, `onMapUnload`, `onPlayerSpawn`, `onPlayerDeath`
-- [x] Add event hooks: `onEntitySpawn`, `onEntityRemove`, `onDamage`, `onPickup`
-- [x] Allow webapp to inject custom logic at key points
+- [ ] Add lifecycle hooks: `onMapLoad`, `onMapUnload`, `onPlayerSpawn`, `onPlayerDeath`
+- [ ] Add event hooks: `onEntitySpawn`, `onEntityRemove`, `onDamage`, `onPickup`
+- [ ] Allow webapp to inject custom logic at key points
 
 ---
 
