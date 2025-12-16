@@ -204,6 +204,12 @@ export function SP_monster_floater(self: Entity, context: SpawnContext): void {
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }
+
+    if (context.entities.rng.frandom() < 0.5) {
+       context.entities.sound?.(self, 0, 'floater/fltpain1.wav', 1, 1, 0);
+    } else {
+       context.entities.sound?.(self, 0, 'floater/fltpain2.wav', 1, 1, 0);
+    }
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -216,6 +222,7 @@ export function SP_monster_floater(self: Entity, context: SpawnContext): void {
         return;
     }
 
+    context.entities.sound?.(self, 0, 'floater/fltdeth1.wav', 1, 1, 0);
     floater_die(self);
   };
 

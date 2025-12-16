@@ -464,6 +464,33 @@ function useTargetStory(self: Entity, other: Entity | null, activator: Entity | 
     context.entities.imports.configstring(ConfigStringIndex.Story, self.message || "");
 }
 
+// target_delay implementation
+function target_delay_think(self: Entity, context: any) {
+    context.entities.useTargets(self, self.activator);
+}
+
+function useTargetDelay(self: Entity, other: Entity | null, activator: Entity | null, context: any) {
+    self.activator = activator;
+    self.think = (s) => target_delay_think(s, context);
+    // Use delay or wait if delay not set (or wait is primary?)
+    // In g_spawn: ent->delay = st.delay.
+    // In g_target.c: self->nextthink = level.time + self->wait;
+    // But 'wait' is usually seconds to wait before resetting?
+    // For target_delay, 'wait' or 'delay' keyvalue sets the time.
+    // Standard Q2 entities often use 'delay' key mapped to 'delay' field, but target_delay uses 'wait' field in C?
+    // Actually:
+    // if (st.delay) self->wait = st.delay; (g_spawn.c generic?)
+    // No, usually specific spawn function.
+    // SP_target_delay: if (!self->wait) self->wait = 1;
+
+    // We'll support both, prioritizing wait if set, else delay.
+    let time = self.wait;
+    if (!time && self.delay) time = self.delay;
+    if (!time) time = 1;
+
+    self.nextthink = context.entities.timeSeconds + time;
+}
+
 
 // target_light implementation
 const SPAWNFLAG_TARGET_LIGHT_START_ON = 1;
@@ -917,6 +944,12 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
           return;
       }
       entity.use = (self, other, activator) => useTargetStory(self, other, activator ?? null, context);
+  });
+
+  registry.register('target_delay', (entity, context) => {
+      if (!entity.wait) entity.wait = 1;
+      entity.use = (self, other, activator) => useTargetDelay(self, other, activator ?? null, context);
+      entity.svflags |= ServerFlags.NoClient;
   });
 
   registry.register('target_light', (entity, context) => {

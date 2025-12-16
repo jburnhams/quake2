@@ -198,6 +198,12 @@ export function SP_monster_icarus(self: Entity, context: SpawnContext): void {
     if (self.health < (self.max_health / 2)) {
       self.monsterinfo.current_move = pain_move;
     }
+
+    if (context.entities.rng.frandom() < 0.5) {
+       context.entities.sound?.(self, 0, 'icarus/icrpain1.wav', 1, 1, 0);
+    } else {
+       context.entities.sound?.(self, 0, 'icarus/icrpain2.wav', 1, 1, 0);
+    }
   };
 
   self.die = (self, inflictor, attacker, damage, point) => {
@@ -210,6 +216,7 @@ export function SP_monster_icarus(self: Entity, context: SpawnContext): void {
         return;
     }
 
+    context.entities.sound?.(self, 0, 'icarus/icrdeth1.wav', 1, 1, 0);
     icarus_die(self);
   };
 
