@@ -79,7 +79,7 @@ export class PakArchive {
       throw new PakParseError(`Invalid directory offset: ${dirOffset}`);
     }
 
-    if (dirLength <= 0 || dirLength % DIRECTORY_ENTRY_SIZE !== 0) {
+    if (dirLength < 0 || dirLength % DIRECTORY_ENTRY_SIZE !== 0) {
       throw new PakParseError(`Invalid directory length: ${dirLength}`);
     }
 

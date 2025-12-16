@@ -4,6 +4,7 @@ import { FrameDiff, DemoEvent, DemoEventType, EventSummary, DemoHeader, ServerIn
 import { DemoAnalyzer } from './analyzer.js';
 import { Vec3 } from '@quake2ts/shared';
 import { DemoCameraMode } from './camera.js';
+import { ResourceLoadTracker, ResourceLoadLog } from '../assets/resourceTracker.js';
 
 export enum PlaybackState {
   Stopped,
@@ -55,6 +56,9 @@ export class DemoPlaybackController {
   private cachedStatistics: DemoStatistics | null = null;
   private cachedPlayerStats: Map<number, PlayerStatistics> | null = null;
   private cachedWeaponStats: Map<number, WeaponStatistics[]> | null = null;
+
+  // Resource Tracking
+  private tracker: ResourceLoadTracker | null = null;
 
   // Camera State
   private cameraMode: DemoCameraMode = DemoCameraMode.FirstPerson;
@@ -195,6 +199,56 @@ export class DemoPlaybackController {
       this.seek(frameIndex);
   }
 
+  public frameToTime(frame: number): number {
+      return (frame * this.frameDuration) / 1000;
+  }
+
+  public timeToFrame(seconds: number): number {
+      return Math.floor((seconds * 1000) / this.frameDuration);
+  }
+
+  public playFrom(offset: { type: 'frame'; frame: number } | { type: 'time'; seconds: number }): void {
+      if (offset.type === 'frame') {
+          this.seek(offset.frame);
+      } else {
+          this.seekToTime(offset.seconds);
+      }
+      this.play();
+  }
+
+  public playRange(
+      start: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
+      end: { type: 'frame'; frame: number } | { type: 'time'; seconds: number }
+  ): void {
+      this.playFrom(start);
+
+      const endFrame = end.type === 'frame' ? end.frame : this.timeToFrame(end.seconds);
+
+      // We need to stop playback when we reach endFrame
+      // We can achieve this by hooking into onFrameUpdate or checking in update()
+      // For now, let's wrap the callbacks to intercept the stop condition
+      const originalOnFrameUpdate = this.callbacks?.onFrameUpdate;
+
+      const rangeCallback: DemoPlaybackCallbacks = {
+          ...this.callbacks,
+          onFrameUpdate: (frame) => {
+              if (originalOnFrameUpdate) originalOnFrameUpdate(frame);
+              if (this.currentFrameIndex >= endFrame) {
+                  this.pause();
+                  // Reset callbacks to remove interception
+                  if (this.callbacks === rangeCallback) {
+                       this.setCallbacks({ ...this.callbacks, onFrameUpdate: originalOnFrameUpdate });
+                  }
+                  if (this.callbacks?.onPlaybackComplete) {
+                      this.callbacks.onPlaybackComplete();
+                  }
+              }
+          }
+      };
+
+      this.setCallbacks(rangeCallback);
+  }
+
   /**
    * Seeks to a specific frame number.
    */
@@ -296,6 +350,12 @@ export class DemoPlaybackController {
       }
 
       this.currentFrameIndex++;
+
+      // Update tracker
+      if (this.tracker) {
+          this.tracker.setCurrentFrame(this.currentFrameIndex);
+          this.tracker.setCurrentTime(this.getCurrentTime());
+      }
 
       // Parsing
       try {
@@ -596,5 +656,127 @@ export class DemoPlaybackController {
 
   public setThirdPersonOffset(offset: Vec3) {
       this.thirdPersonOffset = offset;
+  }
+
+  public async playWithTracking(tracker: ResourceLoadTracker, options: { fastForward?: boolean } = {}): Promise<ResourceLoadLog> {
+      this.tracker = tracker;
+      tracker.startTracking();
+
+      if (options.fastForward) {
+          // Fast forward mode: run as fast as possible without waiting for update()
+          try {
+              // Ensure we are in a clean state
+              if (this.state === PlaybackState.Stopped && this.reader) {
+                   // Initial frame if needed
+              }
+              this.transitionState(PlaybackState.Playing);
+
+              const CHUNK_SIZE = 100; // Process 100 frames per tick to avoid blocking UI too much
+
+              const processChunk = async (): Promise<ResourceLoadLog> => {
+                  if (this.state !== PlaybackState.Playing) {
+                      throw new Error("Playback stopped unexpectedly during fast forward");
+                  }
+
+                  let count = 0;
+                  while (count < CHUNK_SIZE) {
+                      if (!this.processNextFrame()) {
+                          // Finished
+                          const log = tracker.stopTracking();
+                          this.tracker = null;
+                          if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
+                          return log;
+                      }
+                      count++;
+                  }
+
+                  // Yield to event loop
+                  await new Promise(resolve => setTimeout(resolve, 0));
+                  return processChunk();
+              };
+
+              return await processChunk();
+          } catch (e) {
+              tracker.stopTracking();
+              this.tracker = null;
+              throw e;
+          }
+      } else {
+          return new Promise((resolve, reject) => {
+              const originalComplete = this.callbacks?.onPlaybackComplete;
+              const originalError = this.callbacks?.onPlaybackError;
+
+              const cleanup = () => {
+                  this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+                  this.tracker = null;
+              };
+
+              this.setCallbacks({
+                  ...this.callbacks,
+                  onPlaybackComplete: () => {
+                      const log = tracker.stopTracking();
+                      if (originalComplete) originalComplete();
+                      cleanup();
+                      resolve(log);
+                  },
+                  onPlaybackError: (err) => {
+                      tracker.stopTracking(); // Stop anyway
+                      if (originalError) originalError(err);
+                      cleanup();
+                      reject(err);
+                  }
+              });
+
+              this.play();
+          });
+      }
+  }
+
+  public async playRangeWithTracking(
+      start: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
+      end: { type: 'frame'; frame: number } | { type: 'time'; seconds: number },
+      tracker: ResourceLoadTracker
+  ): Promise<ResourceLoadLog> {
+      this.tracker = tracker;
+      tracker.startTracking();
+
+      return new Promise((resolve, reject) => {
+          const originalComplete = this.callbacks?.onPlaybackComplete;
+          const originalError = this.callbacks?.onPlaybackError;
+
+          const cleanup = () => {
+              this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+              this.tracker = null;
+          };
+
+          // playRange uses callbacks internally to stop. We need to hook into the existing complete callback if any.
+          // Since playRange sets callbacks, we should probably set our complete callback via setCallbacks AFTER calling playRange?
+          // No, playRange sets a wrapped callback immediately. If we set callbacks after, we overwrite logic in playRange.
+          // We need to pass our completion logic to playRange somehow or wrap the callbacks before calling playRange.
+
+          // But playRange implementation overwrites onFrameUpdate to detect end condition.
+          // It calls onPlaybackComplete when end is reached.
+
+          // So we can set our complete callback, then call playRange.
+          // But playRange calls setCallbacks with a wrapper that delegates to "this.callbacks" (which are our callbacks).
+
+          this.setCallbacks({
+              ...this.callbacks,
+              onPlaybackComplete: () => {
+                  const log = tracker.stopTracking();
+                  if (originalComplete) originalComplete();
+                  cleanup();
+                  resolve(log);
+              },
+              onPlaybackError: (err) => {
+                  tracker.stopTracking();
+                  if (originalError) originalError(err);
+                  cleanup();
+                  reject(err);
+              }
+          });
+
+          this.playRange(start, end);
+      });
   }
 }
