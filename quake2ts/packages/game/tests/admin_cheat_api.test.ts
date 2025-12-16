@@ -115,6 +115,15 @@ describe('Admin/Cheat APIs', () => {
 
     it('damage should call T_Damage on player', () => {
         game.damage(50);
+        // Correct expectation for arguments.
+        // The call in index.ts:
+        // T_Damage(
+        //   player, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN,
+        //   levelClock.current.timeSeconds, undefined, { hooks: hookRegistry }
+        // );
+        // Arg 10: levelClock.current.timeSeconds (matches expectation '0' from test helper context)
+        // Arg 11: undefined
+        // Arg 12: options object containing hooks
         expect(T_Damage).toHaveBeenCalledWith(
             player,
             null,
@@ -126,7 +135,9 @@ describe('Admin/Cheat APIs', () => {
             0,
             DamageFlags.NONE,
             DamageMod.UNKNOWN,
-            expect.any(Number) // levelClock.current.timeSeconds
+            expect.any(Number), // dflags (passed levelClock.timeSeconds)
+            undefined,          // multicast (passed undefined explicitly)
+            expect.objectContaining({ hooks: expect.any(Object) }) // options (received hooks)
         );
     });
 

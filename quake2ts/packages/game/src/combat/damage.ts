@@ -8,12 +8,138 @@ import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { throwGibs } from '../entities/gibs.js';
 
+// We need access to GameExports or EntitySystem to trigger hooks.
+// Since T_Damage is a standalone function, we might need to rely on the entity having a reference
+// to the game or we assume we can access a global or pass context.
+// However, 'ent' usually doesn't have a direct 'game' reference unless we added it.
+// EntitySystem has it.
+//
+// In this codebase, EntitySystem has a '_game' property.
+// And 'ent' is managed by EntitySystem.
+// But we don't have a direct link from Entity back to EntitySystem on the interface.
+//
+// Wait, 'Entity' interface is just data.
+// But T_Damage logic already uses 'multicast' passed in or imported?
+// The current T_Damage signature accepts 'multicast'.
+// We can add 'hooks' to the options or arguments, but that changes the signature widely.
+//
+// Alternatively, we can use the fact that 'ent' is an object and if we can find the EntitySystem that owns it...
+// We don't have that.
+//
+// However, we can check if 'ent' has a 'hooks' property if we injected it? No.
+//
+// Let's look at how we can trigger the hook.
+// T_Damage is called from GameExports.damage, weapon firing, etc.
+// Most call sites have access to 'game' or 'entities'.
+//
+// Ideally T_Damage should accept a context object including hooks.
+// But refactoring T_Damage signature everywhere is risky and large.
+//
+// Let's see if we can use the 'multicast' argument? No.
+//
+// Wait, T_Damage calls 'targ.die' and 'targ.pain'.
+// 'targ.die' is often 'player_die' which takes 'entities' as argument.
+// So we can trigger 'onPlayerDeath' inside 'player_die' (which we already did).
+//
+// What about 'onDamage'?
+// We need to trigger it before damage is applied or after?
+// "Called when an entity takes damage."
+//
+// If we want to support modifying damage, it should be before.
+//
+// If we cannot easily access hooks in T_Damage, maybe we can export a 'setHooks' or 'setGame' for the module?
+// Or we can rely on a singleton if available? No singletons.
+//
+// Let's check 'EntitySystem'. It has 'scriptHooks'.
+// Can we pass 'EntitySystem' to T_Damage?
+// The current signature:
+// export function T_Damage(
+//   targ: Damageable,
+//   ...
+//   multicast?: ...
+//   options?: DamageOptions
+// )
+//
+// 'Damageable' is an interface implemented by Entity.
+//
+// If we update 'DamageOptions' to include 'hooks' or 'entitySystem'?
+//
+// Or better: In 'packages/game/src/index.ts', we export 'game'.
+// But we are inside 'packages/game/src/combat/damage.ts'.
+// Circular dependency if we import 'game' instance (which doesn't exist statically).
+//
+// Let's look at call sites.
+// `game.damage` calls `T_Damage`.
+// `fireShotgun` calls `fireLead` which calls `fireBullet` ...
+//
+// The cleanest way is to add `entitySystem` or `hooks` to `T_Damage` arguments.
+// `T_Damage` is widely used.
+//
+// Maybe we can add it to `DamageOptions`?
+// `options?: DamageOptions & { hooks?: ScriptHookRegistry }`
+//
+// And then in `GameExports.damage`, we pass it.
+// But what about internal calls like `fireBullet`?
+// They typically don't pass options or pass empty options.
+//
+// If we want 'onDamage' to work globally, we need it in T_Damage.
+//
+// Let's try to find a way to access the registry.
+//
+// Actually, `EntitySystem` is where we added `scriptHooks`.
+// Does `Entity` have a hidden link to `EntitySystem`?
+// No, it's a POJO.
+//
+// However, `targ.die` is a callback.
+//
+// If we strictly follow the plan "pass Hooks to EntitySystem" (done),
+// "Implement Remaining Hook Triggers":
+// - Entity Spawn (done in EntitySystem)
+// - Entity Remove (done in EntitySystem)
+// - Pickup (done in handleItemPickup, accessed via game)
+//
+// - Damage: "Trigger onDamage in T_Damage".
+//
+// This is the hard one.
+//
+// If I change T_Damage signature, I have to update all callers.
+//
+// Let's see if there is another way.
+// Maybe `targ` has a `_system` reference? No.
+//
+// What if we add `hooks?: ScriptHookRegistry` to `DamageOptions`?
+// And we update `T_Damage` to check `options?.hooks`.
+// Then we need to update callers to pass it.
+//
+// Most callers are in `weapons`. Weapons usually have access to `game` or `entities`.
+//
+// Let's try to update `T_Damage` to take an optional `hooks` in `DamageOptions`.
+// And in `GameExports`, we pass it.
+// And in `fire_...` functions, we need to pass it.
+//
+// This seems correct but laborious.
+//
+// Alternative: `T_Damage` is imported from `damage.ts`.
+// Can we wrap `T_Damage` in `GameExports` and use that?
+// But existing code imports `T_Damage` directly from `combat/index.ts`.
+//
+// Wait, `GameExports` exposes `damage(amount)` which calls `T_Damage`.
+// But weapons import `T_Damage` directly.
+//
+// If I modify `T_Damage` signature, TypeScript will tell me all places to fix.
+//
+// Let's Modify `DamageOptions`.
+
 export interface DamageOptions {
   /** If true, check if attacker and target are on same team and apply rules. */
   checkFriendlyFire?: boolean;
   /** If true (and checkFriendlyFire is on), damage is 0 for teammates. */
   noFriendlyFire?: boolean;
+  /** Hooks registry to trigger onDamage event */
+  hooks?: any; // Avoiding strict type circular dependency for now, or import ScriptHookRegistry type
 }
+
+import type { ScriptHookRegistry } from '../scripting/hooks.js';
 
 function onSameTeam(ent1: Entity, ent2: Entity): boolean {
   if (!ent1.client || !ent2.client) {
@@ -174,8 +300,13 @@ export function T_Damage(
   options?: DamageOptions,
   sys?: EntitySystem
 ): DamageApplicationResult | null {
-  if (sys) {
-    sys.scriptHooks.onDamage?.(targ as Entity, attacker as Entity, inflictor as Entity, damage);
+  // Trigger hook if present
+  if (options?.hooks) {
+     const hookRegistry = options.hooks as ScriptHookRegistry;
+     // We cast targ, inflictor, attacker to Entity because ScriptHooks expects Entity.
+     // T_Damage uses Damageable which is a subset/interface of Entity.
+     // In practice they are Entities.
+     hookRegistry.onDamage(targ as Entity, inflictor as Entity | null, attacker as Entity | null, damage, dflags, mod);
   }
 
   if (!targ.takedamage) {
@@ -348,7 +479,13 @@ export function T_RadiusDamage(
 
     const dir = normalizeVec3(subtractVec3(ent.origin, inflictorCenter));
 
-    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedKnockback, dflags | DamageFlags.RADIUS, mod, time, multicast, options);
+    // Pass hooks from options if present
+    const damageOptions: DamageOptions = {
+        ...options,
+        hooks: options.hooks
+    };
+
+    const result = T_Damage(ent, inflictor as Damageable | null, attacker, dir, entCenter, dir, adjustedDamage, adjustedKnockback, dflags | DamageFlags.RADIUS, mod, time, multicast, damageOptions);
     hits.push({ target: ent, result, appliedDamage: adjustedDamage });
   }
 
