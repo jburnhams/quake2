@@ -324,6 +324,25 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onDamage(indicators: DamageIndicator[]): void {
+        if (this.view) {
+            // Apply damage view kick based on Quake 2's CL_ParseDamage and V_AddKick logic.
+            // CL_ParseDamage calculates a directional kick to viewangles (not implemented here to avoid permanent angle modification),
+            // while V_AddKick adds a temporary pitch kick (pain flinch).
+
+            for (const ind of indicators) {
+                // Use damage value directly from indicator
+                const estimatedDamage = ind.damage;
+
+                // Apply pitch kick to simulate pain flinch.
+                // Negative pitch corresponds to looking up ("head snaps back").
+                this.view.addKick({
+                    pitch: -estimatedDamage * 0.5,
+                    roll: 0, // Directional roll is not yet implemented
+                    durationMs: 200,
+                });
+            }
+        }
+
         if (this.callbacks?.onDamage) {
             this.callbacks.onDamage(indicators);
         }
