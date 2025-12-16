@@ -330,3 +330,6 @@ export { applyEntityDelta } from './demo/delta.js';
 export { FileType, detectFileType, isTextFile, isBinaryFile } from './assets/fileType.js';
 export { AssetPreviewGenerator } from './assets/preview.js';
 export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
+
+// Export ENT tools
+export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type ValidationResult } from './assets/ent.js';

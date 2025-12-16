@@ -88,6 +88,8 @@ export { CustomEntityRegistration, ModAPI } from './mod.js';
 import { giveItem } from './inventory/index.js';
 import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
 
+import { ModAPI } from './mod.js';
+
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
   spawnWorld(): void;
   readonly entities: EntitySystem;
@@ -128,6 +130,10 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
 
   // Spectator Mode
   setSpectator(playernum: number, spectating: boolean): void;
+
+  // Mod Initialization Hooks
+  onModInit?: (modId: string, modApi: ModAPI) => void;
+  onModShutdown?: (modId: string) => void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -798,7 +804,9 @@ export function createGame(
               }
           }
       }
-    }
+    },
+    onModInit: undefined,
+    onModShutdown: undefined
   };
 
   // Register default spawns synchronously now that gameExports is defined
