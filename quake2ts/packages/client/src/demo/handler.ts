@@ -330,8 +330,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             // while V_AddKick adds a temporary pitch kick (pain flinch).
 
             for (const ind of indicators) {
-                // Approximate original damage value from normalized strength (strength ~= damage / 20.0)
-                const estimatedDamage = ind.strength * 20;
+                // Use damage value directly from indicator
+                const estimatedDamage = ind.damage;
 
                 // Apply pitch kick to simulate pain flinch.
                 // Negative pitch corresponds to looking up ("head snaps back").

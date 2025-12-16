@@ -19,8 +19,11 @@ describe('ClientNetworkHandler Damage Kick', () => {
 
     it('should add kick on damage', () => {
         const indicators: DamageIndicator[] = [{
-            direction: { x: 1, y: 0, z: 0 },
-            strength: 0.5
+            dir: { x: 1, y: 0, z: 0 },
+            damage: 10,
+            health: true,
+            armor: false,
+            power: false
         }];
 
         handler.onDamage(indicators);
