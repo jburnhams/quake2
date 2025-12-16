@@ -3,11 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "composite": false
   },
-  "include": ["src/**/*"],
-  "references": [
-    { "path": "../shared" },
-    { "path": "../game" }
-  ]
+  "include": ["src/**/*"]
 }

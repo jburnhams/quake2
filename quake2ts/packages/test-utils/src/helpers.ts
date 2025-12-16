@@ -206,8 +206,8 @@ export const ladderTrace: PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, m
 export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
   const engine = {
     sound: vi.fn(),
-    soundIndex: vi.fn(() => 0),
-    modelIndex: vi.fn(() => 0),
+    soundIndex: vi.fn((sound: string) => 0),
+    modelIndex: vi.fn((model: string) => 0),
     centerprintf: vi.fn(),
   };
 
