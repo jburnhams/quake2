@@ -31,6 +31,11 @@ export interface Md2BindOptions {
   readonly dlights?: readonly DLight[];
   readonly modelMatrix?: Float32List; // Needed for dlight world position calculation
   readonly renderMode?: RenderModeConfig;
+  // Lighting controls
+  readonly brightness?: number;
+  readonly gamma?: number;
+  readonly fullbright?: boolean;
+  readonly ambient?: number;
 }
 
 export const MD2_VERTEX_SHADER = `#version 300 es
@@ -100,6 +105,12 @@ uniform vec4 u_tint;
 uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
 uniform vec4 u_solidColor;
 
+// Lighting controls
+uniform float u_brightness;
+uniform float u_gamma;
+uniform bool u_fullbright;
+uniform float u_globalAmbient;
+
 out vec4 o_color;
 
 void main() {
@@ -107,7 +118,25 @@ void main() {
 
   if (u_renderMode == 0) {
       vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-      finalColor = vec4(albedo.rgb * v_lightColor, albedo.a);
+
+      vec3 light = v_lightColor;
+
+      if (u_fullbright) {
+          light = vec3(1.0);
+      }
+
+      // Apply global ambient min
+      light = max(light, vec3(u_globalAmbient));
+
+      light *= u_brightness;
+
+      vec3 rgb = albedo.rgb * light;
+
+      if (u_gamma != 1.0) {
+          rgb = pow(rgb, vec3(1.0 / u_gamma));
+      }
+
+      finalColor = vec4(rgb, albedo.a);
   } else {
       vec3 color = u_solidColor.rgb;
       if (u_renderMode == 2) {
@@ -308,6 +337,12 @@ export class Md2Pipeline {
   private readonly uniformNumDlights: WebGLUniformLocation | null;
   private readonly uniformDlights: { pos: WebGLUniformLocation | null, color: WebGLUniformLocation | null, intensity: WebGLUniformLocation | null }[] = [];
 
+  // Lighting controls
+  private readonly uniformBrightness: WebGLUniformLocation | null;
+  private readonly uniformGamma: WebGLUniformLocation | null;
+  private readonly uniformFullbright: WebGLUniformLocation | null;
+  private readonly uniformGlobalAmbient: WebGLUniformLocation | null;
+
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
     this.program = ShaderProgram.create(
@@ -334,10 +369,28 @@ export class Md2Pipeline {
         intensity: this.program.getUniformLocation(`u_dlights[${i}].intensity`),
       });
     }
+
+    this.uniformBrightness = this.program.getUniformLocation('u_brightness');
+    this.uniformGamma = this.program.getUniformLocation('u_gamma');
+    this.uniformFullbright = this.program.getUniformLocation('u_fullbright');
+    this.uniformGlobalAmbient = this.program.getUniformLocation('u_globalAmbient');
   }
 
   bind(options: Md2BindOptions): void {
-    const { modelViewProjection, modelMatrix, lightDirection = [0, 0, 1], ambientLight = 0.2, tint = [1, 1, 1, 1], diffuseSampler = 0, dlights = [], renderMode } = options;
+    const {
+        modelViewProjection,
+        modelMatrix,
+        lightDirection = [0, 0, 1],
+        ambientLight = 0.2,
+        tint = [1, 1, 1, 1],
+        diffuseSampler = 0,
+        dlights = [],
+        renderMode,
+        brightness = 1.0,
+        gamma = 1.0,
+        fullbright = false,
+        ambient = 0.0
+    } = options;
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
@@ -379,6 +432,12 @@ export class Md2Pipeline {
         this.gl.uniform3f(this.uniformDlights[i].color, light.color.x, light.color.y, light.color.z);
         this.gl.uniform1f(this.uniformDlights[i].intensity, light.intensity);
     }
+
+    // Lighting controls
+    this.gl.uniform1f(this.uniformBrightness, brightness);
+    this.gl.uniform1f(this.uniformGamma, gamma);
+    this.gl.uniform1i(this.uniformFullbright, fullbright ? 1 : 0);
+    this.gl.uniform1f(this.uniformGlobalAmbient, ambient);
   }
 
   draw(mesh: Md2MeshBuffers, renderMode?: RenderModeConfig): void {

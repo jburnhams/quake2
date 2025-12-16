@@ -69,6 +69,11 @@ interface FrameRenderOptions {
   readonly renderMode?: RenderModeConfig;
   readonly disableLightmaps?: boolean; // New option to toggle lightmaps
   readonly lightmapOnly?: boolean;
+  readonly brightness?: number;
+  readonly gamma?: number;
+  readonly fullbright?: boolean;
+  readonly ambient?: number;
+  readonly lightStyleOverrides?: Map<number, string>; // Pattern overrides
 }
 
 interface FrameRendererDependencies {
@@ -214,6 +219,31 @@ function renderViewModel(
   return true;
 }
 
+// Helper to evaluate light style pattern at a given time
+function evaluateLightStyle(pattern: string, time: number): number {
+    if (!pattern) return 1.0;
+    const frame = Math.floor(time * 10) % pattern.length;
+    const charCode = pattern.charCodeAt(frame);
+    // 'a' is 0, 'z' is 25.5 -> 'z'-'a' = 25 -> value = 25/25.5 ~ 1.0?
+    // Quake 2: value = (char - 'a') * (22 / 256.0)? No.
+    // Standard interpretation: 'a' = 0, 'z' = 2.0 (double bright). 'm' = 1.0 (normal).
+    // range 'a' (0) to 'z' (25).
+    // m - a = 12.
+    // value = (char - 'a') / 12.0? If m is normal.
+    // Let's assume standard Quake 2:
+    // float value = (float)(s[j] - 'a') * (1.0 / 12.0); roughly?
+    // engine: cl_lightstyle_table. value / 255.0?
+    // In Quake 2: lightstyle values are 0-255?
+    // Actually, lightstyle values are often floats in range 0-2 (or more).
+    // Let's stick to common convention: 'm' is normal (1.0).
+    // 'a' is 0.
+    // 'z' is 25 -> ~2.0.
+    // so value = (char - 'a') * (1.0/12.5) approx. Or (char-'a')/12.8?
+    // Let's use (char - 'a') / 12.0 for now, so m (12) -> 1.0.
+    return (charCode - 97) / 12.0;
+}
+
+
 export const createFrameRenderer = (
   gl: WebGL2RenderingContext,
   bspPipeline: BspSurfacePipeline,
@@ -237,7 +267,23 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode, disableLightmaps, lightmapOnly } = options;
+    const {
+        camera,
+        world,
+        sky,
+        clearColor = [0, 0, 0, 1],
+        timeSeconds = 0,
+        viewModel,
+        dlights,
+        renderMode,
+        disableLightmaps,
+        lightmapOnly,
+        brightness,
+        gamma,
+        fullbright,
+        ambient,
+        lightStyleOverrides
+    } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -258,6 +304,20 @@ export const createFrameRenderer = (
       };
       const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
       const sortedFaces = sortVisibleFaces(visibleFaces);
+
+      // Prepare effective light styles
+      let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
+      if (lightStyleOverrides && lightStyleOverrides.size > 0) {
+          // Clone array to modify
+          const styles = [...(world.lightStyles || [])];
+          // Ensure array is large enough for overrides
+          for (const [index, pattern] of lightStyleOverrides) {
+             while (styles.length <= index) styles.push(1.0); // Default fill
+             styles[index] = evaluateLightStyle(pattern, timeSeconds);
+          }
+          effectiveLightStyles = styles;
+      }
+
 
       let lastBatchKey: BatchKey | undefined;
       let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
@@ -322,7 +382,7 @@ export const createFrameRenderer = (
           cachedState = bspPipeline.bind({
             modelViewProjection: viewProjection,
             styleIndices: faceStyles,
-            styleValues: world.lightStyles,
+            styleValues: effectiveLightStyles,
             surfaceFlags: geometry.surfaceFlags,
             timeSeconds,
             diffuseSampler: textures.diffuse ?? 0,
@@ -331,7 +391,11 @@ export const createFrameRenderer = (
             warp,
             dlights,
             renderMode: activeRenderMode,
-            lightmapOnly
+            lightmapOnly,
+            brightness,
+            gamma,
+            fullbright,
+            ambient
           });
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;

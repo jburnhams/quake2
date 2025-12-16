@@ -38,6 +38,10 @@ export interface Md3SurfaceMaterial {
   readonly diffuseSampler?: number;
   readonly tint?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
+  readonly brightness?: number;
+  readonly gamma?: number;
+  readonly fullbright?: boolean;
+  readonly globalAmbient?: number;
 }
 
 export interface Md3TagTransform {
@@ -244,6 +248,12 @@ uniform vec4 u_tint;
 uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
 uniform vec4 u_solidColor;
 
+// Lighting controls
+uniform float u_brightness;
+uniform float u_gamma;
+uniform bool u_fullbright;
+uniform float u_globalAmbient;
+
 out vec4 o_color;
 
 void main() {
@@ -251,7 +261,21 @@ void main() {
 
   if (u_renderMode == 0) {
       vec4 albedo = texture(u_diffuseMap, v_texCoord) * u_tint;
-      finalColor = vec4(albedo.rgb * v_color.rgb, albedo.a * v_color.a);
+
+      vec3 light = v_color.rgb;
+      if (u_fullbright) {
+          light = vec3(1.0);
+      }
+      light = max(light, vec3(u_globalAmbient));
+      light *= u_brightness;
+
+      vec3 rgb = albedo.rgb * light;
+
+      if (u_gamma != 1.0) {
+          rgb = pow(rgb, vec3(1.0 / u_gamma));
+      }
+
+      finalColor = vec4(rgb, albedo.a * v_color.a);
   } else {
       vec3 color = u_solidColor.rgb;
       if (u_renderMode == 2) {
@@ -368,6 +392,12 @@ export class Md3Pipeline {
   private readonly uniformRenderMode: WebGLUniformLocation | null;
   private readonly uniformSolidColor: WebGLUniformLocation | null;
 
+  // Lighting controls
+  private readonly uniformBrightness: WebGLUniformLocation | null;
+  private readonly uniformGamma: WebGLUniformLocation | null;
+  private readonly uniformFullbright: WebGLUniformLocation | null;
+  private readonly uniformGlobalAmbient: WebGLUniformLocation | null;
+
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
     this.program = ShaderProgram.create(
@@ -382,6 +412,11 @@ export class Md3Pipeline {
 
     this.uniformRenderMode = this.program.getUniformLocation('u_renderMode');
     this.uniformSolidColor = this.program.getUniformLocation('u_solidColor');
+
+    this.uniformBrightness = this.program.getUniformLocation('u_brightness');
+    this.uniformGamma = this.program.getUniformLocation('u_gamma');
+    this.uniformFullbright = this.program.getUniformLocation('u_fullbright');
+    this.uniformGlobalAmbient = this.program.getUniformLocation('u_globalAmbient');
   }
 
   bind(modelViewProjection: Float32List, tint: readonly [number, number, number, number] = [1, 1, 1, 1], sampler = 0): void {
@@ -400,6 +435,30 @@ export class Md3Pipeline {
     const tint = material?.tint ?? [1, 1, 1, 1];
     const renderMode = material?.renderMode;
 
+    // Lighting controls from material (which propagates from pipeline bind if structure allows,
+    // but here we are in draw call. We need access to the lighting state set in bind?
+    // The problem is Md3Pipeline doesn't have a comprehensive 'bind' method that takes everything.
+    // It has bind(mvp) and drawSurface(mesh, material).
+    // The caller (renderer.ts) iterates surfaces and calls drawSurface.
+    // So we should probably update drawSurface or bind to accept lighting params.
+    // Or add a separate setLighting method.
+    // For now, let's pass them via material if possible, or assume they were set globally.
+    // But drawSurface sets uniforms...
+    // Actually, bind() sets MVP and resets some state.
+    // We should probably pass lighting to bind() or add setLightingState.
+    // Let's modify bind() signature to be more comprehensive or add a separate method.
+    // Since we are modifying Md3Pipeline class, let's update `bind` to take lighting options.
+
+    // However, drawSurface also sets uniforms.
+    // Wait, the uniforms I added (brightness etc) are on the program.
+    // If I set them in `bind`, they persist until `use` is called again or another program is used.
+    // Since drawSurface assumes program is used, it should be fine.
+
+    const brightness = material?.brightness ?? 1.0;
+    const gamma = material?.gamma ?? 1.0;
+    const fullbright = material?.fullbright ?? false;
+    const globalAmbient = material?.globalAmbient ?? 0.0;
+
     this.gl.uniform4fv(this.uniformTint, new Float32Array(tint));
     this.gl.uniform1i(this.uniformDiffuse, sampler);
 
@@ -416,6 +475,11 @@ export class Md3Pipeline {
     }
     this.gl.uniform1i(this.uniformRenderMode, modeInt);
     this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
+
+    this.gl.uniform1f(this.uniformBrightness, brightness);
+    this.gl.uniform1f(this.uniformGamma, gamma);
+    this.gl.uniform1i(this.uniformFullbright, fullbright ? 1 : 0);
+    this.gl.uniform1f(this.uniformGlobalAmbient, globalAmbient);
 
     mesh.vertexArray.bind();
 

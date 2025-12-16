@@ -890,7 +890,7 @@ interface MemoryUsage {
 | Demo Metadata Access | client | P2 | 03 | Needed |
 | Renderer Statistics API | engine | P1 | 04 | Implemented |
 | Debug Rendering Mode | engine | P1 | 04 | Implemented |
-| Lighting Control APIs | engine | P2 | 04 | Needed |
+| Lighting Control APIs | engine | P2 | 04 | Implemented |
 | Entity Bounds Access | game | P2 | 04 | Needed |
 | Cross-Reference API | engine | P2 | 05 | Partially Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |

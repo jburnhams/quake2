@@ -38,6 +38,11 @@ export interface BspSurfaceBindOptions {
   readonly dlights?: readonly DLight[];
   readonly renderMode?: RenderModeConfig;
   readonly lightmapOnly?: boolean;
+  // New lighting controls
+  readonly brightness?: number;
+  readonly gamma?: number;
+  readonly fullbright?: boolean;
+  readonly ambient?: number;
 }
 
 export const BSP_SURFACE_VERTEX_SOURCE = `#version 300 es
@@ -123,6 +128,12 @@ uniform vec4 u_solidColor;
 uniform int u_numDlights;
 uniform DLight u_dlights[MAX_DLIGHTS];
 
+// Lighting controls
+uniform float u_brightness;
+uniform float u_gamma;
+uniform bool u_fullbright;
+uniform float u_ambient;
+
 out vec4 o_color;
 
 void main() {
@@ -137,7 +148,7 @@ void main() {
 
       vec3 totalLight = vec3(1.0);
 
-      if (u_applyLightmap) {
+      if (u_applyLightmap && !u_fullbright) {
         // Multi-style lightmap accumulation
         vec3 light = vec3(0.0);
         bool hasLight = false;
@@ -172,9 +183,23 @@ void main() {
              totalLight += dlight.color * contribution;
           }
         }
+      } else if (u_fullbright) {
+        totalLight = vec3(1.0);
       }
 
+      // Apply ambient minimum
+      totalLight = max(totalLight, vec3(u_ambient));
+
+      // Apply brightness
+      totalLight *= u_brightness;
+
       base.rgb *= totalLight;
+
+      // Gamma correction
+      if (u_gamma != 1.0) {
+         base.rgb = pow(base.rgb, vec3(1.0 / u_gamma));
+      }
+
       finalColor = vec4(base.rgb, base.a * u_alpha);
   } else {
       // SOLID / WIREFRAME / FACETED
@@ -277,6 +302,11 @@ export class BspSurfacePipeline {
   private readonly uniformNumDlights: WebGLUniformLocation | null;
   private readonly uniformDlights: { pos: WebGLUniformLocation | null, color: WebGLUniformLocation | null, intensity: WebGLUniformLocation | null }[] = [];
 
+  // Lighting controls uniforms
+  private readonly uniformBrightness: WebGLUniformLocation | null;
+  private readonly uniformGamma: WebGLUniformLocation | null;
+  private readonly uniformFullbright: WebGLUniformLocation | null;
+  private readonly uniformAmbient: WebGLUniformLocation | null;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -310,6 +340,11 @@ export class BspSurfacePipeline {
         intensity: this.program.getUniformLocation(`u_dlights[${i}].intensity`),
       });
     }
+
+    this.uniformBrightness = this.program.getUniformLocation('u_brightness');
+    this.uniformGamma = this.program.getUniformLocation('u_gamma');
+    this.uniformFullbright = this.program.getUniformLocation('u_fullbright');
+    this.uniformAmbient = this.program.getUniformLocation('u_ambient');
   }
 
   bind(options: BspSurfaceBindOptions): SurfaceRenderState {
@@ -327,7 +362,11 @@ export class BspSurfacePipeline {
       warp,
       dlights = [],
       renderMode,
-      lightmapOnly
+      lightmapOnly,
+      brightness = 1.0,
+      gamma = 1.0,
+      fullbright = false,
+      ambient = 0.0
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
@@ -383,6 +422,12 @@ export class BspSurfacePipeline {
         this.gl.uniform3f(this.uniformDlights[i].color, light.color.x, light.color.y, light.color.z);
         this.gl.uniform1f(this.uniformDlights[i].intensity, light.intensity);
     }
+
+    // Bind Lighting controls
+    this.gl.uniform1f(this.uniformBrightness, brightness);
+    this.gl.uniform1f(this.uniformGamma, gamma);
+    this.gl.uniform1i(this.uniformFullbright, fullbright ? 1 : 0);
+    this.gl.uniform1f(this.uniformAmbient, ambient);
 
     return state;
   }
