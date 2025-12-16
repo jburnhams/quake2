@@ -2,7 +2,6 @@ import { createRenderer } from '../../src/render/renderer.js';
 import { FrameRenderer } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RenderStatistics } from '../../src/render/gpuProfiler.js';
-import { Md3ModelMesh } from '../../src/render/md3Pipeline.js';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -14,7 +13,7 @@ vi.mock('../../src/render/md2Pipeline.js', () => ({
     })),
     Md2MeshBuffers: vi.fn(() => ({
         update: vi.fn(),
-        geometry: { vertices: new Float32Array(30) } // 10 verts
+        geometry: { vertices: new Float32Array(30) }
     }))
 }));
 vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
@@ -33,10 +32,9 @@ vi.mock('../../src/render/md3Pipeline.js', () => ({
     })),
     Md3ModelMesh: vi.fn(() => ({
         update: vi.fn(),
-        surfaces: new Map([['test', { geometry: { vertices: new Float32Array(30) } }]]) // 10 verts
+        surfaces: new Map([['test', { geometry: { vertices: new Float32Array(30) } }]])
     }))
 }));
-
 
 // Mock DebugRenderer
 vi.mock('../../src/render/debug.js', () => ({
@@ -46,6 +44,13 @@ vi.mock('../../src/render/debug.js', () => ({
         clear: vi.fn(),
         getLabels: vi.fn().mockReturnValue([])
     })),
+}));
+
+// Mock culling to always verify visibility
+vi.mock('../../src/render/culling.js', () => ({
+    boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+    extractFrustumPlanes: vi.fn().mockReturnValue([]),
+    transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
 }));
 
 // Mock FrameRenderer with stats return
@@ -65,7 +70,7 @@ vi.mock('../../src/render/frame.js', () => ({
     createFrameRenderer: vi.fn(() => mockFrameRenderer),
 }));
 
-// Mock bspTraversal and light to avoid errors during renderFrame
+// Mock bspTraversal and light
 vi.mock('../../src/render/bspTraversal.js', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0),
     isClusterVisible: vi.fn().mockReturnValue(true),
@@ -95,7 +100,7 @@ describe('Renderer Statistics', () => {
                  if (param === 0x8866) return 5000000; // QUERY_RESULT
                  return 0;
             }),
-            getParameter: vi.fn().mockReturnValue(0), // No disjoint
+            getParameter: vi.fn().mockReturnValue(0),
             canvas: { width: 640, height: 480 },
             createShader: vi.fn().mockReturnValue({}),
             shaderSource: vi.fn(),
@@ -120,7 +125,6 @@ describe('Renderer Statistics', () => {
             deleteProgram: vi.fn(),
             uniformMatrix4fv: vi.fn(),
             drawArrays: vi.fn(),
-            // Define constants used by GpuProfiler
             QUERY_RESULT_AVAILABLE: 0x8867,
             QUERY_RESULT: 0x8866
         } as unknown as WebGL2RenderingContext;
@@ -136,7 +140,6 @@ describe('Renderer Statistics', () => {
     });
 
     it('should update statistics after rendering a frame', () => {
-        // Fix: Provide viewMatrix as a Float32Array or array-like that has at least 16 elements
         const viewMatrix = new Float32Array(16);
         const options = {
             camera: {
@@ -170,7 +173,6 @@ describe('Renderer Statistics', () => {
             }
         } as any;
 
-        // Mock an MD3 entity
         const entities = [{
             type: 'md3',
             model: {
@@ -182,35 +184,12 @@ describe('Renderer Statistics', () => {
             lighting: {}
         }] as any;
 
-        // renderFrame calls Md3Pipeline.drawSurface which we mocked.
-        // It also calculates lighting, frustum culling, etc.
-        // With current mocks:
-        // - Frustum culling: transformAabb -> boxIntersectsFrustum. We didn't mock boxIntersectsFrustum but it is in culling.js.
-        //   Real boxIntersectsFrustum might filter it out if matrices are identity (0s).
-        // Let's ensure boxIntersectsFrustum returns true by mocking it in this file if not already.
-        // culling.js imports are real unless mocked.
-
         renderer.renderFrame(options, entities);
 
-        // draw calls: 10 (from frameRenderer) + 1 (entity) = 11
-        // vertices: 1000 (frame) + 10 (entity) = 1010
+        // draw calls: 10 (frame) + 1 (entity) = 11
+        // vertices: 1000 (frame) + 30 (entity vertices in mock) = 1030
         const stats = renderer.getPerformanceReport();
 
-        // Check if entity was actually drawn.
-        // If culling removed it, drawCalls would be 10.
-        // Since we didn't mock culling.js fully (only imported extractFrustumPlanes in renderer),
-        // we rely on real logic. Identity matrix and 0 position might cause issues.
-        // But let's assume it passes or we can relax expectation.
-
-        // Wait, I didn't mock culling.js completely in the original file, just imported some.
-        // In the test file I see `vi.mock('../../src/render/culling.js', ...)` is NOT present.
-        // So it uses real culling.
-        // Identity viewProjection -> Frustum planes are all 0?
-        // Let's add a mock for culling to force visibility.
-
-        // Assert that entity draws are added to frame stats
-        // We expect drawCalls to be 10 (frame) + 1 (entity) = 11
-        // We expect vertices to be 1000 (frame) + 30 (entity floats in mock) = 1030
         expect(stats.drawCalls).toBe(11);
         expect(stats.vertices).toBe(1030);
     });

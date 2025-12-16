@@ -100,29 +100,50 @@ export class DemoAnalyzer {
                 }
             },
             onPrint: (level, msg) => {
+                 const text = msg.replace(/\n/g, ' ').trim();
                  // Check for death messages
-                 if (msg.includes("died") || msg.includes("killed") || msg.includes("suicide")) {
+                 if (text.includes("died") || text.includes("killed") || text.includes("suicide")) {
                      this.summary.totalDeaths++; // Simple count
                      this.recordEvent({
                         type: DemoEventType.Death,
                         frame: currentFrameIndex,
                         time: currentTime,
-                        description: msg.trim()
+                        description: text
                      });
-                     // Heuristic: Assign death to current player if mentioned?
-                     // Hard without names.
-                 }
-                 // Check for pickups
-                 if (msg.startsWith("You got the ")) {
+
+                     // Detect kill vs death
+                     // "Player was killed by Monster" -> Death
+                     // "Monster was killed by Player" -> Kill (if we are Player)
+                     // Since we don't have full name mapping easily, we assume "Death" for now unless we match our name.
+                 } else if (text.startsWith("You got the ")) {
                      this.recordEvent({
                          type: DemoEventType.Pickup,
                          frame: currentFrameIndex,
                          time: currentTime,
-                         description: msg.trim()
+                         description: text
                      });
+                 } else {
+                     // Chat or other messages
+                     // PRINT_CHAT is usually level 3, but onPrint arg 'level' tells us.
+                     if (level === 3 || level === 2) { // Chat or Medium
+                         this.recordEvent({
+                             type: DemoEventType.Chat,
+                             frame: currentFrameIndex,
+                             time: currentTime,
+                             description: text,
+                             data: { level }
+                         });
+                     }
                  }
             },
-            onCenterPrint: () => {},
+            onCenterPrint: (msg) => {
+                this.recordEvent({
+                    type: DemoEventType.Objective,
+                    frame: currentFrameIndex,
+                    time: currentTime,
+                    description: msg.trim()
+                });
+            },
             onStuffText: () => {},
             onSound: () => {},
             onTempEntity: () => {},

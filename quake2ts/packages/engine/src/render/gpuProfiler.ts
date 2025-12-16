@@ -4,14 +4,34 @@ export interface GpuTimerResult {
 }
 
 export interface RenderStatistics {
+  readonly frameTimeMs: number;
   readonly gpuTimeMs: number;
   readonly cpuFrameTimeMs: number;
   readonly drawCalls: number;
   readonly triangles: number;
   readonly vertices: number;
   readonly textureBinds: number;
-  readonly textureMemoryBytes: number;
-  readonly bufferMemoryBytes: number;
+  readonly shaderSwitches: number;
+  readonly visibleSurfaces: number;
+  readonly culledSurfaces: number;
+  readonly visibleEntities: number;
+  readonly culledEntities: number;
+  readonly memoryUsageMB: {
+    readonly textures: number;
+    readonly geometry: number;
+    readonly total: number;
+  };
+}
+
+export interface FrameStats {
+    drawCalls: number;
+    vertexCount: number;
+    batches: number;
+    shaderSwitches: number;
+    visibleSurfaces: number;
+    culledSurfaces: number;
+    visibleEntities: number;
+    culledEntities: number;
 }
 
 export class GpuProfiler {
@@ -41,16 +61,28 @@ export class GpuProfiler {
   }
 
   // To be called by Renderer to construct the final report
-  getPerformanceReport(frameStats: { drawCalls: number; vertexCount: number; batches: number }): RenderStatistics {
+  getPerformanceReport(frameStats: FrameStats): RenderStatistics {
+      const textureMB = this.textureMemoryBytes / (1024 * 1024);
+      const geometryMB = this.bufferMemoryBytes / (1024 * 1024);
+
       return {
+          frameTimeMs: this.lastCpuFrameTimeMs, // Main frame time (CPU)
           gpuTimeMs: this.lastGpuTimeMs,
           cpuFrameTimeMs: this.lastCpuFrameTimeMs,
           drawCalls: frameStats.drawCalls,
           triangles: Math.floor(frameStats.vertexCount / 3), // Approximation if mostly triangles
           vertices: frameStats.vertexCount,
           textureBinds: frameStats.batches, // Using batches as proxy for texture binds
-          textureMemoryBytes: this.textureMemoryBytes,
-          bufferMemoryBytes: this.bufferMemoryBytes
+          shaderSwitches: frameStats.shaderSwitches,
+          visibleSurfaces: frameStats.visibleSurfaces,
+          culledSurfaces: frameStats.culledSurfaces,
+          visibleEntities: frameStats.visibleEntities,
+          culledEntities: frameStats.culledEntities,
+          memoryUsageMB: {
+              textures: textureMB,
+              geometry: geometryMB,
+              total: textureMB + geometryMB
+          }
       };
   }
 

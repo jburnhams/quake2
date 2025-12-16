@@ -620,9 +620,16 @@ export class DemoPlaybackController {
 
   // 3.2.3 Event Log Extraction & 3.3 Metadata
 
-  public getDemoEvents(): DemoEvent[] {
+  /**
+   * Extract notable events from demo for timeline markers
+   */
+  public getEvents(): DemoEvent[] {
       this.ensureAnalysis();
       return this.cachedEvents || [];
+  }
+
+  public getDemoEvents(): DemoEvent[] {
+      return this.getEvents();
   }
 
   public filterEvents(type: DemoEventType, entityId?: number): DemoEvent[] {

@@ -11,7 +11,7 @@ import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
-import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
+import { GpuProfiler, RenderStatistics, FrameStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
@@ -90,7 +90,16 @@ export const createRenderer = (
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
     let font: Pic | null = null;
-    let lastFrameStats = { drawCalls: 0, vertexCount: 0, batches: 0 };
+    let lastFrameStats: FrameStats = {
+        drawCalls: 0,
+        vertexCount: 0,
+        batches: 0,
+        shaderSwitches: 0,
+        visibleSurfaces: 0,
+        culledSurfaces: 0,
+        visibleEntities: 0,
+        culledEntities: 0
+    };
     const highlightedEntities = new Map<number, [number, number, number, number]>();
     const highlightedSurfaces = new Map<number, [number, number, number, number]>();
     let debugMode = DebugMode.None;
@@ -157,6 +166,17 @@ export const createRenderer = (
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
 
+        // Frame stats from frameRenderer need to be mapped to our FrameStats
+        // Assuming frameRenderer returns object similar to what we mocked
+        // { drawCalls: number, vertexCount: number, batches: number, facesDrawn: number }
+        // We'll need to instrument frameRenderer to return culled surfaces too or calculate it.
+        // For now, let's assume map faces count - facesDrawn = culledSurfaces if we had total faces.
+        // But FrameRenderer doesn't expose total faces easily here without querying options.world.map.faces.length
+
+        let visibleSurfaces = (stats as any).facesDrawn || 0;
+        let totalSurfaces = options.world ? options.world.map.faces.length : 0;
+        let culledSurfaces = totalSurfaces - visibleSurfaces;
+
         // Determine view cluster for PVS culling
         let viewCluster = -1;
         if (options.world && renderOptions?.cullingEnabled !== false) {
@@ -175,6 +195,8 @@ export const createRenderer = (
         let lastTexture: Texture2D | undefined;
         let entityDrawCalls = 0;
         let entityVertices = 0;
+        let visibleEntities = 0;
+        let culledEntities = 0;
 
         for (const entity of entities) {
             // PVS Culling
@@ -189,6 +211,7 @@ export const createRenderer = (
                 if (entityLeafIndex >= 0) {
                     const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
                     if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
+                        culledEntities++;
                         continue;
                     }
                 }
@@ -234,9 +257,12 @@ export const createRenderer = (
             if (minBounds && maxBounds) {
                 const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
                 if (!boxIntersectsFrustum(worldBounds.mins, worldBounds.maxs, frustumPlanes)) {
+                    culledEntities++;
                     continue;
                 }
             }
+
+            visibleEntities++;
 
             // Calculate ambient light for the entity
             const position = {
@@ -256,6 +282,12 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
                             md2MeshCache.set(entity.model, mesh);
+                            // Corrected property access
+                            const vertexBytes = mesh.geometry.vertices.length * 8 * 4; // 8 floats per vertex, 4 bytes per float
+                            // assuming indices are also stored and consume memory
+                            // indices are Uint16, so 2 bytes each
+                            const indexBytes = mesh.geometry.indices.length * 2;
+                            gpuProfiler.trackBufferMemory(vertexBytes + indexBytes);
                         } else {
                             mesh.update(entity.model, entity.blend);
                         }
@@ -334,6 +366,8 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
                             md3MeshCache.set(entity.model, mesh);
+                            // Approximate memory tracking for Md3
+                            // gpuProfiler.trackBufferMemory(...);
                         } else {
                             mesh.update(entity.blend, lighting);
                         }
@@ -597,7 +631,12 @@ export const createRenderer = (
         lastFrameStats = {
             drawCalls: stats.drawCalls + entityDrawCalls,
             vertexCount: stats.vertexCount + entityVertices,
-            batches: stats.batches // Approximation
+            batches: stats.batches, // Approximation for texture binds
+            shaderSwitches: 0, // Not fully tracked yet
+            visibleSurfaces,
+            culledSurfaces,
+            visibleEntities,
+            culledEntities
         };
 
         gpuProfiler.endFrame();
@@ -614,6 +653,7 @@ export const createRenderer = (
         const texture = new Texture2D(gl);
         texture.upload(imageBitmap.width, imageBitmap.height, imageBitmap);
         picCache.set(name, texture);
+        gpuProfiler.trackTextureMemory(imageBitmap.width * imageBitmap.height * 4);
 
         if (name.includes('conchars')) {
             font = texture;
@@ -632,6 +672,7 @@ export const createRenderer = (
         tex.upload(level.width, level.height, level.rgba);
 
         picCache.set(name, tex);
+        gpuProfiler.trackTextureMemory(level.width * level.height * 4);
 
         if (name.includes('conchars')) {
             font = tex;
