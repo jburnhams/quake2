@@ -872,7 +872,7 @@ interface MemoryUsage {
 | Admin/Cheat APIs | game | P1 | 01 | Implemented |
 | Master Server Client | client/net | P1 | 02 | Implemented |
 | WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
-| Spectator Mode APIs | game/client | P1 | 02 | Needed |
+| Spectator Mode APIs | game/client | P1 | 02 | Implemented |
 | Demo Event Extraction | client | P1 | 03 | Needed |
 | Demo Clip Extraction | client | P2 | 03 | Needed |
 | Demo Metadata Access | client | P2 | 03 | Needed |
