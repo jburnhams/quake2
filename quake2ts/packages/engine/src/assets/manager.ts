@@ -8,6 +8,7 @@ import { VirtualFileSystem, VirtualFileHandle } from './vfs.js';
 import { parsePcx } from './pcx.js';
 import { parseTga } from './tga.js';
 import { BspLoader, type BspMap } from './bsp.js';
+import { ResourceLoadTracker, ResourceType } from './resourceTracker.js';
 
 type AssetType = 'texture' | 'model' | 'sound' | 'sprite' | 'map';
 
@@ -85,12 +86,14 @@ export interface AssetManagerOptions {
   readonly textureCacheCapacity?: number;
   readonly audioCacheSize?: number;
   readonly dependencyTracker?: AssetDependencyTracker;
+  readonly resourceTracker?: ResourceLoadTracker;
 }
 
 export class AssetManager {
   readonly textures: TextureCache;
   readonly audio: AudioRegistry;
   readonly dependencyTracker: AssetDependencyTracker;
+  readonly resourceTracker?: ResourceLoadTracker;
   private readonly md2: Md2Loader;
   private readonly md3: Md3Loader;
   private readonly sprite: SpriteLoader;
@@ -102,6 +105,7 @@ export class AssetManager {
     this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
     this.audio = new AudioRegistry(vfs, { cacheSize: options.audioCacheSize ?? 64 });
     this.dependencyTracker = options.dependencyTracker ?? new AssetDependencyTracker();
+    this.resourceTracker = options.resourceTracker;
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
     this.sprite = new SpriteLoader(vfs);
@@ -146,6 +150,9 @@ export class AssetManager {
   }
 
   async loadTexture(path: string): Promise<PreparedTexture> {
+    if (this.resourceTracker) {
+        this.resourceTracker.recordLoad(ResourceType.Texture, path);
+    }
     const cached = this.textures.get(path);
     if (cached) return cached;
 
@@ -169,6 +176,9 @@ export class AssetManager {
   }
 
   async loadSound(path: string): Promise<DecodedAudio> {
+    if (this.resourceTracker) {
+        this.resourceTracker.recordLoad(ResourceType.Sound, path);
+    }
     const audio = await this.audio.load(path);
     const key = this.makeKey('sound', path);
     this.dependencyTracker.register(key);
@@ -177,6 +187,9 @@ export class AssetManager {
   }
 
   async loadMd2Model(path: string, textureDependencies: readonly string[] = []): Promise<Md2Model> {
+    if (this.resourceTracker) {
+        this.resourceTracker.recordLoad(ResourceType.Model, path);
+    }
     const modelKey = this.makeKey('model', path);
     const dependencyKeys = textureDependencies.map((dep) => this.makeKey('texture', dep));
     this.dependencyTracker.register(modelKey, dependencyKeys);
@@ -190,10 +203,16 @@ export class AssetManager {
   }
 
   getMd2Model(path: string): Md2Model | undefined {
+      if (this.resourceTracker) {
+          this.resourceTracker.recordLoad(ResourceType.Model, path);
+      }
       return this.md2.get(path);
   }
 
   async loadMd3Model(path: string, textureDependencies: readonly string[] = []): Promise<Md3Model> {
+    if (this.resourceTracker) {
+        this.resourceTracker.recordLoad(ResourceType.Model, path);
+    }
     const modelKey = this.makeKey('model', path);
     const dependencyKeys = textureDependencies.map((dep) => this.makeKey('texture', dep));
     this.dependencyTracker.register(modelKey, dependencyKeys);
@@ -207,10 +226,16 @@ export class AssetManager {
   }
 
   getMd3Model(path: string): Md3Model | undefined {
+      if (this.resourceTracker) {
+          this.resourceTracker.recordLoad(ResourceType.Model, path);
+      }
       return this.md3.get(path);
   }
 
   async loadSprite(path: string): Promise<SpriteModel> {
+    if (this.resourceTracker) {
+        this.resourceTracker.recordLoad(ResourceType.Sprite, path);
+    }
     const spriteKey = this.makeKey('sprite', path);
     this.dependencyTracker.register(spriteKey);
     const sprite = await this.sprite.load(path);
@@ -219,6 +244,9 @@ export class AssetManager {
   }
 
   async loadMap(path: string): Promise<BspMap> {
+      if (this.resourceTracker) {
+          this.resourceTracker.recordLoad(ResourceType.Map, path);
+      }
       const mapKey = this.makeKey('map', path);
       if (this.maps.has(path)) {
           return this.maps.get(path)!;
