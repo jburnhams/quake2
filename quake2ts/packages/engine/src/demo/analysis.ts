@@ -18,13 +18,16 @@ export interface FrameDiff {
 }
 
 export enum DemoEventType {
-    WeaponFire,
-    DamageDealt,
-    DamageReceived,
-    Pickup,
-    Death,
-    Spawn,
-    PlayerInfo // Name change, etc
+    WeaponFire = 'weapon_fire',
+    DamageDealt = 'damage_dealt',
+    DamageReceived = 'damage_received',
+    Pickup = 'pickup',
+    Death = 'death',
+    Kill = 'kill',
+    Spawn = 'spawn',
+    PlayerInfo = 'player_info',
+    Chat = 'chat',
+    Objective = 'objective'
 }
 
 export interface DemoEvent {
@@ -36,6 +39,7 @@ export interface DemoEvent {
     value?: number; // Damage amount, weapon ID, etc.
     position?: Vec3;
     description?: string;
+    data?: any; // Extra data as needed by enhancement request
 }
 
 export interface EventSummary {
