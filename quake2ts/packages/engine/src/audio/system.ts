@@ -19,7 +19,6 @@ import {
 } from './context.js';
 import { SoundRegistry } from './registry.js';
 import { baseChannel, createInitialChannels, pickChannel, type ChannelState } from './channels.js';
-import { spatializeOrigin, type ListenerState } from './spatialization.js';
 import { ReverbSystem, type ReverbPreset } from './reverb.js';
 
 export interface SoundRequest {
@@ -66,6 +65,13 @@ interface OcclusionState {
 export interface OcclusionResult {
   gainScale?: number;
   lowpassHz?: number;
+}
+
+export interface ListenerState {
+  origin: Vec3;
+  right: Vec3;
+  mono?: boolean;
+  playerEntity?: number;
 }
 
 export type OcclusionResolver = (
@@ -194,13 +200,13 @@ export class AudioSystem {
       ? this.createOcclusionFilter(ctx, occlusion?.lowpassHz ?? 20000)
       : undefined;
     this.applyOriginToPanner(panner, origin);
-    const isListenerSound = request.entity === this.playerEntity;
-    const spatial = spatializeOrigin(origin, this.listener, request.volume, request.attenuation, isListenerSound);
 
-    const attenuationScale = request.volume === 0 ? 0 : Math.max(spatial.left, spatial.right) / Math.max(1, request.volume);
-    const gainValue = attenuationScale * (request.volume / 255) * this.masterVolume * this.sfxVolume;
+    // Gain logic: only apply base volume, master, sfx.
+    // Panner handles distance attenuation and spatialization.
+    const baseVolume = request.volume / 255;
+    const gainValue = baseVolume * this.sfxVolume; // masterVolume is on graph.master
 
-    // Mute if playback rate is not 1.0
+    // Mute if playback rate is not 1.0 (if desired, though usually we might want pitch shift)
     const playbackRateMute = Math.abs(this.playbackRate - 1.0) < 0.001 ? 1 : 0;
 
     gain.gain.value = gainValue * occlusionScale * playbackRateMute;
@@ -210,31 +216,12 @@ export class AudioSystem {
 
     source.connect(panner);
 
-    // Connect panner to reverb if available
-    if (this.reverb && this.reverb.getInputNode()) {
-        // We route the panner output to reverb send
-        // But the panner output is stereo, reverb input is stereo or mono.
-        // This is a wet path.
-        // We probably want to send post-panner but pre-gain (or post-gain?)
-        // If we send pre-gain, we need to apply gain to the send.
-        // If we send post-gain, the reverb level scales with source volume, which is correct.
-
-        // Wait, gain is master volume and sfx volume applied.
-        // If we connect gain to master, it's dry.
-        // If we connect gain to reverb, it's wet.
-        // So we can connect gain to both.
-
-        // However, occlusion might filter the sound. Reverb should probably be fed the filtered sound too?
-        // Realistically, occlusion affects the direct path strongly. The reverberant path might be less affected (sound bouncing around obstacles),
-        // but for simplicity, let's feed the occluded signal to reverb.
-    }
-
     let finalNode: AudioNodeLike = panner;
 
     if (occlusionFilter) {
       panner.connect(occlusionFilter);
       occlusionFilter.connect(gain);
-      finalNode = gain; // Output of this chain is gain
+      finalNode = gain;
     } else {
       panner.connect(gain);
       finalNode = gain;
@@ -385,10 +372,15 @@ export class AudioSystem {
     panner.refDistance = SOUND_FULLVOLUME;
     panner.maxDistance = calculateMaxAudibleDistance(attenuation);
     panner.rolloffFactor = distMult;
-    panner.distanceModel = attenuation === 0 ? 'linear' : 'inverse';
+    panner.distanceModel = 'linear'; // Use linear for everything to match Quake 2
     panner.positionX.value = this.listener.origin.x;
     panner.positionY.value = this.listener.origin.y;
     panner.positionZ.value = this.listener.origin.z;
+
+    // For ATTN_NONE (0), we might want no attenuation.
+    // If attenuation is 0, distMult is 0. rolloffFactor 0 means no distance attenuation.
+    // So linear model with rolloff 0 is correct.
+
     return panner;
   }
 

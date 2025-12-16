@@ -164,7 +164,7 @@ describe('AudioSystem', () => {
     expect(ambient).toBeTruthy();
 
     const positionedPanner = fakeContext.panners.at(-2)!;
-    expect(positionedPanner.distanceModel).toBe('inverse');
+    expect(positionedPanner.distanceModel).toBe('linear');
     const ambientPanner = fakeContext.panners.at(-1)!;
     expect(ambientPanner.distanceModel).toBe('linear');
     expect(ambientPanner.rolloffFactor).toBe(0);
@@ -427,15 +427,15 @@ describe('AudioSystem', () => {
 
     system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_NORM);
     const pannerNorm = fakeContext.panners[0];
-    expect(pannerNorm.distanceModel).toBe('inverse');
+    expect(pannerNorm.distanceModel).toBe('linear');
 
     system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_IDLE);
     const pannerIdle = fakeContext.panners[1];
-    expect(pannerIdle.distanceModel).toBe('inverse');
+    expect(pannerIdle.distanceModel).toBe('linear');
 
     system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_STATIC);
     const pannerStatic = fakeContext.panners[2];
-    expect(pannerStatic.distanceModel).toBe('inverse');
+    expect(pannerStatic.distanceModel).toBe('linear');
 
     system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_NONE);
     const pannerNone = fakeContext.panners[3];
@@ -481,7 +481,7 @@ describe('AudioSystem', () => {
     });
 
     const gain = fakeContext.gains[2]; // sound-specific gain
-    const expectedGain = (128 / 255) * 0.5 * 0.8;
+    const expectedGain = (128 / 255) * 0.8; // master volume is applied at graph.master
     expect(gain.gain.value).toBeCloseTo(expectedGain);
   });
 
