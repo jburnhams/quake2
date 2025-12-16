@@ -77,7 +77,8 @@ describe('Railgun', () => {
             expect.anything(), // damageFlags
             DamageMod.RAILGUN,
             expect.anything(),
-            expect.anything()
+            expect.anything(),
+            expect.objectContaining({ hooks: expect.anything() })
         );
     });
 
@@ -98,7 +99,8 @@ describe('Railgun', () => {
             expect.anything(), // damageFlags
             DamageMod.RAILGUN,
             expect.anything(),
-            expect.anything()
+            expect.anything(),
+            expect.objectContaining({ hooks: expect.anything() })
         );
     });
 });

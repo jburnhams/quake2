@@ -1,16 +1,18 @@
 import { Entity } from './entities/entity.js';
-import { SpawnRegistry, SpawnContext } from './entities/spawn.js';
+import { ScriptHooks } from './scripting/hooks.js';
+
+export { ScriptHooks };
 
 /**
- * Mod API for registering custom entities and commands.
+ * Mod API for registering custom entities and hooks.
  */
 export interface ModAPI {
   registerEntity(classname: string, spawnFunc: (entity: Entity) => void): void;
-  // TODO: registerCommand, registerCvar in future
+  registerHooks(hooks: ScriptHooks): () => void;
 }
 
 /**
- * Interface extension for GameExports to support custom entity registration
+ * Interface extension for GameExports to support custom entity registration and hooks
  */
 export interface CustomEntityRegistration {
   /**
@@ -31,4 +33,10 @@ export interface CustomEntityRegistration {
    * Get list of registered custom entities
    */
   getCustomEntities(): string[];
+
+  /**
+   * Register script hooks.
+   * @returns A cleanup function to unregister the hooks.
+   */
+  registerHooks(hooks: ScriptHooks): () => void;
 }
