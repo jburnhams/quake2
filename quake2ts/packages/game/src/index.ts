@@ -128,6 +128,10 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
   giveItem(itemClassname: string): void;
   damage(amount: number): void;
   teleport(origin: Vec3): void;
+
+  // Script Hooks
+  registerHooks(hooks: ScriptHooks): () => void;
+  hooks: ScriptHookRegistry;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
