@@ -75,6 +75,8 @@ describe('Weapon Alt-Fires', () => {
         right: { x: 0, y: 1, z: 0 },
         up: { x: 0, y: 0, z: 1 }
     });
+
+    vi.clearAllMocks();
   });
 
   describe('Super Shotgun', () => {

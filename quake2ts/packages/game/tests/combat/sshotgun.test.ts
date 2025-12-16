@@ -52,7 +52,7 @@ describe('Super Shotgun', () => {
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
         expect(trace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
         // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
-        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, game.time, expect.any(Function), expect.objectContaining({ hooks: expect.anything() }));
+        expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, game.time, expect.any(Function));
     });
 
     it('should fire two volleys with horizontal spread', () => {

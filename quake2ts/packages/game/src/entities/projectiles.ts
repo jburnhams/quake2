@@ -62,12 +62,12 @@ export function createRocket(sys: EntitySystem, owner: Entity, start: Vec3, dir:
                 DamageMod.ROCKET,
                 sys.timeSeconds,
                 sys.multicast.bind(sys),
-                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }
+                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }
             );
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
@@ -158,12 +158,12 @@ export function createGuidedRocket(sys: EntitySystem, owner: Entity, start: Vec3
                 DamageMod.ROCKET,
                 sys.timeSeconds,
                 sys.multicast.bind(sys),
-                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }
+                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }
             );
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
         sys.free(self);
@@ -195,7 +195,7 @@ export function createGrenade(sys: EntitySystem, owner: Entity, start: Vec3, dir
 
     const explode = (self: Entity) => {
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.GRENADE, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         // Explosion effect
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, self.origin);
@@ -276,8 +276,7 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
                 DamageFlags.NONE,
                 mod,
                 sys.timeSeconds,
-                sys.multicast.bind(sys),
-                { hooks: sys.scriptHooks }
+                sys.multicast.bind(sys)
             );
         } else {
             // Wall impact effect
@@ -340,7 +339,7 @@ export function createIonRipper(sys: EntitySystem, owner: Entity, start: Vec3, d
                 DamageMod.RIPPER,
                 sys.timeSeconds,
                 sys.multicast.bind(sys),
-                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }
+                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }
             );
             sys.free(self);
             return;
@@ -439,7 +438,7 @@ function fireBfgPiercingLaser(sys: EntitySystem, bfg: Entity, target: Entity, da
                     DamageMod.BFG_LASER,
                     sys.timeSeconds,
                     sys.multicast.bind(sys),
-                    { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }
+                    { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }
                 );
             }
 
@@ -586,8 +585,7 @@ function bfgExplode(self: Entity, sys: EntitySystem): void {
                     DamageFlags.ENERGY,
                     DamageMod.BFG_EFFECT,
                     sys.timeSeconds,
-                    sys.multicast.bind(sys),
-                    { hooks: sys.scriptHooks }
+                    sys.multicast.bind(sys)
                 );
 
                 // Visual BFG zap effect (would need TE_BFG_ZAP if available)
@@ -648,15 +646,14 @@ export function createBfgBall(sys: EntitySystem, owner: Entity, start: Vec3, dir
                 DamageFlags.ENERGY,
                 DamageMod.BFG_BLAST,
                 sys.timeSeconds,
-                sys.multicast.bind(sys),
-                { hooks: sys.scriptHooks }
+                sys.multicast.bind(sys)
             );
         }
 
         // Radius damage from initial impact
         const entities = sys.findByRadius(self.origin, 100);
         T_RadiusDamage(entities as any[], self as any, self.owner as any, 200, other as any, 100,
-            DamageFlags.ENERGY, DamageMod.BFG_BLAST, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+            DamageFlags.ENERGY, DamageMod.BFG_BLAST, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         // Big explosion effect
         // Based on rerelease/g_weapon.cpp:1021-1024
@@ -720,14 +717,13 @@ export function createPhalanxBall(sys: EntitySystem, owner: Entity, start: Vec3,
                 DamageFlags.ENERGY,
                 DamageMod.PHALANX,
                 sys.timeSeconds,
-                sys.multicast.bind(sys),
-                { hooks: sys.scriptHooks }
+                sys.multicast.bind(sys)
             );
         }
 
         // Radius damage
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.ENERGY, DamageMod.PHALANX, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, radiusDamage, self.owner as any, 120, DamageFlags.ENERGY, DamageMod.PHALANX, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         // Explosion effect
         // Using TE_PLASMA_EXPLOSION or similar
@@ -838,11 +834,11 @@ export function createHeatSeekingMissile(sys: EntitySystem, owner: Entity, start
         if (other === self.owner) return;
 
         if (other && other.takedamage) {
-            T_Damage(other as any, self as any, self.owner as any, self.velocity, self.origin, plane ? plane.normal : ZERO_VEC3, damage, 0, DamageFlags.NONE, DamageMod.ROCKET, sys.timeSeconds, sys.multicast.bind(sys), { hooks: sys.scriptHooks });
+            T_Damage(other as any, self as any, self.owner as any, self.velocity, self.origin, plane ? plane.normal : ZERO_VEC3, damage, 0, DamageFlags.NONE, DamageMod.ROCKET, sys.timeSeconds, sys.multicast.bind(sys));
         }
 
         const entities = sys.findByRadius(self.origin, 120);
-        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }, sys.multicast.bind(sys));
+        T_RadiusDamage(entities as any[], self as any, self.owner as any, damage, self.owner as any, 120, DamageFlags.NONE, DamageMod.R_SPLASH, sys.timeSeconds, { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }, sys.multicast.bind(sys));
 
         sys.multicast(self.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.ROCKET_EXPLOSION, self.origin);
         sys.free(self);
@@ -891,7 +887,7 @@ export function createFlechette(sys: EntitySystem, owner: Entity, start: Vec3, d
                 DamageMod.ETF_RIFLE, // Assuming this exists or falls under UNKNOWN
                 sys.timeSeconds,
                 sys.multicast ? sys.multicast.bind(sys) : undefined,
-                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire, hooks: sys.scriptHooks }
+                { checkFriendlyFire: sys.coop, noFriendlyFire: !sys.friendlyFire }
             );
 
             // Freeze Logic

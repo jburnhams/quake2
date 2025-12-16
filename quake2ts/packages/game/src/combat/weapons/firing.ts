@@ -144,8 +144,7 @@ function fireHitscan(game: GameExports, player: Entity, start: Vec3, forward: an
             DamageFlags.BULLET,
             mod,
             game.time,
-            game.multicast,
-            { hooks: game.hooks }
+            game.multicast
         );
     } else {
         // Wall impact
@@ -180,8 +179,7 @@ function fireMultiplePellets(game: GameExports, player: Entity, start: Vec3, for
                     DamageFlags.BULLET,
                     mod,
                     game.time,
-                    game.multicast,
-                    { hooks: game.hooks }
+                    game.multicast
                 );
             } else if (trace.plane) {
                 if (random.frandom() > 0.9) {
@@ -232,8 +230,7 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
                     DamageFlags.ENERGY,
                     DamageMod.RAILGUN,
                     game.time,
-                    game.multicast,
-                    { hooks: game.hooks }
+                    game.multicast
                 );
             }
 
@@ -277,7 +274,7 @@ export function fireHandGrenade(game: GameExports, player: Entity, inventory: Pl
 
             if (held) {
                 const dmg = 120;
-                T_RadiusDamage([ent] as any, ent as any, ent as any, dmg, ent as any, 120, DamageFlags.NONE, DamageMod.GRENADE, game.time, { hooks: game.hooks }, game.multicast);
+                T_RadiusDamage([ent] as any, ent as any, ent as any, dmg, ent as any, 120, DamageFlags.NONE, DamageMod.GRENADE, game.time, {}, game.multicast);
                 game.multicast(ent.origin, MulticastType.Phs, ServerCommand.temp_entity, TempEntity.GRENADE_EXPLOSION, ent.origin);
             } else {
                 let heldTime = 0;
@@ -425,9 +422,6 @@ export function fireChaingun(game: GameExports, player: Entity) {
         } else {
             shots = 3;
         }
-    }
-
-    if (spinupCount > 1) {
         game.sound(player, 0, "weapons/chngnl1a.wav", 1, 0, 0);
     }
 
@@ -537,8 +531,7 @@ export function fireBlaster(game: GameExports, player: Entity) {
                     0,
                     DamageMod.BLASTER,
                     game.time,
-                    game.multicast,
-                    { hooks: game.hooks }
+                    game.multicast
                 );
                 // Hit sound
                 game.sound(player, 0, 'weapons/tink1.wav', 1, ATTN_NORM, 0);
@@ -650,8 +643,7 @@ export function fireHyperBlasterBeam(game: GameExports, player: Entity, weaponSt
             DamageFlags.ENERGY,
             DamageMod.HYPERBLASTER, // Or new mod?
             game.time,
-            game.multicast,
-            { hooks: game.hooks }
+            game.multicast
         );
     }
 

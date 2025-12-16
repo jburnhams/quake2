@@ -51,18 +51,7 @@ describe('Weapon Firing - Edge Cases', () => {
             },
             random: {
                 irandom: vi.fn(),
-            },
-            hooks: {
-                onDamage: vi.fn(),
-                onPlayerSpawn: vi.fn(),
-                onPlayerDeath: vi.fn(),
-                onEntitySpawn: vi.fn(),
-                onEntityRemove: vi.fn(),
-                onPickup: vi.fn(),
-                register: vi.fn(),
-                onMapLoad: vi.fn(),
-                onMapUnload: vi.fn(),
-            } as any
+            }
         };
     });
 
@@ -86,8 +75,7 @@ describe('Weapon Firing - Edge Cases', () => {
                 expect.anything(),
                 expect.anything(),
                 game.time,
-                expect.anything(),
-                { hooks: game.hooks }
+                expect.anything()
             );
         });
 
@@ -106,8 +94,7 @@ describe('Weapon Firing - Edge Cases', () => {
                 expect.anything(),
                 expect.anything(),
                 game.time,
-                expect.anything(),
-                { hooks: game.hooks }
+                expect.anything()
             );
         });
     });

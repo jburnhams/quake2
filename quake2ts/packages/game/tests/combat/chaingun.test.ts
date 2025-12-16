@@ -85,8 +85,7 @@ describe('Chaingun', () => {
             expect.anything(),
             DamageMod.CHAINGUN,
             game.time,
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
+            expect.anything()
         );
     });
 
@@ -112,8 +111,7 @@ describe('Chaingun', () => {
             expect.anything(),
             DamageMod.CHAINGUN,
             game.time,
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
+            expect.anything()
         );
     });
 

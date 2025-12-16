@@ -20,6 +20,10 @@ describe('Entity Selection', () => {
   function createEntity(mins: number[], maxs: number[]): Entity {
     const e = {
       inUse: true,
+      origin: { x: 0, y: 0, z: 0 },
+      angles: { x: 0, y: 0, z: 0 },
+      mins: { x: mins[0], y: mins[1], z: mins[2] },
+      maxs: { x: maxs[0], y: maxs[1], z: maxs[2] },
       absmin: { x: mins[0], y: mins[1], z: mins[2] },
       absmax: { x: maxs[0], y: maxs[1], z: maxs[2] }
     } as any;

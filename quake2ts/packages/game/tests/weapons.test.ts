@@ -131,8 +131,7 @@ describe('Weapon Tests', () => {
                 expect.anything(),
                 DamageMod.RAILGUN,
                 expect.anything(),
-                expect.anything(),
-                expect.anything() // options with hooks
+                expect.anything()
             );
         });
 
@@ -169,8 +168,7 @@ describe('Weapon Tests', () => {
                 expect.anything(),
                 DamageMod.RAILGUN,
                 expect.anything(),
-                expect.anything(),
-                expect.anything() // options with hooks
+                expect.anything()
             );
         });
     });
@@ -207,8 +205,7 @@ describe('Weapon Tests', () => {
                  expect.anything(),
                  DamageMod.CHAINGUN,
                  expect.anything(),
-                 expect.anything(),
-                 expect.anything() // options with hooks
+                 expect.anything()
              );
         });
 
@@ -238,8 +235,7 @@ describe('Weapon Tests', () => {
                  expect.anything(),
                  DamageMod.CHAINGUN,
                  expect.anything(),
-                 expect.anything(),
-                 expect.anything() // options with hooks
+                 expect.anything()
              );
         });
 
