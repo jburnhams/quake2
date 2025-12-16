@@ -168,7 +168,14 @@ export class EntitySystem {
   private spawnCount = 0;
 
   private spatialGrid: SpatialGrid;
-  public readonly scriptHooks = new ScriptHookRegistry();
+
+  // We will lazily access this.scriptHooks from _game or via a property if passed.
+  // Actually, EntitySystem doesn't own the registry, GameExports does.
+  // But GameExports is initialized with EntitySystem, so it's circular.
+  // We can add a property that delegates to _game.hooks.
+  get scriptHooks(): ScriptHookRegistry | undefined {
+      return (this as any)._game?.hooks;
+  }
 
   readonly targetAwareness: ExtendedTargetAwarenessState;
 
@@ -393,12 +400,12 @@ export class EntitySystem {
     this.spawnCount++;
     ent.spawn_count = this.spawnCount;
     ent.timestamp = this.currentTimeSeconds;
-    this.scriptHooks.onEntitySpawn?.(ent);
+    this.scriptHooks?.onEntitySpawn?.(ent);
     return ent;
   }
 
   free(entity: Entity): void {
-    this.scriptHooks.onEntityRemove?.(entity);
+    this.scriptHooks?.onEntityRemove?.(entity);
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
