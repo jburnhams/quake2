@@ -273,7 +273,7 @@ export function player_die(self: Entity, inflictor: Entity | null, attacker: Ent
     // Obituaries
     if (sys) {
         ClientObituary(self, inflictor, attacker, mod, sys);
-        sys.scriptHooks?.onPlayerDeath?.(self, inflictor, attacker, damage);
+        sys.scriptHooks.onPlayerDeath?.(self, attacker, inflictor);
     }
 
     // Weapon drop (optional)
