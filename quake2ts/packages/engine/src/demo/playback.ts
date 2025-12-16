@@ -4,6 +4,7 @@ import { FrameDiff, DemoEvent, DemoEventType, EventSummary, DemoHeader, ServerIn
 import { DemoAnalyzer } from './analyzer.js';
 import { Vec3 } from '@quake2ts/shared';
 import { DemoCameraMode } from './camera.js';
+import { ResourceLoadTracker, ResourceLoadLog } from '../assets/resourceTracker.js';
 
 export enum PlaybackState {
   Stopped,
@@ -23,6 +24,29 @@ export interface DemoPlaybackCallbacks {
   onFrameUpdate?: (frame: FrameData) => void;
   onPlaybackError?: (error: Error) => void;
 }
+
+export type FrameOffset = { type: 'frame'; frame: number };
+export type TimeOffset = { type: 'time'; seconds: number };
+export type PlaybackOffset = FrameOffset | TimeOffset;
+
+const createNoOpHandler = (): NetworkMessageHandler => ({
+    onServerData: () => {},
+    onConfigString: () => {},
+    onSpawnBaseline: () => {},
+    onFrame: () => {},
+    onCenterPrint: () => {},
+    onStuffText: () => {},
+    onPrint: () => {},
+    onSound: () => {},
+    onTempEntity: () => {},
+    onLayout: () => {},
+    onInventory: () => {},
+    onMuzzleFlash: () => {},
+    onMuzzleFlash2: () => {},
+    onDisconnect: () => {},
+    onReconnect: () => {},
+    onDownload: () => {}
+});
 
 export class DemoPlaybackController {
   private reader: DemoReader | null = null;
@@ -55,6 +79,9 @@ export class DemoPlaybackController {
   private cachedStatistics: DemoStatistics | null = null;
   private cachedPlayerStats: Map<number, PlayerStatistics> | null = null;
   private cachedWeaponStats: Map<number, WeaponStatistics[]> | null = null;
+
+  // Resource Tracking
+  private tracker: ResourceLoadTracker | null = null;
 
   // Camera State
   private cameraMode: DemoCameraMode = DemoCameraMode.FirstPerson;
@@ -187,12 +214,77 @@ export class DemoPlaybackController {
   }
 
   public seekToTime(seconds: number) {
-      const frameIndex = Math.floor((seconds * 1000) / this.frameDuration);
+      const frameIndex = this.timeToFrame(seconds);
       this.seek(frameIndex);
   }
 
   public seekToFrame(frameIndex: number) {
       this.seek(frameIndex);
+  }
+
+  public frameToTime(frame: number): number {
+      return (frame * this.frameDuration) / 1000;
+  }
+
+  public timeToFrame(seconds: number): number {
+      return Math.floor((seconds * 1000) / this.frameDuration);
+  }
+
+  public playFrom(offset: PlaybackOffset): void {
+      if (offset.type === 'frame') {
+          this.seek(offset.frame);
+      } else if (offset.type === 'time') {
+          this.seekToTime(offset.seconds);
+      } else {
+          // Should not happen with TS, but runtime check
+          throw new Error(`Invalid offset type: ${(offset as any).type}`);
+      }
+      this.play();
+  }
+
+  public playRange(start: PlaybackOffset, end: PlaybackOffset): void {
+      // Validate bounds
+      const startFrame = start.type === 'frame' ? start.frame : this.timeToFrame(start.seconds);
+      const endFrame = end.type === 'frame' ? end.frame : this.timeToFrame(end.seconds);
+      const totalFrames = this.getTotalFrames();
+      const maxFrame = Math.max(0, totalFrames - 1);
+
+      // We allow startFrame == totalFrames (which means start at end, i.e., finish immediately)
+      // but generally we should clamp or error if out of reasonable bounds.
+      if (startFrame < 0) {
+        throw new Error(`Invalid start offset: ${startFrame}`);
+      }
+      // Note: We don't strictly enforce endFrame <= totalFrames because the demo might be streaming or length unknown (though here we know length).
+      // But if endFrame < startFrame, that's invalid.
+      if (endFrame < startFrame) {
+          throw new Error(`End offset (${endFrame}) cannot be before start offset (${startFrame})`);
+      }
+
+      this.playFrom(start);
+
+      // We need to stop playback when we reach endFrame
+      // We can achieve this by hooking into onFrameUpdate or checking in update()
+      // For now, let's wrap the callbacks to intercept the stop condition
+      const originalOnFrameUpdate = this.callbacks?.onFrameUpdate;
+
+      const rangeCallback: DemoPlaybackCallbacks = {
+          ...this.callbacks,
+          onFrameUpdate: (frame) => {
+              if (originalOnFrameUpdate) originalOnFrameUpdate(frame);
+              if (this.currentFrameIndex >= endFrame) {
+                  this.pause();
+                  // Reset callbacks to remove interception
+                  if (this.callbacks === rangeCallback) {
+                       this.setCallbacks({ ...this.callbacks, onFrameUpdate: originalOnFrameUpdate });
+                  }
+                  if (this.callbacks?.onPlaybackComplete) {
+                      this.callbacks.onPlaybackComplete();
+                  }
+              }
+          }
+      };
+
+      this.setCallbacks(rangeCallback);
   }
 
   /**
@@ -202,8 +294,12 @@ export class DemoPlaybackController {
       if (!this.reader) return;
 
       const total = this.getTotalFrames();
+
+      // Allow seeking to total (end state), but clamp if > total
+      // Actually standard behavior is clamp to [0, total-1] usually, but if we want to seek to "end", maybe total is fine.
+      // However, processNextFrame checks hasMore().
+      if (total > 0 && frameNumber >= total) frameNumber = total - 1;
       if (frameNumber < 0) frameNumber = 0;
-      if (frameNumber >= total) frameNumber = total - 1;
 
       // Optimization: If seeking to next frame, just process it
       if (frameNumber === this.currentFrameIndex + 1) {
@@ -212,11 +308,17 @@ export class DemoPlaybackController {
           return;
       }
 
+      // If seeking to current frame, do nothing
+      if (frameNumber === this.currentFrameIndex) {
+          if (this.callbacks?.onSeekComplete) this.callbacks.onSeekComplete();
+          return;
+      }
+
       // 1. Determine best start point
       let startIndex = -1;
       let snapshotData: any = null;
 
-      // Check current position
+      // Check current position (only if we are before target)
       if (frameNumber > this.currentFrameIndex && this.currentFrameIndex !== -1) {
           startIndex = this.currentFrameIndex;
       }
@@ -297,11 +399,17 @@ export class DemoPlaybackController {
 
       this.currentFrameIndex++;
 
+      // Update tracker
+      if (this.tracker) {
+          this.tracker.setCurrentFrame(this.currentFrameIndex);
+          this.tracker.setCurrentTime(this.getCurrentTime());
+      }
+
       // Parsing
       try {
           // Wrap handler to capture onFrame
           const proxyHandler: NetworkMessageHandler = {
-              ...this.handler!,
+              ...(this.handler || createNoOpHandler()),
               onFrame: (frame: FrameData) => {
                   this.lastFrameData = frame; // Capture last frame
                   if (this.handler?.onFrame) this.handler.onFrame(frame);
@@ -309,7 +417,7 @@ export class DemoPlaybackController {
               }
           };
 
-          const parser = new NetworkMessageParser(block.data, this.handler ? proxyHandler : undefined);
+          const parser = new NetworkMessageParser(block.data, proxyHandler);
           parser.setProtocolVersion(this.currentProtocolVersion);
           parser.parseMessage();
           this.currentProtocolVersion = parser.getProtocolVersion();
@@ -512,9 +620,16 @@ export class DemoPlaybackController {
 
   // 3.2.3 Event Log Extraction & 3.3 Metadata
 
-  public getDemoEvents(): DemoEvent[] {
+  /**
+   * Extract notable events from demo for timeline markers
+   */
+  public getEvents(): DemoEvent[] {
       this.ensureAnalysis();
       return this.cachedEvents || [];
+  }
+
+  public getDemoEvents(): DemoEvent[] {
+      return this.getEvents();
   }
 
   public filterEvents(type: DemoEventType, entityId?: number): DemoEvent[] {
@@ -596,5 +711,156 @@ export class DemoPlaybackController {
 
   public setThirdPersonOffset(offset: Vec3) {
       this.thirdPersonOffset = offset;
+  }
+
+  public async playWithTracking(tracker: ResourceLoadTracker, options: { fastForward?: boolean } = {}): Promise<ResourceLoadLog> {
+      this.tracker = tracker;
+      tracker.startTracking();
+
+      if (options.fastForward) {
+          // Fast forward mode: run as fast as possible without waiting for update()
+          try {
+              // Ensure we are in a clean state
+              if (this.state === PlaybackState.Stopped && this.reader) {
+                   // Initial frame if needed
+              }
+              this.transitionState(PlaybackState.Playing);
+
+              const CHUNK_SIZE = 100; // Process 100 frames per tick to avoid blocking UI too much
+
+              const processChunk = async (): Promise<ResourceLoadLog> => {
+                  if (this.state !== PlaybackState.Playing) {
+                      throw new Error("Playback stopped unexpectedly during fast forward");
+                  }
+
+                  let count = 0;
+                  while (count < CHUNK_SIZE) {
+                      if (!this.processNextFrame()) {
+                          // Finished
+                          const log = tracker.stopTracking();
+                          this.tracker = null;
+                          if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
+                          return log;
+                      }
+                      count++;
+                  }
+
+                  // Yield to event loop
+                  await new Promise(resolve => setTimeout(resolve, 0));
+                  return processChunk();
+              };
+
+              return await processChunk();
+          } catch (e) {
+              tracker.stopTracking();
+              this.tracker = null;
+              throw e;
+          }
+      } else {
+          return new Promise((resolve, reject) => {
+              const originalComplete = this.callbacks?.onPlaybackComplete;
+              const originalError = this.callbacks?.onPlaybackError;
+
+              const cleanup = () => {
+                  this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+                  this.tracker = null;
+              };
+
+              this.setCallbacks({
+                  ...this.callbacks,
+                  onPlaybackComplete: () => {
+                      const log = tracker.stopTracking();
+                      if (originalComplete) originalComplete();
+                      cleanup();
+                      resolve(log);
+                  },
+                  onPlaybackError: (err) => {
+                      tracker.stopTracking(); // Stop anyway
+                      if (originalError) originalError(err);
+                      cleanup();
+                      reject(err);
+                  }
+              });
+
+              this.play();
+          });
+      }
+  }
+
+  public async playRangeWithTracking(
+      start: PlaybackOffset,
+      end: PlaybackOffset,
+      tracker: ResourceLoadTracker,
+      options: { fastForward?: boolean } = {}
+  ): Promise<ResourceLoadLog> {
+      this.tracker = tracker;
+      tracker.startTracking();
+
+      const startFrame = start.type === 'frame' ? start.frame : this.timeToFrame(start.seconds);
+      const endFrame = end.type === 'frame' ? end.frame : this.timeToFrame(end.seconds);
+
+      if (options.fastForward) {
+          try {
+              this.playFrom(start);
+              this.transitionState(PlaybackState.Playing);
+
+              const CHUNK_SIZE = 100;
+
+              const processChunk = async (): Promise<ResourceLoadLog> => {
+                  if (this.state !== PlaybackState.Playing) {
+                       throw new Error("Playback stopped unexpectedly during fast forward");
+                  }
+
+                  let count = 0;
+                  while (count < CHUNK_SIZE) {
+                      if (this.currentFrameIndex >= endFrame || !this.processNextFrame()) {
+                          const log = tracker.stopTracking();
+                          this.tracker = null;
+                          if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
+                          return log;
+                      }
+                      count++;
+                  }
+
+                  await new Promise(resolve => setTimeout(resolve, 0));
+                  return processChunk();
+              };
+
+              return await processChunk();
+
+          } catch (e) {
+              tracker.stopTracking();
+              this.tracker = null;
+              throw e;
+          }
+      } else {
+          return new Promise((resolve, reject) => {
+              const originalComplete = this.callbacks?.onPlaybackComplete;
+              const originalError = this.callbacks?.onPlaybackError;
+
+              const cleanup = () => {
+                  this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+                  this.tracker = null;
+              };
+
+              this.setCallbacks({
+                  ...this.callbacks,
+                  onPlaybackComplete: () => {
+                      const log = tracker.stopTracking();
+                      if (originalComplete) originalComplete();
+                      cleanup();
+                      resolve(log);
+                  },
+                  onPlaybackError: (err) => {
+                      tracker.stopTracking();
+                      if (originalError) originalError(err);
+                      cleanup();
+                      reject(err);
+                  }
+              });
+
+              this.playRange(start, end);
+          });
+      }
   }
 }

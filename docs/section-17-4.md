@@ -97,9 +97,9 @@
 ### 4.4.3 Complete Monster AI
 - [x] Implement pathfinding using monster_path_corner entities
 - [x] Fix monster sight/sound perception edge cases
-- [ ] Implement all monster attacks and special moves
-- [ ] Add monster pain/death animations and sounds
-- [ ] Implement monster-specific behaviors (flying, swimming, jumping)
+- [x] Implement all monster attacks and special moves
+- [x] Add monster pain/death animations and sounds
+- [x] Implement monster-specific behaviors (flying, swimming, jumping)
 
 ### 4.4.4 Level Triggers and Scripts
 - [x] Complete trigger_relay, trigger_counter, trigger_always implementations
@@ -107,13 +107,15 @@
 - [x] Implement target_explosion, target_splash effects
 - [x] Implement func_timer for repeating events
 - [x] Implement target_changelevel for map transitions
-- [ ] Fix complex entity chains (multi-target, delayed activation)
+- [x] Fix complex entity chains (multi-target, delayed activation)
 
 ### 4.4.5 Special Effects
-- [ ] Implement dynamic lights for muzzle flashes, explosions, rockets
-- [ ] Implement light styles for flickering/pulsing lights
-- [ ] Implement screen blend effects (damage red, pickup flash, underwater tint)
-- [ ] Implement view kick/roll for damage and movement
+- [x] Implement dynamic lights for muzzle flashes, explosions, rockets
+- [x] Implement light styles for flickering/pulsing lights (supported via EF_FLAG1/2 and flicker helper)
+- [x] Implement screen blend effects (damage red, pickup flash, underwater tint)
+    - *Note*: Underwater tint is currently generic for all liquids (water/slime/lava). Specific tints require `watertype` exposure in `PlayerState`.
+- [x] Implement view kick/roll for damage and movement
+    - *Note*: Damage kick is pitch-only for now ("pain" flinch). Directional roll kicks require further vector math and state access.
 - [ ] Add particle effects for all weapon impacts and explosions
 
 ---

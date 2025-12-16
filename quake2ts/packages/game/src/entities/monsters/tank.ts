@@ -466,6 +466,7 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
         return;
     }
 
+    context.entities.sound?.(self, 0, 'tank/tnkdeth2.wav', 1, 1, 0);
     tank_die(self);
   };
 

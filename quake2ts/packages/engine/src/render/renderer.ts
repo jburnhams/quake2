@@ -11,7 +11,7 @@ import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
-import { GpuProfiler, RenderStatistics } from './gpuProfiler.js';
+import { GpuProfiler, RenderStatistics, FrameStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
@@ -90,7 +90,16 @@ export const createRenderer = (
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
     let font: Pic | null = null;
-    let lastFrameStats = { drawCalls: 0, vertexCount: 0, batches: 0 };
+    let lastFrameStats: FrameStats = {
+        drawCalls: 0,
+        vertexCount: 0,
+        batches: 0,
+        shaderSwitches: 0,
+        visibleSurfaces: 0,
+        culledSurfaces: 0,
+        visibleEntities: 0,
+        culledEntities: 0
+    };
     const highlightedEntities = new Map<number, [number, number, number, number]>();
     const highlightedSurfaces = new Map<number, [number, number, number, number]>();
     let debugMode = DebugMode.None;
@@ -115,6 +124,8 @@ export const createRenderer = (
 
         // Handle wireframe option
         let effectiveRenderMode: RenderModeConfig | undefined = currentRenderMode;
+        let lightmapOnly = false;
+
         if (renderOptions?.wireframe || debugMode === DebugMode.Wireframe) {
             effectiveRenderMode = {
                 mode: 'wireframe',
@@ -122,14 +133,7 @@ export const createRenderer = (
                 color: [1, 1, 1, 1] // White wireframe
             };
         } else if (debugMode === DebugMode.Lightmaps) {
-             // Lightmaps only mode: we can trick this by forcing a render mode that only shows lightmaps,
-             // or by disabling textures in the pipeline.
-             // For now, let's assume 'lightmap' render mode if supported, or just use normal rendering but disable textures?
-             // The options.disableLightmaps = false enables them.
-             // We probably want to disable the diffuse texture application.
-             // FrameRenderOptions doesn't explicitly support "Lightmap Only".
-             // We can check if we can modify the pipeline state or use a special render mode.
-             // Let's rely on standard rendering for now but maybe later adding specific support.
+            lightmapOnly = true;
         }
 
         // Handle showSkybox option
@@ -138,7 +142,7 @@ export const createRenderer = (
             effectiveSky = undefined;
         }
 
-        const viewProjection = options.camera.viewProjectionMatrix;
+        const viewProjection = new Float32Array(options.camera.viewProjectionMatrix);
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
         // Cull lights
@@ -157,9 +161,24 @@ export const createRenderer = (
             renderMode: effectiveRenderMode,
             disableLightmaps: renderOptions?.showLightmaps === false && debugMode !== DebugMode.Lightmaps,
             dlights: culledLights,
+            lightmapOnly
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
+
+        // Frame stats from frameRenderer need to be mapped to our FrameStats
+        // Assuming frameRenderer returns object similar to what we mocked
+        // { drawCalls: number, vertexCount: number, batches: number, facesDrawn: number }
+        // We'll need to instrument frameRenderer to return culled surfaces too or calculate it.
+        // For now, let's assume map faces count - facesDrawn = culledSurfaces if we had total faces.
+        // But FrameRenderer doesn't expose total faces easily here without querying options.world.map.faces.length
+
+        let visibleSurfaces = (stats as any).facesDrawn || 0;
+        let totalSurfaces = 0;
+        if (options.world && options.world.map && options.world.map.faces) {
+            totalSurfaces = options.world.map.faces.length;
+        }
+        let culledSurfaces = totalSurfaces - visibleSurfaces;
 
         // Determine view cluster for PVS culling
         let viewCluster = -1;
@@ -179,6 +198,8 @@ export const createRenderer = (
         let lastTexture: Texture2D | undefined;
         let entityDrawCalls = 0;
         let entityVertices = 0;
+        let visibleEntities = 0;
+        let culledEntities = 0;
 
         for (const entity of entities) {
             // PVS Culling
@@ -193,6 +214,7 @@ export const createRenderer = (
                 if (entityLeafIndex >= 0) {
                     const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
                     if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
+                        culledEntities++;
                         continue;
                     }
                 }
@@ -238,9 +260,12 @@ export const createRenderer = (
             if (minBounds && maxBounds) {
                 const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
                 if (!boxIntersectsFrustum(worldBounds.mins, worldBounds.maxs, frustumPlanes)) {
+                    culledEntities++;
                     continue;
                 }
             }
+
+            visibleEntities++;
 
             // Calculate ambient light for the entity
             const position = {
@@ -260,6 +285,12 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
                             md2MeshCache.set(entity.model, mesh);
+                            // Corrected property access
+                            const vertexBytes = mesh.geometry.vertices.length * 8 * 4; // 8 floats per vertex, 4 bytes per float
+                            // assuming indices are also stored and consume memory
+                            // indices are Uint16, so 2 bytes each
+                            const indexBytes = mesh.geometry.indices.length * 2;
+                            gpuProfiler.trackBufferMemory(vertexBytes + indexBytes);
                         } else {
                             mesh.update(entity.model, entity.blend);
                         }
@@ -338,6 +369,8 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
                             md3MeshCache.set(entity.model, mesh);
+                            // Approximate memory tracking for Md3
+                            // gpuProfiler.trackBufferMemory(...);
                         } else {
                             mesh.update(entity.blend, lighting);
                         }
@@ -449,28 +482,24 @@ export const createRenderer = (
             const surfacesToDraw = new Map<number, [number, number, number, number]>(highlightedSurfaces);
 
             if (debugMode === DebugMode.PVSClusters && options.world) {
-                 // We need to find visible leaves and their faces.
-                 // This is expensive to re-traverse if we already did it in gatherVisibleFaces but didn't save the leaf info.
-                 // Let's do a simplified approach: iterate all leaves, if visible, add their faces.
-                 // But we don't have easy access to `isClusterVisible` from here without `viewCluster`.
-                 if (viewCluster >= 0) {
-                     const map = options.world.map;
-                     // We can't iterate all leaves easily here (it's in map.leafs).
-                     // map.leafs is an array.
-                     for (let i = 0; i < map.leafs.length; i++) {
-                         const leaf = map.leafs[i];
-                         if (isClusterVisible(map.visibility, viewCluster, leaf.cluster)) {
-                             const color = colorFromId(leaf.cluster);
-                             // Iterate leaf faces
-                             const leafFaces = map.leafLists.leafFaces[i];
-                             for (const faceIdx of leafFaces) {
-                                 if (!surfacesToDraw.has(faceIdx)) {
-                                     surfacesToDraw.set(faceIdx, color);
-                                 }
-                             }
-                         }
-                     }
-                 }
+                // Use gatherVisibleFaces result implicitly from renderer or re-run it
+                // We re-run it here for debug clarity, although it's duplicated work.
+                // Or we can assume FrameRenderer did it but we don't have its result here except stats.
+                // Re-running gatherVisibleFaces is cheap enough for debug mode.
+                const frustum = extractFrustumPlanes(viewProjection);
+                const cameraPosition = {
+                    x: options.camera.position[0],
+                    y: options.camera.position[1],
+                    z: options.camera.position[2],
+                };
+                const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
+
+                for (const { faceIndex, leafIndex } of visibleFaces) {
+                    const leaf = options.world.map.leafs[leafIndex];
+                    if (leaf && !surfacesToDraw.has(faceIndex)) {
+                        surfacesToDraw.set(faceIndex, colorFromId(leaf.cluster));
+                    }
+                }
             }
 
             for (const [faceIndex, color] of surfacesToDraw) {
@@ -524,7 +553,12 @@ export const createRenderer = (
                   }
 
                   const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
-                  debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 });
+
+                  if (debugMode === DebugMode.CollisionHulls) {
+                      debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 0, g: 1, b: 1 }); // Cyan for collision
+                  } else {
+                      debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 }); // Yellow
+                  }
 
                   // Also draw origin/axes as requested in task 1.3.2
                   const origin = {
@@ -600,7 +634,12 @@ export const createRenderer = (
         lastFrameStats = {
             drawCalls: stats.drawCalls + entityDrawCalls,
             vertexCount: stats.vertexCount + entityVertices,
-            batches: stats.batches // Approximation
+            batches: stats.batches, // Approximation for texture binds
+            shaderSwitches: 0, // Not fully tracked yet
+            visibleSurfaces,
+            culledSurfaces,
+            visibleEntities,
+            culledEntities
         };
 
         gpuProfiler.endFrame();
@@ -617,6 +656,7 @@ export const createRenderer = (
         const texture = new Texture2D(gl);
         texture.upload(imageBitmap.width, imageBitmap.height, imageBitmap);
         picCache.set(name, texture);
+        gpuProfiler.trackTextureMemory(imageBitmap.width * imageBitmap.height * 4);
 
         if (name.includes('conchars')) {
             font = texture;
@@ -635,6 +675,7 @@ export const createRenderer = (
         tex.upload(level.width, level.height, level.rgba);
 
         picCache.set(name, tex);
+        gpuProfiler.trackTextureMemory(level.width * level.height * 4);
 
         if (name.includes('conchars')) {
             font = tex;

@@ -227,6 +227,8 @@ interface DemoEvent {
 
 **Workaround**: Parse demo manually, but complex and requires understanding demo format.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 3.2: Demo Clip Extraction (P2)
@@ -320,6 +322,8 @@ interface RenderStatistics {
 
 **Workaround**: WebGL queries can get some data, but incomplete and library-internal buffers not accessible.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 4.2: Debug Rendering Mode API (P1)
@@ -349,6 +353,8 @@ enum DebugMode {
 **Rationale**: Debug visualization (Section 04, Task 1) helps developers understand rendering.
 
 **Workaround**: Separate debug rendering layer in application, but doesn't have access to library internals.
+
+**Status**: Implemented.
 
 ---
 
@@ -461,6 +467,8 @@ class AssetCrossReference {
 **Rationale**: Asset usage tracking (Section 05, Tasks 1.4, 6.6) shows where assets are used.
 
 **Workaround**: Scan all assets manually, very slow for large PAKs.
+
+**Status**: Partially Implemented (getMapDependencies).
 
 ---
 
@@ -870,15 +878,15 @@ interface MemoryUsage {
 | Admin/Cheat APIs | game | P1 | 01 | Implemented |
 | Master Server Client | client/net | P1 | 02 | Implemented |
 | WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
-| Spectator Mode APIs | game/client | P1 | 02 | Needed |
-| Demo Event Extraction | client | P1 | 03 | Needed |
+| Spectator Mode APIs | game/client | P1 | 02 | Implemented |
+| Demo Event Extraction | client | P1 | 03 | Implemented |
 | Demo Clip Extraction | client | P2 | 03 | Needed |
 | Demo Metadata Access | client | P2 | 03 | Needed |
-| Renderer Statistics API | engine | P1 | 04 | Needed |
-| Debug Rendering Mode | engine | P1 | 04 | Needed |
+| Renderer Statistics API | engine | P1 | 04 | Implemented |
+| Debug Rendering Mode | engine | P1 | 04 | Implemented |
 | Lighting Control APIs | engine | P2 | 04 | Needed |
 | Entity Bounds Access | game | P2 | 04 | Needed |
-| Cross-Reference API | engine | P2 | 05 | Needed |
+| Cross-Reference API | engine | P2 | 05 | Partially Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Needed |
 | Entity Templates | game | P2 | 06 | Needed |

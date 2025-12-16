@@ -26,7 +26,8 @@ import {
     U_OLD_FRAME_HIGH,
     FogData,
     DamageIndicator,
-    RenderableEntity
+    RenderableEntity,
+    applyEntityDelta
 } from '@quake2ts/engine';
 import {
     Vec3, ZERO_VEC3,
@@ -168,61 +169,11 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
             // Apply delta
             const final = structuredClone(source!);
-            this.applyDelta(final, partial);
+            applyEntityDelta(final, partial);
             newEntities.set(number, final);
         }
 
         this.entities = newEntities;
-    }
-
-    private applyDelta(to: EntityState, from: EntityState): void {
-        const bits = from.bits;
-        const bitsHigh = from.bitsHigh;
-        to.number = from.number; // Should match
-
-        if (bits & U_MODEL) to.modelindex = from.modelindex;
-        if (bits & U_MODEL2) to.modelindex2 = from.modelindex2;
-        if (bits & U_MODEL3) to.modelindex3 = from.modelindex3;
-        if (bits & U_MODEL4) to.modelindex4 = from.modelindex4;
-
-        if (bits & U_FRAME8) to.frame = from.frame;
-        if (bits & U_FRAME16) to.frame = from.frame;
-
-        if ((bits & U_SKIN8) || (bits & U_SKIN16)) to.skinnum = from.skinnum;
-
-        if ((bits & U_EFFECTS8) || (bits & U_EFFECTS16)) to.effects = from.effects;
-
-        if ((bits & U_RENDERFX8) || (bits & U_RENDERFX16)) to.renderfx = from.renderfx;
-
-        if (bits & U_ORIGIN1) to.origin.x = from.origin.x;
-        if (bits & U_ORIGIN2) to.origin.y = from.origin.y;
-        if (bits & U_ORIGIN3) to.origin.z = from.origin.z;
-
-        if (bits & U_ANGLE1) to.angles.x = from.angles.x;
-        if (bits & U_ANGLE2) to.angles.y = from.angles.y;
-        if (bits & U_ANGLE3) to.angles.z = from.angles.z;
-
-        if (bits & U_OLDORIGIN) {
-             to.old_origin.x = from.old_origin.x;
-             to.old_origin.y = from.old_origin.y;
-             to.old_origin.z = from.old_origin.z;
-        }
-
-        if (bits & U_SOUND) to.sound = from.sound;
-
-        if (bits & U_EVENT) to.event = from.event;
-
-        if (bits & U_SOLID) to.solid = from.solid;
-
-        // Rerelease fields
-        if (bits & U_ALPHA) to.alpha = from.alpha;
-        if (bits & U_SCALE) to.scale = from.scale;
-        if (bits & U_INSTANCE_BITS) to.instanceBits = from.instanceBits;
-        if (bits & U_LOOP_VOLUME) to.loopVolume = from.loopVolume;
-
-        if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = from.loopAttenuation;
-        if (bitsHigh & U_OWNER_HIGH) to.owner = from.owner;
-        if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = from.oldFrame;
     }
 
     onCenterPrint(msg: string): void {
@@ -373,6 +324,25 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     }
 
     onDamage(indicators: DamageIndicator[]): void {
+        if (this.view) {
+            // Apply damage view kick based on Quake 2's CL_ParseDamage and V_AddKick logic.
+            // CL_ParseDamage calculates a directional kick to viewangles (not implemented here to avoid permanent angle modification),
+            // while V_AddKick adds a temporary pitch kick (pain flinch).
+
+            for (const ind of indicators) {
+                // Use damage value directly from indicator
+                const estimatedDamage = ind.damage;
+
+                // Apply pitch kick to simulate pain flinch.
+                // Negative pitch corresponds to looking up ("head snaps back").
+                this.view.addKick({
+                    pitch: -estimatedDamage * 0.5,
+                    roll: 0, // Directional roll is not yet implemented
+                    durationMs: 200,
+                });
+            }
+        }
+
         if (this.callbacks?.onDamage) {
             this.callbacks.onDamage(indicators);
         }

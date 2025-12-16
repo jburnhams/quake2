@@ -270,7 +270,7 @@ export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
   self.model = 'models/monsters/flipper/tris.md2';
   self.mins = { x: -16, y: -16, z: 0 };
   self.maxs = { x: 16, y: 16, z: 32 };
-  self.movetype = MoveType.Fly; // Use Fly for swimming/flying in Q2TS
+  self.movetype = MoveType.Step;
   self.flags |= EntityFlags.Swim;
   self.solid = Solid.BoundingBox;
   self.health = 50 * context.health_multiplier;

@@ -132,6 +132,10 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   setDemoFreeCamera(origin: Vec3, angles: Vec3): void;
   setDemoFollowEntity(entityId: number): void;
 
+  // Spectator API
+  setSpectatorTarget(targetEntityId: number | null): void;
+  getSpectatorTargets(): { id: number; name: string }[];
+
   // Networking
   multiplayer: MultiplayerConnection;
 
@@ -1380,6 +1384,51 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     setDemoFollowEntity(entityId: number) {
         demoCameraState.followEntityId = entityId;
+    },
+
+    // Spectator API
+    setSpectatorTarget(targetEntityId: number | null) {
+        if (targetEntityId === null) {
+            // Revert to free/first person?
+            // If we were following, stop following.
+            if (demoCameraState.mode === DemoCameraMode.Follow) {
+                // Determine what to fallback to.
+                // If demo, maybe FirstPerson.
+                // If multiplayer spectator, probably Free.
+                // For now, let's just clear follow ID and switch to FirstPerson if in demo, or Free if user requests.
+                // The task implies "null for free cam".
+                demoCameraState.mode = DemoCameraMode.Free;
+            }
+            demoCameraState.followEntityId = -1;
+        } else {
+            demoCameraState.mode = DemoCameraMode.Follow;
+            demoCameraState.followEntityId = targetEntityId;
+        }
+    },
+
+    getSpectatorTargets(): { id: number; name: string }[] {
+        // Collect players from config strings or scoreboard
+        // ScoreboardManager tracks players.
+        const targets: { id: number; name: string }[] = [];
+        const scoreboard = scoreboardManager.getScoreboard();
+
+        // In Q2, player entities are usually indices 1..MAX_CLIENTS
+        // We can correlate scoreboard entries with entity indices if we know them.
+        // ScoreboardData has entries.
+        // But entries might not directly map to entity ID without looking up configstrings.
+        // The configstring index for a player's name is CS_PLAYERS + playernum.
+        // Player entity index is usually playernum + 1.
+
+        for (let i = 0; i < MAX_CLIENTS; i++) {
+            const name = configStrings.getPlayerName(i);
+            if (name) {
+                // Map playernum to entity ID
+                const entityId = i + 1;
+                // Maybe filter out self?
+                targets.push({ id: entityId, name });
+            }
+        }
+        return targets;
     },
 
     // Scoreboard API

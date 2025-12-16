@@ -68,6 +68,7 @@ interface FrameRenderOptions {
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly disableLightmaps?: boolean; // New option to toggle lightmaps
+  readonly lightmapOnly?: boolean;
 }
 
 interface FrameRendererDependencies {
@@ -236,7 +237,7 @@ export const createFrameRenderer = (
       vertexCount: 0,
     };
 
-    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode, disableLightmaps } = options;
+    const { camera, world, sky, clearColor = [0, 0, 0, 1], timeSeconds = 0, viewModel, dlights, renderMode, disableLightmaps, lightmapOnly } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
@@ -329,7 +330,8 @@ export const createFrameRenderer = (
             texScroll,
             warp,
             dlights,
-            renderMode: activeRenderMode
+            renderMode: activeRenderMode,
+            lightmapOnly
           });
           applySurfaceState(gl, cachedState);
           lastBatchKey = batchKey;

@@ -7,18 +7,18 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 1: Foundation - PAK Writing
 
 ### Task 1.1: Implement PAK Writer
-- [ ] Create `PakWriter` class in `packages/engine/src/assets/pakWriter.ts`
-  - [ ] `addFile(path: string, data: Uint8Array): void` - add file to archive
-  - [ ] `removeFile(path: string): boolean` - remove file from archive
-  - [ ] `build(): Uint8Array` - serialize to PAK format with compression
-  - [ ] `buildFromEntries(entries: Map<string, Uint8Array>): Uint8Array` - static builder
-  - [ ] Support directory structure preservation from existing PAKs
-  - [ ] Implement proper offset/length calculation for directory
-  - [ ] Write PACK header with magic, dirOffset, dirLength
-  - [ ] Normalize paths to Quake 2 format (lowercase, forward slashes, max 56 chars)
-- [ ] Add compression support (if Quake 2 rerelease format supports it)
-- [ ] Export from `packages/engine/src/assets/index.ts`
-- [ ] Export from `packages/engine/src/index.ts`
+- [x] Create `PakWriter` class in `packages/engine/src/assets/pakWriter.ts`
+  - [x] `addFile(path: string, data: Uint8Array): void` - add file to archive
+  - [x] `removeFile(path: string): boolean` - remove file from archive
+  - [x] `build(): Uint8Array` - serialize to PAK format with compression
+  - [x] `buildFromEntries(entries: Map<string, Uint8Array>): Uint8Array` - static builder
+  - [x] Support directory structure preservation from existing PAKs
+  - [x] Implement proper offset/length calculation for directory
+  - [x] Write PACK header with magic, dirOffset, dirLength
+  - [x] Normalize paths to Quake 2 format (lowercase, forward slashes, max 56 chars)
+- [x] Add compression support (if Quake 2 rerelease format supports it)
+- [x] Export from `packages/engine/src/assets/index.ts`
+- [x] Export from `packages/engine/src/index.ts`
 
 **Dependencies:** `packages/engine/src/assets/pak.ts` (PakArchive for format reference)
 
@@ -35,17 +35,17 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 2: Foundation - Demo Playback Offsets
 
 ### Task 2.1: Add Offset Parameters to Demo Playback
-- [ ] Extend `DemoPlaybackController` in `packages/engine/src/demo/playback.ts`
-  - [ ] `playFrom(offset: FrameOffset | TimeOffset): void` - start playback from offset
-  - [ ] `playRange(start: Offset, end: Offset): void` - play specific range
-  - [ ] Add `FrameOffset` type: `{ type: 'frame', frame: number }`
-  - [ ] Add `TimeOffset` type: `{ type: 'time', seconds: number }`
-  - [ ] Update `seek()` logic to handle both offset types
-  - [ ] Add validation for offset bounds (0 to messageCount/duration)
-- [ ] Add offset conversion utilities
-  - [ ] `frameToTime(frame: number): number` - convert frame index to seconds
-  - [ ] `timeToFrame(seconds: number): number` - convert seconds to frame index
-  - [ ] Use existing snapshot system for efficient seeking
+- [x] Extend `DemoPlaybackController` in `packages/engine/src/demo/playback.ts`
+  - [x] `playFrom(offset: FrameOffset | TimeOffset): void` - start playback from offset
+  - [x] `playRange(start: Offset, end: Offset): void` - play specific range
+  - [x] Add `FrameOffset` type: `{ type: 'frame', frame: number }`
+  - [x] Add `TimeOffset` type: `{ type: 'time', seconds: number }`
+  - [x] Update `seek()` logic to handle both offset types
+  - [x] Add validation for offset bounds (0 to messageCount/duration)
+- [x] Add offset conversion utilities
+  - [x] `frameToTime(frame: number): number` - convert frame index to seconds
+  - [x] `timeToFrame(seconds: number): number` - convert seconds to frame index
+  - [x] Use existing snapshot system for efficient seeking
 
 **Dependencies:** `packages/engine/src/demo/demoReader.ts` (DemoReader.seekToMessage), `packages/engine/src/demo/playback.ts` (existing seek methods)
 
@@ -62,20 +62,20 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 3: Foundation - Resource Tracking
 
 ### Task 3.1: Implement Resource Load Tracker
-- [ ] Create `ResourceLoadTracker` class in `packages/engine/src/assets/resourceTracker.ts`
-  - [ ] `startTracking(): void` - begin tracking resource loads
-  - [ ] `stopTracking(): ResourceLoadLog` - end tracking and return log
-  - [ ] `recordLoad(type: ResourceType, path: string, timestamp: number, frame: number): void`
-  - [ ] Define `ResourceType` enum: Texture, Sound, Model, Map, Sprite, ConfigString
-  - [ ] Define `ResourceLoadLog` interface with frame and time-indexed maps
-  - [ ] Track both first load and subsequent accesses
-  - [ ] Store resource metadata (size, pak source)
-- [ ] Integrate with existing asset systems
-  - [ ] Hook `AssetManager` in `packages/engine/src/assets/manager.ts`
-  - [ ] Hook `TextureCache` in `packages/engine/src/assets/texture.ts`
-  - [ ] Hook `AudioRegistry` in `packages/engine/src/assets/audio.ts`
-  - [ ] Hook model loaders (Md2Loader, Md3Loader, SpriteLoader)
-  - [ ] Hook `BspLoader` in `packages/engine/src/loaders/bsp.ts`
+- [x] Create `ResourceLoadTracker` class in `packages/engine/src/assets/resourceTracker.ts`
+  - [x] `startTracking(): void` - begin tracking resource loads
+  - [x] `stopTracking(): ResourceLoadLog` - end tracking and return log
+  - [x] `recordLoad(type: ResourceType, path: string, timestamp: number, frame: number): void`
+  - [x] Define `ResourceType` enum: Texture, Sound, Model, Map, Sprite, ConfigString
+  - [x] Define `ResourceLoadLog` interface with frame and time-indexed maps
+  - [x] Track both first load and subsequent accesses
+  - [x] Store resource metadata (size, pak source)
+- [x] Integrate with existing asset systems
+  - [x] Hook `AssetManager` in `packages/engine/src/assets/manager.ts`
+  - [x] Hook `TextureCache` in `packages/engine/src/assets/texture.ts`
+  - [x] Hook `AudioRegistry` in `packages/engine/src/assets/audio.ts`
+  - [x] Hook model loaders (Md2Loader, Md3Loader, SpriteLoader)
+  - [x] Hook `BspLoader` in `packages/engine/src/loaders/bsp.ts`
 
 **Dependencies:** `packages/engine/src/assets/manager.ts`, loaders in `packages/engine/src/loaders/`
 
@@ -88,16 +88,16 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Integration: Memory leak test (start/stop tracking 1000 times)
 
 ### Task 3.2: Demo Playback with Resource Tracking
-- [ ] Extend `DemoPlaybackController` to support tracking
-  - [ ] `playWithTracking(tracker: ResourceLoadTracker, options?: PlaybackOptions): Promise<ResourceLoadLog>`
-  - [ ] `playRangeWithTracking(start: Offset, end: Offset, tracker: ResourceLoadTracker): Promise<ResourceLoadLog>`
-  - [ ] Automatically associate frame numbers from DemoReader with resource loads
-  - [ ] Associate timestamps from playback timer with resource loads
-  - [ ] Support fast-forward mode (skip rendering, parse only) for analysis speed
-- [ ] Add analysis mode options
-  - [ ] `trackingMode: 'loads' | 'visibility' | 'both'` - what to track
-  - [ ] `skipRendering: boolean` - fast analysis without drawing
-  - [ ] `recordInterval: 'frame' | 'time'` - primary indexing method
+- [x] Extend `DemoPlaybackController` to support tracking
+  - [x] `playWithTracking(tracker: ResourceLoadTracker, options?: PlaybackOptions): Promise<ResourceLoadLog>`
+  - [x] `playRangeWithTracking(start: Offset, end: Offset, tracker: ResourceLoadTracker): Promise<ResourceLoadLog>`
+  - [x] Automatically associate frame numbers from DemoReader with resource loads
+  - [x] Associate timestamps from playback timer with resource loads
+  - [x] Support fast-forward mode (skip rendering, parse only) for analysis speed
+- [x] Add analysis mode options
+  - [x] `trackingMode: 'loads' | 'visibility' | 'both'` - what to track (Impl: Currently tracks all loads)
+  - [x] `skipRendering: boolean` - fast analysis without drawing (Impl: via fastForward option)
+  - [x] `recordInterval: 'frame' | 'time'` - primary indexing method (Impl: Log contains both indices)
 
 **Dependencies:** Task 3.1, `packages/engine/src/demo/playback.ts`
 
@@ -112,33 +112,30 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 
 ## Phase 4: Demo Manipulation - Clip Extraction
 
-### Task 4.1: Extract Demo Clip to New File
-- [ ] Create `DemoClipper` class in `packages/engine/src/demo/clipper.ts`
-  - [ ] `extractClip(demo: Uint8Array, start: Offset, end: Offset): Uint8Array`
-  - [ ] `extractStandaloneClip(demo: Uint8Array, start: Offset, end: Offset, worldState: WorldState): Uint8Array`
-  - [ ] Extract raw message blocks from DemoReader between offsets
-  - [ ] Re-serialize to valid demo format (length-prefixed blocks, -1 terminator)
-- [ ] Define `WorldState` interface
-  - [ ] `serverData: ServerDataMessage` - protocol, map name, player slot
-  - [ ] `configStrings: Map<number, string>` - all CS_ values
-  - [ ] `entityBaselines: Map<number, EntityState>` - spawn baselines
-  - [ ] `playerState: ProtocolPlayerState` - starting player state at clip offset
-- [ ] Implement world state capture
-  - [ ] `captureWorldState(demo: Uint8Array, atOffset: Offset): Promise<WorldState>`
-  - [ ] Play demo from start to offset, accumulate all state
-  - [ ] Use `ClientNetworkHandler` to process messages and extract state
-  - [ ] Optimize: use snapshot system if available for faster seeks
+### Task 4.1: Basic Clip Extraction & State Capture
+- [x] Create `DemoClipper` class in `packages/engine/src/demo/clipper.ts`
+  - [x] `extractClip(demo: Uint8Array, start: Offset, end: Offset): Uint8Array` (Raw extraction)
+  - [x] `captureWorldState(demo: Uint8Array, atOffset: Offset): Promise<WorldState>`
+- [x] Implement `MessageWriter` in `packages/engine/src/demo/writer.ts`
+  - [x] Support serializing `svc_serverdata`, `svc_configstring`, `svc_spawnbaseline`, `svc_stufftext`
+  - [x] Support `svc_spawnbaseline` entity state serialization
+- [x] Define `WorldState` interface
+  - [x] `serverData: ServerDataMessage` - protocol, map name, player slot
+  - [x] `configStrings: Map<number, string>` - all CS_ values
+  - [x] `entityBaselines: Map<number, EntityState>` - spawn baselines
+  - [x] `playerState: ProtocolPlayerState` - starting player state at clip offset
+  - [x] `currentEntities: Map<number, EntityState>` - active entities at clip start
+- [x] Implement world state capture logic
+  - [x] Play demo from start to offset
+  - [x] Enhance `NetworkMessageHandler` to track entity deltas and reconstruct full entity state
+  - [x] Accumulate configstrings and baselines
 
-**Dependencies:** `packages/engine/src/demo/demoReader.ts`, `packages/engine/src/demo/recorder.ts`, `packages/engine/src/demo/parser.ts`, `packages/client/src/demo/handler.ts`
+**Dependencies:** `packages/engine/src/demo/demoReader.ts`, `packages/engine/src/demo/playback.ts`, `packages/engine/src/demo/parser.ts`
 
 **Test Cases:**
-- Unit: Extract clip from middle of demo, verify message count
-- Unit: Extract from start (offset 0), extract to end (no end offset)
-- Unit: Invalid offsets (start > end, out of bounds)
-- Integration: Extract clip → play in DemoPlaybackController → verify playback succeeds
-- Integration: Standalone clip → verify contains ServerData, configstrings, baselines
-- Integration: World state capture at various offsets, verify completeness
-- Integration: Clip from offset N should look identical to playing full demo and seeking to N
+- Unit: Extract clip from middle of demo, verify message count/size (Raw)
+- Unit: World state capture at various offsets, verify completeness
+- Unit: Verify `MessageWriter` output against known binary patterns
 
 ### Task 4.2: Optimize World State for Clips
 - [ ] Add `WorldStateOptimizer` in `packages/engine/src/demo/worldStateOptimizer.ts`
@@ -159,9 +156,25 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Unit: WorldState with 100 entities, clip references 5 → verify 95 removed
 - Unit: ConfigString removal (unreferenced CS_MODELS, CS_SOUNDS)
 - Unit: Dependency preservation (entity → model → texture chain)
-- Integration: Optimized standalone clip file size < unoptimized
-- Integration: Optimized clip playback identical to unoptimized
-- Integration: Stress test: large map (1000 entities), tiny clip (5 seconds)
+
+### Task 4.3: Frame Re-serialization & Delta Patching
+- [ ] Implement `extractStandaloneClip` in `DemoClipper`
+  - [ ] `extractStandaloneClip(demo: Uint8Array, start: Offset, end: Offset, worldState: WorldState): Uint8Array`
+  - [ ] Generate synthetic Frame 0 (Full Update) from `WorldState`
+  - [ ] Re-serialize subsequent frames from the clip:
+    - [ ] Decode original frame
+    - [ ] Map `delta_frame` references (e.g., if frame 1001 refs 1000, and 1000 is our new Frame 0, update ref)
+    - [ ] Convert delta entities to full updates if the reference frame is dropped
+    - [ ] Re-encode frame using `MessageWriter`
+  - [ ] Write final demo file structure (Header + Messages + EOF)
+
+**Dependencies:** Task 4.1, Task 4.2, `packages/engine/src/demo/writer.ts`
+
+**Test Cases:**
+- Integration: Standalone clip → verify contains ServerData, configstrings, baselines
+- Integration: Playback of standalone clip should be smooth without "delta from unknown frame" errors
+- Integration: Clip from offset N should look identical to playing full demo and seeking to N
+- Performance: Re-serialization speed for large clips
 
 ---
 

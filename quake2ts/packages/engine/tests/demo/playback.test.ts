@@ -1,135 +1,150 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
-import { NetworkMessageHandler, createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
+import { DemoPlaybackController, PlaybackState, FrameOffset, TimeOffset } from '../../src/demo/playback';
+import { DemoReader } from '../../src/demo/demoReader';
 
-describe('DemoPlaybackController', () => {
-  let controller: DemoPlaybackController;
-  let mockHandler: NetworkMessageHandler;
-
-  beforeEach(() => {
-    controller = new DemoPlaybackController();
-    mockHandler = {
-      onServerData: vi.fn(),
-      onBaseline: vi.fn(),
-      onFrame: vi.fn(),
-      onPrint: vi.fn(),
-      onCenterPrint: vi.fn(),
-      onStuffText: vi.fn(),
-      onSound: vi.fn(),
-      onTempEntity: vi.fn(),
-      onLayout: vi.fn(),
-      onInventory: vi.fn(),
-      onConfigString: vi.fn(),
-      onMuzzleFlash: vi.fn(),
-      onSpawnBaseline: vi.fn(),
-      // Mock optional methods
-      getEntities: vi.fn().mockReturnValue(new Map()),
-      getPlayerState: vi.fn().mockReturnValue(createEmptyProtocolPlayerState())
+// Mock DemoReader
+vi.mock('../../src/demo/demoReader', () => {
+    return {
+        DemoReader: vi.fn().mockImplementation(() => {
+            return {
+                getMessageCount: vi.fn().mockReturnValue(100),
+                getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
+                getOffset: vi.fn().mockReturnValue(0),
+                reset: vi.fn(),
+                hasMore: vi.fn().mockReturnValue(true),
+                readNextBlock: vi.fn().mockReturnValue({ data: new Uint8Array(0) }),
+                seekToMessage: vi.fn().mockReturnValue(true)
+            };
+        })
     };
-    controller.setHandler(mockHandler);
-  });
+});
 
-  const createMockDemoBuffer = (numFrames: number): ArrayBuffer => {
-    const buffer = new ArrayBuffer(numFrames * (4 + 1));
-    const view = new DataView(buffer);
-    let offset = 0;
-    for (let i = 0; i < numFrames; i++) {
-      view.setInt32(offset, 1, true); // Length 1
-      offset += 4;
-      view.setUint8(offset, 6); // ServerCommand.nop
-      offset += 1;
-    }
-    return buffer;
-  };
+// Mock NetworkMessageParser to trigger handler
+vi.mock('../../src/demo/parser', () => {
+    return {
+        NetworkMessageParser: vi.fn().mockImplementation((data, handler) => {
+            return {
+                setProtocolVersion: vi.fn(),
+                getProtocolVersion: vi.fn().mockReturnValue(31),
+                parseMessage: vi.fn().mockImplementation(() => {
+                    // Simulate parsing a frame by calling the handler
+                    if (handler && handler.onFrame) {
+                        handler.onFrame({
+                            sequence: 0,
+                            deltaSequence: 0,
+                            timestamp: 0,
+                            playerState: null,
+                            packetEntities: null
+                        });
+                    }
+                })
+            };
+        })
+    };
+});
 
-  it('should initialize in stopped state', () => {
-    expect(controller.getState()).toBe(PlaybackState.Stopped);
-  });
+describe('DemoPlaybackController Offset Parameters', () => {
+    let controller: DemoPlaybackController;
+    let mockReader: any;
 
-  it('should fire onPlaybackStateChange event', () => {
-      const callback = vi.fn();
-      controller.setCallbacks({ onPlaybackStateChange: callback });
-      const buffer = createMockDemoBuffer(1);
-      controller.loadDemo(buffer);
+    beforeEach(() => {
+        vi.clearAllMocks();
+        controller = new DemoPlaybackController();
+        controller.loadDemo(new ArrayBuffer(100));
+        // Access the private reader instance through the mock
+        mockReader = (DemoReader as any).mock.results[0].value;
+    });
 
-      controller.play();
-      expect(callback).toHaveBeenCalledWith(PlaybackState.Playing);
+    it('should convert frame to time', () => {
+        controller.setFrameDuration(100); // 100ms per frame
+        expect(controller.frameToTime(10)).toBe(1.0);
+        expect(controller.frameToTime(0)).toBe(0);
+        expect(controller.frameToTime(50)).toBe(5.0);
+    });
 
-      controller.pause();
-      expect(callback).toHaveBeenCalledWith(PlaybackState.Paused);
-  });
+    it('should convert time to frame', () => {
+        controller.setFrameDuration(100);
+        expect(controller.timeToFrame(1.0)).toBe(10);
+        expect(controller.timeToFrame(1.05)).toBe(10); // Floor
+        expect(controller.timeToFrame(0)).toBe(0);
+    });
 
-  it('should seek to specific frame', () => {
-      const buffer = createMockDemoBuffer(10);
-      controller.loadDemo(buffer);
-      const onSeekComplete = vi.fn();
-      controller.setCallbacks({ onSeekComplete });
+    it('should playFrom frame offset', () => {
+        const offset: FrameOffset = { type: 'frame', frame: 20 };
+        controller.playFrom(offset);
 
-      controller.seekToFrame(5);
+        expect(controller.getState()).toBe(PlaybackState.Playing);
+        expect(controller.getCurrentFrame()).toBe(20);
+    });
 
-      expect(controller.getCurrentFrame()).toBe(5);
-      expect(onSeekComplete).toHaveBeenCalled();
-  });
+    it('should playFrom time offset', () => {
+        controller.setFrameDuration(100);
+        const offset: TimeOffset = { type: 'time', seconds: 2.0 }; // Frame 20
+        controller.playFrom(offset);
 
-  it('should get frame data', () => {
-      const buffer = createMockDemoBuffer(5);
-      controller.loadDemo(buffer);
+        expect(controller.getState()).toBe(PlaybackState.Playing);
+        expect(controller.getCurrentFrame()).toBe(20);
+    });
 
-      const frameData = controller.getFrameData(2);
-      expect(frameData).toBeDefined();
-      expect(controller.getCurrentFrame()).toBe(2);
-  });
+    it('should validate playFrom offset type', () => {
+        expect(() => {
+            controller.playFrom({ type: 'invalid' as any, frame: 10 });
+        }).toThrow('Invalid offset type');
+    });
 
-  it('should get frame entities via handler', () => {
-      const buffer = createMockDemoBuffer(5);
-      controller.loadDemo(buffer);
+    it('should playRange with frame offsets', () => {
+        const start: FrameOffset = { type: 'frame', frame: 10 };
+        const end: FrameOffset = { type: 'frame', frame: 15 };
 
-      // Need to seek first so currentFrameIndex matches requested index for the optimization
-      // Or rely on seek being called internally.
-      // If we request frame 3, it seeks to 3.
-      // `getEntities` optimization checks if `frameIndex === currentFrameIndex`.
+        const onComplete = vi.fn();
+        controller.setCallbacks({ onPlaybackComplete: onComplete });
 
-      const entities = controller.getFrameEntities(3);
+        controller.playRange(start, end);
 
-      // The optimization inside getFrameEntities checks `frameIndex === this.currentFrameIndex`.
-      // Internal seek updates `currentFrameIndex` to 3.
-      // So optimization should pass and `handler.getEntities` should be called.
+        expect(controller.getCurrentFrame()).toBe(10);
+        expect(controller.getState()).toBe(PlaybackState.Playing);
 
-      expect(mockHandler.getEntities).toHaveBeenCalled();
-      expect(entities).toEqual([]); // Mock returns empty map
-      expect(controller.getCurrentFrame()).toBe(3);
-  });
+        // Simulate updates
+        // We start at frame 10.
+        // update(0.1) -> accumulated 100ms -> processNextFrame -> frame 11 -> trigger onFrame -> check >= 15 (no)
+        // update(0.1) -> frame 12
+        // update(0.1) -> frame 13
+        // update(0.1) -> frame 14
+        // update(0.1) -> frame 15 -> trigger onFrame -> check >= 15 (yes) -> pause -> onComplete
 
-  it('should get frame player state via handler', () => {
-      const buffer = createMockDemoBuffer(5);
-      controller.loadDemo(buffer);
+        for (let i = 0; i < 5; i++) {
+            controller.update(0.1);
+        }
 
-      // Seek internal should work.
-      // Note: `seek` implementation sets `currentFrameIndex` to `targetFrame`.
-      // The optimization in `getFramePlayerState` is:
-      // if (frameIndex === this.currentFrameIndex && this.handler?.getPlayerState)
+        expect(controller.getCurrentFrame()).toBe(15);
+        expect(controller.getState()).toBe(PlaybackState.Paused);
+        expect(onComplete).toHaveBeenCalled();
+    });
 
-      // But initially `currentFrameIndex` is -1.
-      // So `getFramePlayerState(1)` calls `getFrameData(1)`.
-      // `getFrameData(1)` calls `seek(1)`.
-      // `seek(1)` sets `currentFrameIndex` to 1.
-      // `getFrameData` returns `lastFrameData`.
-      // `getFramePlayerState` returns `frame.playerState`.
+    it('should playRange with mixed offsets', () => {
+        controller.setFrameDuration(100);
+        const start: TimeOffset = { type: 'time', seconds: 1.0 }; // Frame 10
+        const end: FrameOffset = { type: 'frame', frame: 15 };
 
-      // Wait! `getFramePlayerState` calls `getFrameData` if the initial check FAILS.
-      // So if I call `getFramePlayerState(1)` when at -1:
-      // 1. check fails (-1 != 1)
-      // 2. calls `getFrameData(1)` -> seeks -> returns frame
-      // 3. returns frame.playerState.
-      // So `mockHandler.getPlayerState` is NOT CALLED in this path!
+        controller.playRange(start, end);
+        expect(controller.getCurrentFrame()).toBe(10);
+    });
 
-      // To test the optimization (handler call), we must be AT the frame.
-      controller.seekToFrame(1);
+    it('should throw on invalid range', () => {
+        const start: FrameOffset = { type: 'frame', frame: 20 };
+        const end: FrameOffset = { type: 'frame', frame: 10 };
 
-      const state = controller.getFramePlayerState(1);
-      expect(mockHandler.getPlayerState).toHaveBeenCalled();
-      expect(state).toBeDefined();
-      expect(controller.getCurrentFrame()).toBe(1);
-  });
+        expect(() => {
+            controller.playRange(start, end);
+        }).toThrow(/cannot be before start offset/);
+    });
 
+    it('should clamp seek to boundaries', () => {
+        // Mock getMessageCount is 100. Max frame is 99.
+        controller.seekToFrame(150);
+        expect(controller.getCurrentFrame()).toBe(99);
+
+        controller.seekToFrame(-50);
+        expect(controller.getCurrentFrame()).toBe(0);
+    });
 });

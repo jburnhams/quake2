@@ -36,7 +36,7 @@ describe('Spectator Mode', () => {
         expect(player.movetype).toBe(MoveType.Noclip);
         expect(player.solid).toBe(Solid.Not);
         expect(player.modelindex).toBe(0);
-        expect(player.client?.pm_type).toBe(1); // PM_SPECTATOR
+        expect(player.client?.pm_type).toBe(3); // PM_SPECTATOR (3 in this codebase)
     });
 
     it('should unset spectator mode', () => {

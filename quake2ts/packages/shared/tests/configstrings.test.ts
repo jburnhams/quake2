@@ -28,11 +28,16 @@ describe('configstring constants', () => {
     expect(ConfigStringIndex.Lights).toBe(ConfigStringIndex.Images + MAX_IMAGES);
     expect(ConfigStringIndex.ShadowLights).toBe(ConfigStringIndex.Lights + MAX_LIGHTSTYLES);
     expect(ConfigStringIndex.Items).toBe(ConfigStringIndex.ShadowLights + MAX_SHADOW_LIGHTS);
-    expect(ConfigStringIndex.PlayerSkins).toBe(ConfigStringIndex.Items + MAX_ITEMS);
+    // PlayerSkins is now aliased to Players, which is Items + MAX_ITEMS.
+    // The previous test expected PlayerSkins to be the start of the next block,
+    // but in standard Q2 (and our fix), Players comes first, and PlayerSkins is an alias.
+    // The next block (General) starts after Players + MAX_CLIENTS.
+    expect(ConfigStringIndex.Players).toBe(11582);
+    expect(ConfigStringIndex.PlayerSkins).toBe(11582);
   });
 
   it('lays out the wheel/general ranges with the same limits as the C++ enum', () => {
-    expect(ConfigStringIndex.General).toBe(ConfigStringIndex.PlayerSkins + MAX_CLIENTS);
+    expect(ConfigStringIndex.General).toBe(11838);
     expect(ConfigStringIndex.WheelWeapons).toBe(ConfigStringIndex.General + MAX_GENERAL);
     expect(ConfigStringIndex.WheelAmmo).toBe(ConfigStringIndex.WheelWeapons + MAX_WHEEL_ITEMS);
     expect(ConfigStringIndex.WheelPowerups).toBe(ConfigStringIndex.WheelAmmo + MAX_WHEEL_ITEMS);

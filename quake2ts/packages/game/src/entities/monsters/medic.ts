@@ -748,6 +748,7 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
         return;
     }
 
+    context.entities.sound?.(self, 0, 'medic/meddeth1.wav', 1, 1, 0);
     medic_die(self);
   };
 

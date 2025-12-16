@@ -56,6 +56,8 @@ export { Cvar, CvarRegistry } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
 export { PakArchive, PakParseError, calculatePakChecksum } from './assets/pak.js';
+export { PakWriter } from './assets/pakWriter.js';
+export { ResourceLoadTracker, ResourceType, type ResourceLoadLog, type ResourceLoadEntry } from './assets/resourceTracker.js';
 export { VirtualFileSystem } from './assets/vfs.js';
 export {
   ingestPaks,
@@ -290,6 +292,7 @@ export { DemoAnalyzer } from './demo/analyzer.js';
 export { DemoEventType } from './demo/analysis.js';
 export { DemoCameraMode } from './demo/camera.js';
 export type { DemoCameraState } from './demo/camera.js';
+export { DemoClipper, type WorldState, type ServerDataMessage } from './demo/clipper.js';
 export type { DemoEvent, EventSummary, DemoHeader, ServerInfo, DemoStatistics, PlayerStatistics, WeaponStatistics, FrameDiff } from './demo/analysis.js';
 export {
     PROTOCOL_VERSION_RERELEASE,
@@ -323,6 +326,7 @@ export type {
     FogData,
     DamageIndicator
 } from './demo/parser.js';
+export { applyEntityDelta } from './demo/delta.js';
 export { FileType, detectFileType, isTextFile, isBinaryFile } from './assets/fileType.js';
 export { AssetPreviewGenerator } from './assets/preview.js';
 export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
