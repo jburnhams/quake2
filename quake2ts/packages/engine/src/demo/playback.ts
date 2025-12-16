@@ -783,37 +783,77 @@ export class DemoPlaybackController {
   public async playRangeWithTracking(
       start: PlaybackOffset,
       end: PlaybackOffset,
-      tracker: ResourceLoadTracker
+      tracker: ResourceLoadTracker,
+      options: { fastForward?: boolean } = {}
   ): Promise<ResourceLoadLog> {
       this.tracker = tracker;
       tracker.startTracking();
 
-      return new Promise((resolve, reject) => {
-          const originalComplete = this.callbacks?.onPlaybackComplete;
-          const originalError = this.callbacks?.onPlaybackError;
+      const startFrame = start.type === 'frame' ? start.frame : this.timeToFrame(start.seconds);
+      const endFrame = end.type === 'frame' ? end.frame : this.timeToFrame(end.seconds);
 
-          const cleanup = () => {
-              this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+      if (options.fastForward) {
+          try {
+              this.playFrom(start);
+              this.transitionState(PlaybackState.Playing);
+
+              const CHUNK_SIZE = 100;
+
+              const processChunk = async (): Promise<ResourceLoadLog> => {
+                  if (this.state !== PlaybackState.Playing) {
+                       throw new Error("Playback stopped unexpectedly during fast forward");
+                  }
+
+                  let count = 0;
+                  while (count < CHUNK_SIZE) {
+                      if (this.currentFrameIndex >= endFrame || !this.processNextFrame()) {
+                          const log = tracker.stopTracking();
+                          this.tracker = null;
+                          if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
+                          return log;
+                      }
+                      count++;
+                  }
+
+                  await new Promise(resolve => setTimeout(resolve, 0));
+                  return processChunk();
+              };
+
+              return await processChunk();
+
+          } catch (e) {
+              tracker.stopTracking();
               this.tracker = null;
-          };
+              throw e;
+          }
+      } else {
+          return new Promise((resolve, reject) => {
+              const originalComplete = this.callbacks?.onPlaybackComplete;
+              const originalError = this.callbacks?.onPlaybackError;
 
-          this.setCallbacks({
-              ...this.callbacks,
-              onPlaybackComplete: () => {
-                  const log = tracker.stopTracking();
-                  if (originalComplete) originalComplete();
-                  cleanup();
-                  resolve(log);
-              },
-              onPlaybackError: (err) => {
-                  tracker.stopTracking();
-                  if (originalError) originalError(err);
-                  cleanup();
-                  reject(err);
-              }
+              const cleanup = () => {
+                  this.setCallbacks({ ...this.callbacks, onPlaybackComplete: originalComplete, onPlaybackError: originalError });
+                  this.tracker = null;
+              };
+
+              this.setCallbacks({
+                  ...this.callbacks,
+                  onPlaybackComplete: () => {
+                      const log = tracker.stopTracking();
+                      if (originalComplete) originalComplete();
+                      cleanup();
+                      resolve(log);
+                  },
+                  onPlaybackError: (err) => {
+                      tracker.stopTracking();
+                      if (originalError) originalError(err);
+                      cleanup();
+                      reject(err);
+                  }
+              });
+
+              this.playRange(start, end);
           });
-
-          this.playRange(start, end);
-      });
+      }
   }
 }
