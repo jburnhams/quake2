@@ -115,6 +115,7 @@ describe('Script Hooks', () => {
       DamageMod.UNKNOWN,
       0,
       undefined,
+      undefined,
       entities // Pass entities system
     );
 

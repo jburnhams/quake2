@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { WorldStateOptimizer } from '../../src/demo/worldStateOptimizer.js';
 import { MessageWriter } from '../../src/demo/writer.js';
 import { WorldState } from '../../src/demo/clipper.js';
-import { ConfigStringIndex } from '@quake2ts/shared';
+import { ConfigStringIndex, BinaryStream } from '@quake2ts/shared';
 import { DemoMessageBlock } from '../../src/demo/demoReader.js';
 import { createEmptyProtocolPlayerState, createEmptyEntityState, EntityState } from '../../src/demo/parser.js';
 
@@ -28,7 +28,7 @@ describe('WorldStateOptimizer', () => {
   // Helper to create a dummy message block
   const createBlock = (data: Uint8Array): DemoMessageBlock => ({
     sequence: 0,
-    data
+    data: new BinaryStream(data)
   });
 
   it('should keep used configstrings and prune unused ones', () => {

@@ -34,8 +34,8 @@ export class WorldStateOptimizer {
 
         // We need to parse each block to find referenced entities and configstrings
         for (const block of clipMessages) {
-             const blockData = new Uint8Array(block.data);
-             const stream = new BinaryStream(blockData);
+             const stream = block.data;
+             const startPos = stream.getReadPosition();
 
              const blockParser = new NetworkMessageParser(stream, {
                  onServerData: () => {},
@@ -72,6 +72,7 @@ export class WorldStateOptimizer {
              });
 
              blockParser.parseMessage();
+             stream.setReadPosition(startPos);
         }
 
         // Analyze dependencies of all used entities (from start state and clip)

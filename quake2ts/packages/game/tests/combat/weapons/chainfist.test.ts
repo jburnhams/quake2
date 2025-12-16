@@ -90,6 +90,8 @@ describe('Chainfist Weapon', () => {
         v_angle: { x: 0, y: 0, z: 0 },
       },
     } as unknown as Entity;
+
+    vi.clearAllMocks();
   });
 
   describe('fireChainfist', () => {

@@ -3,6 +3,7 @@ import { applyPowerArmor, applyRegularArmor, type PowerArmorState, type RegularA
 import { DamageFlags, EntityDamageFlags, hasAnyDamageFlag } from './damageFlags.js';
 import { DamageMod } from './damageMods.js';
 import type { Entity } from '../entities/entity.js';
+import type { EntitySystem } from '../entities/system.js';
 import { ServerCommand, TempEntity, ZERO_VEC3 } from '@quake2ts/shared';
 import { MulticastType } from '../imports.js';
 import { throwGibs } from '../entities/gibs.js';
@@ -170,8 +171,13 @@ export function T_Damage(
   mod: DamageMod,
   time: number,
   multicast?: (origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]) => void,
-  options?: DamageOptions
+  options?: DamageOptions,
+  sys?: EntitySystem
 ): DamageApplicationResult | null {
+  if (sys) {
+    sys.scriptHooks.onDamage?.(targ as Entity, attacker as Entity, inflictor as Entity, damage);
+  }
+
   if (!targ.takedamage) {
     return null;
   }

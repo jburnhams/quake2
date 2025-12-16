@@ -469,9 +469,10 @@ export function createGame(
       return snapshot(0);
     },
     shutdown() {
-      /* placeholder shutdown */
+      entities.scriptHooks.onMapUnload?.();
     },
     spawnWorld() {
+      entities.scriptHooks.onMapLoad?.(entities.level.mapname || '');
       // In Q2, spawnWorld is called to load entities from map string.
       // Here it does player spawning too for the single player mode.
       // For multiplayer, we might just spawn world entities here.
@@ -518,6 +519,8 @@ export function createGame(
        player.client = client;
        // Initial spawn logic delegated to respawn (reusing code)
        this.respawn(player);
+
+       entities.scriptHooks.onPlayerSpawn?.(player);
 
        player.die = (self, inflictor, attacker, damage, point, mod) => {
            player_die(self, inflictor, attacker, damage, point, mod, entities);
