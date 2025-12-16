@@ -76,7 +76,7 @@ import { findPlayerStart, SelectSpawnPoint } from './entities/spawn.js';
 import { player_die, player_think, player_pain } from './entities/player.js';
 import { populatePlayerStats } from './entities/playerStats.js';
 
-import { UserCommand, applyPmove, PmoveTraceResult } from '@quake2ts/shared';
+import { UserCommand, applyPmove, PmoveTraceResult, PmType } from '@quake2ts/shared';
 import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
 
 import { GameTraceResult } from './imports.js';
@@ -125,6 +125,9 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
   giveItem(itemClassname: string): void;
   damage(amount: number): void;
   teleport(origin: Vec3): void;
+
+  // Spectator Mode
+  setSpectator(playernum: number, spectating: boolean): void;
 }
 
 export { hashGameState, hashEntitySystem } from './checksum.js';
@@ -762,6 +765,38 @@ export function createGame(
          // Sync engine origin if strictly single player focused with global var
          // origin = { ...player.origin };
          // velocity = { ...player.velocity };
+      }
+    },
+    setSpectator(playernum: number, spectating: boolean): void {
+      // Find player entity. For now, assuming single player or looking up by playernum if we track it.
+      // Since we don't have an explicit playernum map in this context, we'll try to find by index
+      // or just grab the 'player' for SP compat.
+      // In a real MP scenario, we would look up by `entities.get(playernum + 1)`.
+      // Let's try that, falling back to finding the first player.
+      let player = entities.getByIndex(playernum + 1);
+      if (!player || player.classname !== 'player') {
+          player = entities.find(e => e.classname === 'player');
+      }
+
+      if (player && player.client) {
+          if (spectating) {
+              player.movetype = MoveType.Noclip;
+              player.solid = Solid.Not;
+              player.client.pm_type = PmType.Spectator;
+              player.modelindex = 0;
+          } else {
+              player.movetype = MoveType.Walk;
+              player.solid = Solid.BoundingBox;
+              player.client.pm_type = PmType.Normal;
+              // Ideally we restore the original model index.
+              // For now, let's assume standard male model or query engine.
+              // Note: respawn() sets it to 'players/male/tris.md2'.
+              if (engine.modelIndex) {
+                 player.modelindex = engine.modelIndex('players/male/tris.md2');
+              } else {
+                 player.modelindex = 255; // Fallback?
+              }
+          }
       }
     }
   };

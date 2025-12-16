@@ -55,6 +55,22 @@ export class ClientConfigStrings {
     return this.images[index];
   }
 
+  public getPlayerName(playernum: number): string | undefined {
+    const csIndex = ConfigStringIndex.Players + playernum;
+    const info = this.strings.get(csIndex);
+    if (!info) return undefined;
+    // Player info is a userinfo string: \name\Player\skin\male/grunt...
+    // We need to parse it to get the name.
+    // Simple parse: extract value for 'name' key.
+    const parts = info.split('\\');
+    for (let i = 1; i < parts.length; i += 2) {
+      if (parts[i] === 'name') {
+        return parts[i + 1];
+      }
+    }
+    return undefined;
+  }
+
   public clear(): void {
     this.strings.clear();
     this.models.length = 0;

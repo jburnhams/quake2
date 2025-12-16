@@ -53,7 +53,8 @@ export enum ConfigStringIndex {
   Lights = Images + MAX_IMAGES,
   ShadowLights = Lights + MAX_LIGHTSTYLES,
   Items = ShadowLights + MAX_SHADOW_LIGHTS,
-  PlayerSkins = Items + MAX_ITEMS,
+  Players = Items + MAX_ITEMS, // CS_PLAYERS
+  PlayerSkins = Players + MAX_CLIENTS, // Legacy naming, but CS_PLAYERS is usually player info
   General = PlayerSkins + MAX_CLIENTS,
   WheelWeapons = General + MAX_GENERAL,
   WheelAmmo = WheelWeapons + MAX_WHEEL_ITEMS,
