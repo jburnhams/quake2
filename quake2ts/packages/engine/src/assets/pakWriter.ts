@@ -1,4 +1,4 @@
-import { normalizePath } from './pak';
+import { normalizePath } from './pak.js';
 
 const PAK_MAGIC = 'PACK';
 const HEADER_SIZE = 12;
