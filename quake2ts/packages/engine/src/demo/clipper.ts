@@ -71,13 +71,13 @@ export class DemoClipper {
       let currentFrame = -1;
 
       const handler: NetworkMessageHandler = {
-          onServerData: (data) => {
+          onServerData: (protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string, tickRate?: number, demoType?: number) => {
               serverData = {
-                  protocolVersion: data.protocolVersion,
-                  serverCount: data.serverCount,
-                  attractLoop: data.attractLoop,
-                  gameDirectory: data.gameDirectory,
-                  levelName: data.levelName
+                  protocolVersion: protocol,
+                  serverCount: serverCount,
+                  attractLoop: attractLoop !== 0,
+                  gameDirectory: gameDir,
+                  levelName: levelName
               };
           },
           onConfigString: (index, str) => {
@@ -156,7 +156,9 @@ export class DemoClipper {
           currentFrame++;
 
           const parser = new NetworkMessageParser(block.data, handler);
-          parser.setProtocolVersion(serverData?.protocolVersion ?? 34);
+          // @ts-ignore
+          const currentProtocol = serverData ? serverData.protocolVersion : 34;
+          parser.setProtocolVersion(currentProtocol);
           parser.parseMessage();
       }
 
