@@ -39,7 +39,8 @@ export function processEntityEffects(
 
   // EF_HYPERBLASTER: Yellow light
   if (effects & EntityEffects.HyperBlaster) {
-    addDLight(dlights, origin, [1.0, 1.0, 0.0], 200, 0, lifetime);
+    const intensity = flicker(time, 200, 32);
+    addDLight(dlights, origin, [1.0, 1.0, 0.0], intensity, 0, lifetime);
   }
 
   // EF_ROCKET: Red/Orange light + Trail? (Trails handled elsewhere usually)
@@ -60,7 +61,8 @@ export function processEntityEffects(
 
   // EF_BLUEHYPERBLASTER: Blue light
   if (effects & EntityEffects.Bluehyperblaster) {
-    addDLight(dlights, origin, [0.2, 0.2, 1.0], 200, 0, lifetime);
+    const intensity = flicker(time, 200, 32);
+    addDLight(dlights, origin, [0.2, 0.2, 1.0], intensity, 0, lifetime);
   }
 
   // EF_PLASMA: Blue light
@@ -78,6 +80,22 @@ export function processEntityEffects(
     addDLight(dlights, origin, [0.2, 1.0, 0.2], 200, 0, lifetime);
   }
 
+  // EF_FLAG1: Red Light
+  if (effects & EntityEffects.Flag1) {
+    const intensity = flicker(time, 200, 40);
+    addDLight(dlights, origin, [1.0, 0.2, 0.2], intensity, 0, lifetime);
+  }
+
+  // EF_FLAG2: Blue Light
+  if (effects & EntityEffects.Flag2) {
+    const intensity = flicker(time, 200, 40);
+    addDLight(dlights, origin, [0.2, 0.2, 1.0], intensity, 0, lifetime);
+  }
+
   // EF_COLOR_SHELL (16) often implies power shield or specific coloring?
   // EF_POWERSCREEN (32)
+}
+
+function flicker(time: number, base: number, variance: number): number {
+    return base + (Math.random() - 0.5) * variance;
 }

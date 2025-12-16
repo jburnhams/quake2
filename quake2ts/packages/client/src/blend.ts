@@ -44,5 +44,12 @@ export const updateBlend = (
       return [1, 0, 0, state.damageAlpha * 0.5];
   }
 
+  // Underwater tints
+  if (ps.waterLevel >= 3) {
+      // TODO: Support specific tints for Lava/Slime once watertype is exposed in PlayerState.
+      // Currently defaulting to generic brown/gold water tint.
+      return [0.5, 0.3, 0.2, 0.4];
+  }
+
   return [0, 0, 0, 0];
 };
