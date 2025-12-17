@@ -212,12 +212,12 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
   };
 
   const seed = options?.seed ?? 12345;
-  const traceFn = vi.fn(() => ({
+  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => ({
         fraction: 1.0,
         ent: null,
         allsolid: false,
         startsolid: false,
-        endpos: { x: 0, y: 0, z: 0 },
+        endpos: end, // Use end argument
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
         surfaceFlags: 0,
         contents: 0
