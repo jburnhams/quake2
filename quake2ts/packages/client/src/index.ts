@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS } from '@quake2ts/shared';
+import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS, CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -777,12 +777,6 @@ export function createClient(imports: ClientImports): ClientExports {
           renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
 
           // Get packet entities for effect processing.
-          // demoHandler doesn't expose getPacketEntities directly yet, but getRenderableEntities builds from them.
-          // We might need to expose them or iterate renderEntities if they retain enough info.
-          // RenderableEntity has model, transform, skin... but not raw effects flags unless we added them.
-          // But we need effects flags.
-          // Let's assume demoHandler.latestFrame.packetEntities exists if we access it?
-          // demoHandler is ClientNetworkHandler.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
               currentPacketEntities = demoHandler.latestFrame.packetEntities.entities;
           }
@@ -876,8 +870,6 @@ export function createClient(imports: ClientImports): ClientExports {
                       // Find entity in renderEntities
                       const ent = renderEntities.find(e => e.id === demoCameraState.followEntityId);
                       if (ent) {
-                          // RenderableEntity has transform, not origin/angles directly
-                          // Extract position from matrix
                           const mat = ent.transform;
                           const targetOrigin = { x: mat[12], y: mat[13], z: mat[14] };
 
@@ -904,21 +896,6 @@ export function createClient(imports: ClientImports): ClientExports {
                           }
 
                           lastRendered.origin = { ...demoCameraState.currentFollowOrigin };
-
-                          // Optionally look AT the target or just position camera there
-                          // "Follow" usually implies third person view OF the target, or first person view FROM the target?
-                          // Let's assume third-person-like follow.
-                          // We need view angles. If the entity has angles, we can use them.
-                          // RenderableEntity doesn't expose angles directly, but we can assume they are encoded in the model transform
-                          // or passed separately. But we don't have them easily here without decomping matrix.
-                          // For now, let's just position camera AT the entity and keep previous view angles (or user controlled?)
-                          // If we want "tracking", we might want to update angles to look at it?
-                          // Let's stick to positioning for now, effectively a "spectate" mode.
-                          // If we want third person follow, we need to know the entity's forward vector.
-
-                          // For now, minimal "smooth camera tracking player" (positional)
-                          // Assuming camera angles are manually controlled or we default to looking at it from fixed offset?
-                          // Let's keep existing view angles to allow user to look around while following position.
                       }
                   }
              }
@@ -982,12 +959,9 @@ export function createClient(imports: ClientImports): ClientExports {
       dlightManager.update(timeSeconds, dtMs / 1000.0);
 
       // Collect lights (persistent + per-frame)
-      // Copy active lights from manager
       const dlights: DLight[] = [...dlightManager.getActiveLights()];
 
       // Process Entity Effects (Per-frame lights)
-      // These are not stateful in DLightManager usually (unless we want them to linger?)
-      // processEntityEffects currently pushes to array.
       for (const ent of currentPacketEntities) {
           processEntityEffects(ent, dlights, timeSeconds);
       }
@@ -1028,7 +1002,7 @@ export function createClient(imports: ClientImports): ClientExports {
             dlights.push({
                 origin: lightOrigin,
                 color: { x: 1, y: 1, z: 1 },
-                intensity: 200, // Reduced radius for spotlight effect emulation via attenuation? Standard dlight is point.
+                intensity: 200,
                 die: (sample.nowMs / 1000) + 0.1,
                 minLight: 0
             });
@@ -1037,30 +1011,37 @@ export function createClient(imports: ClientImports): ClientExports {
 
       // RENDER THE WORLD
       if (imports.engine.renderer && camera) {
-          // Retrieve current map if available
-          // Usually index 1 in configstrings is map model: "maps/base1.bsp"
-          // NOTE: Q2 configstring CS_MODELS+1 is the world model.
           let world: WorldRenderState | undefined;
 
           if (imports.engine.assets) {
-              // CS_MODELS is 32. So model index 1 is at 33.
               const mapName = configStrings.getModelName(1);
               if (mapName) {
                   const bspMap = imports.engine.assets.getMap(mapName);
-
                   if (bspMap) {
                       // Construct world state.
-                      // For now we mock surfaces/lightmaps as they are built in renderer internals usually?
                   }
               }
+          }
+
+          // Check camera contents for water tint
+          const cameraContents = pointContents({ x: camera.position[0], y: camera.position[1], z: camera.position[2] });
+          let waterTint: readonly [number, number, number, number] | undefined;
+
+          if ((cameraContents & CONTENTS_WATER) !== 0) {
+              waterTint = [0.5, 0.5, 0.6, 0.6]; // Blueish
+          } else if ((cameraContents & CONTENTS_SLIME) !== 0) {
+              waterTint = [0.2, 0.3, 0.1, 0.7]; // Slime green
+          } else if ((cameraContents & CONTENTS_LAVA) !== 0) {
+              waterTint = [0.8, 0.2, 0.1, 0.7]; // Lava red
           }
 
           imports.engine.renderer.renderFrame({
               camera,
               world,
               dlights: dlights,
-              deltaTime: dtMs / 1000.0, // Pass Delta Time for particle update
-              timeSeconds
+              deltaTime: dtMs / 1000.0,
+              timeSeconds,
+              waterTint // Pass it here
           }, renderEntities);
       }
 
@@ -1068,10 +1049,10 @@ export function createClient(imports: ClientImports): ClientExports {
         const perfReport = imports.engine.renderer.getPerformanceReport();
         const stats: FrameRenderStats = {
           batches: perfReport.textureBinds,
-          facesDrawn: perfReport.triangles, // approximate
+          facesDrawn: perfReport.triangles,
           drawCalls: perfReport.drawCalls,
-          skyDrawn: false, // Not exposed in report
-          viewModelDrawn: false, // Not exposed in report
+          skyDrawn: false,
+          viewModelDrawn: false,
           fps: 0,
           vertexCount: perfReport.vertices,
         };
@@ -1111,11 +1092,10 @@ export function createClient(imports: ClientImports): ClientExports {
                 damageIndicators: lastRendered.damageIndicators ?? [],
                 blend: currentBlend,
                 pickupIcon: lastRendered.pickupIcon,
-                centerPrint: undefined, // Handled by CGame MessageSystem now
+                centerPrint: undefined,
                 notify: undefined,
 
                 // Stubs for new fields
-                // Ensure stats are safely initialized
                 stats: lastRendered.stats ? [...lastRendered.stats] : new Array(32).fill(0),
                 kick_angles: ZERO_VEC3,
                 kick_origin: ZERO_VEC3,
@@ -1137,10 +1117,6 @@ export function createClient(imports: ClientImports): ClientExports {
             playerState.stats[PlayerStat.STAT_HEALTH] = lastRendered.health ?? 0;
             playerState.stats[PlayerStat.STAT_AMMO] = lastRendered.ammo ?? 0;
             playerState.stats[PlayerStat.STAT_ARMOR] = lastRendered.armor ?? 0;
-
-            // Call CGame DrawHUD wrapper
-            // Note: client.ts's DrawHUD calls Draw_Hud from hud.ts
-            // But we should use cg.DrawHUD eventually.
 
             renderer.begin2D();
             cg.DrawHUD(
@@ -1179,19 +1155,10 @@ export function createClient(imports: ClientImports): ClientExports {
         const ammo = lastRendered.ammo ?? 0;
         const fps = 60; // TODO: Calculate real FPS
 
-        // Need to extract damage indicators
         const damageIndicators = (lastRendered.damageIndicators ?? []).map(ind => ({
             angle: vectorToAngles(ind.direction).y,
             alpha: ind.strength
         }));
-
-        // Inventory is not directly in PredictionState, but Client has it?
-        // Wait, Client Exports doesn't have inventory.
-        // PredictionState has 'client' property which is PlayerClient, which has inventory.
-        // But PredictionState interface doesn't strictly enforce client structure.
-        // Let's assume we can access it if available.
-        // Or if in single player, we query game session?
-        // But client exports shouldn't depend on game session.
 
         return {
             health,
@@ -1337,16 +1304,7 @@ export function createClient(imports: ClientImports): ClientExports {
         clientExports.onNotify(msg);
       }
 
-      // Heuristic for obituaries:
-      // Usually contain "died", "killed", "fragged", etc.
-      // But avoid chat messages (handled separately)
-      // For now, if it doesn't look like a chat "Name: Msg" or system "Print: ..."
-      // Quake 2 obituaries are plain strings like "Player was gunned down by Tank"
-      // Chat usually has a prefix or format.
-      // We'll rely on onObituaryMessage being fired for these.
-      // Filter out obvious system messages if needed.
       if (clientExports.onObituaryMessage) {
-         // TODO: Refine this filter
          if (!msg.includes(': ')) {
              clientExports.onObituaryMessage(msg);
          }
@@ -1389,14 +1347,7 @@ export function createClient(imports: ClientImports): ClientExports {
     // Spectator API
     setSpectatorTarget(targetEntityId: number | null) {
         if (targetEntityId === null) {
-            // Revert to free/first person?
-            // If we were following, stop following.
             if (demoCameraState.mode === DemoCameraMode.Follow) {
-                // Determine what to fallback to.
-                // If demo, maybe FirstPerson.
-                // If multiplayer spectator, probably Free.
-                // For now, let's just clear follow ID and switch to FirstPerson if in demo, or Free if user requests.
-                // The task implies "null for free cam".
                 demoCameraState.mode = DemoCameraMode.Free;
             }
             demoCameraState.followEntityId = -1;
@@ -1407,24 +1358,11 @@ export function createClient(imports: ClientImports): ClientExports {
     },
 
     getSpectatorTargets(): { id: number; name: string }[] {
-        // Collect players from config strings or scoreboard
-        // ScoreboardManager tracks players.
         const targets: { id: number; name: string }[] = [];
-        const scoreboard = scoreboardManager.getScoreboard();
-
-        // In Q2, player entities are usually indices 1..MAX_CLIENTS
-        // We can correlate scoreboard entries with entity indices if we know them.
-        // ScoreboardData has entries.
-        // But entries might not directly map to entity ID without looking up configstrings.
-        // The configstring index for a player's name is CS_PLAYERS + playernum.
-        // Player entity index is usually playernum + 1.
-
         for (let i = 0; i < MAX_CLIENTS; i++) {
             const name = configStrings.getPlayerName(i);
             if (name) {
-                // Map playernum to entity ID
                 const entityId = i + 1;
-                // Maybe filter out self?
                 targets.push({ id: entityId, name });
             }
         }

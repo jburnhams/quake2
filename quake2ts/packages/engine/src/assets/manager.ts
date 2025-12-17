@@ -10,7 +10,14 @@ import { parseTga } from './tga.js';
 import { BspLoader, type BspMap } from './bsp.js';
 import { ResourceLoadTracker, ResourceType } from './resourceTracker.js';
 
-type AssetType = 'texture' | 'model' | 'sound' | 'sprite' | 'map';
+export type AssetType = 'texture' | 'model' | 'sound' | 'sprite' | 'map';
+
+export interface MemoryUsage {
+    textures: number;
+    audio: number;
+    heapTotal?: number;
+    heapUsed?: number;
+}
 
 interface DependencyNode {
   readonly dependencies: Set<string>;
@@ -82,11 +89,21 @@ export class AssetDependencyTracker {
   }
 }
 
+interface AssetTask {
+    path: string;
+    type: AssetType;
+    priority: number;
+    resolve: (value: any) => void;
+    reject: (err: any) => void;
+}
+
 export interface AssetManagerOptions {
   readonly textureCacheCapacity?: number;
+  readonly textureMemoryLimit?: number;
   readonly audioCacheSize?: number;
   readonly dependencyTracker?: AssetDependencyTracker;
   readonly resourceTracker?: ResourceLoadTracker;
+  readonly maxConcurrentLoads?: number;
 }
 
 export class AssetManager {
@@ -101,8 +118,15 @@ export class AssetManager {
   private palette: Uint8Array;
   private readonly maps = new Map<string, BspMap>();
 
+  private readonly loadQueue: AssetTask[] = [];
+  private activeLoads = 0;
+  private readonly maxConcurrentLoads: number;
+
   constructor(private readonly vfs: VirtualFileSystem, options: AssetManagerOptions = {}) {
-    this.textures = new TextureCache({ capacity: options.textureCacheCapacity ?? 128 });
+    this.textures = new TextureCache({
+        capacity: options.textureCacheCapacity ?? 128,
+        maxMemory: options.textureMemoryLimit
+    });
     this.audio = new AudioRegistry(vfs, { cacheSize: options.audioCacheSize ?? 64 });
     this.dependencyTracker = options.dependencyTracker ?? new AssetDependencyTracker();
     this.resourceTracker = options.resourceTracker;
@@ -110,6 +134,7 @@ export class AssetManager {
     this.md3 = new Md3Loader(vfs);
     this.sprite = new SpriteLoader(vfs);
     this.bsp = new BspLoader(vfs);
+    this.maxConcurrentLoads = options.maxConcurrentLoads ?? 4;
 
     // Default grayscale palette until loaded
     this.palette = new Uint8Array(768);
@@ -278,11 +303,141 @@ export class AssetManager {
     this.textures.clear();
     this.audio.clearAll();
     this.dependencyTracker.reset();
-    // Maps are heavy, maybe clear them or cache strategically?
-    // For now, let's keep them cached as VFS is already heavy.
-    // Actually, level change implies new map, old map memory can be freed?
-    // Let's clear maps on level change to be safe with memory.
     this.maps.clear();
+    this.loadQueue.length = 0; // Clear pending loads
+  }
+
+  getMemoryUsage(): MemoryUsage {
+      let heapTotal = 0;
+      let heapUsed = 0;
+      if (typeof process !== 'undefined' && process.memoryUsage) {
+          const mem = process.memoryUsage();
+          heapTotal = mem.heapTotal;
+          heapUsed = mem.heapUsed;
+      }
+
+      // Audio memory estimation is tricky as it depends on decoded buffers.
+      // AudioRegistry tracks loaded sounds, but we might need to query it.
+      // Assuming basic tracking for now.
+
+      return {
+          textures: this.textures.memoryUsage,
+          audio: 0, // Placeholder
+          heapTotal,
+          heapUsed
+      };
+  }
+
+  clearCache(type: AssetType): void {
+      switch (type) {
+          case 'texture':
+              this.textures.clear();
+              break;
+          case 'sound':
+              this.audio.clearAll();
+              break;
+          case 'map':
+              this.maps.clear();
+              break;
+          // Models are currently handled by internal loaders (Md2Loader etc.)
+          // which wrap LruCache internally or similar?
+          // Looking at imports, Md2Loader is from ./md2.js. It likely has a cache.
+          // If we want to clear models, we need to expose clear on Md2Loader.
+      }
+  }
+
+  /**
+   * Preload a list of assets with low priority.
+   */
+  async preloadAssets(paths: string[]): Promise<void> {
+      const promises = paths.map(path => {
+          const type = this.detectAssetType(path);
+          if (type) {
+              return this.queueLoad(path, type, 0); // Low priority 0
+          }
+          return Promise.resolve();
+      });
+      await Promise.all(promises);
+  }
+
+  /**
+   * Queue an asset for loading.
+   * @param path The path to the asset.
+   * @param type The type of asset.
+   * @param priority Higher priority assets are loaded first. Default 1 (High).
+   */
+  queueLoad<T>(path: string, type: AssetType, priority: number = 1): Promise<T> {
+      // If already loaded, return immediately
+      if (type === 'texture' && this.textures.get(path)) {
+          return Promise.resolve(this.textures.get(path) as unknown as T);
+      }
+      // Add similar checks for other types if possible
+
+      return new Promise<T>((resolve, reject) => {
+          this.loadQueue.push({
+              path,
+              type,
+              priority,
+              resolve,
+              reject
+          });
+          this.loadQueue.sort((a, b) => b.priority - a.priority);
+          this.processQueue();
+      });
+  }
+
+  private async processQueue() {
+      if (this.activeLoads >= this.maxConcurrentLoads || this.loadQueue.length === 0) {
+          return;
+      }
+
+      const task = this.loadQueue.shift()!;
+      this.activeLoads++;
+
+      try {
+          let result;
+          switch (task.type) {
+              case 'texture':
+                  result = await this.loadTexture(task.path);
+                  break;
+              case 'sound':
+                  result = await this.loadSound(task.path);
+                  break;
+              case 'model':
+                  // Heuristic: MD2 vs MD3
+                  if (task.path.endsWith('.md2')) {
+                      result = await this.loadMd2Model(task.path);
+                  } else if (task.path.endsWith('.md3')) {
+                      result = await this.loadMd3Model(task.path);
+                  }
+                  break;
+              case 'sprite':
+                  result = await this.loadSprite(task.path);
+                  break;
+              case 'map':
+                  result = await this.loadMap(task.path);
+                  break;
+              default:
+                  throw new Error(`Unknown asset type ${task.type}`);
+          }
+          task.resolve(result);
+      } catch (err) {
+          task.reject(err);
+      } finally {
+          this.activeLoads--;
+          this.processQueue();
+      }
+  }
+
+  private detectAssetType(path: string): AssetType | null {
+      const ext = path.split('.').pop()?.toLowerCase();
+      if (!ext) return null;
+      if (['wal', 'pcx', 'tga', 'png', 'jpg'].includes(ext)) return 'texture';
+      if (['wav', 'ogg'].includes(ext)) return 'sound';
+      if (['md2', 'md3'].includes(ext)) return 'model';
+      if (['sp2'].includes(ext)) return 'sprite';
+      if (['bsp'].includes(ext)) return 'map';
+      return null;
   }
 
   private makeKey(type: AssetType, path: string): string {

@@ -30,6 +30,7 @@ export interface BspSurfaceBindOptions {
   readonly styleLayers?: readonly number[];
   readonly diffuseSampler?: number;
   readonly lightmapSampler?: number;
+  readonly refractionSampler?: number; // New: Refraction map sampler
   readonly surfaceFlags?: SurfaceFlag;
   readonly timeSeconds?: number;
   readonly texScroll?: readonly [number, number];
@@ -63,6 +64,7 @@ out vec2 v_texCoord;
 out vec2 v_lightmapCoord;
 out float v_lightmapStep;
 out vec3 v_position;
+out vec4 v_screenPos; // For refraction
 
 // Match gl_warp.c TURBSCALE
 const float TURBSCALE = (256.0 / (2.0 * 3.14159));
@@ -94,6 +96,7 @@ void main() {
   v_lightmapStep = a_lightmapStep;
   v_position = pos;
   gl_Position = u_modelViewProjection * vec4(pos, 1.0);
+  v_screenPos = gl_Position;
 }`;
 
 export const BSP_SURFACE_FRAGMENT_SOURCE = `#version 300 es
@@ -111,15 +114,18 @@ in vec2 v_texCoord;
 in vec2 v_lightmapCoord;
 in float v_lightmapStep;
 in vec3 v_position;
+in vec4 v_screenPos;
 
 uniform sampler2D u_diffuseMap;
 uniform sampler2D u_lightmapAtlas;
+uniform sampler2D u_refractionMap; // New: Refraction map
 uniform vec4 u_lightStyleFactors;
 uniform vec4 u_styleLayerMapping; // 0, 1, 2... or -1 if invalid
 uniform float u_alpha;
 uniform bool u_applyLightmap;
 uniform bool u_warp;
 uniform bool u_lightmapOnly;
+uniform bool u_hasRefraction; // New: Flag to enable refraction
 uniform float u_time;
 
 uniform int u_renderMode; // 0: Textured, 1: Solid, 2: Solid Faceted
@@ -144,6 +150,30 @@ void main() {
       vec4 base = vec4(1.0);
       if (!u_lightmapOnly) {
           base = texture(u_diffuseMap, v_texCoord);
+      }
+
+      // Refraction Logic
+      if (u_warp && u_hasRefraction) {
+          vec2 ndc = (v_screenPos.xy / v_screenPos.w) * 0.5 + 0.5;
+
+          // Calculate distortion based on texture coordinates time
+          // Simple turbulent distortion
+          float distortionStrength = 0.05;
+          vec2 distortion = vec2(
+              sin(v_texCoord.y * 10.0 + u_time * 2.0),
+              cos(v_texCoord.x * 10.0 + u_time * 2.0)
+          ) * distortionStrength;
+
+          vec3 refractColor = texture(u_refractionMap, ndc + distortion).rgb;
+
+          // Blend base texture with refraction
+          // Quake 2 water usually is quite opaque but let's try a blend
+          // Or just tint the refraction
+
+          // If it's water (warp), we usually want some transparency + refraction
+          // Let's mix refraction into the base color
+          base.rgb = mix(base.rgb, refractColor, 0.4);
+          base.a = 0.7; // Ensure some alpha for water
       }
 
       vec3 totalLight = vec3(1.0);
@@ -257,7 +287,7 @@ export function deriveSurfaceRenderState(
   const trans66 = (surfaceFlags & SURF_TRANS66) !== 0;
 
   const alpha = trans33 ? 0.33 : trans66 ? 0.66 : 1;
-  const blend = trans33 || trans66;
+  const blend = trans33 || trans66 || warp; // Enable blend for warp (water)
   const depthWrite = !blend && !sky;
   const flowOffset: readonly [number, number] = flowing ? computeFlowOffset(timeSeconds) : [0, 0];
 
@@ -294,6 +324,8 @@ export class BspSurfacePipeline {
   private readonly uniformLightmapOnly: WebGLUniformLocation | null;
   private readonly uniformDiffuse: WebGLUniformLocation | null;
   private readonly uniformLightmap: WebGLUniformLocation | null;
+  private readonly uniformRefraction: WebGLUniformLocation | null; // New
+  private readonly uniformHasRefraction: WebGLUniformLocation | null; // New
   private readonly uniformTime: WebGLUniformLocation | null;
 
   private readonly uniformRenderMode: WebGLUniformLocation | null;
@@ -327,6 +359,8 @@ export class BspSurfacePipeline {
     this.uniformLightmapOnly = this.program.getUniformLocation('u_lightmapOnly');
     this.uniformDiffuse = this.program.getUniformLocation('u_diffuseMap');
     this.uniformLightmap = this.program.getUniformLocation('u_lightmapAtlas');
+    this.uniformRefraction = this.program.getUniformLocation('u_refractionMap');
+    this.uniformHasRefraction = this.program.getUniformLocation('u_hasRefraction');
     this.uniformTime = this.program.getUniformLocation('u_time');
 
     this.uniformRenderMode = this.program.getUniformLocation('u_renderMode');
@@ -355,6 +389,7 @@ export class BspSurfacePipeline {
       styleValues = [],
       diffuseSampler = 0,
       lightmapSampler,
+      refractionSampler,
       surfaceFlags = SURF_NONE,
       timeSeconds = 0,
       texScroll,
@@ -391,6 +426,14 @@ export class BspSurfacePipeline {
     this.gl.uniform1f(this.uniformTime, timeSeconds);
     this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
     this.gl.uniform1i(this.uniformLightmap, lightmapSampler ?? 0);
+
+    // Bind Refraction
+    if (refractionSampler !== undefined && finalWarp) {
+        this.gl.uniform1i(this.uniformRefraction, refractionSampler);
+        this.gl.uniform1i(this.uniformHasRefraction, 1);
+    } else {
+        this.gl.uniform1i(this.uniformHasRefraction, 0);
+    }
 
     // Render Mode Logic
     let modeInt = 0; // Textured

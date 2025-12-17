@@ -14,10 +14,10 @@
 - [x] Optimize light batching for multiple sources
 
 ### 6.1.2 Water and Transparent Surfaces
-- [ ] Implement water surface rendering with refraction
-- [ ] Add water fog/tint when camera underwater
-- [ ] Implement glass/window transparency
-- [ ] Add surface ripple effects (optional)
+- [x] Implement water surface rendering with refraction
+- [x] Add water fog/tint when camera underwater
+- [x] Implement glass/window transparency
+- [x] Add surface ripple effects (optional)
 
 ### 6.1.3 Post-Processing Effects
 - [x] Implement damage screen flash (red overlay)
@@ -76,10 +76,10 @@
 ## 6.4 Performance and Optimization
 
 ### 6.4.1 Asset Streaming
-- [ ] Implement progressive asset loading with priority queue
-- [ ] Add method `preloadAssets(paths: string[]): Promise<void>` for loading screens
-- [ ] Add LRU eviction for texture/model/sound caches
-- [ ] Add configurable memory limits per asset type
+- [x] Implement progressive asset loading with priority queue
+- [x] Add method `preloadAssets(paths: string[]): Promise<void>` for loading screens
+- [x] Add LRU eviction for texture/model/sound caches
+- [x] Add configurable memory limits per asset type
 
 ### 6.4.2 Worker Thread Support
 - [ ] Move BSP parsing to worker thread for non-blocking load
@@ -88,7 +88,7 @@
 - [ ] Expose worker-based API with progress callbacks
 
 ### 6.4.3 Memory Management
-- [ ] Add method `getMemoryUsage(): MemoryUsage` reporting heap usage
-- [ ] Add method `clearCache(type: AssetType): void` for manual cache clearing
+- [x] Add method `getMemoryUsage(): MemoryUsage` reporting heap usage
+- [x] Add method `clearCache(type: AssetType): void` for manual cache clearing
 - [ ] Add automatic garbage collection triggers for low-memory scenarios
 - [ ] Document memory budget recommendations for different device classes

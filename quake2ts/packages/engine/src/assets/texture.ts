@@ -19,17 +19,34 @@ export interface TextureLevel {
 
 export interface TextureCacheOptions {
   readonly capacity?: number;
+  readonly maxMemory?: number;
+}
+
+function calculateTextureSize(texture: PreparedTexture): number {
+    let size = 0;
+    for (const level of texture.levels) {
+        size += level.rgba.byteLength;
+    }
+    return size;
 }
 
 export class TextureCache {
   private readonly cache: LruCache<PreparedTexture>;
 
   constructor(options: TextureCacheOptions = {}) {
-    this.cache = new LruCache<PreparedTexture>(options.capacity ?? 128);
+    this.cache = new LruCache<PreparedTexture>(
+        options.capacity ?? 128,
+        options.maxMemory ?? 256 * 1024 * 1024, // Default 256MB
+        calculateTextureSize
+    );
   }
 
   get size(): number {
     return this.cache.size;
+  }
+
+  get memoryUsage(): number {
+    return this.cache.memoryUsage;
   }
 
   get(key: string): PreparedTexture | undefined {

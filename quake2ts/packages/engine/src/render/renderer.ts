@@ -120,6 +120,11 @@ export const createRenderer = (
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
+    // Forward declarations for usage in renderFrame
+    let begin2D: () => void;
+    let end2D: () => void;
+    let drawfillRect: (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => void;
+
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
 
@@ -465,6 +470,13 @@ export const createRenderer = (
             });
         }
 
+        // Render water tint (Fullscreen quad)
+        if (augmentedOptions.waterTint) {
+            begin2D();
+            drawfillRect(0, 0, gl.canvas.width, gl.canvas.height, augmentedOptions.waterTint as [number, number, number, number]);
+            end2D();
+        }
+
         // Render collision vis debug lines
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
@@ -661,7 +673,7 @@ export const createRenderer = (
         return tex;
     };
 
-    const begin2D = () => {
+    begin2D = () => {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.DEPTH_TEST);
@@ -673,7 +685,7 @@ export const createRenderer = (
         spriteRenderer.begin(projection as Float32Array);
     };
 
-    const end2D = () => {
+    end2D = () => {
         gl.disable(gl.BLEND);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
@@ -725,7 +737,7 @@ export const createRenderer = (
         drawString(x, y, text);
     };
 
-    const drawfillRect = (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => {
+    drawfillRect = (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => {
         spriteRenderer.drawRect(x, y, width, height, color);
     };
 
