@@ -21,11 +21,11 @@
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
-    "@quake2ts/game": "workspace:*",
-    "vitest": "^1.6.0"
+    "@quake2ts/game": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.1.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }
