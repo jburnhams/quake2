@@ -203,21 +203,21 @@ export const ladderTrace: PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, m
 
 // -- Game Helpers --
 
-export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
+export function createTestContext(options?: { seed?: number, initialEntities?: Entity[] }): { entities: EntitySystem, game: any } & SpawnContext {
   const engine = {
     sound: vi.fn(),
-    soundIndex: vi.fn(() => 0),
-    modelIndex: vi.fn(() => 0),
+    soundIndex: vi.fn((sound: string) => 0),
+    modelIndex: vi.fn((model: string) => 0),
     centerprintf: vi.fn(),
   };
 
   const seed = options?.seed ?? 12345;
-  const traceFn = vi.fn(() => ({
+  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => ({
         fraction: 1.0,
         ent: null,
         allsolid: false,
         startsolid: false,
-        endpos: { x: 0, y: 0, z: 0 },
+        endpos: end, // Use end argument
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
         surfaceFlags: 0,
         contents: 0
@@ -236,11 +236,27 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
       getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys()))
   };
 
+  const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
+
   const entities = {
-    spawn: vi.fn(() => new Entity(1)),
-    free: vi.fn(),
+    spawn: vi.fn(() => {
+        const ent = new Entity(entityList.length + 1);
+        entityList.push(ent);
+        return ent;
+    }),
+    free: vi.fn((ent: Entity) => {
+        const idx = entityList.indexOf(ent);
+        if (idx !== -1) {
+            entityList.splice(idx, 1);
+        }
+    }),
     finalizeSpawn: vi.fn(),
-    freeImmediate: vi.fn(),
+    freeImmediate: vi.fn((ent: Entity) => {
+        const idx = entityList.indexOf(ent);
+        if (idx !== -1) {
+            entityList.splice(idx, 1);
+        }
+    }),
     setSpawnRegistry: vi.fn(),
     timeSeconds: 10,
     deltaSeconds: 0.1, // Added deltaSeconds
@@ -275,28 +291,13 @@ export function createTestContext(options?: { seed?: number }): { entities: Enti
         intermission_origin: { x: 0, y: 0, z: 0 },
     },
     targetNameIndex: new Map(),
-    forEachEntity: vi.fn((callback) => {
-        // Implement simple iteration over a few mocked entities if needed,
-        // or just rely on the fact that G_PickTarget iterates.
-        // For testing G_PickTarget, we can look at the targetNameIndex we just added
-        if ((entities as any).targetNameIndex) {
-            for (const bucket of (entities as any).targetNameIndex.values()) {
-                for (const ent of bucket) {
-                    callback(ent);
-                }
-            }
-        }
+    forEachEntity: vi.fn((callback: (ent: Entity) => void) => {
+        // Iterate over managed list
+        entityList.forEach(callback);
     }),
     find: vi.fn((predicate: (ent: Entity) => boolean) => {
-        // Simple mock implementation of find
-        if ((entities as any).targetNameIndex) {
-             for (const bucket of (entities as any).targetNameIndex.values()) {
-                for (const ent of bucket) {
-                    if (predicate(ent)) return ent;
-                }
-            }
-        }
-        return undefined;
+        // Find in managed list
+        return entityList.find(predicate);
     }),
     beginFrame: vi.fn((timeSeconds: number) => {
         (entities as any).timeSeconds = timeSeconds;
