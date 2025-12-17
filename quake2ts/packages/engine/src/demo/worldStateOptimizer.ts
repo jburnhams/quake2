@@ -1,203 +1,136 @@
-import { BinaryStream, ServerCommand, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_LIGHTSTYLES, MAX_ITEMS } from '@quake2ts/shared';
+import { ServerCommand, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_LIGHTSTYLES, MAX_ITEMS, MAX_CLIENTS } from '@quake2ts/shared';
 import { WorldState } from './clipper.js';
-import { DemoMessageBlock } from './demoReader.js';
-import { NetworkMessageParser, EntityState, U_MODEL, U_SOUND, U_EVENT, U_MODEL2, U_MODEL3, U_MODEL4, FrameData, U_REMOVE } from './parser.js';
+import { Message, FrameMessage, SoundMessage, SpawnBaselineMessage } from './message.js';
+import { EntityState, U_MODEL, U_MODEL2, U_MODEL3, U_MODEL4, U_SOUND } from './parser.js';
 
-/**
- * Optimizes a captured WorldState for a specific clip, removing unused resources
- * and entities to minimize the state size and required assets.
- */
 export class WorldStateOptimizer {
 
     /**
-     * Analyzes the clip messages and optimizes the world state.
+     * Optimizes the WorldState for a specific clip by removing unreferenced resources and entities.
      *
-     * @param worldState The captured world state at the start of the clip
-     * @param clipMessages The raw messages that make up the clip
-     * @returns A new, optimized WorldState
+     * @param worldState The initial state at the start of the clip.
+     * @param clipMessages The parsed messages from the clip.
+     * @returns A new optimized WorldState.
      */
-    public optimizeForClip(worldState: WorldState, clipMessages: DemoMessageBlock[]): WorldState {
-        // 1. Analyze usage
-        const usage = this.analyzeUsage(worldState, clipMessages);
+    public optimizeForClip(worldState: WorldState, clipMessages: Message[]): WorldState {
+        // 1. Identify all referenced Entity IDs and ConfigString Indices
+        const referencedEntities = new Set<number>();
+        const referencedConfigStrings = new Set<number>();
 
-        // 2. Filter WorldState based on usage
-        return this.pruneState(worldState, usage);
-    }
-
-    private analyzeUsage(worldState: WorldState, clipMessages: DemoMessageBlock[]): UsageAnalysis {
-        const usage = new UsageAnalysis();
-
-        // 1. Mark entities active in the initial state as potential candidates
-        for (const id of worldState.currentEntities.keys()) {
-            usage.entityIds.add(id);
-        }
-
-        // We need to parse each block to find referenced entities and configstrings
-        for (const block of clipMessages) {
-             const stream = block.data;
-             const startPos = stream.getReadPosition();
-
-             const blockParser = new NetworkMessageParser(stream, {
-                 onServerData: () => {},
-                 onConfigString: (index: number, str: string) => {
-                     usage.configStrings.add(index);
-                 },
-                 onSpawnBaseline: (ent: EntityState) => {
-                     usage.entityIds.add(ent.number);
-                     this.analyzeEntityState(ent, usage);
-                 },
-                 onFrame: (frame: FrameData) => {
-                     this.analyzeFrame(frame, usage);
-                 },
-                 onSound: (flags: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: any) => {
-                     usage.configStrings.add(ConfigStringIndex.Sounds + soundNum);
-                 },
-                 onPrint: () => {},
-                 onCenterPrint: () => {},
-                 onStuffText: () => {},
-                 onTempEntity: (type: number, pos: any, pos2?: any, dir?: any, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
-                     // Temp entities often use models/sounds defined by their type.
-                 },
-                 onLayout: () => {},
-                 onInventory: () => {},
-                 onMuzzleFlash: (entityNum: number, type: number) => {
-                     usage.entityIds.add(entityNum);
-                 },
-                 onMuzzleFlash2: (entityNum: number, type: number) => {
-                     usage.entityIds.add(entityNum);
-                 },
-                 onDisconnect: () => {},
-                 onReconnect: () => {},
-                 onDownload: () => {}
-             });
-
-             blockParser.parseMessage();
-             stream.setReadPosition(startPos);
-        }
-
-        // Analyze dependencies of all used entities (from start state and clip)
-
-        // Check current entities
-        for (const ent of worldState.currentEntities.values()) {
-            this.analyzeEntityState(ent, usage);
-        }
-
-        // Check baselines for used entities
-        for (const id of usage.entityIds) {
-            const baseline = worldState.entityBaselines.get(id);
-            if (baseline) {
-                this.analyzeEntityState(baseline, usage);
+        // Helper to mark config string as used
+        const markConfigString = (index: number) => {
+            if (index >= 0 && index < ConfigStringIndex.MaxConfigStrings) {
+                referencedConfigStrings.add(index);
             }
-        }
-
-        return usage;
-    }
-
-    private analyzeFrame(frame: FrameData, usage: UsageAnalysis) {
-        // Player state resources
-        if (frame.playerState) {
-            // Check protocol for gun index vs gun_index
-            // The parser interface has gun_index
-            if (frame.playerState.gun_index) {
-                usage.configStrings.add(ConfigStringIndex.Models + frame.playerState.gun_index);
-            }
-        }
-
-        // Packet entities
-        for (const ent of frame.packetEntities.entities) {
-            usage.entityIds.add(ent.number);
-
-            if (!(ent.bits & U_REMOVE)) {
-                this.analyzeEntityState(ent, usage);
-            }
-        }
-    }
-
-    private analyzeEntityState(ent: EntityState, usage: UsageAnalysis) {
-        if (ent.modelindex) usage.configStrings.add(ConfigStringIndex.Models + ent.modelindex);
-        if (ent.modelindex2) usage.configStrings.add(ConfigStringIndex.Models + ent.modelindex2);
-        if (ent.modelindex3) usage.configStrings.add(ConfigStringIndex.Models + ent.modelindex3);
-        if (ent.modelindex4) usage.configStrings.add(ConfigStringIndex.Models + ent.modelindex4);
-
-        if (ent.sound) {
-            usage.configStrings.add(ConfigStringIndex.Sounds + ent.sound);
-        }
-    }
-
-    private pruneState(worldState: WorldState, usage: UsageAnalysis): WorldState {
-        const newState: WorldState = {
-            ...worldState,
-            configStrings: new Map(),
-            entityBaselines: new Map(),
-            currentEntities: new Map()
         };
 
-        // Filter ConfigStrings
-        for (const [index, str] of worldState.configStrings) {
-            if (this.shouldKeepConfigString(index, usage)) {
-                newState.configStrings.set(index, str);
-            }
-        }
+        // Helper to mark entity dependencies
+        const analyzeEntityState = (ent: EntityState) => {
+            referencedEntities.add(ent.number);
 
-        // Filter Baselines
-        for (const [id, ent] of worldState.entityBaselines) {
-            if (usage.entityIds.has(id)) {
-                newState.entityBaselines.set(id, ent);
-            }
-        }
+            // Models
+            if (ent.modelindex > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex);
+            if (ent.modelindex2 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex2);
+            if (ent.modelindex3 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex3);
+            if (ent.modelindex4 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex4);
 
-        // Filter Current Entities
+            // Sounds
+            if (ent.sound > 0) markConfigString(ConfigStringIndex.Sounds + ent.sound);
+        };
+
+        // 2. Analyze Current Entities (Start State)
         for (const [id, ent] of worldState.currentEntities) {
-            if (usage.entityIds.has(id)) {
-                newState.currentEntities.set(id, ent);
+            analyzeEntityState(ent);
+        }
+
+        // 3. Analyze Clip Messages
+        for (const msg of clipMessages) {
+            switch (msg.type) {
+                case ServerCommand.frame: {
+                    const frame = (msg as FrameMessage).data;
+                    const ps = frame.playerState;
+                    if (ps.gun_index > 0) markConfigString(ConfigStringIndex.Models + ps.gun_index);
+
+                    if (frame.packetEntities && frame.packetEntities.entities) {
+                        for (const ent of frame.packetEntities.entities) {
+                             referencedEntities.add(ent.number);
+
+                             if (ent.bits & U_MODEL) markConfigString(ConfigStringIndex.Models + ent.modelindex);
+                             if (ent.bits & U_MODEL2) markConfigString(ConfigStringIndex.Models + ent.modelindex2);
+                             if (ent.bits & U_MODEL3) markConfigString(ConfigStringIndex.Models + ent.modelindex3);
+                             if (ent.bits & U_MODEL4) markConfigString(ConfigStringIndex.Models + ent.modelindex4);
+
+                             if (ent.bits & U_SOUND) markConfigString(ConfigStringIndex.Sounds + ent.sound);
+                        }
+                    }
+                    break;
+                }
+                case ServerCommand.sound: {
+                    const snd = msg as SoundMessage;
+                    if (snd.soundNum > 0) markConfigString(ConfigStringIndex.Sounds + snd.soundNum);
+                    if (snd.ent !== undefined) referencedEntities.add(snd.ent);
+                    break;
+                }
+                case ServerCommand.temp_entity: {
+                    // TODO: Implement dependency tracking for TempEntities.
+                    // Many temp entities implicitly reference sprites or models (e.g. TE_EXPLOSION1 uses sprites/s_explod.sp2).
+                    // Without a complete mapping table, we risk pruning required assets.
+                    // For now, we rely on "Safe" optimization mode which should probably keep common sprites,
+                    // or assume the user accepts some missing visual effects in "Minimal" mode.
+                    // Ideally we should have a `TempEntityResources` map.
+                    break;
+                }
+                case ServerCommand.spawnbaseline: {
+                    const bl = msg as SpawnBaselineMessage;
+                    referencedEntities.add(bl.entity.number);
+                    analyzeEntityState(bl.entity);
+                    break;
+                }
             }
         }
 
-        return newState;
+        // 4. Always keep essential ConfigStrings
+        markConfigString(ConfigStringIndex.Name);
+        markConfigString(ConfigStringIndex.CdTrack);
+        markConfigString(ConfigStringIndex.Sky);
+        markConfigString(ConfigStringIndex.SkyAxis);
+        markConfigString(ConfigStringIndex.SkyRotate);
+        markConfigString(ConfigStringIndex.StatusBar);
+        markConfigString(ConfigStringIndex.HealthBarName);
+        markConfigString(ConfigStringIndex.AirAccel);
+        markConfigString(ConfigStringIndex.MaxClients);
+        markConfigString(ConfigStringIndex.MapChecksum);
+
+        for (let i = 0; i < MAX_CLIENTS; i++) {
+            markConfigString(ConfigStringIndex.Players + i);
+        }
+
+        for (let i = 0; i < MAX_IMAGES; i++) {
+             markConfigString(ConfigStringIndex.Images + i);
+        }
+
+        // Filter WorldState
+
+        const newBaselines = new Map<number, EntityState>();
+        for (const [num, ent] of worldState.entityBaselines) {
+            if (referencedEntities.has(num)) {
+                newBaselines.set(num, ent);
+                // Also ensure dependencies of this baseline are marked
+                analyzeEntityState(ent);
+            }
+        }
+
+        const newConfigStrings = new Map<number, string>();
+        for (const [idx, str] of worldState.configStrings) {
+            if (referencedConfigStrings.has(idx)) {
+                newConfigStrings.set(idx, str);
+            }
+        }
+
+        return {
+            ...worldState,
+            configStrings: newConfigStrings,
+            entityBaselines: newBaselines
+        };
     }
-
-    private shouldKeepConfigString(index: number, usage: UsageAnalysis): boolean {
-        // Always keep essential configstrings
-        if (index < ConfigStringIndex.Models) return true; // Server info, etc.
-        if (index >= ConfigStringIndex.MaxConfigStrings) return true; // Unknown/Extension?
-
-        // Check specific types
-        if (usage.configStrings.has(index)) return true;
-
-        // If it's a Model/Sound/Image/Item, only keep if used
-        if (index >= ConfigStringIndex.Models && index < ConfigStringIndex.Sounds) {
-            return usage.configStrings.has(index);
-        }
-        if (index >= ConfigStringIndex.Sounds && index < ConfigStringIndex.Images) {
-            return usage.configStrings.has(index);
-        }
-
-        // Images (pics) are often referenced by UI or temp entities which we don't track perfectly yet.
-        // Safe optimization: Keep all images? Or try to track?
-        // Task says "Optimize", so we should try.
-        // But UI images (HUD) are not in entity states.
-        // If we drop them, HUD might break.
-        // Strategy: Keep all CS_IMAGES for now to be safe, unless we track HUD usage.
-        if (index >= ConfigStringIndex.Images && index < ConfigStringIndex.Lights) {
-            return true; // KEEP ALL IMAGES FOR SAFE MODE
-        }
-
-        // Items are usually global?
-        if (index >= ConfigStringIndex.Items && index < ConfigStringIndex.Players) {
-            return true; // Keep all items metadata
-        }
-
-        // Players (UserInfo) - only keep for players in the clip?
-        if (index >= ConfigStringIndex.Players && index < ConfigStringIndex.General) {
-            const playerNum = index - ConfigStringIndex.Players + 1;
-            return usage.entityIds.has(playerNum);
-        }
-
-        return true;
-    }
-}
-
-class UsageAnalysis {
-    entityIds = new Set<number>();
-    configStrings = new Set<number>();
 }

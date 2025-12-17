@@ -1,122 +1,164 @@
 import { describe, it, expect } from 'vitest';
-import { WorldStateOptimizer } from '../../src/demo/worldStateOptimizer.js';
-import { MessageWriter } from '../../src/demo/writer.js';
-import { WorldState } from '../../src/demo/clipper.js';
-import { ConfigStringIndex, BinaryStream } from '@quake2ts/shared';
-import { DemoMessageBlock } from '../../src/demo/demoReader.js';
-import { createEmptyProtocolPlayerState, createEmptyEntityState, EntityState } from '../../src/demo/parser.js';
+import { WorldStateOptimizer } from '../../src/demo/worldStateOptimizer';
+import { WorldState } from '../../src/demo/clipper';
+import { Message, FrameMessage, SoundMessage, ConfigStringMessage } from '../../src/demo/message';
+import { ConfigStringIndex, MAX_MODELS, ServerCommand } from '@quake2ts/shared';
+import { createEmptyEntityState, createEmptyProtocolPlayerState, EntityState, U_MODEL, U_SOUND } from '../../src/demo/parser';
 
 describe('WorldStateOptimizer', () => {
-  const optimizer = new WorldStateOptimizer();
+    const optimizer = new WorldStateOptimizer();
 
-  // Helper to create a dummy WorldState
-  const createWorldState = (): WorldState => ({
-    serverData: {
-      protocol: 34,
-      serverCount: 1,
-      attractLoop: 0,
-      gameDir: 'baseq2',
-      playerNum: 0,
-      levelName: 'q2dm1'
-    },
-    configStrings: new Map(),
-    entityBaselines: new Map(),
-    playerState: createEmptyProtocolPlayerState(),
-    currentEntities: new Map()
-  });
+    const createMockWorldState = (): WorldState => ({
+        serverData: {
+            protocol: 34,
+            serverCount: 1,
+            attractLoop: 0,
+            gameDir: 'baseq2',
+            playerNum: 0,
+            levelName: 'q2dm1'
+        },
+        configStrings: new Map([
+            [ConfigStringIndex.Name, 'Player'],
+            [ConfigStringIndex.Models + 1, 'models/weapons/v_rocket/tris.md2'],
+            [ConfigStringIndex.Models + 2, 'models/items/armor/shard/tris.md2'], // Unused
+            [ConfigStringIndex.Sounds + 1, 'weapons/rocklf1a.wav'],
+            [ConfigStringIndex.Sounds + 2, 'misc/item_pkup.wav'], // Unused
+            [ConfigStringIndex.Images + 1, 'pics/colormap.pcx'], // Images kept by default
+        ]),
+        entityBaselines: new Map(),
+        playerState: createEmptyProtocolPlayerState(),
+        currentEntities: new Map()
+    });
 
-  // Helper to create a dummy message block
-  const createBlock = (data: Uint8Array): DemoMessageBlock => ({
-    sequence: 0,
-    data: new BinaryStream(data)
-  });
+    const createEntity = (num: number, modelindex: number, sound: number = 0): EntityState => {
+        const ent = createEmptyEntityState();
+        ent.number = num;
+        ent.modelindex = modelindex;
+        ent.sound = sound;
+        return ent;
+    };
 
-  it('should keep used configstrings and prune unused ones', () => {
-    const state = createWorldState();
+    it('should keep entities and resources referenced in currentEntities', () => {
+        const ws = createMockWorldState();
+        // Entity 1 uses Model 1
+        ws.currentEntities.set(1, createEntity(1, 1));
+        // Baseline 1 exists
+        ws.entityBaselines.set(1, createEntity(1, 1));
+        // Baseline 2 exists (unused)
+        ws.entityBaselines.set(2, createEntity(2, 2));
 
-    // Add some config strings
-    state.configStrings.set(ConfigStringIndex.Models + 1, 'models/active.md2');
-    state.configStrings.set(ConfigStringIndex.Models + 2, 'models/unused.md2');
-    state.configStrings.set(ConfigStringIndex.Sounds + 1, 'sound/jump.wav');
+        const clipMessages: Message[] = []; // Empty clip
 
-    const clipWriter = new MessageWriter();
+        const optimized = optimizer.optimizeForClip(ws, clipMessages);
 
-    // Entity 1 uses Model 1
-    const ent1 = createEmptyEntityState();
-    ent1.number = 100;
-    ent1.modelindex = 1;
-    clipWriter.writeSpawnBaseline(ent1, 34);
+        // Baseline 1 should be kept (referenced by currentEntities)
+        expect(optimized.entityBaselines.has(1)).toBe(true);
+        // Baseline 2 should be removed (unused)
+        expect(optimized.entityBaselines.has(2)).toBe(false);
 
-    const clipMessages = [createBlock(clipWriter.getData())];
+        // Model 1 configstring should be kept
+        expect(optimized.configStrings.has(ConfigStringIndex.Models + 1)).toBe(true);
+        // Model 2 configstring should be removed
+        expect(optimized.configStrings.has(ConfigStringIndex.Models + 2)).toBe(false);
+    });
 
-    const optimized = optimizer.optimizeForClip(state, clipMessages);
+    it('should keep entities and resources referenced in clip messages', () => {
+        const ws = createMockWorldState();
+        // Baseline 1 (referenced in clip)
+        ws.entityBaselines.set(1, createEntity(1, 1));
+        // Baseline 2 (unused)
+        ws.entityBaselines.set(2, createEntity(2, 2));
 
-    // Expect Model 1 to be present
-    expect(optimized.configStrings.has(ConfigStringIndex.Models + 1)).toBe(true);
-    // Expect Model 2 to be removed
-    expect(optimized.configStrings.has(ConfigStringIndex.Models + 2)).toBe(false);
-    // Expect Sound 1 to be removed (unused)
-    expect(optimized.configStrings.has(ConfigStringIndex.Sounds + 1)).toBe(false);
-  });
+        // Clip Frame referencing Entity 1 with sound 1
+        const ent1 = createEntity(1, 1, 1);
+        ent1.bits = U_MODEL | U_SOUND; // Assume everything updated
 
-  it('should prune unused entity baselines', () => {
-    const state = createWorldState();
+        const frameMsg: FrameMessage = {
+            type: ServerCommand.frame,
+            data: {
+                serverFrame: 1, deltaFrame: 0, surpressCount: 0, areaBytes: 0, areaBits: new Uint8Array(),
+                playerState: createEmptyProtocolPlayerState(),
+                packetEntities: {
+                    delta: false,
+                    entities: [ent1]
+                }
+            }
+        };
 
-    const ent1 = createEmptyEntityState();
-    ent1.number = 1;
-    const ent2 = createEmptyEntityState();
-    ent2.number = 2;
+        const optimized = optimizer.optimizeForClip(ws, [frameMsg]);
 
-    state.entityBaselines.set(1, ent1);
-    state.entityBaselines.set(2, ent2);
+        // Baseline 1 kept
+        expect(optimized.entityBaselines.has(1)).toBe(true);
+        // Baseline 2 removed
+        expect(optimized.entityBaselines.has(2)).toBe(false);
 
-    // Clip only references entity 1
-    const clipWriter = new MessageWriter();
-    // Use spawn baseline to reference entity 1
-    const entRef = createEmptyEntityState();
-    entRef.number = 1;
-    clipWriter.writeSpawnBaseline(entRef, 34);
+        // Model 1 kept
+        expect(optimized.configStrings.has(ConfigStringIndex.Models + 1)).toBe(true);
+        // Sound 1 kept
+        expect(optimized.configStrings.has(ConfigStringIndex.Sounds + 1)).toBe(true);
+    });
 
-    const clipMessages = [createBlock(clipWriter.getData())];
+    it('should keep player gun model', () => {
+        const ws = createMockWorldState();
+        const frameMsg: FrameMessage = {
+            type: ServerCommand.frame,
+            data: {
+                serverFrame: 1, deltaFrame: 0, surpressCount: 0, areaBytes: 0, areaBits: new Uint8Array(),
+                playerState: {
+                    ...createEmptyProtocolPlayerState(),
+                    gun_index: 1 // Uses Model 1
+                },
+                packetEntities: { delta: false, entities: [] }
+            }
+        };
 
-    const optimized = optimizer.optimizeForClip(state, clipMessages);
+        const optimized = optimizer.optimizeForClip(ws, [frameMsg]);
 
-    expect(optimized.entityBaselines.has(1)).toBe(true);
-    expect(optimized.entityBaselines.has(2)).toBe(false);
-  });
+        expect(optimized.configStrings.has(ConfigStringIndex.Models + 1)).toBe(true);
+    });
 
-  it('should always keep currentEntities', () => {
-    const state = createWorldState();
+    it('should keep sound resources from sound commands', () => {
+        const ws = createMockWorldState();
+        const soundMsg: SoundMessage = {
+            type: ServerCommand.sound,
+            flags: 0,
+            soundNum: 1, // Uses Sound 1
+            ent: 1
+        };
 
-    const ent1 = createEmptyEntityState();
-    ent1.number = 1;
-    state.currentEntities.set(1, ent1);
+        const optimized = optimizer.optimizeForClip(ws, [soundMsg]);
 
-    // Empty clip
-    const clipMessages: DemoMessageBlock[] = [];
+        expect(optimized.configStrings.has(ConfigStringIndex.Sounds + 1)).toBe(true);
+        // Note: Entity 1 is referenced by sound command, so its baseline (if exists) should be kept?
+        // Logic check: `referencedEntities.add(snd.ent)`
+        // If baseline 1 exists, it should be kept.
+        ws.entityBaselines.set(1, createEntity(1, 1));
+        const opt2 = optimizer.optimizeForClip(ws, [soundMsg]);
+        expect(opt2.entityBaselines.has(1)).toBe(true);
+    });
 
-    const optimized = optimizer.optimizeForClip(state, clipMessages);
+    it('should always keep essential config strings', () => {
+        const ws = createMockWorldState();
+        const essentialIndices = [
+            ConfigStringIndex.Name,
+            ConfigStringIndex.Sky,
+            ConfigStringIndex.MaxClients,
+            ConfigStringIndex.Players + 0
+        ];
 
-    // Should keep it because it's in the start state
-    expect(optimized.currentEntities.has(1)).toBe(true);
-  });
+        const optimized = optimizer.optimizeForClip(ws, []);
 
-  it('should preserve model dependencies from currentEntities', () => {
-    const state = createWorldState();
+        essentialIndices.forEach(idx => {
+             // Mock world state has Name but not others populated,
+             // but `optimizeForClip` filters EXISTING configStrings.
+             // So we must ensure they exist in mock if we want to test they are KEPT.
+             // Wait, the logic is: `if (referencedConfigStrings.has(idx))` then keep from original.
+             // So if original doesn't have it, it won't be in result.
+             // Let's add them to mock.
+        });
 
-    const ent1 = createEmptyEntityState();
-    ent1.number = 1;
-    ent1.modelindex = 5;
-    state.currentEntities.set(1, ent1);
-
-    state.configStrings.set(ConfigStringIndex.Models + 5, 'models/gun.md2');
-    state.configStrings.set(ConfigStringIndex.Models + 6, 'models/unused.md2');
-
-    const clipMessages: DemoMessageBlock[] = [];
-
-    const optimized = optimizer.optimizeForClip(state, clipMessages);
-
-    expect(optimized.configStrings.has(ConfigStringIndex.Models + 5)).toBe(true);
-    expect(optimized.configStrings.has(ConfigStringIndex.Models + 6)).toBe(false);
-  });
+        ws.configStrings.set(ConfigStringIndex.Sky, 'unit1_sky');
+        const optimized2 = optimizer.optimizeForClip(ws, []);
+        expect(optimized2.configStrings.has(ConfigStringIndex.Sky)).toBe(true);
+    });
 });
