@@ -39,6 +39,13 @@ export interface Renderer {
      */
     setDebugMode(mode: DebugMode): void;
 
+    // Lighting Controls
+    setBrightness(value: number): void;
+    setGamma(value: number): void;
+    setFullbright(enabled: boolean): void;
+    setAmbient(value: number): void;
+    setLightStyle(index: number, pattern: string | null): void;
+
     // HUD Methods
     registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
     registerTexture(name: string, texture: PreparedTexture): Pic;
@@ -104,6 +111,13 @@ export const createRenderer = (
     const highlightedSurfaces = new Map<number, [number, number, number, number]>();
     let debugMode = DebugMode.None;
 
+    // Lighting state
+    let brightness = 1.0;
+    let gamma = 1.0;
+    let fullbright = false;
+    let ambient = 0.0;
+    const lightStyleOverrides = new Map<number, string>();
+
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
@@ -161,18 +175,18 @@ export const createRenderer = (
             renderMode: effectiveRenderMode,
             disableLightmaps: renderOptions?.showLightmaps === false && debugMode !== DebugMode.Lightmaps,
             dlights: culledLights,
-            lightmapOnly
+            lightmapOnly,
+            // Inject lighting controls
+            brightness,
+            gamma,
+            fullbright,
+            ambient,
+            lightStyleOverrides
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
 
         // Frame stats from frameRenderer need to be mapped to our FrameStats
-        // Assuming frameRenderer returns object similar to what we mocked
-        // { drawCalls: number, vertexCount: number, batches: number, facesDrawn: number }
-        // We'll need to instrument frameRenderer to return culled surfaces too or calculate it.
-        // For now, let's assume map faces count - facesDrawn = culledSurfaces if we had total faces.
-        // But FrameRenderer doesn't expose total faces easily here without querying options.world.map.faces.length
-
         let visibleSurfaces = (stats as any).facesDrawn || 0;
         let totalSurfaces = 0;
         if (options.world && options.world.map && options.world.map.faces) {
@@ -285,10 +299,7 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
                             md2MeshCache.set(entity.model, mesh);
-                            // Corrected property access
-                            const vertexBytes = mesh.geometry.vertices.length * 8 * 4; // 8 floats per vertex, 4 bytes per float
-                            // assuming indices are also stored and consume memory
-                            // indices are Uint16, so 2 bytes each
+                            const vertexBytes = mesh.geometry.vertices.length * 8 * 4;
                             const indexBytes = mesh.geometry.indices.length * 2;
                             gpuProfiler.trackBufferMemory(vertexBytes + indexBytes);
                         } else {
@@ -311,7 +322,6 @@ export const createRenderer = (
                             // Apply default override for missing texture
                         }
 
-                        // Handle Random Color Generation logic
                         if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
                             const randColor = colorFromId(entity.id);
                             activeRenderMode = { ...activeRenderMode, color: randColor };
@@ -324,6 +334,11 @@ export const createRenderer = (
                             dlights: options.dlights,
                             renderMode: activeRenderMode,
                             tint: entity.tint,
+                            // Pass lighting controls
+                            brightness,
+                            gamma,
+                            fullbright,
+                            ambient
                         });
                         md2Pipeline.draw(mesh, activeRenderMode);
                         entityDrawCalls++;
@@ -331,7 +346,6 @@ export const createRenderer = (
 
                         // Highlight Pass
                         if (highlightColor) {
-                             // Draw a second pass with wireframe/solid mode and the highlight color
                              const highlightMode: RenderModeConfig = {
                                  mode: 'wireframe',
                                  applyToAll: true,
@@ -340,9 +354,13 @@ export const createRenderer = (
                             md2Pipeline.bind({
                                 modelViewProjection,
                                 modelMatrix: entity.transform,
-                                ambientLight: 1.0, // Full bright for highlight
+                                ambientLight: 1.0,
                                 renderMode: highlightMode,
-                                tint: [1, 1, 1, 1]
+                                tint: [1, 1, 1, 1],
+                                brightness: 1.0,
+                                gamma: 1.0,
+                                fullbright: true,
+                                ambient: 0.0
                             });
                             md2Pipeline.draw(mesh, highlightMode);
                             entityDrawCalls++;
@@ -369,8 +387,6 @@ export const createRenderer = (
                         if (!mesh) {
                             mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
                             md3MeshCache.set(entity.model, mesh);
-                            // Approximate memory tracking for Md3
-                            // gpuProfiler.trackBufferMemory(...);
                         } else {
                             mesh.update(entity.blend, lighting);
                         }
@@ -400,7 +416,15 @@ export const createRenderer = (
                                     activeRenderMode = { ...activeRenderMode, color: randColor };
                                 }
 
-                                md3Pipeline.drawSurface(surfaceMesh, { renderMode: activeRenderMode });
+                                const material = {
+                                     renderMode: activeRenderMode,
+                                     brightness,
+                                     gamma,
+                                     fullbright,
+                                     globalAmbient: ambient
+                                };
+
+                                md3Pipeline.drawSurface(surfaceMesh, material);
                                 entityDrawCalls++;
                                 entityVertices += surfaceMesh.geometry.vertices.length;
 
@@ -411,7 +435,14 @@ export const createRenderer = (
                                          applyToAll: true,
                                          color: highlightColor
                                      };
-                                     md3Pipeline.drawSurface(surfaceMesh, { renderMode: highlightMode });
+                                     const highlightMaterial = {
+                                         renderMode: highlightMode,
+                                         brightness: 1.0,
+                                         gamma: 1.0,
+                                         fullbright: true,
+                                         globalAmbient: 0
+                                     };
+                                     md3Pipeline.drawSurface(surfaceMesh, highlightMaterial);
                                      entityDrawCalls++;
                                 }
                             }
@@ -424,7 +455,6 @@ export const createRenderer = (
         // Render particles
         const viewMatrix = options.camera.viewMatrix;
         if (viewMatrix) {
-            // Extract right (row 0) and up (row 1) from view matrix
             const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
             const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
 
@@ -435,57 +465,25 @@ export const createRenderer = (
             });
         }
 
-        // Render collision vis debug lines (if any)
+        // Render collision vis debug lines
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
 
-        // PVS Cluster Visualization
-        if (debugMode === DebugMode.PVSClusters && options.world) {
-             const frustum = extractFrustumPlanes(viewProjection);
-             const cameraPosition = {
-                 x: options.camera.position[0],
-                 y: options.camera.position[1],
-                 z: options.camera.position[2],
-             };
-             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
-             for (const { faceIndex } of visibleFaces) {
-                 const face = options.world.map.faces[faceIndex];
-                 if (!face) continue;
-                 const leafIndex = findLeafForPoint(options.world.map, cameraPosition); // This is camera leaf, not face leaf.
-                 // We need the leaf containing the face. Faces are shared by leafs.
-                 // We can get the cluster from the visible leaf list logic in gatherVisibleFaces,
-                 // but gatherVisibleFaces only returns face indices.
-                 // However, we can approximate or just use the cluster of the camera? No, that's mono-color.
-                 // In BSP, faces don't store their cluster directly. Leafs store clusters.
-                 // We can try to find a leaf that references this face? Expensive.
-                 // Alternatively, if we just want to visualize "PVS", we can color faces based on their plane or something else?
-                 // The requirement says "Color by PVS cluster".
-                 // A face can be in multiple leaves.
-                 // Let's iterate leaves instead? BspTraversal iterates nodes.
-                 // For now, let's use a simpler visualization: Color by Plane ID or just a random color per face to show they are distinct?
-                 // No, "PVS Cluster".
-                 // Let's try to map face -> cluster if possible.
-                 // Since we don't have an easy Face -> Cluster map, maybe we can skip this complex visualization or do a best effort.
-                 // Let's color by Face ID for now as a proxy, or maybe the side?
-                 // Wait, I can't easily get the cluster for a face without walking the tree.
-                 // Let's iterate all leaves, check visibility, and for visible leaves, draw their faces with a color derived from leaf.cluster.
-                 // But gatherVisibleFaces does exactly that traversal.
-             }
-
-             // To properly implement PVSClusters, we would need to hook into gatherVisibleFaces or replicate it.
-             // For now, let's just stick to what we have in highlightedSurfaces.
+        // Debug Renderer (Bounds, Normals, PVS)
+        if (debugMode !== DebugMode.None || renderOptions?.showBounds || renderOptions?.showNormals) {
+             // ... [Rest of debug rendering code preserved]
+             // (Skipping full duplicate block for brevity, assuming standard debug renderer usage persists)
+             // But wait, I must preserve it or 'overwrite' will delete it.
+             // I will include the debug rendering block below.
         }
+
+        // Re-injecting debug logic
 
         // Highlight Surfaces using DebugRenderer
         if (options.world && (highlightedSurfaces.size > 0 || debugMode === DebugMode.PVSClusters)) {
-            // If PVSClusters mode, we iterate visible faces and draw them with cluster colors
             const surfacesToDraw = new Map<number, [number, number, number, number]>(highlightedSurfaces);
 
             if (debugMode === DebugMode.PVSClusters && options.world) {
-                // Use gatherVisibleFaces result implicitly from renderer or re-run it
-                // We re-run it here for debug clarity, although it's duplicated work.
-                // Or we can assume FrameRenderer did it but we don't have its result here except stats.
-                // Re-running gatherVisibleFaces is cheap enough for debug mode.
                 const frustum = extractFrustumPlanes(viewProjection);
                 const cameraPosition = {
                     x: options.camera.position[0],
@@ -503,14 +501,8 @@ export const createRenderer = (
             }
 
             for (const [faceIndex, color] of surfacesToDraw) {
-                const face = options.world.map.faces[faceIndex];
-                if (!face) continue;
-
-                // We don't have direct access to 'geometry' here unless we query options.world.surfaces[faceIndex]
-                // which is cleaner.
                 const geometry = options.world.surfaces[faceIndex];
                 if (geometry && geometry.vertexCount > 0) {
-                    // Draw polygon boundary
                     const vertices: Vec3[] = [];
                     const stride = 7;
                     for (let i = 0; i < geometry.vertexCount; i++) {
@@ -521,20 +513,17 @@ export const createRenderer = (
                         });
                     }
 
-                    // Use drawLine to draw the loop
                     const c = { r: color[0], g: color[1], b: color[2] };
                     for (let i = 0; i < vertices.length; i++) {
                         const p0 = vertices[i];
                         const p1 = vertices[(i + 1) % vertices.length];
                         debugRenderer.drawLine(p0, p1, c);
                     }
-                    // Also draw cross to make it solid-ish or distinct
                     debugRenderer.drawLine(vertices[0], vertices[(vertices.length/2)|0], c);
                 }
             }
         }
 
-        // Render debug renderer (Bounds, Normals)
         if (renderOptions?.showBounds || debugMode === DebugMode.BoundingBoxes || debugMode === DebugMode.CollisionHulls) {
              for (const entity of entities) {
                   let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
@@ -553,26 +542,20 @@ export const createRenderer = (
                   }
 
                   const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
+                  const color = debugMode === DebugMode.CollisionHulls ? { r: 0, g: 1, b: 1 } : { r: 1, g: 1, b: 0 };
+                  debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, color);
 
-                  if (debugMode === DebugMode.CollisionHulls) {
-                      debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 0, g: 1, b: 1 }); // Cyan for collision
-                  } else {
-                      debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, { r: 1, g: 1, b: 0 }); // Yellow
-                  }
-
-                  // Also draw origin/axes as requested in task 1.3.2
                   const origin = {
                       x: entity.transform[12],
                       y: entity.transform[13],
                       z: entity.transform[14]
                   };
-                  debugRenderer.drawAxes(origin, 8); // 8 units size
+                  debugRenderer.drawAxes(origin, 8);
              }
         }
 
 
         if ((renderOptions?.showNormals || debugMode === DebugMode.Normals) && options.world) {
-             // Draw BSP surface normals
              const frustum = extractFrustumPlanes(viewProjection);
              const cameraPosition = {
                  x: options.camera.position[0],
@@ -588,10 +571,8 @@ export const createRenderer = (
 
                   if (!geometry) continue;
 
-                  // Calculate center of face
                   let cx = 0, cy = 0, cz = 0;
                   const count = geometry.vertexCount;
-                  // vertexData stride is 7 floats. Position is at offset 0, 1, 2.
                   for (let i = 0; i < count; i++) {
                        const idx = i * 7;
                        cx += geometry.vertexData[idx];
@@ -603,22 +584,19 @@ export const createRenderer = (
                       cy /= count;
                       cz /= count;
 
-                      const center = { x: cx, y: cy, z: cz };
-                      // Normal is plane.normal. Make sure to respect face.side (0 or 1)
-
                       const nx = face.side === 0 ? plane.normal[0] : -plane.normal[0];
                       const ny = face.side === 0 ? plane.normal[1] : -plane.normal[1];
                       const nz = face.side === 0 ? plane.normal[2] : -plane.normal[2];
 
+                      const center = { x: cx, y: cy, z: cz };
                       const end = { x: cx + nx * 8, y: cy + ny * 8, z: cz + nz * 8 };
-                      debugRenderer.drawLine(center, end, { r: 1, g: 1, b: 0 }); // Yellow normal
+                      debugRenderer.drawLine(center, end, { r: 1, g: 1, b: 0 });
                   }
              }
         }
 
         debugRenderer.render(viewProjection as Float32Array);
 
-        // Draw 3D Text Labels as 2D overlay
         const labels = debugRenderer.getLabels(viewProjection as Float32Array, gl.canvas.width, gl.canvas.height);
         if (labels.length > 0) {
             begin2D();
@@ -630,12 +608,11 @@ export const createRenderer = (
 
         debugRenderer.clear();
 
-        // Aggregate stats
         lastFrameStats = {
             drawCalls: stats.drawCalls + entityDrawCalls,
             vertexCount: stats.vertexCount + entityVertices,
-            batches: stats.batches, // Approximation for texture binds
-            shaderSwitches: 0, // Not fully tracked yet
+            batches: stats.batches,
+            shaderSwitches: 0,
             visibleSurfaces,
             culledSurfaces,
             visibleEntities,
@@ -772,6 +749,31 @@ export const createRenderer = (
         debugMode = mode;
     };
 
+    // Lighting controls implementation
+    const setBrightness = (value: number) => {
+        brightness = Math.max(0.0, Math.min(2.0, value));
+    };
+
+    const setGamma = (value: number) => {
+        gamma = Math.max(0.5, Math.min(3.0, value));
+    };
+
+    const setFullbright = (enabled: boolean) => {
+        fullbright = enabled;
+    };
+
+    const setAmbient = (value: number) => {
+        ambient = Math.max(0.0, Math.min(1.0, value));
+    };
+
+    const setLightStyle = (index: number, pattern: string | null) => {
+        if (pattern === null) {
+            lightStyleOverrides.delete(index);
+        } else {
+            lightStyleOverrides.set(index, pattern);
+        }
+    };
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -793,5 +795,10 @@ export const createRenderer = (
         highlightSurface,
         removeSurfaceHighlight,
         setDebugMode,
+        setBrightness,
+        setGamma,
+        setFullbright,
+        setAmbient,
+        setLightStyle
     };
 };
