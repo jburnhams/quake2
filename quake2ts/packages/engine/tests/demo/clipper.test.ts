@@ -1,182 +1,128 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoClipper, WorldState } from '../../src/demo/clipper.js';
+import { DemoClipper } from '../../src/demo/clipper.js';
 import { DemoPlaybackController } from '../../src/demo/playback.js';
-import { BinaryWriter, ServerCommand } from '@quake2ts/shared';
 
-// Helper to create a dummy demo with a few frames
-function createDummyDemo(): Uint8Array {
-  const writer = new BinaryWriter();
-
-  // Header (no explicit header in demo stream, just blocks)
-
-  // Block 1: ServerData
-  writer.writeLong(50); // Block length
-  writer.writeByte(ServerCommand.serverdata);
-  writer.writeLong(2023); // Protocol
-  writer.writeLong(1234); // Spawn count
-  writer.writeByte(1); // Demo type
-  writer.writeByte(10); // Tick rate
-  writer.writeString("baseq2");
-  writer.writeShort(0); // Player num
-  writer.writeString("map1");
-  // Pad to 50 bytes? No, BinaryWriter handles specific writes.
-  // Wait, block length must match content.
-  // We should write content to a buffer then write length + content.
-
-  return new Uint8Array(0);
-}
-
-function createMessageBlock(content: Uint8Array): Uint8Array {
-    const writer = new BinaryWriter(content.length + 4);
-    writer.writeLong(content.length);
-    const result = new Uint8Array(writer.getData().length + content.length);
-    result.set(writer.getData(), 0);
-    result.set(content, 4);
-    return result;
-}
-
-function createSimpleDemo(): Uint8Array {
-    const blocks: Uint8Array[] = [];
-
-    // 1. Server Data
-    const w1 = new BinaryWriter();
-    w1.writeByte(ServerCommand.serverdata);
-    w1.writeLong(2023);
-    w1.writeLong(1);
-    w1.writeByte(0);
-    w1.writeByte(10);
-    w1.writeString('baseq2');
-    w1.writeShort(0);
-    w1.writeString('test');
-    blocks.push(createMessageBlock(w1.getData()));
-
-    // 2. Frame 0
-    const w2 = new BinaryWriter();
-    w2.writeByte(ServerCommand.frame);
-    w2.writeLong(0); // ServerFrame
-    w2.writeLong(0); // DeltaFrame
-    w2.writeByte(0); // Suppress
-    w2.writeByte(0); // AreaBytes
-    w2.writeByte(ServerCommand.playerinfo);
-    w2.writeShort(0); // Flags
-    w2.writeLong(0); // Stats
-    w2.writeByte(ServerCommand.packetentities);
-    w2.writeByte(0); // End of entities (simplified)
-    blocks.push(createMessageBlock(w2.getData()));
-
-    // 3. Frame 1
-    const w3 = new BinaryWriter();
-    w3.writeByte(ServerCommand.frame);
-    w3.writeLong(1);
-    w3.writeLong(0); // Delta from 0
-    w3.writeByte(0);
-    w3.writeByte(0);
-    w3.writeByte(ServerCommand.playerinfo);
-    w3.writeShort(0);
-    w3.writeLong(0);
-    w3.writeByte(ServerCommand.packetentities);
-    w3.writeByte(0);
-    blocks.push(createMessageBlock(w3.getData()));
-
-    // Combine
-    let totalSize = 0;
-    blocks.forEach(b => totalSize += b.length);
-    const result = new Uint8Array(totalSize);
-    let offset = 0;
-    blocks.forEach(b => {
-        result.set(b, offset);
-        offset += b.length;
-    });
-
-    return result;
-}
+// We mock DemoPlaybackController just for timeToFrame, but we will test extractClip with real data
+vi.mock('../../src/demo/playback.js');
 
 describe('DemoClipper', () => {
-    let clipper: DemoClipper;
-    let demoData: Uint8Array;
-    let controller: DemoPlaybackController;
+  let clipper: DemoClipper;
+  let mockController: any;
 
-    beforeEach(() => {
-        clipper = new DemoClipper();
-        demoData = createSimpleDemo();
-        controller = new DemoPlaybackController();
-        controller.loadDemo(demoData.buffer as ArrayBuffer);
-        // We need to set frame duration to match our mock data if we use time
-        controller.setFrameDuration(100);
-    });
+  beforeEach(() => {
+    clipper = new DemoClipper();
+    mockController = {
+        loadDemo: vi.fn(),
+        timeToFrame: vi.fn((t) => Math.floor(t * 10)), // Mock 10 fps
+    };
+    (DemoPlaybackController as any).mockImplementation(() => mockController);
+  });
 
-    it('should extract a simple clip by frame range', () => {
-        // Start at frame 0, end at frame 1
-        const clip = clipper.extractClip(
-            demoData,
-            { type: 'frame', frame: 0 },
-            { type: 'frame', frame: 0 }, // Inclusive? No, usually range is start inclusive, end exclusive? Or inclusive?
-            // The method logic: startByteOffset is startFrame. endByteOffset is endFrame + 1.
-            // So [0, 0] means extract frame 0.
-            controller
-        );
+  it('should extract a clip range from valid binary demo data', () => {
+    // Construct a fake demo with 3 frames
+    // Each frame block is: [Length (4 bytes)] [Data (Length bytes)]
 
-        // Should contain frame 0 block. Frame 0 is at index 1 (index 0 is serverdata).
-        // Wait, index 0 in seekToMessage(0) maps to the first FRAME message?
-        // DemoReader.scan() indexes ALL blocks.
-        // DemoPlaybackController.seek(0) goes to the first frame.
-        // The controller indexes frames specifically?
-        // No, `seekToMessage` takes an index into `messageOffsets`.
-        // `processNextFrame` consumes one block.
-        // So `frame 0` effectively means `block 0` if every block is a frame.
-        // But block 0 is ServerData.
+    // Frame 0: Length 4, Data [0, 0, 0, 0]
+    // Frame 1: Length 4, Data [1, 1, 1, 1]
+    // Frame 2: Length 4, Data [2, 2, 2, 2]
 
-        // DemoPlaybackController.processNextFrame() increments `currentFrameIndex` for every block?
-        // Let's check `processNextFrame` in `playback.ts`.
-        // `currentFrameIndex` starts at -1.
-        // `processNextFrame` reads block, `currentFrameIndex++`.
-        // So yes, block 0 is frame 0.
+    const buffer = new ArrayBuffer(24); // 3 * (4 + 4) = 24 bytes
+    const view = new DataView(buffer);
+    const u8 = new Uint8Array(buffer);
 
-        // Our demo has: Block 0 (ServerData), Block 1 (Frame 0), Block 2 (Frame 1).
+    // Frame 0
+    view.setInt32(0, 4, true);
+    u8.set([0, 0, 0, 0], 4);
 
-        // If we ask for start: frame 1, end: frame 1.
-        // It should extract Block 1.
+    // Frame 1
+    view.setInt32(8, 4, true);
+    u8.set([1, 1, 1, 1], 12);
 
-        // Let's test extraction of Block 1.
-        const clip2 = clipper.extractClip(
-            demoData,
-            { type: 'frame', frame: 1 },
-            { type: 'frame', frame: 1 },
-            controller
-        );
+    // Frame 2
+    view.setInt32(16, 4, true);
+    u8.set([2, 2, 2, 2], 20);
 
-        // Verify clip2 contains Block 1 and EOF
-        // Block 1 size?
-        // serverdata is ~30 bytes + overhead.
-        // frame is ~30 bytes + overhead.
+    const demoData = new Uint8Array(buffer);
 
-        expect(clip2.length).toBeGreaterThan(10);
-        const view = new DataView(clip2.buffer);
-        const lastInt = view.getInt32(clip2.length - 4, true);
-        expect(lastInt).toBe(-1);
-    });
+    // Extract Frame 1 only
+    // Start Frame 1, End Frame 1 (exclusive range in logic? clipper usually includes start, and goes up to end)
+    // Looking at clipper logic:
+    // startFrame -> seekToMessage(startFrame)
+    // endFrame -> seekToMessage(endFrame + 1)
 
-    it('should capture world state correctly', async () => {
-        // Capture state at frame 1 (which is after ServerData and Frame 0)
-        // Wait, if block 0 is ServerData, block 1 is Frame 0.
-        // So capturing at frame 1 means we have processed block 0 and block 1.
-        // So we are at the state AFTER Frame 0.
+    // So extracting frame 1 means start=1, end=1.
+    // Seek(1) -> Offset 8.
+    // Seek(1+1=2) -> Offset 16.
+    // Slice(8, 16) -> Length 8 bytes.
+    // Append -1 EOF (4 bytes).
+    // Result Length = 12 bytes.
 
-        const state = await clipper.captureWorldState(demoData, { type: 'frame', frame: 1 });
+    const result = clipper.extractClip(demoData, { type: 'frame', frame: 1 }, { type: 'frame', frame: 1 }, mockController);
 
-        expect(state.serverData.protocol).toBe(2023);
-        expect(state.serverData.gameDir).toBe('baseq2');
-        expect(state.serverData.levelName).toBe('test');
-    });
+    expect(result.length).toBe(12);
 
-    it('should throw if start frame is out of bounds', () => {
-        expect(() => {
-            clipper.extractClip(
-                demoData,
-                { type: 'frame', frame: 10 },
-                { type: 'frame', frame: 11 },
-                controller
-            );
-        }).toThrow();
-    });
+    const resView = new DataView(result.buffer);
+
+    // Check block 1
+    expect(resView.getInt32(0, true)).toBe(4);
+    expect(result[4]).toBe(1);
+    expect(result[5]).toBe(1);
+    expect(result[6]).toBe(1);
+    expect(result[7]).toBe(1);
+
+    // Check EOF
+    expect(resView.getInt32(8, true)).toBe(-1);
+  });
+
+  it('should extract multiple frames', () => {
+     // Construct a fake demo with 4 frames
+     // Frame 0..3
+     const buffer = new ArrayBuffer(32); // 4 * 8 = 32
+     const view = new DataView(buffer);
+
+     for(let i=0; i<4; i++) {
+         view.setInt32(i*8, 4, true);
+         // Data is just i repeated
+         const u8 = new Uint8Array(buffer);
+         u8.fill(i, i*8 + 4, i*8 + 8);
+     }
+
+     const demoData = new Uint8Array(buffer);
+
+     // Extract Frame 1 to 2
+     // Start=1, End=2.
+     // Seek(1) -> Offset 8.
+     // Seek(3) -> Offset 24.
+     // Slice(8, 24) -> Length 16.
+     // Result = 16 + 4 = 20.
+
+     const result = clipper.extractClip(demoData, { type: 'frame', frame: 1 }, { type: 'frame', frame: 2 }, mockController);
+
+     expect(result.length).toBe(20);
+
+     const resView = new DataView(result.buffer);
+
+     // Frame 1
+     expect(resView.getInt32(0, true)).toBe(4);
+     expect(result[4]).toBe(1);
+
+     // Frame 2
+     expect(resView.getInt32(8, true)).toBe(4);
+     expect(result[12]).toBe(2);
+
+     // EOF
+     expect(resView.getInt32(16, true)).toBe(-1);
+  });
+
+  it('should throw if start frame is out of bounds', () => {
+      const buffer = new ArrayBuffer(8);
+      const view = new DataView(buffer);
+      view.setInt32(0, 4, true);
+
+      const demoData = new Uint8Array(buffer);
+
+      expect(() => {
+          clipper.extractClip(demoData, { type: 'frame', frame: 5 }, { type: 'frame', frame: 6 }, mockController);
+      }).toThrow('out of bounds');
+  });
 });

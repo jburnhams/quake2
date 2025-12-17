@@ -3,6 +3,7 @@ import { DemoReader, DemoMessageBlock } from './demoReader.js';
 import { NetworkMessageHandler, NetworkMessageParser, ProtocolPlayerState, EntityState, FrameData, PROTOCOL_VERSION_RERELEASE, createEmptyEntityState, createEmptyProtocolPlayerState, U_REMOVE, U_MODEL, U_MODEL2, U_MODEL3, U_MODEL4, U_FRAME8, U_FRAME16, U_SKIN8, U_SKIN16, U_EFFECTS8, U_EFFECTS16, U_RENDERFX8, U_RENDERFX16, U_ORIGIN1, U_ORIGIN2, U_ORIGIN3, U_ANGLE1, U_ANGLE2, U_ANGLE3, U_OLDORIGIN, U_SOUND, U_EVENT, U_SOLID, U_ALPHA, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH } from './parser.js';
 import { MessageWriter } from './writer.js';
 import { PlaybackOffset, DemoPlaybackController, PlaybackState } from './playback.js';
+import { applyEntityDelta } from './delta.js';
 
 export interface ServerDataMessage {
   protocol: number;
@@ -65,6 +66,16 @@ export class DemoClipper {
         view.setInt32(clipData.length, -1, true);
 
         return result;
+    }
+
+    public extractDemoRange(demo: Uint8Array, startFrame: number, endFrame: number): Uint8Array {
+      // Create a temporary controller to handle conversions if needed, though here we have frame numbers
+      // We don't have a controller instance passed in, so we assume frame numbers are absolute
+
+      const controller = new DemoPlaybackController();
+      controller.loadDemo(demo.buffer as ArrayBuffer);
+
+      return this.extractClip(demo, { type: 'frame', frame: startFrame }, { type: 'frame', frame: endFrame }, controller);
     }
 
     /**
@@ -247,50 +258,8 @@ export class DemoClipper {
                     }
 
                     // Apply delta
-                    // We use the `bits` field to know what to update
-                    const bits = deltaEnt.bits;
-                    const next = { ...prev }; // Clone to mutate
-
-                    next.bits = bits; // Store the bits that updated this frame
-
-                    if (bits & U_MODEL) next.modelindex = deltaEnt.modelindex;
-                    if (bits & U_MODEL2) next.modelindex2 = deltaEnt.modelindex2;
-                    if (bits & U_MODEL3) next.modelindex3 = deltaEnt.modelindex3;
-                    if (bits & U_MODEL4) next.modelindex4 = deltaEnt.modelindex4;
-
-                    if (bits & U_FRAME8) next.frame = deltaEnt.frame;
-                    if (bits & U_FRAME16) next.frame = deltaEnt.frame;
-
-                    if (bits & U_SKIN8) next.skinnum = deltaEnt.skinnum;
-                    if (bits & U_SKIN16) next.skinnum = deltaEnt.skinnum;
-
-                    if (bits & U_EFFECTS8) next.effects = deltaEnt.effects;
-                    if (bits & U_EFFECTS16) next.effects = deltaEnt.effects;
-
-                    if (bits & U_RENDERFX8) next.renderfx = deltaEnt.renderfx;
-                    if (bits & U_RENDERFX16) next.renderfx = deltaEnt.renderfx;
-
-                    if (bits & U_ORIGIN1) next.origin.x = deltaEnt.origin.x;
-                    if (bits & U_ORIGIN2) next.origin.y = deltaEnt.origin.y;
-                    if (bits & U_ORIGIN3) next.origin.z = deltaEnt.origin.z;
-
-                    if (bits & U_ANGLE1) next.angles.x = deltaEnt.angles.x;
-                    if (bits & U_ANGLE2) next.angles.y = deltaEnt.angles.y;
-                    if (bits & U_ANGLE3) next.angles.z = deltaEnt.angles.z;
-
-                    if (bits & U_OLDORIGIN) next.old_origin = { ...deltaEnt.old_origin };
-
-                    if (bits & U_SOUND) next.sound = deltaEnt.sound;
-                    if (bits & U_EVENT) next.event = deltaEnt.event;
-                    if (bits & U_SOLID) next.solid = deltaEnt.solid;
-
-                    if (state.serverData.protocol >= 2023) {
-                         // Rerelease fields
-                         if (bits & U_ALPHA) next.alpha = deltaEnt.alpha;
-                         if (bits & U_SCALE) next.scale = deltaEnt.scale;
-                         // ... others
-                    }
-
+                    const next = { ...prev };
+                    applyEntityDelta(next, deltaEnt);
                     newEntities.set(deltaEnt.number, next);
                 }
 

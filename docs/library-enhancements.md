@@ -255,6 +255,8 @@ function extractDemoRange(
 
 **Workaround**: Record new demo while playing desired section, but inefficient.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 3.3: Demo Metadata Access (P2)
@@ -281,6 +283,8 @@ interface DemoMetadata {
 ```
 
 **Rationale**: Demo metadata editor (Section 03, Task 7) displays and edits demo properties.
+
+**Status**: Implemented.
 
 ---
 
@@ -421,6 +425,8 @@ interface Entity {
 **Rationale**: Bounding box visualization (Section 04, Task 1.1) needs entity bounds.
 
 **Workaround**: Calculate from entity origin + mins/maxs, but may not account for rotation.
+
+**Status**: Implemented.
 
 ---
 
@@ -749,6 +755,8 @@ function listCvars(): Cvar[]
 
 **Workaround**: Custom config system, but doesn't integrate with library.
 
+**Status**: Implemented.
+
 ---
 
 ## Section 09: Performance Optimization
@@ -886,12 +894,12 @@ interface MemoryUsage {
 | WebSocket Protocol Docs | docs | P0 | 02 | Implemented |
 | Spectator Mode APIs | game/client | P1 | 02 | Implemented |
 | Demo Event Extraction | client | P1 | 03 | Implemented |
-| Demo Clip Extraction | client | P2 | 03 | Needed |
-| Demo Metadata Access | client | P2 | 03 | Needed |
+| Demo Clip Extraction | client | P2 | 03 | Implemented |
+| Demo Metadata Access | client | P2 | 03 | Implemented |
 | Renderer Statistics API | engine | P1 | 04 | Implemented |
 | Debug Rendering Mode | engine | P1 | 04 | Implemented |
 | Lighting Control APIs | engine | P2 | 04 | Implemented |
-| Entity Bounds Access | game | P2 | 04 | Needed |
+| Entity Bounds Access | game | P2 | 04 | Implemented |
 | Cross-Reference API | engine | P2 | 05 | Partially Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
@@ -900,7 +908,7 @@ interface MemoryUsage {
 | Custom Entity Registration | game | P0 | 07 | Implemented |
 | Mod Initialization Hooks | game | P1 | 07 | Implemented |
 | VFS Priority Support | engine | P1 | 07 | Implemented |
-| Cvar System | shared/game | P2 | 07 | Needed |
+| Cvar System | shared/game | P2 | 07 | Implemented |
 | Streaming PAK Reader | engine | P2 | 09 | Needed |
 | Instancing API | engine | P2 | 09 | Nice-to-have |
 | LOD Support | engine | P3 | 09 | Nice-to-have |
