@@ -1,12 +1,5 @@
 import type { PlayerState, EntityState } from '@quake2ts/shared';
-
-// Define GameStateSnapshot locally if it's not exported or if we need a specific mock version
-// Assuming it matches the structure expected by the game/client
-export interface GameStateSnapshot {
-  entities: EntityState[];
-  playerState: PlayerState;
-  timestamp: number;
-}
+import type { GameStateSnapshot } from '@quake2ts/game';
 
 export const createPlayerStateFactory = (overrides?: Partial<PlayerState>): PlayerState => ({
   pm_type: 0,
@@ -54,9 +47,39 @@ export const createEntityStateFactory = (overrides?: Partial<EntityState>): Enti
   ...overrides,
 });
 
-export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnapshot>): GameStateSnapshot => ({
-  entities: [],
-  playerState: createPlayerStateFactory(),
-  timestamp: Date.now(),
+// Note: This factory might need updates if GameStateSnapshot structure changes significantly in @quake2ts/game
+export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnapshot>): any => ({
+  // Simplified default mock matching the interface as best as possible for basic tests
+  gravity: { x: 0, y: 0, z: -800 },
+  origin: { x: 0, y: 0, z: 0 },
+  velocity: { x: 0, y: 0, z: 0 },
+  viewangles: { x: 0, y: 0, z: 0 },
+  level: { timeSeconds: 0, frameNumber: 0, previousTimeSeconds: 0 },
+  entities: {
+    activeCount: 0,
+    worldClassname: 'worldspawn',
+  },
+  packetEntities: [],
+  pmFlags: 0,
+  pmType: 0,
+  waterlevel: 0,
+  deltaAngles: { x: 0, y: 0, z: 0 },
+  health: 100,
+  armor: 0,
+  ammo: 0,
+  blend: [0, 0, 0, 0],
+  damageAlpha: 0,
+  damageIndicators: [],
+  stats: [],
+  kick_angles: { x: 0, y: 0, z: 0 },
+  kick_origin: { x: 0, y: 0, z: 0 },
+  gunoffset: { x: 0, y: 0, z: 0 },
+  gunangles: { x: 0, y: 0, z: 0 },
+  gunindex: 0,
+  pm_time: 0,
+  gun_frame: 0,
+  rdflags: 0,
+  fov: 90,
+  renderfx: 0,
   ...overrides,
 });
