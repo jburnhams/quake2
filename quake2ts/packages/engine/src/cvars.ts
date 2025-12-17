@@ -37,16 +37,32 @@ export class Cvar {
     return this._value;
   }
 
+  getString(): string {
+    return this.string;
+  }
+
   get number(): number {
     return Number(this._value);
+  }
+
+  getFloat(): number {
+    return this.number;
   }
 
   get integer(): number {
     return Math.trunc(this.number);
   }
 
+  getInt(): number {
+    return this.integer;
+  }
+
   get boolean(): boolean {
     return Boolean(this.integer);
+  }
+
+  getBoolean(): boolean {
+    return this.boolean;
   }
 
   set(value: string): void {

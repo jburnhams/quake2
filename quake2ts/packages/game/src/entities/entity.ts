@@ -443,6 +443,13 @@ export class Entity {
       this._powerArmor = v;
   }
 
+  get worldBounds(): { min: Vec3; max: Vec3 } {
+    return {
+      min: this.absmin,
+      max: this.absmax
+    };
+  }
+
   constructor(index: number) {
     this.index = index;
   }
