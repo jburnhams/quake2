@@ -10,6 +10,7 @@ import { LevelClock, type LevelFrameState } from './level.js';
 import { createSaveFile, applySaveFile, GameSaveFile } from './save/index.js';
 import { RandomGenerator } from '@quake2ts/shared';
 export * from './entities/index.js';
+export * from './entities/templates.js';
 export * from './ai/index.js';
 export * from './ai/noise.js';
 
