@@ -903,7 +903,7 @@ interface MemoryUsage {
 | Cross-Reference API | engine | P2 | 05 | Partially Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
-| Entity Templates | game | P2 | 06 | Needed |
+| Entity Templates | game | P2 | 06 | Implemented |
 | BSP Entity Lump Replace | tools | P3 | 06 | Nice-to-have |
 | Custom Entity Registration | game | P0 | 07 | Implemented |
 | Mod Initialization Hooks | game | P1 | 07 | Implemented |
