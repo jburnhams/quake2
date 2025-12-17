@@ -313,9 +313,9 @@ export class MessageCollector implements NetworkMessageHandler {
 export function collectMessages(demoData: Uint8Array): Message[] {
     const collector = new MessageCollector();
     // Use the demo buffer (handling slice offset)
-    const buffer = demoData.byteOffset === 0 && demoData.byteLength === demoData.buffer.byteLength
+    const buffer = (demoData.byteOffset === 0 && demoData.byteLength === demoData.buffer.byteLength
         ? demoData.buffer
-        : demoData.slice().buffer;
+        : demoData.slice().buffer) as ArrayBuffer;
 
     const reader = new DemoReader(buffer);
 
