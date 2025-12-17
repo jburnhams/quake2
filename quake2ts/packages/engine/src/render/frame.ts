@@ -4,7 +4,7 @@ import { gatherVisibleFaces, type VisibleFace } from './bspTraversal.js';
 import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
 import type { BspSurfaceGeometry, LightmapAtlas } from './bsp.js';
-import type { Texture2D } from './resources.js';
+import { Texture2D } from './resources.js';
 import type { MaterialManager } from './materials.js';
 import {
   computeSkyScroll,
@@ -13,7 +13,7 @@ import {
   type SkyboxBindOptions,
 } from './skybox.js';
 import { mat4 } from 'gl-matrix';
-import { SURF_SKY } from '@quake2ts/shared';
+import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
 
 export { FrameRenderStats, FrameRenderOptions };
@@ -74,6 +74,7 @@ interface FrameRenderOptions {
   readonly fullbright?: boolean;
   readonly ambient?: number;
   readonly lightStyleOverrides?: Map<number, string>; // Pattern overrides
+  readonly waterTint?: readonly [number, number, number, number]; // New option for underwater tint
 }
 
 interface FrameRendererDependencies {
@@ -117,18 +118,26 @@ function renderSky(
   skyboxPipeline.gl.depthMask(true);
 }
 
-function sortVisibleFaces(faces: readonly VisibleFace[]): VisibleFace[] {
+// Front-to-back sorting for opaque surfaces
+function sortVisibleFacesFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
   return [...faces].sort((a, b) => b.sortKey - a.sortKey);
+}
+
+// Back-to-front sorting for transparent surfaces
+function sortVisibleFacesBackToFront(faces: readonly VisibleFace[]): VisibleFace[] {
+  return [...faces].sort((a, b) => a.sortKey - b.sortKey);
 }
 
 interface TextureBindingCache {
   diffuse?: Texture2D;
   lightmap?: Texture2D;
+  refraction?: Texture2D;
 }
 
 interface ResolvedSurfaceTextures {
   diffuse?: Texture2D;
   lightmap?: Texture2D;
+  refraction?: Texture2D;
 }
 
 interface BatchKey {
@@ -138,7 +147,11 @@ interface BatchKey {
   styleKey: string;
 }
 
-function resolveSurfaceTextures(geometry: BspSurfaceGeometry, world: WorldRenderState | undefined): ResolvedSurfaceTextures {
+function resolveSurfaceTextures(
+    geometry: BspSurfaceGeometry,
+    world: WorldRenderState | undefined,
+    refractionTexture?: Texture2D
+): ResolvedSurfaceTextures {
   // Try to resolve the texture from the material system first (handling animations)
   const material = world?.materials?.getMaterial(geometry.texture);
   let diffuse: Texture2D | undefined;
@@ -159,7 +172,7 @@ function resolveSurfaceTextures(geometry: BspSurfaceGeometry, world: WorldRender
   const lightmapIndex = geometry.lightmap?.atlasIndex;
   const lightmap = lightmapIndex !== undefined ? world?.lightmaps?.[lightmapIndex]?.texture : undefined;
 
-  return { diffuse, lightmap };
+  return { diffuse, lightmap, refraction: refractionTexture };
 }
 
 function bindSurfaceTextures(
@@ -167,7 +180,7 @@ function bindSurfaceTextures(
   world: WorldRenderState | undefined,
   cache: TextureBindingCache,
   resolved: ResolvedSurfaceTextures
-): { diffuse?: number; lightmap?: number } {
+): { diffuse?: number; lightmap?: number; refraction?: number } {
   const diffuse = resolved.diffuse;
 
   if (diffuse && cache.diffuse !== diffuse) {
@@ -184,7 +197,19 @@ function bindSurfaceTextures(
     cache.lightmap = undefined;
   }
 
-  return { diffuse: 0, lightmap: lightmap ? 1 : undefined };
+  const refraction = resolved.refraction;
+  let refractionSampler: number | undefined;
+  if (refraction && (geometry.surfaceFlags & SURF_WARP)) {
+      if (cache.refraction !== refraction) {
+          refraction.bind(2);
+          cache.refraction = refraction;
+      }
+      refractionSampler = 2;
+  } else {
+      cache.refraction = undefined;
+  }
+
+  return { diffuse: 0, lightmap: lightmap ? 1 : undefined, refraction: refractionSampler };
 }
 
 export interface FrameRenderer {
@@ -224,22 +249,6 @@ function evaluateLightStyle(pattern: string, time: number): number {
     if (!pattern) return 1.0;
     const frame = Math.floor(time * 10) % pattern.length;
     const charCode = pattern.charCodeAt(frame);
-    // 'a' is 0, 'z' is 25.5 -> 'z'-'a' = 25 -> value = 25/25.5 ~ 1.0?
-    // Quake 2: value = (char - 'a') * (22 / 256.0)? No.
-    // Standard interpretation: 'a' = 0, 'z' = 2.0 (double bright). 'm' = 1.0 (normal).
-    // range 'a' (0) to 'z' (25).
-    // m - a = 12.
-    // value = (char - 'a') / 12.0? If m is normal.
-    // Let's assume standard Quake 2:
-    // float value = (float)(s[j] - 'a') * (1.0 / 12.0); roughly?
-    // engine: cl_lightstyle_table. value / 255.0?
-    // In Quake 2: lightstyle values are 0-255?
-    // Actually, lightstyle values are often floats in range 0-2 (or more).
-    // Let's stick to common convention: 'm' is normal (1.0).
-    // 'a' is 0.
-    // 'z' is 25 -> ~2.0.
-    // so value = (char - 'a') * (1.0/12.5) approx. Or (char-'a')/12.8?
-    // Let's use (char - 'a') / 12.0 for now, so m (12) -> 1.0.
     return (charCode - 97) / 12.0;
 }
 
@@ -251,6 +260,31 @@ export const createFrameRenderer = (
   deps: FrameRendererDependencies = DEFAULT_DEPS
 ): FrameRenderer => {
   let lastFrameTime = 0;
+
+  // Refraction Texture State
+  let refractionTexture: Texture2D | undefined;
+  let refractionTextureWidth = 0;
+  let refractionTextureHeight = 0;
+
+  const ensureRefractionTexture = (width: number, height: number): Texture2D => {
+      if (!refractionTexture || refractionTextureWidth !== width || refractionTextureHeight !== height) {
+          if (refractionTexture) {
+              // Texture2D doesn't have explicit dispose, but we can overwrite.
+              // In a robust system we should delete old textures.
+          }
+          refractionTexture = new Texture2D(gl);
+          refractionTexture.upload(width, height, null); // Empty texture
+          refractionTexture.setParameters({
+              minFilter: gl.LINEAR,
+              magFilter: gl.LINEAR,
+              wrapS: gl.CLAMP_TO_EDGE,
+              wrapT: gl.CLAMP_TO_EDGE
+          });
+          refractionTextureWidth = width;
+          refractionTextureHeight = height;
+      }
+      return refractionTexture;
+  };
 
   const renderFrame = (options: FrameRenderOptions): FrameRenderStats => {
     const now = performance.now();
@@ -282,7 +316,8 @@ export const createFrameRenderer = (
         gamma,
         fullbright,
         ambient,
-        lightStyleOverrides
+        lightStyleOverrides,
+        waterTint
     } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
@@ -303,116 +338,148 @@ export const createFrameRenderer = (
         z: camera.position[2] ?? 0,
       };
       const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
-      const sortedFaces = sortVisibleFaces(visibleFaces);
+
+      // Split faces into Opaque and Transparent/Warping
+      const opaqueFaces: VisibleFace[] = [];
+      const transparentFaces: VisibleFace[] = [];
+
+      for (const face of visibleFaces) {
+          const geometry = world.surfaces[face.faceIndex];
+          if (!geometry) continue;
+
+          // Check if surface is transparent or warping (water, slime, lava)
+          const isTransparent = (geometry.surfaceFlags & (SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)) !== 0;
+
+          if (isTransparent) {
+              transparentFaces.push(face);
+          } else {
+              opaqueFaces.push(face);
+          }
+      }
+
+      // 1. Render Opaque Faces
+      const sortedOpaque = sortVisibleFacesFrontToBack(opaqueFaces);
 
       // Prepare effective light styles
       let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
       if (lightStyleOverrides && lightStyleOverrides.size > 0) {
-          // Clone array to modify
           const styles = [...(world.lightStyles || [])];
-          // Ensure array is large enough for overrides
           for (const [index, pattern] of lightStyleOverrides) {
-             while (styles.length <= index) styles.push(1.0); // Default fill
+             while (styles.length <= index) styles.push(1.0);
              styles[index] = evaluateLightStyle(pattern, timeSeconds);
           }
           effectiveLightStyles = styles;
       }
 
+      const drawSurfaceBatch = (faces: VisibleFace[], useRefraction: boolean) => {
+           let lastBatchKey: BatchKey | undefined;
+           let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
+           const cache: TextureBindingCache = {};
 
-      let lastBatchKey: BatchKey | undefined;
-      let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
-      const cache: TextureBindingCache = {};
+           // Ensure refraction texture is bound if needed
+           const currentRefractionTexture = useRefraction ? refractionTexture : undefined;
 
-      for (const { faceIndex } of sortedFaces) {
-        const geometry = world.surfaces[faceIndex];
-        if (!geometry) {
-          continue;
-        }
+           for (const { faceIndex } of faces) {
+                const geometry = world.surfaces[faceIndex];
+                if (!geometry) continue;
+                if ((geometry.surfaceFlags & SURF_SKY) !== 0) continue;
 
-        if ((geometry.surfaceFlags & SURF_SKY) !== 0) {
-          continue;
-        }
+                const faceStyles = world.map.faces[faceIndex]?.styles;
+                const material = world.materials?.getMaterial(geometry.texture);
+                const resolvedTextures = resolveSurfaceTextures(geometry, world, currentRefractionTexture);
 
-        const faceStyles = world.map.faces[faceIndex]?.styles;
-        const material = world.materials?.getMaterial(geometry.texture);
-        const resolvedTextures = resolveSurfaceTextures(geometry, world);
+                let activeRenderMode: RenderModeConfig | undefined = renderMode;
+                if (renderMode && !renderMode.applyToAll && resolvedTextures.diffuse) {
+                    activeRenderMode = undefined;
+                } else if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
+                   activeRenderMode = renderMode;
+                }
 
-        // Determine effective render mode for this surface
-        let activeRenderMode: RenderModeConfig | undefined = renderMode;
-        if (renderMode && !renderMode.applyToAll && resolvedTextures.diffuse) {
-          // If fallback mode is active but texture exists, use textured mode (disable override)
-          activeRenderMode = undefined;
-        } else if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
-           // If fallback mode is active and texture is missing, enforce the override
-           activeRenderMode = renderMode;
-        }
+                let effectiveLightmap = resolvedTextures.lightmap;
+                if (disableLightmaps) {
+                    effectiveLightmap = undefined;
+                }
 
-        // Apply lightmap disable override
-        let effectiveLightmap = resolvedTextures.lightmap;
-        if (disableLightmaps) {
-            effectiveLightmap = undefined;
-        }
+                const batchKey: BatchKey = {
+                  diffuse: resolvedTextures.diffuse,
+                  lightmap: effectiveLightmap,
+                  surfaceFlags: geometry.surfaceFlags,
+                  styleKey: faceStyles?.join(',') ?? '',
+                };
 
-        const batchKey: BatchKey = {
-          diffuse: resolvedTextures.diffuse,
-          lightmap: effectiveLightmap,
-          surfaceFlags: geometry.surfaceFlags,
-          styleKey: faceStyles?.join(',') ?? '',
-        };
+                const isSameBatch =
+                  lastBatchKey &&
+                  lastBatchKey.diffuse === batchKey.diffuse &&
+                  lastBatchKey.lightmap === batchKey.lightmap &&
+                  lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
+                  lastBatchKey.styleKey === batchKey.styleKey;
 
-        const isSameBatch =
-          lastBatchKey &&
-          lastBatchKey.diffuse === batchKey.diffuse &&
-          lastBatchKey.lightmap === batchKey.lightmap &&
-          lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
-          lastBatchKey.styleKey === batchKey.styleKey;
+                if (!isSameBatch) {
+                  stats.batches += 1;
+                  cache.diffuse = undefined;
+                  cache.lightmap = undefined;
+                  cache.refraction = undefined;
 
-        if (!isSameBatch) {
-          stats.batches += 1;
-          cache.diffuse = undefined;
-          cache.lightmap = undefined;
+                  const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
+                  const textures = bindSurfaceTextures(geometry, world, cache, effectiveTextures);
 
-          // Note: we pass resolvedTextures manually constructed to respect disableLightmaps
-          const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
-          const textures = bindSurfaceTextures(geometry, world, cache, effectiveTextures);
+                  const texScroll = material ? material.scrollOffset : undefined;
+                  const warp = material ? material.warp : undefined;
 
-          const texScroll = material ? material.scrollOffset : undefined;
-          const warp = material ? material.warp : undefined;
+                  cachedState = bspPipeline.bind({
+                    modelViewProjection: viewProjection,
+                    styleIndices: faceStyles,
+                    styleValues: effectiveLightStyles,
+                    surfaceFlags: geometry.surfaceFlags,
+                    timeSeconds,
+                    diffuseSampler: textures.diffuse ?? 0,
+                    lightmapSampler: textures.lightmap,
+                    refractionSampler: textures.refraction,
+                    texScroll,
+                    warp,
+                    dlights,
+                    renderMode: activeRenderMode,
+                    lightmapOnly,
+                    brightness,
+                    gamma,
+                    fullbright,
+                    ambient
+                  });
+                  applySurfaceState(gl, cachedState);
+                  lastBatchKey = batchKey;
+                } else {
+                  // Rebind textures if we are in the same batch (optimization mostly for non-cached changes)
+                  // Actually resolveSurfaceTextures always returns new object, so bindSurfaceTextures check is useful
+                  const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
+                  bindSurfaceTextures(geometry, world, cache, effectiveTextures);
+                  if (cachedState) {
+                    applySurfaceState(gl, cachedState);
+                  }
+                }
 
-          cachedState = bspPipeline.bind({
-            modelViewProjection: viewProjection,
-            styleIndices: faceStyles,
-            styleValues: effectiveLightStyles,
-            surfaceFlags: geometry.surfaceFlags,
-            timeSeconds,
-            diffuseSampler: textures.diffuse ?? 0,
-            lightmapSampler: textures.lightmap,
-            texScroll,
-            warp,
-            dlights,
-            renderMode: activeRenderMode,
-            lightmapOnly,
-            brightness,
-            gamma,
-            fullbright,
-            ambient
-          });
-          applySurfaceState(gl, cachedState);
-          lastBatchKey = batchKey;
-        } else {
-          const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
-          bindSurfaceTextures(geometry, world, cache, effectiveTextures);
-          if (cachedState) {
-            applySurfaceState(gl, cachedState);
-          }
-        }
+                bspPipeline.draw(geometry, activeRenderMode);
 
-        bspPipeline.draw(geometry, activeRenderMode);
+                stats.facesDrawn += 1;
+                stats.drawCalls += 1;
+                stats.vertexCount += geometry.vertexCount;
+           }
+      };
 
-        stats.facesDrawn += 1;
-        stats.drawCalls += 1;
-        stats.vertexCount += geometry.vertexCount;
+      // Draw Opaque Pass
+      drawSurfaceBatch(sortedOpaque, false);
+
+      // 2. Capture Framebuffer for Refraction
+      if (transparentFaces.length > 0) {
+          const width = gl.canvas.width;
+          const height = gl.canvas.height;
+          const rt = ensureRefractionTexture(width, height);
+          rt.bind(2); // Bind to a unit to copy into
+          gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
       }
+
+      // 3. Render Transparent/Warping Faces
+      const sortedTransparent = sortVisibleFacesBackToFront(transparentFaces);
+      drawSurfaceBatch(sortedTransparent, true);
     }
 
     if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
