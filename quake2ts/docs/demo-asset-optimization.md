@@ -138,17 +138,17 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Unit: Verify `MessageWriter` output against known binary patterns
 
 ### Task 4.2: Optimize World State for Clips
-- [ ] Add `WorldStateOptimizer` in `packages/engine/src/demo/worldStateOptimizer.ts`
-  - [ ] `optimizeForClip(worldState: WorldState, clipMessages: Message[]): WorldState`
-  - [ ] Analyze which entities/configstrings are referenced in clip
-  - [ ] Remove unreferenced baselines, configstrings, models from world state
-  - [ ] Keep only entities visible or interactable during clip
-  - [ ] Preserve dependency chain (e.g., model referenced by entity needs texture)
-- [ ] Add visibility analysis
-  - [ ] Parse all frames in clip
-  - [ ] Track which entity IDs appear
-  - [ ] Track which configstring indices are accessed
-  - [ ] Build dependency graph for resources
+- [x] Add `WorldStateOptimizer` in `packages/engine/src/demo/worldStateOptimizer.ts`
+  - [x] `optimizeForClip(worldState: WorldState, clipMessages: Message[]): WorldState`
+  - [x] Analyze which entities/configstrings are referenced in clip
+  - [x] Remove unreferenced baselines, configstrings, models from world state
+  - [x] Keep only entities visible or interactable during clip
+  - [x] Preserve dependency chain (e.g., model referenced by entity needs texture)
+- [x] Add visibility analysis
+  - [x] Parse all frames in clip
+  - [x] Track which entity IDs appear
+  - [x] Track which configstring indices are accessed
+  - [x] Build dependency graph for resources
 
 **Dependencies:** Task 4.1, `packages/engine/src/demo/parser.ts`
 
