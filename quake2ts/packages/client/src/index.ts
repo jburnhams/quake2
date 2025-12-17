@@ -556,6 +556,19 @@ export function createClient(imports: ClientImports): ClientExports {
           description: 'Toggle client-side prediction'
       });
 
+      imports.host.cvars.register({
+          name: 's_musicvolume',
+          defaultValue: '1',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              const vol = cvar.number;
+              if (!isNaN(vol)) {
+                  imports.engine.audio?.set_music_volume(Math.max(0, Math.min(1, vol)));
+              }
+          },
+          description: 'Music volume'
+      });
+
       // Initialize fovValue from cvar
       const initialFov = imports.host.cvars.get('fov');
       if (initialFov) {
@@ -563,6 +576,15 @@ export function createClient(imports: ClientImports): ClientExports {
          if (!isNaN(f)) {
           fovValue = Math.max(1, Math.min(179, f));
         }
+      }
+
+      // Initialize music volume
+      const initialMusicVol = imports.host.cvars.get('s_musicvolume');
+      if (initialMusicVol) {
+          const vol = initialMusicVol.number;
+          if (!isNaN(vol)) {
+              imports.engine.audio?.set_music_volume(Math.max(0, Math.min(1, vol)));
+          }
       }
     }
   }
