@@ -4,8 +4,8 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ## Testing & Reliability
 
-- [ ] **Export Test Utilities**
-    - [ ] Create a `@quake2ts/test-utils` package or export.
+- [ ] **Export Test Utilities** (In Progress)
+    - [ ] Create a `@quake2ts/test-utils` package or export. (Package created, build configuration needs fixing)
     - [ ] Include mocks for `NetChan`, `BinaryStream`, `BinaryWriter`.
     - [ ] Include factories for `GameStateSnapshot`, `PlayerState`, `EntityState` with valid default values.
     - [ ] **Goal**: Reduce boilerplate mock setup in application unit tests.
