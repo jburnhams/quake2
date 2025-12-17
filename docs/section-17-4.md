@@ -130,7 +130,7 @@
 - [x] Fix spatialization edge cases (inside entity bounds handled by `PannerNode`)
 
 ### 4.5.2 Music System
-- [ ] Add music track crossfading for smooth transitions
-- [ ] Implement music triggers (target_music or map-based)
-- [ ] Add configurable music volume separate from SFX
-- [ ] Support OGG Vorbis and fallback formats
+- [x] Add music track crossfading for smooth transitions
+- [x] Implement music triggers (target_music or map-based)
+- [x] Add configurable music volume separate from SFX
+- [x] Support OGG Vorbis and fallback formats
