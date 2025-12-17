@@ -146,7 +146,11 @@ describe('Demo Playback Integration', () => {
             },
             audio: {
                 sound: vi.fn(),
-                positioned_sound: vi.fn()
+                positioned_sound: vi.fn(),
+                set_music_volume: vi.fn(), // Mock set_music_volume
+                play_track: vi.fn(),
+                play_music: vi.fn(),
+                stop_music: vi.fn()
             } as any
         } as any;
 

@@ -563,7 +563,11 @@ export function createClient(imports: ClientImports): ClientExports {
           onChange: (cvar) => {
               const vol = cvar.number;
               if (!isNaN(vol)) {
-                  imports.engine.audio?.set_music_volume(Math.max(0, Math.min(1, vol)));
+                  // Defensive call in case engine interface is partial
+                  const audio = imports.engine.audio as any;
+                  if (audio && typeof audio.set_music_volume === 'function') {
+                      audio.set_music_volume(Math.max(0, Math.min(1, vol)));
+                  }
               }
           },
           description: 'Music volume'
@@ -583,7 +587,10 @@ export function createClient(imports: ClientImports): ClientExports {
       if (initialMusicVol) {
           const vol = initialMusicVol.number;
           if (!isNaN(vol)) {
-              imports.engine.audio?.set_music_volume(Math.max(0, Math.min(1, vol)));
+              const audio = imports.engine.audio as any;
+              if (audio && typeof audio.set_music_volume === 'function') {
+                  audio.set_music_volume(Math.max(0, Math.min(1, vol)));
+              }
           }
       }
     }
