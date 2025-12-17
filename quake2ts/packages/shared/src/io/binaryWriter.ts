@@ -39,6 +39,12 @@ export class BinaryWriter {
     this.offset += 1;
   }
 
+  public writeBytes(data: Uint8Array): void {
+      this.ensureSpace(data.byteLength);
+      this.buffer.set(data, this.offset);
+      this.offset += data.byteLength;
+  }
+
   public writeChar(value: number): void {
     this.ensureSpace(1);
     this.view.setInt8(this.offset, value);
