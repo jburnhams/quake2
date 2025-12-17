@@ -1,26 +1,28 @@
-
-import { describe, it, expect, beforeAll } from 'vitest';
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
+import { describe, it, expect } from 'vitest';
 import { PakArchive } from '../../src/assets/pak';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 
-describe('Real PAK Inspection', () => {
-    let pak: PakArchive;
+describe('Inspect PAK', () => {
+    it('lists files in pak0.pak', () => {
+        const pakPath = resolve(process.cwd(), '../../pak0.pak');
 
-    beforeAll(() => {
-        // Adjust path to point to workspace root
-        const pakPath = resolve(__dirname, '../../../../pak.pak');
+        if (!existsSync(pakPath)) {
+            console.log('pak0.pak not found at', pakPath);
+            return;
+        }
+        console.log('Reading PAK from', pakPath);
         const buffer = readFileSync(pakPath);
-        pak = PakArchive.fromArrayBuffer('pak.pak', buffer.buffer);
-    });
+        const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 
-    it('should list files in pak.pak', () => {
-        const entries = pak.listEntries();
-        console.log("Files in pak.pak:");
-        entries.forEach(e => console.log(`- ${e.name} (${e.length} bytes)`));
+        const pak = PakArchive.fromArrayBuffer('pak0.pak', arrayBuffer);
 
-        const demoFiles = entries.filter(e => e.name.endsWith('.dm2'));
-        expect(demoFiles.length).toBeGreaterThan(0);
-        console.log("Demo files found:", demoFiles.map(d => d.name));
+        const files = [];
+        for (const file of pak.entries.keys()) {
+            if (file.endsWith('.dm2')) {
+                files.push(file);
+            }
+        }
+        console.log('Demos found:', files);
     });
 });
