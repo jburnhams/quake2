@@ -91,6 +91,7 @@ import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js'
 
 // Script hooks
 import { ScriptHookRegistry, ScriptHooks } from './scripting/hooks.js';
+export { ScriptHookRegistry, ScriptHooks } from './scripting/hooks.js';
 import { ModAPI } from './mod.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
