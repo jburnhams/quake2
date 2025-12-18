@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildBspGeometry, type BspSurfaceInput } from '../src/render/bsp.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 
 function makeLightmap(width: number, height: number, start = 0): Uint8Array {
   const samples = new Uint8Array(width * height * 3);

@@ -11,7 +11,7 @@ import {
   spawnTeleportFlash,
   spawnTrail,
 } from '../src/render/particleSystem.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 import { RandomGenerator } from '@quake2ts/shared';
 
 function createMockRng(value: number): RandomGenerator {

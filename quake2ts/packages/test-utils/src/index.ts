@@ -3,3 +3,4 @@ export * from './shared/mocks.js';
 export * from './shared/bsp.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
+export * from './engine/mocks/webgl.js';

@@ -7,7 +7,7 @@ import {
   VertexArray,
   VertexBuffer,
 } from '../src/render/resources.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 
 describe('VertexBuffer and IndexBuffer', () => {
   it('binds and uploads data with the requested usage', () => {
