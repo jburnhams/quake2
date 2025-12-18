@@ -9,7 +9,11 @@ import {
   angleVectors
 } from '@quake2ts/shared';
 // Import particle helpers from engine
-import { spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash, spawnTrail, spawnSplash, spawnSteam } from '@quake2ts/engine';
+import {
+    spawnBulletImpact, spawnExplosion, spawnBlood, spawnMuzzleFlash,
+    spawnTrail, spawnSplash, spawnSteam, spawnRailTrail, spawnSparks,
+    spawnBlasterImpact, spawnBfgExplosion
+} from '@quake2ts/engine';
 import { ClientConfigStrings } from './configStrings.js';
 
 // Helper to copy vec3
@@ -203,7 +207,7 @@ export class ClientEffectSystem {
         }
     }
 
-    public onTempEntity(type: number, pos: Vec3, time: number, dir?: Vec3) {
+    public onTempEntity(type: number, pos: Vec3, time: number, dir?: Vec3, pos2?: Vec3) {
          const particleSystem = this.engine.renderer?.particleSystem;
 
          switch (type) {
@@ -267,10 +271,9 @@ export class ClientEffectSystem {
                      this.playSound(pos, 0, "weapons/bfg__x1b.wav", 1.0, 0.5);
 
                      if (particleSystem) {
-                        spawnExplosion({
+                        spawnBfgExplosion({
                              system: particleSystem,
                              origin: pos
-                             // TODO: Make BFG explosion green/bigger
                         });
                      }
                  }
@@ -294,6 +297,67 @@ export class ClientEffectSystem {
                          origin: pos
                      });
                  }
+                 break;
+
+             case TempEntity.RAILTRAIL:
+                 if (particleSystem && pos2) {
+                     spawnRailTrail({
+                         system: particleSystem,
+                         start: pos,
+                         end: pos2
+                     });
+                 }
+                 break;
+
+             case TempEntity.BLASTER:
+                 if (particleSystem) {
+                     spawnBlasterImpact({
+                         system: particleSystem,
+                         origin: pos,
+                         color: [1.0, 1.0, 0.0, 1.0] // Yellow
+                     });
+                 }
+                 this.playSound(pos, 0, "weapons/lasthit.wav"); // Adjust sound if needed
+                 break;
+
+             case TempEntity.BLUEHYPERBLASTER:
+                 if (particleSystem) {
+                     spawnBlasterImpact({
+                         system: particleSystem,
+                         origin: pos,
+                         color: [0.0, 0.0, 1.0, 1.0] // Blue
+                     });
+                 }
+                 this.playSound(pos, 0, "weapons/lasthit.wav");
+                 break;
+
+             case TempEntity.SPARKS:
+             case TempEntity.BULLET_SPARKS:
+             case TempEntity.WELDING_SPARKS:
+                 if (particleSystem) {
+                     spawnSparks({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 },
+                         count: 8,
+                         color: [1.0, 0.8, 0.2, 1.0]
+                     });
+                 }
+                 this.playSound(pos, 0, "world/spark1.wav"); // Or similar
+                 break;
+
+             case TempEntity.SHIELD_SPARKS:
+             case TempEntity.SCREEN_SPARKS:
+                 if (particleSystem) {
+                     spawnSparks({
+                         system: particleSystem,
+                         origin: pos,
+                         normal: dir || { x: 0, y: 0, z: 1 },
+                         count: 12,
+                         color: [0.5, 1.0, 0.5, 1.0] // Greenish for shield? Or classic spark color.
+                     });
+                 }
+                 this.playSound(pos, 0, "world/spark2.wav");
                  break;
          }
     }

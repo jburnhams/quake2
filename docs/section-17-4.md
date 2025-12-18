@@ -116,7 +116,9 @@
     - *Note*: Underwater tint is currently generic for all liquids (water/slime/lava). Specific tints require `watertype` exposure in `PlayerState`.
 - [x] Implement view kick/roll for damage and movement
     - *Note*: Damage kick is pitch-only for now ("pain" flinch). Directional roll kicks require further vector math and state access.
-- [ ] Add particle effects for all weapon impacts and explosions
+- [x] Add particle effects for all weapon impacts and explosions
+    - Implemented handlers for `RAILTRAIL`, `BLASTER`, `SPARKS`, and enhanced `BFG_EXPLOSION`.
+    - Added particle system helpers: `spawnRailTrail`, `spawnSparks`, `spawnBlasterImpact`, `spawnBfgExplosion`.
 
 ---
 

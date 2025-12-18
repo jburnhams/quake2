@@ -416,7 +416,7 @@ export function createClient(imports: ClientImports): ClientExports {
     onTempEntity: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
         const time = demoPlayback.getCurrentTime() / 1000.0;
         if (pos) {
-            effectSystem.onTempEntity(type, pos, time, dir);
+            effectSystem.onTempEntity(type, pos, time, dir, pos2);
         }
     },
     onDamage: (indicators: DamageIndicator[]) => {
