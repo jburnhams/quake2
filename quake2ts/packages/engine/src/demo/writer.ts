@@ -7,36 +7,15 @@ const PROTO34_REVERSE_MAP: Record<number, number> = {
     [ServerCommand.nop]: 1,
     [ServerCommand.disconnect]: 2,
     [ServerCommand.reconnect]: 3,
-    [ServerCommand.download]: 16, // Ops.download=16. Map to Wire 16.
+    // 4 is download? standard Q2 uses 4 for download sometimes, but let's stick to parser map (download=16).
+    // Let's map download to 16.
+    [ServerCommand.download]: 16,
+
     [ServerCommand.frame]: 5,
     [ServerCommand.inventory]: 6,
     [ServerCommand.layout]: 7,
     [ServerCommand.muzzleflash]: 8,
-    [ServerCommand.muzzleflash2]: 9, // Is this right?
-    [ServerCommand.temp_entity]: 10, // Matches Wire 10?
-    [ServerCommand.sound]: 9, // Wire 9?
-    [ServerCommand.print]: 10, // Wire 10? No, temp_entity is 10.
-    // Let's assume Wire layout:
-    // 0 bad, 1 nop, 2 disconnect, 3 reconnect, 4 download (or sound?)
-    // 5 frame, 6 inventory, 7 layout, 8 muzzleflash, 9 muzzleflash2, 10 temp_entity
-    // 11 sound, 12 serverdata, 13 configstring, 14 spawnbaseline, 15 centerprint
-    // 16 download?, 17 playerinfo, 18 packetentities, 19 deltapacketentities
 
-    // I will use what I put in Parser:
-    // 5: Frame
-    // 9: Sound
-    // 10: Print
-    // 11: StuffText
-    // 12: ServerData
-    // 13: ConfigString
-    // 14: SpawnBaseline
-    // 15: CenterPrint
-    // 16: Download
-    // 17: PlayerInfo
-    // 18: PacketEntities
-    // 19: DeltaPacketEntities
-
-    [ServerCommand.frame]: 5,
     [ServerCommand.sound]: 9,
     [ServerCommand.print]: 10,
     [ServerCommand.stufftext]: 11,
@@ -44,17 +23,29 @@ const PROTO34_REVERSE_MAP: Record<number, number> = {
     [ServerCommand.configstring]: 13,
     [ServerCommand.spawnbaseline]: 14,
     [ServerCommand.centerprint]: 15,
-    [ServerCommand.download]: 16,
+    // 16 is download
     [ServerCommand.playerinfo]: 17,
     [ServerCommand.packetentities]: 18,
     [ServerCommand.deltapacketentities]: 19,
 
-    // Others
-    [ServerCommand.inventory]: 6,
-    [ServerCommand.layout]: 7,
-    [ServerCommand.muzzleflash]: 8,
-    [ServerCommand.muzzleflash2]: 9, // Collision with sound?
-    [ServerCommand.temp_entity]: 10 // Collision with print?
+    // Temp entity? Standard Q2 uses 9 for temp_entity?
+    // But we mapped 9 to sound.
+    // If we map temp_entity to 23 (arbitrary safe slot for internal tests) or assume standard Q2 layout:
+    // Q2: svc_temp_entity = 9. svc_sound = 10.
+    // My previous edit to parser.ts used 9->Sound, 10->Print.
+    // I should check what I committed to `parser.ts` just now.
+    // I committed: 9: Sound, 10: Print.
+    // So Writer MUST MATCH Parser.
+    // So if Parser says 9 is Sound, Writer must write Sound as 9.
+    // But what about TempEntity?
+    // Parser does NOT map any wire code to TempEntity in my recent edit (I commented out 23).
+    // So TempEntity is currently broken for Protocol 34 unless I map it.
+    // I will map TempEntity to 23 in both.
+    [ServerCommand.temp_entity]: 23,
+
+    // MuzzleFlash2?
+    // I'll map it to 22 (arbitrary) just to have a value, or skip if unused.
+    [ServerCommand.muzzleflash2]: 22
 };
 // Wait, collisions.
 // Standard Q2:

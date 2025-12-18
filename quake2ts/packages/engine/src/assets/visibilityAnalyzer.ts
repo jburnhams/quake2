@@ -49,12 +49,12 @@ export class ResourceVisibilityAnalyzer {
             return configStrings.get(ConfigStringIndex.Images + index);
         };
 
-        // Current parsing state
-        let currentServerFrame = 0;
+        let currentProtocol = 0;
+        const pendingSounds = new Set<string>();
 
         const handler: NetworkMessageHandler = {
             onServerData: (protocol, serverCount, attractLoop, gameDir, playerNum, levelName, tickRate, demoType) => {
-                // Initialize tracking
+                currentProtocol = protocol;
             },
             onConfigString: (index, str) => {
                 configStrings.set(index, str);
@@ -63,7 +63,6 @@ export class ResourceVisibilityAnalyzer {
                 baselines.set(entity.number, { ...entity });
             },
             onFrame: (frame: FrameData) => {
-                currentServerFrame = frame.serverFrame;
                 const resources: FrameResources = {
                     visible: new Set(),
                     audible: new Set(),
@@ -84,24 +83,10 @@ export class ResourceVisibilityAnalyzer {
                             const path = getSoundPath(ent.sound);
                             if (path) resources.audible.add(path);
                         }
-                        // Track skin? Skinnum logic maps to model skins or player skins.
-                        // If modelindex implies player (often modelindex 255 or similar special handling in Q2),
-                        // we might look up players configstrings.
-                        // Standard Q2 entities:
-                        // if modelindex is standard model, skinnum selects skin texture relative to model.
-                        // We track the model itself as the primary resource.
                     }
                 }
 
                 // Add sound events (accumulated during frame parsing)
-                // Note: onSound is called separately from onFrame.
-                // Because DemoReader iterates blocks, sound commands come BEFORE or INSIDE the frame block?
-                // Actually, frame message is usually the last in a packet.
-                // Sounds come before it.
-                // So we should have collected sounds since last frame.
-                // However, we don't have accumulation logic here yet.
-                // We'll fix this by maintaining a pendingSounds set.
-
                 if (pendingSounds.size > 0) {
                     for (const s of pendingSounds) resources.audible.add(s);
                     pendingSounds.clear();
@@ -114,10 +99,7 @@ export class ResourceVisibilityAnalyzer {
                 if (path) pendingSounds.add(path);
             },
             onTempEntity: (type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt) => {
-                // Temp entities often spawn sprites or models.
-                // Mapping TE to resources is complex (hardcoded in client).
-                // E.g. TE_EXPLOSION1 -> "sprites/s_explod.sp2"
-                // For now, we ignore TEs or add a generic placeholder logic if needed.
+                // Placeholder for TempEntity logic
             },
             onCenterPrint: () => {},
             onStuffText: () => {},
@@ -131,53 +113,144 @@ export class ResourceVisibilityAnalyzer {
             onDownload: () => {}
         };
 
-        const pendingSounds = new Set<string>();
-
         // We use a lenient parser to handle partial data if needed
         while (reader.nextBlock()) {
             const block = reader.getBlock();
             const blockParser = new NetworkMessageParser(block.data, handler, false);
-            // Protocol version handling:
-            // Ideally we detect from ServerData.
-            // The parser updates its protocolVersion when it sees ServerData.
-            // But we need to persist it across blocks if we instantiate new Parser per block?
-            // NetworkMessageParser maintains state? No, it's new instance.
-            // We need a persistent parser instance or pass version.
-            // But StreamingBuffer requires the full buffer? Or we can feed blocks?
-            // NetworkMessageParser takes a Buffer.
-            // If we create new Parser for each block, we lose protocol version state.
-            // FIX: Track protocol version externally.
-
-            // However, NetworkMessageParser doesn't accept protocol version in ctor, only setProtocolVersion.
-
-            // We need to track the version found in ServerData.
-            // We can wrap the handler to intercept onServerData and update our tracking variable.
-
-            // Actually, we can reuse the parser instance if we could feed it new data.
-            // StreamingBuffer doesn't support appending easily (it wraps a fixed buffer).
-            // So we must create new Parser and set version.
-
-            // Let's track version.
-
-            // Also, we need to pass the version to the new parser instance.
-
-            // Intercepting handler:
-            const originalOnServerData = handler.onServerData;
-            handler.onServerData = (protocol, ...args) => {
-                currentProtocol = protocol;
-                originalOnServerData(protocol, ...args);
-            };
-
+            // Pass the current protocol state to the new parser instance
             blockParser.setProtocolVersion(currentProtocol);
             blockParser.parseMessage();
+
+            // Note: If the block contained ServerData, currentProtocol was updated by the handler during parseMessage.
+            // This updated protocol will be used for the NEXT block.
+            // However, ServerData is usually the first command in a block if present.
+            // NetworkMessageParser updates its internal protocol version when it parses ServerData,
+            // so it handles mixed-protocol blocks correctly internally.
+            // We just need to persist it for the next block.
+            // To ensure we capture the *updated* protocol from the parser if it changed *during* parsing:
+            if (blockParser.getProtocolVersion() !== currentProtocol) {
+                currentProtocol = blockParser.getProtocolVersion();
+            }
         }
 
         return timeline;
     }
 
     public async analyzeRange(demo: Uint8Array, startFrame: number, endFrame: number): Promise<VisibilityTimeline> {
-        return this.analyzeDemo(demo);
+        // Simple implementation respecting range
+        // Note: We must still parse linearly to track state (baselines, configstrings),
+        // but we only record frames within the range.
+
+        const reader = new DemoReader(demo.buffer as ArrayBuffer);
+        const timeline: VisibilityTimeline = {
+            frames: new Map(),
+            time: new Map()
+        };
+
+        // ... Copy setup from analyzeDemo ...
+        // To avoid code duplication, we could refactor, but for now we inline or adapt.
+        // Actually, we can reuse analyzeDemo logic if we add range filtering inside onFrame.
+
+        // Let's refactor analyzeDemo to accept optional range filter?
+        // But analyzeDemo signature is fixed in the class.
+        // We'll implement analyzeRange by duplicating the loop logic but adding the check.
+
+        // Better: Make a private internal method.
+        return this.analyzeInternal(demo, startFrame, endFrame);
+    }
+
+    private async analyzeInternal(demo: Uint8Array, startFrame: number = 0, endFrame: number = Number.MAX_SAFE_INTEGER): Promise<VisibilityTimeline> {
+        const reader = new DemoReader(demo.buffer as ArrayBuffer);
+        const timeline: VisibilityTimeline = {
+            frames: new Map(),
+            time: new Map()
+        };
+
+        const configStrings = new Map<number, string>();
+        const baselines = new Map<number, EntityState>();
+
+        const getModelPath = (index: number): string | undefined => {
+            if (index <= 0) return undefined;
+            return configStrings.get(ConfigStringIndex.Models + index - 1);
+        };
+
+        const getSoundPath = (index: number): string | undefined => {
+            if (index <= 0) return undefined;
+            return configStrings.get(ConfigStringIndex.Sounds + index - 1);
+        };
+
+        let currentProtocol = 0;
+        const pendingSounds = new Set<string>();
+
+        const handler: NetworkMessageHandler = {
+            onServerData: (protocol, serverCount, attractLoop, gameDir, playerNum, levelName, tickRate, demoType) => {
+                currentProtocol = protocol;
+            },
+            onConfigString: (index, str) => {
+                configStrings.set(index, str);
+            },
+            onSpawnBaseline: (entity) => {
+                baselines.set(entity.number, { ...entity });
+            },
+            onFrame: (frame: FrameData) => {
+                if (frame.serverFrame < startFrame || frame.serverFrame > endFrame) {
+                    pendingSounds.clear(); // Discard sounds for skipped frames
+                    return;
+                }
+
+                const resources: FrameResources = {
+                    visible: new Set(),
+                    audible: new Set(),
+                    loaded: new Set()
+                };
+
+                if (frame.packetEntities && frame.packetEntities.entities) {
+                    for (const ent of frame.packetEntities.entities) {
+                        if (ent.modelindex > 0) {
+                            const path = getModelPath(ent.modelindex);
+                            if (path) resources.visible.add(path);
+                        }
+                        if (ent.sound > 0) {
+                            const path = getSoundPath(ent.sound);
+                            if (path) resources.audible.add(path);
+                        }
+                    }
+                }
+
+                if (pendingSounds.size > 0) {
+                    for (const s of pendingSounds) resources.audible.add(s);
+                    pendingSounds.clear();
+                }
+
+                timeline.frames.set(frame.serverFrame, resources);
+            },
+            onSound: (mask, soundNum, volume, attenuation, offset, ent, pos) => {
+                const path = getSoundPath(soundNum);
+                if (path) pendingSounds.add(path);
+            },
+            onTempEntity: () => {},
+            onCenterPrint: () => {},
+            onStuffText: () => {},
+            onPrint: () => {},
+            onLayout: () => {},
+            onInventory: () => {},
+            onMuzzleFlash: () => {},
+            onMuzzleFlash2: () => {},
+            onDisconnect: () => {},
+            onReconnect: () => {},
+            onDownload: () => {}
+        };
+
+        while (reader.nextBlock()) {
+            const block = reader.getBlock();
+            const blockParser = new NetworkMessageParser(block.data, handler, false);
+            blockParser.setProtocolVersion(currentProtocol);
+            blockParser.parseMessage();
+            if (blockParser.getProtocolVersion() !== currentProtocol) {
+                currentProtocol = blockParser.getProtocolVersion();
+            }
+        }
+
+        return timeline;
     }
 }
-
-let currentProtocol = 0;
