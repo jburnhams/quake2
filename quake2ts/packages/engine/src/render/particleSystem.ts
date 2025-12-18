@@ -622,3 +622,184 @@ export function spawnSteam(context: ParticleEffectContext): void {
         });
     }
 }
+
+// ============================================================================
+// New Particle Helpers for Weapon Impacts & Effects
+// ============================================================================
+
+export interface RailTrailContext {
+  readonly system: ParticleSystem;
+  readonly start: Vec3;
+  readonly end: Vec3;
+}
+
+export function spawnRailTrail(context: RailTrailContext): void {
+    const { system, start, end } = context;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const dz = end.z - start.z;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (dist < 1) return;
+
+    // Normalize direction
+    const dir = { x: dx / dist, y: dy / dist, z: dz / dist };
+
+    // Core trail particles
+    const step = 8; // Density
+    for (let d = 0; d < dist; d += step) {
+        const x = start.x + dir.x * d;
+        const y = start.y + dir.y * d;
+        const z = start.z + dir.z * d;
+
+        // Spiral effect
+        // d acts as "time" or distance along axis
+        // We want a spiral around the axis.
+        // For simplicity, let's just do a glowing core + some random jitter for now.
+        // A true spiral requires constructing perpendicular vectors.
+
+        // Inner blue core
+        system.spawn({
+            position: { x, y, z },
+            velocity: { x: 0, y: 0, z: 0 }, // Static
+            color: [0.4, 0.4, 1, 0.8],
+            size: 2,
+            lifetime: 0.6,
+            blendMode: 'additive',
+            fade: true
+        });
+
+        // Outer spiral/jitter
+        const radius = 3;
+        const theta = d * 0.5; // Twist
+        // This is not a true spiral around the vector, but simple jitter around point
+        // To do true spiral, we need basis vectors.
+        // For now, simple jitter is "good enough" for Quake 2 feel usually.
+        // Or we can try to improve visuals later.
+        system.spawn({
+            position: {
+                x: x + (system.rng.frandom() - 0.5) * 6,
+                y: y + (system.rng.frandom() - 0.5) * 6,
+                z: z + (system.rng.frandom() - 0.5) * 6
+            },
+            velocity: {
+                x: (system.rng.frandom() - 0.5) * 10,
+                y: (system.rng.frandom() - 0.5) * 10,
+                z: (system.rng.frandom() - 0.5) * 10
+            },
+            color: [0.1, 0.1, 0.8, 0.6],
+            size: 3,
+            lifetime: 0.8 + system.rng.frandom() * 0.2,
+            blendMode: 'additive',
+            fade: true
+        });
+    }
+}
+
+export interface SparksContext extends ParticleEffectContext {
+    readonly count?: number;
+    readonly color?: readonly [number, number, number, number];
+}
+
+export function spawnSparks(context: SparksContext): void {
+    const { system, origin, normal = { x: 0, y: 0, z: 1 }, count = 12, color = [1, 0.9, 0.2, 1] } = context;
+
+    for (let i = 0; i < count; i++) {
+        const speed = 100 + system.rng.frandom() * 200;
+        const spread = 0.5;
+
+        system.spawn({
+            position: origin,
+            velocity: {
+                x: normal.x * speed + (system.rng.frandom() - 0.5) * 100 * spread,
+                y: normal.y * speed + (system.rng.frandom() - 0.5) * 100 * spread,
+                z: normal.z * speed + (system.rng.frandom() - 0.5) * 100 * spread
+            },
+            color: color,
+            size: 1.5,
+            lifetime: 0.3 + system.rng.frandom() * 0.2,
+            gravity: 800,
+            bounce: 0.5,
+            damping: 1,
+            blendMode: 'additive',
+            fade: true
+        });
+    }
+}
+
+export interface BlasterImpactContext extends ParticleEffectContext {
+    readonly color?: readonly [number, number, number, number];
+}
+
+export function spawnBlasterImpact(context: BlasterImpactContext): void {
+    const { system, origin, normal = { x: 0, y: 0, z: 1 }, color = [1, 0.8, 0.0, 1] } = context;
+
+    // Flash
+    system.spawn({
+        position: origin,
+        velocity: { x: 0, y: 0, z: 0 },
+        color: color,
+        size: 8,
+        lifetime: 0.2,
+        blendMode: 'additive',
+        fade: true
+    });
+
+    // Sparks
+    for (let i = 0; i < 8; i++) {
+         const speed = 150 + system.rng.frandom() * 150;
+         system.spawn({
+            position: origin,
+            velocity: {
+                x: normal.x * speed + (system.rng.frandom() - 0.5) * 120,
+                y: normal.y * speed + (system.rng.frandom() - 0.5) * 120,
+                z: normal.z * speed + (system.rng.frandom() - 0.5) * 120
+            },
+            color: color,
+            size: 2,
+            lifetime: 0.4 + system.rng.frandom() * 0.2,
+            gravity: 400,
+            blendMode: 'additive',
+            fade: true
+         });
+    }
+}
+
+export function spawnBfgExplosion(context: ParticleEffectContext): void {
+    const { system, origin } = context;
+
+    // Core Flash
+    system.spawn({
+        position: origin,
+        velocity: { x: 0, y: 0, z: 0 },
+        color: [0.2, 1.0, 0.2, 1], // Green
+        size: 30,
+        lifetime: 0.5,
+        blendMode: 'additive',
+        fade: true
+    });
+
+    // Radiating green rays/particles
+    for (let i = 0; i < 60; i++) {
+        const theta = system.rng.frandom() * Math.PI * 2;
+        const phi = Math.acos(2 * system.rng.frandom() - 1);
+        const speed = 300 + system.rng.frandom() * 400;
+        const dir = {
+            x: Math.sin(phi) * Math.cos(theta),
+            y: Math.sin(phi) * Math.sin(theta),
+            z: Math.cos(phi),
+        };
+
+        system.spawn({
+            position: origin,
+            velocity: { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed },
+            color: [0.2, 1.0, 0.2, 0.8],
+            size: 4,
+            lifetime: 1.0,
+            gravity: 100, // Low gravity
+            damping: 1,
+            blendMode: 'additive',
+            fade: true
+        });
+    }
+}
