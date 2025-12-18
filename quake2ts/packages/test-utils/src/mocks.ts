@@ -1,6 +1,24 @@
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
-export const createBinaryWriterMock = () => ({
+export interface BinaryWriterMock {
+    writeByte: Mock<[number], void>;
+    writeShort: Mock<[number], void>;
+    writeLong: Mock<[number], void>;
+    writeString: Mock<[string], void>;
+    writeBytes: Mock<[Uint8Array], void>;
+    getBuffer: Mock<[], Uint8Array>;
+    reset: Mock<[], void>;
+    writeInt8: Mock<[number], void>;
+    writeUint8: Mock<[number], void>;
+    writeInt16: Mock<[number], void>;
+    writeUint16: Mock<[number], void>;
+    writeInt32: Mock<[number], void>;
+    writeUint32: Mock<[number], void>;
+    writeFloat: Mock<[number], void>;
+    getData: Mock<[], Uint8Array>;
+}
+
+export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeByte: vi.fn(),
   writeShort: vi.fn(),
   writeLong: vi.fn(),
@@ -61,7 +79,38 @@ export const createNetChanMock = () => ({
   isTimedOut: vi.fn(() => false),
 });
 
-export const createBinaryStreamMock = () => ({
+export interface BinaryStreamMock {
+    getPosition: Mock<[], number>;
+    getReadPosition: Mock<[], number>;
+    getLength: Mock<[], number>;
+    getRemaining: Mock<[], number>;
+    seek: Mock<[number], void>;
+    setReadPosition: Mock<[number], void>;
+    hasMore: Mock<[], boolean>;
+    hasBytes: Mock<[number], boolean>;
+
+    readChar: Mock<[], number>;
+    readByte: Mock<[], number>;
+    readShort: Mock<[], number>;
+    readUShort: Mock<[], number>;
+    readLong: Mock<[], number>;
+    readULong: Mock<[], number>;
+    readFloat: Mock<[], number>;
+
+    readString: Mock<[], string>;
+    readStringLine: Mock<[], string>;
+
+    readCoord: Mock<[], number>;
+    readAngle: Mock<[], number>;
+    readAngle16: Mock<[], number>;
+
+    readData: Mock<[number], Uint8Array>;
+
+    readPos: Mock<[], any>; // Use proper type if available, e.g., Vec3
+    readDir: Mock<[], any>;
+}
+
+export const createBinaryStreamMock = (): BinaryStreamMock => ({
   getPosition: vi.fn(() => 0),
   getReadPosition: vi.fn(() => 0),
   getLength: vi.fn(() => 0),
@@ -69,7 +118,7 @@ export const createBinaryStreamMock = () => ({
   seek: vi.fn(),
   setReadPosition: vi.fn(),
   hasMore: vi.fn(() => true),
-  hasBytes: vi.fn(() => true),
+  hasBytes: vi.fn((amount: number) => true),
 
   readChar: vi.fn(() => 0),
   readByte: vi.fn(() => 0),
@@ -86,7 +135,7 @@ export const createBinaryStreamMock = () => ({
   readAngle: vi.fn(() => 0),
   readAngle16: vi.fn(() => 0),
 
-  readData: vi.fn(() => new Uint8Array(0)),
+  readData: vi.fn((length: number) => new Uint8Array(length)),
 
   readPos: vi.fn(),
   readDir: vi.fn(),
