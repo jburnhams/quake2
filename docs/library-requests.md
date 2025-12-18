@@ -67,7 +67,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ## Test Utilities
 
-### [] 1. Export `test-utils` in Package Configuration
+### [x] 1. Export `test-utils` in Package Configuration
 **Problem:** The `test-utils` package is present in `node_modules` but not exported via the main `package.json` `exports` field, requiring fragile path aliases to access.
 **Request:** Add `./test-utils` to the `exports` map in `quake2ts/package.json`.
 

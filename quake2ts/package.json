@@ -85,6 +85,12 @@
       "types": "./apps/viewer/dist/types/index.d.ts",
       "default": "./apps/viewer/dist/browser/index.js"
     },
+    "./test-utils": {
+      "types": "./packages/test-utils/dist/index.d.ts",
+      "import": "./packages/test-utils/dist/index.js",
+      "require": "./packages/test-utils/dist/index.cjs",
+      "default": "./packages/test-utils/dist/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
