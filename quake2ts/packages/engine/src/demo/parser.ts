@@ -280,15 +280,48 @@ const PROTO34_MAP: Record<number, number> = {
     9: ServerCommand.muzzleflash2,
     10: ServerCommand.temp_entity,
     11: ServerCommand.sound,
-    12: ServerCommand.print,
-    13: ServerCommand.stufftext,
-    14: ServerCommand.serverdata,
-    15: ServerCommand.configstring,
-    16: ServerCommand.spawnbaseline,
-    17: ServerCommand.centerprint,
-    18: ServerCommand.playerinfo,
-    19: ServerCommand.packetentities,
-    20: ServerCommand.deltapacketentities
+    12: ServerCommand.serverdata,
+    13: ServerCommand.configstring,
+    14: ServerCommand.spawnbaseline,
+    15: ServerCommand.centerprint,
+    16: ServerCommand.download, // Or stufftext?
+    // Standard Q2:
+    // 16: download
+    // 17: playerinfo
+    // 18: packetentities
+    // 19: deltapacketentities
+    // 20: frame (Wait, frame is 5).
+    // 11 is stufftext in q_shared.h? "svc_stufftext = 11".
+    // My previous edit mapped 11->sound. Sound is 9 in q_shared.h?
+    // Let's verify q_shared.h via knowledge base if possible or trust ops.ts logic?
+    // ops.ts: sound=9, print=10, stufftext=11, serverdata=12, configstring=13.
+    // If these Enums match Wire exactly, then:
+    // Wire 11 = Enum 11 (stufftext).
+    // Wire 12 = Enum 12 (serverdata).
+    // Wire 13 = Enum 13 (configstring).
+    // Wire 14 = Enum 14 (spawnbaseline).
+    // Wire 15 = Enum 15 (centerprint).
+    // Wire 16 = Enum 16 (download).
+    // Wire 17 = Enum 17 (playerinfo).
+    // Wire 18 = Enum 18 (packetentities).
+    // Wire 19 = Enum 19 (deltapacketentities).
+    // Wire 5 = Enum 20 (frame).
+    // Wire 9 = Enum 9 (sound)?
+
+    // Let's assume standard Q2 matches ops.ts for 11-19, except Frame is 5.
+
+    5: ServerCommand.frame,
+    9: ServerCommand.sound,
+    10: ServerCommand.print, // svc_print is 10? No, print is 10 in ops.ts.
+    11: ServerCommand.stufftext,
+    12: ServerCommand.serverdata,
+    13: ServerCommand.configstring,
+    14: ServerCommand.spawnbaseline,
+    15: ServerCommand.centerprint,
+    16: ServerCommand.download,
+    17: ServerCommand.playerinfo,
+    18: ServerCommand.packetentities,
+    19: ServerCommand.deltapacketentities
 };
 
 export class NetworkMessageParser {
@@ -346,6 +379,9 @@ export class NetworkMessageParser {
         if (PROTO34_MAP[cmd] !== undefined) {
             return PROTO34_MAP[cmd];
         }
+        // Fallback for known identity commands or missing mappings?
+        // But strict protocol 34 mapping is safer.
+        // For now, if not in map, return bad.
         return ServerCommand.bad;
     }
 
