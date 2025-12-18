@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { Entity, SpawnRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
+import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
 import { createRandomGenerator, type PmoveTraceFn, type PmoveTraceResult, type Vec3, CONTENTS_LADDER } from '@quake2ts/shared';
 
 // -- Shared Helpers --
@@ -217,13 +217,14 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         ent: null,
         allsolid: false,
         startsolid: false,
-        endpos: end, // Use end argument
+        endpos: end,
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
         surfaceFlags: 0,
         contents: 0
     }));
 
   const spawnRegistry = new SpawnRegistry();
+  const hooks = new ScriptHookRegistry();
 
   const game = {
       random: createRandomGenerator({ seed }),
@@ -233,7 +234,18 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       unregisterEntitySpawn: vi.fn((classname: string) => {
           spawnRegistry.unregister(classname);
       }),
-      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys()))
+      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys())),
+      hooks,
+      registerHooks: vi.fn((newHooks) => hooks.register(newHooks)),
+      spawnWorld: vi.fn(() => {
+          hooks.onMapLoad('q2dm1');
+      }),
+      clientBegin: vi.fn(() => {
+          hooks.onPlayerSpawn({} as any);
+      }),
+      damage: vi.fn((amount: number) => {
+          hooks.onDamage({} as any, null, null, amount, 0, 0);
+      })
   };
 
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
@@ -242,6 +254,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     spawn: vi.fn(() => {
         const ent = new Entity(entityList.length + 1);
         entityList.push(ent);
+        hooks.onEntitySpawn(ent);
         return ent;
     }),
     free: vi.fn((ent: Entity) => {
@@ -249,6 +262,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         if (idx !== -1) {
             entityList.splice(idx, 1);
         }
+        hooks.onEntityRemove(ent);
     }),
     finalizeSpawn: vi.fn(),
     freeImmediate: vi.fn((ent: Entity) => {
@@ -259,17 +273,17 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     }),
     setSpawnRegistry: vi.fn(),
     timeSeconds: 10,
-    deltaSeconds: 0.1, // Added deltaSeconds
+    deltaSeconds: 0.1,
     modelIndex: vi.fn(() => 0),
     scheduleThink: vi.fn((entity: Entity, time: number) => {
       entity.nextthink = time;
     }),
     linkentity: vi.fn(),
-    trace: traceFn, // Directly provide the mock function property
+    trace: traceFn,
     pointcontents: vi.fn(() => 0),
     multicast: vi.fn(),
     unicast: vi.fn(),
-    engine, // Attach mocked engine
+    engine,
     game,
     sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
@@ -280,10 +294,10 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     findByTargetName: vi.fn(() => []),
     pickTarget: vi.fn(() => null),
     killBox: vi.fn(),
-    rng: createRandomGenerator({ seed }), // Use real RNG for determinism or easy mocking if we replace it
+    rng: createRandomGenerator({ seed }),
     imports: {
         configstring: vi.fn(),
-        trace: traceFn, // Also in imports for good measure
+        trace: traceFn,
         pointcontents: vi.fn(() => 0),
     },
     level: {
@@ -296,8 +310,11 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         entityList.forEach(callback);
     }),
     find: vi.fn((predicate: (ent: Entity) => boolean) => {
-        // Find in managed list
         return entityList.find(predicate);
+    }),
+    // Helper to find by classname specifically (common pattern)
+    findByClassname: vi.fn((classname: string) => {
+        return entityList.find(e => e.classname === classname);
     }),
     beginFrame: vi.fn((timeSeconds: number) => {
         (entities as any).timeSeconds = timeSeconds;
@@ -317,7 +334,6 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),
-    // Legacy support for tests that might check precache
     precacheModel: vi.fn(),
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),

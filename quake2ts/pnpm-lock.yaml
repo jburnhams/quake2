@@ -169,6 +169,9 @@ importers:
         specifier: workspace:*
         version: link:../shared
     devDependencies:
+      '@quake2ts/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
       '@quake2ts/tests':
         specifier: workspace:^
         version: link:../tests

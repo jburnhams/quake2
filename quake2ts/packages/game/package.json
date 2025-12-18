@@ -42,6 +42,7 @@
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
+    "@quake2ts/test-utils": "workspace:^",
     "@quake2ts/tests": "workspace:^",
     "fake-indexeddb": "^6.0.0",
     "tsup": "^8.1.0"
