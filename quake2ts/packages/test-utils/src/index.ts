@@ -1,5 +1,5 @@
 // Export all test utilities
-export * from './mocks.js';
-export * from './factories.js';
-export * from './helpers.js';
-export * from './bsp.js';
+export * from './shared/mocks.js';
+export * from './shared/bsp.js';
+export * from './game/factories.js';
+export * from './game/helpers.js';
