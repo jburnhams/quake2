@@ -6,5 +6,9 @@
     "types": ["vitest/globals"],
     "composite": false
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../game" }
+  ]
 }

@@ -24,7 +24,7 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeLong: vi.fn(),
   writeString: vi.fn(),
   writeBytes: vi.fn(),
-  getBuffer: vi.fn(() => new Uint8Array(0)),
+  getBuffer: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
   reset: vi.fn(),
   // Legacy methods (if any)
   writeInt8: vi.fn(),
@@ -34,7 +34,7 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeInt32: vi.fn(),
   writeUint32: vi.fn(),
   writeFloat: vi.fn(),
-  getData: vi.fn(() => new Uint8Array(0)),
+  getData: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
 });
 
 export const createNetChanMock = () => ({
@@ -74,7 +74,7 @@ export const createNetChanMock = () => ({
   writeReliableShort: vi.fn(),
   writeReliableLong: vi.fn(),
   writeReliableString: vi.fn(),
-  getReliableData: vi.fn(() => new Uint8Array(0)),
+  getReliableData: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
   needsKeepalive: vi.fn(() => false),
   isTimedOut: vi.fn(() => false),
 });
@@ -135,7 +135,7 @@ export const createBinaryStreamMock = (): BinaryStreamMock => ({
   readAngle: vi.fn(() => 0),
   readAngle16: vi.fn(() => 0),
 
-  readData: vi.fn((length: number) => new Uint8Array(length)),
+  readData: vi.fn<[number], Uint8Array>((length: number) => new Uint8Array(length)),
 
   readPos: vi.fn(),
   readDir: vi.fn(),
