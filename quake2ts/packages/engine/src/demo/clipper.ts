@@ -178,7 +178,6 @@ export class DemoClipper {
             onInventory: () => {},
             onMuzzleFlash: () => {},
             onMuzzleFlash2: () => {},
-            onTempEntity: () => {},
             onDisconnect: () => {},
             onReconnect: () => {},
             onDownload: () => {}
@@ -233,7 +232,7 @@ export class DemoClipper {
 
         // 2. Write ConfigStrings
         for (const [index, str] of worldState.configStrings) {
-            headerWriter.writeConfigString(index, str);
+            headerWriter.writeConfigString(index, str, serverData.protocol);
         }
 
         // 3. Write Baselines
@@ -282,19 +281,19 @@ export class DemoClipper {
                 // Let's implement a passthrough handler that intercepts Frame.
                 const passthroughHandler: NetworkMessageHandler = {
                     onServerData: () => {},
-                    onConfigString: (idx, str) => blockWriter.writeConfigString(idx, str),
+                    onConfigString: (idx, str) => blockWriter.writeConfigString(idx, str, serverData.protocol),
                     onSpawnBaseline: (ent) => blockWriter.writeSpawnBaseline(ent, serverData.protocol),
-                    onCenterPrint: (msg) => blockWriter.writeCenterPrint(msg),
-                    onStuffText: (txt) => blockWriter.writeStuffText(txt),
-                    onPrint: (lvl, msg) => blockWriter.writePrint(lvl, msg),
-                    onSound: (mask, s, v, a, o, e, p) => blockWriter.writeSound(mask, s, v, a, o, e, p),
-                    onLayout: (l) => blockWriter.writeLayout(l),
-                    onInventory: (inv) => blockWriter.writeInventory(inv),
-                    onMuzzleFlash: (ent, w) => blockWriter.writeMuzzleFlash(ent, w),
-                    onMuzzleFlash2: (ent, w) => blockWriter.writeMuzzleFlash2(ent, w),
-                    onTempEntity: (t, p, p2, d, c, clr, e, s, de) => blockWriter.writeTempEntity(t, p, p2, d, c, clr, e, s, de),
-                    onDisconnect: () => blockWriter.writeDisconnect(),
-                    onReconnect: () => blockWriter.writeReconnect(),
+                    onCenterPrint: (msg) => blockWriter.writeCenterPrint(msg, serverData.protocol),
+                    onStuffText: (txt) => blockWriter.writeStuffText(txt, serverData.protocol),
+                    onPrint: (lvl, msg) => blockWriter.writePrint(lvl, msg, serverData.protocol),
+                    onSound: (mask, s, v, a, o, e, p) => blockWriter.writeSound(mask, s, v, a, o, e, p, serverData.protocol),
+                    onLayout: (l) => blockWriter.writeLayout(l, serverData.protocol),
+                    onInventory: (inv) => blockWriter.writeInventory(inv, serverData.protocol),
+                    onMuzzleFlash: (ent, w) => blockWriter.writeMuzzleFlash(ent, w, serverData.protocol),
+                    onMuzzleFlash2: (ent, w) => blockWriter.writeMuzzleFlash2(ent, w, serverData.protocol),
+                    onTempEntity: (t, p, p2, d, c, clr, e, s, de) => blockWriter.writeTempEntity(t, p, p2, d, c, clr, e, s, de, serverData.protocol),
+                    onDisconnect: () => blockWriter.writeDisconnect(serverData.protocol),
+                    onReconnect: () => blockWriter.writeReconnect(serverData.protocol),
                     onDownload: () => {}, // Stub for download
 
                     onFrame: (frame) => {
