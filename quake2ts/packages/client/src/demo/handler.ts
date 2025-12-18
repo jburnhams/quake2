@@ -348,7 +348,10 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 // We need player's right vector.
                 let roll = 0;
                 if (this.latestFrame && this.latestFrame.playerState) {
-                    const vectors = angleVectors(this.latestFrame.playerState.viewangles);
+                    const ps = this.latestFrame.playerState;
+                    // Cast MutableVec3 to Vec3 for angleVectors
+                    const angles: Vec3 = { x: ps.viewangles.x, y: ps.viewangles.y, z: ps.viewangles.z } as any;
+                    const vectors = angleVectors(angles);
                     // Q2: cl.kick_angles[2] = damage * 0.5 * DotProduct(v, right);
                     // where v is normalized direction to damage source.
                     const side = dotVec3(ind.dir, vectors.right);
