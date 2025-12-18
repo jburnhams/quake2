@@ -3,7 +3,7 @@ import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState, Client } from '../src/client.js';
 import { UserCommand, UPDATE_BACKUP } from '@quake2ts/shared';
-import { MockTransport } from './mocks/transport.js';
+import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('node:fs/promises', () => ({
@@ -120,7 +120,7 @@ describe('DedicatedServer', () => {
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 
-    transport = new MockTransport();
+    transport = createMockTransport();
     server = new DedicatedServer({ transport });
     await server.startServer('test.bsp');
   });
@@ -184,7 +184,7 @@ describe('DedicatedServer', () => {
     (mockGame.frame as any).mockClear();
     server.stopServer();
 
-    transport = new MockTransport();
+    transport = createMockTransport();
     server = new DedicatedServer({ transport });
     await server.startServer('test.bsp');
 

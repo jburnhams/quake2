@@ -193,6 +193,9 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       ws:
         specifier: ^8.18.0
         version: 8.18.3
@@ -221,6 +224,9 @@ importers:
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game
+      '@quake2ts/server':
+        specifier: workspace:*
+        version: link:../server
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared

@@ -3,7 +3,7 @@ import { DedicatedServer } from '../../src/dedicated.js';
 import { createClient, Client, ClientState } from '../../src/client.js';
 import { ServerCommand, ConfigStringIndex, PlayerStat, MAX_CONFIGSTRINGS, BinaryStream, BinaryWriter, NetDriver } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
-import { MockTransport } from '../mocks/transport.js';
+import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -82,7 +82,7 @@ describe('Integration: Config String & Stats Sync', () => {
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        transport = new MockTransport();
+        transport = createMockTransport();
         server = new DedicatedServer({ port: 27910, transport });
 
         // Start server
