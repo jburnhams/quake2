@@ -2,11 +2,17 @@ import { ResourceLoadTracker } from './resourceTracker.js';
 import { DemoReader } from '../demo/demoReader.js';
 import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState } from '../demo/parser.js';
 import { BinaryStream, Vec3, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_CLIENTS } from '@quake2ts/shared';
+import { AssetManager } from './manager.js';
 
 export interface FrameResources {
-    visible: Set<string>;
-    audible: Set<string>;
+    models: Set<string>;
+    sounds: Set<string>;
+    textures: Set<string>;
     loaded: Set<string>;
+    /** @deprecated Use models instead */
+    visible: Set<string>;
+    /** @deprecated Use sounds instead */
+    audible: Set<string>;
 }
 
 export interface VisibilityTimeline {
@@ -23,7 +29,15 @@ export class ResourceVisibilityAnalyzer {
         this.tracker = new ResourceLoadTracker();
     }
 
-    public async analyzeDemo(demo: Uint8Array): Promise<VisibilityTimeline> {
+    public async analyzeDemo(demo: Uint8Array, assetManager?: AssetManager): Promise<VisibilityTimeline> {
+        return this.analyzeInternal(demo, 0, Number.MAX_SAFE_INTEGER, assetManager);
+    }
+
+    public async analyzeRange(demo: Uint8Array, startFrame: number, endFrame: number, assetManager?: AssetManager): Promise<VisibilityTimeline> {
+        return this.analyzeInternal(demo, startFrame, endFrame, assetManager);
+    }
+
+    private async analyzeInternal(demo: Uint8Array, startFrame: number = 0, endFrame: number = Number.MAX_SAFE_INTEGER, assetManager?: AssetManager): Promise<VisibilityTimeline> {
         const reader = new DemoReader(demo.buffer as ArrayBuffer);
         const timeline: VisibilityTimeline = {
             frames: new Map(),
@@ -44,11 +58,6 @@ export class ResourceVisibilityAnalyzer {
             return configStrings.get(ConfigStringIndex.Sounds + index - 1);
         };
 
-        const getImagePath = (index: number): string | undefined => {
-            if (index < 0) return undefined;
-            return configStrings.get(ConfigStringIndex.Images + index);
-        };
-
         let currentProtocol = 0;
         const pendingSounds = new Set<string>();
 
@@ -63,11 +72,15 @@ export class ResourceVisibilityAnalyzer {
                 baselines.set(entity.number, { ...entity });
             },
             onFrame: (frame: FrameData) => {
-                const resources: FrameResources = {
-                    visible: new Set(),
-                    audible: new Set(),
-                    loaded: new Set()
-                };
+                if (frame.serverFrame < startFrame || frame.serverFrame > endFrame) {
+                    pendingSounds.clear(); // Discard sounds for skipped frames
+                    return;
+                }
+
+                const models = new Set<string>();
+                const sounds = new Set<string>();
+                const textures = new Set<string>();
+                const loaded = new Set<string>();
 
                 // Track visible entities
                 // We assume frame.packetEntities includes all visible entities for the frame
@@ -76,21 +89,35 @@ export class ResourceVisibilityAnalyzer {
                         // Track model
                         if (ent.modelindex > 0) {
                             const path = getModelPath(ent.modelindex);
-                            if (path) resources.visible.add(path);
+                            if (path) {
+                                models.add(path);
+                                // If assetManager is provided, we could resolve model dependencies here.
+                                // But that's async and we are in a sync callback.
+                                // We might need a post-processing pass.
+                            }
                         }
                         // Track sound (if entity has constant sound)
                         if (ent.sound > 0) {
                             const path = getSoundPath(ent.sound);
-                            if (path) resources.audible.add(path);
+                            if (path) sounds.add(path);
                         }
                     }
                 }
 
                 // Add sound events (accumulated during frame parsing)
                 if (pendingSounds.size > 0) {
-                    for (const s of pendingSounds) resources.audible.add(s);
+                    for (const s of pendingSounds) sounds.add(s);
                     pendingSounds.clear();
                 }
+
+                const resources: FrameResources = {
+                    models,
+                    sounds,
+                    textures,
+                    loaded,
+                    visible: models, // Alias for backward compat
+                    audible: sounds  // Alias for backward compat
+                };
 
                 timeline.frames.set(frame.serverFrame, resources);
             },
@@ -121,134 +148,15 @@ export class ResourceVisibilityAnalyzer {
             blockParser.setProtocolVersion(currentProtocol);
             blockParser.parseMessage();
 
-            // Note: If the block contained ServerData, currentProtocol was updated by the handler during parseMessage.
-            // This updated protocol will be used for the NEXT block.
-            // However, ServerData is usually the first command in a block if present.
-            // NetworkMessageParser updates its internal protocol version when it parses ServerData,
-            // so it handles mixed-protocol blocks correctly internally.
-            // We just need to persist it for the next block.
-            // To ensure we capture the *updated* protocol from the parser if it changed *during* parsing:
             if (blockParser.getProtocolVersion() !== currentProtocol) {
                 currentProtocol = blockParser.getProtocolVersion();
             }
         }
 
-        return timeline;
-    }
-
-    public async analyzeRange(demo: Uint8Array, startFrame: number, endFrame: number): Promise<VisibilityTimeline> {
-        // Simple implementation respecting range
-        // Note: We must still parse linearly to track state (baselines, configstrings),
-        // but we only record frames within the range.
-
-        const reader = new DemoReader(demo.buffer as ArrayBuffer);
-        const timeline: VisibilityTimeline = {
-            frames: new Map(),
-            time: new Map()
-        };
-
-        // ... Copy setup from analyzeDemo ...
-        // To avoid code duplication, we could refactor, but for now we inline or adapt.
-        // Actually, we can reuse analyzeDemo logic if we add range filtering inside onFrame.
-
-        // Let's refactor analyzeDemo to accept optional range filter?
-        // But analyzeDemo signature is fixed in the class.
-        // We'll implement analyzeRange by duplicating the loop logic but adding the check.
-
-        // Better: Make a private internal method.
-        return this.analyzeInternal(demo, startFrame, endFrame);
-    }
-
-    private async analyzeInternal(demo: Uint8Array, startFrame: number = 0, endFrame: number = Number.MAX_SAFE_INTEGER): Promise<VisibilityTimeline> {
-        const reader = new DemoReader(demo.buffer as ArrayBuffer);
-        const timeline: VisibilityTimeline = {
-            frames: new Map(),
-            time: new Map()
-        };
-
-        const configStrings = new Map<number, string>();
-        const baselines = new Map<number, EntityState>();
-
-        const getModelPath = (index: number): string | undefined => {
-            if (index <= 0) return undefined;
-            return configStrings.get(ConfigStringIndex.Models + index - 1);
-        };
-
-        const getSoundPath = (index: number): string | undefined => {
-            if (index <= 0) return undefined;
-            return configStrings.get(ConfigStringIndex.Sounds + index - 1);
-        };
-
-        let currentProtocol = 0;
-        const pendingSounds = new Set<string>();
-
-        const handler: NetworkMessageHandler = {
-            onServerData: (protocol, serverCount, attractLoop, gameDir, playerNum, levelName, tickRate, demoType) => {
-                currentProtocol = protocol;
-            },
-            onConfigString: (index, str) => {
-                configStrings.set(index, str);
-            },
-            onSpawnBaseline: (entity) => {
-                baselines.set(entity.number, { ...entity });
-            },
-            onFrame: (frame: FrameData) => {
-                if (frame.serverFrame < startFrame || frame.serverFrame > endFrame) {
-                    pendingSounds.clear(); // Discard sounds for skipped frames
-                    return;
-                }
-
-                const resources: FrameResources = {
-                    visible: new Set(),
-                    audible: new Set(),
-                    loaded: new Set()
-                };
-
-                if (frame.packetEntities && frame.packetEntities.entities) {
-                    for (const ent of frame.packetEntities.entities) {
-                        if (ent.modelindex > 0) {
-                            const path = getModelPath(ent.modelindex);
-                            if (path) resources.visible.add(path);
-                        }
-                        if (ent.sound > 0) {
-                            const path = getSoundPath(ent.sound);
-                            if (path) resources.audible.add(path);
-                        }
-                    }
-                }
-
-                if (pendingSounds.size > 0) {
-                    for (const s of pendingSounds) resources.audible.add(s);
-                    pendingSounds.clear();
-                }
-
-                timeline.frames.set(frame.serverFrame, resources);
-            },
-            onSound: (mask, soundNum, volume, attenuation, offset, ent, pos) => {
-                const path = getSoundPath(soundNum);
-                if (path) pendingSounds.add(path);
-            },
-            onTempEntity: () => {},
-            onCenterPrint: () => {},
-            onStuffText: () => {},
-            onPrint: () => {},
-            onLayout: () => {},
-            onInventory: () => {},
-            onMuzzleFlash: () => {},
-            onMuzzleFlash2: () => {},
-            onDisconnect: () => {},
-            onReconnect: () => {},
-            onDownload: () => {}
-        };
-
-        while (reader.nextBlock()) {
-            const block = reader.getBlock();
-            const blockParser = new NetworkMessageParser(block.data, handler, false);
-            blockParser.setProtocolVersion(currentProtocol);
-            blockParser.parseMessage();
-            if (blockParser.getProtocolVersion() !== currentProtocol) {
-                currentProtocol = blockParser.getProtocolVersion();
-            }
+        // Post-processing: If AssetManager is available, try to derive textures.
+        if (assetManager) {
+            // TODO: Implement dependency resolution (Task 5.2 / 5.1 extension)
+            // For now we just tracked models and sounds.
         }
 
         return timeline;
