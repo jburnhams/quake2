@@ -882,6 +882,8 @@ interface MemoryUsage {
 
 **Workaround**: Estimate from asset counts, inaccurate.
 
+**Status**: Implemented.
+
 ---
 
 ## Summary Table
@@ -912,7 +914,7 @@ interface MemoryUsage {
 | Streaming PAK Reader | engine | P2 | 09 | Needed |
 | Instancing API | engine | P2 | 09 | Nice-to-have |
 | LOD Support | engine | P3 | 09 | Nice-to-have |
-| Memory Tracking | engine | P2 | 09 | Needed |
+| Memory Tracking | engine | P2 | 09 | Implemented |
 
 **Total Enhancements**: 25
 - **P0 (Critical)**: 3

@@ -124,6 +124,10 @@ export class DebugRenderer {
         ], this.vboSolid);
     }
 
+    get shaderSize(): number {
+        return this.shader.sourceSize + this.shaderSolid.sourceSize;
+    }
+
     drawLine(start: Vec3, end: Vec3, color: Color) {
         this.vertices.push(
             start.x, start.y, start.z, color.r, color.g, color.b,

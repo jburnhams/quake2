@@ -376,6 +376,10 @@ export class Md2Pipeline {
     this.uniformGlobalAmbient = this.program.getUniformLocation('u_globalAmbient');
   }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
   bind(options: Md2BindOptions): void {
     const {
         modelViewProjection,

@@ -69,6 +69,10 @@ export class CollisionVisRenderer {
         );
     }
 
+    get shaderSize(): number {
+        return this.program.sourceSize;
+    }
+
     addLine(start: {x:number, y:number, z:number}, end: {x:number, y:number, z:number}, color: {r:number, g:number, b:number, a:number} = {r:1, g:0, b:0, a:1}) {
         this.vertices.push(
             start.x, start.y, start.z, color.r, color.g, color.b, color.a,
