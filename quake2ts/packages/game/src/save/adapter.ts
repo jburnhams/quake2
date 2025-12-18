@@ -52,6 +52,7 @@ export function createSerializedGameState(context: AdapterContext): SerializedGa
     viewAngles: player ? { ...player.angles } : { x: 0, y: 0, z: 0 },
     onGround: player ? (player.groundentity !== null) : false,
     waterLevel: player ? player.waterlevel : 0,
+    watertype: player ? player.watertype : 0,
     mins: player ? { ...player.mins } : { x: -16, y: -16, z: -24 },
     maxs: player ? { ...player.maxs } : { x: 16, y: 16, z: 32 },
     damageAlpha: player?.client?.damage_alpha ?? 0,

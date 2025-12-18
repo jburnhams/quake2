@@ -26,7 +26,8 @@ function readPlayerState(data: Uint8Array): ProtocolPlayerState {
         blend: [0, 0, 0, 0],
         fov: 0,
         rdflags: 0,
-        stats: new Array(32).fill(0)
+        stats: new Array(32).fill(0),
+        watertype: 0
     };
 
     const flags = stream.readShort();
@@ -95,6 +96,9 @@ function readPlayerState(data: Uint8Array): ProtocolPlayerState {
     if (flags & 2048) ps.fov = stream.readByte();
     if (flags & 16384) ps.rdflags = stream.readByte();
 
+    // New: watertype (bit 15)
+    if (flags & 32768) ps.watertype = stream.readByte();
+
     const statbits = stream.readLong();
     for (let i = 0; i < 32; i++) {
         if (statbits & (1 << i)) {
@@ -112,7 +116,7 @@ describe('writePlayerState', () => {
             pm_type: 0, origin: {x:0,y:0,z:0}, velocity: {x:0,y:0,z:0}, pm_time: 0, pm_flags: 0, gravity: 0,
             delta_angles: {x:0,y:0,z:0}, viewoffset: {x:0,y:0,z:0}, viewangles: {x:0,y:0,z:0}, kick_angles: {x:0,y:0,z:0},
             gun_index: 0, gun_frame: 0, gun_offset: {x:0,y:0,z:0}, gun_angles: {x:0,y:0,z:0},
-            blend: [0,0,0,0], fov: 0, rdflags: 0, stats: new Array(32).fill(0)
+            blend: [0,0,0,0], fov: 0, rdflags: 0, stats: new Array(32).fill(0), watertype: 0
         };
 
         writePlayerState(writer, emptyState);
@@ -122,6 +126,7 @@ describe('writePlayerState', () => {
         expect(readState.pm_type).toBe(0);
         expect(readState.origin.x).toBe(0);
         expect(readState.stats[0]).toBe(0);
+        expect(readState.watertype).toBe(0);
     });
 
     it('should correctly round-trip all fields', () => {
@@ -144,7 +149,8 @@ describe('writePlayerState', () => {
             blend: [255, 128, 64, 32],
             fov: 90,
             rdflags: 7,
-            stats: new Array(32).fill(0)
+            stats: new Array(32).fill(0),
+            watertype: 128 // Custom flag
         };
         state.stats[1] = 100; // Health
         state.stats[3] = 50;  // Ammo
@@ -165,6 +171,7 @@ describe('writePlayerState', () => {
         expect(read.stats[3]).toBe(50);
         expect(read.gun_index).toBe(5);
         expect(read.gun_frame).toBe(12);
+        expect(read.watertype).toBe(128);
     });
 
     it('should ignore stats > 31', () => {
@@ -173,7 +180,7 @@ describe('writePlayerState', () => {
             pm_type: 0, origin: {x:0,y:0,z:0}, velocity: {x:0,y:0,z:0}, pm_time: 0, pm_flags: 0, gravity: 0,
             delta_angles: {x:0,y:0,z:0}, viewoffset: {x:0,y:0,z:0}, viewangles: {x:0,y:0,z:0}, kick_angles: {x:0,y:0,z:0},
             gun_index: 0, gun_frame: 0, gun_offset: {x:0,y:0,z:0}, gun_angles: {x:0,y:0,z:0},
-            blend: [0,0,0,0], fov: 0, rdflags: 0, stats: new Array(64).fill(0)
+            blend: [0,0,0,0], fov: 0, rdflags: 0, stats: new Array(64).fill(0), watertype: 0
         };
         state.stats[31] = 999;
         state.stats[32] = 123; // Should be ignored

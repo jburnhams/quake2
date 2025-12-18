@@ -85,6 +85,7 @@ export function defaultPredictionState(): PredictionState {
     pmFlags: PmFlag.OnGround,
     pmType: PmType.Normal,
     waterLevel: WaterLevel.None,
+    watertype: 0,
     gravity: DEFAULT_GRAVITY,
     deltaAngles: ZERO_VEC3,
 

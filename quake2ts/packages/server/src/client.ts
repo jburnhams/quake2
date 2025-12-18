@@ -149,6 +149,7 @@ function createEmptyPlayerState(): PlayerState {
         viewAngles: { x: 0, y: 0, z: 0 },
         onGround: false,
         waterLevel: 0,
+        watertype: 0,
         mins: { x: -16, y: -16, z: -24 },
         maxs: { x: 16, y: 16, z: 32 },
         damageAlpha: 0,

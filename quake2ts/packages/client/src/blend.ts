@@ -1,4 +1,4 @@
-import { PlayerState, PlayerStat } from '@quake2ts/shared';
+import { PlayerState, PlayerStat, CONTENTS_LAVA, CONTENTS_SLIME, CONTENTS_WATER } from '@quake2ts/shared';
 
 export interface BlendState {
   damageAlpha: number;
@@ -46,9 +46,16 @@ export const updateBlend = (
 
   // Underwater tints
   if (ps.waterLevel >= 3) {
-      // TODO: Support specific tints for Lava/Slime once watertype is exposed in PlayerState.
-      // Currently defaulting to generic brown/gold water tint.
-      return [0.5, 0.3, 0.2, 0.4];
+      if (ps.watertype & CONTENTS_LAVA) {
+          // Lava: Strong Orange/Red
+          return [1.0, 0.3, 0.0, 0.6];
+      } else if (ps.watertype & CONTENTS_SLIME) {
+          // Slime: Sickly Green
+          return [0.0, 0.1, 0.05, 0.6];
+      } else {
+          // Water: Brown/Gold tint matching Q2
+          return [0.5, 0.3, 0.2, 0.4];
+      }
   }
 
   return [0, 0, 0, 0];
