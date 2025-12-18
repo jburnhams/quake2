@@ -63,7 +63,7 @@ describe('MessageWriter', () => {
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
 
-        expect(reader.readByte()).toBe(ServerCommand.packetentities);
+        expect(reader.readByte()).toBe(18); // ServerCommand.packetentities (18) -> Wire 18
 
         // Entity 1
         const bitsByte = reader.readByte();
@@ -100,18 +100,19 @@ describe('MessageWriter', () => {
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
 
-        expect(reader.readByte()).toBe(ServerCommand.frame);
+        // Protocol 34: Frame (Wire 5), PlayerInfo (Wire 17), DeltaPacketEntities (Wire 19)
+        expect(reader.readByte()).toBe(5); // ServerCommand.frame (20) -> Wire 5
         expect(reader.readLong()).toBe(100);
         expect(reader.readLong()).toBe(99);
         expect(reader.readByte()).toBe(0); // surpress
         expect(reader.readByte()).toBe(0); // areaBytes
 
-        expect(reader.readByte()).toBe(ServerCommand.playerinfo);
+        expect(reader.readByte()).toBe(17); // ServerCommand.playerinfo (17) -> Wire 17
         // Player state (empty) -> flags=0, stats=0
         expect(reader.readShort()).toBe(0); // flags
         expect(reader.readLong()).toBe(0); // statbits
 
-        expect(reader.readByte()).toBe(ServerCommand.deltapacketentities);
+        expect(reader.readByte()).toBe(19); // ServerCommand.deltapacketentities (21) -> Wire 19
         expect(reader.readShort()).toBe(0); // terminator
     });
 

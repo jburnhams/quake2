@@ -266,6 +266,32 @@ class BinaryStreamAdapter extends StreamingBuffer {
     }
 }
 
+// Protocol 34 (Original Q2) Opcode Mapping
+const PROTO34_MAP: Record<number, number> = {
+    0: ServerCommand.bad,
+    1: ServerCommand.nop,
+    2: ServerCommand.disconnect,
+    3: ServerCommand.reconnect,
+    4: ServerCommand.download,
+    5: ServerCommand.frame,
+    6: ServerCommand.inventory,
+    7: ServerCommand.layout,
+    8: ServerCommand.muzzleflash,
+    9: ServerCommand.sound,
+    10: ServerCommand.print,
+    11: ServerCommand.stufftext,
+    12: ServerCommand.serverdata,
+    13: ServerCommand.configstring,
+    14: ServerCommand.spawnbaseline,
+    15: ServerCommand.centerprint,
+    16: ServerCommand.download,
+    17: ServerCommand.playerinfo,
+    18: ServerCommand.packetentities,
+    19: ServerCommand.deltapacketentities,
+    23: ServerCommand.temp_entity, // Wire 23 -> Enum 3 (TempEntity)
+    22: ServerCommand.muzzleflash2 // Wire 22 -> Enum 2 (MuzzleFlash2)
+};
+
 export class NetworkMessageParser {
   private stream: StreamingBuffer;
   private protocolVersion: number = 0;
@@ -317,7 +343,13 @@ export class NetworkMessageParser {
     }
 
     if (this.protocolVersion === 34) {
-        if (cmd <= ServerCommand.frame) return cmd;
+        // Use the mapping table
+        if (PROTO34_MAP[cmd] !== undefined) {
+            return PROTO34_MAP[cmd];
+        }
+        // Fallback for known identity commands or missing mappings?
+        // But strict protocol 34 mapping is safer.
+        // For now, if not in map, return bad.
         return ServerCommand.bad;
     }
 
@@ -746,7 +778,7 @@ export class NetworkMessageParser {
 
       let peCmd = this.stream.readByte();
       peCmd = this.translateCommand(peCmd);
-      if (peCmd !== ServerCommand.packetentities) {
+      if (peCmd !== ServerCommand.packetentities && peCmd !== ServerCommand.deltapacketentities) {
           if (this.strictMode) throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
           return;
       }

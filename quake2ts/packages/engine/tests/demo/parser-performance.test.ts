@@ -65,7 +65,7 @@ describe('NetworkMessageParser Performance', () => {
         const bb = new ByteBuilder();
 
         // ServerData to set protocol 34
-        bb.addByte(7); // ServerCommand.serverdata (translated)
+        bb.addByte(12); // svc_serverdata (Wire 12)
         bb.addLong(34); // Protocol
         bb.addLong(1); // Server count
         bb.addByte(0); // Attract
@@ -77,20 +77,20 @@ describe('NetworkMessageParser Performance', () => {
         const ENTITIES_PER_FRAME = 100;
 
         for (let f = 0; f < FRAMES; f++) {
-            bb.addByte(ServerCommand.frame);
+            bb.addByte(5); // svc_frame (Wire 5)
             bb.addLong(f + 1); // serverFrame
             bb.addLong(0); // deltaFrame
             bb.addByte(0); // suppressCount (protocol 34)
             bb.addByte(0); // areaBytes
 
             // PlayerInfo
-            bb.addByte(ServerCommand.playerinfo);
+            bb.addByte(17); // svc_playerinfo (Wire 17)
             // Minimal PlayerState
             bb.addShort(0); // flags
             bb.addLong(0); // stats
 
             // PacketEntities
-            bb.addByte(ServerCommand.packetentities);
+            bb.addByte(18); // svc_packetentities (Wire 18)
 
             for (let e = 1; e <= ENTITIES_PER_FRAME; e++) {
                 // Entity header

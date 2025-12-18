@@ -105,8 +105,9 @@ describe('Streaming Parser E2E', () => {
             .endBlock();
 
         // Block 3: ConfigString
+        // Protocol 34 svc_configstring is 13.
         builder.startBlock()
-            .writeByte(ServerCommand.configstring)
+            .writeByte(13) // svc_configstring (Wire 13)
             .writeShort(1)
             .writeString("gamename")
             .endBlock();
@@ -130,6 +131,8 @@ describe('Streaming Parser E2E', () => {
             onDisconnect: vi.fn(),
             onReconnect: vi.fn(),
             onDownload: vi.fn(),
+            onStuffText: vi.fn(),
+            onStuffText: vi.fn(),
         };
 
         const parser = new NetworkMessageParser(demoStream.getBuffer(), handler, true);
