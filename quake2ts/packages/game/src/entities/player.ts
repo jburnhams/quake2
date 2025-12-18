@@ -142,27 +142,31 @@ export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     if (ent.client.kick_angles) {
         const decay = 5; // degrees per frame (0.1s)
         const angles = ent.client.kick_angles;
+        let { x, y, z } = angles;
 
         // Pitch
-        if (angles.x > 0) {
-            angles.x = Math.max(0, angles.x - decay);
-        } else if (angles.x < 0) {
-            angles.x = Math.min(0, angles.x + decay);
+        if (x > 0) {
+            x = Math.max(0, x - decay);
+        } else if (x < 0) {
+            x = Math.min(0, x + decay);
         }
 
         // Yaw
-        if (angles.y > 0) {
-            angles.y = Math.max(0, angles.y - decay);
-        } else if (angles.y < 0) {
-            angles.y = Math.min(0, angles.y + decay);
+        if (y > 0) {
+            y = Math.max(0, y - decay);
+        } else if (y < 0) {
+            y = Math.min(0, y + decay);
         }
 
         // Roll
-        if (angles.z > 0) {
-            angles.z = Math.max(0, angles.z - decay);
-        } else if (angles.z < 0) {
-            angles.z = Math.min(0, angles.z + decay);
+        if (z > 0) {
+            z = Math.max(0, z - decay);
+        } else if (z < 0) {
+            z = Math.min(0, z + decay);
         }
+
+        // Assign new object
+        ent.client.kick_angles = { x, y, z };
     }
 
 
@@ -241,8 +245,9 @@ export function player_pain(self: Entity, other: Entity | null, kick: number, da
     if (realKick < 10) realKick = 10;
 
     // Pitch kick (always up/back)
-    self.client.kick_angles = self.client.kick_angles || { x: 0, y: 0, z: 0 };
-    self.client.kick_angles.x = -realKick;
+    const currentKick = self.client.kick_angles || { x: 0, y: 0, z: 0 };
+    let kickX = -realKick;
+    let kickZ = currentKick.z; // Preserve current roll unless updated below
 
     // Directional roll kick
     if (other && other !== self) {
@@ -251,8 +256,11 @@ export function player_pain(self: Entity, other: Entity | null, kick: number, da
         const { right } = angleVectors(self.angles);
         const side = dotVec3(dirN, right);
 
-        self.client.kick_angles.z = realKick * side;
+        kickZ = realKick * side;
     }
+
+    // Assign new object to handle readonly properties
+    self.client.kick_angles = { x: kickX, y: currentKick.y, z: kickZ };
 
     // Pick pain animation
     if (self.health < 40) {
