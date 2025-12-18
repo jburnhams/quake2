@@ -84,7 +84,7 @@ describe('Player Animation System', () => {
   });
 
   it('should handle pain animation priority', () => {
-      player_pain(entity, 10);
+      player_pain(entity, null, 10, 10);
       expect(entity.client!.anim_priority).toBe(ANIM_PAIN);
 
       // Attempt movement update
