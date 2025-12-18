@@ -7,7 +7,7 @@ import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
-import { writeDeltaEntity, writeRemoveEntity } from './protocol/entity.js';
+import { writeDeltaEntity, writeRemoveEntity } from '@quake2ts/shared';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
 import { writeServerCommand } from './protocol/write.js';
 import { Vec3, lerpAngle } from '@quake2ts/shared';

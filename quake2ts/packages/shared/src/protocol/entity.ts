@@ -1,46 +1,47 @@
-import { BinaryWriter, EntityState } from '@quake2ts/shared';
+import { BinaryWriter } from '../io/index.js';
+import { EntityState } from './entityState.js';
 
 // Constants matching packages/engine/src/demo/parser.ts
-const U_ORIGIN1   = (1 << 0);
-const U_ORIGIN2   = (1 << 1);
-const U_ANGLE2    = (1 << 2);
-const U_ANGLE3    = (1 << 3);
-const U_FRAME8    = (1 << 4);
-const U_EVENT     = (1 << 5);
-const U_REMOVE    = (1 << 6);
-const U_MOREBITS1 = (1 << 7);
+export const U_ORIGIN1   = (1 << 0);
+export const U_ORIGIN2   = (1 << 1);
+export const U_ANGLE2    = (1 << 2);
+export const U_ANGLE3    = (1 << 3);
+export const U_FRAME8    = (1 << 4);
+export const U_EVENT     = (1 << 5);
+export const U_REMOVE    = (1 << 6);
+export const U_MOREBITS1 = (1 << 7);
 
-const U_NUMBER16  = (1 << 8);
-const U_ORIGIN3   = (1 << 9);
-const U_ANGLE1    = (1 << 10);
-const U_MODEL     = (1 << 11);
-const U_RENDERFX8 = (1 << 12);
-const U_ALPHA     = (1 << 13); // Rerelease: Alpha
-const U_EFFECTS8  = (1 << 14);
-const U_MOREBITS2 = (1 << 15);
+export const U_NUMBER16  = (1 << 8);
+export const U_ORIGIN3   = (1 << 9);
+export const U_ANGLE1    = (1 << 10);
+export const U_MODEL     = (1 << 11);
+export const U_RENDERFX8 = (1 << 12);
+export const U_ALPHA     = (1 << 13); // Rerelease: Alpha
+export const U_EFFECTS8  = (1 << 14);
+export const U_MOREBITS2 = (1 << 15);
 
-const U_SKIN8     = (1 << 16);
-const U_FRAME16   = (1 << 17);
-const U_RENDERFX16 = (1 << 18);
-const U_EFFECTS16 = (1 << 19);
-const U_MODEL2    = (1 << 20); // Rerelease
-const U_MODEL3    = (1 << 21); // Rerelease
-const U_MODEL4    = (1 << 22); // Rerelease
-const U_MOREBITS3 = (1 << 23);
+export const U_SKIN8     = (1 << 16);
+export const U_FRAME16   = (1 << 17);
+export const U_RENDERFX16 = (1 << 18);
+export const U_EFFECTS16 = (1 << 19);
+export const U_MODEL2    = (1 << 20); // Rerelease
+export const U_MODEL3    = (1 << 21); // Rerelease
+export const U_MODEL4    = (1 << 22); // Rerelease
+export const U_MOREBITS3 = (1 << 23);
 
-const U_OLDORIGIN = (1 << 24);
-const U_SKIN16    = (1 << 25);
-const U_SOUND     = (1 << 26);
-const U_SOLID     = (1 << 27);
-const U_SCALE     = (1 << 28); // Rerelease
-const U_INSTANCE_BITS = (1 << 29); // Rerelease
-const U_LOOP_VOLUME   = (1 << 30); // Rerelease
-const U_MOREBITS4     = 0x80000000 | 0; // Bit 31 (sign bit)
+export const U_OLDORIGIN = (1 << 24);
+export const U_SKIN16    = (1 << 25);
+export const U_SOUND     = (1 << 26);
+export const U_SOLID     = (1 << 27);
+export const U_SCALE     = (1 << 28); // Rerelease
+export const U_INSTANCE_BITS = (1 << 29); // Rerelease
+export const U_LOOP_VOLUME   = (1 << 30); // Rerelease
+export const U_MOREBITS4     = 0x80000000 | 0; // Bit 31 (sign bit)
 
 // Rerelease Extension Bits (Byte 5 - High Bits)
-const U_LOOP_ATTENUATION_HIGH = (1 << 0);
-const U_OWNER_HIGH            = (1 << 1);
-const U_OLD_FRAME_HIGH        = (1 << 2);
+export const U_LOOP_ATTENUATION_HIGH = (1 << 0);
+export const U_OWNER_HIGH            = (1 << 1);
+export const U_OLD_FRAME_HIGH        = (1 << 2);
 
 
 // A null state for new entities, used as a baseline for comparison.
