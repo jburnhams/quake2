@@ -69,6 +69,10 @@ export class SpriteRenderer {
         this.whiteTexture.upload(1, 1, new Uint8Array([255, 255, 255, 255]));
     }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
     begin(projection: Float32List) {
         this.program.use();
         this.gl.uniformMatrix4fv(this.uniformProjection, false, projection);

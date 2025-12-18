@@ -348,6 +348,10 @@ export class ParticleRenderer {
     );
   }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
   render(options: ParticleRenderOptions): void {
     const mesh = this.system.buildMesh(options.viewRight, options.viewUp);
     if (mesh.indices.length === 0) {

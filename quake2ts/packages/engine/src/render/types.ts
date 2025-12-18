@@ -23,3 +23,11 @@ export interface LightmapData {
   height: number;
   data: Uint8Array;
 }
+
+export interface MemoryUsage {
+  texturesBytes: number;
+  geometryBytes: number;
+  shadersBytes: number;
+  buffersBytes: number;
+  totalBytes: number;
+}

@@ -381,6 +381,10 @@ export class BspSurfacePipeline {
     this.uniformAmbient = this.program.getUniformLocation('u_ambient');
   }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
   bind(options: BspSurfaceBindOptions): SurfaceRenderState {
     const {
       modelViewProjection,

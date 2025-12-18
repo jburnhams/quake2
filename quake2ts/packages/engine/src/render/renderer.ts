@@ -21,6 +21,7 @@ import { DebugRenderer } from './debug.js';
 import { cullLights } from './lightCulling.js';
 import { ParticleRenderer, ParticleSystem } from './particleSystem.js';
 import { DebugMode } from './debugMode.js';
+import { MemoryUsage } from './types.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -32,6 +33,7 @@ export interface Renderer {
     readonly debug: DebugRenderer;
     readonly particleSystem: ParticleSystem;
     getPerformanceReport(): RenderStatistics;
+    getMemoryUsage(): MemoryUsage;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
 
     /**
@@ -95,6 +97,18 @@ export const createRenderer = (
 
     const particleSystem = new ParticleSystem(4096, particleRng);
     const particleRenderer = new ParticleRenderer(gl, particleSystem);
+
+    // Track shader memory
+    const shaderBytes = bspPipeline.shaderSize +
+                        skyboxPipeline.shaderSize +
+                        md2Pipeline.shaderSize +
+                        md3Pipeline.shaderSize +
+                        spriteRenderer.shaderSize +
+                        collisionVis.shaderSize +
+                        debugRenderer.shaderSize +
+                        particleRenderer.shaderSize;
+
+    gpuProfiler.trackShaderMemory(shaderBytes);
 
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
@@ -802,6 +816,7 @@ export const createRenderer = (
         get debug() { return debugRenderer; },
         get particleSystem() { return particleSystem; },
         getPerformanceReport: () => gpuProfiler.getPerformanceReport(lastFrameStats),
+        getMemoryUsage: () => gpuProfiler.getMemoryUsage(),
         renderFrame,
         registerPic,
         registerTexture,
