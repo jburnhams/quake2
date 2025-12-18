@@ -419,6 +419,10 @@ export class Md3Pipeline {
     this.uniformGlobalAmbient = this.program.getUniformLocation('u_globalAmbient');
   }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
   bind(modelViewProjection: Float32List, tint: readonly [number, number, number, number] = [1, 1, 1, 1], sampler = 0): void {
     this.program.use();
     this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);

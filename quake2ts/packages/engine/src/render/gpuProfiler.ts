@@ -1,4 +1,6 @@
 
+import { MemoryUsage } from './types.js';
+
 export interface GpuTimerResult {
   readonly timeElapsedNs: number;
 }
@@ -49,6 +51,7 @@ export class GpuProfiler {
   // Resource Tracking
   private textureMemoryBytes: number = 0;
   private bufferMemoryBytes: number = 0;
+  private shaderMemoryBytes: number = 0;
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -120,6 +123,26 @@ export class GpuProfiler {
 
   trackBufferMemory(bytes: number) {
       this.bufferMemoryBytes += bytes;
+  }
+
+  trackShaderMemory(bytes: number) {
+      this.shaderMemoryBytes += bytes;
+  }
+
+  getMemoryUsage(): MemoryUsage {
+      const texturesBytes = this.textureMemoryBytes;
+      const geometryBytes = this.bufferMemoryBytes;
+      const shadersBytes = this.shaderMemoryBytes;
+      const buffersBytes = this.bufferMemoryBytes;
+      const totalBytes = texturesBytes + geometryBytes + shadersBytes;
+
+      return {
+          texturesBytes,
+          geometryBytes,
+          shadersBytes,
+          buffersBytes,
+          totalBytes
+      };
   }
 
   private getQuery(): WebGLQuery | null {

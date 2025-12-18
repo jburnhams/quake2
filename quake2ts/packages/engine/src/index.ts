@@ -275,12 +275,19 @@ export {
   spawnTrail,
   spawnSplash,
   spawnSteam,
+  spawnRailTrail,
+  spawnSparks,
+  spawnBlasterImpact,
+  spawnBfgExplosion,
   type ParticleBlendMode,
   type ParticleEffectContext,
   type ParticleMesh,
   type ParticleRenderOptions,
   type ParticleSimulationOptions,
   type ParticleSpawnOptions,
+  type RailTrailContext,
+  type SparksContext,
+  type BlasterImpactContext,
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render/frame.js';

@@ -121,6 +121,10 @@ export class SkyboxPipeline {
     });
   }
 
+  get shaderSize(): number {
+    return this.program.sourceSize;
+  }
+
   bind(options: SkyboxBindOptions): void {
     const { viewProjection, scroll, textureUnit = 0 } = options;
     this.program.use();

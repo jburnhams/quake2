@@ -187,12 +187,12 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 5: Resource Analysis - Visibility Tracking
 
 ### Task 5.1: Frame-Level Resource Visibility Analysis
-- [ ] Create `ResourceVisibilityAnalyzer` in `packages/engine/src/assets/visibilityAnalyzer.ts`
-  - [ ] `analyzeDemo(demo: Uint8Array): Promise<VisibilityTimeline>`
-  - [ ] `analyzeRange(demo: Uint8Array, start: Offset, end: Offset): Promise<VisibilityTimeline>`
-  - [ ] Track per-frame: visible entities, audible sounds, active models, textures
-  - [ ] Define `VisibilityTimeline`: frame-indexed map of visible/active resource sets
-  - [ ] Define `FrameResources`: `{ visible: Set<string>, audible: Set<string>, loaded: Set<string> }`
+- [x] Create `ResourceVisibilityAnalyzer` in `packages/engine/src/assets/visibilityAnalyzer.ts`
+  - [x] `analyzeDemo(demo: Uint8Array): Promise<VisibilityTimeline>`
+  - [x] `analyzeRange(demo: Uint8Array, start: Offset, end: Offset): Promise<VisibilityTimeline>`
+  - [x] Track per-frame: visible entities, audible sounds, active models, textures
+  - [x] Define `VisibilityTimeline`: frame-indexed map of visible/active resource sets
+  - [x] Define `FrameResources`: `{ visible: Set<string>, audible: Set<string>, loaded: Set<string> }`
 - [ ] Implement visibility detection
   - [ ] Entities: check if in camera frustum (requires view matrix from playerState)
   - [ ] Sounds: check if positional sound within audible range or UI sound

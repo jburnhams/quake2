@@ -136,6 +136,7 @@ export interface ProtocolPlayerState {
   gunrate: number;
   damage_blend: number[];
   team_id: number;
+  watertype: number;
 }
 
 export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
@@ -160,7 +161,8 @@ export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
   gunskin: 0,
   gunrate: 0,
   damage_blend: [0, 0, 0, 0],
-  team_id: 0
+  team_id: 0,
+  watertype: 0
 });
 
 export interface FrameData {
@@ -266,6 +268,32 @@ class BinaryStreamAdapter extends StreamingBuffer {
     }
 }
 
+// Protocol 34 (Original Q2) Opcode Mapping
+const PROTO34_MAP: Record<number, number> = {
+    0: ServerCommand.bad,
+    1: ServerCommand.nop,
+    2: ServerCommand.disconnect,
+    3: ServerCommand.reconnect,
+    4: ServerCommand.download,
+    5: ServerCommand.frame,
+    6: ServerCommand.inventory,
+    7: ServerCommand.layout,
+    8: ServerCommand.muzzleflash,
+    9: ServerCommand.sound,
+    10: ServerCommand.print,
+    11: ServerCommand.stufftext,
+    12: ServerCommand.serverdata,
+    13: ServerCommand.configstring,
+    14: ServerCommand.spawnbaseline,
+    15: ServerCommand.centerprint,
+    16: ServerCommand.download,
+    17: ServerCommand.playerinfo,
+    18: ServerCommand.packetentities,
+    19: ServerCommand.deltapacketentities,
+    23: ServerCommand.temp_entity, // Wire 23 -> Enum 3 (TempEntity)
+    22: ServerCommand.muzzleflash2 // Wire 22 -> Enum 2 (MuzzleFlash2)
+};
+
 export class NetworkMessageParser {
   private stream: StreamingBuffer;
   private protocolVersion: number = 0;
@@ -317,7 +345,13 @@ export class NetworkMessageParser {
     }
 
     if (this.protocolVersion === 34) {
-        if (cmd <= ServerCommand.frame) return cmd;
+        // Use the mapping table
+        if (PROTO34_MAP[cmd] !== undefined) {
+            return PROTO34_MAP[cmd];
+        }
+        // Fallback for known identity commands or missing mappings?
+        // But strict protocol 34 mapping is safer.
+        // For now, if not in map, return bad.
         return ServerCommand.bad;
     }
 
@@ -746,7 +780,7 @@ export class NetworkMessageParser {
 
       let peCmd = this.stream.readByte();
       peCmd = this.translateCommand(peCmd);
-      if (peCmd !== ServerCommand.packetentities) {
+      if (peCmd !== ServerCommand.packetentities && peCmd !== ServerCommand.deltapacketentities) {
           if (this.strictMode) throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
           return;
       }
@@ -798,6 +832,7 @@ export class NetworkMessageParser {
       if (flags & 1024) { ps.blend[0] = this.stream.readByte(); ps.blend[1] = this.stream.readByte(); ps.blend[2] = this.stream.readByte(); ps.blend[3] = this.stream.readByte(); }
       if (flags & 2048) ps.fov = this.stream.readByte();
       if (flags & 16384) ps.rdflags = this.stream.readByte();
+      if (flags & 32768) ps.watertype = this.stream.readByte(); // 1 << 15
       const statbits = this.stream.readLong();
       for (let i = 0; i < 32; i++) if (statbits & (1 << i)) ps.stats[i] = this.stream.readShort();
       return ps;

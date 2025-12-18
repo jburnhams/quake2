@@ -11,18 +11,18 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [x] **Goal**: Reduce boilerplate mock setup in application unit tests.
 
 - [ ] **Interface Stability**
-    - [ ] **`GameStateSnapshot` Consistency**: Ensure `GameStateSnapshot` (game) and `NetSnapshot` (network) interfaces are compatible or provide a built-in adapter.
-    - [ ] **Explicit exports for `cgame` types**: Export `ClientPrediction` and related types from the main entry point or a stable subpath like `@quake2ts/client`.
+    - [x] **`GameStateSnapshot` Consistency**: Investigated, but `NetSnapshot` type was not found in the codebase. This task is currently not applicable.
+    - [x] **Explicit exports for `cgame` types**: `ClientPrediction`, `interpolatePredictionState`, `defaultPredictionState` and related types are exported from `@quake2ts/client`.
 
-- [ ] **Dependency Injection / Testability**
-    - [ ] **`NetworkService`**: Allow injecting `NetChan` instance via constructor options to avoid mocking module internals.
-    - [ ] **`ClientPrediction`**: Allow injecting trace functions via an interface rather than raw function pointers, to verify interactions easier.
+- [x] **Dependency Injection / Testability**
+    - [x] **`NetworkService`**: `MultiplayerConnection` (NetworkService) now accepts an optional `NetChan` instance in `MultiplayerConnectionOptions` for easier testing.
+    - [x] **`ClientPrediction`**: `ClientPrediction` now accepts a `PredictionPhysics` interface instead of raw function pointers.
 
 ## Feature Migration (Move Logic to Library)
 
-- [ ] **Demo Recording**
-    - [ ] **`DemoRecorder` serialization**: Implement `recordSnapshot(snapshot: GameStateSnapshot)` in `quake2ts/engine` that handles serialization to `.dm2` format (server commands).
-    - [ ] Currently, the app has to handle this or it's stubbed. Moving this to the engine ensures correct protocol encoding.
+- [x] **Demo Recording**
+    - [x] **`DemoRecorder` serialization**: Implement `recordSnapshot(snapshot: GameStateSnapshot)` in `quake2ts/engine` that handles serialization to `.dm2` format (server commands).
+    - [x] Currently, the app has to handle this or it's stubbed. Moving this to the engine ensures correct protocol encoding.
 
 - [ ] **Clip Extraction**
     - [ ] **`extractDemoRange`**: Implement methods to slice `.dm2` files buffer-to-buffer.

@@ -71,6 +71,7 @@ export {
 export {
   ClientPrediction,
   interpolatePredictionState,
+  defaultPredictionState,
 } from '@quake2ts/cgame';
 export type { PredictionSettings, PredictionState } from '@quake2ts/cgame';
 
@@ -210,7 +211,7 @@ export function createClient(imports: ClientImports): ClientExports {
       return tr.contents || 0;
   };
 
-  const prediction = new ClientPrediction(imports.engine.trace, pointContents);
+  const prediction = new ClientPrediction({ trace: imports.engine.trace, pointContents });
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
   const demoControls = new DemoControls(demoPlayback, (speed) => {
@@ -415,7 +416,7 @@ export function createClient(imports: ClientImports): ClientExports {
     onTempEntity: (type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number) => {
         const time = demoPlayback.getCurrentTime() / 1000.0;
         if (pos) {
-            effectSystem.onTempEntity(type, pos, time, dir);
+            effectSystem.onTempEntity(type, pos, time, dir, pos2);
         }
     },
     onDamage: (indicators: DamageIndicator[]) => {
@@ -1059,9 +1060,9 @@ export function createClient(imports: ClientImports): ClientExports {
           if ((cameraContents & CONTENTS_WATER) !== 0) {
               waterTint = [0.5, 0.5, 0.6, 0.6]; // Blueish
           } else if ((cameraContents & CONTENTS_SLIME) !== 0) {
-              waterTint = [0.2, 0.3, 0.1, 0.7]; // Slime green
+              waterTint = [0.0, 0.1, 0.05, 0.6]; // Slime green
           } else if ((cameraContents & CONTENTS_LAVA) !== 0) {
-              waterTint = [0.8, 0.2, 0.1, 0.7]; // Lava red
+              waterTint = [1.0, 0.3, 0.0, 0.6]; // Lava red
           }
 
           imports.engine.renderer.renderFrame({
@@ -1115,6 +1116,7 @@ export function createClient(imports: ClientImports): ClientExports {
                 viewAngles: lastRendered.viewAngles,
                 onGround: hasPmFlag(lastRendered.pmFlags, PmFlag.OnGround),
                 waterLevel: lastRendered.waterLevel,
+                watertype: lastRendered.watertype,
                 mins: { x: -16, y: -16, z: -24 },
                 maxs: { x: 16, y: 16, z: 32 },
                 damageAlpha: lastRendered.damageAlpha ?? 0,

@@ -58,9 +58,12 @@ export class ShaderProgram {
   private readonly uniformLocations = new Map<string, WebGLUniformLocation | null>();
   private readonly attributeLocations = new Map<string, number>();
 
-  private constructor(gl: WebGL2RenderingContext, program: WebGLProgram) {
+  readonly sourceSize: number;
+
+  private constructor(gl: WebGL2RenderingContext, program: WebGLProgram, sourceSize: number) {
     this.gl = gl;
     this.program = program;
+    this.sourceSize = sourceSize;
   }
 
   static create(
@@ -72,7 +75,8 @@ export class ShaderProgram {
     const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, sources.fragment);
     try {
       const program = linkProgram(gl, vertexShader, fragmentShader, attributeLocations);
-      return new ShaderProgram(gl, program);
+      const sourceSize = sources.vertex.length + sources.fragment.length;
+      return new ShaderProgram(gl, program, sourceSize);
     } finally {
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);

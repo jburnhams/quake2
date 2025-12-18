@@ -85,6 +85,7 @@ export function defaultPredictionState(): PredictionState {
     pmFlags: PmFlag.OnGround,
     pmType: PmType.Normal,
     waterLevel: WaterLevel.None,
+    watertype: 0,
     gravity: DEFAULT_GRAVITY,
     deltaAngles: ZERO_VEC3,
 
@@ -236,10 +237,14 @@ function simulateCommand(
   } as PredictionState;
 }
 
+export interface PredictionPhysics {
+  trace: PmoveTraceFn;
+  pointContents: (p: Vec3) => number;
+}
+
 export class ClientPrediction {
   private readonly settings: PredictionSettings;
-  private readonly trace: PmoveTraceFn;
-  private readonly pointContents: (p: Vec3) => number;
+  private readonly physics: PredictionPhysics;
   private enabled = true;
   private baseFrame: GameFrameResult<PredictionState> = {
     frame: 0,
@@ -250,10 +255,9 @@ export class ClientPrediction {
   private predicted: PredictionState = defaultPredictionState();
   private predictionError: Vec3 = ZERO_VEC3;
 
-  constructor(trace: PmoveTraceFn, pointContents: (p: Vec3) => number, settings: Partial<PredictionSettings> = {}) {
+  constructor(physics: PredictionPhysics, settings: Partial<PredictionSettings> = {}) {
     this.settings = { ...DEFAULTS, ...settings } satisfies PredictionSettings;
-    this.trace = trace;
-    this.pointContents = pointContents;
+    this.physics = physics;
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
@@ -284,7 +288,7 @@ export class ClientPrediction {
       if (relevantCommands.length > 0 || this.baseFrame.frame === frame.frame) {
           let tempState = normalizeState(this.baseFrame.state);
           for (const cmd of relevantCommands) {
-              tempState = simulateCommand(tempState, cmd, this.settings, this.trace, this.pointContents);
+              tempState = simulateCommand(tempState, cmd, this.settings, this.physics.trace, this.physics.pointContents);
           }
           predictedAtFrame = tempState;
       }
@@ -359,7 +363,7 @@ export class ClientPrediction {
 
     if (this.enabled) {
       for (const cmd of this.commands) {
-        state = simulateCommand(state, cmd, this.settings, this.trace, this.pointContents);
+        state = simulateCommand(state, cmd, this.settings, this.physics.trace, this.physics.pointContents);
       }
     }
 

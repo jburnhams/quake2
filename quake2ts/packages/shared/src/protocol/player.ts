@@ -1,4 +1,4 @@
-import { BinaryWriter, Vec3 } from '@quake2ts/shared';
+import { BinaryWriter, Vec3 } from '../index.js';
 
 export interface ProtocolPlayerState {
   pm_type: number;
@@ -19,7 +19,12 @@ export interface ProtocolPlayerState {
   fov: number;
   rdflags: number;
   stats: number[];
-  watertype: number;
+
+  // Optional / Extension fields if needed
+  gunskin?: number;
+  gunrate?: number;
+  damage_blend?: number[];
+  team_id?: number;
 }
 
 // Bitflags matching demo/parser.ts
@@ -38,7 +43,6 @@ const PS_FOV = (1 << 11);
 const PS_WEAPONINDEX = (1 << 12);
 const PS_WEAPONFRAME = (1 << 13);
 const PS_RDFLAGS = (1 << 14);
-const PS_WATERTYPE = (1 << 15);
 
 export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState): void {
   // Determine mask
@@ -69,7 +73,6 @@ export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState):
 
   if (ps.fov !== 0) mask |= PS_FOV;
   if (ps.rdflags !== 0) mask |= PS_RDFLAGS;
-  if (ps.watertype !== 0) mask |= PS_WATERTYPE;
 
   // Stats mask calculation
   let statsMask = 0;
@@ -147,7 +150,6 @@ export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState):
 
   if (mask & PS_FOV) writer.writeByte(ps.fov);
   if (mask & PS_RDFLAGS) writer.writeByte(ps.rdflags);
-  if (mask & PS_WATERTYPE) writer.writeByte(ps.watertype);
 
   // Write Stats
   writer.writeLong(statsMask);

@@ -91,7 +91,7 @@ describe('DemoClipper', () => {
      expect(reader.readLong()).toBe(-1);
   });
 
-  it.skip('should re-serialize multiple frames and update deltas', () => {
+  it('should re-serialize multiple frames and update deltas', () => {
       // 1. Create a synthetic demo with 3 frames: 0, 1, 2.
       const demoWriter = new DemoWriter();
       const proto = 34;
@@ -153,7 +153,7 @@ describe('DemoClipper', () => {
       const startPos2 = reader.getPosition();
 
       // Should be Frame command
-      expect(reader.readByte()).toBe(ServerCommand.frame);
+      expect(reader.readByte()).toBe(5); // Protocol 34 Wire for Frame (ServerCommand.frame is 20)
       const seq2 = reader.readLong();
       const delta2 = reader.readLong();
 

@@ -134,8 +134,9 @@ function createVanillaDemoData(): ArrayBuffer {
   };
 
   // --- 1. ServerData (Vanilla) ---
-  // In parser: if (this.protocolVersion === 0) { if (cmd === 7) return ServerCommand.serverdata; }
-  writeByte(7); // svc_serverdata
+  // Protocol 34 svc_serverdata is 12.
+  // The parser translates initial cmd 12 to ServerCommand.serverdata (12).
+  writeByte(12); // svc_serverdata
   writeLong(34); // Protocol 34
   writeLong(12345); // serverCount
   writeByte(0); // attractLoop (0=game, 1=demo)
@@ -144,28 +145,18 @@ function createVanillaDemoData(): ArrayBuffer {
   writeString("demo1"); // levelName
 
   // --- 2. ConfigString ---
-  writeByte(13); // svc_configstring (ServerCommand.configstring is 13)
-  // Wait, in parser: if (this.protocolVersion === 25) ...
-  // But Protocol 34 (Vanilla) is not handled by special cases in translateCommand other than initial detection.
-  // Standard Q2 commands map 1:1 mostly?
-  // Looking at parser.ts:
-  // if (cmd === 7) return ServerCommand.serverdata; (for proto 0)
-  // Standard Q2 svc_serverdata is 12. But initial handshake often uses 7 (svc_print in older?) or specific setup?
-  // Actually, Quake 2 source `q_shared.h`: svc_serverdata is 12.
-  // But `cl_parse.c`:
-  // `if (cmd == svc_serverdata)`
-  // The parser implementation has: `if (this.protocolVersion === 0) { if (cmd === 7) return ServerCommand.serverdata; ... }`
-  // This implies some handshake sends 7?
-  // Actually, let's use standard svc_serverdata (12) if protocol is already known, but here it's 0.
-  // So we send 7 to trigger detection?
-  // Let's stick to 7 for serverdata as seen in Rerelease test.
-
-  // svc_configstring (13)
+  // Protocol 34 svc_configstring is 13.
+  // ServerCommand.configstring is 15.
+  // Parser maps 13 -> 15.
+  writeByte(13); // svc_configstring (Wire 13)
   writeShort(0); // index
   writeString("Vanilla v3.20");
 
   // --- 3. Frame ---
-  writeByte(ServerCommand.frame); // 20
+  // Protocol 34 svc_frame is 5.
+  // ServerCommand.frame is 20.
+  // Parser maps 5 -> 20.
+  writeByte(5); // svc_frame (Wire 5)
   writeLong(1); // ServerFrame
   writeLong(0); // DeltaFrame
   writeByte(0); // SuppressCount
@@ -178,9 +169,8 @@ function createVanillaDemoData(): ArrayBuffer {
   writeLong(0); // Stats bits
 
   // PacketEntities (REQUIRED after playerinfo in parser logic)
-  // For Vanilla (Protocol 34) in our parser implementation, we map 1:1 up to frame(20).
-  // packetentities is 18.
-  writeByte(18); // svc_packetentities
+  // Protocol 34 svc_packetentities is 18.
+  writeByte(18); // svc_packetentities (Wire 18)
   writeByte(0); // Header
   writeByte(0); // Entity Number 0
 

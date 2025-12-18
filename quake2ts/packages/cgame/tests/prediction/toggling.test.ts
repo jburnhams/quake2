@@ -21,7 +21,7 @@ describe('ClientPrediction Toggling', () => {
             startsolid: false
         });
         pointContentsFn = vi.fn().mockReturnValue(0);
-        prediction = new ClientPrediction(traceFn, pointContentsFn);
+        prediction = new ClientPrediction({ trace: traceFn, pointContents: pointContentsFn });
     });
 
     it('should respect setPredictionEnabled(false)', () => {

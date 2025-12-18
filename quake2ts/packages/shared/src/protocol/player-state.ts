@@ -14,6 +14,7 @@ export interface PlayerState {
   viewAngles: Vec3;
   onGround: boolean;
   waterLevel: WaterLevel;
+  watertype: number; // Added for correct fluid effects
   mins: Vec3;
   maxs: Vec3;
   damageAlpha: number;
