@@ -71,6 +71,7 @@ export {
 export {
   ClientPrediction,
   interpolatePredictionState,
+  defaultPredictionState,
 } from '@quake2ts/cgame';
 export type { PredictionSettings, PredictionState } from '@quake2ts/cgame';
 
@@ -210,7 +211,7 @@ export function createClient(imports: ClientImports): ClientExports {
       return tr.contents || 0;
   };
 
-  const prediction = new ClientPrediction(imports.engine.trace, pointContents);
+  const prediction = new ClientPrediction({ trace: imports.engine.trace, pointContents });
   const view = new ViewEffects();
   const demoPlayback = new DemoPlaybackController();
   const demoControls = new DemoControls(demoPlayback, (speed) => {

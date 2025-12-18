@@ -20,7 +20,7 @@ describe('ClientPrediction Command Buffering', () => {
   };
 
   beforeEach(() => {
-    prediction = new ClientPrediction(mockTrace, mockPointContents, settings);
+    prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents }, settings);
   });
 
   const createCommand = (sequence: number): UserCommand => ({
