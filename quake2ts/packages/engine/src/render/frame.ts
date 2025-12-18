@@ -15,6 +15,7 @@ import {
 import { mat4 } from 'gl-matrix';
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
+import { PostProcessPipeline } from './postProcess.js';
 
 export { FrameRenderStats, FrameRenderOptions };
 
@@ -75,6 +76,7 @@ interface FrameRenderOptions {
   readonly ambient?: number;
   readonly lightStyleOverrides?: Map<number, string>; // Pattern overrides
   readonly waterTint?: readonly [number, number, number, number]; // New option for underwater tint
+  readonly underwaterWarp?: boolean; // Enable underwater distortion
 }
 
 interface FrameRendererDependencies {
@@ -259,31 +261,28 @@ export const createFrameRenderer = (
   skyboxPipeline: SkyboxPipeline,
   deps: FrameRendererDependencies = DEFAULT_DEPS
 ): FrameRenderer => {
+  const postProcess = new PostProcessPipeline(gl);
   let lastFrameTime = 0;
 
-  // Refraction Texture State
-  let refractionTexture: Texture2D | undefined;
-  let refractionTextureWidth = 0;
-  let refractionTextureHeight = 0;
+  // Texture State for copies (Refraction and PostProcess)
+  let copyTexture: Texture2D | undefined;
+  let copyTextureWidth = 0;
+  let copyTextureHeight = 0;
 
-  const ensureRefractionTexture = (width: number, height: number): Texture2D => {
-      if (!refractionTexture || refractionTextureWidth !== width || refractionTextureHeight !== height) {
-          if (refractionTexture) {
-              // Texture2D doesn't have explicit dispose, but we can overwrite.
-              // In a robust system we should delete old textures.
-          }
-          refractionTexture = new Texture2D(gl);
-          refractionTexture.upload(width, height, null); // Empty texture
-          refractionTexture.setParameters({
+  const ensureCopyTexture = (width: number, height: number): Texture2D => {
+      if (!copyTexture || copyTextureWidth !== width || copyTextureHeight !== height) {
+          copyTexture = new Texture2D(gl);
+          copyTexture.upload(width, height, null); // Empty texture
+          copyTexture.setParameters({
               minFilter: gl.LINEAR,
               magFilter: gl.LINEAR,
               wrapS: gl.CLAMP_TO_EDGE,
               wrapT: gl.CLAMP_TO_EDGE
           });
-          refractionTextureWidth = width;
-          refractionTextureHeight = height;
+          copyTextureWidth = width;
+          copyTextureHeight = height;
       }
-      return refractionTexture;
+      return copyTexture;
   };
 
   const renderFrame = (options: FrameRenderOptions): FrameRenderStats => {
@@ -317,7 +316,8 @@ export const createFrameRenderer = (
         fullbright,
         ambient,
         lightStyleOverrides,
-        waterTint
+        waterTint,
+        underwaterWarp
     } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
@@ -377,7 +377,7 @@ export const createFrameRenderer = (
            const cache: TextureBindingCache = {};
 
            // Ensure refraction texture is bound if needed
-           const currentRefractionTexture = useRefraction ? refractionTexture : undefined;
+           const currentRefractionTexture = useRefraction ? copyTexture : undefined;
 
            for (const { faceIndex } of faces) {
                 const geometry = world.surfaces[faceIndex];
@@ -472,7 +472,7 @@ export const createFrameRenderer = (
       if (transparentFaces.length > 0) {
           const width = gl.canvas.width;
           const height = gl.canvas.height;
-          const rt = ensureRefractionTexture(width, height);
+          const rt = ensureCopyTexture(width, height);
           rt.bind(2); // Bind to a unit to copy into
           gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
       }
@@ -484,6 +484,24 @@ export const createFrameRenderer = (
 
     if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation)) {
       stats.viewModelDrawn = true;
+    }
+
+    // 4. Underwater Distortion Post-Process
+    if (underwaterWarp) {
+        const width = gl.canvas.width;
+        const height = gl.canvas.height;
+        const rt = ensureCopyTexture(width, height);
+
+        // Copy current framebuffer to texture
+        rt.bind(0);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
+
+        // Render full screen quad with distortion
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        postProcess.render(rt.texture, timeSeconds);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
     }
 
     return stats;
