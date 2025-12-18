@@ -63,6 +63,9 @@ export interface Renderer {
     // Surface Highlighting
     highlightSurface(faceIndex: number, color: [number, number, number, number]): void;
     removeSurfaceHighlight(faceIndex: number): void;
+
+    // Post Process
+    setUnderwaterWarp(enabled: boolean): void;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -117,6 +120,7 @@ export const createRenderer = (
     let fullbright = false;
     let ambient = 0.0;
     const lightStyleOverrides = new Map<number, string>();
+    let underwaterWarp = false;
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -186,7 +190,8 @@ export const createRenderer = (
             gamma,
             fullbright,
             ambient,
-            lightStyleOverrides
+            lightStyleOverrides,
+            underwaterWarp
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
@@ -786,6 +791,10 @@ export const createRenderer = (
         }
     };
 
+    const setUnderwaterWarp = (enabled: boolean) => {
+        underwaterWarp = enabled;
+    }
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -811,6 +820,7 @@ export const createRenderer = (
         setGamma,
         setFullbright,
         setAmbient,
-        setLightStyle
+        setLightStyle,
+        setUnderwaterWarp
     };
 };
