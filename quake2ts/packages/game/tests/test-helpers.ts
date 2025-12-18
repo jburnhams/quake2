@@ -5,143 +5,16 @@ import type { EntitySystem } from '../src/entities/system.js';
 import { createRandomGenerator } from '@quake2ts/shared';
 import { SpawnRegistry } from '../src/entities/spawn.js';
 import { ScriptHookRegistry } from '../src/scripting/hooks.js';
+import { createTestContext as createTestContextUtils } from '@quake2ts/test-utils';
 
 export function createTestContext(options?: { seed?: number }): { entities: EntitySystem, game: any } & SpawnContext {
-  const engine = {
-    sound: vi.fn(),
-    soundIndex: vi.fn(() => 0),
-    modelIndex: vi.fn(() => 0),
-    centerprintf: vi.fn(),
-  };
+  // Use the test-utils implementation but ensure we maintain any specific overrides if they existed.
+  // The original implementation here was nearly identical to test-utils.
 
-  const seed = options?.seed ?? 12345;
-  const traceFn = vi.fn(() => ({
-        fraction: 1.0,
-        ent: null,
-        allsolid: false,
-        startsolid: false,
-        endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-        surfaceFlags: 0,
-        contents: 0
-    }));
+  // We need to match the return type structure expected by existing tests.
+  // test-utils returns: TestContext which is SpawnContext & { entities, game, engine }
 
-  const spawnRegistry = new SpawnRegistry();
-  const hooks = new ScriptHookRegistry();
-
-  const game = {
-      random: createRandomGenerator({ seed }),
-      registerEntitySpawn: vi.fn((classname: string, spawnFunc: (entity: Entity) => void) => {
-          spawnRegistry.register(classname, (entity) => spawnFunc(entity));
-      }),
-      unregisterEntitySpawn: vi.fn((classname: string) => {
-          spawnRegistry.unregister(classname);
-      }),
-      getCustomEntities: vi.fn(() => Array.from(spawnRegistry.keys())),
-      hooks, // Expose hooks registry
-      registerHooks: vi.fn((newHooks) => hooks.register(newHooks)),
-      spawnWorld: vi.fn(() => {
-          hooks.onMapLoad('q2dm1');
-      }),
-      clientBegin: vi.fn(() => {
-          hooks.onPlayerSpawn({} as any);
-      }),
-      damage: vi.fn((amount: number) => {
-          hooks.onDamage({} as any, null, null, amount, 0, 0);
-      })
-  };
-
-  const entities = {
-    spawn: vi.fn(() => {
-        const ent = new Entity(1);
-        hooks.onEntitySpawn(ent);
-        return ent;
-    }),
-    free: vi.fn((ent: Entity) => {
-        hooks.onEntityRemove(ent);
-    }),
-    finalizeSpawn: vi.fn(),
-    freeImmediate: vi.fn(),
-    setSpawnRegistry: vi.fn(),
-    timeSeconds: 10,
-    deltaSeconds: 0.1, // Added deltaSeconds
-    modelIndex: vi.fn(() => 0),
-    scheduleThink: vi.fn((entity: Entity, time: number) => {
-      entity.nextthink = time;
-    }),
-    linkentity: vi.fn(),
-    trace: traceFn, // Directly provide the mock function property
-    pointcontents: vi.fn(() => 0),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-    engine, // Attach mocked engine
-    game,
-    sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
-      engine.sound(ent, chan, sound, vol, attn, timeofs);
-    }),
-    soundIndex: vi.fn((sound: string) => engine.soundIndex(sound)),
-    useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
-    }),
-    findByTargetName: vi.fn(() => []),
-    pickTarget: vi.fn(() => null),
-    killBox: vi.fn(),
-    rng: createRandomGenerator({ seed }), // Use real RNG for determinism or easy mocking if we replace it
-    imports: {
-        configstring: vi.fn(),
-        trace: traceFn, // Also in imports for good measure
-        pointcontents: vi.fn(() => 0),
-    },
-    level: {
-        intermission_angle: { x: 0, y: 0, z: 0 },
-        intermission_origin: { x: 0, y: 0, z: 0 },
-    },
-    targetNameIndex: new Map(),
-    forEachEntity: vi.fn((callback) => {
-        // Implement simple iteration over a few mocked entities if needed,
-        // or just rely on the fact that G_PickTarget iterates.
-        // For testing G_PickTarget, we can look at the targetNameIndex we just added
-        if ((entities as any).targetNameIndex) {
-            for (const bucket of (entities as any).targetNameIndex.values()) {
-                for (const ent of bucket) {
-                    callback(ent);
-                }
-            }
-        }
-    }),
-    find: vi.fn((predicate: (ent: Entity) => boolean) => {
-        // Simple mock implementation of find
-        if ((entities as any).targetNameIndex) {
-             for (const bucket of (entities as any).targetNameIndex.values()) {
-                for (const ent of bucket) {
-                    if (predicate(ent)) return ent;
-                }
-            }
-        }
-        return undefined;
-    }),
-    beginFrame: vi.fn((timeSeconds: number) => {
-        (entities as any).timeSeconds = timeSeconds;
-    }),
-    targetAwareness: {
-      timeSeconds: 10,
-      frameNumber: 1,
-      sightEntity: null,
-      soundEntity: null,
-    }
-  } as unknown as EntitySystem;
-
-  return {
-    keyValues: {},
-    entities,
-    game: game,
-    health_multiplier: 1,
-    warn: vi.fn(),
-    free: vi.fn(),
-    // Legacy support for tests that might check precache
-    precacheModel: vi.fn(),
-    precacheSound: vi.fn(),
-    precacheImage: vi.fn(),
-  } as unknown as SpawnContext & { entities: EntitySystem, game: any };
+  return createTestContextUtils(options);
 }
 
 export function createSpawnContext(): SpawnContext {

@@ -35,3 +35,4 @@ export * from './net/index.js';
 export * from './items/index.js';
 export * from './audio/constants.js';
 export * from './inventory-helpers.js';
+export * from './testing.js';
