@@ -33,7 +33,8 @@ import {
     Vec3, ZERO_VEC3,
     G_GetPowerupStat, PowerupId,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
-    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER
+    MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
+    angleVectors, dotVec3
 } from '@quake2ts/shared';
 // Import from cgame
 import { PredictionState, defaultPredictionState, interpolatePredictionState, ViewEffects } from '@quake2ts/cgame';
@@ -333,11 +334,35 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 // Use damage value directly from indicator
                 const estimatedDamage = ind.damage;
 
+                // Determine directional roll
+                // Damage direction (ind.dir) is likely the vector of the attack (or from attacker to player?)
+                // Assuming it represents the attack vector (velocity), or direction TO attacker.
+                // Let's assume direction TO attacker (or FROM attacker to player?)
+                // Quake 2 CL_ParseDamage uses (origin - cl.simorg) which is vector TO attacker (if origin is attacker pos).
+                // Actually in Q2: VectorSubtract (origin, cl.simorg, v); where 'origin' is read from message.
+                // MSG_ReadCoord(msg). The server sends damage origin.
+                // Rerelease protocol sends a 'dir' (byte).
+                // If it follows Q2 logic, 'dir' points from Player to Attacker (or Attacker to Player).
+                // Let's assume it points to where the damage came FROM.
+
+                // We need player's right vector.
+                let roll = 0;
+                if (this.latestFrame && this.latestFrame.playerState) {
+                    const ps = this.latestFrame.playerState;
+                    // Cast MutableVec3 to Vec3 for angleVectors
+                    const angles: Vec3 = { x: ps.viewangles.x, y: ps.viewangles.y, z: ps.viewangles.z } as any;
+                    const vectors = angleVectors(angles);
+                    // Q2: cl.kick_angles[2] = damage * 0.5 * DotProduct(v, right);
+                    // where v is normalized direction to damage source.
+                    const side = dotVec3(ind.dir, vectors.right);
+                    roll = estimatedDamage * 0.5 * side;
+                }
+
                 // Apply pitch kick to simulate pain flinch.
                 // Negative pitch corresponds to looking up ("head snaps back").
                 this.view.addKick({
                     pitch: -estimatedDamage * 0.5,
-                    roll: 0, // Directional roll is not yet implemented
+                    roll: roll,
                     durationMs: 200,
                 });
             }
@@ -442,6 +467,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             pmFlags: ps.pm_flags,
             pmType: ps.pm_type,
             waterLevel: WaterLevel.None,
+            watertype: ps.watertype,
             gravity: ps.gravity,
             deltaAngles,
             client: {

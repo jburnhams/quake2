@@ -136,6 +136,7 @@ export interface ProtocolPlayerState {
   gunrate: number;
   damage_blend: number[];
   team_id: number;
+  watertype: number;
 }
 
 export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
@@ -160,7 +161,8 @@ export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
   gunskin: 0,
   gunrate: 0,
   damage_blend: [0, 0, 0, 0],
-  team_id: 0
+  team_id: 0,
+  watertype: 0
 });
 
 export interface FrameData {
@@ -830,6 +832,7 @@ export class NetworkMessageParser {
       if (flags & 1024) { ps.blend[0] = this.stream.readByte(); ps.blend[1] = this.stream.readByte(); ps.blend[2] = this.stream.readByte(); ps.blend[3] = this.stream.readByte(); }
       if (flags & 2048) ps.fov = this.stream.readByte();
       if (flags & 16384) ps.rdflags = this.stream.readByte();
+      if (flags & 32768) ps.watertype = this.stream.readByte(); // 1 << 15
       const statbits = this.stream.readLong();
       for (let i = 0; i < 32; i++) if (statbits & (1 << i)) ps.stats[i] = this.stream.readShort();
       return ps;

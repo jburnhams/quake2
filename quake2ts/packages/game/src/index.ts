@@ -45,6 +45,7 @@ export interface GameStateSnapshot {
   readonly pmFlags: number;
   readonly pmType: number;
   readonly waterlevel: number;
+  readonly watertype: number; // Added for correct fluid effects
   readonly deltaAngles: Vec3;
   readonly client?: PlayerClient;
   readonly health: number;
@@ -359,6 +360,7 @@ export function createGame(
         pmType: player?.client?.pm_type ?? 0,
         pm_time: player?.client?.pm_time ?? 0,
         waterlevel: player ? player.waterlevel : 0,
+        watertype: player ? player.watertype : 0, // Populate watertype
         deltaAngles: { x: 0, y: 0, z: 0 },
         client: player?.client,
         health: player?.health ?? 0,
@@ -417,6 +419,7 @@ export function createGame(
         velocity: player.velocity,
         onGround: false, // This will be calculated by pmove
         waterLevel: player.waterlevel, // Pass waterlevel
+        watertype: player.watertype, // Pass watertype
         mins: player.mins,
         maxs: player.maxs,
         damageAlpha: 0,

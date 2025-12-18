@@ -898,7 +898,8 @@ export class DedicatedServer implements GameEngine {
             blend: snapshot.blend,
             fov: snapshot.fov,
             rdflags: snapshot.rdflags,
-            stats: snapshot.stats
+            stats: snapshot.stats,
+            watertype: snapshot.watertype // Populate watertype
         };
 
         writePlayerState(writer, ps);
