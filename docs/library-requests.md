@@ -28,9 +28,9 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [ ] **`extractDemoRange`**: Implement methods to slice `.dm2` files buffer-to-buffer.
     - [ ] `(buffer: ArrayBuffer, startFrame: number, endFrame: number) => ArrayBuffer`.
 
-- [ ] **HUD & UI Helpers**
-    - [ ] **`getIconPath(statIndex: number)`**: Expose helper to map `STAT_SELECTED_ICON` to a VFS path string using `configstrings`.
-    - [ ] **`Inventory Helpers`**: Provide `getAmmoCount(playerState, item)` logic in shared library.
+- [x] **HUD & UI Helpers**
+    - [x] **`getIconPath(statIndex: number)`**: Expose helper to map `STAT_SELECTED_ICON` to a VFS path string using `configstrings`.
+    - [x] **`Inventory Helpers`**: Provide `getAmmoCount(playerState, item)` logic in shared library.
 
 - [ ] **Map & Asset Analysis**
     - [ ] **`BspAnalyzer` helpers**: Expose `calculatePVS(origin)` or `findLeaf(origin)` as public API on `BspMap` or `SceneGraph`.

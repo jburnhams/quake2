@@ -2,6 +2,7 @@ import { PlayerState } from './protocol/index.js';
 import { AmmoItemId, AmmoType, WeaponId } from './items/index.js';
 import { G_GetAmmoStat } from './protocol/stats.js';
 import { WEAPON_AMMO_MAP } from './items/index.js';
+import { ConfigStringIndex } from './protocol/configstrings.js';
 
 // Blaster uses no ammo in standard Q2.
 // We handle mapping `AmmoItemId` (string) to `AmmoType` (enum).
@@ -51,12 +52,6 @@ export function getAmmoCount(playerState: PlayerState, item: WeaponId | AmmoItem
 }
 
 /**
- * Config String Index base for Images (CS_IMAGES = 32 usually, but we need to verify).
- * In `quake2ts`, this seems to be defined in `ConfigStringIndex`.
- */
-const CS_IMAGES = 32; // Standard Q2.
-
-/**
  * Resolves the icon path for a given stat index (e.g. STAT_SELECTED_ICON).
  * @param statIndex The index in the stats array to read (e.g. PlayerStat.STAT_SELECTED_ICON).
  * @param playerState The player state containing the stats.
@@ -75,8 +70,8 @@ export function getIconPath(
     return undefined;
   }
 
-  // The value in the stat is the index into the Config Strings relative to CS_IMAGES.
-  const configIndex = CS_IMAGES + iconIndex;
+  // The value in the stat is the index into the Config Strings relative to ConfigStringIndex.Images.
+  const configIndex = ConfigStringIndex.Images + iconIndex;
 
   if (configIndex < 0 || configIndex >= configStrings.length) {
     return undefined;
