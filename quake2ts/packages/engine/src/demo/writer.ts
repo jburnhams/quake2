@@ -1,6 +1,30 @@
 import { BinaryWriter, ServerCommand } from '@quake2ts/shared';
 import { EntityState, ProtocolPlayerState, FrameData, U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1, U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2, U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3, U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH } from './parser.js';
-import { Vec3 } from '@quake2ts/shared';
+import { Vec3, TempEntity } from '@quake2ts/shared';
+
+const PROTO34_REVERSE_MAP: Record<number, number> = {
+    [ServerCommand.bad]: 0,
+    [ServerCommand.nop]: 1,
+    [ServerCommand.disconnect]: 2,
+    [ServerCommand.reconnect]: 3,
+    [ServerCommand.download]: 4,
+    [ServerCommand.frame]: 5,
+    [ServerCommand.inventory]: 6,
+    [ServerCommand.layout]: 7,
+    [ServerCommand.muzzleflash]: 8,
+    [ServerCommand.muzzleflash2]: 9,
+    [ServerCommand.temp_entity]: 10,
+    [ServerCommand.sound]: 11,
+    [ServerCommand.print]: 12,
+    [ServerCommand.stufftext]: 13,
+    [ServerCommand.serverdata]: 14,
+    [ServerCommand.configstring]: 15,
+    [ServerCommand.spawnbaseline]: 16,
+    [ServerCommand.centerprint]: 17,
+    [ServerCommand.playerinfo]: 18,
+    [ServerCommand.packetentities]: 19,
+    [ServerCommand.deltapacketentities]: 20
+};
 
 export class MessageWriter {
     private writer: BinaryWriter;
@@ -13,10 +37,19 @@ export class MessageWriter {
         return this.writer.getData();
     }
 
-    // ... (unchanged methods)
+    private writeCommand(cmd: ServerCommand, protocolVersion: number = 0): void {
+        if (protocolVersion === 34) {
+            const translated = PROTO34_REVERSE_MAP[cmd];
+            if (translated !== undefined) {
+                this.writer.writeByte(translated);
+                return;
+            }
+        }
+        this.writer.writeByte(cmd);
+    }
 
     public writeServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
-        this.writer.writeByte(ServerCommand.serverdata);
+        this.writeCommand(ServerCommand.serverdata, protocol);
         this.writer.writeLong(protocol);
         this.writer.writeLong(serverCount);
         this.writer.writeByte(attractLoop);
@@ -26,7 +59,7 @@ export class MessageWriter {
     }
 
     public writeServerDataRerelease(protocol: number, spawnCount: number, demoType: number, tickRate: number, gameDir: string, playerNum: number, levelName: string): void {
-        this.writer.writeByte(ServerCommand.serverdata);
+        this.writeCommand(ServerCommand.serverdata, protocol);
         this.writer.writeLong(protocol);
         this.writer.writeLong(spawnCount);
         this.writer.writeByte(demoType);
@@ -36,64 +69,156 @@ export class MessageWriter {
         this.writer.writeString(levelName);
     }
 
-    public writeConfigString(index: number, str: string): void {
-        this.writer.writeByte(ServerCommand.configstring);
+    public writeConfigString(index: number, str: string, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.configstring, protocolVersion);
         this.writer.writeShort(index);
         this.writer.writeString(str);
     }
 
     public writeSpawnBaseline(entity: EntityState, protocolVersion: number): void {
-        this.writer.writeByte(ServerCommand.spawnbaseline);
+        this.writeCommand(ServerCommand.spawnbaseline, protocolVersion);
         this.writeEntityState(entity, null, true, protocolVersion);
     }
 
-    public writeStuffText(text: string): void {
-        this.writer.writeByte(ServerCommand.stufftext);
+    public writeStuffText(text: string, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.stufftext, protocolVersion);
         this.writer.writeString(text);
     }
 
-    public writeCenterPrint(text: string): void {
-        this.writer.writeByte(ServerCommand.centerprint);
+    public writeCenterPrint(text: string, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.centerprint, protocolVersion);
         this.writer.writeString(text);
     }
 
-    public writePrint(level: number, text: string): void {
-        this.writer.writeByte(ServerCommand.print);
+    public writePrint(level: number, text: string, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.print, protocolVersion);
         this.writer.writeByte(level);
         this.writer.writeString(text);
     }
 
-    public writeLayout(layout: string): void {
-        this.writer.writeByte(ServerCommand.layout);
+    public writeLayout(layout: string, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.layout, protocolVersion);
         this.writer.writeString(layout);
     }
 
-    public writeInventory(inventory: number[]): void {
-        this.writer.writeByte(ServerCommand.inventory);
+    public writeInventory(inventory: number[], protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.inventory, protocolVersion);
         for(let i=0; i<256; i++) {
             this.writer.writeShort(inventory[i] || 0);
         }
     }
 
-    public writeMuzzleFlash(ent: number, weapon: number): void {
-        this.writer.writeByte(ServerCommand.muzzleflash);
+    public writeMuzzleFlash(ent: number, weapon: number, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.muzzleflash, protocolVersion);
         this.writer.writeShort(ent);
         this.writer.writeByte(weapon);
     }
 
-    public writeMuzzleFlash2(ent: number, weapon: number): void {
-        this.writer.writeByte(ServerCommand.muzzleflash2);
+    public writeMuzzleFlash2(ent: number, weapon: number, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.muzzleflash2, protocolVersion);
         this.writer.writeShort(ent);
         this.writer.writeByte(weapon);
     }
 
-    public writeTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
-        // Safe stub: do not write partial header to avoid corruption
-        console.warn('writeTempEntity not implemented - skipping message');
+    public writeTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.temp_entity, protocolVersion);
+        this.writer.writeByte(type);
+
+        switch (type) {
+            case TempEntity.EXPLOSION1: case TempEntity.EXPLOSION2: case TempEntity.ROCKET_EXPLOSION: case TempEntity.GRENADE_EXPLOSION:
+            case TempEntity.ROCKET_EXPLOSION_WATER: case TempEntity.GRENADE_EXPLOSION_WATER: case TempEntity.BFG_EXPLOSION: case TempEntity.BFG_BIGEXPLOSION:
+            case TempEntity.BOSSTPORT: case TempEntity.PLASMA_EXPLOSION: case TempEntity.PLAIN_EXPLOSION: case TempEntity.CHAINFIST_SMOKE:
+            case TempEntity.TRACKER_EXPLOSION: case TempEntity.TELEPORT_EFFECT: case TempEntity.DBALL_GOAL: case TempEntity.NUKEBLAST:
+            case TempEntity.WIDOWSPLASH: case TempEntity.EXPLOSION1_BIG: case TempEntity.EXPLOSION1_NP:
+                this.writer.writePos(pos);
+                break;
+            case TempEntity.GUNSHOT: case TempEntity.BLOOD: case TempEntity.BLASTER: case TempEntity.SHOTGUN: case TempEntity.SPARKS:
+            case TempEntity.BULLET_SPARKS: case TempEntity.SCREEN_SPARKS: case TempEntity.SHIELD_SPARKS: case TempEntity.BLASTER2: case TempEntity.FLECHETTE:
+            case TempEntity.MOREBLOOD: case TempEntity.ELECTRIC_SPARKS: case TempEntity.HEATBEAM_SPARKS: case TempEntity.HEATBEAM_STEAM:
+                this.writer.writePos(pos);
+                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                break;
+            case TempEntity.SPLASH: case TempEntity.LASER_SPARKS: case TempEntity.WELDING_SPARKS: case TempEntity.TUNNEL_SPARKS:
+                this.writer.writeByte(cnt || 0);
+                this.writer.writePos(pos);
+                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                this.writer.writeByte(color || 0);
+                break;
+            case TempEntity.BLUEHYPERBLASTER:
+                if (protocolVersion >= 32) {
+                    this.writer.writePos(pos);
+                    this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                } else {
+                    this.writer.writePos(pos);
+                    this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                }
+                break;
+            case TempEntity.GREENBLOOD:
+                if (protocolVersion >= 32) {
+                    this.writer.writePos(pos);
+                    this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                } else {
+                    this.writer.writePos(pos);
+                    this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                }
+                break;
+            case TempEntity.RAILTRAIL: case TempEntity.BUBBLETRAIL: case TempEntity.BFG_LASER: case TempEntity.DEBUGTRAIL: case TempEntity.BUBBLETRAIL2:
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                break;
+            case TempEntity.PARASITE_ATTACK: case TempEntity.MEDIC_CABLE_ATTACK:
+                this.writer.writeShort(ent || 0);
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                break;
+            case TempEntity.GRAPPLE_CABLE:
+                this.writer.writeShort(ent || 0);
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                this.writer.writePos(dir || { x: 0, y: 0, z: 0 });
+                break;
+            case TempEntity.LIGHTNING:
+                this.writer.writeShort(srcEnt || 0);
+                this.writer.writeShort(destEnt || 0);
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                break;
+            case TempEntity.FLASHLIGHT:
+                this.writer.writePos(pos);
+                this.writer.writeShort(ent || 0);
+                break;
+            case TempEntity.FORCEWALL:
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                this.writer.writeByte(color || 0);
+                break;
+            case TempEntity.STEAM:
+                // Note: nextId logic is complex as it requires knowing the entity logic.
+                // We'll write -1 for nextId for now, assuming simple case.
+                this.writer.writeShort(-1);
+                this.writer.writeByte(cnt || 0);
+                this.writer.writePos(pos);
+                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                this.writer.writeByte(color || 0);
+                this.writer.writeShort(0); // sound
+                break;
+            case TempEntity.WIDOWBEAMOUT:
+                this.writer.writeShort(0); // ent
+                // Fallthrough
+            case TempEntity.HEATBEAM: case TempEntity.MONSTER_HEATBEAM:
+                this.writer.writeShort(ent || 0);
+                this.writer.writePos(pos);
+                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
+                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
+                break;
+            default:
+                console.warn(`writeTempEntity: Unhandled type ${type}`);
+                break;
+        }
     }
 
-    public writeSound(mask: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {
-        this.writer.writeByte(ServerCommand.sound);
+    public writeSound(mask: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3, protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.sound, protocolVersion);
         this.writer.writeByte(mask);
         this.writer.writeByte(soundNum);
         if (mask & 1) this.writer.writeByte(volume || 0);
@@ -107,16 +232,16 @@ export class MessageWriter {
         }
     }
 
-    public writeDisconnect(): void {
-        this.writer.writeByte(ServerCommand.disconnect);
+    public writeDisconnect(protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.disconnect, protocolVersion);
     }
 
-    public writeReconnect(): void {
-        this.writer.writeByte(ServerCommand.reconnect);
+    public writeReconnect(protocolVersion: number = 0): void {
+        this.writeCommand(ServerCommand.reconnect, protocolVersion);
     }
 
     public writeFrame(frame: FrameData, protocolVersion: number): void {
-        this.writer.writeByte(ServerCommand.frame);
+        this.writeCommand(ServerCommand.frame, protocolVersion);
         this.writer.writeLong(frame.serverFrame);
         this.writer.writeLong(frame.deltaFrame);
 
@@ -129,7 +254,7 @@ export class MessageWriter {
             this.writer.writeBytes(frame.areaBits);
         }
 
-        this.writer.writeByte(ServerCommand.playerinfo);
+        this.writeCommand(ServerCommand.playerinfo, protocolVersion);
         this.writePlayerState(frame.playerState);
 
         this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocolVersion);
@@ -211,7 +336,7 @@ export class MessageWriter {
     }
 
     public writePacketEntities(entities: EntityState[], delta: boolean, protocolVersion: number): void {
-        this.writer.writeByte(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities);
+        this.writeCommand(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities, protocolVersion);
 
         for (const ent of entities) {
             const force = !delta;

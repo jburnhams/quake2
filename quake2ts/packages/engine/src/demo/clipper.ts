@@ -178,6 +178,7 @@ export class DemoClipper {
             onInventory: () => {},
             onMuzzleFlash: () => {},
             onMuzzleFlash2: () => {},
+            onTempEntity: () => {},
             onDisconnect: () => {},
             onReconnect: () => {},
             onDownload: () => {}

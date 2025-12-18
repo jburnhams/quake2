@@ -266,6 +266,31 @@ class BinaryStreamAdapter extends StreamingBuffer {
     }
 }
 
+// Protocol 34 (Original Q2) Opcode Mapping
+const PROTO34_MAP: Record<number, number> = {
+    0: ServerCommand.bad,
+    1: ServerCommand.nop,
+    2: ServerCommand.disconnect,
+    3: ServerCommand.reconnect,
+    4: ServerCommand.download,
+    5: ServerCommand.frame,
+    6: ServerCommand.inventory,
+    7: ServerCommand.layout,
+    8: ServerCommand.muzzleflash,
+    9: ServerCommand.muzzleflash2,
+    10: ServerCommand.temp_entity,
+    11: ServerCommand.sound,
+    12: ServerCommand.print,
+    13: ServerCommand.stufftext,
+    14: ServerCommand.serverdata,
+    15: ServerCommand.configstring,
+    16: ServerCommand.spawnbaseline,
+    17: ServerCommand.centerprint,
+    18: ServerCommand.playerinfo,
+    19: ServerCommand.packetentities,
+    20: ServerCommand.deltapacketentities
+};
+
 export class NetworkMessageParser {
   private stream: StreamingBuffer;
   private protocolVersion: number = 0;
@@ -317,7 +342,10 @@ export class NetworkMessageParser {
     }
 
     if (this.protocolVersion === 34) {
-        if (cmd <= ServerCommand.frame) return cmd;
+        // Use the mapping table
+        if (PROTO34_MAP[cmd] !== undefined) {
+            return PROTO34_MAP[cmd];
+        }
         return ServerCommand.bad;
     }
 
@@ -746,7 +774,7 @@ export class NetworkMessageParser {
 
       let peCmd = this.stream.readByte();
       peCmd = this.translateCommand(peCmd);
-      if (peCmd !== ServerCommand.packetentities) {
+      if (peCmd !== ServerCommand.packetentities && peCmd !== ServerCommand.deltapacketentities) {
           if (this.strictMode) throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
           return;
       }
