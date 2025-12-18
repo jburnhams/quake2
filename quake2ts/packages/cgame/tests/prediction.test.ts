@@ -53,7 +53,7 @@ function createGroundState(): PredictionState {
 
 describe('ClientPrediction', () => {
   it('applies ground friction and acceleration identically to rerelease pmove', () => {
-    const prediction = new ClientPrediction(mockTrace, mockPointContents);
+    const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents });
     const base = createGroundState();
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
 
@@ -104,7 +104,7 @@ describe('ClientPrediction', () => {
   });
 
   it('replays unacknowledged commands after an authoritative correction', () => {
-    const prediction = new ClientPrediction(mockTrace, mockPointContents);
+    const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents });
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: createGroundState() });
 
     const earlyCmd: UserCommand = {
@@ -134,7 +134,7 @@ describe('ClientPrediction', () => {
   });
 
   it('keeps absolute view angles between commands instead of compounding them', () => {
-    const prediction = new ClientPrediction(mockTrace, mockPointContents);
+    const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents });
     const base = createGroundState();
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
 
@@ -163,7 +163,7 @@ describe('ClientPrediction', () => {
       allsolid: false,
       startsolid: false,
     } as PmoveTraceResult);
-    const prediction = new ClientPrediction(trace, mockPointContents);
+    const prediction = new ClientPrediction({ trace: trace, pointContents: mockPointContents });
     const base = createGroundState();
     prediction.setAuthoritative({ frame: 1, timeMs: 25, state: base });
 

@@ -39,7 +39,7 @@ function createGroundState(): PredictionState {
 describe('ClientPrediction Tolerance', () => {
     it('uses custom error tolerance for snapping', () => {
         // Create prediction with strict snap threshold (e.g. 5 units)
-        const prediction = new ClientPrediction(mockTrace, mockPointContents, {
+        const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents }, {
             errorSnapThreshold: 5
         });
 
@@ -85,7 +85,7 @@ describe('ClientPrediction Tolerance', () => {
     it('uses custom error tolerance for accumulation', () => {
          // Create prediction with high accumulation threshold (e.g. 2 units)
          // So small errors (like 1 unit) are IGNORED (error set to 0), whereas usually 0.1 triggers accumulation.
-        const prediction = new ClientPrediction(mockTrace, mockPointContents, {
+        const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents }, {
             errorTolerance: 2
         });
 
@@ -121,7 +121,7 @@ describe('ClientPrediction Tolerance', () => {
     });
 
      it('accumulates error when between tolerance and snap threshold', () => {
-         const prediction = new ClientPrediction(mockTrace, mockPointContents, {
+         const prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents }, {
             errorTolerance: 0.1,
             errorSnapThreshold: 10
         });

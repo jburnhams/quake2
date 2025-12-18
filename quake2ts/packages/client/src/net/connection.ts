@@ -42,6 +42,7 @@ export interface MultiplayerConnectionOptions {
     skin: string;
     hand?: number;
     fov?: number;
+    netchan?: NetChan;
 }
 
 export class MultiplayerConnection implements NetworkMessageHandler {
@@ -87,7 +88,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
-    this.netchan = new NetChan();
+    this.netchan = options.netchan ?? new NetChan();
 
     this.driver.onMessage((data) => this.handleMessage(data));
     this.driver.onClose(() => this.handleDisconnect());
