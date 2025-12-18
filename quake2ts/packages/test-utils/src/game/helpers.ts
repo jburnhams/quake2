@@ -8,22 +8,22 @@ export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared';
 // -- Types --
 
 export interface MockEngine {
-  sound: Mock;
-  soundIndex: Mock;
-  modelIndex: Mock;
-  centerprintf: Mock;
+  sound: Mock<[Entity, number, string, number, number, number], void>;
+  soundIndex: Mock<[string], number>;
+  modelIndex: Mock<[string], number>;
+  centerprintf: Mock<[Entity, string], void>;
 }
 
 export interface MockGame {
   random: ReturnType<typeof createRandomGenerator>;
-  registerEntitySpawn: Mock;
-  unregisterEntitySpawn: Mock;
-  getCustomEntities: Mock;
+  registerEntitySpawn: Mock<[string, (entity: Entity) => void], void>;
+  unregisterEntitySpawn: Mock<[string], void>;
+  getCustomEntities: Mock<[], string[]>;
   hooks: ScriptHookRegistry;
-  registerHooks: Mock;
-  spawnWorld: Mock;
-  clientBegin: Mock;
-  damage: Mock;
+  registerHooks: Mock<[any], any>;
+  spawnWorld: Mock<[], void>;
+  clientBegin: Mock<[any], void>;
+  damage: Mock<[number], void>;
 }
 
 export interface TestContext extends SpawnContext {
@@ -45,7 +45,7 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
   const spawnRegistry = new SpawnRegistry();
   const hooks = new ScriptHookRegistry();
 
-  const game = {
+  const game: MockGame = {
     random: createRandomGenerator({ seed }),
     registerEntitySpawn: vi.fn((classname: string, spawnFunc: (entity: Entity) => void) => {
       spawnRegistry.register(classname, (entity) => spawnFunc(entity));
@@ -59,7 +59,7 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
     spawnWorld: vi.fn(() => {
       hooks.onMapLoad('q2dm1');
     }),
-    clientBegin: vi.fn(() => {
+    clientBegin: vi.fn((client) => {
       hooks.onPlayerSpawn({} as any);
     }),
     damage: vi.fn((amount: number) => {
@@ -165,7 +165,15 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       frameNumber: 1,
       sightEntity: null,
       soundEntity: null,
-    }
+    },
+    // Adding missing properties to satisfy EntitySystem interface partially or fully
+    // We cast to unknown first anyway, but filling these in makes it safer for consumers
+    skill: 1,
+    deathmatch: false,
+    coop: false,
+    activeCount: entityList.length,
+    world: entityList.find(e => e.classname === 'worldspawn') || new Entity(0),
+    // ... other EntitySystem properties would go here
   } as unknown as EntitySystem;
 
   return {
@@ -176,6 +184,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),
+    // Mock precache functions if they are part of SpawnContext in future or TestContext extensions
     precacheModel: vi.fn(),
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),

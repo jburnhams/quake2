@@ -48,14 +48,12 @@ export const createEntityStateFactory = (overrides?: Partial<EntityState>): Enti
   ...overrides,
 });
 
-// Note: This factory might need updates if GameStateSnapshot structure changes significantly in @quake2ts/game
-export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnapshot>): any => ({
-  // Simplified default mock matching the interface as best as possible for basic tests
+export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnapshot>): GameStateSnapshot => ({
   gravity: { x: 0, y: 0, z: -800 },
   origin: { x: 0, y: 0, z: 0 },
   velocity: { x: 0, y: 0, z: 0 },
   viewangles: { x: 0, y: 0, z: 0 },
-  level: { timeSeconds: 0, frameNumber: 0, previousTimeSeconds: 0 },
+  level: { timeSeconds: 0, frameNumber: 0, previousTimeSeconds: 0, deltaSeconds: 0.1 },
   entities: {
     activeCount: 0,
     worldClassname: 'worldspawn',
@@ -83,5 +81,7 @@ export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnap
   rdflags: 0,
   fov: 90,
   renderfx: 0,
+  pm_flags: 0,
+  pm_type: 0,
   ...overrides,
 });
