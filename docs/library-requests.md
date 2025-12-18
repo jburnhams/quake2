@@ -61,5 +61,5 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [ ] **InputController Lifecycle**: Make `InputController` a standard class (constructor/dispose) rather than relying on global `initInputController`/`cleanupInputController` functions. This simplifies isolated unit testing.
 
 - [ ] **Protocol Constants**
-    - [ ] **Export ConfigString Constants**: Export constants like `CS_NAME` (0), `CS_MAXCLIENTS` (30), `CS_MAPNAME`, etc., from `@quake2ts/shared`.
-    - [ ] **Reason**: Required to implement server query logic and correctly parse `ServerCommand.configstring` in `NetworkService` without hardcoding magic numbers.
+    - [x] **Export ConfigString Constants**: Export constants like `CS_NAME` (0), `CS_MAXCLIENTS` (30), `CS_MAPNAME`, etc., from `@quake2ts/shared`.
+    - [x] **Reason**: Required to implement server query logic and correctly parse `ServerCommand.configstring` in `NetworkService` without hardcoding magic numbers. (Note: `CS_MAPNAME` is not a standard protocol constant and was omitted. `CS_MAXCLIENTS` exports as 60 to match the Rerelease protocol used by this engine.)

@@ -84,3 +84,21 @@ export function configStringSize(index: number): number {
 
   return CS_MAX_STRING_LENGTH;
 }
+
+// Legacy constants
+export const CS_NAME = ConfigStringIndex.Name;
+export const CS_CDTRACK = ConfigStringIndex.CdTrack;
+export const CS_SKY = ConfigStringIndex.Sky;
+export const CS_SKYAXIS = ConfigStringIndex.SkyAxis;
+export const CS_SKYROTATE = ConfigStringIndex.SkyRotate;
+export const CS_STATUSBAR = ConfigStringIndex.StatusBar;
+export const CS_AIRACCEL = ConfigStringIndex.AirAccel;
+export const CS_MAXCLIENTS = ConfigStringIndex.MaxClients;
+export const CS_MAPCHECKSUM = ConfigStringIndex.MapChecksum;
+export const CS_MODELS = ConfigStringIndex.Models;
+export const CS_SOUNDS = ConfigStringIndex.Sounds;
+export const CS_IMAGES = ConfigStringIndex.Images;
+export const CS_LIGHTS = ConfigStringIndex.Lights;
+export const CS_ITEMS = ConfigStringIndex.Items;
+export const CS_PLAYERS = ConfigStringIndex.Players;
+export const CS_GENERAL = ConfigStringIndex.General;
