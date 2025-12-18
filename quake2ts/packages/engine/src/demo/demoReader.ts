@@ -10,6 +10,7 @@ export class DemoReader {
   private view: DataView;
   private offset: number;
   private messageOffsets: number[] = [];
+  private currentBlock: DemoMessageBlock | null = null;
 
   constructor(buffer: ArrayBuffer) {
     this.buffer = buffer;
@@ -27,6 +28,11 @@ export class DemoReader {
 
     while (scanOffset + 4 <= this.buffer.byteLength) {
       const length = this.view.getInt32(scanOffset, true);
+
+      if (length === -1) {
+          // EOF
+          break;
+      }
 
       if (length < 0 || length > 0x200000) {
         // Sanity check failed, stop scanning
@@ -64,6 +70,11 @@ export class DemoReader {
 
     const length = this.view.getInt32(this.offset, true);
 
+    if (length === -1) {
+        // Explicit EOF block
+        return null;
+    }
+
     // We already validated this in scan(), but let's keep it safe
     if (length < 0 || this.offset + 4 + length > this.buffer.byteLength) {
        return null;
@@ -78,6 +89,31 @@ export class DemoReader {
       length,
       data: new BinaryStream(blockData)
     };
+  }
+  
+  /**
+   * Advances to the next block and stores it in `currentBlock`.
+   * Returns true if a block was read, false otherwise.
+   * Compatible with `getBlock()` usage.
+   */
+  public nextBlock(): boolean {
+      const block = this.readNextBlock();
+      if (block) {
+          this.currentBlock = block;
+          return true;
+      }
+      this.currentBlock = null;
+      return false;
+  }
+  
+  /**
+   * Returns the current block read by `nextBlock()`.
+   */
+  public getBlock(): DemoMessageBlock {
+      if (!this.currentBlock) {
+          throw new Error("No current block. Call nextBlock() first.");
+      }
+      return this.currentBlock;
   }
 
   /**
@@ -94,6 +130,7 @@ export class DemoReader {
       let tempOffset = this.offset;
       while (tempOffset + 4 <= this.buffer.byteLength) {
           const length = this.view.getInt32(tempOffset, true);
+          if (length === -1) break;
           if (length < 0 || tempOffset + 4 + length > this.buffer.byteLength) {
               break;
           }
@@ -124,6 +161,7 @@ export class DemoReader {
    */
   public reset(): void {
     this.offset = 0;
+    this.currentBlock = null;
   }
 
   /**
@@ -135,6 +173,7 @@ export class DemoReader {
       return false;
     }
     this.offset = this.messageOffsets[index];
+    this.currentBlock = null;
     return true;
   }
 
