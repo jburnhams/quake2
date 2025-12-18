@@ -19,6 +19,7 @@ const gl = {
     useProgram: vi.fn(),
     getUniformLocation: vi.fn(() => ({})),
     getAttribLocation: vi.fn(() => 0),
+    bindAttribLocation: vi.fn(), // Added bindAttribLocation
     createBuffer: vi.fn(() => ({})),
     bindBuffer: vi.fn(),
     bufferData: vi.fn(),
