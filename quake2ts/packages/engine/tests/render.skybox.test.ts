@@ -6,7 +6,7 @@ import {
   computeSkyScroll,
   removeViewTranslation,
 } from '../src/render/skybox.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 
 describe('Skybox helpers', () => {
   it('removes translation from view matrices', () => {

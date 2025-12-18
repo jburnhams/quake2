@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProgramFromSources, ShaderProgram } from '../src/render/shaderProgram.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 
 const basicVertex = `#version 300 es
 in vec3 position;

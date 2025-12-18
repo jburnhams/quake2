@@ -11,7 +11,7 @@ import {
   interpolateMd3Tag,
 } from '../src/render/md3Pipeline.js';
 import { buildMd3 } from './helpers/md3Builder.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 import { mat4FromBasis } from '@quake2ts/shared';
 
 const baseMd3 = parseMd3(

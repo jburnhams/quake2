@@ -188,6 +188,10 @@ export class MockWebGL2RenderingContext {
   isContextLost = vi.fn(() => false);
 }
 
-export function createMockGL(): MockWebGL2RenderingContext {
-  return new MockWebGL2RenderingContext();
+export function createMockWebGL2Context(overrides?: Partial<WebGL2RenderingContext>): MockWebGL2RenderingContext {
+  const mock = new MockWebGL2RenderingContext();
+  if (overrides) {
+    Object.assign(mock, overrides);
+  }
+  return mock;
 }

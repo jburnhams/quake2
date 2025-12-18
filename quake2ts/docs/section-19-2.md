@@ -17,36 +17,36 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 1. Consolidate WebGL Mocks (HIGH PRIORITY)
 
-**Status:** Two conflicting implementations exist
+**Status:** Completed
 **Dependencies:** None
 
-- [ ] **1.1** Create `test-utils/src/engine/mocks/webgl.ts` file
+- [x] **1.1** Create `test-utils/src/engine/mocks/webgl.ts` file
 
-- [ ] **1.2** Migrate `MockWebGL2RenderingContext` class from `engine/tests/helpers/mockWebGL.ts`
+- [x] **1.2** Migrate `MockWebGL2RenderingContext` class from `engine/tests/helpers/mockWebGL.ts`
   - Class with ~194 lines including all WebGL2 constants and methods
   - Methods: `createBuffer()`, `createTexture()`, `createShader()`, `createProgram()`, `bindBuffer()`, `bufferData()`, `texImage2D()`, etc.
   - Properties: All WebGL2 constants (ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER, TEXTURE_2D, etc.)
 
-- [ ] **1.3** Add factory function `createMockWebGL2Context(overrides?: Partial<WebGL2RenderingContext>): MockWebGL2RenderingContext`
+- [x] **1.3** Add factory function `createMockWebGL2Context(overrides?: Partial<WebGL2RenderingContext>): MockWebGL2RenderingContext`
   - Wraps class instantiation for convenience
 
-- [ ] **1.4** Remove duplicate simple mock from `tests/src/mocks/webgl2.ts`
+- [x] **1.4** Remove duplicate simple mock from `tests/src/mocks/webgl2.ts`
   - Delete entire file after migration complete
 
-- [ ] **1.5** Update imports in `engine/tests/render/` directory
+- [x] **1.5** Update imports in `engine/tests/render/` directory
   - Replace `import { MockWebGL2RenderingContext } from '../helpers/mockWebGL'`
   - With `import { createMockWebGL2Context } from '@quake2ts/test-utils'`
   - Estimated files: ~25
 
-- [ ] **1.6** Update imports in `engine/tests/assets/` directory
+- [x] **1.6** Update imports in `engine/tests/assets/` directory
   - Same import replacement pattern
   - Estimated files: ~5
 
-- [ ] **1.7** Update imports in `tests/src/` directory
+- [x] **1.7** Update imports in `tests/src/` directory
   - Replace `tests/src/mocks/webgl2` imports
   - Estimated files: ~5
 
-- [ ] **1.8** Delete `engine/tests/helpers/mockWebGL.ts` after all migrations
+- [x] **1.8** Delete `engine/tests/helpers/mockWebGL.ts` after all migrations
 
 ---
 

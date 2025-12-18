@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createWebGLContext } from '../src/render/context.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context as createMockGL } from '@quake2ts/test-utils';
 
 describe('createWebGLContext', () => {
   it('initializes default GL state and queries extensions', () => {
