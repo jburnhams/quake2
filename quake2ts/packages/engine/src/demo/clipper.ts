@@ -294,6 +294,7 @@ export class DemoClipper {
                     onTempEntity: (t, p, p2, d, c, clr, e, s, de) => blockWriter.writeTempEntity(t, p, p2, d, c, clr, e, s, de),
                     onDisconnect: () => blockWriter.writeDisconnect(),
                     onReconnect: () => blockWriter.writeReconnect(),
+                    onDownload: () => {}, // Stub for download
 
                     onFrame: (frame) => {
                          // Modify frame
@@ -307,7 +308,17 @@ export class DemoClipper {
                          if (frameMap.has(oldDelta)) {
                              newDelta = frameMap.get(oldDelta)!;
                          } else {
-                             // Fallback or full update logic
+                             // Fallback: lost reference frame.
+                             // We must convert this frame to a full update to avoid corruption.
+                             frame.packetEntities.delta = false;
+                             // Note: Entities are already parsed as sparse deltas.
+                             // If we turn off delta flag, MessageWriter (with our fix) will force full serialization.
+                             // However, since we don't have the full state here (only deltas),
+                             // forcing full serialization of sparse entities results in many 0s.
+                             // This effectively corrupts the state (entities vanish or reset).
+                             // Ideally we should replay state to get full entities, but that requires expensive simulation.
+                             // For now, forcing full update is "safer" than invalid delta, but still destructive.
+                             // But since we synthesize Frame 0, valid clips (sequential) will not hit this path.
                          }
 
                          frameMap.set(oldSeq, newSeq);

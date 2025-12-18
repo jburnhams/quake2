@@ -91,7 +91,7 @@ describe('DemoClipper', () => {
      expect(reader.readLong()).toBe(-1);
   });
 
-  it.skip('should re-serialize multiple frames and update deltas', () => {
+  it('should re-serialize multiple frames and update deltas', () => {
       // 1. Create a synthetic demo with 3 frames: 0, 1, 2.
       const demoWriter = new DemoWriter();
       const proto = 34;
@@ -118,11 +118,8 @@ describe('DemoClipper', () => {
 
       const demoData = demoWriter.getData();
 
-      // VERIFY INPUT STRUCTURE
-      const inputReader = new DemoReader(demoData.buffer);
-      // expect(inputReader.getMessageCount()).toBe(3); // DemoReader handles EOF correctly?
-      // Yes, it scans until EOF. So it should find 3 messages.
-      // If this fails, the issue is in DemoWriter/DemoReader or setup.
+      // VERIFY INPUT STRUCTURE - Use slice().buffer to ensure offset 0
+      const inputReader = new DemoReader(demoData.slice().buffer);
       expect(inputReader.getMessageCount()).toBe(3);
 
       // 2. We want to clip Frames 1-2.
@@ -136,7 +133,10 @@ describe('DemoClipper', () => {
       };
 
       // 3. Run extractStandaloneClip
-      const result = clipper.extractStandaloneClip(demoData, { type: 'frame', frame: 1 }, { type: 'frame', frame: 2 }, worldState);
+      // Important: pass demoData (which is Uint8Array)
+      // Pass slice() to ensure offsets are clean
+
+      const result = clipper.extractStandaloneClip(demoData.slice(), { type: 'frame', frame: 1 }, { type: 'frame', frame: 2 }, worldState);
 
       // 4. Verify output
       const reader = new BinaryStream(result.buffer);

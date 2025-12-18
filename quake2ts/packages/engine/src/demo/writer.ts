@@ -88,20 +88,8 @@ export class MessageWriter {
     }
 
     public writeTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
-        this.writer.writeByte(ServerCommand.temp_entity);
-        this.writer.writeByte(type);
-        // Writing temp entities depends on type switch
-        // This is complex, implementing minimal generic logic or defaulting
-        // Assuming we need full logic to preserve clips.
-
-        // Due to complexity and missing context of all TempEntity types serialization logic (which is often ad-hoc per type),
-        // we might not implement full serialization here yet.
-        // But for passthrough, we need it.
-        // However, passthrough usually handles raw bytes?
-        // No, DemoClipper parses then re-writes.
-
-        // Stub implementation that warns:
-        console.warn('writeTempEntity not fully implemented');
+        // Safe stub: do not write partial header to avoid corruption
+        console.warn('writeTempEntity not implemented - skipping message');
     }
 
     public writeSound(mask: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3): void {
@@ -237,11 +225,14 @@ export class MessageWriter {
         let bits = 0;
         let bitsHigh = 0;
 
-        if (to.bits !== 0) {
+        if (to.bits !== 0 && !force) {
+            // Respect existing bits if not forcing
             bits = to.bits;
             bitsHigh = to.bitsHigh;
         } else {
-            // Let's implement robust bit calculation
+            // Calculate bits based on values (fallback or forced generation)
+            // If force is true, we check non-zero values to generate bits.
+
             if (to.modelindex !== 0) bits |= U_MODEL;
             if (to.modelindex2 !== 0) bits |= U_MODEL2;
             if (to.modelindex3 !== 0) bits |= U_MODEL3;
