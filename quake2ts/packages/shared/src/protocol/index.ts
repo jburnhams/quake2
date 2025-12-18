@@ -14,3 +14,6 @@ export * from './renderFx.js';
 export * from './crc.js';
 export * from './effects.js';
 export * from './entityEvent.js';
+export * from './entity.js';
+export * from './entityState.js';
+export * from './player.js';

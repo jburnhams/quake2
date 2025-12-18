@@ -20,9 +20,9 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ## Feature Migration (Move Logic to Library)
 
-- [ ] **Demo Recording**
-    - [ ] **`DemoRecorder` serialization**: Implement `recordSnapshot(snapshot: GameStateSnapshot)` in `quake2ts/engine` that handles serialization to `.dm2` format (server commands).
-    - [ ] Currently, the app has to handle this or it's stubbed. Moving this to the engine ensures correct protocol encoding.
+- [x] **Demo Recording**
+    - [x] **`DemoRecorder` serialization**: Implement `recordSnapshot(snapshot: GameStateSnapshot)` in `quake2ts/engine` that handles serialization to `.dm2` format (server commands).
+    - [x] Currently, the app has to handle this or it's stubbed. Moving this to the engine ensures correct protocol encoding.
 
 - [ ] **Clip Extraction**
     - [ ] **`extractDemoRange`**: Implement methods to slice `.dm2` files buffer-to-buffer.
