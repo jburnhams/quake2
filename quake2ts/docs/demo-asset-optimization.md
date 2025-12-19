@@ -193,12 +193,12 @@ Task list for demo playback analysis and PAK file optimization features. Enables
   - [x] Track per-frame: visible entities, audible sounds, active models, textures
   - [x] Define `VisibilityTimeline`: frame-indexed map of visible/active resource sets
   - [x] Define `FrameResources`: `{ visible: Set<string>, audible: Set<string>, loaded: Set<string> }`
-- [ ] Implement visibility detection
-  - [ ] Entities: check if in camera frustum (requires view matrix from playerState)
-  - [ ] Sounds: check if positional sound within audible range or UI sound
-  - [ ] Models: derived from visible entities
+- [x] Implement visibility detection
+  - [x] Entities: check if in camera frustum (requires view matrix from playerState)
+  - [x] Sounds: check if positional sound within audible range or UI sound
+  - [x] Models: derived from visible entities
   - [ ] Textures: derived from visible models/BSP surfaces
-  - [ ] Use PVS (Potentially Visible Set) from BSP if available
+  - [x] Use PVS (Potentially Visible Set) from BSP if available
 - [ ] Add interaction detection
   - [ ] Projectiles in flight
   - [ ] Physics interactions (touching/blocking player)
