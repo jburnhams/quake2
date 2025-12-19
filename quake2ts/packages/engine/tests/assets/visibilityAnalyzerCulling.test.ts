@@ -3,7 +3,7 @@ import { ResourceVisibilityAnalyzer } from '../../src/assets/visibilityAnalyzer.
 import { MessageWriter } from '../../src/demo/writer.js';
 import { ConfigStringIndex, Vec3 } from '@quake2ts/shared';
 import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
-import { BspLoader } from '../../src/loaders/bsp.js';
+import { BspMap, BspLeaf, BspNode, BspPlane, BspModel } from '../../src/assets/bsp.js';
 
 // Helper to create synthetic demo data with Writer
 const createSyntheticDemo = (
@@ -27,11 +27,9 @@ const createSyntheticDemo = (
     // Block 1: ServerData + ConfigStrings
     const w1 = new MessageWriter();
     w1.writeServerData(34, 1, 0, "baseq2", 0, "map1");
-    // CS_MODELS starts at index 0 relative to base? No, ConfigStringIndex.Models is base.
-    // writeConfigString takes absolute index.
-    w1.writeConfigString(ConfigStringIndex.Models + 0, "models/test/model1.md2"); // Index 1
-    w1.writeConfigString(ConfigStringIndex.Models + 1, "models/test/model2.md2"); // Index 2
-    w1.writeConfigString(ConfigStringIndex.Sounds + 0, "sound/test/sound1.wav"); // Index 1
+    w1.writeConfigString(ConfigStringIndex.Models + 0, "models/test/model1.md2");
+    w1.writeConfigString(ConfigStringIndex.Models + 1, "models/test/model2.md2");
+    w1.writeConfigString(ConfigStringIndex.Sounds + 0, "sound/test/sound1.wav");
     addBlock(w1);
 
     // Block 2: Frame 1
@@ -40,7 +38,7 @@ const createSyntheticDemo = (
     ent1.number = 1;
     ent1.modelindex = entityModelIndex;
     ent1.origin = entityOrigin;
-    ent1.sound = 1;      // "sound/test/sound1.wav"
+    ent1.sound = 1;
 
     const playerState = createEmptyProtocolPlayerState();
     playerState.origin = playerOrigin;
@@ -70,6 +68,104 @@ const createSyntheticDemo = (
     return combined;
 };
 
+// Helper to create a minimal BSP structure
+const createMockBsp = (): BspMap => {
+    // Simple BSP:
+    // 1 Plane at x=50, normal=[1,0,0]
+    // 1 Node splitting at plane 0
+    // Node 0: children[0] = Leaf 0 (front/pos side), children[1] = Leaf 1 (back/neg side)
+    // Leaf 0: cluster 0
+    // Leaf 1: cluster 1
+
+    const planes: BspPlane[] = [{
+        normal: [1, 0, 0],
+        dist: 50,
+        type: 0 // Axial X
+    }];
+
+    // Nodes
+    // children: positive, negative. Leaf indices are negative: -1 - leafIndex
+    // Leaf 0 -> -1
+    // Leaf 1 -> -2
+    const nodes: BspNode[] = [{
+        planeIndex: 0,
+        children: [-1, -2], // Leaf 0, Leaf 1
+        mins: [-1000, -1000, -1000],
+        maxs: [1000, 1000, 1000],
+        firstFace: 0,
+        numFaces: 0
+    }];
+
+    const leafs: BspLeaf[] = [
+        // Leaf 0
+        {
+            contents: 0,
+            cluster: 0,
+            area: 0,
+            mins: [50, -1000, -1000],
+            maxs: [1000, 1000, 1000],
+            firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0
+        },
+        // Leaf 1
+        {
+            contents: 0,
+            cluster: 1,
+            area: 0,
+            mins: [-1000, -1000, -1000],
+            maxs: [50, 1000, 1000],
+            firstLeafFace: 0, numLeafFaces: 0, firstLeafBrush: 0, numLeafBrushes: 0
+        }
+    ];
+
+    const models: BspModel[] = [{
+        mins: [-1000, -1000, -1000],
+        maxs: [1000, 1000, 1000],
+        origin: [0, 0, 0],
+        headNode: 0,
+        firstFace: 0,
+        numFaces: 0
+    }];
+
+    // Visibility: 2 clusters (0 and 1).
+    // Cluster 0 sees only Cluster 0.
+    // Cluster 1 sees only Cluster 1.
+    // PVS row size: ceil(2/8) = 1 byte.
+    // Row 0 (Cluster 0): 00000001 (bit 0 set) -> [1]
+    // Row 1 (Cluster 1): 00000010 (bit 1 set) -> [2]
+
+    const pvs0 = new Uint8Array([1]);
+    const pvs1 = new Uint8Array([2]);
+
+    const visibility = {
+        numClusters: 2,
+        clusters: [
+            { pvs: pvs0, phs: pvs0 },
+            { pvs: pvs1, phs: pvs1 }
+        ]
+    };
+
+    return {
+        header: { version: 38, lumps: new Map() },
+        entities: { raw: "", entities: [], worldspawn: undefined, getUniqueClassnames: () => [] },
+        planes,
+        vertices: [],
+        nodes,
+        texInfo: [],
+        faces: [],
+        lightMaps: new Uint8Array(0),
+        lightMapInfo: [],
+        leafs,
+        leafLists: { leafFaces: [], leafBrushes: [] },
+        edges: [],
+        surfEdges: new Int32Array(0),
+        models,
+        brushes: [],
+        brushSides: [],
+        visibility,
+        pickEntity: () => null
+    } as unknown as BspMap;
+};
+
 describe('ResourceVisibilityAnalyzer Culling', () => {
     let analyzer: ResourceVisibilityAnalyzer;
 
@@ -78,25 +174,19 @@ describe('ResourceVisibilityAnalyzer Culling', () => {
     });
 
     it('should include entity if in front of player (default)', async () => {
-        // Player at 0,0,0 looking at 0,0,0 (Down X?).
-        // Quake angles: Pitch, Yaw, Roll.
-        // Yaw 0 is East (X+).
         const demoData = createSyntheticDemo(
             { x: 0, y: 0, z: 0 },
-            { x: 0, y: 0, z: 0 }, // Looking X+
-            { x: 100, y: 0, z: 0 }, // Entity at X=100
+            { x: 0, y: 0, z: 0 },
+            { x: 100, y: 0, z: 0 },
             1
         );
         const timeline = await analyzer.analyzeDemo(demoData);
         const frame = timeline.frames.get(1);
         expect(frame).toBeDefined();
-        // Should be visible
         expect(frame?.models.has("models/test/model1.md2")).toBe(true);
     });
 
     it('should exclude entity if behind player', async () => {
-        // Player at 0,0,0 looking X+ (Yaw 0)
-        // Entity at -1000, 0, 0 (Behind and definitely out of the 256 box)
         const demoData = createSyntheticDemo(
             { x: 0, y: 0, z: 0 },
             { x: 0, y: 0, z: 0 },
@@ -105,57 +195,44 @@ describe('ResourceVisibilityAnalyzer Culling', () => {
         );
         const timeline = await analyzer.analyzeDemo(demoData);
         const frame = timeline.frames.get(1);
-        // Should NOT be visible if frustum culling is working
         expect(frame?.models.has("models/test/model1.md2")).toBe(false);
     });
 
     it('should exclude entity if far away for PVS (mocked)', async () => {
         const demoData = createSyntheticDemo(
+            { x: 0, y: 0, z: 0 }, // Player at 0 (Leaf 1, Cluster 1)
             { x: 0, y: 0, z: 0 },
-            { x: 0, y: 0, z: 0 },
-            { x: 100, y: 0, z: 0 }, // In front, so Frustum allows it
+            { x: 100, y: 0, z: 0 }, // Entity at 100 (Leaf 0, Cluster 0)
             1
         );
 
-        // Mock BSP Loader
-        const mockBspLoader = {
-            findLeaf: vi.fn((pos: Vec3) => {
-                if (pos.x === 0 && pos.y === 0 && pos.z === 0) {
-                    return { cluster: 0 }; // Player at cluster 0
-                }
-                return { cluster: 1 }; // Entity at cluster 1
-            }),
-            isClusterVisible: vi.fn((from: number, to: number) => {
-                return from === to; // Only visible if same cluster
-            })
-        } as unknown as BspLoader;
+        // Wait, 0 is < 50, so Leaf 1?
+        // Plane X=50. Normal 1,0,0. Dist=50.
+        // 0*1 - 50 = -50. Back side. Children[1] -> Leaf 1 -> Cluster 1.
+        // 100*1 - 50 = 50. Front side. Children[0] -> Leaf 0 -> Cluster 0.
 
-        const timeline = await analyzer.analyzeDemo(demoData, undefined, mockBspLoader);
+        // Mock BSP says: Cluster 0 sees ONLY Cluster 0. Cluster 1 sees ONLY Cluster 1.
+        // So Player (Cluster 1) cannot see Entity (Cluster 0).
+
+        const mockBsp = createMockBsp();
+
+        const timeline = await analyzer.analyzeDemo(demoData, undefined, mockBsp);
         const frame = timeline.frames.get(1);
 
-        // PVS says no (cluster 0 -> cluster 1 is false)
         expect(frame?.models.has("models/test/model1.md2")).toBe(false);
-        expect(mockBspLoader.isClusterVisible).toHaveBeenCalledWith(0, 1);
     });
 
     it('should include entity if visible in PVS (mocked)', async () => {
         const demoData = createSyntheticDemo(
+            { x: 0, y: 0, z: 0 }, // Player at 0 (Cluster 1)
             { x: 0, y: 0, z: 0 },
-            { x: 0, y: 0, z: 0 },
-            { x: 100, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 }, // Entity at 10 (Cluster 1, still < 50)
             1
         );
 
-        const mockBspLoader = {
-            findLeaf: vi.fn((pos: Vec3) => {
-                return { cluster: 0 }; // Both in cluster 0
-            }),
-            isClusterVisible: vi.fn((from: number, to: number) => {
-                return true;
-            })
-        } as unknown as BspLoader;
+        const mockBsp = createMockBsp();
 
-        const timeline = await analyzer.analyzeDemo(demoData, undefined, mockBspLoader);
+        const timeline = await analyzer.analyzeDemo(demoData, undefined, mockBsp);
         const frame = timeline.frames.get(1);
 
         expect(frame?.models.has("models/test/model1.md2")).toBe(true);

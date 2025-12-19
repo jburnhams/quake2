@@ -4,7 +4,7 @@ import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState } f
 import { BinaryStream, Vec3, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_CLIENTS } from '@quake2ts/shared';
 import { AssetManager } from './manager.js';
 import { Camera } from '../render/camera.js';
-import { BspLoader } from '../loaders/bsp.js';
+import { BspLoader, BspMap, BspLeaf } from './bsp.js'; // Fixed Import
 import { vec3, mat4 } from 'gl-matrix';
 
 export interface FrameResources {
@@ -25,6 +25,13 @@ export interface VisibilityTimeline {
     time: Map<number, FrameResources>;
 }
 
+// Relaxed vector type for compatibility
+interface Vector3Like {
+    x: number;
+    y: number;
+    z: number;
+}
+
 export class ResourceVisibilityAnalyzer {
     private tracker: ResourceLoadTracker;
 
@@ -32,12 +39,12 @@ export class ResourceVisibilityAnalyzer {
         this.tracker = new ResourceLoadTracker();
     }
 
-    public async analyzeDemo(demo: Uint8Array, assetManager?: AssetManager, bspLoader?: BspLoader): Promise<VisibilityTimeline> {
-        return this.analyzeInternal(demo, 0, Number.MAX_SAFE_INTEGER, assetManager, bspLoader);
+    public async analyzeDemo(demo: Uint8Array, assetManager?: AssetManager, bspMap?: BspMap): Promise<VisibilityTimeline> {
+        return this.analyzeInternal(demo, 0, Number.MAX_SAFE_INTEGER, assetManager, bspMap);
     }
 
-    public async analyzeRange(demo: Uint8Array, startFrame: number, endFrame: number, assetManager?: AssetManager, bspLoader?: BspLoader): Promise<VisibilityTimeline> {
-        return this.analyzeInternal(demo, startFrame, endFrame, assetManager, bspLoader);
+    public async analyzeRange(demo: Uint8Array, startFrame: number, endFrame: number, assetManager?: AssetManager, bspMap?: BspMap): Promise<VisibilityTimeline> {
+        return this.analyzeInternal(demo, startFrame, endFrame, assetManager, bspMap);
     }
 
     private extractFrustumPlanes(viewProjection: mat4): Float32Array[] {
@@ -99,7 +106,7 @@ export class ResourceVisibilityAnalyzer {
         return planes;
     }
 
-    private isBoxInFrustum(planes: Float32Array[], mins: Vec3, maxs: Vec3, origin: Vec3): boolean {
+    private isBoxInFrustum(planes: Float32Array[], mins: Vector3Like, maxs: Vector3Like, origin: Vector3Like): boolean {
         // Transform box to world space (simple translation for AABB)
         const absMins = { x: mins.x + origin.x, y: mins.y + origin.y, z: mins.z + origin.z };
         const absMaxs = { x: maxs.x + origin.x, y: maxs.y + origin.y, z: maxs.z + origin.z };
@@ -124,13 +131,62 @@ export class ResourceVisibilityAnalyzer {
         return true;
     }
 
+    private findLeaf(map: BspMap, point: Vector3Like): BspLeaf {
+        let nodeIndex = map.models[0].headNode;
+
+        while (nodeIndex >= 0) {
+            const node = map.nodes[nodeIndex];
+            const plane = map.planes[node.planeIndex];
+
+            // Check which side of the plane the point is on
+            // Plane equation: normal * point - dist
+            const dist = plane.normal[0] * point.x + plane.normal[1] * point.y + plane.normal[2] * point.z - plane.dist;
+
+            if (dist >= 0) {
+                nodeIndex = node.children[0];
+            } else {
+                nodeIndex = node.children[1];
+            }
+        }
+
+        // nodeIndex is now leaf index (negative)
+        // leaf index = -1 - nodeIndex
+        const leafIndex = -1 - nodeIndex;
+        return map.leafs[leafIndex];
+    }
+
+    private isClusterVisible(map: BspMap, fromCluster: number, toCluster: number): boolean {
+        if (!map.visibility || fromCluster === -1 || toCluster === -1) {
+            return true; // No PVS or invalid cluster, assume visible
+        }
+
+        // Check range
+        if (fromCluster >= map.visibility.numClusters || toCluster >= map.visibility.numClusters) {
+            return true;
+        }
+
+        const cluster = map.visibility.clusters[fromCluster];
+        if (!cluster || !cluster.pvs) return true;
+
+        const pvs = cluster.pvs;
+        const byteIndex = toCluster >> 3;
+        const bitIndex = toCluster & 7;
+
+        if (byteIndex >= pvs.length) return false;
+
+        return (pvs[byteIndex] & (1 << bitIndex)) !== 0;
+    }
+
     private async analyzeInternal(
         demo: Uint8Array,
         startFrame: number = 0,
         endFrame: number = Number.MAX_SAFE_INTEGER,
         assetManager?: AssetManager,
-        bspLoader?: BspLoader
+        bspMap?: BspMap
     ): Promise<VisibilityTimeline> {
+        // If BspMap is provided, we use it. If not, we could potentially load it if assetManager is smart enough,
+        // but here we stick to provided map.
+
         const reader = new DemoReader(demo.buffer as ArrayBuffer);
         const timeline: VisibilityTimeline = {
             frames: new Map(),
@@ -164,6 +220,8 @@ export class ResourceVisibilityAnalyzer {
         const handler: NetworkMessageHandler = {
             onServerData: (protocol, serverCount, attractLoop, gameDir, playerNum, levelName, tickRate, demoType) => {
                 currentProtocol = protocol;
+                // If we had logic to auto-load BSP using assetManager.loadBsp(levelName), it would go here.
+                // But we can't await here in the sync loop.
             },
             onConfigString: (index, str) => {
                 configStrings.set(index, str);
@@ -192,8 +250,8 @@ export class ResourceVisibilityAnalyzer {
 
                 // Get PVS cluster for player if BSP is available
                 let pvsCluster = -1;
-                if (bspLoader && frame.playerState) {
-                    const leaf = bspLoader.findLeaf(frame.playerState.origin);
+                if (bspMap && frame.playerState) {
+                    const leaf = this.findLeaf(bspMap, frame.playerState.origin);
                     if (leaf) {
                         pvsCluster = leaf.cluster;
                     }
@@ -202,20 +260,18 @@ export class ResourceVisibilityAnalyzer {
                 if (frame.packetEntities && frame.packetEntities.entities) {
                     for (const ent of frame.packetEntities.entities) {
                         // Check PVS
-                        if (bspLoader && pvsCluster !== -1) {
+                        if (bspMap && pvsCluster !== -1) {
                             // Find entity leaf
-                            const entLeaf = bspLoader.findLeaf(ent.origin);
+                            const entLeaf = this.findLeaf(bspMap, ent.origin);
                             if (entLeaf && entLeaf.cluster !== -1) {
                                 // check visibility
-                                if (!bspLoader.isClusterVisible(pvsCluster, entLeaf.cluster)) {
+                                if (!this.isClusterVisible(bspMap, pvsCluster, entLeaf.cluster)) {
                                     continue; // Skip if not in PVS
                                 }
                             }
                         }
 
                         // Check Frustum
-                        // We need entity bounds. Using standard Q2 player bounds as fallback or similar.
-                        // Ideally we get bounds from model, but we might not have it loaded.
                         // We use a large conservative bound to avoid culling large objects (bosses, trains).
                         const MAX_ENTITY_SIZE = 256;
                         const mins = { x: -MAX_ENTITY_SIZE, y: -MAX_ENTITY_SIZE, z: -MAX_ENTITY_SIZE };
@@ -230,13 +286,7 @@ export class ResourceVisibilityAnalyzer {
                             const path = getModelPath(ent.modelindex);
                             if (path) {
                                 models.add(path);
-                                // Model Texture Derivation
-                                if (assetManager) {
-                                    // This assumes models are already loaded/cached or we can peek.
-                                    // For now, if we can't synchronously check, we skip.
-                                    // Task 5.2/5.1 suggests deriving textures.
-                                    // We can implement a helper if AssetManager exposes it.
-                                }
+                                // Model Texture Derivation could happen here
                             }
                         }
 
@@ -263,16 +313,6 @@ export class ResourceVisibilityAnalyzer {
                     pendingSounds.clear();
                 }
 
-                // If BSP loader is present, we should add map textures for visible clusters?
-                // That might be too heavy for per-frame.
-                // Usually map textures are loaded once. But for "Resource Visibility",
-                // we probably only care about dynamic resources or if we are building a minimal PAK.
-                // For a minimal PAK, we need all map textures if the map is used.
-                // Or maybe only visible surfaces? That requires full BSP traversal.
-                // The task description says "Textures: derived from visible models/BSP surfaces".
-                // Doing full BSP surface visibility per frame is expensive.
-                // For now, let's stick to Model textures.
-
                 const resources: FrameResources = {
                     models,
                     sounds,
@@ -287,15 +327,6 @@ export class ResourceVisibilityAnalyzer {
             onSound: (mask, soundNum, volume, attenuation, offset, ent, pos) => {
                 const path = getSoundPath(soundNum);
                 if (path) {
-                    // Check distance if positional
-                    // But onSound provides `pos`? No, protocol parser provides `pos` if present.
-                    // Actually parser signature: onSound(mask, soundNum, volume, attenuation, offset, ent, pos?)
-
-                    // If attenuation is NONE, it's global.
-                    // If pos is provided, check distance.
-                    // If ent is provided, we need entity origin (which we might not have efficiently here).
-
-                    // Simplified: if pos provided, check distance.
                     if (pos) {
                         const dx = pos.x - camera.position[0];
                         const dy = pos.y - camera.position[1];
@@ -305,9 +336,6 @@ export class ResourceVisibilityAnalyzer {
                              pendingSounds.add(path);
                          }
                     } else {
-                        // Global or attached to entity we don't track position of well here?
-                        // If attached to entity, we should ideally look up entity position.
-                        // For now, assume audible if no pos (safe default).
                         pendingSounds.add(path);
                     }
                 }
@@ -331,7 +359,6 @@ export class ResourceVisibilityAnalyzer {
         while (reader.nextBlock()) {
             const block = reader.getBlock();
             const blockParser = new NetworkMessageParser(block.data, handler, false);
-            // Pass the current protocol state to the new parser instance
             blockParser.setProtocolVersion(currentProtocol);
             blockParser.parseMessage();
 
