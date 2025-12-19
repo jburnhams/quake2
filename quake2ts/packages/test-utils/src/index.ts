@@ -12,6 +12,7 @@ export * from './setup/timing.js';
 
 // E2E
 export * from './e2e/playwright.js';
+export * from './e2e/input.js';
 
 // Shared
 export * from './shared/bsp.js';
