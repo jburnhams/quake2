@@ -23,5 +23,7 @@ export * from './streamer.js';
 export * from './texture.js';
 export * from './tga.js';
 export * from './vfs.js';
+export * from './visibilityAnalyzer.js';
+export * from './interactionGraph.js';
 export * from './wal.js';
 export * from './wav.js';
