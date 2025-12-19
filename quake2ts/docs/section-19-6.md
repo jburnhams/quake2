@@ -114,23 +114,23 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Inline implementations exist
 **Dependencies:** None
 
-- [ ] **4.1** Create `test-utils/src/setup/timing.ts` file
+- [x] **4.1** Create `test-utils/src/setup/timing.ts` file
 
-- [ ] **4.2** Add `createMockRAF()` factory
+- [x] **4.2** Add `createMockRAF()` factory
   - Signature: `createMockRAF(): MockRAF`
   - Mock requestAnimationFrame/cancelAnimationFrame
   - Methods: `tick()`, `advance()`, `getCallbacks()`
 
-- [ ] **4.3** Add `createMockPerformance()` factory
+- [x] **4.3** Add `createMockPerformance()` factory
   - Signature: `createMockPerformance(startTime?: number): Performance`
   - Mock performance.now() and performance.timing
 
-- [ ] **4.4** Add `createControlledTimer()` helper
+- [x] **4.4** Add `createControlledTimer()` helper
   - Signature: `createControlledTimer(): ControlledTimer`
   - Control setTimeout/setInterval for deterministic testing
   - Methods: `tick()`, `advanceBy()`, `clear()`
 
-- [ ] **4.5** Add `simulateFrames()` helper
+- [x] **4.5** Add `simulateFrames()` helper
   - Signature: `simulateFrames(count: number, frameTime?: number, callback?: () => void): void`
   - Simulate multiple RAF frames
 
@@ -146,24 +146,25 @@ This section covers consolidation of test environment setup code, browser enviro
   - `closeBrowser()` - Cleanup
   - `TestClient` interface
 
-- [ ] **5.2** Create `test-utils/src/e2e/playwright.ts` file
+- [x] **5.2** Create `test-utils/src/e2e/playwright.ts` file
 
-- [ ] **5.3** Add `createPlaywrightTestClient()` factory
+- [x] **5.3** Add `createPlaywrightTestClient()` factory
   - Signature: `createPlaywrightTestClient(options?: PlaywrightOptions): Promise<PlaywrightTestClient>`
   - Wraps browser launch and client setup
   - Methods: `navigate()`, `waitForGame()`, `injectInput()`, `screenshot()`, `close()`
 
-- [ ] **5.4** Add `waitForGameReady()` helper
+- [x] **5.4** Add `waitForGameReady()` helper
   - Signature: `waitForGameReady(page: Page, timeout?: number): Promise<void>`
   - Wait for game initialization
 
-- [ ] **5.5** Add `captureGameState()` helper
+- [x] **5.5** Add `captureGameState()` helper
   - Signature: `captureGameState(page: Page): Promise<GameStateCapture>`
   - Capture current game state from browser
 
 - [ ] **5.6** Update `e2e-tests/helpers/testClient.ts` to use test-utils
   - Re-export from test-utils for backward compatibility
   - Estimated files: ~8
+  - **Note:** Deferred. The existing implementation has specific static serving and logging logic that requires careful porting to avoid regressions. The new helper is available for new tests.
 
 ---
 

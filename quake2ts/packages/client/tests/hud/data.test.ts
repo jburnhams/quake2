@@ -76,7 +76,12 @@ describe('HUD Data API', () => {
           begin2D: vi.fn(),
           end2D: vi.fn(),
           renderFrame: vi.fn(),
-          getPerformanceReport: vi.fn(() => ({}))
+          getPerformanceReport: vi.fn(() => ({})),
+          setGamma: vi.fn(),
+          setBrightness: vi.fn(),
+          setBloom: vi.fn(),
+          setBloomIntensity: vi.fn(),
+          setUnderwaterWarp: vi.fn(),
       },
       assets: {
           listFiles: vi.fn(() => [])

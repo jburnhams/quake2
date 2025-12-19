@@ -22,6 +22,8 @@ function createMockWebGL2Context() {
     texImage2D: vi.fn(),
     texParameteri: vi.fn(),
     activeTexture: vi.fn(),
+    createFramebuffer: vi.fn(() => ({})),
+    deleteFramebuffer: vi.fn(),
     createProgram: vi.fn(() => ({})),
     createShader: vi.fn(() => ({})),
     shaderSource: vi.fn(),
