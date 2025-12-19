@@ -112,9 +112,43 @@ describe('Renderer Integration', () => {
         camera.setPosition(100, 50, 20);
         camera.setRotation(0, 45, 0); // Yaw 45
 
-        // Create dummy world to prevent crashes
+        // Create minimal valid BSP
+        const bspData = buildTestBsp({
+            entities: '{"classname" "worldspawn"}\n',
+            planes: [{ normal: [0, 0, 1], dist: 0, type: 0 }],
+            vertices: [],
+            nodes: [{
+                planeIndex: 0,
+                children: [-1, -1],
+                mins: [0, 0, 0],
+                maxs: [0, 0, 0],
+                firstFace: 0,
+                numFaces: 0
+            }],
+            leafs: [{
+                contents: 0,
+                cluster: -1,
+                area: 0,
+                mins: [0, 0, 0],
+                maxs: [0, 0, 0],
+                firstLeafFace: 0,
+                numLeafFaces: 0,
+                firstLeafBrush: 0,
+                numLeafBrushes: 0
+            }],
+            models: [{
+                mins: [0, 0, 0],
+                maxs: [0, 0, 0],
+                origin: [0, 0, 0],
+                headNode: 0,
+                firstFace: 0,
+                numFaces: 0
+            }]
+        });
+        const map = parseBsp(bspData);
+
         const world = {
-            map: { leafs: [] },
+            map,
             surfaces: [],
             textures: new Map(),
             materials: { update: vi.fn(), getMaterial: vi.fn() }
@@ -123,7 +157,8 @@ describe('Renderer Integration', () => {
         const options = {
             camera,
             world: world as any,
-            timeSeconds: 2.0
+            timeSeconds: 2.0,
+            sky: {}
         };
 
         renderer.renderFrame(options, []);
