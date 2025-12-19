@@ -20,8 +20,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
     "vitest": "^1.6.0"
   },
   "devDependencies": {

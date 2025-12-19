@@ -54,7 +54,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [ ] **`MockNetworkTransport`**: Export a mock transport layer that implements `NetChan` interfaces but records packets for inspection.
 
 - [ ] **Rendering & WebGL**
-    - [ ] **`TestRenderer`**: Provide a headless or mock WebGL2 context/renderer in `@quake2ts/test-utils` that mirrors the engine's expectations.
+    - [x] **`TestRenderer`**: Provide a headless or mock WebGL2 context/renderer in `@quake2ts/test-utils` that mirrors the engine's expectations.
     - [ ] **`PostProcessing` Pipeline**: Move `PostProcessor` logic (quad rendering, shader compilation) into `quake2ts/engine`'s render system to avoid raw WebGL calls in the app.
 
 - [ ] **Input Management**
@@ -82,7 +82,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 }
 ```
 
-### [] 2. Rendering Mocks
+### [x] 2. Rendering Mocks
 **Problem:** Tests for `UniversalViewer` and adapters require extensive manual mocking of `quake2ts/engine` internals (WebGL context, Pipelines, Camera).
 **Request:** Provide a `createMockRenderingContext` or similar in `test-utils` that returns a Jest/Vitest compatible mock of the engine's rendering layer.
 
@@ -100,7 +100,7 @@ interface MockRenderingContext {
 export function createMockRenderingContext(): MockRenderingContext;
 ```
 
-### [] 3. Game Exports vs Internal MockGame
+### [x] 3. Game Exports vs Internal MockGame
 **Problem:** `createMockGame` returns an internal `MockGame` interface which doesn't match the `GameExports` interface returned by `createGame`. This makes it difficult to mock the return value of `createGame` when testing the service layer.
 **Request:** Update `createMockGame` or add `createMockGameExports` to provide a mock that satisfies `GameExports` (init, frame, shutdown, snapshot, etc.).
 
@@ -111,14 +111,14 @@ export function createMockGameExports(overrides?: Partial<GameExports>): GameExp
 
 ## API Improvements
 
-### [] 4. Game Loop & Recording Integration
+### [x] 4. Game Loop & Recording Integration
 **Problem:** Recording frame data usually requires serializing the `GameStateSnapshot` to network protocol messages, which is complex to duplicate in the application layer.
 **Request:** Expose a `serializeSnapshot(snapshot: GameStateSnapshot): Uint8Array` method in `quake2ts/game` or `quake2ts/shared`, or allow `DemoRecorder` to accept snapshots directly.
 
-### [] 5. ConfigString Constants
+### [x] 5. ConfigString Constants
 **Problem:** `ConfigString` constants (e.g. `CS_NAME`, `CS_MAXCLIENTS`) are not exported, requiring re-definition in the app.
 **Request:** Export `ConfigString` enum/constants from `quake2ts/shared`.
 
-### [] 6. File System Interfaces
+### [x] 6. File System Interfaces
 **Problem:** `PakArchive` does not expose `list()` in the interface, only `listEntries()`. `VirtualFileSystem` methods sometimes return different structures than expected in mocks.
 **Request:** Standardize `PakArchive` interface to include `list(): string[]` for convenience.
