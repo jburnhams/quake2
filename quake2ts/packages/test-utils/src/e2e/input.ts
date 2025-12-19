@@ -20,6 +20,7 @@ export class MockPointerLock {
     // Mock requestPointerLock on Element prototype
     // We need to extend the Element interface to make TS happy if we were strict,
     // but here we are modifying the prototype directly.
+    // @ts-ignore
     (global.HTMLElement.prototype as any).requestPointerLock = function() {
       // In a real browser this is async and requires user gesture,
       // but for tests we make it immediate.
@@ -30,7 +31,7 @@ export class MockPointerLock {
 }
 
 export class InputInjector {
-  constructor(private doc: Document, private win: Window) {}
+  constructor(private doc: Document, private win: any) {}
 
   keyDown(key: string, code?: string) {
     const event = new this.win.KeyboardEvent('keydown', {
@@ -70,6 +71,7 @@ export class InputInjector {
     Object.defineProperty(event, 'movementY', { value: movementY });
 
     // Dispatch to pointer lock element if active, otherwise document
+    // @ts-ignore
     const target = this.doc.pointerLockElement || this.doc;
     target.dispatchEvent(event);
   }
@@ -81,6 +83,7 @@ export class InputInjector {
       cancelable: true,
       view: this.win
     });
+    // @ts-ignore
     const target = this.doc.pointerLockElement || this.doc;
     target.dispatchEvent(event);
   }
@@ -92,6 +95,7 @@ export class InputInjector {
       cancelable: true,
       view: this.win
     });
+    // @ts-ignore
     const target = this.doc.pointerLockElement || this.doc;
     target.dispatchEvent(event);
   }
@@ -103,6 +107,7 @@ export class InputInjector {
           cancelable: true,
           view: this.win
       });
+      // @ts-ignore
       const target = this.doc.pointerLockElement || this.doc;
       target.dispatchEvent(event);
   }

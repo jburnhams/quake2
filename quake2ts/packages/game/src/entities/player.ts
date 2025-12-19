@@ -24,7 +24,7 @@ import { checkPlayerFlagDrop } from '../modes/ctf/integration.js';
 import { EntityDamageFlags, DamageFlags } from '../combat/damageFlags.js';
 import { updateCtfScoreboard } from '../modes/ctf/scoreboard.js';
 import { T_Damage, Damageable } from '../combat/damage.js';
-import { ZERO_VEC3 } from '@quake2ts/shared';
+import { ZERO_VEC3, subtractVec3, normalizeVec3, dotVec3, angleVectors } from '@quake2ts/shared';
 
 // Based on rerelease/p_client.cpp: P_WorldEffects
 function P_WorldEffects(ent: Entity, sys: EntitySystem) {
@@ -137,6 +137,39 @@ export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
         }
     }
 
+    // Decay kick angles
+    // Simple linear decay for now
+    if (ent.client.kick_angles) {
+        const decay = 5; // degrees per frame (0.1s)
+        const angles = ent.client.kick_angles;
+        let { x, y, z } = angles;
+
+        // Pitch
+        if (x > 0) {
+            x = Math.max(0, x - decay);
+        } else if (x < 0) {
+            x = Math.min(0, x + decay);
+        }
+
+        // Yaw
+        if (y > 0) {
+            y = Math.max(0, y - decay);
+        } else if (y < 0) {
+            y = Math.min(0, y + decay);
+        }
+
+        // Roll
+        if (z > 0) {
+            z = Math.max(0, z - decay);
+        } else if (z < 0) {
+            z = Math.min(0, z + decay);
+        }
+
+        // Assign new object
+        ent.client.kick_angles = { x, y, z };
+    }
+
+
     // Animation update
     const client = ent.client;
     let animChanged = false;
@@ -204,8 +237,30 @@ export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
     }
 }
 
-export function player_pain(self: Entity, damage: number) {
+export function player_pain(self: Entity, other: Entity | null, kick: number, damage: number) {
     if (!self.client) return;
+
+    // Apply view kick
+    let realKick = kick;
+    if (realKick < 10) realKick = 10;
+
+    // Pitch kick (always up/back)
+    const currentKick = self.client.kick_angles || { x: 0, y: 0, z: 0 };
+    let kickX = -realKick;
+    let kickZ = currentKick.z; // Preserve current roll unless updated below
+
+    // Directional roll kick
+    if (other && other !== self) {
+        const dir = subtractVec3(other.origin, self.origin);
+        const dirN = normalizeVec3(dir);
+        const { right } = angleVectors(self.angles);
+        const side = dotVec3(dirN, right);
+
+        kickZ = realKick * side;
+    }
+
+    // Assign new object to handle readonly properties
+    self.client.kick_angles = { x: kickX, y: currentKick.y, z: kickZ };
 
     // Pick pain animation
     if (self.health < 40) {

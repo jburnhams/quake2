@@ -557,7 +557,7 @@ export function createGame(
        };
 
        player.pain = (self, other, kick, damage) => {
-           player_pain(self, damage);
+           player_pain(self, other, kick, damage);
        };
 
        player.think = (self) => {
