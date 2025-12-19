@@ -199,13 +199,13 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
-      '@quake2ts/test-utils':
-        specifier: workspace:*
-        version: link:../test-utils
       ws:
         specifier: ^8.18.0
         version: 8.18.3
     devDependencies:
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       '@types/ws':
         specifier: ^8.5.12
         version: 8.18.1
