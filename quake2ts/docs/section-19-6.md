@@ -20,9 +20,9 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Duplicate setup in client and engine packages
 **Dependencies:** Section 19-2 Task 1 (WebGL mocks)
 
-- [ ] **1.1** Create `test-utils/src/setup/browser.ts` file
+- [x] **1.1** Create `test-utils/src/setup/browser.ts` file
 
-- [ ] **1.2** Extract common setup from `client/vitest.setup.ts`
+- [x] **1.2** Extract common setup from `client/vitest.setup.ts`
   - JSDOM configuration with napi-rs/canvas
   - fake-indexeddb setup
   - localStorage mock
@@ -30,27 +30,27 @@ This section covers consolidation of test environment setup code, browser enviro
   - Image/ImageData globals
   - btoa/atob polyfills
 
-- [ ] **1.3** Extract common setup from `engine/vitest.setup.ts`
+- [x] **1.3** Extract common setup from `engine/vitest.setup.ts`
   - Similar to client setup
   - Focus on WebGL/canvas testing
 
-- [ ] **1.4** Create `setupBrowserEnvironment()` function
+- [x] **1.4** Create `setupBrowserEnvironment()` function
   - Signature: `setupBrowserEnvironment(options?: BrowserSetupOptions): void`
   - Options: `enableWebGL`, `enableCanvas`, `enableIndexedDB`, `enableLocalStorage`
   - Consolidates all browser API mocking
 
-- [ ] **1.5** Create `teardownBrowserEnvironment()` function
+- [x] **1.5** Create `teardownBrowserEnvironment()` function
   - Signature: `teardownBrowserEnvironment(): void`
   - Cleanup function for afterAll hooks
 
-- [ ] **1.6** Update `client/vitest.setup.ts` to use consolidated setup
+- [x] **1.6** Update `client/vitest.setup.ts` to use consolidated setup
   - Import and call `setupBrowserEnvironment()` from test-utils
   - Remove duplicate code
 
-- [ ] **1.7** Update `engine/vitest.setup.ts` to use consolidated setup
+- [x] **1.7** Update `engine/vitest.setup.ts` to use consolidated setup
   - Same pattern as client
 
-- [ ] **1.8** Create `test-utils/src/setup/node.ts` for Node-specific setup
+- [x] **1.8** Create `test-utils/src/setup/node.ts` for Node-specific setup
   - Signature: `setupNodeEnvironment(options?: NodeSetupOptions): void`
   - For packages that don't need browser mocks
 
