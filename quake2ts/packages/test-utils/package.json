@@ -20,13 +20,19 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@quake2ts/shared": "workspace:*",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/client": "workspace:*",
     "@quake2ts/engine": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "serve-handler": "^6.1.6",
     "vitest": "^1.6.0"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^0.1.84",
+    "@types/jsdom": "^27.0.0",
+    "@types/serve-handler": "^6.1.4",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^27.3.0",
     "tsup": "^8.1.0",
     "typescript": "^5.4.5"
   }

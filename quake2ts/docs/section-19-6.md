@@ -20,9 +20,9 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Duplicate setup in client and engine packages
 **Dependencies:** Section 19-2 Task 1 (WebGL mocks)
 
-- [ ] **1.1** Create `test-utils/src/setup/browser.ts` file
+- [x] **1.1** Create `test-utils/src/setup/browser.ts` file
 
-- [ ] **1.2** Extract common setup from `client/vitest.setup.ts`
+- [x] **1.2** Extract common setup from `client/vitest.setup.ts`
   - JSDOM configuration with napi-rs/canvas
   - fake-indexeddb setup
   - localStorage mock
@@ -30,27 +30,27 @@ This section covers consolidation of test environment setup code, browser enviro
   - Image/ImageData globals
   - btoa/atob polyfills
 
-- [ ] **1.3** Extract common setup from `engine/vitest.setup.ts`
+- [x] **1.3** Extract common setup from `engine/vitest.setup.ts`
   - Similar to client setup
   - Focus on WebGL/canvas testing
 
-- [ ] **1.4** Create `setupBrowserEnvironment()` function
+- [x] **1.4** Create `setupBrowserEnvironment()` function
   - Signature: `setupBrowserEnvironment(options?: BrowserSetupOptions): void`
   - Options: `enableWebGL`, `enableCanvas`, `enableIndexedDB`, `enableLocalStorage`
   - Consolidates all browser API mocking
 
-- [ ] **1.5** Create `teardownBrowserEnvironment()` function
+- [x] **1.5** Create `teardownBrowserEnvironment()` function
   - Signature: `teardownBrowserEnvironment(): void`
   - Cleanup function for afterAll hooks
 
-- [ ] **1.6** Update `client/vitest.setup.ts` to use consolidated setup
+- [x] **1.6** Update `client/vitest.setup.ts` to use consolidated setup
   - Import and call `setupBrowserEnvironment()` from test-utils
   - Remove duplicate code
 
-- [ ] **1.7** Update `engine/vitest.setup.ts` to use consolidated setup
+- [x] **1.7** Update `engine/vitest.setup.ts` to use consolidated setup
   - Same pattern as client
 
-- [ ] **1.8** Create `test-utils/src/setup/node.ts` for Node-specific setup
+- [x] **1.8** Create `test-utils/src/setup/node.ts` for Node-specific setup
   - Signature: `setupNodeEnvironment(options?: NodeSetupOptions): void`
   - For packages that don't need browser mocks
 
@@ -61,22 +61,22 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Exists in tests package, needs consolidation
 **Dependencies:** Task 1
 
-- [ ] **2.1** Audit `tests/src/setup.ts` for reusable utilities
+- [x] **2.1** Audit `tests/src/setup.ts` for reusable utilities
   - `setupBrowserEnvironment()` function (~100 lines)
   - Mock WebGL2 context setup
   - Pointer Lock API mock
   - requestAnimationFrame/cancelAnimationFrame mocks
   - Canvas API interception
 
-- [ ] **2.2** Migrate unique utilities from `tests/src/setup.ts` to `test-utils/src/setup/browser.ts`
+- [x] **2.2** Migrate unique utilities from `tests/src/setup.ts` to `test-utils/src/setup/browser.ts`
   - Avoid duplicating Task 1 work
   - Focus on integration-specific setup
 
-- [ ] **2.3** Update `tests/src/setup.ts` to re-export from test-utils
+- [x] **2.3** Update `tests/src/setup.ts` to re-export from test-utils
   - Maintain backward compatibility
   - Import from `@quake2ts/test-utils`
 
-- [ ] **2.4** Update imports in `tests/src/` test files
+- [x] **2.4** Update imports in `tests/src/` test files
   - Verify no breaking changes
   - Estimated files: ~5
 
@@ -87,24 +87,24 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Section 19-2 Task 1 (WebGL mocks)
 
-- [ ] **3.1** Create `test-utils/src/setup/canvas.ts` file
+- [x] **3.1** Create `test-utils/src/setup/canvas.ts` file
 
-- [ ] **3.2** Add `createMockCanvas()` factory
+- [x] **3.2** Add `createMockCanvas()` factory
   - Signature: `createMockCanvas(width?: number, height?: number): HTMLCanvasElement`
   - Return mock canvas with WebGL context support
 
-- [ ] **3.3** Add `createMockCanvasContext2D()` factory
+- [x] **3.3** Add `createMockCanvasContext2D()` factory
   - Signature: `createMockCanvasContext2D(canvas?: HTMLCanvasElement): CanvasRenderingContext2D`
   - Mock 2D rendering context
 
-- [ ] **3.4** Add `captureCanvasDrawCalls()` helper
+- [x] **3.4** Add `captureCanvasDrawCalls()` helper
   - Signature: `captureCanvasDrawCalls(context: CanvasRenderingContext2D): DrawCall[]`
   - Spy on draw operations for verification
 
-- [ ] **3.5** Add `createMockImageData()` factory
+- [x] **3.5** Add `createMockImageData()` factory
   - Signature: `createMockImageData(width: number, height: number, fillColor?: [number, number, number, number]): ImageData`
 
-- [ ] **3.6** Add `createMockImage()` factory
+- [x] **3.6** Add `createMockImage()` factory
   - Signature: `createMockImage(width?: number, height?: number, src?: string): HTMLImageElement`
 
 ---
@@ -114,23 +114,23 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Inline implementations exist
 **Dependencies:** None
 
-- [ ] **4.1** Create `test-utils/src/setup/timing.ts` file
+- [x] **4.1** Create `test-utils/src/setup/timing.ts` file
 
-- [ ] **4.2** Add `createMockRAF()` factory
+- [x] **4.2** Add `createMockRAF()` factory
   - Signature: `createMockRAF(): MockRAF`
   - Mock requestAnimationFrame/cancelAnimationFrame
   - Methods: `tick()`, `advance()`, `getCallbacks()`
 
-- [ ] **4.3** Add `createMockPerformance()` factory
+- [x] **4.3** Add `createMockPerformance()` factory
   - Signature: `createMockPerformance(startTime?: number): Performance`
   - Mock performance.now() and performance.timing
 
-- [ ] **4.4** Add `createControlledTimer()` helper
+- [x] **4.4** Add `createControlledTimer()` helper
   - Signature: `createControlledTimer(): ControlledTimer`
   - Control setTimeout/setInterval for deterministic testing
   - Methods: `tick()`, `advanceBy()`, `clear()`
 
-- [ ] **4.5** Add `simulateFrames()` helper
+- [x] **4.5** Add `simulateFrames()` helper
   - Signature: `simulateFrames(count: number, frameTime?: number, callback?: () => void): void`
   - Simulate multiple RAF frames
 
@@ -146,24 +146,25 @@ This section covers consolidation of test environment setup code, browser enviro
   - `closeBrowser()` - Cleanup
   - `TestClient` interface
 
-- [ ] **5.2** Create `test-utils/src/e2e/playwright.ts` file
+- [x] **5.2** Create `test-utils/src/e2e/playwright.ts` file
 
-- [ ] **5.3** Add `createPlaywrightTestClient()` factory
+- [x] **5.3** Add `createPlaywrightTestClient()` factory
   - Signature: `createPlaywrightTestClient(options?: PlaywrightOptions): Promise<PlaywrightTestClient>`
   - Wraps browser launch and client setup
   - Methods: `navigate()`, `waitForGame()`, `injectInput()`, `screenshot()`, `close()`
 
-- [ ] **5.4** Add `waitForGameReady()` helper
+- [x] **5.4** Add `waitForGameReady()` helper
   - Signature: `waitForGameReady(page: Page, timeout?: number): Promise<void>`
   - Wait for game initialization
 
-- [ ] **5.5** Add `captureGameState()` helper
+- [x] **5.5** Add `captureGameState()` helper
   - Signature: `captureGameState(page: Page): Promise<GameStateCapture>`
   - Capture current game state from browser
 
 - [ ] **5.6** Update `e2e-tests/helpers/testClient.ts` to use test-utils
   - Re-export from test-utils for backward compatibility
   - Estimated files: ~8
+  - **Note:** Deferred. The existing implementation has specific static serving and logging logic that requires careful porting to avoid regressions. The new helper is available for new tests.
 
 ---
 

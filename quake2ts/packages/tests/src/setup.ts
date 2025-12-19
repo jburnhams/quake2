@@ -1,4 +1,4 @@
-import { JSDOM } from 'jsdom';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { createCanvas } from '@napi-rs/canvas';
 import { AudioContext } from 'node-web-audio-api';
 import { createMockWebGL2Context } from './mocks/webgl2.js';
@@ -55,25 +55,23 @@ export function setupBrowserEnvironment() {
     lastTime = currTime + timeToCall;
     return id as unknown as number;
   };
-
-  global.cancelAnimationFrame = (id: number) => {
-    clearTimeout(id);
-  };
-
-  // 3. Mock Canvas API
-  // We intercept getContext to return our mock WebGL2 context
-  const originalGetContext = global.HTMLCanvasElement.prototype.getContext;
-  global.HTMLCanvasElement.prototype.getContext = function (
-    contextId: string,
-    options?: any
-  ): any {
-    if (contextId === 'webgl2') {
-      return createMockWebGL2Context(this);
-    }
-    // Fallback to original (likely 2D or null in jsdom)
-    return originalGetContext.call(this, contextId, options);
-  };
 }
+
+export function setupBrowserEnvironmentLocal() {
+    setupBrowserEnvironment({
+        url: 'http://localhost:3000/',
+        pretendToBeVisual: true,
+        resources: 'usable',
+        enableWebGL2: true,
+        enablePointerLock: true
+    });
+}
+
+// Rename the export to match what was likely imported by other files
+export { setupBrowserEnvironmentLocal as setupBrowserEnvironment };
+
+// Re-export specific helpers used by tests
+export { createMockWebGL2Context, MockPointerLock } from '@quake2ts/test-utils';
 
 export function createHeadlessCanvas(width: number, height: number) {
     return createCanvas(width, height);

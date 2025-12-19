@@ -23,6 +23,11 @@ describe('Demo Camera Modes and Collision', () => {
                 begin2D: vi.fn(),
                 end2D: vi.fn(),
                 drawPic: vi.fn(),
+                setGamma: vi.fn(),
+                setBrightness: vi.fn(),
+                setBloom: vi.fn(),
+                setBloomIntensity: vi.fn(),
+                setUnderwaterWarp: vi.fn(),
                 stats: {}
             } as unknown as Renderer,
             assets: {

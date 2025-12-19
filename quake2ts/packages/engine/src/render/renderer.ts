@@ -68,6 +68,8 @@ export interface Renderer {
 
     // Post Process
     setUnderwaterWarp(enabled: boolean): void;
+    setBloom(enabled: boolean): void;
+    setBloomIntensity(value: number): void;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -135,6 +137,8 @@ export const createRenderer = (
     let ambient = 0.0;
     const lightStyleOverrides = new Map<number, string>();
     let underwaterWarp = false;
+    let bloom = false;
+    let bloomIntensity = 0.5;
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -205,7 +209,9 @@ export const createRenderer = (
             fullbright,
             ambient,
             lightStyleOverrides,
-            underwaterWarp
+            underwaterWarp,
+            bloom,
+            bloomIntensity
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
@@ -809,6 +815,14 @@ export const createRenderer = (
         underwaterWarp = enabled;
     }
 
+    const setBloom = (enabled: boolean) => {
+        bloom = enabled;
+    };
+
+    const setBloomIntensity = (value: number) => {
+        bloomIntensity = value;
+    };
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -836,6 +850,8 @@ export const createRenderer = (
         setFullbright,
         setAmbient,
         setLightStyle,
-        setUnderwaterWarp
+        setUnderwaterWarp,
+        setBloom,
+        setBloomIntensity
     };
 };

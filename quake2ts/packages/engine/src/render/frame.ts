@@ -16,6 +16,7 @@ import { mat4 } from 'gl-matrix';
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
 import { PostProcessPipeline } from './postProcess.js';
+import { BloomPipeline } from './bloom.js';
 
 export { FrameRenderStats, FrameRenderOptions };
 
@@ -77,6 +78,8 @@ interface FrameRenderOptions {
   readonly lightStyleOverrides?: Map<number, string>; // Pattern overrides
   readonly waterTint?: readonly [number, number, number, number]; // New option for underwater tint
   readonly underwaterWarp?: boolean; // Enable underwater distortion
+  readonly bloom?: boolean; // Enable bloom
+  readonly bloomIntensity?: number; // Bloom intensity (default 0.5)
 }
 
 interface FrameRendererDependencies {
@@ -262,6 +265,7 @@ export const createFrameRenderer = (
   deps: FrameRendererDependencies = DEFAULT_DEPS
 ): FrameRenderer => {
   const postProcess = new PostProcessPipeline(gl);
+  const bloomPipeline = new BloomPipeline(gl);
   let lastFrameTime = 0;
 
   // Texture State for copies (Refraction and PostProcess)
@@ -317,7 +321,9 @@ export const createFrameRenderer = (
         ambient,
         lightStyleOverrides,
         waterTint,
-        underwaterWarp
+        underwaterWarp,
+        bloom,
+        bloomIntensity
     } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
@@ -502,6 +508,25 @@ export const createFrameRenderer = (
         postProcess.render(rt.texture, timeSeconds);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
+    }
+
+    // 5. Bloom Post-Process
+    if (bloom) {
+        const width = gl.canvas.width;
+        const height = gl.canvas.height;
+        bloomPipeline.resize(width, height);
+
+        const rt = ensureCopyTexture(width, height);
+
+        // Copy current framebuffer to texture (if underwaterWarp ran, we copy the warped result)
+        // Note: ensureCopyTexture returns the same texture object, and copyTexImage2D overwrites it.
+        // This is fine as long as pipelines don't hold onto it across calls in a way that matters here.
+
+        rt.bind(0);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
+
+        // Render bloom
+        bloomPipeline.render(rt, bloomIntensity ?? 0.5);
     }
 
     return stats;

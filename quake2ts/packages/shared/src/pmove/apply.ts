@@ -5,11 +5,9 @@ import { Vec3 } from '../math/vec3.js';
 import { applyPmoveAccelerate, applyPmoveFriction, buildAirGroundWish, buildWaterWish } from './pmove.js';
 import { PlayerState } from '../protocol/player-state.js';
 import { angleVectors } from '../math/angles.js';
+import { MASK_WATER } from '../bsp/contents.js';
 
 const FRAMETIME = 0.025;
-
-// MASK_WATER definition from shared constants (0x2000000)
-const MASK_WATER = 0x2000000;
 
 // Local definition to avoid dependency issues if constants.ts is missing
 // Matches packages/shared/src/pmove/constants.ts
@@ -38,13 +36,14 @@ const checkWater = (state: PlayerState, pointContents: (point: Vec3) => number):
   // Default to feet
   point.z = state.origin.z + mins.z + 1;
 
-  const contents = pointContents(point);
+  const feetContents = pointContents(point);
 
-  if (!(contents & MASK_WATER)) {
-    return { ...state, waterLevel: WaterLevel.None };
+  if (!(feetContents & MASK_WATER)) {
+    return { ...state, waterLevel: WaterLevel.None, watertype: 0 };
   }
 
   let waterLevel: number = WaterLevel.Feet;
+  let watertype = feetContents;
 
   // Check waist
   const waist = state.origin.z + (mins.z + maxs.z) * 0.5;
@@ -53,6 +52,7 @@ const checkWater = (state: PlayerState, pointContents: (point: Vec3) => number):
 
   if (waistContents & MASK_WATER) {
     waterLevel = WaterLevel.Waist;
+    watertype = waistContents;
 
     // Check head (eyes)
     // Standard Quake 2 viewheight is 22. maxs.z is typically 32.
@@ -65,10 +65,11 @@ const checkWater = (state: PlayerState, pointContents: (point: Vec3) => number):
 
     if (headContents & MASK_WATER) {
       waterLevel = WaterLevel.Under;
+      watertype = headContents;
     }
   }
 
-  return { ...state, waterLevel };
+  return { ...state, waterLevel, watertype };
 };
 
 

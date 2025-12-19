@@ -104,7 +104,12 @@ describe('Demo Recording Integration', () => {
                 drawString: vi.fn(),
                 drawfillRect: vi.fn(),
                 begin2D: vi.fn(),
-                end2D: vi.fn()
+                end2D: vi.fn(),
+                setGamma: vi.fn(),
+                setBrightness: vi.fn(),
+                setBloom: vi.fn(),
+                setBloomIntensity: vi.fn(),
+                setUnderwaterWarp: vi.fn(),
             },
             cmd: {
                 executeText: vi.fn(),

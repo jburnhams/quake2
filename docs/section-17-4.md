@@ -113,9 +113,9 @@
 - [x] Implement dynamic lights for muzzle flashes, explosions, rockets
 - [x] Implement light styles for flickering/pulsing lights (supported via EF_FLAG1/2 and flicker helper)
 - [x] Implement screen blend effects (damage red, pickup flash, underwater tint)
-    - [x] *Note*: Underwater tint is currently generic for all liquids (water/slime/lava). Specific tints require `watertype` exposure in `PlayerState`.
+    - [x] Implemented specific tints for water, slime, and lava using `watertype` in `PlayerState`.
 - [x] Implement view kick/roll for damage and movement
-    - *Note*: Damage kick is pitch-only for now ("pain" flinch). Directional roll kicks require further vector math and state access.
+    - [x] Implemented directional damage kicks (pitch and roll) based on attacker direction in `player_pain` with proper decay.
 - [x] Add particle effects for all weapon impacts and explosions
     - Implemented handlers for `RAILTRAIL`, `BLASTER`, `SPARKS`, and enhanced `BFG_EXPLOSION`.
     - Added particle system helpers: `spawnRailTrail`, `spawnSparks`, `spawnBlasterImpact`, `spawnBfgExplosion`.

@@ -129,7 +129,12 @@ describe('Demo Playback Integration', () => {
             drawCenterString: vi.fn(),
             registerTexture: vi.fn(),
             registerPic: vi.fn(),
-            getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 })
+            getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
+            setGamma: vi.fn(),
+            setBrightness: vi.fn(),
+            setBloom: vi.fn(),
+            setBloomIntensity: vi.fn(),
+            setUnderwaterWarp: vi.fn(),
         };
 
         mockEngine = {
