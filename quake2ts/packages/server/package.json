@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "build": "tsup src/index.ts --format esm,cjs && tsc --emitDeclarationOnly",
     "dev": "tsup src/index.ts --format esm,cjs --watch --dts",
     "test": "vitest run"
   },
