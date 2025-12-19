@@ -27,6 +27,8 @@ const gl = {
     vertexAttribPointer: vi.fn(),
     drawElements: vi.fn(),
     drawArrays: vi.fn(),
+    createFramebuffer: vi.fn(() => ({})),
+    deleteFramebuffer: vi.fn(),
     createTexture: vi.fn(() => ({})),
     activeTexture: vi.fn(),
     bindTexture: vi.fn(),

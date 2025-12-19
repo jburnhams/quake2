@@ -46,6 +46,8 @@ describe('Renderer Lighting Control', () => {
             vertexAttribPointer: vi.fn(),
             drawElements: vi.fn(),
             getExtension: vi.fn(),
+            createFramebuffer: vi.fn(() => ({})),
+            deleteFramebuffer: vi.fn(),
             canvas: { width: 800, height: 600 },
             VERTEX_SHADER: 35633, // Valid GL constants needed
             FRAGMENT_SHADER: 35632,
