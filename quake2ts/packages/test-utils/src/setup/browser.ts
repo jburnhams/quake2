@@ -1,10 +1,15 @@
 import { JSDOM } from 'jsdom';
 import { Canvas, Image, ImageData } from '@napi-rs/canvas';
 import 'fake-indexeddb/auto';
+import { MockPointerLock } from '../e2e/input.js';
+import { createMockWebGL2Context } from './webgl.js';
 
 export interface BrowserSetupOptions {
   url?: string;
   pretendToBeVisual?: boolean;
+  resources?: "usable";
+  enableWebGL2?: boolean;
+  enablePointerLock?: boolean;
 }
 
 /**
@@ -12,20 +17,45 @@ export interface BrowserSetupOptions {
  * This should be called in your vitest.setup.ts file.
  */
 export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
-  const { url = 'http://localhost', pretendToBeVisual = true } = options;
+  const {
+    url = 'http://localhost',
+    pretendToBeVisual = true,
+    resources = undefined,
+    enableWebGL2 = false,
+    enablePointerLock = false
+  } = options;
 
   // Create a JSDOM instance
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
     url,
     pretendToBeVisual,
+    resources
   });
 
   // Set up global variables
   global.window = dom.window as any;
   global.document = dom.window.document;
-  global.navigator = dom.window.navigator;
+
+  // Handle navigator assignment safely (handling read-only global.navigator if needed)
+  try {
+    // @ts-ignore
+    global.navigator = dom.window.navigator;
+  } catch (e) {
+    // If direct assignment fails, try Object.defineProperty
+    try {
+      Object.defineProperty(global, 'navigator', {
+        value: dom.window.navigator,
+        writable: true,
+        configurable: true
+      });
+    } catch (e2) {
+      console.warn('Could not assign global.navigator, skipping.');
+    }
+  }
+
   global.location = dom.window.location;
   global.HTMLElement = dom.window.HTMLElement;
+  global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
 
   // Polyfill global Event constructors to match JSDOM's window
   global.Event = dom.window.Event;
@@ -89,6 +119,11 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
         if (contextId === '2d') {
           return napiCanvas.getContext('2d', options);
         }
+
+        if (enableWebGL2 && contextId === 'webgl2') {
+           return createMockWebGL2Context(domCanvas as HTMLCanvasElement);
+        }
+
         // For webgl/webgl2, return jsdom's default context (null or mock)
         // or the original behavior if needed.
         if (contextId === 'webgl' || contextId === 'webgl2') {
@@ -104,6 +139,20 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
     }
     return originalCreateElement(tagName, options);
   } as any;
+
+  // Also override HTMLCanvasElement.prototype.getContext to support direct instantiation via JSDOM
+  if (enableWebGL2) {
+      const originalProtoGetContext = global.HTMLCanvasElement.prototype.getContext;
+      global.HTMLCanvasElement.prototype.getContext = function (
+        contextId: string,
+        options?: any
+      ): any {
+        if (contextId === 'webgl2') {
+          return createMockWebGL2Context(this);
+        }
+        return originalProtoGetContext.call(this, contextId, options);
+      };
+  }
 
   // Set up global Image constructor
   global.Image = Image as any;
@@ -146,6 +195,30 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
       return Buffer.from(str, 'base64').toString('binary');
     };
   }
+
+  // Mock Pointer Lock API
+  if (enablePointerLock) {
+      MockPointerLock.setup(global.document);
+  }
+
+  // Mock requestAnimationFrame
+  // We use a simplified version that runs immediately or with small delay for tests
+  if (typeof global.requestAnimationFrame === 'undefined') {
+      let lastTime = 0;
+      global.requestAnimationFrame = (callback: FrameRequestCallback) => {
+        const currTime = Date.now();
+        const timeToCall = Math.max(0, 16 - (currTime - lastTime));
+        const id = setTimeout(() => {
+            callback(currTime + timeToCall);
+        }, timeToCall);
+        lastTime = currTime + timeToCall;
+        return id as unknown as number;
+      };
+
+      global.cancelAnimationFrame = (id: number) => {
+        clearTimeout(id);
+      };
+  }
 }
 
 /**
@@ -170,11 +243,32 @@ export function teardownBrowserEnvironment() {
   // @ts-ignore
   delete global.HTMLElement;
   // @ts-ignore
+  delete global.HTMLCanvasElement;
+  // @ts-ignore
   delete global.Image;
   // @ts-ignore
   delete global.ImageData;
   // @ts-ignore
   delete global.createImageBitmap;
+
+  // @ts-ignore
+  delete global.Event;
+  // @ts-ignore
+  delete global.CustomEvent;
+  // @ts-ignore
+  delete global.DragEvent;
+  // @ts-ignore
+  delete global.MouseEvent;
+  // @ts-ignore
+  delete global.KeyboardEvent;
+  // @ts-ignore
+  delete global.FocusEvent;
+  // @ts-ignore
+  delete global.WheelEvent;
+  // @ts-ignore
+  delete global.InputEvent;
+  // @ts-ignore
+  delete global.UIEvent;
 
   // Note: btoa/atob might be native in newer Node versions, so be careful deleting them if they were original.
   // But here we only set them if undefined.
