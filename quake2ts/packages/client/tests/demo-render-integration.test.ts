@@ -16,6 +16,11 @@ const mockRenderer = {
   drawPic: vi.fn(),
   drawText: vi.fn(),
   measureText: vi.fn().mockReturnValue(10),
+  setGamma: vi.fn(),
+  setBrightness: vi.fn(),
+  setBloom: vi.fn(),
+  setBloomIntensity: vi.fn(),
+  setUnderwaterWarp: vi.fn(),
 } as unknown as Renderer;
 
 const mockEngineImports: EngineImports = {
