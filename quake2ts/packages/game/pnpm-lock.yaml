@@ -1,0 +1,23 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@quake2ts/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@quake2ts/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@quake2ts/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
+      '@quake2ts/tests':
+        specifier: workspace:^
+        version: link:../tests
