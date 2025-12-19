@@ -8,6 +8,8 @@ export interface MockRAF {
   disable(): void;
 }
 
+let activeMockRAF: MockRAF | undefined;
+
 /**
  * Creates a mock implementation of requestAnimationFrame that allows manual control.
  * It replaces the global requestAnimationFrame and cancelAnimationFrame.
@@ -61,11 +63,16 @@ export function createMockRAF(): MockRAF {
     },
 
     enable() {
+        activeMockRAF = this;
         global.requestAnimationFrame = raf as any;
         global.cancelAnimationFrame = cancel as any;
     },
 
     disable() {
+        if (activeMockRAF === this) {
+            activeMockRAF = undefined;
+        }
+
         if (originalRAF) {
             global.requestAnimationFrame = originalRAF;
         } else {
@@ -97,7 +104,6 @@ export function createMockPerformance(startTime: number = 0): Performance {
     timing: {
       navigationStart: startTime,
     },
-    // Add minimal navigation/resource timing interfaces to satisfy types if needed
     clearMarks: () => {},
     clearMeasures: () => {},
     clearResourceTimings: () => {},
@@ -113,7 +119,6 @@ export function createMockPerformance(startTime: number = 0): Performance {
     dispatchEvent: () => true,
   } as unknown as Performance;
 
-  // Enhance with control methods attached to the object (casting to any to expose them)
   (mockPerf as any).advance = (deltaMs: number) => {
     currentTime += deltaMs;
   };
@@ -128,6 +133,105 @@ export interface ControlledTimer {
   tick(): void;
   advanceBy(ms: number): void;
   clear(): void;
+  restore(): void;
+}
+
+/**
+ * Creates a controlled timer that replaces global setTimeout/setInterval.
+ * Allows deterministic time advancement.
+ */
+export function createControlledTimer(): ControlledTimer {
+    let currentTime = 0;
+    interface Timer {
+        id: number;
+        callback: Function;
+        dueTime: number;
+        interval?: number;
+        args: any[];
+    }
+    let timers: Timer[] = [];
+    let nextId = 1;
+
+    const originalSetTimeout = global.setTimeout;
+    const originalClearTimeout = global.clearTimeout;
+    const originalSetInterval = global.setInterval;
+    const originalClearInterval = global.clearInterval;
+
+    const mockSetTimeout = (callback: Function, delay: number = 0, ...args: any[]) => {
+        const id = nextId++;
+        timers.push({ id, callback, dueTime: currentTime + delay, args });
+        return id;
+    };
+
+    const mockClearTimeout = (id: any) => {
+        timers = timers.filter(t => t.id !== id);
+    };
+
+    const mockSetInterval = (callback: Function, delay: number = 0, ...args: any[]) => {
+        const id = nextId++;
+        timers.push({ id, callback, dueTime: currentTime + delay, interval: delay, args });
+        return id;
+    };
+
+    const mockClearInterval = (id: any) => {
+        timers = timers.filter(t => t.id !== id);
+    };
+
+    global.setTimeout = mockSetTimeout as any;
+    global.clearTimeout = mockClearTimeout as any;
+    global.setInterval = mockSetInterval as any;
+    global.clearInterval = mockClearInterval as any;
+
+    return {
+        tick() {
+            this.advanceBy(0);
+        },
+        advanceBy(ms: number) {
+            const targetTime = currentTime + ms;
+
+            // Process timers until targetTime
+            while (true) {
+                // Find earliest timer
+                let earliest: Timer | null = null;
+                for (const t of timers) {
+                    if (!earliest || t.dueTime < earliest.dueTime) {
+                        earliest = t;
+                    }
+                }
+
+                if (!earliest || earliest.dueTime > targetTime) {
+                    break;
+                }
+
+                // Advance time to this timer
+                currentTime = earliest.dueTime;
+
+                // Execute
+                const { callback, args, interval, id } = earliest;
+
+                if (interval !== undefined) {
+                    earliest.dueTime += interval;
+                    // Prevent infinite loops with 0 interval
+                    if (interval === 0) earliest.dueTime += 1;
+                } else {
+                    timers = timers.filter(t => t.id !== id);
+                }
+
+                callback(...args);
+            }
+
+            currentTime = targetTime;
+        },
+        clear() {
+            timers = [];
+        },
+        restore() {
+            global.setTimeout = originalSetTimeout;
+            global.clearTimeout = originalClearTimeout;
+            global.setInterval = originalSetInterval;
+            global.clearInterval = originalClearInterval;
+        }
+    };
 }
 
 /**
@@ -137,27 +241,14 @@ export interface ControlledTimer {
  * @param callback Optional callback to run inside the loop (e.g. triggering inputs)
  */
 export function simulateFrames(count: number, frameTimeMs: number = 16.6, callback?: (frameIndex: number) => void) {
-    // This assumes requestAnimationFrame is already mocked or we are driving it via manual calls
-    // If using the MockRAF above, one would call mockRAF.tick() in a loop.
-    // However, this helper might be intended to work with the *current* global RAF.
+    if (!activeMockRAF) {
+        throw new Error("simulateFrames requires an active MockRAF. Ensure createMockRAF().enable() is called.");
+    }
 
-    // Check if we can drive the global RAF
-    // @ts-ignore
-    const raf = global.requestAnimationFrame;
-    if (!raf) return;
-
-    // Ideally, we'd need access to the mock controller to force ticks.
-    // If this is just running standardized "wait", it won't work synchronously.
-    // So this helper really makes sense only if we have a MockRAF instance or can control time.
-
-    // For now, let's assume this helper is meant to be used with the MockRAF:
-    // "Run a loop that calls requestAnimationFrame callbacks"
-
-    // Implementation depends on how the test is set up.
-    // If the user replaces global.requestAnimationFrame with our MockRAF, we can't easily access the 'mock' instance unless passed in.
-    // BUT, if we implement it to just loop and invoke pending callbacks if possible, it's tricky without shared state.
-
-    // Let's implement a version that requires passing the MockRAF controller, or tries to assume one.
+    for (let i = 0; i < count; i++) {
+        if (callback) callback(i);
+        activeMockRAF.advance(frameTimeMs);
+    }
 }
 
 /**
