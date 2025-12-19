@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { createCanvas } from '@napi-rs/canvas';
 import { AudioContext } from 'node-web-audio-api';
-import { createMockWebGL2Context } from './mocks/webgl2.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { MockPointerLock } from './mocks/input.js';
 
 export function setupBrowserEnvironment() {
@@ -68,7 +68,7 @@ export function setupBrowserEnvironment() {
     options?: any
   ): any {
     if (contextId === 'webgl2') {
-      return createMockWebGL2Context(this);
+      return createMockWebGL2Context({ canvas: this });
     }
     // Fallback to original (likely 2D or null in jsdom)
     return originalGetContext.call(this, contextId, options);

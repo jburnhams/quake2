@@ -147,6 +147,9 @@ importers:
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       '@quake2ts/tests':
         specifier: workspace:^
         version: link:../tests
@@ -250,6 +253,9 @@ importers:
       '@napi-rs/canvas':
         specifier: ^0.1.82
         version: 0.1.82
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       jsdom:
         specifier: ^24.0.0
         version: 24.1.3
