@@ -1,7 +1,7 @@
 import { createRenderer } from '../../src/render/renderer.js';
 import { FrameRenderer } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { RenderStatistics } from '../../src/render/gpuProfiler.js';
+import { createMockGL } from '../helpers/mockWebGL.js';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -81,55 +81,23 @@ vi.mock('../../src/render/light.js', () => ({
 }));
 
 describe('Renderer Statistics', () => {
-    let mockGl: WebGL2RenderingContext;
+    let mockGl: ReturnType<typeof createMockGL>;
     let renderer: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockGl = {
-            disable: vi.fn(),
-            enable: vi.fn(),
-            depthMask: vi.fn(),
-            getExtension: vi.fn().mockReturnValue({ TIME_ELAPSED_EXT: 0x88BF, GPU_DISJOINT_EXT: 0x8FBB }),
-            createQuery: vi.fn().mockReturnValue({}),
-            beginQuery: vi.fn(),
-            endQuery: vi.fn(),
-            deleteQuery: vi.fn(),
-            getQueryParameter: vi.fn().mockImplementation((q, param) => {
-                 if (param === 0x8867) return true; // QUERY_RESULT_AVAILABLE
-                 if (param === 0x8866) return 5000000; // QUERY_RESULT
-                 return 0;
-            }),
-            getParameter: vi.fn().mockReturnValue(0),
-            canvas: { width: 640, height: 480 },
-            createShader: vi.fn().mockReturnValue({}),
-            shaderSource: vi.fn(),
-            compileShader: vi.fn(),
-            getShaderParameter: vi.fn().mockReturnValue(true),
-            createProgram: vi.fn().mockReturnValue({}),
-            attachShader: vi.fn(),
-            linkProgram: vi.fn(),
-            getProgramParameter: vi.fn().mockReturnValue(true),
-            getUniformLocation: vi.fn().mockReturnValue({}),
-            getAttribLocation: vi.fn().mockReturnValue(0),
-            useProgram: vi.fn(),
-            bindAttribLocation: vi.fn(),
-            enableVertexAttribArray: vi.fn(),
-            vertexAttribPointer: vi.fn(),
-            createBuffer: vi.fn().mockReturnValue({}),
-            bindBuffer: vi.fn(),
-            bufferData: vi.fn(),
-            createVertexArray: vi.fn().mockReturnValue({}),
-            bindVertexArray: vi.fn(),
-            deleteShader: vi.fn(),
-            deleteProgram: vi.fn(),
-            uniformMatrix4fv: vi.fn(),
-            drawArrays: vi.fn(),
-            QUERY_RESULT_AVAILABLE: 0x8867,
-            QUERY_RESULT: 0x8866
-        } as unknown as WebGL2RenderingContext;
+        mockGl = createMockGL();
 
-        renderer = createRenderer(mockGl);
+        // Mock extensions for Profiler
+        mockGl.extensions.set('EXT_disjoint_timer_query_webgl2', { TIME_ELAPSED_EXT: 0x88BF, GPU_DISJOINT_EXT: 0x8FBB });
+        // The mockGL defaults getQueryParameter to null/0, override for stats
+        mockGl.getQueryParameter = vi.fn().mockImplementation((q, param) => {
+             if (param === 0x8867) return true; // QUERY_RESULT_AVAILABLE
+             if (param === 0x8866) return 5000000; // QUERY_RESULT
+             return 0;
+        });
+
+        renderer = createRenderer(mockGl as any);
     });
 
     it('should return initial zero statistics', () => {
