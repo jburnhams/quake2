@@ -1,6 +1,6 @@
 import { Entity, Solid } from '../entity.js';
 import type { SpawnRegistry } from '../spawn.js';
-import { ATTN_NORM } from '@quake2ts/shared';
+import { ATTN_NORM, ATTN_STATIC, ATTN_NONE } from '@quake2ts/shared';
 
 const SPEAKER_SPAWNFLAGS = {
   LoopedOn: 1 << 0,
@@ -37,12 +37,17 @@ export function registerTargetSpeaker(registry: SpawnRegistry) {
     const noise = context.keyValues.noise;
     if (noise) {
         entity.message = noise;
-        entity.noise_index = 1;
+        entity.noise_index = 1; // Mark as having a sound
     }
 
-    const attenuation = context.keyValues.attenuation;
-    if (attenuation) {
-        entity.attenuation = Number.parseFloat(attenuation);
+    // Parse attenuation - prioritizing keyvalue, then flags, then default
+    const attenuationKey = context.keyValues.attenuation;
+    if (attenuationKey) {
+        entity.attenuation = Number.parseFloat(attenuationKey);
+    } else if (entity.spawnflags & 1) {
+        entity.attenuation = ATTN_STATIC;
+    } else if (entity.spawnflags & 2) {
+        entity.attenuation = ATTN_NONE;
     } else {
         entity.attenuation = ATTN_NORM;
     }
