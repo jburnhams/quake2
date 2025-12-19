@@ -227,6 +227,9 @@ importers:
 
   packages/test-utils:
     dependencies:
+      '@quake2ts/engine':
+        specifier: workspace:^
+        version: link:../engine
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game
