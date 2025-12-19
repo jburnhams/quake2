@@ -140,9 +140,6 @@ importers:
       '@wasm-audio-decoders/ogg-vorbis':
         specifier: ^0.1.20
         version: 0.1.20
-      gl-matrix:
-        specifier: ^3.4.3
-        version: 3.4.4
     devDependencies:
       '@napi-rs/canvas':
         specifier: ^0.1.52
@@ -159,6 +156,9 @@ importers:
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
       tsup:
         specifier: ^8.1.0
         version: 8.5.1(tsx@4.20.6)(typescript@5.9.3)
@@ -218,6 +218,9 @@ importers:
 
   packages/shared:
     devDependencies:
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
       tsup:
         specifier: ^8.1.0
         version: 8.5.1(tsx@4.20.6)(typescript@5.9.3)
@@ -2030,7 +2033,6 @@ packages:
 
   /gl-matrix@3.4.4:
     resolution: {integrity: sha512-latSnyDNt/8zYUB6VIJ6PCh2jBjJX6gnDsoCZ7LyW7GkqrD51EWwa9qCoGixj8YqBtETQK/xY7OmpTF8xz1DdQ==}
-    dev: false
 
   /gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
