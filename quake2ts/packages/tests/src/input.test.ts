@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { setupBrowserEnvironment } from './setup.js';
-import { InputInjector } from './mocks/input.js';
+import { createInputInjector, InputInjector } from '@quake2ts/test-utils';
 
 describe('Input API Substitutes', () => {
   let injector: InputInjector;

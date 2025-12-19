@@ -22,6 +22,8 @@
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/game": "workspace:*",
+    "@quake2ts/client": "workspace:*",
+    "@quake2ts/engine": "workspace:*",
     "vitest": "^1.6.0"
   },
   "devDependencies": {

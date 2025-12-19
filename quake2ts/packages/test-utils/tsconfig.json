@@ -4,7 +4,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "types": ["vitest/globals"],
-    "composite": false
+    "composite": false,
+    "lib": ["dom", "es2020"]
   },
   "include": ["src/**/*"],
   "references": [

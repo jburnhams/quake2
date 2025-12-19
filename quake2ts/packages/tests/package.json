@@ -15,6 +15,7 @@
   "dependencies": {
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
-    "@quake2ts/shared": "workspace:*"
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/test-utils": "workspace:*"
   }
 }

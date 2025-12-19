@@ -2,7 +2,7 @@ import { JSDOM } from 'jsdom';
 import { createCanvas } from '@napi-rs/canvas';
 import { AudioContext } from 'node-web-audio-api';
 import { createMockWebGL2Context } from './mocks/webgl2.js';
-import { MockPointerLock } from './mocks/input.js';
+import { createMockPointerLock } from '@quake2ts/test-utils';
 
 export function setupBrowserEnvironment() {
   // 1. Setup JSDOM for window, document, etc.
@@ -39,7 +39,7 @@ export function setupBrowserEnvironment() {
   global.WheelEvent = dom.window.WheelEvent;
 
   // 1b. Mock Pointer Lock API
-  MockPointerLock.setup(global.document);
+  createMockPointerLock();
 
   // 2. Mock requestAnimationFrame
   // We use a simplified version that runs immediately or with small delay for tests,
