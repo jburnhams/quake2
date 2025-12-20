@@ -6,7 +6,9 @@ export * from './game/helpers.js';
 export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mocks/state.js';
-// Use .js extensions for module resolution compatibility
+export * from './server/mocks/connection.js';
+export * from './server/helpers/multiplayer.js';
+export * from './server/helpers/snapshot.js';
 
 // Setup
 export * from './setup/browser.js';
