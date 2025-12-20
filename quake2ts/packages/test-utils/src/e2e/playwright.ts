@@ -1,78 +1,90 @@
-import type { Page, Browser, BrowserContext } from 'playwright';
-
 export interface PlaywrightOptions {
     headless?: boolean;
     viewport?: { width: number; height: number };
 }
 
 export interface PlaywrightTestClient {
-    page: Page;
-    browser: Browser;
-    context: BrowserContext;
+    page: any; // Type as 'Page' from playwright in real usage, but keeping it generic here to avoid hard dependency on playwright types in this util file if not needed
+    browser: any;
     navigate(url: string): Promise<void>;
     waitForGame(): Promise<void>;
-    injectInput(input: any): Promise<void>;
+    injectInput(type: string, data: any): Promise<void>;
     screenshot(name: string): Promise<Buffer>;
     close(): Promise<void>;
 }
 
 /**
- * Creates a Playwright test client wrapper.
- * Requires playwright to be installed and available.
+ * Creates a Playwright test client.
+ * Note: Requires playwright to be installed in the project.
  */
 export async function createPlaywrightTestClient(options: PlaywrightOptions = {}): Promise<PlaywrightTestClient> {
-    const { chromium } = await import('playwright');
+    // Dynamic import to avoid hard dependency if not used
+    let playwright;
+    try {
+        playwright = await import('playwright');
+    } catch (e) {
+        throw new Error('Playwright is not installed. Please install it to use this utility.');
+    }
 
-    const browser = await chromium.launch({
+    const browser = await playwright.chromium.launch({
         headless: options.headless ?? true,
     });
-
     const context = await browser.newContext({
         viewport: options.viewport || { width: 1280, height: 720 },
     });
-
     const page = await context.newPage();
 
     return {
         page,
         browser,
-        context,
-        navigate: async (url) => {
+        async navigate(url: string) {
             await page.goto(url);
         },
-        waitForGame: async () => {
+        async waitForGame() {
             await waitForGameReady(page);
         },
-        injectInput: async (input) => {
-            // Implementation depends on how input is exposed
+        async injectInput(type: string, data: any) {
+             // Simulate input injection via evaluate
+             await page.evaluate(({ type, data }: any) => {
+                 // Assumes a global function or event listener exists to receive injected input
+                 console.log('Injecting input', type, data);
+                 // (window as any).game.injectInput(type, data);
+             }, { type, data });
         },
-        screenshot: async (name) => {
+        async screenshot(name: string) {
             return await page.screenshot({ path: `${name}.png` });
         },
-        close: async () => {
+        async close() {
             await browser.close();
         }
     };
 }
 
-export async function waitForGameReady(page: Page, timeout: number = 30000): Promise<void> {
+/**
+ * Waits for the game to be ready.
+ */
+export async function waitForGameReady(page: any, timeout: number = 10000): Promise<void> {
     await page.waitForFunction(() => {
-        // @ts-ignore
-        return window.quake2 && window.quake2.ready;
+        // Check for some global game state or canvas presence
+        return (window as any).game && (window as any).game.isRunning;
     }, { timeout });
 }
 
 export interface GameStateCapture {
-    // Define game state properties
-    player: any;
-    entities: any[];
+    time: number;
+    entities: number;
+    // Add other state properties
 }
 
-export async function captureGameState(page: Page): Promise<GameStateCapture> {
+/**
+ * Captures current game state from the browser.
+ */
+export async function captureGameState(page: any): Promise<GameStateCapture> {
     return await page.evaluate(() => {
-        // @ts-ignore
-        if (!window.quake2) return null;
-        // @ts-ignore
-        return window.quake2.getState();
+        const game = (window as any).game;
+        return {
+            time: game ? game.time : 0,
+            entities: game && game.entities ? game.entities.length : 0
+        };
     });
 }
