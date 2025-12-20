@@ -9,17 +9,17 @@ import {
 } from '../src/index';
 
 describe('Storage Helpers', () => {
-    it('should handle localStorage scenario', () => {
+    it('should handle localStorage scenario', async () => {
         const scenario = createStorageTestScenario('local');
-        scenario.populate({ 'key1': 'value1' });
-        expect(scenario.verify('key1', 'value1')).toBe(true);
-        expect(scenario.verify('key1', 'wrong')).toBe(false);
+        await scenario.populate({ 'key1': 'value1' });
+        expect(await scenario.verify('key1', 'value1')).toBe(true);
+        expect(await scenario.verify('key1', 'wrong')).toBe(false);
     });
 
-    it('should handle sessionStorage scenario', () => {
+    it('should handle sessionStorage scenario', async () => {
         const scenario = createStorageTestScenario('session');
-        scenario.populate({ 'sess1': 'val1' });
-        expect(scenario.verify('sess1', 'val1')).toBe(true);
+        await scenario.populate({ 'sess1': 'val1' });
+        expect(await scenario.verify('sess1', 'val1')).toBe(true);
     });
 
     it('should handle indexedDB scenario', async () => {

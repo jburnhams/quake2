@@ -1,18 +1,12 @@
 export interface NodeSetupOptions {
-    polyfillFetch?: boolean;
+    // Add Node-specific setup options here if needed in the future
 }
 
 /**
  * Sets up a Node.js environment for testing.
- * This is primarily for backend or shared logic that doesn't rely on browser APIs.
+ * This is primarily a placeholder for now as standard Node tests don't require much setup,
+ * but can be used for global polyfills or environment variable configuration.
  */
 export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
-  // Add any Node-specific global setup here
-  // For now, this is a placeholder or can be used for things like
-  // polyfilling fetch if not present in older Node versions (though Quake2TS targets recent Node)
-
-  if (options.polyfillFetch && typeof global.fetch === 'undefined') {
-      // In a real scenario, we might import node-fetch here
-      // global.fetch = ...
-  }
+    // Placeholder for future Node setup logic
 }

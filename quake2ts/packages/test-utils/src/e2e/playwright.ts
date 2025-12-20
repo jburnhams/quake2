@@ -1,160 +1,78 @@
+import type { Page, Browser, BrowserContext } from 'playwright';
 
-import { chromium, Browser, Page, BrowserContext, BrowserContextOptions, LaunchOptions } from 'playwright';
-import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import handler from 'serve-handler';
-import path from 'path';
-
-/**
- * Interface for Test Client options
- */
 export interface PlaywrightOptions {
-  headless?: boolean;
-  width?: number;
-  height?: number;
-  clientUrl?: string; // If provided, uses this URL. Otherwise starts a static server.
-  serverUrl?: string; // Game server URL to connect to via query param
-  rootPath?: string; // Root path for static server (defaults to process.cwd())
-  launchOptions?: LaunchOptions;
-  contextOptions?: BrowserContextOptions;
+    headless?: boolean;
+    viewport?: { width: number; height: number };
 }
 
 export interface PlaywrightTestClient {
+    page: Page;
     browser: Browser;
     context: BrowserContext;
-    page: Page;
-    server?: Server; // HTTP server instance
-    close: () => Promise<void>;
-    navigate: (url?: string) => Promise<void>;
-    waitForGame: (timeout?: number) => Promise<void>;
-    injectInput: (type: string, data: any) => Promise<void>;
+    navigate(url: string): Promise<void>;
+    waitForGame(): Promise<void>;
+    injectInput(input: any): Promise<void>;
+    screenshot(name: string): Promise<Buffer>;
+    close(): Promise<void>;
 }
 
 /**
- * Creates a Playwright-controlled browser environment for testing.
- * Can start a static server to serve the game client if no clientUrl is provided.
+ * Creates a Playwright test client wrapper.
+ * Requires playwright to be installed and available.
  */
 export async function createPlaywrightTestClient(options: PlaywrightOptions = {}): Promise<PlaywrightTestClient> {
-  let staticServer: Server | undefined;
-  let clientUrl = options.clientUrl;
-  const rootPath = options.rootPath || process.cwd();
+    const { chromium } = await import('playwright');
 
-  if (!clientUrl) {
-    // Start a local static server
-    staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
-      return handler(request, response, {
-        public: rootPath,
-        cleanUrls: false,
-        headers: [
-          {
-            source: '**/*',
-            headers: [
-              { key: 'Cache-Control', value: 'no-cache' },
-              { key: 'Access-Control-Allow-Origin', value: '*' },
-              { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-              { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' }
-            ]
-          }
-        ]
-      });
+    const browser = await chromium.launch({
+        headless: options.headless ?? true,
     });
 
-    await new Promise<void>((resolve) => {
-        if (!staticServer) return;
-        staticServer.listen(0, () => {
-            const addr = staticServer?.address();
-            const port = typeof addr === 'object' ? addr?.port : 0;
-            clientUrl = `http://localhost:${port}`;
-            console.log(`Test client serving from ${rootPath} at ${clientUrl}`);
-            resolve();
-        });
+    const context = await browser.newContext({
+        viewport: options.viewport || { width: 1280, height: 720 },
     });
-  }
 
-  const browser = await chromium.launch({
-    headless: options.headless ?? true,
-    args: [
-        '--use-gl=egl',
-        '--ignore-gpu-blocklist',
-        ...(options.launchOptions?.args || [])
-    ],
-    ...options.launchOptions
-  });
+    const page = await context.newPage();
 
-  const width = options.width || 1280;
-  const height = options.height || 720;
-
-  const context = await browser.newContext({
-      viewport: { width, height },
-      deviceScaleFactor: 1,
-      ...options.contextOptions
-  });
-
-  const page = await context.newPage();
-
-  // Helper for closing
-  const close = async () => {
-    await browser.close();
-    if (staticServer) {
-        staticServer.close();
-    }
-  };
-
-  const navigate = async (url?: string) => {
-      const targetUrl = url || clientUrl;
-      if (!targetUrl) throw new Error("No URL to navigate to");
-
-      let finalUrl = targetUrl;
-      if (options.serverUrl && !targetUrl.includes('connect=')) {
-          const separator = targetUrl.includes('?') ? '&' : '?';
-          finalUrl = `${targetUrl}${separator}connect=${encodeURIComponent(options.serverUrl)}`;
-      }
-
-      console.log(`Navigating to: ${finalUrl}`);
-      await page.goto(finalUrl, { waitUntil: 'domcontentloaded' });
-  };
-
-  return {
-      browser,
-      context,
-      page,
-      server: staticServer,
-      close,
-      navigate,
-      waitForGame: async (timeout = 10000) => {
-          await waitForGameReady(page, timeout);
-      },
-      injectInput: async (type, data) => {
-          // Placeholder for input injection if we have a mechanism
-          await page.evaluate(({type, data}) => {
-             // @ts-ignore
-             if (window.injectGameInput) window.injectGameInput(type, data);
-          }, {type, data});
-      }
-  };
+    return {
+        page,
+        browser,
+        context,
+        navigate: async (url) => {
+            await page.goto(url);
+        },
+        waitForGame: async () => {
+            await waitForGameReady(page);
+        },
+        injectInput: async (input) => {
+            // Implementation depends on how input is exposed
+        },
+        screenshot: async (name) => {
+            return await page.screenshot({ path: `${name}.png` });
+        },
+        close: async () => {
+            await browser.close();
+        }
+    };
 }
 
-export async function waitForGameReady(page: Page, timeout: number = 10000): Promise<void> {
-    try {
-        await page.waitForFunction(() => {
-            // @ts-ignore
-            return window.gameInstance && window.gameInstance.isReady; // Example check
-        }, null, { timeout });
-    } catch (e) {
-        await page.waitForSelector('canvas', { timeout });
-    }
+export async function waitForGameReady(page: Page, timeout: number = 30000): Promise<void> {
+    await page.waitForFunction(() => {
+        // @ts-ignore
+        return window.quake2 && window.quake2.ready;
+    }, { timeout });
 }
 
 export interface GameStateCapture {
-    [key: string]: any;
+    // Define game state properties
+    player: any;
+    entities: any[];
 }
 
 export async function captureGameState(page: Page): Promise<GameStateCapture> {
     return await page.evaluate(() => {
         // @ts-ignore
-        if (window.gameInstance && window.gameInstance.getState) {
-            // @ts-ignore
-            return window.gameInstance.getState();
-        }
-        return {};
+        if (!window.quake2) return null;
+        // @ts-ignore
+        return window.quake2.getState();
     });
 }
