@@ -1,18 +1,8 @@
-import { Vec3 } from '@quake2ts/shared';
-import {
-  EngineHost,
-  type ClientRenderer,
-  type EngineHostOptions,
-  type GameFrameResult,
-  type GameRenderSample,
-  type GameSimulation,
-} from './host.js';
-import { ConfigStringRegistry } from './configstrings.js';
-import { FixedTimestepLoop, type LoopCallbacks, type LoopOptions } from './loop.js';
+import { LoopCallbacks, FixedTimestepLoop, type LoopOptions, type FixedStepContext, type RenderContext } from './loop.js';
 import { EngineRuntime, createEngineRuntime } from './runtime.js';
-import { AssetManager } from './assets/manager.js';
+import { AssetManager, type AssetManagerOptions } from './assets/manager.js';
 
-import { PmoveTraceResult } from '@quake2ts/shared';
+import { PmoveTraceResult, Vec3 } from '@quake2ts/shared';
 
 export interface TraceResult extends PmoveTraceResult {
   readonly start: Vec3;
@@ -20,12 +10,13 @@ export interface TraceResult extends PmoveTraceResult {
   readonly hit?: Vec3;
 }
 
-import { Renderer } from './render/renderer.js';
-import { AudioApi } from './audio/api.js';
+import { Renderer } from './render/renderer.js'; // This now exports the interface and alias
+import { AudioApi, type AudioApiOptions } from './audio/api.js';
+import { IRenderer } from './render/interface.js';
 
 export interface EngineImports {
   trace(start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3): TraceResult;
-  renderer?: Renderer;
+  renderer?: IRenderer; // Use the interface
   audio?: AudioApi;
   assets?: AssetManager;
 }
@@ -51,7 +42,7 @@ export function createEngine(imports: EngineImports): EngineExports {
 }
 
 export { FixedTimestepLoop };
-export { ConfigStringRegistry };
+export { ConfigStringRegistry } from './configstrings.js';
 export { Cvar, CvarRegistry } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
@@ -190,7 +181,7 @@ export {
   type GameFrameResult,
   type GameRenderSample,
   type GameSimulation,
-};
+} from './host.js';
 export { EngineRuntime, createEngineRuntime };
 export { createWebGLContext, type WebGLContextInitOptions, type WebGLContextState } from './render/context.js';
 export { ShaderProgram, createProgramFromSources, type ShaderSources } from './render/shaderProgram.js';
@@ -291,6 +282,7 @@ export {
   type BlasterImpactContext,
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
+export { IRenderer } from './render/interface.js'; // Added export
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render/frame.js';
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';

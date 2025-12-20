@@ -1,7 +1,7 @@
 import { createRenderer } from '../../src/render/renderer.js';
 import { DebugMode } from '../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import { createMockGL } from '../helpers/mockWebGL.js';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -77,12 +77,12 @@ vi.mock('../../src/render/light.js', () => ({
 }));
 
 describe('DebugMode Integration', () => {
-    let mockGl: ReturnType<typeof createMockWebGL2Context>;
+    let mockGl: ReturnType<typeof createMockGL>;
     let renderer: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockGl = createMockWebGL2Context();
+        mockGl = createMockGL();
         renderer = createRenderer(mockGl as any);
     });
 

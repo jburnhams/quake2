@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProgramFromSources, ShaderProgram } from '../src/render/shaderProgram.js';
-import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import { createMockGL } from './helpers/mockWebGL.js';
 
 const basicVertex = `#version 300 es
 in vec3 position;
@@ -12,7 +12,7 @@ void main() { color = vec4(1.0); }`;
 
 describe('ShaderProgram', () => {
   it('compiles, links, and caches uniform/attribute lookups', () => {
-    const gl = createMockWebGL2Context();
+    const gl = createMockGL();
     gl.uniformLocations.set('u_mvp', {} as WebGLUniformLocation);
     gl.attributeLocations.set('a_position', 3);
 
@@ -45,7 +45,7 @@ describe('ShaderProgram', () => {
   });
 
   it('throws with shader compile log', () => {
-    const gl = createMockWebGL2Context();
+    const gl = createMockGL();
     gl.compileSucceeds = false;
     gl.shaderInfoLog = 'bad shader';
 
@@ -59,7 +59,7 @@ describe('ShaderProgram', () => {
   });
 
   it('throws with program link log and cleans up shaders', () => {
-    const gl = createMockWebGL2Context();
+    const gl = createMockGL();
     gl.linkSucceeds = false;
     gl.programInfoLog = 'link failed';
 
