@@ -122,6 +122,7 @@
     "vitest": "^1.5.3"
   },
   "dependencies": {
+    "@quake2ts/engine": "workspace:^",
     "gl-matrix": "^3.4.3",
     "pako": "^2.1.0"
   }

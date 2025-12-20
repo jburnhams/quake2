@@ -26,9 +26,13 @@ export * from './setup/webgl.js'; // This exports createMockWebGL2Context
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 
+// Client Mocks
+export * from './client/mocks/input.js';
+export * from './client/helpers/view.js';
+
 // E2E
 export * from './e2e/playwright.js';
-export * from './e2e/input.js';
+// export * from './e2e/input.js'; // Replaced by client/mocks/input.js
 export * from './e2e/network.js';
 export * from './e2e/visual.js';
 
