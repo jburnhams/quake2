@@ -26,60 +26,14 @@ import { InstanceData } from './instancing.js';
 import { Md2Model } from '../assets/md2.js';
 import { Md3Model } from '../assets/md3.js';
 import { RenderableMd2, RenderableMd3 } from './scene.js';
+import { IRenderer, Pic } from './interface.js';
 
-// A handle to a registered picture.
-export type Pic = Texture2D;
+// Re-export Pic and IRenderer for compatibility
+export { Pic, IRenderer as Renderer };
 
 type MutableRenderableMd2 = { -readonly [K in keyof RenderableMd2]: RenderableMd2[K] };
 type MutableRenderableMd3 = { -readonly [K in keyof RenderableMd3]: RenderableMd3[K] };
 type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
-
-export interface Renderer {
-    readonly width: number;
-    readonly height: number;
-    readonly collisionVis: CollisionVisRenderer;
-    readonly debug: DebugRenderer;
-    readonly particleSystem: ParticleSystem;
-    getPerformanceReport(): RenderStatistics;
-    getMemoryUsage(): MemoryUsage;
-    renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
-    renderInstanced(model: Md2Model | Md3Model, instances: InstanceData[]): void;
-
-    /**
-     * Enable debug visualization modes
-     */
-    setDebugMode(mode: DebugMode): void;
-
-    // Lighting Controls
-    setBrightness(value: number): void;
-    setGamma(value: number): void;
-    setFullbright(enabled: boolean): void;
-    setAmbient(value: number): void;
-    setLightStyle(index: number, pattern: string | null): void;
-
-    // HUD Methods
-    registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
-    registerTexture(name: string, texture: PreparedTexture): Pic;
-    begin2D(): void;
-    end2D(): void;
-    drawPic(x: number, y: number, pic: Pic, color?: [number, number, number, number]): void;
-    drawString(x: number, y: number, text: string, color?: [number, number, number, number]): void;
-    drawCenterString(y: number, text: string): void;
-    drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
-
-    // Entity Highlighting
-    setEntityHighlight(entityId: number, color: [number, number, number, number]): void;
-    clearEntityHighlight(entityId: number): void;
-
-    // Surface Highlighting
-    highlightSurface(faceIndex: number, color: [number, number, number, number]): void;
-    removeSurfaceHighlight(faceIndex: number): void;
-
-    // Post Process
-    setUnderwaterWarp(enabled: boolean): void;
-    setBloom(enabled: boolean): void;
-    setBloomIntensity(value: number): void;
-}
 
 // Helper to generate a stable pseudo-random color from a number
 function colorFromId(id: number): [number, number, number, number] {
@@ -92,7 +46,7 @@ function colorFromId(id: number): [number, number, number, number] {
 
 export const createRenderer = (
     gl: WebGL2RenderingContext,
-): Renderer => {
+): IRenderer => {
     const bspPipeline = new BspSurfacePipeline(gl);
     const skyboxPipeline = new SkyboxPipeline(gl);
     const md2Pipeline = new Md2Pipeline(gl);

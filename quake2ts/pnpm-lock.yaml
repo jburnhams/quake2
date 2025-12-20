@@ -180,6 +180,9 @@ importers:
       vitest:
         specifier: ^1.5.3
         version: 1.6.1(@types/node@25.0.3)(jsdom@27.2.0)
+      webgpu:
+        specifier: ^0.3.8
+        version: 0.3.8
 
   packages/game:
     dependencies:

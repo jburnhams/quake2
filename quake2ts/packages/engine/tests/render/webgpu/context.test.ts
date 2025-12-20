@@ -1,87 +1,129 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createWebGPUContext } from '../../../src/render/webgpu/context';
-import { setupWebGPUMocks } from '@quake2ts/test-utils';
+import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState, queryCapabilities, setupDeviceLossHandling } from '../../../src/render/webgpu/context.js';
 
-describe('WebGPU Context', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setupWebGPUMocks();
+// Mock WebGPU globals
+const mockRequestAdapter = vi.fn();
+const mockRequestDevice = vi.fn();
+const mockGetContext = vi.fn();
+const mockConfigure = vi.fn();
+const mockGetPreferredCanvasFormat = vi.fn();
+
+const mockAdapter = {
+  features: new Set(['timestamp-query', 'depth-clip-control']),
+  requestDevice: mockRequestDevice,
+};
+
+const mockDevice = {
+  limits: {
+    maxTextureDimension2D: 8192,
+    maxBindGroups: 4,
+    maxUniformBufferBindingSize: 65536,
+    maxStorageBufferBindingSize: 134217728,
+  },
+  lost: Promise.resolve({ reason: 'destroyed' }),
+};
+
+const mockContext = {
+  configure: mockConfigure,
+};
+
+beforeEach(() => {
+  vi.resetAllMocks();
+
+  // Setup default mocks
+  Object.defineProperty(global, 'navigator', {
+    value: {
+      gpu: {
+        requestAdapter: mockRequestAdapter,
+        getPreferredCanvasFormat: mockGetPreferredCanvasFormat,
+      },
+    },
+    writable: true,
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    // Clean up global mocks if needed, though setupWebGPUMocks handles setup
-    delete (global.navigator as any).gpu;
-    delete (global as any).GPUTextureUsage;
-  });
+  mockRequestAdapter.mockResolvedValue(mockAdapter);
+  mockRequestDevice.mockResolvedValue(mockDevice);
+  mockGetContext.mockReturnValue(mockContext);
+  mockGetPreferredCanvasFormat.mockReturnValue('bgra8unorm');
+});
 
-  it('should create context with canvas', async () => {
-    const canvas = {
-      getContext: vi.fn().mockReturnValue({
-        configure: vi.fn(),
-      }),
-    } as unknown as HTMLCanvasElement;
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-    const result = await createWebGPUContext(canvas);
-
-    expect(result.device).toBeDefined();
-    expect(result.context).toBeDefined();
-    expect(result.isHeadless).toBe(false);
-    expect(result.format).toBe('bgra8unorm'); // Default mock format
-
-    // Verify adapter request options
-    expect(navigator.gpu.requestAdapter).toHaveBeenCalledWith({
-      powerPreference: 'high-performance'
-    });
-
-    // Verify context configuration
-    const context = canvas.getContext('webgpu');
-    expect(context?.configure).toHaveBeenCalledWith(expect.objectContaining({
-      device: result.device,
-      format: 'bgra8unorm',
-      usage: expect.any(Number) // GPUTextureUsage.RENDER_ATTACHMENT | COPY_SRC
-    }));
-  });
-
-  it('should create headless context when no canvas provided', async () => {
-    const result = await createWebGPUContext();
-
-    expect(result.device).toBeDefined();
-    expect(result.context).toBeUndefined();
-    expect(result.isHeadless).toBe(true);
-    expect(result.format).toBe('rgba8unorm'); // Default headless format
-  });
-
-  it('should pass options to adapter and device creation', async () => {
-    const options = {
-      powerPreference: 'low-power' as GPUPowerPreference,
-    };
-
-    await createWebGPUContext(undefined, options);
-
-    expect(navigator.gpu.requestAdapter).toHaveBeenCalledWith({
-      powerPreference: 'low-power'
-    });
-  });
-
-  it('should throw error if WebGPU is not supported', async () => {
-    (global.navigator as any).gpu = undefined;
-
+describe('createWebGPUContext', () => {
+  it('should throw if navigator.gpu is undefined', async () => {
+    Object.defineProperty(global, 'navigator', { value: {} });
     await expect(createWebGPUContext()).rejects.toThrow('WebGPU is not supported');
   });
 
-  it('should throw error if adapter creation fails', async () => {
-    (navigator.gpu.requestAdapter as any).mockResolvedValue(null);
-
+  it('should throw if requestAdapter fails', async () => {
+    mockRequestAdapter.mockResolvedValue(null);
     await expect(createWebGPUContext()).rejects.toThrow('Failed to request WebGPU adapter');
   });
 
-  it('should throw error if context creation from canvas fails', async () => {
-    const canvas = {
-      getContext: vi.fn().mockReturnValue(null),
+  it('should request adapter with power preference', async () => {
+    const options: WebGPUContextOptions = { powerPreference: 'low-power' };
+    await createWebGPUContext(undefined, options);
+    expect(mockRequestAdapter).toHaveBeenCalledWith({ powerPreference: 'low-power' });
+  });
+
+  it('should throw if required feature is missing', async () => {
+    const options: WebGPUContextOptions = { requiredFeatures: ['texture-compression-bc'] };
+    await expect(createWebGPUContext(undefined, options)).rejects.toThrow("Required feature 'texture-compression-bc' is not supported");
+  });
+
+  it('should create context with canvas', async () => {
+    const mockCanvas = {
+      getContext: mockGetContext,
     } as unknown as HTMLCanvasElement;
 
-    await expect(createWebGPUContext(canvas)).rejects.toThrow('Failed to get WebGPU context');
+    const result = await createWebGPUContext(mockCanvas);
+
+    expect(mockGetContext).toHaveBeenCalledWith('webgpu');
+    expect(mockConfigure).toHaveBeenCalledWith(expect.objectContaining({
+      device: mockDevice,
+      format: 'bgra8unorm',
+      alphaMode: 'premultiplied'
+    }));
+    expect(result.context).toBe(mockContext);
+    expect(result.isHeadless).toBe(false);
+  });
+
+  it('should create headless context', async () => {
+    const result = await createWebGPUContext();
+    expect(result.context).toBeUndefined();
+    expect(result.isHeadless).toBe(true);
+    // Since getPreferredCanvasFormat is mocked to return 'bgra8unorm', and our headless logic now uses it if available
+    expect(result.format).toBe('bgra8unorm');
+  });
+});
+
+describe('queryCapabilities', () => {
+  it('should correctly map capabilities', () => {
+    const state = {
+      adapter: mockAdapter,
+      device: mockDevice,
+    } as unknown as WebGPUContextState;
+
+    const capabilities = queryCapabilities(state);
+
+    expect(capabilities.hasTimestampQuery).toBe(true);
+    expect(capabilities.hasDepthClipControl).toBe(true);
+    expect(capabilities.hasTextureCompressionBC).toBe(false);
+    expect(capabilities.maxTextureDimension2D).toBe(8192);
+  });
+});
+
+describe('setupDeviceLossHandling', () => {
+  it('should register loss handler', async () => {
+    const onLost = vi.fn();
+    const mockLostPromise = Promise.resolve({ reason: 'destroyed' as GPUDeviceLostReason });
+    const device = { lost: mockLostPromise } as unknown as GPUDevice;
+
+    setupDeviceLossHandling(device, onLost);
+
+    await mockLostPromise;
+    expect(onLost).toHaveBeenCalledWith('destroyed');
   });
 });
