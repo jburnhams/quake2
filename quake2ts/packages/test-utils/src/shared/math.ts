@@ -1,4 +1,4 @@
-import type { Vec3, Bounds3 } from '@quake2ts/shared/src/math/vec3.js';
+import type { Vec3, Bounds3 } from '@quake2ts/shared/math/vec3';
 
 export const createVector3 = (x: number = 0, y: number = 0, z: number = 0): Vec3 => ({
   x,

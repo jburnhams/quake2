@@ -1,5 +1,5 @@
-import type { Vec3 } from '@quake2ts/shared/src/math/vec3.js';
-import type { TraceResult, CollisionPlane } from '@quake2ts/shared/src/bsp/collision.js';
+import type { Vec3 } from '@quake2ts/shared/math/vec3';
+import type { TraceResult, CollisionPlane } from '@quake2ts/shared/bsp/collision';
 
 // Re-export trace helpers from shared if they exist there now, or redefine them here if needed
 // The plan says "Move trace helpers from game/helpers.ts to shared/collision.ts"
@@ -7,7 +7,7 @@ import type { TraceResult, CollisionPlane } from '@quake2ts/shared/src/bsp/colli
 // `intersects`, `stairTrace`, `ladderTrace` are in `packages/shared/src/testing.ts`.
 // I will re-export them here for test-utils consumers.
 
-export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared/src/testing.js';
+export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared/testing';
 
 export interface TraceMock extends Partial<TraceResult> {
     fraction: number;
