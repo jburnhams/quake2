@@ -39,6 +39,8 @@ export * from './server/mocks/connection.js';
 export * from './setup/browser.js';
 // export * from './setup/webgl.js'; // Duplicates createMockWebGL2Context from mocks/webgl2.js
 export * from './setup/canvas.js';
+export * from './engine/mocks/webgpu.js';
+export * from './engine/mocks/webgl.js'; // Consolidated export
 export * from './setup/storage.js';
 export * from './setup/timing.js';
 export * from './setup/audio.js';

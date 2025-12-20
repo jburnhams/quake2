@@ -59,6 +59,8 @@ interface SerializedGameState {
 
 **Workaround**: Manually save player position/inventory and restart map, but loses entity state.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 1.2: Admin/Cheat APIs (P1)
@@ -194,6 +196,8 @@ interface ClientExports {
 ```
 
 **Rationale**: Multiplayer spectator mode (Section 02, Task 6.4) allows observing matches.
+
+**Status**: Implemented.
 
 ---
 

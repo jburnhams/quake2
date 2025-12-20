@@ -53,10 +53,14 @@ export class MockWebGL2RenderingContext {
   readonly QUERY_RESULT_AVAILABLE = 0x8867;
   readonly QUERY_RESULT = 0x8866;
 
-  readonly canvas = {
-      width: 800,
-      height: 600
-  };
+  // Constants commonly used in setup/webgl.ts
+  readonly TRIANGLE_FAN = 0x0006;
+  readonly COLOR_BUFFER_BIT = 0x4000;
+  readonly DEPTH_BUFFER_BIT = 0x0100;
+
+  readonly canvas: HTMLCanvasElement | { width: number; height: number };
+  readonly drawingBufferWidth: number;
+  readonly drawingBufferHeight: number;
 
   private shaderCounter = 0;
   private programCounter = 0;
@@ -70,6 +74,18 @@ export class MockWebGL2RenderingContext {
   readonly calls: string[] = [];
   readonly uniformLocations = new Map<string, WebGLUniformLocation | null>();
   readonly attributeLocations = new Map<string, number>();
+
+  constructor(canvas?: HTMLCanvasElement) {
+    if (canvas) {
+      this.canvas = canvas;
+      this.drawingBufferWidth = canvas.width;
+      this.drawingBufferHeight = canvas.height;
+    } else {
+      this.canvas = { width: 800, height: 600 };
+      this.drawingBufferWidth = 800;
+      this.drawingBufferHeight = 600;
+    }
+  }
 
   enable = vi.fn((cap: GLenum) => this.calls.push(`enable:${cap}`));
   disable = vi.fn((cap: GLenum) => this.calls.push(`disable:${cap}`));
@@ -159,6 +175,7 @@ export class MockWebGL2RenderingContext {
         `texImage2D:${target}:${level}:${internalFormat}:${width}:${height}:${border}:${format}:${type}:${pixels ? 'data' : 'null'}`
       )
   );
+  texImage3D = vi.fn(); // Stub for compatibility
   deleteTexture = vi.fn((texture: WebGLTexture) => this.calls.push(`deleteTexture:${!!texture}`));
 
   createFramebuffer = vi.fn(() => ({ fb: {} } as unknown as WebGLFramebuffer));
@@ -226,9 +243,25 @@ export class MockWebGL2RenderingContext {
       this.calls.push(`uniformMatrix4fv:${location ? 'set' : 'null'}:${transpose}:${Array.from(data as Iterable<number>).join(',')}`)
   );
 
+  uniformBlockBinding = vi.fn();
+
   isContextLost = vi.fn(() => false);
 }
 
-export function createMockGL(): MockWebGL2RenderingContext {
-  return new MockWebGL2RenderingContext();
+export function createMockWebGL2Context(
+  overridesOrCanvas?: Partial<WebGL2RenderingContext> | HTMLCanvasElement
+): MockWebGL2RenderingContext {
+  let context: MockWebGL2RenderingContext;
+
+  if (overridesOrCanvas instanceof Object && 'width' in overridesOrCanvas && 'height' in overridesOrCanvas && 'getContext' in overridesOrCanvas) {
+    // It's likely a canvas element (or mock of it)
+    context = new MockWebGL2RenderingContext(overridesOrCanvas as HTMLCanvasElement);
+  } else {
+    context = new MockWebGL2RenderingContext();
+    if (overridesOrCanvas) {
+      Object.assign(context, overridesOrCanvas);
+    }
+  }
+
+  return context;
 }

@@ -11,7 +11,7 @@ import {
   interpolateMd3Tag,
 } from '../src/render/md3Pipeline.js';
 import { buildMd3 } from './helpers/md3Builder.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { mat4FromBasis } from '@quake2ts/shared';
 
 const baseMd3 = parseMd3(
@@ -230,7 +230,7 @@ describe('MD3 tags', () => {
 
 describe('MD3 pipeline', () => {
   it('binds MVP and draws each surface with materials', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
 
     // Ensure uniform4f is mocked
     if (!gl.uniform4f) {
@@ -259,7 +259,7 @@ describe('MD3 pipeline', () => {
   });
 
   it('updates every surface when the model mesh blend changes', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const modelMesh = new Md3ModelMesh(gl as unknown as WebGL2RenderingContext, baseMd3, blend);
     modelMesh.update({ frame0: 1, frame1: 1, lerp: 0 }, { ambient: [1, 0, 0] });
     expect(modelMesh.surfaces.get('head')).toBeDefined();
