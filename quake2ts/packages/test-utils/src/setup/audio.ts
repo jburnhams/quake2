@@ -1,109 +1,119 @@
-
-// Basic mock of AudioContext
-export function createMockAudioContext(): AudioContext {
-    const context = {
-        createGain: () => ({
-            connect: () => {},
-            gain: { value: 1, setValueAtTime: () => {} }
-        }),
-        createOscillator: () => ({
-            connect: () => {},
-            start: () => {},
-            stop: () => {},
-            frequency: { value: 440 }
-        }),
-        createBufferSource: () => ({
-            connect: () => {},
-            start: () => {},
-            stop: () => {},
-            buffer: null,
-            playbackRate: { value: 1 },
-            loop: false
-        }),
-        destination: {},
-        currentTime: 0,
-        state: 'running',
-        resume: async () => {},
-        suspend: async () => {},
-        close: async () => {},
-        decodeAudioData: async (buffer: ArrayBuffer) => ({
-            duration: 1,
-            length: 44100,
-            sampleRate: 44100,
-            numberOfChannels: 2,
-            getChannelData: () => new Float32Array(44100)
-        }),
-        createBuffer: (channels: number, length: number, sampleRate: number) => ({
-            duration: length / sampleRate,
-            length,
-            sampleRate,
-            numberOfChannels: channels,
-            getChannelData: () => new Float32Array(length)
-        }),
-        // Helper to track events if needed
-        _events: [] as AudioEvent[]
-    };
-
-    // Proxy to capture events
-    return new Proxy(context as unknown as AudioContext, {
-        get(target, prop, receiver) {
-             if (prop === '_events') return (target as any)._events;
-             const value = Reflect.get(target, prop, receiver);
-             if (typeof value === 'function') {
-                 return (...args: any[]) => {
-                     (target as any)._events.push({ type: String(prop), args });
-                     return Reflect.apply(value, target, args);
-                 };
-             }
-             return value;
-        }
-    });
-}
-
-/**
- * Replaces the global AudioContext with a mock.
- */
+// Mock AudioContext and related interfaces
 export function setupMockAudioContext() {
-    if (typeof global.AudioContext === 'undefined' && typeof global.window !== 'undefined') {
-        // @ts-ignore
-        global.AudioContext = class {
-            constructor() {
-                return createMockAudioContext();
-            }
-        };
-        // @ts-ignore
-        global.window.AudioContext = global.AudioContext;
-        // @ts-ignore
-        global.window.webkitAudioContext = global.AudioContext;
+    class MockAudioNode {
+        connect() { return this; }
+        disconnect() {}
     }
+
+    class MockGainNode extends MockAudioNode {
+        gain = { value: 1, setValueAtTime: () => {}, linearRampToValueAtTime: () => {} };
+    }
+
+    class MockAudioBufferSourceNode extends MockAudioNode {
+        buffer: any = null;
+        loop = false;
+        playbackRate = { value: 1 };
+        start() {}
+        stop() {}
+    }
+
+    class MockPannerNode extends MockAudioNode {
+        positionX = { value: 0 };
+        positionY = { value: 0 };
+        positionZ = { value: 0 };
+        setPosition(x: number, y: number, z: number) {
+            this.positionX.value = x;
+            this.positionY.value = y;
+            this.positionZ.value = z;
+        }
+    }
+
+    class MockAudioListener {
+        positionX = { value: 0 };
+        positionY = { value: 0 };
+        positionZ = { value: 0 };
+        forwardX = { value: 0 };
+        forwardY = { value: 0 };
+        forwardZ = { value: 0 };
+        upX = { value: 0 };
+        upY = { value: 0 };
+        upZ = { value: 0 };
+
+        setPosition(x: number, y: number, z: number) {
+            this.positionX.value = x;
+            this.positionY.value = y;
+            this.positionZ.value = z;
+        }
+        setOrientation(fx: number, fy: number, fz: number, ux: number, uy: number, uz: number) {
+            this.forwardX.value = fx;
+            this.forwardY.value = fy;
+            this.forwardZ.value = fz;
+            this.upX.value = ux;
+            this.upY.value = uy;
+            this.upZ.value = uz;
+        }
+    }
+
+    class MockAudioContext {
+        state = 'running';
+        currentTime = 0;
+        destination = new MockAudioNode();
+        listener = new MockAudioListener();
+
+        createGain() { return new MockGainNode(); }
+        createBufferSource() { return new MockAudioBufferSourceNode(); }
+        createPanner() { return new MockPannerNode(); }
+        decodeAudioData(buffer: ArrayBuffer) {
+            return Promise.resolve({
+                duration: 1,
+                numberOfChannels: 2,
+                sampleRate: 44100,
+                getChannelData: () => new Float32Array(100)
+            });
+        }
+        resume() { return Promise.resolve(); }
+        suspend() { return Promise.resolve(); }
+        close() { return Promise.resolve(); }
+    }
+
+    // @ts-ignore
+    global.AudioContext = MockAudioContext;
+    // @ts-ignore
+    global.webkitAudioContext = MockAudioContext;
 }
 
-/**
- * Restores the original AudioContext (if it was mocked).
- */
+export function createMockAudioContext(): AudioContext {
+    setupMockAudioContext();
+    return new AudioContext();
+}
+
 export function teardownMockAudioContext() {
-    // If we mocked it on global, we might want to remove it.
-    // However, usually in JSDOM it doesn't exist, so we just leave it or delete it.
     // @ts-ignore
-    if (global.AudioContext && global.AudioContext.toString().includes('class')) {
-         // @ts-ignore
-        delete global.AudioContext;
-         // @ts-ignore
-        delete global.window.AudioContext;
-         // @ts-ignore
-        delete global.window.webkitAudioContext;
-    }
+    delete global.AudioContext;
+    // @ts-ignore
+    delete global.webkitAudioContext;
 }
 
 export interface AudioEvent {
     type: string;
-    args: any[];
+    node?: any;
+    args?: any[];
 }
 
 /**
- * Captures audio operations for verification.
- * Note: Only works if the context was created via createMockAudioContext which proxies calls.
+ * Wraps the current AudioContext (mocked or real) to capture method calls.
  */
 export function captureAudioEvents(context: AudioContext): AudioEvent[] {
-    return (context as any)._events || [];
+    const events: AudioEvent[] = [];
+
+    const methods = ['createGain', 'createBufferSource', 'createPanner', 'decodeAudioData'];
+    methods.forEach(method => {
+        const original = (context as any)[method];
+        (context as any)[method] = function(...args: any[]) {
+            events.push({ type: method, args });
+            return original.apply(this, args);
+        };
+    });
+
+    return events;
 }

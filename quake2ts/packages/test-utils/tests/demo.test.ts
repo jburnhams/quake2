@@ -45,9 +45,10 @@ describe('Audio Helpers', () => {
 
     it('should use manually created mock context for event capturing', () => {
         const context = createMockAudioContext();
+        const events = captureAudioEvents(context);
+
         context.createGain();
 
-        const events = captureAudioEvents(context);
         expect(events).toHaveLength(1);
         expect(events[0].type).toBe('createGain');
     });

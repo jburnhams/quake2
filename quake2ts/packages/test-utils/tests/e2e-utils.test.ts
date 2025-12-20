@@ -44,7 +44,8 @@ describe('E2E Utilities', () => {
             })
         };
 
-        await throttleBandwidth(mockPage, 1000);
+        const throttle = throttleBandwidth(1000);
+        await throttle.applyCondition(mockPage);
         expect(mockCDP.send).toHaveBeenCalledWith('Network.emulateNetworkConditions', expect.objectContaining({
             downloadThroughput: 1000
         }));

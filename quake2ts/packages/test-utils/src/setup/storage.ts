@@ -1,120 +1,111 @@
-
 import 'fake-indexeddb/auto';
 
 /**
  * Creates a mock Storage implementation (localStorage/sessionStorage).
  */
 export function createMockLocalStorage(initialData: Record<string, string> = {}): Storage {
-    const storage = new Map<string, string>(Object.entries(initialData));
+  const storage = new Map<string, string>(Object.entries(initialData));
 
-    return {
-        getItem: (key: string) => storage.get(key) || null,
-        setItem: (key: string, value: string) => storage.set(key, value),
-        removeItem: (key: string) => storage.delete(key),
-        clear: () => storage.clear(),
-        key: (index: number) => Array.from(storage.keys())[index] || null,
-        get length() { return storage.size; }
-    } as Storage;
+  return {
+    getItem: (key: string) => storage.get(key) || null,
+    setItem: (key: string, value: string) => storage.set(key, String(value)),
+    removeItem: (key: string) => storage.delete(key),
+    clear: () => storage.clear(),
+    key: (index: number) => Array.from(storage.keys())[index] || null,
+    get length() { return storage.size; },
+  } as Storage;
 }
 
-/**
- * Creates a mock SessionStorage implementation.
- * Functionally identical to LocalStorage mock but distinct for testing isolation.
- */
 export function createMockSessionStorage(initialData: Record<string, string> = {}): Storage {
-    return createMockLocalStorage(initialData);
+  return createMockLocalStorage(initialData);
 }
 
 /**
  * Creates a mock IndexedDB factory.
- * Currently relies on 'fake-indexeddb/auto' being imported which mocks the global indexedDB.
- * This helper ensures the global is available or resets it.
+ * Since we imported 'fake-indexeddb/auto', global.indexedDB is already mocked.
+ * This helper returns it or allows custom setup if needed.
  */
-export function createMockIndexedDB(): IDBFactory {
-    if (typeof indexedDB === 'undefined') {
-        throw new Error('IndexedDB mock not found. Ensure fake-indexeddb is loaded.');
-    }
-    // In a real mock scenario we might want to return a fresh instance,
-    // but fake-indexeddb patches the global.
-    return indexedDB;
+export function createMockIndexedDB(databases: IDBDatabase[] = []): IDBFactory {
+  // fake-indexeddb handles most of this automatically.
+  // If we needed to inject specific databases, we would open them here.
+  return global.indexedDB;
 }
 
 export interface StorageScenario {
-    storage: Storage | IDBFactory;
-    populate(data: Record<string, any>): Promise<void> | void;
-    verify(key: string, value: any): Promise<boolean> | boolean;
+  localStorage: Storage;
+  sessionStorage: Storage;
+  indexedDB: IDBFactory;
+  reset(): void;
+  populate(data: Record<string, string>): Promise<void> | void;
+  verify(key: string, value: string): Promise<boolean> | boolean;
 }
 
 /**
- * Helper to setup a storage test scenario.
+ * Creates a comprehensive storage test scenario.
  */
-export function createStorageTestScenario(storageType: 'local' | 'session' | 'indexed' = 'local'): StorageScenario {
-    if (storageType === 'indexed') {
-        const dbName = `test-db-${Math.random().toString(36).substring(7)}`;
-        const storeName = 'test-store';
-        const storage = createMockIndexedDB();
+export function createStorageTestScenario(type: 'local' | 'session' | 'indexed'): StorageScenario {
+  const mockLocal = createMockLocalStorage();
+  const mockSession = createMockSessionStorage();
 
-        return {
-            storage,
-            populate: async (data: Record<string, any>) => {
-                return new Promise((resolve, reject) => {
-                    const req = storage.open(dbName, 1);
-                    req.onupgradeneeded = (e: any) => {
-                        const db = e.target.result;
-                        db.createObjectStore(storeName);
-                    };
-                    req.onsuccess = (e: any) => {
-                        const db = e.target.result;
-                        const tx = db.transaction(storeName, 'readwrite');
-                        const store = tx.objectStore(storeName);
-                        Object.entries(data).forEach(([k, v]) => store.put(v, k));
-                        tx.oncomplete = () => {
-                            db.close();
-                            resolve();
-                        };
-                        tx.onerror = () => reject(tx.error);
-                    };
-                    req.onerror = () => reject(req.error);
-                });
-            },
-            verify: async (key: string, value: any) => {
-                return new Promise((resolve, reject) => {
-                    const req = storage.open(dbName, 1);
-                    req.onsuccess = (e: any) => {
-                        const db = e.target.result;
-                        if (!db.objectStoreNames.contains(storeName)) {
-                            db.close();
-                            resolve(false);
-                            return;
-                        }
-                        const tx = db.transaction(storeName, 'readonly');
-                        const store = tx.objectStore(storeName);
-                        const getReq = store.get(key);
-                        getReq.onsuccess = () => {
-                            const result = getReq.result === value;
-                            db.close();
-                            resolve(result);
-                        };
-                        getReq.onerror = () => {
-                            db.close();
-                            resolve(false);
-                        };
-                    };
-                    req.onerror = () => reject(req.error);
-                });
-            }
-        };
-    }
+  // Apply to global for the duration of the test if this helper is used to setup env
+  // Note: fake-indexeddb is auto-applied globally on import
 
-    const storage = storageType === 'local' ? createMockLocalStorage() : createMockSessionStorage();
+  global.localStorage = mockLocal;
+  global.sessionStorage = mockSession;
 
-    return {
-        storage,
-        populate(data) {
-            Object.entries(data).forEach(([k, v]) => storage.setItem(k, v));
-        },
-        verify(key, value) {
-            return storage.getItem(key) === value;
+  return {
+    localStorage: mockLocal,
+    sessionStorage: mockSession,
+    indexedDB: global.indexedDB,
+    reset() {
+      mockLocal.clear();
+      mockSession.clear();
+    },
+    populate(data: Record<string, string>) {
+        if (type === 'local') {
+            Object.entries(data).forEach(([k, v]) => mockLocal.setItem(k, v));
+        } else if (type === 'session') {
+            Object.entries(data).forEach(([k, v]) => mockSession.setItem(k, v));
+        } else if (type === 'indexed') {
+             // Basic indexedDB population logic for test
+             // This is complex, assume simple key-val store for demo
+             return new Promise<void>((resolve, reject) => {
+                 const req = global.indexedDB.open('test-db', 1);
+                 req.onupgradeneeded = (e: any) => {
+                     const db = e.target.result;
+                     db.createObjectStore('store');
+                 };
+                 req.onsuccess = (e: any) => {
+                     const db = e.target.result;
+                     const tx = db.transaction('store', 'readwrite');
+                     const store = tx.objectStore('store');
+                     Object.entries(data).forEach(([k, v]) => store.put(v, k));
+                     tx.oncomplete = () => resolve();
+                     tx.onerror = () => reject(tx.error);
+                 };
+             });
         }
-    };
+    },
+    verify(key: string, value: string) {
+        if (type === 'local') {
+            return mockLocal.getItem(key) === value;
+        } else if (type === 'session') {
+            return mockSession.getItem(key) === value;
+        } else if (type === 'indexed') {
+             return new Promise<boolean>((resolve) => {
+                 const req = global.indexedDB.open('test-db', 1);
+                 req.onsuccess = (e: any) => {
+                     const db = e.target.result;
+                     const tx = db.transaction('store', 'readonly');
+                     const store = tx.objectStore('store');
+                     const getReq = store.get(key);
+                     getReq.onsuccess = () => resolve(getReq.result === value);
+                     getReq.onerror = () => resolve(false);
+                 };
+                 req.onerror = () => resolve(false);
+             });
+        }
+        return false;
+    }
+  };
 }

@@ -1,18 +1,22 @@
-export interface NodeSetupOptions {
-    polyfillFetch?: boolean;
-}
-
 /**
  * Sets up a Node.js environment for testing.
- * This is primarily for backend or shared logic that doesn't rely on browser APIs.
+ * This is useful for packages that don't need browser mocks but might need
+ * other Node-specific setups (like specific polyfills not provided by default).
  */
-export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
-  // Add any Node-specific global setup here
-  // For now, this is a placeholder or can be used for things like
-  // polyfilling fetch if not present in older Node versions (though Quake2TS targets recent Node)
 
-  if (options.polyfillFetch && typeof global.fetch === 'undefined') {
-      // In a real scenario, we might import node-fetch here
-      // global.fetch = ...
+export interface NodeSetupOptions {
+  // Add any specific Node environment options here if needed in future
+}
+
+export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
+  // Currently, most Node setup is handled by Vitest default environment
+  // or specific polyfills in other helpers.
+  // This function acts as a placeholder and standard entry point.
+
+  // Example: Ensure global TextEncoder/TextDecoder if missing (Node 10-)
+  if (typeof global.TextEncoder === 'undefined') {
+    const { TextEncoder, TextDecoder } = require('util');
+    global.TextEncoder = TextEncoder;
+    global.TextDecoder = TextDecoder;
   }
 }

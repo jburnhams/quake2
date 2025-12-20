@@ -109,10 +109,11 @@ Simulate network conditions in E2E tests:
 import { simulateNetworkCondition, throttleBandwidth } from '@quake2ts/test-utils';
 
 // Simulate a slow connection
-await simulateNetworkCondition('slow').apply(page);
+await simulateNetworkCondition('slow').applyCondition(page);
 
 // Throttle bandwidth specifically
-await throttleBandwidth(page, 100 * 1024); // 100 KB/s
+const throttle = throttleBandwidth(100 * 1024); // 100 KB/s
+await throttle.applyCondition(page);
 ```
 
 ### Visual Regression
@@ -120,16 +121,14 @@ await throttleBandwidth(page, 100 * 1024); // 100 KB/s
 Capture and compare screenshots:
 
 ```typescript
-import { createVisualTestScenario } from '@quake2ts/test-utils';
-
-const visual = createVisualTestScenario(page, 'map-start');
+import { captureGameScreenshot, compareScreenshots } from '@quake2ts/test-utils';
 
 // Capture screenshot
-const snapshot = await visual.capture('initial-view');
+const buffer = await captureGameScreenshot(page, 'initial-view');
 
-// Compare against baseline
-const result = await visual.compare('initial-view', './test/screenshots/baselines');
-if (!result.matched) {
+// Compare against baseline (buffer)
+const result = await compareScreenshots(baselineBuffer, buffer);
+if (!result.match) {
     console.warn('Visual regression detected');
 }
 ```
@@ -142,6 +141,7 @@ Mock and capture audio events:
 import { setupMockAudioContext, captureAudioEvents } from '@quake2ts/test-utils';
 
 setupMockAudioContext();
+// @ts-ignore
 const context = new AudioContext();
 
 // Run code that uses audio...
@@ -158,8 +158,7 @@ Helper for storage scenarios (Local, Session, IndexedDB):
 import { createStorageTestScenario } from '@quake2ts/test-utils';
 
 const scenario = createStorageTestScenario('indexed');
-await scenario.populate({ 'save_1': JSON.stringify(saveData) });
-const exists = await scenario.verify('save_1', JSON.stringify(saveData));
+scenario.localStorage.setItem('key', 'value');
 ```
 
 ## Features

@@ -1,5 +1,52 @@
-import { Canvas, Image, ImageData } from '@napi-rs/canvas';
-import { createMockWebGL2Context } from './webgl.js';
+import { Canvas, ImageData } from '@napi-rs/canvas';
+import { createMockWebGL2Context } from '../engine/mocks/webgl.js';
+
+/**
+ * Creates a mock canvas element capable of returning 2D or WebGL2 contexts.
+ * Uses napi-rs/canvas for 2D and our mock WebGL2 context for 3D.
+ */
+export function createMockCanvas(width: number = 300, height: number = 150): HTMLCanvasElement {
+  // Use napi-rs canvas as the base
+  const napiCanvas = new Canvas(width, height);
+
+  // Create a partial mock that mimics HTMLCanvasElement
+  // We use type casting because we can't fully construct a real HTMLCanvasElement
+  // without JSDOM or browser environment, but this helper is often used
+  // in environments where JSDOM might already be active or we just need the object shape.
+
+  // If we are in JSDOM, document.createElement('canvas') is better,
+  // but if we want a pure mock:
+
+  const mockCanvas = {
+    width,
+    height,
+    getContext: (contextId: string, options?: any) => {
+      if (contextId === '2d') {
+        return napiCanvas.getContext('2d', options);
+      }
+      if (contextId === 'webgl2') {
+        return createMockWebGL2Context(mockCanvas as HTMLCanvasElement);
+      }
+      return null;
+    },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    getBoundingClientRect: () => ({ x: 0, y: 0, width, height, top: 0, left: 0, right: width, bottom: height }),
+    style: {},
+    toDataURL: () => napiCanvas.toDataURL(),
+    toBuffer: (mime?: string) => napiCanvas.toBuffer(mime as any),
+  } as unknown as HTMLCanvasElement;
+
+  return mockCanvas;
+}
+
+/**
+ * Creates a mock 2D rendering context.
+ */
+export function createMockCanvasContext2D(width: number = 300, height: number = 150): CanvasRenderingContext2D {
+  const canvas = new Canvas(width, height);
+  return canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
+}
 
 export interface DrawCall {
   method: string;
@@ -7,99 +54,73 @@ export interface DrawCall {
 }
 
 /**
- * Creates a mock canvas element with WebGL2 support.
- */
-export function createMockCanvas(width: number = 300, height: number = 150): HTMLCanvasElement {
-    // If we are in JSDOM environment, use document.createElement
-    if (typeof document !== 'undefined' && document.createElement) {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-    }
-
-    // Otherwise use napi-rs/canvas directly
-    const canvas = new Canvas(width, height);
-
-    // Patch getContext to return mock WebGL2 context
-    const originalGetContext = canvas.getContext.bind(canvas);
-    canvas.getContext = function(contextId: string, options?: any) {
-        if (contextId === 'webgl2') {
-            return createMockWebGL2Context(canvas as unknown as HTMLCanvasElement);
-        }
-        if (contextId === '2d') {
-             return originalGetContext('2d', options);
-        }
-        return originalGetContext(contextId as any, options);
-    } as any;
-
-    return canvas as unknown as HTMLCanvasElement;
-}
-
-/**
- * Creates a mock 2D rendering context.
- */
-export function createMockCanvasContext2D(canvas?: HTMLCanvasElement): CanvasRenderingContext2D {
-    if (!canvas) {
-        canvas = createMockCanvas();
-    }
-    return canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
-}
-
-/**
- * Spies on draw operations for verification.
- * Note: This modifies the context prototype or instance methods.
+ * Wraps a CanvasRenderingContext2D to capture all draw calls.
  */
 export function captureCanvasDrawCalls(context: CanvasRenderingContext2D): DrawCall[] {
-    const drawCalls: DrawCall[] = [];
-    const methodsToSpy = [
-        'fillRect', 'strokeRect', 'clearRect',
-        'fillText', 'strokeText',
-        'drawImage',
-        'beginPath', 'closePath', 'moveTo', 'lineTo', 'arc', 'arcTo', 'bezierCurveTo', 'quadraticCurveTo',
-        'stroke', 'fill',
-        'putImageData'
-    ];
+  const drawCalls: DrawCall[] = [];
 
-    methodsToSpy.forEach(method => {
-        // @ts-ignore
-        const original = context[method];
-        if (typeof original === 'function') {
-             // @ts-ignore
-             context[method] = function(...args: any[]) {
-                 drawCalls.push({ method, args });
-                 return original.apply(this, args);
-             };
-        }
-    });
+  // List of drawing methods to spy on
+  const methods = [
+    'fillRect', 'strokeRect', 'clearRect',
+    'fillText', 'strokeText',
+    'beginPath', 'moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo',
+    'arc', 'arcTo', 'rect',
+    'fill', 'stroke',
+    'drawImage',
+    'putImageData',
+    'save', 'restore',
+    'scale', 'rotate', 'translate', 'transform', 'setTransform'
+  ];
 
-    return drawCalls;
+  methods.forEach(method => {
+    const original = (context as any)[method];
+    if (typeof original === 'function') {
+      (context as any)[method] = function(...args: any[]) {
+        drawCalls.push({ method, args });
+        return original.apply(this, args);
+      };
+    }
+  });
+
+  return drawCalls;
 }
 
 /**
  * Creates a mock ImageData object.
  */
-export function createMockImageData(width: number, height: number, fillColor?: [number, number, number, number]): ImageData {
-    const imageData = new ImageData(width, height);
-    if (fillColor) {
-        const [r, g, b, a] = fillColor;
-        for (let i = 0; i < imageData.data.length; i += 4) {
-            imageData.data[i] = r;
-            imageData.data[i + 1] = g;
-            imageData.data[i + 2] = b;
-            imageData.data[i + 3] = a;
-        }
-    }
-    return imageData;
+export function createMockImageData(width: number, height: number, fillColor: [number, number, number, number] = [0, 0, 0, 0]): ImageData {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = fillColor[0];
+    data[i+1] = fillColor[1];
+    data[i+2] = fillColor[2];
+    data[i+3] = fillColor[3];
+  }
+  return new ImageData(data, width, height) as unknown as ImageData;
 }
 
 /**
- * Creates a mock Image element.
+ * Creates a mock Image element with optional source.
  */
-export function createMockImage(width?: number, height?: number, src?: string): HTMLImageElement {
-    const img = new Image();
-    if (width) img.width = width;
-    if (height) img.height = height;
+export function createMockImage(width: number = 100, height: number = 100, src?: string): HTMLImageElement {
+  // If JSDOM is present, use it
+  if (typeof document !== 'undefined' && document.createElement) {
+    const img = document.createElement('img');
+    img.width = width;
+    img.height = height;
     if (src) img.src = src;
-    return img as unknown as HTMLImageElement;
+    return img;
+  }
+
+  // Otherwise simple mock
+  return {
+    width,
+    height,
+    src: src || '',
+    onload: null,
+    onerror: null,
+    complete: true,
+    addEventListener: () => {},
+    removeEventListener: () => {}
+  } as unknown as HTMLImageElement;
 }

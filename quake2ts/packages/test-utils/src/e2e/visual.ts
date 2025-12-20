@@ -1,72 +1,63 @@
+// Visual testing utilities
 
-import { Page } from 'playwright';
-import path from 'path';
-import fs from 'fs/promises';
+export async function captureGameScreenshot(page: any, name?: string): Promise<Buffer> {
+  return await page.screenshot({ path: name ? `${name}.png` : undefined });
+}
 
 export interface VisualDiff {
-    pixelDiff: number;
-    diffPath?: string;
-    matched: boolean;
+  match: boolean;
+  diffPercentage: number;
+  diffImage?: Buffer;
 }
 
-/**
- * Captures a screenshot of the current game state.
- */
-export async function captureGameScreenshot(page: Page, name: string, options: { dir?: string, fullPage?: boolean } = {}): Promise<Buffer> {
-    const dir = options.dir || '__screenshots__';
-    const screenshotPath = path.join(dir, `${name}.png`);
-
-    // Ensure directory exists
-    await fs.mkdir(dir, { recursive: true });
-
-    return await page.screenshot({
-        path: screenshotPath,
-        fullPage: options.fullPage ?? false,
-        animations: 'disabled',
-        caret: 'hide'
-    });
-}
-
-/**
- * Compares two image buffers pixel-by-pixel.
- * Note: A robust implementation would use a library like 'pixelmatch' or 'looks-same'.
- * For now, we provide a basic placeholder or rely on simple buffer comparison.
- */
 export async function compareScreenshots(baseline: Buffer, current: Buffer, threshold: number = 0.1): Promise<VisualDiff> {
-    if (baseline.equals(current)) {
-        return { pixelDiff: 0, matched: true };
-    }
+  // Use pixelmatch via dynamic import or implementation
+  let pixelmatch;
+  let PNG;
+  try {
+     // @ts-ignore
+     pixelmatch = (await import('pixelmatch')).default;
+     // @ts-ignore
+     PNG = (await import('pngjs')).PNG;
+  } catch (e) {
+      console.warn('Visual testing dependencies (pixelmatch, pngjs) not found.');
+      // Fallback simple comparison of buffer length or similar?
+      // For now, fail or return dummy
+      return { match: baseline.equals(current), diffPercentage: 0 };
+  }
 
-    return {
-        pixelDiff: -1, // Unknown magnitude
-        matched: false
-    };
+  const img1 = PNG.sync.read(baseline);
+  const img2 = PNG.sync.read(current);
+  const { width, height } = img1;
+
+  if (img2.width !== width || img2.height !== height) {
+      throw new Error('Image dimensions do not match');
+  }
+
+  const diff = new PNG({ width, height });
+  const numDiffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold });
+
+  const totalPixels = width * height;
+  const diffPercentage = (numDiffPixels / totalPixels) * 100;
+
+  return {
+      match: diffPercentage <= threshold * 100, // threshold usually 0.0-1.0 in pixelmatch options, but result is pixel count
+      diffPercentage,
+      diffImage: PNG.sync.write(diff)
+  };
 }
 
 export interface VisualScenario {
-    capture(name: string): Promise<Buffer>;
-    compare(name: string, baselineDir: string): Promise<VisualDiff>;
+    name: string;
+    setup: (page: any) => Promise<void>;
 }
 
-/**
- * Creates a helper for visual regression testing scenarios.
- */
-export function createVisualTestScenario(page: Page, sceneName: string): VisualScenario {
+export function createVisualTestScenario(sceneName: string): VisualScenario {
     return {
-        async capture(snapshotName: string) {
-            return await captureGameScreenshot(page, `${sceneName}-${snapshotName}`);
-        },
-        async compare(snapshotName: string, baselineDir: string) {
-            const name = `${sceneName}-${snapshotName}`;
-            const current = await captureGameScreenshot(page, name, { dir: '__screenshots__/current' });
-
-            try {
-                const baselinePath = path.join(baselineDir, `${name}.png`);
-                const baseline = await fs.readFile(baselinePath);
-                return await compareScreenshots(baseline, current);
-            } catch (e) {
-                return { pixelDiff: -1, matched: false };
-            }
+        name: sceneName,
+        setup: async (page: any) => {
+            // Navigate to specific map/pos?
+            // This is a placeholder for standard scene setup logic
         }
     };
 }

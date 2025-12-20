@@ -1,6 +1,5 @@
 import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { createCanvas } from '@napi-rs/canvas';
-import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 export function setupBrowserEnvironmentLocal() {
     setupBrowserEnvironment({
