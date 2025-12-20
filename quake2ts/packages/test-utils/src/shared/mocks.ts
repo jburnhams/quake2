@@ -16,6 +16,8 @@ export interface BinaryWriterMock {
     writeUint32: Mock<[number], void>;
     writeFloat: Mock<[number], void>;
     getData: Mock<[], Uint8Array>;
+    writePos: Mock<[any], void>;
+    writeDir: Mock<[any], void>;
 }
 
 export const createBinaryWriterMock = (): BinaryWriterMock => ({
@@ -35,6 +37,8 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeUint32: vi.fn(),
   writeFloat: vi.fn(),
   getData: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
+  writePos: vi.fn(),
+  writeDir: vi.fn(),
 });
 
 export const createNetChanMock = () => ({
@@ -139,4 +143,54 @@ export const createBinaryStreamMock = (): BinaryStreamMock => ({
 
   readPos: vi.fn(),
   readDir: vi.fn(),
+});
+
+// Alias for MessageWriter to match requested API
+export interface MessageWriterMock extends BinaryWriterMock {
+    writeInt: Mock<[number], void>;
+    writeVector: Mock<[any], void>;
+}
+
+export const createMessageWriterMock = (overrides?: Partial<MessageWriterMock>): MessageWriterMock => {
+    const mock = createBinaryWriterMock();
+    const writer: MessageWriterMock = {
+        ...mock,
+        writeInt: mock.writeInt32, // Alias writeInt to writeInt32
+        writeVector: mock.writePos, // Alias writeVector to writePos
+        ...overrides
+    };
+    return writer;
+};
+
+// Alias for MessageReader to match requested API
+export interface MessageReaderMock extends BinaryStreamMock {
+    readInt: Mock<[], number>;
+    readVector: Mock<[], any>;
+}
+
+export const createMessageReaderMock = (data?: Uint8Array): MessageReaderMock => {
+    const mock = createBinaryStreamMock();
+    const reader: MessageReaderMock = {
+        ...mock,
+        readInt: mock.readLong, // Alias readInt to readLong (int32)
+        readVector: mock.readPos, // Alias readVector to readPos
+    };
+    return reader;
+};
+
+export interface PacketMock {
+    type: 'connection' | 'data' | 'ack' | 'disconnect';
+    sequence: number;
+    ack: number;
+    qport: number;
+    data: Uint8Array;
+}
+
+export const createPacketMock = (overrides?: Partial<PacketMock>): PacketMock => ({
+    type: 'data',
+    sequence: 0,
+    ack: 0,
+    qport: 0,
+    data: new Uint8Array(0),
+    ...overrides
 });
