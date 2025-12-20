@@ -8,3 +8,5 @@ export interface AssetSummary {
 export function describeAsset(name: string, origin?: Vec3): AssetSummary {
   return { name, origin };
 }
+
+export { exportMd2ToObj, exportMd3ToGltf } from './modelExport.js';
