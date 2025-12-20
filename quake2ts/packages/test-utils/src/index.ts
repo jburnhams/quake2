@@ -10,8 +10,10 @@ export * from './server/mocks/transport.js';
 export * from './server/mocks/state.js';
 export * from './server/mocks/connection.js';
 export * from './server/mocks/commands.js';
+export * from './server/mocks/master.js';
 export * from './server/helpers/multiplayer.js';
 export * from './server/helpers/snapshot.js';
+export * from './server/helpers/bandwidth.js';
 
 // Setup
 export * from './setup/browser.js';
