@@ -33,6 +33,7 @@ export * from './shared/bsp.js';
 export * from './shared/mocks.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
+export * from './client/mocks/input.js';
 
 // Export types
 export type { BrowserSetupOptions } from './setup/browser.js';

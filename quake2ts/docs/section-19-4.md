@@ -17,71 +17,71 @@ This section covers migration of client-specific test utilities including input 
 
 ### 1. Migrate Input System Mocks (HIGH PRIORITY)
 
-**Status:** Exists in tests package, needs migration
+**Status:** Completed
 **Dependencies:** None
 
-- [ ] **1.1** Create `test-utils/src/client/mocks/input.ts` file
+- [x] **1.1** Create `test-utils/src/client/mocks/input.ts` file
 
-- [ ] **1.2** Migrate `MockPointerLock` class from `tests/src/mocks/input.ts`
+- [x] **1.2** Migrate `MockPointerLock` class from `tests/src/mocks/input.ts`
   - Class implementing PointerLock API
   - Methods: `request()`, `exit()`, `isLocked()`
   - Properties: `element`, `locked`
 
-- [ ] **1.3** Migrate `InputInjector` class from `tests/src/mocks/input.ts`
+- [x] **1.3** Migrate `InputInjector` class from `tests/src/mocks/input.ts`
   - Class for simulating input events (~110 lines)
   - Methods: `keyDown()`, `keyUp()`, `mouseMove()`, `mouseButton()`, `mouseWheel()`
   - Support for keyboard, mouse, and wheel events
 
-- [ ] **1.4** Add factory functions for input mocks
+- [x] **1.4** Add factory functions for input mocks
   - `createMockPointerLock(element?: HTMLElement): MockPointerLock`
   - `createInputInjector(target?: EventTarget): InputInjector`
 
-- [ ] **1.5** Add `createMockKeyboardEvent()` factory
+- [x] **1.5** Add `createMockKeyboardEvent()` factory
   - Signature: `createMockKeyboardEvent(key: string, type?: 'keydown' | 'keyup', modifiers?: KeyModifiers): KeyboardEvent`
 
-- [ ] **1.6** Add `createMockMouseEvent()` factory
+- [x] **1.6** Add `createMockMouseEvent()` factory
   - Signature: `createMockMouseEvent(type: string, options?: MouseEventInit): MouseEvent`
 
-- [ ] **1.7** Add `createMockWheelEvent()` factory
+- [x] **1.7** Add `createMockWheelEvent()` factory
   - Signature: `createMockWheelEvent(deltaX?: number, deltaY?: number): WheelEvent`
 
-- [ ] **1.8** Update imports in `tests/src/` directory
+- [x] **1.8** Update imports in `tests/src/` directory
   - Replace `import { MockPointerLock, InputInjector } from './mocks/input'`
   - With `import { createMockPointerLock, createInputInjector } from '@quake2ts/test-utils'`
   - Estimated files: ~5
 
-- [ ] **1.9** Update imports in `client/tests/input/` directory
+- [x] **1.9** Update imports in `client/tests/input/` directory
   - Same pattern for any input tests
   - Estimated files: ~8
 
-- [ ] **1.10** Delete `tests/src/mocks/input.ts` after migration
+- [x] **1.10** Delete `tests/src/mocks/input.ts` after migration
 
 ---
 
 ### 2. Create View/Camera Test Utilities (HIGH PRIORITY)
 
-**Status:** Not started
+**Status:** In Progress
 **Dependencies:** Section 19-1 Task 3 (math helpers)
 
-- [ ] **2.1** Create `test-utils/src/client/helpers/view.ts` file
+- [x] **2.1** Create `test-utils/src/client/helpers/view.ts` file
 
-- [ ] **2.2** Add `createMockCamera()` factory
+- [x] **2.2** Add `createMockCamera()` factory
   - Signature: `createMockCamera(overrides?: Partial<Camera>): Camera`
   - Include: position, rotation, fov, near, far planes
 
-- [ ] **2.3** Add `createMockViewState()` factory
+- [x] **2.3** Add `createMockViewState()` factory
   - Signature: `createMockViewState(overrides?: Partial<ViewState>): ViewState`
   - Include: camera, viewport, refdef
 
-- [ ] **2.4** Add `createMockRefDef()` factory
+- [x] **2.4** Add `createMockRefDef()` factory
   - Signature: `createMockRefDef(overrides?: Partial<RefDef>): RefDef`
   - Include: vieworg, viewangles, fov_x, fov_y, time
 
-- [ ] **2.5** Add `createViewTestScenario()` helper
+- [x] **2.5** Add `createViewTestScenario()` helper
   - Signature: `createViewTestScenario(scenarioType: 'firstPerson' | 'thirdPerson' | 'spectator'): ViewScenario`
   - Return pre-configured camera and view state
 
-- [ ] **2.6** Add `simulateCameraMovement()` helper
+- [x] **2.6** Add `simulateCameraMovement()` helper
   - Signature: `simulateCameraMovement(camera: Camera, input: CameraInput, deltaTime: number): Camera`
   - Simulate camera movement based on input
 
