@@ -13,17 +13,18 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "build": "tsup src/index.ts --format esm,cjs && tsc --emitDeclarationOnly",
     "dev": "tsup src/index.ts --format esm,cjs --watch --dts",
     "test": "vitest run"
   },
   "dependencies": {
-    "@quake2ts/shared": "workspace:*",
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@quake2ts/test-utils": "workspace:*",
     "@types/ws": "^8.5.12",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5",

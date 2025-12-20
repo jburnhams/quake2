@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { MockTransport } from '../mocks/transport.js';
+import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 import { NetDriver } from '@quake2ts/shared';
 
 // Mock dependencies
@@ -57,7 +57,7 @@ describe('DedicatedServer Timeout', () => {
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        transport = new MockTransport();
+        transport = createMockTransport();
         server = new DedicatedServer({ port: 27910, transport });
         await server.startServer('maps/test.bsp');
     });

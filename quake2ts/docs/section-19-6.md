@@ -114,23 +114,23 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Inline implementations exist
 **Dependencies:** None
 
-- [ ] **4.1** Create `test-utils/src/setup/timing.ts` file
+- [x] **4.1** Create `test-utils/src/setup/timing.ts` file
 
-- [ ] **4.2** Add `createMockRAF()` factory
+- [x] **4.2** Add `createMockRAF()` factory
   - Signature: `createMockRAF(): MockRAF`
   - Mock requestAnimationFrame/cancelAnimationFrame
   - Methods: `tick()`, `advance()`, `getCallbacks()`
 
-- [ ] **4.3** Add `createMockPerformance()` factory
+- [x] **4.3** Add `createMockPerformance()` factory
   - Signature: `createMockPerformance(startTime?: number): Performance`
   - Mock performance.now() and performance.timing
 
-- [ ] **4.4** Add `createControlledTimer()` helper
+- [x] **4.4** Add `createControlledTimer()` helper
   - Signature: `createControlledTimer(): ControlledTimer`
   - Control setTimeout/setInterval for deterministic testing
   - Methods: `tick()`, `advanceBy()`, `clear()`
 
-- [ ] **4.5** Add `simulateFrames()` helper
+- [x] **4.5** Add `simulateFrames()` helper
   - Signature: `simulateFrames(count: number, frameTime?: number, callback?: () => void): void`
   - Simulate multiple RAF frames
 
@@ -146,24 +146,25 @@ This section covers consolidation of test environment setup code, browser enviro
   - `closeBrowser()` - Cleanup
   - `TestClient` interface
 
-- [ ] **5.2** Create `test-utils/src/e2e/playwright.ts` file
+- [x] **5.2** Create `test-utils/src/e2e/playwright.ts` file
 
-- [ ] **5.3** Add `createPlaywrightTestClient()` factory
+- [x] **5.3** Add `createPlaywrightTestClient()` factory
   - Signature: `createPlaywrightTestClient(options?: PlaywrightOptions): Promise<PlaywrightTestClient>`
   - Wraps browser launch and client setup
   - Methods: `navigate()`, `waitForGame()`, `injectInput()`, `screenshot()`, `close()`
 
-- [ ] **5.4** Add `waitForGameReady()` helper
+- [x] **5.4** Add `waitForGameReady()` helper
   - Signature: `waitForGameReady(page: Page, timeout?: number): Promise<void>`
   - Wait for game initialization
 
-- [ ] **5.5** Add `captureGameState()` helper
+- [x] **5.5** Add `captureGameState()` helper
   - Signature: `captureGameState(page: Page): Promise<GameStateCapture>`
   - Capture current game state from browser
 
 - [ ] **5.6** Update `e2e-tests/helpers/testClient.ts` to use test-utils
   - Re-export from test-utils for backward compatibility
   - Estimated files: ~8
+  - **Note:** Deferred. The existing implementation has specific static serving and logging logic that requires careful porting to avoid regressions. The new helper is available for new tests.
 
 ---
 
@@ -172,20 +173,20 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Basic mocks exist in setup
 **Dependencies:** None
 
-- [ ] **6.1** Create `test-utils/src/setup/storage.ts` file
+- [x] **6.1** Create `test-utils/src/setup/storage.ts` file
 
-- [ ] **6.2** Add `createMockLocalStorage()` factory
+- [x] **6.2** Add `createMockLocalStorage()` factory
   - Signature: `createMockLocalStorage(initialData?: Record<string, string>): Storage`
   - Full Storage API implementation
 
-- [ ] **6.3** Add `createMockSessionStorage()` factory
+- [x] **6.3** Add `createMockSessionStorage()` factory
   - Signature: `createMockSessionStorage(initialData?: Record<string, string>): Storage`
 
-- [ ] **6.4** Add `createMockIndexedDB()` factory
+- [x] **6.4** Add `createMockIndexedDB()` factory
   - Signature: `createMockIndexedDB(databases?: IDBDatabase[]): IDBFactory`
   - Wrap fake-indexeddb with factory pattern
 
-- [ ] **6.5** Add `createStorageTestScenario()` helper
+- [x] **6.5** Add `createStorageTestScenario()` helper
   - Signature: `createStorageTestScenario(storageType: 'local' | 'session' | 'indexed'): StorageScenario`
   - Pre-configured storage for testing
 
@@ -196,17 +197,17 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Some audio mocks in Section 19-2
 **Dependencies:** Section 19-2 Task 2 (audio mocks)
 
-- [ ] **7.1** Create `test-utils/src/setup/audio.ts` file
+- [x] **7.1** Create `test-utils/src/setup/audio.ts` file
 
-- [ ] **7.2** Add `setupMockAudioContext()` helper
+- [x] **7.2** Add `setupMockAudioContext()` helper
   - Signature: `setupMockAudioContext(): void`
   - Replace global AudioContext with mock
 
-- [ ] **7.3** Add `teardownMockAudioContext()` helper
+- [x] **7.3** Add `teardownMockAudioContext()` helper
   - Signature: `teardownMockAudioContext(): void`
   - Restore original AudioContext
 
-- [ ] **7.4** Add `captureAudioEvents()` helper
+- [x] **7.4** Add `captureAudioEvents()` helper
   - Signature: `captureAudioEvents(context: AudioContext): AudioEvent[]`
   - Track audio operations for verification
 
@@ -217,16 +218,16 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Section 19-1 Task 2 (network mocks)
 
-- [ ] **8.1** Create `test-utils/src/e2e/network.ts` file
+- [x] **8.1** Create `test-utils/src/e2e/network.ts` file
 
-- [ ] **8.2** Add `simulateNetworkCondition()` helper
+- [x] **8.2** Add `simulateNetworkCondition()` helper
   - Signature: `simulateNetworkCondition(condition: 'good' | 'slow' | 'unstable' | 'offline'): NetworkSimulator`
   - Presets for common network conditions
 
-- [ ] **8.3** Add `createCustomNetworkCondition()` helper
+- [x] **8.3** Add `createCustomNetworkCondition()` helper
   - Signature: `createCustomNetworkCondition(latency: number, jitter: number, packetLoss: number): NetworkSimulator`
 
-- [ ] **8.4** Add `throttleBandwidth()` helper
+- [x] **8.4** Add `throttleBandwidth()` helper
   - Signature: `throttleBandwidth(bytesPerSecond: number): void`
   - For Playwright network throttling
 
@@ -237,17 +238,17 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Task 5 (E2E helpers)
 
-- [ ] **9.1** Create `test-utils/src/e2e/visual.ts` file
+- [x] **9.1** Create `test-utils/src/e2e/visual.ts` file
 
-- [ ] **9.2** Add `captureGameScreenshot()` helper
+- [x] **9.2** Add `captureGameScreenshot()` helper
   - Signature: `captureGameScreenshot(page: Page, name: string): Promise<Buffer>`
   - Capture and save game screenshot
 
-- [ ] **9.3** Add `compareScreenshots()` helper
+- [x] **9.3** Add `compareScreenshots()` helper
   - Signature: `compareScreenshots(baseline: Buffer, current: Buffer, threshold?: number): VisualDiff`
   - Pixel-by-pixel comparison
 
-- [ ] **9.4** Add `createVisualTestScenario()` helper
+- [x] **9.4** Add `createVisualTestScenario()` helper
   - Signature: `createVisualTestScenario(sceneName: string): VisualScenario`
   - Setup for visual regression testing
 
@@ -258,22 +259,22 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Tasks 1-9
 
-- [ ] **10.1** Add JSDoc comments to all setup/E2E utilities
+- [x] **10.1** Add JSDoc comments to all setup/E2E utilities
   - Include usage examples for browser setup, E2E testing
 
-- [ ] **10.2** Update `test-utils/README.md` with setup/E2E utilities section
+- [x] **10.2** Update `test-utils/README.md` with setup/E2E utilities section
   - Document: browser setup, canvas mocks, RAF helpers, E2E utilities
 
 - [ ] **10.3** Create migration guide for vitest.setup.ts files
   - Document how to migrate existing setup files
 
-- [ ] **10.4** Verify all setup/E2E utilities exported from `test-utils/src/index.ts`
+- [x] **10.4** Verify all setup/E2E utilities exported from `test-utils/src/index.ts`
   - Organized by category: `setup/*`, `e2e/*`
 
 - [ ] **10.5** Add TypeScript type exports
   - Export all setup options and E2E interfaces
 
-- [ ] **10.6** Create example test files demonstrating setup usage
+- [x] **10.6** Create example test files demonstrating setup usage
   - Example unit test with browser setup
   - Example E2E test with Playwright
   - Example integration test with full environment

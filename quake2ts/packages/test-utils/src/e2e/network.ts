@@ -30,7 +30,7 @@ const CONDITIONS: Record<NetworkCondition, NetworkConfig> = {
         offline: false,
         downloadThroughput: 1 * 1024 * 1024,
         uploadThroughput: 1 * 1024 * 1024,
-        latency: 100 // Jitter needs logic not simple preset
+        latency: 100
     },
     'offline': {
         offline: true,
@@ -52,8 +52,8 @@ export function simulateNetworkCondition(condition: NetworkCondition): NetworkSi
  * Creates a custom network condition simulator.
  *
  * @param latency Latency in milliseconds
- * @param jitter Approximate jitter (variation in latency) - Note: CDP doesn't support jitter natively, so this is just a placeholder or requires manual delay injection.
- * @param packetLoss Packet loss percentage (0-100) - CDP doesn't strictly support packet loss, typically emulated via "offline" toggling or proxy. We will ignore for basic CDP emulation.
+ * @param jitter Approximate jitter (variation in latency) - Note: CDP doesn't support jitter natively.
+ * @param packetLoss Packet loss percentage (0-100) - Ignored for basic CDP emulation.
  */
 export function createCustomNetworkCondition(
     latency: number,
@@ -62,12 +62,12 @@ export function createCustomNetworkCondition(
     baseConfig?: NetworkConfig
 ): NetworkSimulator {
     return {
-        async apply(page: any) { // Type as 'any' to avoid strict Playwright dependency in signature if not needed, or use Page
+        async apply(page: any) {
             const client = await page.context().newCDPSession(page);
             await client.send('Network.enable');
             await client.send('Network.emulateNetworkConditions', {
                 offline: baseConfig?.offline || false,
-                latency: latency + (Math.random() * jitter), // Basic jitter application on setup (static)
+                latency: latency + (Math.random() * jitter),
                 downloadThroughput: baseConfig?.downloadThroughput || -1,
                 uploadThroughput: baseConfig?.uploadThroughput || -1,
             });
