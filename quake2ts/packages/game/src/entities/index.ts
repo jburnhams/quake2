@@ -10,10 +10,15 @@ export {
   type MonsterInfo,
   type MonsterMove,
   type MonsterFrame,
+  type MonsterAction,
+  type AIAction,
   MoveType,
   Solid,
   ServerFlags,
   DeadFlag,
+  EntityFlags,
+  EntityEffects,
+  MuzzleFlash,
   ENTITY_FIELD_METADATA,
 } from './entity.js';
 export { EntitySystem, type EntitySystemSnapshot, type SerializedEntityState, type SerializedTargetAwareness, type LevelState } from './system.js';
