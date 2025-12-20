@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState } from '../src/client.js';
-import { NetDriver } from '@quake2ts/shared';
-import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -65,17 +64,11 @@ describe('DedicatedServer Connection Flow', () => {
 
   it('should handle "connect" command', () => {
     // 1. Setup a client using proper factory
-    const mockNet: NetDriver = {
+    const mockNet = createMockNetDriver({
         send: vi.fn((data) => {
             sentMessages.push(data);
-        }),
-        disconnect: vi.fn(),
-        connect: vi.fn(),
-        onMessage: vi.fn(),
-        onClose: vi.fn(),
-        onError: vi.fn(),
-        isConnected: vi.fn().mockReturnValue(true)
-    };
+        })
+    });
 
     const client = createMockServerClient(0, {
         state: ClientState.Connected,

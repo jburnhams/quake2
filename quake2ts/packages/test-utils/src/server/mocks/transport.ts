@@ -142,3 +142,20 @@ export function createMockTransport(
     Object.assign(transport, overrides);
     return transport;
 }
+
+/**
+ * Creates a mock NetDriver instance.
+ * @param overrides Optional overrides for the NetDriver methods.
+ */
+export function createMockNetDriver(overrides?: Partial<NetDriver>): NetDriver {
+    return {
+        connect: vi.fn().mockResolvedValue(undefined),
+        disconnect: vi.fn(),
+        send: vi.fn(),
+        onMessage: vi.fn(),
+        onClose: vi.fn(),
+        onError: vi.fn(),
+        isConnected: vi.fn().mockReturnValue(true),
+        ...overrides
+    };
+}
