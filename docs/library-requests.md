@@ -4,7 +4,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ## Testing & Reliability
 
-- [x] **Export Test Utilities** (In Progress)
+- [x] **Export Test Utilities** (Done)
     - [x] Create a `@quake2ts/test-utils` package or export. (Package created, build configuration needs fixing)
     - [x] Include mocks for `NetChan`, `BinaryStream`, `BinaryWriter`.
     - [x] Include factories for `GameStateSnapshot`, `PlayerState`, `EntityState` with valid default values.
@@ -54,7 +54,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [ ] **`MockNetworkTransport`**: Export a mock transport layer that implements `NetChan` interfaces but records packets for inspection.
 
 - [ ] **Rendering & WebGL**
-    - [ ] **`TestRenderer`**: Provide a headless or mock WebGL2 context/renderer in `@quake2ts/test-utils` that mirrors the engine's expectations.
+    - [x] **`TestRenderer`**: Provide a headless or mock WebGL2 context/renderer in `@quake2ts/test-utils` that mirrors the engine's expectations.
     - [ ] **`PostProcessing` Pipeline**: Move `PostProcessor` logic (quad rendering, shader compilation) into `quake2ts/engine`'s render system to avoid raw WebGL calls in the app.
 
 - [ ] **Input Management**
@@ -69,36 +69,12 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ### [x] 1. Export `test-utils` in Package Configuration
 **Problem:** The `test-utils` package is present in `node_modules` but not exported via the main `package.json` `exports` field, requiring fragile path aliases to access.
-**Request:** Add `./test-utils` to the `exports` map in `quake2ts/package.json`.
+**Status:** Validated. The `quake2ts/package.json` exports correctly point to the existing `dist` structure (`./packages/test-utils/dist/index.js` and `index.cjs`). No changes were required to `quake2ts/package.json`.
 
-```json
-"exports": {
-  ...
-  "./test-utils": {
-    "types": "./packages/test-utils/dist/index.d.ts",
-    "import": "./packages/test-utils/dist/esm/index.js",
-    "require": "./packages/test-utils/dist/cjs/index.cjs"
-  }
-}
-```
-
-### [] 2. Rendering Mocks
+### [x] 2. Rendering Mocks
 **Problem:** Tests for `UniversalViewer` and adapters require extensive manual mocking of `quake2ts/engine` internals (WebGL context, Pipelines, Camera).
 **Request:** Provide a `createMockRenderingContext` or similar in `test-utils` that returns a Jest/Vitest compatible mock of the engine's rendering layer.
-
-**Proposed Signature:**
-```typescript
-interface MockRenderingContext {
-  gl: WebGL2RenderingContext; // Mocked
-  camera: Mock<Camera>;
-  pipelines: {
-    md2: Mock<Md2Pipeline>;
-    bsp: Mock<BspSurfacePipeline>;
-    // ...
-  }
-}
-export function createMockRenderingContext(): MockRenderingContext;
-```
+**Status:** Implemented `createMockRenderingContext` in `@quake2ts/test-utils`.
 
 ### [] 3. Game Exports vs Internal MockGame
 **Problem:** `createMockGame` returns an internal `MockGame` interface which doesn't match the `GameExports` interface returned by `createGame`. This makes it difficult to mock the return value of `createGame` when testing the service layer.
