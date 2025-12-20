@@ -51,5 +51,3 @@ export * from './e2e/playwright.js';
 export * from './e2e/visual.js';
 export * from './e2e/network.js';
 
-// Legacy/Misc
-export * from './mocks/webgl2.js';
