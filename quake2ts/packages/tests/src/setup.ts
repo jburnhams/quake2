@@ -1,10 +1,10 @@
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
+import { setupBrowserEnvironment as setupBrowserEnvironmentUtils } from '@quake2ts/test-utils';
 import { createCanvas } from '@napi-rs/canvas';
-import { AudioContext } from 'node-web-audio-api';
+import { JSDOM } from 'jsdom';
 import { createMockWebGL2Context } from './mocks/webgl2.js';
 import { createMockPointerLock } from '@quake2ts/test-utils';
 
-export function setupBrowserEnvironment() {
+export function setupBrowserEnvironmentOriginal() {
   // 1. Setup JSDOM for window, document, etc.
   const dom = new JSDOM('<!DOCTYPE html><canvas id="game-canvas"></canvas>', {
     url: 'http://localhost:3000/',
@@ -58,7 +58,7 @@ export function setupBrowserEnvironment() {
 }
 
 export function setupBrowserEnvironmentLocal() {
-    setupBrowserEnvironment({
+    setupBrowserEnvironmentUtils({
         url: 'http://localhost:3000/',
         pretendToBeVisual: true,
         resources: 'usable',
