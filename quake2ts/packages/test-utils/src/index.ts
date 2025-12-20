@@ -5,6 +5,7 @@ export * from './game/factories.js';
 export * from './game/helpers.js';
 export * from './game/mocks/ai.js';
 export * from './game/mocks/combat.js';
+export * from './game/mocks/items.js';
 export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mocks/state.js';
@@ -22,19 +23,12 @@ export * from './setup/node.js';
 export * from './setup/webgl.js'; // This exports createMockWebGL2Context
 export * from './setup/storage.js';
 export * from './setup/audio.js';
-export * from './setup/timing.js';
 
 // E2E
 export * from './e2e/playwright.js';
 export * from './e2e/input.js';
 export * from './e2e/network.js';
 export * from './e2e/visual.js';
-
-// Shared
-export * from './shared/bsp.js';
-export * from './shared/mocks.js';
-export * from './game/factories.js';
-export * from './game/helpers.js';
 
 // Export types
 export type { BrowserSetupOptions } from './setup/browser.js';
