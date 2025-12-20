@@ -104,6 +104,8 @@
     "build:types": "tsc -b tsconfig.build.json",
     "build:workspace": "pnpm -r --filter=!#workspace-root --if-present run build",
     "test": "pnpm -r --if-present test",
+    "test:unit": "pnpm -r --filter \"!@quake2ts/e2e-tests\" --if-present run test:unit",
+    "test:integration": "pnpm -r --filter \"!@quake2ts/e2e-tests\" --if-present run test:integration",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "devDependencies": {
