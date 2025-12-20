@@ -164,21 +164,21 @@ This section covers migration and expansion of game-specific test utilities incl
 **Status:** Some helpers exist, need expansion
 **Dependencies:** Section 19-1 Task 4 (collision helpers)
 
-- [ ] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
+- [x] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
 
-- [ ] **5.2** Add `simulateMovement()` helper
+- [x] **5.2** Add `simulateMovement()` helper
   - Signature: `simulateMovement(entity: Entity, destination: Vector3, context: TestContext): Trace`
   - Simulate movement with collision detection
 
-- [ ] **5.3** Add `simulateGravity()` helper
+- [x] **5.3** Add `simulateGravity()` helper
   - Signature: `simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void`
   - Apply gravity and ground detection
 
-- [ ] **5.4** Add `simulateJump()` helper
+- [x] **5.4** Add `simulateJump()` helper
   - Signature: `simulateJump(entity: Entity, context: TestContext): void`
   - Apply jump velocity with ground check
 
-- [ ] **5.5** Add `createPhysicsTestScenario()` helper
+- [x] **5.5** Add `createPhysicsTestScenario()` helper
   - Signature: `createPhysicsTestScenario(scenarioType: 'stairs' | 'ladder' | 'platform' | 'slope'): PhysicsScenario`
   - Return pre-configured BSP model and entity setup
 
