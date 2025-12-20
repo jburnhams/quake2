@@ -115,6 +115,10 @@ function queryCapabilities(state: WebGPUContextState): WebGPUCapabilities
 - Returns accurate limit values
 - Handles missing optional features gracefully
 
+**Status:**
+- [x] Implemented queryCapabilities function
+- [x] Verified correct feature and limit extraction
+
 ---
 
 ### Task 3: Context Loss/Restoration Handling
@@ -147,11 +151,17 @@ function setupDeviceLossHandling(
 - Handles multiple loss events
 - Does not crash if no callback provided
 
+**Status:**
+- [x] Implemented setupDeviceLossHandling
+- [x] Verified callback invocation on device loss
+
 ---
 
 ### Task 4: Headless Rendering Support
 
 **File:** `packages/engine/src/render/webgpu/headless.ts`
+
+**NOTE:** This task has been deferred to a later step per user instruction.
 
 Create headless-specific utilities:
 
@@ -191,6 +201,9 @@ async function captureRenderTarget(
 - Handles different texture formats
 - Properly manages staging buffers
 
+**Status:**
+- [ ] Deferred
+
 ---
 
 ### Task 5: Error Handling & Validation
@@ -213,6 +226,10 @@ Implement comprehensive error handling:
 - Validates canvas parameter
 - Error messages guide user to solutions
 - Captures validation errors via error scopes
+
+**Status:**
+- [x] Implemented error handling for missing API, adapter failures, and device creation
+- [x] Validated canvas element check
 
 ---
 
@@ -257,6 +274,12 @@ export interface IWebGPURenderer extends IRenderer {
 - WebGL renderer still compiles and works
 - Interface correctly defines contract
 - Both renderers can be typed as IRenderer
+
+**Status:**
+- [x] Created `packages/engine/src/render/interface.ts`
+- [x] Refactored `Renderer` to implement `IRenderer`
+- [x] Created `packages/engine/src/render/webgpu/renderer.ts` placeholder
+- [x] Updated exports in `index.ts` and fixed build errors
 
 ---
 
@@ -313,15 +336,15 @@ test('creates headless context with @webgpu/dawn', async () => {
 
 ## Success Criteria
 
-- [ ] Can create WebGPU context in browser with canvas
-- [ ] Can create WebGPU context headlessly with @webgpu/dawn
-- [ ] Feature detection correctly identifies capabilities
-- [ ] Device loss handling implemented
-- [ ] Headless render targets can be created and read back
-- [ ] Error handling provides helpful messages
-- [ ] Shared interface extracts common renderer contract
-- [ ] All tests pass (unit and integration)
-- [ ] Zero modifications to existing WebGL code
+- [x] Can create WebGPU context in browser with canvas
+- [x] Can create WebGPU context headlessly with @webgpu/dawn
+- [x] Feature detection correctly identifies capabilities
+- [x] Device loss handling implemented
+- [ ] Headless render targets can be created and read back (Deferred)
+- [x] Error handling provides helpful messages
+- [x] Shared interface extracts common renderer contract
+- [x] All tests pass (unit and integration)
+- [x] Zero modifications to existing WebGL code (Except interface adoption and export fixes)
 
 ---
 
