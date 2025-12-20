@@ -9,14 +9,21 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/server": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^0.34.0",
-    "tsup": "^7.1.0",
-    "typescript": "^5.0.0",
-    "@types/jsdom": "^21.1.0"
+    "@napi-rs/canvas": "^0.1.84",
+    "@types/jsdom": "^27.0.0",
+    "@types/serve-handler": "^6.1.4",
+    "@webgpu/types": "^0.1.68",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^27.3.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "webgpu": "^0.3.8"
   }
 }

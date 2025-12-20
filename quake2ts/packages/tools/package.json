@@ -30,6 +30,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@quake2ts/engine": "workspace:*",
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
