@@ -77,7 +77,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 3. Create Connection/Handshake Mocks (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** In Progress
 **Dependencies:** Task 1 (transport mocks)
 
 - [x] **3.1** Create `test-utils/src/server/mocks/connection.ts` file
@@ -106,7 +106,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 4. Create Multiplayer Simulation Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** In Progress
 **Dependencies:** Task 2 (server state), Section 19-3 Task 1 (entity factories)
 
 - [x] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
@@ -139,7 +139,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 5. Create Client Snapshot Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** In Progress
 **Dependencies:** Task 2 (server state), Section 19-3 Task 8 (game state factories)
 
 - [x] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
@@ -168,20 +168,20 @@ This section covers migration of server-specific test utilities including networ
 
 ### 6. Create Server Command/RCon Mocks (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** In Progress
 **Dependencies:** None
 
-- [ ] **6.1** Create `test-utils/src/server/mocks/commands.ts` file
+- [x] **6.1** Create `test-utils/src/server/mocks/commands.ts` file
 
-- [ ] **6.2** Add `createMockServerConsole()` factory
+- [x] **6.2** Add `createMockServerConsole()` factory
   - Signature: `createMockServerConsole(overrides?: Partial<ServerConsole>): ServerConsole`
   - Methods: `exec()`, `print()`, `broadcast()`
 
-- [ ] **6.3** Add `createMockRConClient()` factory
+- [x] **6.3** Add `createMockRConClient()` factory
   - Signature: `createMockRConClient(password?: string): RConClient`
   - Simulate remote console connection
 
-- [ ] **6.4** Add `simulateServerCommand()` helper
+- [x] **6.4** Add `simulateServerCommand()` helper
   - Signature: `simulateServerCommand(server: MockServer, command: string): string`
   - Execute server command and return output
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
 import { NetDriver } from '@quake2ts/shared';
 
 // Mock dependencies
@@ -88,27 +88,12 @@ describe('DedicatedServer Timeout', () => {
         };
 
         const clientIndex = 0;
-        const client = {
-            index: clientIndex,
-            state: ClientState.Connected,
+        const client = createMockServerClient(clientIndex, {
             net: mockDriver,
             lastMessage: sv.frame, // Last message was NOW
-            messageQueue: [],
-            frames: [],
-            edict: null,
-            userInfo: '',
-            lastCmd: {},
             lastConnect: Date.now(),
-            name: 'TestClient',
-            frameLatency: [],
-            messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
-        };
+            name: 'TestClient'
+        });
 
         svs.clients[clientIndex] = client;
 
@@ -151,27 +136,12 @@ describe('DedicatedServer Timeout', () => {
         };
 
         const clientIndex = 0;
-        const client = {
-            index: clientIndex,
-            state: ClientState.Connected,
+        const client = createMockServerClient(clientIndex, {
             net: mockDriver,
             lastMessage: sv.frame,
-            messageQueue: [],
-            frames: [],
-            edict: null,
-            userInfo: '',
-            lastCmd: {},
             lastConnect: Date.now(),
-            name: 'TestClient',
-            frameLatency: [],
-            messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
-        };
+            name: 'TestClient'
+        });
 
         svs.clients[clientIndex] = client;
         const dropClientSpy = vi.spyOn(server as any, 'dropClient');
