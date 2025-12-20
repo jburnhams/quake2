@@ -1,6 +1,6 @@
-import { LoopCallbacks, FixedTimestepLoop, type LoopOptions } from './loop.js';
+import { LoopCallbacks, FixedTimestepLoop, type LoopOptions, type FixedStepContext, type RenderContext } from './loop.js';
 import { EngineRuntime, createEngineRuntime } from './runtime.js';
-import { AssetManager } from './assets/manager.js';
+import { AssetManager, type AssetManagerOptions } from './assets/manager.js';
 
 import { PmoveTraceResult, Vec3 } from '@quake2ts/shared';
 
@@ -11,7 +11,7 @@ export interface TraceResult extends PmoveTraceResult {
 }
 
 import { Renderer } from './render/renderer.js'; // This now exports the interface and alias
-import { AudioApi } from './audio/api.js';
+import { AudioApi, type AudioApiOptions } from './audio/api.js';
 import { IRenderer } from './render/interface.js';
 
 export interface EngineImports {
@@ -42,7 +42,7 @@ export function createEngine(imports: EngineImports): EngineExports {
 }
 
 export { FixedTimestepLoop };
-export { ConfigStringRegistry };
+export { ConfigStringRegistry } from './configstrings.js';
 export { Cvar, CvarRegistry } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
@@ -181,7 +181,7 @@ export {
   type GameFrameResult,
   type GameRenderSample,
   type GameSimulation,
-};
+} from './host.js';
 export { EngineRuntime, createEngineRuntime };
 export { createWebGLContext, type WebGLContextInitOptions, type WebGLContextState } from './render/context.js';
 export { ShaderProgram, createProgramFromSources, type ShaderSources } from './render/shaderProgram.js';

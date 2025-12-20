@@ -6,11 +6,21 @@ import { CollisionEntityIndex, traceBox } from '@quake2ts/shared';
 // Mock dependencies
 vi.mock('@quake2ts/shared', async () => {
     const actual = await vi.importActual('@quake2ts/shared');
-    const { createMockCollisionEntityIndex } = await vi.importActual('@quake2ts/test-utils');
     return {
         ...actual,
         traceBox: vi.fn(),
-        CollisionEntityIndex: vi.fn().mockImplementation(() => createMockCollisionEntityIndex())
+        CollisionEntityIndex: vi.fn().mockImplementation(() => ({
+            trace: vi.fn().mockReturnValue({
+                fraction: 1.0,
+                allsolid: false,
+                startsolid: false,
+                endpos: { x: 0, y: 0, z: 0 },
+                entityId: null
+            }),
+            link: vi.fn(),
+            unlink: vi.fn(),
+            gatherTriggerTouches: vi.fn().mockReturnValue([])
+        }))
     };
 });
 

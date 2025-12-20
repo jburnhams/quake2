@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@quake2ts/engine':
-        specifier: workspace:^
-        version: link:packages/engine
       gl-matrix:
         specifier: ^3.4.3
         version: 3.4.4
@@ -251,9 +248,6 @@ importers:
 
   packages/test-utils:
     dependencies:
-      '@quake2ts/engine':
-        specifier: workspace:^
-        version: link:../engine
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game

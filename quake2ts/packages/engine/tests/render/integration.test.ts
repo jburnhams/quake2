@@ -5,16 +5,16 @@ import { Camera } from '../../src/render/camera.js';
 import { BspMap } from '../../src/assets/bsp.js';
 
 // Import helpers
-import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import { createMockGL } from '../helpers/mockWebGL.js';
 import { buildTestBsp, BspFixtureOptions } from '../helpers/bspBuilder.js';
 import { parseBsp } from '../../src/assets/bsp.js';
 
 describe('Renderer Integration', () => {
-    let mockGl: ReturnType<typeof createMockWebGL2Context>;
+    let mockGl: ReturnType<typeof createMockGL>;
     let renderer: Renderer;
 
     beforeEach(() => {
-        mockGl = createMockWebGL2Context();
+        mockGl = createMockGL();
         renderer = createRenderer(mockGl as unknown as WebGL2RenderingContext);
     });
 
