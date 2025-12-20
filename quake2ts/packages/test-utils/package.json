@@ -25,16 +25,19 @@
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
+    "playwright": "^1.57.0",
     "serve-handler": "^6.1.6",
     "vitest": "^1.6.0"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.84",
     "@types/jsdom": "^27.0.0",
+    "@webgpu/types": "^0.1.68",
     "@types/serve-handler": "^6.1.4",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.3.0",
     "tsup": "^8.1.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "webgpu": "^0.3.8"
   }
 }

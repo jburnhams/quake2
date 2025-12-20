@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "@webgpu/types"],
     "composite": false,
     "lib": ["dom", "es2020"]
   },

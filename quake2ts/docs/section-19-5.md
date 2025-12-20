@@ -77,24 +77,24 @@ This section covers migration of server-specific test utilities including networ
 
 ### 3. Create Connection/Handshake Mocks (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Task 1 (transport mocks)
 
-- [ ] **3.1** Create `test-utils/src/server/mocks/connection.ts` file
+- [x] **3.1** Create `test-utils/src/server/mocks/connection.ts` file
 
-- [ ] **3.2** Add `createMockConnection()` factory
+- [x] **3.2** Add `createMockConnection()` factory
   - Signature: `createMockConnection(state?: ConnectionState, overrides?: Partial<Connection>): Connection`
   - Include: state, address, challenge, userinfo
 
-- [ ] **3.3** Add `createMockHandshake()` factory
+- [x] **3.3** Add `createMockHandshake()` factory
   - Signature: `createMockHandshake(stage?: HandshakeStage): Handshake`
   - Stages: challenge, connect, info, active
 
-- [ ] **3.4** Add `simulateHandshake()` helper
+- [x] **3.4** Add `simulateHandshake()` helper
   - Signature: `simulateHandshake(client: MockConnection, server: MockServer): Promise<boolean>`
   - Simulate complete handshake process
 
-- [ ] **3.5** Add `createMockUserInfo()` factory
+- [x] **3.5** Add `createMockUserInfo()` factory
   - Signature: `createMockUserInfo(overrides?: Partial<UserInfo>): UserInfo`
   - Include: name, skin, model, fov, hand
 
@@ -106,28 +106,28 @@ This section covers migration of server-specific test utilities including networ
 
 ### 4. Create Multiplayer Simulation Utilities (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Task 2 (server state), Section 19-3 Task 1 (entity factories)
 
-- [ ] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
+- [x] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
 
-- [ ] **4.2** Add `createMultiplayerTestScenario()` helper
+- [x] **4.2** Add `createMultiplayerTestScenario()` helper
   - Signature: `createMultiplayerTestScenario(numPlayers?: number): MultiplayerScenario`
   - Include: server, connected clients, player entities
 
-- [ ] **4.3** Add `simulatePlayerJoin()` helper
+- [x] **4.3** Add `simulatePlayerJoin()` helper
   - Signature: `simulatePlayerJoin(server: MockServer, userInfo?: UserInfo): Promise<ServerClient>`
   - Simulate complete player connection and spawn
 
-- [ ] **4.4** Add `simulatePlayerLeave()` helper
+- [x] **4.4** Add `simulatePlayerLeave()` helper
   - Signature: `simulatePlayerLeave(server: MockServer, clientNum: number): void`
   - Simulate player disconnect and cleanup
 
-- [ ] **4.5** Add `simulateServerTick()` helper
+- [x] **4.5** Add `simulateServerTick()` helper
   - Signature: `simulateServerTick(server: MockServer, deltaTime?: number): void`
   - Simulate one server frame update
 
-- [ ] **4.6** Add `simulatePlayerInput()` helper
+- [x] **4.6** Add `simulatePlayerInput()` helper
   - Signature: `simulatePlayerInput(client: ServerClient, input: PlayerInput): void`
   - Inject player input into server simulation
 
@@ -139,24 +139,24 @@ This section covers migration of server-specific test utilities including networ
 
 ### 5. Create Client Snapshot Utilities (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Task 2 (server state), Section 19-3 Task 8 (game state factories)
 
-- [ ] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
+- [x] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
 
-- [ ] **5.2** Add `createServerSnapshot()` helper
+- [x] **5.2** Add `createServerSnapshot()` helper
   - Signature: `createServerSnapshot(serverState: ServerState, clientNum: number): Snapshot`
   - Generate client-specific snapshot from server state
 
-- [ ] **5.3** Add `createDeltaSnapshot()` helper
+- [x] **5.3** Add `createDeltaSnapshot()` helper
   - Signature: `createDeltaSnapshot(oldSnapshot: Snapshot, newSnapshot: Snapshot): DeltaSnapshot`
   - Calculate delta between snapshots
 
-- [ ] **5.4** Add `verifySnapshotConsistency()` helper
+- [x] **5.4** Add `verifySnapshotConsistency()` helper
   - Signature: `verifySnapshotConsistency(snapshots: Snapshot[]): ConsistencyReport`
   - Verify snapshot sequence is valid
 
-- [ ] **5.5** Add `simulateSnapshotDelivery()` helper
+- [x] **5.5** Add `simulateSnapshotDelivery()` helper
   - Signature: `simulateSnapshotDelivery(snapshot: Snapshot, reliability?: number): Promise<Snapshot | null>`
   - Simulate network delivery with packet loss
 

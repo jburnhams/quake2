@@ -474,7 +474,7 @@ class AssetCrossReference {
 
 **Workaround**: Scan all assets manually, very slow for large PAKs.
 
-**Status**: Partially Implemented (getMapDependencies).
+**Status**: Implemented in `@quake2ts/engine`.
 
 ---
 
@@ -795,6 +795,8 @@ class StreamingPakArchive {
 
 **Workaround**: Load entire PAK into memory, uses excessive RAM.
 
+**Status**: Implemented in `@quake2ts/engine`.
+
 ---
 
 ### Enhancement 9.2: Instancing API (P2)
@@ -902,7 +904,7 @@ interface MemoryUsage {
 | Debug Rendering Mode | engine | P1 | 04 | Implemented |
 | Lighting Control APIs | engine | P2 | 04 | Implemented |
 | Entity Bounds Access | game | P2 | 04 | Implemented |
-| Cross-Reference API | engine | P2 | 05 | Partially Implemented |
+| Cross-Reference API | engine | P2 | 05 | Implemented |
 | Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
 | Entity Templates | game | P2 | 06 | Implemented |

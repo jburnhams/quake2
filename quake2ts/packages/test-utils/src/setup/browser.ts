@@ -29,7 +29,7 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
     url,
     pretendToBeVisual,
-    resources
+    resources: resources as any
   });
 
   // Set up global variables
@@ -150,7 +150,12 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
         if (contextId === 'webgl2') {
           return createMockWebGL2Context(this);
         }
-        return originalProtoGetContext.call(this, contextId, options);
+        // jsdom's getContext doesn't officially support options in types in some versions,
+        // or we are calling it with 3 arguments (this, contextId, options) via call?
+        // Actually originalProtoGetContext.call(this, contextId, options) is passing 3 args to call:
+        // this arg, arg1, arg2. If jsdom definition has 1 arg, it might complain.
+        // @ts-ignore - JSDOM definitions might not support the options argument yet, but we need to pass it
+        return originalProtoGetContext.call(this, contextId as any, options);
       };
   }
 
@@ -180,7 +185,7 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
       // Fallback for other sources (e.g. Image element) - return empty canvas of generic size
       const canvas = new Canvas(100, 100);
       return canvas;
-    } as any;
+    } as unknown as any;
   }
 
   // Mock btoa and atob if not available
