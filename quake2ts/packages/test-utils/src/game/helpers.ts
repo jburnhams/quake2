@@ -191,7 +191,20 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   } as unknown as TestContext;
 }
 
-export function createSpawnContext(): SpawnContext {
+export function createSpawnTestContext(mapName?: string): TestContext {
+  const ctx = createTestContext();
+  // Simulate map load if needed
+  if (mapName) {
+    ctx.game.spawnWorld();
+  }
+  return ctx;
+}
+
+export function createCombatTestContext(): TestContext {
+  return createTestContext();
+}
+
+export function createPhysicsTestContext(): TestContext {
   return createTestContext();
 }
 

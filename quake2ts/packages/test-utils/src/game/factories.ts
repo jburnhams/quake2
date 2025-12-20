@@ -1,5 +1,15 @@
+import {
+  Entity,
+  MoveType,
+  Solid,
+  ServerFlags,
+  DeadFlag,
+  EntityFlags
+} from '@quake2ts/game';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot } from '@quake2ts/game';
+
+// -- Shared / Game State Factories --
 
 export const createPlayerStateFactory = (overrides?: Partial<PlayerState>): PlayerState => ({
   pm_type: 0,
@@ -85,3 +95,78 @@ export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnap
   pm_type: 0,
   ...overrides,
 });
+
+// -- Entity Factories --
+
+export function createEntityFactory(overrides: Partial<Entity> = {}): Entity {
+  const ent = new Entity(1);
+  Object.assign(ent, {
+    classname: 'info_null',
+    health: 0,
+    max_health: 0,
+    takedamage: false,
+    deadflag: DeadFlag.Alive,
+    solid: Solid.Not,
+    movetype: MoveType.None,
+    flags: 0,
+    svflags: 0,
+    ...overrides
+  });
+  return ent;
+}
+
+export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Entity {
+  return createEntityFactory({
+    classname: 'player',
+    health: 100,
+    max_health: 100,
+    takedamage: true,
+    solid: Solid.BoundingBox,
+    movetype: MoveType.Walk,
+    svflags: ServerFlags.Player,
+    viewheight: 22,
+    ...overrides
+  });
+}
+
+export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+  return createEntityFactory({
+    classname,
+    health: 100,
+    max_health: 100,
+    takedamage: true,
+    solid: Solid.BoundingBox,
+    movetype: MoveType.Step,
+    svflags: ServerFlags.Monster,
+    deadflag: DeadFlag.Alive,
+    ...overrides
+  });
+}
+
+export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+  return createEntityFactory({
+    classname,
+    solid: Solid.Trigger,
+    movetype: MoveType.Toss,
+    ...overrides
+  });
+}
+
+export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+  return createEntityFactory({
+    classname,
+    solid: Solid.Bsp,
+    movetype: MoveType.FlyMissile,
+    svflags: ServerFlags.Projectile,
+    ...overrides
+  });
+}
+
+export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+  return createEntityFactory({
+    classname,
+    solid: Solid.Trigger,
+    movetype: MoveType.None,
+    ...overrides
+  });
+}
