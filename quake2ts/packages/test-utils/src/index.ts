@@ -7,6 +7,7 @@ export * from './setup/browser.js';
 export * from './setup/node.js';
 export * from './setup/webgl.js';
 export * from './setup/canvas.js';
+export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
