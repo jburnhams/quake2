@@ -154,7 +154,8 @@ import { createPlayerInventory, PlayerClient, PowerupId, WeaponId } from './inve
 import { createPlayerWeaponStates } from './combat/index.js';
 
 // Export these for use in dedicated server
-export { createPlayerInventory } from './inventory/index.js';
+export { createPlayerInventory, PlayerInventory } from './inventory/index.js';
+export { Item } from './inventory/items.js';
 export { createPlayerWeaponStates } from './combat/index.js';
 
 import { CollisionModel } from '@quake2ts/shared';

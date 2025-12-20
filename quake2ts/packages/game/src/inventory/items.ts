@@ -435,3 +435,5 @@ export const FLAG_ITEMS: Record<string, FlagItem> = {
         team: 'blue',
     },
 };
+
+export type Item = WeaponItem | HealthItem | ArmorItem | PowerupItem | PowerArmorItem | KeyItem | FlagItem;

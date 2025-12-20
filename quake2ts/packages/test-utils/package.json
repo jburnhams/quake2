@@ -1,41 +1,22 @@
 {
   "name": "@quake2ts/test-utils",
   "version": "0.0.1",
-  "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "description": "Shared test utilities for Quake2TS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "test": "vitest run --passWithNoTests"
+    "build": "tsup",
+    "test": "vitest run"
   },
   "dependencies": {
     "@quake2ts/game": "workspace:*",
-    "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "playwright": "^1.57.0",
-    "serve-handler": "^6.1.6",
-    "vitest": "^1.6.0"
+    "@quake2ts/server": "workspace:*"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.84",
-    "@types/jsdom": "^27.0.0",
-    "@webgpu/types": "^0.1.68",
-    "@types/serve-handler": "^6.1.4",
-    "fake-indexeddb": "^6.0.0",
-    "jsdom": "^27.3.0",
-    "tsup": "^8.1.0",
-    "typescript": "^5.4.5",
-    "webgpu": "^0.3.8"
+    "vitest": "^0.34.0",
+    "tsup": "^7.1.0",
+    "typescript": "^5.0.0",
+    "@types/jsdom": "^21.1.0"
   }
 }

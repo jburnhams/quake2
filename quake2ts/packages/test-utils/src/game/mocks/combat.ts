@@ -1,61 +1,47 @@
+import { Entity, DamageMod, type WeaponState } from '@quake2ts/game';
+import { type Vec3 } from '@quake2ts/shared';
 import { vi, type Mock } from 'vitest';
-import { DamageMod, Entity, EntitySystem, WeaponState } from '@quake2ts/game';
 
-export interface MockDamageInfo {
+export interface MockWeapon {
+  fire: Mock<[Entity], void>;
+  reload: Mock<[Entity], void>;
   damage: number;
-  mod: DamageMod;
-  knockback: number;
-  attacker: Entity | null;
-  inflictor: Entity | null;
-  dir: { x: number, y: number, z: number } | null;
-  point: { x: number, y: number, z: number } | null;
 }
 
-export function createMockDamageInfo(overrides: Partial<MockDamageInfo> = {}): MockDamageInfo {
+export interface DamageInfo {
+  attacker: Entity | null;
+  target: Entity;
+  damage: number;
+  kick: number;
+  damageFlags: number;
+  mod: DamageMod;
+  point: Vec3;
+  dir: Vec3;
+}
+
+export function createMockWeapon(weaponType: string, overrides: Partial<MockWeapon> = {}): MockWeapon {
   return {
+    fire: vi.fn(),
+    reload: vi.fn(),
     damage: 10,
-    mod: DamageMod.UNKNOWN,
-    knockback: 0,
-    attacker: null,
-    inflictor: null,
-    dir: null,
-    point: null,
     ...overrides
   };
 }
 
-const WEAPON_NAMES: Record<string, string> = {
-  'weapon_blaster': 'Blaster',
-  'weapon_shotgun': 'Shotgun',
-  'weapon_supershotgun': 'Super Shotgun',
-  'weapon_machinegun': 'Machinegun',
-  'weapon_chaingun': 'Chaingun',
-  'weapon_grenadelauncher': 'Grenade Launcher',
-  'weapon_rocketlauncher': 'Rocket Launcher',
-  'weapon_hyperblaster': 'HyperBlaster',
-  'weapon_railgun': 'Railgun',
-  'weapon_bfg': 'BFG10K',
-};
-
-export function createMockWeapon(name: string = 'Mock Weapon') {
-  const displayName = WEAPON_NAMES[name] || name;
+export function createMockDamageInfo(overrides: Partial<DamageInfo> = {}): DamageInfo {
   return {
-    name: displayName,
-    ammoType: 'bullets',
-    ammoUse: 1,
-    selection: vi.fn(),
-    think: vi.fn(),
-    command: vi.fn(),
+    attacker: null,
+    target: new Entity(0),
+    damage: 0,
+    kick: 0,
+    damageFlags: 0,
+    mod: DamageMod.UNKNOWN,
+    point: { x: 0, y: 0, z: 0 },
+    dir: { x: 0, y: 0, z: 0 },
+    ...overrides
   };
 }
 
-export const mockMonsterAttacks = {
-  fireBlaster: vi.fn(),
-  fireRocket: vi.fn(),
-  fireGrenade: vi.fn(),
-  fireHeat: vi.fn(),
-  fireBullet: vi.fn(),
-  fireShotgun: vi.fn(),
-  fireRailgun: vi.fn(),
-  fireBFG: vi.fn(),
-};
+export const mockMonsterFireBlaster = vi.fn((entity: Entity, start: Vec3, dir: Vec3, damage: number) => {});
+export const mockMonsterFireRocket = vi.fn((entity: Entity, start: Vec3, dir: Vec3, damage: number) => {});
+export const mockMonsterFireRailgun = vi.fn((entity: Entity, start: Vec3, dir: Vec3, damage: number) => {});
