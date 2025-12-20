@@ -9,7 +9,7 @@ import {
   buildMd2VertexData,
 } from '../src/render/md2Pipeline.js';
 import { buildMd2 } from './helpers/md2Builder.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 const baseMd2 = parseMd2(
   buildMd2({
@@ -127,7 +127,7 @@ describe('MD2 frame interpolation', () => {
 
 describe('MD2 pipeline', () => {
   it('binds uniforms and draws the mesh', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     // Ensure uniform4f is mocked
     if (!gl.uniform4f) {
         (gl as any).uniform4f = vi.fn();

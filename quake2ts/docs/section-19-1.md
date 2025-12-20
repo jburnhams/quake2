@@ -17,27 +17,27 @@ This section covers migration of shared testing utilities that form the foundati
 
 ### 1. Consolidate BSP Helpers (HIGH PRIORITY)
 
-**Status:** Partially complete - duplicates exist
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **1.1** Verify `test-utils/src/shared/bsp.ts` has all functions from duplicates
+- [x] **1.1** Verify `test-utils/src/shared/bsp.ts` has all functions from duplicates
   - Functions: `makePlane()`, `makeAxisBrush()`, `makeNode()`, `makeBspModel()`, `makeLeaf()`, `makeLeafModel()`, `makeBrushFromMinsMaxs()`
 
-- [ ] **1.2** Remove duplicate BSP helpers from `shared/tests/bsp/test-helpers.ts`
+- [x] **1.2** Remove duplicate BSP helpers from `shared/tests/bsp/test-helpers.ts`
   - Delete file after completing subtasks below
 
-- [ ] **1.3** Update imports in `shared/tests/` directory
+- [x] **1.3** Update imports in `shared/tests/` directory
   - Replace `import { ... } from './bsp/test-helpers'` with `import { ... } from '@quake2ts/test-utils'`
   - Estimated files: ~15
 
-- [ ] **1.4** Remove duplicate BSP helpers from `game/tests/physics/bsp-helpers.ts`
+- [x] **1.4** Remove duplicate BSP helpers from `game/tests/physics/bsp-helpers.ts`
   - Delete file after completing subtasks below
 
-- [ ] **1.5** Update imports in `game/tests/physics/` directory
+- [x] **1.5** Update imports in `game/tests/physics/` directory
   - Replace `import { ... } from './bsp-helpers'` with `import { ... } from '@quake2ts/test-utils'`
   - Estimated files: ~10
 
-- [ ] **1.6** Update imports in other `game/tests/` subdirectories
+- [x] **1.6** Update imports in other `game/tests/` subdirectories
   - Check `game/tests/entities/`, `game/tests/combat/` for BSP helper usage
   - Estimated files: ~5
 

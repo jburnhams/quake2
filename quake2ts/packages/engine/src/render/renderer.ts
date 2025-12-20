@@ -35,6 +35,56 @@ type MutableRenderableMd2 = { -readonly [K in keyof RenderableMd2]: RenderableMd
 type MutableRenderableMd3 = { -readonly [K in keyof RenderableMd3]: RenderableMd3[K] };
 type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
 
+export interface Renderer {
+    readonly width: number;
+    readonly height: number;
+    readonly collisionVis: CollisionVisRenderer;
+    readonly debug: DebugRenderer;
+    readonly particleSystem: ParticleSystem;
+    getPerformanceReport(): RenderStatistics;
+    getMemoryUsage(): MemoryUsage;
+    renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
+    renderInstanced(model: Md2Model | Md3Model, instances: InstanceData[]): void;
+
+    /**
+     * Enable debug visualization modes
+     */
+    setDebugMode(mode: DebugMode): void;
+
+    // Lighting Controls
+    setBrightness(value: number): void;
+    setGamma(value: number): void;
+    setFullbright(enabled: boolean): void;
+    setAmbient(value: number): void;
+    setLightStyle(index: number, pattern: string | null): void;
+
+    // LOD
+    setLodBias(bias: number): void;
+
+    // HUD Methods
+    registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
+    registerTexture(name: string, texture: PreparedTexture): Pic;
+    begin2D(): void;
+    end2D(): void;
+    drawPic(x: number, y: number, pic: Pic, color?: [number, number, number, number]): void;
+    drawString(x: number, y: number, text: string, color?: [number, number, number, number]): void;
+    drawCenterString(y: number, text: string): void;
+    drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void;
+
+    // Entity Highlighting
+    setEntityHighlight(entityId: number, color: [number, number, number, number]): void;
+    clearEntityHighlight(entityId: number): void;
+
+    // Surface Highlighting
+    highlightSurface(faceIndex: number, color: [number, number, number, number]): void;
+    removeSurfaceHighlight(faceIndex: number): void;
+
+    // Post Process
+    setUnderwaterWarp(enabled: boolean): void;
+    setBloom(enabled: boolean): void;
+    setBloomIntensity(value: number): void;
+}
+
 // Helper to generate a stable pseudo-random color from a number
 function colorFromId(id: number): [number, number, number, number] {
     // Simple hash function to generate RGB
@@ -57,7 +107,6 @@ export const createRenderer = (
     const gpuProfiler = new GpuProfiler(gl);
 
     // Create Particle System
-    // Assuming a reasonable max particle count (e.g., 2048) and a default RNG
     const particleRng = new RandomGenerator({ seed: Date.now() });
 
     const particleSystem = new ParticleSystem(4096, particleRng);
@@ -103,6 +152,9 @@ export const createRenderer = (
     let bloom = false;
     let bloomIntensity = 0.5;
 
+    // LOD state
+    let lodBias = 1.0;
+
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
     // Object pooling for instances
@@ -114,11 +166,9 @@ export const createRenderer = (
     const tempQuat = quat.create();
     const tempVec3Pos = vec3.create();
     const tempVec3Scale = vec3.create();
-    const DEFAULT_SCALE_VEC = vec3.fromValues(1, 1, 1);
 
     // Pre-allocate pools
     for (let i = 0; i < MAX_INSTANCES; i++) {
-        // Initialize as MD3-compatible structure to reserve lighting object
         const entity: MutableRenderableMd3 = {
             id: -1,
             model: undefined as any,
@@ -128,11 +178,10 @@ export const createRenderer = (
             tint: [1, 1, 1, 1],
             lighting: {
                 ambient: [0.5, 0.5, 0.5],
-                dynamicLights: [], // We will reuse this array capacity by setting length=0
+                dynamicLights: [],
                 modelMatrix: undefined as any
             }
         };
-        // Ensure lighting.modelMatrix points to the same transform array
         if (entity.lighting) {
             (entity.lighting as any).modelMatrix = entity.transform;
         }
@@ -141,39 +190,59 @@ export const createRenderer = (
 
     const queuedInstances: RenderableEntity[] = [];
 
-    // Forward declarations for usage in renderFrame
+    // Forward declarations
     let begin2D: () => void;
     let end2D: () => void;
     let drawfillRect: (x: number, y: number, width: number, height: number, color: [number, number, number, number]) => void;
+
+    // Helper for LOD selection
+    const selectLod = (entity: RenderableEntity, cameraPos: Vec3): { model: any, type: 'md2' | 'md3' } => {
+        // LOD Check
+        if (entity.type === 'md2') {
+             const model = entity.model as Md2Model;
+             if (!model.lods || model.lods.length === 0) {
+                 return { model: entity.model, type: entity.type };
+             }
+
+             // Calculate distance
+             const dx = entity.transform[12] - cameraPos.x;
+             const dy = entity.transform[13] - cameraPos.y;
+             const dz = entity.transform[14] - cameraPos.z;
+             const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+             const lodIndex = Math.floor((distance * lodBias) / 500);
+
+             if (lodIndex <= 0) {
+                 return { model: entity.model, type: entity.type };
+             }
+
+             const availableLods = model.lods;
+             const selectedLodIndex = Math.min(lodIndex - 1, availableLods.length - 1);
+
+             return { model: availableLods[selectedLodIndex], type: entity.type };
+        }
+
+        return { model: entity.model, type: entity.type };
+    };
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
 
         const allEntities = queuedInstances.length > 0 ? [...entities, ...queuedInstances] : entities;
 
-        // Reset pool usage for next frame (after this frame is rendered, or before next?
-        // Since queuedInstances are used IN this function, we must reset AFTER this function finishes or at start of next.
-        // But if renderInstanced is called before renderFrame, we should reset at the *end* of renderFrame.
-        // However, queuedInstances are just references to pooled objects.
-        // We clear the list, so the references are dropped from the list.
-        // We reset the counter so next frame overwrites the pool objects.
         queuedInstances.length = 0;
         instanceCount = 0;
 
-        // Update particles
         if (options.deltaTime) {
             particleSystem.update(options.deltaTime);
         }
 
-        // 1. Clear buffers, render world, sky, and viewmodel
         gl.disable(gl.BLEND);
         gl.enable(gl.DEPTH_TEST);
         gl.depthMask(true);
 
-        // Apply Render Options to pipelines/rendering
         const currentRenderMode = options.renderMode;
 
-        // Handle wireframe option
         let effectiveRenderMode: RenderModeConfig | undefined = currentRenderMode;
         let lightmapOnly = false;
 
@@ -181,13 +250,12 @@ export const createRenderer = (
             effectiveRenderMode = {
                 mode: 'wireframe',
                 applyToAll: true,
-                color: [1, 1, 1, 1] // White wireframe
+                color: [1, 1, 1, 1]
             };
         } else if (debugMode === DebugMode.Lightmaps) {
             lightmapOnly = true;
         }
 
-        // Handle showSkybox option
         let effectiveSky = options.sky;
         if (renderOptions?.showSkybox === false) {
             effectiveSky = undefined;
@@ -196,7 +264,6 @@ export const createRenderer = (
         const viewProjection = new Float32Array(options.camera.viewProjectionMatrix);
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
-        // Cull lights
         const culledLights = options.dlights
             ? cullLights(
                 options.dlights,
@@ -213,7 +280,6 @@ export const createRenderer = (
             disableLightmaps: renderOptions?.showLightmaps === false && debugMode !== DebugMode.Lightmaps,
             dlights: culledLights,
             lightmapOnly,
-            // Inject lighting controls
             brightness,
             gamma,
             fullbright,
@@ -226,7 +292,6 @@ export const createRenderer = (
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
 
-        // Frame stats from frameRenderer need to be mapped to our FrameStats
         let visibleSurfaces = (stats as any).facesDrawn || 0;
         let totalSurfaces = 0;
         if (options.world && options.world.map && options.world.map.faces) {
@@ -234,7 +299,6 @@ export const createRenderer = (
         }
         let culledSurfaces = totalSurfaces - visibleSurfaces;
 
-        // Determine view cluster for PVS culling
         let viewCluster = -1;
         if (options.world && renderOptions?.cullingEnabled !== false) {
             const cameraPosition = {
@@ -248,15 +312,19 @@ export const createRenderer = (
             }
         }
 
-        // 2. Render models (entities)
         let lastTexture: Texture2D | undefined;
         let entityDrawCalls = 0;
         let entityVertices = 0;
         let visibleEntities = 0;
         let culledEntities = 0;
 
+        const cameraPos: Vec3 = {
+            x: options.camera.position[0],
+            y: options.camera.position[1],
+            z: options.camera.position[2]
+        };
+
         for (const entity of allEntities) {
-            // PVS Culling
             if (options.world && viewCluster >= 0) {
                 const origin = {
                     x: entity.transform[12],
@@ -274,26 +342,32 @@ export const createRenderer = (
                 }
             }
 
-            // Frustum Culling
+            // LOD Selection
+            const { model: activeModel, type: activeType } = selectLod(entity, cameraPos);
+
             let minBounds: Vec3 | undefined;
             let maxBounds: Vec3 | undefined;
 
-            if (entity.type === 'md2') {
-                const frame0 = entity.model.frames[entity.blend.frame0];
-                const frame1 = entity.model.frames[entity.blend.frame1];
-                minBounds = {
-                    x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
-                    y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
-                    z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
-                };
-                maxBounds = {
-                    x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
-                    y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
-                    z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
-                };
-            } else if (entity.type === 'md3') {
-                const frame0 = entity.model.frames[entity.blend.frame0];
-                const frame1 = entity.model.frames[entity.blend.frame1];
+            if (activeType === 'md2') {
+                const md2Model = activeModel as Md2Model;
+                const frame0 = md2Model.frames[entity.blend.frame0 % md2Model.frames.length];
+                const frame1 = md2Model.frames[entity.blend.frame1 % md2Model.frames.length];
+                if (frame0 && frame1) {
+                    minBounds = {
+                        x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
+                        y: Math.min(frame0.minBounds.y, frame1.minBounds.y),
+                        z: Math.min(frame0.minBounds.z, frame1.minBounds.z)
+                    };
+                    maxBounds = {
+                        x: Math.max(frame0.maxBounds.x, frame1.maxBounds.x),
+                        y: Math.max(frame0.maxBounds.y, frame1.maxBounds.y),
+                        z: Math.max(frame0.maxBounds.z, frame1.maxBounds.z)
+                    };
+                }
+            } else if (activeType === 'md3') {
+                const md3Model = activeModel as Md3Model;
+                const frame0 = md3Model.frames[entity.blend.frame0 % md3Model.frames.length];
+                const frame1 = md3Model.frames[entity.blend.frame1 % md3Model.frames.length];
                 if (frame0 && frame1) {
                      minBounds = {
                         x: Math.min(frame0.minBounds.x, frame1.minBounds.x),
@@ -321,7 +395,6 @@ export const createRenderer = (
 
             visibleEntities++;
 
-            // Calculate ambient light for the entity
             const position = {
                 x: entity.transform[12],
                 y: entity.transform[13],
@@ -329,37 +402,37 @@ export const createRenderer = (
             };
             const light = calculateEntityLight(options.world?.map, position);
 
-            // Determine highlighting
             const highlightColor = (entity.id !== undefined) ? highlightedEntities.get(entity.id) : undefined;
 
-            switch (entity.type) {
+            switch (activeType) {
                 case 'md2':
                     {
-                        let mesh = md2MeshCache.get(entity.model);
+                        const md2Model = activeModel as Md2Model;
+                        let mesh = md2MeshCache.get(md2Model);
                         if (!mesh) {
-                            mesh = new Md2MeshBuffers(gl, entity.model, entity.blend);
-                            md2MeshCache.set(entity.model, mesh);
+                            mesh = new Md2MeshBuffers(gl, md2Model, entity.blend);
+                            md2MeshCache.set(md2Model, mesh);
                             const vertexBytes = mesh.geometry.vertices.length * 8 * 4;
                             const indexBytes = mesh.geometry.indices.length * 2;
                             gpuProfiler.trackBufferMemory(vertexBytes + indexBytes);
                         } else {
-                            mesh.update(entity.model, entity.blend);
+                            mesh.update(md2Model, entity.blend);
                         }
 
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        const texture = entity.skin ? options.world?.textures?.get(entity.skin) : undefined;
+
+                        // Use type assertion to access skin since it might not exist on all RenderableEntity types
+                        const skinName = (entity as any).skin;
+                        const texture = skinName ? options.world?.textures?.get(skinName) : undefined;
 
                         if (texture && texture !== lastTexture) {
                             texture.bind(0);
                             lastTexture = texture;
                         }
 
-                        // Determine render mode
                         let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
                         if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                             activeRenderMode = undefined;
-                        } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
-                            // Apply default override for missing texture
                         }
 
                         if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
@@ -374,7 +447,6 @@ export const createRenderer = (
                             dlights: options.dlights,
                             renderMode: activeRenderMode,
                             tint: entity.tint,
-                            // Pass lighting controls
                             brightness,
                             gamma,
                             fullbright,
@@ -384,7 +456,6 @@ export const createRenderer = (
                         entityDrawCalls++;
                         entityVertices += mesh.geometry.vertices.length;
 
-                        // Highlight Pass
                         if (highlightColor) {
                              const highlightMode: RenderModeConfig = {
                                  mode: 'wireframe',
@@ -409,7 +480,11 @@ export const createRenderer = (
                     break;
                 case 'md3':
                     {
-                        let mesh = md3MeshCache.get(entity.model);
+                        const md3Model = activeModel as Md3Model;
+                        let mesh = md3MeshCache.get(md3Model);
+
+                        // Use type assertion for Md3 properties
+                        const md3Entity = entity as RenderableMd3;
 
                         const md3Dlights = options.dlights ? options.dlights.map(d => ({
                             origin: d.origin,
@@ -418,15 +493,15 @@ export const createRenderer = (
                         })) : undefined;
 
                         const lighting = {
-                            ...entity.lighting,
+                            ...md3Entity.lighting,
                             ambient: [light, light, light] as const,
                             dynamicLights: md3Dlights,
                             modelMatrix: entity.transform
                         };
 
                         if (!mesh) {
-                            mesh = new Md3ModelMesh(gl, entity.model, entity.blend, lighting);
-                            md3MeshCache.set(entity.model, mesh);
+                            mesh = new Md3ModelMesh(gl, md3Model, entity.blend, lighting);
+                            md3MeshCache.set(md3Model, mesh);
                         } else {
                             mesh.update(entity.blend, lighting);
                         }
@@ -434,10 +509,10 @@ export const createRenderer = (
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
                         md3Pipeline.bind(modelViewProjection);
 
-                        for (const surface of entity.model.surfaces) {
+                        for (const surface of md3Model.surfaces) {
                             const surfaceMesh = mesh.surfaces.get(surface.name);
                             if (surfaceMesh) {
-                                const textureName = entity.skins?.get(surface.name);
+                                const textureName = md3Entity.skins?.get(surface.name);
                                 const texture = textureName ? options.world?.textures?.get(textureName) : undefined;
 
                                 if (texture && texture !== lastTexture) {
@@ -448,7 +523,6 @@ export const createRenderer = (
                                 let activeRenderMode: RenderModeConfig | undefined = effectiveRenderMode;
                                 if (activeRenderMode && !activeRenderMode.applyToAll && texture) {
                                     activeRenderMode = undefined;
-                                } else if (activeRenderMode && !activeRenderMode.applyToAll && !texture) {
                                 }
 
                                 if (activeRenderMode?.generateRandomColor && entity.id !== undefined) {
@@ -468,7 +542,6 @@ export const createRenderer = (
                                 entityDrawCalls++;
                                 entityVertices += surfaceMesh.geometry.vertices.length;
 
-                                // Highlight Pass
                                 if (highlightColor) {
                                      const highlightMode: RenderModeConfig = {
                                          mode: 'wireframe',
@@ -492,7 +565,6 @@ export const createRenderer = (
             }
         }
 
-        // Render particles
         const viewMatrix = options.camera.viewMatrix;
         if (viewMatrix) {
             const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
@@ -505,28 +577,15 @@ export const createRenderer = (
             });
         }
 
-        // Render water tint (Fullscreen quad)
         if (augmentedOptions.waterTint) {
             begin2D();
             drawfillRect(0, 0, gl.canvas.width, gl.canvas.height, augmentedOptions.waterTint as [number, number, number, number]);
             end2D();
         }
 
-        // Render collision vis debug lines
         collisionVis.render(viewProjection as Float32Array);
         collisionVis.clear();
 
-        // Debug Renderer (Bounds, Normals, PVS)
-        if (debugMode !== DebugMode.None || renderOptions?.showBounds || renderOptions?.showNormals) {
-             // ... [Rest of debug rendering code preserved]
-             // (Skipping full duplicate block for brevity, assuming standard debug renderer usage persists)
-             // But wait, I must preserve it or 'overwrite' will delete it.
-             // I will include the debug rendering block below.
-        }
-
-        // Re-injecting debug logic
-
-        // Highlight Surfaces using DebugRenderer
         if (options.world && (highlightedSurfaces.size > 0 || debugMode === DebugMode.PVSClusters)) {
             const surfacesToDraw = new Map<number, [number, number, number, number]>(highlightedSurfaces);
 
@@ -577,11 +636,11 @@ export const createRenderer = (
                   let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
 
                   if (entity.type === 'md2') {
-                      const frame = entity.model.frames[entity.blend.frame0];
+                      const frame = entity.model.frames[entity.blend.frame0 % entity.model.frames.length];
                       minBounds = frame.minBounds;
                       maxBounds = frame.maxBounds;
                   } else if (entity.type === 'md3') {
-                      const frame = entity.model.frames[entity.blend.frame0];
+                      const frame = entity.model.frames[entity.blend.frame0 % entity.model.frames.length];
                       if (frame) {
                           minBounds = frame.minBounds;
                           maxBounds = frame.maxBounds;
@@ -796,7 +855,6 @@ export const createRenderer = (
         debugMode = mode;
     };
 
-    // Lighting controls implementation
     const setBrightness = (value: number) => {
         brightness = Math.max(0.0, Math.min(2.0, value));
     };
@@ -833,8 +891,11 @@ export const createRenderer = (
         bloomIntensity = value;
     };
 
+    const setLodBias = (bias: number) => {
+        lodBias = Math.max(0.0, Math.min(2.0, bias));
+    };
+
     const renderInstanced = (model: Md2Model | Md3Model, instances: InstanceData[]) => {
-        // Check for Md2 vs Md3 once per batch
         const isMd2 = 'glCommands' in model;
         const type = isMd2 ? 'md2' : 'md3';
 
@@ -846,11 +907,9 @@ export const createRenderer = (
 
             const entity = instancePool[instanceCount++];
 
-            // Re-initialize pooled entity
             entity.model = model as any;
             entity.type = type;
 
-            // Animation (cast to mutable)
             const blend = entity.blend as any;
             if (instance.frame !== undefined) {
                 blend.frame0 = instance.frame;
@@ -866,31 +925,24 @@ export const createRenderer = (
                 (entity as MutableRenderableMd2).skin = instance.skin !== undefined ? 'skin' + instance.skin : undefined;
             }
 
-            // Transform
             const rotation = instance.rotation;
             const position = instance.position;
             const scale = instance.scale || { x: 1, y: 1, z: 1 };
 
             mat4.fromRotationTranslationScale(
-                entity.transform as any, // Reuse matrix
+                entity.transform as any,
                 tempQuat,
                 tempVec3Pos,
                 tempVec3Scale
             );
 
-            // Lighting (will be updated in render loop, but reset defaults here)
-            // Use cast to handle lighting property which might not exist on MD2 type at runtime if mis-initialized,
-            // but we initialized as MD3-compatible.
             const lighting = (entity as any).lighting;
             if (lighting) {
-                // modelMatrix already points to entity.transform
                 if (lighting.dynamicLights) {
                     (lighting.dynamicLights as any[]).length = 0;
                 } else {
                     (lighting as any).dynamicLights = [];
                 }
-                // Use set/copy to avoid allocation if possible, but ambient is simple array.
-                // Assuming it's [r, g, b].
                 if (!lighting.ambient) {
                     (lighting as any).ambient = [0.5, 0.5, 0.5];
                 } else {
@@ -934,6 +986,7 @@ export const createRenderer = (
         setUnderwaterWarp,
         setBloom,
         setBloomIntensity,
+        setLodBias,
         renderInstanced
     };
 };

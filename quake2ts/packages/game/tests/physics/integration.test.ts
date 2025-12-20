@@ -13,7 +13,7 @@ import {
 import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
-} from './bsp-helpers.js';
+} from '@quake2ts/test-utils';
 import { runProjectileMovement, runPush, runGravity } from '../../src/physics/movement.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { GameImports, GameTraceResult } from '../../src/imports.js';
