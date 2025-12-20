@@ -20,31 +20,31 @@ This section covers migration and expansion of game-specific test utilities incl
 **Status:** Basic entity factory exists, needs expansion
 **Dependencies:** Section 19-1 Task 3 (math helpers)
 
-- [ ] **1.1** Audit current entity factories in `test-utils/src/game/factories.ts`
+- [x] **1.1** Audit current entity factories in `test-utils/src/game/factories.ts`
   - Current: `createPlayerStateFactory()`, `createEntityStateFactory()`, `createGameStateSnapshotFactory()`
 
-- [ ] **1.2** Add `createEntityFactory()` with comprehensive defaults
+- [x] **1.2** Add `createEntityFactory()` with comprehensive defaults
   - Signature: `createEntityFactory(overrides?: Partial<Entity>): Entity`
   - Include: `classname`, `health`, `maxHealth`, `origin`, `velocity`, `angles`, `solid`, `moveType`
   - Enhance existing basic `createEntity()` from helpers.ts
 
-- [ ] **1.3** Add `createPlayerEntityFactory()` specialized for players
+- [x] **1.3** Add `createPlayerEntityFactory()` specialized for players
   - Signature: `createPlayerEntityFactory(overrides?: Partial<Entity>): Entity`
   - Pre-set: `classname: 'player'`, health: 100, playerState, client info
 
-- [ ] **1.4** Add `createMonsterEntityFactory()` for AI entities
+- [x] **1.4** Add `createMonsterEntityFactory()` for AI entities
   - Signature: `createMonsterEntityFactory(type: string, overrides?: Partial<Entity>): Entity`
   - Pre-set monster-specific fields: AI, ideal_yaw, enemy reference
 
-- [ ] **1.5** Add `createItemEntityFactory()` for pickups
+- [x] **1.5** Add `createItemEntityFactory()` for pickups
   - Signature: `createItemEntityFactory(itemType: string, overrides?: Partial<Entity>): Entity`
   - Pre-set: `classname`, item-specific properties, respawn logic
 
-- [ ] **1.6** Add `createProjectileEntityFactory()` for bullets/rockets/etc
+- [x] **1.6** Add `createProjectileEntityFactory()` for bullets/rockets/etc
   - Signature: `createProjectileEntityFactory(projectileType: string, overrides?: Partial<Entity>): Entity`
   - Pre-set: velocity, owner, damage, moveType
 
-- [ ] **1.7** Add `createTriggerEntityFactory()` for triggers
+- [x] **1.7** Add `createTriggerEntityFactory()` for triggers
   - Signature: `createTriggerEntityFactory(triggerType: string, overrides?: Partial<Entity>): Entity`
   - Pre-set: bounds, touch callback, solid type
 
@@ -67,20 +67,20 @@ This section covers migration and expansion of game-specific test utilities incl
 **Status:** Basic helpers exist, need enhancement
 **Dependencies:** Task 1
 
-- [ ] **2.1** Enhance `createTestContext()` in `test-utils/src/game/helpers.ts`
+- [x] **2.1** Enhance `createTestContext()` in `test-utils/src/game/helpers.ts`
   - Add optional entity pool pre-population
   - Add optional level/map configuration
   - Signature: `createTestContext(config?: TestContextConfig): TestContext`
 
-- [ ] **2.2** Add `createSpawnTestContext()` specialized for spawn testing
+- [x] **2.2** Add `createSpawnTestContext()` specialized for spawn testing
   - Signature: `createSpawnTestContext(mapName?: string): TestContext`
   - Pre-configure spawn points, player starts
 
-- [ ] **2.3** Add `createCombatTestContext()` specialized for combat testing
+- [x] **2.3** Add `createCombatTestContext()` specialized for combat testing
   - Signature: `createCombatTestContext(): TestContext`
   - Pre-configure attacker, target, weapons
 
-- [ ] **2.4** Add `createPhysicsTestContext()` for physics testing
+- [x] **2.4** Add `createPhysicsTestContext()` for physics testing
   - Signature: `createPhysicsTestContext(bspModel?: BspModel): TestContext`
   - Include collision world, traces
 
@@ -95,27 +95,27 @@ This section covers migration and expansion of game-specific test utilities incl
 **Status:** Currently scattered mocks
 **Dependencies:** None
 
-- [ ] **3.1** Create `test-utils/src/game/mocks/ai.ts` file
+- [x] **3.1** Create `test-utils/src/game/mocks/ai.ts` file
 
-- [ ] **3.2** Add `createMockAI()` factory
+- [x] **3.2** Add `createMockAI()` factory
   - Signature: `createMockAI(overrides?: Partial<AI>): AI`
   - Methods: `think()`, `stand()`, `walk()`, `run()`, `attack()`, `pain()`, `die()`
 
-- [ ] **3.3** Add `createMockMonsterAI()` for monster-specific AI
+- [x] **3.3** Add `createMockMonsterAI()` for monster-specific AI
   - Signature: `createMockMonsterAI(monsterType: string, overrides?: Partial<MonsterAI>): MonsterAI`
   - Include move states, attack patterns
 
-- [ ] **3.4** Create `test-utils/src/game/mocks/combat.ts` file
+- [x] **3.4** Create `test-utils/src/game/mocks/combat.ts` file
 
-- [ ] **3.5** Add `createMockWeapon()` factory
+- [x] **3.5** Add `createMockWeapon()` factory
   - Signature: `createMockWeapon(weaponType: string, overrides?: Partial<Weapon>): Weapon`
   - Include: damage, fire rate, ammo, projectile type
 
-- [ ] **3.6** Add mock attack functions
+- [x] **3.6** Add mock attack functions
   - `mockMonsterFireBlaster()`, `mockMonsterFireRocket()`, `mockMonsterFireRailgun()`
   - Signature pattern: `mockMonsterFire*(entity: Entity, start: Vector3, dir: Vector3, damage: number)`
 
-- [ ] **3.7** Add `createMockDamageInfo()` factory
+- [x] **3.7** Add `createMockDamageInfo()` factory
   - Signature: `createMockDamageInfo(overrides?: Partial<DamageInfo>): DamageInfo`
   - Include: attacker, target, amount, type, point, direction
 
@@ -135,23 +135,23 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 4. Create Inventory/Item Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Partially completed
 **Dependencies:** Task 1 (entity factories)
 
-- [ ] **4.1** Create `test-utils/src/game/mocks/items.ts` file
+- [x] **4.1** Create `test-utils/src/game/mocks/items.ts` file
 
-- [ ] **4.2** Add `createMockInventory()` factory
+- [x] **4.2** Add `createMockInventory()` factory
   - Signature: `createMockInventory(overrides?: Partial<Inventory>): Inventory`
   - Pre-populate with common items, ammo counts
 
-- [ ] **4.3** Add `createMockItem()` factory
+- [x] **4.3** Add `createMockItem()` factory
   - Signature: `createMockItem(itemType: string, overrides?: Partial<Item>): Item`
   - Include: name, icon, pickup function, use function
 
-- [ ] **4.4** Add item-specific factories
+- [x] **4.4** Add item-specific factories
   - `createMockWeaponItem()`, `createMockAmmoItem()`, `createMockArmorItem()`, `createMockHealthItem()`
 
-- [ ] **4.5** Add `createMockPowerup()` factory
+- [x] **4.5** Add `createMockPowerup()` factory
   - Signature: `createMockPowerup(powerupType: string, duration?: number): Powerup`
 
 - [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
@@ -271,7 +271,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [ ] **9.2** Update `test-utils/README.md` with game utilities section
   - Document: entity factories, AI/combat mocks, physics helpers, save utilities
 
-- [ ] **9.3** Verify all game utilities exported from `test-utils/src/index.ts`
+- [x] **9.3** Verify all game utilities exported from `test-utils/src/index.ts`
   - Organized by category: `game/factories/*`, `game/mocks/*`, `game/helpers/*`
 
 - [ ] **9.4** Add TypeScript type exports

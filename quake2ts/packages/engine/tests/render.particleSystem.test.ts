@@ -11,7 +11,7 @@ import {
   spawnTeleportFlash,
   spawnTrail,
 } from '../src/render/particleSystem.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { RandomGenerator } from '@quake2ts/shared';
 
 function createMockRng(value: number): RandomGenerator {
@@ -126,7 +126,7 @@ describe('ParticleSystem rendering data', () => {
   });
 
   it('renders batches with correct blend state changes', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const system = new ParticleSystem(2, createMockRng(0.5));
     system.spawn({ position: { x: 0, y: 0, z: 0 }, lifetime: 1, gravity: 0, blendMode: 'alpha' });
     system.spawn({ position: { x: 1, y: 0, z: 0 }, lifetime: 1, gravity: 0, blendMode: 'additive' });

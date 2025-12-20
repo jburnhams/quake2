@@ -2,6 +2,7 @@ import { Server, ServerState, ServerStatic, Client, ClientState } from '@quake2t
 import { NetDriver, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 import { vi } from 'vitest';
+import { createMockNetDriver } from './transport.js';
 
 /**
  * Creates a mock server state object.
@@ -49,15 +50,7 @@ export function createMockServerStatic(maxClients: number = 16, overrides?: Part
  */
 export function createMockServerClient(clientNum: number, overrides?: Partial<Client>): Client {
     // Create a minimal mock net driver
-    const mockNet: NetDriver = {
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-        send: vi.fn(),
-        onMessage: vi.fn(),
-        onClose: vi.fn(),
-        onError: vi.fn(),
-        isConnected: vi.fn().mockReturnValue(true)
-    };
+    const mockNet: NetDriver = createMockNetDriver();
 
     return {
         index: clientNum,

@@ -6,7 +6,7 @@ import {
   computeSkyScroll,
   removeViewTranslation,
 } from '../src/render/skybox.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('Skybox helpers', () => {
   it('removes translation from view matrices', () => {
@@ -29,7 +29,7 @@ describe('Skybox helpers', () => {
 
 describe('SkyboxPipeline', () => {
   it('binds uniforms, binds cubemap, and issues a draw', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const uniformNames = ['u_viewProjectionNoTranslation', 'u_scroll', 'u_skybox'];
     for (const name of uniformNames) {
       gl.uniformLocations.set(name, {} as WebGLUniformLocation);

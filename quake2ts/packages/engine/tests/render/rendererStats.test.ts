@@ -1,7 +1,7 @@
 import { createRenderer } from '../../src/render/renderer.js';
 import { renderFrame } from '../../src/render/frame.js'; // Import the singleton spy
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createMockGL } from '../helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -70,7 +70,7 @@ vi.mock('../../src/render/light', () => ({
 }));
 
 describe('Renderer Statistics', () => {
-    let mockGl: ReturnType<typeof createMockGL>;
+    let mockGl: ReturnType<typeof createMockWebGL2Context>;
     let renderer: any;
 
     beforeEach(async () => {

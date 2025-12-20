@@ -400,6 +400,8 @@ class Renderer {
 
 **Workaround**: Post-processing brightness/gamma, but doesn't affect actual lighting calculations.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 4.4: Entity Bounds Access (P2)
@@ -507,6 +509,8 @@ function exportMd3ToGltf(model: Md3Model): {
 
 **Workaround**: Manual conversion, extremely complex.
 
+**Status**: Implemented in `@quake2ts/tools`.
+
 ---
 
 ## Section 06: Map Editor Integration
@@ -581,6 +585,8 @@ enum PropertyType {
 
 **Workaround**: Hardcode in application, but duplicates library knowledge.
 
+**Status**: Implemented.
+
 ---
 
 ### Enhancement 6.3: BSP Entity Lump Replacement (P3)
@@ -604,6 +610,8 @@ function replaceBspEntities(
 **Rationale**: Direct BSP modification (Section 06, Task 6.4) without external tools.
 
 **Workaround**: Export ENT separately, user uses external tools like bspinfo.
+
+**Status**: Implemented in `@quake2ts/tools`.
 
 ---
 
@@ -829,6 +837,8 @@ interface InstanceData {
 
 **Workaround**: Render each instance separately, slower.
 
+**Status**: Implemented in `@quake2ts/engine`.
+
 ---
 
 ### Enhancement 9.3: LOD (Level of Detail) Support (P3)
@@ -855,6 +865,8 @@ class Renderer {
 **Rationale**: LOD streaming (Section 09, Task 5.3) for progressive loading.
 
 **Workaround**: Single LOD only, no optimization.
+
+**Status**: Implemented in `@quake2ts/engine`.
 
 ---
 
@@ -905,17 +917,17 @@ interface MemoryUsage {
 | Lighting Control APIs | engine | P2 | 04 | Implemented |
 | Entity Bounds Access | game | P2 | 04 | Implemented |
 | Cross-Reference API | engine | P2 | 05 | Implemented |
-| Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
+| Model Export Utilities | engine/tools | P3 | 05 | Implemented |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
 | Entity Templates | game | P2 | 06 | Implemented |
-| BSP Entity Lump Replace | tools | P3 | 06 | Nice-to-have |
+| BSP Entity Lump Replace | tools | P3 | 06 | Implemented |
 | Custom Entity Registration | game | P0 | 07 | Implemented |
 | Mod Initialization Hooks | game | P1 | 07 | Implemented |
 | VFS Priority Support | engine | P1 | 07 | Implemented |
 | Cvar System | shared/game | P2 | 07 | Implemented |
-| Streaming PAK Reader | engine | P2 | 09 | Needed |
-| Instancing API | engine | P2 | 09 | Nice-to-have |
-| LOD Support | engine | P3 | 09 | Nice-to-have |
+| Streaming PAK Reader | engine | P2 | 09 | Implemented |
+| Instancing API | engine | P2 | 09 | Implemented |
+| LOD Support | engine | P3 | 09 | Implemented |
 | Memory Tracking | engine | P2 | 09 | Implemented |
 
 **Total Enhancements**: 25

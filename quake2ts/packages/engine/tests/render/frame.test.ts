@@ -5,7 +5,7 @@ import { removeViewTranslation, type SkyboxPipeline } from '../../src/render/sky
 import type { BspSurfaceGeometry } from '../../src/render/bsp.js';
 import { Camera } from '../../src/render/camera.js';
 import { mat4, vec3 } from 'gl-matrix';
-import { createMockGL } from '../helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 let callOrder: string[] = [];
 
@@ -29,7 +29,7 @@ describe('FrameRenderer', () => {
   });
 
   const makeRenderer = (depsOverrides = {}, glOverrides: Partial<WebGL2RenderingContext> = {}) => {
-    const gl = Object.assign(createMockGL(), {
+    const gl = createMockWebGL2Context({
       clearColor: vi.fn(),
       clear: vi.fn(),
       COLOR_BUFFER_BIT: 0x1,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildBspGeometry, type BspSurfaceInput } from '../src/render/bsp.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 function makeLightmap(width: number, height: number, start = 0): Uint8Array {
   const samples = new Uint8Array(width * height * 3);
@@ -12,7 +12,7 @@ function makeLightmap(width: number, height: number, start = 0): Uint8Array {
 
 describe('buildBspGeometry', () => {
   it('packs lightmaps into atlases and remaps UVs', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const surfaces: BspSurfaceInput[] = [
       {
         vertices: [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0],
@@ -56,7 +56,7 @@ describe('buildBspGeometry', () => {
   });
 
   it('builds CPU vertex/index data and uploads GPU buffers', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const surface: BspSurfaceInput = {
       vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0],
       textureCoords: [0, 0, 1, 0, 0, 1],

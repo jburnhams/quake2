@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports } from '@quake2ts/test-utils';
 import { NetDriver } from '@quake2ts/shared';
 
 // Mock dependencies
@@ -15,25 +15,14 @@ vi.mock('node:fs/promises', async () => {
     };
 });
 
+import { createGame } from '@quake2ts/game';
+
 // Mock game creation
 vi.mock('@quake2ts/game', async () => {
     const actual = await vi.importActual('@quake2ts/game');
     return {
         ...actual,
-        createGame: vi.fn().mockReturnValue({
-            init: vi.fn(),
-            spawnWorld: vi.fn(),
-            shutdown: vi.fn(),
-            frame: vi.fn().mockReturnValue({ state: {} }),
-            entities: {
-                getByIndex: vi.fn(),
-                forEachEntity: vi.fn()
-            },
-            clientConnect: vi.fn().mockReturnValue(true),
-            clientBegin: vi.fn().mockReturnValue({ index: 1, origin: {x:0,y:0,z:0} }),
-            clientDisconnect: vi.fn(),
-            clientThink: vi.fn()
-        }),
+        createGame: vi.fn(),
         createPlayerInventory: vi.fn(),
         createPlayerWeaponStates: vi.fn()
     };
@@ -57,6 +46,12 @@ describe('DedicatedServer Timeout', () => {
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
+        // Setup mock game return value here, where we can access createMockGameExports
+        (createGame as vi.Mock).mockReturnValue(createMockGameExports({
+            clientBegin: vi.fn().mockReturnValue({ index: 1, origin: {x:0,y:0,z:0} } as any),
+            clientConnect: vi.fn().mockReturnValue(true)
+        }));
+
         transport = createMockTransport();
         server = new DedicatedServer({ port: 27910, transport });
         await server.startServer('maps/test.bsp');
@@ -76,16 +71,7 @@ describe('DedicatedServer Timeout', () => {
         const sv = getPrivate(server, 'sv');
 
         // Mock a connected client
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
-        };
+        const mockDriver = createMockNetDriver();
 
         const clientIndex = 0;
         const client = createMockServerClient(clientIndex, {
@@ -124,16 +110,7 @@ describe('DedicatedServer Timeout', () => {
         const svs = getPrivate(server, 'svs');
         const sv = getPrivate(server, 'sv');
 
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
-        };
+        const mockDriver = createMockNetDriver();
 
         const clientIndex = 0;
         const client = createMockServerClient(clientIndex, {

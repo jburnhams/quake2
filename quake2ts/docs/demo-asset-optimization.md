@@ -221,7 +221,7 @@ Task list for demo playback analysis and PAK file optimization features. Enables
   - [x] `buildInteractionGraph(timeline: VisibilityTimeline): ResourceGraph`
   - [x] Define `ResourceGraph`: nodes = resources, edges = dependencies/interactions
   - [x] Track resource→resource dependencies (model→texture, entity→model)
-  - [ ] Track temporal co-occurrence (resources used together in frames)
+  - [x] Track temporal co-occurrence (resources used together in frames)
 - [x] Add graph utilities
   - [x] `getTransitiveDependencies(resource: string): Set<string>`
   - [x] `getMinimalSetForFrame(frame: number): Set<string>`
@@ -242,18 +242,18 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 ## Phase 6: Resource Analysis - Optimal Window Finder
 
 ### Task 6.1: Implement Sliding Window Analysis
-- [ ] Create `OptimalClipFinder` in `packages/engine/src/demo/optimalClipFinder.ts`
-  - [ ] `findMinimalWindow(demo: Uint8Array, duration: number): Promise<OptimalWindow>`
-  - [ ] `findMinimalWindowInRange(timeline: VisibilityTimeline, duration: number, searchStart?: Offset, searchEnd?: Offset): OptimalWindow`
-  - [ ] Define `OptimalWindow`: `{ start: Offset, end: Offset, resourceCount: number, resources: Set<string>, score: number }`
-  - [ ] Implement sliding window algorithm over timeline
-  - [ ] For each position, calculate unique resources in window
-  - [ ] Return window with minimum resource count
-- [ ] Add scoring heuristics
-  - [ ] Primary: minimize unique resource count
-  - [ ] Secondary: minimize total resource size (bytes)
-  - [ ] Tertiary: prefer resource locality (resources already used elsewhere)
-  - [ ] `scoringMode: 'count' | 'size' | 'locality' | 'hybrid'`
+- [x] Create `OptimalClipFinder` in `packages/engine/src/demo/optimalClipFinder.ts`
+  - [x] `findMinimalWindow(demo: Uint8Array, duration: number): Promise<OptimalWindow>`
+  - [x] `findMinimalWindowInRange(timeline: VisibilityTimeline, duration: number, searchStart?: Offset, searchEnd?: Offset): OptimalWindow`
+  - [x] Define `OptimalWindow`: `{ start: Offset, end: Offset, resourceCount: number, resources: Set<string>, score: number }`
+  - [x] Implement sliding window algorithm over timeline
+  - [x] For each position, calculate unique resources in window
+  - [x] Return window with minimum resource count
+- [x] Add scoring heuristics
+  - [x] Primary: minimize unique resource count
+  - [x] Secondary: minimize total resource size (bytes)
+  - [x] Tertiary: prefer resource locality (resources already used elsewhere)
+  - [x] `scoringMode: 'count' | 'size' | 'locality' | 'hybrid'`
 
 **Dependencies:** Task 5.1, Task 5.2
 
@@ -267,16 +267,16 @@ Task list for demo playback analysis and PAK file optimization features. Enables
 - Integration: Scoring modes produce different but valid results
 
 ### Task 6.2: Multi-Criteria Optimization
-- [ ] Add advanced search options to `OptimalClipFinder`
-  - [ ] `findOptimalWindows(demo: Uint8Array, criteria: OptimizationCriteria): Promise<OptimalWindow[]>`
-  - [ ] Define `OptimizationCriteria`: duration range, max resources, content preferences
-  - [ ] Support multiple objectives: minimize resources AND maximize action
-  - [ ] Add action/interest scoring (kills, damage, movement)
-  - [ ] Return top N candidates, sorted by composite score
-- [ ] Integration with DemoAnalyzer
-  - [ ] Use `DemoAnalyzer` from `packages/engine/src/demo/analyzer.ts` for event data
-  - [ ] Correlate resource usage with interesting events
-  - [ ] Prefer windows with gameplay highlights
+- [x] Add advanced search options to `OptimalClipFinder`
+  - [x] `findOptimalWindows(demo: Uint8Array, criteria: OptimizationCriteria): Promise<OptimalWindow[]>`
+  - [x] Define `OptimizationCriteria`: duration range, max resources, content preferences
+  - [x] Support multiple objectives: minimize resources AND maximize action
+  - [x] Add action/interest scoring (kills, damage, movement)
+  - [x] Return top N candidates, sorted by composite score
+- [x] Integration with DemoAnalyzer
+  - [x] Use `DemoAnalyzer` from `packages/engine/src/demo/analyzer.ts` for event data
+  - [x] Correlate resource usage with interesting events
+  - [x] Prefer windows with gameplay highlights
 
 **Dependencies:** Task 6.1, `packages/engine/src/demo/analyzer.ts`
 
