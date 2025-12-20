@@ -12,7 +12,9 @@ export * from './setup/timing.js';
 
 // E2E
 export * from './e2e/playwright.js';
-export * from './e2e/input.js';
+// Remove export * from './e2e/input.js' to avoid duplicates.
+// If E2E specific input helpers are needed, they should be exported explicitly here or renamed.
+// export * from './e2e/input.js';
 
 // Shared
 export * from './shared/bsp.js';
