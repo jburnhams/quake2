@@ -27,7 +27,9 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm run test:unit",
+    "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
+    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
