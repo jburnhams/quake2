@@ -13,6 +13,8 @@ export * from './server/helpers/snapshot.js';
 // Setup
 export * from './setup/browser.js';
 export * from './setup/canvas.js';
+export * from './engine/mocks/webgpu.js';
+export * from './setup/timing.js';
 export * from './setup/node.js';
 export * from './setup/webgl.js'; // This exports createMockWebGL2Context
 export * from './setup/storage.js';
