@@ -23,8 +23,8 @@ export function createMockCanvas(width: number = 300, height: number = 150): HTM
       }
       return null;
     },
-    toDataURL: (...args: any[]) => napiCanvas.toDataURL(...args),
-    toBuffer: (...args: any[]) => napiCanvas.toBuffer(...args),
+    toDataURL: (mime?: any, quality?: any) => napiCanvas.toDataURL(mime, quality),
+    toBuffer: (mime?: any, config?: any) => napiCanvas.toBuffer(mime, config),
     addEventListener: () => {},
     removeEventListener: () => {},
     dispatchEvent: () => true,
