@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { MockTransport } from '../mocks/transport.js';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver } from '@quake2ts/test-utils';
 import { NetDriver } from '@quake2ts/shared';
 
 // Mock dependencies
@@ -57,7 +57,7 @@ describe('DedicatedServer Timeout', () => {
         consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        transport = new MockTransport();
+        transport = createMockTransport();
         server = new DedicatedServer({ port: 27910, transport });
         await server.startServer('maps/test.bsp');
     });
@@ -76,39 +76,15 @@ describe('DedicatedServer Timeout', () => {
         const sv = getPrivate(server, 'sv');
 
         // Mock a connected client
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
-        };
+        const mockDriver = createMockNetDriver();
 
         const clientIndex = 0;
-        const client = {
-            index: clientIndex,
-            state: ClientState.Connected,
+        const client = createMockServerClient(clientIndex, {
             net: mockDriver,
             lastMessage: sv.frame, // Last message was NOW
-            messageQueue: [],
-            frames: [],
-            edict: null,
-            userInfo: '',
-            lastCmd: {},
             lastConnect: Date.now(),
-            name: 'TestClient',
-            frameLatency: [],
-            messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
-        };
+            name: 'TestClient'
+        });
 
         svs.clients[clientIndex] = client;
 
@@ -139,39 +115,15 @@ describe('DedicatedServer Timeout', () => {
         const svs = getPrivate(server, 'svs');
         const sv = getPrivate(server, 'sv');
 
-        const mockDriver: NetDriver = {
-            send: vi.fn(),
-            disconnect: vi.fn(),
-            connect: vi.fn(),
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true)
-        };
+        const mockDriver = createMockNetDriver();
 
         const clientIndex = 0;
-        const client = {
-            index: clientIndex,
-            state: ClientState.Connected,
+        const client = createMockServerClient(clientIndex, {
             net: mockDriver,
             lastMessage: sv.frame,
-            messageQueue: [],
-            frames: [],
-            edict: null,
-            userInfo: '',
-            lastCmd: {},
             lastConnect: Date.now(),
-            name: 'TestClient',
-            frameLatency: [],
-            messageSize: [],
-            lastPacketEntities: [],
-            netchan: {
-                qport: 0
-            },
-            commandCount: 0,
-            lastCommandTime: 0
-        };
+            name: 'TestClient'
+        });
 
         svs.clients[clientIndex] = client;
         const dropClientSpy = vi.spyOn(server as any, 'dropClient');

@@ -22,9 +22,9 @@
 ### 6.1.3 Post-Processing Effects
 - [x] Implement damage screen flash (red overlay)
 - [x] Implement pickup flash (yellow overlay)
-- [ ] Implement underwater distortion
+- [x] Implement underwater distortion
 - [ ] Add bloom/glow for bright surfaces
-- [ ] Add configurable gamma/brightness adjustment
+- [x] Add configurable gamma/brightness adjustment
 
 ### 6.1.4 Advanced Culling
 - [ ] Optimize PVS lookup for large maps

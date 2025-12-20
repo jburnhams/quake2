@@ -30,6 +30,8 @@ const gl = {
     vertexAttribIPointer: vi.fn(), // Needed for WebGL2
     drawElements: vi.fn(),
     drawArrays: vi.fn(),
+    createFramebuffer: vi.fn(() => ({})),
+    deleteFramebuffer: vi.fn(),
     createTexture: vi.fn(() => ({})),
     bindTexture: vi.fn(),
     texImage2D: vi.fn(),

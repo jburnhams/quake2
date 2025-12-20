@@ -14,6 +14,8 @@ export default defineConfig({
     'fake-indexeddb',
     'fs',
     'path',
-    'util'
+    'util',
+    'playwright',
+    'playwright-core'
   ]
 });

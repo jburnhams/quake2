@@ -574,6 +574,57 @@ export function createClient(imports: ClientImports): ClientExports {
           description: 'Music volume'
       });
 
+      imports.host.cvars.register({
+          name: 'vid_gamma',
+          defaultValue: '1.0',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              const val = cvar.number;
+              if (!isNaN(val) && imports.engine.renderer) {
+                  imports.engine.renderer.setGamma(val);
+              }
+          },
+          description: 'Gamma correction'
+      });
+
+      imports.host.cvars.register({
+          name: 'r_brightness',
+          defaultValue: '1.0',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              const val = cvar.number;
+              if (!isNaN(val) && imports.engine.renderer) {
+                  imports.engine.renderer.setBrightness(val);
+              }
+          },
+          description: 'Brightness control'
+      });
+
+      imports.host.cvars.register({
+          name: 'r_bloom',
+          defaultValue: '0',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              if (imports.engine.renderer) {
+                  imports.engine.renderer.setBloom(cvar.number !== 0);
+              }
+          },
+          description: 'Enable bloom effect'
+      });
+
+      imports.host.cvars.register({
+          name: 'r_bloom_intensity',
+          defaultValue: '0.5',
+          flags: CvarFlags.Archive,
+          onChange: (cvar) => {
+              const val = cvar.number;
+              if (!isNaN(val) && imports.engine.renderer) {
+                  imports.engine.renderer.setBloomIntensity(val);
+              }
+          },
+          description: 'Bloom intensity'
+      });
+
       // Initialize fovValue from cvar
       const initialFov = imports.host.cvars.get('fov');
       if (initialFov) {
@@ -623,6 +674,26 @@ export function createClient(imports: ClientImports): ClientExports {
          Init_Hud(imports.engine.renderer, imports.engine.assets).then(() => {
              loadingScreen.finish();
          });
+      }
+
+      // Apply initial render settings from cvars
+      if (imports.engine.renderer && imports.host?.cvars) {
+          const gamma = imports.host.cvars.get('vid_gamma');
+          if (gamma && !isNaN(gamma.number)) {
+              imports.engine.renderer.setGamma(gamma.number);
+          }
+          const brightness = imports.host.cvars.get('r_brightness');
+          if (brightness && !isNaN(brightness.number)) {
+              imports.engine.renderer.setBrightness(brightness.number);
+          }
+          const bloom = imports.host.cvars.get('r_bloom');
+          if (bloom) {
+              imports.engine.renderer.setBloom(bloom.number !== 0);
+          }
+          const bloomIntensity = imports.host.cvars.get('r_bloom_intensity');
+          if (bloomIntensity && !isNaN(bloomIntensity.number)) {
+              imports.engine.renderer.setBloomIntensity(bloomIntensity.number);
+          }
       }
 
       void imports.engine.trace({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 });
@@ -1056,14 +1127,20 @@ export function createClient(imports: ClientImports): ClientExports {
           // Check camera contents for water tint
           const cameraContents = pointContents({ x: camera.position[0], y: camera.position[1], z: camera.position[2] });
           let waterTint: readonly [number, number, number, number] | undefined;
+          let underwaterWarp = false;
 
           if ((cameraContents & CONTENTS_WATER) !== 0) {
               waterTint = [0.5, 0.5, 0.6, 0.6]; // Blueish
+              underwaterWarp = true;
           } else if ((cameraContents & CONTENTS_SLIME) !== 0) {
               waterTint = [0.0, 0.1, 0.05, 0.6]; // Slime green
+              underwaterWarp = true;
           } else if ((cameraContents & CONTENTS_LAVA) !== 0) {
               waterTint = [1.0, 0.3, 0.0, 0.6]; // Lava red
+              underwaterWarp = true;
           }
+
+          imports.engine.renderer.setUnderwaterWarp(underwaterWarp);
 
           imports.engine.renderer.renderFrame({
               camera,

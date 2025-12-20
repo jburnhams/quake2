@@ -14,6 +14,11 @@ const mockRenderer = {
     registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24 } as any),
     renderFrame: vi.fn(),
     getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
+    setGamma: vi.fn(),
+    setBrightness: vi.fn(),
+    setBloom: vi.fn(),
+    setBloomIntensity: vi.fn(),
+    setUnderwaterWarp: vi.fn(),
     width: 640,
     height: 480
 } as unknown as Renderer;
