@@ -32,9 +32,6 @@ export class MockWebGL2RenderingContext {
   readonly FRAMEBUFFER = 0x8d40;
   readonly COLOR_ATTACHMENT0 = 0x8ce0;
   readonly DEPTH_ATTACHMENT = 0x8d00;
-  readonly RENDERBUFFER = 0x8d41;
-  readonly DEPTH_COMPONENT24 = 0x81a6;
-  readonly FRAMEBUFFER_COMPLETE = 0x8cd5;
   readonly TRIANGLES = 0x0004;
   readonly DEPTH_TEST = 0x0b71;
   readonly CULL_FACE = 0x0b44;
@@ -49,14 +46,6 @@ export class MockWebGL2RenderingContext {
   readonly COMPILE_STATUS = 0x8b81;
   readonly LINK_STATUS = 0x8b82;
   readonly ONE_MINUS_SRC_COLOR = 0x0301;
-  readonly TRIANGLE_STRIP = 0x0005;
-  readonly QUERY_RESULT_AVAILABLE = 0x8867;
-  readonly QUERY_RESULT = 0x8866;
-
-  readonly canvas = {
-      width: 800,
-      height: 600
-  };
 
   private shaderCounter = 0;
   private programCounter = 0;
@@ -81,9 +70,6 @@ export class MockWebGL2RenderingContext {
   );
   blendFunc = vi.fn((sfactor: GLenum, dfactor: GLenum) => this.calls.push(`blendFunc:${sfactor}:${dfactor}`));
   getExtension = vi.fn((name: string) => this.extensions.get(name) ?? null);
-  viewport = vi.fn((x: number, y: number, w: number, h: number) => this.calls.push(`viewport:${x}:${y}:${w}:${h}`));
-  clear = vi.fn((mask: number) => this.calls.push(`clear:${mask}`));
-  clearColor = vi.fn((r: number, g: number, b: number, a: number) => this.calls.push(`clearColor:${r}:${g}:${b}:${a}`));
 
   createShader = vi.fn((type: GLenum) => ({ id: ++this.shaderCounter, type } as unknown as WebGLShader));
   shaderSource = vi.fn((shader: ShaderRecord, source: string) => this.calls.push(`shaderSource:${shader.id}:${source}`));
@@ -170,19 +156,6 @@ export class MockWebGL2RenderingContext {
       this.calls.push(`framebufferTexture2D:${target}:${attachment}:${textarget}:${!!texture}:${level}`)
   );
   deleteFramebuffer = vi.fn((fb: WebGLFramebuffer) => this.calls.push(`deleteFramebuffer:${!!fb}`));
-  checkFramebufferStatus = vi.fn((target: GLenum) => this.FRAMEBUFFER_COMPLETE);
-
-  createRenderbuffer = vi.fn(() => ({ rb: {} } as unknown as WebGLRenderbuffer));
-  bindRenderbuffer = vi.fn((target: GLenum, renderbuffer: WebGLRenderbuffer | null) =>
-      this.calls.push(`bindRenderbuffer:${target}:${!!renderbuffer}`)
-  );
-  renderbufferStorage = vi.fn((target: GLenum, internalformat: GLenum, width: GLsizei, height: GLsizei) =>
-      this.calls.push(`renderbufferStorage:${target}:${internalformat}:${width}:${height}`)
-  );
-  framebufferRenderbuffer = vi.fn((target: GLenum, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: WebGLRenderbuffer | null) =>
-      this.calls.push(`framebufferRenderbuffer:${target}:${attachment}:${renderbuffertarget}:${!!renderbuffer}`)
-  );
-  deleteRenderbuffer = vi.fn((rb: WebGLRenderbuffer) => this.calls.push(`deleteRenderbuffer:${!!rb}`));
 
   drawArrays = vi.fn((mode: GLenum, first: GLint, count: GLsizei) =>
     this.calls.push(`drawArrays:${mode}:${first}:${count}`)
@@ -192,28 +165,14 @@ export class MockWebGL2RenderingContext {
     this.calls.push(`drawElements:${mode}:${count}:${type}:${offset}`)
   );
 
-  // Queries
-  createQuery = vi.fn(() => ({}) as WebGLQuery);
-  beginQuery = vi.fn();
-  endQuery = vi.fn();
-  deleteQuery = vi.fn();
-  getQueryParameter = vi.fn();
-  getParameter = vi.fn();
-
   uniform1f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat) =>
     this.calls.push(`uniform1f:${location ? 'set' : 'null'}:${x}`)
   );
   uniform1i = vi.fn((location: WebGLUniformLocation | null, x: GLint) =>
     this.calls.push(`uniform1i:${location ? 'set' : 'null'}:${x}`)
   );
-  uniform4f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat) =>
-    this.calls.push(`uniform4f:${location ? 'set' : 'null'}:${x}:${y}:${z}:${w}`)
-  );
   uniform3fv = vi.fn((location: WebGLUniformLocation | null, data: Float32List | number[]) =>
     this.calls.push(`uniform3fv:${location ? 'set' : 'null'}:${Array.from(data as Iterable<number>).join(',')}`)
-  );
-  uniform3f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat, y: GLfloat, z: GLfloat) =>
-    this.calls.push(`uniform3f:${location ? 'set' : 'null'}:${x}:${y}:${z}`)
   );
   uniform2f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat, y: GLfloat) =>
     this.calls.push(`uniform2f:${location ? 'set' : 'null'}:${x}:${y}`)

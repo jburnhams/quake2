@@ -31,7 +31,6 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "gl-matrix": "^3.4.4",
     "tsup": "^8.1.0"
   }
 }

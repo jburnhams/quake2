@@ -7,15 +7,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: [
-    'vitest',
-    'jsdom',
-    '@napi-rs/canvas',
-    'fake-indexeddb',
-    'fs',
-    'path',
-    'util',
-    'playwright',
-    'playwright-core'
-  ]
+  external: ['vitest']
 });

@@ -31,15 +31,14 @@
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
-    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
+    "gl-matrix": "^3.4.3"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.52",
     "@quake2ts/game": "workspace:*",
-    "@quake2ts/test-utils": "workspace:^",
     "@quake2ts/tests": "workspace:^",
     "fake-indexeddb": "^6.0.0",
-    "gl-matrix": "^3.4.4",
     "tsup": "^8.1.0",
     "vitest": "^1.5.3"
   }

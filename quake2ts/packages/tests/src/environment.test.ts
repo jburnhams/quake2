@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { setupBrowserEnvironment, createMockWebGL2Context } from './setup.js';
+import { setupBrowserEnvironment } from './setup.js';
+import { createMockWebGL2Context } from './mocks/webgl2.js';
 
 describe('Integration Test Environment', () => {
   beforeAll(() => {

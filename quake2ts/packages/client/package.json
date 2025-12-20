@@ -36,7 +36,6 @@
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
-    "@quake2ts/test-utils": "workspace:^",
     "tsup": "^8.1.0"
   }
 }
