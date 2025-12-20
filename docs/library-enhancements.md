@@ -914,7 +914,7 @@ interface MemoryUsage {
 | VFS Priority Support | engine | P1 | 07 | Implemented |
 | Cvar System | shared/game | P2 | 07 | Implemented |
 | Streaming PAK Reader | engine | P2 | 09 | Needed |
-| Instancing API | engine | P2 | 09 | Nice-to-have |
+| Instancing API | engine | P2 | 09 | Implemented |
 | LOD Support | engine | P3 | 09 | Nice-to-have |
 | Memory Tracking | engine | P2 | 09 | Implemented |
 
