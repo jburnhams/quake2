@@ -10,3 +10,4 @@ export function describeAsset(name: string, origin?: Vec3): AssetSummary {
 }
 
 export { exportMd2ToObj, exportMd3ToGltf } from './modelExport.js';
+export { replaceBspEntities } from './bspTools.js';
