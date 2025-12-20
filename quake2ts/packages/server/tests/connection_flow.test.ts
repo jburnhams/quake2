@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState, createClient } from '../src/client.js';
-import { ServerCommand, BinaryStream, NetDriver } from '@quake2ts/shared';
-import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
+import { ClientState } from '../src/client.js';
+import { NetDriver } from '@quake2ts/shared';
+import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -77,8 +77,15 @@ describe('DedicatedServer Connection Flow', () => {
         isConnected: vi.fn().mockReturnValue(true)
     };
 
-    const client = createClient(0, mockNet);
-    client.state = ClientState.Connected;
+    const client = createMockServerClient(0, {
+        state: ClientState.Connected,
+        net: mockNet,
+        edict: null // Explicitly null edict as player hasn't entered game yet
+    });
+
+    // Make sure transmit returns something so client.net.send is called with it
+    (client.netchan.transmit as any).mockReturnValue(new Uint8Array([1, 2, 3]));
+
 
     // Inject client
     // @ts-ignore

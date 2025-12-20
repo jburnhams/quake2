@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState, Client } from '../src/client.js';
-import { UserCommand, UPDATE_BACKUP } from '@quake2ts/shared';
-import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
+import { ClientState } from '../src/client.js';
+import { UPDATE_BACKUP } from '@quake2ts/shared';
+import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('node:fs/promises', () => ({
@@ -31,45 +31,6 @@ vi.mock('@quake2ts/game', () => ({
 }));
 
 const FRAME_TIME_MS = 100; // 10Hz
-
-// Helper to create a proper mock client
-const createMockClient = (index: number): Client => {
-  const frames = [];
-  for (let i = 0; i < UPDATE_BACKUP; i++) {
-    frames.push({
-      areaBytes: 0,
-      areaBits: new Uint8Array(0),
-      playerState: {},
-      numEntities: 0,
-      firstEntity: 0,
-      sentTime: 0,
-      entities: []
-    });
-  }
-
-  return {
-    index,
-    state: ClientState.Active,
-    edict: { id: 1, classname: 'player' },
-    lastCmd: { msec: 0, angles: {x: 0, y: 0, z: 0}, buttons: 0, forwardmove: 0, sidemove: 0, upmove: 0 },
-    net: { send: vi.fn() },
-    netchan: {
-      transmit: vi.fn().mockReturnValue(new Uint8Array(0)),
-      process: vi.fn().mockReturnValue(new Uint8Array(0)),
-      writeReliableByte: vi.fn(),
-      writeReliableShort: vi.fn(),
-      writeReliableString: vi.fn(),
-      writeReliableLong: vi.fn(),
-    },
-    messageQueue: [],
-    lastPacketEntities: [],
-    frames: frames,
-    lastFrame: 0,
-    commandQueue: [],
-    lastCommandTime: Date.now(),
-    commandCount: 0
-  } as unknown as Client;
-};
 
 describe('DedicatedServer', () => {
   let server: DedicatedServer;
@@ -143,8 +104,26 @@ describe('DedicatedServer', () => {
   });
 
   it('should run the main game loop and process client commands', () => {
-    const fakeClient = createMockClient(0);
-    fakeClient.lastCmd = { msec: 100, angles: {x: 0, y: 90, z: 0}, buttons: 1, forwardmove: 200, sidemove: 0, upmove: 0 };
+    // Create frames array for backup
+    const frames = [];
+    for (let i = 0; i < UPDATE_BACKUP; i++) {
+        frames.push({
+            areaBytes: 0,
+            areaBits: new Uint8Array(0),
+            playerState: {},
+            numEntities: 0,
+            firstEntity: 0,
+            sentTime: 0,
+            entities: []
+        });
+    }
+
+    const fakeClient = createMockServerClient(0, {
+        frames: frames as any[],
+        lastCmd: { msec: 100, angles: {x: 0, y: 90, z: 0}, buttons: 1, forwardmove: 200, sidemove: 0, upmove: 0, sequence: 1, lightlevel: 0, impulse: 0, serverFrame: 0 },
+        state: ClientState.Active,
+        edict: { id: 1, classname: 'player' } as any
+    });
 
     // @ts-ignore
     server.svs.clients[0] = fakeClient;
@@ -164,8 +143,24 @@ describe('DedicatedServer', () => {
   });
 
   it('should not process commands for clients that are not active', () => {
-    const fakeClient = createMockClient(0);
-    fakeClient.state = ClientState.Connected;
+    const frames = [];
+    for (let i = 0; i < UPDATE_BACKUP; i++) {
+        frames.push({
+            areaBytes: 0,
+            areaBits: new Uint8Array(0),
+            playerState: {},
+            numEntities: 0,
+            firstEntity: 0,
+            sentTime: 0,
+            entities: []
+        });
+    }
+
+    const fakeClient = createMockServerClient(0, {
+        frames: frames as any[],
+        state: ClientState.Connected, // Not Active
+        edict: { id: 1, classname: 'player' } as any
+    });
 
     // @ts-ignore
     server.svs.clients[0] = fakeClient;
