@@ -1,262 +1,173 @@
-
 export interface MockRAF {
-  tick(timestamp?: number): void;
-  advance(deltaMs?: number): void;
-  getCallbacks(): FrameRequestCallback[];
-  reset(): void;
-  enable(): void;
-  disable(): void;
+    tick(ms?: number): void;
+    advance(ms: number): void;
+    getCallbacks(): FrameRequestCallback[];
+    reset(): void;
+    enable(): void;
+    disable(): void;
 }
 
-let activeMockRAF: MockRAF | undefined;
-
 /**
- * Creates a mock implementation of requestAnimationFrame that allows manual control.
- * It replaces the global requestAnimationFrame and cancelAnimationFrame.
+ * Creates a controllable requestAnimationFrame mock.
+ * Note: If using `setupBrowserEnvironment`, it installs a basic setTimeout-based RAF.
+ * This helper provides more manual control.
  */
 export function createMockRAF(): MockRAF {
-  let callbacks: { id: number; callback: FrameRequestCallback }[] = [];
-  let nextId = 1;
-  let currentTime = 0;
+    let callbacks: Map<number, FrameRequestCallback> = new Map();
+    let nextId = 1;
+    let currentTime = 0;
+    let originalRAF: any = undefined;
+    let originalCancelRAF: any = undefined;
 
-  const originalRAF = global.requestAnimationFrame;
-  const originalCancelRAF = global.cancelAnimationFrame;
+    const mock: MockRAF = {
+        tick(ms: number = 16.66) {
+            mock.advance(ms);
+        },
+        advance(ms: number) {
+            currentTime += ms;
+            const currentCallbacks = Array.from(callbacks.values());
+            callbacks.clear();
+            currentCallbacks.forEach(cb => cb(currentTime));
+        },
+        getCallbacks() {
+            return Array.from(callbacks.values());
+        },
+        reset() {
+            callbacks.clear();
+            currentTime = 0;
+            if (originalRAF) {
+                global.requestAnimationFrame = originalRAF;
+                global.cancelAnimationFrame = originalCancelRAF;
+                originalRAF = undefined;
+            }
+        },
+        enable() {
+             if (typeof global !== 'undefined') {
+                if (!originalRAF) {
+                    originalRAF = global.requestAnimationFrame;
+                    originalCancelRAF = global.cancelAnimationFrame;
+                }
+                global.requestAnimationFrame = (callback: FrameRequestCallback) => {
+                    const id = nextId++;
+                    callbacks.set(id, callback);
+                    return id;
+                };
 
-  const raf = (callback: FrameRequestCallback): number => {
-    const id = nextId++;
-    callbacks.push({ id, callback });
-    return id;
-  };
-
-  const cancel = (id: number): void => {
-    callbacks = callbacks.filter(cb => cb.id !== id);
-  };
-
-  const mock: MockRAF = {
-    tick(timestamp?: number) {
-      if (typeof timestamp !== 'number') {
-        currentTime += 16.6; // Default to ~60fps
-      } else {
-        currentTime = timestamp;
-      }
-
-      const currentCallbacks = [...callbacks];
-      callbacks = []; // Clear before execution so new RAFs go to next frame
-
-      currentCallbacks.forEach(({ callback }) => {
-        callback(currentTime);
-      });
-    },
-
-    advance(deltaMs: number = 16.6) {
-      this.tick(currentTime + deltaMs);
-    },
-
-    getCallbacks() {
-      return callbacks.map(c => c.callback);
-    },
-
-    reset() {
-      callbacks = [];
-      nextId = 1;
-      currentTime = 0;
-    },
-
-    enable() {
-        activeMockRAF = this;
-        global.requestAnimationFrame = raf as any;
-        global.cancelAnimationFrame = cancel as any;
-    },
-
-    disable() {
-        if (activeMockRAF === this) {
-            activeMockRAF = undefined;
+                global.cancelAnimationFrame = (id: number) => {
+                    callbacks.delete(id);
+                };
+            }
+        },
+        disable() {
+             this.reset();
         }
+    };
 
-        if (originalRAF) {
-            global.requestAnimationFrame = originalRAF;
-        } else {
-            // @ts-ignore
-            delete global.requestAnimationFrame;
-        }
-
-        if (originalCancelRAF) {
-            global.cancelAnimationFrame = originalCancelRAF;
-        } else {
-             // @ts-ignore
-            delete global.cancelAnimationFrame;
-        }
-    }
-  };
-
-  return mock;
+    return mock;
 }
 
 /**
- * Creates a mock Performance object with controllable time.
+ * Creates a mock Performance object.
  */
 export function createMockPerformance(startTime: number = 0): Performance {
-  let currentTime = startTime;
-
-  const mockPerf = {
-    now: () => currentTime,
-    timeOrigin: startTime,
-    timing: {
-      navigationStart: startTime,
-    },
-    clearMarks: () => {},
-    clearMeasures: () => {},
-    clearResourceTimings: () => {},
-    getEntries: () => [],
-    getEntriesByName: () => [],
-    getEntriesByType: () => [],
-    mark: () => {},
-    measure: () => {},
-    setResourceTimingBufferSize: () => {},
-    toJSON: () => ({}),
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => true,
-  } as unknown as Performance;
-
-  (mockPerf as any).advance = (deltaMs: number) => {
-    currentTime += deltaMs;
-  };
-  (mockPerf as any).setTime = (time: number) => {
-    currentTime = time;
-  };
-
-  return mockPerf;
+    let now = startTime;
+    return {
+        now: () => now,
+        timeOrigin: startTime,
+        mark: () => {},
+        measure: () => {},
+        getEntries: () => [],
+        getEntriesByName: () => [],
+        getEntriesByType: () => [],
+        clearMarks: () => {},
+        clearMeasures: () => {},
+        clearResourceTimings: () => {},
+        setResourceTimingBufferSize: () => {},
+        onresourcetimingbufferfull: null,
+        toJSON: () => ({}),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => true,
+        __advance: (ms: number) => { now += ms; }
+    } as unknown as Performance;
 }
 
 export interface ControlledTimer {
-  tick(): void;
-  advanceBy(ms: number): void;
-  clear(): void;
-  restore(): void;
+    tick(): void;
+    advanceBy(ms: number): void;
+    clear(): void;
+    restore(): void;
 }
 
 /**
- * Creates a controlled timer that replaces global setTimeout/setInterval.
- * Allows deterministic time advancement.
+ * Creates a controlled timer environment using vi.useFakeTimers (if available).
+ * This wrapper abstracts the test runner specific timer logic.
  */
 export function createControlledTimer(): ControlledTimer {
-    let currentTime = 0;
-    interface Timer {
-        id: number;
-        callback: Function;
-        dueTime: number;
-        interval?: number;
-        args: any[];
+    let vi: any;
+    try {
+         // @ts-ignore
+         vi = global.vi;
+         if (!vi) {
+             // Try dynamic import for vitest if not global
+             // But we can't do async inside this sync function
+             // So we assume global.vi is available in vitest environment
+         }
+    } catch (e) {}
+
+    // Check if we can find it on arguments.callee? No.
+    // In vitest environment, 'vi' should be available if configured, or imported.
+    // The test file imports 'vi' from 'vitest'.
+    // If we want this helper to work, we might need to pass 'vi' instance or rely on global.
+    // Let's assume global.vi might not be set by default in all environments.
+
+    // For now, if we can't find vi, we'll try to find jest (if migrated) or just fail.
+    // Let's explicitly look for global.vi
+
+    if (typeof global !== 'undefined' && (global as any).vi) {
+        vi = (global as any).vi;
     }
-    let timers: Timer[] = [];
-    let nextId = 1;
 
-    const originalSetTimeout = global.setTimeout;
-    const originalClearTimeout = global.clearTimeout;
-    const originalSetInterval = global.setInterval;
-    const originalClearInterval = global.clearInterval;
+    if (vi) {
+        vi.useFakeTimers();
+        return {
+            tick: () => vi.advanceTimersByTime(16),
+            advanceBy: (ms: number) => vi.advanceTimersByTime(ms),
+            clear: () => vi.clearAllTimers(),
+            restore: () => vi.useRealTimers()
+        };
+    }
 
-    const mockSetTimeout = (callback: Function, delay: number = 0, ...args: any[]) => {
-        const id = nextId++;
-        timers.push({ id, callback, dueTime: currentTime + delay, args });
-        return id;
-    };
-
-    const mockClearTimeout = (id: any) => {
-        timers = timers.filter(t => t.id !== id);
-    };
-
-    const mockSetInterval = (callback: Function, delay: number = 0, ...args: any[]) => {
-        const id = nextId++;
-        timers.push({ id, callback, dueTime: currentTime + delay, interval: delay, args });
-        return id;
-    };
-
-    const mockClearInterval = (id: any) => {
-        timers = timers.filter(t => t.id !== id);
-    };
-
-    global.setTimeout = mockSetTimeout as any;
-    global.clearTimeout = mockClearTimeout as any;
-    global.setInterval = mockSetInterval as any;
-    global.clearInterval = mockClearInterval as any;
-
+    // Fallback if no vitest
+    console.warn('createControlledTimer: vitest not found, timers will not be controlled.');
     return {
-        tick() {
-            this.advanceBy(0);
-        },
-        advanceBy(ms: number) {
-            const targetTime = currentTime + ms;
-
-            // Process timers until targetTime
-            while (true) {
-                // Find earliest timer
-                let earliest: Timer | null = null;
-                for (const t of timers) {
-                    if (!earliest || t.dueTime < earliest.dueTime) {
-                        earliest = t;
-                    }
-                }
-
-                if (!earliest || earliest.dueTime > targetTime) {
-                    break;
-                }
-
-                // Advance time to this timer
-                currentTime = earliest.dueTime;
-
-                // Execute
-                const { callback, args, interval, id } = earliest;
-
-                if (interval !== undefined) {
-                    earliest.dueTime += interval;
-                    // Prevent infinite loops with 0 interval
-                    if (interval === 0) earliest.dueTime += 1;
-                } else {
-                    timers = timers.filter(t => t.id !== id);
-                }
-
-                callback(...args);
-            }
-
-            currentTime = targetTime;
-        },
-        clear() {
-            timers = [];
-        },
-        restore() {
-            global.setTimeout = originalSetTimeout;
-            global.clearTimeout = originalClearTimeout;
-            global.setInterval = originalSetInterval;
-            global.clearInterval = originalClearInterval;
-        }
+        tick: () => {},
+        advanceBy: () => {},
+        clear: () => {},
+        restore: () => {}
     };
 }
 
 /**
- * Helper to simulate multiple frames of a game loop.
- * @param count Number of frames to simulate
- * @param frameTimeMs Time per frame in milliseconds
- * @param callback Optional callback to run inside the loop (e.g. triggering inputs)
+ * Simulates running a loop for a number of frames.
  */
-export function simulateFrames(count: number, frameTimeMs: number = 16.6, callback?: (frameIndex: number) => void) {
-    if (!activeMockRAF) {
-        throw new Error("simulateFrames requires an active MockRAF. Ensure createMockRAF().enable() is called.");
-    }
-
+export function simulateFrames(count: number, frameTime: number = 16, callback?: (frameIndex: number) => void): void {
     for (let i = 0; i < count; i++) {
         if (callback) callback(i);
-        activeMockRAF.advance(frameTimeMs);
+        // Best effort to advance timers if they are mocked
+        try {
+            // @ts-ignore
+            if (global.vi) global.vi.advanceTimersByTime(frameTime);
+        } catch(e) {}
     }
 }
 
 /**
- * Simulates frames using a provided MockRAF controller.
+ * Helper to simulate frames specifically using a MockRAF instance.
  */
-export function simulateFramesWithMock(mock: MockRAF, count: number, frameTimeMs: number = 16.6, callback?: (frameIndex: number) => void) {
+export function simulateFramesWithMock(mockRAF: MockRAF, count: number, frameTime: number = 16.6, callback?: (frameIndex: number) => void) {
     for (let i = 0; i < count; i++) {
+        mockRAF.advance(frameTime);
         if (callback) callback(i);
-        mock.advance(frameTimeMs);
     }
 }

@@ -109,10 +109,8 @@ Simulate network conditions in E2E tests:
 import { simulateNetworkCondition, throttleBandwidth } from '@quake2ts/test-utils';
 
 // Simulate a slow connection
-await simulateNetworkCondition('slow').apply(page);
-
-// Throttle bandwidth specifically
-await throttleBandwidth(page, 100 * 1024); // 100 KB/s
+const simulator = simulateNetworkCondition('slow');
+// Apply logic to packets/requests
 ```
 
 ### Visual Regression
@@ -120,16 +118,14 @@ await throttleBandwidth(page, 100 * 1024); // 100 KB/s
 Capture and compare screenshots:
 
 ```typescript
-import { createVisualTestScenario } from '@quake2ts/test-utils';
-
-const visual = createVisualTestScenario(page, 'map-start');
+import { captureGameScreenshot, compareScreenshots } from '@quake2ts/test-utils';
 
 // Capture screenshot
-const snapshot = await visual.capture('initial-view');
+const buffer = await captureGameScreenshot(page, 'map-start');
 
 // Compare against baseline
-const result = await visual.compare('initial-view', './test/screenshots/baselines');
-if (!result.matched) {
+const result = compareScreenshots(baselineBuffer, buffer);
+if (!result.passed) {
     console.warn('Visual regression detected');
 }
 ```
@@ -157,9 +153,8 @@ Helper for storage scenarios (Local, Session, IndexedDB):
 ```typescript
 import { createStorageTestScenario } from '@quake2ts/test-utils';
 
-const scenario = createStorageTestScenario('indexed');
-await scenario.populate({ 'save_1': JSON.stringify(saveData) });
-const exists = await scenario.verify('save_1', JSON.stringify(saveData));
+const scenario = createStorageTestScenario('local');
+scenario.localStorage.setItem('foo', 'bar');
 ```
 
 ## Features
@@ -171,3 +166,10 @@ const exists = await scenario.verify('save_1', JSON.stringify(saveData));
 - **Audio:** Basic Web Audio API mock with event capturing.
 - **E2E:** Playwright wrappers, network simulation, visual regression helpers.
 - **Game Factories:** Helpers for creating entities, items, and game state.
+
+## Migration Guide
+
+When migrating existing tests:
+1. Replace `setupBrowserEnvironment` imports from local helpers to `@quake2ts/test-utils`.
+2. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
+3. Use `setupMockAudioContext` instead of custom inline mocks.

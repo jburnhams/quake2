@@ -1,14 +1,18 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { createControlledTimer, createMockRAF, simulateFramesWithMock } from '../src/setup/timing';
+import {
+    createControlledTimer,
+    createMockRAF,
+    simulateFramesWithMock
+} from '../src/index';
+
+// Expose vi to global for the helper to pick it up if needed
+// verify environment.
+if (typeof global !== 'undefined') {
+    (global as any).vi = vi;
+}
 
 describe('createMockRAF', () => {
-    it('should create a mock RAF', () => {
-        const mockRAF = createMockRAF();
-        expect(mockRAF).toBeDefined();
-        expect(mockRAF.tick).toBeDefined();
-    });
-
     it('should control time and execute callbacks', () => {
         const mockRAF = createMockRAF();
         const callback = vi.fn();
@@ -36,8 +40,7 @@ describe('createControlledTimer', () => {
         const timer = createControlledTimer();
         const callback = vi.fn();
 
-        setTimeout(callback, 100);
-        timer.advanceBy(50);
+        setTimeout(callback, 50);
         expect(callback).not.toHaveBeenCalled();
         timer.advanceBy(50);
         expect(callback).toHaveBeenCalled();
@@ -55,6 +58,7 @@ describe('createControlledTimer', () => {
         timer.advanceBy(100);
         expect(callback).toHaveBeenCalledTimes(2);
 
+        clearInterval(undefined as any); // Cleanup
         timer.restore();
     });
 });

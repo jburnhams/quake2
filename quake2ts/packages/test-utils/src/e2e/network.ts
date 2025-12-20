@@ -1,98 +1,138 @@
+export interface NetworkCondition {
+    latency: number; // ms
+    jitter: number; // ms
+    packetLoss: number; // 0-1
+    bandwidth?: number; // bytes per second
+}
 
 export interface NetworkSimulator {
-    apply(page: any): Promise<void>;
-    clear(page: any): Promise<void>;
+    condition: NetworkCondition;
+    apply(target: any): Promise<any>;
+    reset(target?: any): Promise<void>;
+    clear(target?: any): Promise<void>; // Alias for reset/compatibility
 }
 
-export type NetworkCondition = 'good' | 'slow' | 'unstable' | 'offline';
-
-export interface NetworkConfig {
-    offline: boolean;
-    downloadThroughput: number; // bytes/sec
-    uploadThroughput: number; // bytes/sec
-    latency: number; // ms
-}
-
-const CONDITIONS: Record<NetworkCondition, NetworkConfig> = {
-    'good': {
-        offline: false,
-        downloadThroughput: 10 * 1024 * 1024, // 10 Mbps
-        uploadThroughput: 5 * 1024 * 1024,   // 5 Mbps
-        latency: 20
-    },
-    'slow': {
-        offline: false,
-        downloadThroughput: 500 * 1024, // 500 Kbps
-        uploadThroughput: 500 * 1024,
-        latency: 400
-    },
-    'unstable': {
-        offline: false,
-        downloadThroughput: 1 * 1024 * 1024,
-        uploadThroughput: 1 * 1024 * 1024,
-        latency: 100
-    },
-    'offline': {
-        offline: true,
-        downloadThroughput: 0,
-        uploadThroughput: 0,
-        latency: 0
-    }
-};
-
-/**
- * Simulates network conditions using Chrome DevTools Protocol (CDP) via Playwright.
- */
-export function simulateNetworkCondition(condition: NetworkCondition): NetworkSimulator {
-    const config = CONDITIONS[condition];
-    return createCustomNetworkCondition(config.latency, 0, 0, config);
-}
-
-/**
- * Creates a custom network condition simulator.
- *
- * @param latency Latency in milliseconds
- * @param jitter Approximate jitter (variation in latency) - Note: CDP doesn't support jitter natively.
- * @param packetLoss Packet loss percentage (0-100) - Ignored for basic CDP emulation.
- */
-export function createCustomNetworkCondition(
-    latency: number,
-    jitter: number = 0,
-    packetLoss: number = 0,
-    baseConfig?: NetworkConfig
-): NetworkSimulator {
-    return {
-        async apply(page: any) {
-            const client = await page.context().newCDPSession(page);
-            await client.send('Network.enable');
-            await client.send('Network.emulateNetworkConditions', {
-                offline: baseConfig?.offline || false,
-                latency: latency + (Math.random() * jitter),
-                downloadThroughput: baseConfig?.downloadThroughput || -1,
-                uploadThroughput: baseConfig?.uploadThroughput || -1,
-            });
-        },
-        async clear(page: any) {
-            const client = await page.context().newCDPSession(page);
-            await client.send('Network.emulateNetworkConditions', {
-                offline: false,
-                latency: 0,
-                downloadThroughput: -1,
-                uploadThroughput: -1,
-            });
+async function applyToCDP(target: any, condition: NetworkCondition) {
+    let client = target;
+    // If target is a Page (has context()), get CDP session
+    if (target && typeof target.context === 'function') {
+        try {
+            client = await target.context().newCDPSession(target);
+        } catch (e) {
+            // ignore
         }
+    }
+
+    if (client && typeof client.send === 'function') {
+        await client.send('Network.enable');
+        await client.send('Network.emulateNetworkConditions', {
+            offline: condition.packetLoss >= 1,
+            downloadThroughput: condition.bandwidth || -1,
+            uploadThroughput: condition.bandwidth || -1,
+            latency: condition.latency + (condition.jitter / 2) // Approximate avg latency
+        });
+        return true;
+    }
+    return false;
+}
+
+export function simulateNetworkCondition(conditionType: 'good' | 'slow' | 'unstable' | 'offline'): NetworkSimulator {
+    let condition: NetworkCondition;
+
+    switch (conditionType) {
+        case 'good':
+            condition = { latency: 20, jitter: 5, packetLoss: 0, bandwidth: -1 };
+            break;
+        case 'slow':
+            condition = { latency: 150, jitter: 30, packetLoss: 0.01, bandwidth: 500 * 1024 };
+            break;
+        case 'unstable':
+            condition = { latency: 100, jitter: 100, packetLoss: 0.05, bandwidth: -1 };
+            break;
+        case 'offline':
+            condition = { latency: 0, jitter: 0, packetLoss: 1, bandwidth: 0 };
+            break;
+    }
+
+    const reset = async (target?: any) => {
+        if (target) {
+             await applyToCDP(target, { latency: 0, jitter: 0, packetLoss: 0, bandwidth: -1 });
+        }
+    };
+
+    return {
+        condition,
+        apply: async (target: any) => {
+            // Try to apply to CDP first
+            if (await applyToCDP(target, condition)) {
+                return target;
+            }
+
+            // Fallback for non-CDP targets (simple delay simulation)
+            if (Math.random() < condition.packetLoss) {
+                return null; // Lost
+            }
+            const delay = condition.latency + (Math.random() * condition.jitter);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return target;
+        },
+        reset,
+        clear: reset
+    };
+}
+
+export function createCustomNetworkCondition(latency: number, jitter: number, packetLoss: number): NetworkSimulator {
+    const condition = { latency, jitter, packetLoss };
+    const reset = async (target?: any) => {
+          if (target) {
+             await applyToCDP(target, { latency: 0, jitter: 0, packetLoss: 0, bandwidth: -1 });
+        }
+    };
+    return {
+        condition,
+        apply: async (target: any) => {
+             if (await applyToCDP(target, condition)) {
+                return target;
+            }
+            if (Math.random() < condition.packetLoss) {
+                return null;
+            }
+            const delay = condition.latency + (Math.random() * condition.jitter);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return target;
+        },
+        reset,
+        clear: reset
     };
 }
 
 /**
- * Throttles bandwidth for the given page.
+ * Throttles network bandwidth for a page/client.
+ * If passed a CDPSession/Playwright Page, it will apply settings.
+ * For test utility purposes without Playwright dependency, it does nothing or mocks behavior.
  */
-export async function throttleBandwidth(page: any, bytesPerSecond: number) {
-    const simulator = createCustomNetworkCondition(0, 0, 0, {
-        offline: false,
-        latency: 0,
-        downloadThroughput: bytesPerSecond,
-        uploadThroughput: bytesPerSecond
-    });
-    await simulator.apply(page);
+export async function throttleBandwidth(target: any, bytesPerSecond: number): Promise<void> {
+    // If target looks like a Playwright page or CDP session
+    if (target && typeof target.send === 'function') {
+        // CDPSession or similar
+         await target.send('Network.emulateNetworkConditions', {
+            offline: false,
+            downloadThroughput: bytesPerSecond,
+            uploadThroughput: bytesPerSecond,
+            latency: 0
+        });
+    } else if (target && typeof target.context === 'function') {
+        // Playwright page (needs CDP session)
+        try {
+            const client = await target.context().newCDPSession(target);
+            await client.send('Network.emulateNetworkConditions', {
+                offline: false,
+                downloadThroughput: bytesPerSecond,
+                uploadThroughput: bytesPerSecond,
+                latency: 0
+            });
+        } catch (e) {
+            // Ignore if not a page
+        }
+    }
 }

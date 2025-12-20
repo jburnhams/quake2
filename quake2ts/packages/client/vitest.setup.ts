@@ -6,4 +6,7 @@
 
 import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 
-setupBrowserEnvironment();
+setupBrowserEnvironment({
+  enableWebGL2: true, // Assuming client might need it
+  enablePointerLock: true
+});
