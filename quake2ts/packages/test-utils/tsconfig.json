@@ -1,15 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["vitest/globals", "@webgpu/types"],
-    "composite": false
-  },
-  "include": ["src/**/*"],
-  "references": [
-    { "path": "../shared" },
-    { "path": "../game" },
-    { "path": "../server" }
-  ]
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["vitest/globals"],
+    "lib": ["ES2020", "DOM"]
+  }
 }

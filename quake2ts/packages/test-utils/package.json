@@ -1,34 +1,21 @@
 {
   "name": "@quake2ts/test-utils",
   "version": "0.0.1",
-  "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "description": "Shared test utilities for Quake2TS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "test": "vitest run --passWithNoTests"
+    "build": "tsup",
+    "test": "vitest run"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
-    "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "playwright": "^1.57.0",
-    "serve-handler": "^6.1.6",
-    "vitest": "^1.6.0"
+    "@quake2ts/server": "workspace:*"
   },
   "devDependencies": {
+    "vitest": "^0.34.0",
     "@napi-rs/canvas": "^0.1.84",
     "@types/jsdom": "^27.0.0",
     "@types/serve-handler": "^6.1.4",

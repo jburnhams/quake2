@@ -1,15 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 import { player_die } from '../../src/entities/player.js';
-import { Entity, DeadFlag, Solid, MoveType } from '../../src/entities/entity.js';
+import { DeadFlag, Solid, MoveType } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import type { GameEngine } from '../../src/index.js';
+import { createEntityFactory, createPlayerEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('Player Death', () => {
     it('should set dead flags and properties', () => {
-        const player = new Entity(1);
-        player.health = 0;
-        player.origin = { x: 0, y: 0, z: 0 };
+        const player = createPlayerEntityFactory({
+            number: 1,
+            health: 0,
+            origin: { x: 0, y: 0, z: 0 }
+        });
 
         player_die(player, null, null, 10, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN);
 
@@ -36,9 +39,11 @@ describe('Player Death', () => {
         const system = new EntitySystem(mockEngine, mockImports as any);
         const spawnSpy = vi.spyOn(system, 'spawn').mockReturnValue({} as any);
 
-        const player = new Entity(1);
-        player.health = -50;
-        player.origin = { x: 0, y: 0, z: 0 };
+        const player = createPlayerEntityFactory({
+            number: 1,
+            health: -50,
+            origin: { x: 0, y: 0, z: 0 }
+        });
 
         player_die(player, null, null, 100, { x: 0, y: 0, z: 0 }, DamageMod.ROCKET, system);
 
@@ -60,12 +65,12 @@ describe('Player Death', () => {
 
         const system = new EntitySystem(mockEngine, mockImports as any);
 
-        const player = new Entity(1);
-        player.classname = 'player';
-        player.health = 0;
+        const player = createPlayerEntityFactory({
+            number: 1,
+            health: 0
+        });
 
-        const attacker = new Entity(2);
-        attacker.classname = 'monster_soldier';
+        const attacker = createMonsterEntityFactory('monster_soldier', { number: 2 });
 
         player_die(player, null, attacker, 10, { x: 0, y: 0, z: 0 }, DamageMod.MACHINEGUN, system);
         // player_die now uses ClientObituary which uses sys.multicast with ServerCommand.print, not centerprintf

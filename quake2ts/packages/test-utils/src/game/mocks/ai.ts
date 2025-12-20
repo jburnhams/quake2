@@ -1,67 +1,41 @@
+import { Entity, EntitySystem, type MonsterMove } from '@quake2ts/game';
 import { vi, type Mock } from 'vitest';
-import { Entity, EntitySystem, MonsterMove, MonsterAction, AIAction } from '@quake2ts/game';
 
 export interface MockAI {
-  checkAttack: Mock;
-  findTarget: Mock;
-  visible: Mock;
-  infront: Mock;
+  think: Mock<[Entity], void>;
+  stand: Mock<[Entity], void>;
+  walk: Mock<[Entity], void>;
+  run: Mock<[Entity], void>;
+  attack: Mock<[Entity], void>;
+  pain: Mock<[Entity, number], void>;
+  die: Mock<[Entity, any, any, number, any], void>;
 }
 
-export interface MockMonsterAI {
-  stand: Mock;
-  walk: Mock;
-  run: Mock;
-  dodge: Mock;
-  attack: Mock;
-  melee: Mock;
-  sight: Mock;
-  idle: Mock;
+export interface MockMonsterAI extends MockAI {
+  checkAttack: Mock<[Entity], boolean>;
+  sight: Mock<[Entity, Entity], boolean>;
+  blocked: Mock<[Entity, Entity], void>;
 }
 
 export function createMockAI(overrides: Partial<MockAI> = {}): MockAI {
   return {
-    checkAttack: vi.fn(() => false),
-    findTarget: vi.fn(() => null),
-    visible: vi.fn(() => true),
-    infront: vi.fn(() => true),
-    ...overrides
-  };
-}
-
-export function createMockMonsterAI(overrides: Partial<MockMonsterAI> = {}): MockMonsterAI {
-  return {
+    think: vi.fn(),
     stand: vi.fn(),
     walk: vi.fn(),
     run: vi.fn(),
-    dodge: vi.fn(),
     attack: vi.fn(),
-    melee: vi.fn(),
-    sight: vi.fn(),
-    idle: vi.fn(),
+    pain: vi.fn(),
+    die: vi.fn(),
     ...overrides
   };
 }
 
-export function createMockMonsterMove(
-  first: number,
-  last: number,
-  think: (self: Entity, context: EntitySystem) => void,
-  action: (self: Entity, dist: number, context: EntitySystem) => void
-): MonsterMove {
-  const frames = [];
-  for (let i = first; i <= last; i++) {
-    frames.push({
-      ai: action,
-      dist: 0,
-      think: think
-    });
-  }
-
+export function createMockMonsterAI(monsterType: string, overrides: Partial<MockMonsterAI> = {}): MockMonsterAI {
   return {
-    firstframe: first,
-    lastframe: last,
-    frames,
-    endfunc: null
+    ...createMockAI(),
+    checkAttack: vi.fn((ent: Entity) => false),
+    sight: vi.fn((ent: Entity, other: Entity) => true),
+    blocked: vi.fn(),
+    ...overrides
   };
 }

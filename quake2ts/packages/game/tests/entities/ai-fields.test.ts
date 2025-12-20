@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { Entity, ENTITY_FIELD_METADATA } from '../../src/index.js';
+import { ENTITY_FIELD_METADATA } from '../../src/index.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('AI entity fields', () => {
   it('initializes and resets timing/yaw search fields to zero', () => {
-    const entity = new Entity(0);
+    const entity = createEntityFactory({ number: 0 });
 
     expect(entity.search_time).toBe(0);
     expect(entity.attack_finished_time).toBe(0);
