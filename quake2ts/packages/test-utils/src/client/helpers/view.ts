@@ -1,6 +1,7 @@
 
 import { vec3 } from 'gl-matrix';
 import { Camera } from '@quake2ts/engine';
+import { Vec3 } from '@quake2ts/shared';
 
 // Define RefDef interface locally if it's not exported from shared/engine,
 // or import it if we find it.
@@ -40,22 +41,32 @@ export interface CameraInput {
   rollDelta?: number;
 }
 
+function toVec3(v: Vec3 | vec3 | { x: number, y: number, z: number } | number[]): vec3 {
+  if (v instanceof Float32Array && v.length === 3) {
+    return v as vec3;
+  }
+  if (Array.isArray(v) && v.length === 3) {
+      return vec3.fromValues(v[0], v[1], v[2]);
+  }
+  if (typeof v === 'object' && 'x' in v && 'y' in v && 'z' in v) {
+    return vec3.fromValues(v.x, v.y, v.z);
+  }
+  // Fallback or error? defaulting to 0,0,0
+  return vec3.create();
+}
+
 /**
  * Creates a mock Camera instance with optional overrides.
+ * Accepts partial Camera properties, where position/angles can be Vec3 objects or arrays.
  */
-export function createMockCamera(overrides: Partial<Camera> = {}): Camera {
-  // We instantiate a real Camera because it's logic-heavy (matrices)
-  // and we often want that logic in tests.
-  // If we wanted a pure mock (jest.fn()), we would need a different approach (interface based).
-  // But the task says "MockCamera", and usually we use a real class configured for tests.
-
+export function createMockCamera(overrides: Partial<Omit<Camera, 'position' | 'angles'> & { position: any, angles: any }> = {}): Camera {
   const camera = new Camera();
 
   if (overrides.position) {
-    camera.position = overrides.position;
+    camera.position = toVec3(overrides.position);
   }
   if (overrides.angles) {
-    camera.angles = overrides.angles;
+    camera.angles = toVec3(overrides.angles);
   }
   if (overrides.fov !== undefined) {
     camera.fov = overrides.fov;
