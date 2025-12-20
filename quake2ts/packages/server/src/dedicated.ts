@@ -504,7 +504,12 @@ export class DedicatedServer implements GameEngine {
             ? data.buffer
             : data.slice().buffer;
 
-        client.messageQueue.push(new Uint8Array(buffer as ArrayBuffer));
+        if (buffer instanceof ArrayBuffer) {
+            client.messageQueue.push(new Uint8Array(buffer));
+        } else {
+             // SharedArrayBuffer fallback or other weirdness
+             client.messageQueue.push(new Uint8Array(buffer as any));
+        }
     }
 
     private onClientDisconnect(client: Client) {
@@ -766,7 +771,14 @@ export class DedicatedServer implements GameEngine {
                     continue;
                 }
 
-                const reader = new BinaryStream(data.buffer);
+                let buffer: ArrayBuffer;
+                if (data.buffer instanceof ArrayBuffer) {
+                    buffer = data.buffer;
+                } else {
+                    buffer = new Uint8Array(data).buffer as ArrayBuffer;
+                }
+
+                const reader = new BinaryStream(buffer);
                 const parser = new ClientMessageParser(reader, {
                     onMove: (checksum, lastFrame, cmd) => this.handleMove(client, cmd, checksum, lastFrame),
                     onUserInfo: (info) => this.handleUserInfo(client, info),

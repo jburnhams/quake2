@@ -227,6 +227,9 @@ importers:
         specifier: ^8.18.0
         version: 8.18.3
     devDependencies:
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
       '@types/ws':
         specifier: ^8.5.12
         version: 8.18.1
@@ -260,6 +263,9 @@ importers:
       '@quake2ts/game':
         specifier: workspace:*
         version: link:../game
+      '@quake2ts/server':
+        specifier: workspace:*
+        version: link:../server
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared

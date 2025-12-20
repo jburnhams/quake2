@@ -3,7 +3,7 @@ import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState, createClient } from '../src/client.js';
 import { ServerCommand, BinaryStream, NetDriver } from '@quake2ts/shared';
-import { MockTransport } from './mocks/transport.js';
+import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -51,7 +51,7 @@ describe('DedicatedServer Connection Flow', () => {
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 
-    transport = new MockTransport();
+    transport = createMockTransport();
     server = new DedicatedServer({ transport });
     await server.startServer('test.bsp');
   });
