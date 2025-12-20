@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@quake2ts/game": "workspace:*",
+    "@quake2ts/client": "workspace:*",
+    "@quake2ts/engine": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "playwright": "^1.57.0",
