@@ -6,11 +6,15 @@ import {
 } from '../../src/render/skybox.js';
 import { mat4 } from 'gl-matrix';
 
-const mockLocations = {
-  u_viewProjectionNoTranslation: { id: 1 },
-  u_scroll: { id: 2 },
-  u_skybox: { id: 3 },
-};
+const { mockLocations } = vi.hoisted(() => {
+  return {
+    mockLocations: {
+      u_viewProjectionNoTranslation: { id: 1 },
+      u_scroll: { id: 2 },
+      u_skybox: { id: 3 },
+    }
+  };
+});
 
 vi.mock('../../src/render/shaderProgram.js', () => {
   const getUniformLocation = vi.fn(
@@ -104,7 +108,7 @@ describe('skybox', () => {
         enableVertexAttribArray: vi.fn(),
         vertexAttribPointer: vi.fn(),
         vertexAttribDivisor: vi.fn(),
-        getUniformLocation: vi.fn().mockReturnValue({}),
+        getUniformLocation: vi.fn().mockImplementation((p, name) => mockLocations[name] || {}),
         uniformMatrix4fv: vi.fn(),
         uniform2f: vi.fn(),
         uniform1i: vi.fn(),

@@ -34,14 +34,33 @@ const mockLocations = {
   'u_dlights[0].position': { id: 15 },
   'u_dlights[0].color': { id: 16 },
   'u_dlights[0].intensity': { id: 17 },
-  // ... can add more if needed
 };
 
-vi.mock('../../src/render/shaderProgram.js', () => {
+vi.mock('../../src/render/shaderProgram', () => {
+  // Hardcode locations in the mock to avoid hoisting issues accessing outer variables
+  const locations: any = {
+    u_modelViewProjection: { id: 1 },
+    u_texScroll: { id: 2 },
+    u_lightmapScroll: { id: 3 },
+    u_lightStyleFactors: { id: 4 },
+    u_alpha: { id: 5 },
+    u_applyLightmap: { id: 6 },
+    u_warp: { id: 7 },
+    u_diffuseMap: { id: 8 },
+    u_lightmapAtlas: { id: 9 },
+    u_time: { id: 10 },
+    u_renderMode: { id: 11 },
+    u_solidColor: { id: 12 },
+    u_styleLayerMapping: { id: 13 },
+    u_numDlights: { id: 14 },
+    'u_dlights[0].position': { id: 15 },
+    'u_dlights[0].color': { id: 16 },
+    'u_dlights[0].intensity': { id: 17 },
+  };
+
   const getUniformLocation = vi.fn(
     (name: string) => {
-        // Handle array access for dlights or simple lookup
-        return (mockLocations as any)[name] || { id: 999 };
+        return locations[name] || { id: 999 };
     }
   );
   const use = vi.fn();
@@ -126,9 +145,34 @@ describe('bspPipeline', () => {
         uniform2f: vi.fn(),
         uniform4fv: vi.fn(),
         uniform1f: vi.fn(),
-        uniform1i: vi.fn(),
+        uniform1i: vi.fn((...args) => console.log('uniform1i:', args)),
         uniform4f: vi.fn(),
         uniform3f: vi.fn(),
+        createShader: vi.fn().mockReturnValue({}),
+        createProgram: vi.fn().mockReturnValue({}),
+        shaderSource: vi.fn(),
+        compileShader: vi.fn(),
+        getShaderParameter: vi.fn().mockReturnValue(true),
+        getProgramParameter: vi.fn().mockReturnValue(true),
+        attachShader: vi.fn(),
+        linkProgram: vi.fn(),
+        useProgram: vi.fn(),
+        deleteShader: vi.fn(),
+        deleteProgram: vi.fn(),
+        getUniformLocation: vi.fn().mockImplementation((_, name) => mockLocations[name] || { id: 999 }),
+        getAttribLocation: vi.fn(),
+        bindAttribLocation: vi.fn(),
+        createVertexArray: vi.fn().mockReturnValue({}),
+        bindVertexArray: vi.fn(),
+        createBuffer: vi.fn().mockReturnValue({}),
+        bindBuffer: vi.fn(),
+        bufferData: vi.fn(),
+        enableVertexAttribArray: vi.fn(),
+        vertexAttribPointer: vi.fn(),
+        vertexAttribDivisor: vi.fn(),
+        createTexture: vi.fn().mockReturnValue({}),
+        bindTexture: vi.fn(),
+        texParameteri: vi.fn(),
       } as any);
 
     const mockMvp = new Float32Array(16);
