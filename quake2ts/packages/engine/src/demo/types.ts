@@ -25,3 +25,7 @@ export interface RecorderSnapshot {
     readonly fov: number;
     readonly blend: [number, number, number, number];
 }
+
+export type FrameOffset = { type: 'frame'; frame: number };
+export type TimeOffset = { type: 'time'; seconds: number };
+export type Offset = FrameOffset | TimeOffset;
