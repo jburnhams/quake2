@@ -19,22 +19,47 @@ export class AssetCrossReference {
 
   /**
    * Find which models use this texture
-   * Note: This requires scanning all models, which can be slow.
    */
   async getModelsUsingTexture(texturePath: string): Promise<string[]> {
     const usingModels: string[] = [];
     const lowerTexturePath = texturePath.toLowerCase();
 
-    // We would need a list of all models to scan.
-    // Since VFS doesn't easily support listing all files recursively without cost,
-    // we might rely on a known list or scan specific directories like 'models/'.
-    // For this implementation, we will assume the caller provides a scope or we scan 'models/' if possible.
-    // However, VFS interface in this codebase usually exposes reading, not listing recursively easily
-    // unless we implement a crawler.
+    // Scan MD2 models
+    const md2Files = this.vfs.findByExtension('md2');
+    for (const file of md2Files) {
+        try {
+            const buffer = await this.vfs.readFile(file.path);
+            const model = parseMd2(buffer.slice().buffer);
+            for (const skin of model.skins) {
+                if (skin.name.toLowerCase() === lowerTexturePath) {
+                    usingModels.push(file.path);
+                    break;
+                }
+            }
+        } catch (e) {
+            console.warn(`Failed to process MD2 ${file.path} for cross-ref`, e);
+        }
+    }
 
-    // As a workaround for this "P2" task, we will try to list typical directories if VFS supports it.
-    // Assuming VFS has a way to list files. If not, we can't implement this fully without an index.
-    // Let's check VFS interface.
+    // Scan MD3 models
+    const md3Files = this.vfs.findByExtension('md3');
+    for (const file of md3Files) {
+        try {
+            const buffer = await this.vfs.readFile(file.path);
+            const model = parseMd3(buffer.slice().buffer);
+            for (const surface of model.surfaces) {
+                for (const shader of surface.shaders) {
+                    if (shader.name.toLowerCase() === lowerTexturePath) {
+                        usingModels.push(file.path);
+                        break; // Found usage in this model, no need to check other shaders in this file
+                    }
+                }
+                if (usingModels[usingModels.length - 1] === file.path) break;
+            }
+        } catch (e) {
+             console.warn(`Failed to process MD3 ${file.path} for cross-ref`, e);
+        }
+    }
 
     return usingModels;
   }
@@ -43,8 +68,84 @@ export class AssetCrossReference {
    * Find which maps use this model
    */
   async getMapsUsingModel(modelPath: string): Promise<string[]> {
-      // Similar limitation: needs to scan all maps.
-      return [];
+    const usingMaps: string[] = [];
+    const lowerModelPath = modelPath.toLowerCase();
+
+    const bspFiles = this.vfs.findByExtension('bsp');
+    for (const file of bspFiles) {
+        try {
+            const buffer = await this.vfs.readFile(file.path);
+            const bsp = parseBsp(buffer.slice().buffer);
+
+            let found = false;
+            for (const entity of bsp.entities.entities) {
+                if (entity.properties['model']?.toLowerCase() === lowerModelPath) {
+                    found = true;
+                    break;
+                }
+                // Check extra keys just in case
+                for (const key in entity.properties) {
+                    if (key.endsWith('model') && entity.properties[key]?.toLowerCase() === lowerModelPath) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+            }
+
+            if (found) {
+                usingMaps.push(file.path);
+            }
+        } catch (e) {
+            console.warn(`Failed to process BSP ${file.path} for cross-ref`, e);
+        }
+    }
+    return usingMaps;
+  }
+
+  /**
+   * Find which entities use this sound.
+   * Scans all maps and returns entities that reference the sound.
+   * Note: The BspEntity object doesn't inherently store its origin map,
+   * so checking the context requires correlating with the map iteration if needed by the caller,
+   * but the interface is just BspEntity[].
+   */
+  async getEntitiesUsingSound(soundPath: string): Promise<BspEntity[]> {
+    const usingEntities: BspEntity[] = [];
+    const lowerSoundPath = soundPath.toLowerCase();
+
+    const bspFiles = this.vfs.findByExtension('bsp');
+    for (const file of bspFiles) {
+        try {
+            const buffer = await this.vfs.readFile(file.path);
+            const bsp = parseBsp(buffer.slice().buffer);
+
+            for (const entity of bsp.entities.entities) {
+                let found = false;
+                if (entity.properties['sound']?.toLowerCase() === lowerSoundPath) {
+                    found = true;
+                }
+                else if (entity.properties['noise']?.toLowerCase() === lowerSoundPath) {
+                    found = true;
+                }
+                else {
+                    for (const key in entity.properties) {
+                        if ((key.endsWith('sound') || key.endsWith('noise')) && entity.properties[key]?.toLowerCase() === lowerSoundPath) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (found) {
+                    usingEntities.push(entity);
+                }
+            }
+        } catch (e) {
+            console.warn(`Failed to process BSP ${file.path} for cross-ref`, e);
+        }
+    }
+    return usingEntities;
   }
 
   /**
@@ -84,33 +185,6 @@ export class AssetCrossReference {
         sounds: Array.from(sounds).sort()
     };
   }
-
-  /**
-   * Find which entities use this sound (in a specific map or globally? The req says "BspEntity[]")
-   * If it returns BspEntity[], it implies looking into a specific map or set of maps.
-   * The signature `getEntitiesUsingSound(soundPath: string): BspEntity[]` implies it returns entities,
-   * but entities belong to a map. So likely this is "scan a map for usages".
-   * But the requirement is "Find which entities use this sound", probably in the context of the currently loaded map?
-   * Or across all maps?
-   * Given `getModelsUsingTexture` returns `string[]` (paths), and this returns `BspEntity[]`,
-   * it suggests this might be context-dependent.
-   *
-   * Let's clarify: "Find which entities use this sound" -> returns BspEntity[].
-   * This is likely "Scan the *current* map or a *provided* map".
-   * But the API doesn't take a map.
-   *
-   * If it scans ALL maps, returning BspEntity objects without knowing which map they came from is useless.
-   * So maybe it means "search within a provided set of entities" or "search all maps and return descriptors".
-   *
-   * Let's implement a helper `scanMapForSound(mapPath: string, soundPath: string)` instead, or interpret this as
-   * "Get entities in *current* map". But this class doesn't hold state of "current map".
-   *
-   * I will implement `scanMapForSound` as a public method, and `getEntitiesUsingSound` might need clarification
-   * or I'll implement it to return `{ map: string, entities: BspEntity[] }`.
-   *
-   * For the task requirement, I'll stick to `getMapDependencies` as the primary implemented feature
-   * as it's the most feasible and useful one without a global index.
-   */
 
   private extractEntityAssets(entity: BspEntity, textures: Set<string>, models: Set<string>, sounds: Set<string>) {
       // Common properties
