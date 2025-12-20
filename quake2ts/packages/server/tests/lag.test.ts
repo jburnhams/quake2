@@ -1,41 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated';
-import { Entity, Solid, Vec3 } from '@quake2ts/game';
-import { EntitySystem } from '@quake2ts/game/src/entities/system';
-import { createEntitySystem } from '@quake2ts/game/src/entities/system';
-import { GameImports } from '@quake2ts/game/src/imports';
-
-// Define mocks hoisted so they are available in the mock factory
-const { mockGame, mockGameEntities } = vi.hoisted(() => {
-    const mockEntities = {
-        forEachEntity: vi.fn(),
-        getByIndex: vi.fn(),
-        createEntity: vi.fn(),
-        free: vi.fn()
-    };
-
-    const game = {
-        entities: mockEntities,
-        time: 0,
-        init: vi.fn(),
-        frame: vi.fn(),
-        shutdown: vi.fn(),
-        clientConnect: vi.fn(),
-        clientThink: vi.fn(),
-        clientBegin: vi.fn(),
-        spawnWorld: vi.fn(),
-    };
-    return { mockGame: game, mockGameEntities: mockEntities };
-});
+import { Entity, Solid, createGame, GameExports } from '@quake2ts/game';
+import { createMockGameExports } from '@quake2ts/test-utils';
 
 vi.mock('@quake2ts/game', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual as any,
-        createGame: () => {
-            console.log('Test: createGame called');
-            return mockGame;
-        }
+        createGame: vi.fn(),
     };
 });
 
@@ -44,13 +16,10 @@ describe('Lag Compensation', () => {
     let target: Entity;
     let attacker: Entity;
     let entities: Entity[];
+    let mockGame: GameExports;
 
     beforeEach(() => {
         vi.clearAllMocks();
-
-        // Ensure mockGame methods return what we expect if needed
-
-        server = new DedicatedServer(0);
 
         // Setup mock entities
         target = new Entity(1);
@@ -66,14 +35,19 @@ describe('Lag Compensation', () => {
 
         entities = [target, attacker];
 
-        // Need to update the mock implementation for each test run
-        mockGameEntities.forEachEntity.mockImplementation((cb: any) => {
-            entities.forEach(cb);
+        const defaultGame = createMockGameExports();
+        mockGame = createMockGameExports({
+             entities: {
+                 ...defaultGame.entities,
+                 forEachEntity: vi.fn((cb: any) => entities.forEach(cb)),
+                 getByIndex: vi.fn((id: number) => entities.find(e => e.index === id)) as any,
+                 trace: vi.fn(),
+             } as any
         });
 
-        mockGameEntities.getByIndex.mockImplementation((id: number) => {
-            return entities.find(e => e.index === id);
-        });
+        (createGame as vi.Mock).mockReturnValue(mockGame);
+
+        server = new DedicatedServer(0);
 
         // Initialize server (starts game)
         // start() is async and does file io.
