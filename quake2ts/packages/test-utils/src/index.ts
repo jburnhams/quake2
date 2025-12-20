@@ -23,7 +23,7 @@ export * from './setup/canvas.js';
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
-export * from './setup/webgl.js'; // This exports createMockWebGL2Context
+export * from './engine/mocks/webgl.js'; // Consolidated export
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 

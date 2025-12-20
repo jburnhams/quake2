@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createWebGLContext } from '../src/render/context.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('createWebGLContext', () => {
   it('initializes default GL state and queries extensions', () => {
     const canvas = document.createElement('canvas');
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     gl.extensions.set('EXT_texture_compression', {});
     const getContext = vi.fn(() => gl as unknown as WebGL2RenderingContext);
     canvas.getContext = getContext as unknown as typeof canvas.getContext;
@@ -35,7 +35,7 @@ describe('createWebGLContext', () => {
 
   it('throws when a required extension is missing', () => {
     const canvas = document.createElement('canvas');
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     canvas.getContext = vi.fn(() => gl as unknown as WebGL2RenderingContext) as unknown as typeof canvas.getContext;
 
     expect(() =>
@@ -45,7 +45,7 @@ describe('createWebGLContext', () => {
 
   it('tracks context loss and restoration callbacks', () => {
     const canvas = document.createElement('canvas');
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     canvas.getContext = vi.fn(() => gl as unknown as WebGL2RenderingContext) as unknown as typeof canvas.getContext;
 
     const state = createWebGLContext(canvas);

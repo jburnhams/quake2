@@ -6,7 +6,7 @@ import {
   deriveSurfaceRenderState,
   resolveLightStyles,
 } from '../src/render/bspPipeline.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('resolveLightStyles', () => {
   it('fills in style defaults for missing lightstyle values', () => {
@@ -33,7 +33,7 @@ describe('deriveSurfaceRenderState', () => {
 
 describe('BspSurfacePipeline', () => {
   it('binds shader uniforms including dlights and returns the render state', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
 
     // Ensure uniform4f is mocked
     if (!gl.uniform4f) {

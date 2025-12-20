@@ -7,11 +7,11 @@ import {
   VertexArray,
   VertexBuffer,
 } from '../src/render/resources.js';
-import { createMockGL } from './helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('VertexBuffer and IndexBuffer', () => {
   it('binds and uploads data with the requested usage', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const buffer = new VertexBuffer(gl as unknown as WebGL2RenderingContext, gl.STATIC_DRAW);
 
     const data = new Float32Array([0, 1, 2]);
@@ -27,7 +27,7 @@ describe('VertexBuffer and IndexBuffer', () => {
   });
 
   it('creates element array buffers for indices', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const buffer = new IndexBuffer(gl as unknown as WebGL2RenderingContext, gl.STATIC_DRAW);
     buffer.upload(new Uint16Array([0, 1, 2]), gl.STATIC_DRAW);
     expect(gl.bindBuffer).toHaveBeenCalledWith(gl.ELEMENT_ARRAY_BUFFER, buffer.buffer);
@@ -36,7 +36,7 @@ describe('VertexBuffer and IndexBuffer', () => {
 
 describe('VertexArray', () => {
   it('binds attributes and divisors', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const vao = new VertexArray(gl as unknown as WebGL2RenderingContext);
     const vbo = new VertexBuffer(gl as unknown as WebGL2RenderingContext);
 
@@ -60,7 +60,7 @@ describe('VertexArray', () => {
 
 describe('Texture2D', () => {
   it('binds, sets parameters, and uploads images', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const texture = new Texture2D(gl as unknown as WebGL2RenderingContext);
 
     texture.setParameters({ wrapS: gl.CLAMP_TO_EDGE ?? 0x812f, wrapT: gl.CLAMP_TO_EDGE ?? 0x812f });
@@ -87,7 +87,7 @@ describe('Texture2D', () => {
 
 describe('TextureCubeMap', () => {
   it('binds, sets parameters, and uploads faces', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const cubemap = new TextureCubeMap(gl as unknown as WebGL2RenderingContext);
 
     cubemap.setParameters({ minFilter: gl.LINEAR, magFilter: gl.LINEAR });
@@ -125,7 +125,7 @@ describe('TextureCubeMap', () => {
 
 describe('Framebuffer', () => {
   it('attaches textures', () => {
-    const gl = createMockGL();
+    const gl = createMockWebGL2Context();
     const framebuffer = new Framebuffer(gl as unknown as WebGL2RenderingContext);
     const texture = new Texture2D(gl as unknown as WebGL2RenderingContext);
 

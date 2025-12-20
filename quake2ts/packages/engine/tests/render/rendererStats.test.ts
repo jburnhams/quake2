@@ -1,7 +1,7 @@
 import { createRenderer } from '../../src/render/renderer.js';
 import { FrameRenderer } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createMockGL } from '../helpers/mockWebGL.js';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -81,12 +81,12 @@ vi.mock('../../src/render/light.js', () => ({
 }));
 
 describe('Renderer Statistics', () => {
-    let mockGl: ReturnType<typeof createMockGL>;
+    let mockGl: ReturnType<typeof createMockWebGL2Context>;
     let renderer: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockGl = createMockGL();
+        mockGl = createMockWebGL2Context();
 
         // Mock extensions for Profiler
         mockGl.extensions.set('EXT_disjoint_timer_query_webgl2', { TIME_ELAPSED_EXT: 0x88BF, GPU_DISJOINT_EXT: 0x8FBB });
