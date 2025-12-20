@@ -22,6 +22,7 @@
   "dependencies": {
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
+    "playwright": "^1.57.0",
     "serve-handler": "^6.1.6",
     "vitest": "^1.6.0"
   },

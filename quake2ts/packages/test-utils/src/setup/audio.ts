@@ -1,7 +1,7 @@
 
 // Basic mock of AudioContext
 export function createMockAudioContext(): AudioContext {
-    return {
+    const context = {
         createGain: () => ({
             connect: () => {},
             gain: { value: 1, setValueAtTime: () => {} }
@@ -39,8 +39,25 @@ export function createMockAudioContext(): AudioContext {
             sampleRate,
             numberOfChannels: channels,
             getChannelData: () => new Float32Array(length)
-        })
-    } as unknown as AudioContext;
+        }),
+        // Helper to track events if needed
+        _events: [] as AudioEvent[]
+    };
+
+    // Proxy to capture events
+    return new Proxy(context as unknown as AudioContext, {
+        get(target, prop, receiver) {
+             if (prop === '_events') return (target as any)._events;
+             const value = Reflect.get(target, prop, receiver);
+             if (typeof value === 'function') {
+                 return (...args: any[]) => {
+                     (target as any)._events.push({ type: String(prop), args });
+                     return Reflect.apply(value, target, args);
+                 };
+             }
+             return value;
+        }
+    });
 }
 
 /**
@@ -85,9 +102,8 @@ export interface AudioEvent {
 
 /**
  * Captures audio operations for verification.
- * Currently requires manual instrumentation or a more sophisticated Proxy mock.
- * This is a placeholder for future implementation.
+ * Note: Only works if the context was created via createMockAudioContext which proxies calls.
  */
 export function captureAudioEvents(context: AudioContext): AudioEvent[] {
-    return [];
+    return (context as any)._events || [];
 }

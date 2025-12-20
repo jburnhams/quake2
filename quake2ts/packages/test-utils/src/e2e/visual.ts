@@ -22,7 +22,7 @@ export async function captureGameScreenshot(page: Page, name: string, options: {
     return await page.screenshot({
         path: screenshotPath,
         fullPage: options.fullPage ?? false,
-        animations: 'disabled', // Try to freeze animations if possible
+        animations: 'disabled',
         caret: 'hide'
     });
 }
@@ -30,19 +30,12 @@ export async function captureGameScreenshot(page: Page, name: string, options: {
 /**
  * Compares two image buffers pixel-by-pixel.
  * Note: A robust implementation would use a library like 'pixelmatch' or 'looks-same'.
- * For now, we provide a basic placeholder or rely on simple buffer comparison if strict equality is needed,
- * but visual regression usually requires tolerance.
+ * For now, we provide a basic placeholder or rely on simple buffer comparison.
  */
 export async function compareScreenshots(baseline: Buffer, current: Buffer, threshold: number = 0.1): Promise<VisualDiff> {
-    // Ideally use pixelmatch here.
-    // If not available, we can only check strict equality or length.
-
     if (baseline.equals(current)) {
         return { pixelDiff: 0, matched: true };
     }
-
-    // Without a pixel comparison library in the shared utils deps, we can't do much more.
-    // We assume the consumer might have one, or we just report failure on binary mismatch.
 
     return {
         pixelDiff: -1, // Unknown magnitude
@@ -72,7 +65,6 @@ export function createVisualTestScenario(page: Page, sceneName: string): VisualS
                 const baseline = await fs.readFile(baselinePath);
                 return await compareScreenshots(baseline, current);
             } catch (e) {
-                // Baseline might not exist
                 return { pixelDiff: -1, matched: false };
             }
         }

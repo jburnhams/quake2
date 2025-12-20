@@ -13,6 +13,8 @@ export * from './setup/timing.js';
 // E2E
 export * from './e2e/playwright.js';
 export * from './e2e/input.js';
+export * from './e2e/network.js';
+export * from './e2e/visual.js';
 
 // Shared
 export * from './shared/bsp.js';
@@ -20,8 +22,10 @@ export * from './shared/mocks.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
 
-// Mocks
-// NOTE: mocks/webgl2.ts contains a duplicate createMockWebGL2Context.
-// We rely on setup/webgl.ts as the primary source.
-// If mocks/webgl2.ts contains other exports, they should be exported explicitly here.
-// Currently it only contains the duplicate function, so we exclude it.
+// Export types
+export type { BrowserSetupOptions } from './setup/browser.js';
+export type { NodeSetupOptions } from './setup/node.js';
+export type { MockRAF } from './setup/timing.js';
+export type { StorageScenario } from './setup/storage.js';
+export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
+export type { VisualScenario, VisualDiff } from './e2e/visual.js';
