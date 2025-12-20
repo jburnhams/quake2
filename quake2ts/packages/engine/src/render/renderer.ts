@@ -22,6 +22,10 @@ import { cullLights } from './lightCulling.js';
 import { ParticleRenderer, ParticleSystem } from './particleSystem.js';
 import { DebugMode } from './debugMode.js';
 import { MemoryUsage } from './types.js';
+import { InstanceData } from './instancing.js';
+import { Md2Model } from '../assets/md2.js';
+import { Md3Model } from '../assets/md3.js';
+import { fromRotationTranslationScale } from '@quake2ts/shared';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
@@ -35,6 +39,7 @@ export interface Renderer {
     getPerformanceReport(): RenderStatistics;
     getMemoryUsage(): MemoryUsage;
     renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions): void;
+    renderInstanced(model: Md2Model | Md3Model, instances: InstanceData[]): void;
 
     /**
      * Enable debug visualization modes
@@ -142,6 +147,36 @@ export const createRenderer = (
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
+    // Object pooling for instances
+    const MAX_INSTANCES = 10000;
+    const instancePool: RenderableEntity[] = [];
+    const matrixPool: Float32Array[] = [];
+    let instanceCount = 0;
+
+    // Pre-allocate pools
+    for (let i = 0; i < MAX_INSTANCES; i++) {
+        instancePool.push({
+            id: -1,
+            model: undefined as any,
+            transform: new Float32Array(16),
+            type: 'md2',
+            blend: { frame0: 0, frame1: 0, lerp: 0 },
+            tint: [1, 1, 1, 1],
+            lighting: {
+                ambient: [0.5, 0.5, 0.5],
+                dynamicLights: [],
+                modelMatrix: undefined as any
+            }
+        });
+        matrixPool.push(instancePool[i].transform as Float32Array);
+        // Ensure lighting.modelMatrix points to the same transform array
+        if (instancePool[i].lighting) {
+            instancePool[i].lighting!.modelMatrix = instancePool[i].transform;
+        }
+    }
+
+    const queuedInstances: RenderableEntity[] = [];
+
     // Forward declarations for usage in renderFrame
     let begin2D: () => void;
     let end2D: () => void;
@@ -149,6 +184,17 @@ export const createRenderer = (
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
+
+        const allEntities = queuedInstances.length > 0 ? [...entities, ...queuedInstances] : entities;
+
+        // Reset pool usage for next frame (after this frame is rendered, or before next?
+        // Since queuedInstances are used IN this function, we must reset AFTER this function finishes or at start of next.
+        // But if renderInstanced is called before renderFrame, we should reset at the *end* of renderFrame.
+        // However, queuedInstances are just references to pooled objects.
+        // We clear the list, so the references are dropped from the list.
+        // We reset the counter so next frame overwrites the pool objects.
+        queuedInstances.length = 0;
+        instanceCount = 0;
 
         // Update particles
         if (options.deltaTime) {
@@ -245,7 +291,7 @@ export const createRenderer = (
         let visibleEntities = 0;
         let culledEntities = 0;
 
-        for (const entity of entities) {
+        for (const entity of allEntities) {
             // PVS Culling
             if (options.world && viewCluster >= 0) {
                 const origin = {
@@ -823,6 +869,59 @@ export const createRenderer = (
         bloomIntensity = value;
     };
 
+    const renderInstanced = (model: Md2Model | Md3Model, instances: InstanceData[]) => {
+        // Check for Md2 vs Md3 once per batch
+        const isMd2 = 'glCommands' in model;
+        const type = isMd2 ? 'md2' : 'md3';
+
+        for (const instance of instances) {
+            if (instanceCount >= MAX_INSTANCES) {
+                console.warn('Max instances reached');
+                break;
+            }
+
+            const entity = instancePool[instanceCount++];
+
+            // Re-initialize pooled entity
+            entity.model = model as any;
+            entity.type = type;
+
+            // Animation
+            if (instance.frame !== undefined) {
+                entity.blend.frame0 = instance.frame;
+                entity.blend.frame1 = instance.frame;
+                entity.blend.lerp = 0;
+            } else {
+                entity.blend.frame0 = instance.frame0 || 0;
+                entity.blend.frame1 = instance.frame1 || 0;
+                entity.blend.lerp = instance.lerp || 0;
+            }
+
+            entity.skin = instance.skin ? 'skin' + instance.skin : undefined;
+
+            // Transform
+            const rotation = instance.rotation;
+            const position = instance.position;
+            const scale = instance.scale || { x: 1, y: 1, z: 1 };
+
+            fromRotationTranslationScale(
+                entity.transform as Float32Array, // Reuse matrix
+                rotation,
+                position,
+                scale
+            );
+
+            // Lighting (will be updated in render loop, but reset defaults here)
+            if (entity.lighting) {
+                // modelMatrix already points to entity.transform
+                entity.lighting.dynamicLights = [];
+                entity.lighting.ambient = [0.5, 0.5, 0.5];
+            }
+
+            queuedInstances.push(entity);
+        }
+    };
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -852,6 +951,7 @@ export const createRenderer = (
         setLightStyle,
         setUnderwaterWarp,
         setBloom,
-        setBloomIntensity
+        setBloomIntensity,
+        renderInstanced
     };
 };
