@@ -1,5 +1,5 @@
 import { Mat4, multiplyMat4, Vec3, RandomGenerator } from '@quake2ts/shared';
-import { mat4 } from 'gl-matrix';
+import { mat4, quat, vec3 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
 import { createFrameRenderer, FrameRenderOptions, RenderModeConfig } from './frame.js';
@@ -25,10 +25,14 @@ import { MemoryUsage } from './types.js';
 import { InstanceData } from './instancing.js';
 import { Md2Model } from '../assets/md2.js';
 import { Md3Model } from '../assets/md3.js';
-import { fromRotationTranslationScale } from '@quake2ts/shared';
+import { RenderableMd2, RenderableMd3 } from './scene.js';
 
 // A handle to a registered picture.
 export type Pic = Texture2D;
+
+type MutableRenderableMd2 = { -readonly [K in keyof RenderableMd2]: RenderableMd2[K] };
+type MutableRenderableMd3 = { -readonly [K in keyof RenderableMd3]: RenderableMd3[K] };
+type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
 
 export interface Renderer {
     readonly width: number;
@@ -149,30 +153,36 @@ export const createRenderer = (
 
     // Object pooling for instances
     const MAX_INSTANCES = 10000;
-    const instancePool: RenderableEntity[] = [];
-    const matrixPool: Float32Array[] = [];
+    const instancePool: MutableRenderableEntity[] = [];
     let instanceCount = 0;
+
+    // Reusable math objects
+    const tempQuat = quat.create();
+    const tempVec3Pos = vec3.create();
+    const tempVec3Scale = vec3.create();
+    const DEFAULT_SCALE_VEC = vec3.fromValues(1, 1, 1);
 
     // Pre-allocate pools
     for (let i = 0; i < MAX_INSTANCES; i++) {
-        instancePool.push({
+        // Initialize as MD3-compatible structure to reserve lighting object
+        const entity: MutableRenderableMd3 = {
             id: -1,
             model: undefined as any,
             transform: new Float32Array(16),
-            type: 'md2',
+            type: 'md3',
             blend: { frame0: 0, frame1: 0, lerp: 0 },
             tint: [1, 1, 1, 1],
             lighting: {
                 ambient: [0.5, 0.5, 0.5],
-                dynamicLights: [],
+                dynamicLights: [], // We will reuse this array capacity by setting length=0
                 modelMatrix: undefined as any
             }
-        });
-        matrixPool.push(instancePool[i].transform as Float32Array);
+        };
         // Ensure lighting.modelMatrix points to the same transform array
-        if (instancePool[i].lighting) {
-            instancePool[i].lighting!.modelMatrix = instancePool[i].transform;
+        if (entity.lighting) {
+            (entity.lighting as any).modelMatrix = entity.transform;
         }
+        instancePool.push(entity);
     }
 
     const queuedInstances: RenderableEntity[] = [];
@@ -886,36 +896,54 @@ export const createRenderer = (
             entity.model = model as any;
             entity.type = type;
 
-            // Animation
+            // Animation (cast to mutable)
+            const blend = entity.blend as any;
             if (instance.frame !== undefined) {
-                entity.blend.frame0 = instance.frame;
-                entity.blend.frame1 = instance.frame;
-                entity.blend.lerp = 0;
+                blend.frame0 = instance.frame;
+                blend.frame1 = instance.frame;
+                blend.lerp = 0;
             } else {
-                entity.blend.frame0 = instance.frame0 || 0;
-                entity.blend.frame1 = instance.frame1 || 0;
-                entity.blend.lerp = instance.lerp || 0;
+                blend.frame0 = instance.frame0 || 0;
+                blend.frame1 = instance.frame1 || 0;
+                blend.lerp = instance.lerp || 0;
             }
 
-            entity.skin = instance.skin ? 'skin' + instance.skin : undefined;
+            if (isMd2) {
+                (entity as MutableRenderableMd2).skin = instance.skin !== undefined ? 'skin' + instance.skin : undefined;
+            }
 
             // Transform
             const rotation = instance.rotation;
             const position = instance.position;
             const scale = instance.scale || { x: 1, y: 1, z: 1 };
 
-            fromRotationTranslationScale(
-                entity.transform as Float32Array, // Reuse matrix
-                rotation,
-                position,
-                scale
+            mat4.fromRotationTranslationScale(
+                entity.transform as any, // Reuse matrix
+                tempQuat,
+                tempVec3Pos,
+                tempVec3Scale
             );
 
             // Lighting (will be updated in render loop, but reset defaults here)
-            if (entity.lighting) {
+            // Use cast to handle lighting property which might not exist on MD2 type at runtime if mis-initialized,
+            // but we initialized as MD3-compatible.
+            const lighting = (entity as any).lighting;
+            if (lighting) {
                 // modelMatrix already points to entity.transform
-                entity.lighting.dynamicLights = [];
-                entity.lighting.ambient = [0.5, 0.5, 0.5];
+                if (lighting.dynamicLights) {
+                    (lighting.dynamicLights as any[]).length = 0;
+                } else {
+                    (lighting as any).dynamicLights = [];
+                }
+                // Use set/copy to avoid allocation if possible, but ambient is simple array.
+                // Assuming it's [r, g, b].
+                if (!lighting.ambient) {
+                    (lighting as any).ambient = [0.5, 0.5, 0.5];
+                } else {
+                    (lighting.ambient as number[])[0] = 0.5;
+                    (lighting.ambient as number[])[1] = 0.5;
+                    (lighting.ambient as number[])[2] = 0.5;
+                }
             }
 
             queuedInstances.push(entity);
