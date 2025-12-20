@@ -79,7 +79,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
     createTraceMock({
       endpos: end,
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
     })
   );
 

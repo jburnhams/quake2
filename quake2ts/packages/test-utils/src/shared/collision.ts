@@ -1,6 +1,5 @@
-import { vi, type Mock } from 'vitest';
 import type { Vec3 } from '@quake2ts/shared/src/math/vec3.js';
-import type { TraceResult } from '@quake2ts/shared/src/bsp/collision.js';
+import type { TraceResult, CollisionPlane } from '@quake2ts/shared/src/bsp/collision.js';
 
 // Re-export trace helpers from shared if they exist there now, or redefine them here if needed
 // The plan says "Move trace helpers from game/helpers.ts to shared/collision.ts"
@@ -13,7 +12,7 @@ export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared/src/testin
 export interface TraceMock extends Partial<TraceResult> {
     fraction: number;
     endpos: Vec3;
-    plane: { normal: Vec3, dist: number };
+    plane: CollisionPlane;
     surface: { flags: number, name?: string, value?: number };
     contents: number;
     ent: any; // Using any to avoid circular dependency with Entity
@@ -24,7 +23,7 @@ export interface TraceMock extends Partial<TraceResult> {
 export const createTraceMock = (overrides?: Partial<TraceMock>): TraceMock => ({
     fraction: 1.0,
     endpos: { x: 0, y: 0, z: 0 },
-    plane: { normal: { x: 0, y: 0, z: 0 }, dist: 0 },
+    plane: { normal: { x: 0, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
     surface: { flags: 0 },
     contents: 0,
     ent: null,
