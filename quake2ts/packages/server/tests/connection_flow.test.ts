@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState } from '../src/client.js';
-import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -33,20 +33,10 @@ describe('DedicatedServer Connection Flow', () => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    mockGame = {
-      init: vi.fn(),
-      shutdown: vi.fn(),
-      spawnWorld: vi.fn(),
+    mockGame = createMockGameExports({
       clientConnect: vi.fn().mockReturnValue(true),
-      clientDisconnect: vi.fn(),
-      clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
-      clientThink: vi.fn(),
-      frame: vi.fn().mockReturnValue({ state: {} }),
-      entities: {
-          forEachEntity: vi.fn(),
-          getByIndex: vi.fn()
-      }
-    } as unknown as GameExports;
+      clientBegin: vi.fn(() => ({ id: 1, classname: 'player' } as any)),
+    });
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 

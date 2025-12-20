@@ -3,7 +3,7 @@ import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState } from '../src/client.js';
 import { UPDATE_BACKUP } from '@quake2ts/shared';
-import { createMockTransport, MockTransport, createMockServerClient } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockGameExports, createGameStateSnapshotFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('node:fs/promises', () => ({
@@ -47,37 +47,16 @@ describe('DedicatedServer', () => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    mockGame = {
-      init: vi.fn(),
-      shutdown: vi.fn(),
-      spawnWorld: vi.fn(),
-      clientBegin: vi.fn(() => ({ id: 1, classname: 'player' })),
-      clientThink: vi.fn(),
+    mockGame = createMockGameExports({
+      clientBegin: vi.fn(() => ({ id: 1, classname: 'player' } as any)),
       frame: vi.fn().mockReturnValue({
-        state: {
-          packetEntities: [],
-          gravity: { x: 0, y: 0, z: -800 },
-          origin: { x: 0, y: 0, z: 0 },
-          velocity: { x: 0, y: 0, z: 0 },
-          viewangles: { x: 0, y: 0, z: 0 },
-          deltaAngles: { x: 0, y: 0, z: 0 },
-          kick_angles: { x: 0, y: 0, z: 0 },
-          gunoffset: { x: 0, y: 0, z: 0 },
-          gunangles: { x: 0, y: 0, z: 0 },
-          blend: [0, 0, 0, 0],
-          stats: new Array(32).fill(0),
-          pmFlags: 0,
-          pmType: 0,
-          gunindex: 0
-        }
+        state: createGameStateSnapshotFactory({
+           gravity: { x: 0, y: 0, z: -800 },
+           stats: new Array(32).fill(0),
+        })
       }),
-      entities: {
-          forEachEntity: vi.fn(),
-          getByIndex: vi.fn()
-      },
       clientConnect: vi.fn().mockReturnValue(true),
-      clientDisconnect: vi.fn(),
-    } as unknown as GameExports;
+    });
 
     (createGame as vi.Mock).mockReturnValue(mockGame);
 
