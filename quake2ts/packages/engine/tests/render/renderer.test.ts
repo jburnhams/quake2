@@ -111,6 +111,18 @@ describe('Renderer', () => {
             deleteProgram: vi.fn(),
             uniformMatrix4fv: vi.fn(),
             drawArrays: vi.fn(),
+            activeTexture: vi.fn(),
+            bindTexture: vi.fn(),
+            texImage2D: vi.fn(),
+            createFramebuffer: vi.fn().mockReturnValue({}),
+            bindFramebuffer: vi.fn(),
+            deleteFramebuffer: vi.fn(),
+            clearColor: vi.fn(),
+            clear: vi.fn(),
+            framebufferTexture2D: vi.fn(),
+            enableVertexAttribArray: vi.fn(),
+            vertexAttribPointer: vi.fn(),
+            vertexAttribDivisor: vi.fn(),
         } as unknown as WebGL2RenderingContext;
     });
 

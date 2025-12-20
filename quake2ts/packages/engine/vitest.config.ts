@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import path from 'path';
 
 const sharedSrc = fileURLToPath(new URL('../shared/src/index.ts', import.meta.url));
 const gameSrc = fileURLToPath(new URL('../game/src/index.ts', import.meta.url));
@@ -22,6 +23,7 @@ export default defineConfig({
     alias: {
       '@quake2ts/shared': sharedSrc,
       '@quake2ts/game': gameSrc,
+      '@quake2ts/engine': path.resolve(__dirname, './src/index.ts'),
     },
   },
   test: {
