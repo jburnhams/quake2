@@ -1,6 +1,6 @@
 import { CollisionModel } from "@quake2ts/shared";
 import { EntityState, MAX_CONFIGSTRINGS, MAX_EDICTS, MAX_CHALLENGES } from "@quake2ts/shared";
-import { Client } from "./client";
+import { Client } from "./client.js";
 
 /**
  * ServerState corresponds to server_state_t in the original source.

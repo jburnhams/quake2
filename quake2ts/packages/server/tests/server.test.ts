@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
-import { MockTransport } from './mocks/transport.js';
+import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 
 // Mock fs to avoid ENOENT errors
 vi.mock('node:fs/promises', () => ({
@@ -17,7 +17,7 @@ describe('DedicatedServer', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        transport = new MockTransport();
+        transport = createMockTransport();
         server = new DedicatedServer({ port: 27910, transport });
 
         // Suppress expected console warnings and logs

@@ -17,59 +17,59 @@ This section covers migration of server-specific test utilities including networ
 
 ### 1. Migrate Network Transport Mocks (HIGH PRIORITY)
 
-**Status:** Exists in server/tests, needs migration
+**Status:** Complete
 **Dependencies:** Section 19-1 Task 2 (network mocks)
 
-- [ ] **1.1** Create `test-utils/src/server/mocks/transport.ts` file
+- [x] **1.1** Create `test-utils/src/server/mocks/transport.ts` file
 
-- [ ] **1.2** Migrate `MockTransport` class from `server/tests/mocks/transport.ts`
+- [x] **1.2** Migrate `MockTransport` class from `server/tests/mocks/transport.ts`
   - Class implementing network transport interface (~35 lines)
   - Methods: `send()`, `receive()`, `close()`, `isConnected()`
   - Properties: `address`, `port`, `sentMessages`, `receivedMessages`
 
-- [ ] **1.3** Add `createMockTransport()` factory
+- [x] **1.3** Add `createMockTransport()` factory
   - Signature: `createMockTransport(address?: string, port?: number, overrides?: Partial<Transport>): MockTransport`
 
-- [ ] **1.4** Add `createMockUDPSocket()` factory
+- [x] **1.4** Add `createMockUDPSocket()` factory
   - Signature: `createMockUDPSocket(overrides?: Partial<UDPSocket>): UDPSocket`
   - Mock UDP socket for network layer testing
 
-- [ ] **1.5** Add `createMockNetworkAddress()` factory
+- [x] **1.5** Add `createMockNetworkAddress()` factory
   - Signature: `createMockNetworkAddress(ip?: string, port?: number): NetworkAddress`
 
-- [ ] **1.6** Update imports in `server/tests/` directory
+- [x] **1.6** Update imports in `server/tests/` directory
   - Replace `import { MockTransport } from './mocks/transport'`
   - With `import { createMockTransport } from '@quake2ts/test-utils'`
   - Estimated files: ~6
 
-- [ ] **1.7** Delete `server/tests/mocks/transport.ts` after migration
+- [x] **1.7** Delete `server/tests/mocks/transport.ts` after migration
 
 ---
 
 ### 2. Create Server State Management Mocks (HIGH PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Section 19-3 Task 2 (game context helpers)
 
-- [ ] **2.1** Create `test-utils/src/server/mocks/state.ts` file
+- [x] **2.1** Create `test-utils/src/server/mocks/state.ts` file
 
-- [ ] **2.2** Add `createMockServerState()` factory
+- [x] **2.2** Add `createMockServerState()` factory
   - Signature: `createMockServerState(overrides?: Partial<ServerState>): ServerState`
   - Include: frameNum, time, clients, entities, gameState
 
-- [ ] **2.3** Add `createMockServer()` factory
+- [x] **2.3** Add `createMockServer()` factory
   - Signature: `createMockServer(overrides?: Partial<Server>): Server`
   - Methods: `start()`, `stop()`, `tick()`, `broadcast()`, `getClient()`
 
-- [ ] **2.4** Add `createMockServerClient()` factory
+- [x] **2.4** Add `createMockServerClient()` factory
   - Signature: `createMockServerClient(clientNum: number, overrides?: Partial<ServerClient>): ServerClient`
   - Include: clientNum, state, entity, netchan, lastMessage
 
-- [ ] **2.5** Add `createMockGameState()` factory
+- [x] **2.5** Add `createMockGameState()` factory
   - Signature: `createMockGameState(overrides?: Partial<GameState>): GameState`
   - Include: levelName, time, entities, clients
 
-- [ ] **2.6** Cleanup server state tests in `server/tests/state/` directory
+- [x] **2.6** Cleanup server state tests in `server/tests/state/` directory
   - Replace inline server mocks
   - Estimated files: ~8
 

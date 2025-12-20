@@ -9,7 +9,8 @@ import {
   BinaryWriter,
   CMD_BACKUP,
   NetChan,
-  Vec3
+  Vec3,
+  crc8
 } from '@quake2ts/shared';
 import {
   NetworkMessageParser,
@@ -85,6 +86,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   private effectSystem?: ClientEffectSystem;
 
+  // Frame CRC
+  private frameCRCs = new Map<number, number>();
+  private currentPacketCRC = 0;
+
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
     this.options = options;
@@ -159,6 +164,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     this.commandHistory = [];
     this.latestServerFrame = 0;
     this.parser = null;
+    this.frameCRCs.clear();
     // Note: Do not clear options or listeners as they might be reused
   }
 
@@ -198,7 +204,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       const writer = new BinaryWriter();
 
       writer.writeByte(ClientCommand.move);
-      writer.writeByte(0); // checksum (crc8 of last server frame) - TODO
+
+      const checksum = this.frameCRCs.get(this.latestServerFrame) || 0;
+      writer.writeByte(checksum);
+
       writer.writeLong(this.latestServerFrame); // lastframe (ack)
 
       writeUserCommand(writer, commandWithFrame);
@@ -230,6 +239,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
         if (this.demoRecorder && this.demoRecorder.getIsRecording()) {
             this.demoRecorder.recordMessage(processedData);
         }
+
+        // Calculate CRC for potential frame update
+        this.currentPacketCRC = crc8(processedData);
 
         const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
         this.parser = new NetworkMessageParser(stream, this);
@@ -341,6 +353,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     if (frame.serverFrame > this.latestServerFrame) {
       this.latestServerFrame = frame.serverFrame;
     }
+
+    // Store CRC for this frame
+    this.frameCRCs.set(frame.serverFrame, this.currentPacketCRC);
 
     // Update Entities Map
     const packetEntities = frame.packetEntities;
