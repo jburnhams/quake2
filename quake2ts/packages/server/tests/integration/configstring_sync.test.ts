@@ -3,7 +3,7 @@ import { DedicatedServer } from '../../src/dedicated.js';
 import { createClient, Client, ClientState } from '../../src/client.js';
 import { ServerCommand, ConfigStringIndex, PlayerStat, MAX_CONFIGSTRINGS, BinaryStream, BinaryWriter, NetDriver } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
-import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockNetDriver } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
@@ -69,7 +69,7 @@ vi.mock('@quake2ts/engine', () => ({
 describe('Integration: Config String & Stats Sync', () => {
     let server: DedicatedServer;
     let mockClient: Client;
-    let mockDriver: any;
+    let mockDriver: NetDriver;
     let consoleLogSpy: any;
     let consoleWarnSpy: any;
     let transport: MockTransport;
@@ -89,15 +89,9 @@ describe('Integration: Config String & Stats Sync', () => {
         await server.startServer('maps/test.bsp');
 
         // Setup mock driver instance
-        mockDriver = {
-            attach: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            send: vi.fn(),
-            close: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true),
-            disconnect: vi.fn()
-        };
+        mockDriver = createMockNetDriver({
+            send: vi.fn()
+        });
 
         // Simulate connection via Transport
         transport.simulateConnection(mockDriver, {});
@@ -134,7 +128,7 @@ describe('Integration: Config String & Stats Sync', () => {
         expect(mockDriver.send).toHaveBeenCalled();
 
         // Inspect the last call to see if it contains the config string command
-        const calls = mockDriver.send.mock.calls;
+        const calls = (mockDriver.send as any).mock.calls;
         const lastCallData = calls[calls.length - 1][0];
 
         // Scan for the command byte (ServerCommand.configstring)
@@ -166,7 +160,7 @@ describe('Integration: Config String & Stats Sync', () => {
         (server as any).handleConnect(mockClient, "userinfo");
 
         // 3. Check sent packets
-        const calls = mockDriver.send.mock.calls;
+        const calls = (mockDriver.send as any).mock.calls;
         let foundServerData = false;
         let foundModel1 = false;
         let foundSound1 = false;
@@ -224,7 +218,7 @@ describe('Integration: Config String & Stats Sync', () => {
         (server as any).runFrame();
 
         // 4. Check for frame packet
-        const calls = mockDriver.send.mock.calls;
+        const calls = (mockDriver.send as any).mock.calls;
         const lastCallData = calls[calls.length - 1][0];
 
         // Scan buffer for stats values (100 and 50)

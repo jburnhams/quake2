@@ -98,7 +98,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `createMockUserInfo(overrides?: Partial<UserInfo>): UserInfo`
   - Include: name, skin, model, fov, hand
 
-- [ ] **3.6** Cleanup connection tests in `server/tests/connection/` directory
+- [x] **3.6** Cleanup connection tests in `server/tests/connection/` directory
   - Replace inline connection mocks
   - Estimated files: ~6
 

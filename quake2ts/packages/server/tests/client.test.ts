@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClient, ClientState } from '../src/client.js';
-import { NetDriver, NetChan } from '@quake2ts/shared';
+import { NetChan } from '@quake2ts/shared';
+import { createMockNetDriver } from '@quake2ts/test-utils';
 
 describe('Server Client', () => {
     it('should initialize with NetChan', () => {
-        const mockNetDriver = {
-            send: vi.fn(),
-            close: vi.fn(),
-        } as unknown as NetDriver;
+        const mockNetDriver = createMockNetDriver();
 
         const client = createClient(0, mockNetDriver);
 
