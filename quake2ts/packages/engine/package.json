@@ -38,6 +38,8 @@
     "@quake2ts/game": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
     "@quake2ts/tests": "workspace:^",
+    "@types/node": "^25.0.3",
+    "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
     "gl-matrix": "^3.4.4",
     "tsup": "^8.1.0",
