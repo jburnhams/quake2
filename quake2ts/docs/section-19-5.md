@@ -195,62 +195,62 @@ This section covers migration of server-specific test utilities including networ
 
 ### 7. Create Bandwidth/Rate Limiting Utilities (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Task 1 (transport mocks)
 
-- [ ] **7.1** Create `test-utils/src/server/helpers/bandwidth.ts` file
+- [x] **7.1** Create `test-utils/src/server/helpers/bandwidth.ts` file
 
-- [ ] **7.2** Add `createMockRateLimiter()` factory
+- [x] **7.2** Add `createMockRateLimiter()` factory
   - Signature: `createMockRateLimiter(bytesPerSecond: number): RateLimiter`
 
-- [ ] **7.3** Add `simulateBandwidthLimit()` helper
+- [x] **7.3** Add `simulateBandwidthLimit()` helper
   - Signature: `simulateBandwidthLimit(messages: Message[], bandwidth: number): Message[]`
   - Filter messages based on bandwidth constraints
 
-- [ ] **7.4** Add `measureSnapshotSize()` helper
+- [x] **7.4** Add `measureSnapshotSize()` helper
   - Signature: `measureSnapshotSize(snapshot: Snapshot): number`
   - Calculate snapshot size in bytes
 
-- [ ] **7.5** Add `createBandwidthTestScenario()` helper
+- [x] **7.5** Add `createBandwidthTestScenario()` helper
   - Signature: `createBandwidthTestScenario(bandwidth: number, numClients: number): BandwidthScenario`
 
 ---
 
 ### 8. Create Master Server Mocks (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Task 1 (transport mocks)
 
-- [ ] **8.1** Create `test-utils/src/server/mocks/master.ts` file
+- [x] **8.1** Create `test-utils/src/server/mocks/master.ts` file
 
-- [ ] **8.2** Add `createMockMasterServer()` factory
+- [x] **8.2** Add `createMockMasterServer()` factory
   - Signature: `createMockMasterServer(overrides?: Partial<MasterServer>): MasterServer`
   - Methods: `registerServer()`, `heartbeat()`, `getServerList()`
 
-- [ ] **8.3** Add `createMockServerInfo()` factory
+- [x] **8.3** Add `createMockServerInfo()` factory
   - Signature: `createMockServerInfo(overrides?: Partial<ServerInfo>): ServerInfo`
   - Include: name, map, players, maxPlayers, gametype, version
 
-- [ ] **8.4** Add `simulateServerRegistration()` helper
+- [x] **8.4** Add `simulateServerRegistration()` helper
   - Signature: `simulateServerRegistration(server: MockServer, master: MockMasterServer): Promise<boolean>`
 
 ---
 
 ### 9. Documentation and Exports (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** Tasks 1-8
 
-- [ ] **9.1** Add JSDoc comments to all server utilities
+- [x] **9.1** Add JSDoc comments to all server utilities
   - Include usage examples for multiplayer simulation, transport mocking
 
-- [ ] **9.2** Update `test-utils/README.md` with server utilities section
+- [x] **9.2** Update `test-utils/README.md` with server utilities section
   - Document: transport mocks, server state, multiplayer helpers, snapshot utilities
 
-- [ ] **9.3** Verify all server utilities exported from `test-utils/src/index.ts`
+- [x] **9.3** Verify all server utilities exported from `test-utils/src/index.ts`
   - Organized by category: `server/mocks/*`, `server/helpers/*`
 
-- [ ] **9.4** Add TypeScript type exports
+- [x] **9.4** Add TypeScript type exports
   - Export all mock types and helper interfaces
 
 ---

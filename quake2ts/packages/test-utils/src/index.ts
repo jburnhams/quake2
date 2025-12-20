@@ -11,8 +11,11 @@ export * from './server/mocks/transport.js';
 export * from './server/mocks/state.js';
 export * from './server/mocks/connection.js';
 export * from './server/mocks/commands.js';
+export * from './server/mocks/master.js';
+export * from './server/mocks/physics.js';
 export * from './server/helpers/multiplayer.js';
 export * from './server/helpers/snapshot.js';
+export * from './server/helpers/bandwidth.js';
 
 // Setup
 export * from './setup/browser.js';
@@ -24,9 +27,13 @@ export * from './setup/webgl.js'; // This exports createMockWebGL2Context
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 
+// Client Mocks
+export * from './client/mocks/input.js';
+export * from './client/helpers/view.js';
+
 // E2E
 export * from './e2e/playwright.js';
-export * from './e2e/input.js';
+// export * from './e2e/input.js'; // Replaced by client/mocks/input.js
 export * from './e2e/network.js';
 export * from './e2e/visual.js';
 

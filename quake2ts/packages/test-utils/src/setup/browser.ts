@@ -1,7 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { Canvas, Image, ImageData } from '@napi-rs/canvas';
 import 'fake-indexeddb/auto';
-import { MockPointerLock } from '../e2e/input.js';
+import { MockPointerLock } from '../client/mocks/input.js';
 import { createMockWebGL2Context } from './webgl.js';
 
 export interface BrowserSetupOptions {
@@ -178,7 +178,7 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
   }
 
   if (enablePointerLock) {
-      MockPointerLock.setup(global.document);
+      new MockPointerLock(global.document);
   }
 
   if (typeof global.requestAnimationFrame === 'undefined') {
