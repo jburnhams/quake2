@@ -135,23 +135,23 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 4. Create Inventory/Item Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Partially completed
 **Dependencies:** Task 1 (entity factories)
 
-- [ ] **4.1** Create `test-utils/src/game/mocks/items.ts` file
+- [x] **4.1** Create `test-utils/src/game/mocks/items.ts` file
 
-- [ ] **4.2** Add `createMockInventory()` factory
+- [x] **4.2** Add `createMockInventory()` factory
   - Signature: `createMockInventory(overrides?: Partial<Inventory>): Inventory`
   - Pre-populate with common items, ammo counts
 
-- [ ] **4.3** Add `createMockItem()` factory
+- [x] **4.3** Add `createMockItem()` factory
   - Signature: `createMockItem(itemType: string, overrides?: Partial<Item>): Item`
   - Include: name, icon, pickup function, use function
 
-- [ ] **4.4** Add item-specific factories
+- [x] **4.4** Add item-specific factories
   - `createMockWeaponItem()`, `createMockAmmoItem()`, `createMockArmorItem()`, `createMockHealthItem()`
 
-- [ ] **4.5** Add `createMockPowerup()` factory
+- [x] **4.5** Add `createMockPowerup()` factory
   - Signature: `createMockPowerup(powerupType: string, duration?: number): Powerup`
 
 - [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
