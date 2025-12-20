@@ -270,12 +270,12 @@ importers:
       '@types/jsdom':
         specifier: ^27.0.0
         version: 27.0.0
-      '@webgpu/types':
-        specifier: ^0.1.68
-        version: 0.1.68
       '@types/serve-handler':
         specifier: ^6.1.4
         version: 6.1.4
+      '@webgpu/types':
+        specifier: ^0.1.68
+        version: 0.1.68
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
@@ -322,6 +322,9 @@ importers:
 
   packages/tools:
     dependencies:
+      '@quake2ts/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared

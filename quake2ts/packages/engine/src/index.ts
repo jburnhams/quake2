@@ -56,6 +56,7 @@ export { Cvar, CvarRegistry } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
 export { PakArchive, PakParseError, calculatePakChecksum } from './assets/pak.js';
+export { StreamingPakArchive } from './assets/streamingPak.js';
 export { PakWriter } from './assets/pakWriter.js';
 export { ResourceLoadTracker, ResourceType, type ResourceLoadLog, type ResourceLoadEntry } from './assets/resourceTracker.js';
 export { VirtualFileSystem } from './assets/vfs.js';

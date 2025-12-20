@@ -905,7 +905,7 @@ interface MemoryUsage {
 | Lighting Control APIs | engine | P2 | 04 | Implemented |
 | Entity Bounds Access | game | P2 | 04 | Implemented |
 | Cross-Reference API | engine | P2 | 05 | Implemented |
-| Model Export Utilities | engine/tools | P3 | 05 | Nice-to-have |
+| Model Export Utilities | engine/tools | P3 | 05 | Implemented |
 | ENT Parser/Serializer | engine/tools | P1 | 06 | Implemented |
 | Entity Templates | game | P2 | 06 | Implemented |
 | BSP Entity Lump Replace | tools | P3 | 06 | Nice-to-have |
@@ -913,7 +913,7 @@ interface MemoryUsage {
 | Mod Initialization Hooks | game | P1 | 07 | Implemented |
 | VFS Priority Support | engine | P1 | 07 | Implemented |
 | Cvar System | shared/game | P2 | 07 | Implemented |
-| Streaming PAK Reader | engine | P2 | 09 | Needed |
+| Streaming PAK Reader | engine | P2 | 09 | Implemented |
 | Instancing API | engine | P2 | 09 | Implemented |
 | LOD Support | engine | P3 | 09 | Nice-to-have |
 | Memory Tracking | engine | P2 | 09 | Implemented |
