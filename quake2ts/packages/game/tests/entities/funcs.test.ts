@@ -3,6 +3,7 @@ import { func_door_rotating } from '../../src/entities/funcs.js';
 import { createTestContext } from '../test-helpers.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { lengthVec3 } from '@quake2ts/shared';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('func_door_rotating acceleration', () => {
     let context;
@@ -10,14 +11,15 @@ describe('func_door_rotating acceleration', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        entity = new Entity(1);
-        // Setup minimal entity properties for func_door_rotating
-        entity.classname = 'func_door_rotating';
-        entity.speed = 100;
-        entity.wait = 3;
-        entity.accel = 100; // Use accel
-        entity.decel = 100; // Use decel
-        entity.spawnflags = 0; // Z-axis default (Yaw)
+        entity = createEntityFactory({
+            number: 1,
+            classname: 'func_door_rotating',
+            speed: 100,
+            wait: 3,
+            accel: 100, // Use accel
+            decel: 100, // Use decel
+            spawnflags: 0 // Z-axis default (Yaw)
+        });
 
         // Mock EntitySystem properties needed for move_calc/angle_move_calc
         // We need to capture the think callback to simulate frames
@@ -26,9 +28,16 @@ describe('func_door_rotating acceleration', () => {
         });
 
         context.entities.linkentity = vi.fn();
+
+        // Mock sound on context.entities as well
+        context.entities.sound = vi.fn();
     });
 
     it('should accelerate angular velocity when opening', () => {
+        // func_door_rotating takes (entity, context). In `funcs.ts`, it uses `context.entities`.
+        // The `createTestContext` helper returns `context` where `context.entities` is the EntitySystem.
+        // So we should pass `context` directly to `func_door_rotating` if it expects SpawnContext (it does, type SpawnFunction = (ent, ctx: SpawnContext) => void).
+
         func_door_rotating(entity, context);
 
         // Trigger the door to open
@@ -62,7 +71,7 @@ describe('func_door_rotating acceleration', () => {
         // Simulate next frame
         // Advance time and call think
         context.entities.timeSeconds += 0.1;
-        if (thinkFn) thinkFn(entity);
+        if (thinkFn) thinkFn(entity, context.entities);
 
         // New speed should be previous speed + accel * dt
         // 10 + 100 * 0.1 = 20
@@ -104,7 +113,7 @@ describe('func_door_rotating acceleration', () => {
          }
 
          // Run one frame
-         thinkFn(entity);
+         thinkFn(entity, context.entities);
 
          const newSpeed = lengthVec3(entity.avelocity);
          expect(newSpeed).toBeCloseTo(50);

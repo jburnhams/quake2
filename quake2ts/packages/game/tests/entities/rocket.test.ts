@@ -7,6 +7,7 @@ import { createRocket } from '../../src/entities/projectiles.js';
 import { createGame } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Rocket Projectile', () => {
     it('should have correct initial properties and explode on touch', () => {
@@ -37,6 +38,12 @@ describe('Rocket Projectile', () => {
         createRocket(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
 
         const rocket = game.entities.find(e => e.classname === 'rocket')!;
+
+        // Use factory via internal pool or just verification.
+        // For 'target' we can't easily swap out with createEntityFactory because we need it to be in the system
+        // and 'game.entities.spawn()' handles that registration.
+        // We could use Object.assign to apply factory defaults to the spawned entity if needed,
+        // but for now we just spawn it.
         const target = game.entities.spawn();
         target.health = 100;
         target.takedamage = 1;

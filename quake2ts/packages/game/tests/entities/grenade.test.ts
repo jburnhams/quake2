@@ -7,6 +7,7 @@ import { createGrenade } from '../../src/entities/projectiles.js';
 import { createGame } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Grenade Projectile', () => {
     it('should have correct initial properties and explode on think', () => {
@@ -31,6 +32,10 @@ describe('Grenade Projectile', () => {
         playerStart.angles = { x: 0, y: 0, z: 0 };
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
+
+        // If we were creating the player manually for testing createGrenade directly,
+        // we would use createEntityFactory. But here we rely on game.spawnWorld() to behave normally.
+        // However, let's verify we can find the player.
 
         const player = game.entities.find(e => e.classname === 'player')!;
 
