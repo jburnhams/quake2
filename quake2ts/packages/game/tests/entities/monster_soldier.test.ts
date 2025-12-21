@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DeadFlag, Entity, Solid } from '../../src/entities/entity.js';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { DeadFlag, Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
@@ -46,8 +47,9 @@ describe('monster_soldier', () => {
         const testContext = createTestContext();
         context = testContext.entities as unknown as EntitySystem;
 
-        entity = createEntityFactory({
+        entity = createMonsterEntityFactory('monster_soldier', {
             number: 0,
+            timestamp: 0,
             monsterinfo: {
                 aiflags: 0,
                 last_sighting: { x: 0, y: 0, z: 0 },
@@ -55,7 +57,6 @@ describe('monster_soldier', () => {
                 pausetime: 0,
             }
         });
-        entity.timestamp = 0;
     });
 
     it('should set stand action that calls ai_stand', () => {
@@ -97,11 +98,12 @@ describe('monster_soldier', () => {
     it('should set run action that calls ai_run', () => {
         spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
 
-        entity.enemy = createEntityFactory({
-          health: 100,
-          origin: { x: 100, y: 0, z: 0 },
-          absmin: { x: 90, y: -10, z: -10 },
-          absmax: { x: 110, y: 10, z: 10 }
+        // Needs an enemy to run
+        entity.enemy = createPlayerEntityFactory({
+             health: 100,
+             origin: { x: 100, y: 0, z: 0 },
+             absmin: { x: 90, y: -10, z: -10 },
+             absmax: { x: 110, y: 10, z: 10 }
         });
 
         // Switch to run

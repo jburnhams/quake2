@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMonsterEntityFactory, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { registerGunnerSpawns } from '../../../src/entities/monsters/gunner.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { GameEngine } from '../../../src/index.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
 import { createGrenade } from '../../../src/entities/projectiles.js';
 import { AIFlags } from '../../../src/ai/constants.js';
@@ -34,7 +34,7 @@ describe('monster_gunner', () => {
     sys.engine.sound = vi.fn();
     sys.sound = vi.fn();
 
-    gunner = new Entity(1);
+    gunner = createMonsterEntityFactory('monster_gunner', { number: 1 });
 
     spawnRegistry = {
         register: vi.fn(),
@@ -88,8 +88,10 @@ describe('monster_gunner', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
 
-    gunner.enemy = new Entity(2);
-    gunner.enemy.origin = { x: 100, y: 0, z: 0 };
+    gunner.enemy = createPlayerEntityFactory({
+        number: 2,
+        origin: { x: 100, y: 0, z: 0 }
+    });
     gunner.origin = { x: 0, y: 0, z: 0 };
 
     // Transition to fire chain move
@@ -126,8 +128,10 @@ describe('monster_gunner', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
 
-    gunner.enemy = new Entity(2);
-    gunner.enemy.origin = { x: 100, y: 0, z: 0 };
+    gunner.enemy = createPlayerEntityFactory({
+        number: 2,
+        origin: { x: 100, y: 0, z: 0 }
+    });
     gunner.origin = { x: 0, y: 0, z: 0 };
 
     vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.4); // Grenade
@@ -199,7 +203,7 @@ describe('monster_gunner', () => {
       // Should invoke duck if random allows (mock it)
       // Actually dodge uses random > 0.25 return, so <= 0.25 to proceed
       vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
-      gunner.monsterinfo.dodge!(gunner, new Entity(2), 0);
+      gunner.monsterinfo.dodge!(gunner, createEntityFactory({ number: 2 }), 0);
 
       expect(gunner.monsterinfo.current_move?.firstframe).toBe(201); // Duck start
 

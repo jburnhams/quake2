@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createPlayerEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 import { player_die } from '../../src/entities/player.js';
 import { DeadFlag, Solid, MoveType } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
@@ -70,9 +71,8 @@ describe('Player Death', () => {
             health: 0
         });
 
-        const attacker = createEntityFactory({
-            number: 2,
-            classname: 'monster_soldier'
+        const attacker = createMonsterEntityFactory('monster_soldier', {
+            number: 2
         });
 
         player_die(player, null, attacker, 10, { x: 0, y: 0, z: 0 }, DamageMod.MACHINEGUN, system);
