@@ -169,7 +169,9 @@ scenario.localStorage.setItem('foo', 'bar');
 
 ## Migration Guide
 
-When migrating existing tests:
+For detailed instructions on migrating existing tests to use this package, see [MIGRATION.md](./MIGRATION.md).
+
+Quick summary:
 1. Replace `setupBrowserEnvironment` imports from local helpers to `@quake2ts/test-utils`.
 2. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
 3. Use `setupMockAudioContext` instead of custom inline mocks.
