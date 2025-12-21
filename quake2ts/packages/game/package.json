@@ -28,15 +28,8 @@
     "build:types": "tsc -b",
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
-    "test:unit": "TEST_TYPE=unit pnpm run test:unit:entities && TEST_TYPE=unit pnpm run test:unit:combat && TEST_TYPE=unit pnpm run test:unit:physics && TEST_TYPE=unit pnpm run test:unit:ai && TEST_TYPE=unit pnpm run test:unit:inventory && TEST_TYPE=unit pnpm run test:unit:core && TEST_TYPE=unit pnpm run test:unit:replay",
-    "test:integration": "TEST_TYPE=integration vitest run tests/integration/entitySystem.test.ts && TEST_TYPE=integration vitest run tests/integration/combat.test.ts && TEST_TYPE=integration vitest run tests/integration/gameplay.test.ts",
-    "test:unit:entities": "vitest run --passWithNoTests tests/entities",
-    "test:unit:combat": "vitest run --passWithNoTests tests/combat",
-    "test:unit:physics": "vitest run --passWithNoTests tests/physics",
-    "test:unit:ai": "vitest run --passWithNoTests tests/ai",
-    "test:unit:inventory": "vitest run --passWithNoTests tests/inventory",
-    "test:unit:core": "vitest run --passWithNoTests tests/*.test.ts src/save/tests",
-    "test:unit:replay": "vitest run --passWithNoTests tests/replay"
+    "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
+    "test:integration": "TEST_TYPE=integration vitest run tests/integration"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",

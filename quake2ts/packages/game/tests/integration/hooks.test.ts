@@ -5,6 +5,8 @@ import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { createGame, GameExports } from '../../src/index.js';
 import { createTestContext } from '../test-helpers.js';
+import { T_Damage } from '../../src/combat/damage.js';
+import { ZERO_VEC3 } from '@quake2ts/shared';
 
 describe('ScriptHookRegistry', () => {
   let registry: ScriptHookRegistry;
@@ -51,6 +53,8 @@ describe('ScriptHookRegistry', () => {
   });
 
   it('triggers onDamage when entity takes damage', () => {
+    const context = createTestContext();
+    const entities = context.entities;
     const onDamage = vi.fn();
     entities.scriptHooks.register({ onDamage });
 
@@ -61,6 +65,14 @@ describe('ScriptHookRegistry', () => {
 
     const attacker = entities.spawn();
     attacker.classname = 'attacker';
+
+    // Mock trace used by T_Damage
+    (entities.trace as any).mockReturnValue({
+        fraction: 1.0,
+        endpos: { x: 0, y: 0, z: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 } },
+        ent: target
+    });
 
     T_Damage(
       target,
@@ -75,11 +87,11 @@ describe('ScriptHookRegistry', () => {
       DamageMod.UNKNOWN,
       0,
       undefined,
-      undefined,
+      { hooks: entities.scriptHooks }, // Pass hooks via options
       entities // Pass entities system
     );
 
-    expect(onDamage).toHaveBeenCalledWith(target, attacker, attacker, 10);
+    expect(onDamage).toHaveBeenCalledWith(target, attacker, attacker, 10, expect.anything(), expect.anything());
   });
      
   it('should trigger onPlayerDeath', () => {
@@ -124,67 +136,6 @@ describe('ScriptHookRegistry', () => {
   });
 });
 
-describe('GameExports Hooks Integration', () => {
-  let game: GameExports;
-  let hooks: ScriptHooks;
-
-  beforeEach(async () => {
-    // createTestContext provides a simplified environment where game logic is mocked/minimal.
-    // The "game" object returned by createTestContext is a mock object defined in test-helpers.ts,
-    // NOT the full GameExports from createGame.
-    // However, hooks.test.ts seems to want to test integration with the REAL createGame logic,
-    // OR test that the mock setup in test-helpers supports hooks.
-    //
-    // If we want to test REAL integration, we should use createGame from ../src/index.js.
-    // But createGame requires engine, imports, etc.
-    //
-    // The previous failure was "game.registerHooks is not a function" because createTestContext returned a mock game object that didn't have it.
-    // I updated createTestContext to include registerHooks.
-    //
-    // Now let's see if we are testing the mock or the real deal.
-    // The test calls `game.spawnWorld()`. In the mock, this just calls hooks.onMapLoad.
-    // This confirms the mock is working.
-    //
-    // If we want to test that REAL createGame calls hooks, we should instantiate real createGame.
-
-    // For this test file, let's stick to testing the mock context first to ensure test-helpers are correct,
-    // AND then maybe add a test for real createGame if needed.
-    // The current test suite describes "GameExports Hooks Integration".
-    // If `game` comes from `createTestContext().game`, it is the mock.
-
-    const context = await createTestContext();
-    game = context.game; // This is the mock game from test-helpers
-
-    hooks = {
-      onMapLoad: vi.fn(),
-      onEntitySpawn: vi.fn(),
-      onEntityRemove: vi.fn(),
-      onPlayerSpawn: vi.fn(),
-      onDamage: vi.fn()
-    };
-    game.registerHooks(hooks);
-  });
-
-  it('should trigger onMapLoad on spawnWorld', () => {
-    // In mock game, spawnWorld calls onMapLoad
-    game.spawnWorld();
-    expect(hooks.onMapLoad).toHaveBeenCalledWith('q2dm1');
-  });
-
-  it('should trigger onEntitySpawn when spawning entity', () => {
-    // In mock context, entities.spawn calls onEntitySpawn
-    const context = createTestContext();
-    // Wait, we need to register hooks on the game that matches the entities.
-    // The `game` variable is context.game.
-    // The `context.entities` uses that game.
-    // BUT in test-helpers, I instantiated `hooks` inside createTestContext.
-    // I need to make sure I am using the SAME context.
-
-    // In `beforeEach`, I did `context = await createTestContext(); game = context.game`.
-    // I should also get `entities`.
-  });
-});
-
 describe('Real GameExports Hooks Integration', () => {
     // Test the actual createGame logic
     it('should trigger hooks in real game flow', () => {
@@ -197,11 +148,15 @@ describe('Real GameExports Hooks Integration', () => {
             multicast: vi.fn(),
             unicast: vi.fn(),
             configstring: vi.fn(),
-            serverCommand: vi.fn()
+            serverCommand: vi.fn(),
+            assets: {
+               // ... mocks
+            }
         };
         const options = { gravity: {x:0,y:0,z:-800} };
 
         // Create REAL game
+        // We cast to any to avoid complex mocking of all imports/engine methods
         const game = createGame(imports as any, engine, options);
 
         const hooks = {
