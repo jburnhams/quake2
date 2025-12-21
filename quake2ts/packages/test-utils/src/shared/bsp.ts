@@ -9,6 +9,14 @@ import {
   type Vec3
 } from '@quake2ts/shared';
 
+/**
+ * Creates a collision plane with the specified normal and distance.
+ * Automatically calculates the plane type and signbits.
+ *
+ * @param normal - The normal vector of the plane.
+ * @param dist - The distance from the origin.
+ * @returns A CollisionPlane object.
+ */
 export function makePlane(normal: Vec3, dist: number): CollisionPlane {
   return {
     normal,
@@ -18,6 +26,13 @@ export function makePlane(normal: Vec3, dist: number): CollisionPlane {
   };
 }
 
+/**
+ * Creates a simple axis-aligned cubic brush for testing.
+ *
+ * @param size - The size of the cube (width, height, depth).
+ * @param contents - The content flags for the brush (default: CONTENTS_SOLID).
+ * @returns A CollisionBrush object.
+ */
 export function makeAxisBrush(size: number, contents = CONTENTS_SOLID): CollisionBrush {
   const half = size / 2;
   const planes = [
@@ -35,10 +50,27 @@ export function makeAxisBrush(size: number, contents = CONTENTS_SOLID): Collisio
   };
 }
 
+/**
+ * Creates a BSP node.
+ *
+ * @param plane - The splitting plane for this node.
+ * @param children - Indices of the children (positive for nodes, negative for leaves).
+ * @returns A CollisionNode object.
+ */
 export function makeNode(plane: CollisionPlane, children: [number, number]): CollisionNode {
   return { plane, children };
 }
 
+/**
+ * Constructs a full CollisionModel from components.
+ *
+ * @param planes - Array of planes.
+ * @param nodes - Array of nodes.
+ * @param leaves - Array of leaves.
+ * @param brushes - Array of brushes.
+ * @param leafBrushes - Array of leaf brush indices.
+ * @returns A CollisionModel object.
+ */
 export function makeBspModel(
   planes: CollisionPlane[],
   nodes: CollisionNode[],
@@ -56,10 +88,25 @@ export function makeBspModel(
   };
 }
 
+/**
+ * Creates a BSP leaf.
+ *
+ * @param contents - The content flags for this leaf.
+ * @param firstLeafBrush - Index into the leafBrushes array.
+ * @param numLeafBrushes - Number of brushes in this leaf.
+ * @returns A CollisionLeaf object.
+ */
 export function makeLeaf(contents: number, firstLeafBrush: number, numLeafBrushes: number): CollisionLeaf {
   return { contents, cluster: 0, area: 0, firstLeafBrush, numLeafBrushes };
 }
 
+/**
+ * Creates a simplified CollisionModel consisting of a single leaf containing the provided brushes.
+ * Useful for testing collision against a set of brushes without full BSP tree traversal.
+ *
+ * @param brushes - Array of CollisionBrushes to include.
+ * @returns A CollisionModel object.
+ */
 export function makeLeafModel(brushes: CollisionBrush[]): CollisionModel {
   const planes = brushes.flatMap((brush) => brush.sides.map((side) => side.plane));
 
@@ -73,6 +120,14 @@ export function makeLeafModel(brushes: CollisionBrush[]): CollisionModel {
   };
 }
 
+/**
+ * Creates a brush defined by min and max bounds.
+ *
+ * @param mins - Minimum coordinates (x, y, z).
+ * @param maxs - Maximum coordinates (x, y, z).
+ * @param contents - Content flags (default: CONTENTS_SOLID).
+ * @returns A CollisionBrush object.
+ */
 export function makeBrushFromMinsMaxs(mins: Vec3, maxs: Vec3, contents = CONTENTS_SOLID): CollisionBrush {
   const planes = [
     makePlane({ x: 1, y: 0, z: 0 }, maxs.x),

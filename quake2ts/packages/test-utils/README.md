@@ -18,6 +18,73 @@ setupBrowserEnvironment({
 });
 ```
 
+### Shared Utilities
+
+The library includes common utilities for testing game logic, collisions, math, and networking.
+
+#### BSP & Collision Helpers
+```typescript
+import {
+  makePlane,
+  makeAxisBrush,
+  makeNode,
+  makeBspModel,
+  makeLeaf,
+  createTraceMock,
+  createSurfaceMock
+} from '@quake2ts/test-utils';
+
+// Create a simple box brush
+const brush = makeAxisBrush(32);
+
+// Create a mock collision trace result
+const trace = createTraceMock({
+  fraction: 0.5,
+  endpos: { x: 10, y: 0, z: 0 },
+  contents: 1 // CONTENTS_SOLID
+});
+```
+
+#### Math Helpers
+```typescript
+import {
+  createVector3,
+  createBounds,
+  createTransform,
+  randomVector3
+} from '@quake2ts/test-utils';
+
+const v = createVector3(10, 20, 30);
+const bounds = createBounds(); // Unit cube
+```
+
+#### Binary & Network Mocks
+```typescript
+import {
+  createBinaryWriterMock,
+  createBinaryStreamMock,
+  createNetChanMock,
+  createMessageWriterMock,
+  createPacketMock
+} from '@quake2ts/test-utils';
+
+const writer = createBinaryWriterMock();
+writer.writeByte(123);
+expect(writer.writeByte).toHaveBeenCalledWith(123);
+
+const netchan = createNetChanMock();
+```
+
+#### Factories
+```typescript
+import {
+  createCvarMock,
+  createConfigStringMock
+} from '@quake2ts/test-utils';
+
+const cvar = createCvarMock('g_gravity', '800');
+```
+
 ### Server Testing Utilities
 
 The library includes comprehensive mocks and helpers for testing server logic without needing a full network stack.
@@ -160,6 +227,7 @@ scenario.localStorage.setItem('foo', 'bar');
 ## Features
 
 - **Browser Mocks:** JSDOM enhancement, Pointer Lock, RAF, Performance.
+- **Shared Utilities:** BSP construction, Collision tracing, Math helpers, Binary mocks.
 - **Server Utilities:** Network mocks, Server state factories, Multiplayer simulation, Snapshot analysis.
 - **Canvas/WebGL:** Mock implementations for headless testing.
 - **Storage:** LocalStorage, SessionStorage, IndexedDB mocks.
@@ -173,5 +241,6 @@ For detailed instructions on migrating existing tests to use this package, see [
 
 Quick summary:
 1. Replace `setupBrowserEnvironment` imports from local helpers to `@quake2ts/test-utils`.
-2. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
-3. Use `setupMockAudioContext` instead of custom inline mocks.
+2. Use shared helpers (e.g., `createVector3`, `makePlane`) instead of recreating them.
+3. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
+4. Use `setupMockAudioContext` instead of custom inline mocks.
