@@ -9,6 +9,9 @@ import type { TraceResult, CollisionPlane } from '@quake2ts/shared/bsp/collision
 
 export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared';
 
+/**
+ * Interface for a TraceResult mock, including all standard properties.
+ */
 export interface TraceMock extends Partial<TraceResult> {
     fraction: number;
     endpos: Vec3;
@@ -20,6 +23,12 @@ export interface TraceMock extends Partial<TraceResult> {
     startsolid: boolean;
 }
 
+/**
+ * Creates a mock TraceResult.
+ *
+ * @param overrides - Optional overrides for trace properties.
+ * @returns A TraceMock object.
+ */
 export const createTraceMock = (overrides?: Partial<TraceMock>): TraceMock => ({
     fraction: 1.0,
     endpos: { x: 0, y: 0, z: 0 },
@@ -32,12 +41,21 @@ export const createTraceMock = (overrides?: Partial<TraceMock>): TraceMock => ({
     ...overrides
 });
 
+/**
+ * Interface for a Surface mock.
+ */
 export interface SurfaceMock {
     flags: number;
     name: string;
     value: number;
 }
 
+/**
+ * Creates a mock Surface.
+ *
+ * @param overrides - Optional overrides for surface properties.
+ * @returns A SurfaceMock object.
+ */
 export const createSurfaceMock = (overrides?: Partial<SurfaceMock>): SurfaceMock => ({
     flags: 0,
     name: 'default',

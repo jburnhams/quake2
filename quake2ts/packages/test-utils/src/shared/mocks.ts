@@ -1,5 +1,8 @@
 import { vi, type Mock } from 'vitest';
 
+/**
+ * Interface for the BinaryWriter mock.
+ */
 export interface BinaryWriterMock {
     writeByte: Mock<[number], void>;
     writeShort: Mock<[number], void>;
@@ -20,6 +23,11 @@ export interface BinaryWriterMock {
     writeDir: Mock<[any], void>;
 }
 
+/**
+ * Creates a mock BinaryWriter for testing binary data writing.
+ *
+ * @returns A BinaryWriterMock object with all methods mocked using vi.fn().
+ */
 export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeByte: vi.fn(),
   writeShort: vi.fn(),
@@ -41,6 +49,12 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeDir: vi.fn(),
 });
 
+/**
+ * Creates a mock NetChan (Network Channel) for testing network communication.
+ * Includes mocks for sequencing, reliable messaging, and fragmentation.
+ *
+ * @returns A mocked NetChan object.
+ */
 export const createNetChanMock = () => ({
   qport: 1234,
 
@@ -83,6 +97,9 @@ export const createNetChanMock = () => ({
   isTimedOut: vi.fn(() => false),
 });
 
+/**
+ * Interface for the BinaryStream mock.
+ */
 export interface BinaryStreamMock {
     getPosition: Mock<[], number>;
     getReadPosition: Mock<[], number>;
@@ -114,6 +131,11 @@ export interface BinaryStreamMock {
     readDir: Mock<[], any>;
 }
 
+/**
+ * Creates a mock BinaryStream for testing binary data reading.
+ *
+ * @returns A BinaryStreamMock object with all methods mocked.
+ */
 export const createBinaryStreamMock = (): BinaryStreamMock => ({
   getPosition: vi.fn(() => 0),
   getReadPosition: vi.fn(() => 0),
@@ -145,12 +167,20 @@ export const createBinaryStreamMock = (): BinaryStreamMock => ({
   readDir: vi.fn(),
 });
 
-// Alias for MessageWriter to match requested API
+/**
+ * Interface for MessageWriter mock, extending BinaryWriterMock with additional message-specific methods.
+ */
 export interface MessageWriterMock extends BinaryWriterMock {
     writeInt: Mock<[number], void>;
     writeVector: Mock<[any], void>;
 }
 
+/**
+ * Creates a mock MessageWriter, aliasing writeInt to writeInt32 and writeVector to writePos.
+ *
+ * @param overrides - Optional overrides for the mock.
+ * @returns A MessageWriterMock object.
+ */
 export const createMessageWriterMock = (overrides?: Partial<MessageWriterMock>): MessageWriterMock => {
     const mock = createBinaryWriterMock();
     const writer: MessageWriterMock = {
@@ -162,12 +192,20 @@ export const createMessageWriterMock = (overrides?: Partial<MessageWriterMock>):
     return writer;
 };
 
-// Alias for MessageReader to match requested API
+/**
+ * Interface for MessageReader mock, extending BinaryStreamMock with additional message-specific methods.
+ */
 export interface MessageReaderMock extends BinaryStreamMock {
     readInt: Mock<[], number>;
     readVector: Mock<[], any>;
 }
 
+/**
+ * Creates a mock MessageReader, aliasing readInt to readLong and readVector to readPos.
+ *
+ * @param data - Optional initial data for the reader.
+ * @returns A MessageReaderMock object.
+ */
 export const createMessageReaderMock = (data?: Uint8Array): MessageReaderMock => {
     const mock = createBinaryStreamMock();
     const reader: MessageReaderMock = {
@@ -178,6 +216,9 @@ export const createMessageReaderMock = (data?: Uint8Array): MessageReaderMock =>
     return reader;
 };
 
+/**
+ * Interface for a generic network packet mock.
+ */
 export interface PacketMock {
     type: 'connection' | 'data' | 'ack' | 'disconnect';
     sequence: number;
@@ -186,6 +227,12 @@ export interface PacketMock {
     data: Uint8Array;
 }
 
+/**
+ * Creates a mock network packet.
+ *
+ * @param overrides - Optional overrides for packet properties.
+ * @returns A PacketMock object.
+ */
 export const createPacketMock = (overrides?: Partial<PacketMock>): PacketMock => ({
     type: 'data',
     sequence: 0,

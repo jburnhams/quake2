@@ -50,3 +50,14 @@ export type { MockRAF } from './setup/timing.js';
 export type { StorageScenario } from './setup/storage.js';
 export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
 export type { VisualScenario, VisualDiff } from './e2e/visual.js';
+
+// Shared Types
+export type {
+    BinaryWriterMock,
+    BinaryStreamMock,
+    MessageWriterMock,
+    MessageReaderMock,
+    PacketMock
+} from './shared/mocks.js';
+export type { TraceMock, SurfaceMock } from './shared/collision.js';
+export type { Transform } from './shared/math.js';
