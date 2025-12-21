@@ -51,6 +51,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [ ] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
   - Replace manual entity creation with factories
   - Estimated files: ~25
+  - *Progress:* Refactored `player.test.ts`, `monster_soldier.test.ts`, `monsters/gunner.test.ts`, `ai-fields.test.ts`, and `entity-bounds.test.ts`.
 
 - [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - Same pattern
