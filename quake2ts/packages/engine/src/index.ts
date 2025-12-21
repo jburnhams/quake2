@@ -294,6 +294,7 @@ export { Pic, Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render/frame.js';
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
+export { MessageWriter } from './demo/writer.js'; // Exporting MessageWriter
 export { DemoValidator, type DemoValidationResult } from './demo/validator.js';
 export { DemoAnalyzer } from './demo/analyzer.js';
 export { DemoEventType } from './demo/analysis.js';
