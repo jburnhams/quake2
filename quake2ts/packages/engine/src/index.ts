@@ -345,4 +345,4 @@ export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type Va
 // WebGPU
 export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
 export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
-export { IRenderer, IWebGPURenderer } from './render/interface.js';
+export { IRenderer } from './render/interface.js';

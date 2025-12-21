@@ -939,6 +939,10 @@ export const createRenderer = (
         setBloom,
         setBloomIntensity,
         setLodBias,
-        renderInstanced
+        renderInstanced,
+        dispose: () => {
+            // Cleanup logic if needed, typically resource disposal
+            gpuProfiler.dispose();
+        }
     };
 };

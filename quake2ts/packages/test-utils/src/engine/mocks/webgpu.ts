@@ -1,94 +1,71 @@
 import { vi } from 'vitest';
 
-export interface MockGPUAdapterOptions {
-  features?: Set<string>;
-  limits?: Record<string, number>;
-}
-
-export function createMockGPUAdapter(options: MockGPUAdapterOptions = {}) {
-  const features = new Set(options.features || []);
-
+export function createMockGPUAdapter() {
   return {
-    features: {
-      has: (feature: string) => features.has(feature),
-      [Symbol.iterator]: features[Symbol.iterator].bind(features),
-    },
-    limits: options.limits || {
-      maxTextureDimension2D: 8192,
-      maxBindGroups: 4,
-      maxUniformBufferBindingSize: 16384,
-      maxStorageBufferBindingSize: 134217728,
-    },
-    requestDevice: vi.fn().mockImplementation(async (descriptor) => createMockGPUDevice(descriptor)),
-  };
-}
-
-export function createMockGPUDevice(descriptor: any = {}) {
-  const features = new Set(descriptor?.requiredFeatures || []);
-
-  return {
-    features: {
-      has: (feature: string) => features.has(feature),
-      [Symbol.iterator]: features[Symbol.iterator].bind(features),
-    },
+    features: new Set(),
     limits: {
       maxTextureDimension2D: 8192,
       maxBindGroups: 4,
-      maxUniformBufferBindingSize: 16384,
+      maxUniformBufferBindingSize: 65536,
       maxStorageBufferBindingSize: 134217728,
-      ...descriptor?.requiredLimits
     },
+    requestDevice: vi.fn().mockResolvedValue(createMockGPUDevice()),
+  } as unknown as GPUAdapter;
+}
+
+export function createMockGPUDevice() {
+  return {
+    features: new Set(),
+    limits: {
+      maxTextureDimension2D: 8192,
+    },
+    lost: new Promise(() => {}), // Pending promise
+    createShaderModule: vi.fn(),
+    createBindGroupLayout: vi.fn(),
+    createPipelineLayout: vi.fn(),
+    createRenderPipeline: vi.fn(),
+    createCommandEncoder: vi.fn().mockReturnValue({
+      copyTextureToBuffer: vi.fn(),
+      finish: vi.fn(),
+    }),
+    createBuffer: vi.fn(),
+    createTexture: vi.fn().mockReturnValue({
+      createView: vi.fn(),
+    }),
     queue: {
       submit: vi.fn(),
       writeBuffer: vi.fn(),
       writeTexture: vi.fn(),
     },
-    createCommandEncoder: vi.fn().mockReturnValue({
-      beginRenderPass: vi.fn().mockReturnValue({
-        setPipeline: vi.fn(),
-        setBindGroup: vi.fn(),
-        setVertexBuffer: vi.fn(),
-        setIndexBuffer: vi.fn(),
-        draw: vi.fn(),
-        drawIndexed: vi.fn(),
-        end: vi.fn(),
-      }),
-      copyTextureToBuffer: vi.fn(),
-      finish: vi.fn(),
-    }),
-    createBindGroup: vi.fn(),
-    createBindGroupLayout: vi.fn(),
-    createPipelineLayout: vi.fn(),
-    createRenderPipeline: vi.fn(),
-    createShaderModule: vi.fn(),
-    createBuffer: vi.fn(),
-    createTexture: vi.fn().mockReturnValue({
-        createView: vi.fn(),
-        width: descriptor?.size?.width || 0,
-        height: descriptor?.size?.height || 0,
-    }),
-    createSampler: vi.fn(),
-    lost: new Promise((resolve) => {}), // Never resolves by default
-    destroy: vi.fn(),
-  };
+  } as unknown as GPUDevice;
+}
+
+export function createMockGPUCanvasContext() {
+  return {
+    configure: vi.fn(),
+    getCurrentTexture: vi.fn(),
+  } as unknown as GPUCanvasContext;
 }
 
 export function setupWebGPUMocks() {
-  const adapter = createMockGPUAdapter();
-  const gpu = {
-    requestAdapter: vi.fn().mockResolvedValue(adapter),
+  const mockAdapter = createMockGPUAdapter();
+  const mockGpu = {
+    requestAdapter: vi.fn().mockResolvedValue(mockAdapter),
     getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm'),
   };
 
-  // @ts-ignore
-  global.navigator = global.navigator || {};
-  // @ts-ignore
-  global.navigator.gpu = gpu;
+  // Mock global navigator.gpu
+  Object.defineProperty(global, 'navigator', {
+    value: {
+      ...global.navigator,
+      gpu: mockGpu,
+    },
+    writable: true,
+  });
 
-  // Polyfill WebGPU constants for Node environment tests
-  if (!global.GPUTextureUsage) {
-    // @ts-ignore
-    global.GPUTextureUsage = {
+  // Mock GPU globals if they don't exist
+  if (typeof GPUTextureUsage === 'undefined') {
+    (global as any).GPUTextureUsage = {
       COPY_SRC: 0x01,
       COPY_DST: 0x02,
       TEXTURE_BINDING: 0x04,
@@ -97,9 +74,8 @@ export function setupWebGPUMocks() {
     };
   }
 
-  if (!global.GPUBufferUsage) {
-    // @ts-ignore
-    global.GPUBufferUsage = {
+  if (typeof GPUBufferUsage === 'undefined') {
+    (global as any).GPUBufferUsage = {
       MAP_READ: 0x0001,
       MAP_WRITE: 0x0002,
       COPY_SRC: 0x0004,
@@ -113,13 +89,15 @@ export function setupWebGPUMocks() {
     };
   }
 
-  if (!global.GPUMapMode) {
-    // @ts-ignore
-    global.GPUMapMode = {
+  if (typeof GPUMapMode === 'undefined') {
+    (global as any).GPUMapMode = {
       READ: 0x0001,
       WRITE: 0x0002,
     };
   }
 
-  return { gpu, adapter };
+  return {
+    mockGpu,
+    mockAdapter
+  };
 }

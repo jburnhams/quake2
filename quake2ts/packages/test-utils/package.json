@@ -10,6 +10,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./src/engine/mocks/webgpu": {
+      "types": "./src/engine/mocks/webgpu.ts",
+      "import": "./src/engine/mocks/webgpu.ts",
+      "require": "./src/engine/mocks/webgpu.ts"
     }
   },
   "files": [
