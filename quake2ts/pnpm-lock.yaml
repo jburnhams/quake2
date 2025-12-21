@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@quake2ts/engine':
-        specifier: workspace:^
-        version: link:packages/engine
+      '@wasm-audio-decoders/ogg-vorbis':
+        specifier: ^0.1.20
+        version: 0.1.20
       gl-matrix:
         specifier: ^3.4.3
         version: 3.4.4
