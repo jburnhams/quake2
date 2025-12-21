@@ -1,7 +1,7 @@
 import { createRenderer } from '../../src/render/renderer.js';
 import { renderFrame } from '../../src/render/frame.js'; // Import the singleton spy
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { createMockGL } from '../helpers/webgl';
+import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
@@ -70,7 +70,7 @@ vi.mock('../../src/render/light', () => ({
 }));
 
 describe('Renderer Statistics', () => {
-    let mockGl: ReturnType<typeof createMockGL>;
+    let mockGl: MockWebGL2RenderingContext;
     let renderer: any;
 
     beforeEach(async () => {
@@ -93,12 +93,9 @@ describe('Renderer Statistics', () => {
             culledEntities: 2
         });
 
-        mockGl = createMockGL();
+        mockGl = createMockWebGL2Context();
 
         // Mock extensions for Profiler
-        // mockGl doesn't have extensions property by default in my mock
-        // I will add it manually or update createMockGL
-        (mockGl as any).extensions = new Map();
         (mockGl as any).extensions.set('EXT_disjoint_timer_query_webgl2', { TIME_ELAPSED_EXT: 0x88BF, GPU_DISJOINT_EXT: 0x8FBB });
 
         mockGl.getQueryParameter = vi.fn().mockImplementation((q, param) => {
