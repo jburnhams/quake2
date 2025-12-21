@@ -1,8 +1,9 @@
+/// <reference types="@webgpu/types" />
+
 export interface WebGPUContextOptions {
-  powerPreference?: GPUPowerPreference;
+  powerPreference?: 'low-power' | 'high-performance';
   requiredFeatures?: GPUFeatureName[];
   requiredLimits?: Record<string, number>;
-  forceFallbackAdapter?: boolean;
 }
 
 export interface WebGPUContextState {
@@ -27,10 +28,11 @@ export interface WebGPUCapabilities {
   maxStorageBufferBindingSize: number;
 }
 
-export interface ContextLostHandler {
-  (reason: GPUDeviceLostReason, message: string): void;
-}
+export type ContextLostHandler = (reason: GPUDeviceLostReason) => void;
 
+/**
+ * Creates and initializes a WebGPU context and device.
+ */
 export async function createWebGPUContext(
   canvas?: HTMLCanvasElement,
   options?: WebGPUContextOptions
@@ -39,71 +41,56 @@ export async function createWebGPUContext(
     throw new Error('WebGPU is not supported in this environment');
   }
 
-  const adapterOptions = {
-    powerPreference: options?.powerPreference ?? 'high-performance',
-    forceFallbackAdapter: options?.forceFallbackAdapter
-  };
-
-  const adapter = await navigator.gpu.requestAdapter(adapterOptions);
+  const adapter = await navigator.gpu.requestAdapter({
+    powerPreference: options?.powerPreference || 'high-performance',
+  });
 
   if (!adapter) {
-    console.error('WebGPU Adapter Request Failed');
-    console.error('Options:', JSON.stringify(adapterOptions));
-    // @ts-ignore
-    console.error('Navigator.gpu:', navigator.gpu);
-
-    // Try to get info if available (Node environment)
-    if (typeof process !== 'undefined' && process.env) {
-       console.error('Environment:', {
-           VK_ICD_FILENAMES: process.env.VK_ICD_FILENAMES,
-           DISPLAY: process.env.DISPLAY
-       });
-    }
-    throw new Error('Failed to request WebGPU adapter');
+    throw new Error('No appropriate GPUAdapter found');
   }
 
   // Validate required features
   if (options?.requiredFeatures) {
     for (const feature of options.requiredFeatures) {
       if (!adapter.features.has(feature)) {
-        throw new Error(`Required WebGPU feature '${feature}' is not supported by the adapter`);
+        throw new Error(`Required feature not available: ${feature}`);
       }
     }
   }
 
-  const device = await adapter.requestDevice({
+  // Create device
+  const deviceDescriptor: GPUDeviceDescriptor = {
     requiredFeatures: options?.requiredFeatures,
-    requiredLimits: options?.requiredLimits
-  });
+    requiredLimits: options?.requiredLimits,
+  };
 
-  if (!device) {
-    throw new Error('Failed to request WebGPU device');
-  }
+  const device = await adapter.requestDevice(deviceDescriptor);
 
   let context: GPUCanvasContext | undefined;
-  let format: GPUTextureFormat;
+  let format: GPUTextureFormat = 'bgra8unorm'; // Fallback default
+  let isHeadless = true;
 
   if (canvas) {
     context = canvas.getContext('webgpu') as GPUCanvasContext;
     if (!context) {
       throw new Error('Failed to get WebGPU context from canvas');
     }
+
+    isHeadless = false;
     format = navigator.gpu.getPreferredCanvasFormat();
+
     context.configure({
       device,
       format,
-      alphaMode: 'premultiplied'
+      alphaMode: 'opaque', // Standard for game rendering
     });
-  } else {
-    // Headless mode fallback format
-    format = 'rgba8unorm';
   }
 
+  // Collect enabled features
   const features = new Set<GPUFeatureName>();
-  // We can iterate the features from the device or adapter
-  // device.features is a set-like object
-  // @ts-ignore - GPUFeatureName is string
-  for (const feature of device.features) {
+  // adapter.features is a set-like object, iterate it
+  // Note: in some envs iterator might be different, but for standard WebGPU:
+  for (const feature of adapter.features) {
     features.add(feature as GPUFeatureName);
   }
 
@@ -114,10 +101,13 @@ export async function createWebGPUContext(
     format,
     features,
     limits: device.limits,
-    isHeadless: !canvas
+    isHeadless
   };
 }
 
+/**
+ * Queries capabilities of the created context/device.
+ */
 export function queryCapabilities(state: WebGPUContextState): WebGPUCapabilities {
   const { features, limits } = state;
 
@@ -134,13 +124,16 @@ export function queryCapabilities(state: WebGPUContextState): WebGPUCapabilities
   };
 }
 
+/**
+ * Sets up handling for device loss.
+ */
 export function setupDeviceLossHandling(
   device: GPUDevice,
   onLost: ContextLostHandler
 ): void {
   device.lost.then((info) => {
-    onLost(info.reason, info.message);
-  }).catch((error) => {
-    console.error('Error handling device lost:', error);
+    // info.reason can be 'destroyed', 'unknown'
+    console.warn(`WebGPU Device Lost: ${info.reason} - ${info.message}`);
+    onLost(info.reason);
   });
 }

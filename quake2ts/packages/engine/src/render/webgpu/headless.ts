@@ -11,10 +11,16 @@ export function createHeadlessRenderTarget(
   height: number,
   format: GPUTextureFormat = 'rgba8unorm'
 ): HeadlessRenderTarget {
+  // Use magic numbers if globals are not available (can happen in partial environments)
+  // RENDER_ATTACHMENT = 0x10, COPY_SRC = 0x01
+  const usage = (typeof GPUTextureUsage !== 'undefined')
+    ? GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+    : 0x11;
+
   const texture = device.createTexture({
     size: { width, height, depthOrArrayLayers: 1 },
     format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    usage,
   });
 
   const view = texture.createView();
@@ -42,9 +48,15 @@ export async function captureRenderTarget(
   const paddedBytesPerRow = Math.max(bytesPerPixel * width, Math.ceil((width * bytesPerPixel) / align) * align);
   const bufferSize = paddedBytesPerRow * height;
 
+  // Use magic numbers if globals are not available
+  // COPY_DST = 0x0008, MAP_READ = 0x0001
+  const usage = (typeof GPUBufferUsage !== 'undefined')
+    ? GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+    : 0x0009;
+
   const outputBuffer = device.createBuffer({
     size: bufferSize,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    usage,
   });
 
   const commandEncoder = device.createCommandEncoder();
@@ -65,7 +77,9 @@ export async function captureRenderTarget(
 
   device.queue.submit([commandEncoder.finish()]);
 
-  await outputBuffer.mapAsync(GPUMapMode.READ);
+  // READ = 0x0001
+  const mapMode = (typeof GPUMapMode !== 'undefined') ? GPUMapMode.READ : 0x0001;
+  await outputBuffer.mapAsync(mapMode);
   const mappedRange = outputBuffer.getMappedRange();
 
   // Create a view of the data
