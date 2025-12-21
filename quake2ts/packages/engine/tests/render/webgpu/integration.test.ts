@@ -27,8 +27,7 @@ describe('WebGPU Integration (Real/Headless)', () => {
   });
 
   it('should create a real WebGPU device with Dawn', async () => {
-    // Use forceFallbackAdapter to ensure it works in headless environments (software rasterizer)
-    const context = await createWebGPUContext(undefined, { forceFallbackAdapter: true });
+    const context = await createWebGPUContext();
     expect(context.device).toBeDefined();
     expect(context.isHeadless).toBe(true);
 
@@ -37,8 +36,7 @@ describe('WebGPU Integration (Real/Headless)', () => {
   });
 
   it('should clear a texture and read it back', async () => {
-    // Use forceFallbackAdapter to ensure it works in headless environments (software rasterizer)
-    const context = await createWebGPUContext(undefined, { forceFallbackAdapter: true });
+    const context = await createWebGPUContext();
     const device = context.device;
     const width = 64;
     const height = 64;

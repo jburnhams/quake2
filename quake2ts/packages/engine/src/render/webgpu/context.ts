@@ -39,12 +39,26 @@ export async function createWebGPUContext(
     throw new Error('WebGPU is not supported in this environment');
   }
 
-  const adapter = await navigator.gpu.requestAdapter({
+  const adapterOptions = {
     powerPreference: options?.powerPreference ?? 'high-performance',
     forceFallbackAdapter: options?.forceFallbackAdapter
-  });
+  };
+
+  const adapter = await navigator.gpu.requestAdapter(adapterOptions);
 
   if (!adapter) {
+    console.error('WebGPU Adapter Request Failed');
+    console.error('Options:', JSON.stringify(adapterOptions));
+    // @ts-ignore
+    console.error('Navigator.gpu:', navigator.gpu);
+
+    // Try to get info if available (Node environment)
+    if (typeof process !== 'undefined' && process.env) {
+       console.error('Environment:', {
+           VK_ICD_FILENAMES: process.env.VK_ICD_FILENAMES,
+           DISPLAY: process.env.DISPLAY
+       });
+    }
     throw new Error('Failed to request WebGPU adapter');
   }
 
