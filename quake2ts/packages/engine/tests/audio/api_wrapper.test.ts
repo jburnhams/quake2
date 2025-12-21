@@ -4,7 +4,7 @@ import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { SoundChannel, ATTN_NORM } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 import { MusicSystem } from '../../src/audio/music.js';
 import { AudioApi } from '../../src/audio/api.js';
 
@@ -25,7 +25,7 @@ describe('AudioApi', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const index = registry.register('test.wav', createBuffer(1));
+    const index = registry.register('test.wav', createMockAudioBuffer(1));
     const system = new AudioSystem({ context: controller, registry });
     const api = new AudioApi({ registry, system });
 

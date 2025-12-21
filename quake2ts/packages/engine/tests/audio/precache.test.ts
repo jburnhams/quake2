@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SoundPrecache } from '../../src/audio/precache.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioContextController } from '../../src/audio/context.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 class FakeVfs {
   constructor(private readonly files: Record<string, Uint8Array>) {}
@@ -76,7 +76,7 @@ describe('SoundPrecache', () => {
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
     const placeholderIndex = registry.registerName('sound/player/pain100_1.wav');
-    registry.register('sound/world/wind.wav', createBuffer(0.1));
+    registry.register('sound/world/wind.wav', createMockAudioBuffer(0.1));
 
     const vfs = new FakeVfs({ 'sound/player/pain100_1.wav': new Uint8Array(500) });
     const precache = new SoundPrecache({ vfs, registry, context: controller });

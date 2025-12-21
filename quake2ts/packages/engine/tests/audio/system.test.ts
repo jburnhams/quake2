@@ -3,14 +3,14 @@ import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { SoundChannel, calculateMaxAudibleDistance, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 describe('AudioSystem', () => {
   it('resumes the audio context on demand and wires the master graph', async () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+    const soundIndex = registry.register('world/ambience/windfly.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({ context: controller, registry, playerEntity: 1 });
 
@@ -37,7 +37,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+    const soundIndex = registry.register('world/ambience/windfly.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({ context: controller, registry, masterVolume: 0.25 });
     system.play({ entity: 1, channel: SoundChannel.Weapon, soundIndex, volume: 255, attenuation: 1 });
@@ -49,7 +49,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('weapons/blaster/fire.wav', createBuffer(0.5));
+    const soundIndex = registry.register('weapons/blaster/fire.wav', createMockAudioBuffer(0.5));
 
     const system = new AudioSystem({
       context: controller,
@@ -80,7 +80,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+    const soundIndex = registry.register('world/ambience/windfly.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({ context: controller, registry, playerEntity: 7 });
 
@@ -108,7 +108,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('weapons/blaster/fire.wav', createBuffer(0.25));
+    const soundIndex = registry.register('weapons/blaster/fire.wav', createMockAudioBuffer(0.25));
 
     const system = new AudioSystem({ context: controller, registry, playerEntity: 9 });
 
@@ -134,7 +134,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('player/foot/step.wav', createBuffer(0.25));
+    const soundIndex = registry.register('player/foot/step.wav', createMockAudioBuffer(0.25));
 
     const system = new AudioSystem({ context: controller, registry, playerEntity: 5 });
     system.play({ entity: 3, channel: SoundChannel.Auto, soundIndex, volume: 255, attenuation: 3 });
@@ -149,7 +149,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/water1.wav', createBuffer(2));
+    const soundIndex = registry.register('world/ambience/water1.wav', createMockAudioBuffer(2));
 
     const system = new AudioSystem({
       context: controller,
@@ -175,7 +175,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext(false);
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/water1.wav', createBuffer(2));
+    const soundIndex = registry.register('world/ambience/water1.wav', createMockAudioBuffer(2));
 
     const system = new AudioSystem({
       context: controller,
@@ -196,7 +196,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/ambience/windfly.wav', createBuffer(1));
+    const soundIndex = registry.register('world/ambience/windfly.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({ context: controller, registry, listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } } });
 
@@ -226,7 +226,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/wind.wav', createBuffer(1));
+    const soundIndex = registry.register('world/wind.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({ context: controller, registry, listener: { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } } });
     system.play({ entity: 3, channel: SoundChannel.Auto, soundIndex, volume: 255, attenuation: 1, origin: { x: 0, y: 0, z: 0 }, looping: true });
@@ -245,7 +245,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/occluded.wav', createBuffer(1));
+    const soundIndex = registry.register('world/occluded.wav', createMockAudioBuffer(1));
     const resolver = vi.fn().mockReturnValue({ gainScale: 0.3, lowpassHz: 900 });
 
     const system = new AudioSystem({
@@ -283,7 +283,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/late-occlude.wav', createBuffer(1));
+    const soundIndex = registry.register('world/late-occlude.wav', createMockAudioBuffer(1));
     const resolver = vi
       .fn()
       .mockReturnValueOnce(undefined)
@@ -321,7 +321,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/clear-occlude.wav', createBuffer(1));
+    const soundIndex = registry.register('world/clear-occlude.wav', createMockAudioBuffer(1));
     const resolver = vi
       .fn()
       .mockReturnValueOnce({ gainScale: 0.2, lowpassHz: 700 })
@@ -357,7 +357,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/move.wav', createBuffer(1));
+    const soundIndex = registry.register('world/move.wav', createMockAudioBuffer(1));
     const resolver = vi
       .fn()
       .mockReturnValueOnce({ gainScale: 0.5, lowpassHz: 1200 })
@@ -391,7 +391,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('world/debug.wav', createBuffer(1));
+    const soundIndex = registry.register('world/debug.wav', createMockAudioBuffer(1));
 
     const system = new AudioSystem({
       context: controller,
@@ -422,7 +422,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const soundIndex = registry.register('test.wav', createMockAudioBuffer(1.0));
     const system = new AudioSystem({ context: controller, registry });
 
     system.positionedSound({ x: 100, y: 0, z: 0 }, soundIndex, 255, ATTN_NORM);
@@ -446,7 +446,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const soundIndex = registry.register('test.wav', createMockAudioBuffer(1.0));
     const system = new AudioSystem({ context: controller, registry });
 
     const activeSound = system.play({
@@ -469,7 +469,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const soundIndex = registry.register('test.wav', createMockAudioBuffer(1.0));
     const system = new AudioSystem({ context: controller, registry, masterVolume: 0.5, sfxVolume: 0.8 });
 
     system.play({
@@ -489,7 +489,7 @@ describe('AudioSystem', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('test.wav', createBuffer(1.0));
+    const soundIndex = registry.register('test.wav', createMockAudioBuffer(1.0));
     const system = new AudioSystem({ context: controller, registry });
 
     fakeContext.currentTime = 5;

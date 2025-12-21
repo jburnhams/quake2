@@ -9,24 +9,24 @@ import type {
   DynamicsCompressorNodeLike,
   PannerNodeLike,
   BiquadFilterNodeLike,
-} from '../../src/audio/context.js';
+} from '@quake2ts/engine';
 
-class FakeAudioParam implements AudioParamLike {
+export class FakeAudioParam implements AudioParamLike {
   constructor(public value: number) {}
 }
 
-class FakeAudioNode implements AudioNodeLike {
+export class FakeAudioNode implements AudioNodeLike {
   readonly connections: AudioNodeLike[] = [];
   connect(destination: AudioNodeLike): void {
     this.connections.push(destination);
   }
 }
 
-class FakeGainNode extends FakeAudioNode implements GainNodeLike, DynamicsCompressorNodeLike {
+export class FakeGainNode extends FakeAudioNode implements GainNodeLike, DynamicsCompressorNodeLike {
   gain = new FakeAudioParam(1);
 }
 
-class FakePannerNode extends FakeAudioNode implements PannerNodeLike {
+export class FakePannerNode extends FakeAudioNode implements PannerNodeLike {
   positionX = new FakeAudioParam(0);
   positionY = new FakeAudioParam(0);
   positionZ = new FakeAudioParam(0);
@@ -36,13 +36,13 @@ class FakePannerNode extends FakeAudioNode implements PannerNodeLike {
   distanceModel?: string;
 }
 
-class FakeBiquadFilterNode extends FakeAudioNode implements BiquadFilterNodeLike {
+export class FakeBiquadFilterNode extends FakeAudioNode implements BiquadFilterNodeLike {
   frequency = new FakeAudioParam(0);
   Q = new FakeAudioParam(0);
   type = 'lowpass';
 }
 
-class FakeBufferSource extends FakeAudioNode implements AudioBufferSourceNodeLike {
+export class FakeBufferSource extends FakeAudioNode implements AudioBufferSourceNodeLike {
   buffer: AudioBufferLike | null = null;
   loop = false;
   playbackRate = new FakeAudioParam(1);
@@ -62,7 +62,7 @@ class FakeBufferSource extends FakeAudioNode implements AudioBufferSourceNodeLik
   duration?: number;
 }
 
-class FakeDestination extends FakeAudioNode implements AudioDestinationNodeLike {}
+export class FakeDestination extends FakeAudioNode implements AudioDestinationNodeLike {}
 
 export class FakeAudioContext implements AudioContextLike {
   readonly destination = new FakeDestination();
@@ -129,7 +129,24 @@ export class FakeAudioContext implements AudioContextLike {
   }
 }
 
-export const createBuffer = (duration: number): AudioBufferLike => ({ duration });
+export const createMockAudioBuffer = (duration = 1, channels = 2, sampleRate = 44100): AudioBufferLike => ({ duration });
 
-export const mockAudioContextFactory = (): FakeAudioContext => new FakeAudioContext();
+export const createMockAudioContext = (overrides?: Partial<AudioContext>): FakeAudioContext => new FakeAudioContext();
+
+export const createMockPannerNode = (overrides?: Partial<PannerNode>): FakePannerNode => {
+    const node = new FakePannerNode();
+    if (overrides) {
+        Object.assign(node, overrides);
+    }
+    return node;
+}
+
+export const createMockBufferSource = (buffer?: AudioBuffer): FakeBufferSource => {
+    const node = new FakeBufferSource();
+    if (buffer) {
+        node.buffer = buffer;
+    }
+    return node;
+}
+
 export { FakeBufferSource as MockAudioBufferSourceNode };

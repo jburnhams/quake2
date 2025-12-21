@@ -5,13 +5,13 @@ import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { MusicSystem } from '../../src/audio/music.js';
 import { SoundChannel } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 const createSystem = () => {
   const context = new FakeAudioContext();
   const controller = new AudioContextController(() => context);
   const registry = new SoundRegistry();
-  registry.register('player/pain.wav', createBuffer(0.25));
+  registry.register('player/pain.wav', createMockAudioBuffer(0.25));
   const system = new AudioSystem({ context: controller, registry, playerEntity: 1 });
   return { context, controller, registry, system };
 };
@@ -22,7 +22,7 @@ describe('AudioApi', () => {
     const api = new AudioApi({ registry, system });
     const index = api.soundindex('world/ambience/windfly.wav');
 
-    registry.register('world/ambience/windfly.wav', createBuffer(0.75));
+    registry.register('world/ambience/windfly.wav', createMockAudioBuffer(0.75));
 
     expect(index).toBeGreaterThan(0);
     expect(registry.find('world/ambience/windfly.wav')).toBe(index);
@@ -34,7 +34,7 @@ describe('AudioApi', () => {
   it('supports positioned, looping, and ambient helpers plus entity cleanup', () => {
     const { registry, system } = createSystem();
     const api = new AudioApi({ registry, system });
-    const ambientIndex = registry.register('world/wind.wav', createBuffer(0.5));
+    const ambientIndex = registry.register('world/wind.wav', createMockAudioBuffer(0.5));
 
     api.loop_sound(2, SoundChannel.Body, ambientIndex, 200, 1);
     api.positioned_sound({ x: 10, y: 0, z: 0 }, ambientIndex, 200, 1);
