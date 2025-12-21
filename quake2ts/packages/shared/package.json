@@ -28,7 +28,9 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "vitest run"
+    "test": "pnpm run test:unit",
+    "test:unit": "TEST_TYPE=unit vitest run",
+    "test:integration": "TEST_TYPE=integration vitest run"
   },
   "devDependencies": {
     "gl-matrix": "^3.4.4",

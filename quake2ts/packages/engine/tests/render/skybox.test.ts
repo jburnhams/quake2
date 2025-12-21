@@ -6,11 +6,15 @@ import {
 } from '../../src/render/skybox.js';
 import { mat4 } from 'gl-matrix';
 
-const mockLocations = {
-  u_viewProjectionNoTranslation: { id: 1 },
-  u_scroll: { id: 2 },
-  u_skybox: { id: 3 },
-};
+const { mockLocations } = vi.hoisted(() => {
+  return {
+    mockLocations: {
+      u_viewProjectionNoTranslation: { id: 1 },
+      u_scroll: { id: 2 },
+      u_skybox: { id: 3 },
+    }
+  };
+});
 
 vi.mock('../../src/render/shaderProgram.js', () => {
   const getUniformLocation = vi.fn(
@@ -84,6 +88,37 @@ describe('skybox', () => {
         uniform1i: vi.fn(),
         depthMask: vi.fn(),
         drawArrays: vi.fn(),
+        createShader: vi.fn().mockReturnValue({}),
+        shaderSource: vi.fn(),
+        compileShader: vi.fn(),
+        getShaderParameter: vi.fn().mockReturnValue(true),
+        deleteShader: vi.fn(),
+        createProgram: vi.fn().mockReturnValue({}),
+        attachShader: vi.fn(),
+        linkProgram: vi.fn(),
+        getProgramParameter: vi.fn().mockReturnValue(true),
+        bindAttribLocation: vi.fn(),
+        createVertexArray: vi.fn().mockReturnValue({}),
+        bindVertexArray: vi.fn(),
+        deleteVertexArray: vi.fn(),
+        createBuffer: vi.fn().mockReturnValue({}),
+        bindBuffer: vi.fn(),
+        bufferData: vi.fn(),
+        deleteBuffer: vi.fn(),
+        enableVertexAttribArray: vi.fn(),
+        vertexAttribPointer: vi.fn(),
+        vertexAttribDivisor: vi.fn(),
+        getUniformLocation: vi.fn().mockImplementation((p, name) => mockLocations[name] || {}),
+        uniformMatrix4fv: vi.fn(),
+        uniform2f: vi.fn(),
+        uniform1i: vi.fn(),
+        createTexture: vi.fn().mockReturnValue({}),
+        bindTexture: vi.fn(),
+        texParameteri: vi.fn(),
+        texImage2D: vi.fn(),
+        activeTexture: vi.fn(),
+        deleteTexture: vi.fn(),
+        useProgram: vi.fn(),
         TRIANGLES: 0x0004,
       } as any);
 

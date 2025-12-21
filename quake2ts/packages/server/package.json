@@ -15,7 +15,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs && tsc --emitDeclarationOnly",
     "dev": "tsup src/index.ts --format esm,cjs --watch --dts",
-    "test": "vitest run"
+    "test": "pnpm run test:unit",
+    "test:unit": "TEST_TYPE=unit vitest run",
+    "test:integration": "TEST_TYPE=integration vitest run"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",

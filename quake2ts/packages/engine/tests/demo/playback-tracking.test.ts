@@ -2,24 +2,55 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DemoPlaybackController, PlaybackState, FrameOffset, TimeOffset } from '../../src/demo/playback.js';
 import { ResourceLoadTracker, ResourceLoadLog } from '../../src/assets/resourceTracker.js';
 import { DemoReader } from '../../src/demo/demoReader.js';
+import { BinaryStream } from '@quake2ts/shared';
 
-// Mock DemoReader
+// Mock DemoReader with extension
 vi.mock('../../src/demo/demoReader.js', () => {
   return {
-    DemoReader: vi.fn().mockImplementation(() => ({
-      hasMore: vi.fn().mockReturnValue(true),
-      readNextBlock: vi.fn().mockReturnValue({ data: new Uint8Array(0) }),
-      reset: vi.fn(),
-      getMessageCount: vi.fn().mockReturnValue(100),
-      getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
-      getOffset: vi.fn().mockReturnValue(0),
-      seekToMessage: vi.fn().mockReturnValue(true)
-    }))
+    DemoReader: vi.fn().mockImplementation(() => {
+        return {
+            hasMore: vi.fn().mockReturnValue(true),
+            readNextBlock: vi.fn().mockReturnValue({ data: new Uint8Array(0) }),
+            reset: vi.fn(),
+            getMessageCount: vi.fn().mockReturnValue(100),
+            getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
+            getOffset: vi.fn().mockReturnValue(0),
+            seekToMessage: vi.fn().mockReturnValue(true)
+        };
+    })
   };
 });
 
-// Mock NetworkMessageParser
+// Mock DemoReader without extension
+vi.mock('../../src/demo/demoReader', () => {
+    return {
+      DemoReader: vi.fn().mockImplementation(() => {
+          return {
+              hasMore: vi.fn().mockReturnValue(true),
+              readNextBlock: vi.fn().mockReturnValue({ data: new Uint8Array(0) }),
+              reset: vi.fn(),
+              getMessageCount: vi.fn().mockReturnValue(100),
+              getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
+              getOffset: vi.fn().mockReturnValue(0),
+              seekToMessage: vi.fn().mockReturnValue(true)
+          };
+      })
+    };
+  });
+
+// Mock NetworkMessageParser with extension
 vi.mock('../../src/demo/parser.js', () => {
+    return {
+        NetworkMessageParser: vi.fn().mockImplementation(() => ({
+            setProtocolVersion: vi.fn(),
+            parseMessage: vi.fn(),
+            getProtocolVersion: vi.fn().mockReturnValue(34)
+        }))
+    };
+});
+
+// Mock NetworkMessageParser without extension
+vi.mock('../../src/demo/parser', () => {
     return {
         NetworkMessageParser: vi.fn().mockImplementation(() => ({
             setProtocolVersion: vi.fn(),
@@ -34,6 +65,7 @@ describe('DemoPlaybackController Tracking', () => {
   let tracker: ResourceLoadTracker;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     controller = new DemoPlaybackController();
     // Load a dummy demo to initialize reader
     controller.loadDemo(new ArrayBuffer(10));
@@ -50,13 +82,36 @@ describe('DemoPlaybackController Tracking', () => {
 
   it('playWithTracking should start and stop tracking in fast forward mode', async () => {
     const reader = (controller as any).reader;
+
+    if (!vi.isMockFunction(reader.hasMore)) {
+        vi.spyOn(reader, 'hasMore');
+        vi.spyOn(reader, 'readNextBlock');
+    }
+
+    const mockHasMore = (reader.hasMore as any);
+    const mockReadNextBlock = (reader.readNextBlock as any);
+
     let callCount = 0;
-    reader.hasMore.mockImplementation(() => {
+    mockHasMore.mockImplementation(() => {
         return callCount < 5;
     });
-    reader.readNextBlock.mockImplementation(() => {
+
+    // Create a dummy BinaryStream-like object to satisfy NetworkMessageParser if real one runs
+    const dummyData = {
+        hasBytes: () => false, // Empty
+        readByte: () => -1,
+        readShort: () => 0,
+        readLong: () => 0,
+        readFloat: () => 0,
+        readString: () => '',
+        readData: () => new Uint8Array(0),
+        getReadPosition: () => 0,
+        setReadPosition: () => {}
+    };
+
+    mockReadNextBlock.mockImplementation(() => {
         callCount++;
-        if (callCount <= 5) return { data: new Uint8Array(0) };
+        if (callCount <= 5) return { data: dummyData };
         return null;
     });
 
@@ -74,48 +129,31 @@ describe('DemoPlaybackController Tracking', () => {
 
     const reader = (controller as any).reader;
 
-    // We mock seekToMessage to succeed.
-    // In playback.ts: playFrom(start) -> seek(10) -> internal seek logic calls reader.seekToMessage.
-    reader.seekToMessage.mockReturnValue(true);
+    if (!vi.isMockFunction(reader.seekToMessage)) {
+        vi.spyOn(reader, 'seekToMessage');
+        vi.spyOn(reader, 'hasMore');
+        vi.spyOn(reader, 'readNextBlock');
+        vi.spyOn(reader, 'reset');
+    }
 
-    // Also we need to make sure processNextFrame keeps returning data so it doesn't stop early.
-    reader.hasMore.mockReturnValue(true);
-    reader.readNextBlock.mockReturnValue({ data: new Uint8Array(0) });
+    const mockSeekToMessage = (reader.seekToMessage as any);
+    const mockHasMore = (reader.hasMore as any);
+    const mockReadNextBlock = (reader.readNextBlock as any);
+
+    const dummyData = {
+        hasBytes: () => false,
+        readByte: () => -1
+    };
+
+    mockSeekToMessage.mockReturnValue(true);
+    mockHasMore.mockReturnValue(true);
+    mockReadNextBlock.mockReturnValue({ data: dummyData });
 
     await controller.playRangeWithTracking(start, end, tracker, { fastForward: true });
 
     expect(tracker.startTracking).toHaveBeenCalled();
     expect(tracker.stopTracking).toHaveBeenCalled();
 
-    // It seems seekToMessage is called via private seek().
-    // If seek logic decides simple advancement is enough (currentFrame + 1), it skips seekToMessage.
-    // Initial currentFrameIndex is -1. start frame is 10.
-    // seek(10) checks snapshots... falls back to reader.reset() then fast forward loop?
-    // Wait, my mock reset() does nothing.
-    // My seek implementation in playback.ts:
-    /*
-      // If no better start point found, restart from 0
-      if (startIndex === -1 && this.currentFrameIndex > frameNumber) {
-          this.reader.reset();
-          this.currentFrameIndex = -1;
-          this.currentProtocolVersion = 0;
-      } else if (startIndex === -1) {
-          this.reader.reset();
-          this.currentFrameIndex = -1;
-          this.currentProtocolVersion = 0;
-      }
-
-      // ...
-
-      // 2. Fast forward loop
-      while (this.currentFrameIndex < frameNumber) { ... }
-    */
-    // So it resets and loops. It does NOT call reader.seekToMessage() unless a snapshot is restored.
-    // Snapshots map is empty initially.
-    // So reader.seekToMessage is NOT called in this path.
-    // That explains why the test fails.
-
-    // We should verify that it resets instead.
     expect(reader.reset).toHaveBeenCalled();
   });
 });
