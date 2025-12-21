@@ -340,3 +340,8 @@ export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
 
 // Export ENT tools
 export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type ValidationResult } from './assets/ent.js';
+
+// WebGPU
+export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
+export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
+export { IRenderer, IWebGPURenderer } from './render/interface.js';
