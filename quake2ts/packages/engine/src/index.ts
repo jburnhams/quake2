@@ -51,8 +51,8 @@ export function createEngine(imports: EngineImports): EngineExports {
 }
 
 export { FixedTimestepLoop };
-export { ConfigStringRegistry };
-export { Cvar, CvarRegistry } from './cvars.js';
+export { ConfigStringRegistry, type ConfigStringEntry } from './configstrings.js';
+export { Cvar, CvarRegistry, type CvarChangeHandler } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
 export { PakArchive, PakParseError, calculatePakChecksum } from './assets/pak.js';

@@ -115,22 +115,22 @@ This section covers migration of shared testing utilities that form the foundati
 
 ### 5. Create Common Type Factories (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **5.1** Create `test-utils/src/shared/factories.ts` file
+- [x] **5.1** Create `test-utils/src/shared/factories.ts` file
 
-- [ ] **5.2** Add `createConfigStringMock()` factory
+- [x] **5.2** Add `createConfigStringMock()` factory
   - Signature: `createConfigStringMock(index: number, value: string): ConfigString`
 
-- [ ] **5.3** Add `createConfigStringArrayMock()` factory
+- [x] **5.3** Add `createConfigStringArrayMock()` factory
   - Signature: `createConfigStringArrayMock(entries?: Record<number, string>): ConfigString[]`
   - Pre-populate common indices (models, sounds, images)
 
-- [ ] **5.4** Add `createCvarMock()` factory
+- [x] **5.4** Add `createCvarMock()` factory
   - Signature: `createCvarMock(name: string, value: string, flags?: number): Cvar`
 
-- [ ] **5.5** Export all shared factories from `test-utils/src/index.ts`
+- [x] **5.5** Export all shared factories from `test-utils/src/index.ts`
 
 ---
 
