@@ -1,6 +1,9 @@
 import { Entity, GameExports, GameImports } from '@quake2ts/game';
 import { vi } from 'vitest';
 
+/**
+ * Interface for mock GameState.
+ */
 export interface GameState {
     levelName: string;
     time: number;
