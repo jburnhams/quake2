@@ -1,19 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
 import { DemoReader } from '../../src/demo/demoReader.js';
 import { DemoAnalyzer } from '../../src/demo/analyzer.js';
 import { DemoHeader, ServerInfo } from '../../src/demo/analysis.js';
 
 // Mock dependencies
 vi.mock('../../src/demo/demoReader.js');
-vi.mock('../../src/demo/analyzer.js');
+vi.mock('../../src/demo/demoReader');
+
+const analyzerMockImpl = () => mockAnalyzer;
+vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: vi.fn().mockImplementation(analyzerMockImpl) }));
+vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: vi.fn().mockImplementation(analyzerMockImpl) }));
+
+let mockAnalyzer: any;
 
 describe('DemoPlaybackController Metadata', () => {
-  let controller: DemoPlaybackController;
-  let mockAnalyzer: any;
+  let controller: any;
 
-  beforeEach(() => {
-    controller = new DemoPlaybackController();
+  beforeEach(async () => {
+    vi.resetModules();
 
     // Mock DemoAnalyzer to return fake analysis results
     mockAnalyzer = {
@@ -36,7 +40,10 @@ describe('DemoPlaybackController Metadata', () => {
         weaponStats: new Map()
       })
     };
-    (DemoAnalyzer as any).mockImplementation(() => mockAnalyzer);
+
+    // Dynamic import to pick up new mocks
+    const { DemoPlaybackController } = await import('../../src/demo/playback.js');
+    controller = new DemoPlaybackController();
   });
 
   it('should return null metadata if no demo is loaded', () => {

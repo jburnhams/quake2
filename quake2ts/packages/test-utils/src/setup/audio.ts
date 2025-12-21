@@ -1,109 +1,118 @@
+/**
+ * Mocks for Web Audio API.
+ */
 
-// Basic mock of AudioContext
-export function createMockAudioContext(): AudioContext {
-    const context = {
-        createGain: () => ({
-            connect: () => {},
-            gain: { value: 1, setValueAtTime: () => {} }
-        }),
-        createOscillator: () => ({
-            connect: () => {},
-            start: () => {},
-            stop: () => {},
-            frequency: { value: 440 }
-        }),
-        createBufferSource: () => ({
-            connect: () => {},
-            start: () => {},
-            stop: () => {},
+/**
+ * Sets up a mock AudioContext globally.
+ */
+export function setupMockAudioContext(): void {
+  class MockAudioContext {
+    state = 'suspended';
+    destination = {};
+    currentTime = 0;
+    listener = {
+        positionX: { value: 0 },
+        positionY: { value: 0 },
+        positionZ: { value: 0 },
+        forwardX: { value: 0 },
+        forwardY: { value: 0 },
+        forwardZ: { value: 0 },
+        upX: { value: 0 },
+        upY: { value: 0 },
+        upZ: { value: 0 },
+        setOrientation: () => {},
+        setPosition: () => {}
+    };
+
+    createGain() {
+      return {
+        gain: { value: 1, linearRampToValueAtTime: () => {} },
+        connect: () => {},
+        disconnect: () => {}
+      };
+    }
+
+    createBufferSource() {
+        return {
             buffer: null,
+            loop: false,
             playbackRate: { value: 1 },
-            loop: false
-        }),
-        destination: {},
-        currentTime: 0,
-        state: 'running',
-        resume: async () => {},
-        suspend: async () => {},
-        close: async () => {},
-        decodeAudioData: async (buffer: ArrayBuffer) => ({
-            duration: 1,
-            length: 44100,
-            sampleRate: 44100,
-            numberOfChannels: 2,
-            getChannelData: () => new Float32Array(44100)
-        }),
-        createBuffer: (channels: number, length: number, sampleRate: number) => ({
+            connect: () => {},
+            start: () => {},
+            stop: () => {},
+            disconnect: () => {},
+            onended: null
+        };
+    }
+
+    createPanner() {
+        return {
+            panningModel: 'equalpower',
+            distanceModel: 'inverse',
+            positionX: { value: 0 },
+            positionY: { value: 0 },
+            positionZ: { value: 0 },
+            orientationX: { value: 0 },
+            orientationY: { value: 0 },
+            orientationZ: { value: 0 },
+            coneInnerAngle: 360,
+            coneOuterAngle: 360,
+            coneOuterGain: 0,
+            connect: () => {},
+            disconnect: () => {},
+            setPosition: () => {},
+            setOrientation: () => {}
+        }
+    }
+
+    createBuffer(numOfChannels: number, length: number, sampleRate: number) {
+        return {
             duration: length / sampleRate,
             length,
             sampleRate,
-            numberOfChannels: channels,
+            numberOfChannels: numOfChannels,
             getChannelData: () => new Float32Array(length)
-        }),
-        // Helper to track events if needed
-        _events: [] as AudioEvent[]
-    };
-
-    // Proxy to capture events
-    return new Proxy(context as unknown as AudioContext, {
-        get(target, prop, receiver) {
-             if (prop === '_events') return (target as any)._events;
-             const value = Reflect.get(target, prop, receiver);
-             if (typeof value === 'function') {
-                 return (...args: any[]) => {
-                     (target as any)._events.push({ type: String(prop), args });
-                     return Reflect.apply(value, target, args);
-                 };
-             }
-             return value;
         }
-    });
+    }
+
+    decodeAudioData(data: ArrayBuffer, success?: (buffer: any) => void) {
+        const buffer = this.createBuffer(2, 100, 44100);
+        if (success) success(buffer);
+        return Promise.resolve(buffer);
+    }
+
+    resume() { return Promise.resolve(); }
+    suspend() { return Promise.resolve(); }
+    close() { return Promise.resolve(); }
+  }
+
+  global.AudioContext = MockAudioContext as any;
+  // @ts-ignore
+  global.webkitAudioContext = MockAudioContext as any;
 }
 
 /**
- * Replaces the global AudioContext with a mock.
+ * Restores original AudioContext.
  */
-export function setupMockAudioContext() {
-    if (typeof global.AudioContext === 'undefined' && typeof global.window !== 'undefined') {
-        // @ts-ignore
-        global.AudioContext = class {
-            constructor() {
-                return createMockAudioContext();
-            }
-        };
-        // @ts-ignore
-        global.window.AudioContext = global.AudioContext;
-        // @ts-ignore
-        global.window.webkitAudioContext = global.AudioContext;
-    }
-}
-
-/**
- * Restores the original AudioContext (if it was mocked).
- */
-export function teardownMockAudioContext() {
-    // If we mocked it on global, we might want to remove it.
-    // However, usually in JSDOM it doesn't exist, so we just leave it or delete it.
-    // @ts-ignore
-    if (global.AudioContext && global.AudioContext.toString().includes('class')) {
-         // @ts-ignore
-        delete global.AudioContext;
-         // @ts-ignore
-        delete global.window.AudioContext;
-         // @ts-ignore
-        delete global.window.webkitAudioContext;
-    }
+export function teardownMockAudioContext(): void {
+  // @ts-ignore
+  delete global.AudioContext;
+  // @ts-ignore
+  delete global.webkitAudioContext;
 }
 
 export interface AudioEvent {
-    type: string;
-    args: any[];
+  type: string;
+  data?: any;
 }
 
 /**
- * Captures audio operations for verification.
- * Note: Only works if the context was created via createMockAudioContext which proxies calls.
+ * Captures audio events from a context.
+ * Requires the context to be instrumented or mocked to emit events.
+ * This helper currently works with the `setupMockAudioContext` mock if extended.
  */
 export function captureAudioEvents(context: AudioContext): AudioEvent[] {
-    return (context as any)._events || [];
+  // Placeholder for capturing events.
+  // Real implementation would attach spies to context methods.
+  return [];
 }

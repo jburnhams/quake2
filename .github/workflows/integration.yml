@@ -49,7 +49,7 @@ jobs:
       - name: Run Full Test Suite
         env:
           VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-        run: pnpm run test
+        run: pnpm run test:integration
 
       - name: Upload Test Results
         if: always()

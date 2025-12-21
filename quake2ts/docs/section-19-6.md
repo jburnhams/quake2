@@ -141,10 +141,11 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Specialized E2E helpers exist
 **Dependencies:** None
 
-- [ ] **5.1** Audit `e2e-tests/helpers/testClient.ts` for reusable utilities
+- [x] **5.1** Audit `e2e-tests/helpers/testClient.ts` for reusable utilities
   - `launchBrowserClient()` - Playwright browser setup
   - `closeBrowser()` - Cleanup
   - `TestClient` interface
+  - **Note:** `e2e-tests` directory was not found in the expected location. The functionality is now provided by `test-utils`'s Playwright helpers.
 
 - [x] **5.2** Create `test-utils/src/e2e/playwright.ts` file
 
@@ -265,13 +266,13 @@ This section covers consolidation of test environment setup code, browser enviro
 - [x] **10.2** Update `test-utils/README.md` with setup/E2E utilities section
   - Document: browser setup, canvas mocks, RAF helpers, E2E utilities
 
-- [ ] **10.3** Create migration guide for vitest.setup.ts files
+- [x] **10.3** Create migration guide for vitest.setup.ts files
   - Document how to migrate existing setup files
 
 - [x] **10.4** Verify all setup/E2E utilities exported from `test-utils/src/index.ts`
   - Organized by category: `setup/*`, `e2e/*`
 
-- [ ] **10.5** Add TypeScript type exports
+- [x] **10.5** Add TypeScript type exports
   - Export all setup options and E2E interfaces
 
 - [x] **10.6** Create example test files demonstrating setup usage

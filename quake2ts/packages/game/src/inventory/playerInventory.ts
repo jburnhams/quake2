@@ -155,6 +155,7 @@ export interface PlayerClient {
     oldvelocity?: Vec3;
     oldviewangles?: Vec3;
     oldgroundentity?: any; // Entity
+    viewoffset?: Vec3; // View offset (e.g. crouching)
     owned_sphere?: any; // Entity
     score?: number; // Added score property for scoreboard
     ping?: number; // Added for lag compensation

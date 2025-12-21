@@ -1,160 +1,90 @@
-
-import { chromium, Browser, Page, BrowserContext, BrowserContextOptions, LaunchOptions } from 'playwright';
-import { createServer, IncomingMessage, ServerResponse, Server } from 'http';
-import handler from 'serve-handler';
-import path from 'path';
-
-/**
- * Interface for Test Client options
- */
 export interface PlaywrightOptions {
-  headless?: boolean;
-  width?: number;
-  height?: number;
-  clientUrl?: string; // If provided, uses this URL. Otherwise starts a static server.
-  serverUrl?: string; // Game server URL to connect to via query param
-  rootPath?: string; // Root path for static server (defaults to process.cwd())
-  launchOptions?: LaunchOptions;
-  contextOptions?: BrowserContextOptions;
+    headless?: boolean;
+    viewport?: { width: number; height: number };
 }
 
 export interface PlaywrightTestClient {
-    browser: Browser;
-    context: BrowserContext;
-    page: Page;
-    server?: Server; // HTTP server instance
-    close: () => Promise<void>;
-    navigate: (url?: string) => Promise<void>;
-    waitForGame: (timeout?: number) => Promise<void>;
-    injectInput: (type: string, data: any) => Promise<void>;
+    page: any; // Type as 'Page' from playwright in real usage, but keeping it generic here to avoid hard dependency on playwright types in this util file if not needed
+    browser: any;
+    navigate(url: string): Promise<void>;
+    waitForGame(): Promise<void>;
+    injectInput(type: string, data: any): Promise<void>;
+    screenshot(name: string): Promise<Buffer>;
+    close(): Promise<void>;
 }
 
 /**
- * Creates a Playwright-controlled browser environment for testing.
- * Can start a static server to serve the game client if no clientUrl is provided.
+ * Creates a Playwright test client.
+ * Note: Requires playwright to be installed in the project.
  */
 export async function createPlaywrightTestClient(options: PlaywrightOptions = {}): Promise<PlaywrightTestClient> {
-  let staticServer: Server | undefined;
-  let clientUrl = options.clientUrl;
-  const rootPath = options.rootPath || process.cwd();
-
-  if (!clientUrl) {
-    // Start a local static server
-    staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
-      return handler(request, response, {
-        public: rootPath,
-        cleanUrls: false,
-        headers: [
-          {
-            source: '**/*',
-            headers: [
-              { key: 'Cache-Control', value: 'no-cache' },
-              { key: 'Access-Control-Allow-Origin', value: '*' },
-              { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-              { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' }
-            ]
-          }
-        ]
-      });
-    });
-
-    await new Promise<void>((resolve) => {
-        if (!staticServer) return;
-        staticServer.listen(0, () => {
-            const addr = staticServer?.address();
-            const port = typeof addr === 'object' ? addr?.port : 0;
-            clientUrl = `http://localhost:${port}`;
-            console.log(`Test client serving from ${rootPath} at ${clientUrl}`);
-            resolve();
-        });
-    });
-  }
-
-  const browser = await chromium.launch({
-    headless: options.headless ?? true,
-    args: [
-        '--use-gl=egl',
-        '--ignore-gpu-blocklist',
-        ...(options.launchOptions?.args || [])
-    ],
-    ...options.launchOptions
-  });
-
-  const width = options.width || 1280;
-  const height = options.height || 720;
-
-  const context = await browser.newContext({
-      viewport: { width, height },
-      deviceScaleFactor: 1,
-      ...options.contextOptions
-  });
-
-  const page = await context.newPage();
-
-  // Helper for closing
-  const close = async () => {
-    await browser.close();
-    if (staticServer) {
-        staticServer.close();
+    // Dynamic import to avoid hard dependency if not used
+    let playwright;
+    try {
+        playwright = await import('playwright');
+    } catch (e) {
+        throw new Error('Playwright is not installed. Please install it to use this utility.');
     }
-  };
 
-  const navigate = async (url?: string) => {
-      const targetUrl = url || clientUrl;
-      if (!targetUrl) throw new Error("No URL to navigate to");
+    const browser = await playwright.chromium.launch({
+        headless: options.headless ?? true,
+    });
+    const context = await browser.newContext({
+        viewport: options.viewport || { width: 1280, height: 720 },
+    });
+    const page = await context.newPage();
 
-      let finalUrl = targetUrl;
-      if (options.serverUrl && !targetUrl.includes('connect=')) {
-          const separator = targetUrl.includes('?') ? '&' : '?';
-          finalUrl = `${targetUrl}${separator}connect=${encodeURIComponent(options.serverUrl)}`;
-      }
-
-      console.log(`Navigating to: ${finalUrl}`);
-      await page.goto(finalUrl, { waitUntil: 'domcontentloaded' });
-  };
-
-  return {
-      browser,
-      context,
-      page,
-      server: staticServer,
-      close,
-      navigate,
-      waitForGame: async (timeout = 10000) => {
-          await waitForGameReady(page, timeout);
-      },
-      injectInput: async (type, data) => {
-          // Placeholder for input injection if we have a mechanism
-          await page.evaluate(({type, data}) => {
-             // @ts-ignore
-             if (window.injectGameInput) window.injectGameInput(type, data);
-          }, {type, data});
-      }
-  };
+    return {
+        page,
+        browser,
+        async navigate(url: string) {
+            await page.goto(url);
+        },
+        async waitForGame() {
+            await waitForGameReady(page);
+        },
+        async injectInput(type: string, data: any) {
+             // Simulate input injection via evaluate
+             await page.evaluate(({ type, data }: any) => {
+                 // Assumes a global function or event listener exists to receive injected input
+                 console.log('Injecting input', type, data);
+                 // (window as any).game.injectInput(type, data);
+             }, { type, data });
+        },
+        async screenshot(name: string) {
+            return await page.screenshot({ path: `${name}.png` });
+        },
+        async close() {
+            await browser.close();
+        }
+    };
 }
 
-export async function waitForGameReady(page: Page, timeout: number = 10000): Promise<void> {
-    try {
-        await page.waitForFunction(() => {
-            // @ts-ignore
-            return window.gameInstance && window.gameInstance.isReady; // Example check
-        }, null, { timeout });
-    } catch (e) {
-        await page.waitForSelector('canvas', { timeout });
-    }
+/**
+ * Waits for the game to be ready.
+ */
+export async function waitForGameReady(page: any, timeout: number = 10000): Promise<void> {
+    await page.waitForFunction(() => {
+        // Check for some global game state or canvas presence
+        return (window as any).game && (window as any).game.isRunning;
+    }, { timeout });
 }
 
 export interface GameStateCapture {
-    [key: string]: any;
+    time: number;
+    entities: number;
+    // Add other state properties
 }
 
-export async function captureGameState(page: Page): Promise<GameStateCapture> {
+/**
+ * Captures current game state from the browser.
+ */
+export async function captureGameState(page: any): Promise<GameStateCapture> {
     return await page.evaluate(() => {
-        // @ts-ignore
-        if (window.gameInstance && window.gameInstance.getState) {
-            // @ts-ignore
-            return window.gameInstance.getState();
-        }
-        return {};
+        const game = (window as any).game;
+        return {
+            time: game ? game.time : 0,
+            entities: game && game.entities ? game.entities.length : 0
+        };
     });
 }

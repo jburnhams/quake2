@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoAnalyzer } from '../../src/demo/analyzer.js';
 import { DemoEventType } from '../../src/demo/analysis.js';
 
 // Mock dependencies
@@ -14,26 +13,34 @@ const mockNetworkMessageParser = {
   getProtocolVersion: vi.fn().mockReturnValue(31),
 };
 
-vi.mock('../../src/demo/demoReader.js', () => ({
-  DemoReader: vi.fn().mockImplementation(() => mockDemoReader)
-}));
+const demoReaderMockImpl = () => mockDemoReader;
+vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: vi.fn().mockImplementation(demoReaderMockImpl) }));
+vi.mock('../../src/demo/demoReader', () => ({ DemoReader: vi.fn().mockImplementation(demoReaderMockImpl) }));
 
-vi.mock('../../src/demo/parser.js', () => ({
-  NetworkMessageParser: vi.fn().mockImplementation((data, handler) => {
-    // Expose handler so we can trigger callbacks in tests
+const parserMockImpl = (data, handler) => {
     (global as any).mockParserHandler = handler;
     return mockNetworkMessageParser;
-  }),
+};
+vi.mock('../../src/demo/parser.js', () => ({
+  NetworkMessageParser: vi.fn().mockImplementation(parserMockImpl),
+  createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
+  createEmptyProtocolPlayerState: () => ({}),
+}));
+vi.mock('../../src/demo/parser', () => ({
+  NetworkMessageParser: vi.fn().mockImplementation(parserMockImpl),
   createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
   createEmptyProtocolPlayerState: () => ({}),
 }));
 
 describe('DemoAnalyzer', () => {
-  let analyzer: DemoAnalyzer;
+  let analyzer: any; // Dynamic type
   let buffer: ArrayBuffer;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules();
     buffer = new ArrayBuffer(0);
+    // Dynamic import to respect resetModules
+    const { DemoAnalyzer } = await import('../../src/demo/analyzer.js');
     analyzer = new DemoAnalyzer(buffer);
     vi.clearAllMocks();
   });
@@ -56,7 +63,7 @@ describe('DemoAnalyzer', () => {
     }
 
     expect(result.events.length).toBeGreaterThan(0);
-    const pickupEvent = result.events.find(e => e.type === DemoEventType.Pickup);
+    const pickupEvent = result.events.find((e: any) => e.type === DemoEventType.Pickup);
     expect(pickupEvent).toBeDefined();
     expect(pickupEvent?.description).toContain('You got the Shotgun');
   });
@@ -67,15 +74,5 @@ describe('DemoAnalyzer', () => {
     mockDemoReader.readNextBlock.mockReturnValue({ length: 10, data: new ArrayBuffer(10) });
 
     analyzer.analyze();
-    // We need to trigger parseMessage for each loop iteration.
-    // The analyzer loop calls `new NetworkMessageParser` each time.
-    // So we need to capture the handlers.
-
-    // Since `analyze` runs synchronously, we can't intervene between frames easily with this mock setup
-    // unless `readNextBlock` triggers side effects or we change how we mock.
-
-    // Actually, `analyze` loops until `hasMore` is false.
-    // The `NetworkMessageParser` is instantiated inside the loop.
-    // So `vi.mock` factory is called multiple times? No, the class constructor is called.
   });
 });

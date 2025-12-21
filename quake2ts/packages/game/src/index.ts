@@ -148,6 +148,7 @@ export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
 import { SerializedGameState, createSerializedGameState, applySerializedGameState } from './save/adapter.js';
 export { SerializedGameState };
+export * from './demo/serializer.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
 import { createPlayerInventory, PlayerClient, PowerupId, WeaponId } from './inventory/index.js';
