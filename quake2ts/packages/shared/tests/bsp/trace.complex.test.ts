@@ -8,7 +8,7 @@ import {
   makeLeaf,
   makeNode,
   makePlane,
-} from './test-helpers.js';
+} from '@quake2ts/test-utils';
 
 describe('traceBox complex geometry cases', () => {
   it('should collide with an internal corner', () => {
