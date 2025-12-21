@@ -7,7 +7,7 @@ import type { TraceResult, CollisionPlane } from '@quake2ts/shared/bsp/collision
 // `intersects`, `stairTrace`, `ladderTrace` are in `packages/shared/src/testing.ts`.
 // I will re-export them here for test-utils consumers.
 
-export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared/testing';
+export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared';
 
 export interface TraceMock extends Partial<TraceResult> {
     fraction: number;
