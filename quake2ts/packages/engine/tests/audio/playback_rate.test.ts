@@ -3,7 +3,7 @@ import { AudioSystem, AudioSystemOptions } from '../../src/audio/system.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioContextController } from '../../src/audio/context.js';
 import { SoundChannel } from '../../src/audio/constants.js';
-import { mockAudioContextFactory, MockAudioBufferSourceNode } from './fakes.js';
+import { createMockAudioContext, MockAudioBufferSourceNode } from '@quake2ts/test-utils';
 
 describe('AudioSystem Playback Rate', () => {
   let context: AudioContextController;
@@ -11,11 +11,10 @@ describe('AudioSystem Playback Rate', () => {
   let system: AudioSystem;
 
   beforeEach(async () => {
-    context = new AudioContextController(mockAudioContextFactory);
+    context = new AudioContextController(createMockAudioContext);
     registry = new SoundRegistry(context);
 
     // Create a dummy buffer in registry
-    const buffer = context.getContext().createBufferSource().buffer; // Actually this is null in mock unless we set it
     // MockSoundRegistry logic?
     // We can just spy on registry.get
     vi.spyOn(registry, 'get').mockReturnValue({ duration: 1 } as any);

@@ -175,6 +175,10 @@ export {
   type GainNodeLike,
   type BiquadFilterNodeLike,
   type PannerNodeLike,
+  type AudioDestinationNodeLike,
+  type AudioParamLike,
+  type AudioBufferSourceNodeLike,
+  type DynamicsCompressorNodeLike,
 } from './audio/context.js';
 export { SoundRegistry } from './audio/registry.js';
 export { SoundPrecache, type SoundPrecacheOptions, type SoundPrecacheReport } from './audio/precache.js';

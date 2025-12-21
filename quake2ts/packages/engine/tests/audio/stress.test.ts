@@ -4,14 +4,14 @@ import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { SoundChannel, MAX_SOUND_CHANNELS, ATTN_NORM } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 describe('AudioSystem Stress Tests', () => {
   it('handles channel stealing when playing more than MAX_SOUND_CHANNELS', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('stress.wav', createBuffer(1.0));
+    const soundIndex = registry.register('stress.wav', createMockAudioBuffer(1.0));
 
     // Create system with enough channels to fill up
     const system = new AudioSystem({ context: controller, registry });
@@ -52,7 +52,7 @@ describe('AudioSystem Stress Tests', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('stress.wav', createBuffer(10.0)); // Long sound
+    const soundIndex = registry.register('stress.wav', createMockAudioBuffer(10.0)); // Long sound
 
     const playerEntity = 1;
     const system = new AudioSystem({ context: controller, registry, playerEntity });
@@ -107,7 +107,7 @@ describe('AudioSystem Stress Tests', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('short.wav', createBuffer(0.1));
+    const soundIndex = registry.register('short.wav', createMockAudioBuffer(0.1));
     const system = new AudioSystem({ context: controller, registry });
 
     const start = performance.now();

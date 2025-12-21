@@ -29,6 +29,7 @@ export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
 export * from './engine/mocks/webgl.js'; // Restored original export
+export * from './engine/mocks/audio.js'; // Added audio mocks
 export * from './engine/rendering.js'; // Rendering mocks (does not re-export webgl symbols now)
 export * from './setup/storage.js';
 export * from './setup/audio.js';

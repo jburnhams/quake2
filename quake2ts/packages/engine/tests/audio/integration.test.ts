@@ -4,14 +4,14 @@ import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { SoundChannel, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 describe('AudioSystem Integration Tests', () => {
   it('verifies looping sound behavior: start, continuous check, stop', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('loop.wav', createBuffer(1.0));
+    const soundIndex = registry.register('loop.wav', createMockAudioBuffer(1.0));
     const system = new AudioSystem({ context: controller, registry });
 
     // Start looping sound
@@ -42,7 +42,7 @@ describe('AudioSystem Integration Tests', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('vol.wav', createBuffer(1.0));
+    const soundIndex = registry.register('vol.wav', createMockAudioBuffer(1.0));
 
     const masterVol = 0.5;
     const sfxVol = 0.8;
@@ -74,7 +74,7 @@ describe('AudioSystem Integration Tests', () => {
     const fakeContext = new FakeAudioContext();
     const controller = new AudioContextController(() => fakeContext);
     const registry = new SoundRegistry();
-    const soundIndex = registry.register('space.wav', createBuffer(1.0));
+    const soundIndex = registry.register('space.wav', createMockAudioBuffer(1.0));
 
     // Listener at 0,0,0 facing X
     const system = new AudioSystem({

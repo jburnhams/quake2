@@ -3,7 +3,7 @@ import { AudioContextController } from '../../src/audio/context.js';
 import { SoundRegistry } from '../../src/audio/registry.js';
 import { AudioSystem } from '../../src/audio/system.js';
 import { SoundChannel, ATTN_NORM } from '../../src/audio/constants.js';
-import { FakeAudioContext, createBuffer } from './fakes.js';
+import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 import { createOcclusionResolver } from '../../src/audio/occlusion.js';
 
 describe('AudioSystem Integration with Occlusion', () => {
@@ -11,7 +11,7 @@ describe('AudioSystem Integration with Occlusion', () => {
         const fakeContext = new FakeAudioContext();
         const controller = new AudioContextController(() => fakeContext);
         const registry = new SoundRegistry();
-        const soundIndex = registry.register('test/occlusion.wav', createBuffer(1));
+        const soundIndex = registry.register('test/occlusion.wav', createMockAudioBuffer(1));
 
         // Mock trace to report obstruction (fraction < 1.0)
         // start, end, mins, maxs
@@ -88,7 +88,7 @@ describe('AudioSystem Integration with Occlusion', () => {
         const fakeContext = new FakeAudioContext();
         const controller = new AudioContextController(() => fakeContext);
         const registry = new SoundRegistry();
-        const soundIndex = registry.register('test/clear.wav', createBuffer(1));
+        const soundIndex = registry.register('test/clear.wav', createMockAudioBuffer(1));
 
         // Mock trace to report clear path
         const traceFn = vi.fn().mockReturnValue({ fraction: 1.0 });
