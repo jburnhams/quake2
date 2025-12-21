@@ -16,12 +16,16 @@
     "./browser": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/browser/index.js"
-    }
+    },
+    "./testing": "./src/testing.ts",
+    "./bsp/collision": "./src/bsp/collision.ts",
+    "./math/vec3": "./src/math/vec3.ts"
   },
   "unpkg": "./dist/browser/index.js",
   "jsdelivr": "./dist/browser/index.js",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "sideEffects": false,
   "scripts": {
