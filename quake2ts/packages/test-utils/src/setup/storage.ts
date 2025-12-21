@@ -1,23 +1,31 @@
-import 'fake-indexeddb/auto';
-
 /**
- * Creates a mock Storage implementation (localStorage/sessionStorage).
+ * Helper to create a storage-like object (localStorage/sessionStorage).
  */
-export function createMockLocalStorage(initialData: Record<string, string> = {}): Storage {
-    const storage = new Map<string, string>(Object.entries(initialData));
+function createStorageMock(initialData: Record<string, string> = {}): Storage {
+  const store = new Map<string, string>(Object.entries(initialData));
 
-    return {
-        getItem: (key: string) => storage.get(key) || null,
-        setItem: (key: string, value: string) => storage.set(key, value),
-        removeItem: (key: string) => storage.delete(key),
-        clear: () => storage.clear(),
-        key: (index: number) => Array.from(storage.keys())[index] || null,
-        get length() { return storage.size; }
-    } as Storage;
+  return {
+    getItem: (key: string) => store.get(key) || null,
+    setItem: (key: string, value: string) => store.set(key, value.toString()),
+    removeItem: (key: string) => store.delete(key),
+    clear: () => store.clear(),
+    key: (index: number) => Array.from(store.keys())[index] || null,
+    get length() { return store.size; }
+  } as Storage;
 }
 
+/**
+ * Creates a mock LocalStorage instance.
+ */
+export function createMockLocalStorage(initialData: Record<string, string> = {}): Storage {
+  return createStorageMock(initialData);
+}
+
+/**
+ * Creates a mock SessionStorage instance.
+ */
 export function createMockSessionStorage(initialData: Record<string, string> = {}): Storage {
-    return createMockLocalStorage(initialData);
+  return createStorageMock(initialData);
 }
 
 /**
@@ -25,51 +33,28 @@ export function createMockSessionStorage(initialData: Record<string, string> = {
  * Wraps fake-indexeddb.
  */
 export function createMockIndexedDB(databases?: IDBDatabase[]): IDBFactory {
-    return global.indexedDB;
+  // fake-indexeddb/auto already sets global.indexedDB
+  // If we need to return a specific instance or customized one, we can do it here.
+  // For now, return the global one or a fresh 'fake-indexeddb' instance if we were to import it directly.
+
+  // Since we imported 'fake-indexeddb/auto' in setup/browser.ts, global.indexedDB is already mocked.
+  // We can return that.
+  return global.indexedDB;
 }
 
 export interface StorageScenario {
-    localStorage: Storage;
-    sessionStorage: Storage;
-    indexedDB: IDBFactory;
-    populate(data: Record<string, string>): Promise<void>;
-    verify(key: string, expectedValue: string): Promise<boolean>; // Promise for consistency with IDB
+  localStorage: Storage;
+  sessionStorage: Storage;
+  indexedDB: IDBFactory;
 }
 
 /**
- * Creates a storage test scenario with pre-configured mocks.
+ * Creates a complete storage test scenario.
  */
-export function createStorageTestScenario(type: 'local' | 'session' | 'indexed'): StorageScenario {
-    const localStorage = createMockLocalStorage();
-    const sessionStorage = createMockSessionStorage();
-    const indexedDB = createMockIndexedDB();
-
-    const scenario: StorageScenario = {
-        localStorage,
-        sessionStorage,
-        indexedDB,
-        populate: async (data: Record<string, string>) => {
-            if (type === 'local') {
-                Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
-            } else if (type === 'session') {
-                Object.entries(data).forEach(([k, v]) => sessionStorage.setItem(k, v));
-            } else if (type === 'indexed') {
-                // Mock IDB pop is non-trivial without complex logic.
-                // We'll just assume success for the mock test.
-            }
-        },
-        verify: async (key: string, expectedValue: string) => {
-            if (type === 'local') {
-                return localStorage.getItem(key) === expectedValue;
-            } else if (type === 'session') {
-                return sessionStorage.getItem(key) === expectedValue;
-            } else if (type === 'indexed') {
-                // Mock verify
-                return true;
-            }
-            return false;
-        }
-    };
-
-    return scenario;
+export function createStorageTestScenario(storageType: 'local' | 'session' | 'indexed' = 'local'): StorageScenario {
+  return {
+    localStorage: createMockLocalStorage(),
+    sessionStorage: createMockSessionStorage(),
+    indexedDB: createMockIndexedDB()
+  };
 }

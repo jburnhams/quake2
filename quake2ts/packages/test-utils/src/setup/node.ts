@@ -1,12 +1,21 @@
+/**
+ * Setup helpers for Node.js environments.
+ */
 export interface NodeSetupOptions {
-    // Add Node-specific setup options here if needed in the future
+  // Add options as needed, e.g. mocking fs, process.env, etc.
 }
 
 /**
  * Sets up a Node.js environment for testing.
- * This is primarily a placeholder for now as standard Node tests don't require much setup,
- * but can be used for global polyfills or environment variable configuration.
+ * Currently a placeholder for future Node-specific setup.
  */
 export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
-    // Placeholder for future Node setup logic
+  // No-op for now, but provides a hook for future setup
+}
+
+/**
+ * Teardown for Node.js environment.
+ */
+export function teardownNodeEnvironment() {
+  // No-op for now
 }

@@ -125,7 +125,7 @@ const buffer = await captureGameScreenshot(page, 'map-start');
 
 // Compare against baseline
 const result = compareScreenshots(baselineBuffer, buffer);
-if (!result.passed) {
+if (result.diffPercentage > 0) {
     console.warn('Visual regression detected');
 }
 ```
