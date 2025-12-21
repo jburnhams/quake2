@@ -51,8 +51,8 @@ export function createEngine(imports: EngineImports): EngineExports {
 }
 
 export { FixedTimestepLoop };
-export { ConfigStringRegistry };
-export { Cvar, CvarRegistry } from './cvars.js';
+export { ConfigStringRegistry, type ConfigStringEntry } from './configstrings.js';
+export { Cvar, CvarRegistry, type CvarChangeHandler } from './cvars.js';
 export { Command, CommandRegistry, type CommandCallback } from './commands.js';
 export type { FixedStepContext, LoopCallbacks, LoopOptions, RenderContext } from './loop.js';
 export { PakArchive, PakParseError, calculatePakChecksum } from './assets/pak.js';
@@ -294,6 +294,7 @@ export { Pic, Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState } from './render/frame.js';
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
+export { MessageWriter } from './demo/writer.js'; // Exporting MessageWriter
 export { DemoValidator, type DemoValidationResult } from './demo/validator.js';
 export { DemoAnalyzer } from './demo/analyzer.js';
 export { DemoEventType } from './demo/analysis.js';
@@ -340,3 +341,8 @@ export { MapAnalyzer, type MapStatistics } from './assets/mapStatistics.js';
 
 // Export ENT tools
 export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type ValidationResult } from './assets/ent.js';
+
+// WebGPU
+export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
+export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
+export { IRenderer } from './render/interface.js';

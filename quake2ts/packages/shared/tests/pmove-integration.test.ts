@@ -3,7 +3,7 @@ import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
   makePlane,
-} from './bsp/test-helpers.js';
+} from '@quake2ts/test-utils';
 import { traceBox, TraceResult } from '../src/bsp/collision.js';
 import { applyPmoveAirMove, applyPmoveWaterMove } from '../src/pmove/move.js';
 import { categorizePosition } from '../src/pmove/categorize.js';

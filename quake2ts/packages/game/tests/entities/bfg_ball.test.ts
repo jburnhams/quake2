@@ -9,6 +9,7 @@ import { createGame } from '../../src/index.js';
 import { MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('BFG Ball Projectile', () => {
     it('should have correct initial properties', () => {
@@ -78,6 +79,8 @@ describe('BFG Ball Projectile', () => {
 
         // Create target monster within 256 units
         const target = game.entities.spawn();
+        // Here we could use Object.assign(target, createMonsterEntityFactory('monster_soldier', ...))
+        // but explicit assignment is fine for now as we are testing integration with game.entities
         target.classname = 'monster_soldier';
         target.origin = { x: 200, y: 0, z: 0 };
         target.absmin = { x: 195, y: -16, z: -24 };

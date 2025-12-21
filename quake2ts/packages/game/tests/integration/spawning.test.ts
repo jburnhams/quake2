@@ -197,7 +197,7 @@ describe('Spawning Integration Tests', () => {
 
         const player = game.entities.spawn();
         player.classname = 'player';
-        player.client = { inventory: { armor: { armorCount: 0 } } } as any;
+        player.client = { inventory: { armor: null } } as any;
 
         item.touch?.(item, player);
 

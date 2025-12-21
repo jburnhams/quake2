@@ -4,9 +4,10 @@ import { DeadFlag, Entity, MoveType, Solid } from '../../src/entities/entity.js'
 import { EntitySystem } from '../../src/entities/system.js';
 import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { ai_stand, ai_walk, ai_run, ai_move } from '../../src/ai/movement.js';
+import { ai_stand, ai_walk, ai_run } from '../../src/ai/movement.js';
 import { throwGibs } from '../../src/entities/gibs.js';
 import { createTestContext } from '../test-helpers.js';
+import { createEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 // Mock ai functions
 vi.mock('../../src/ai/movement.js', async (importOriginal) => {

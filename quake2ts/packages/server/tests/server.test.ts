@@ -1,12 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated.js';
+import { DedicatedServer, createServer } from '../src/dedicated.js';
 import { createMockTransport, MockTransport } from '@quake2ts/test-utils';
 
-// Mock fs to avoid ENOENT errors
+// Mock dependencies
 vi.mock('node:fs/promises', () => ({
     default: {
-        readFile: vi.fn().mockRejectedValue(new Error('Mocked ENOENT'))
+        readFile: vi.fn().mockResolvedValue(Buffer.alloc(100))
     }
+}));
+
+vi.mock('@quake2ts/engine', () => ({
+    parseBsp: vi.fn().mockReturnValue({
+        planes: [],
+        nodes: [],
+        leafs: [],
+        brushes: [],
+        models: [],
+        leafLists: { leafBrushes: [] },
+        texInfo: [],
+        brushSides: [],
+        visibility: { numClusters: 0, clusters: [] } // Add visibility to mock
+    })
 }));
 
 describe('DedicatedServer', () => {
@@ -28,20 +42,41 @@ describe('DedicatedServer', () => {
     afterEach(() => {
         consoleWarnSpy.mockRestore();
         consoleLogSpy.mockRestore();
-        server.stopServer();
+        if (server) {
+            server.stopServer();
+        }
+    });
+
+    it('should create a server with default options', () => {
+        server = createServer({ transport });
+        expect(server).toBeInstanceOf(DedicatedServer);
     });
 
     it('should initialize WebSocketServer on start', async () => {
         await server.startServer('test_map');
         expect(transport.listenSpy).toHaveBeenCalledWith(27910);
-
-        // Verify we got the expected warning
-        expect(console.warn).toHaveBeenCalledWith('Failed to load map:', expect.any(Error));
     });
 
     it('should be able to stop', async () => {
         await server.startServer('test_map');
         server.stopServer();
         expect(transport.closeSpy).toHaveBeenCalled();
+    });
+
+    it('should fail to start without map', async () => {
+        server = createServer({ transport });
+        await expect(server.startServer()).rejects.toThrow('No map specified');
+    });
+
+    it('should kick player', () => {
+        server = createServer({ transport });
+        // Just verify method exists and runs safely on empty server
+        expect(() => server.kickPlayer(0)).not.toThrow();
+    });
+
+    it('should change map', async () => {
+        server = createServer({ transport });
+        await server.startServer('maps/q2dm1.bsp');
+        await expect(server.changeMap('maps/q2dm2.bsp')).resolves.not.toThrow();
     });
 });

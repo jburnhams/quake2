@@ -49,9 +49,16 @@ This section covers migration and expansion of game-specific test utilities incl
   - Pre-set: bounds, touch callback, solid type
 
 - [ ] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
+  - [x] Refactored `player.test.ts`
+  - [x] Refactored `monster_soldier.test.ts`
+  - [x] Refactored `monsters.test.ts`
+  - [x] Refactored `grenade.test.ts`
+  - [x] Refactored `rocket.test.ts`
+  - [x] Refactored `projectiles.test.ts`
+  - [x] Refactored `bfg_ball.test.ts`
+  - [x] Refactored `funcs.test.ts`
   - Replace manual entity creation with factories
-  - Estimated files: ~25
-  - *Progress:* Refactored `player.test.ts`, `monster_soldier.test.ts`, `monsters/gunner.test.ts`, `ai-fields.test.ts`, and `entity-bounds.test.ts`.
+  - Estimated files: ~25 (Remaining: ~17)
 
 - [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - Same pattern

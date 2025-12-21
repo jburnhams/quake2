@@ -1,9 +1,10 @@
 import { vi, type Mock } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
+import { createTraceMock } from '../shared/collision.js';
 
-// Re-export generic helpers from shared
-export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared';
+// Re-export collision helpers from shared collision utility
+export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock } from '../shared/collision.js';
 
 // -- Types --
 
@@ -75,16 +76,12 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const seed = options?.seed ?? 12345;
   const { game, spawnRegistry } = createMockGame(seed);
 
-  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => ({
-    fraction: 1.0,
-    ent: null,
-    allsolid: false,
-    startsolid: false,
-    endpos: end,
-    plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-    surfaceFlags: 0,
-    contents: 0
-  }));
+  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
+    createTraceMock({
+      endpos: end,
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    })
+  );
 
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
 
@@ -125,6 +122,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     multicast: vi.fn(),
     unicast: vi.fn(),
     engine,
+    scriptHooks: hooks,
     game,
     sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
@@ -166,6 +164,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       sightEntity: null,
       soundEntity: null,
     },
+    warn: vi.fn(), // Added warn to entities as it is sometimes used there too, though typically on SpawnContext
     // Adding missing properties to satisfy EntitySystem interface partially or fully
     // We cast to unknown first anyway, but filling these in makes it safer for consumers
     skill: 1,

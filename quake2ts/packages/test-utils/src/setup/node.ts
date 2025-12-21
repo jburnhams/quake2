@@ -1,18 +1,21 @@
+/**
+ * Setup helpers for Node.js environments.
+ */
 export interface NodeSetupOptions {
-    polyfillFetch?: boolean;
+  // Add options as needed, e.g. mocking fs, process.env, etc.
 }
 
 /**
  * Sets up a Node.js environment for testing.
- * This is primarily for backend or shared logic that doesn't rely on browser APIs.
+ * Currently a placeholder for future Node-specific setup.
  */
 export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
-  // Add any Node-specific global setup here
-  // For now, this is a placeholder or can be used for things like
-  // polyfilling fetch if not present in older Node versions (though Quake2TS targets recent Node)
+  // No-op for now, but provides a hook for future setup
+}
 
-  if (options.polyfillFetch && typeof global.fetch === 'undefined') {
-      // In a real scenario, we might import node-fetch here
-      // global.fetch = ...
-  }
+/**
+ * Teardown for Node.js environment.
+ */
+export function teardownNodeEnvironment() {
+  // No-op for now
 }

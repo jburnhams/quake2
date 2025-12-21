@@ -24,6 +24,7 @@ export interface RecorderSnapshot {
     readonly rdflags: number;
     readonly fov: number;
     readonly blend: [number, number, number, number];
+    readonly watertype?: number;
 }
 
 export type FrameOffset = { type: 'frame'; frame: number };

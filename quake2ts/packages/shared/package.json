@@ -16,19 +16,25 @@
     "./browser": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/browser/index.js"
-    }
+    },
+    "./testing": "./src/testing.ts",
+    "./bsp/collision": "./src/bsp/collision.ts",
+    "./math/vec3": "./src/math/vec3.ts"
   },
   "unpkg": "./dist/browser/index.js",
   "jsdelivr": "./dist/browser/index.js",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "sideEffects": false,
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "vitest run"
+    "test": "pnpm run test:unit",
+    "test:unit": "TEST_TYPE=unit vitest run",
+    "test:integration": "TEST_TYPE=integration vitest run"
   },
   "devDependencies": {
     "gl-matrix": "^3.4.4",

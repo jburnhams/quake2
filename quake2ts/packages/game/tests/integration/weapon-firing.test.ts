@@ -9,7 +9,7 @@ import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { GameImports } from '../../src/imports.js';
 import { vi } from 'vitest';
 import { CollisionEntityIndex, CollisionModel, Solid } from '@quake2ts/shared';
-import { makeBrushFromMinsMaxs } from '../../../tests/physics/bsp-helpers.js';
+import { makeBrushFromMinsMaxs } from '@quake2ts/test-utils';
 
 const createMockGameImports = (): GameImports => ({
     trace: vi.fn(),

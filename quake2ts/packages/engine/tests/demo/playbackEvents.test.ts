@@ -1,21 +1,35 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DemoPlaybackController } from '../../src/demo/playback.js';
 import { DemoAnalyzer } from '../../src/demo/analyzer.js';
 import { DemoEventType } from '../../src/demo/analysis.js';
 
 // Mock DemoReader and DemoAnalyzer
-vi.mock('../../src/demo/demoReader.js', () => ({
-    DemoReader: vi.fn(() => ({
-        reset: vi.fn(),
-        hasMore: vi.fn().mockReturnValue(false),
-        readNextBlock: vi.fn().mockReturnValue(null),
-        getProgress: vi.fn().mockReturnValue({ total: 0, current: 0 })
-    }))
+const readerMock = vi.fn(() => ({
+    reset: vi.fn(),
+    hasMore: vi.fn().mockReturnValue(false),
+    readNextBlock: vi.fn().mockReturnValue(null),
+    getProgress: vi.fn().mockReturnValue({ total: 0, current: 0 })
 }));
 
-vi.mock('../../src/demo/analyzer.js', () => ({
-    DemoAnalyzer: vi.fn(() => ({
-        analyze: vi.fn().mockReturnValue({
+vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: readerMock }));
+vi.mock('../../src/demo/demoReader', () => ({ DemoReader: readerMock }));
+
+// Spy on analyze method
+// Note: We don't mock the module, we spy on the class method.
+// But we need to make sure the imported class is the same one used in playback.ts
+
+describe('DemoPlaybackController', () => {
+    let controller: DemoPlaybackController;
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+
+        // Spy on DemoAnalyzer.prototype.analyze
+        vi.spyOn(DemoAnalyzer.prototype, 'analyze').mockReturnValue({
             events: [
                 {
                     type: DemoEventType.Death,
@@ -44,14 +58,8 @@ vi.mock('../../src/demo/analyzer.js', () => ({
             statistics: null,
             playerStats: new Map(),
             weaponStats: new Map()
-        })
-    }))
-}));
+        });
 
-describe('DemoPlaybackController', () => {
-    let controller: DemoPlaybackController;
-
-    beforeEach(() => {
         controller = new DemoPlaybackController();
     });
 

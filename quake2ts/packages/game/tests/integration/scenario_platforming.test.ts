@@ -15,7 +15,7 @@ import {
   CollisionModel,
   CONTENTS_SOLID
 } from '@quake2ts/shared';
-import { makeBrushFromMinsMaxs, makeLeafModel } from '../physics/bsp-helpers.js';
+import { makeBrushFromMinsMaxs, makeLeafModel } from '@quake2ts/test-utils';
 
 describe('Scenario 3: Platforming Challenge', () => {
   let game: GameExports;

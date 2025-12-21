@@ -32,6 +32,7 @@ This section covers migration of shared testing utilities that form the foundati
 
 - [x] **1.4** Remove duplicate BSP helpers from `game/tests/physics/bsp-helpers.ts`
   - Delete file after completing subtasks below
+  - *Note: `bsp-helpers.ts` was not found, assumed already deleted or not present. Verified no internal usage.*
 
 - [x] **1.5** Update imports in `game/tests/physics/` directory
   - Replace `import { ... } from './bsp-helpers'` with `import { ... } from '@quake2ts/test-utils'`
@@ -45,21 +46,21 @@ This section covers migration of shared testing utilities that form the foundati
 
 ### 2. Expand Binary/Network Mocks (MEDIUM PRIORITY)
 
-**Status:** Basic mocks exist, need expansion
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **2.1** Audit current binary/network mocks in `test-utils/src/shared/mocks.ts`
+- [x] **2.1** Audit current binary/network mocks in `test-utils/src/shared/mocks.ts`
   - Current: `createBinaryWriterMock()`, `createNetChanMock()`, `createBinaryStreamMock()`
 
-- [ ] **2.2** Add `createMessageWriterMock()` factory to `test-utils/src/shared/mocks.ts`
+- [x] **2.2** Add `createMessageWriterMock()` factory to `test-utils/src/shared/mocks.ts`
   - Signature: `createMessageWriterMock(overrides?: Partial<MessageWriter>): MessageWriter`
   - Mock methods: `writeString()`, `writeInt()`, `writeByte()`, `writeVector()`
 
-- [ ] **2.3** Add `createMessageReaderMock()` factory to `test-utils/src/shared/mocks.ts`
+- [x] **2.3** Add `createMessageReaderMock()` factory to `test-utils/src/shared/mocks.ts`
   - Signature: `createMessageReaderMock(data?: Uint8Array): MessageReader`
   - Mock methods: `readString()`, `readInt()`, `readByte()`, `readVector()`
 
-- [ ] **2.4** Add `createPacketMock()` factory to `test-utils/src/shared/mocks.ts`
+- [x] **2.4** Add `createPacketMock()` factory to `test-utils/src/shared/mocks.ts`
   - Signature: `createPacketMock(overrides?: Partial<Packet>): Packet`
   - Include common packet types: connection, data, ack, disconnect
 
@@ -67,70 +68,70 @@ This section covers migration of shared testing utilities that form the foundati
 
 ### 3. Create Shared Math/Geometry Helpers (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **3.1** Create `test-utils/src/shared/math.ts` file
+- [x] **3.1** Create `test-utils/src/shared/math.ts` file
 
-- [ ] **3.2** Add vector factory `createVector3(x?: number, y?: number, z?: number): Vector3`
+- [x] **3.2** Add vector factory `createVector3(x?: number, y?: number, z?: number): Vector3`
   - Default to origin (0, 0, 0)
 
-- [ ] **3.3** Add bounds factory `createBounds(mins?: Vector3, maxs?: Vector3): Bounds`
+- [x] **3.3** Add bounds factory `createBounds(mins?: Vector3, maxs?: Vector3): Bounds`
   - Default to unit cube
 
-- [ ] **3.4** Add transform factory `createTransform(overrides?: Partial<Transform>): Transform`
+- [x] **3.4** Add transform factory `createTransform(overrides?: Partial<Transform>): Transform`
   - Include position, rotation, scale
 
-- [ ] **3.5** Add `randomVector3(min?: number, max?: number): Vector3` helper
+- [x] **3.5** Add `randomVector3(min?: number, max?: number): Vector3` helper
   - For randomized test data
 
-- [ ] **3.6** Export all math helpers from `test-utils/src/index.ts`
+- [x] **3.6** Export all math helpers from `test-utils/src/index.ts`
 
 ---
 
 ### 4. Expand Trace/Collision Helpers (MEDIUM PRIORITY)
 
-**Status:** Basic helpers exist in `test-utils/src/game/helpers.ts`
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **4.1** Move trace helpers from `game/helpers.ts` to `shared/collision.ts`
+- [x] **4.1** Move trace helpers from `game/helpers.ts` to `shared/collision.ts`
   - Functions: `intersects()`, `stairTrace()`, `ladderTrace()`
   - These are shared utilities, not game-specific
 
-- [ ] **4.2** Add `createTraceMock()` factory to `test-utils/src/shared/collision.ts`
+- [x] **4.2** Add `createTraceMock()` factory to `test-utils/src/shared/collision.ts`
   - Signature: `createTraceMock(overrides?: Partial<Trace>): Trace`
   - Include: `fraction`, `endpos`, `plane`, `surface`, `contents`, `ent`
 
-- [ ] **4.3** Add `createSurfaceMock()` factory to `test-utils/src/shared/collision.ts`
+- [x] **4.3** Add `createSurfaceMock()` factory to `test-utils/src/shared/collision.ts`
   - Signature: `createSurfaceMock(overrides?: Partial<Surface>): Surface`
   - Include common surface types
 
-- [ ] **4.4** Update `game/helpers.ts` to re-export from `shared/collision.ts`
+- [x] **4.4** Update `game/helpers.ts` to re-export from `shared/collision.ts`
   - Maintain backward compatibility temporarily
 
-- [ ] **4.5** Update imports across codebase (phased approach)
+- [x] **4.5** Update imports across codebase (phased approach)
   - Create subtasks per package in Section 19-3
 
 ---
 
 ### 5. Create Common Type Factories (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Complete
 **Dependencies:** None
 
-- [ ] **5.1** Create `test-utils/src/shared/factories.ts` file
+- [x] **5.1** Create `test-utils/src/shared/factories.ts` file
 
-- [ ] **5.2** Add `createConfigStringMock()` factory
+- [x] **5.2** Add `createConfigStringMock()` factory
   - Signature: `createConfigStringMock(index: number, value: string): ConfigString`
 
-- [ ] **5.3** Add `createConfigStringArrayMock()` factory
+- [x] **5.3** Add `createConfigStringArrayMock()` factory
   - Signature: `createConfigStringArrayMock(entries?: Record<number, string>): ConfigString[]`
   - Pre-populate common indices (models, sounds, images)
 
-- [ ] **5.4** Add `createCvarMock()` factory
+- [x] **5.4** Add `createCvarMock()` factory
   - Signature: `createCvarMock(name: string, value: string, flags?: number): Cvar`
 
-- [ ] **5.5** Export all shared factories from `test-utils/src/index.ts`
+- [x] **5.5** Export all shared factories from `test-utils/src/index.ts`
 
 ---
 

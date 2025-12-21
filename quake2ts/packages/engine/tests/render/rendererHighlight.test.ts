@@ -1,23 +1,27 @@
-import { createRenderer } from '../../src/render/renderer.js';
 import { FrameRenderer, RenderModeConfig } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../src/render/resources.js';
 
 // Mock the pipeline dependencies to prevent WebGL calls
-vi.mock('../../src/render/bspPipeline.js', () => ({ BspSurfacePipeline: vi.fn() }));
-vi.mock('../../src/render/skybox.js', () => ({ SkyboxPipeline: vi.fn() }));
-vi.mock('../../src/render/md2Pipeline.js', () => ({ Md2Pipeline: vi.fn() }));
-vi.mock('../../src/render/sprite.js', () => ({ SpriteRenderer: vi.fn() }));
-vi.mock('../../src/render/bspTraversal.js', () => ({
+vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
+vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn() }));
+vi.mock('../../src/render/md2Pipeline', () => ({ Md2Pipeline: vi.fn() }));
+vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn() }));
+vi.mock('../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0),
     isClusterVisible: vi.fn().mockReturnValue(true),
     gatherVisibleFaces: vi.fn().mockReturnValue([]),
 }));
-vi.mock('../../src/render/light.js', () => ({
+vi.mock('../../src/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
-vi.mock('../../src/render/collisionVis.js', () => ({
+vi.mock('../../src/render/culling.js', () => ({
+    boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+    extractFrustumPlanes: vi.fn().mockReturnValue([]),
+    transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
+}));
+vi.mock('../../src/render/collisionVis', () => ({
     CollisionVisRenderer: vi.fn(() => ({
         render: vi.fn(),
         clear: vi.fn(),
@@ -56,15 +60,21 @@ const mockFrameRenderer: FrameRenderer = {
     }),
 };
 
-vi.mock('../../src/render/frame.js', () => ({
+vi.mock('../../src/render/frame', () => ({
     createFrameRenderer: vi.fn(() => mockFrameRenderer),
 }));
 
 describe('Renderer Highlighting', () => {
     let mockGl: WebGL2RenderingContext;
+    let createRenderer: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        vi.resetModules();
         vi.clearAllMocks();
+
+        const mod = await import('../../src/render/renderer.js');
+        createRenderer = mod.createRenderer;
+
         mockGl = {
             disable: vi.fn(),
             enable: vi.fn(),
@@ -100,7 +110,24 @@ describe('Renderer Highlighting', () => {
             deleteShader: vi.fn(),
             deleteProgram: vi.fn(),
             uniformMatrix4fv: vi.fn(),
+            uniform4fv: vi.fn(),
+            uniform1i: vi.fn(),
+            uniform1f: vi.fn(),
+            uniform4f: vi.fn(),
             drawArrays: vi.fn(),
+            drawElements: vi.fn(),
+            activeTexture: vi.fn(),
+            bindTexture: vi.fn(),
+            texImage2D: vi.fn(),
+            createFramebuffer: vi.fn().mockReturnValue({}),
+            bindFramebuffer: vi.fn(),
+            deleteFramebuffer: vi.fn(),
+            clearColor: vi.fn(),
+            clear: vi.fn(),
+            framebufferTexture2D: vi.fn(),
+            enableVertexAttribArray: vi.fn(),
+            vertexAttribPointer: vi.fn(),
+            vertexAttribDivisor: vi.fn(),
         } as unknown as WebGL2RenderingContext;
     });
 
@@ -114,7 +141,7 @@ describe('Renderer Highlighting', () => {
             type: 'md3',
             id: entityId,
             model: {
-                surfaces: [{ name: 'test' }],
+                surfaces: [{ name: 'test', triangles: [], vertices: [[]] }],
                 frames: [
                     { minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }
                 ]
@@ -158,7 +185,7 @@ describe('Renderer Highlighting', () => {
             type: 'md3',
             id: entityId,
             model: {
-                surfaces: [{ name: 'test' }],
+                surfaces: [{ name: 'test', triangles: [], vertices: [[]] }],
                 frames: [{ minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }]
             },
             blend: { frame0: 0, frame1: 0, lerp: 0 },
@@ -181,14 +208,14 @@ describe('Renderer Highlighting', () => {
         const entity1 = {
             type: 'md3',
             id: 1,
-            model: { surfaces: [{ name: 'test' }], frames: [{ minBounds: {x: -1, y: -1, z: -1}, maxBounds: {x: 1, y: 1, z: 1} }] },
+            model: { surfaces: [{ name: 'test', triangles: [], vertices: [[]] }], frames: [{ minBounds: {x: -1, y: -1, z: -1}, maxBounds: {x: 1, y: 1, z: 1} }] },
             blend: { frame0: 0, frame1: 0, lerp: 0 },
             transform: new Float32Array(16),
         };
         const entity2 = {
             type: 'md3',
             id: 2,
-            model: { surfaces: [{ name: 'test' }], frames: [{ minBounds: {x: -1, y: -1, z: -1}, maxBounds: {x: 1, y: 1, z: 1} }] },
+            model: { surfaces: [{ name: 'test', triangles: [], vertices: [[]] }], frames: [{ minBounds: {x: -1, y: -1, z: -1}, maxBounds: {x: 1, y: 1, z: 1} }] },
             blend: { frame0: 0, frame1: 0, lerp: 0 },
             transform: new Float32Array(16),
         };

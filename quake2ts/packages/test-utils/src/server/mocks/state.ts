@@ -4,6 +4,12 @@ import { Entity } from '@quake2ts/game';
 import { vi } from 'vitest';
 import { createMockNetDriver } from './transport.js';
 
+// Define GameState interface locally or import from where it should be.
+// Based on grep, GameStateSnapshot is in @quake2ts/game.
+// But test-utils/src/game/mocks.ts defines a local GameState interface.
+// Let's use that one or define a compatible one here.
+import { GameState } from '../../game/mocks.js';
+
 /**
  * Creates a mock server state object.
  * @param overrides Optional overrides for the server state.
@@ -122,6 +128,9 @@ export interface MockServer {
     configstring(index: number, value: string): void;
     kickPlayer(clientId: number): void;
     changeMap(mapName: string): Promise<void>;
+    getClient(clientNum: number): Client | null;
+    broadcast(message: string): void;
+    tick(): void;
 }
 
 /**
@@ -137,6 +146,17 @@ export function createMockServer(overrides?: Partial<MockServer>): MockServer {
         configstring: vi.fn(),
         kickPlayer: vi.fn(),
         changeMap: vi.fn().mockResolvedValue(undefined),
+        getClient: vi.fn().mockReturnValue(null),
+        broadcast: vi.fn(),
+        tick: vi.fn(),
         ...overrides
     };
 }
+
+// Re-export GameState from game mocks if needed, or use the one from game/mocks
+// Since we have a createMockGameState in game/mocks.ts, we should probably use that or alias it.
+// The task says "Add createMockGameState() factory".
+// If it is already in game/mocks.ts, we can just export it from there or re-export it here.
+// But to avoid duplication, I will just re-export the one from game mocks if the intention is to have it available under server utils.
+
+export { createMockGameState, type GameState } from '../../game/mocks.js';

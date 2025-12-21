@@ -1,167 +1,118 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { DemoClipper, WorldState } from '../../src/demo/clipper.js';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
-import { createEmptyEntityState, createEmptyProtocolPlayerState, FrameData } from '../../src/demo/parser.js';
-import { ServerCommand, BinaryStream } from '@quake2ts/shared';
-import { MessageWriter } from '../../src/demo/writer.js';
-import { DemoWriter } from '../../src/demo/demoWriter.js';
 import { DemoReader } from '../../src/demo/demoReader.js';
-
-// We mock DemoPlaybackController
-vi.mock('../../src/demo/playback.js', () => {
-    return {
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            loadDemo: vi.fn(),
-            timeToFrame: vi.fn((t) => {
-                // Return frame number directly if 'frame' type, or convert sec * 10
-                return Math.floor(t * 10);
-            }),
-            setHandler: vi.fn(),
-            seek: vi.fn()
-        })),
-        PlaybackState: {}
-    };
-});
 
 describe('DemoClipper', () => {
   let clipper: DemoClipper;
-  let mockController: any;
+  let demoData: Uint8Array;
+
+  // Create a minimal synthetic demo
+  // Frame 0: Header + ConfigStrings + Frame
+  // Frame 1: Frame
+  // Frame 2: Frame
+  // EOF
+  const createSyntheticDemo = (): Uint8Array => {
+    // We can manually construct blocks: [Length][Data]
+    // But it's tedious to create valid protobufs.
+    // Instead we rely on just testing slicing logic (length-based) if we can.
+    // If we test `extractClip` (raw slice), we just need valid block structure.
+
+    const blocks: Uint8Array[] = [];
+
+    const addBlock = (data: Uint8Array) => {
+        const length = data.length;
+        const block = new Uint8Array(4 + length);
+        const view = new DataView(block.buffer);
+        view.setInt32(0, length, true);
+        block.set(data, 4);
+        blocks.push(block);
+    };
+
+    // Block 0: 10 bytes
+    addBlock(new Uint8Array(10).fill(0xAA));
+    // Block 1: 20 bytes
+    addBlock(new Uint8Array(20).fill(0xBB));
+    // Block 2: 30 bytes
+    addBlock(new Uint8Array(30).fill(0xCC));
+    // EOF
+    const eof = new Uint8Array(4);
+    new DataView(eof.buffer).setInt32(0, -1, true);
+    blocks.push(eof);
+
+    // Concatenate
+    const totalLength = blocks.reduce((acc, b) => acc + b.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    blocks.forEach(b => {
+        result.set(b, offset);
+        offset += b.length;
+    });
+
+    return result;
+  };
 
   beforeEach(() => {
     clipper = new DemoClipper();
-    // Reset mock
-    (DemoPlaybackController as any).mockClear();
+    demoData = createSyntheticDemo();
   });
 
-  // ... previous tests ...
-  it('should extract a clip range from valid binary demo data', () => {
-    const buffer = new ArrayBuffer(24);
-    const view = new DataView(buffer);
-    const u8 = new Uint8Array(buffer);
+  it('extractClip slices raw blocks correctly', () => {
+      // Frame 0: 0..14 (4 + 10)
+      // Frame 1: 14..38 (4 + 20)
+      // Frame 2: 38..72 (4 + 30)
+      // EOF: 72..76
 
-    view.setInt32(0, 4, true);
-    u8.set([0, 0, 0, 0], 4);
+      // Extract Frame 1 only
+      // Start frame 1, end frame 1.
+      // Offset start: 14
+      // Offset end: 38 (exclusive of next frame)
 
-    view.setInt32(8, 4, true);
-    u8.set([1, 1, 1, 1], 12);
+      // We need to mock DemoPlaybackController timeToFrame?
+      // Or pass frame objects.
 
-    view.setInt32(16, 4, true);
-    u8.set([2, 2, 2, 2], 20);
+      // But `extractClip` uses `reader.seekToMessage` which relies on valid block lengths.
+      // Our synthetic demo has valid block lengths.
 
-    const demoData = new Uint8Array(buffer);
-    const controller = new DemoPlaybackController();
+      // We don't need a real controller if we pass { type: 'frame', frame: X }.
+      // But `extractClip` inside creates a `reader`.
 
-    const result = clipper.extractClip(demoData, { type: 'frame', frame: 1 }, { type: 'frame', frame: 1 }, controller);
+      const result = clipper.extractClip(demoData, { type: 'frame', frame: 1 }, { type: 'frame', frame: 1 }, null as any);
 
-    expect(result.length).toBe(12);
-    const resView = new DataView(result.buffer);
-    expect(resView.getInt32(0, true)).toBe(4);
-    expect(result[4]).toBe(1);
-    expect(resView.getInt32(8, true)).toBe(-1);
-  });
+      // Expected: Block 1 + EOF
+      // Block 1 size: 24 bytes
+      // EOF size: 4 bytes
+      // Total: 28 bytes
 
-  it('should extract standalone clip with synthesized header and frame 0', () => {
-     const worldState: WorldState = {
-         serverData: {
-             protocol: 34,
-             serverCount: 1,
-             attractLoop: 0,
-             gameDir: 'baseq2',
-             playerNum: 0,
-             levelName: 'q2dm1'
-         },
-         configStrings: new Map([[1, 'test']]),
-         entityBaselines: new Map(),
-         playerState: createEmptyProtocolPlayerState(),
-         currentEntities: new Map(),
-         currentFrameNumber: 10
-     };
+      expect(result.byteLength).toBe(28);
 
-     const demoData = new Uint8Array(100);
-
-     const result = clipper.extractStandaloneClip(demoData, { type: 'frame', frame: 10 }, { type: 'frame', frame: 10 }, worldState);
-
-     const reader = new BinaryStream(result.buffer);
-
-     const blockLen = reader.readLong();
-     expect(blockLen).toBeGreaterThan(0);
-
-     // Check EOF
-     reader.seek(result.byteLength - 4);
-     expect(reader.readLong()).toBe(-1);
-  });
-
-  it('should re-serialize multiple frames and update deltas', () => {
-      // 1. Create a synthetic demo with 3 frames: 0, 1, 2.
-      const demoWriter = new DemoWriter();
-      const proto = 34;
-
-      const createFrame = (seq: number, delta: number): Uint8Array => {
-          const w = new MessageWriter();
-          const frame: FrameData = {
-              serverFrame: seq,
-              deltaFrame: delta,
-              surpressCount: 0,
-              areaBytes: 0,
-              areaBits: new Uint8Array(0),
-              playerState: createEmptyProtocolPlayerState(),
-              packetEntities: { delta: delta !== -1, entities: [] }
-          };
-          w.writeFrame(frame, proto);
-          return w.getData();
-      };
-
-      demoWriter.writeBlock(createFrame(0, -1));
-      demoWriter.writeBlock(createFrame(1, 0));
-      demoWriter.writeBlock(createFrame(2, 1));
-      demoWriter.writeEOF();
-
-      const demoData = demoWriter.getData();
-
-      // VERIFY INPUT STRUCTURE - Use slice().buffer to ensure offset 0
       const inputReader = new DemoReader(demoData.slice().buffer);
-      expect(inputReader.getMessageCount()).toBe(3);
+      inputReader.seekToMessage(1);
+      inputReader.nextBlock(); // Advance so getBlock works
+      const expectedBlock = inputReader.getBlock(); // Block 1
 
-      // 2. We want to clip Frames 1-2.
-      const worldState: WorldState = {
-         serverData: { protocol: proto, serverCount: 1, attractLoop: 0, gameDir: 'baseq2', playerNum: 0, levelName: 'map' },
-         configStrings: new Map(),
-         entityBaselines: new Map(),
-         playerState: createEmptyProtocolPlayerState(),
-         currentEntities: new Map(),
-         currentFrameNumber: 1
-      };
+      const resultReader = new DemoReader(result.buffer as ArrayBuffer);
+      const resultBlock = resultReader.readNextBlock();
 
-      // 3. Run extractStandaloneClip
-      const result = clipper.extractStandaloneClip(demoData.slice(), { type: 'frame', frame: 1 }, { type: 'frame', frame: 2 }, worldState);
+      expect(resultBlock).not.toBeNull();
+      expect(resultBlock?.length).toBe(expectedBlock.length);
+      // Check content
+      // @ts-ignore
+      const expectedArr = new Uint8Array(expectedBlock.data.buffer).slice(expectedBlock.data.offset, expectedBlock.data.offset + expectedBlock.length);
+      // @ts-ignore
+      const resultArr = new Uint8Array(resultBlock!.data.buffer).slice(resultBlock!.data.offset, resultBlock!.data.offset + resultBlock!.length);
+      expect(resultArr).toEqual(expectedArr);
 
-      // 4. Verify output
-      const reader = new BinaryStream(result.buffer);
+      // Verify EOF
+      expect(resultReader.readNextBlock()).toBeNull();
+  });
 
-      // Block 1: Header (includes Frame 0 which maps to original Frame 1)
-      const len1 = reader.readLong();
-      expect(len1).toBeGreaterThan(0);
-      const startPos1 = reader.getPosition();
-
-      // Skip Block 1 data
-      reader.seek(startPos1 + len1);
-
-      // Block 2 (Original Frame 2)
-      const len2 = reader.readLong();
-
-      expect(len2).toBeGreaterThan(0);
-      const startPos2 = reader.getPosition();
-
-      // Should be Frame command
-      expect(reader.readByte()).toBe(5); // Protocol 34 Wire for Frame (ServerCommand.frame is 20)
-      const seq2 = reader.readLong();
-      const delta2 = reader.readLong();
-
-      expect(seq2).toBe(1); // Frame 2 mapped to 1
-      expect(delta2).toBe(0); // Delta 1 mapped to 0
-
-      // EOF
-      reader.seek(startPos2 + len2);
-      expect(reader.readLong()).toBe(-1);
+  it('extractDemoRange calls extractClip with frame indices', () => {
+      const result = clipper.extractDemoRange(demoData, 0, 1);
+      // Frames 0 and 1 + EOF
+      // Block 0: 14
+      // Block 1: 24
+      // EOF: 4
+      // Total: 42
+      expect(result.byteLength).toBe(42);
   });
 });

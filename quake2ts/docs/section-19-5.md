@@ -106,32 +106,32 @@ This section covers migration of server-specific test utilities including networ
 
 ### 4. Create Multiplayer Simulation Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** Task 2 (server state), Section 19-3 Task 1 (entity factories)
 
-- [x] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
+- [ ] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
 
-- [x] **4.2** Add `createMultiplayerTestScenario()` helper
+- [ ] **4.2** Add `createMultiplayerTestScenario()` helper
   - Signature: `createMultiplayerTestScenario(numPlayers?: number): MultiplayerScenario`
   - Include: server, connected clients, player entities
 
-- [x] **4.3** Add `simulatePlayerJoin()` helper
+- [ ] **4.3** Add `simulatePlayerJoin()` helper
   - Signature: `simulatePlayerJoin(server: MockServer, userInfo?: UserInfo): Promise<ServerClient>`
   - Simulate complete player connection and spawn
 
-- [x] **4.4** Add `simulatePlayerLeave()` helper
+- [ ] **4.4** Add `simulatePlayerLeave()` helper
   - Signature: `simulatePlayerLeave(server: MockServer, clientNum: number): void`
   - Simulate player disconnect and cleanup
 
-- [x] **4.5** Add `simulateServerTick()` helper
+- [ ] **4.5** Add `simulateServerTick()` helper
   - Signature: `simulateServerTick(server: MockServer, deltaTime?: number): void`
   - Simulate one server frame update
 
-- [x] **4.6** Add `simulatePlayerInput()` helper
+- [ ] **4.6** Add `simulatePlayerInput()` helper
   - Signature: `simulatePlayerInput(client: ServerClient, input: PlayerInput): void`
   - Inject player input into server simulation
 
-- [x] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
+- [ ] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
   - Replace inline simulation code
   - Note: Dedicated test files updated in `server/tests/` as subdirectories were not present.
   - Estimated files: ~5
@@ -140,28 +140,28 @@ This section covers migration of server-specific test utilities including networ
 
 ### 5. Create Client Snapshot Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** Task 2 (server state), Section 19-3 Task 8 (game state factories)
 
-- [x] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
+- [ ] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
 
-- [x] **5.2** Add `createServerSnapshot()` helper
+- [ ] **5.2** Add `createServerSnapshot()` helper
   - Signature: `createServerSnapshot(serverState: ServerState, clientNum: number): Snapshot`
   - Generate client-specific snapshot from server state
 
-- [x] **5.3** Add `createDeltaSnapshot()` helper
+- [ ] **5.3** Add `createDeltaSnapshot()` helper
   - Signature: `createDeltaSnapshot(oldSnapshot: Snapshot, newSnapshot: Snapshot): DeltaSnapshot`
   - Calculate delta between snapshots
 
-- [x] **5.4** Add `verifySnapshotConsistency()` helper
+- [ ] **5.4** Add `verifySnapshotConsistency()` helper
   - Signature: `verifySnapshotConsistency(snapshots: Snapshot[]): ConsistencyReport`
   - Verify snapshot sequence is valid
 
-- [x] **5.5** Add `simulateSnapshotDelivery()` helper
+- [ ] **5.5** Add `simulateSnapshotDelivery()` helper
   - Signature: `simulateSnapshotDelivery(snapshot: Snapshot, reliability?: number): Promise<Snapshot | null>`
   - Simulate network delivery with packet loss
 
-- [x] **5.6** Cleanup snapshot tests in `server/tests/snapshot/` directory
+- [ ] **5.6** Cleanup snapshot tests in `server/tests/snapshot/` directory
   - Replace inline snapshot creation
   - Note: Relevant tests in `server/tests/` updated.
   - Estimated files: ~6
@@ -170,24 +170,24 @@ This section covers migration of server-specific test utilities including networ
 
 ### 6. Create Server Command/RCon Mocks (LOW PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** None
 
-- [x] **6.1** Create `test-utils/src/server/mocks/commands.ts` file
+- [ ] **6.1** Create `test-utils/src/server/mocks/commands.ts` file
 
-- [x] **6.2** Add `createMockServerConsole()` factory
+- [ ] **6.2** Add `createMockServerConsole()` factory
   - Signature: `createMockServerConsole(overrides?: Partial<ServerConsole>): ServerConsole`
   - Methods: `exec()`, `print()`, `broadcast()`
 
-- [x] **6.3** Add `createMockRConClient()` factory
+- [ ] **6.3** Add `createMockRConClient()` factory
   - Signature: `createMockRConClient(password?: string): RConClient`
   - Simulate remote console connection
 
-- [x] **6.4** Add `simulateServerCommand()` helper
+- [ ] **6.4** Add `simulateServerCommand()` helper
   - Signature: `simulateServerCommand(server: MockServer, command: string): string`
   - Execute server command and return output
 
-- [x] **6.5** Cleanup server command tests in `server/tests/commands/` directory
+- [ ] **6.5** Cleanup server command tests in `server/tests/commands/` directory
   - Estimated files: ~4
   - Note: Relevant tests in `server/tests/` updated.
 
@@ -195,62 +195,62 @@ This section covers migration of server-specific test utilities including networ
 
 ### 7. Create Bandwidth/Rate Limiting Utilities (LOW PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** Task 1 (transport mocks)
 
-- [x] **7.1** Create `test-utils/src/server/helpers/bandwidth.ts` file
+- [ ] **7.1** Create `test-utils/src/server/helpers/bandwidth.ts` file
 
-- [x] **7.2** Add `createMockRateLimiter()` factory
+- [ ] **7.2** Add `createMockRateLimiter()` factory
   - Signature: `createMockRateLimiter(bytesPerSecond: number): RateLimiter`
 
-- [x] **7.3** Add `simulateBandwidthLimit()` helper
+- [ ] **7.3** Add `simulateBandwidthLimit()` helper
   - Signature: `simulateBandwidthLimit(messages: Message[], bandwidth: number): Message[]`
   - Filter messages based on bandwidth constraints
 
-- [x] **7.4** Add `measureSnapshotSize()` helper
+- [ ] **7.4** Add `measureSnapshotSize()` helper
   - Signature: `measureSnapshotSize(snapshot: Snapshot): number`
   - Calculate snapshot size in bytes
 
-- [x] **7.5** Add `createBandwidthTestScenario()` helper
+- [ ] **7.5** Add `createBandwidthTestScenario()` helper
   - Signature: `createBandwidthTestScenario(bandwidth: number, numClients: number): BandwidthScenario`
 
 ---
 
 ### 8. Create Master Server Mocks (LOW PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** Task 1 (transport mocks)
 
-- [x] **8.1** Create `test-utils/src/server/mocks/master.ts` file
+- [ ] **8.1** Create `test-utils/src/server/mocks/master.ts` file
 
-- [x] **8.2** Add `createMockMasterServer()` factory
+- [ ] **8.2** Add `createMockMasterServer()` factory
   - Signature: `createMockMasterServer(overrides?: Partial<MasterServer>): MasterServer`
   - Methods: `registerServer()`, `heartbeat()`, `getServerList()`
 
-- [x] **8.3** Add `createMockServerInfo()` factory
+- [ ] **8.3** Add `createMockServerInfo()` factory
   - Signature: `createMockServerInfo(overrides?: Partial<ServerInfo>): ServerInfo`
   - Include: name, map, players, maxPlayers, gametype, version
 
-- [x] **8.4** Add `simulateServerRegistration()` helper
+- [ ] **8.4** Add `simulateServerRegistration()` helper
   - Signature: `simulateServerRegistration(server: MockServer, master: MockMasterServer): Promise<boolean>`
 
 ---
 
 ### 9. Documentation and Exports (LOW PRIORITY)
 
-**Status:** Complete
+**Status:** Pending
 **Dependencies:** Tasks 1-8
 
-- [x] **9.1** Add JSDoc comments to all server utilities
+- [ ] **9.1** Add JSDoc comments to all server utilities
   - Include usage examples for multiplayer simulation, transport mocking
 
-- [x] **9.2** Update `test-utils/README.md` with server utilities section
+- [ ] **9.2** Update `test-utils/README.md` with server utilities section
   - Document: transport mocks, server state, multiplayer helpers, snapshot utilities
 
-- [x] **9.3** Verify all server utilities exported from `test-utils/src/index.ts`
+- [ ] **9.3** Verify all server utilities exported from `test-utils/src/index.ts`
   - Organized by category: `server/mocks/*`, `server/helpers/*`
 
-- [x] **9.4** Add TypeScript type exports
+- [ ] **9.4** Add TypeScript type exports
   - Export all mock types and helper interfaces
 
 ---

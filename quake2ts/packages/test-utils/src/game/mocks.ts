@@ -1,6 +1,9 @@
 import { Entity, GameExports, GameImports } from '@quake2ts/game';
 import { vi } from 'vitest';
 
+/**
+ * Interface for mock GameState.
+ */
 export interface GameState {
     levelName: string;
     time: number;
@@ -35,19 +38,6 @@ export function createMockGameExports(overrides?: Partial<GameExports>): GameExp
         clientBegin: vi.fn().mockReturnValue({ index: 1, origin: { x: 0, y: 0, z: 0 } }),
         clientDisconnect: vi.fn(),
         clientThink: vi.fn(),
-        // clientUserInfoChanged is not in GameExports
-        // clientCommand is not in GameExports (it's serverCommand?) No, clientCommand might be missing from interface but present in impl or legacy.
-        // Checking GameExports interface in src/index.ts:
-        /*
-          clientConnect(ent: Entity | null, userInfo: string): string | true;
-          clientBegin(client: PlayerClient): Entity;
-          clientDisconnect(ent: Entity): void;
-          clientThink(ent: Entity, cmd: UserCommand): void;
-          respawn(ent: Entity): void;
-          ...
-          configstring(index: number, value: string): void;
-          serverCommand(cmd: string): void;
-        */
         respawn: vi.fn(),
         entities: {
             getByIndex: vi.fn(),
@@ -57,7 +47,7 @@ export function createMockGameExports(overrides?: Partial<GameExports>): GameExp
             checkAnyCollision: vi.fn(),
             trace: vi.fn(),
             pointcontents: vi.fn(),
-            link: vi.fn(), // linkentity mapped to link in EntitySystem? No, linkentity in imports, link/unlink in System.
+            link: vi.fn(),
             unlink: vi.fn(),
             spawn: vi.fn(),
             free: vi.fn(),

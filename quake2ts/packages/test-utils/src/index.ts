@@ -1,13 +1,18 @@
 // Export all test utilities
 export * from './shared/mocks.js';
 export * from './shared/bsp.js';
+export * from './shared/math.js';
+export * from './shared/collision.js';
+export * from './shared/factories.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
+export * from './game/helpers/physics.js';
 export * from './game/mocks/ai.js';
 export * from './game/mocks/combat.js';
 export * from './game/mocks/items.js';
 export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
+export * from './server/mockTransport.js';
 export * from './server/mocks/state.js';
 export * from './server/mocks/connection.js';
 export * from './server/mocks/commands.js';
@@ -23,7 +28,8 @@ export * from './setup/canvas.js';
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
-export * from './engine/mocks/webgl.js'; // Consolidated export
+export * from './engine/mocks/webgl.js'; // Restored original export
+export * from './engine/rendering.js'; // Rendering mocks (does not re-export webgl symbols now)
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 

@@ -3,6 +3,7 @@ import { createGame } from '../../src/index.js';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Monster Spawning', () => {
   const mockEngine = {
@@ -57,6 +58,10 @@ describe('Monster Spawning', () => {
 
   monsters.forEach(({ classname, expectedHealth }) => {
     it(`spawns ${classname} with correct health`, () => {
+      // Note: spawnEntityFromDictionary handles entity creation internally using the entity pool.
+      // We are verifying the result, not the creation process itself in this integration-like test.
+      // However, we can assert that the result conforms to what we expect from our factories if we were to use them.
+
       const entity = spawnEntityFromDictionary(
         { classname, origin: '100 100 100', angle: '90' },
         { registry, entities }

@@ -1,9 +1,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGrenade } from '../../src/entities/projectiles.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { Entity, MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
+import { Entity, MoveType } from '../../src/entities/entity.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
+import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('createGrenade', () => {
   let sys: any;
@@ -11,7 +11,7 @@ describe('createGrenade', () => {
 
   beforeEach(() => {
     sys = {
-      spawn: vi.fn().mockReturnValue({ origin: { ...ZERO_VEC3 } }),
+      spawn: vi.fn().mockImplementation(() => createEntityFactory({ origin: { ...ZERO_VEC3 } })),
       modelIndex: vi.fn(),
       scheduleThink: vi.fn(),
       finalizeSpawn: vi.fn(),
@@ -21,10 +21,9 @@ describe('createGrenade', () => {
       multicast: vi.fn(),
       free: vi.fn(),
     };
-    owner = {
-      classname: 'player',
+    owner = createPlayerEntityFactory({
       origin: { x: 0, y: 0, z: 0 },
-    } as any;
+    });
   });
 
   it('should create a grenade with correct default timer', () => {

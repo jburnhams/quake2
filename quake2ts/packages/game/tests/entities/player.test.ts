@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPlayerEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 import { player_die } from '../../src/entities/player.js';
-import { Entity, DeadFlag, Solid, MoveType } from '../../src/entities/entity.js';
+import { DeadFlag, Solid, MoveType } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import type { GameEngine } from '../../src/index.js';
+import { createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Player Death', () => {
     it('should set dead flags and properties', () => {
