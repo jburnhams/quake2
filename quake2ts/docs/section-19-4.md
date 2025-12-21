@@ -95,23 +95,23 @@ This section covers migration of client-specific test utilities including input 
 
 ### 3. Create HUD/UI Test Utilities (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Partially Completed
 **Dependencies:** None
 
-- [ ] **3.1** Create `test-utils/src/client/helpers/hud.ts` file
+- [x] **3.1** Create `test-utils/src/client/helpers/hud.ts` file
 
-- [ ] **3.2** Add `createMockHudState()` factory
+- [x] **3.2** Add `createMockHudState()` factory
   - Signature: `createMockHudState(overrides?: Partial<HudState>): HudState`
   - Include: health, armor, ammo, weapons, items
 
-- [ ] **3.3** Add `createMockScoreboard()` factory
+- [x] **3.3** Add `createMockScoreboard()` factory
   - Signature: `createMockScoreboard(players?: PlayerInfo[]): Scoreboard`
   - Include player list, scores, pings
 
-- [ ] **3.4** Add `createMockChatMessage()` factory
+- [x] **3.4** Add `createMockChatMessage()` factory
   - Signature: `createMockChatMessage(text: string, sender?: string, timestamp?: number): ChatMessage`
 
-- [ ] **3.5** Add `createMockNotification()` factory
+- [x] **3.5** Add `createMockNotification()` factory
   - Signature: `createMockNotification(type: string, message: string, duration?: number): Notification`
 
 - [ ] **3.6** Cleanup HUD tests in `client/tests/hud/` directory
