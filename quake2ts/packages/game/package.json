@@ -29,7 +29,7 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run --poolOptions.forks.maxForks=1 tests/integration"
+    "test:integration": "TEST_TYPE=integration NODE_OPTIONS='--max-old-space-size=4096' vitest run tests/integration/entitySystem.test.ts tests/integration/combat.test.ts tests/integration/gameplay.test.ts tests/integration/hooks.test.ts tests/integration/scenario_base1.test.ts tests/integration/physicsStress.test.ts tests/integration/saveLoad.test.ts tests/integration/asset-loading.test.ts"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",

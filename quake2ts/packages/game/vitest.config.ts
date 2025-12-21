@@ -23,11 +23,10 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       forks: {
-        // maxForks: 1, // Removed to allow parallelism
-        // minForks: 1,
+        ...(isIntegration ? { maxForks: 1, minForks: 1 } : {}),
       },
     },
-    fileParallelism: true, // Enable file parallelism
+    fileParallelism: !isIntegration,
     isolate: true,
     clearMocks: true,
     mockReset: true,
