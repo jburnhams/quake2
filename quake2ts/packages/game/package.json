@@ -29,7 +29,7 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run tests/integration"
+    "test:integration": "TEST_TYPE=integration vitest run --poolOptions.forks.maxForks=1 tests/integration"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:*",
