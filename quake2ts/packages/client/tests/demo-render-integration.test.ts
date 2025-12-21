@@ -86,12 +86,14 @@ describe('Client Demo Playback Integration', () => {
     mockGetRenderableEntities.mockReturnValue([dummyEntity]);
 
     const mockGetDemoCamera = vi.spyOn(mockDemoHandler, 'getDemoCamera');
-    const mockCamera = createMockCamera({
-        position: { x: 200, y: 200, z: 200 },
+
+    // getDemoCamera returns { origin, angles, fov }, NOT a Camera instance.
+    // We can manually construct this or helper.
+    mockGetDemoCamera.mockReturnValue({
+        origin: { x: 200, y: 200, z: 200 },
         angles: { x: 0, y: 90, z: 0 },
         fov: 90
     });
-    mockGetDemoCamera.mockReturnValue(mockCamera);
 
     // Mock getPredictionState to avoid undefined lastRendered
     const mockGetPredictionState = vi.spyOn(mockDemoHandler, 'getPredictionState');
