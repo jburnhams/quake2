@@ -122,6 +122,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     multicast: vi.fn(),
     unicast: vi.fn(),
     engine,
+    scriptHooks: hooks,
     game,
     sound: vi.fn((ent: Entity, chan: number, sound: string, vol: number, attn: number, timeofs: number) => {
       engine.sound(ent, chan, sound, vol, attn, timeofs);

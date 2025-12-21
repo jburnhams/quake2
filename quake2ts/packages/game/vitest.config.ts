@@ -7,25 +7,26 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  ...(isUnit ? ['**/integration/**', '**/*integration*'] : [])
+  ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
 ];
 
 const include = isIntegration
   ? ['**/integration/**', '**/*integration*']
-  : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
+  : ['tests/**/*.test.ts', 'src/save/tests/**/*.test.ts'];
 
 export default defineConfig({
   test: {
     include,
     exclude,
+    // pool: 'forks', // Default is threads, which is faster but might have isolation issues. Forks provides better isolation.
+    // Let's stick to forks but allow parallelism.
     pool: 'forks',
     poolOptions: {
       forks: {
-        maxForks: 1,
-        minForks: 1,
+        ...(isIntegration ? { maxForks: 1, minForks: 1 } : {}),
       },
     },
-    fileParallelism: false,
+    fileParallelism: !isIntegration,
     isolate: true,
     clearMocks: true,
     mockReset: true,

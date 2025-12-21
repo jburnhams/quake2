@@ -173,7 +173,8 @@ describe('Weapon Regression Tests', () => {
             expect.anything(), // Dflags
             DamageMod.RAILGUN,
             expect.anything(), // time
-            expect.anything() // multicast
+            expect.anything(), // multicast
+            expect.anything() // hooks?
         );
 
         // DM
@@ -191,6 +192,7 @@ describe('Weapon Regression Tests', () => {
             200, // Knockback (DM)
             expect.anything(),
             DamageMod.RAILGUN,
+            expect.anything(),
             expect.anything(),
             expect.anything()
         );
@@ -292,6 +294,7 @@ describe('Weapon Regression Tests', () => {
             expect.anything(),
             expect.anything(),
             DamageMod.RAILGUN,
+            expect.anything(),
             expect.anything(),
             expect.anything()
         );
