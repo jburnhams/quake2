@@ -26,6 +26,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: quake2ts/pnpm-lock.yaml
 
+      # WebGPU headless testing requires Vulkan drivers
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+
       - name: Install dependencies
         run: pnpm install
 

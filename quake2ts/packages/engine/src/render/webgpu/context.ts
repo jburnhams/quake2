@@ -2,6 +2,7 @@ export interface WebGPUContextOptions {
   powerPreference?: GPUPowerPreference;
   requiredFeatures?: GPUFeatureName[];
   requiredLimits?: Record<string, number>;
+  forceFallbackAdapter?: boolean;
 }
 
 export interface WebGPUContextState {
@@ -39,7 +40,8 @@ export async function createWebGPUContext(
   }
 
   const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: options?.powerPreference ?? 'high-performance'
+    powerPreference: options?.powerPreference ?? 'high-performance',
+    forceFallbackAdapter: options?.forceFallbackAdapter
   });
 
   if (!adapter) {
