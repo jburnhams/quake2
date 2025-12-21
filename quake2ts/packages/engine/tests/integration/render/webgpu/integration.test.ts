@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
-import { createWebGPUContext } from '../../../src/render/webgpu/context';
-import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
+import { createWebGPUContext } from '../../../../src/render/webgpu/context';
+import { createHeadlessRenderTarget, captureRenderTarget } from '../../../../src/render/webgpu/headless';
 import { create, globals } from 'webgpu';
 
 // Create a single shared instance for the suite to avoid creation/destruction issues
