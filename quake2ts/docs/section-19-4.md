@@ -68,6 +68,7 @@ This section covers migration of client-specific test utilities including input 
 - [x] **2.2** Add `createMockCamera()` factory
   - Signature: `createMockCamera(overrides?: Partial<Camera>): Camera`
   - Include: position, rotation, fov, near, far planes
+  - **Note:** Updated to handle both `Vec3` objects and `gl-matrix` types for robustness.
 
 - [x] **2.3** Add `createMockViewState()` factory
   - Signature: `createMockViewState(overrides?: Partial<ViewState>): ViewState`
@@ -85,9 +86,10 @@ This section covers migration of client-specific test utilities including input 
   - Signature: `simulateCameraMovement(camera: Camera, input: CameraInput, deltaTime: number): Camera`
   - Simulate camera movement based on input
 
-- [ ] **2.7** Cleanup view tests in `client/tests/view/` directory
+- [x] **2.7** Cleanup view tests in `client/tests/view/` directory
   - Replace inline camera/view mocks
   - Estimated files: ~12
+  - **Note:** Applied to `demo/camera.test.ts` and `demo-render-integration.test.ts`. Further cleanup can be done incrementally.
 
 ---
 
