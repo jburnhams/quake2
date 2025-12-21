@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DIST_EPSILON, traceBox } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs, makeLeafModel, makeAxisBrush } from './test-helpers.js';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
 
 describe('traceBox grazing hit scenarios', () => {
   describe('parallel traces along surfaces', () => {

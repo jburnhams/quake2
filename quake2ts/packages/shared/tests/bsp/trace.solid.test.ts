@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { traceBox } from '../../src/bsp/collision.js';
-import { makeAxisBrush, makeLeafModel } from './test-helpers.js';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
 
 describe('traceBox solid and contained cases', () => {
   it('should correctly identify a trace that starts inside a solid', () => {

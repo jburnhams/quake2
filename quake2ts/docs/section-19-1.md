@@ -32,6 +32,7 @@ This section covers migration of shared testing utilities that form the foundati
 
 - [x] **1.4** Remove duplicate BSP helpers from `game/tests/physics/bsp-helpers.ts`
   - Delete file after completing subtasks below
+  - *Note: `bsp-helpers.ts` was not found, assumed already deleted or not present. Verified no internal usage.*
 
 - [x] **1.5** Update imports in `game/tests/physics/` directory
   - Replace `import { ... } from './bsp-helpers'` with `import { ... } from '@quake2ts/test-utils'`

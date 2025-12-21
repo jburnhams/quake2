@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { traceBox, CollisionModel } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs } from './test-helpers.js';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
 import { CONTENTS_SOLID, MASK_SOLID } from '../../src/bsp/contents.js';
 
 describe('Trace Performance', () => {
