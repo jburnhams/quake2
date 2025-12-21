@@ -164,6 +164,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       sightEntity: null,
       soundEntity: null,
     },
+    warn: vi.fn(), // Added warn to entities as it is sometimes used there too, though typically on SpawnContext
     // Adding missing properties to satisfy EntitySystem interface partially or fully
     // We cast to unknown first anyway, but filling these in makes it safer for consumers
     skill: 1,

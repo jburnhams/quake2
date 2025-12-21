@@ -6,6 +6,7 @@ export * from './shared/collision.js';
 export * from './shared/factories.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
+export * from './game/helpers/physics.js';
 export * from './game/mocks/ai.js';
 export * from './game/mocks/combat.js';
 export * from './game/mocks/items.js';
