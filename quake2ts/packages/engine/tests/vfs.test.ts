@@ -164,4 +164,39 @@ describe('VirtualFileSystem', () => {
     expect(result).toBe(dataStr);
     expect(chunks).toBe(10);
   });
+
+  it('mountPak returns the PakArchive instance', () => {
+    const pak = makePak('base.pak', [{ path: 'test.txt', data: 'hello' }]);
+    const vfs = new VirtualFileSystem();
+    const result = vfs.mountPak(pak);
+    expect(result).toBe(pak);
+  });
+
+  it('findByExtension supports array of extensions', () => {
+    const pak = makePak('base.pak', [
+      { path: 'a.txt', data: '' },
+      { path: 'b.cfg', data: '' },
+      { path: 'c.dat', data: '' },
+    ]);
+    const vfs = new VirtualFileSystem([pak]);
+    // @ts-ignore
+    const results = vfs.findByExtension(['.txt', 'cfg']); // mixed format
+
+    expect(results.map(f => f.path)).toEqual(expect.arrayContaining(['a.txt', 'b.cfg']));
+    expect(results.length).toBe(2);
+  });
+
+  it('findByExtension supports regex', () => {
+    const pak = makePak('base.pak', [
+      { path: 'maps/base1.bsp', data: '' },
+      { path: 'maps/base2.bsp', data: '' },
+      { path: 'textures/wall.wal', data: '' },
+    ]);
+    const vfs = new VirtualFileSystem([pak]);
+    // @ts-ignore
+    const results = vfs.findByExtension(/base\d/);
+
+    expect(results.map(f => f.path)).toEqual(expect.arrayContaining(['maps/base1.bsp', 'maps/base2.bsp']));
+    expect(results.length).toBe(2);
+  });
 });

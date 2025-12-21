@@ -47,7 +47,7 @@ export class VirtualFileSystem {
     archives.forEach((archive) => this.mountPak(archive));
   }
 
-  mountPak(archive: PakArchive, priority: number = 0): void {
+  mountPak(archive: PakArchive, priority: number = 0): PakArchive {
     // Remove if already mounted to update priority
     const existingIndex = this.mounts.findIndex(m => m.pak === archive);
     if (existingIndex !== -1) {
@@ -78,6 +78,7 @@ export class VirtualFileSystem {
       // Sort sources by priority descending (stable sort preserves insertion order for equal priority)
       sources.sort((a, b) => b.priority - a.priority);
     }
+    return archive;
   }
 
   setPriority(archive: PakArchive, priority: number): void {
@@ -216,7 +217,14 @@ export class VirtualFileSystem {
     return listing.files;
   }
 
-  findByExtension(extension: string): VirtualFileHandle[] {
+  findByExtension(extension: string | string[] | RegExp): VirtualFileHandle[] {
+    if (extension instanceof RegExp) {
+        return this.searchFiles(extension);
+    }
+    if (Array.isArray(extension)) {
+        return this.listByExtension(extension);
+    }
+
     const normalizedExt = extension.startsWith('.') ? extension.toLowerCase() : `.${extension.toLowerCase()}`;
     const results: VirtualFileHandle[] = [];
     for (const [path, sources] of this.files) {
