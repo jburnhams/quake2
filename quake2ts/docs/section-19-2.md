@@ -52,12 +52,12 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 2. Migrate Audio System Mocks (HIGH PRIORITY)
 
-**Status:** Comprehensive mocks exist in engine/tests
+**Status:** Completed
 **Dependencies:** None
 
-- [ ] **2.1** Create `test-utils/src/engine/mocks/audio.ts` file
+- [x] **2.1** Create `test-utils/src/engine/mocks/audio.ts` file
 
-- [ ] **2.2** Migrate audio fake classes from `engine/tests/audio/fakes.ts`
+- [x] **2.2** Migrate audio fake classes from `engine/tests/audio/fakes.ts`
   - `FakeAudioContext` - Mock Web Audio API context
   - `FakeAudioNode` - Base audio node mock
   - `FakeAudioDestinationNode` - Output destination mock
@@ -67,25 +67,25 @@ This section covers migration of engine-specific test utilities including WebGL 
   - `FakeGainNode` - Volume control mock
   - Total: ~136 lines
 
-- [ ] **2.3** Add factory functions for common audio mocks
+- [x] **2.3** Add factory functions for common audio mocks
   - `createMockAudioContext(overrides?: Partial<AudioContext>): FakeAudioContext`
   - `createMockPannerNode(overrides?: Partial<PannerNode>): FakePannerNode`
   - `createMockBufferSource(buffer?: AudioBuffer): FakeBufferSource`
 
-- [ ] **2.4** Add `createMockAudioBuffer()` factory
+- [x] **2.4** Add `createMockAudioBuffer()` factory
   - Signature: `createMockAudioBuffer(duration?: number, channels?: number, sampleRate?: number): AudioBuffer`
   - Default: 1 second, stereo, 44.1kHz
 
-- [ ] **2.5** Update imports in `engine/tests/audio/` directory
+- [x] **2.5** Update imports in `engine/tests/audio/` directory
   - Replace `import { FakeAudioContext, ... } from './fakes'`
   - With `import { createMockAudioContext, ... } from '@quake2ts/test-utils'`
   - Estimated files: ~8
 
-- [ ] **2.6** Update imports in `engine/tests/music/` directory
+- [x] **2.6** Update imports in `engine/tests/music/` directory
   - Same import pattern
   - Estimated files: ~3
 
-- [ ] **2.7** Delete `engine/tests/audio/fakes.ts` after migration
+- [x] **2.7** Delete `engine/tests/audio/fakes.ts` after migration
 
 ---
 
