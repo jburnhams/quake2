@@ -3,6 +3,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import handler from 'serve-handler';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PlaywrightTestClient } from '@quake2ts/test-utils';
 
 // Fix for ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -18,10 +19,8 @@ export interface TestClientOptions {
   height?: number;
 }
 
-export interface TestClient {
-    browser: Browser;
+export interface TestClient extends PlaywrightTestClient {
     context: BrowserContext;
-    page: Page;
     server?: any; // HTTP server instance
 }
 
@@ -126,7 +125,39 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
     console.warn(`Failed to navigate to ${fullUrl}:`, error);
   }
 
-  return { browser, context, page, server: staticServer };
+  // Construct the client object matching PlaywrightTestClient interface
+  const client: TestClient = {
+      browser,
+      context,
+      page,
+      server: staticServer,
+      navigate: async (url: string) => { await page.goto(url); },
+      waitForGame: async () => {
+          await page.waitForFunction(() => {
+              // Check for global game instance and running state
+              return (window as any).game && (window as any).game.isRunning;
+          }, { timeout: 10000 });
+      },
+      injectInput: async (type: string, data: any) => {
+             await page.evaluate(({ type, data }: any) => {
+                 // Forward input event to the game instance if available
+                 const game = (window as any).game;
+                 if (game && typeof game.injectInput === 'function') {
+                     game.injectInput(type, data);
+                 } else {
+                     console.warn('Game instance or injectInput method not found on window');
+                 }
+             }, { type, data });
+      },
+      screenshot: async (name: string) => {
+          return await page.screenshot({ path: `${name}.png` });
+      },
+      close: async () => {
+          await closeBrowser(client);
+      }
+  };
+
+  return client;
 }
 
 /**
