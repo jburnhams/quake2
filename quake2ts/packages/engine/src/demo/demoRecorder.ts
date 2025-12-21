@@ -93,7 +93,8 @@ export class DemoRecorder {
             gunskin: 0,
             gunrate: 0,
             damage_blend: [0, 0, 0, 0],
-            team_id: 0
+            team_id: 0,
+            watertype: snapshot.watertype || 0
         };
 
         writePlayerState(writer, ps);

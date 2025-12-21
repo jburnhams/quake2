@@ -142,6 +142,13 @@ export class PakArchive {
     return Array.from(this.entries.values());
   }
 
+  /**
+   * Returns a list of all file paths in the PAK archive.
+   */
+  list(): string[] {
+    return Array.from(this.entries.keys());
+  }
+
   readFile(path: string): Uint8Array {
     const entry = this.getEntry(path);
     if (!entry) {
