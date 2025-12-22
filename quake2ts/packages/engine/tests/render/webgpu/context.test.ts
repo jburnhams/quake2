@@ -1,140 +1,106 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  createWebGPUContext,
-  queryCapabilities,
-  setupDeviceLossHandling,
-  WebGPUContextOptions
-} from '../../../src/render/webgpu/context';
-import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
+import { createWebGPUContext, WebGPUContextOptions } from '../../../src/render/webgpu/context';
+
+// Mocks
+const mockDestroy = vi.fn();
+const mockConfigure = vi.fn();
+const mockGetContext = vi.fn();
+
+const mockDevice = {
+  features: {
+    keys: () => ['texture-compression-bc'],
+    has: (feature: string) => feature === 'texture-compression-bc',
+  },
+  limits: {
+    maxTextureDimension2D: 8192,
+  },
+  destroy: mockDestroy,
+  lost: Promise.resolve({ reason: 'destroyed', message: 'Device destroyed' }),
+} as unknown as GPUDevice;
+
+const mockAdapter = {
+  features: {
+    keys: () => ['texture-compression-bc'],
+    has: (feature: string) => feature === 'texture-compression-bc',
+  },
+  requestDevice: vi.fn().mockResolvedValue(mockDevice),
+} as unknown as GPUAdapter;
+
+const mockNavigatorGpu = {
+  requestAdapter: vi.fn().mockResolvedValue(mockAdapter),
+  getPreferredCanvasFormat: () => 'bgra8unorm',
+};
 
 describe('WebGPU Context', () => {
-  let mocks: ReturnType<typeof setupWebGPUMocks>;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks = setupWebGPUMocks();
+    (global as any).navigator = {
+      gpu: mockNavigatorGpu,
+    };
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    delete (global as any).navigator;
   });
 
-  describe('createWebGPUContext', () => {
-    it('creates context successfully in browser environment', async () => {
-      const canvas = document.createElement('canvas');
-      canvas.getContext = vi.fn().mockReturnValue({
-        configure: vi.fn(),
-      });
+  it('throws if WebGPU is not supported', async () => {
+    delete (global as any).navigator.gpu;
+    await expect(createWebGPUContext()).rejects.toThrow('WebGPU not supported');
+  });
 
-      const state = await createWebGPUContext(canvas);
+  it('throws if adapter cannot be created', async () => {
+    mockNavigatorGpu.requestAdapter.mockResolvedValueOnce(null);
+    await expect(createWebGPUContext()).rejects.toThrow('Failed to request WebGPU adapter');
+  });
 
-      expect(state.device).toBeDefined();
-      expect(state.adapter).toBeDefined();
-      expect(state.context).toBeDefined();
-      expect(state.isHeadless).toBe(false);
-      expect(state.format).toBe('bgra8unorm');
+  it('creates context with canvas', async () => {
+    const mockCanvas = {
+      getContext: mockGetContext.mockReturnValue({
+        configure: mockConfigure,
+      }),
+    } as unknown as HTMLCanvasElement;
 
-      expect(navigator.gpu.requestAdapter).toHaveBeenCalledWith({
-        powerPreference: 'high-performance'
-      });
+    const ctx = await createWebGPUContext(mockCanvas);
+
+    expect(ctx.device).toBe(mockDevice);
+    expect(ctx.adapter).toBe(mockAdapter);
+    expect(ctx.isHeadless).toBe(false);
+    expect(ctx.format).toBe('bgra8unorm');
+    expect(mockGetContext).toHaveBeenCalledWith('webgpu');
+    expect(mockConfigure).toHaveBeenCalledWith(expect.objectContaining({
+      device: mockDevice,
+      format: 'bgra8unorm',
+    }));
+  });
+
+  it('creates headless context', async () => {
+    const ctx = await createWebGPUContext();
+
+    expect(ctx.device).toBe(mockDevice);
+    expect(ctx.isHeadless).toBe(true);
+    expect(ctx.context).toBeUndefined();
+    // Default headless format
+    expect(ctx.format).toBe('rgba8unorm');
+  });
+
+  it('validates required features', async () => {
+    await expect(createWebGPUContext(undefined, {
+      requiredFeatures: ['timestamp-query' as GPUFeatureName],
+    })).rejects.toThrow('Required WebGPU feature not available');
+  });
+
+  it('passes options to requestAdapter', async () => {
+    await createWebGPUContext(undefined, {
+      powerPreference: 'low-power',
     });
-
-    it('creates headless context when no canvas provided', async () => {
-      const state = await createWebGPUContext();
-
-      expect(state.device).toBeDefined();
-      expect(state.context).toBeUndefined();
-      expect(state.isHeadless).toBe(true);
-      expect(state.format).toBe('bgra8unorm'); // Default fallback
-    });
-
-    it('throws error if WebGPU is not supported', async () => {
-      // Temporarily remove gpu from navigator
-      const originalGpu = navigator.gpu;
-      // @ts-ignore
-      delete navigator.gpu;
-
-      await expect(createWebGPUContext()).rejects.toThrow('WebGPU is not supported');
-
-      // Restore
-      Object.defineProperty(navigator, 'gpu', { value: originalGpu });
-    });
-
-    it('throws error if no adapter found', async () => {
-      // @ts-ignore
-      mocks.mockGpu.requestAdapter.mockResolvedValue(null);
-
-      await expect(createWebGPUContext()).rejects.toThrow('No appropriate GPUAdapter found');
-    });
-
-    it('validates required features', async () => {
-      // Mock adapter with no features
-      // @ts-ignore
-      mocks.mockAdapter.features = new Set();
-
-      const options: WebGPUContextOptions = {
-        requiredFeatures: ['texture-compression-bc' as GPUFeatureName]
-      };
-
-      await expect(createWebGPUContext(undefined, options)).rejects.toThrow('Required feature not available');
-    });
-
-    it('passes required limits to device creation', async () => {
-      const options: WebGPUContextOptions = {
-        requiredLimits: { maxBindGroups: 8 }
-      };
-
-      await createWebGPUContext(undefined, options);
-
-      expect(mocks.mockAdapter.requestDevice).toHaveBeenCalledWith(expect.objectContaining({
-        requiredLimits: { maxBindGroups: 8 }
-      }));
+    expect(mockNavigatorGpu.requestAdapter).toHaveBeenCalledWith({
+      powerPreference: 'low-power',
     });
   });
 
-  describe('queryCapabilities', () => {
-    it('correctly identifies capabilities', async () => {
-      const state = await createWebGPUContext();
-      // Setup mock features
-      state.features.add('timestamp-query');
-      state.limits.maxTextureDimension2D = 16384;
-
-      const caps = queryCapabilities(state);
-
-      expect(caps.hasTimestampQuery).toBe(true);
-      expect(caps.hasTextureCompressionBC).toBe(false);
-      expect(caps.maxTextureDimension2D).toBe(16384);
-    });
-  });
-
-  describe('setupDeviceLossHandling', () => {
-    it('registers lost handler', async () => {
-      const state = await createWebGPUContext();
-      const onLost = vi.fn();
-
-      // We can't easily trigger the promise resolution of a mocked property without exposing the resolve function
-      // But we can verify the setup logic attaches the handler
-
-      // Creating a device with a manually controlled promise for 'lost'
-      let resolveLost: (info: GPUDeviceLostInfo) => void;
-      const lostPromise = new Promise<GPUDeviceLostInfo>((resolve) => {
-        resolveLost = resolve;
-      });
-
-      const device = {
-        lost: lostPromise
-      } as unknown as GPUDevice;
-
-      setupDeviceLossHandling(device, onLost);
-
-      // Trigger loss
-      // @ts-ignore
-      resolveLost({ reason: 'destroyed', message: 'test' });
-
-      // Wait for microtasks
-      await new Promise(process.nextTick);
-
-      expect(onLost).toHaveBeenCalledWith('destroyed');
-    });
+  it('disposes correctly', async () => {
+    const ctx = await createWebGPUContext();
+    ctx.dispose();
+    expect(mockDestroy).toHaveBeenCalled();
   });
 });

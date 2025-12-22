@@ -5,6 +5,7 @@ import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
 import type { BspSurfaceGeometry, LightmapAtlas } from './bsp.js';
 import { Texture2D } from './resources.js';
+import { IRenderer, FrameRenderOptions } from './interface.js';
 import type { MaterialManager } from './materials.js';
 import {
   computeSkyScroll,
@@ -18,7 +19,7 @@ import { DLight } from './dlight.js';
 import { PostProcessPipeline } from './postProcess.js';
 import { BloomPipeline } from './bloom.js';
 
-export { FrameRenderStats, FrameRenderOptions };
+export { FrameRenderStats };
 
 interface SkyRenderState {
   readonly scrollSpeeds?: readonly [number, number];
@@ -59,7 +60,8 @@ export interface RenderModeConfig {
   readonly generateRandomColor?: boolean; // If true, generates color from entity ID
 }
 
-interface FrameRenderOptions {
+// Internal renderer-specific options interface
+export interface FrameRenderOptionsInternal extends FrameRenderOptions {
   readonly camera: Camera;
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
@@ -289,7 +291,7 @@ export const createFrameRenderer = (
       return copyTexture;
   };
 
-  const renderFrame = (options: FrameRenderOptions): FrameRenderStats => {
+  const renderFrame = (options: FrameRenderOptionsInternal): FrameRenderStats => {
     const now = performance.now();
     const fps = lastFrameTime > 0 ? 1000 / (now - lastFrameTime) : 0;
     lastFrameTime = now;

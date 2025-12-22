@@ -44,7 +44,13 @@ describe('WebGPU Integration (Real)', () => {
     device.queue.submit([encoder.finish()]);
 
     // Read back
-    const data = await captureRenderTarget(device, texture);
+    const data = await captureRenderTarget(device, {
+        texture,
+        view,
+        width,
+        height,
+        format: 'rgba8unorm'
+    });
 
     // Check first pixel is red
     expect(data[0]).toBe(255);
