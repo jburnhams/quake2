@@ -78,6 +78,7 @@ async function createWebGPUContext(
 - [x] Implemented core context creation logic
 - [x] Added unit tests with mocks
 - [x] Verified build and tests pass
+- [x] Integration tests implemented (Note: require GPU/Vulkan drivers, may fail in headless CI)
 
 ---
 
@@ -202,8 +203,8 @@ async function captureRenderTarget(
 **Status:**
 - [x] Implemented headless render target creation
 - [x] Implemented framebuffer capture
-- [x] Added mocked tests
-- [x] Added real integration tests with @webgpu/dawn
+- [x] Added mocked unit tests (passing)
+- [x] Added real integration tests with webgpu package (functional, but require GPU drivers)
 
 ---
 
@@ -326,15 +327,17 @@ Test context creation logic without real GPU.
 
 ### Integration Tests (Headless)
 
-Test with real @webgpu/dawn:
+Test with real webgpu package:
 
 ```typescript
-test('creates headless context with @webgpu/dawn', async () => {
+test('creates headless context with webgpu', async () => {
   const context = await createWebGPUContext();
   expect(context.device).toBeDefined();
   expect(context.isHeadless).toBe(true);
 });
 ```
+
+**Note on CI/CD:** Integration tests using the `webgpu` npm package require GPU drivers (Vulkan, Metal, or D3D12) or SwiftShader. These may fail in headless CI environments without GPU support. Unit tests with mocks provide sufficient coverage for CI/CD pipelines.
 
 ---
 
