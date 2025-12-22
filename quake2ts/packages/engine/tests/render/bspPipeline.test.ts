@@ -70,12 +70,14 @@ vi.mock('../../src/render/shaderProgram', () => {
     getUniformLocation,
     use,
     dispose,
+    sourceSize: 100,
   }));
 
   ShaderProgram.create = vi.fn(() => ({
     getUniformLocation,
     use,
     dispose,
+    sourceSize: 100,
   }));
 
   return { ShaderProgram };

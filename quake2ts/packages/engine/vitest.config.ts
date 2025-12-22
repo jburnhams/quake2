@@ -49,7 +49,7 @@ export default defineConfig({
      // Optimize unit test performance
     ...(isUnit ? {
       pool: 'threads',
-      isolate: false, // Reuse environment across test files for speed
+      isolate: true, // Ensure test isolation to prevent mock pollution
     } : {}),
     // Force sequential execution for integration tests to prevent WebGPU/NAPI crashes
     ...(isIntegration ? {
