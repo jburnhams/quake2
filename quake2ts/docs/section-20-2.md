@@ -28,7 +28,7 @@ Implement WebGPU resource abstractions (buffers, textures, shaders, bind groups,
 
 ## Tasks
 
-### Task 1: Buffer Abstractions
+### Task 1: Buffer Abstractions [COMPLETED]
 
 **File:** `packages/engine/src/render/webgpu/resources.ts`
 
@@ -80,7 +80,7 @@ class StorageBuffer extends GPUBufferResource
 
 ---
 
-### Task 2: Texture Abstractions
+### Task 2: Texture Abstractions [COMPLETED]
 
 **File:** Same as Task 1
 
@@ -401,7 +401,7 @@ function createRenderPassDescriptor(): RenderPassDescriptorBuilder
 
 ---
 
-### Task 7: Memory Tracking & Profiling
+### Task 7: Memory Tracking & Profiling [COMPLETED]
 
 **File:** Same as Task 1
 

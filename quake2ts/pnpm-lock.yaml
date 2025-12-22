@@ -39,6 +39,9 @@ importers:
       '@types/serve-handler':
         specifier: ^6.1.4
         version: 6.1.4
+      '@webgpu/types':
+        specifier: ^0.1.68
+        version: 0.1.68
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
