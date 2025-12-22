@@ -18,6 +18,11 @@ const include = isIntegration
   ? ['**/integration/**', '**/*integration*']
   : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
+const setupFiles = ['./vitest.setup.ts'];
+if (isIntegration) {
+    setupFiles.push('./tests/setup-webgpu.ts');
+}
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -39,7 +44,7 @@ export default defineConfig({
     // Given this is the engine package and we want headless WebGPU, 'node' is safer for those.
     // But other tests might need 'jsdom'.
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts', './tests/setup-webgpu.ts'],
+    setupFiles,
     globals: true,
     // Force sequential execution for integration tests to prevent WebGPU/NAPI crashes
     ...(isIntegration ? {

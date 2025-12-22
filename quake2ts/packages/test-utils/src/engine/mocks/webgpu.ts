@@ -1,9 +1,61 @@
 import { vi } from 'vitest';
+import { globals } from 'webgpu';
 
 export interface MockWebGPUContext {
   adapter: GPUAdapter;
   device: GPUDevice;
   queue: GPUQueue;
+}
+
+/**
+ * Patches globalThis with WebGPU globals (GPUBufferUsage, etc.)
+ * and optionally patches navigator.gpu.
+ */
+export function setupWebGPUMocks() {
+    // 1. Inject globals like GPUBufferUsage, GPUTextureUsage
+    Object.assign(globalThis, globals);
+
+    // 2. Setup Navigator mock
+    const mockGpu = {
+      requestAdapter: vi.fn(),
+      getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm'),
+    };
+
+    // Create mocks for Adapter and Device
+    const mockAdapter = createMockGPUAdapter();
+    const mockDevice = createMockGPUDevice();
+
+    // Wire them up
+    mockGpu.requestAdapter.mockResolvedValue(mockAdapter);
+    // @ts-ignore - vitest mock manipulation
+    mockAdapter.requestDevice.mockResolvedValue(mockDevice);
+
+    if (!globalThis.navigator) {
+      // @ts-ignore
+      globalThis.navigator = {};
+    }
+
+    // Safely redefine navigator.gpu
+    try {
+        // If it exists and is configurable, define it.
+        // If it doesn't exist, define it.
+        // If it exists and is NOT configurable, we can't do much (but that shouldn't happen in our test env if we control it)
+        Object.defineProperty(globalThis.navigator, 'gpu', {
+            value: mockGpu,
+            writable: true,
+            configurable: true
+        });
+    } catch (e) {
+        // Fallback: simple assignment if defineProperty fails (e.g. some JSDOM quirks)
+        // @ts-ignore
+        globalThis.navigator.gpu = mockGpu;
+    }
+
+    return {
+      mockGpu,
+      mockAdapter,
+      mockDevice
+    };
 }
 
 export function createMockGPUAdapter(options: Partial<GPUAdapter> = {}): GPUAdapter {
