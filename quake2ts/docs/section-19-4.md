@@ -95,7 +95,7 @@ This section covers migration of client-specific test utilities including input 
 
 ### 3. Create HUD/UI Test Utilities (MEDIUM PRIORITY)
 
-**Status:** Partially Completed
+**Status:** Completed
 **Dependencies:** None
 
 - [x] **3.1** Create `test-utils/src/client/helpers/hud.ts` file
@@ -114,7 +114,7 @@ This section covers migration of client-specific test utilities including input 
 - [x] **3.5** Add `createMockNotification()` factory
   - Signature: `createMockNotification(type: string, message: string, duration?: number): Notification`
 
-- [ ] **3.6** Cleanup HUD tests in `client/tests/hud/` directory
+- [x] **3.6** Cleanup HUD tests in `client/tests/hud/` directory
   - Replace inline HUD mocks
   - Estimated files: ~8
 
