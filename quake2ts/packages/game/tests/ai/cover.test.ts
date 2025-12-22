@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, EntityFlags } from '../../src/entities/entity.js';
 import { findCover } from '../../src/ai/targeting.js';
 import { AIFlags } from '../../src/ai/constants.js';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('AI Cover Seeking', () => {
   let monster: Entity;
@@ -11,47 +12,43 @@ describe('AI Cover Seeking', () => {
   let context: any;
 
   beforeEach(() => {
-    monster = {
-      classname: 'monster_soldier',
+    monster = createMonsterEntityFactory('monster_soldier', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
-      enemy: null,
-      goalentity: null,
-      movetarget: null,
-      monsterinfo: {
+    });
+
+    // Manual setup of AI mock functions for now, or use createMockMonsterAI if applicable to `monsterinfo`
+    monster.monsterinfo = {
+        ...monster.monsterinfo,
         aiflags: 0,
         run: vi.fn(),
-      },
-      angles: { x: 0, y: 0, z: 0 },
-      ideal_yaw: 0,
     } as any;
 
-    enemy = {
-      classname: 'player',
+    enemy = createPlayerEntityFactory({
       origin: { x: 500, y: 0, z: 0 },
       viewheight: 22,
       flags: 0,
-    } as any;
+    });
 
     monster.enemy = enemy;
 
-    coverSpot1 = {
+    coverSpot1 = createEntityFactory({
       classname: 'point_combat',
       origin: { x: 0, y: 100, z: 0 },
       viewheight: 0,
-      inUse: true,
-      owner: null, // Not occupied
-    } as any;
+    });
+    (coverSpot1 as any).inUse = true;
+    (coverSpot1 as any).owner = null;
 
-    coverSpot2 = {
+    coverSpot2 = createEntityFactory({
       classname: 'point_combat',
       origin: { x: 0, y: -100, z: 0 },
       viewheight: 0,
-      inUse: true,
-      owner: null,
-    } as any;
+    });
+    (coverSpot2 as any).inUse = true;
+    (coverSpot2 as any).owner = null;
 
     context = {
       findByClassname: vi.fn().mockReturnValue([coverSpot1, coverSpot2]),

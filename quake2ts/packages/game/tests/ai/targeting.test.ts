@@ -3,7 +3,7 @@ import { ai_checkattack } from '../../src/ai/targeting.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AIFlags, AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createEntity } from '../test-helpers.js';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createMockMonsterAI } from '@quake2ts/test-utils';
 
 describe('ai_checkattack', () => {
   let context: EntitySystem;
@@ -14,17 +14,20 @@ describe('ai_checkattack', () => {
     const testCtx = createTestContext();
     context = testCtx.entities;
 
-    self = createEntity();
-    self.classname = 'monster_test';
-    self.origin = { x: 0, y: 0, z: 0 };
-    self.monsterinfo = {
-        checkattack: vi.fn(() => true), // Mock monster specific check
-        attack_state: AttackState.Straight
-    };
+    self = createMonsterEntityFactory('monster_test', {
+        origin: { x: 0, y: 0, z: 0 }
+    });
 
-    enemy = createEntity();
-    enemy.classname = 'player';
-    enemy.origin = { x: 100, y: 0, z: 0 };
+    // Override monsterinfo to provide checkattack mock which is required for this test.
+    self.monsterinfo = {
+        ...self.monsterinfo,
+        checkattack: vi.fn(() => true),
+        attack_state: AttackState.Straight
+    } as any;
+
+    enemy = createPlayerEntityFactory({
+        origin: { x: 100, y: 0, z: 0 }
+    });
     self.enemy = enemy;
   });
 
