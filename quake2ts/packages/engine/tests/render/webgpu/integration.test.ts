@@ -1,31 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { createWebGPUContext } from '../../../src/render/webgpu/context';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
 
-// We need to conditionally run these tests only if we can load webgpu
-let webgpuAvailable = false;
-try {
-  // Try to load webgpu
-  const { gpu } = require('webgpu');
-  if (gpu) {
-    webgpuAvailable = true;
+// Import webgpu/dawn bindings for Node.js
+import { create, globals } from 'webgpu';
 
-    // Polyfill navigator.gpu for the test environment
-    if (!global.navigator) {
-      // @ts-ignore
-      global.navigator = {};
-    }
-    // @ts-ignore
-    if (!global.navigator.gpu) {
-      // @ts-ignore
-      global.navigator.gpu = gpu;
-    }
-  }
-} catch (e) {
-  console.warn('webgpu package not available, skipping real integration tests');
+// Register globals for Node.js environment
+Object.assign(global, globals);
+
+// Polyfill navigator.gpu
+if (!global.navigator) {
+  (global as any).navigator = {};
 }
+(global.navigator as any).gpu = create([]);
 
-describe.skipIf(!webgpuAvailable)('WebGPU Integration (Real)', () => {
+describe('WebGPU Integration (Real)', () => {
   it('should create a real WebGPU context headlessly', async () => {
     const context = await createWebGPUContext();
     expect(context.device).toBeDefined();
