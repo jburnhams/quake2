@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { func_door_secret } from '../../src/entities/funcs.js';
-import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from '../../src/entities/entity.js';
+import { MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { Entity } from '../../src/entities/entity.js'; // Keep for type if needed, but we use factory
 
 // Mock angleVectors since it's used in SP_func_door_secret
 vi.mock('@quake2ts/shared', async () => {
@@ -43,12 +45,13 @@ describe('func_door_secret', () => {
     let entitySystem: EntitySystem;
 
     beforeEach(() => {
-        entity = new Entity();
-        entity.origin = { x: 100, y: 100, z: 100 };
-        entity.angles = { x: 0, y: 0, z: 0 };
-        entity.size = { x: 32, y: 32, z: 64 };
-        entity.mins = { x: 0, y: 0, z: 0 };
-        entity.maxs = { x: 32, y: 32, z: 64 };
+        entity = createEntityFactory({
+            origin: { x: 100, y: 100, z: 100 },
+            angles: { x: 0, y: 0, z: 0 },
+            size: { x: 32, y: 32, z: 64 },
+            mins: { x: 0, y: 0, z: 0 },
+            maxs: { x: 32, y: 32, z: 64 },
+        });
 
         entitySystem = {
             scheduleThink: vi.fn((ent, time) => {

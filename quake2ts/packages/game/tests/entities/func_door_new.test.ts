@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerFuncSpawns, DoorState } from '../../src/entities/funcs.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { MoveType, Solid, Entity } from '../../src/entities/entity.js';
 import { createTestContext } from '../test-helpers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { createEntityFactory } from '@quake2ts/test-utils';
@@ -57,14 +57,13 @@ describe('func_door', () => {
     spawnFn?.(entity, context);
 
     // Mock other entity
-    const other = new Entity(2);
-    other.classname = 'player';
+    const other = createEntityFactory({ number: 2, classname: 'player' });
 
     // Check if touch is defined
     expect(entity.touch).toBeDefined();
 
     // Trigger touch
-    entity.touch?.(entity, other);
+    entity.touch?.(entity, other, {} as any, {} as any);
 
     // Should be opening
     expect(entity.state).toBe(DoorState.Opening);
@@ -79,8 +78,8 @@ describe('func_door', () => {
     expect(entity.max_health).toBe(100);
 
     // Die callback should trigger use
-    const other = new Entity(2);
-    entity.die?.(entity, null, other, 100);
+    const other = createEntityFactory({ number: 2 });
+    entity.die?.(entity, null, other, 100, {x:0, y:0, z:0}, 0);
 
     // Should be opening and health reset
     expect(entity.state).toBe(DoorState.Opening);
@@ -95,8 +94,8 @@ describe('func_door', () => {
       spawnFn?.(entity, context);
 
       // Trigger use
-      const other = new Entity(2);
-      entity.use?.(entity, other, other);
+      const other = createEntityFactory({ number: 2 });
+      entity.use?.(entity, other, other, context.entities);
 
       // Check sound call
       expect(context.entities.sound).toHaveBeenCalledWith(
@@ -130,8 +129,8 @@ describe('func_door', () => {
       expect(entity.state).toBe(DoorState.Closed);
 
       // Use to open
-      const other = new Entity(2);
-      entity.use?.(entity, other, other);
+      const other = createEntityFactory({ number: 2 });
+      entity.use?.(entity, other, other, context.entities);
       expect(entity.state).toBe(DoorState.Opening);
 
       // Fast forward to Open state manually or mock think
@@ -139,7 +138,7 @@ describe('func_door', () => {
       entity.origin = entity.pos2;
 
       // Use again to close (toggle behavior)
-      entity.use?.(entity, other, other);
+      entity.use?.(entity, other, other, context.entities);
       expect(entity.state).toBe(DoorState.Closing);
   });
 
@@ -148,9 +147,7 @@ describe('func_door', () => {
     spawnFn?.(entity, context);
 
     // Setup blocking entity
-    const victim = new Entity(2);
-    victim.takedamage = true;
-    victim.health = 100;
+    const victim = createEntityFactory({ number: 2, takedamage: true, health: 100 });
 
     // Simulate Opening state
     entity.state = DoorState.Opening;
@@ -172,8 +169,8 @@ describe('func_door', () => {
     spawnFn?.(entity, context);
 
     // Use the door
-    const activator = new Entity(2);
-    entity.use?.(entity, activator, activator);
+    const activator = createEntityFactory({ number: 2 });
+    entity.use?.(entity, activator, activator, context.entities);
 
     expect(entity.state).toBe(DoorState.Opening);
 

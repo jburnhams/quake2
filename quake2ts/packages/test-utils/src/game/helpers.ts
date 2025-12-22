@@ -91,6 +91,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const entities = {
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
+      ent.inUse = true;
       entityList.push(ent);
       hooks.onEntitySpawn(ent);
       return ent;
@@ -100,6 +101,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       if (idx !== -1) {
         entityList.splice(idx, 1);
       }
+      ent.inUse = false;
       hooks.onEntityRemove(ent);
     }),
     finalizeSpawn: vi.fn(),
@@ -108,6 +110,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       if (idx !== -1) {
         entityList.splice(idx, 1);
       }
+      ent.inUse = false;
     }),
     setSpawnRegistry: vi.fn(),
     timeSeconds: 10,
