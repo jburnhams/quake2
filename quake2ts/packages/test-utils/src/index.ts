@@ -50,6 +50,9 @@ export * from './client/mocks/state.js';
 export * from './client/mocks/console.js';
 export * from './client/helpers/prediction.js';
 
+// Visual Testing
+export * from './visual/snapshots.js';
+
 // E2E
 export * from './e2e/playwright.js';
 export * from './e2e/network.js';
@@ -76,3 +79,9 @@ export type {
 } from './shared/mocks.js';
 export type { TraceMock, SurfaceMock } from './shared/collision.js';
 export type { Transform } from './shared/math.js';
+export type {
+    CaptureOptions,
+    ComparisonResult,
+    ComparisonOptions,
+    SnapshotTestOptions
+} from './visual/snapshots.js';
