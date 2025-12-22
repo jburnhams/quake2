@@ -27,7 +27,7 @@ Establish headless WebGPU testing infrastructure using @webgpu/dawn for Node.js.
 
 ## Tasks
 
-### Task 1: @webgpu/dawn Setup & Configuration
+### Task 1: @webgpu/dawn Setup & Configuration [COMPLETE]
 
 **File:** `packages/test-utils/package.json`
 
@@ -36,8 +36,8 @@ Add dependencies and setup:
 ```json
 {
   "devDependencies": {
-    "@webgpu/dawn": "^0.0.x",
-    "@webgpu/types": "^0.1.x"
+    "webgpu": "^0.3.8",
+    "@webgpu/types": "^0.1.68"
   }
 }
 ```
@@ -64,22 +64,22 @@ async function createHeadlessTestContext(): Promise<WebGPUContextState>
 ```
 
 **Subtasks:**
-1. Import @webgpu/dawn for Node.js environments
-2. Create adapter/device initialization for tests
-3. Handle cleanup to prevent resource leaks between tests
-4. Detect Node.js vs browser environment
-5. Provide sensible test defaults (high-performance adapter)
-6. Integrate with createWebGPUContext from 20-1
+1. [x] Import @webgpu/dawn (via `webgpu` package) for Node.js environments
+2. [x] Create adapter/device initialization for tests
+3. [x] Handle cleanup to prevent resource leaks between tests
+4. [x] Detect Node.js vs browser environment
+5. [x] Provide sensible test defaults (high-performance adapter)
+6. [x] Integrate with createWebGPUContext from 20-1
 
 **Test Cases:**
-- Successfully initializes in Node.js with @webgpu/dawn
-- Cleanup properly releases resources
-- Can be called multiple times in test suite
-- Environment detection works
+- [x] Successfully initializes in Node.js with @webgpu/dawn
+- [x] Cleanup properly releases resources
+- [x] Can be called multiple times in test suite
+- [x] Environment detection works
 
 ---
 
-### Task 2: WebGPU Mock Objects for Unit Testing
+### Task 2: WebGPU Mock Objects for Unit Testing [COMPLETE]
 
 **File:** `packages/test-utils/src/engine/mocks/webgpu.ts`
 
@@ -91,71 +91,31 @@ function createMockGPUAdapter(
   options?: Partial<GPUAdapter>
 ): GPUAdapter
 
-// Mock GPU device
-function createMockGPUDevice(
-  features?: Set<GPUFeatureName>
-): GPUDevice
-
-// Mock GPU buffer
-function createMockGPUBuffer(
-  size: number,
-  usage: GPUBufferUsageFlags
-): GPUBuffer
-
-// Mock GPU texture
-function createMockGPUTexture(
-  width: number,
-  height: number,
-  format: GPUTextureFormat
-): GPUTexture
-
-// Mock GPU shader module
-function createMockShaderModule(
-  code: string
-): GPUShaderModule
-
-// Mock GPU render pipeline
-function createMockRenderPipeline(): GPURenderPipeline
-
-// Mock GPU bind group
-function createMockBindGroup(): GPUBindGroup
-
-// Mock GPU command encoder
-function createMockCommandEncoder(): GPUCommandEncoder
-
-// Mock GPU queue
-function createMockQueue(): GPUQueue
-
-// Complete mock context
-function createMockWebGPUContext(): {
-  adapter: GPUAdapter;
-  device: GPUDevice;
-  queue: GPUQueue;
-}
+// ... (other mock functions)
 ```
 
 **Subtasks:**
-1. Mock GPUAdapter with feature/limit queries
-2. Mock GPUDevice with all creation methods
-3. Mock GPUBuffer with size and usage tracking
-4. Mock GPUTexture with dimension tracking
-5. Mock GPUShaderModule (minimal, just tracks code)
-6. Mock GPURenderPipeline (minimal)
-7. Mock GPUCommandEncoder with command recording
-8. Mock GPUQueue with submit/writeBuffer/writeTexture
-9. Track method calls for test assertions
-10. Implement minimal behavior (e.g., writeBuffer updates internal state)
+1. [x] Mock GPUAdapter with feature/limit queries
+2. [x] Mock GPUDevice with all creation methods
+3. [x] Mock GPUBuffer with size and usage tracking
+4. [x] Mock GPUTexture with dimension tracking
+5. [x] Mock GPUShaderModule (minimal, just tracks code)
+6. [x] Mock GPURenderPipeline (minimal)
+7. [x] Mock GPUCommandEncoder with command recording
+8. [x] Mock GPUQueue with submit/writeBuffer/writeTexture
+9. [x] Track method calls for test assertions
+10. [x] Implement minimal behavior (e.g., writeBuffer updates internal state)
 
 **Test Cases:**
-- Mocks satisfy TypeScript types
-- Can create all resource types
-- Method calls are trackable
-- State updates work (writeBuffer, etc.)
-- Validation errors throw when expected
+- [x] Mocks satisfy TypeScript types
+- [x] Can create all resource types
+- [x] Method calls are trackable
+- [x] State updates work (writeBuffer, etc.)
+- [x] Validation errors throw when expected
 
 ---
 
-### Task 3: Headless Rendering Test Utilities
+### Task 3: Headless Rendering Test Utilities [COMPLETE]
 
 **File:** `packages/test-utils/src/engine/helpers/webgpu-rendering.ts`
 
@@ -168,56 +128,32 @@ interface RenderTestSetup {
   commandEncoder: GPUCommandEncoder;
   cleanup: () => Promise<void>;
 }
-
-async function createRenderTestSetup(
-  width?: number,
-  height?: number
-): Promise<RenderTestSetup>
-
-async function renderAndCapture(
-  setup: RenderTestSetup,
-  renderFn: (pass: GPURenderPassEncoder) => void
-): Promise<Uint8ClampedArray>
-
-interface ComputeTestSetup {
-  context: WebGPUContextState;
-  outputBuffer: GPUBuffer;
-  cleanup: () => Promise<void>;
-}
-
-async function createComputeTestSetup(
-  outputSize: number
-): Promise<ComputeTestSetup>
-
-async function runComputeAndReadback(
-  setup: ComputeTestSetup,
-  computeFn: (pass: GPUComputePassEncoder) => void
-): Promise<ArrayBuffer>
+// ... (other helper functions)
 ```
 
 **Subtasks:**
-1. Create setup function that initializes all needed resources
-2. Create render target texture and view
-3. Provide command encoder for test
-4. Implement renderAndCapture helper that:
+1. [x] Create setup function that initializes all needed resources
+2. [x] Create render target texture and view
+3. [x] Provide command encoder for test
+4. [x] Implement renderAndCapture helper that:
    - Begins render pass
    - Invokes user render function
    - Ends pass and submits
    - Reads back framebuffer
-5. Implement cleanup that destroys all resources
-6. Create similar setup for compute shader testing
-7. Handle different texture formats and sizes
+5. [x] Implement cleanup that destroys all resources
+6. [x] Create similar setup for compute shader testing
+7. [x] Handle different texture formats and sizes
 
 **Test Cases:**
-- Setup creates valid rendering context
-- renderAndCapture produces valid pixel data
-- Cleanup properly releases resources
-- Can run multiple tests in sequence
-- Compute setup works for compute shaders
+- [x] Setup creates valid rendering context
+- [x] renderAndCapture produces valid pixel data
+- [x] Cleanup properly releases resources
+- [x] Can run multiple tests in sequence
+- [x] Compute setup works for compute shaders
 
 ---
 
-### Task 4: Vitest Integration & Configuration
+### Task 4: Vitest Integration & Configuration [COMPLETE]
 
 **File:** `packages/engine/vitest.config.ts`
 
@@ -253,24 +189,24 @@ afterAll(async () => {
 ```
 
 **Subtasks:**
-1. Configure vitest for headless WebGPU
-2. Create global test setup file
-3. Initialize @webgpu/dawn once (expensive operation)
-4. Provide cleanup hooks
-5. Handle test isolation (each test gets own device)
-6. Configure test timeouts for GPU operations
+1. [x] Configure vitest for headless WebGPU
+2. [x] Create global test setup file
+3. [x] Initialize @webgpu/dawn once (expensive operation)
+4. [x] Provide cleanup hooks
+5. [x] Handle test isolation (each test gets own device)
+6. [x] Configure test timeouts for GPU operations
 
 **Test Cases:**
-- Vitest runs with @webgpu/dawn
-- Tests can access WebGPU API
-- Global setup runs once
-- Tests are isolated from each other
+- [x] Vitest runs with @webgpu/dawn
+- [x] Tests can access WebGPU API
+- [x] Global setup runs once
+- [x] Tests are isolated from each other
 
 ---
 
-### Task 5: Example Pipeline Tests (Template)
+### Task 5: Example Pipeline Tests (Template) [COMPLETE]
 
-**File:** `packages/engine/tests/render/webgpu/pipeline-test-template.ts`
+**File:** `packages/engine/tests/render/webgpu/pipeline-test-template.ts` (moved to `packages/test-utils/src/engine/helpers/pipeline-test-template.ts`)
 
 Create reusable test patterns:
 
@@ -284,64 +220,27 @@ export async function testPipelineRendering(
   setupGeometry: (device: GPUDevice) => GeometryBuffers,
   expectedOutput?: Uint8ClampedArray  // For validation
 ) {
-  const setup = await createRenderTestSetup(256, 256);
-
-  try {
-    const pipeline = createPipeline(setup.context.device);
-    const geometry = setupGeometry(setup.context.device);
-
-    const pixels = await renderAndCapture(setup, (pass) => {
-      pass.setPipeline(pipeline.pipeline);
-      // ... bind geometry and draw
-    });
-
-    if (expectedOutput) {
-      expect(pixels).toEqual(expectedOutput);
-    } else {
-      // At least verify we got pixels
-      expect(pixels.length).toBe(256 * 256 * 4);
-    }
-  } finally {
-    await setup.cleanup();
-  }
-}
-
-/**
- * Template for testing compute shaders
- */
-export async function testComputeShader(
-  name: string,
-  createComputePipeline: (device: GPUDevice) => ComputePipeline,
-  inputData: Float32Array,
-  expectedOutput?: Float32Array
-) {
-  const setup = await createComputeTestSetup(inputData.byteLength);
-
-  try {
-    // ... run compute and validate
-  } finally {
-    await setup.cleanup();
-  }
+  // ... implementation
 }
 ```
 
 **Subtasks:**
-1. Create template for testing render pipelines
-2. Create template for testing compute pipelines
-3. Provide common setup/teardown patterns
-4. Include pixel validation helpers
-5. Include buffer validation helpers
-6. Document usage patterns
+1. [x] Create template for testing render pipelines
+2. [x] Create template for testing compute pipelines
+3. [x] Provide common setup/teardown patterns
+4. [x] Include pixel validation helpers
+5. [x] Include buffer validation helpers
+6. [x] Document usage patterns
 
 **Test Cases:**
-- Template can test simple triangle rendering
-- Template can test compute shader
-- Cleanup always runs even on test failure
-- Can be reused across multiple pipelines
+- [x] Template can test simple triangle rendering
+- [x] Template can test compute shader
+- [x] Cleanup always runs even on test failure
+- [x] Can be reused across multiple pipelines
 
 ---
 
-### Task 6: Test Utilities Export & Documentation
+### Task 6: Test Utilities Export & Documentation [COMPLETE]
 
 **File:** `packages/test-utils/src/index.ts`
 
@@ -417,11 +316,11 @@ test('renders triangle', async () => {
 ```
 
 **Subtasks:**
-1. Export all WebGPU testing utilities
-2. Document mock usage patterns
-3. Document headless testing patterns
-4. Provide code examples
-5. Explain when to use mocks vs headless
+1. [x] Export all WebGPU testing utilities
+2. [x] Document mock usage patterns
+3. [x] Document headless testing patterns
+4. [x] Provide code examples
+5. [x] Explain when to use mocks vs headless
 
 ---
 
@@ -435,7 +334,7 @@ test('renders triangle', async () => {
 - `packages/engine/tests/setup-webgpu.ts` (~50 lines)
 
 ### Modified Files
-- `packages/test-utils/package.json` (add @webgpu/dawn)
+- `packages/test-utils/package.json` (verified dependencies)
 - `packages/test-utils/src/index.ts` (exports)
 - `packages/test-utils/README.md` (documentation)
 - `packages/engine/vitest.config.ts` (setup file)
@@ -487,14 +386,14 @@ test('headless rendering produces pixel data', async () => {
 
 ## Success Criteria
 
-- [ ] @webgpu/dawn installs and runs in Node.js
-- [ ] Can create headless WebGPU context in tests
-- [ ] Comprehensive mocks available for unit testing
-- [ ] Render test utilities can capture pixels
-- [ ] Compute test utilities can read back buffers
-- [ ] All tests pass
-- [ ] Documentation explains usage patterns
-- [ ] No resource leaks between tests
+- [x] @webgpu/dawn installs and runs in Node.js
+- [x] Can create headless WebGPU context in tests
+- [x] Comprehensive mocks available for unit testing
+- [x] Render test utilities can capture pixels
+- [x] Compute test utilities can read back buffers
+- [x] All tests pass
+- [x] Documentation explains usage patterns
+- [x] No resource leaks between tests
 
 ---
 

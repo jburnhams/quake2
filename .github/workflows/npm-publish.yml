@@ -27,5 +27,8 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: pnpm install
       - run: pnpm run build
+      # WebGPU headless testing requires Vulkan drivers
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers vulkan-tools
       - run: pnpm exec playwright install chromium --with-deps
       - run: pnpm publish --no-git-checks        

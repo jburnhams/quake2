@@ -1,55 +1,103 @@
 import { vi } from 'vitest';
+import { globals } from 'webgpu';
 
-export function createMockGPUAdapter(options?: Partial<GPUAdapter>): GPUAdapter {
-  const adapter = {
-    features: new Set(),
-    limits: {
-      maxTextureDimension2D: 8192,
-      maxBindGroups: 4,
-      maxUniformBufferBindingSize: 65536,
-      maxStorageBufferBindingSize: 134217728,
-    },
-    requestDevice: vi.fn().mockResolvedValue(createMockGPUDevice()),
-    requestAdapterInfo: vi.fn().mockResolvedValue({
-      vendor: 'Mock Vendor',
-      architecture: 'Mock Arch',
-      device: 'Mock Device',
-      description: 'Mock Adapter'
-    }),
-    ...options
-  } as unknown as GPUAdapter;
-  return adapter;
+export interface MockWebGPUContext {
+  adapter: GPUAdapter;
+  device: GPUDevice;
+  queue: GPUQueue;
 }
 
-export function createMockGPUDevice(features?: Set<GPUFeatureName>): GPUDevice {
+/**
+ * Patches globalThis with WebGPU globals (GPUBufferUsage, etc.)
+ * and optionally patches navigator.gpu.
+ */
+export function setupWebGPUMocks() {
+    // 1. Inject globals like GPUBufferUsage, GPUTextureUsage
+    Object.assign(globalThis, globals);
+
+    // 2. Setup Navigator mock
+    const mockGpu = {
+      requestAdapter: vi.fn(),
+      getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm'),
+    };
+
+    // Create mocks for Adapter and Device
+    const mockAdapter = createMockGPUAdapter();
+    const mockDevice = createMockGPUDevice();
+
+    // Wire them up
+    mockGpu.requestAdapter.mockResolvedValue(mockAdapter);
+    // @ts-ignore - vitest mock manipulation
+    mockAdapter.requestDevice.mockResolvedValue(mockDevice);
+
+    if (!globalThis.navigator) {
+      // @ts-ignore
+      globalThis.navigator = {};
+    }
+
+    // Safely redefine navigator.gpu
+    try {
+        // If it exists and is configurable, define it.
+        // If it doesn't exist, define it.
+        // If it exists and is NOT configurable, we can't do much (but that shouldn't happen in our test env if we control it)
+        Object.defineProperty(globalThis.navigator, 'gpu', {
+            value: mockGpu,
+            writable: true,
+            configurable: true
+        });
+    } catch (e) {
+        // Fallback: simple assignment if defineProperty fails (e.g. some JSDOM quirks)
+        // @ts-ignore
+        globalThis.navigator.gpu = mockGpu;
+    }
+
+    return {
+      mockGpu,
+      mockAdapter,
+      mockDevice
+    };
+}
+
+export function createMockGPUAdapter(options: Partial<GPUAdapter> = {}): GPUAdapter {
+  return {
+    features: new Set(),
+    limits: {},
+    isFallbackAdapter: false,
+    requestDevice: vi.fn().mockResolvedValue(createMockGPUDevice()),
+    requestAdapterInfo: vi.fn().mockResolvedValue({}),
+    ...options,
+  } as unknown as GPUAdapter;
+}
+
+export function createMockGPUDevice(features: Set<GPUFeatureName> = new Set()): GPUDevice {
   const queue = createMockQueue();
 
   return {
-    features: features || new Set(),
-    limits: {
-      maxTextureDimension2D: 8192,
-    },
+    features,
+    limits: {},
     queue,
-    lost: new Promise(() => {}),
-    createBuffer: vi.fn((descriptor: GPUBufferDescriptor) => createMockGPUBuffer(descriptor.size, descriptor.usage)),
-    createTexture: vi.fn((descriptor: GPUTextureDescriptor) => createMockGPUTexture(descriptor.size, descriptor.format)),
-    createSampler: vi.fn(),
-    createBindGroupLayout: vi.fn().mockReturnValue({}),
-    createPipelineLayout: vi.fn().mockReturnValue({}),
-    createBindGroup: vi.fn().mockReturnValue({}),
-    createShaderModule: vi.fn((descriptor: GPUShaderModuleDescriptor) => createMockShaderModule(descriptor.code)),
-    createComputePipeline: vi.fn().mockReturnValue({}),
-    createRenderPipeline: vi.fn(() => createMockRenderPipeline()),
-    createCommandEncoder: vi.fn(() => createMockCommandEncoder()),
-    createRenderBundleEncoder: vi.fn(),
-    createQuerySet: vi.fn(),
     destroy: vi.fn(),
+    createBuffer: vi.fn((descriptor: GPUBufferDescriptor) => createMockGPUBuffer(descriptor)),
+    createTexture: vi.fn((descriptor: GPUTextureDescriptor) => createMockGPUTexture(descriptor)),
+    createSampler: vi.fn(() => createMockSampler()),
+    createBindGroupLayout: vi.fn(() => ({ label: 'mock-bind-group-layout' })),
+    createPipelineLayout: vi.fn(() => ({ label: 'mock-pipeline-layout' })),
+    createBindGroup: vi.fn(() => ({ label: 'mock-bind-group' })),
+    createShaderModule: vi.fn((descriptor: GPUShaderModuleDescriptor) => createMockShaderModule(descriptor)),
+    createComputePipeline: vi.fn(() => createMockComputePipeline()),
+    createRenderPipeline: vi.fn(() => createMockRenderPipeline()),
+    createComputePipelineAsync: vi.fn().mockResolvedValue(createMockComputePipeline()),
+    createRenderPipelineAsync: vi.fn().mockResolvedValue(createMockRenderPipeline()),
+    createCommandEncoder: vi.fn(() => createMockCommandEncoder()),
+    createQuerySet: vi.fn(() => ({ label: 'mock-query-set' })),
     pushErrorScope: vi.fn(),
-    popErrorScope: vi.fn(),
-    onuncapturederror: null,
+    popErrorScope: vi.fn().mockResolvedValue(null),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
+    onuncapturederror: null,
+    label: '',
+    lost: Promise.resolve({ reason: 'destroyed', message: 'Device lost' }),
   } as unknown as GPUDevice;
 }
 
@@ -64,38 +112,34 @@ export function createMockQueue(): GPUQueue {
   } as unknown as GPUQueue;
 }
 
-export function createMockGPUBuffer(size: number, usage: GPUBufferUsageFlags): GPUBuffer {
+export function createMockGPUBuffer(descriptor: GPUBufferDescriptor): GPUBuffer {
   return {
-    size,
-    usage,
+    size: descriptor.size,
+    usage: descriptor.usage,
     mapState: 'unmapped',
     mapAsync: vi.fn().mockResolvedValue(undefined),
-    getMappedRange: vi.fn().mockReturnValue(new ArrayBuffer(size)),
+    getMappedRange: vi.fn(() => new ArrayBuffer(descriptor.size)),
     unmap: vi.fn(),
     destroy: vi.fn(),
-    label: '',
+    label: descriptor.label || '',
   } as unknown as GPUBuffer;
 }
 
-export function createMockGPUTexture(
-  size: GPUExtent3D,
-  format: GPUTextureFormat
-): GPUTexture {
-  let width: number;
-  let height: number;
-  let depthOrArrayLayers: number;
+export function createMockGPUTexture(descriptor: GPUTextureDescriptor): GPUTexture {
+  const size = descriptor.size;
+  let width = 0;
+  let height = 0;
+  let depthOrArrayLayers = 1;
 
-  if (typeof size === 'number') {
-      width = size;
-      height = 1;
-      depthOrArrayLayers = 1;
-  } else if (Array.isArray(size)) {
-      width = size[0] || 1;
-      height = size[1] || 1;
-      depthOrArrayLayers = size[2] || 1;
-  } else {
-      // GPUExtent3DDict or similar
-      const dict = size as any;
+  if (Array.isArray(size) || size instanceof Float32Array || size instanceof Uint32Array) {
+      // Iterable<number>
+      const arr = Array.from(size as Iterable<number>);
+      width = arr[0] || 0;
+      height = arr[1] || 1;
+      depthOrArrayLayers = arr[2] || 1;
+  } else if (typeof size === 'object') {
+      // GPUExtent3DDict
+      const dict = size as GPUExtent3DDict;
       width = dict.width;
       height = dict.height || 1;
       depthOrArrayLayers = dict.depthOrArrayLayers || 1;
@@ -105,62 +149,62 @@ export function createMockGPUTexture(
     width,
     height,
     depthOrArrayLayers,
-    mipLevelCount: 1,
-    sampleCount: 1,
-    dimension: '2d',
-    format,
-    usage: 0,
-    createView: vi.fn().mockReturnValue({}),
+    mipLevelCount: descriptor.mipLevelCount || 1,
+    sampleCount: descriptor.sampleCount || 1,
+    dimension: descriptor.dimension || '2d',
+    format: descriptor.format,
+    usage: descriptor.usage,
+    createView: vi.fn(() => createMockTextureView()),
     destroy: vi.fn(),
-    label: '',
+    label: descriptor.label || '',
   } as unknown as GPUTexture;
 }
 
-export function createMockShaderModule(code: string): GPUShaderModule {
+export function createMockTextureView(): GPUTextureView {
   return {
     label: '',
+  } as unknown as GPUTextureView;
+}
+
+export function createMockSampler(): GPUSampler {
+  return {
+    label: '',
+  } as unknown as GPUSampler;
+}
+
+export function createMockShaderModule(descriptor: GPUShaderModuleDescriptor): GPUShaderModule {
+  return {
     getCompilationInfo: vi.fn().mockResolvedValue({ messages: [] }),
+    label: descriptor.label || '',
   } as unknown as GPUShaderModule;
+}
+
+export function createMockComputePipeline(): GPUComputePipeline {
+  return {
+    getBindGroupLayout: vi.fn(() => ({ label: 'mock-bind-group-layout' })),
+    label: '',
+  } as unknown as GPUComputePipeline;
 }
 
 export function createMockRenderPipeline(): GPURenderPipeline {
   return {
+    getBindGroupLayout: vi.fn(() => ({ label: 'mock-bind-group-layout' })),
     label: '',
-    getBindGroupLayout: vi.fn().mockReturnValue({}),
   } as unknown as GPURenderPipeline;
 }
 
 export function createMockCommandEncoder(): GPUCommandEncoder {
   return {
-    beginRenderPass: vi.fn().mockReturnValue({
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      setIndexBuffer: vi.fn(),
-      setViewport: vi.fn(),
-      setScissorRect: vi.fn(),
-      setBlendConstant: vi.fn(),
-      setStencilReference: vi.fn(),
-      draw: vi.fn(),
-      drawIndexed: vi.fn(),
-      drawIndirect: vi.fn(),
-      drawIndexedIndirect: vi.fn(),
-      end: vi.fn(),
-    }),
-    beginComputePass: vi.fn().mockReturnValue({
-       setPipeline: vi.fn(),
-       setBindGroup: vi.fn(),
-       dispatchWorkgroups: vi.fn(),
-       dispatchWorkgroupsIndirect: vi.fn(),
-       end: vi.fn(),
-    }),
+    beginRenderPass: vi.fn(() => createMockRenderPassEncoder()),
+    beginComputePass: vi.fn(() => createMockComputePassEncoder()),
     copyBufferToBuffer: vi.fn(),
     copyBufferToTexture: vi.fn(),
     copyTextureToBuffer: vi.fn(),
     copyTextureToTexture: vi.fn(),
     clearBuffer: vi.fn(),
+    writeTimestamp: vi.fn(),
     resolveQuerySet: vi.fn(),
-    finish: vi.fn().mockReturnValue({}),
+    finish: vi.fn(() => ({ label: 'mock-command-buffer' })),
     pushDebugGroup: vi.fn(),
     popDebugGroup: vi.fn(),
     insertDebugMarker: vi.fn(),
@@ -168,86 +212,51 @@ export function createMockCommandEncoder(): GPUCommandEncoder {
   } as unknown as GPUCommandEncoder;
 }
 
-export function createMockWebGPUContext() {
+export function createMockRenderPassEncoder(): GPURenderPassEncoder {
+  return {
+    setPipeline: vi.fn(),
+    setIndexBuffer: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    setBindGroup: vi.fn(),
+    setViewport: vi.fn(),
+    setScissorRect: vi.fn(),
+    setBlendConstant: vi.fn(),
+    setStencilReference: vi.fn(),
+    beginOcclusionQuery: vi.fn(),
+    endOcclusionQuery: vi.fn(),
+    executeBundles: vi.fn(),
+    draw: vi.fn(),
+    drawIndexed: vi.fn(),
+    drawIndirect: vi.fn(),
+    drawIndexedIndirect: vi.fn(),
+    end: vi.fn(),
+    pushDebugGroup: vi.fn(),
+    popDebugGroup: vi.fn(),
+    insertDebugMarker: vi.fn(),
+    label: '',
+  } as unknown as GPURenderPassEncoder;
+}
+
+export function createMockComputePassEncoder(): GPUComputePassEncoder {
+  return {
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    dispatchWorkgroups: vi.fn(),
+    dispatchWorkgroupsIndirect: vi.fn(),
+    end: vi.fn(),
+    pushDebugGroup: vi.fn(),
+    popDebugGroup: vi.fn(),
+    insertDebugMarker: vi.fn(),
+    label: '',
+  } as unknown as GPUComputePassEncoder;
+}
+
+export function createMockWebGPUContext(): MockWebGPUContext {
   const adapter = createMockGPUAdapter();
   const device = createMockGPUDevice();
   return {
     adapter,
     device,
     queue: device.queue,
-  };
-}
-
-export function setupWebGPUMocks() {
-  const mockAdapter = createMockGPUAdapter();
-  const mockGpu = {
-    requestAdapter: vi.fn().mockResolvedValue(mockAdapter),
-    getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm'),
-  };
-
-  if (typeof global.navigator === 'undefined') {
-    // @ts-ignore
-    global.navigator = { gpu: mockGpu };
-  } else {
-    try {
-        Object.defineProperty(global.navigator, 'gpu', {
-            value: mockGpu,
-            writable: true,
-            configurable: true
-        });
-    } catch (e) {
-        const originalNavigator = global.navigator;
-        Object.defineProperty(global, 'navigator', {
-            value: {
-                ...originalNavigator,
-                gpu: mockGpu
-            },
-            writable: true,
-            configurable: true
-        });
-    }
-  }
-
-  // Mock GPU globals
-  const constants = {
-    GPUTextureUsage: {
-      COPY_SRC: 0x01,
-      COPY_DST: 0x02,
-      TEXTURE_BINDING: 0x04,
-      STORAGE_BINDING: 0x08,
-      RENDER_ATTACHMENT: 0x10,
-    },
-    GPUBufferUsage: {
-      MAP_READ: 0x0001,
-      MAP_WRITE: 0x0002,
-      COPY_SRC: 0x0004,
-      COPY_DST: 0x0008,
-      INDEX: 0x0010,
-      VERTEX: 0x0020,
-      UNIFORM: 0x0040,
-      STORAGE: 0x0080,
-      INDIRECT: 0x0100,
-      QUERY_RESOLVE: 0x0200,
-    },
-    GPUMapMode: {
-      READ: 0x0001,
-      WRITE: 0x0002,
-    },
-    GPUShaderStage: {
-        VERTEX: 1,
-        FRAGMENT: 2,
-        COMPUTE: 4
-    }
-  };
-
-  Object.entries(constants).forEach(([key, value]) => {
-     if (typeof (global as any)[key] === 'undefined') {
-         (global as any)[key] = value;
-     }
-  });
-
-  return {
-    mockGpu,
-    mockAdapter
   };
 }

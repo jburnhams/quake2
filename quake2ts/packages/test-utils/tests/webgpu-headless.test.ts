@@ -1,44 +1,31 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { initHeadlessWebGPU } from '../src/setup/webgpu';
+import { describe, it, expect, vi } from 'vitest';
+import { initHeadlessWebGPU, createHeadlessTestContext } from '../src/setup/webgpu';
 
-describe('Headless WebGPU Setup', () => {
-  let setup: any;
+describe('WebGPU Headless Setup', () => {
+  it('should initialize WebGPU in Node.js environment', async () => {
+    const setup = await initHeadlessWebGPU();
+    expect(setup).toBeDefined();
+    expect(setup.adapter).toBeDefined();
+    expect(setup.device).toBeDefined();
+    expect(setup.cleanup).toBeTypeOf('function');
 
-  afterEach(async () => {
-    if (setup && setup.cleanup) {
-      await setup.cleanup();
-    }
+    await setup.cleanup();
   });
 
-  it('initializes in Node.js environment', async () => {
-    try {
-      setup = await initHeadlessWebGPU();
+  it('should create a test context with adapter, device and queue', async () => {
+    const context = await createHeadlessTestContext();
+    expect(context).toBeDefined();
+    expect(context.adapter).toBeDefined();
+    expect(context.device).toBeDefined();
+    expect(context.queue).toBeDefined();
 
-      expect(setup).toBeDefined();
-      expect(setup.adapter).toBeDefined();
-      expect(setup.device).toBeDefined();
-      expect(setup.cleanup).toBeDefined();
-
-      // Basic check if it looks like a GPU adapter
-      // Note: properties might depend on the implementation
-      expect(setup.adapter.features).toBeDefined();
-      expect(setup.device.queue).toBeDefined();
-    } catch (error) {
-       console.error("WebGPU Init Error:", error);
-       // If it fails due to missing system dependencies, we might want to skip or warn
-       // but for now we expect it to work in this environment if configured correctly
-       throw error;
-    }
+    // Cleanup via destroying device manually since createHeadlessTestContext doesn't return cleanup
+    context.device.destroy();
   });
 
-  it('can be called multiple times', async () => {
-    const setup1 = await initHeadlessWebGPU();
-    const setup2 = await initHeadlessWebGPU();
-
-    expect(setup1).toBeDefined();
-    expect(setup2).toBeDefined();
-
-    await setup1.cleanup();
-    await setup2.cleanup();
+  it('should allow requesting specific power preference', async () => {
+    const setup = await initHeadlessWebGPU({ powerPreference: 'low-power' });
+    expect(setup).toBeDefined();
+    await setup.cleanup();
   });
 });

@@ -20,6 +20,9 @@ export default defineConfig({
     exclude,
     // pool: 'forks', // Default is threads, which is faster but might have isolation issues. Forks provides better isolation.
     // Let's stick to forks but allow parallelism.
+    // Switching to threads for unit tests to improve performance (reduce overhead).
+    // Integration tests often require strict isolation or serial execution, so we keep forks/threads logic distinct if needed.
+    // However, for now, let's try threads for everything unless it breaks.
     pool: isIntegration ? 'forks' : 'threads',
     poolOptions: {
       forks: {
@@ -27,7 +30,7 @@ export default defineConfig({
       },
     },
     fileParallelism: !isIntegration,
-    isolate: true,
+    isolate: true, // Keep isolation on for reliability
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,

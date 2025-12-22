@@ -282,7 +282,7 @@ class ComputePipeline {
 
 ---
 
-### Task 5: Bind Group Management
+### Task 5: Bind Group Management [COMPLETED]
 
 **File:** Same as Task 1
 
@@ -350,7 +350,7 @@ class BindGroupBuilder {
 
 ---
 
-### Task 6: Render Pass Helpers
+### Task 6: Render Pass Helpers [COMPLETED]
 
 **File:** Same as Task 1
 
@@ -498,14 +498,14 @@ test('compiles valid WGSL shader', async () => {
 
 ## Success Criteria
 
-- [ ] All buffer types can be created and written to
-- [ ] Textures can be created, uploaded, and sampled
-- [ ] Shaders compile from WGSL source
-- [ ] Render pipelines can be created with various states
-- [ ] Bind groups can be created and bound
-- [ ] Memory tracking accurately reports usage
-- [ ] All tests pass (unit and integration)
-- [ ] No modifications to existing WebGL resources
+- [x] All buffer types can be created and written to
+- [x] Textures can be created, uploaded, and sampled
+- [x] Shaders compile from WGSL source
+- [x] Render pipelines can be created with various states
+- [x] Bind groups can be created and bound
+- [x] Memory tracking accurately reports usage
+- [x] All tests pass (unit and integration)
+- [x] No modifications to existing WebGL resources
 
 ---
 

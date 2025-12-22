@@ -46,6 +46,9 @@ export * from './client/helpers/view.js';
 export * from './client/helpers/hud.js';
 export * from './client/mocks/network.js';
 export * from './client/mocks/download.js';
+export * from './client/mocks/state.js';
+export * from './client/mocks/console.js';
+export * from './client/helpers/prediction.js';
 
 // E2E
 export * from './e2e/playwright.js';
