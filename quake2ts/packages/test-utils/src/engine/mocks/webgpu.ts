@@ -74,10 +74,29 @@ export function createMockGPUBuffer(descriptor: GPUBufferDescriptor): GPUBuffer 
 }
 
 export function createMockGPUTexture(descriptor: GPUTextureDescriptor): GPUTexture {
+  const size = descriptor.size;
+  let width = 0;
+  let height = 0;
+  let depthOrArrayLayers = 1;
+
+  if (Array.isArray(size) || size instanceof Float32Array || size instanceof Uint32Array) {
+      // Iterable<number>
+      const arr = Array.from(size as Iterable<number>);
+      width = arr[0] || 0;
+      height = arr[1] || 1;
+      depthOrArrayLayers = arr[2] || 1;
+  } else if (typeof size === 'object') {
+      // GPUExtent3DDict
+      const dict = size as GPUExtent3DDict;
+      width = dict.width;
+      height = dict.height || 1;
+      depthOrArrayLayers = dict.depthOrArrayLayers || 1;
+  }
+
   return {
-    width: descriptor.size.width || 0,
-    height: descriptor.size.height || 0,
-    depthOrArrayLayers: descriptor.size.depthOrArrayLayers || 1,
+    width,
+    height,
+    depthOrArrayLayers,
     mipLevelCount: descriptor.mipLevelCount || 1,
     sampleCount: descriptor.sampleCount || 1,
     dimension: descriptor.dimension || '2d',
