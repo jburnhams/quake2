@@ -116,6 +116,7 @@
     "@types/node": "^24.10.1",
     "@types/pako": "^2.0.4",
     "@types/serve-handler": "^6.1.4",
+    "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.2.0",
     "playwright": "1.57.0",
