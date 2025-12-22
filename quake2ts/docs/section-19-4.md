@@ -122,8 +122,14 @@ This section covers migration of client-specific test utilities including input 
 
 ### 4. Create Client State Management Mocks (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Skipped (Blocked)
 **Dependencies:** Section 19-3 Task 1 (entity factories)
+
+**Notes:**
+- `ClientState` and `ClientInfo` types are not explicitly defined/exported in a reusable way in the codebase.
+- `ClientState` appears to be a concept distributed across `ClientConnection` and `ClientExports`.
+- `Frame` generally maps to `FrameData` in `@quake2ts/engine`.
+- Skipping this task for now to avoid creating incorrect abstractions or circular dependencies. Needs architectural clarification.
 
 - [ ] **4.1** Create `test-utils/src/client/mocks/state.ts` file
 
@@ -151,8 +157,11 @@ This section covers migration of client-specific test utilities including input 
 
 ### 5. Create Prediction/Interpolation Helpers (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Skipped (Blocked by Task 4)
 **Dependencies:** Section 19-1 Task 3 (math helpers), Section 19-3 Task 1 (entity factories)
+
+**Notes:**
+- `simulateClientPrediction` relies on `ClientState`, which is currently ambiguous (see Task 4).
 
 - [ ] **5.1** Create `test-utils/src/client/helpers/prediction.ts` file
 
@@ -179,7 +188,7 @@ This section covers migration of client-specific test utilities including input 
 
 ### 6. Create Client Network Mocks (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** In Progress
 **Dependencies:** Section 19-1 Task 2 (network mocks)
 
 - [ ] **6.1** Create `test-utils/src/client/mocks/network.ts` file

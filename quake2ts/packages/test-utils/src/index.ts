@@ -39,6 +39,7 @@ export * from './setup/audio.js';
 export * from './client/mocks/input.js';
 export * from './client/helpers/view.js';
 export * from './client/helpers/hud.js';
+export * from './client/mocks/network.js';
 
 // E2E
 export * from './e2e/playwright.js';
