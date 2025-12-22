@@ -14,14 +14,14 @@ describe('Player Damage Kick', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        // Use createPlayerEntityFactory for player
+
         player = createPlayerEntityFactory({
-            classname: 'player',
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 }
         });
 
         // Populate client which createPlayerEntityFactory does not fully populate with complex objects yet
+        // TODO: Update createPlayerEntityFactory to include these defaults
         player.client = {
             inventory: createPlayerInventory(),
             weaponStates: createPlayerWeaponStates(),

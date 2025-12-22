@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ai_run, ai_run_slide, monster_done_dodge } from '../../src/ai/movement.js';
-import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { ai_run, monster_done_dodge } from '../../src/ai/movement.js';
+import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AIFlags, AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createEntity } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import * as targeting from '../../src/ai/targeting.js';
 import * as perception from '../../src/ai/perception.js';
 
 describe('AI Dodge', () => {
   let context: EntitySystem;
-  let self: Entity;
-  let enemy: Entity;
+  let self: any;
+  let enemy: any;
 
   beforeEach(() => {
     const testCtx = createTestContext();
@@ -22,16 +22,20 @@ describe('AI Dodge', () => {
     });
 
     // Setup self (monster)
-    self = createEntity();
-    self.classname = 'monster_test';
-    self.origin = { x: 0, y: 0, z: 0 };
-    self.angles = { x: 0, y: 0, z: 0 };
-    self.ideal_yaw = 0;
-    self.yaw_speed = 3600; // Fast enough to turn instantly
-    self.movetype = MoveType.Step;
-    self.solid = Solid.Bbox;
+    self = createMonsterEntityFactory('monster_test', {
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 },
+        ideal_yaw: 0,
+        yaw_speed: 3600, // Fast enough to turn instantly
+        movetype: MoveType.Step,
+        solid: Solid.Bbox,
+    });
+    // Add flags not in default factory
     self.flags |= EntityFlags.Fly; // Allow movement without ground check for simplicity
+
+    // Manual monsterinfo setup or use merge if factory supports deeply
     self.monsterinfo = {
+      ...self.monsterinfo,
       current_move: null,
       aiflags: 0,
       attack_state: AttackState.Straight,
@@ -39,11 +43,10 @@ describe('AI Dodge', () => {
     };
 
     // Setup enemy
-    enemy = createEntity();
-    enemy.classname = 'player';
-    enemy.origin = { x: 200, y: 0, z: 0 };
-    enemy.inUse = true;
-    enemy.client = {} as any; // Mark as client
+    enemy = createPlayerEntityFactory({
+        origin: { x: 200, y: 0, z: 0 },
+    });
+    (enemy as any).inUse = true;
 
     self.enemy = enemy;
 
@@ -67,10 +70,6 @@ describe('AI Dodge', () => {
     it('should strafe left if lefty is true', () => {
        self.monsterinfo.lefty = 1;
        self.ideal_yaw = 0;
-
-       // Calling direct implementation if exported, or via ai_run
-       // Since ai_run_slide is not exported in current codebase, we might test via ai_run
-       // But plan says to implement it. We can export it for testing or just test via ai_run.
 
        self.monsterinfo.attack_state = AttackState.Sliding;
 

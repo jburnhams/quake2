@@ -154,15 +154,22 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createMockDamageInfo(overrides?: Partial<DamageInfo>): DamageInfo`
   - Include: attacker, target, amount, type, point, direction
 
-- [ ] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+- [x] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+  - [x] Refactored `radiusDamage.test.ts`
+  - [x] Refactored `damage.test.ts`
+  - [x] Refactored `damage-kick.test.ts`
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 
-- [ ] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+- [x] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+  - [x] Refactored `targeting.test.ts`
+  - [x] Refactored `cover.test.ts`
+  - [x] Refactored `dodge.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
-- [ ] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+- [x] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+  - [x] Refactored `soldier_variants.test.ts`
   - Replace inline attack function mocks
   - Estimated files: ~15
 

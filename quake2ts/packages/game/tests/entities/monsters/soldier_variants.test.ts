@@ -7,27 +7,27 @@ import {
     SP_monster_soldier_hypergun,
     SP_monster_soldier_lasergun
 } from '../../../src/entities/monsters/soldier.js';
-import { Entity } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('soldier_variants', () => {
   let context: any;
   let spawnContext: any;
-  let soldier: Entity;
+  let soldier: any;
 
   beforeEach(() => {
     const testCtx = createTestContext();
     context = testCtx.entities;
     spawnContext = { entities: context, health_multiplier: 1 } as any;
 
-    soldier = {
-      index: 1,
-      origin: { x: 0, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
-      classname: 'monster_soldier',
-      spawnflags: 0,
-      monsterinfo: {},
-    } as any;
+    soldier = createMonsterEntityFactory('monster_soldier', {
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 },
+        spawnflags: 0,
+        monsterinfo: {} as any,
+    });
+    // Ensure style is undefined initially
+    delete soldier.style;
   });
 
   it('should spawn regular soldier', () => {
