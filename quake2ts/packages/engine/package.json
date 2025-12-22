@@ -29,7 +29,10 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests"
+    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests",
+    "test:visual": "vitest run tests/integration/visual",
+    "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
+    "test:visual:watch": "vitest tests/integration/visual"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",

@@ -3,6 +3,7 @@ import pixelmatch from 'pixelmatch';
 import fs from 'fs/promises';
 import { createReadStream, createWriteStream, existsSync } from 'fs';
 import path from 'path';
+import { RenderTestSetup, renderAndCapture } from '../engine/helpers/webgpu-rendering.js';
 
 export interface CaptureOptions {
   width: number;
@@ -259,4 +260,17 @@ export async function expectSnapshot(
             `See ${diffPath} for details.`
         );
     }
+}
+
+export async function renderAndExpectSnapshot(
+  setup: RenderTestSetup,
+  renderFn: (pass: GPURenderPassEncoder) => void,
+  options: Omit<SnapshotTestOptions, 'width' | 'height'>
+): Promise<void> {
+    const pixels = await renderAndCapture(setup, renderFn);
+    await expectSnapshot(pixels, {
+        ...options,
+        width: setup.width,
+        height: setup.height
+    });
 }
