@@ -4,6 +4,7 @@ import { buildRenderableEntities } from '../src/entities.js';
 import { EntityState } from '@quake2ts/shared';
 import { ClientConfigStrings } from '../src/configStrings.js';
 import { ClientImports } from '../src/index.js';
+import { createMockAssetManager, createMockMd2Model } from '@quake2ts/test-utils';
 
 describe('buildRenderableEntities', () => {
     // Mock ConfigStrings
@@ -12,13 +13,8 @@ describe('buildRenderableEntities', () => {
         getImageName: vi.fn()
     } as unknown as ClientConfigStrings;
 
-    // Mock AssetManager
-    const mockAssets = {
-        getMd2Model: vi.fn(),
-        getMd3Model: vi.fn(),
-        getMap: vi.fn(),
-        listFiles: vi.fn()
-    };
+    // Mock AssetManager using centralized factory from test-utils
+    const mockAssets = createMockAssetManager();
 
     // Mock ClientImports
     const mockImports = {
@@ -28,10 +24,11 @@ describe('buildRenderableEntities', () => {
         }
     } as unknown as ClientImports;
 
-    // Mock Model
-    const mockMd2Model = {
-        header: { magic: 844121161 }, // IDP2
-    };
+    // Mock MD2 Model using centralized factory from test-utils
+    // IDP2 magic number = 844121161 for MD2 format (ref: ref_gl/r_model.c)
+    const mockMd2Model = createMockMd2Model({
+        header: { magic: 844121161 } as any
+    });
 
     it('should interpolate scale correctly', () => {
         // Setup mocks

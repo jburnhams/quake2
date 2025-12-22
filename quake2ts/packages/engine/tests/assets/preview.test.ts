@@ -5,6 +5,7 @@ import { VirtualFileSystem } from '../../src/assets/vfs.js';
 import { Md2Model } from '../../src/assets/md2.js';
 import { Md3Model } from '../../src/assets/md3.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createMockMd2Model, createMockMd3Model } from '@quake2ts/test-utils';
 
 describe('AssetPreviewGenerator', () => {
   let assetManager: AssetManager;
@@ -106,19 +107,16 @@ describe('AssetPreviewGenerator', () => {
       { vertexIndices: [0, 1, 2] as [number, number, number], texCoordIndices: [0, 0, 0] as [number, number, number] }
     ];
 
-    const mockMd2: Md2Model = {
-      header: {} as any,
-      skins: [],
-      texCoords: [],
+    // Use centralized mock factory from test-utils
+    const mockMd2 = createMockMd2Model({
       triangles: mockTriangles,
       frames: [{
         name: 'frame1',
         vertices: mockVertices.map(p => ({ position: p, normalIndex: 0, normal: {x:0,y:0,z:1} })),
         minBounds: {x:-10,y:-10,z:-10},
         maxBounds: {x:10,y:10,z:0}
-      }],
-      glCommands: []
-    };
+      }]
+    });
 
     vi.spyOn(assetManager, 'loadMd2Model').mockResolvedValue(mockMd2);
 
@@ -147,17 +145,15 @@ describe('AssetPreviewGenerator', () => {
       { position: { x: 0, y: 10, z: 0 } }
     ];
 
-    const mockMd3: Md3Model = {
-      header: {} as any,
-      frames: [],
-      tags: [],
+    // Use centralized mock factory from test-utils
+    const mockMd3 = createMockMd3Model({
       surfaces: [{
         shaders: [],
         triangles: [{ indices: [0, 1, 2] }],
         texCoords: [],
         vertices: [mockVertices as any]
       } as any]
-    };
+    });
 
     vi.spyOn(assetManager, 'loadMd3Model').mockResolvedValue(mockMd3);
 

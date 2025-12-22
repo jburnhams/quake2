@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Draw_Crosshair, Init_Crosshair, Set_Crosshair, Cycle_Crosshair } from '../../src/hud/crosshair.js';
 import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
-import { createMockRenderer } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager } from '@quake2ts/test-utils';
 
 const mockRenderer = createMockRenderer({
     width: 640,
@@ -10,9 +10,10 @@ const mockRenderer = createMockRenderer({
     registerTexture: vi.fn().mockImplementation((name) => ({ width: 16, height: 16, name } as any)),
 });
 
-const mockAssetManager = {
+// Mock AssetManager using centralized factory from test-utils
+const mockAssetManager = createMockAssetManager({
     loadTexture: vi.fn().mockResolvedValue({ width: 16, height: 16, levels: [], source: 'pcx' } as PreparedTexture)
-} as unknown as AssetManager;
+});
 
 describe('Crosshair', () => {
     beforeEach(() => {
