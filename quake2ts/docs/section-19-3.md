@@ -48,7 +48,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createTriggerEntityFactory(triggerType: string, overrides?: Partial<Entity>): Entity`
   - Pre-set: bounds, touch callback, solid type
 
-- [ ] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
+- [x] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
   - [x] Refactored `player.test.ts`
   - [x] Refactored `monster_soldier.test.ts`
   - [x] Refactored `monsters.test.ts`
@@ -77,14 +77,21 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `trigger_conditions.test.ts`
   - [x] Refactored `triggers.test.ts`
   - [x] Refactored `misc.test.ts`
+  - [x] Refactored `lights.test.ts`
+  - [x] Refactored `paths.test.ts`
   - Replace manual entity creation with factories
-  - Estimated files: ~25 (Remaining: ~1)
+  - Estimated files: ~25 (Remaining: 0)
 
-- [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+- [x] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+  - [x] Refactored `damage.test.ts`
+  - [x] Refactored `damage-kick.test.ts`
+  - [x] Refactored `weapons/projectSource.test.ts`
   - Same pattern
   - Estimated files: ~15
 
-- [ ] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+- [x] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+  - [x] Refactored `entities/items/weapons.test.ts`
+  - [x] Refactored `entities/items/ammo.test.ts`
   - Same pattern
   - Estimated files: ~10
 

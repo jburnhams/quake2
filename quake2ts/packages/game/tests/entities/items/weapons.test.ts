@@ -2,16 +2,15 @@
 // Quake II - Weapon Pickup Entity Tests
 // =================================================================
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createWeaponPickupEntity } from '../../../src/entities/items';
 import { WEAPON_ITEMS } from '../../../src/inventory';
 import { Entity } from '../../../src/entities';
 import { createPlayerInventory, WeaponId } from '../../../src/inventory/playerInventory';
 import { AmmoType } from '../../../src/inventory/ammo';
 import { GameExports } from '../../../src';
-
-import { beforeEach } from 'vitest';
 import { Solid } from '../../../src/entities/entity';
+import { createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Weapon Pickup Entities', () => {
     let mockGame: GameExports;
@@ -46,11 +45,12 @@ describe('Weapon Pickup Entities', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
-        const player = {
-            client: {
-                inventory: createPlayerInventory(),
-            },
-        } as Entity;
+        // Use createPlayerEntityFactory but need to mock inventory manually as factory might not do deep complex objects yet
+        // or we use the factory and then override client
+        const player = createPlayerEntityFactory();
+        player.client = {
+            inventory: createPlayerInventory(),
+        } as any;
 
         entity.touch(entity, player);
 
@@ -77,7 +77,7 @@ describe('Weapon Pickup Entities', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
-        const nonPlayer = {} as Entity;
+        const nonPlayer = createEntityFactory();
 
         entity.touch(entity, nonPlayer);
 
