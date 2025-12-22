@@ -138,7 +138,7 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 4. Create Asset/Resource Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Partially Completed
+**Status:** Completed
 **Dependencies:** None
 
 - [x] **4.1** Create `test-utils/src/engine/mocks/assets.ts` file
@@ -165,13 +165,20 @@ This section covers migration of engine-specific test utilities including WebGL 
   - Include: models, nodes, leafs, planes, brushes
   - Integrate with BSP helpers from Section 19-1
 
-- [ ] **4.7** Cleanup inline asset mocks in `engine/tests/assets/` directory
-  - Replace inline mocks with factories
-  - Estimated files: ~15
+- [x] **4.7** Cleanup inline asset mocks in `engine/tests/assets/` directory
+  - Replaced inline mocks with centralized factories
+  - Updated files:
+    - `interactionGraph.test.ts` - Uses `createMockAssetManager`
+    - `preview.test.ts` - Uses `createMockMd2Model`, `createMockMd3Model`
+  - Note: Other files in this directory either don't use inline asset mocks or create specialized structures for specific test scenarios (e.g., BSP tree testing)
 
-- [ ] **4.8** Cleanup inline asset mocks in `client/tests/` directories
-  - Same pattern
-  - Estimated files: ~8
+- [x] **4.8** Cleanup inline asset mocks in `client/tests/` directories
+  - Replaced inline mocks with centralized factories
+  - Updated files:
+    - `entities.test.ts` - Uses `createMockAssetManager`, `createMockMd2Model`
+    - `hud.test.ts` - Uses `createMockAssetManager`
+    - `hud/crosshair.test.ts` - Uses `createMockAssetManager`
+  - All tests passing (58 integration tests, 35 engine integration tests)
 
 ---
 

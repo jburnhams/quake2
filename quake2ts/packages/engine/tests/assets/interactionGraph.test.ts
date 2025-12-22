@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ResourceInteractionGraph } from '../../src/assets/interactionGraph.js';
 import { VisibilityTimeline, FrameResources } from '../../src/assets/visibilityAnalyzer.js';
 import { AssetManager } from '../../src/assets/manager.js';
+import { createMockAssetManager } from '@quake2ts/test-utils';
 
 describe('ResourceInteractionGraph', () => {
     let graph: ResourceInteractionGraph;
@@ -9,13 +10,12 @@ describe('ResourceInteractionGraph', () => {
 
     beforeEach(() => {
         graph = new ResourceInteractionGraph();
-        mockAssetManager = {
+        // Mock AssetManager using centralized factory from test-utils
+        mockAssetManager = createMockAssetManager({
             loadMd2Model: vi.fn().mockResolvedValue({
                 skins: [{ name: 'models/test/skin.pcx' }]
-            }),
-            loadSound: vi.fn(),
-            loadTexture: vi.fn()
-        };
+            })
+        });
     });
 
     it('should build a graph from timeline roots', async () => {
