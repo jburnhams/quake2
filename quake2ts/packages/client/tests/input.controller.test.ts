@@ -33,6 +33,17 @@ describe('InputBindings', () => {
     bindings.unbind('Mouse1');
     expect(bindings.getBinding('Mouse1')).toBeUndefined();
   });
+
+  it('supports reverse lookup of bound keys for a command', () => {
+    const bindings = new InputBindings();
+    const keys = bindings.getBoundKeys('+forward');
+    expect(keys).toContain('KeyW');
+    expect(keys).toContain('ArrowUp');
+
+    bindings.bind('KeyX', '+test');
+    expect(bindings.getBoundKeys('+test')).toEqual(['KeyX']);
+    expect(bindings.getBoundKeys('+TEST')).toEqual(['KeyX']); // Case insensitive
+  });
 });
 
 describe('InputController', () => {
@@ -308,5 +319,15 @@ describe('InputController', () => {
     controller.buildCommand(16, 48);
 
     expect(controller.consumeConsoleCommands()).toEqual(['-attack', '-jump']);
+  });
+
+  it('exposes bound keys for UI display', () => {
+    const controller = createController();
+    const forwardKeys = controller.getBoundKeys('+forward');
+    expect(forwardKeys).toContain('KeyW');
+    expect(forwardKeys).toContain('ArrowUp');
+
+    controller.setKeyBinding('+testcmd', ['KeyP']);
+    expect(controller.getBoundKeys('+testcmd')).toEqual(['KeyP']);
   });
 });
