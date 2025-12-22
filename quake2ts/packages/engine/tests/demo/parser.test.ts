@@ -24,7 +24,7 @@ describe('NetworkMessageParser', () => {
     const parser = new NetworkMessageParser(stream, handler);
     parser.parseMessage();
 
-    expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 1, "q2dm1");
+    expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 1, "q2dm1", undefined, undefined);
     expect(stream.hasMore()).toBe(false);
   });
 
@@ -58,6 +58,8 @@ describe('NetworkMessageParser', () => {
     parser.parseMessage(); // Frame
 
     expect(handler.onServerData).toHaveBeenCalled();
+    // Frame parsing triggers player state parsing which might fail if protocol isn't set right,
+    // but here we expect success.
     expect(handler.onFrame).toHaveBeenCalled();
     const frameArg = (handler.onFrame as any).mock.calls[0][0];
     expect(frameArg.serverFrame).toBe(100);

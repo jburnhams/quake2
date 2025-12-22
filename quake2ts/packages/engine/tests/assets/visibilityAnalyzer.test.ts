@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ResourceVisibilityAnalyzer } from '../../src/assets/visibilityAnalyzer.js';
 import { MessageWriter } from '../../src/demo/writer.js';
-import { ConfigStringIndex } from '@quake2ts/shared';
+import { ConfigStringIndex, TempEntity } from '@quake2ts/shared';
 import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
 
 // Helper to create synthetic demo data with Writer
-const createSyntheticDemo = (): Uint8Array => {
+const createSyntheticDemo = (withTempEntity: boolean = false): Uint8Array => {
     // We need to create blocks format: Length(4) + Data
     const blocks: Uint8Array[] = [];
 
@@ -44,6 +44,15 @@ const createSyntheticDemo = (): Uint8Array => {
         playerState: createEmptyProtocolPlayerState(),
         packetEntities: { delta: false, entities: [ent1] }
     }, 34);
+
+    if (withTempEntity) {
+        // Add TempEntity via Frame (simulated) or just use generic write if available
+        // Frame parser handles packet entities, but temp entities are separate commands usually inside the frame block
+        // writer.writeTempEntity is a thing?
+        // Let's check MessageWriter
+        w2.writeTempEntity(TempEntity.ROCKET_EXPLOSION, {x:0, y:0, z:0});
+    }
+
     addBlock(w2);
 
     // Combine blocks
@@ -88,5 +97,16 @@ describe('ResourceVisibilityAnalyzer', () => {
 
         expect(frame1Res.visible.has("models/test/model1.md2")).toBe(true);
         expect(frame1Res.audible.has("sound/test/sound1.wav")).toBe(true);
+    });
+
+    it('should identify resources from TempEntity events', async () => {
+        const demoData = createSyntheticDemo(true);
+        const timeline = await analyzer.analyzeDemo(demoData);
+
+        expect(timeline.frames.has(1)).toBe(true);
+        const frame1Res = timeline.frames.get(1)!;
+
+        // ROCKET_EXPLOSION should map to s_explod.sp2
+        expect(frame1Res.models.has("sprites/s_explod.sp2")).toBe(true);
     });
 });
