@@ -11,7 +11,7 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  ...(isUnit ? ['**/integration/**', '**/*integration*'] : [])
+  ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
 ];
 
 const include = isIntegration
@@ -34,6 +34,11 @@ export default defineConfig({
     exclude,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    // Optimize unit test performance
+    ...(isUnit ? {
+      pool: 'threads',
+      isolate: false, // Reuse environment across test files for speed
+    } : {}),
     // Force sequential execution for integration tests to prevent WebGPU/NAPI crashes
     ...(isIntegration ? {
       pool: 'forks',
@@ -43,7 +48,8 @@ export default defineConfig({
           minForks: 1
         }
       },
-      fileParallelism: false
+      fileParallelism: false,
+      isolate: true,
     } : {})
   },
 });

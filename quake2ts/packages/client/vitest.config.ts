@@ -20,6 +20,9 @@ export default defineConfig({
     exclude,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    // Optimize unit test performance
+    pool: isUnit ? 'threads' : 'forks',
+    isolate: true, // Keep isolation for client tests
     alias: {
       '@quake2ts/engine': path.resolve(__dirname, '../engine/src/index.ts'),
       '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),

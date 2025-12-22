@@ -22,7 +22,9 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
+    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests"
   },
   "dependencies": {
     "@quake2ts/engine": "workspace:^",

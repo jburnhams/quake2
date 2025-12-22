@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { initHeadlessWebGPU } from '../src/setup/webgpu';
+import { initHeadlessWebGPU } from '../../src/setup/webgpu';
 
 describe('Headless WebGPU Setup', () => {
   let setup: any;

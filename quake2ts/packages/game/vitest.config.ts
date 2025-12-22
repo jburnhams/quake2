@@ -30,7 +30,7 @@ export default defineConfig({
       },
     },
     fileParallelism: !isIntegration,
-    isolate: true, // Keep isolation on for reliability
+    isolate: true, // Keep isolation - game tests have state sharing issues
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
