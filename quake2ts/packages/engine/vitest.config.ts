@@ -34,5 +34,16 @@ export default defineConfig({
     exclude,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    // Force sequential execution for integration tests to prevent WebGPU/NAPI crashes
+    ...(isIntegration ? {
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          maxForks: 1,
+          minForks: 1
+        }
+      },
+      fileParallelism: false
+    } : {})
   },
 });
