@@ -13,7 +13,7 @@ export * from './game/mocks/items.js';
 export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mockTransport.js';
-export * from './server/mockNetDriver.js'; // Added export
+export * from './server/mockNetDriver.js';
 export * from './server/mocks/state.js';
 export * from './server/mocks/connection.js';
 export * from './server/mocks/commands.js';
@@ -32,6 +32,7 @@ export * from './setup/node.js';
 export * from './engine/mocks/webgl.js';
 export * from './engine/mocks/audio.js';
 export * from './engine/mocks/renderer.js';
+export * from './engine/mocks/assets.js';
 export * from './engine/rendering.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
@@ -41,6 +42,7 @@ export * from './client/mocks/input.js';
 export * from './client/helpers/view.js';
 export * from './client/helpers/hud.js';
 export * from './client/mocks/network.js';
+export * from './client/mocks/download.js';
 
 // E2E
 export * from './e2e/playwright.js';
