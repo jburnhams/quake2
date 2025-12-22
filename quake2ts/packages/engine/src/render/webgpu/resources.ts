@@ -428,3 +428,210 @@ export class TextureCubeMap {
     return this._mipLevelCount > 1 ? Math.floor(totalBase * 1.33) : totalBase;
   }
 }
+
+/**
+ * Sampler wrapper.
+ */
+export class Sampler {
+  private _sampler: GPUSampler;
+  private _device: GPUDevice;
+
+  constructor(device: GPUDevice, descriptor: GPUSamplerDescriptor) {
+    this._device = device;
+    this._sampler = device.createSampler(descriptor);
+  }
+
+  get sampler(): GPUSampler {
+    return this._sampler;
+  }
+
+  // Samplers are lightweight and usually cached/deduplicated by the device,
+  // GPUSampler does not have a destroy method.
+  destroy(): void {
+    // No-op
+  }
+}
+
+// Factory functions
+export function createLinearSampler(device: GPUDevice): Sampler {
+  return new Sampler(device, {
+    minFilter: 'linear',
+    magFilter: 'linear',
+    mipmapFilter: 'linear',
+    label: 'LinearSampler'
+  });
+}
+
+export function createNearestSampler(device: GPUDevice): Sampler {
+  return new Sampler(device, {
+    minFilter: 'nearest',
+    magFilter: 'nearest',
+    mipmapFilter: 'nearest',
+    label: 'NearestSampler'
+  });
+}
+
+export function createClampSampler(device: GPUDevice): Sampler {
+  return new Sampler(device, {
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge',
+    minFilter: 'linear',
+    magFilter: 'linear',
+    label: 'ClampSampler'
+  });
+}
+
+export function createRepeatSampler(device: GPUDevice): Sampler {
+  return new Sampler(device, {
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+    minFilter: 'linear',
+    magFilter: 'linear',
+    label: 'RepeatSampler'
+  });
+}
+
+/**
+ * ShaderModule wrapper.
+ */
+export class ShaderModule {
+  private _module: GPUShaderModule;
+  private _device: GPUDevice;
+
+  constructor(
+    device: GPUDevice,
+    descriptor: {
+      code: string;
+      label?: string;
+    }
+  ) {
+    this._device = device;
+    this._module = device.createShaderModule({
+      code: descriptor.code,
+      label: descriptor.label
+    });
+  }
+
+  get module(): GPUShaderModule {
+    return this._module;
+  }
+
+  get compilationInfo(): Promise<GPUCompilationInfo> {
+    return this._module.getCompilationInfo();
+  }
+}
+
+/**
+ * Pipeline Descriptor Interface.
+ */
+export interface PipelineDescriptor {
+  vertex: {
+    module: ShaderModule;
+    entryPoint: string;
+    buffers?: Iterable<GPUVertexBufferLayout | null>;
+  };
+  fragment?: {
+    module: ShaderModule;
+    entryPoint: string;
+    targets: Iterable<GPUColorTargetState | null>;
+  };
+  primitive?: GPUPrimitiveState;
+  depthStencil?: GPUDepthStencilState;
+  multisample?: GPUMultisampleState;
+  layout: GPUPipelineLayout | 'auto';
+  label?: string;
+}
+
+/**
+ * Render Pipeline Wrapper.
+ */
+export class RenderPipeline {
+  private _pipeline: GPURenderPipeline;
+  private _device: GPUDevice;
+  private _layout: GPUPipelineLayout | 'auto';
+
+  constructor(device: GPUDevice, descriptor: PipelineDescriptor) {
+    this._device = device;
+    this._layout = descriptor.layout;
+
+    const pipelineDescriptor: GPURenderPipelineDescriptor = {
+      label: descriptor.label,
+      layout: descriptor.layout,
+      vertex: {
+        module: descriptor.vertex.module.module,
+        entryPoint: descriptor.vertex.entryPoint,
+        buffers: descriptor.vertex.buffers as Iterable<GPUVertexBufferLayout | null>
+      },
+      primitive: descriptor.primitive,
+      depthStencil: descriptor.depthStencil,
+      multisample: descriptor.multisample
+    };
+
+    if (descriptor.fragment) {
+      pipelineDescriptor.fragment = {
+        module: descriptor.fragment.module.module,
+        entryPoint: descriptor.fragment.entryPoint,
+        targets: descriptor.fragment.targets as Iterable<GPUColorTargetState | null>
+      };
+    }
+
+    this._pipeline = device.createRenderPipeline(pipelineDescriptor);
+  }
+
+  get pipeline(): GPURenderPipeline {
+    return this._pipeline;
+  }
+
+  get layout(): GPUPipelineLayout | 'auto' {
+    return this._layout;
+  }
+
+  destroy(): void {
+    // No explicit destroy on GPURenderPipeline
+  }
+}
+
+/**
+ * Compute Pipeline Wrapper.
+ */
+export class ComputePipeline {
+  private _pipeline: GPUComputePipeline;
+  private _device: GPUDevice;
+  private _layout: GPUPipelineLayout | 'auto';
+
+  constructor(
+    device: GPUDevice,
+    descriptor: {
+      compute: {
+        module: ShaderModule;
+        entryPoint: string;
+      };
+      layout: GPUPipelineLayout | 'auto';
+      label?: string;
+    }
+  ) {
+    this._device = device;
+    this._layout = descriptor.layout;
+
+    this._pipeline = device.createComputePipeline({
+      label: descriptor.label,
+      layout: descriptor.layout,
+      compute: {
+        module: descriptor.compute.module.module,
+        entryPoint: descriptor.compute.entryPoint
+      }
+    });
+  }
+
+  get pipeline(): GPUComputePipeline {
+    return this._pipeline;
+  }
+
+  get layout(): GPUPipelineLayout | 'auto' {
+    return this._layout;
+  }
+
+  destroy(): void {
+    // No explicit destroy on GPUComputePipeline
+  }
+}

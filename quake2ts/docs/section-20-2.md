@@ -153,9 +153,9 @@ class TextureCubeMap {
 
 ---
 
-### Task 3: Sampler Management
+### Task 3: Sampler Management [COMPLETED]
 
-**File:** Same as Task 1
+**File:** `packages/engine/src/render/webgpu/resources.ts`
 
 Implement sampler abstractions:
 
@@ -198,9 +198,9 @@ function createRepeatSampler(device: GPUDevice): Sampler
 
 ---
 
-### Task 4: Shader Module & Pipeline Abstractions
+### Task 4: Shader Module & Pipeline Abstractions [COMPLETED]
 
-**File:** Same as Task 1
+**File:** `packages/engine/src/render/webgpu/resources.ts`
 
 Implement shader and pipeline wrappers:
 

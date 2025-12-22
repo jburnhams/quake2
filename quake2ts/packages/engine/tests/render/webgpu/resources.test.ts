@@ -7,7 +7,16 @@ import {
   StorageBuffer,
   resourceTracker,
   Texture2D,
-  TextureCubeMap
+  TextureCubeMap,
+  Sampler,
+  createLinearSampler,
+  createNearestSampler,
+  createClampSampler,
+  createRepeatSampler,
+  ShaderModule,
+  RenderPipeline,
+  ComputePipeline,
+  PipelineDescriptor
 } from '../../../src/render/webgpu/resources.js';
 import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from '../../../src/render/webgpu/constants.js';
 
@@ -17,9 +26,22 @@ const mockTexture = {
   destroy: vi.fn(),
 } as unknown as GPUTexture;
 
+const mockSampler = {} as unknown as GPUSampler;
+
+const mockShaderModule = {
+  getCompilationInfo: vi.fn().mockResolvedValue({ messages: [] })
+} as unknown as GPUShaderModule;
+
+const mockRenderPipeline = {} as unknown as GPURenderPipeline;
+const mockComputePipeline = {} as unknown as GPUComputePipeline;
+
 const mockDevice = {
   createBuffer: vi.fn(),
   createTexture: vi.fn(),
+  createSampler: vi.fn(),
+  createShaderModule: vi.fn(),
+  createRenderPipeline: vi.fn(),
+  createComputePipeline: vi.fn(),
   queue: {
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
@@ -38,6 +60,10 @@ describe('WebGPU Resources', () => {
     vi.clearAllMocks();
     (mockDevice.createBuffer as any).mockReturnValue(mockBuffer);
     (mockDevice.createTexture as any).mockReturnValue(mockTexture);
+    (mockDevice.createSampler as any).mockReturnValue(mockSampler);
+    (mockDevice.createShaderModule as any).mockReturnValue(mockShaderModule);
+    (mockDevice.createRenderPipeline as any).mockReturnValue(mockRenderPipeline);
+    (mockDevice.createComputePipeline as any).mockReturnValue(mockComputePipeline);
     (mockTexture.createView as any).mockReturnValue({});
     resourceTracker.reset();
   });
@@ -219,6 +245,126 @@ describe('WebGPU Resources', () => {
         });
         // 10*10*4 * 6 = 2400 bytes
         expect(tex.size).toBe(2400);
+    });
+  });
+
+  describe('Sampler', () => {
+    it('creates a sampler', () => {
+      const sampler = new Sampler(mockDevice, {
+        minFilter: 'linear',
+        magFilter: 'linear'
+      });
+      expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+        minFilter: 'linear',
+        magFilter: 'linear'
+      }));
+      expect(sampler.sampler).toBe(mockSampler);
+    });
+
+    it('createLinearSampler uses correct defaults', () => {
+      createLinearSampler(mockDevice);
+      expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+        minFilter: 'linear',
+        magFilter: 'linear',
+        mipmapFilter: 'linear'
+      }));
+    });
+
+    it('createNearestSampler uses correct defaults', () => {
+      createNearestSampler(mockDevice);
+      expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+        minFilter: 'nearest',
+        magFilter: 'nearest',
+        mipmapFilter: 'nearest'
+      }));
+    });
+
+    it('createClampSampler uses clamp address mode', () => {
+      createClampSampler(mockDevice);
+      expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge'
+      }));
+    });
+
+    it('createRepeatSampler uses repeat address mode', () => {
+      createRepeatSampler(mockDevice);
+      expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+        addressModeU: 'repeat',
+        addressModeV: 'repeat'
+      }));
+    });
+  });
+
+  describe('ShaderModule & Pipelines', () => {
+    it('creates ShaderModule', async () => {
+      const code = '@vertex fn main() {}';
+      const shader = new ShaderModule(mockDevice, { code, label: 'test-shader' });
+
+      expect(mockDevice.createShaderModule).toHaveBeenCalledWith({
+        code,
+        label: 'test-shader'
+      });
+      expect(shader.module).toBe(mockShaderModule);
+      await expect(shader.compilationInfo).resolves.toEqual({ messages: [] });
+    });
+
+    it('creates RenderPipeline', () => {
+      const vertexModule = new ShaderModule(mockDevice, { code: '' });
+      const fragmentModule = new ShaderModule(mockDevice, { code: '' });
+      const descriptor: PipelineDescriptor = {
+        vertex: {
+          module: vertexModule,
+          entryPoint: 'vs_main',
+          buffers: []
+        },
+        fragment: {
+          module: fragmentModule,
+          entryPoint: 'fs_main',
+          targets: [{ format: 'bgra8unorm' }]
+        },
+        layout: 'auto',
+        label: 'test-pipeline'
+      };
+
+      const pipeline = new RenderPipeline(mockDevice, descriptor);
+
+      expect(mockDevice.createRenderPipeline).toHaveBeenCalledWith(expect.objectContaining({
+        label: 'test-pipeline',
+        layout: 'auto',
+        vertex: expect.objectContaining({
+          entryPoint: 'vs_main',
+          module: mockShaderModule
+        }),
+        fragment: expect.objectContaining({
+          entryPoint: 'fs_main',
+          module: mockShaderModule
+        })
+      }));
+      expect(pipeline.pipeline).toBe(mockRenderPipeline);
+      expect(pipeline.layout).toBe('auto');
+    });
+
+    it('creates ComputePipeline', () => {
+      const computeModule = new ShaderModule(mockDevice, { code: '' });
+      const pipeline = new ComputePipeline(mockDevice, {
+        compute: {
+          module: computeModule,
+          entryPoint: 'main'
+        },
+        layout: 'auto',
+        label: 'compute-pipeline'
+      });
+
+      expect(mockDevice.createComputePipeline).toHaveBeenCalledWith(expect.objectContaining({
+        label: 'compute-pipeline',
+        layout: 'auto',
+        compute: expect.objectContaining({
+          entryPoint: 'main',
+          module: mockShaderModule
+        })
+      }));
+      expect(pipeline.pipeline).toBe(mockComputePipeline);
     });
   });
 
