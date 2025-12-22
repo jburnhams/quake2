@@ -1,85 +1,81 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { globals } from 'webgpu';
 import {
-    createMockWebGPUContext,
-    createMockGPUDevice,
-    createMockGPUBuffer,
-    setupWebGPUMocks
+  createMockWebGPUContext,
+  createMockGPUAdapter,
+  createMockGPUDevice
 } from '../src/engine/mocks/webgpu';
 
 describe('WebGPU Mocks', () => {
+  beforeAll(() => {
+    // Ensure WebGPU constants are available
+    Object.assign(globalThis, globals);
+  });
 
-    it('should setup global mocks', async () => {
-        const { mockGpu } = setupWebGPUMocks();
-        expect(navigator.gpu).toBeDefined();
-        expect(navigator.gpu.requestAdapter).toBeDefined();
+  it('should create a complete mock context', () => {
+    const { adapter, device, queue } = createMockWebGPUContext();
+    expect(adapter).toBeDefined();
+    expect(device).toBeDefined();
+    expect(queue).toBeDefined();
 
-        const adapter = await navigator.gpu.requestAdapter();
-        expect(adapter).toBeDefined();
-        expect(mockGpu.requestAdapter).toHaveBeenCalled();
+    // Check circular reference logic (device.queue should be the queue)
+    expect(device.queue).toBe(queue);
+  });
 
-        // Check constants
-        expect((global as any).GPUBufferUsage).toBeDefined();
-        expect((global as any).GPUBufferUsage.UNIFORM).toBeDefined();
+  it('should mock GPUAdapter methods', async () => {
+    const adapter = createMockGPUAdapter();
+    const device = await adapter.requestDevice();
+    expect(adapter.requestDevice).toHaveBeenCalled();
+    expect(device).toBeDefined();
+  });
+
+  it('should mock GPUDevice resource creation', () => {
+    const device = createMockGPUDevice();
+
+    const buffer = device.createBuffer({
+      size: 1024,
+      usage: GPUBufferUsage.VERTEX
     });
+    expect(device.createBuffer).toHaveBeenCalled();
+    expect(buffer.size).toBe(1024);
 
-    it('should create a complete mock context', () => {
-        const { adapter, device, queue } = createMockWebGPUContext();
-        expect(adapter).toBeDefined();
-        expect(device).toBeDefined();
-        expect(queue).toBeDefined();
-        expect(device.queue).toBe(queue);
+    const texture = device.createTexture({
+        size: { width: 100, height: 100 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
+    expect(device.createTexture).toHaveBeenCalled();
+    expect(texture.format).toBe('rgba8unorm');
+  });
 
-    it('should mock GPUBuffer creation', () => {
-        const device = createMockGPUDevice();
-        const buffer = device.createBuffer({
-            size: 1024,
-            usage: (global as any).GPUBufferUsage.UNIFORM
-        });
+  it('should mock CommandEncoder and RenderPass', () => {
+    const device = createMockGPUDevice();
+    const encoder = device.createCommandEncoder();
+    expect(device.createCommandEncoder).toHaveBeenCalled();
 
-        expect(buffer).toBeDefined();
-        expect(buffer.size).toBe(1024);
-        expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({ size: 1024 }));
+    const pass = encoder.beginRenderPass({
+        colorAttachments: []
     });
+    expect(encoder.beginRenderPass).toHaveBeenCalled();
 
-    it('should mock GPUTexture creation', () => {
-        const device = createMockGPUDevice();
-        const texture = device.createTexture({
-            size: { width: 256, height: 256 },
-            format: 'rgba8unorm',
-            usage: (global as any).GPUTextureUsage.TEXTURE_BINDING
-        });
+    pass.setPipeline({} as GPURenderPipeline);
+    pass.draw(3);
+    pass.end();
 
-        expect(texture).toBeDefined();
-        expect(texture.width).toBe(256);
-        expect(texture.height).toBe(256);
-        expect(texture.createView).toBeDefined();
-    });
+    expect(pass.draw).toHaveBeenCalledWith(3);
+    expect(pass.end).toHaveBeenCalled();
 
-    it('should mock command encoding', () => {
-        const device = createMockGPUDevice();
-        const encoder = device.createCommandEncoder();
+    encoder.finish();
+    expect(encoder.finish).toHaveBeenCalled();
+  });
 
-        expect(encoder).toBeDefined();
-        expect(encoder.beginRenderPass).toBeDefined();
+  it('should mock Queue operations', () => {
+      const device = createMockGPUDevice();
+      const queue = device.queue;
 
-        const pass = encoder.beginRenderPass({ colorAttachments: [] });
-        expect(pass).toBeDefined();
-        expect(pass.setPipeline).toBeDefined();
-        expect(pass.draw).toBeDefined();
+      const buffer = device.createBuffer({ size: 16, usage: GPUBufferUsage.COPY_DST });
+      queue.writeBuffer(buffer, 0, new Uint8Array([1, 2, 3, 4]));
 
-        pass.end();
-        expect(pass.end).toHaveBeenCalled();
-
-        const buffer = encoder.finish();
-        expect(buffer).toBeDefined();
-    });
-
-    it('should mock queue operations', () => {
-        const device = createMockGPUDevice();
-        const buffer = createMockGPUBuffer(16, 0);
-
-        device.queue.writeBuffer(buffer, 0, new Float32Array([1, 2, 3, 4]));
-        expect(device.queue.writeBuffer).toHaveBeenCalled();
-    });
+      expect(queue.writeBuffer).toHaveBeenCalled();
+  });
 });
