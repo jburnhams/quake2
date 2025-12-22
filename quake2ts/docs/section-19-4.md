@@ -188,29 +188,30 @@ This section covers migration of client-specific test utilities including input 
 
 ### 6. Create Client Network Mocks (MEDIUM PRIORITY)
 
-**Status:** In Progress
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 2 (network mocks)
 
-- [ ] **6.1** Create `test-utils/src/client/mocks/network.ts` file
+- [x] **6.1** Create `test-utils/src/client/mocks/network.ts` file
 
-- [ ] **6.2** Add `createMockServerMessage()` factory
+- [x] **6.2** Add `createMockServerMessage()` factory
   - Signature: `createMockServerMessage(type: number, data?: Uint8Array): ServerMessage`
 
-- [ ] **6.3** Add `createMockSnapshot()` factory
+- [x] **6.3** Add `createMockSnapshot()` factory
   - Signature: `createMockSnapshot(frameNum: number, entities?: EntityState[]): Snapshot`
 
-- [ ] **6.4** Add `createMockDeltaFrame()` factory
+- [x] **6.4** Add `createMockDeltaFrame()` factory
   - Signature: `createMockDeltaFrame(from: number, to: number, changes?: EntityDelta[]): DeltaFrame`
 
-- [ ] **6.5** Add `simulateNetworkDelay()` helper
+- [x] **6.5** Add `simulateNetworkDelay()` helper
   - Signature: `simulateNetworkDelay(messages: Message[], delayMs: number): Promise<Message[]>`
 
-- [ ] **6.6** Add `simulatePacketLoss()` helper
+- [x] **6.6** Add `simulatePacketLoss()` helper
   - Signature: `simulatePacketLoss(messages: Message[], lossPercent: number): Message[]`
 
-- [ ] **6.7** Cleanup network tests in `client/tests/network/` directory
+- [x] **6.7** Cleanup network tests in `client/tests/network/` directory
   - Replace inline network mocks
   - Estimated files: ~8
+  - **Note:** Updated `clientConnection.test.ts`, `connection.test.ts`, and `serverBrowser.test.ts`. Also added `MockNetDriver` to `test-utils`.
 
 ---
 
@@ -238,41 +239,42 @@ This section covers migration of client-specific test utilities including input 
 
 ### 8. Create Console/Command Mocks (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** None
 
-- [ ] **8.1** Create `test-utils/src/client/mocks/console.ts` file
+- [x] **8.1** Create `test-utils/src/client/mocks/console.ts` file
 
-- [ ] **8.2** Add `createMockConsole()` factory
+- [x] **8.2** Add `createMockConsole()` factory
   - Signature: `createMockConsole(overrides?: Partial<Console>): MockConsole`
   - Methods: `print()`, `exec()`, `addCommand()`, `getCvar()`
 
-- [ ] **8.3** Add `createMockCommand()` factory
+- [x] **8.3** Add `createMockCommand()` factory
   - Signature: `createMockCommand(name: string, handler: CommandHandler): Command`
 
-- [ ] **8.4** Add `createMockCvarRegistry()` factory
+- [x] **8.4** Add `createMockCvarRegistry()` factory
   - Signature: `createMockCvarRegistry(cvars?: Record<string, string>): CvarRegistry`
 
-- [ ] **8.5** Cleanup console tests in `client/tests/console/` directory
+- [x] **8.5** Cleanup console tests in `client/tests/console/` directory
   - Estimated files: ~5
+  - **Note:** No dedicated console tests found in `client/tests/console/`. `clientConfig.test.ts` covers some config parsing but doesn't use a console object directly. The mocks are available for future use.
 
 ---
 
 ### 9. Documentation and Exports (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Tasks 1-8
 
-- [ ] **9.1** Add JSDoc comments to all client utilities
+- [x] **9.1** Add JSDoc comments to all client utilities
   - Include usage examples for input injection, view setup, prediction testing
 
-- [ ] **9.2** Update `test-utils/README.md` with client utilities section
+- [x] **9.2** Update `test-utils/README.md` with client utilities section
   - Document: input mocks, view helpers, HUD utilities, client state mocks
 
-- [ ] **9.3** Verify all client utilities exported from `test-utils/src/index.ts`
+- [x] **9.3** Verify all client utilities exported from `test-utils/src/index.ts`
   - Organized by category: `client/mocks/*`, `client/helpers/*`
 
-- [ ] **9.4** Add TypeScript type exports
+- [x] **9.4** Add TypeScript type exports
   - Export all mock types and helper interfaces
 
 ---

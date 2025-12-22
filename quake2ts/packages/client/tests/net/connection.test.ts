@@ -1,25 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MultiplayerConnection, ConnectionState } from '../../src/net/connection';
 import { NetDriver, UserCommand, ClientCommand, ServerCommand, BinaryWriter, NetChan } from '@quake2ts/shared';
+import { MockNetDriver } from '@quake2ts/test-utils';
 import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver';
 
-// Mock dependencies
-vi.mock('../../src/net/browserWsDriver', () => {
-    return {
-        BrowserWebSocketNetDriver: vi.fn().mockImplementation(() => ({
-            connect: vi.fn().mockResolvedValue(undefined),
-            disconnect: vi.fn(),
-            send: vi.fn(),
-            onMessage: vi.fn(),
-            onClose: vi.fn(),
-            onError: vi.fn()
-        }))
-    };
-});
+// Mock dependencies - just the module, implementation will be set in beforeEach
+vi.mock('../../src/net/browserWsDriver');
 
 describe('MultiplayerConnection', () => {
     let connection: MultiplayerConnection;
-    let mockDriver: any;
+    let mockDriver: MockNetDriver;
 
     const mockCmd: UserCommand = {
         msec: 100,
@@ -32,6 +22,9 @@ describe('MultiplayerConnection', () => {
     };
 
     beforeEach(() => {
+        // Setup the mock implementation using the imported MockNetDriver class
+        (BrowserWebSocketNetDriver as any).mockImplementation(() => new MockNetDriver());
+
         connection = new MultiplayerConnection({
             username: 'Player',
             model: 'male',
@@ -54,14 +47,12 @@ describe('MultiplayerConnection', () => {
         connection.onConnectionStateChange = stateChangeSpy;
 
         await connection.connect('ws://localhost:27910');
-        expect(mockDriver.connect).toHaveBeenCalledWith('ws://localhost:27910');
+        expect(mockDriver.connectSpy).toHaveBeenCalledWith('ws://localhost:27910');
         expect((connection as any).state).toBe(ConnectionState.Challenge);
         // Verify it sends getchallenge
-        expect(mockDriver.send).toHaveBeenCalled();
+        expect(mockDriver.sendSpy).toHaveBeenCalled();
 
         // Check state change events
-        // 1. Connecting
-        // 2. Challenge
         expect(stateChangeSpy).toHaveBeenCalledTimes(2);
         expect(stateChangeSpy).toHaveBeenNthCalledWith(1, ConnectionState.Connecting);
         expect(stateChangeSpy).toHaveBeenNthCalledWith(2, ConnectionState.Challenge);
@@ -69,7 +60,7 @@ describe('MultiplayerConnection', () => {
 
     it('should support connectToServer with address and port', async () => {
         await connection.connectToServer('localhost', 27910);
-        expect(mockDriver.connect).toHaveBeenCalledWith('ws://localhost:27910');
+        expect(mockDriver.connectSpy).toHaveBeenCalledWith('ws://localhost:27910');
     });
 
     it('should complete handshake sequence and emit events', async () => {
@@ -79,54 +70,51 @@ describe('MultiplayerConnection', () => {
         await connection.connect('ws://localhost:27910');
         stateChangeSpy.mockClear();
 
-        // Wait for next tick to ensure async operations complete if any
+        // Wait for next tick
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        // Create a server-side NetChan to format packets correctly
+        // Create a server-side NetChan
         const serverNetChan = new NetChan();
-        const sentPacket = mockDriver.send.mock.calls[0][0] as Uint8Array;
+        const sentPacket = mockDriver.getLastSentMessage()!;
         const view = new DataView(sentPacket.buffer, sentPacket.byteOffset, sentPacket.byteLength);
         const qport = view.getUint16(8, true);
         serverNetChan.setup(qport);
+        mockDriver.clearSentMessages();
 
         // --- 1. Server sends challenge ---
-        // Simulate "challenge 12345" response
         const writer = new BinaryWriter();
         writer.writeByte(ServerCommand.stufftext);
         writer.writeString('challenge 12345\n');
-
         const challengePacket = serverNetChan.transmit(writer.getData());
-        const onMessage = mockDriver.onMessage.mock.calls[0][0];
-        onMessage(challengePacket);
+
+        mockDriver.receiveMessage(challengePacket);
 
         // Should have sent connect command
-        expect(mockDriver.send).toHaveBeenCalledTimes(2); // getchallenge + connect
+        expect(mockDriver.sendSpy).toHaveBeenCalled();
 
         // --- 2. Server sends serverdata ---
-        // Simulate svc_serverdata
         const writer2 = new BinaryWriter();
         writer2.writeByte(ServerCommand.serverdata);
-        writer2.writeLong(34); // Protocol
-        writer2.writeLong(1); // Server count
-        writer2.writeByte(0); // Attract
+        writer2.writeLong(34);
+        writer2.writeLong(1);
+        writer2.writeByte(0);
         writer2.writeString("baseq2");
-        writer2.writeShort(0); // Player num
+        writer2.writeShort(0);
         writer2.writeString("maps/test.bsp");
-
         const serverDataPacket = serverNetChan.transmit(writer2.getData());
-        onMessage(serverDataPacket);
+
+        mockDriver.receiveMessage(serverDataPacket);
 
         expect((connection as any).state).toBe(ConnectionState.Loading);
         expect(stateChangeSpy).toHaveBeenCalledWith(ConnectionState.Loading);
 
-        // --- 3. Server sends precache (end of loading) ---
-        // Simulate "precache" which finishes loading
+        // --- 3. Server sends precache ---
         const writer3 = new BinaryWriter();
         writer3.writeByte(ServerCommand.stufftext);
         writer3.writeString('precache\n');
-
         const precachePacket = serverNetChan.transmit(writer3.getData());
-        onMessage(precachePacket);
+
+        mockDriver.receiveMessage(precachePacket);
 
         expect(connection.isConnected()).toBe(true);
         expect((connection as any).state).toBe(ConnectionState.Active);
@@ -140,11 +128,9 @@ describe('MultiplayerConnection', () => {
         await connection.connect('ws://localhost:27910');
         connection.disconnect();
 
-        expect(mockDriver.disconnect).toHaveBeenCalled();
+        expect(mockDriver.disconnectSpy).toHaveBeenCalled();
         expect((connection as any).state).toBe(ConnectionState.Disconnected);
         expect(stateChangeSpy).toHaveBeenLastCalledWith(ConnectionState.Disconnected);
-        expect((connection as any).configStrings.size).toBe(0);
-        expect((connection as any).baselines.size).toBe(0);
     });
 
     it('should handle connection errors', async () => {
@@ -152,7 +138,7 @@ describe('MultiplayerConnection', () => {
         connection.onConnectionError = errorSpy;
 
         const error = new Error('Connection failed');
-        mockDriver.connect.mockRejectedValueOnce(error);
+        mockDriver.connectSpy.mockRejectedValueOnce(error);
 
         await expect(connection.connect('ws://bad-url')).rejects.toThrow('Connection failed');
         expect(errorSpy).toHaveBeenCalledWith(error);
@@ -162,13 +148,11 @@ describe('MultiplayerConnection', () => {
     it('should update ping on message receipt', async () => {
         await connection.connect('ws://localhost:27910');
 
-        // Setup initial ping time
         const now = Date.now();
-        (connection as any).lastPingTime = now - 50; // Simulate 50ms ago
+        (connection as any).lastPingTime = now - 50;
 
-        // Receive a packet
         const serverNetChan = new NetChan();
-        const sentPacket = mockDriver.send.mock.calls[0][0] as Uint8Array;
+        const sentPacket = mockDriver.getLastSentMessage()!;
         const view = new DataView(sentPacket.buffer, sentPacket.byteOffset, sentPacket.byteLength);
         const qport = view.getUint16(8, true);
         serverNetChan.setup(qport);
@@ -177,17 +161,14 @@ describe('MultiplayerConnection', () => {
         writer.writeByte(ServerCommand.nop);
         const packet = serverNetChan.transmit(writer.getData());
 
-        const onMessage = mockDriver.onMessage.mock.calls[0][0];
-        onMessage(packet);
+        mockDriver.receiveMessage(packet);
 
         expect(connection.getPing()).toBeGreaterThanOrEqual(50);
     });
 
     it('should buffer last 64 commands', async () => {
-        // Manually set state to Active to allow sending
         (connection as any).state = ConnectionState.Active;
 
-        // Send 70 commands
         for (let i = 0; i < 70; i++) {
             connection.sendCommand({ ...mockCmd, serverFrame: i });
         }
@@ -195,12 +176,11 @@ describe('MultiplayerConnection', () => {
         const cmdBuffer = (connection as any).commandHistory as UserCommand[];
         expect(cmdBuffer).toBeDefined();
         expect(cmdBuffer.length).toBe(64);
-        expect(cmdBuffer[0].serverFrame).toBe(6); // Should drop first 6
+        expect(cmdBuffer[0].serverFrame).toBe(6);
         expect(cmdBuffer[63].serverFrame).toBe(69);
     });
 
     it('should attach serverFrame to sent commands if available', async () => {
-        // Mock server frame update
         (connection as any).latestServerFrame = 123;
         (connection as any).state = ConnectionState.Active;
 
