@@ -238,6 +238,7 @@ export {
   SkyboxPipeline,
   computeSkyScroll,
   removeViewTranslation,
+  type SkyboxBindOptions, // Exported
 } from './render/skybox.js';
 export {
   MD2_FRAGMENT_SHADER,
@@ -295,8 +296,10 @@ export {
   type BlasterImpactContext,
 } from './render/particleSystem.js';
 export { Pic, Renderer } from './render/renderer.js';
-export { FrameRenderStats, WorldRenderState } from './render/frame.js';
 export { FrameRenderOptions } from './render/interface.js';
+export { FrameRenderStats, FrameRenderOptions, WorldRenderState, type FrameRenderer, type RenderModeConfig } from './render/frame.js'; // Export FrameRenderer and RenderModeConfig
+export { SpriteRenderer } from './render/sprite.js'; // Export SpriteRenderer
+export { RenderOptions } from './render/options.js'; // Export RenderOptions
 export { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
 export { MessageWriter } from './demo/writer.js'; // Exporting MessageWriter

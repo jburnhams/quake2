@@ -91,34 +91,34 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 3. Create Rendering Mock Factories (HIGH PRIORITY)
 
-**Status:** Currently inline mocks in 30+ test files
+**Status:** Partial
 **Dependencies:** Task 1 (WebGL mocks)
 
-- [ ] **3.1** Create `test-utils/src/engine/mocks/renderer.ts` file
+- [x] **3.1** Create `test-utils/src/engine/mocks/renderer.ts` file
 
-- [ ] **3.2** Add `createMockRenderer()` factory
+- [x] **3.2** Add `createMockRenderer()` factory
   - Signature: `createMockRenderer(overrides?: Partial<Renderer>): Renderer`
   - Methods: `render()`, `setClearColor()`, `setPostProcess()`, `resize()`, `getContext()`
   - Return mock WebGL context from method
 
-- [ ] **3.3** Add `createMockFrameRenderer()` factory
+- [x] **3.3** Add `createMockFrameRenderer()` factory
   - Signature: `createMockFrameRenderer(overrides?: Partial<FrameRenderer>): FrameRenderer`
   - Methods: `renderFrame()`, `clear()`, `setViewport()`
 
-- [ ] **3.4** Add `createMockBspPipeline()` factory
+- [x] **3.4** Add `createMockBspPipeline()` factory
   - Signature: `createMockBspPipeline(overrides?: Partial<BspPipeline>): BspPipeline`
   - Methods: `render()`, `setup()`, `cleanup()`
 
-- [ ] **3.5** Add `createMockMd2Pipeline()` factory
+- [x] **3.5** Add `createMockMd2Pipeline()` factory
   - Signature: `createMockMd2Pipeline(overrides?: Partial<Md2Pipeline>): Md2Pipeline`
 
-- [ ] **3.6** Add `createMockMd3Pipeline()` factory
+- [x] **3.6** Add `createMockMd3Pipeline()` factory
   - Signature: `createMockMd3Pipeline(overrides?: Partial<Md3Pipeline>): Md3Pipeline`
 
-- [ ] **3.7** Add `createMockSpritePipeline()` factory
+- [x] **3.7** Add `createMockSpritePipeline()` factory
   - Signature: `createMockSpritePipeline(overrides?: Partial<SpritePipeline>): SpritePipeline`
 
-- [ ] **3.8** Add `createMockSkyboxPipeline()` factory
+- [x] **3.8** Add `createMockSkyboxPipeline()` factory
   - Signature: `createMockSkyboxPipeline(overrides?: Partial<SkyboxPipeline>): SkyboxPipeline`
 
 - [ ] **3.9** Cleanup inline renderer mocks in `client/tests/view/` directory
@@ -129,15 +129,16 @@ This section covers migration of engine-specific test utilities including WebGL 
   - Same pattern
   - Estimated files: ~8
 
-- [ ] **3.11** Cleanup inline renderer mocks in `engine/tests/render/` directory
+- [x] **3.11** Cleanup inline renderer mocks in `engine/tests/render/` directory
   - Same pattern
   - Estimated files: ~10
+  - *Note:* `renderer.test.ts` uses standardized inline mocks due to `vi.mock` hoisting limitations. Dependency injection refactor documented as option for future.
 
 ---
 
 ### 4. Create Asset/Resource Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Currently inline mocks scattered
+**Status:** Not Started
 **Dependencies:** None
 
 - [ ] **4.1** Create `test-utils/src/engine/mocks/assets.ts` file
