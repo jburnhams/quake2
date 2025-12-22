@@ -99,6 +99,7 @@ Refactored `renderAndExpectSnapshot` fixture to accept a callback that receives 
 **File:** `packages/engine/package.json`
 
 Added test scripts: `test:visual`, `test:visual:update`, `test:visual:watch`.
+Moved visual tests to `tests/integration/visual/` to run as part of integration suite.
 
 **Documentation:** `docs/testing-visual.md` created.
 
@@ -113,7 +114,7 @@ Added test scripts: `test:visual`, `test:visual:update`, `test:visual:watch`.
 
 ### Task 6: Example Visual Tests [x]
 
-**File:** `packages/engine/tests/visual/basic-rendering.test.ts`
+**File:** `packages/engine/tests/integration/visual/basic-rendering.test.ts`
 
 Created example visual tests for clear color and triangle rendering.
 
@@ -132,7 +133,7 @@ Created example visual tests for clear color and triangle rendering.
 ### New Files Created
 - `packages/test-utils/src/visual/snapshots.ts`
 - `packages/engine/tests/helpers/visual-testing.ts`
-- `packages/engine/tests/visual/basic-rendering.test.ts`
+- `packages/engine/tests/integration/visual/basic-rendering.test.ts`
 - `docs/testing-visual.md`
 
 ### Modified Files
@@ -141,9 +142,9 @@ Created example visual tests for clear color and triangle rendering.
 - `packages/test-utils/src/index.ts`
 
 ### Directories Created
-- `packages/engine/tests/visual/__snapshots__/baselines/`
-- `packages/engine/tests/visual/__snapshots__/actual/`
-- `packages/engine/tests/visual/__snapshots__/diff/`
+- `packages/engine/tests/integration/visual/__snapshots__/baselines/`
+- `packages/engine/tests/integration/visual/__snapshots__/actual/`
+- `packages/engine/tests/integration/visual/__snapshots__/diff/`
 
 ---
 

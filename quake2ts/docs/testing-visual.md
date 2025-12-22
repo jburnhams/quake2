@@ -9,8 +9,13 @@ This project uses a visual regression testing framework based on:
 
 ## Running Visual Tests
 
+Visual tests are part of the integration test suite.
+
 ```bash
-# Run visual tests
+# Run all integration tests (including visual)
+npm run test:integration
+
+# Run only visual tests (convenience alias)
 npm run test:visual
 
 # Update baselines (after manual review)
@@ -24,8 +29,8 @@ npm run test:visual:watch
 
 When a visual test fails:
 
-1. Check `tests/__snapshots__/actual/test-name.png` - what was rendered
-2. Check `tests/__snapshots__/diff/test-name.png` - highlighted differences (red pixels)
+1. Check `tests/integration/visual/__snapshots__/actual/test-name.png` - what was rendered
+2. Check `tests/integration/visual/__snapshots__/diff/test-name.png` - highlighted differences (red pixels)
 3. If the change is expected (e.g., you changed rendering logic):
    - Run `npm run test:visual:update` to update the baseline.
 4. If the change is unexpected (regression):
@@ -34,12 +39,12 @@ When a visual test fails:
 
 ## Creating New Visual Tests
 
-Visual tests are located in `packages/engine/tests/visual/`.
+Visual tests are located in `packages/engine/tests/integration/visual/`.
 
 To create a new test:
 
 ```typescript
-import { test } from '../helpers/visual-testing';
+import { test } from '../../helpers/visual-testing';
 
 test('renders skybox correctly', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(
@@ -70,7 +75,7 @@ The `renderAndExpectSnapshot` helper:
 Snapshots are stored relative to the test file:
 
 ```
-tests/visual/
+tests/integration/visual/
 ├── basic-rendering.test.ts
 └── __snapshots__/
     ├── baselines/       (Committed to git)

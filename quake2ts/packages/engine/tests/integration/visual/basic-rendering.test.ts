@@ -1,4 +1,4 @@
-import { test } from '../helpers/visual-testing';
+import { test } from '../../helpers/visual-testing';
 
 test('renders clear color', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(
