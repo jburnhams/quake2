@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DemoControls } from '../../src/ui/demo-controls.js';
 import { DemoPlaybackController, PlaybackState, Renderer } from '@quake2ts/engine';
+import { createMockRenderer } from '@quake2ts/test-utils';
 
 describe('DemoControls', () => {
   let controls: DemoControls;
@@ -20,13 +21,10 @@ describe('DemoControls', () => {
     mockPlayback.stepBackward = vi.fn();
     mockPlayback.getCurrentTime = vi.fn().mockReturnValue(65000); // 1:05
 
-    mockRenderer = {
-        drawfillRect: vi.fn(),
-        drawString: vi.fn(),
-        drawCenterString: vi.fn(),
+    mockRenderer = createMockRenderer({
         width: 800,
         height: 600
-    } as unknown as Renderer;
+    });
 
     controls = new DemoControls(mockPlayback);
   });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '../src/index.js';
 import { AssetManager, Renderer, EngineImports, EngineHost } from '@quake2ts/engine';
+import { createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock dependencies
 const mockAssets = {
@@ -11,23 +12,7 @@ const mockAssets = {
   loadTexture: vi.fn().mockResolvedValue({}),
 } as unknown as AssetManager;
 
-const mockRenderer = {
-  registerTexture: vi.fn(),
-  begin2D: vi.fn(),
-  end2D: vi.fn(),
-  drawfillRect: vi.fn(),
-  drawCenterString: vi.fn(),
-  drawString: vi.fn(),
-  renderFrame: vi.fn(),
-  getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
-  setGamma: vi.fn(),
-  setBrightness: vi.fn(),
-  setBloom: vi.fn(),
-  setBloomIntensity: vi.fn(),
-  setUnderwaterWarp: vi.fn(),
-  width: 800,
-  height: 600,
-} as unknown as Renderer;
+const mockRenderer = createMockRenderer();
 
 const mockTrace = vi.fn().mockReturnValue({
   fraction: 1,

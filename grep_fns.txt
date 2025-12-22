@@ -1,0 +1,7 @@
+quake2ts/packages/client/tests/session-save.test.ts:            render: vi.fn(),
+quake2ts/packages/client/tests/ui/menu/demo.test.ts:        render: vi.fn()
+quake2ts/packages/client/tests/session_integration.test.ts:                render: vi.fn(),
+quake2ts/packages/client/tests/session.test.ts:            render: vi.fn(),
+quake2ts/packages/client/tests/demo/demo-recording-integration.test.ts:        render: vi.fn(),
+quake2ts/packages/client/tests/demo/demo-playback-integration.test.ts:        render: vi.fn(),
+quake2ts/packages/client/tests/demo/demo-playback-integration.test.ts:        render: vi.fn(),

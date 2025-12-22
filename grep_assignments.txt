@@ -1,0 +1,15 @@
+quake2ts/packages/client/tests/clientConfig.test.ts:const mockRenderer = createMockRenderer();
+quake2ts/packages/client/tests/cgame-integration.test.ts:    const mockRenderer = createMockRenderer({
+quake2ts/packages/client/tests/ui/demo-controls.test.ts:    mockRenderer = {
+quake2ts/packages/client/tests/fov_zoom.test.ts:const mockRenderer = createMockRenderer();
+quake2ts/packages/client/tests/integration.test.ts:const mockRenderer = createMockRenderer({
+quake2ts/packages/client/tests/hud/crosshair.test.ts:const mockRenderer = {
+quake2ts/packages/client/tests/hud/numbers.test.ts:        mockRenderer = {
+quake2ts/packages/client/tests/hud/icons.test.ts:        mockRenderer = {
+quake2ts/packages/client/tests/hud/messages.test.ts:    mockRenderer = {
+quake2ts/packages/client/tests/fov.test.ts:const mockRenderer = {
+quake2ts/packages/client/tests/demo-render-integration.test.ts:const mockRenderer = {
+quake2ts/packages/client/tests/render-config.test.ts:    mockRenderer = {
+quake2ts/packages/client/tests/hud.test.ts:const mockRenderer = {
+quake2ts/packages/client/tests/demo/demo-playback-integration.test.ts:        mockRenderer = {
+quake2ts/packages/client/tests/effects-integration.test.ts:const mockRenderer = {
