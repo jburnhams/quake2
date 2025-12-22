@@ -72,12 +72,13 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `target_laser.test.ts`
   - [x] Refactored `target_music.test.ts`
   - [x] Refactored `target_spawner.test.ts`
+  - [x] Refactored `target_speaker.test.ts`
   - [x] Refactored `trigger_multiple.test.ts`
   - [x] Refactored `trigger_conditions.test.ts`
   - [x] Refactored `triggers.test.ts`
   - [x] Refactored `misc.test.ts`
   - Replace manual entity creation with factories
-  - Estimated files: ~25 (Remaining: ~2)
+  - Estimated files: ~25 (Remaining: ~1)
 
 - [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - Same pattern
