@@ -57,8 +57,27 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `projectiles.test.ts`
   - [x] Refactored `bfg_ball.test.ts`
   - [x] Refactored `funcs.test.ts`
+  - [x] Refactored `func_door_*.test.ts` (3 files)
+  - [x] Refactored `func_explosive.test.ts`
+  - [x] Refactored `func_misc.test.ts`
+  - [x] Refactored `func_object.test.ts`
+  - [x] Refactored `func_plat.test.ts`
+  - [x] Refactored `func_rotating.test.ts`
+  - [x] Refactored `func_timer.test.ts`
+  - [x] Refactored `func_train.test.ts`
+  - [x] Refactored `target_autosave.test.ts`
+  - [x] Refactored `target_blaster.test.ts`
+  - [x] Refactored `target_crosslevel.test.ts`
+  - [x] Refactored `target_healthbar.test.ts`
+  - [x] Refactored `target_laser.test.ts`
+  - [x] Refactored `target_music.test.ts`
+  - [x] Refactored `target_spawner.test.ts`
+  - [x] Refactored `trigger_multiple.test.ts`
+  - [x] Refactored `trigger_conditions.test.ts`
+  - [x] Refactored `triggers.test.ts`
+  - [x] Refactored `misc.test.ts`
   - Replace manual entity creation with factories
-  - Estimated files: ~25 (Remaining: ~17)
+  - Estimated files: ~25 (Remaining: ~2)
 
 - [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - Same pattern

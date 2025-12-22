@@ -3,6 +3,7 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { Entity } from '../../src/entities/entity.js';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('target_crosslevel', () => {
   let sys: EntitySystem;
@@ -14,6 +15,9 @@ describe('target_crosslevel', () => {
         pointcontents: vi.fn(),
         linkentity: vi.fn(),
     } as any);
+
+    // Override spawn to use factory
+    sys.spawn = vi.fn(() => createEntityFactory({ number: 1 }));
 
     // Mock GameExports to satisfy SpawnRegistry requirements
     const gameMock = {

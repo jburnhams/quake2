@@ -3,6 +3,7 @@ import { registerFuncSpawns, DoorState } from '../../src/entities/funcs.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { createTestContext } from '../test-helpers.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('func_door', () => {
   let context: ReturnType<typeof createTestContext>;
@@ -14,12 +15,13 @@ describe('func_door', () => {
     registry = new SpawnRegistry();
     registerFuncSpawns(registry);
 
-    entity = new Entity(1);
-    // Default func_door properties
-    entity.classname = 'func_door';
-    entity.angles = { x: 0, y: 0, z: 0 };
-    entity.mins = { x: 0, y: 0, z: 0 };
-    entity.maxs = { x: 100, y: 100, z: 100 };
+    entity = createEntityFactory({
+      number: 1,
+      classname: 'func_door',
+      angles: { x: 0, y: 0, z: 0 },
+      mins: { x: 0, y: 0, z: 0 },
+      maxs: { x: 100, y: 100, z: 100 }
+    });
 
     // Ensure scheduleThink mock is clean
     vi.clearAllMocks();

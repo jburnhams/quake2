@@ -3,6 +3,7 @@ import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { Entity } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { createDefaultSpawnRegistry, SpawnFunction } from '../../src/entities/spawn.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('target_autosave', () => {
   let context: EntitySystem;
@@ -36,10 +37,9 @@ describe('target_autosave', () => {
       keyValues: {},
     } as unknown as EntitySystem;
 
-    entity = {
-      classname: 'target_autosave',
-      use: undefined,
-    } as unknown as Entity;
+    entity = createEntityFactory({
+      classname: 'target_autosave'
+    });
 
     const registry = createDefaultSpawnRegistry();
     registerTargetSpawns(registry);
