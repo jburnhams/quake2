@@ -4,6 +4,7 @@ import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { createDefaultSpawnRegistry, SpawnFunction } from '../../src/entities/spawn.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('target_healthbar', () => {
   let context: EntitySystem;
@@ -40,12 +41,11 @@ describe('target_healthbar', () => {
       keyValues: {},
     } as unknown as EntitySystem;
 
-    entity = {
+    entity = createEntityFactory({
       classname: 'target_healthbar',
       target: 'boss',
-      message: 'Big Boss',
-      use: undefined,
-    } as unknown as Entity;
+      message: 'Big Boss'
+    });
 
     const registry = createDefaultSpawnRegistry();
     registerTargetSpawns(registry);
