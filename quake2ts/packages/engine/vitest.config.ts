@@ -15,7 +15,7 @@ const exclude = [
 ];
 
 const include = isIntegration
-  ? ['**/integration/**', '**/*integration*']
+  ? ['**/integration/**', '**/*integration*', '**/performance/**']
   : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 export default defineConfig({
