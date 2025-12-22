@@ -8,8 +8,8 @@ import {
   resourceTracker,
   Texture2D,
   TextureCubeMap
-} from '../../../src/render/webgpu/resources';
-import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from '../../../src/render/webgpu/constants';
+} from '../../../src/render/webgpu/resources.js';
+import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from '../../../src/render/webgpu/constants.js';
 
 // Mock WebGPU globals
 const mockTexture = {

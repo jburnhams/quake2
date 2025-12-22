@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from './constants';
+import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from './constants.js';
 
 /**
  * Tracks GPU memory usage for buffers and textures.
