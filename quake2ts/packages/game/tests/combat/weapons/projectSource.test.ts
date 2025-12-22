@@ -3,6 +3,7 @@ import { P_ProjectSource, getProjectileOrigin } from '../../../src/combat/weapon
 import { Entity } from '../../../src/entities/entity.js';
 import { GameExports } from '../../../src/index.js';
 import { Vec3, angleVectors, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('P_ProjectSource', () => {
     let mockGame: GameExports;
@@ -13,11 +14,11 @@ describe('P_ProjectSource', () => {
             trace: vi.fn(),
         } as unknown as GameExports;
 
-        mockPlayer = {
+        mockPlayer = createEntityFactory({
             origin: { x: 100, y: 100, z: 100 },
             viewheight: 22,
             angles: { x: 0, y: 0, z: 0 } // Facing East (1, 0, 0)
-        } as unknown as Entity;
+        });
     });
 
     it('should calculate correct muzzle position without obstruction', () => {

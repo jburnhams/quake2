@@ -1,17 +1,20 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage, type Damageable } from '../../src/combat/index.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 type PartialEntity = Partial<Damageable> & Pick<Damageable, 'origin'>;
 
 const MOD_UNKNOWN = DamageMod.UNKNOWN;
 
 function makeEntity(partial: PartialEntity): Damageable {
-  return {
+  // Use createEntityFactory and merge partial
+  const ent = createEntityFactory({
     takedamage: true,
     health: 100,
     velocity: { x: 0, y: 0, z: 0 },
     ...partial,
-  } as Damageable;
+  });
+  return ent as unknown as Damageable;
 }
 
 describe('T_Damage', () => {

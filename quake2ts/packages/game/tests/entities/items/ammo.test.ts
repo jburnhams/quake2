@@ -3,6 +3,7 @@ import { createAmmoPickupEntity } from '../../../src/entities/items/ammo.js';
 import { AmmoItemId } from '../../../src/inventory/ammo.js';
 import { Solid } from '../../../src/entities/entity.js';
 import { Entity } from '../../../src/entities/entity.js';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Ammo Pickup Entities', () => {
     const mockGame = {
@@ -24,13 +25,12 @@ describe('Ammo Pickup Entities', () => {
 
     it('should pickup ammo when touched by player', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
-        const player = {
-            client: {
-                inventory: {
-                    ammo: {
-                        caps: [100, 100], // shells is index 1
-                        counts: [0, 0]
-                    }
+        const player = createPlayerEntityFactory();
+        player.client = {
+            inventory: {
+                ammo: {
+                    caps: [100, 100], // shells is index 1
+                    counts: [0, 0]
                 }
             }
         } as any;
@@ -49,13 +49,12 @@ describe('Ammo Pickup Entities', () => {
 
     it('should not pickup if maxed out', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
-         const player = {
-            client: {
-                inventory: {
-                    ammo: {
-                        caps: [100, 100],
-                        counts: [0, 100] // already max
-                    }
+         const player = createPlayerEntityFactory();
+         player.client = {
+            inventory: {
+                ammo: {
+                    caps: [100, 100],
+                    counts: [0, 100] // already max
                 }
             }
         } as any;
