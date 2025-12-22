@@ -1,19 +1,36 @@
 /// <reference types="@webgpu/types" />
 
 export interface WebGPUContextOptions {
-  powerPreference?: 'low-power' | 'high-performance';
-  requiredFeatures?: GPUFeatureName[];
-  requiredLimits?: Record<string, number>;
+  /**
+   * Power preference for adapter selection.
+   * Defaults to 'high-performance'.
+   */
+  readonly powerPreference?: GPUPowerPreference;
+  /**
+   * Required features. Throws if any are missing.
+   */
+  readonly requiredFeatures?: GPUFeatureName[];
+  /**
+   * Required limits. Throws if any cannot be met.
+   */
+  readonly requiredLimits?: Record<string, number>;
 }
 
 export interface WebGPUContextState {
-  adapter: GPUAdapter;
-  device: GPUDevice;
-  context?: GPUCanvasContext;  // undefined for headless
-  format: GPUTextureFormat;
-  features: Set<GPUFeatureName>;
-  limits: GPUSupportedLimits;
-  isHeadless: boolean;
+  readonly adapter: GPUAdapter;
+  readonly device: GPUDevice;
+  /**
+   * The canvas context, if a canvas was provided. Undefined for headless contexts.
+   */
+  readonly context?: GPUCanvasContext;
+  /**
+   * The preferred texture format for the surface (e.g. bgra8unorm).
+   */
+  readonly format: GPUTextureFormat;
+  readonly features: Set<GPUFeatureName>;
+  readonly limits: GPUSupportedLimits;
+  readonly isHeadless: boolean;
+  dispose(): void;
 }
 
 export interface WebGPUCapabilities {
@@ -28,89 +45,17 @@ export interface WebGPUCapabilities {
   maxStorageBufferBindingSize: number;
 }
 
-export type ContextLostHandler = (reason: GPUDeviceLostReason) => void;
+export type ContextLostHandler = (reason: GPUDeviceLostReason, message: string) => void;
 
-/**
- * Creates and initializes a WebGPU context and device.
- */
-export async function createWebGPUContext(
-  canvas?: HTMLCanvasElement,
-  options?: WebGPUContextOptions
-): Promise<WebGPUContextState> {
-  if (!navigator.gpu) {
-    throw new Error('WebGPU is not supported in this environment');
+function hasFeature(features: ReadonlySet<string> | GPUFeatureName[], feature: string): boolean {
+  if (Array.isArray(features)) {
+    return features.includes(feature as GPUFeatureName);
   }
-
-  const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: options?.powerPreference || 'high-performance',
-  });
-
-  if (!adapter) {
-    throw new Error('No appropriate GPUAdapter found');
-  }
-
-  // Validate required features
-  if (options?.requiredFeatures) {
-    for (const feature of options.requiredFeatures) {
-      if (!adapter.features.has(feature)) {
-        throw new Error(`Required feature not available: ${feature}`);
-      }
-    }
-  }
-
-  // Create device
-  const deviceDescriptor: GPUDeviceDescriptor = {
-    requiredFeatures: options?.requiredFeatures,
-    requiredLimits: options?.requiredLimits,
-  };
-
-  const device = await adapter.requestDevice(deviceDescriptor);
-
-  let context: GPUCanvasContext | undefined;
-  let format: GPUTextureFormat = 'bgra8unorm'; // Fallback default
-  let isHeadless = true;
-
-  if (canvas) {
-    context = canvas.getContext('webgpu') as GPUCanvasContext;
-    if (!context) {
-      throw new Error('Failed to get WebGPU context from canvas');
-    }
-
-    isHeadless = false;
-    format = navigator.gpu.getPreferredCanvasFormat();
-
-    context.configure({
-      device,
-      format,
-      alphaMode: 'opaque', // Standard for game rendering
-    });
-  }
-
-  // Collect enabled features
-  const features = new Set<GPUFeatureName>();
-  // adapter.features is a set-like object, iterate it
-  // Note: in some envs iterator might be different, but for standard WebGPU:
-  for (const feature of adapter.features) {
-    features.add(feature as GPUFeatureName);
-  }
-
-  return {
-    adapter,
-    device,
-    context,
-    format,
-    features,
-    limits: device.limits,
-    isHeadless
-  };
+  return features.has(feature as GPUFeatureName);
 }
 
-/**
- * Queries capabilities of the created context/device.
- */
 export function queryCapabilities(state: WebGPUContextState): WebGPUCapabilities {
   const { features, limits } = state;
-
   return {
     hasTimestampQuery: features.has('timestamp-query'),
     hasDepthClipControl: features.has('depth-clip-control'),
@@ -124,16 +69,91 @@ export function queryCapabilities(state: WebGPUContextState): WebGPUCapabilities
   };
 }
 
-/**
- * Sets up handling for device loss.
- */
 export function setupDeviceLossHandling(
   device: GPUDevice,
   onLost: ContextLostHandler
 ): void {
   device.lost.then((info) => {
-    // info.reason can be 'destroyed', 'unknown'
-    console.warn(`WebGPU Device Lost: ${info.reason} - ${info.message}`);
-    onLost(info.reason);
+    onLost(info.reason, info.message);
+  }).catch((err) => {
+    // Should not happen for device.lost promise, but good practice
+    console.error('Error in device lost handler:', err);
   });
+}
+
+export async function createWebGPUContext(
+  canvas?: HTMLCanvasElement,
+  options: WebGPUContextOptions = {}
+): Promise<WebGPUContextState> {
+  const {
+    powerPreference = 'high-performance',
+    requiredFeatures = [],
+    requiredLimits = {},
+  } = options;
+
+  if (!navigator.gpu) {
+    throw new Error('WebGPU not supported: navigator.gpu is missing');
+  }
+
+  const adapter = await navigator.gpu.requestAdapter({
+    powerPreference,
+  });
+
+  if (!adapter) {
+    throw new Error('Failed to request WebGPU adapter');
+  }
+
+  // Validate required features
+  const availableFeatures = new Set(adapter.features.keys());
+  for (const feature of requiredFeatures) {
+    if (!availableFeatures.has(feature)) {
+      throw new Error(`Required WebGPU feature not available: ${feature}`);
+    }
+  }
+
+  // Check strict limits if needed - requestDevice will fail if limits aren't met,
+  // but we can pre-check or just let it fail. We'll let requestDevice handle it.
+
+  const device = await adapter.requestDevice({
+    requiredFeatures,
+    requiredLimits,
+  });
+
+  if (!device) {
+    // This case usually throws, but type-wise requestDevice returns Promise<GPUDevice>
+    throw new Error('Failed to create WebGPU device');
+  }
+
+  let context: GPUCanvasContext | undefined;
+  let format: GPUTextureFormat;
+  const isHeadless = !canvas;
+
+  if (canvas) {
+    context = canvas.getContext('webgpu') as GPUCanvasContext;
+    if (!context) {
+      throw new Error('Failed to get WebGPU context from canvas');
+    }
+    format = navigator.gpu.getPreferredCanvasFormat();
+    context.configure({
+      device,
+      format,
+      alphaMode: 'opaque', // Default to opaque, matches WebGL behavior usually
+    });
+  } else {
+    // For headless, we typically pick a standard format like rgba8unorm
+    format = 'rgba8unorm';
+  }
+
+  return {
+    adapter,
+    device,
+    context,
+    format,
+    features: new Set(device.features.keys()) as Set<GPUFeatureName>,
+    limits: device.limits,
+    isHeadless,
+    dispose() {
+      device.destroy();
+    },
+  };
 }

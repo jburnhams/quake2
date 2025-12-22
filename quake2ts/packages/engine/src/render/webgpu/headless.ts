@@ -1,8 +1,11 @@
+/// <reference types="@webgpu/types" />
+
 export interface HeadlessRenderTarget {
-  texture: GPUTexture;
-  view: GPUTextureView;
-  width: number;
-  height: number;
+  readonly texture: GPUTexture;
+  readonly view: GPUTextureView;
+  readonly width: number;
+  readonly height: number;
+  readonly format: GPUTextureFormat;
 }
 
 export function createHeadlessRenderTarget(
@@ -11,16 +14,10 @@ export function createHeadlessRenderTarget(
   height: number,
   format: GPUTextureFormat = 'rgba8unorm'
 ): HeadlessRenderTarget {
-  // Use magic numbers if globals are not available (can happen in partial environments)
-  // RENDER_ATTACHMENT = 0x10, COPY_SRC = 0x01
-  const usage = (typeof GPUTextureUsage !== 'undefined')
-    ? GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
-    : 0x11;
-
   const texture = device.createTexture({
     size: { width, height, depthOrArrayLayers: 1 },
     format,
-    usage,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
   });
 
   const view = texture.createView();
@@ -29,75 +26,58 @@ export function createHeadlessRenderTarget(
     texture,
     view,
     width,
-    height
+    height,
+    format,
   };
 }
 
 export async function captureRenderTarget(
   device: GPUDevice,
-  texture: GPUTexture
+  target: HeadlessRenderTarget
 ): Promise<Uint8ClampedArray> {
-  const width = texture.width;
-  const height = texture.height;
+  const { texture, width, height, format } = target;
 
-  // Calculate buffer size (assuming 4 bytes per pixel for rgba8unorm/bgra8unorm)
-  // Rows must be padded to 256 bytes
+  // We need to determine the bytes per pixel based on format.
+  // For now, assume rgba8unorm or bgra8unorm (4 bytes).
+  // TODO: Add support/checks for other formats if needed.
   const bytesPerPixel = 4;
   const unpaddedBytesPerRow = width * bytesPerPixel;
   const align = 256;
-  const paddedBytesPerRow = Math.max(bytesPerPixel * width, Math.ceil((width * bytesPerPixel) / align) * align);
-  const bufferSize = paddedBytesPerRow * height;
+  const paddedBytesPerRow = Math.ceil(unpaddedBytesPerRow / align) * align;
+  const totalSize = paddedBytesPerRow * height;
 
-  // Use magic numbers if globals are not available
-  // COPY_DST = 0x0008, MAP_READ = 0x0001
-  const usage = (typeof GPUBufferUsage !== 'undefined')
-    ? GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-    : 0x0009;
-
-  const outputBuffer = device.createBuffer({
-    size: bufferSize,
-    usage,
+  const buffer = device.createBuffer({
+    size: totalSize,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
   const commandEncoder = device.createCommandEncoder();
   commandEncoder.copyTextureToBuffer(
-    {
-      texture,
-    },
-    {
-      buffer: outputBuffer,
-      bytesPerRow: paddedBytesPerRow,
-    },
-    {
-      width,
-      height,
-      depthOrArrayLayers: 1,
-    }
+    // Explicitly pass texture as property for webgpu-native/dawn strictness?
+    // The type definition says { texture: GPUTexture, ... }
+    // However, Node's webgpu package might be picky about object shape or prototypes.
+    { texture: texture },
+    { buffer, bytesPerRow: paddedBytesPerRow, rowsPerImage: height },
+    { width, height, depthOrArrayLayers: 1 }
   );
 
   device.queue.submit([commandEncoder.finish()]);
 
-  // READ = 0x0001
-  const mapMode = (typeof GPUMapMode !== 'undefined') ? GPUMapMode.READ : 0x0001;
-  await outputBuffer.mapAsync(mapMode);
-  const mappedRange = outputBuffer.getMappedRange();
+  await buffer.mapAsync(GPUMapMode.READ);
+  const arrayBuffer = buffer.getMappedRange();
 
-  // Create a view of the data
-  // We need to remove the padding if it exists
-  const data = new Uint8Array(mappedRange);
-  const result = new Uint8ClampedArray(width * height * 4);
+  // We need to copy row by row to remove padding and populate the result
+  const output = new Uint8ClampedArray(width * height * 4);
+  const src = new Uint8Array(arrayBuffer);
 
-  if (paddedBytesPerRow === unpaddedBytesPerRow) {
-    result.set(data);
-  } else {
-    for (let i = 0; i < height; i++) {
-      const srcOffset = i * paddedBytesPerRow;
-      const dstOffset = i * unpaddedBytesPerRow;
-      result.set(data.subarray(srcOffset, srcOffset + unpaddedBytesPerRow), dstOffset);
-    }
+  for (let i = 0; i < height; i++) {
+    const srcOffset = i * paddedBytesPerRow;
+    const dstOffset = i * unpaddedBytesPerRow;
+    output.set(src.subarray(srcOffset, srcOffset + unpaddedBytesPerRow), dstOffset);
   }
 
-  outputBuffer.unmap();
+  buffer.unmap();
+  buffer.destroy();
 
-  return result;
+  return output;
 }
