@@ -1,8 +1,7 @@
 /// <reference types="@webgpu/types" />
-import { GPUBufferUsage, GPUMapMode, GPUTextureUsage } from './constants.js';
 
 /**
- * Tracks GPU memory usage for buffers and textures.
+ * Resource tracking for memory profiling.
  */
 export class GPUResourceTracker {
   private _totalBufferMemory = 0;
@@ -16,11 +15,7 @@ export class GPUResourceTracker {
   }
 
   trackTexture(texture: Texture2D | TextureCubeMap): void {
-    if (texture instanceof Texture2D) {
-       this._totalTextureMemory += texture.memorySize;
-    } else if (texture instanceof TextureCubeMap) {
-       this._totalTextureMemory += texture.size;
-    }
+    this._totalTextureMemory += texture.memorySize;
     this._textureCount++;
   }
 
@@ -30,11 +25,7 @@ export class GPUResourceTracker {
   }
 
   untrackTexture(texture: Texture2D | TextureCubeMap): void {
-    if (texture instanceof Texture2D) {
-       this._totalTextureMemory -= texture.memorySize;
-    } else if (texture instanceof TextureCubeMap) {
-       this._totalTextureMemory -= texture.size;
-    }
+    this._totalTextureMemory -= texture.memorySize;
     this._textureCount--;
   }
 
@@ -66,14 +57,14 @@ export class GPUResourceTracker {
 export const resourceTracker = new GPUResourceTracker();
 
 /**
- * Base class for all GPU buffer resources.
+ * Base wrapper for GPUBuffer to handle lifecycle and tracking.
  */
 export class GPUBufferResource {
-  private _buffer: GPUBuffer;
-  private _size: number;
-  private _usage: GPUBufferUsageFlags;
-  private _device: GPUDevice;
-  private _label: string | undefined;
+  protected _buffer: GPUBuffer;
+  protected _device: GPUDevice;
+  protected _size: number;
+  protected _usage: GPUBufferUsageFlags;
+  protected _label: string | undefined;
 
   constructor(
     device: GPUDevice,
@@ -100,7 +91,8 @@ export class GPUBufferResource {
   }
 
   /**
-   * Writes data to the buffer.
+   * Writes data to the buffer using device.queue.writeBuffer.
+   * Efficient for frequent updates (uniforms, dynamic geometry).
    */
   write(data: BufferSource, offset = 0): void {
     this._device.queue.writeBuffer(
@@ -111,12 +103,16 @@ export class GPUBufferResource {
   }
 
   /**
-   * Maps the buffer for reading (async).
-   * Note: Buffer must have MAP_READ usage.
+   * Maps the buffer for reading.
+   * Requires MAP_READ usage.
    */
-  async mapAsync(mode: GPUMapModeFlags = GPUMapMode.READ, offset = 0, size?: number): Promise<ArrayBuffer> {
-    await this._buffer.mapAsync(mode, offset, size);
-    return this._buffer.getMappedRange(offset, size);
+  async mapAsync(): Promise<ArrayBuffer> {
+    if (!(this._usage & GPUBufferUsage.MAP_READ)) {
+      throw new Error('Buffer does not have MAP_READ usage');
+    }
+
+    await this._buffer.mapAsync(GPUMapMode.READ);
+    return this._buffer.getMappedRange();
   }
 
   /**
@@ -127,11 +123,11 @@ export class GPUBufferResource {
   }
 
   /**
-   * Destroys the buffer and releases resources.
+   * Destroys the buffer and removes it from tracking.
    */
   destroy(): void {
-    resourceTracker.untrackBuffer(this);
     this._buffer.destroy();
+    resourceTracker.untrackBuffer(this);
   }
 
   get buffer(): GPUBuffer {
@@ -142,13 +138,17 @@ export class GPUBufferResource {
     return this._size;
   }
 
-  get usage(): GPUBufferUsageFlags {
-    return this._usage;
+  /**
+   * If mappedAtCreation was used, get the mapped range immediately.
+   */
+  getMappedRange(offset?: number, size?: number): ArrayBuffer {
+    return this._buffer.getMappedRange(offset, size);
   }
 }
 
 /**
  * Vertex buffer wrapper.
+ * Usage: VERTEX | COPY_DST
  */
 export class VertexBuffer extends GPUBufferResource {
   constructor(
@@ -156,19 +156,21 @@ export class VertexBuffer extends GPUBufferResource {
     descriptor: {
       size: number;
       label?: string;
-      usage?: GPUBufferUsageFlags; // Allow extra flags
+      mappedAtCreation?: boolean;
     }
   ) {
     super(device, {
       size: descriptor.size,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | (descriptor.usage || 0),
-      label: descriptor.label
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      label: descriptor.label,
+      mappedAtCreation: descriptor.mappedAtCreation
     });
   }
 }
 
 /**
  * Index buffer wrapper.
+ * Usage: INDEX | COPY_DST
  */
 export class IndexBuffer extends GPUBufferResource {
   constructor(
@@ -176,19 +178,21 @@ export class IndexBuffer extends GPUBufferResource {
     descriptor: {
       size: number;
       label?: string;
-      usage?: GPUBufferUsageFlags;
+      mappedAtCreation?: boolean;
     }
   ) {
     super(device, {
       size: descriptor.size,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST | (descriptor.usage || 0),
-      label: descriptor.label
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+      label: descriptor.label,
+      mappedAtCreation: descriptor.mappedAtCreation
     });
   }
 }
 
 /**
  * Uniform buffer wrapper.
+ * Usage: UNIFORM | COPY_DST
  */
 export class UniformBuffer extends GPUBufferResource {
   constructor(
@@ -196,19 +200,21 @@ export class UniformBuffer extends GPUBufferResource {
     descriptor: {
       size: number;
       label?: string;
-      usage?: GPUBufferUsageFlags;
+      mappedAtCreation?: boolean;
     }
   ) {
     super(device, {
       size: descriptor.size,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | (descriptor.usage || 0),
-      label: descriptor.label
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      label: descriptor.label,
+      mappedAtCreation: descriptor.mappedAtCreation
     });
   }
 }
 
 /**
  * Storage buffer wrapper.
+ * Usage: STORAGE | COPY_DST | COPY_SRC (for readback)
  */
 export class StorageBuffer extends GPUBufferResource {
   constructor(
@@ -216,41 +222,24 @@ export class StorageBuffer extends GPUBufferResource {
     descriptor: {
       size: number;
       label?: string;
-      usage?: GPUBufferUsageFlags;
+      readBack?: boolean; // If true, adds MAP_READ usage (requires separate buffer in some flows, but simple here)
+      mappedAtCreation?: boolean;
     }
   ) {
+    // Note: Buffers cannot have both MAP_READ and STORAGE usage in some implementations/specs directly
+    // without restrictions, but commonly for readback we might copy to a mappable buffer.
+    // However, if we want direct mapping, we use MAP_READ.
+    // Standard approach for readback from storage is: Storage -> Copy -> MapReadBuffer.
+    // This wrapper assumes standard storage usage. If readback is needed, it might need refinement
+    // or a separate staging buffer. For now, we'll keep it simple: STORAGE | COPY_DST | COPY_SRC.
+
     super(device, {
       size: descriptor.size,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | (descriptor.usage || 0),
-      label: descriptor.label
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      label: descriptor.label,
+      mappedAtCreation: descriptor.mappedAtCreation
     });
   }
-}
-
-export interface TextureUploadOptions {
-  x?: number;
-  y?: number;
-  z?: number;
-  width?: number;
-  height?: number;
-  depth?: number;
-  mipLevel?: number;
-}
-
-/**
- * Helper to get bytes per pixel for memory tracking.
- */
-function getFormatBlockSize(format: GPUTextureFormat): number {
-  if (format.endsWith('8unorm') || format.endsWith('8snorm') || format.endsWith('8uint') || format.endsWith('8sint')) {
-    return 4; // Assuming RGBA8 usually
-  }
-  if (format === 'bgra8unorm') return 4;
-  if (format === 'rgba16float') return 8;
-  if (format === 'depth24plus') return 4;
-  if (format === 'depth32float') return 4;
-  if (format === 'r8unorm') return 1;
-  // Fallback estimation
-  return 4;
 }
 
 /**
@@ -262,7 +251,7 @@ export class Texture2D {
   private _width: number;
   private _height: number;
   private _format: GPUTextureFormat;
-  private _mipLevelCount: number;
+  private _memorySize: number;
 
   constructor(
     device: GPUDevice,
@@ -279,45 +268,52 @@ export class Texture2D {
     this._width = descriptor.width;
     this._height = descriptor.height;
     this._format = descriptor.format;
-    this._mipLevelCount = descriptor.mipLevelCount || 1;
+
+    // Calculate memory size estimation (approximate)
+    // Basic calculation: width * height * bytesPerPixel
+    // This assumes 4 bytes per pixel for common formats like rgba8unorm
+    // For more accuracy, we'd need a format table lookup
+    const bytesPerPixel = this.getBytesPerPixel(this._format);
+    this._memorySize = this._width * this._height * bytesPerPixel;
+    if (descriptor.mipLevelCount && descriptor.mipLevelCount > 1) {
+      // Rough estimate for mips: adds ~33%
+      this._memorySize = Math.floor(this._memorySize * 1.33);
+    }
 
     this._texture = device.createTexture({
       size: { width: this._width, height: this._height, depthOrArrayLayers: 1 },
       format: this._format,
       usage: descriptor.usage || (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST),
-      mipLevelCount: this._mipLevelCount,
-      label: descriptor.label
+      mipLevelCount: descriptor.mipLevelCount || 1,
+      label: descriptor.label,
+      dimension: '2d',
     });
 
     resourceTracker.trackTexture(this);
   }
 
-  upload(data: BufferSource, options: TextureUploadOptions = {}): void {
-    const mipLevel = options.mipLevel || 0;
-    const x = options.x || 0;
-    const y = options.y || 0;
-    const z = options.z || 0;
-    // For mipLevel > 0, size is smaller. This assumes full upload if width not specified.
-    const width = options.width || Math.max(1, this._width >> mipLevel);
-    const height = options.height || Math.max(1, this._height >> mipLevel);
-    const depth = options.depth || 1;
+  upload(data: BufferSource, options?: {
+    origin?: GPUOrigin3D;
+    size?: GPUExtent3D;
+    layout?: GPUImageDataLayout;
+  }): void {
+    const origin = options?.origin || { x: 0, y: 0, z: 0 };
+    const size = options?.size || { width: this._width, height: this._height, depthOrArrayLayers: 1 };
+    const layout = options?.layout || { bytesPerRow: this._width * this.getBytesPerPixel(this._format) };
 
-    const bytesPerPixel = getFormatBlockSize(this._format);
-    const bytesPerRow = width * bytesPerPixel;
-
-    // Note: queue.writeTexture does NOT require 256-byte alignment for bytesPerRow,
-    // unlike CopyBufferToTexture. It handles tight packing.
     this._device.queue.writeTexture(
-      { texture: this._texture, mipLevel, origin: { x, y, z } },
+      { texture: this._texture, origin: origin },
       data,
-      { bytesPerRow },
-      { width, height, depthOrArrayLayers: depth }
+      layout,
+      size
     );
   }
 
+  // Basic implementation - generating mipmaps usually requires a pipeline or blit
+  // For now, we'll stub this or implement a simple version later if needed
   generateMipmaps(commandEncoder: GPUCommandEncoder): void {
-      // Placeholder: Requires render/compute pipeline
-      console.warn('generateMipmaps not implemented yet (requires pipeline abstractions)');
+    // TODO: Implement mipmap generation
+    // This requires setting up render passes or compute shaders to downsample
   }
 
   createView(descriptor?: GPUTextureViewDescriptor): GPUTextureView {
@@ -325,8 +321,8 @@ export class Texture2D {
   }
 
   destroy(): void {
-    resourceTracker.untrackTexture(this);
     this._texture.destroy();
+    resourceTracker.untrackTexture(this);
   }
 
   get texture(): GPUTexture {
@@ -346,9 +342,14 @@ export class Texture2D {
   }
 
   get memorySize(): number {
-    // Approximate: width * height * bytes * 1.33 for mips
-    const base = this._width * this._height * getFormatBlockSize(this._format);
-    return this._mipLevelCount > 1 ? Math.floor(base * 1.33) : base;
+    return this._memorySize;
+  }
+
+  private getBytesPerPixel(format: GPUTextureFormat): number {
+    if (format.includes('8unorm') || format.includes('8snorm') || format.includes('8uint') || format.includes('8sint')) return 4;
+    if (format.includes('16float') || format.includes('16uint') || format.includes('16sint')) return 8;
+    if (format.includes('32float') || format.includes('32uint') || format.includes('32sint')) return 16;
+    return 4; // Default fallback
   }
 }
 
@@ -360,7 +361,7 @@ export class TextureCubeMap {
   private _device: GPUDevice;
   private _size: number;
   private _format: GPUTextureFormat;
-  private _mipLevelCount: number;
+  private _memorySize: number;
 
   constructor(
     device: GPUDevice,
@@ -373,48 +374,50 @@ export class TextureCubeMap {
     }
   ) {
     this._device = device;
-    this._size = descriptor.size; // Width/Height
+    this._size = descriptor.size;
     this._format = descriptor.format;
-    this._mipLevelCount = descriptor.mipLevelCount || 1;
+
+    // 6 faces
+    const bytesPerPixel = this.getBytesPerPixel(this._format);
+    this._memorySize = this._size * this._size * bytesPerPixel * 6;
+    if (descriptor.mipLevelCount && descriptor.mipLevelCount > 1) {
+        this._memorySize = Math.floor(this._memorySize * 1.33);
+    }
 
     this._texture = device.createTexture({
       size: { width: this._size, height: this._size, depthOrArrayLayers: 6 },
       format: this._format,
-      usage: descriptor.usage || (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT),
-      mipLevelCount: this._mipLevelCount,
+      usage: descriptor.usage || (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST),
+      mipLevelCount: descriptor.mipLevelCount || 1,
       label: descriptor.label,
-      dimension: '2d', // Yes, cubemaps are 2d array layers
+      dimension: '2d', // Cubemaps are 2D arrays
     });
 
     resourceTracker.trackTexture(this);
   }
 
   uploadFace(face: number, data: BufferSource, mipLevel = 0): void {
-    if (face < 0 || face > 5) throw new Error('Invalid cubemap face index');
-
-    const width = Math.max(1, this._size >> mipLevel);
-    const height = width;
-    const bytesPerPixel = getFormatBlockSize(this._format);
-    const bytesPerRow = width * bytesPerPixel;
-
+    // Face order: +X, -X, +Y, -Y, +Z, -Z
+    // In WebGPU, faces are array layers 0-5
+    const size = this._size >> mipLevel;
     this._device.queue.writeTexture(
-      { texture: this._texture, mipLevel, origin: { x: 0, y: 0, z: face } }, // z is layer index
+      { texture: this._texture, origin: { x: 0, y: 0, z: face }, mipLevel },
       data,
-      { bytesPerRow },
-      { width, height, depthOrArrayLayers: 1 }
+      { bytesPerRow: size * this.getBytesPerPixel(this._format) },
+      { width: size, height: size }
     );
   }
 
-  createView(): GPUTextureView {
+  createView(descriptor?: GPUTextureViewDescriptor): GPUTextureView {
     return this._texture.createView({
       dimension: 'cube',
-      arrayLayerCount: 6
+      ...descriptor
     });
   }
 
   destroy(): void {
-    resourceTracker.untrackTexture(this);
     this._texture.destroy();
+    resourceTracker.untrackTexture(this);
   }
 
   get texture(): GPUTexture {
@@ -422,43 +425,56 @@ export class TextureCubeMap {
   }
 
   get size(): number {
-    // Total memory bytes
-    const faceBase = this._size * this._size * getFormatBlockSize(this._format);
-    const totalBase = faceBase * 6;
-    return this._mipLevelCount > 1 ? Math.floor(totalBase * 1.33) : totalBase;
+    return this._size;
+  }
+
+  get memorySize(): number {
+    return this._memorySize;
+  }
+
+  private getBytesPerPixel(format: GPUTextureFormat): number {
+    // Reuse logic or helper
+    if (format.includes('8unorm') || format.includes('8snorm') || format.includes('8uint') || format.includes('8sint')) return 4;
+    if (format.includes('16float') || format.includes('16uint') || format.includes('16sint')) return 8;
+    if (format.includes('32float') || format.includes('32uint') || format.includes('32sint')) return 16;
+    return 4; // Default fallback
   }
 }
 
-/**
- * Sampler wrapper.
- */
+export interface SamplerDescriptor {
+  minFilter?: GPUFilterMode;
+  magFilter?: GPUFilterMode;
+  mipmapFilter?: GPUMipmapFilterMode;
+  addressModeU?: GPUAddressMode;
+  addressModeV?: GPUAddressMode;
+  addressModeW?: GPUAddressMode;
+  maxAnisotropy?: number;
+  compare?: GPUCompareFunction;
+  label?: string;
+}
+
 export class Sampler {
   private _sampler: GPUSampler;
-  private _device: GPUDevice;
 
-  constructor(device: GPUDevice, descriptor: GPUSamplerDescriptor) {
-    this._device = device;
-    this._sampler = device.createSampler(descriptor);
+  constructor(device: GPUDevice, descriptor: SamplerDescriptor) {
+    this._sampler = device.createSampler({
+      ...descriptor
+    });
   }
 
   get sampler(): GPUSampler {
     return this._sampler;
   }
 
-  // Samplers are lightweight and usually cached/deduplicated by the device,
-  // GPUSampler does not have a destroy method.
-  destroy(): void {
-    // No-op
-  }
+  // Samplers are lightweight and usually don't need manual destruction unless managing limit strictly
 }
 
-// Factory functions
 export function createLinearSampler(device: GPUDevice): Sampler {
   return new Sampler(device, {
     minFilter: 'linear',
     magFilter: 'linear',
     mipmapFilter: 'linear',
-    label: 'LinearSampler'
+    label: 'Linear Sampler'
   });
 }
 
@@ -467,7 +483,7 @@ export function createNearestSampler(device: GPUDevice): Sampler {
     minFilter: 'nearest',
     magFilter: 'nearest',
     mipmapFilter: 'nearest',
-    label: 'NearestSampler'
+    label: 'Nearest Sampler'
   });
 }
 
@@ -477,7 +493,7 @@ export function createClampSampler(device: GPUDevice): Sampler {
     addressModeV: 'clamp-to-edge',
     minFilter: 'linear',
     magFilter: 'linear',
-    label: 'ClampSampler'
+    label: 'Clamp Sampler'
   });
 }
 
@@ -487,29 +503,21 @@ export function createRepeatSampler(device: GPUDevice): Sampler {
     addressModeV: 'repeat',
     minFilter: 'linear',
     magFilter: 'linear',
-    label: 'RepeatSampler'
+    label: 'Repeat Sampler'
   });
 }
 
-/**
- * ShaderModule wrapper.
- */
 export class ShaderModule {
   private _module: GPUShaderModule;
-  private _device: GPUDevice;
 
   constructor(
     device: GPUDevice,
     descriptor: {
-      code: string;
+      code: string;  // WGSL source
       label?: string;
     }
   ) {
-    this._device = device;
-    this._module = device.createShaderModule({
-      code: descriptor.code,
-      label: descriptor.label
-    });
+    this._module = device.createShaderModule(descriptor);
   }
 
   get module(): GPUShaderModule {
@@ -521,19 +529,16 @@ export class ShaderModule {
   }
 }
 
-/**
- * Pipeline Descriptor Interface.
- */
-export interface PipelineDescriptor {
+export interface RenderPipelineDescriptor {
   vertex: {
     module: ShaderModule;
     entryPoint: string;
-    buffers?: Iterable<GPUVertexBufferLayout | null>;
+    buffers: GPUVertexBufferLayout[];
   };
   fragment?: {
     module: ShaderModule;
     entryPoint: string;
-    targets: Iterable<GPUColorTargetState | null>;
+    targets: GPUColorTargetState[];
   };
   primitive?: GPUPrimitiveState;
   depthStencil?: GPUDepthStencilState;
@@ -542,62 +547,42 @@ export interface PipelineDescriptor {
   label?: string;
 }
 
-/**
- * Render Pipeline Wrapper.
- */
 export class RenderPipeline {
   private _pipeline: GPURenderPipeline;
-  private _device: GPUDevice;
-  private _layout: GPUPipelineLayout | 'auto';
+  private _layout: GPUPipelineLayout;
 
-  constructor(device: GPUDevice, descriptor: PipelineDescriptor) {
-    this._device = device;
-    this._layout = descriptor.layout;
+  constructor(device: GPUDevice, descriptor: RenderPipelineDescriptor) {
+    const layout = descriptor.layout;
 
-    const pipelineDescriptor: GPURenderPipelineDescriptor = {
-      label: descriptor.label,
-      layout: descriptor.layout,
+    this._pipeline = device.createRenderPipeline({
       vertex: {
         module: descriptor.vertex.module.module,
         entryPoint: descriptor.vertex.entryPoint,
-        buffers: descriptor.vertex.buffers as Iterable<GPUVertexBufferLayout | null>
+        buffers: descriptor.vertex.buffers
       },
-      primitive: descriptor.primitive,
-      depthStencil: descriptor.depthStencil,
-      multisample: descriptor.multisample
-    };
-
-    if (descriptor.fragment) {
-      pipelineDescriptor.fragment = {
+      fragment: descriptor.fragment ? {
         module: descriptor.fragment.module.module,
         entryPoint: descriptor.fragment.entryPoint,
-        targets: descriptor.fragment.targets as Iterable<GPUColorTargetState | null>
-      };
-    }
+        targets: descriptor.fragment.targets
+      } : undefined,
+      primitive: descriptor.primitive,
+      depthStencil: descriptor.depthStencil,
+      multisample: descriptor.multisample,
+      layout: layout,
+      label: descriptor.label
+    });
 
-    this._pipeline = device.createRenderPipeline(pipelineDescriptor);
+    // Use passed layout. If 'auto', individual bind group layouts can be retrieved via getBindGroupLayout
+    this._layout = layout as GPUPipelineLayout;
   }
 
   get pipeline(): GPURenderPipeline {
     return this._pipeline;
   }
-
-  get layout(): GPUPipelineLayout | 'auto' {
-    return this._layout;
-  }
-
-  destroy(): void {
-    // No explicit destroy on GPURenderPipeline
-  }
 }
 
-/**
- * Compute Pipeline Wrapper.
- */
 export class ComputePipeline {
   private _pipeline: GPUComputePipeline;
-  private _device: GPUDevice;
-  private _layout: GPUPipelineLayout | 'auto';
 
   constructor(
     device: GPUDevice,
@@ -610,28 +595,174 @@ export class ComputePipeline {
       label?: string;
     }
   ) {
-    this._device = device;
-    this._layout = descriptor.layout;
-
     this._pipeline = device.createComputePipeline({
-      label: descriptor.label,
-      layout: descriptor.layout,
       compute: {
         module: descriptor.compute.module.module,
         entryPoint: descriptor.compute.entryPoint
-      }
+      },
+      layout: descriptor.layout,
+      label: descriptor.label
     });
   }
 
   get pipeline(): GPUComputePipeline {
     return this._pipeline;
   }
+}
 
-  get layout(): GPUPipelineLayout | 'auto' {
+export interface BindGroupLayoutDescriptor {
+  entries: {
+    binding: number;
+    visibility: GPUShaderStageFlags;
+    buffer?: GPUBufferBindingLayout;
+    texture?: GPUTextureBindingLayout;
+    sampler?: GPUSamplerBindingLayout;
+    storageTexture?: GPUStorageTextureBindingLayout;
+  }[];
+  label?: string;
+}
+
+export class BindGroupLayout {
+  private _layout: GPUBindGroupLayout;
+
+  constructor(device: GPUDevice, descriptor: BindGroupLayoutDescriptor) {
+    this._layout = device.createBindGroupLayout(descriptor);
+  }
+
+  get layout(): GPUBindGroupLayout {
     return this._layout;
   }
+}
 
-  destroy(): void {
-    // No explicit destroy on GPUComputePipeline
+export interface BindGroupEntry {
+  binding: number;
+  resource: GPUBufferBinding | GPUTextureView | GPUSampler;
+}
+
+export class BindGroup {
+  private _bindGroup: GPUBindGroup;
+
+  constructor(
+    device: GPUDevice,
+    layout: BindGroupLayout,
+    entries: BindGroupEntry[],
+    label?: string
+  ) {
+    this._bindGroup = device.createBindGroup({
+      layout: layout.layout,
+      entries: entries,
+      label: label
+    });
   }
+
+  get bindGroup(): GPUBindGroup {
+    return this._bindGroup;
+  }
+}
+
+export class BindGroupBuilder {
+  private _entries: BindGroupLayoutDescriptor['entries'] = [];
+
+  addUniformBuffer(binding: number, visibility: GPUShaderStageFlags): this {
+    this._entries.push({
+      binding,
+      visibility,
+      buffer: { type: 'uniform' }
+    });
+    return this;
+  }
+
+  addTexture(binding: number, visibility: GPUShaderStageFlags, viewDimension: GPUTextureViewDimension = '2d'): this {
+    this._entries.push({
+      binding,
+      visibility,
+      texture: { viewDimension }
+    });
+    return this;
+  }
+
+  addSampler(binding: number, visibility: GPUShaderStageFlags, type: GPUSamplerBindingType = 'filtering'): this {
+    this._entries.push({
+      binding,
+      visibility,
+      sampler: { type }
+    });
+    return this;
+  }
+
+  addStorageBuffer(binding: number, visibility: GPUShaderStageFlags, type: GPUBufferBindingType = 'read-only-storage'): this {
+    this._entries.push({
+      binding,
+      visibility,
+      buffer: { type }
+    });
+    return this;
+  }
+
+  build(device: GPUDevice, label?: string): BindGroupLayout {
+    return new BindGroupLayout(device, {
+      entries: this._entries,
+      label
+    });
+  }
+}
+
+export interface RenderPassAttachmentOptions {
+  loadOp?: GPULoadOp;
+  storeOp?: GPUStoreOp;
+  clearValue?: GPUColor;
+}
+
+export interface DepthStencilAttachmentOptions {
+  depthLoadOp?: GPULoadOp;
+  depthStoreOp?: GPUStoreOp;
+  depthClearValue?: number;
+  stencilLoadOp?: GPULoadOp;
+  stencilStoreOp?: GPUStoreOp;
+  stencilClearValue?: number;
+}
+
+export class RenderPassDescriptorBuilder {
+  private _colorAttachments: GPURenderPassColorAttachment[] = [];
+  private _depthStencilAttachment: GPURenderPassDepthStencilAttachment | undefined;
+
+  setColorAttachment(
+    view: GPUTextureView,
+    options: RenderPassAttachmentOptions = {}
+  ): this {
+    this._colorAttachments.push({
+      view,
+      loadOp: options.loadOp || 'clear',
+      storeOp: options.storeOp || 'store',
+      clearValue: options.clearValue || { r: 0, g: 0, b: 0, a: 1 }
+    });
+    return this;
+  }
+
+  setDepthStencilAttachment(
+    view: GPUTextureView,
+    options: DepthStencilAttachmentOptions = {}
+  ): this {
+    this._depthStencilAttachment = {
+      view,
+      depthLoadOp: options.depthLoadOp || 'clear',
+      depthStoreOp: options.depthStoreOp || 'store',
+      depthClearValue: options.depthClearValue ?? 1.0,
+      stencilLoadOp: options.stencilLoadOp || 'clear',
+      stencilStoreOp: options.stencilStoreOp || 'store',
+      stencilClearValue: options.stencilClearValue ?? 0
+    };
+    return this;
+  }
+
+  build(): GPURenderPassDescriptor {
+    return {
+      colorAttachments: this._colorAttachments,
+      depthStencilAttachment: this._depthStencilAttachment
+    };
+  }
+}
+
+export function createRenderPassDescriptor(): RenderPassDescriptorBuilder {
+  return new RenderPassDescriptorBuilder();
 }
