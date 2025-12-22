@@ -18,6 +18,42 @@ setupBrowserEnvironment({
 });
 ```
 
+### WebGPU Testing
+
+#### Unit Tests (Mocked)
+
+For testing logic without GPU:
+
+```typescript
+import { createMockWebGPUContext } from '@quake2ts/test-utils';
+
+test('creates uniform buffer', () => {
+  const { device } = createMockWebGPUContext();
+  const buffer = device.createBuffer({
+      size: 256,
+      usage: GPUBufferUsage.UNIFORM
+  });
+  expect(buffer.size).toBe(256);
+});
+```
+
+#### Integration Tests (Headless)
+
+For testing actual rendering with @webgpu/dawn (in Node.js):
+
+```typescript
+import { createRenderTestSetup, renderAndCapture } from '@quake2ts/test-utils';
+
+test('renders triangle', async () => {
+  const setup = await createRenderTestSetup();
+  const pixels = await renderAndCapture(setup, (pass) => {
+    // ... render triangle
+  });
+  // Validate pixels
+  await setup.cleanup();
+});
+```
+
 ### Client Utilities
 
 The library includes mocks and helpers for testing client-side systems like input, view/camera, HUD, and network.
@@ -314,6 +350,7 @@ scenario.localStorage.setItem('foo', 'bar');
 - **Shared Utilities:** BSP construction, Collision tracing, Math helpers, Binary mocks.
 - **Server Utilities:** Network mocks, Server state factories, Multiplayer simulation, Snapshot analysis.
 - **Canvas/WebGL:** Mock implementations for headless testing.
+- **WebGPU:** Headless testing with @webgpu/dawn and comprehensive mocks.
 - **Storage:** LocalStorage, SessionStorage, IndexedDB mocks.
 - **Audio:** Basic Web Audio API mock with event capturing.
 - **E2E:** Playwright wrappers, network simulation, visual regression helpers.
