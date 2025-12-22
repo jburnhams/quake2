@@ -25,6 +25,7 @@ export * from './server/helpers/bandwidth.js';
 // Setup
 export * from './setup/browser.js';
 export * from './setup/canvas.js';
+export * from './setup/webgpu.js';
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
@@ -34,6 +35,8 @@ export * from './engine/mocks/renderer.js'; // Added renderer mocks
 export * from './engine/rendering.js'; // Rendering mocks (does not re-export webgl symbols now)
 export * from './setup/storage.js';
 export * from './setup/audio.js';
+export * from './engine/helpers/webgpu-rendering.js';
+export * from './engine/helpers/pipeline-test-template.js';
 
 // Client Mocks
 export * from './client/mocks/input.js';
@@ -53,6 +56,9 @@ export type { MockRAF } from './setup/timing.js';
 export type { StorageScenario } from './setup/storage.js';
 export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
 export type { VisualScenario, VisualDiff } from './e2e/visual.js';
+export type { HeadlessWebGPUSetup, WebGPUContextState } from './setup/webgpu.js';
+export type { RenderTestSetup, ComputeTestSetup } from './engine/helpers/webgpu-rendering.js';
+export type { GeometryBuffers } from './engine/helpers/pipeline-test-template.js';
 
 // Shared Types
 export type {
