@@ -1,45 +1,75 @@
-import { describe, it, expect, vi } from 'vitest';
-import { registerFuncSpawns } from '../../src/entities/funcs.js';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
+import { createTestContext } from '../test-helpers.js';
+import { SP_func_rotating } from '../../src/entities/funcs.js';
+import { MoveType, Solid } from '../../src/entities/entity.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import * as damageModule from '../../src/combat/damage.js';
+
+// Mock T_Damage
+vi.mock('../../src/combat/damage.js', () => ({
+    T_Damage: vi.fn(),
+}));
 
 describe('func_rotating', () => {
-  it('should register func_rotating', () => {
-    const registry = new SpawnRegistry();
-    registerFuncSpawns(registry);
-    expect(registry.get('func_rotating')).toBeDefined();
-  });
+    let context: ReturnType<typeof createTestContext>;
+    let sys: EntitySystem;
 
-  it('should initialize func_rotating', () => {
-    const registry = new SpawnRegistry();
-    registerFuncSpawns(registry);
+    beforeEach(async () => {
+        context = await createTestContext();
+        sys = context.entities;
+        vi.clearAllMocks();
+    });
 
-    const entity = {
-      classname: 'func_rotating',
-      origin: { x: 0, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
-      speed: 100,
-    } as Entity;
+    it('initializes correctly', () => {
+        const ent = createEntityFactory({
+            classname: 'func_rotating',
+            speed: 100,
+            model: '*1'
+        });
 
-    const system = {
-        timeSeconds: 0,
-    } as unknown as EntitySystem;
+        SP_func_rotating(ent, { entities: sys } as any);
 
-    const context = {
-        entities: system,
-        warn: vi.fn(),
-    } as any;
+        expect(ent.movetype).toBe(MoveType.Push);
+        expect(ent.solid).toBe(Solid.Bsp);
+        expect(ent.avelocity.z).toBe(100);
+    });
 
-    const spawn = registry.get('func_rotating');
-    spawn?.(entity, context);
+    it('sets angular velocity based on spawnflags', () => {
+        const ent = createEntityFactory({
+            classname: 'func_rotating',
+            speed: 100,
+            spawnflags: 4 // X-Axis
+        });
 
-    expect(entity.solid).toBe(Solid.Bsp);
-    expect(entity.movetype).toBe(MoveType.Push);
+        SP_func_rotating(ent, { entities: sys } as any);
 
-    // Check avelocity is set (x, y, z depends on logic, but not zero)
-    // Default is Z rotation usually
-    expect(entity.avelocity).toBeDefined();
-    expect(entity.avelocity?.z).toBe(100);
-  });
+        expect(ent.avelocity.x).toBe(100);
+        expect(ent.avelocity.y).toBe(0);
+        expect(ent.avelocity.z).toBe(0);
+    });
+
+    it('inflicts pain on blocked', () => {
+        const ent = createEntityFactory({
+            classname: 'func_rotating',
+            dmg: 10
+        });
+
+        SP_func_rotating(ent, { entities: sys } as any);
+
+        expect(ent.blocked).toBeDefined();
+
+        const victim = createEntityFactory({
+            classname: 'player',
+            health: 100,
+            takedamage: true
+        });
+
+        if (ent.blocked) {
+             ent.blocked(ent, victim, sys);
+        }
+
+        // Ensure damage is applied directly to health
+        expect(victim.health).toBe(90);
+    });
 });

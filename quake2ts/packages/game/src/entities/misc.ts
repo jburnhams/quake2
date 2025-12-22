@@ -49,7 +49,7 @@ function func_object_touch(self: Entity, other: Entity | null, plane?: Collision
     T_Damage(other as any, self as any, self as any, {x:0, y:0, z:0}, point, plane?.normal || {x:0, y:0, z:1}, damage, 1, 0, DamageMod.CRUSH, time);
 }
 
-const func_object: SpawnFunction = (entity, context) => {
+export const SP_func_object: SpawnFunction = (entity, context) => {
     // Adjust bounds
     entity.mins = {
         x: entity.mins.x + 1,
@@ -177,7 +177,7 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
     spawn_gib(entity, "models/objects/gibs/head/tris.md2", context);
   });
 
-  registry.register('func_object', func_object);
+  registry.register('func_object', SP_func_object);
   registerMiscViper(registry);
   registerMiscViperBomb(registry);
   registerMiscViperMissile(registry);

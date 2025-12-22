@@ -1246,7 +1246,7 @@ const func_pendulum: SpawnFunction = (entity, context) => {
 // FUNC ROTATING
 // ============================================================================
 
-const func_rotating: SpawnFunction = (entity, context) => {
+export const SP_func_rotating: SpawnFunction = (entity, context) => {
     entity.solid = Solid.Bsp;
     entity.movetype = MoveType.Push;
 
@@ -1773,7 +1773,7 @@ export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_train', func_train);
   registry.register('func_plat', func_plat);
   registry.register('func_plat2', func_plat2);
-  registry.register('func_rotating', func_rotating);
+  registry.register('func_rotating', SP_func_rotating);
   registry.register('func_pendulum', func_pendulum);
   registry.register('func_conveyor', func_conveyor);
   registry.register('func_water', func_water);
