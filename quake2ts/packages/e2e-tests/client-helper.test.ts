@@ -85,10 +85,15 @@ describe('testClient Helper', () => {
       browser: mockBrowser,
       context: mockContext,
       page: mockPage,
+      close: vi.fn().mockResolvedValue(undefined),
+      navigate: vi.fn(),
+      waitForGame: vi.fn(),
+      injectInput: vi.fn(),
+      screenshot: vi.fn(),
     };
 
     await closeBrowser(client);
 
-    expect(mockBrowser.close).toHaveBeenCalled();
+    expect(client.close).toHaveBeenCalled();
   });
 });

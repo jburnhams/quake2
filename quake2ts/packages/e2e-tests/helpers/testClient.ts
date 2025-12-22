@@ -20,7 +20,7 @@ export interface TestClientOptions {
 }
 
 export interface TestClient extends PlaywrightTestClient {
-    context: BrowserContext;
+    context?: BrowserContext; // Made optional as test-utils might abstract it differently, but keeping for compatibility
     server?: any; // HTTP server instance
 }
 
@@ -38,33 +38,20 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
   if (!clientUrl) {
     // Start a local static server to serve the client and fixtures
     // We serve the root of the repo so we can access packages/client/dist
-    // __dirname is packages/e2e-tests/helpers
     const repoRoot = path.resolve(__dirname, '../../..');
 
     staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
       return handler(request, response, {
         public: repoRoot,
-        cleanUrls: false, // Ensure we don't redirect .html -> extensionless which might drop query params
+        cleanUrls: false, // Ensure we don't redirect .html -> extensionless which might drop query params like ?connect=
         headers: [
           {
             source: '**/*',
             headers: [
-              {
-                key: 'Cache-Control',
-                value: 'no-cache'
-              },
-              {
-                key: 'Access-Control-Allow-Origin',
-                value: '*'
-              },
-              {
-                key: 'Cross-Origin-Opener-Policy',
-                value: 'same-origin'
-              },
-              {
-                key: 'Cross-Origin-Embedder-Policy',
-                value: 'require-corp'
-              }
+              { key: 'Cache-Control', value: 'no-cache' },
+              { key: 'Access-Control-Allow-Origin', value: '*' },
+              { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+              { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' }
             ]
           }
         ]
@@ -75,7 +62,6 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
         staticServer.listen(0, () => {
             const addr = staticServer.address();
             const port = typeof addr === 'object' ? addr?.port : 0;
-            // Point to the fixture
             clientUrl = `http://localhost:${port}/packages/e2e-tests/fixtures/real-client.html`;
             console.log(`Test client serving from ${repoRoot} at ${clientUrl}`);
             resolve();
@@ -83,10 +69,13 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
     });
   }
 
+  // We manually construct the client to ensure it conforms to the TestClient interface
+  // which extends PlaywrightTestClient from test-utils.
+
   const browser = await chromium.launch({
     headless: options.headless ?? true,
     args: [
-        '--use-gl=egl', // Ensure WebGL support in headless environments
+        '--use-gl=egl',
         '--ignore-gpu-blocklist'
     ],
   });
@@ -101,7 +90,6 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
 
   const page = await context.newPage();
 
-  // Inject console logging to stdout for debugging
   page.on('console', msg => {
     if (msg.type() === 'error') console.error(`[Browser Error] ${msg.text()}`);
     else console.log(`[Browser] ${msg.text()}`);
@@ -115,7 +103,6 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
     console.error(`[Browser Request Failed] ${request.url()} - ${request.failure()?.errorText}`);
   });
 
-  // Navigate to the client application
   const fullUrl = `${clientUrl}?connect=${encodeURIComponent(serverUrl)}`;
   console.log(`Navigating to: ${fullUrl}`);
 
@@ -125,7 +112,6 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
     console.warn(`Failed to navigate to ${fullUrl}:`, error);
   }
 
-  // Construct the client object matching PlaywrightTestClient interface
   const client: TestClient = {
       browser,
       context,
@@ -134,13 +120,11 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
       navigate: async (url: string) => { await page.goto(url); },
       waitForGame: async () => {
           await page.waitForFunction(() => {
-              // Check for global game instance and running state
               return (window as any).game && (window as any).game.isRunning;
-          }, { timeout: 10000 });
+          }, undefined, { timeout: 10000 });
       },
       injectInput: async (type: string, data: any) => {
              await page.evaluate(({ type, data }: any) => {
-                 // Forward input event to the game instance if available
                  const game = (window as any).game;
                  if (game && typeof game.injectInput === 'function') {
                      game.injectInput(type, data);
@@ -153,23 +137,14 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
           return await page.screenshot({ path: `${name}.png` });
       },
       close: async () => {
-          await closeBrowser(client);
+          if (browser) await browser.close();
+          if (staticServer) staticServer.close();
       }
   };
 
   return client;
 }
 
-/**
- * Closes the browser instance.
- *
- * @param client - The TestClient object returned by launchBrowserClient
- */
 export async function closeBrowser(client: TestClient): Promise<void> {
-  if (client.browser) {
-    await client.browser.close();
-  }
-  if (client.server) {
-      client.server.close();
-  }
+    await client.close();
 }
