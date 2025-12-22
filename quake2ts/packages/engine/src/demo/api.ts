@@ -5,6 +5,8 @@ import { DemoAnalyzer } from './analyzer.js';
 import { VirtualFileSystem } from '../assets/vfs.js';
 import { PakArchive } from '../assets/pak.js';
 import { Offset } from './types.js';
+import { DemoPlaybackController } from './playback.js';
+import { ResourceVisibilityAnalyzer } from '../assets/visibilityAnalyzer.js';
 
 export interface ClipCriteria {
     duration: number; // Seconds
@@ -25,13 +27,11 @@ export class DemoOptimizerApi {
     private packager: DemoPackager;
     private clipFinder: OptimalClipFinder;
     private clipper: DemoClipper;
-    private analyzer: DemoAnalyzer;
 
     constructor() {
         this.packager = new DemoPackager();
         this.clipFinder = new OptimalClipFinder();
         this.clipper = new DemoClipper();
-        this.analyzer = new DemoAnalyzer();
     }
 
     /**
@@ -45,7 +45,10 @@ export class DemoOptimizerApi {
         const start: Offset = { type: 'time', seconds: startTime };
         const end: Offset = { type: 'time', seconds: startTime + duration };
 
-        return this.clipper.extractClip(demoData, start, end);
+        const controller = new DemoPlaybackController();
+        controller.loadDemo(demoData.buffer as ArrayBuffer);
+
+        return this.clipper.extractClip(demoData, start, end, controller);
     }
 
     /**
@@ -62,8 +65,7 @@ export class DemoOptimizerApi {
             // We need to mount the PAK.
             // VFS supports mounting archives.
             // But here we have raw data. We should parse it into PakArchive first.
-            const archive = new PakArchive(pak.name);
-            await archive.load(pak.data.buffer as ArrayBuffer);
+            const archive = PakArchive.fromArrayBuffer(pak.name, pak.data.buffer as ArrayBuffer);
             vfs.mountPak(archive);
         }
 
@@ -72,7 +74,7 @@ export class DemoOptimizerApi {
             demoSource: demoData,
             sourcePaks: vfs,
             optimize: {
-                duration: { min: criteria.duration, max: criteria.duration + 5 }, // Allow small flexibility
+                durationRange: [criteria.duration, criteria.duration + 5], // Allow small flexibility
                 maxResources: criteria.maxResources
             },
             level: 'SAFE' // Default to safe
@@ -88,16 +90,21 @@ export class DemoOptimizerApi {
     public async analyzeDemo(demoData: Uint8Array): Promise<DemoAnalysisReport> {
         // Analyze for a standard window size (e.g. 60s) just to give some suggestions
         const criteria: OptimizationCriteria = {
-            duration: { min: 30, max: 60 }
+            durationRange: [30, 60]
         };
-        const windows = await this.clipFinder.findOptimalWindows(demoData, criteria);
+
+        const visibilityAnalyzer = new ResourceVisibilityAnalyzer();
+        const timeline = await visibilityAnalyzer.analyzeDemo(demoData);
+
+        const windows = await this.clipFinder.findOptimalWindows(timeline, criteria);
 
         // Use Analyzer for summary stats (duration, etc.)
-        const stats = await this.analyzer.analyze(demoData);
+        const analyzer = new DemoAnalyzer(demoData.buffer as ArrayBuffer);
+        const stats = analyzer.analyze();
 
         return {
             summary: {
-                duration: stats.duration,
+                duration: stats.statistics?.duration || 0,
                 totalResources: 0 // TODO: Get total unique resources from stats or visibility analyzer
             },
             optimalWindows: windows
@@ -109,12 +116,22 @@ export class DemoOptimizerApi {
      */
     public async findBestClips(demoData: Uint8Array, criteria: ClipCriteria): Promise<OptimalWindow[]> {
         const optCriteria: OptimizationCriteria = {
-            duration: { min: criteria.duration, max: criteria.duration + 10 },
-            maxResources: criteria.maxResources,
-            content: {
-                 minActionScore: criteria.minAction
-            }
+            durationRange: [criteria.duration, criteria.duration + 10],
+            maxResources: criteria.maxResources
+            // Content criteria scoring not directly mapped in OptimizationCriteria basic structure
+            // Use scoringMode 'action' or 'hybrid' instead if available, or update OptimizationCriteria definition
         };
-        return this.clipFinder.findOptimalWindows(demoData, optCriteria);
+
+        // Setup options to include analysis for action scoring
+        const options: any = { // TODO: Properly type this
+            ...optCriteria,
+            scoringMode: criteria.minAction ? 'hybrid' : 'count',
+            demoBuffer: demoData.buffer as ArrayBuffer
+        };
+
+        const visibilityAnalyzer = new ResourceVisibilityAnalyzer();
+        const timeline = await visibilityAnalyzer.analyzeDemo(demoData);
+
+        return this.clipFinder.findOptimalWindows(timeline, options);
     }
 }
