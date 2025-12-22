@@ -293,8 +293,8 @@ export class Texture2D {
   }
 
   upload(data: BufferSource, options?: {
-    origin?: GPUOrigin3DStrict;
-    size?: GPUExtent3DStrict;
+    origin?: GPUOrigin3D;
+    size?: GPUExtent3D;
     layout?: GPUImageDataLayout;
   }): void {
     const origin = options?.origin || { x: 0, y: 0, z: 0 };
