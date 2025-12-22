@@ -32,9 +32,9 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [x] **`getIconPath(statIndex: number)`**: Expose helper to map `STAT_SELECTED_ICON` to a VFS path string using `configstrings`.
     - [x] **`Inventory Helpers`**: Provide `getAmmoCount(playerState, item)` logic in shared library.
 
-- [ ] **Map & Asset Analysis**
-    - [ ] **`BspAnalyzer` helpers**: Expose `calculatePVS(origin)` or `findLeaf(origin)` as public API on `BspMap` or `SceneGraph`.
-    - [ ] **`Lightmap Export`**: Utility to export lightmaps as PNG buffers directly from `BspMap` without WebGL context (if possible, or via headless gl).
+- [x] **Map & Asset Analysis**
+    - [x] **`BspAnalyzer` helpers**: Expose `calculatePVS(origin)` or `findLeaf(origin)` as public API on `BspMap` or `SceneGraph`.
+    - [x] **`Lightmap Export`**: Utility to export lightmaps as PNG buffers directly from `BspMap` without WebGL context (if possible, or via headless gl).
 
 ## API Improvements
 

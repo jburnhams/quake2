@@ -109,9 +109,7 @@ function extractLightmapData(map: BspMap): BspLightmapData[] {
 
       if (samples) {
         const expectedSize = lmWidth * lmHeight * 3;
-        // Check if we have at least the required data
         if (samples.length >= expectedSize) {
-            // Slice exactly what we need
             const exactSamples = samples.length === expectedSize ? samples : samples.slice(0, expectedSize);
             results.push({ width: lmWidth, height: lmHeight, samples: exactSamples, index: results.length });
         }
@@ -143,14 +141,14 @@ function placeLightmap(
   for (const atlas of builders) {
     if (atlas.cursorX + paddedWidth > atlas.width) {
       atlas.cursorX = 0;
-      atlas.cursorY += atlas.rowHeight + padding;
+      atlas.cursorY += atlas.rowHeight;
       atlas.rowHeight = 0;
     }
 
     if (atlas.cursorY + paddedHeight <= atlas.height) {
        const x = atlas.cursorX;
        const y = atlas.cursorY;
-       atlas.cursorX += paddedWidth + padding;
+       atlas.cursorX += paddedWidth;
        atlas.rowHeight = Math.max(atlas.rowHeight, paddedHeight);
        return { atlas, x, y };
     }
@@ -160,7 +158,7 @@ function placeLightmap(
   builders.push(atlas);
   const x = 0;
   const y = 0;
-  atlas.cursorX = paddedWidth + padding;
+  atlas.cursorX = paddedWidth;
   atlas.rowHeight = paddedHeight;
   return { atlas, x, y };
 }
