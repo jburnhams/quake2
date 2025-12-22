@@ -104,7 +104,7 @@
     "build:types": "tsc -b tsconfig.build.json",
     "build:workspace": "pnpm -r --filter=!#workspace-root --if-present run build",
     "test": "pnpm -r --if-present test",
-    "test:unit": "pnpm -r --if-present test:unit",
+    "test:unit": "TEST_TYPE=unit vitest run",
     "test:integration": "pnpm -r --if-present test:integration",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },

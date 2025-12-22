@@ -24,6 +24,9 @@ export default defineConfig({
       '@quake2ts/shared': sharedSrc,
       '@quake2ts/game': gameSrc,
       '@quake2ts/engine': path.resolve(__dirname, './src/index.ts'),
+      '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(__dirname, '../test-utils/src/engine/mocks/webgpu.ts'),
+      '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
+      '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
     },
   },
   test: {
@@ -31,5 +34,16 @@ export default defineConfig({
     exclude,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
+    // Force sequential execution for integration tests to prevent WebGPU/NAPI crashes
+    ...(isIntegration ? {
+      pool: 'forks',
+      poolOptions: {
+        forks: {
+          maxForks: 1,
+          minForks: 1
+        }
+      },
+      fileParallelism: false
+    } : {})
   },
 });

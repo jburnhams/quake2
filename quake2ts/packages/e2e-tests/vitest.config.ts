@@ -1,8 +1,14 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
+const isUnit = process.env.TEST_TYPE === 'unit';
+
 export default defineConfig({
   test: {
+    // If we are running unit tests, we want to exclude everything in this package
+    // since these are end-to-end tests requiring browsers.
+    include: isUnit ? [] : ['**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     pool: 'forks',
     poolOptions: {
       forks: {
