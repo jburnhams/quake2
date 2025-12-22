@@ -37,7 +37,11 @@ vi.mock('../../src/demo/optimalClipFinder.js', () => {
 vi.mock('../../src/demo/analyzer.js', () => {
     return {
         DemoAnalyzer: vi.fn().mockImplementation(() => ({
-            analyze: vi.fn().mockReturnValue({ duration: 120 })
+            analyze: vi.fn().mockReturnValue({
+                statistics: { duration: 120 },
+                events: [],
+                summary: {}
+            })
         }))
     };
 });

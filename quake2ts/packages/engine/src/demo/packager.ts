@@ -4,6 +4,7 @@ import { DemoClipper } from './clipper.js';
 import { OptimalClipFinder, OptimizationOptions } from './optimalClipFinder.js';
 import { ResourceVisibilityAnalyzer } from '../assets/visibilityAnalyzer.js';
 import { Offset } from './types.js';
+import { DemoPlaybackController } from './playback.js';
 
 export interface PackageOptions {
     demoSource: Uint8Array;
@@ -63,7 +64,7 @@ export class DemoPackager {
             // Need timeline for optimal finder
             const timeline = await this.visibilityAnalyzer.analyzeDemo(options.demoSource);
             const durationSec = options.optimize.durationRange ? options.optimize.durationRange[0] : 60;
-            const optimal = await this.clipFinder.findMinimalWindow(timeline, durationSec, options.optimize);
+            const optimal = this.clipFinder.findMinimalWindow(timeline, durationSec, options.optimize);
 
             // Extract frame range from optimal window if available, or just use offsets
             if (optimal.start.type === 'frame') startFrame = optimal.start.frame;
@@ -74,7 +75,10 @@ export class DemoPackager {
 
             duration = (optimal.end as any).seconds - (optimal.start as any).seconds;
 
-            clipData = this.clipper.extractClip(options.demoSource, optimal.start, optimal.end);
+            const controller = new DemoPlaybackController();
+            controller.loadDemo(options.demoSource.buffer as ArrayBuffer);
+
+            clipData = this.clipper.extractClip(options.demoSource, optimal.start, optimal.end, controller);
         } else if (options.range) {
              if (options.range.start.type === 'frame') startFrame = options.range.start.frame;
              else startFrame = Math.floor(options.range.start.seconds * 10);
@@ -87,7 +91,10 @@ export class DemoPackager {
                  duration = options.range.end.seconds - options.range.start.seconds;
              }
 
-            clipData = this.clipper.extractClip(options.demoSource, options.range.start, options.range.end);
+            const controller = new DemoPlaybackController();
+            controller.loadDemo(options.demoSource.buffer as ArrayBuffer);
+
+            clipData = this.clipper.extractClip(options.demoSource, options.range.start, options.range.end, controller);
         } else {
             // Full demo
             clipData = options.demoSource;
