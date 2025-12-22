@@ -291,6 +291,10 @@ export class InputController {
     }
   }
 
+  getBoundKeys(command: string): InputCode[] {
+    return this.bindings.getBoundKeys(command);
+  }
+
   getDefaultBindings(): InputBindings {
     return this.bindings;
   }

@@ -43,7 +43,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [x] **`mountPak`**: Return the `PakArchive` instance handle for easier unmounting reference.
 
 - [ ] **`InputController`**
-    - [ ] Expose `getBoundKeys(command)` to reverse lookup bindings for UI display.
+    - [x] Expose `getBoundKeys(command)` to reverse lookup bindings for UI display.
 
 ## Testing Improvements (From Implementation Experience)
 
@@ -58,7 +58,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [ ] **`PostProcessing` Pipeline**: Move `PostProcessor` logic (quad rendering, shader compilation) into `quake2ts/engine`'s render system to avoid raw WebGL calls in the app.
 
 - [ ] **Input Management**
-    - [ ] **InputController Lifecycle**: Make `InputController` a standard class (constructor/dispose) rather than relying on global `initInputController`/`cleanupInputController` functions. This simplifies isolated unit testing.
+    - [x] **InputController Lifecycle**: Confirmed `InputController` is already a standard class.
 
 - [ ] **Protocol Constants**
     - [x] **Export ConfigString Constants**: Export constants like `CS_NAME` (0), `CS_MAXCLIENTS` (30), `CS_MAPNAME`, etc., from `@quake2ts/shared`.

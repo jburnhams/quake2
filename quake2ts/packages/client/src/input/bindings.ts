@@ -64,6 +64,17 @@ export class InputBindings {
     return this.bindings.get(code);
   }
 
+  getBoundKeys(command: string): InputCode[] {
+    const normalizedCommand = normalizeCommand(command);
+    const keys: InputCode[] = [];
+    for (const [code, cmd] of this.bindings) {
+      if (cmd === normalizedCommand) {
+        keys.push(code);
+      }
+    }
+    return keys;
+  }
+
   entries(): BindingMap {
     return new Map(this.bindings.entries());
   }
