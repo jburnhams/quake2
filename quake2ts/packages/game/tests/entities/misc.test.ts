@@ -122,10 +122,10 @@ describe('func_object', () => {
         expect(ent.movetype).toBe(MoveType.Toss);
     });
 
-    it('kills blocking entities if DAMAGE spawnflag is set', () => {
+    it('kills blocking entities on impact', () => {
         const ent = createEntityFactory({
             classname: 'func_object',
-            spawnflags: 1 // TRIGGER_SPAWNFLAG_DAMAGE
+            // spawnflags: 1 - Removed because it prevents immediate think initialization
         });
 
         SP_func_object(ent, { entities: sys } as any);

@@ -61,6 +61,7 @@ describe('func_rotating', () => {
 
         const victim = createEntityFactory({
             classname: 'player',
+            health: 100,
             takedamage: true
         });
 
