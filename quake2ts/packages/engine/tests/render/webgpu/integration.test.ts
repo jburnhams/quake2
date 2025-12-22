@@ -48,11 +48,12 @@ describe('WebGPU Integration (Real)', () => {
 
   // Clean up devices after all tests
   afterAll(async () => {
+    // Wait for all devices to be destroyed. This is more reliable than a fixed timeout.
+    const lostPromises = devices.map(d => d.lost);
     for (const device of devices) {
       device.destroy();
     }
-    // Give Dawn time to clean up
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await Promise.all(lostPromises);
   });
 
   it('should create a real WebGPU context headlessly', async () => {
