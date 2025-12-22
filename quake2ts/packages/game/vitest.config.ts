@@ -20,7 +20,7 @@ export default defineConfig({
     exclude,
     // pool: 'forks', // Default is threads, which is faster but might have isolation issues. Forks provides better isolation.
     // Let's stick to forks but allow parallelism.
-    pool: 'forks',
+    pool: isIntegration ? 'forks' : 'threads',
     poolOptions: {
       forks: {
         ...(isIntegration ? { maxForks: 1, minForks: 1 } : {}),
