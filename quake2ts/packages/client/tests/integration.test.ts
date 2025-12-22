@@ -2,26 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientImports } from '../src/index.js';
 import { EngineImports, Renderer, GameFrameResult } from '@quake2ts/engine';
 import { UserCommand } from '@quake2ts/shared';
+import { createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock dependencies
-const mockRenderer = {
-    begin2D: vi.fn(),
-    end2D: vi.fn(),
-    drawPic: vi.fn(),
-    drawfillRect: vi.fn(),
-    drawString: vi.fn(),
-    drawCenterString: vi.fn(),
-    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24 } as any),
-    renderFrame: vi.fn(),
-    getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
-    setGamma: vi.fn(),
-    setBrightness: vi.fn(),
-    setBloom: vi.fn(),
-    setBloomIntensity: vi.fn(),
-    setUnderwaterWarp: vi.fn(),
+const mockRenderer = createMockRenderer({
     width: 640,
-    height: 480
-} as unknown as Renderer;
+    height: 480,
+    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24 } as any),
+});
 
 const mockTrace = vi.fn().mockReturnValue({
     allsolid: false,

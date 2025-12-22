@@ -91,7 +91,7 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 3. Create Rendering Mock Factories (HIGH PRIORITY)
 
-**Status:** Partial
+**Status:** Completed
 **Dependencies:** Task 1 (WebGL mocks)
 
 - [x] **3.1** Create `test-utils/src/engine/mocks/renderer.ts` file
@@ -121,11 +121,11 @@ This section covers migration of engine-specific test utilities including WebGL 
 - [x] **3.8** Add `createMockSkyboxPipeline()` factory
   - Signature: `createMockSkyboxPipeline(overrides?: Partial<SkyboxPipeline>): SkyboxPipeline`
 
-- [ ] **3.9** Cleanup inline renderer mocks in `client/tests/view/` directory
+- [x] **3.9** Cleanup inline renderer mocks in `client/tests/view/` directory
   - Replace inline `mockRenderer = { ... }` with `createMockRenderer()`
   - Estimated files: ~12
 
-- [ ] **3.10** Cleanup inline renderer mocks in `client/tests/renderer/` directory
+- [x] **3.10** Cleanup inline renderer mocks in `client/tests/renderer/` directory
   - Same pattern
   - Estimated files: ~8
 
