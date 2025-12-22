@@ -138,29 +138,29 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 4. Create Asset/Resource Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Not Started
+**Status:** Partially Completed
 **Dependencies:** None
 
-- [ ] **4.1** Create `test-utils/src/engine/mocks/assets.ts` file
+- [x] **4.1** Create `test-utils/src/engine/mocks/assets.ts` file
 
-- [ ] **4.2** Add `createMockAssetManager()` factory
+- [x] **4.2** Add `createMockAssetManager()` factory
   - Signature: `createMockAssetManager(overrides?: Partial<AssetManager>): AssetManager`
   - Methods: `loadModel()`, `loadTexture()`, `loadSound()`, `loadMap()`
   - Return resolved promises with mock assets
 
-- [ ] **4.3** Add `createMockTexture()` factory
+- [x] **4.3** Add `createMockTexture()` factory
   - Signature: `createMockTexture(width?: number, height?: number, data?: Uint8Array): Texture`
   - Default to 1x1 white texture
 
-- [ ] **4.4** Add `createMockMd2Model()` factory
+- [x] **4.4** Add `createMockMd2Model()` factory
   - Signature: `createMockMd2Model(overrides?: Partial<Md2Model>): Md2Model`
   - Include: frames, vertices, triangles, glCommands
 
-- [ ] **4.5** Add `createMockMd3Model()` factory
+- [x] **4.5** Add `createMockMd3Model()` factory
   - Signature: `createMockMd3Model(overrides?: Partial<Md3Model>): Md3Model`
   - Include: surfaces, frames, tags
 
-- [ ] **4.6** Add `createMockBspMap()` factory
+- [x] **4.6** Add `createMockBspMap()` factory
   - Signature: `createMockBspMap(overrides?: Partial<BspMap>): BspMap`
   - Include: models, nodes, leafs, planes, brushes
   - Integrate with BSP helpers from Section 19-1

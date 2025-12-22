@@ -217,23 +217,24 @@ This section covers migration of client-specific test utilities including input 
 
 ### 7. Create Download/Precache Mocks (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Section 19-2 Task 4 (asset mocks)
 
-- [ ] **7.1** Create `test-utils/src/client/mocks/download.ts` file
+- [x] **7.1** Create `test-utils/src/client/mocks/download.ts` file
 
-- [ ] **7.2** Add `createMockDownloadManager()` factory
+- [x] **7.2** Add `createMockDownloadManager()` factory
   - Signature: `createMockDownloadManager(overrides?: Partial<DownloadManager>): DownloadManager`
   - Methods: `download()`, `cancel()`, `getProgress()`
 
-- [ ] **7.3** Add `createMockPrecacheList()` factory
+- [x] **7.3** Add `createMockPrecacheList()` factory
   - Signature: `createMockPrecacheList(models?: string[], sounds?: string[], images?: string[]): PrecacheList`
 
-- [ ] **7.4** Add `simulateDownload()` helper
+- [x] **7.4** Add `simulateDownload()` helper
   - Signature: `simulateDownload(url: string, progressCallback?: (percent: number) => void): Promise<ArrayBuffer>`
 
 - [ ] **7.5** Cleanup download tests in `client/tests/download/` directory
   - Estimated files: ~4
+  - **Note:** The `client/tests/download` directory does not currently exist. Download logic is sparse or integrated elsewhere (e.g., `clientConfig.test.ts` for precache). The mock factories are now available for future use.
 
 ---
 
