@@ -13,6 +13,7 @@ export * from './game/mocks/items.js';
 export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mockTransport.js';
+export * from './server/mockNetDriver.js'; // Added export
 export * from './server/mocks/state.js';
 export * from './server/mocks/connection.js';
 export * from './server/mocks/commands.js';
@@ -28,10 +29,10 @@ export * from './setup/canvas.js';
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
-export * from './engine/mocks/webgl.js'; // Restored original export
-export * from './engine/mocks/audio.js'; // Added audio mocks
-export * from './engine/mocks/renderer.js'; // Added renderer mocks
-export * from './engine/rendering.js'; // Rendering mocks (does not re-export webgl symbols now)
+export * from './engine/mocks/webgl.js';
+export * from './engine/mocks/audio.js';
+export * from './engine/mocks/renderer.js';
+export * from './engine/rendering.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 
@@ -43,7 +44,6 @@ export * from './client/mocks/network.js';
 
 // E2E
 export * from './e2e/playwright.js';
-// export * from './e2e/input.js'; // Replaced by client/mocks/input.js
 export * from './e2e/network.js';
 export * from './e2e/visual.js';
 

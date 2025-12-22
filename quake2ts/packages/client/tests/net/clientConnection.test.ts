@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ClientConnection, ConnectionState } from '../../src/net/clientConnection.js';
 import { MessageWriter } from '@quake2ts/engine';
+import { createMockSnapshot } from '@quake2ts/test-utils';
 
 describe('ClientConnection', () => {
   let connection: ClientConnection;
@@ -46,42 +47,11 @@ describe('ClientConnection', () => {
 
   it('handles svc_frame and updates latestServerFrame', () => {
     const writer = new MessageWriter();
-    // We need to write a frame.
-    // writeFrame signature: (frame: FrameData, protocolVersion: number)
-    // Construct a minimal frame
-    const frameData = {
-        serverFrame: 100,
-        deltaFrame: 99,
-        surpressCount: 0,
-        areaBytes: 0,
-        areaBits: new Uint8Array(),
-        playerState: {
-            pm_type: 0,
-            origin: { x: 10, y: 20, z: 30 },
-            velocity: { x: 0, y: 0, z: 0 },
-            pm_time: 0,
-            pm_flags: 0,
-            gravity: 800,
-            delta_angles: { x: 0, y: 0, z: 0 },
-            viewoffset: { x: 0, y: 0, z: 0 },
-            viewangles: { x: 0, y: 0, z: 0 },
-            kick_angles: { x: 0, y: 0, z: 0 },
-            gun_index: 0,
-            gun_frame: 0,
-            gun_offset: { x: 0, y: 0, z: 0 },
-            gun_angles: { x: 0, y: 0, z: 0 },
-            blend: [0, 0, 0, 0],
-            fov: 90,
-            rdflags: 0,
-            stats: [],
-            gunskin: 0,
-            gunrate: 0,
-            damage_blend: [0, 0, 0, 0],
-            team_id: 0,
-            watertype: 0
-        },
-        packetEntities: { delta: false, entities: [] }
-    };
+    // Use test-utils to create mock snapshot
+    const frameData = createMockSnapshot(100, [], {
+        origin: { x: 10, y: 20, z: 30 },
+        gravity: 800
+    }, 99);
 
     // We need to ensure we parse serverdata first so protocol matches?
     // NetworkMessageParser defaults to 0.

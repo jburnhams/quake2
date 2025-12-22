@@ -18,6 +18,89 @@ setupBrowserEnvironment({
 });
 ```
 
+### Client Utilities
+
+The library includes mocks and helpers for testing client-side systems like input, view/camera, HUD, and network.
+
+#### Input Mocks
+```typescript
+import {
+  createMockPointerLock,
+  createInputInjector,
+  createMockKeyboardEvent,
+  createMockMouseEvent
+} from '@quake2ts/test-utils';
+
+// Mock Pointer Lock API
+const pl = createMockPointerLock(document.body);
+pl.request();
+
+// Inject Input Events
+const injector = createInputInjector();
+injector.keyDown('KeyW');
+injector.mouseMove(10, 5);
+```
+
+#### View/Camera Helpers
+```typescript
+import {
+  createMockCamera,
+  createMockViewState,
+  createViewTestScenario,
+  simulateCameraMovement
+} from '@quake2ts/test-utils';
+
+// Create a camera with overrides
+const camera = createMockCamera({ position: { x: 100, y: 0, z: 0 }, fov: 110 });
+
+// Setup a predefined scenario
+const scenario = createViewTestScenario('firstPerson');
+
+// Simulate movement
+simulateCameraMovement(camera, { forward: 100 }, 0.016);
+```
+
+#### HUD Utilities
+```typescript
+import {
+  createMockHudState,
+  createMockScoreboard,
+  createMockChatMessage,
+  createMockNotification
+} from '@quake2ts/test-utils';
+
+const hud = createMockHudState({ health: 50, armor: 100 });
+const chat = createMockChatMessage("Hello World", "Player1");
+```
+
+#### Client Network Mocks
+```typescript
+import {
+  createMockServerMessage,
+  createMockSnapshot,
+  createMockDeltaFrame,
+  simulateNetworkDelay,
+  simulatePacketLoss
+} from '@quake2ts/test-utils';
+
+// Create frame data
+const snapshot = createMockSnapshot(100, [], { origin: { x: 0, y: 0, z: 0 } });
+
+// Create network messages
+const msg = createMockServerMessage(1, new Uint8Array([1, 2, 3]));
+```
+
+#### Console Mocks
+```typescript
+import { createMockConsole, createMockCommand } from '@quake2ts/test-utils';
+
+const consoleMock = createMockConsole();
+consoleMock.print('Hello');
+expect(consoleMock.getHistory()).toContain('Hello');
+
+const cmd = createMockCommand('god', () => { /* ... */ });
+```
+
 ### Shared Utilities
 
 The library includes common utilities for testing game logic, collisions, math, and networking.
@@ -227,6 +310,7 @@ scenario.localStorage.setItem('foo', 'bar');
 ## Features
 
 - **Browser Mocks:** JSDOM enhancement, Pointer Lock, RAF, Performance.
+- **Client Mocks:** Input, View, HUD, Network, Console.
 - **Shared Utilities:** BSP construction, Collision tracing, Math helpers, Binary mocks.
 - **Server Utilities:** Network mocks, Server state factories, Multiplayer simulation, Snapshot analysis.
 - **Canvas/WebGL:** Mock implementations for headless testing.
@@ -244,3 +328,4 @@ Quick summary:
 2. Use shared helpers (e.g., `createVector3`, `makePlane`) instead of recreating them.
 3. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
 4. Use `setupMockAudioContext` instead of custom inline mocks.
+5. Use client utilities for specialized mocks (input, view, network).
