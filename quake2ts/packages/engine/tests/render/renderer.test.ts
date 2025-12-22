@@ -5,10 +5,10 @@ import { Texture2D } from '../../src/render/resources.js';
 import path from 'path';
 
 // Mock the pipeline dependencies to prevent WebGL calls
-vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
-vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn() }));
-vi.mock('../../src/render/md2Pipeline', () => ({ Md2Pipeline: vi.fn() }));
-vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn() }));
+vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn(() => ({ shaderSize: 100 })) }));
+vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn(() => ({ shaderSize: 100 })) }));
+vi.mock('../../src/render/md2Pipeline', () => ({ Md2Pipeline: vi.fn(() => ({ shaderSize: 100 })) }));
+vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn(() => ({ shaderSize: 100 })) }));
 // Mock PVS/BSP traversal to avoid complex map data setup
 vi.mock('../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0), // Return a valid leaf index
@@ -25,12 +25,14 @@ vi.mock('../../src/render/collisionVis', () => ({
     CollisionVisRenderer: vi.fn(() => ({
         render: vi.fn(),
         clear: vi.fn(),
+        shaderSize: 100
     })),
 }));
 
 const mockMd3Pipeline = {
     bind: vi.fn(),
     drawSurface: vi.fn(),
+    shaderSize: 100
 };
 
 // Properly mocked Md3ModelMesh with geometry.vertices for stats tracking

@@ -4,23 +4,25 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
-vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn() }));
+vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn(() => ({ shaderSize: 100 })) }));
+vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn(() => ({ shaderSize: 100 })) }));
 vi.mock('../../src/render/md2Pipeline', () => ({
     Md2Pipeline: vi.fn(() => ({
         bind: vi.fn(),
         draw: vi.fn(),
+        shaderSize: 100
     })),
     Md2MeshBuffers: vi.fn(() => ({
         update: vi.fn(),
         geometry: { vertices: new Float32Array(30) }
     }))
 }));
-vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn() }));
+vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn(() => ({ shaderSize: 100 })) }));
 vi.mock('../../src/render/collisionVis', () => ({
     CollisionVisRenderer: vi.fn(() => ({
         render: vi.fn(),
         clear: vi.fn(),
+        shaderSize: 100
     })),
 }));
 
@@ -32,6 +34,7 @@ vi.mock('../../src/render/md3Pipeline', () => ({
     Md3Pipeline: vi.fn(() => ({
         bind: vi.fn(),
         drawSurface: vi.fn(),
+        shaderSize: 100
     })),
     Md3ModelMesh: vi.fn(() => ({
         update: vi.fn(),
@@ -48,7 +51,8 @@ vi.mock('../../src/render/debug', () => ({
         drawBoundingBox: vi.fn(),
         render: vi.fn(),
         clear: vi.fn(),
-        getLabels: vi.fn().mockReturnValue([])
+        getLabels: vi.fn().mockReturnValue([]),
+        shaderSize: 100
     })),
 }));
 
