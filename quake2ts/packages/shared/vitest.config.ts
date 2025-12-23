@@ -18,6 +18,11 @@ export default defineConfig({
   test: {
     include,
     exclude,
+    // Optimize unit test performance - shared package has stateless utility functions
+    ...(isUnit ? {
+      pool: 'threads',
+      isolate: false, // Safe for stateless utilities
+    } : {}),
     alias: {
       '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
