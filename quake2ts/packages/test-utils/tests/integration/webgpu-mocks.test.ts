@@ -4,7 +4,7 @@ import {
   createMockWebGPUContext,
   createMockGPUAdapter,
   createMockGPUDevice
-} from '../src/engine/mocks/webgpu';
+} from '../../src/engine/mocks/webgpu';
 
 describe('WebGPU Mocks', () => {
   beforeAll(() => {
