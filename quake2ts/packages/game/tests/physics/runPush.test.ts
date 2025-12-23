@@ -4,6 +4,7 @@ import { runPush } from '../../src/physics/movement.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('runPush', () => {
   let system: EntitySystem;
@@ -12,12 +13,9 @@ describe('runPush', () => {
   let linkEntityMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    const engine = {
-        sound: vi.fn(),
-        modelIndex: vi.fn(),
-    };
+    const { imports: baseImports, engine } = createGameImportsAndEngine();
 
-    traceMock = vi.fn();
+    // Custom linkentity implementation that calculates absmin/absmax
     linkEntityMock = vi.fn((ent: Entity) => {
         ent.absmin = {
             x: ent.origin.x + ent.mins.x,
@@ -31,9 +29,10 @@ describe('runPush', () => {
         };
     });
 
+    // Use the trace from baseImports but override linkentity
+    traceMock = baseImports.trace;
     imports = {
-      trace: traceMock,
-      pointcontents: vi.fn(() => 0),
+      ...baseImports,
       linkentity: linkEntityMock,
     };
 

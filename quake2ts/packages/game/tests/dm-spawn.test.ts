@@ -4,6 +4,7 @@ import { Entity } from '../src/entities/entity.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let entities: EntitySystem;
@@ -65,7 +66,8 @@ describe('Deathmatch Spawn', () => {
 
 describe('GameExports Respawn', () => {
     it('respawn should reset player state', () => {
-        const game = createGame({}, {} as any, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
 
         // Mock SelectSpawnPoint implicitly by having a spawn point
         const spawn = game.entities.spawn();
