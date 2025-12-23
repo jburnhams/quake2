@@ -85,24 +85,32 @@ describe('DemoPlaybackController with Tracking', () => {
     tracker = new ResourceLoadTracker();
   });
 
-  // Skipped due to persistent timeout in test environment (promise resolution issue with mocks)
-  it.skip('should update tracker frame/time during playback', async () => {
+  it('should update tracker frame/time during playback', async () => {
     const startSpy = vi.spyOn(tracker, 'startTracking');
     const stopSpy = vi.spyOn(tracker, 'stopTracking');
     const setFrameSpy = vi.spyOn(tracker, 'setCurrentFrame');
     const setTimeSpy = vi.spyOn(tracker, 'setCurrentTime');
+
+    // Override mock for this test to be sure of behavior
+    const readerMock = (controller as any).reader;
+    if (readerMock) {
+         // Force the implementation to be strictly what we expect
+         readerMock.hasMore = vi.fn()
+             .mockReturnValueOnce(true)
+             .mockReturnValueOnce(true)
+             .mockReturnValue(false);
+    }
 
     const playbackPromise = controller.playWithTracking(tracker);
 
     expect(startSpy).toHaveBeenCalled();
     expect(controller.getState()).toBe(PlaybackState.Playing);
 
-    // Simulate 2 updates/frames (based on hasMore mock returning true twice)
-    controller.update(0.1); // Frame 0
-    controller.update(0.1); // Frame 1
-    controller.update(0.1); // Frame 2 -> hasMore false -> finish
-
-    // Extra updates to ensure completion
+    // Frame 0
+    controller.update(0.1);
+    // Frame 1
+    controller.update(0.1);
+    // Frame 2 (should finish)
     controller.update(0.1);
 
     await playbackPromise;
