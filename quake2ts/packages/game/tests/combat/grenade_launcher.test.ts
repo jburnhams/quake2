@@ -9,25 +9,14 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
         const createGrenade = vi.spyOn(projectiles, 'createGrenade');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-
-        // Default mock for P_ProjectSource check
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -49,19 +38,10 @@ describe('Grenade Launcher', () => {
     });
 
     it('should explode on impact with an entity', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
