@@ -167,6 +167,17 @@ export interface BspMap {
     model: BspModel;
     distance: number;
   } | null;
+
+  /**
+   * Finds the leaf node containing the given point.
+   */
+  findLeaf(origin: Vec3): BspLeaf;
+
+  /**
+   * Returns the PVS (Potentially Visible Set) for the given point.
+   * Returns undefined if the point is not in a valid cluster or visibility data is missing.
+   */
+  calculatePVS(origin: Vec3): Uint8Array | undefined;
 }
 
 export enum BspLump {
@@ -290,6 +301,38 @@ export function parseBsp(buffer: ArrayBuffer): BspMap {
       }
 
       return closest;
+    },
+    findLeaf(origin: Vec3): BspLeaf {
+      const headNode = models[0].headNode;
+      let nodeIndex = headNode;
+
+      while (nodeIndex >= 0) {
+        const node = nodes[nodeIndex];
+        const plane = planes[node.planeIndex];
+        const distance =
+          plane.normal[0] * origin[0] +
+          plane.normal[1] * origin[1] +
+          plane.normal[2] * origin[2] -
+          plane.dist;
+
+        if (distance >= 0) {
+          nodeIndex = node.children[0];
+        } else {
+          nodeIndex = node.children[1];
+        }
+      }
+
+      return leafs[-(nodeIndex + 1)];
+    },
+    calculatePVS(origin: Vec3): Uint8Array | undefined {
+      const leaf = this.findLeaf(origin);
+      if (leaf.cluster === -1 || !visibility) {
+        return undefined;
+      }
+      if (leaf.cluster < 0 || leaf.cluster >= visibility.clusters.length) {
+        return undefined;
+      }
+      return visibility.clusters[leaf.cluster].pvs;
     },
   };
 
