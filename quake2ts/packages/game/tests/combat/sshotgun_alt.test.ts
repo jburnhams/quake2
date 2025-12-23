@@ -14,26 +14,24 @@ import {
     DEFAULT_SHOTGUN_HSPREAD,
     DEFAULT_SHOTGUN_VSPREAD
 } from '../../src/combat/weapons/firing.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Super Shotgun', () => {
     let game: GameExports;
     let player: Entity;
     let target: Entity;
-    let trace: any;
+    let imports: any;
+    let engine: any;
     let T_Damage: any;
 
     beforeEach(() => {
-        const multicast = vi.fn();
-        trace = vi.fn();
         T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
+        const result = createGameImportsAndEngine();
+        imports = result.imports;
+        engine = result.engine;
 
-        game = createGame({ trace, multicast, pointcontents: vi.fn(), unicast: vi.fn(), linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
 
         game.spawnWorld();
 
@@ -56,7 +54,7 @@ describe('Super Shotgun', () => {
         target.takedamage = true;
         game.entities.finalizeSpawn(target);
 
-        trace.mockReturnValue({
+        imports.trace.mockReturnValue({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
@@ -67,7 +65,7 @@ describe('Super Shotgun', () => {
         fire(game, player, WeaponId.SuperShotgun);
 
         // 1 trace for P_ProjectSource + 20 traces for pellets (10 per barrel) = 21
-        expect(trace).toHaveBeenCalledTimes(21);
+        expect(imports.trace).toHaveBeenCalledTimes(21);
         // Verify damage is 6
         expect(T_Damage).toHaveBeenCalledWith(
             expect.anything(),
@@ -92,7 +90,7 @@ describe('Super Shotgun', () => {
 
         fire(game, player, WeaponId.SuperShotgun);
 
-        expect(trace).toHaveBeenCalledTimes(21);
+        expect(imports.trace).toHaveBeenCalledTimes(21);
         // Verify damage is 4
         expect(T_Damage).toHaveBeenCalledWith(
             expect.anything(),
