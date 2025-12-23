@@ -37,7 +37,7 @@ This section covers migration of server-specific test utilities including networ
 - [x] **1.5** Add `createMockNetworkAddress()` factory
   - Signature: `createMockNetworkAddress(ip?: string, port?: number): NetworkAddress`
 
-- [x] **1.6** Update imports in `server/tests/` directory
+- [ ] **1.6** Update imports in `server/tests/` directory
   - Replace `import { MockTransport } from './mocks/transport'`
   - With `import { createMockTransport } from '@quake2ts/test-utils'`
   - Estimated files: ~6
@@ -69,7 +69,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `createMockGameState(overrides?: Partial<GameState>): GameState`
   - Include: levelName, time, entities, clients
 
-- [x] **2.6** Cleanup server state tests in `server/tests/state/` directory
+- [ ] **2.6** Cleanup server state tests in `server/tests/state/` directory
   - Replace inline server mocks
   - Estimated files: ~8
 
@@ -98,7 +98,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `createMockUserInfo(overrides?: Partial<UserInfo>): UserInfo`
   - Include: name, skin, model, fov, hand
 
-- [x] **3.6** Cleanup connection tests in `server/tests/connection/` directory
+- [ ] **3.6** Cleanup connection tests in `server/tests/connection/` directory
   - Replace inline connection mocks
   - Estimated files: ~6
 
@@ -131,7 +131,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `simulatePlayerInput(client: ServerClient, input: PlayerInput): void`
   - Inject player input into server simulation
 
-- [x] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
+- [ ] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
   - Replace inline simulation code
   - Note: Dedicated test files updated in `server/tests/` as subdirectories were not present.
   - Estimated files: ~5
@@ -161,7 +161,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `simulateSnapshotDelivery(snapshot: Snapshot, reliability?: number): Promise<Snapshot | null>`
   - Simulate network delivery with packet loss
 
-- [x] **5.6** Cleanup snapshot tests in `server/tests/snapshot/` directory
+- [ ] **5.6** Cleanup snapshot tests in `server/tests/snapshot/` directory
   - Replace inline snapshot creation
   - Note: Relevant tests in `server/tests/` updated.
   - Estimated files: ~6
@@ -187,7 +187,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `simulateServerCommand(server: MockServer, command: string): string`
   - Execute server command and return output
 
-- [x] **6.5** Cleanup server command tests in `server/tests/commands/` directory
+- [ ] **6.5** Cleanup server command tests in `server/tests/commands/` directory
   - Estimated files: ~4
   - Note: Relevant tests in `server/tests/` updated.
 
