@@ -1,13 +1,13 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BspSurfacePipeline } from '../../src/render/bspPipeline.js';
-import { SkyboxPipeline } from '../../src/render/skybox.js';
-import { Md2Pipeline } from '../../src/render/md2Pipeline.js';
-import { Md3Pipeline } from '../../src/render/md3Pipeline.js';
-import { SpriteRenderer } from '../../src/render/sprite.js';
-import { CollisionVisRenderer } from '../../src/render/collisionVis.js';
-import { DebugRenderer } from '../../src/render/debug.js';
-import { ParticleRenderer, ParticleSystem } from '../../src/render/particleSystem.js';
+import { BspSurfacePipeline } from '../../../src/render/bspPipeline.js';
+import { SkyboxPipeline } from '../../../src/render/skybox.js';
+import { Md2Pipeline } from '../../../src/render/md2Pipeline.js';
+import { Md3Pipeline } from '../../../src/render/md3Pipeline.js';
+import { SpriteRenderer } from '../../../src/render/sprite.js';
+import { CollisionVisRenderer } from '../../../src/render/collisionVis.js';
+import { DebugRenderer } from '../../../src/render/debug.js';
+import { ParticleRenderer, ParticleSystem } from '../../../src/render/particleSystem.js';
 import { RandomGenerator } from '@quake2ts/shared';
 
 // Mock WebGL2RenderingContext

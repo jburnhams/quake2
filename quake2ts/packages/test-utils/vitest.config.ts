@@ -21,10 +21,10 @@ export default defineConfig({
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
       '@quake2ts/engine': path.resolve(__dirname, '../engine/src/index.ts'),
     },
-    // Optimize unit test performance with threads
+    // Optimize unit test performance with threads and no isolation
     ...(isUnit ? {
       pool: 'threads',
-      isolate: true, // Ensure test isolation
+      isolate: false, // test-utils has well-isolated tests, no global state pollution
     } : {}),
     // Force sequential execution for integration tests to prevent WebGPU native module crashes
     ...(isIntegration ? {
