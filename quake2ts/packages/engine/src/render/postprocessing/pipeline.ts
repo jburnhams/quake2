@@ -1,4 +1,4 @@
-import { ShaderProgram } from './shaderProgram.js';
+import { ShaderProgram } from '../shaderProgram.js';
 
 const VERTEX_SOURCE = `#version 300 es
 layout(location = 0) in vec2 a_position;
