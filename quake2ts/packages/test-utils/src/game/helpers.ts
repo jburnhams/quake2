@@ -247,12 +247,17 @@ export function createGameImportsAndEngine(overrides?: {
     soundIndex: Mock;
   }>;
 }) {
-  const defaultTrace = vi.fn().mockReturnValue({
+  // Default trace result - matches the pattern from original monster tests
+  const defaultTraceResult = {
     fraction: 1.0,
     endpos: { x: 0, y: 0, z: 0 },
     allsolid: false,
     startsolid: false,
-  });
+    plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+    ent: null,
+  };
+
+  const defaultTrace = vi.fn().mockReturnValue(defaultTraceResult);
 
   const imports = {
     trace: defaultTrace,
@@ -264,12 +269,7 @@ export function createGameImportsAndEngine(overrides?: {
   };
 
   const engine = {
-    trace: vi.fn().mockReturnValue({
-      fraction: 1.0,
-      endpos: { x: 0, y: 0, z: 0 },
-      allsolid: false,
-      startsolid: false,
-    }),
+    trace: vi.fn().mockReturnValue(defaultTraceResult),
     sound: vi.fn(),
     centerprintf: vi.fn(),
     modelIndex: vi.fn().mockReturnValue(1),
