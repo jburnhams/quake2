@@ -73,8 +73,9 @@ describe('MessageWriter', () => {
     it('writes packet entities', () => {
         const writer = new MessageWriter();
         const ent = createEmptyEntityState();
-        ent.number = 1;
-        ent.modelindex = 10;
+        const entMutable = ent as any;
+        entMutable.number = 1;
+        entMutable.modelIndex = 10;
 
         writer.writePacketEntities([ent], false, 34);
 
@@ -85,10 +86,15 @@ describe('MessageWriter', () => {
 
         // Entity 1
         const bitsByte = reader.readByte();
+        // Since modelIndex is set, it triggers U_MODEL (1<<11).
+        // U_MODEL is in second byte (0x08).
+        // So first byte MUST have U_MOREBITS1 (0x80) set.
         expect(bitsByte & 0x80).toBe(128); // Expect U_MOREBITS1
 
         // Read next byte
         const bitsByte2 = reader.readByte();
+        // U_MODEL is 0x800. bitsByte2 is (bits >> 8) & 0xFF.
+        // 0x800 >> 8 = 0x08.
         expect(bitsByte2 & 8).toBe(8);
 
         // Number

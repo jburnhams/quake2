@@ -26,3 +26,27 @@ export interface EntityState {
   readonly owner?: number;
   readonly oldFrame?: number;
 }
+
+export const createEmptyEntityState = (): EntityState => ({
+  number: 0,
+  origin: { x: 0, y: 0, z: 0 },
+  angles: { x: 0, y: 0, z: 0 },
+  modelIndex: 0,
+  frame: 0,
+  skinNum: 0,
+  effects: 0,
+  renderfx: 0,
+  solid: 0,
+  sound: 0,
+  event: 0,
+  alpha: 0,
+  scale: 0,
+  instanceBits: 0,
+  loopVolume: 0,
+  loopAttenuation: 0,
+  owner: 0,
+  oldFrame: 0,
+  modelIndex2: 0,
+  modelIndex3: 0,
+  modelIndex4: 0
+});
