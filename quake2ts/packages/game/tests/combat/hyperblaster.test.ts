@@ -8,23 +8,14 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('HyperBlaster', () => {
     it('should consume 1 cell and spawn a blaster bolt', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
