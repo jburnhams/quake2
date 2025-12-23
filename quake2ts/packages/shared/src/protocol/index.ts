@@ -1,4 +1,7 @@
 
+import { ProtocolPlayerState } from './player.js';
+import { EntityState } from './entityState.js';
+
 export * from './configstrings.js';
 export * from './contracts.js';
 export * from './cvar.js';
@@ -17,3 +20,16 @@ export * from './entityEvent.js';
 export * from './entity.js';
 export * from './entityState.js';
 export * from './player.js';
+
+export interface FrameData {
+    serverFrame: number;
+    deltaFrame: number;
+    surpressCount: number;
+    areaBytes: number;
+    areaBits: Uint8Array;
+    playerState: ProtocolPlayerState;
+    packetEntities: {
+        delta: boolean;
+        entities: EntityState[];
+    };
+}

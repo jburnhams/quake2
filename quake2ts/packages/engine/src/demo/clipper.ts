@@ -140,7 +140,10 @@ export class DemoClipper {
                 }
 
                 for (const deltaEnt of frame.packetEntities.entities) {
-                    if (deltaEnt.bits & U_REMOVE) {
+                    const deltaEntAny = deltaEnt as any;
+                    // 'bits' was stripped from shared EntityState, but parser attaches it dynamically.
+                    // We need to trust it is there if it came from parser.
+                    if (deltaEntAny.bits & U_REMOVE) {
                         newEntities.delete(deltaEnt.number);
                         continue;
                     }
@@ -155,7 +158,8 @@ export class DemoClipper {
                             prev = { ...baseline };
                         } else {
                             prev = createEmptyEntityState();
-                            prev.number = deltaEnt.number;
+                            const prevAny = prev as any;
+                            prevAny.number = deltaEnt.number;
                         }
                     } else {
                          // We have a previous state, clone it to avoid mutating history (though we don't keep history here)

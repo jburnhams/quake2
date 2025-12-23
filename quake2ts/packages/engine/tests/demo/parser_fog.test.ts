@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser, NetworkMessageHandler } from '../../src/demo/parser.js';
+import { NetworkMessageParser, NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser.js';
 import { BinaryStream } from '@quake2ts/shared';
 
 describe('NetworkMessageParser - svc_fog', () => {
@@ -59,6 +59,7 @@ describe('NetworkMessageParser - svc_fog', () => {
     };
 
     const parser = new NetworkMessageParser(stream, handler);
+    parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
     parser.parseMessage();
 
     expect(handler.onFog).toHaveBeenCalledTimes(1);

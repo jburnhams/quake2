@@ -109,14 +109,15 @@ export function createMockEntityState(
     overrides?: Partial<EntityState>
 ): EntityState {
     const state = createEmptyEntityState();
-    state.number = number;
-    state.modelindex = modelIndex;
-    state.origin.x = origin.x ?? 0;
-    state.origin.y = origin.y ?? 0;
-    state.origin.z = origin.z ?? 0;
+    const mutableState = state as any;
+    mutableState.number = number;
+    mutableState.modelIndex = modelIndex;
+    mutableState.origin.x = origin.x ?? 0;
+    mutableState.origin.y = origin.y ?? 0;
+    mutableState.origin.z = origin.z ?? 0;
 
     if (overrides) {
-        Object.assign(state, overrides);
+        Object.assign(mutableState, overrides);
     }
     return state;
 }

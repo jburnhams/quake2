@@ -28,6 +28,32 @@ export interface ProtocolPlayerState {
   team_id?: number;
 }
 
+export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
+  pm_type: 0,
+  origin: { x: 0, y: 0, z: 0 },
+  velocity: { x: 0, y: 0, z: 0 },
+  pm_time: 0,
+  pm_flags: 0,
+  gravity: 0,
+  delta_angles: { x: 0, y: 0, z: 0 },
+  viewoffset: { x: 0, y: 0, z: 0 },
+  viewangles: { x: 0, y: 0, z: 0 },
+  kick_angles: { x: 0, y: 0, z: 0 },
+  gun_index: 0,
+  gun_frame: 0,
+  gun_offset: { x: 0, y: 0, z: 0 },
+  gun_angles: { x: 0, y: 0, z: 0 },
+  blend: [0, 0, 0, 0],
+  fov: 0,
+  rdflags: 0,
+  stats: new Array(32).fill(0),
+  watertype: 0,
+  gunskin: 0,
+  gunrate: 0,
+  damage_blend: [0, 0, 0, 0],
+  team_id: 0
+});
+
 // Bitflags matching demo/parser.ts
 const PS_M_TYPE = (1 << 0);
 const PS_M_ORIGIN = (1 << 1);

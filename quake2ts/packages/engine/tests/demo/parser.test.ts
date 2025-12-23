@@ -67,35 +67,29 @@ describe('NetworkMessageParser', () => {
   });
 
   it('should parse svc_playerinfo', () => {
-    // Isolated playerinfo check using MessageWriter
-    // Note: Parser expects playerinfo only inside Frame usually, or strictly?
-    // parseMessage has case for playerinfo.
-
     const writer = new MessageWriter();
     const ps = createEmptyProtocolPlayerState();
     ps.pm_type = 1;
-    writer.writeCommand(ServerCommand.playerinfo, 0); // use Proto 0 for simpler check
+    // We must send ServerData first to switch protocol to Legacy/Quake2 (34)
+    // because BootstrapProtocolHandler might ignore or misunderstand playerinfo.
+    writer.writeServerData(34, 1, 0, "", 0, "");
+    // Use writeCommand with protocol 34
+    (writer as any).writeCommand(ServerCommand.playerinfo, 34);
     writer.writePlayerState(ps);
 
     const stream = createStreamFromWriter(writer);
-    // Mock handler with getPlayerState? No, parsePlayerState just parses and returns logic usually
-    // But NetworkMessageParser.parsePlayerState() actually *consumes* it.
-    // It doesn't call a handler method for playerinfo directly, it returns the state.
-    // Wait, parseMessage case for playerinfo calls `this.parsePlayerState()`.
-    // Does it do anything with the result?
-    // It calls `this.parsePlayerState()`, ignoring return value.
-    // So isolated playerinfo is effectively a no-op in parseMessage loop unless strict check fails.
-
     const parser = new NetworkMessageParser(stream);
-    parser.parseMessage();
+    parser.parseMessage(); // ServerData
+    parser.parseMessage(); // PlayerInfo
     expect(stream.hasMore()).toBe(false);
   });
 
   it('should parse svc_packetentities', () => {
       const writer = new MessageWriter();
       const ent = createEmptyEntityState();
-      ent.number = 1;
-      writer.writePacketEntities([ent], false, 0); // Proto 0
+      const entMutable = ent as any;
+      entMutable.number = 1;
+      writer.writePacketEntities([ent], false, 34); // Proto 34
 
       const stream = createStreamFromWriter(writer);
       const handler = {
@@ -103,6 +97,8 @@ describe('NetworkMessageParser', () => {
       } as unknown as NetworkMessageHandler;
 
       const parser = new NetworkMessageParser(stream, handler);
+      // Set protocol to 34 so packetentities (18) is recognized
+      parser.setProtocolVersion(34);
       parser.parseMessage();
 
       expect(handler.onFrame).toHaveBeenCalled();
@@ -119,6 +115,8 @@ describe('NetworkMessageParser', () => {
       } as unknown as NetworkMessageHandler;
 
       const parser = new NetworkMessageParser(stream, handler);
+      // Set protocol to 34
+      parser.setProtocolVersion(34);
       parser.parseMessage();
 
       // parseTempEntity always passes initialized Vec3s for pos2 and dir
@@ -140,6 +138,8 @@ describe('NetworkMessageParser', () => {
       // Manual bad byte
       const stream = new BinaryStream(new Uint8Array([255]));
       const parser = new NetworkMessageParser(stream);
+      // Set protocol to Rerelease to ensure 255 throws in strict mode, or returns in non-strict
+      // Wait, 255 is bad.
       parser.parseMessage();
       expect(stream.hasMore()).toBe(false);
   });

@@ -105,9 +105,9 @@ describe('Streaming Parser E2E', () => {
             .endBlock();
 
         // Block 3: ConfigString
-        // Protocol 34 svc_configstring is 13.
+        // Protocol 34 svc_configstring is 14.
         builder.startBlock()
-            .writeByte(13) // svc_configstring (Wire 13)
+            .writeByte(14) // svc_configstring (Wire 14)
             .writeShort(1)
             .writeString("gamename")
             .endBlock();
@@ -132,14 +132,13 @@ describe('Streaming Parser E2E', () => {
             onReconnect: vi.fn(),
             onDownload: vi.fn(),
             onStuffText: vi.fn(),
-            onStuffText: vi.fn(),
         };
 
         const parser = new NetworkMessageParser(demoStream.getBuffer(), handler, true);
         parser.parseMessage();
 
         expect(handler.onServerData).toHaveBeenCalledTimes(1);
-        expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 0, "maps/test");
+        expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 0, "maps/test", undefined, undefined);
 
         expect(handler.onConfigString).toHaveBeenCalledTimes(1);
         expect(handler.onConfigString).toHaveBeenCalledWith(1, "gamename");
@@ -160,9 +159,10 @@ describe('Streaming Parser E2E', () => {
             .endBlock();
 
         // Split Print command
+        // svc_print is 11 in Protocol 34
         // Block 2: Command + Level + Part of string
         builder.startBlock()
-            .writeByte(ServerCommand.print)
+            .writeByte(11) // svc_print
             .writeByte(1) // Level
             .writeBytes([ 'H'.charCodeAt(0), 'e'.charCodeAt(0) ])
             .endBlock();
@@ -190,6 +190,7 @@ describe('Streaming Parser E2E', () => {
             onDisconnect: vi.fn(),
             onReconnect: vi.fn(),
             onDownload: vi.fn(),
+            onStuffText: vi.fn(),
         };
 
         const parser = new NetworkMessageParser(demoStream.getBuffer(), handler, true);

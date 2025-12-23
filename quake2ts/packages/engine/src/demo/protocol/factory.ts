@@ -100,5 +100,5 @@ export function createProtocolHandler(version: number): ProtocolHandler {
     }
     // Default to Legacy for 0 or older versions if not strictly 34/2023?
     // Or default to Legacy for now to support existing tests/demos.
-    return new LegacyProtocolHandler();
+    return new LegacyProtocolHandler(version);
 }
