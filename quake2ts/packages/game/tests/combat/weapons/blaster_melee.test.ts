@@ -10,6 +10,7 @@ import {
     FRAME_BLASTER_IDLE_LAST
 } from '../../../src/combat/weapons/frames.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Blaster Alt-Fire (Melee)', () => {
     let game: any;
@@ -18,23 +19,8 @@ describe('Blaster Alt-Fire (Melee)', () => {
     let createBlasterBoltSpy: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
-
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        // Default trace hits nothing (fraction 1.0)
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast, sound }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         sys = game.entities;

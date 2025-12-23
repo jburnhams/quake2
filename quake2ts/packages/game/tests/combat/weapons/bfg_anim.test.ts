@@ -13,6 +13,7 @@ import {
     FRAME_BFG_IDLE_LAST,
     FRAME_BFG_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 // BFG frames:
 // FRAME_ACTIVATE_LAST = 8
@@ -27,21 +28,9 @@ describe('BFG10K Animation', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
+        const { imports, engine } = createGameImportsAndEngine();
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         sys = game.entities;
