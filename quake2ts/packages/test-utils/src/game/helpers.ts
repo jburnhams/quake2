@@ -213,3 +213,69 @@ export function createPhysicsTestContext(): TestContext {
 export function createEntity(): Entity {
   return new Entity(1);
 }
+
+/**
+ * Creates mock imports and engine for use with createGame() from @quake2ts/game.
+ * This is a convenience helper that provides all the commonly mocked functions
+ * needed to instantiate a real Game instance in tests.
+ *
+ * @param overrides Optional overrides for specific mock functions
+ * @returns An object containing both imports and engine mocks
+ *
+ * @example
+ * ```typescript
+ * import { createGame } from '@quake2ts/game';
+ * import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+ *
+ * const { imports, engine } = createGameImportsAndEngine();
+ * const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+ * ```
+ */
+export function createGameImportsAndEngine(overrides?: {
+  imports?: Partial<{
+    trace: Mock;
+    pointcontents: Mock;
+    linkentity: Mock;
+    multicast: Mock;
+    unicast: Mock;
+  }>;
+  engine?: Partial<{
+    trace: Mock;
+    sound: Mock;
+    centerprintf: Mock;
+    modelIndex: Mock;
+    soundIndex: Mock;
+  }>;
+}) {
+  const defaultTrace = vi.fn().mockReturnValue({
+    fraction: 1.0,
+    endpos: { x: 0, y: 0, z: 0 },
+    allsolid: false,
+    startsolid: false,
+  });
+
+  const imports = {
+    trace: defaultTrace,
+    pointcontents: vi.fn().mockReturnValue(0),
+    linkentity: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    ...overrides?.imports,
+  };
+
+  const engine = {
+    trace: vi.fn().mockReturnValue({
+      fraction: 1.0,
+      endpos: { x: 0, y: 0, z: 0 },
+      allsolid: false,
+      startsolid: false,
+    }),
+    sound: vi.fn(),
+    centerprintf: vi.fn(),
+    modelIndex: vi.fn().mockReturnValue(1),
+    soundIndex: vi.fn().mockReturnValue(1),
+    ...overrides?.engine,
+  };
+
+  return { imports, engine };
+}

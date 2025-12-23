@@ -7,22 +7,14 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Machinegun', () => {
     it('should consume 1 bullet and deal damage', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -41,7 +33,7 @@ describe('Machinegun', () => {
         target.health = 100;
         target.takedamage = 1;
 
-        trace.mockReturnValue({
+        imports.trace.mockReturnValue({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
@@ -50,7 +42,7 @@ describe('Machinegun', () => {
         fire(game, player, WeaponId.Machinegun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 source + 1 bullet
+        expect(imports.trace).toHaveBeenCalledTimes(2); // 1 source + 1 bullet
         expect(T_Damage).toHaveBeenCalled();
     });
 });
