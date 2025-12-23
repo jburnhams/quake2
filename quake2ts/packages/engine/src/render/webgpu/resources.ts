@@ -15,6 +15,31 @@ export function setResourceTracker(tracker: ResourceTracker) {
   globalTracker = tracker;
 }
 
+export class TextureCache {
+  private cache = new Map<string, Texture2D>();
+  private device: GPUDevice;
+
+  constructor(device: GPUDevice) {
+      this.device = device;
+  }
+
+  get(name: string): Texture2D | undefined {
+      return this.cache.get(name);
+  }
+
+  // Method to add textures (used by asset loaders)
+  set(name: string, texture: Texture2D) {
+      this.cache.set(name, texture);
+  }
+
+  destroy() {
+      for (const texture of this.cache.values()) {
+          texture.destroy();
+      }
+      this.cache.clear();
+  }
+}
+
 // Default resource tracker implementation
 export class GPUResourceTracker implements ResourceTracker {
   private _totalBufferMemory = 0;
