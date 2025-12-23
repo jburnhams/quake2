@@ -61,6 +61,7 @@ describe('Renderer Memory Tracking', () => {
     let renderer: Renderer;
 
     beforeEach(() => {
+        vi.restoreAllMocks(); // Use restore instead of clear to reset mock implementations
         vi.clearAllMocks();
         // Since createRenderer is a factory that internally instantiates pipelines and profiler,
         // we test the public API.
@@ -69,7 +70,8 @@ describe('Renderer Memory Tracking', () => {
 
     it('should track shader memory', () => {
         const memory = renderer.getMemoryUsage();
-        // Check that shaderBytes is greater than 0, assuming shaders were compiled
+        // Check that shaderBytes is a valid number and greater than 0
+        expect(Number.isFinite(memory.shadersBytes)).toBe(true);
         expect(memory.shadersBytes).toBeGreaterThan(0);
     });
 
