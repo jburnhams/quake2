@@ -37,7 +37,7 @@ This section covers migration of server-specific test utilities including networ
 - [x] **1.5** Add `createMockNetworkAddress()` factory
   - Signature: `createMockNetworkAddress(ip?: string, port?: number): NetworkAddress`
 
-- [ ] **1.6** Update imports in `server/tests/` directory
+- [x] **1.6** Update imports in `server/tests/` directory
   - Replace `import { MockTransport } from './mocks/transport'`
   - With `import { createMockTransport } from '@quake2ts/test-utils'`
   - Estimated files: ~6
@@ -48,7 +48,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 2. Create Server State Management Mocks (HIGH PRIORITY)
 
-**Status:** Complete
+**Status:** Partial
 **Dependencies:** Section 19-3 Task 2 (game context helpers)
 
 - [x] **2.1** Create `test-utils/src/server/mocks/state.ts` file
@@ -69,7 +69,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `createMockGameState(overrides?: Partial<GameState>): GameState`
   - Include: levelName, time, entities, clients
 
-- [ ] **2.6** Cleanup server state tests in `server/tests/state/` directory
+- [x] **2.6** Cleanup server state tests in `server/tests/state/` directory
   - Replace inline server mocks
   - Estimated files: ~8
 
@@ -77,7 +77,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 3. Create Connection/Handshake Mocks (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** Partial
 **Dependencies:** Task 1 (transport mocks)
 
 - [x] **3.1** Create `test-utils/src/server/mocks/connection.ts` file
@@ -98,7 +98,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `createMockUserInfo(overrides?: Partial<UserInfo>): UserInfo`
   - Include: name, skin, model, fov, hand
 
-- [ ] **3.6** Cleanup connection tests in `server/tests/connection/` directory
+- [x] **3.6** Cleanup connection tests in `server/tests/connection/` directory
   - Replace inline connection mocks
   - Estimated files: ~6
 
@@ -106,7 +106,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 4. Create Multiplayer Simulation Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** Partial
 **Dependencies:** Task 2 (server state), Section 19-3 Task 1 (entity factories)
 
 - [x] **4.1** Create `test-utils/src/server/helpers/multiplayer.ts` file
@@ -131,7 +131,7 @@ This section covers migration of server-specific test utilities including networ
   - Signature: `simulatePlayerInput(client: ServerClient, input: PlayerInput): void`
   - Inject player input into server simulation
 
-- [ ] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
+- [x] **4.7** Cleanup multiplayer tests in `server/tests/multiplayer/` directory
   - Replace inline simulation code
   - Note: Dedicated test files updated in `server/tests/` as subdirectories were not present.
   - Estimated files: ~5
@@ -140,7 +140,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 5. Create Client Snapshot Utilities (MEDIUM PRIORITY)
 
-**Status:** Complete
+**Status:** Partial
 **Dependencies:** Task 2 (server state), Section 19-3 Task 8 (game state factories)
 
 - [x] **5.1** Create `test-utils/src/server/helpers/snapshot.ts` file
@@ -170,7 +170,7 @@ This section covers migration of server-specific test utilities including networ
 
 ### 6. Create Server Command/RCon Mocks (LOW PRIORITY)
 
-**Status:** Complete
+**Status:** Partial
 **Dependencies:** None
 
 - [x] **6.1** Create `test-utils/src/server/mocks/commands.ts` file

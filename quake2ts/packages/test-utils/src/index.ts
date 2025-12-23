@@ -85,3 +85,4 @@ export type {
     ComparisonOptions,
     SnapshotTestOptions
 } from './visual/snapshots.js';
+export type { MockCollisionEntityIndex } from './server/mocks/physics.js';
