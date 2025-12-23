@@ -45,12 +45,12 @@ This section covers migration of client-specific test utilities including input 
 - [x] **1.7** Add `createMockWheelEvent()` factory
   - Signature: `createMockWheelEvent(deltaX?: number, deltaY?: number): WheelEvent`
 
-- [x] **1.8** Update imports in `tests/src/` directory
+- [] **1.8** Update imports in `tests/src/` directory
   - Replace `import { MockPointerLock, InputInjector } from './mocks/input'`
   - With `import { createMockPointerLock, createInputInjector } from '@quake2ts/test-utils'`
   - Estimated files: ~5
 
-- [x] **1.9** Update imports in `client/tests/input/` directory
+- [] **1.9** Update imports in `client/tests/input/` directory
   - Same pattern for any input tests
   - Estimated files: ~8
 
@@ -86,7 +86,7 @@ This section covers migration of client-specific test utilities including input 
   - Signature: `simulateCameraMovement(camera: Camera, input: CameraInput, deltaTime: number): Camera`
   - Simulate camera movement based on input
 
-- [x] **2.7** Cleanup view tests in `client/tests/view/` directory
+- [] **2.7** Cleanup view tests in `client/tests/view/` directory
   - Replace inline camera/view mocks
   - Estimated files: ~12
   - **Note:** Applied to `demo/camera.test.ts` and `demo-render-integration.test.ts`. Further cleanup can be done incrementally.
@@ -114,7 +114,7 @@ This section covers migration of client-specific test utilities including input 
 - [x] **3.5** Add `createMockNotification()` factory
   - Signature: `createMockNotification(type: string, message: string, duration?: number): Notification`
 
-- [x] **3.6** Cleanup HUD tests in `client/tests/hud/` directory
+- [] **3.6** Cleanup HUD tests in `client/tests/hud/` directory
   - Replace inline HUD mocks
   - Estimated files: ~8
 
@@ -204,7 +204,7 @@ This section covers migration of client-specific test utilities including input 
 - [x] **6.6** Add `simulatePacketLoss()` helper
   - Signature: `simulatePacketLoss(messages: Message[], lossPercent: number): Message[]`
 
-- [x] **6.7** Cleanup network tests in `client/tests/network/` directory
+- [] **6.7** Cleanup network tests in `client/tests/network/` directory
   - Replace inline network mocks
   - Estimated files: ~8
   - **Note:** Updated `clientConnection.test.ts`, `connection.test.ts`, and `serverBrowser.test.ts`. Also added `MockNetDriver` to `test-utils`.
