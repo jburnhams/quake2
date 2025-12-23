@@ -10,28 +10,24 @@ import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import * as damage from '../../src/combat/damage.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Plasma Beam (Heatbeam)', () => {
     it('should fire a beam, consume ammo, and deal damage', () => {
-        const trace = vi.fn().mockReturnValue({
+        const customTrace = vi.fn().mockReturnValue({
             fraction: 0.5,
             endpos: { x: 100, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
             ent: { takedamage: true }
         });
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: customTrace,
+            },
+        });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -55,7 +51,7 @@ describe('Plasma Beam (Heatbeam)', () => {
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
 
         // Trace call
-        expect(trace).toHaveBeenCalled();
+        expect(customTrace).toHaveBeenCalled();
 
         // Damage call
         expect(T_Damage).toHaveBeenCalledWith(
@@ -74,7 +70,7 @@ describe('Plasma Beam (Heatbeam)', () => {
         );
 
         // Visual effects
-        expect(multicast).toHaveBeenCalledWith(
+        expect(imports.multicast).toHaveBeenCalledWith(
             expect.anything(),
             expect.anything(),
             ServerCommand.temp_entity,
@@ -83,7 +79,7 @@ describe('Plasma Beam (Heatbeam)', () => {
             expect.anything()
         );
 
-         expect(multicast).toHaveBeenCalledWith(
+         expect(imports.multicast).toHaveBeenCalledWith(
             expect.anything(),
             expect.anything(),
             ServerCommand.temp_entity,
@@ -97,11 +93,8 @@ describe('Plasma Beam (Heatbeam)', () => {
     });
 
     it('should not fire if out of ammo', () => {
-        const trace = vi.fn();
-        const multicast = vi.fn();
-        const engine = { trace, sound: vi.fn(), centerprintf: vi.fn(), modelIndex: vi.fn() };
-        const game = createGame({ trace, multicast }, engine, { gravity: { x: 0, y: 0, z: 0 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: 0 } });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -122,6 +115,6 @@ describe('Plasma Beam (Heatbeam)', () => {
         fire(game, player, WeaponId.PlasmaBeam);
 
         // P_ProjectSource calls trace, so we don't expect 'not.toHaveBeenCalled()' for trace
-        expect(multicast).not.toHaveBeenCalled();
+        expect(imports.multicast).not.toHaveBeenCalled();
     });
 });

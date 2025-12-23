@@ -9,23 +9,14 @@ import { Entity } from '../../src/entities/entity.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 		game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -48,24 +39,19 @@ describe('Blaster', () => {
     });
 
     it('should travel at the correct speed', () => {
-        const trace = vi.fn().mockImplementation((start, mins, maxs, end) => {
-            return {
-                fraction: 1.0,
-                endpos: end,
-                allsolid: false,
-                startsolid: false,
-            };
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: vi.fn().mockImplementation((start, mins, maxs, end) => {
+                    return {
+                        fraction: 1.0,
+                        endpos: end,
+                        allsolid: false,
+                        startsolid: false,
+                    };
+                }),
+            },
         });
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';

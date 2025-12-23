@@ -15,6 +15,7 @@ import {
   SPAWNFLAG_NOT_DEATHMATCH,
 } from '../../src/entities/entity.js';
 import { createTestContext } from '../test-helpers.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Entity Spawn Filtering', () => {
   let context: ReturnType<typeof createTestContext>;
@@ -31,8 +32,8 @@ describe('Entity Spawn Filtering', () => {
   });
 
   const createOptions = (skill: number, deathmatch: boolean): SpawnOptions => {
-      // Mock engine and imports
-      const engine = {};
+      // Mock engine and imports using helper
+      const { engine } = createGameImportsAndEngine();
       // Create system manually to pass skill/deathmatch
       sys = new EntitySystem(engine as any, undefined, undefined, undefined, undefined, deathmatch, skill);
       sys.setSpawnRegistry(registry);

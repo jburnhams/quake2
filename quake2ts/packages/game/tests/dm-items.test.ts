@@ -3,6 +3,7 @@ import { EntitySystem } from '../src/entities/system.js';
 import { createGame } from '../src/index.js';
 import { handleItemPickup } from '../src/entities/items/common.js';
 import { Solid } from '../src/entities/entity.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Item Respawn', () => {
     let game: any;
@@ -10,14 +11,9 @@ describe('Item Respawn', () => {
     let player: any;
 
     beforeEach(() => {
-        const engine = {
-            modelIndex: vi.fn().mockReturnValue(1),
-            soundIndex: vi.fn(),
-        } as any;
+        const { imports, engine } = createGameImportsAndEngine();
 
-        game = createGame({
-            multicast: vi.fn()
-        }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
 
         item = game.entities.spawn();
         item.classname = 'item_health';

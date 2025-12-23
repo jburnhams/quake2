@@ -8,6 +8,7 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventor
 import { hyperBlasterThink } from '../../../src/combat/weapons/hyperblaster.js';
 import { getWeaponState } from '../../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('HyperBlaster Alt-Fire', () => {
     let game: any;
@@ -15,22 +16,8 @@ describe('HyperBlaster Alt-Fire', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const linkentity = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity, multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         sys = game.entities;

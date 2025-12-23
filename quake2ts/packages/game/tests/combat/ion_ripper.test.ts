@@ -11,24 +11,14 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { MulticastType } from '../../src/imports.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Ion Ripper', () => {
     it('should fire a projectile, consume ammo, and set up bounce logic', () => {
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
-        const modelIndex = vi.fn().mockReturnValue(1);
         const createIonRipper = vi.spyOn(projectiles, 'createIonRipper');
 
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex,
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -78,7 +68,7 @@ describe('Ion Ripper', () => {
         touch!(projectile!, null, { normal: { x: 0, y: 0, z: 1 } } as any);
 
         expect(projectile!.count).toBe(1);
-        expect(sound).toHaveBeenCalledWith(projectile!, 0, 'weapons/ripphit.wav', 1, 1, 0);
+        expect(engine.sound).toHaveBeenCalledWith(projectile!, 0, 'weapons/ripphit.wav', 1, 1, 0);
 
         // Max bounces check
         projectile!.count = 5;

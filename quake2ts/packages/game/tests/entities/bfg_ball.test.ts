@@ -9,22 +9,12 @@ import { createGame } from '../../src/index.js';
 import { MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('BFG Ball Projectile', () => {
     it('should have correct initial properties', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -52,20 +42,11 @@ describe('BFG Ball Projectile', () => {
     });
 
     it('should fire lasers at nearby targets during flight', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
+        const { imports, engine } = createGameImportsAndEngine();
         // NOTE: areaEdicts default is null, meaning fallback to full scan, which is what we want here
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -93,7 +74,7 @@ describe('BFG Ball Projectile', () => {
 
         // Mock trace for both line-of-sight check and piercing laser
         let traceCallCount = 0;
-        trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
+        imports.trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
             traceCallCount++;
 
             // First call: line-of-sight check (should return clear)
@@ -167,19 +148,10 @@ describe('BFG Ball Projectile', () => {
     });
 
     it('should not fire lasers at targets without line of sight', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -204,7 +176,7 @@ describe('BFG Ball Projectile', () => {
         game.entities.finalizeSpawn(target);
 
         // Mock trace to return obstruction (blocked by wall)
-        trace.mockReturnValue({
+        imports.trace.mockReturnValue({
             ent: game.entities.world,
             fraction: 0.5,
             endpos: { x: 100, y: 0, z: 0 },
@@ -242,20 +214,11 @@ describe('BFG Ball Projectile', () => {
     });
 
     it('should use correct damage in deathmatch mode', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
+        const { imports, engine } = createGameImportsAndEngine();
         // Create game in deathmatch mode
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -281,7 +244,7 @@ describe('BFG Ball Projectile', () => {
 
         // Mock trace for line-of-sight and laser
         let traceCallCount = 0;
-        trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
+        imports.trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
             traceCallCount++;
             if (traceCallCount === 1) {
                 return {
@@ -347,18 +310,8 @@ describe('BFG Ball Projectile', () => {
     });
 
     it('should restore entity solidity after piercing', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
@@ -386,7 +339,7 @@ describe('BFG Ball Projectile', () => {
 
         // Mock trace to hit target
         let traceCallCount = 0;
-        trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
+        imports.trace.mockImplementation((start, mins, maxs, end, ignore, mask) => {
             traceCallCount++;
 
             // Line of sight check

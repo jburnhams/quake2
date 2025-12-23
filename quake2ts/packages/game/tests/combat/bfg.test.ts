@@ -10,23 +10,14 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageMod } from '../../src/combat/damageMods.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('BFG10K', () => {
     it('should consume 50 cells and spawn a projectile', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -48,20 +39,11 @@ describe('BFG10K', () => {
     });
 
     it('should deal secondary laser damage on impact', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -81,7 +63,7 @@ describe('BFG10K', () => {
         const bfgBall = game.entities.find(e => e.classname === 'bfg blast')!;
 
         // Mock trace for visibility check (from player to target)
-        trace.mockReturnValue({
+        imports.trace.mockReturnValue({
              ent: target,
              fraction: 1.0,
              endpos: target.origin,
@@ -100,8 +82,8 @@ describe('BFG10K', () => {
 
     it('should deal 500 damage in single-player', () => {
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
         const player = game.entities.spawn();
         player.client = {
@@ -116,8 +98,8 @@ describe('BFG10K', () => {
 
     it('should deal 200 damage in deathmatch', () => {
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
         const player = game.entities.spawn();
         player.client = {

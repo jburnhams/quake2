@@ -4,6 +4,7 @@ import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('monster_flipper', () => {
   let system: EntitySystem;
@@ -11,24 +12,7 @@ describe('monster_flipper', () => {
 
   beforeEach(() => {
     // Mock game engine and imports
-    const engine = {
-      sound: vi.fn(),
-      modelIndex: vi.fn().mockReturnValue(1),
-    };
-    const imports = {
-      trace: vi.fn().mockReturnValue({
-        allsolid: false,
-        startsolid: false,
-        fraction: 1,
-        endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-        ent: null,
-      }),
-      pointcontents: vi.fn().mockReturnValue(0),
-      linkentity: vi.fn(),
-      multicast: vi.fn(),
-      unicast: vi.fn(),
-    };
+    const { imports, engine } = createGameImportsAndEngine();
 
     const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 }, skill: 1 });
     system = (gameExports as any).entities;

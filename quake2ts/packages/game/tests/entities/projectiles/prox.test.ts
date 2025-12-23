@@ -8,6 +8,7 @@ import { createGame } from '../../../src/index.js';
 import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
 import * as damage from '../../../src/combat/damage.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Prox Mine', () => {
     let trace: any;
@@ -22,41 +23,32 @@ describe('Prox Mine', () => {
     });
 
     const createTestGame = () => {
-        trace = vi.fn().mockReturnValue({
-            fraction: 1.0,
-            ent: null
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: vi.fn().mockReturnValue({
+                    fraction: 1.0,
+                    ent: null
+                }),
+                linkentity: vi.fn((ent) => {
+                    // Mock linkentity to set absmin/absmax for findInBox
+                    ent.absmin = {
+                        x: ent.origin.x + (ent.mins?.x || -16),
+                        y: ent.origin.y + (ent.mins?.y || -16),
+                        z: ent.origin.z + (ent.mins?.z || -24),
+                    };
+                    ent.absmax = {
+                        x: ent.origin.x + (ent.maxs?.x || 16),
+                        y: ent.origin.y + (ent.maxs?.y || 16),
+                        z: ent.origin.z + (ent.maxs?.z || 32),
+                    };
+                }),
+            }
         });
-        const pointcontents = vi.fn().mockReturnValue(0);
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
-        const modelIndex = vi.fn().mockReturnValue(1);
 
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex,
-        };
+        trace = imports.trace;
 
         const game = createGame({
-            trace,
-            pointcontents,
-            linkentity: (ent) => {
-                // Mock linkentity to set absmin/absmax for findInBox
-                ent.absmin = {
-                    x: ent.origin.x + (ent.mins?.x || -16),
-                    y: ent.origin.y + (ent.mins?.y || -16),
-                    z: ent.origin.z + (ent.mins?.z || -24),
-                };
-                ent.absmax = {
-                    x: ent.origin.x + (ent.maxs?.x || 16),
-                    y: ent.origin.y + (ent.maxs?.y || 16),
-                    z: ent.origin.z + (ent.maxs?.z || 32),
-                };
-            },
-            multicast,
-            unicast,
+            ...imports,
             areaEdicts: vi.fn().mockReturnValue(null) // Use fallback iteration
         }, engine, { gravity: { x: 0, y: 0, z: 0 }, deathmatch: true }); // Disable gravity, enable deathmatch to skip auto-spawn player
 

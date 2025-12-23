@@ -4,23 +4,12 @@ import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
 import { Entity, Solid } from '../src/entities/entity.js';
 import { createPlayerInventory } from '../src/inventory/playerInventory.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
-    const trace = vi.fn();
-    const pointcontents = vi.fn();
-    const linkentity = vi.fn();
-    const multicast = vi.fn();
-    const unicast = vi.fn();
-    const engine = {
-        trace: vi.fn(),
-        sound: vi.fn(),
-        centerprintf: vi.fn(),
-    };
-    const optionsSP = { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false };
-    const optionsDM = { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true };
-
     it('should NOT schedule respawn in Single Player mode', () => {
-        const game = createGame({ trace, pointcontents, linkentity, multicast, unicast }, engine, optionsSP);
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
 
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
@@ -54,7 +43,8 @@ describe('Item Respawn Logic', () => {
     });
 
     it('should schedule respawn in Deathmatch mode', () => {
-        const game = createGame({ trace, pointcontents, linkentity, multicast, unicast }, engine, optionsDM);
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
 
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');

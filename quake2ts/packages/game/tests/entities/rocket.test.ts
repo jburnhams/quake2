@@ -7,23 +7,14 @@ import { createRocket } from '../../src/entities/projectiles.js';
 import { createGame } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Rocket Projectile', () => {
     it('should have correct initial properties and explode on touch', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const playerStart = game.entities.spawn();
