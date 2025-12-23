@@ -15,7 +15,7 @@ import {
 import { mat4 } from 'gl-matrix';
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
-import { PostProcessPipeline } from './postProcess.js';
+import { PostProcessPipeline } from './postprocessing/pipeline.js';
 import { BloomPipeline } from './bloom.js';
 
 export { FrameRenderStats, FrameRenderOptions };
