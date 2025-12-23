@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated';
+import { DedicatedServer } from '../src/dedicated.js';
 import { Entity, Solid, createGame, GameExports } from '@quake2ts/game';
-import { createMockGameExports } from '@quake2ts/test-utils';
+import { createMockGameExports, createMockCollisionEntityIndex } from '@quake2ts/test-utils';
 
 vi.mock('@quake2ts/game', async (importOriginal) => {
     const actual = await importOriginal();
@@ -53,12 +53,7 @@ describe('Lag Compensation', () => {
         // start() is async and does file io.
         // We manually inject the game instance to bypass start()
         (server as any).game = mockGame;
-        (server as any).entityIndex = {
-             link: vi.fn(),
-             unlink: vi.fn(),
-             trace: vi.fn(),
-             gatherTriggerTouches: vi.fn()
-        };
+        (server as any).entityIndex = createMockCollisionEntityIndex();
     });
 
     it('should record entity history', () => {
