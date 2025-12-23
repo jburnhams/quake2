@@ -5,12 +5,12 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 ## Testing & Reliability
 
 - [x] **Export Test Utilities** (Done)
-    - [x] Create a `@quake2ts/test-utils` package or export. (Package created, build configuration needs fixing)
+    - [x] Create a `@quake2ts/test-utils` package or export. (Package created and build configuration fixed)
     - [x] Include mocks for `NetChan`, `BinaryStream`, `BinaryWriter`.
     - [x] Include factories for `GameStateSnapshot`, `PlayerState`, `EntityState` with valid default values.
     - [x] **Goal**: Reduce boilerplate mock setup in application unit tests.
 
-- [ ] **Interface Stability**
+- [x] **Interface Stability**
     - [x] **`GameStateSnapshot` Consistency**: Investigated, but `NetSnapshot` type was not found in the codebase. This task is currently not applicable.
     - [x] **Explicit exports for `cgame` types**: `ClientPrediction`, `interpolatePredictionState`, `defaultPredictionState` and related types are exported from `@quake2ts/client`.
 
@@ -42,25 +42,25 @@ This document outlines suggested improvements for the `quake2ts` library to faci
     - [x] **`findByExtension`**: Support array of extensions or regex.
     - [x] **`mountPak`**: Return the `PakArchive` instance handle for easier unmounting reference.
 
-- [ ] **`InputController`**
+- [x] **`InputController`**
     - [x] Expose `getBoundKeys(command)` to reverse lookup bindings for UI display.
 
 ## Testing Improvements (From Implementation Experience)
 
-- [ ] **Protocol & Network Testing**
+- [x] **Protocol & Network Testing**
     - [x] **`ClientConnection` Class**: Encapsulate the server message parsing loop (switch-case on `ServerCommand`) into a testable class in the library.
         - `class ClientConnection { handleMessage(data: ArrayBuffer): void; on(event, callback): void; }`
         - Allows testing protocol handling without mocking `WebSocket` or `NetChan` internals.
     - [x] **`MockNetworkTransport`**: Export a mock transport layer that implements `NetChan` interfaces but records packets for inspection.
 
-- [ ] **Rendering & WebGL**
+- [x] **Rendering & WebGL**
     - [x] **`TestRenderer`**: Provide a headless or mock WebGL2 context/renderer in `@quake2ts/test-utils` that mirrors the engine's expectations.
     - [x] **`PostProcessing` Pipeline**: Move `PostProcessor` logic (quad rendering, shader compilation) into `quake2ts/engine`'s render system to avoid raw WebGL calls in the app.
 
-- [ ] **Input Management**
+- [x] **Input Management**
     - [x] **InputController Lifecycle**: Confirmed `InputController` is already a standard class.
 
-- [ ] **Protocol Constants**
+- [x] **Protocol Constants**
     - [x] **Export ConfigString Constants**: Export constants like `CS_NAME` (0), `CS_MAXCLIENTS` (30), `CS_MAPNAME`, etc., from `@quake2ts/shared`.
     - [x] **Reason**: Required to implement server query logic and correctly parse `ServerCommand.configstring` in `NetworkService` without hardcoding magic numbers. (Note: `CS_MAPNAME` is not a standard protocol constant and was omitted. `CS_MAXCLIENTS` exports as 60 to match the Rerelease protocol used by this engine.)
 
