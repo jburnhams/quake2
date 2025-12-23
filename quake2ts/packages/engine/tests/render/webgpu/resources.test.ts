@@ -7,10 +7,8 @@ import {
   Texture2D,
   TextureCubeMap,
   setResourceTracker,
-  ResourceTracker,
   Sampler,
   createLinearSampler,
-  createNearestSampler,
   ShaderModule,
   RenderPipeline,
   ComputePipeline,
@@ -19,48 +17,94 @@ import {
   BindGroupBuilder,
   createRenderPassDescriptor,
   GPUResourceTracker
-} from '../../../src/render/webgpu/resources.js';
-import { createMockGPUDevice, setupWebGPUMocks } from '../../../../test-utils/src/engine/mocks/webgpu.js';
+} from '../../../src/render/webgpu/resources';
+import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
-describe('WebGPU Resources', () => {
-  let device: GPUDevice;
-  let tracker: ResourceTracker;
+describe('WebGPU Buffer Resources', () => {
+  let mockDevice: GPUDevice;
+  let mockQueue: GPUQueue;
 
   beforeEach(() => {
-    setupWebGPUMocks();
-    device = createMockGPUDevice();
+    const { mockDevice: device } = setupWebGPUMocks();
+    mockDevice = device;
+    mockQueue = device.queue;
 
-    // Mock tracker
-    tracker = {
-      trackBuffer: vi.fn(),
-      trackTexture: vi.fn(),
-      untrackBuffer: vi.fn(),
-      untrackTexture: vi.fn()
-    };
-    setResourceTracker(tracker);
+    setResourceTracker({
+        trackBuffer: vi.fn(),
+        trackTexture: vi.fn(),
+        untrackBuffer: vi.fn(),
+        untrackTexture: vi.fn()
+    } as any);
   });
 
   describe('VertexBuffer', () => {
-    it('creates buffer with correct usage', () => {
-      const buffer = new VertexBuffer(device, { size: 1024, label: 'test-vertex' });
+    it('creates buffer with correct usage flags', () => {
+      const buffer = new VertexBuffer(mockDevice, { size: 1024, label: 'test-vertex' });
 
-      expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockDevice.createBuffer).toHaveBeenCalledWith({
         size: 1024,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        label: 'test-vertex'
-      }));
+        label: 'test-vertex',
+        mappedAtCreation: undefined
+      });
       expect(buffer.size).toBe(1024);
-      expect(tracker.trackBuffer).toHaveBeenCalledWith(buffer);
     });
 
+    it('allows adding extra usage flags', () => {
+      new VertexBuffer(mockDevice, {
+        size: 1024,
+        usage: GPUBufferUsage.STORAGE
+      });
+
+      const calls = (mockDevice.createBuffer as any).mock.calls;
+      const descriptor = calls[calls.length - 1][0];
+      expect(descriptor.usage & GPUBufferUsage.STORAGE).toBeTruthy();
+      expect(descriptor.usage & GPUBufferUsage.VERTEX).toBeTruthy();
+    });
+  });
+
+  describe('IndexBuffer', () => {
+    it('creates buffer with correct usage flags', () => {
+      new IndexBuffer(mockDevice, { size: 512 });
+
+      const calls = (mockDevice.createBuffer as any).mock.calls;
+      const descriptor = calls[calls.length - 1][0];
+      expect(descriptor.usage & GPUBufferUsage.INDEX).toBeTruthy();
+      expect(descriptor.usage & GPUBufferUsage.COPY_DST).toBeTruthy();
+    });
+  });
+
+  describe('UniformBuffer', () => {
+    it('creates buffer with correct usage flags', () => {
+      new UniformBuffer(mockDevice, { size: 256 });
+
+      const calls = (mockDevice.createBuffer as any).mock.calls;
+      const descriptor = calls[calls.length - 1][0];
+      expect(descriptor.usage & GPUBufferUsage.UNIFORM).toBeTruthy();
+      expect(descriptor.usage & GPUBufferUsage.COPY_DST).toBeTruthy();
+    });
+  });
+
+  describe('StorageBuffer', () => {
+    it('creates buffer with correct usage flags', () => {
+      new StorageBuffer(mockDevice, { size: 2048 });
+
+      const calls = (mockDevice.createBuffer as any).mock.calls;
+      const descriptor = calls[calls.length - 1][0];
+      expect(descriptor.usage & GPUBufferUsage.STORAGE).toBeTruthy();
+      expect(descriptor.usage & GPUBufferUsage.COPY_DST).toBeTruthy();
+    });
+  });
+
+  describe('GPUBufferResource Base Functionality', () => {
     it('writes data to buffer', () => {
-      const buffer = new VertexBuffer(device, { size: 1024 });
-      const data = new Float32Array([1, 2, 3]);
+      const buffer = new VertexBuffer(mockDevice, { size: 1024 });
+      const data = new Float32Array([1, 2, 3, 4]);
 
       buffer.write(data);
 
-      expect(device.queue.writeBuffer).toHaveBeenCalledWith(
-        expect.anything(),
+      expect(mockQueue.writeBuffer).toHaveBeenCalledWith(
+        buffer.buffer,
         0,
         data,
         0,
@@ -68,361 +112,497 @@ describe('WebGPU Resources', () => {
       );
     });
 
-    it('destroys buffer and updates tracker', () => {
-      const buffer = new VertexBuffer(device, { size: 1024 });
+    it('supports write with offset', () => {
+      const buffer = new VertexBuffer(mockDevice, { size: 1024 });
+      const data = new Float32Array([1, 2]);
+
+      buffer.write(data, 128);
+
+      expect(mockQueue.writeBuffer).toHaveBeenCalledWith(
+        buffer.buffer,
+        128,
+        data,
+        0,
+        data.byteLength
+      );
+    });
+
+    it('maps buffer async', async () => {
+      const buffer = new StorageBuffer(mockDevice, { size: 1024 });
+
+      await buffer.mapAsync(GPUMapMode.READ);
+
+      expect(buffer.buffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, undefined);
+    });
+
+    it('gets mapped range', () => {
+      const buffer = new StorageBuffer(mockDevice, { size: 1024 });
+
+      buffer.getMappedRange();
+
+      expect(buffer.buffer.getMappedRange).toHaveBeenCalledWith(0, undefined);
+    });
+
+    it('unmaps buffer', () => {
+      const buffer = new StorageBuffer(mockDevice, { size: 1024 });
+
+      buffer.unmap();
+
+      expect(buffer.buffer.unmap).toHaveBeenCalled();
+    });
+
+    it('destroys buffer', () => {
+      const buffer = new VertexBuffer(mockDevice, { size: 1024 });
+
       buffer.destroy();
 
+      expect(buffer.buffer.destroy).toHaveBeenCalled();
+    });
+  });
+
+  describe('Resource Tracking', () => {
+    it('tracks buffer creation and destruction', () => {
+      const tracker = {
+        trackBuffer: vi.fn(),
+        trackTexture: vi.fn(),
+        untrackBuffer: vi.fn(),
+        untrackTexture: vi.fn()
+      };
+      setResourceTracker(tracker);
+
+      const buffer = new VertexBuffer(mockDevice, { size: 1024 });
+      expect(tracker.trackBuffer).toHaveBeenCalledWith(buffer);
+
+      buffer.destroy();
       expect(tracker.untrackBuffer).toHaveBeenCalledWith(buffer);
     });
   });
+});
 
-  describe('IndexBuffer', () => {
-    it('creates buffer with correct usage', () => {
-      new IndexBuffer(device, { size: 512 });
+describe('WebGPU Texture Resources', () => {
+    let mockDevice: GPUDevice;
+    let mockQueue: GPUQueue;
 
-      expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({
-        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
-      }));
-    });
-  });
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
+        mockQueue = device.queue;
 
-  describe('UniformBuffer', () => {
-    it('creates buffer with correct usage', () => {
-      new UniformBuffer(device, { size: 256 });
-
-      expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-      }));
-    });
-  });
-
-  describe('StorageBuffer', () => {
-    it('creates buffer with correct usage', () => {
-      new StorageBuffer(device, { size: 1024 });
-
-      expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-      }));
+        setResourceTracker({
+            trackBuffer: vi.fn(),
+            trackTexture: vi.fn(),
+            untrackBuffer: vi.fn(),
+            untrackTexture: vi.fn()
+        } as any);
     });
 
-    it('maps and unmaps buffer', async () => {
-      // Need MAP_READ usage for mapping in read mode
-      // Or we need to use mapState mock.
-      // But StorageBuffer constructor hardcodes usages to STORAGE | COPY_DST.
-      // If we want to test mapAsync for read, we need a buffer with MAP_READ.
-      // The current StorageBuffer abstraction doesn't easily allow adding MAP_READ unless we modify the constructor usage or add it.
-      // Let's modify the test to manually create a buffer or assume the user would create a generic GPUBufferResource for readback if needed,
-      // or that StorageBuffer supports additional flags.
-      // The class StorageBuffer in resources.ts takes a descriptor but overrides usage?
-      // Ah, I updated the class to take mappedAtCreation, but the usage flags in subclasses are fixed ORed with input?
-      // Looking at `StorageBuffer` constructor:
-      // super(device, { ..., usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | (descriptor.usage || 0) ... })
-      // So we can pass MAP_READ in usage.
+    describe('Texture2D', () => {
+        it('creates texture with correct dimensions and format', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm',
+                label: 'test-texture'
+            });
 
-      const buffer = new StorageBuffer(device, {
-        size: 1024,
-        usage: GPUBufferUsage.MAP_READ
-      });
+            expect(mockDevice.createTexture).toHaveBeenCalledWith({
+                size: [256, 256, 1],
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+                mipLevelCount: 1,
+                label: 'test-texture'
+            });
+            expect(texture.width).toBe(256);
+            expect(texture.height).toBe(256);
+            expect(texture.format).toBe('rgba8unorm');
+        });
 
-      await buffer.mapAsync(GPUMapMode.READ);
-      expect(buffer.buffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, undefined);
+        it('uploads data to texture', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm'
+            });
+            const data = new Uint8Array(256 * 256 * 4);
 
-      buffer.getMappedRange();
-      expect(buffer.buffer.getMappedRange).toHaveBeenCalled();
+            texture.upload(data);
 
-      buffer.unmap();
-      expect(buffer.buffer.unmap).toHaveBeenCalled();
-    });
-  });
+            expect(mockQueue.writeTexture).toHaveBeenCalledWith(
+                { texture: texture.texture, mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+                data,
+                { offset: 0, bytesPerRow: 256 * 4, rowsPerImage: 256 },
+                { width: 256, height: 256, depthOrArrayLayers: 1 }
+            );
+        });
 
-  describe('Texture2D', () => {
-    it('creates texture with correct dimension and format', () => {
-      const texture = new Texture2D(device, {
-        width: 100,
-        height: 100,
-        format: 'rgba8unorm',
-        label: 'test-texture'
-      });
+        it('calculates memory size correctly for RGBA8', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm'
+            });
+            expect(texture.memorySize).toBe(256 * 256 * 4);
+        });
 
-      expect(device.createTexture).toHaveBeenCalledWith(expect.objectContaining({
-        size: [100, 100, 1],
-        format: 'rgba8unorm',
-        dimension: '2d',
-        label: 'test-texture'
-      }));
-      expect(tracker.trackTexture).toHaveBeenCalledWith(texture);
-      expect(texture.memorySize).toBeGreaterThan(0);
-    });
+        it('creates texture view', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm'
+            });
 
-    it('uploads data to texture', () => {
-      const texture = new Texture2D(device, {
-        width: 2,
-        height: 2,
-        format: 'rgba8unorm'
-      });
-      const data = new Uint8Array([255, 0, 0, 255]);
+            texture.createView();
+            expect(texture.texture.createView).toHaveBeenCalled();
+        });
 
-      texture.upload(data);
+        it('destroys texture', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm'
+            });
 
-      expect(device.queue.writeTexture).toHaveBeenCalledWith(
-        expect.objectContaining({ texture: texture.texture }),
-        data,
-        expect.anything(),
-        expect.anything()
-      );
-    });
-
-    it('creates view', () => {
-      const texture = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
-      texture.createView();
-      expect(texture.texture.createView).toHaveBeenCalled();
+            texture.destroy();
+            expect(texture.texture.destroy).toHaveBeenCalled();
+        });
     });
 
-    it('destroys texture and updates tracker', () => {
-      const texture = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
-      texture.destroy();
-      expect(tracker.untrackTexture).toHaveBeenCalledWith(texture);
-      expect(texture.texture.destroy).toHaveBeenCalled();
+    describe('TextureCubeMap', () => {
+        it('creates cubemap with 6 layers', () => {
+            const cubemap = new TextureCubeMap(mockDevice, {
+                size: 256,
+                format: 'rgba8unorm'
+            });
+
+            expect(mockDevice.createTexture).toHaveBeenCalledWith({
+                size: [256, 256, 6],
+                format: 'rgba8unorm',
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+                mipLevelCount: 1,
+                label: undefined
+            });
+        });
+
+        it('uploads to a specific face', () => {
+            const cubemap = new TextureCubeMap(mockDevice, {
+                size: 256,
+                format: 'rgba8unorm'
+            });
+            const data = new Uint8Array(256 * 256 * 4);
+
+            cubemap.uploadFace(2, data); // Face 2
+
+            expect(mockQueue.writeTexture).toHaveBeenCalledWith(
+                { texture: cubemap.texture, mipLevel: 0, origin: { x: 0, y: 0, z: 2 } },
+                data,
+                { offset: 0, bytesPerRow: 256 * 4, rowsPerImage: 256 },
+                { width: 256, height: 256, depthOrArrayLayers: 1 }
+            );
+        });
+
+        it('calculates memory size correctly (6 faces)', () => {
+            const cubemap = new TextureCubeMap(mockDevice, {
+                size: 256,
+                format: 'rgba8unorm'
+            });
+            // 256*256*4 bytes * 6 faces
+            expect(cubemap.memorySize).toBe(256 * 256 * 4 * 6);
+        });
+
+        it('creates view as cube', () => {
+            const cubemap = new TextureCubeMap(mockDevice, {
+                size: 256,
+                format: 'rgba8unorm'
+            });
+
+            cubemap.createView();
+            expect(cubemap.texture.createView).toHaveBeenCalledWith({ dimension: 'cube' });
+        });
     });
-  });
+});
 
-  describe('TextureCubeMap', () => {
-    it('creates cubemap texture (6 layers)', () => {
-      const cubemap = new TextureCubeMap(device, {
-        size: 64,
-        format: 'rgba8unorm',
-        label: 'skybox'
-      });
+describe('WebGPU Sampler Management', () => {
+    let mockDevice: GPUDevice;
 
-      expect(device.createTexture).toHaveBeenCalledWith(expect.objectContaining({
-        size: [64, 64, 6],
-        dimension: '2d', // WebGPU uses 2d array for cubes
-        label: 'skybox'
-      }));
-      expect(tracker.trackTexture).toHaveBeenCalledWith(cubemap);
-    });
-
-    it('uploads to a specific face', () => {
-      const cubemap = new TextureCubeMap(device, { size: 64, format: 'rgba8unorm' });
-      const data = new Uint8Array(100);
-
-      cubemap.uploadFace(2, data); // +Y face
-
-      expect(device.queue.writeTexture).toHaveBeenCalledWith(
-        expect.objectContaining({
-          origin: [0, 0, 2]
-        }),
-        data,
-        expect.anything(),
-        expect.anything()
-      );
-    });
-
-    it('creates cube view', () => {
-      const cubemap = new TextureCubeMap(device, { size: 64, format: 'rgba8unorm' });
-      cubemap.createView();
-
-      expect(cubemap.texture.createView).toHaveBeenCalledWith(expect.objectContaining({
-        dimension: 'cube'
-      }));
-    });
-  });
-
-  describe('Sampler', () => {
-    it('creates sampler with descriptor', () => {
-      new Sampler(device, {
-        minFilter: 'linear',
-        magFilter: 'linear'
-      });
-
-      expect(device.createSampler).toHaveBeenCalledWith(expect.objectContaining({
-        minFilter: 'linear',
-        magFilter: 'linear'
-      }));
-    });
-
-    it('factory functions create correct samplers', () => {
-      createLinearSampler(device);
-      expect(device.createSampler).toHaveBeenCalledWith(expect.objectContaining({
-        minFilter: 'linear',
-        magFilter: 'linear'
-      }));
-
-      createNearestSampler(device);
-      expect(device.createSampler).toHaveBeenCalledWith(expect.objectContaining({
-        minFilter: 'nearest',
-        magFilter: 'nearest'
-      }));
-    });
-  });
-
-  describe('ShaderModule', () => {
-    it('creates shader module from code', async () => {
-      const shader = new ShaderModule(device, {
-        code: '@vertex fn main() {}',
-        label: 'test-shader'
-      });
-
-      expect(device.createShaderModule).toHaveBeenCalledWith(expect.objectContaining({
-        code: '@vertex fn main() {}',
-        label: 'test-shader'
-      }));
-
-      await shader.getCompilationInfo();
-      expect(shader.module.getCompilationInfo).toHaveBeenCalled();
-    });
-  });
-
-  describe('RenderPipeline', () => {
-    it('creates render pipeline', () => {
-      const vertexModule = new ShaderModule(device, { code: '' });
-      const fragmentModule = new ShaderModule(device, { code: '' });
-
-      new RenderPipeline(device, {
-        vertex: {
-          module: vertexModule,
-          entryPoint: 'vs_main'
-        },
-        fragment: {
-          module: fragmentModule,
-          entryPoint: 'fs_main',
-          targets: [{ format: 'bgra8unorm' }]
-        },
-        layout: 'auto',
-        label: 'test-pipeline'
-      });
-
-      expect(device.createRenderPipeline).toHaveBeenCalledWith(expect.objectContaining({
-        vertex: expect.objectContaining({
-           entryPoint: 'vs_main'
-        }),
-        fragment: expect.objectContaining({
-           entryPoint: 'fs_main'
-        }),
-        layout: 'auto',
-        label: 'test-pipeline'
-      }));
-    });
-  });
-
-  describe('ComputePipeline', () => {
-    it('creates compute pipeline', () => {
-      const module = new ShaderModule(device, { code: '' });
-
-      new ComputePipeline(device, {
-        compute: {
-          module: module,
-          entryPoint: 'main'
-        },
-        layout: 'auto'
-      });
-
-      expect(device.createComputePipeline).toHaveBeenCalledWith(expect.objectContaining({
-        compute: expect.objectContaining({ entryPoint: 'main' }),
-        layout: 'auto'
-      }));
-    });
-  });
-
-  describe('BindGroup', () => {
-    it('creates bind group layout with builder', () => {
-      const builder = new BindGroupBuilder();
-      builder
-        .addUniformBuffer(0, GPUShaderStage.VERTEX)
-        .addTexture(1, GPUShaderStage.FRAGMENT)
-        .addSampler(2, GPUShaderStage.FRAGMENT);
-
-      const layout = builder.build(device, 'test-layout');
-
-      expect(device.createBindGroupLayout).toHaveBeenCalledWith(expect.objectContaining({
-        label: 'test-layout',
-        entries: [
-          expect.objectContaining({ binding: 0, buffer: { type: 'uniform' } }),
-          expect.objectContaining({ binding: 1, texture: { viewDimension: '2d' } }),
-          expect.objectContaining({ binding: 2, sampler: { type: 'filtering' } })
-        ]
-      }));
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
     });
 
-    it('creates bind group from layout', () => {
-      const layout = new BindGroupLayout(device, { entries: [] });
-      const buffer = new UniformBuffer(device, { size: 16 });
+    it('creates a sampler with given descriptor', () => {
+        const sampler = new Sampler(mockDevice, {
+            minFilter: 'linear',
+            label: 'test-sampler'
+        });
 
-      new BindGroup(device, layout, [
-        { binding: 0, resource: { buffer: buffer.buffer } }
-      ], 'test-group');
-
-      expect(device.createBindGroup).toHaveBeenCalledWith(expect.objectContaining({
-        layout: layout.layout,
-        entries: [
-           expect.objectContaining({ binding: 0 })
-        ],
-        label: 'test-group'
-      }));
-    });
-  });
-
-  describe('RenderPass', () => {
-    it('creates render pass descriptor', () => {
-      const view = {} as GPUTextureView;
-      const depthView = {} as GPUTextureView;
-
-      const descriptor = createRenderPassDescriptor()
-        .setColorAttachment(0, view, { clearValue: { r: 0, g: 0, b: 0, a: 1 } })
-        .setDepthStencilAttachment(depthView)
-        .build();
-
-      expect(descriptor.colorAttachments).toHaveLength(1);
-
-      // We need to check if the color attachment is defined and matches structure
-      // Note: descriptor.colorAttachments is array of GPUColorAttachment | null
-      const attachment = (descriptor.colorAttachments as GPURenderPassColorAttachment[])[0];
-      expect(attachment).toBeDefined();
-      expect(attachment.view).toBe(view);
-      expect(attachment.loadOp).toBe('clear');
-
-      expect(descriptor.depthStencilAttachment).toBeDefined();
-      expect(descriptor.depthStencilAttachment!.view).toBe(depthView);
-    });
-  });
-
-  describe('ResourceTracker', () => {
-    it('tracks buffer memory', () => {
-      const realTracker = new GPUResourceTracker();
-      setResourceTracker(realTracker);
-
-      const buffer = new VertexBuffer(device, { size: 1000 });
-      expect(realTracker.totalBufferMemory).toBe(1000);
-      expect(realTracker.bufferCount).toBe(1);
-
-      buffer.destroy();
-      expect(realTracker.totalBufferMemory).toBe(0);
-      expect(realTracker.bufferCount).toBe(0);
+        expect(mockDevice.createSampler).toHaveBeenCalledWith({
+            minFilter: 'linear',
+            label: 'test-sampler'
+        });
+        expect(sampler.sampler).toBeDefined();
     });
 
-    it('tracks texture memory', () => {
-      const realTracker = new GPUResourceTracker();
-      setResourceTracker(realTracker);
+    it('createLinearSampler creates correct sampler', () => {
+        createLinearSampler(mockDevice);
+        expect(mockDevice.createSampler).toHaveBeenCalledWith(expect.objectContaining({
+            minFilter: 'linear',
+            magFilter: 'linear'
+        }));
+    });
+});
 
-      const texture = new Texture2D(device, { width: 10, height: 10, format: 'rgba8unorm' });
-      // 10*10*4 = 400 bytes approx
-      expect(realTracker.totalTextureMemory).toBeGreaterThan(0);
-      expect(realTracker.textureCount).toBe(1);
+describe('WebGPU Shader & Pipeline', () => {
+    let mockDevice: GPUDevice;
 
-      texture.destroy();
-      expect(realTracker.totalTextureMemory).toBe(0);
-      expect(realTracker.textureCount).toBe(0);
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
     });
 
-    it('reset clears stats', () => {
-      const realTracker = new GPUResourceTracker();
-      setResourceTracker(realTracker);
+    describe('ShaderModule', () => {
+        it('compiles shader module', () => {
+            const code = '@vertex fn main() {}';
+            const shader = new ShaderModule(mockDevice, { code, label: 'test-shader' });
 
-      new VertexBuffer(device, { size: 1000 });
-      realTracker.reset();
+            expect(mockDevice.createShaderModule).toHaveBeenCalledWith({
+                code,
+                label: 'test-shader'
+            });
+            expect(shader.module).toBeDefined();
+        });
 
-      expect(realTracker.totalBufferMemory).toBe(0);
-      expect(realTracker.bufferCount).toBe(0);
+        it('provides compilation info', async () => {
+            const shader = new ShaderModule(mockDevice, { code: '' });
+            const info = await shader.compilationInfo;
+            expect(info).toBeDefined();
+        });
     });
-  });
+
+    describe('RenderPipeline', () => {
+        it('creates render pipeline', () => {
+            const vertexModule = new ShaderModule(mockDevice, { code: '' });
+            const fragmentModule = new ShaderModule(mockDevice, { code: '' });
+
+            new RenderPipeline(mockDevice, {
+                vertex: {
+                    module: vertexModule,
+                    entryPoint: 'main',
+                    buffers: []
+                },
+                fragment: {
+                    module: fragmentModule,
+                    entryPoint: 'main',
+                    targets: [{ format: 'bgra8unorm' }]
+                },
+                layout: 'auto',
+                label: 'test-pipeline'
+            });
+
+            expect(mockDevice.createRenderPipeline).toHaveBeenCalledWith(expect.objectContaining({
+                label: 'test-pipeline',
+                vertex: expect.objectContaining({ entryPoint: 'main' }),
+                fragment: expect.objectContaining({ entryPoint: 'main' })
+            }));
+        });
+    });
+
+    describe('ComputePipeline', () => {
+        it('creates compute pipeline', () => {
+            const computeModule = new ShaderModule(mockDevice, { code: '' });
+
+            new ComputePipeline(mockDevice, {
+                compute: {
+                    module: computeModule,
+                    entryPoint: 'main'
+                },
+                layout: 'auto',
+                label: 'test-compute'
+            });
+
+            expect(mockDevice.createComputePipeline).toHaveBeenCalledWith(expect.objectContaining({
+                label: 'test-compute',
+                compute: expect.objectContaining({ entryPoint: 'main' })
+            }));
+        });
+    });
+});
+
+describe('WebGPU Bind Group Management', () => {
+    let mockDevice: GPUDevice;
+
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
+    });
+
+    describe('BindGroupLayout', () => {
+        it('creates bind group layout', () => {
+            new BindGroupLayout(mockDevice, {
+                entries: [{
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX,
+                    buffer: { type: 'uniform' }
+                }],
+                label: 'test-layout'
+            });
+
+            expect(mockDevice.createBindGroupLayout).toHaveBeenCalledWith({
+                entries: [{
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX,
+                    buffer: { type: 'uniform' }
+                }],
+                label: 'test-layout'
+            });
+        });
+    });
+
+    describe('BindGroup', () => {
+        it('creates bind group with resources', () => {
+            const layout = new BindGroupLayout(mockDevice, { entries: [] });
+            const buffer = new UniformBuffer(mockDevice, { size: 16 });
+
+            new BindGroup(mockDevice, layout, [
+                { binding: 0, resource: buffer }
+            ], 'test-bindgroup');
+
+            expect(mockDevice.createBindGroup).toHaveBeenCalledWith(expect.objectContaining({
+                label: 'test-bindgroup',
+                layout: layout.layout,
+                entries: expect.arrayContaining([
+                    expect.objectContaining({
+                        binding: 0,
+                        resource: { buffer: buffer.buffer }
+                    })
+                ])
+            }));
+        });
+
+        it('handles texture views and samplers', () => {
+            const layout = new BindGroupLayout(mockDevice, { entries: [] });
+            const texture = new Texture2D(mockDevice, { width: 4, height: 4, format: 'rgba8unorm' });
+            const view = texture.createView();
+            const sampler = new Sampler(mockDevice, {});
+
+            new BindGroup(mockDevice, layout, [
+                { binding: 0, resource: view },
+                { binding: 1, resource: sampler }
+            ]);
+
+            expect(mockDevice.createBindGroup).toHaveBeenCalledWith(expect.objectContaining({
+                entries: expect.arrayContaining([
+                    expect.objectContaining({ binding: 0, resource: view }),
+                    expect.objectContaining({ binding: 1, resource: sampler.sampler })
+                ])
+            }));
+        });
+    });
+
+    describe('BindGroupBuilder', () => {
+        it('builds layout with ergonomic API', () => {
+            const builder = new BindGroupBuilder('test-builder');
+
+            builder
+                .addUniformBuffer(0, GPUShaderStage.VERTEX)
+                .addTexture(1, GPUShaderStage.FRAGMENT)
+                .addSampler(2, GPUShaderStage.FRAGMENT);
+
+            const layout = builder.build(mockDevice);
+
+            expect(mockDevice.createBindGroupLayout).toHaveBeenCalledWith(expect.objectContaining({
+                label: 'test-builder',
+                entries: expect.arrayContaining([
+                    { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+                    { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },
+                    { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }
+                ])
+            }));
+        });
+    });
+});
+
+describe('WebGPU Render Pass Helpers', () => {
+    let mockDevice: GPUDevice;
+
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
+    });
+
+    it('builds a render pass descriptor', () => {
+        const texture = new Texture2D(mockDevice, { width: 256, height: 256, format: 'rgba8unorm' });
+        const view = texture.createView();
+
+        const builder = createRenderPassDescriptor();
+        builder.setColorAttachment(0, view, { clearValue: { r: 1, g: 0, b: 0, a: 1 } });
+
+        const descriptor = builder.build();
+
+        expect(descriptor.colorAttachments).toHaveLength(1);
+        expect((descriptor.colorAttachments as GPURenderPassColorAttachment[])[0].view).toBe(view);
+        expect((descriptor.colorAttachments as GPURenderPassColorAttachment[])[0].clearValue).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    });
+
+    it('supports depth stencil attachment', () => {
+        const texture = new Texture2D(mockDevice, { width: 256, height: 256, format: 'depth24plus' });
+        const view = texture.createView();
+
+        const builder = createRenderPassDescriptor();
+        builder.setDepthStencilAttachment(view, { depthClearValue: 0.5 });
+
+        const descriptor = builder.build();
+
+        expect(descriptor.depthStencilAttachment).toBeDefined();
+        expect(descriptor.depthStencilAttachment!.view).toBe(view);
+        expect(descriptor.depthStencilAttachment!.depthClearValue).toBe(0.5);
+    });
+});
+
+describe('GPUResourceTracker', () => {
+    let mockDevice: GPUDevice;
+
+    beforeEach(() => {
+        const { mockDevice: device } = setupWebGPUMocks();
+        mockDevice = device;
+    });
+
+    it('tracks resource usage', () => {
+        const tracker = new GPUResourceTracker();
+        setResourceTracker(tracker);
+
+        // Initial state
+        expect(tracker.bufferCount).toBe(0);
+        expect(tracker.totalBufferMemory).toBe(0);
+
+        // Create buffer
+        const buffer = new VertexBuffer(mockDevice, { size: 1024 });
+        expect(tracker.bufferCount).toBe(1);
+        expect(tracker.totalBufferMemory).toBe(1024);
+
+        // Create texture
+        const texture = new Texture2D(mockDevice, { width: 4, height: 4, format: 'rgba8unorm' }); // 16 pixels * 4 bytes = 64 bytes
+        expect(tracker.textureCount).toBe(1);
+        expect(tracker.totalTextureMemory).toBe(64);
+
+        // Destroy
+        buffer.destroy();
+        expect(tracker.bufferCount).toBe(0);
+        expect(tracker.totalBufferMemory).toBe(0);
+
+        texture.destroy();
+        expect(tracker.textureCount).toBe(0);
+        expect(tracker.totalTextureMemory).toBe(0);
+    });
+
+    it('resets tracking', () => {
+        const tracker = new GPUResourceTracker();
+        setResourceTracker(tracker);
+
+        new VertexBuffer(mockDevice, { size: 1024 });
+
+        tracker.reset();
+
+        expect(tracker.bufferCount).toBe(0);
+        expect(tracker.totalBufferMemory).toBe(0);
+    });
 });
