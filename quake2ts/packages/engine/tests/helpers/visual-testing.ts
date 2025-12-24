@@ -23,7 +23,7 @@ interface VisualTestContext {
 export const test = base.extend<VisualTestContext>({
   expectSnapshot: async ({ task }, use) => {
     const impl = async (pixels: Uint8ClampedArray, name: string) => {
-        const updateBaseline = process.argv.includes('--update-snapshots') || process.argv.includes('-u');
+        const updateBaseline = process.env.UPDATE_VISUAL === '1' || process.argv.includes('--update-snapshots') || process.argv.includes('-u');
         const testFile = task.file?.filepath;
         const testDir = testFile ? path.dirname(testFile) : path.join(process.cwd(), 'tests');
         const snapshotDir = path.join(testDir, '__snapshots__');
@@ -40,7 +40,7 @@ export const test = base.extend<VisualTestContext>({
   },
 
   renderAndExpectSnapshot: async ({ task }, use) => {
-    const updateBaseline = process.argv.includes('--update-snapshots') || process.argv.includes('-u');
+    const updateBaseline = process.env.UPDATE_VISUAL === '1' || process.argv.includes('--update-snapshots') || process.argv.includes('-u');
     const testFile = task.file?.filepath;
     const testDir = testFile ? path.dirname(testFile) : path.join(process.cwd(), 'tests');
     const snapshotDir = path.join(testDir, '__snapshots__');
