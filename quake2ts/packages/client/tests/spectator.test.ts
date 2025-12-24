@@ -1,27 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports } from '../src/index.js';
-import { ConfigStringIndex, MAX_CLIENTS } from '@quake2ts/shared';
+import { ConfigStringIndex } from '@quake2ts/shared';
+import { createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock dependencies
 const mockEngine = {
-  renderer: {
-    width: 800,
-    height: 600,
-    renderFrame: vi.fn(),
-    begin2D: vi.fn(),
-    end2D: vi.fn(),
-    drawPic: vi.fn(),
-    drawText: vi.fn(),
-    measureText: vi.fn().mockReturnValue(10),
-    getPerformanceReport: vi.fn().mockReturnValue({}),
-  },
-  assets: {
-    getMap: vi.fn(),
-    getTexture: vi.fn(),
-    getSound: vi.fn(),
-    getModel: vi.fn(),
-    listFiles: vi.fn().mockReturnValue([]),
-  },
+  renderer: createMockRenderer({
+    registerTexture: vi.fn().mockReturnValue({
+      width: 32,
+      height: 32,
+      upload: vi.fn(),
+      bind: vi.fn()
+    })
+  }),
+  assets: createMockAssetManager(),
   trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
   audio: {
       play_track: vi.fn(),

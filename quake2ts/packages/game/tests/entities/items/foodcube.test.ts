@@ -1,9 +1,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFoodCubePickupEntity } from '../../../src/entities/items/index.js';
-import { Solid } from '../../../src/entities/entity.js';
-import { createTestContext, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { Entity, Solid } from '../../../src/entities/entity.js';
+import { createTestContext, createMockGameExports, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 
 describe('Food Cube Item', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -11,17 +12,17 @@ describe('Food Cube Item', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        // createTestContext returns SpawnContext which has entities (sys) and inside that engine
-        // We construct a mock game object wrapping entities if needed, or use sys.engine
-        const sys = context.entities;
-
-        game = {
-            sound: sys.engine.sound,
-            centerprintf: sys.engine.centerprintf,
+        // Use createMockGameExports
+        game = createMockGameExports({
+            sound: context.entities.engine.sound,
+            centerprintf: context.entities.engine.centerprintf,
             time: 100,
             deathmatch: true,
-            entities: sys
-        } as unknown as GameExports;
+            entities: context.entities as unknown as EntitySystem,
+            hooks: {
+                onPickup: vi.fn(),
+            } as any
+        });
     });
 
     it('should initialize correctly', () => {

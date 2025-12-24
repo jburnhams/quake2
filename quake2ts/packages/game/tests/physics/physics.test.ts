@@ -4,7 +4,7 @@ import { runGravity, runBouncing, runProjectileMovement } from '../../src/physic
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 import { EntitySystem } from '../../src/entities/system.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 const mockTraceFn = (result: GameTraceResult) => {
   return (
@@ -25,21 +25,22 @@ const mockImports = (result: GameTraceResult): GameImports => ({
   linkentity: vi.fn(),
   multicast: vi.fn(),
   unicast: vi.fn(),
-});
+} as any);
 
 const createMockSystem = (): EntitySystem => {
     return {
         world: new Entity(0),
-        // Add other properties if needed
     } as unknown as EntitySystem;
 };
 
 
 describe('runGravity', () => {
   it('should apply gravity to an entity with MOVETYPE_TOSS', () => {
-    const ent = new Entity(0);
-    ent.movetype = MoveType.Toss;
-    ent.velocity = { x: 0, y: 0, z: 0 };
+    const ent = createEntityFactory({
+        index: 0,
+        movetype: MoveType.Toss,
+        velocity: { x: 0, y: 0, z: 0 }
+    }) as Entity;
 
     // Mock world constants
     const gravity = { x: 0, y: 0, z: -800 };
@@ -48,7 +49,8 @@ describe('runGravity', () => {
     runGravity(ent, gravity, frametime);
 
     // From Quake C code: ent->velocity[2] -= ent->gravity * sv_gravity * frametime;
-    // Assuming ent.gravity is 1.0
+    // Assuming ent.gravity is 1.0 (default in createEntityFactory unless overriden? No, usually 1.0)
+    // Actually default Entity gravity is 1.0.
     const expectedZVelocity = 0 + 1.0 * gravity.z * frametime;
     expect(ent.velocity.z).toBe(expectedZVelocity);
   });
@@ -56,21 +58,17 @@ describe('runGravity', () => {
 
 describe('runProjectileMovement', () => {
   it('should move the entity to the destination if there is no collision', () => {
-    const ent = new Entity(0);
-    ent.movetype = MoveType.FlyMissile;
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.velocity = { x: 1000, y: 0, z: 0 };
+    const ent = createEntityFactory({
+        index: 0,
+        movetype: MoveType.FlyMissile,
+        origin: { x: 0, y: 0, z: 0 },
+        velocity: { x: 1000, y: 0, z: 0 }
+    }) as Entity;
 
-    const mockTrace: GameTraceResult = {
+    const mockTrace = createTraceMock({
       fraction: 1.0,
-      plane: null,
-      contents: 0,
-      surfaceFlags: 0,
-      startsolid: false,
-      allsolid: false,
       endpos: { x: 100, y: 0, z: 0 },
-      ent: null,
-    };
+    });
 
     const frametime = 0.1;
 
@@ -82,24 +80,20 @@ describe('runProjectileMovement', () => {
   });
 
   it('should pass the entity clipmask to the trace function', () => {
-    const ent = new Entity(0);
-    ent.movetype = MoveType.FlyMissile;
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.velocity = { x: 1000, y: 0, z: 0 };
-    ent.clipmask = 42;
+    const ent = createEntityFactory({
+        index: 0,
+        movetype: MoveType.FlyMissile,
+        origin: { x: 0, y: 0, z: 0 },
+        velocity: { x: 1000, y: 0, z: 0 },
+        clipmask: 42
+    }) as Entity;
 
     let passedClipmask = -1;
 
-    const mockTrace: GameTraceResult = {
+    const mockTrace = createTraceMock({
       fraction: 1.0,
-      plane: null,
-      contents: 0,
-      surfaceFlags: 0,
-      startsolid: false,
-      allsolid: false,
       endpos: { x: 100, y: 0, z: 0 },
-      ent: null,
-    };
+    });
 
     const trace = (
       start: Vec3,
@@ -124,14 +118,16 @@ describe('runProjectileMovement', () => {
 
 describe('runBouncing', () => {
   it('should reflect velocity when a bouncing entity collides with a surface', () => {
-    const ent = new Entity(0);
-    ent.movetype = MoveType.Bounce;
-    ent.velocity = { x: 100, y: 0, z: -100 };
-    ent.origin = { x: 0, y: 0, z: 10 };
-    ent.bounce = 1.5; // This property is now ignored in favor of Q2 standard behavior (1.6 backoff)
+    const ent = createEntityFactory({
+        index: 0,
+        movetype: MoveType.Bounce,
+        velocity: { x: 100, y: 0, z: -100 },
+        origin: { x: 0, y: 0, z: 10 },
+        bounce: 1.5 // This property is now ignored in favor of Q2 standard behavior (1.6 backoff)
+    }) as Entity;
     ent.touch = vi.fn(); // Mock touch callback
 
-    const mockTrace: GameTraceResult = {
+    const mockTrace = createTraceMock({
       fraction: 0.5,
       plane: {
         normal: { x: 0, y: 0, z: 1 }, // Hit the floor
@@ -139,13 +135,8 @@ describe('runBouncing', () => {
         type: 0,
         signbits: 0,
       },
-      contents: 0,
-      surfaceFlags: 0,
-      startsolid: false,
-      allsolid: false,
       endpos: { x: 50, y: 0, z: 5 },
-      ent: null,
-    };
+    });
 
     const system = createMockSystem();
     runBouncing(ent, system, mockImports(mockTrace), 0.1);
@@ -172,13 +163,15 @@ describe('runBouncing', () => {
   });
 
   it('should reflect velocity perfectly with WallBounce', () => {
-    const ent = new Entity(0);
-    ent.movetype = MoveType.WallBounce;
-    ent.velocity = { x: 100, y: 0, z: -100 };
-    ent.origin = { x: 0, y: 0, z: 10 };
+    const ent = createEntityFactory({
+        index: 0,
+        movetype: MoveType.WallBounce,
+        velocity: { x: 100, y: 0, z: -100 },
+        origin: { x: 0, y: 0, z: 10 }
+    }) as Entity;
     ent.touch = vi.fn();
 
-    const mockTrace: GameTraceResult = {
+    const mockTrace = createTraceMock({
       fraction: 0.5,
       plane: {
         normal: { x: 0, y: 0, z: 1 }, // Hit the floor
@@ -186,13 +179,8 @@ describe('runBouncing', () => {
         type: 0,
         signbits: 0,
       },
-      contents: 0,
-      surfaceFlags: 0,
-      startsolid: false,
-      allsolid: false,
       endpos: { x: 50, y: 0, z: 5 },
-      ent: null,
-    };
+    });
 
     const system = createMockSystem();
     runBouncing(ent, system, mockImports(mockTrace), 0.1);
