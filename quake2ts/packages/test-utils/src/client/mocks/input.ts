@@ -200,6 +200,30 @@ export class InputInjector {
 }
 
 /**
+ * An implementation of InputSource that listens to DOM events.
+ * Useful for tests that want to verify interaction with real/mocked DOM events.
+ */
+export class BrowserInputSource {
+  constructor(private target: EventTarget = document) {}
+
+  on(event: string, handler: Function): void {
+    if (event === 'keydown' || event === 'keyup') {
+      this.target.addEventListener(event, (e: any) => {
+        handler(e.code);
+      });
+    } else if (event === 'mousedown' || event === 'mouseup') {
+      this.target.addEventListener(event, (e: any) => {
+        handler(e.button);
+      });
+    } else if (event === 'mousemove') {
+      this.target.addEventListener(event, (e: any) => {
+        handler(e.movementX, e.movementY);
+      });
+    }
+  }
+}
+
+/**
  * Factory for creating a MockPointerLock instance.
  */
 export function createMockPointerLock(element?: HTMLElement): MockPointerLock {
