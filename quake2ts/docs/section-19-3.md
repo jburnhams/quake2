@@ -120,6 +120,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Include collision world, traces
 
 - [ ] **2.5** Cleanup context creation in `game/tests/spawn/` directory
+  - [x] Refactored `game/tests/integration/spawning.test.ts`
   - Replace custom contexts with factory functions
   - Estimated files: ~8
 
@@ -158,6 +159,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `radiusDamage.test.ts`
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`
+  - [x] Refactored `hyperblaster.test.ts`
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 

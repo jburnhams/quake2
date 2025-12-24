@@ -1,51 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '../../src/index.js';
 import type { GameExports } from '../../src/index.js';
-import { MoveType, Solid, Entity } from '../../src/entities/entity.js';
+import { MoveType, Solid } from '../../src/entities/entity.js';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../src/entities/spawn.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
-// Mocks for integration test
-const engineMock = {
-    trace: vi.fn(() => ({
-        fraction: 1,
-        allsolid: false,
-        startsolid: false,
-        endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-        ent: null
-    })),
-    pointcontents: vi.fn(() => 0),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-    sound: vi.fn(),
-    centerprintf: vi.fn(),
-    error: vi.fn(),
-    print: vi.fn(),
-    linkentity: vi.fn(),
-    unlinkentity: vi.fn(),
-    configstring: vi.fn(),
-    setmodel: vi.fn(),
-    modelIndex: vi.fn((model: string) => {
-      // Mock model indices for entities we test
-      if (model && model.endsWith('tris.md2')) return 1;
-      return 0;
-    }),
-    imageIndex: vi.fn(() => 1),
-    soundIndex: vi.fn(() => 1),
-    boxEdicts: vi.fn(() => []), // Used by some funcs, might need better mock if logic depends on it
-    areaportalOpen: vi.fn(),
-    cvar: vi.fn((name, val, flags) => ({ name, value: parseFloat(val), flags, string: val, modified: false })),
-    cvar_set: vi.fn(),
-    cvar_force_set: vi.fn(),
-    cvar_string: vi.fn(),
-    addCommand: vi.fn(),
-    removeCommand: vi.fn(),
-    args: vi.fn(() => ''),
-    argv: vi.fn(() => ''),
-    argc: vi.fn(() => 0),
-    milliseconds: vi.fn(() => 0),
-};
-
+// Game options
 const gameOptions = {
     gravity: 800,
     maxEntities: 1024,
@@ -54,15 +14,45 @@ const gameOptions = {
 describe('Spawning Integration Tests', () => {
     let game: GameExports;
     let spawnRegistry: any;
+    let engineMock: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        game = createGame(engineMock as any, engineMock as any, gameOptions);
+
+        const { imports, engine } = createGameImportsAndEngine({
+            engine: {
+                modelIndex: vi.fn((model: string) => {
+                    // Mock model indices for entities we test
+                    if (model && model.endsWith('tris.md2')) return 1;
+                    return 0;
+                }),
+                // Add specific mocks needed for this test file that aren't in default helpers
+                cvar: vi.fn((name, val, flags) => ({ name, value: parseFloat(val), flags, string: val, modified: false })),
+                cvar_set: vi.fn(),
+                cvar_force_set: vi.fn(),
+                cvar_string: vi.fn(),
+                addCommand: vi.fn(),
+                removeCommand: vi.fn(),
+                args: vi.fn(() => ''),
+                argv: vi.fn(() => ''),
+                argc: vi.fn(() => 0),
+                milliseconds: vi.fn(() => 0),
+                boxEdicts: vi.fn(() => []),
+                areaportalOpen: vi.fn(),
+                imageIndex: vi.fn(() => 1),
+                error: vi.fn(),
+                print: vi.fn(),
+                setmodel: vi.fn(),
+                configstring: vi.fn(),
+                unlinkentity: vi.fn(),
+            } as any
+        });
+
+        engineMock = engine;
+
+        game = createGame(imports as any, engine as any, gameOptions);
         game.init(0);
-        // We need access to the registry used by the game, but createGame doesn't expose it directly yet?
-        // Actually, createGame uses internal logic.
-        // But for integration testing of spawns, we can use the `spawnEntitiesFromText` helper
-        // with a registry we create that targets the game's entity system.
+
         spawnRegistry = createDefaultSpawnRegistry(game);
     });
 
