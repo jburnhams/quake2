@@ -19,7 +19,7 @@ export function setupBrowserEnvironmentLocal() {
 export { setupBrowserEnvironmentLocal as setupBrowserEnvironment };
 
 // Re-export specific helpers used by tests from test-utils
-export { createMockWebGL2Context, MockPointerLock } from '@quake2ts/test-utils';
+export { createMockWebGL2Context, MockPointerLock, createMockPointerLock, createInputInjector } from '@quake2ts/test-utils';
 
 /**
  * Creates a headless canvas using napi-rs/canvas.

@@ -41,6 +41,12 @@ export interface CameraInput {
   rollDelta?: number;
 }
 
+export interface DemoCameraResult {
+  origin: Vec3;
+  angles: Vec3;
+  fov: number;
+}
+
 function toVec3(v: Vec3 | vec3 | { x: number, y: number, z: number } | number[]): vec3 {
   if (v instanceof Float32Array && v.length === 3) {
     return v as vec3;
@@ -74,6 +80,18 @@ export function createMockCamera(overrides: Partial<Omit<Camera, 'position' | 'a
   // Apply other properties if exposed by Camera class setters
 
   return camera;
+}
+
+/**
+ * Creates a mock Demo Camera state result (for getDemoCamera mock).
+ * This returns a structure using Vec3 interface compatible with angleVectors, unlike Camera class.
+ */
+export function createMockDemoCameraResult(overrides: Partial<DemoCameraResult> = {}): DemoCameraResult {
+    return {
+        origin: overrides.origin || { x: 0, y: 0, z: 0 },
+        angles: overrides.angles || { x: 0, y: 0, z: 0 },
+        fov: overrides.fov ?? 90
+    };
 }
 
 /**

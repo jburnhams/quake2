@@ -1,14 +1,14 @@
 
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { setupBrowserEnvironment } from './setup.js';
-import { InputInjector } from '@quake2ts/test-utils';
+import { createInputInjector, InputInjector, createMockPointerLock } from '@quake2ts/test-utils';
 
 describe('Input API Substitutes', () => {
   let injector: InputInjector;
 
   beforeAll(() => {
     setupBrowserEnvironment();
-    injector = new InputInjector(document, window);
+    injector = createInputInjector(document);
   });
 
   it('should support pointer lock simulation', () => {
@@ -18,13 +18,16 @@ describe('Input API Substitutes', () => {
 
     expect(document.pointerLockElement).toBeNull();
 
+    // Ensure the mock Pointer Lock is set up
+    const mockLock = createMockPointerLock();
+
     // Request lock
-    canvas.requestPointerLock();
+    mockLock.request(canvas);
     expect(document.pointerLockElement).toBe(canvas);
     expect(lockListener).toHaveBeenCalledTimes(1);
 
     // Exit lock
-    document.exitPointerLock();
+    mockLock.exit();
     expect(document.pointerLockElement).toBeNull();
     expect(lockListener).toHaveBeenCalledTimes(2);
   });
@@ -71,13 +74,14 @@ describe('Input API Substitutes', () => {
     expect(canvasListener).not.toHaveBeenCalled();
 
     // With lock
-    canvas.requestPointerLock();
+    const mockLock = createMockPointerLock();
+    mockLock.request(canvas);
     injector.mouseDown(0);
 
     expect(canvasListener).toHaveBeenCalledTimes(1);
     // Bubbles to document
     expect(docListener).toHaveBeenCalledTimes(2);
 
-    document.exitPointerLock();
+    mockLock.exit();
   });
 });
