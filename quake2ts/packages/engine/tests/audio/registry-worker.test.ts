@@ -80,10 +80,6 @@ describe('AudioRegistry Worker', () => {
         expect(call1.id).not.toBe(call2.id);
 
         // Respond to 2 first
-        // We need to find the handler for call 2.
-        // Since we addEventListener for each request, there are multiple handlers.
-        // We simulate broadcasting the message to all handlers.
-
         const handlers = workerMock.addEventListener.mock.calls.map((c: any) => c[1]);
 
         // Response for 2

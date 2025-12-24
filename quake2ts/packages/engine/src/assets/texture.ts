@@ -61,12 +61,20 @@ export class TextureCache {
     this.cache.clear();
   }
 
-  set maxMemory(value: number) {
-      this.cache.maxMemory = value;
+  get capacity(): number {
+    return this.cache.capacity;
   }
 
   set capacity(value: number) {
       this.cache.capacity = value;
+  }
+
+  get maxMemory(): number {
+    return this.cache.maxMemory;
+  }
+
+  set maxMemory(value: number) {
+      this.cache.maxMemory = value;
   }
 }
 

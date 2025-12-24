@@ -43,6 +43,10 @@ export class AudioRegistry {
     return this.cache.size;
   }
 
+  get capacity(): number {
+      return this.cache.capacity;
+  }
+
   async load(path: string): Promise<DecodedAudio> {
     const normalized = path.toLowerCase();
     const cached = this.cache.get(normalized);
