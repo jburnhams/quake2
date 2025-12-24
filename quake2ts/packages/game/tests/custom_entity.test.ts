@@ -1,46 +1,17 @@
 import { EntitySystem, SpawnFunction, createDefaultSpawnRegistry } from '@quake2ts/game';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GameEngine, GameImports } from '../src/imports.js';
-import { createRandomGenerator } from '@quake2ts/shared';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('Custom Entity Registration', () => {
   let context: EntitySystem;
-  let engine: GameEngine;
-  let imports: GameImports;
 
   beforeEach(() => {
-    // Setup a mock engine
-    engine = {
-      sound: vi.fn(),
-      soundIndex: vi.fn(() => 0),
-      modelIndex: vi.fn(() => 0),
-      centerprintf: vi.fn(),
-    } as unknown as GameEngine;
-
-    imports = {
-        trace: vi.fn(() => ({
-            fraction: 1.0,
-            ent: null,
-            allsolid: false,
-            startsolid: false,
-            endpos: { x: 0, y: 0, z: 0 },
-            plane: null,
-            surfaceFlags: 0,
-            contents: 0
-        })),
-        pointcontents: vi.fn(() => 0),
-        linkentity: vi.fn(),
-        multicast: vi.fn(),
-        unicast: vi.fn(),
-        configstring: vi.fn(),
-        serverCommand: vi.fn(),
-        areaEdicts: vi.fn(() => null),
-    } as unknown as GameImports;
-
-    context = new EntitySystem(engine, imports, { x: 0, y: 0, z: -800 });
+    const testContext = createTestContext();
+    context = testContext.entities;
 
     // Important: The entity system needs a spawn registry to work with registerEntityClass
-    const registry = createDefaultSpawnRegistry({});
+    // We can use the mock engine from testContext
+    const registry = createDefaultSpawnRegistry(testContext.engine);
     context.setSpawnRegistry(registry);
   });
 

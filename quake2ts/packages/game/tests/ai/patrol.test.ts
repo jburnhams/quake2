@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, EntityFlags } from '../../src/entities/entity.js';
 import { ai_walk } from '../../src/ai/movement.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('AI Patrol (path_corner)', () => {
   let system: EntitySystem;
@@ -10,42 +11,15 @@ describe('AI Patrol (path_corner)', () => {
   let pathCorner2: Entity;
 
   beforeEach(() => {
-    // Mock system
-    const gameEngineMock = {
-      trace: vi.fn(),
-      pointcontents: vi.fn().mockReturnValue(0),
-    };
+    const testContext = createTestContext();
+    system = testContext.entities;
 
-    // We need to pass imports mock to constructor or assign it after
-    const imports = {
-        trace: vi.fn().mockReturnValue({
-            fraction: 1.0,
-            ent: null,
-            allsolid: false,
-            startsolid: false,
-            endpos: { x: 0, y: 0, z: 0 },
-            plane: null
-        }),
-        pointcontents: vi.fn().mockReturnValue(0),
-        linkentity: vi.fn(),
-        areaEdicts: vi.fn().mockReturnValue([]),
-        multicast: vi.fn(),
-        unicast: vi.fn(),
-        configstring: vi.fn(),
-        serverCommand: vi.fn(),
-        setLagCompensation: vi.fn()
-    };
-
-    system = new EntitySystem(gameEngineMock as any, imports);
-    Object.defineProperty(system, 'deltaSeconds', {
-        value: 0.1,
-        writable: true
-    });
-
-    // Patch targetAwareness with necessary mocks
-    (system.targetAwareness as any).activePlayers = [];
-    (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
-    (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
+    // Patch targetAwareness with necessary mocks (if not fully covered by test-utils)
+    if (system.targetAwareness) {
+        (system.targetAwareness as any).activePlayers = [];
+        (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+        (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
+    }
 
     // Mock pickTarget to return entities by name
     system.pickTarget = vi.fn().mockImplementation((name: string) => {
@@ -110,8 +84,6 @@ describe('AI Patrol (path_corner)', () => {
 
     // Check if goalentity switched to pathCorner2
     expect(monster.goalentity).toBe(pathCorner2);
-    // expect(monster.goalentity?.targetname).toBe('p2'); // Mock entities don't have props preserved if I spawn them like this without manual assignment or full spawn system.
-    // Wait, system.spawn() gives real Entity objects, properties are preserved.
 
     // Verify system.pickTarget was called with 'p2' (target of p1)
     expect(system.pickTarget).toHaveBeenCalledWith('p2');
