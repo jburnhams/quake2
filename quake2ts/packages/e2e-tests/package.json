@@ -5,9 +5,7 @@
   "description": "End-to-end tests for Quake 2 TS",
   "scripts": {
     "pretest": "pnpm --filter @quake2ts/client build",
-    "test": "pnpm run test:integration",
-    "test:unit": "echo 'No unit tests in e2e-tests'",
-    "test:integration": "vitest run",
+    "test:browser": "vitest run",
     "test:watch": "vitest",
     "test:ui": "playwright test"
   },

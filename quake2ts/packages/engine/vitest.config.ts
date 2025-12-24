@@ -69,6 +69,10 @@ export default defineConfig({
       },
       isolate: true,
       fileParallelism: false
-    } : {})
+    } : {}),
+    reporters: ['default', 'junit'],
+    outputFile: {
+      junit: 'test-results/junit.xml',
+    },
   },
 });

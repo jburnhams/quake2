@@ -27,6 +27,10 @@ export default defineConfig({
       '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
-    }
+    },
+    reporters: ['default', 'junit'],
+    outputFile: {
+      junit: 'test-results/junit.xml',
+    },
   },
 });
