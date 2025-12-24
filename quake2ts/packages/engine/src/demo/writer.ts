@@ -1,97 +1,65 @@
-import { BinaryWriter, ServerCommand } from '@quake2ts/shared';
-import { EntityState, ProtocolPlayerState, FrameData, U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1, U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2, U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3, U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH } from './parser.js';
-import { Vec3, TempEntity } from '@quake2ts/shared';
 
-// Mapping from shared ServerCommand enum to Quake 2 Wire Protocol (Version 34)
-// Shared Enum values:
-// bad=0
-// muzzleflash=1, muzzleflash2=2, temp_entity=3, layout=4, inventory=5
-// nop=6, disconnect=7, reconnect=8, sound=9, print=10, stufftext=11
-// serverdata=12, configstring=13, spawnbaseline=14, centerprint=15, download=16
-// playerinfo=17, packetentities=18, deltapacketentities=19, frame=20...
+import { EntityState, ProtocolPlayerState, FrameData, createEmptyEntityState } from './state.js';
+import {
+    U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1,
+    U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2,
+    U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
+    U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME,
+    U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH,
+    BinaryWriter, ServerCommand, ANORMS
+} from '@quake2ts/shared';
 
-// Wire Protocol 34 (Standard Q2):
-// bad=0, nop=1, disconnect=2, reconnect=3, download=4
-// frame=5, inventory=6, layout=7, muzzleflash=8, temp_entity=9
-// sound=10, print=11, stufftext=12, serverdata=13, configstring=14
-// spawnbaseline=15, centerprint=16, playerinfo=17, packetentities=18, deltapacketentities=19
-// muzzleflash2=20
-
-// Note: Standard Q2 svc_serverdata is 13. svc_sound is 10.
-// (Source: q_shared.h from Q2 source)
-// #define svc_bad 0
-// #define svc_nop 1
-// #define svc_disconnect 2
-// #define svc_reconnect 3
-// #define svc_download 4
-// #define svc_frame 5
-// #define svc_inventory 6
-// #define svc_layout 7
-// #define svc_muzzleflash 8
-// #define svc_temp_entity 9
-// #define svc_sound 10
-// #define svc_print 11
-// #define svc_stufftext 12
-// #define svc_serverdata 13
-// #define svc_configstring 14
-// #define svc_spawnbaseline 15
-// #define svc_centerprint 16
-// #define svc_playerinfo 17
-// #define svc_packetentities 18
-// #define svc_deltapacketentities 19
-// #define svc_muzzleflash2 20
-
-const PROTO34_REVERSE_MAP: Record<number, number> = {
-    [ServerCommand.bad]: 0,
-    [ServerCommand.nop]: 1,
-    [ServerCommand.disconnect]: 2,
-    [ServerCommand.reconnect]: 3,
-    [ServerCommand.download]: 4,
-    [ServerCommand.frame]: 5,
-    [ServerCommand.inventory]: 6,
-    [ServerCommand.layout]: 7,
-    [ServerCommand.muzzleflash]: 8,
-    [ServerCommand.temp_entity]: 9,
-    [ServerCommand.sound]: 10,
-    [ServerCommand.print]: 11,
-    [ServerCommand.stufftext]: 12,
-    [ServerCommand.serverdata]: 13,
-    [ServerCommand.configstring]: 14,
-    [ServerCommand.spawnbaseline]: 15,
-    [ServerCommand.centerprint]: 16,
-    [ServerCommand.playerinfo]: 17,
-    [ServerCommand.packetentities]: 18,
-    [ServerCommand.deltapacketentities]: 19,
-    [ServerCommand.muzzleflash2]: 20,
-};
+// Use Legacy opcodes for testing until we unify
+const PROTO34_SERVERDATA = 13;
 
 export class MessageWriter {
     private writer: BinaryWriter;
+    private protocol: number;
 
-    constructor() {
-        this.writer = new BinaryWriter();
+    constructor(writer?: BinaryWriter, protocol: number = 34) {
+        this.writer = writer || new BinaryWriter(new Uint8Array(64 * 1024));
+        this.protocol = protocol;
     }
 
-    public getData(): Uint8Array {
+    getData(): Uint8Array {
         return this.writer.getData();
     }
 
-    private writeCommand(cmd: ServerCommand, protocolVersion: number = 0): void {
-        // Always translate for P34 or default (0)
-        // If protocol is Rerelease (>=2023), mapping might differ, but usually backwards compatible?
-        // Actually Rerelease might use different ops or same.
-        // For now we assume standard Q2 wire for output unless specified.
-        const translated = PROTO34_REVERSE_MAP[cmd];
-        if (translated !== undefined) {
-            this.writer.writeByte(translated);
+    private getOpcode(cmd: ServerCommand): number {
+        if (this.protocol === 34) {
+            switch(cmd) {
+                case ServerCommand.serverdata: return 13;
+                case ServerCommand.frame: return 5;
+                case ServerCommand.playerinfo: return 17;
+                case ServerCommand.packetentities: return 18;
+                case ServerCommand.deltapacketentities: return 19;
+                case ServerCommand.print: return 11;
+                case ServerCommand.centerprint: return 16;
+                case ServerCommand.stufftext: return 12;
+                case ServerCommand.sound: return 10;
+                case ServerCommand.temp_entity: return 9;
+                case ServerCommand.configstring: return 14;
+                case ServerCommand.spawnbaseline: return 15;
+                case ServerCommand.layout: return 7;
+                case ServerCommand.inventory: return 6;
+                case ServerCommand.muzzleflash: return 8;
+                case ServerCommand.muzzleflash2: return 20;
+            }
+        }
+        return cmd;
+    }
+
+    writeCommand(cmd: ServerCommand, protocol?: number): void {
+        const proto = protocol ?? this.protocol;
+        if (proto === 34 || proto === 0) {
+             this.writer.writeByte(this.getOpcode(cmd));
         } else {
-             // Fallback to enum value if no translation (risky but allows extensions)
-            this.writer.writeByte(cmd);
+             this.writer.writeByte(cmd);
         }
     }
 
-    public writeServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
-        this.writeCommand(ServerCommand.serverdata, protocol);
+    writeServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
+        this.writeCommand(ServerCommand.serverdata);
         this.writer.writeLong(protocol);
         this.writer.writeLong(serverCount);
         this.writer.writeByte(attractLoop);
@@ -100,209 +68,82 @@ export class MessageWriter {
         this.writer.writeString(levelName);
     }
 
-    public writeServerDataRerelease(protocol: number, spawnCount: number, demoType: number, tickRate: number, gameDir: string, playerNum: number, levelName: string): void {
-        this.writeCommand(ServerCommand.serverdata, protocol);
-        this.writer.writeLong(protocol);
-        this.writer.writeLong(spawnCount);
-        this.writer.writeByte(demoType);
-        this.writer.writeByte(tickRate);
-        this.writer.writeString(gameDir);
-        this.writer.writeShort(playerNum);
-        this.writer.writeString(levelName);
-    }
-
-    public writeConfigString(index: number, str: string, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.configstring, protocolVersion);
+    writeConfigString(index: number, str: string): void {
+        this.writeCommand(ServerCommand.configstring);
         this.writer.writeShort(index);
         this.writer.writeString(str);
     }
 
-    public writeSpawnBaseline(entity: EntityState, protocolVersion: number): void {
-        this.writeCommand(ServerCommand.spawnbaseline, protocolVersion);
-        this.writeEntityState(entity, null, true, protocolVersion);
-    }
-
-    public writeStuffText(text: string, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.stufftext, protocolVersion);
+    writeStuffText(text: string): void {
+        this.writeCommand(ServerCommand.stufftext);
         this.writer.writeString(text);
     }
 
-    public writeCenterPrint(text: string, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.centerprint, protocolVersion);
-        this.writer.writeString(text);
+    writeCenterPrint(msg: string): void {
+        this.writeCommand(ServerCommand.centerprint);
+        this.writer.writeString(msg);
     }
 
-    public writePrint(level: number, text: string, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.print, protocolVersion);
+    writePrint(level: number, msg: string): void {
+        this.writeCommand(ServerCommand.print);
         this.writer.writeByte(level);
-        this.writer.writeString(text);
+        this.writer.writeString(msg);
     }
 
-    public writeLayout(layout: string, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.layout, protocolVersion);
+    writeLayout(layout: string): void {
+        this.writeCommand(ServerCommand.layout);
         this.writer.writeString(layout);
     }
 
-    public writeInventory(inventory: number[], protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.inventory, protocolVersion);
-        for(let i=0; i<256; i++) {
-            this.writer.writeShort(inventory[i] || 0);
+    writeInventory(inventory: number[]): void {
+        this.writeCommand(ServerCommand.inventory);
+        for (const count of inventory) {
+            this.writer.writeShort(count);
+        }
+        for (let i = inventory.length; i < 256; i++) {
+            this.writer.writeShort(0);
         }
     }
 
-    public writeMuzzleFlash(ent: number, weapon: number, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.muzzleflash, protocolVersion);
+    writeMuzzleFlash(ent: number, weapon: number): void {
+        this.writeCommand(ServerCommand.muzzleflash);
         this.writer.writeShort(ent);
         this.writer.writeByte(weapon);
     }
 
-    public writeMuzzleFlash2(ent: number, weapon: number, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.muzzleflash2, protocolVersion);
+    writeMuzzleFlash2(ent: number, weapon: number): void {
+        this.writeCommand(ServerCommand.muzzleflash2);
         this.writer.writeShort(ent);
         this.writer.writeByte(weapon);
     }
 
-    public writeTempEntity(type: number, pos: Vec3, pos2?: Vec3, dir?: Vec3, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.temp_entity, protocolVersion);
-        this.writer.writeByte(type);
-
-        switch (type) {
-            case TempEntity.EXPLOSION1: case TempEntity.EXPLOSION2: case TempEntity.ROCKET_EXPLOSION: case TempEntity.GRENADE_EXPLOSION:
-            case TempEntity.ROCKET_EXPLOSION_WATER: case TempEntity.GRENADE_EXPLOSION_WATER: case TempEntity.BFG_EXPLOSION: case TempEntity.BFG_BIGEXPLOSION:
-            case TempEntity.BOSSTPORT: case TempEntity.PLASMA_EXPLOSION: case TempEntity.PLAIN_EXPLOSION: case TempEntity.CHAINFIST_SMOKE:
-            case TempEntity.TRACKER_EXPLOSION: case TempEntity.TELEPORT_EFFECT: case TempEntity.DBALL_GOAL: case TempEntity.NUKEBLAST:
-            case TempEntity.WIDOWSPLASH: case TempEntity.EXPLOSION1_BIG: case TempEntity.EXPLOSION1_NP:
-                this.writer.writePos(pos);
-                break;
-            case TempEntity.GUNSHOT: case TempEntity.BLOOD: case TempEntity.BLASTER: case TempEntity.SHOTGUN: case TempEntity.SPARKS:
-            case TempEntity.BULLET_SPARKS: case TempEntity.SCREEN_SPARKS: case TempEntity.SHIELD_SPARKS: case TempEntity.BLASTER2: case TempEntity.FLECHETTE:
-            case TempEntity.MOREBLOOD: case TempEntity.ELECTRIC_SPARKS: case TempEntity.HEATBEAM_SPARKS: case TempEntity.HEATBEAM_STEAM:
-                this.writer.writePos(pos);
-                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                break;
-            case TempEntity.SPLASH: case TempEntity.LASER_SPARKS: case TempEntity.WELDING_SPARKS: case TempEntity.TUNNEL_SPARKS:
-                this.writer.writeByte(cnt || 0);
-                this.writer.writePos(pos);
-                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                this.writer.writeByte(color || 0);
-                break;
-            case TempEntity.BLUEHYPERBLASTER:
-                if (protocolVersion >= 32) {
-                    this.writer.writePos(pos);
-                    this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                } else {
-                    this.writer.writePos(pos);
-                    this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                }
-                break;
-            case TempEntity.GREENBLOOD:
-                if (protocolVersion >= 32) {
-                    this.writer.writePos(pos);
-                    this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                } else {
-                    this.writer.writePos(pos);
-                    this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                }
-                break;
-            case TempEntity.RAILTRAIL: case TempEntity.BUBBLETRAIL: case TempEntity.BFG_LASER: case TempEntity.DEBUGTRAIL: case TempEntity.BUBBLETRAIL2:
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                break;
-            case TempEntity.PARASITE_ATTACK: case TempEntity.MEDIC_CABLE_ATTACK:
-                this.writer.writeShort(ent || 0);
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                break;
-            case TempEntity.GRAPPLE_CABLE:
-                this.writer.writeShort(ent || 0);
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                this.writer.writePos(dir || { x: 0, y: 0, z: 0 });
-                break;
-            case TempEntity.LIGHTNING:
-                this.writer.writeShort(srcEnt || 0);
-                this.writer.writeShort(destEnt || 0);
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                break;
-            case TempEntity.FLASHLIGHT:
-                this.writer.writePos(pos);
-                this.writer.writeShort(ent || 0);
-                break;
-            case TempEntity.FORCEWALL:
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                this.writer.writeByte(color || 0);
-                break;
-            case TempEntity.STEAM:
-                // Note: nextId logic is complex as it requires knowing the entity logic.
-                // We'll write -1 for nextId for now, assuming simple case.
-                this.writer.writeShort(-1);
-                this.writer.writeByte(cnt || 0);
-                this.writer.writePos(pos);
-                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                this.writer.writeByte(color || 0);
-                this.writer.writeShort(0); // sound
-                break;
-            case TempEntity.WIDOWBEAMOUT:
-                this.writer.writeShort(0); // ent
-                // Fallthrough
-            case TempEntity.HEATBEAM: case TempEntity.MONSTER_HEATBEAM:
-                this.writer.writeShort(ent || 0);
-                this.writer.writePos(pos);
-                this.writer.writePos(pos2 || { x: 0, y: 0, z: 0 });
-                this.writer.writeDir(dir || { x: 0, y: 0, z: 0 });
-                break;
-            default:
-                console.warn(`writeTempEntity: Unhandled type ${type}`);
-                break;
-        }
-    }
-
-    public writeSound(mask: number, soundNum: number, volume?: number, attenuation?: number, offset?: number, ent?: number, pos?: Vec3, protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.sound, protocolVersion);
+    writeSound(mask: number, soundNum: number, volume: number, attenuation: number, offset: number, ent: number, pos: any, protocol: number): void {
+        this.writeCommand(ServerCommand.sound);
         this.writer.writeByte(mask);
         this.writer.writeByte(soundNum);
-        if (mask & 1) this.writer.writeByte(volume || 0);
-        if (mask & 2) this.writer.writeByte(attenuation || 0);
-        if (mask & 16) this.writer.writeByte(offset || 0);
-        if (mask & 8) this.writer.writeShort(ent || 0);
-        if (mask & 4 && pos) {
+
+        if (mask & 1) this.writer.writeByte(volume);
+        if (mask & 2) this.writer.writeByte(attenuation);
+        if (mask & 16) this.writer.writeByte(offset);
+        if (mask & 8) this.writer.writeShort(ent);
+        if (mask & 4) {
             this.writer.writeCoord(pos.x);
             this.writer.writeCoord(pos.y);
             this.writer.writeCoord(pos.z);
         }
     }
 
-    public writeDisconnect(protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.disconnect, protocolVersion);
-    }
-
-    public writeReconnect(protocolVersion: number = 0): void {
-        this.writeCommand(ServerCommand.reconnect, protocolVersion);
-    }
-
-    public writeFrame(frame: FrameData, protocolVersion: number): void {
-        this.writeCommand(ServerCommand.frame, protocolVersion);
-        this.writer.writeLong(frame.serverFrame);
-        this.writer.writeLong(frame.deltaFrame);
-
-        if (protocolVersion !== 25 && protocolVersion !== 26) {
-             this.writer.writeByte(frame.surpressCount);
+    writeTempEntity(type: number, pos: any, pos2?: any, dir?: any, cnt?: number, color?: number, ent?: number, srcEnt?: number, destEnt?: number): void {
+        this.writeCommand(ServerCommand.temp_entity);
+        this.writer.writeByte(type);
+        if (pos) {
+            this.writer.writePos(pos);
         }
-
-        this.writer.writeByte(frame.areaBytes);
-        if (frame.areaBytes > 0) {
-            this.writer.writeBytes(frame.areaBits);
-        }
-
-        this.writeCommand(ServerCommand.playerinfo, protocolVersion);
-        this.writePlayerState(frame.playerState);
-
-        this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocolVersion);
     }
 
-    public writePlayerState(ps: ProtocolPlayerState): void {
+    writePlayerState(ps: ProtocolPlayerState): void {
+        this.writeCommand(ServerCommand.playerinfo);
+
         let flags = 0;
         if (ps.pm_type !== 0) flags |= 1;
         if (ps.origin.x !== 0 || ps.origin.y !== 0 || ps.origin.z !== 0) flags |= 2;
@@ -314,164 +155,192 @@ export class MessageWriter {
         if (ps.viewoffset.x !== 0 || ps.viewoffset.y !== 0 || ps.viewoffset.z !== 0) flags |= 128;
         if (ps.viewangles.x !== 0 || ps.viewangles.y !== 0 || ps.viewangles.z !== 0) flags |= 256;
         if (ps.kick_angles.x !== 0 || ps.kick_angles.y !== 0 || ps.kick_angles.z !== 0) flags |= 512;
-        if (ps.blend[0] !== 0 || ps.blend[1] !== 0 || ps.blend[2] !== 0 || ps.blend[3] !== 0) flags |= 1024;
         if (ps.gun_index !== 0) flags |= 4096;
-        if (ps.gun_frame !== 0 || ps.gun_offset.x !== 0 || ps.gun_offset.y !== 0 || ps.gun_offset.z !== 0 || ps.gun_angles.x !== 0 || ps.gun_angles.y !== 0 || ps.gun_angles.z !== 0) flags |= 8192;
+        if (ps.gun_frame !== 0 || ps.gun_offset.x !== 0 || ps.gun_offset.y !== 0 || ps.gun_offset.z !== 0 ||
+            ps.gun_angles.x !== 0 || ps.gun_angles.y !== 0 || ps.gun_angles.z !== 0) flags |= 8192;
+        if (ps.blend[0] !== 0 || ps.blend[1] !== 0 || ps.blend[2] !== 0 || ps.blend[3] !== 0) flags |= 1024;
         if (ps.fov !== 0) flags |= 2048;
         if (ps.rdflags !== 0) flags |= 16384;
+        if (ps.watertype !== 0) flags |= 32768;
 
         this.writer.writeShort(flags);
 
         if (flags & 1) this.writer.writeByte(ps.pm_type);
-        if (flags & 2) { this.writer.writeCoord(ps.origin.x); this.writer.writeCoord(ps.origin.y); this.writer.writeCoord(ps.origin.z); }
-        if (flags & 4) { this.writer.writeCoord(ps.velocity.x); this.writer.writeCoord(ps.velocity.y); this.writer.writeCoord(ps.velocity.z); }
+        if (flags & 2) {
+            this.writer.writeShort(ps.origin.x / 0.125);
+            this.writer.writeShort(ps.origin.y / 0.125);
+            this.writer.writeShort(ps.origin.z / 0.125);
+        }
+        if (flags & 4) {
+            this.writer.writeShort(ps.velocity.x / 0.125);
+            this.writer.writeShort(ps.velocity.y / 0.125);
+            this.writer.writeShort(ps.velocity.z / 0.125);
+        }
         if (flags & 8) this.writer.writeByte(ps.pm_time);
         if (flags & 16) this.writer.writeByte(ps.pm_flags);
         if (flags & 32) this.writer.writeShort(ps.gravity);
         if (flags & 64) {
-             this.writer.writeShort(Math.round(ps.delta_angles.x * (32768/180)));
-             this.writer.writeShort(Math.round(ps.delta_angles.y * (32768/180)));
-             this.writer.writeShort(Math.round(ps.delta_angles.z * (32768/180)));
+            this.writer.writeShort(ps.delta_angles.x / (180 / 32768));
+            this.writer.writeShort(ps.delta_angles.y / (180 / 32768));
+            this.writer.writeShort(ps.delta_angles.z / (180 / 32768));
         }
         if (flags & 128) {
-            this.writer.writeChar(Math.round(ps.viewoffset.x * 4));
-            this.writer.writeChar(Math.round(ps.viewoffset.y * 4));
-            this.writer.writeChar(Math.round(ps.viewoffset.z * 4));
+             this.writer.writeByte(ps.viewoffset.x / 0.25);
+             this.writer.writeByte(ps.viewoffset.y / 0.25);
+             this.writer.writeByte(ps.viewoffset.z / 0.25);
         }
         if (flags & 256) {
-             this.writer.writeAngle16(ps.viewangles.x);
-             this.writer.writeAngle16(ps.viewangles.y);
-             this.writer.writeAngle16(ps.viewangles.z);
+             this.writer.writeShort(ps.viewangles.x / (360.0 / 65536));
+             this.writer.writeShort(ps.viewangles.y / (360.0 / 65536));
+             this.writer.writeShort(ps.viewangles.z / (360.0 / 65536));
         }
         if (flags & 512) {
-             this.writer.writeChar(Math.round(ps.kick_angles.x * 4));
-             this.writer.writeChar(Math.round(ps.kick_angles.y * 4));
-             this.writer.writeChar(Math.round(ps.kick_angles.z * 4));
+             this.writer.writeByte(ps.kick_angles.x / 0.25);
+             this.writer.writeByte(ps.kick_angles.y / 0.25);
+             this.writer.writeByte(ps.kick_angles.z / 0.25);
         }
         if (flags & 4096) this.writer.writeByte(ps.gun_index);
         if (flags & 8192) {
-            this.writer.writeByte(ps.gun_frame);
-            this.writer.writeChar(Math.round(ps.gun_offset.x * 4));
-            this.writer.writeChar(Math.round(ps.gun_offset.y * 4));
-            this.writer.writeChar(Math.round(ps.gun_offset.z * 4));
-            this.writer.writeChar(Math.round(ps.gun_angles.x * 4));
-            this.writer.writeChar(Math.round(ps.gun_angles.y * 4));
-            this.writer.writeChar(Math.round(ps.gun_angles.z * 4));
+             this.writer.writeByte(ps.gun_frame);
+             this.writer.writeByte(ps.gun_offset.x / 0.25);
+             this.writer.writeByte(ps.gun_offset.y / 0.25);
+             this.writer.writeByte(ps.gun_offset.z / 0.25);
+             this.writer.writeByte(ps.gun_angles.x / 0.25);
+             this.writer.writeByte(ps.gun_angles.y / 0.25);
+             this.writer.writeByte(ps.gun_angles.z / 0.25);
         }
         if (flags & 1024) {
-            this.writer.writeByte(ps.blend[0]);
-            this.writer.writeByte(ps.blend[1]);
-            this.writer.writeByte(ps.blend[2]);
-            this.writer.writeByte(ps.blend[3]);
+             this.writer.writeByte(ps.blend[0]);
+             this.writer.writeByte(ps.blend[1]);
+             this.writer.writeByte(ps.blend[2]);
+             this.writer.writeByte(ps.blend[3]);
         }
         if (flags & 2048) this.writer.writeByte(ps.fov);
         if (flags & 16384) this.writer.writeByte(ps.rdflags);
+        if (flags & 32768) this.writer.writeByte(ps.watertype);
 
         let statbits = 0;
-        for(let i=0; i<32; i++) {
-            if (ps.stats[i] !== 0) statbits |= (1 << i);
+        for (let i = 0; i < 32; i++) {
+             if (ps.stats[i] !== 0) statbits |= (1 << i);
         }
         this.writer.writeLong(statbits);
-        for(let i=0; i<32; i++) {
-            if (statbits & (1 << i)) this.writer.writeShort(ps.stats[i]);
+        for (let i = 0; i < 32; i++) {
+             if (statbits & (1 << i)) this.writer.writeShort(ps.stats[i]);
         }
     }
 
-    public writePacketEntities(entities: EntityState[], delta: boolean, protocolVersion: number): void {
-        this.writeCommand(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities, protocolVersion);
+    writePacketEntities(entities: EntityState[], delta: boolean, protocol: number): void {
+        this.writeCommand(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities);
 
         for (const ent of entities) {
-            const force = !delta;
-            this.writeEntityState(ent, null, force, protocolVersion);
+            this.writeDeltaEntity(createEmptyEntityState(), ent, true);
         }
-
         this.writer.writeShort(0);
     }
 
-    public writeEntityState(to: EntityState, from: EntityState | null, force: boolean, protocolVersion: number): void {
+    writeFrame(frame: FrameData, protocol: number): void {
+        this.writeCommand(ServerCommand.frame);
+        this.writer.writeLong(frame.serverFrame);
+        this.writer.writeLong(frame.deltaFrame);
+
+        if (protocol !== 26 && protocol !== 25) {
+             this.writer.writeByte(frame.surpressCount);
+        }
+
+        this.writer.writeByte(frame.areaBytes);
+        this.writer.writeBytes(frame.areaBits);
+
+        this.writePlayerState(frame.playerState);
+        this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocol);
+    }
+
+    writeDeltaEntity(from: EntityState, to: EntityState, force: boolean): void {
         let bits = 0;
         let bitsHigh = 0;
 
-        if (to.bits !== 0 && !force) {
-            // Respect existing bits if not forcing
-            bits = to.bits;
-            bitsHigh = to.bitsHigh;
-        } else {
-            // Calculate bits based on values (fallback or forced generation)
-            // If force is true, we check non-zero values to generate bits.
+        if (to.modelindex !== from.modelindex || force) bits |= U_MODEL;
+        if (to.modelindex2 !== from.modelindex2 || force) bits |= U_MODEL2;
+        if (to.modelindex3 !== from.modelindex3 || force) bits |= U_MODEL3;
+        if (to.modelindex4 !== from.modelindex4 || force) bits |= U_MODEL4;
 
-            if (to.modelindex !== 0) bits |= U_MODEL;
-            if (to.modelindex2 !== 0) bits |= U_MODEL2;
-            if (to.modelindex3 !== 0) bits |= U_MODEL3;
-            if (to.modelindex4 !== 0) bits |= U_MODEL4;
-
-            if (to.frame !== 0) {
-                 if (to.frame >= 256) bits |= U_FRAME16;
-                 else bits |= U_FRAME8;
-            }
-
-            if (to.skinnum !== 0) {
-                if (to.skinnum >= 256) bits |= U_SKIN16;
-                else bits |= U_SKIN8;
-            }
-
-            if (to.effects !== 0) {
-                if (to.effects >= 256) bits |= U_EFFECTS16;
-                else bits |= U_EFFECTS8;
-            }
-
-            if (to.renderfx !== 0) {
-                if (to.renderfx >= 256) bits |= U_RENDERFX16;
-                else bits |= U_RENDERFX8;
-            }
-
-            if (to.origin.x !== 0) bits |= U_ORIGIN1;
-            if (to.origin.y !== 0) bits |= U_ORIGIN2;
-            if (to.origin.z !== 0) bits |= U_ORIGIN3;
-
-            if (to.angles.x !== 0) bits |= U_ANGLE1;
-            if (to.angles.y !== 0) bits |= U_ANGLE2;
-            if (to.angles.z !== 0) bits |= U_ANGLE3;
-
-            if (to.old_origin.x !== 0 || to.old_origin.y !== 0 || to.old_origin.z !== 0) bits |= U_OLDORIGIN;
-
-            if (to.sound !== 0) bits |= U_SOUND;
-            if (to.event !== 0) bits |= U_EVENT;
-            if (to.solid !== 0) bits |= U_SOLID;
-
-            // Rerelease specific
-            if (protocolVersion >= 2023) {
-                 if (to.alpha !== 0) bits |= U_ALPHA;
-                 if (to.scale !== 0) bits |= U_SCALE;
-                 if (to.instanceBits !== 0) bits |= U_INSTANCE_BITS;
-                 if (to.loopVolume !== 0) bits |= U_LOOP_VOLUME;
-                 if (to.loopAttenuation !== 0) bitsHigh |= U_LOOP_ATTENUATION_HIGH;
-                 if (to.owner !== 0) bitsHigh |= U_OWNER_HIGH;
-                 if (to.oldFrame !== 0) bitsHigh |= U_OLD_FRAME_HIGH;
-            }
-
-            if (to.number >= 256) bits |= U_NUMBER16;
+        if (to.frame !== from.frame || force) {
+            if (to.frame >= 256) bits |= U_FRAME16;
+            else bits |= U_FRAME8;
         }
 
-        // Logic to handle U_MOREBITS
-        if (bitsHigh !== 0) bits |= U_MOREBITS4;
-        if ((bits & 0xFF000000) !== 0) bits |= U_MOREBITS3;
-        if ((bits & 0x00FF0000) !== 0) bits |= U_MOREBITS2;
-        if ((bits & 0x0000FF00) !== 0) bits |= U_MOREBITS1;
+        if (to.skinnum !== from.skinnum || force) {
+            if (to.skinnum >= 256) bits |= U_SKIN16;
+            else bits |= U_SKIN8;
+        }
+
+        if (to.effects !== from.effects || force) {
+            if (to.effects >= 256) bits |= U_EFFECTS16;
+            else bits |= U_EFFECTS8;
+        }
+
+        if (to.renderfx !== from.renderfx || force) {
+            if (to.renderfx >= 256) bits |= U_RENDERFX16;
+            else bits |= U_RENDERFX8;
+        }
+
+        if (to.origin.x !== from.origin.x || force) {
+            if (to.origin.x !== 0) bits |= U_ORIGIN1;
+        }
+        if (to.origin.y !== from.origin.y || force) {
+            if (to.origin.y !== 0) bits |= U_ORIGIN2;
+        }
+        if (to.origin.z !== from.origin.z || force) {
+            if (to.origin.z !== 0) bits |= U_ORIGIN3;
+        }
+
+        if (to.angles.x !== from.angles.x || force) {
+            if (to.angles.x !== 0) bits |= U_ANGLE1;
+        }
+        if (to.angles.y !== from.angles.y || force) {
+            if (to.angles.y !== 0) bits |= U_ANGLE2;
+        }
+        if (to.angles.z !== from.angles.z || force) {
+            if (to.angles.z !== 0) bits |= U_ANGLE3;
+        }
+
+        if (to.sound !== from.sound || force) bits |= U_SOUND;
+        if (to.event !== from.event || force) bits |= U_EVENT;
+        if (to.solid !== from.solid || force) bits |= U_SOLID;
+
+        // Rerelease fields - Only if NOT protocol 34
+        if (this.protocol !== 34) {
+            if (to.alpha !== from.alpha || force) bits |= U_ALPHA;
+            if (to.scale !== from.scale || force) bits |= U_SCALE;
+            if (to.instanceBits !== from.instanceBits || force) bits |= U_INSTANCE_BITS;
+            if (to.loopVolume !== from.loopVolume || force) bits |= U_LOOP_VOLUME;
+
+            // High bits
+            if (to.loopAttenuation !== from.loopAttenuation || force) bitsHigh |= U_LOOP_ATTENUATION_HIGH;
+            if (to.owner !== from.owner || force) bitsHigh |= U_OWNER_HIGH;
+            if (to.oldFrame !== from.oldFrame || force) bitsHigh |= U_OLD_FRAME_HIGH;
+        }
+
+        // Determine cascades
+        if (bitsHigh > 0) bits |= U_MOREBITS4;
+        if (bits & 0xFF000000) bits |= U_MOREBITS3;
+        if (bits & 0xFFFF0000) bits |= U_MOREBITS2;
+        if (bits & 0xFFFFFF00) bits |= U_MOREBITS1;
 
         // Write header
-        this.writer.writeByte(bits & 255);
-        if (bits & U_MOREBITS1) this.writer.writeByte((bits >> 8) & 255);
-        if (bits & U_MOREBITS2) this.writer.writeByte((bits >> 16) & 255);
-        if (bits & U_MOREBITS3) this.writer.writeByte((bits >> 24) & 255);
-        if (protocolVersion >= 2023 && (bits & U_MOREBITS4)) {
-            this.writer.writeByte(bitsHigh & 255);
-        }
+        this.writer.writeByte(bits & 0xFF);
+        if (bits & U_MOREBITS1) this.writer.writeByte((bits >> 8) & 0xFF);
+        if (bits & U_MOREBITS2) this.writer.writeByte((bits >> 16) & 0xFF);
+        if (bits & U_MOREBITS3) this.writer.writeByte((bits >> 24) & 0xFF);
+        if (bits & U_MOREBITS4) this.writer.writeByte(bitsHigh & 0xFF);
 
         // Write number
-        if (bits & U_NUMBER16) this.writer.writeShort(to.number);
-        else this.writer.writeByte(to.number);
+        if (to.number >= 256) {
+             this.writer.writeShort(to.number);
+        } else {
+             this.writer.writeByte(to.number);
+        }
 
+        // Write fields
         if (bits & U_MODEL) this.writer.writeByte(to.modelindex);
         if (bits & U_MODEL2) this.writer.writeByte(to.modelindex2);
         if (bits & U_MODEL3) this.writer.writeByte(to.modelindex3);
@@ -480,17 +349,14 @@ export class MessageWriter {
         if (bits & U_FRAME8) this.writer.writeByte(to.frame);
         if (bits & U_FRAME16) this.writer.writeShort(to.frame);
 
-        if ((bits & U_SKIN8) && (bits & U_SKIN16)) this.writer.writeLong(to.skinnum);
-        else if (bits & U_SKIN8) this.writer.writeByte(to.skinnum);
-        else if (bits & U_SKIN16) this.writer.writeShort(to.skinnum);
+        if (bits & U_SKIN8) this.writer.writeByte(to.skinnum);
+        if (bits & U_SKIN16) this.writer.writeShort(to.skinnum);
 
-        if ((bits & U_EFFECTS8) && (bits & U_EFFECTS16)) this.writer.writeLong(to.effects);
-        else if (bits & U_EFFECTS8) this.writer.writeByte(to.effects);
-        else if (bits & U_EFFECTS16) this.writer.writeShort(to.effects);
+        if (bits & U_EFFECTS8) this.writer.writeByte(to.effects);
+        if (bits & U_EFFECTS16) this.writer.writeShort(to.effects);
 
-        if ((bits & U_RENDERFX8) && (bits & U_RENDERFX16)) this.writer.writeLong(to.renderfx);
-        else if (bits & U_RENDERFX8) this.writer.writeByte(to.renderfx);
-        else if (bits & U_RENDERFX16) this.writer.writeShort(to.renderfx);
+        if (bits & U_RENDERFX8) this.writer.writeByte(to.renderfx);
+        if (bits & U_RENDERFX16) this.writer.writeShort(to.renderfx);
 
         if (bits & U_ORIGIN1) this.writer.writeCoord(to.origin.x);
         if (bits & U_ORIGIN2) this.writer.writeCoord(to.origin.y);
@@ -500,22 +366,17 @@ export class MessageWriter {
         if (bits & U_ANGLE2) this.writer.writeAngle(to.angles.y);
         if (bits & U_ANGLE3) this.writer.writeAngle(to.angles.z);
 
-        if (bits & U_OLDORIGIN) {
-             this.writer.writeCoord(to.old_origin.x);
-             this.writer.writeCoord(to.old_origin.y);
-             this.writer.writeCoord(to.old_origin.z);
-        }
-
-        if (bits & U_SOUND) this.writer.writeByte(to.sound);
-        if (bits & U_EVENT) this.writer.writeByte(to.event);
+        if (bits & U_SOUND) this.writer.writeByte(to.sound ?? 0);
+        if (bits & U_EVENT) this.writer.writeByte(to.event ?? 0);
         if (bits & U_SOLID) this.writer.writeShort(to.solid);
 
-        if (protocolVersion >= 2023) {
-            if (bits & U_ALPHA) this.writer.writeByte(Math.round(to.alpha * 255));
+        if (this.protocol !== 34) {
+            if (bits & U_ALPHA) this.writer.writeByte(to.alpha * 255);
             if (bits & U_SCALE) this.writer.writeFloat(to.scale);
             if (bits & U_INSTANCE_BITS) this.writer.writeLong(to.instanceBits);
-            if (bits & U_LOOP_VOLUME) this.writer.writeByte(Math.round(to.loopVolume * 255));
-            if (bitsHigh & U_LOOP_ATTENUATION_HIGH) this.writer.writeByte(Math.round(to.loopAttenuation * 255));
+            if (bits & U_LOOP_VOLUME) this.writer.writeByte(to.loopVolume * 255);
+
+            if (bitsHigh & U_LOOP_ATTENUATION_HIGH) this.writer.writeByte(to.loopAttenuation * 255);
             if (bitsHigh & U_OWNER_HIGH) this.writer.writeShort(to.owner);
             if (bitsHigh & U_OLD_FRAME_HIGH) this.writer.writeShort(to.oldFrame);
         }

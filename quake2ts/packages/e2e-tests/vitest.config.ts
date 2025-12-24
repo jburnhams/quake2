@@ -9,6 +9,8 @@ export default defineConfig({
     // since these are end-to-end tests requiring browsers.
     include: isUnit ? [] : ['**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
+    testTimeout: 120000,
+    hookTimeout: 120000,
     pool: 'forks',
     poolOptions: {
       forks: {

@@ -1,17 +1,21 @@
 
 import { ProtocolHandler } from './types.js';
-import { ServerCommand } from '@quake2ts/shared';
 import {
-    EntityState, ProtocolPlayerState, createEmptyProtocolPlayerState,
+    ServerCommand,
     U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1,
     U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2,
     U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID
-} from '../parser.js';
+} from '@quake2ts/shared';
+import { EntityState, ProtocolPlayerState, createEmptyProtocolPlayerState } from '../state.js';
 import { StreamingBuffer } from '../../stream/streamingBuffer.js';
 
 export class LegacyProtocolHandler implements ProtocolHandler {
-    protocolVersion = 0; // Or whatever legacy tests use
+    protocolVersion: number;
+
+    constructor(version: number = 0) {
+        this.protocolVersion = version;
+    }
 
     translateCommand(cmd: number): ServerCommand {
         // Legacy Q2TS behavior (prior to fix)

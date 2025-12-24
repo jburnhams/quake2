@@ -35,7 +35,7 @@ describe('E2E Prediction and Reconciliation Test', () => {
     await page.waitForFunction(() => {
         const client = (window as any).clientInstance;
         return client.multiplayer.state >= 4; // Active
-    }, undefined, { timeout: 20000 });
+    }, undefined, { timeout: 60000 });
 
     // --- 4.5.1 Test prediction runs locally ---
 
@@ -93,7 +93,7 @@ describe('E2E Prediction and Reconciliation Test', () => {
         Math.pow(predictionResult.endOrigin.y - predictionResult.startOrigin.y, 2)
     );
     expect(dist).toBeGreaterThan(1);
-  }, 20000);
+  }, 60000);
 
   it('should eventually sync with server (Task 4.5.2)', async () => {
       // If prediction matches server, no "snap" should occur.

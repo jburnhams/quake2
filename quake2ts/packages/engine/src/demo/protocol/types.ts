@@ -1,5 +1,5 @@
 
-import { EntityState, ProtocolPlayerState, FrameData } from '../parser.js';
+import { EntityState, ProtocolPlayerState, FrameData } from '../state.js';
 import { ServerCommand, Vec3 } from '@quake2ts/shared';
 import { StreamingBuffer } from '../../stream/streamingBuffer.js';
 
