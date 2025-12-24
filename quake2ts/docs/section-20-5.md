@@ -21,7 +21,7 @@ Implement the simplest rendering pipeline - 2D sprite/HUD rendering. This serves
 1. Implement WebGPU 2D sprite renderer
 2. Translate GLSL shader to WGSL
 3. Support textured quads and filled rectangles
-4. Support text rendering (texture atlas-based)
+5. Support text rendering (texture atlas-based) (Deferred)
 5. Validate with headless tests and PNG snapshots
 6. Establish pattern for subsequent pipelines
 
@@ -160,7 +160,7 @@ Create PNG snapshot tests:
 1. Create visual test for solid rectangle [x]
 2. Create visual test for textured quad [x]
 3. Create visual test for batched sprites [x]
-4. Create visual test for text rendering [x]
+4. Create visual test for text rendering [ ]
 5. Create visual test for alpha blending [x]
 6. Generate baseline snapshots [x]
 7. Verify snapshots match expectations [x]
