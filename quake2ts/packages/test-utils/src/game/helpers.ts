@@ -89,6 +89,9 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   // Create hooks helper that interacts with the entity list
   const hooks = game.hooks;
 
+  // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
+  let currentSpawnRegistry: SpawnRegistry | undefined;
+
   const entities = {
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
@@ -113,7 +116,17 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       }
       ent.inUse = false;
     }),
-    setSpawnRegistry: vi.fn(),
+    setSpawnRegistry: vi.fn((registry: SpawnRegistry) => {
+      currentSpawnRegistry = registry;
+    }),
+    registerEntityClass: vi.fn((classname: string, factory: any) => {
+      if (currentSpawnRegistry) {
+        currentSpawnRegistry.register(classname, factory);
+      }
+    }),
+    getSpawnFunction: vi.fn((classname: string) => {
+      return currentSpawnRegistry?.get(classname);
+    }),
     timeSeconds: 10,
     deltaSeconds: 0.1,
     modelIndex: vi.fn(() => 0),
