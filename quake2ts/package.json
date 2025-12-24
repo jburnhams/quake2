@@ -114,7 +114,6 @@
     "@napi-rs/canvas": "^0.1.82",
     "@playwright/test": "1.57.0",
     "@quake2ts/test-utils": "workspace:^",
-    "@quake2ts/tests": "workspace:^",
     "@types/node": "^24.10.1",
     "@types/pako": "^2.0.4",
     "@types/serve-handler": "^6.1.4",

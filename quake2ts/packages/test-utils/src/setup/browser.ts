@@ -36,6 +36,11 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
   global.window = dom.window as any;
   global.document = dom.window.document;
 
+  // Polyfill global DOM Constructors
+  global.Document = dom.window.Document;
+  global.Element = dom.window.Element;
+  global.Node = dom.window.Node;
+
   // Handle navigator assignment safely
   try {
     // @ts-ignore
