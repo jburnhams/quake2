@@ -16,7 +16,11 @@ export interface ClientStateProvider {
 }
 
 // Stub implementation of CGameImport using existing client/engine state
-export function createCGameImport(imports: ClientImports, state: ClientStateProvider): CGameImport {
+export function createCGameImport(
+    imports: ClientImports,
+    state: ClientStateProvider,
+    onPrint?: (msg: string) => void
+): CGameImport {
     // Local cache for texture handles to Pic objects
     // CGame uses handles (unknown), we use strings as handles.
     const picCache = new Map<string, Pic>();
@@ -32,11 +36,17 @@ export function createCGameImport(imports: ClientImports, state: ClientStateProv
 
         // Console
         Com_Print: (msg: string) => {
-             // TODO: Route to console system if exists
+             // Route to console system if exists
             console.log(`[CGAME] ${msg}`);
+            if (onPrint) {
+                onPrint(msg);
+            }
         },
         Com_Error: (msg: string) => {
             console.error(`[CGAME ERROR] ${msg}`);
+            if (onPrint) {
+                onPrint(`^1[ERROR] ${msg}`);
+            }
         },
 
         // Config strings

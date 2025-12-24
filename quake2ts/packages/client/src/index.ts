@@ -339,7 +339,10 @@ export function createClient(imports: ClientImports): ClientExports {
   };
 
   // CGame Interface
-  const cgameImport = createCGameImport(imports, stateProvider);
+  const cgameImport = createCGameImport(imports, stateProvider, (msg) => {
+      // Use level 0 (PRINT_LOW/INFO) for general output
+      chatManager.addMessage(0, msg);
+  });
   const cg: CGameExport = GetCGameAPI(cgameImport);
 
   // Networking
