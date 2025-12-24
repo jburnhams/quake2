@@ -20,14 +20,13 @@ describe('Player State Snapshot', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        // 1. Refactor to use createGameImportsAndEngine
         const result = createGameImportsAndEngine();
         mockImports = result.imports;
         mockEngine = result.engine;
 
         game = createGame(mockImports, mockEngine, options);
         game.init(0);
-        // Spawn a player manually or via game mechanics if possible
-        // game.spawnWorld() handles player spawn in SP
         game.spawnWorld();
         player = game.entities.find(e => e.classname === 'player')!;
 
