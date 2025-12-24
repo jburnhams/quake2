@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { initHeadlessWebGPU, createHeadlessTestContext } from '../src/setup/webgpu';
+import { initHeadlessWebGPU, createHeadlessTestContext } from '../../src/setup/webgpu';
 
 describe('WebGPU Headless Setup', () => {
   it('should initialize WebGPU in Node.js environment', async () => {

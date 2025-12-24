@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { createRenderTestSetup, renderAndCapture } from '../src/engine/helpers/webgpu-rendering';
+import { createRenderTestSetup, renderAndCapture } from '../../src/engine/helpers/webgpu-rendering';
 
 describe('WebGPU Rendering Utilities', () => {
 
