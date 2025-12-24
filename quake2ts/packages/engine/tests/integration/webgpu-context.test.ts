@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createWebGPUContext } from '../../../src/render/webgpu/context';
-import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
+import { createWebGPUContext } from '../../src/render/webgpu/context';
+import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
 
 // Import webgpu/dawn bindings for Node.js
 import { create, globals } from 'webgpu';
