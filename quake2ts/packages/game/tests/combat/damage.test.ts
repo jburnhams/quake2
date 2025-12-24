@@ -148,19 +148,15 @@ describe('T_RadiusDamage', () => {
 
 describe('Damage Modifiers', () => {
     const time = 10;
-    // createPlayerEntityFactory ensures client is not null but we might need to populate properties further if factory doesn't
-    // The previous test manually assigned client = {} as any, but createPlayerEntityFactory (from checking source) returns generic Entity with client being undefined by default?
-    // Wait, createPlayerEntityFactory implementation in factories.ts:
-    // returns createEntityFactory({...}) which returns new Entity(1). Entity class has client?: Client.
-    // So createPlayerEntityFactory DOES NOT pre-populate client unless overrides do.
-    // Task 1.3 says "Pre-set: classname: 'player', health: 100, playerState, client info".
-    // But checking `factories.ts` content I read, `createPlayerEntityFactory` does NOT populate `client` or `playerState` (except implicit defaults of Entity?).
-    // Ah, wait, `factories.ts` calls `createEntityFactory` with `classname: 'player'`. It doesn't set `client`.
-    // So I still need to manually set `client`.
 
+    // Use factory and then explicitly hydrate the client property as factories might not fully populate it by default
     const attacker = createPlayerEntityFactory({ origin: { x: 0, y: 0, z: 0 } });
-    // Manually setting client for now as factory doesn't seem to do it fully yet based on my read
-    (attacker as any).client = { quad_time: 0, double_time: 0 };
+    if (!attacker.client) {
+      (attacker as any).client = { quad_time: 0, double_time: 0 };
+    } else {
+      attacker.client.quad_time = 0;
+      attacker.client.double_time = 0;
+    }
 
     const target = createEntityFactory({
         origin: { x: 50, y: 0, z: 0 },
@@ -170,8 +166,10 @@ describe('Damage Modifiers', () => {
     const damage = 10;
 
     beforeEach(() => {
-        (attacker as any).client.quad_time = 0;
-        (attacker as any).client.double_time = 0;
+        if (attacker.client) {
+            attacker.client.quad_time = 0;
+            attacker.client.double_time = 0;
+        }
         target.health = 100;
     });
     const knockback = 20;
