@@ -2,9 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
-import { Entity, Solid } from '../src/entities/entity.js';
-import { createPlayerInventory } from '../src/inventory/playerInventory.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { Solid } from '../src/entities/entity.js';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {
@@ -19,17 +18,26 @@ describe('Item Respawn Logic', () => {
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory(),
-            weaponStates: {
-                currentWeapon: null,
-                lastFireTime: 0,
-                weaponFrame: 0,
-                weaponIdleTime: 0,
-                weapons: {},
-                activeWeaponId: null
-            }
-        };
+        Object.assign(player, createPlayerEntityFactory({
+            client: {
+                inventory: {
+                    ammo: { counts: [], caps: [] },
+                    ownedWeapons: new Set(),
+                    powerups: new Map(),
+                    keys: new Set(),
+                    items: new Set()
+                },
+                weaponStates: {
+                    currentWeapon: null,
+                    lastFireTime: 0,
+                    weaponFrame: 0,
+                    weaponIdleTime: 0,
+                    weapons: {},
+                    activeWeaponId: null
+                }
+            } as any
+        }));
+
 
         // Simulate touch
         if (pickup.touch) {
@@ -54,17 +62,25 @@ describe('Item Respawn Logic', () => {
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory(),
-            weaponStates: {
-                currentWeapon: null,
-                lastFireTime: 0,
-                weaponFrame: 0,
-                weaponIdleTime: 0,
-                weapons: {},
-                activeWeaponId: null
-            }
-        };
+        Object.assign(player, createPlayerEntityFactory({
+            client: {
+                inventory: {
+                    ammo: { counts: [], caps: [] },
+                    ownedWeapons: new Set(),
+                    powerups: new Map(),
+                    keys: new Set(),
+                    items: new Set()
+                },
+                weaponStates: {
+                    currentWeapon: null,
+                    lastFireTime: 0,
+                    weaponFrame: 0,
+                    weaponIdleTime: 0,
+                    weapons: {},
+                    activeWeaponId: null
+                }
+            } as any
+        }));
 
         // Simulate touch
         if (pickup.touch) {

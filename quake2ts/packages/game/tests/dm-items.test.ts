@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../src/entities/system.js';
 import { createGame } from '../src/index.js';
 import { handleItemPickup } from '../src/entities/items/common.js';
 import { Solid } from '../src/entities/entity.js';
@@ -60,7 +59,8 @@ describe('Item Respawn', () => {
     });
 
     it('handleItemPickup should remove item in single player', () => {
-        const spGame = createGame({}, {} as any, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
+        const { imports, engine } = createGameImportsAndEngine();
+        const spGame = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
         const spItem = spGame.entities.spawn();
 
         spGame.entities.free = vi.fn();
