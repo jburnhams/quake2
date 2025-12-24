@@ -9,21 +9,20 @@ import { Entity } from '../../src/entities/entity.js';
 describe('Monster AI - Soldier', () => {
   let system: EntitySystem;
   let registry: any;
+  let testContext: ReturnType<typeof createTestContext>;
 
   beforeEach(() => {
     // 1. Use createTestContext which provides mocked engine and system
-    const testContext = createTestContext();
+    testContext = createTestContext();
     system = testContext.entities;
 
     // Ensure modelIndex returns 1 as expected by the test
-    // createTestContext's engine.modelIndex returns 0 by default, so we override it
     vi.spyOn(testContext.engine, 'modelIndex').mockReturnValue(1);
 
     // 2. Use createDefaultSpawnRegistry with the mocked engine
     registry = createDefaultSpawnRegistry(testContext.engine);
 
     // Patch targetAwareness with necessary mocks if not already fully mocked by createTestContext
-    // createTestContext provides a basic targetAwareness mock, but we might need to enhance it
     if (system.targetAwareness) {
         (system.targetAwareness as any).activePlayers = [];
         (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
@@ -37,15 +36,8 @@ describe('Monster AI - Soldier', () => {
     const spawnFunc = registry.get('monster_soldier');
     expect(spawnFunc).toBeDefined();
 
-    const context = {
-        keyValues: {},
-        entities: system,
-        warn: vi.fn(),
-        free: vi.fn(),
-        health_multiplier: 1.0,
-    };
-
-    spawnFunc(soldier, context);
+    // Use testContext as the spawn context, as it implements SpawnContext
+    spawnFunc(soldier, testContext);
 
     expect(soldier.health).toBe(20);
     expect(soldier.max_health).toBe(20);
@@ -59,14 +51,7 @@ describe('Monster AI - Soldier', () => {
     soldier.classname = 'monster_soldier';
     const spawnFunc = registry.get('monster_soldier');
 
-    const context = {
-        keyValues: {},
-        entities: system,
-        warn: vi.fn(),
-        free: vi.fn(),
-        health_multiplier: 1.0,
-    };
-    spawnFunc(soldier, context);
+    spawnFunc(soldier, testContext);
 
     system.beginFrame(1.0);
 
@@ -84,7 +69,7 @@ describe('Monster AI - Soldier', () => {
     const soldier = system.spawn();
     soldier.classname = 'monster_soldier';
     const spawnFunc = registry.get('monster_soldier');
-    spawnFunc(soldier, { keyValues: {}, entities: system, warn: vi.fn(), free: vi.fn(), health_multiplier: 1.0 });
+    spawnFunc(soldier, testContext);
 
     const move = soldier.monsterinfo.current_move!;
     expect(move).toBeDefined();
@@ -122,6 +107,7 @@ describe('monster_think (Freeze Logic)', () => {
 
     entity = context.spawn();
     entity.inUse = true;
+
     entity.monsterinfo = {
       current_move: {
         firstframe: 0,
@@ -148,7 +134,8 @@ describe('monster_think (Freeze Logic)', () => {
       last_sighting: { x: 0, y: 0, z: 0 },
       trail_time: 0,
       viewheight: 0,
-      allow_spawn: null
+      allow_spawn: null,
+      freeze_time: 0
     };
     entity.frame = 0;
     entity.renderfx = 0;
