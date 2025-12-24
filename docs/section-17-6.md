@@ -83,7 +83,7 @@
 
 ### 6.4.2 Worker Thread Support
 - [x] Move BSP parsing to worker thread for non-blocking load
-- [ ] Move demo parsing to worker thread
+- [x] Move demo parsing to worker thread
 - [ ] Move audio decoding to worker thread (already async via WASM)
 - [ ] Expose worker-based API with progress callbacks
 
