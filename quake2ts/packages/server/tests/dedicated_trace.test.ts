@@ -2,11 +2,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DedicatedServer } from '../src/dedicated.js';
 import * as gameModule from '@quake2ts/game';
 import { CollisionEntityIndex, traceBox } from '@quake2ts/shared';
+import { createMockCollisionEntityIndex } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/shared', async () => {
     const actual = await vi.importActual('@quake2ts/shared');
-    const { createMockCollisionEntityIndex } = await vi.importActual('@quake2ts/test-utils');
     return {
         ...actual,
         traceBox: vi.fn(),

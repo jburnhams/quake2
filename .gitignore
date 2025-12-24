@@ -2,3 +2,10 @@
 node_modules/
 dist/
 .turbo/
+
+# Visual Test Artifacts
+**/__snapshots__/actual/
+**/__snapshots__/diff/
+
+# GitHub Pages
+pages-dist/

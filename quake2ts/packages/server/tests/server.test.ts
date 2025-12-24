@@ -9,19 +9,36 @@ vi.mock('node:fs/promises', () => ({
     }
 }));
 
-vi.mock('@quake2ts/engine', () => ({
-    parseBsp: vi.fn().mockReturnValue({
-        planes: [],
-        nodes: [],
-        leafs: [],
-        brushes: [],
-        models: [],
-        leafLists: { leafBrushes: [] },
-        texInfo: [],
-        brushSides: [],
-        visibility: { numClusters: 0, clusters: [] } // Add visibility to mock
-    })
-}));
+// Must import makeBspModel inside the mock factory to avoid hoisting issues
+vi.mock('@quake2ts/engine', async (importOriginal) => {
+    // We can't use the top-level import here because of hoisting.
+    // So we need to either inline the object or import dynamically if possible,
+    // but vitest mocks are synchronous usually.
+    // However, since we are mocking a return value, we can just return a plain object that looks like what makeBspModel returns
+    // OR we can rely on `await vi.importActual('@quake2ts/test-utils')` if we were mocking that module, but we are mocking `engine`.
+
+    // The error says "Cannot access '__vi_import_1__' before initialization".
+    // This is because `makeBspModel` is imported at top level but used in hoisted `vi.mock`.
+
+    // Solution: Just return a plain object matching the structure, or move `makeBspModel` call inside the test or `beforeEach` and use `vi.mocked`.
+    // But `parseBsp` is called internally by `DedicatedServer`.
+
+    // Let's just define a minimal object here that satisfies the requirements to avoid complexity.
+    return {
+        parseBsp: vi.fn().mockReturnValue({
+            planes: [],
+            nodes: [],
+            leafs: [],
+            brushes: [],
+            leafBrushes: [],
+            bmodels: [],
+            models: [],
+            texInfo: [],
+            brushSides: [],
+            visibility: { numClusters: 0, clusters: [] }
+        })
+    };
+});
 
 describe('DedicatedServer', () => {
     let server: DedicatedServer;

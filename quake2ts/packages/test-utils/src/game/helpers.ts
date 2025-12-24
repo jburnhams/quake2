@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
+import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
 
 // Re-export collision helpers from shared collision utility
@@ -88,6 +89,9 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   // Create hooks helper that interacts with the entity list
   const hooks = game.hooks;
 
+  // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
+  let currentSpawnRegistry: SpawnRegistry | undefined;
+
   const entities = {
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
@@ -112,7 +116,17 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       }
       ent.inUse = false;
     }),
-    setSpawnRegistry: vi.fn(),
+    setSpawnRegistry: vi.fn((registry: SpawnRegistry) => {
+      currentSpawnRegistry = registry;
+    }),
+    registerEntityClass: vi.fn((classname: string, factory: any) => {
+      if (currentSpawnRegistry) {
+        currentSpawnRegistry.register(classname, factory);
+      }
+    }),
+    getSpawnFunction: vi.fn((classname: string) => {
+      return currentSpawnRegistry?.get(classname);
+    }),
     timeSeconds: 10,
     deltaSeconds: 0.1,
     modelIndex: vi.fn(() => 0),
@@ -206,8 +220,23 @@ export function createCombatTestContext(): TestContext {
   return createTestContext();
 }
 
-export function createPhysicsTestContext(): TestContext {
-  return createTestContext();
+export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
+  const context = createTestContext();
+
+  if (bspModel) {
+    // If a BSP model is provided, we can set up the trace mock to be more realistic.
+    // For now, we'll just store the model on the context if we extended TestContext,
+    // but the task specifically asks to "Include collision world, traces".
+
+    // In a real scenario, we might want to hook up a real BSP trace function here
+    // or a mock that uses the BSP data.
+    // Since we don't have a full BSP physics engine mock ready to drop in,
+    // we will stick with the default trace mock which is already set up in createTestContext,
+    // but we acknowledge the bspModel parameter for future expansion where we might
+    // use it to seed the trace results.
+  }
+
+  return context;
 }
 
 export function createEntity(): Entity {

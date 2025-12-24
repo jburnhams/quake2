@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity } from '../../../src/entities/entity.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
 import { WeaponId } from '../../../src/inventory/playerInventory.js';

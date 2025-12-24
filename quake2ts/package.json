@@ -1,6 +1,6 @@
 {
   "name": "quake2ts",
-  "version": "0.0.645",
+  "version": "0.0.696",
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
   "packageManager": "pnpm@8.15.7",
@@ -106,6 +106,7 @@
     "test": "pnpm -r --if-present test",
     "test:unit": "TEST_TYPE=unit vitest run",
     "test:integration": "pnpm -r --if-present test:integration",
+    "test:webgpu": "pnpm -r --if-present test:webgpu",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "devDependencies": {
@@ -117,6 +118,7 @@
     "@types/pako": "^2.0.4",
     "@types/serve-handler": "^6.1.4",
     "@webgpu/types": "^0.1.68",
+    "cross-env": "^10.1.0",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.2.0",
     "playwright": "1.57.0",

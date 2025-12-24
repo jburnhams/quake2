@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('target_speaker', () => {
   let entities: EntitySystem;

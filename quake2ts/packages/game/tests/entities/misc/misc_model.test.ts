@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerMiscModel } from '../../../src/entities/misc/more_misc.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('misc_model', () => {

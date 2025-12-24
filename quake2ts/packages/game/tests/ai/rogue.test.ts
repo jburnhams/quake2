@@ -8,7 +8,7 @@ import {
   monster_jump_finished,
   BlockedJumpResult
 } from '../../src/ai/rogue.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, EntityFlags, ServerFlags, Solid } from '../../src/entities/entity.js';
 import { Vec3, ZERO_VEC3, copyVec3 } from '@quake2ts/shared';
 

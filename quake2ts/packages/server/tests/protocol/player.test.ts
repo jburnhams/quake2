@@ -1,113 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryWriter, BinaryStream } from '@quake2ts/shared';
+import { BinaryWriter } from '@quake2ts/shared';
 import { writePlayerState, ProtocolPlayerState } from '../../src/protocol/player.js';
-
-// Mock parser based on packages/engine/src/demo/parser.ts logic for verification
-// We don't want to import the engine parser directly as it creates circular dependency or requires engine build
-// So we just implement a simple reader here that matches the spec we implemented.
-
-function readPlayerState(data: Uint8Array): ProtocolPlayerState {
-    const stream = new BinaryStream(data.buffer);
-    const ps: ProtocolPlayerState = {
-        pm_type: 0,
-        origin: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        pm_time: 0,
-        pm_flags: 0,
-        gravity: 0,
-        delta_angles: { x: 0, y: 0, z: 0 },
-        viewoffset: { x: 0, y: 0, z: 0 },
-        viewangles: { x: 0, y: 0, z: 0 },
-        kick_angles: { x: 0, y: 0, z: 0 },
-        gun_index: 0,
-        gun_frame: 0,
-        gun_offset: { x: 0, y: 0, z: 0 },
-        gun_angles: { x: 0, y: 0, z: 0 },
-        blend: [0, 0, 0, 0],
-        fov: 0,
-        rdflags: 0,
-        stats: new Array(32).fill(0),
-        watertype: 0
-    };
-
-    const flags = stream.readShort();
-
-    if (flags & 1) ps.pm_type = stream.readByte();
-
-    if (flags & 2) {
-        ps.origin.x = stream.readShort() * 0.125;
-        ps.origin.y = stream.readShort() * 0.125;
-        ps.origin.z = stream.readShort() * 0.125;
-    }
-
-    if (flags & 4) {
-        ps.velocity.x = stream.readShort() * 0.125;
-        ps.velocity.y = stream.readShort() * 0.125;
-        ps.velocity.z = stream.readShort() * 0.125;
-    }
-
-    if (flags & 8) ps.pm_time = stream.readByte();
-    if (flags & 16) ps.pm_flags = stream.readByte();
-    if (flags & 32) ps.gravity = stream.readShort();
-
-    if (flags & 64) {
-        ps.delta_angles.x = stream.readShort() * (180 / 32768);
-        ps.delta_angles.y = stream.readShort() * (180 / 32768);
-        ps.delta_angles.z = stream.readShort() * (180 / 32768);
-    }
-
-    if (flags & 128) {
-        ps.viewoffset.x = stream.readChar() * 0.25;
-        ps.viewoffset.y = stream.readChar() * 0.25;
-        ps.viewoffset.z = stream.readChar() * 0.25;
-    }
-
-    if (flags & 256) {
-        ps.viewangles.x = stream.readAngle16();
-        ps.viewangles.y = stream.readAngle16();
-        ps.viewangles.z = stream.readAngle16();
-    }
-
-    if (flags & 512) {
-        ps.kick_angles.x = stream.readChar() * 0.25;
-        ps.kick_angles.y = stream.readChar() * 0.25;
-        ps.kick_angles.z = stream.readChar() * 0.25;
-    }
-
-    if (flags & 4096) ps.gun_index = stream.readByte();
-
-    if (flags & 8192) {
-        ps.gun_frame = stream.readByte();
-        ps.gun_offset.x = stream.readChar() * 0.25;
-        ps.gun_offset.y = stream.readChar() * 0.25;
-        ps.gun_offset.z = stream.readChar() * 0.25;
-        ps.gun_angles.x = stream.readChar() * 0.25;
-        ps.gun_angles.y = stream.readChar() * 0.25;
-        ps.gun_angles.z = stream.readChar() * 0.25;
-    }
-
-    if (flags & 1024) {
-        ps.blend[0] = stream.readByte();
-        ps.blend[1] = stream.readByte();
-        ps.blend[2] = stream.readByte();
-        ps.blend[3] = stream.readByte();
-    }
-
-    if (flags & 2048) ps.fov = stream.readByte();
-    if (flags & 16384) ps.rdflags = stream.readByte();
-
-    // New: watertype (bit 15)
-    if (flags & 32768) ps.watertype = stream.readByte();
-
-    const statbits = stream.readLong();
-    for (let i = 0; i < 32; i++) {
-        if (statbits & (1 << i)) {
-            ps.stats[i] = stream.readShort();
-        }
-    }
-
-    return ps;
-}
+import { parseProtocolPlayerState } from '@quake2ts/test-utils';
 
 describe('writePlayerState', () => {
     it('should write an empty state as just flags (plus statbits)', () => {
@@ -121,7 +15,7 @@ describe('writePlayerState', () => {
 
         writePlayerState(writer, emptyState);
         const data = writer.getData();
-        const readState = readPlayerState(data);
+        const readState = parseProtocolPlayerState(data);
 
         expect(readState.pm_type).toBe(0);
         expect(readState.origin.x).toBe(0);
@@ -157,7 +51,7 @@ describe('writePlayerState', () => {
 
         writePlayerState(writer, state);
         const data = writer.getData();
-        const read = readPlayerState(data);
+        const read = parseProtocolPlayerState(data);
 
         // Verification with tolerances for precision loss (1/8 units, etc)
         expect(read.pm_type).toBe(state.pm_type);
@@ -186,7 +80,7 @@ describe('writePlayerState', () => {
         state.stats[32] = 123; // Should be ignored
 
         writePlayerState(writer, state);
-        const read = readPlayerState(writer.getData());
+        const read = parseProtocolPlayerState(writer.getData());
 
         expect(read.stats[31]).toBe(999);
         expect(read.stats[32]).toBeUndefined(); // Array size is 32 in reader

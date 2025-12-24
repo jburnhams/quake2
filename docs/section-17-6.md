@@ -23,11 +23,11 @@
 - [x] Implement damage screen flash (red overlay)
 - [x] Implement pickup flash (yellow overlay)
 - [x] Implement underwater distortion
-- [ ] Add bloom/glow for bright surfaces
+- [x] Add bloom/glow for bright surfaces
 - [x] Add configurable gamma/brightness adjustment
 
 ### 6.1.4 Advanced Culling
-- [ ] Optimize PVS lookup for large maps
+- [x] Optimize PVS lookup for large maps
 - [ ] Add occlusion culling for complex scenes
 - [ ] Add distance-based LOD for models (if supported by assets)
 - [ ] Add portal culling for indoor areas
@@ -82,7 +82,7 @@
 - [x] Add configurable memory limits per asset type
 
 ### 6.4.2 Worker Thread Support
-- [ ] Move BSP parsing to worker thread for non-blocking load
+- [x] Move BSP parsing to worker thread for non-blocking load
 - [ ] Move demo parsing to worker thread
 - [ ] Move audio decoding to worker thread (already async via WASM)
 - [ ] Expose worker-based API with progress callbacks

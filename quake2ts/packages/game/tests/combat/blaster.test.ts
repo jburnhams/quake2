@@ -5,11 +5,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
-import { Entity } from '../../src/entities/entity.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
@@ -19,14 +18,20 @@ describe('Blaster', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 		game.init(0);
 
+        // Replace manual playerStart creation with factory pattern
+        const playerStartTemplate = createEntityFactory({
+             classname: 'info_player_start',
+             origin: { x: 0, y: 0, z: 0 },
+             angles: { x: 0, y: 90, z: 0 }
+        });
         const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 90, z: 0 };
+        Object.assign(playerStart, playerStartTemplate);
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
         const player = game.entities.find(e => e.classname === 'player')!;
+
+        // Use factory pattern for inventory (though client exists, we override inventory)
         player.client!.inventory = createPlayerInventory({
             weapons: [WeaponId.Blaster],
             ammo: {},
@@ -53,10 +58,14 @@ describe('Blaster', () => {
         });
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 0, z: 0 }; // Fire along X-axis
+        const playerStartTemplate = createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 } // Fire along X-axis
+       });
+       const playerStart = game.entities.spawn();
+       Object.assign(playerStart, playerStartTemplate);
+
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 

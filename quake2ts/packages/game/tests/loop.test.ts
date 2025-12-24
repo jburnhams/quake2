@@ -108,41 +108,27 @@ describe('GameFrameLoop', () => {
   });
 });
 
-import { Entity, MoveType } from '../src/entities/entity.js';
+import { MoveType } from '../src/entities/entity.js';
 import { EntitySystem } from '../src/entities/system.js';
-import { GameImports, GameTraceResult } from '../src/imports.js';
-import { Vec3 } from '@quake2ts/shared';
-
-const mockTraceFn = (result: GameTraceResult) => {
-  return (
-    start: Vec3,
-    mins: Vec3 | null,
-    maxs: Vec3 | null,
-    end: Vec3,
-    passent: Entity | null,
-    contentmask: number
-  ) => result;
-};
-
-const mockImports = (result: GameTraceResult): GameImports => ({
-  trace: mockTraceFn(result),
-  pointcontents: () => 0,
-});
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('GameFrameLoop Physics Integration', () => {
   it('should call the correct physics function for an entity with MOVETYPE_TOSS', () => {
-    const mockTrace: GameTraceResult = {
-      fraction: 1.0,
-      plane: null,
-      contents: 0,
-      surfaceFlags: 0,
-      startsolid: false,
-      allsolid: false,
-      endpos: { x: 0, y: 0, z: 0 },
-      ent: null,
-    };
+    const { imports } = createGameImportsAndEngine({
+      imports: {
+        trace: () => ({
+          fraction: 1.0,
+          plane: null,
+          contents: 0,
+          surfaceFlags: 0,
+          startsolid: false,
+          allsolid: false,
+          endpos: { x: 0, y: 0, z: 0 },
+          ent: null,
+        }) as any
+      }
+    });
 
-    const imports = mockImports(mockTrace);
     const entitySystem = new EntitySystem({} as any, imports, { x: 0, y: 0, z: -800 });
     const ent = entitySystem.spawn();
     ent.movetype = MoveType.Toss;

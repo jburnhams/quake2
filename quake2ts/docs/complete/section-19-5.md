@@ -163,7 +163,7 @@ This section covers migration of server-specific test utilities including networ
 
 - [x] **5.6** Cleanup snapshot tests in `server/tests/snapshot/` directory
   - Replace inline snapshot creation
-  - Note: Relevant tests in `server/tests/` updated.
+  - Note: Relevant tests in `server/tests/` updated. Verified `server-state.test.ts` and `protocol/player.test.ts` use appropriate helpers.
   - Estimated files: ~6
 
 ---
@@ -189,7 +189,7 @@ This section covers migration of server-specific test utilities including networ
 
 - [x] **6.5** Cleanup server command tests in `server/tests/commands/` directory
   - Estimated files: ~4
-  - Note: Relevant tests in `server/tests/` updated.
+  - Note: Relevant tests in `server/tests/` updated. Directory does not exist, but `write.test.ts` covers command protocol and `server.test.ts` covers console command invocation.
 
 ---
 

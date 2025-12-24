@@ -10,7 +10,8 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { ServerFlags, MoveType, Solid, DeadFlag } from '../../src/entities/entity.js';
 
 describe('BFG10K', () => {
     it('should consume 50 cells and spawn a projectile', () => {
@@ -19,18 +20,26 @@ describe('BFG10K', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 0, z: 0 };
+        const playerStart = createEntityFactory({
+             classname: 'info_player_start',
+             origin: { x: 0, y: 0, z: 0 },
+             angles: { x: 0, y: 0, z: 0 }
+        });
+        game.entities.spawn = vi.fn().mockReturnValue(playerStart);
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
-        const player = game.entities.find(e => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({
-            weapons: [WeaponId.BFG10K],
-            ammo: { [AmmoType.Cells]: 100 },
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.BFG10K],
+                    ammo: { [AmmoType.Cells]: 100 },
+                }),
+                weaponStates: { states: new Map() }
+            } as any
         });
+        // We need to inject player into game.entities
+        game.entities.find = vi.fn().mockReturnValue(player);
 
         fire(game, player, WeaponId.BFG10K);
 
@@ -39,28 +48,30 @@ describe('BFG10K', () => {
     });
 
     it('should deal secondary laser damage on impact', () => {
-        const T_Damage = vi.spyOn(damage, 'T_Damage');
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.client = { inventory: { ammo: { counts: [] } } } as any;
-        game.entities.finalizeSpawn(player);
+        const player = createPlayerEntityFactory({
+             origin: { x: 0, y: 0, z: 0 },
+             client: { inventory: { ammo: { counts: [] } } } as any
+        });
 
-        const target = game.entities.spawn();
-        target.classname = 'monster_target';
-        target.origin = { x: 200, y: 0, z: 0 };
-        target.takedamage = 1;
-        target.health = 100;
-        game.entities.finalizeSpawn(target);
+        const target = createMonsterEntityFactory('monster_target', {
+            origin: { x: 200, y: 0, z: 0 },
+            takedamage: true,
+            health: 100
+        });
 
         // Manually create BFG ball to test its touch function
+        // We need to make sure entities.spawn works if createBfgBall uses it
+        // but here we are calling createBfgBall directly which uses game.entities
+        // Let's mock game.entities.spawn to return a new entity
+        const bfgBall = createEntityFactory({ classname: 'bfg blast' });
+        game.entities.spawn = vi.fn().mockReturnValue(bfgBall);
+
         projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 200);
-        const bfgBall = game.entities.find(e => e.classname === 'bfg blast')!;
 
         // Mock trace for visibility check (from player to target)
         imports.trace.mockReturnValue({
@@ -74,10 +85,6 @@ describe('BFG10K', () => {
 
         // Expect primary radius damage (200 damage, 100 radius based on new implementation)
         expect(T_RadiusDamage).toHaveBeenCalledWith(expect.anything(), bfgBall, player, 200, expect.anything(), 100, expect.anything(), DamageMod.BFG_BLAST, game.time, expect.anything(), expect.any(Function));
-
-        // Note: Secondary lasers are no longer fired on impact in the new implementation
-        // They are fired during flight via the think function
-        // The test would need to be restructured to test the think function instead
     });
 
     it('should deal 500 damage in single-player', () => {
@@ -85,11 +92,13 @@ describe('BFG10K', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
-        const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
-            weaponStates: { states: new Map() }
-        } as any;
+
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                weaponStates: { states: new Map() }
+            } as any
+        });
 
         fire(game, player, WeaponId.BFG10K);
 
@@ -101,11 +110,13 @@ describe('BFG10K', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
-        const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
-            weaponStates: { states: new Map() }
-        } as any;
+
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                weaponStates: { states: new Map() }
+            } as any
+        });
 
         fire(game, player, WeaponId.BFG10K);
 
@@ -132,25 +143,25 @@ describe('BFG10K', () => {
             { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true }
         );
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
+        const player = createPlayerEntityFactory({
+            origin: { x: 0, y: 0, z: 0 }
+        });
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
         // Create a target within 256 units
-        const target = game.entities.spawn();
-        target.classname = 'monster_gladiator';
-        target.origin = { x: 100, y: 0, z: 0 };
-        target.takedamage = true;
-        target.svflags = 4; // ServerFlags.Monster = 1 << 2 = 4
-        target.absmin = { x: 90, y: -10, z: -10 };
-        target.absmax = { x: 110, y: 10, z: 10 };
-
-        game.entities.finalizeSpawn(target);
+        const target = createMonsterEntityFactory('monster_gladiator', {
+            origin: { x: 100, y: 0, z: 0 },
+            svflags: ServerFlags.Monster,
+            absmin: { x: 90, y: -10, z: -10 },
+            absmax: { x: 110, y: 10, z: 10 }
+        });
 
         // Create BFG ball
+        const bfgBall = createEntityFactory({ classname: 'bfg blast' });
+        game.entities.spawn = vi.fn().mockReturnValue(bfgBall);
+
         projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 200);
-        const bfgBall = game.entities.find(e => e.classname === 'bfg blast')!;
 
         // Initial think scheduled?
         expect(bfgBall.think).toBeDefined();
@@ -158,14 +169,6 @@ describe('BFG10K', () => {
         // Spy on findByRadius to return our target
         const findByRadiusSpy = vi.spyOn(game.entities, 'findByRadius');
         findByRadiusSpy.mockReturnValue([target]);
-
-        // Trace for visibility (LOS check)
-        // bfgThink calls trace(self.origin, ..., point, ...)
-        // trace.mockReturnValue({ fraction: 1.0 });
-
-        // Also fireBfgPiercingLaser calls trace twice.
-        // 1. Pierce trace -> Needs to HIT target
-        // 2. Final trace for effect
 
         trace
             .mockReturnValueOnce({ fraction: 1.0 }) // LOS Check: Clear

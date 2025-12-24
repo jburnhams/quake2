@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createTestContext } from '../../test-helpers';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SP_monster_medic } from '../../../src/entities/monsters/medic';
 import { Entity } from '../../../src/entities/entity';
 import { DeadFlag } from '../../../src/entities/entity';

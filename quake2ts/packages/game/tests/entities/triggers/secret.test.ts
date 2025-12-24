@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerTriggerSecret } from '../../../src/entities/triggers/secret.js';
 import { Entity, Solid, ServerFlags, MoveType } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('trigger_secret', () => {

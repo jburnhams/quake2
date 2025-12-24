@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Trap_Think } from '../../../src/combat/weapons/trap.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
 import { AmmoType } from '../../../src/inventory/ammo.js';
 

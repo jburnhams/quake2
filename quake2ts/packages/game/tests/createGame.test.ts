@@ -1,19 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createGame } from '../src/index.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 const ZERO_VEC3 = { x: 0, y: 0, z: 0 } as const;
 
-const mockEngine = {
-  trace(start: typeof ZERO_VEC3, end: typeof ZERO_VEC3) {
-    return { start, end, fraction: 1 };
-  },
-};
-
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {
+    const { imports, engine } = createGameImportsAndEngine();
+
     const game = createGame(
-      { trace: mockEngine.trace as any, pointcontents: () => 0 },
-      mockEngine as any,
+      imports,
+      engine,
       { gravity: { x: 0, y: 0, z: -800 } }
     );
     const snapshot = game.init(1000);
@@ -28,9 +25,22 @@ describe('createGame', () => {
   });
 
   it('integrates velocity and origin over successive frames', () => {
+    // We need the trace to return the end position as if it was a clear path,
+    // to match the original test's assumption that movement succeeds fully.
+    const { imports, engine } = createGameImportsAndEngine({
+      engine: {
+        trace: vi.fn((start, end) => ({
+          start,
+          end,
+          fraction: 1,
+          endpos: end // Ensure endpos is returned as the target
+        })) as any
+      }
+    });
+
     const game = createGame(
-      { trace: mockEngine.trace as any, pointcontents: () => 0 },
-      mockEngine as any,
+      imports,
+      engine,
       { gravity: { x: 0, y: 0, z: -800 } }
     );
     game.init(0);

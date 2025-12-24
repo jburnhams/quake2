@@ -451,6 +451,8 @@ class GPUResourceTracker {
   - Pipeline creation tests
   - Bind group creation tests
   - Memory tracking tests
+- `packages/engine/tests/integration/webgpu-resources.test.ts`
+  - Integration tests for WebGPU resources using real @webgpu/dawn
 
 ---
 

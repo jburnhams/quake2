@@ -26,10 +26,6 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: quake2ts/pnpm-lock.yaml
 
-      # WebGPU headless testing requires Vulkan drivers
-      - name: Install System Dependencies
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers vulkan-tools
-
       - name: Install dependencies
         run: pnpm install
 
@@ -42,13 +38,11 @@ jobs:
       - name: Validate Dependencies
         run: pnpm exec tsx packages/tools/src/validate-deps.ts
 
-      # Run all tests, including unit and integration tests across the workspace
+      # Run integration tests across the workspace
       # We use 'vitest run' to ensure single pass execution
       # We explicitly set the ICD filename to point to Lavapipe (software rasterizer)
       # which is required for headless WebGPU testing on GitHub Actions runners.
       - name: Run Full Test Suite
-        env:
-          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
         run: pnpm run test:integration
 
       - name: Upload Test Results

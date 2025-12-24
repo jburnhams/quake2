@@ -41,6 +41,7 @@ export async function createRenderTestSetup(
     adapter: setup.adapter,
     device: setup.device,
     queue: setup.device.queue,
+    format: 'rgba8unorm',
   };
 
   return {
@@ -55,6 +56,74 @@ export async function createRenderTestSetup(
         await setup.cleanup();
     }
   };
+}
+
+/**
+ * Captures texture content to Uint8ClampedArray (RGBA).
+ * Creates its own CommandEncoder and submits immediately.
+ */
+export async function captureTexture(
+    device: GPUDevice,
+    texture: GPUTexture,
+    width: number,
+    height: number
+): Promise<Uint8ClampedArray> {
+  const commandEncoder = device.createCommandEncoder();
+
+  // Create a buffer to read back the texture data
+  // Bytes per row must be a multiple of 256 for copyTextureToBuffer
+  const bytesPerPixel = 4;
+  const unpaddedBytesPerRow = width * bytesPerPixel;
+  const align = 256;
+  const paddedBytesPerRow = Math.max(
+      bytesPerPixel * width,
+      Math.ceil((bytesPerPixel * width) / align) * align
+  );
+
+  const bufferSize = paddedBytesPerRow * height;
+
+  const readbackBuffer = device.createBuffer({
+    size: bufferSize,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  // Copy texture to buffer
+  commandEncoder.copyTextureToBuffer(
+    {
+      texture: texture,
+    },
+    {
+      buffer: readbackBuffer,
+      bytesPerRow: paddedBytesPerRow,
+    },
+    {
+      width,
+      height,
+      depthOrArrayLayers: 1,
+    }
+  );
+
+  device.queue.submit([commandEncoder.finish()]);
+
+  await readbackBuffer.mapAsync(GPUMapMode.READ);
+
+  const arrayBuffer = readbackBuffer.getMappedRange();
+
+  // Create a new buffer to hold the tightly packed data
+  const output = new Uint8ClampedArray(width * height * 4);
+
+  // Copy row by row to remove padding
+  const srcBytes = new Uint8Array(arrayBuffer);
+  for (let y = 0; y < height; y++) {
+    const srcOffset = y * paddedBytesPerRow;
+    const dstOffset = y * unpaddedBytesPerRow;
+    output.set(srcBytes.subarray(srcOffset, srcOffset + unpaddedBytesPerRow), dstOffset);
+  }
+
+  readbackBuffer.unmap();
+  readbackBuffer.destroy();
+
+  return output;
 }
 
 /**
@@ -86,64 +155,11 @@ export async function renderAndCapture(
   // End pass
   passEncoder.end();
 
-  // Create a buffer to read back the texture data
-  // Bytes per row must be a multiple of 256 for copyTextureToBuffer
-  const bytesPerPixel = 4;
-  const unpaddedBytesPerRow = width * bytesPerPixel;
-  const align = 256;
-  const paddedBytesPerRow = Math.max(
-      bytesPerPixel * width,
-      Math.ceil((bytesPerPixel * width) / align) * align
-  );
-
-  const bufferSize = paddedBytesPerRow * height;
-
-  const readbackBuffer = device.createBuffer({
-    size: bufferSize,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-
-  // Copy texture to buffer
-  commandEncoder.copyTextureToBuffer(
-    {
-      texture: setup.renderTarget,
-    },
-    {
-      buffer: readbackBuffer,
-      bytesPerRow: paddedBytesPerRow,
-    },
-    {
-      width,
-      height,
-      depthOrArrayLayers: 1,
-    }
-  );
-
-  // Submit commands
+  // Submit the render commands
   queue.submit([commandEncoder.finish()]);
 
-  // Wait for queue to finish (implicit in mapAsync usually, but for Dawn/Node we might need to be careful)
-  // mapAsync waits for GPU operations to complete on the buffer
-
-  await readbackBuffer.mapAsync(GPUMapMode.READ);
-
-  const arrayBuffer = readbackBuffer.getMappedRange();
-
-  // Create a new buffer to hold the tightly packed data
-  const output = new Uint8ClampedArray(width * height * 4);
-
-  // Copy row by row to remove padding
-  const srcBytes = new Uint8Array(arrayBuffer);
-  for (let y = 0; y < height; y++) {
-    const srcOffset = y * paddedBytesPerRow;
-    const dstOffset = y * unpaddedBytesPerRow;
-    output.set(srcBytes.subarray(srcOffset, srcOffset + unpaddedBytesPerRow), dstOffset);
-  }
-
-  readbackBuffer.unmap();
-  readbackBuffer.destroy();
-
-  return output;
+  // Capture the texture (using a new encoder)
+  return captureTexture(device, setup.renderTarget, width, height);
 }
 
 /**
@@ -178,6 +194,7 @@ export async function createComputeTestSetup(
     adapter: setup.adapter,
     device: setup.device,
     queue: setup.device.queue,
+    format: 'rgba8unorm',
   };
 
   return {

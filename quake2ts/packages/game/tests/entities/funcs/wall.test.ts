@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { func_wall } from '../../../src/entities/funcs.js';
 import { Entity, Solid, ServerFlags, MoveType } from '../../../src/entities/entity.js';
 

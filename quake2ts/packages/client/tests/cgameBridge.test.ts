@@ -69,4 +69,32 @@ describe('CGameImport cvar', () => {
         cgameImport.cvar_set('set_me', '1');
         expect(cvar.string).toBe('1');
     });
+
+    it('Com_Print calls console.log and onPrint callback', () => {
+        const onPrint = vi.fn();
+        const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        const cgameImport = createCGameImport(mockImports, mockState, onPrint);
+
+        cgameImport.Com_Print('Hello World');
+
+        expect(consoleLogSpy).toHaveBeenCalledWith('[CGAME] Hello World');
+        expect(onPrint).toHaveBeenCalledWith('Hello World');
+
+        consoleLogSpy.mockRestore();
+    });
+
+    it('Com_Error calls console.error and onPrint callback with error prefix', () => {
+        const onPrint = vi.fn();
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const cgameImport = createCGameImport(mockImports, mockState, onPrint);
+
+        cgameImport.Com_Error('Fatal Error');
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[CGAME ERROR] Fatal Error');
+        expect(onPrint).toHaveBeenCalledWith('^1[ERROR] Fatal Error');
+
+        consoleErrorSpy.mockRestore();
+    });
 });

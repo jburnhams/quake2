@@ -46,6 +46,12 @@ function colorFromId(id: number): [number, number, number, number] {
     return [r, g, b, 1.0];
 }
 
+interface CachedLeaf {
+    leafIndex: number;
+    position: Float32Array; // Clone of transform to detect movement
+    lastFrameSeen: number; // For LRU eviction
+}
+
 export const createRenderer = (
     gl: WebGL2RenderingContext,
 ): Renderer => {
@@ -79,6 +85,13 @@ export const createRenderer = (
     const md3MeshCache = new Map<object, Md3ModelMesh>();
     const md2MeshCache = new Map<object, Md2MeshBuffers>();
     const picCache = new Map<string, Pic>();
+
+    // PVS Cache
+    const entityLeafCache = new Map<number, CachedLeaf>();
+    let frameCounter = 0;
+    const CACHE_CLEANUP_INTERVAL = 600; // Cleanup every ~10 seconds at 60fps
+    const CACHE_MAX_AGE = 300; // Evict entries older than 5 seconds
+
     let font: Pic | null = null;
     let lastFrameStats: FrameStats = {
         drawCalls: 0,
@@ -179,6 +192,7 @@ export const createRenderer = (
 
     const renderFrame = (options: FrameRenderOptions, entities: readonly RenderableEntity[], renderOptions?: RenderOptions) => {
         gpuProfiler.startFrame();
+        frameCounter++;
 
         const allEntities = queuedInstances.length > 0 ? [...entities, ...queuedInstances] : entities;
 
@@ -276,6 +290,15 @@ export const createRenderer = (
             z: options.camera.position[2]
         };
 
+        // Cache cleanup
+        if (frameCounter % CACHE_CLEANUP_INTERVAL === 0) {
+            for (const [id, entry] of entityLeafCache) {
+                if (frameCounter - entry.lastFrameSeen > CACHE_MAX_AGE) {
+                    entityLeafCache.delete(id);
+                }
+            }
+        }
+
         for (const entity of allEntities) {
             if (options.world && viewCluster >= 0) {
                 const origin = {
@@ -283,7 +306,31 @@ export const createRenderer = (
                     y: entity.transform[13],
                     z: entity.transform[14],
                 };
-                const entityLeafIndex = findLeafForPoint(options.world.map, origin);
+
+                let entityLeafIndex = -1;
+
+                if (entity.id !== undefined) {
+                    const cached = entityLeafCache.get(entity.id);
+                    // Check if position changed
+                    if (cached &&
+                        cached.position[12] === entity.transform[12] &&
+                        cached.position[13] === entity.transform[13] &&
+                        cached.position[14] === entity.transform[14]) {
+                        entityLeafIndex = cached.leafIndex;
+                        cached.lastFrameSeen = frameCounter;
+                    } else {
+                        entityLeafIndex = findLeafForPoint(options.world.map, origin);
+                        if (entityLeafIndex >= 0) {
+                            entityLeafCache.set(entity.id, {
+                                leafIndex: entityLeafIndex,
+                                position: new Float32Array(entity.transform), // Clone
+                                lastFrameSeen: frameCounter
+                            });
+                        }
+                    }
+                } else {
+                     entityLeafIndex = findLeafForPoint(options.world.map, origin);
+                }
 
                 if (entityLeafIndex >= 0) {
                     const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;

@@ -34,6 +34,9 @@ export * from './engine/mocks/webgl.js';
 export * from './engine/mocks/audio.js';
 export * from './engine/mocks/renderer.js';
 export * from './engine/mocks/assets.js';
+export * from './engine/mocks/buffers.js';
+export * from './engine/mocks/lighting.js';
+export * from './engine/mocks/particles.js';
 export * from './engine/rendering.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
@@ -85,3 +88,4 @@ export type {
     ComparisonOptions,
     SnapshotTestOptions
 } from './visual/snapshots.js';
+export type { MockCollisionEntityIndex } from './server/mocks/physics.js';

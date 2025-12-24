@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientImports } from '../../src/index.js';
 import { ClientPrediction } from '@quake2ts/cgame';
 import { DemoPlaybackController } from '@quake2ts/engine';
-import { createMockHudState } from '@quake2ts/test-utils';
+import { createMockHudState, createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
 
 // Mocks
 vi.mock('@quake2ts/cgame', async (importOriginal) => {
@@ -78,24 +78,17 @@ describe('HUD Data API', () => {
     mockEngine = {
       trace: vi.fn(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } })),
       cmd: { executeText: vi.fn() },
-      renderer: {
+      renderer: createMockRenderer({
           width: 800,
           height: 600,
-          begin2D: vi.fn(),
-          end2D: vi.fn(),
-          renderFrame: vi.fn(),
-          getPerformanceReport: vi.fn(() => ({})),
-          setGamma: vi.fn(),
-          setBrightness: vi.fn(),
-          setBloom: vi.fn(),
-          setBloomIntensity: vi.fn(),
-          setUnderwaterWarp: vi.fn(),
-          drawfillRect: vi.fn(), // Added mock for drawfillRect
-          drawCenterString: vi.fn(), // Added mock for drawCenterString
-      },
-      assets: {
-          listFiles: vi.fn(() => [])
-      }
+          registerTexture: vi.fn().mockReturnValue({
+            width: 32,
+            height: 32,
+            upload: vi.fn(),
+            bind: vi.fn()
+          })
+      }),
+      assets: createMockAssetManager()
     };
 
     client = createClient({ engine: mockEngine } as ClientImports);

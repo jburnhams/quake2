@@ -11,6 +11,7 @@ export interface WebGPUContextState {
     adapter: GPUAdapter;
     device: GPUDevice;
     queue: GPUQueue;
+    format: GPUTextureFormat;
 }
 
 /**
@@ -97,6 +98,7 @@ export async function createHeadlessTestContext(): Promise<WebGPUContextState> {
     return {
         adapter,
         device,
-        queue: device.queue
+        queue: device.queue,
+        format: 'rgba8unorm'
     };
 }
