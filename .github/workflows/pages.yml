@@ -1,8 +1,10 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: ["main", "master", "feature/gh-pages"]
+  workflow_run:
+    workflows: ["WebGpu Tests"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -20,17 +22,50 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # Only run if the WebGpu Tests workflow was successful AND it was on the main branch
+    if: ${{ (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
+      - name: Download Visual Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-test-results
+          path: visual-test-results
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Build Pages
         run: |
           mkdir -p pages-dist
           cp -r pages/* pages-dist/
+
+          if [ -f "visual-test-results/visual-tests.json" ]; then
+            echo "Building Visual Tests Gallery..."
+
+            # Run the gallery generation script
+            # We use npx tsx to run the typescript file directly without full project install
+            npx tsx packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json pages-dist
+
+            mkdir -p pages-dist/snapshots
+            cp -r visual-test-results/packages/engine/tests/__snapshots__/* pages-dist/snapshots/ || true
+
+            # Update index.html link
+            sed -i 's/<\/body>/<p><a href="visual-tests.html">View Visual Tests Gallery<\/a><\/p><\/body>/' pages-dist/index.html
+
+          else
+            echo "No visual test results found, skipping gallery generation."
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

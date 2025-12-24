@@ -223,6 +223,8 @@ export async function expectSnapshot(
     const actualPath = getSnapshotPath(name, 'actual', snapshotDir);
     const diffPath = getSnapshotPath(name, 'diff', snapshotDir);
 
+    const alwaysSave = process.env.ALWAYS_SAVE_SNAPSHOTS === '1';
+
     // If update baseline is requested or baseline doesn't exist, save as baseline and return
     if (updateBaseline || !existsSync(baselinePath)) {
         console.log(`Creating/Updating baseline for ${name} at ${baselinePath}`);
@@ -247,13 +249,15 @@ export async function expectSnapshot(
     // Compare
     const result = await compareSnapshots(pixels, baseline.data, width, height, options);
 
-    if (!result.passed) {
+    if (!result.passed || alwaysSave) {
         // Save actual and diff
         await savePNG(pixels, width, height, actualPath);
         if (result.diffImage) {
             await savePNG(result.diffImage, width, height, diffPath);
         }
+    }
 
+    if (!result.passed) {
         throw new Error(
             `Snapshot comparison failed for ${name}: ${result.percentDifferent.toFixed(2)}% different ` +
             `(${result.pixelsDifferent} pixels). ` +
