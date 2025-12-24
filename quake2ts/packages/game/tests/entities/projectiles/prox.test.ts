@@ -105,14 +105,14 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, undefined, undefined); // Land
 
         // Advance time to arm (1000ms delay)
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Move player near mine
         player.origin = { ...mine.origin };
         game.entities.linkentity(player);
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should not have exploded
         expect(T_RadiusDamage).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, undefined, undefined);
 
         // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Create enemy
         const enemy = game.entities.spawn();
@@ -144,14 +144,14 @@ describe('Prox Mine', () => {
         game.entities.linkentity(enemy);
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should have exploded
         expect(T_RadiusDamage).toHaveBeenCalled();
         expect(mine.inUse).toBe(false);
     });
 
-    it.skip('should trigger via laser tripwire (trace check)', () => {
+    it('should trigger via laser tripwire (trace check)', () => {
         const { game, player, trace } = createTestGame();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
@@ -162,7 +162,7 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, plane as any, undefined);
 
         // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Create enemy far away (out of radius) but in beam path
         const enemy = game.entities.spawn();
@@ -184,7 +184,7 @@ describe('Prox Mine', () => {
         });
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should have exploded due to beam
         expect(T_RadiusDamage).toHaveBeenCalled();

@@ -36,10 +36,11 @@ describe('E2E Entity Synchronization Test', () => {
 
   it.skip('should receive entity updates from server', async () => {
     const server = await startTestServer(GAME_SERVER_PORT);
-    const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT}`, {
+    const client = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT}`, {
         clientUrl: `http://localhost:${CLIENT_PORT}/`,
         headless: true
     });
+    const { page } = client;
 
     await page.waitForSelector('#status');
     const status = await page.textContent('#status');
@@ -59,7 +60,7 @@ describe('E2E Entity Synchronization Test', () => {
     // We can't easily verify exact entity positions with the dummy client unless we implement a full parser in it.
     // But demonstrating data flow is the goal for now.
 
-    await closeBrowser(browser);
+    await closeBrowser(client);
     await stopServer(server);
   }, 10000);
 });
