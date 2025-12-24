@@ -2,7 +2,8 @@ import { FrameRenderer, FrameRenderOptions, FrameRenderStats } from './frame.js'
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
-import { Renderer } from '../interface.js';
+// Remove the unused import that caused the error
+// import { IRenderer } from '../interface.js';
 
 export interface WebGPURenderer {
   readonly type: 'webgpu';
