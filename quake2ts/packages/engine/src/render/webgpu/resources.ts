@@ -207,7 +207,7 @@ export class StorageBuffer extends GPUBufferResource {
 // TASK 2: Texture Abstractions
 // ============================================================================
 
-import { MIPMAP_SHADER } from './shaders/mipmap.wgsl';
+import { MIPMAP_SHADER } from './shaders/mipmapShader.js';
 
 // Helper to get byte size of a texture format
 function getBlockSize(format: GPUTextureFormat): number {
