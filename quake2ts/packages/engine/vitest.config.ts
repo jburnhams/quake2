@@ -30,6 +30,7 @@ export default defineConfig({
       '@quake2ts/game': gameSrc,
       '@quake2ts/engine': path.resolve(__dirname, './src/index.ts'),
       '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(__dirname, '../test-utils/src/engine/mocks/webgpu.ts'),
+      '@quake2ts/test-utils/src/setup/webgpu': path.resolve(__dirname, '../test-utils/src/setup/webgpu.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
     },
@@ -37,12 +38,6 @@ export default defineConfig({
   test: {
     include,
     exclude,
-    // Use 'node' environment for headless WebGPU tests to avoid jsdom conflicts with node-webgpu
-    // However, existing tests might rely on jsdom.
-    // We can override per test file using // @vitest-environment node
-    // or set default to node if most tests don't need DOM.
-    // Given this is the engine package and we want headless WebGPU, 'node' is safer for those.
-    // But other tests might need 'jsdom'.
     environment: 'jsdom',
     setupFiles,
     globals: true,
