@@ -11,15 +11,19 @@ describe('Monster AI - Soldier', () => {
   let registry: any;
 
   beforeEach(() => {
-    const { entities, engine } = createTestContext();
-    system = entities;
+    // 1. Use createTestContext which provides mocked engine and system
+    const testContext = createTestContext();
+    system = testContext.entities;
 
     // Ensure modelIndex returns 1 as expected by the test
-    vi.spyOn(engine, 'modelIndex').mockReturnValue(1);
+    // createTestContext's engine.modelIndex returns 0 by default, so we override it
+    vi.spyOn(testContext.engine, 'modelIndex').mockReturnValue(1);
 
-    registry = createDefaultSpawnRegistry(engine);
+    // 2. Use createDefaultSpawnRegistry with the mocked engine
+    registry = createDefaultSpawnRegistry(testContext.engine);
 
-    // Patch targetAwareness with necessary mocks
+    // Patch targetAwareness with necessary mocks if not already fully mocked by createTestContext
+    // createTestContext provides a basic targetAwareness mock, but we might need to enhance it
     if (system.targetAwareness) {
         (system.targetAwareness as any).activePlayers = [];
         (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
@@ -47,7 +51,6 @@ describe('Monster AI - Soldier', () => {
     expect(soldier.max_health).toBe(20);
     expect(soldier.classname).toBe('monster_soldier');
     expect(soldier.monsterinfo.current_move).toBeDefined();
-    // Should start in stand frames (0-29)
     expect(soldier.monsterinfo.current_move?.firstframe).toBe(0);
   });
 
@@ -65,14 +68,6 @@ describe('Monster AI - Soldier', () => {
     };
     spawnFunc(soldier, context);
 
-    // Initial frame is usually set by the move start
-    // In soldier.ts: self.monsterinfo.stand(self) sets current_move to stand_move.
-    // stand_move.firstframe is 0.
-    // But M_MoveFrame sets self.frame if out of bounds.
-    // Initially self.frame is 0.
-
-    // Run think
-    // Mock context needs targetAwareness now
     system.beginFrame(1.0);
 
     expect(soldier.frame).toBe(0);
@@ -81,7 +76,6 @@ describe('Monster AI - Soldier', () => {
         soldier.think(soldier, system);
     }
 
-    // M_MoveFrame increments frame
     expect(soldier.frame).toBe(1);
     expect(soldier.nextthink).toBeGreaterThan(soldier.timestamp);
   });
@@ -103,16 +97,12 @@ describe('Monster AI - Soldier', () => {
         soldier.think(soldier, system);
     }
 
-    // In Q2 logic, frame increments to lastframe + 1 (overshoot)
     expect(soldier.frame).toBe(move.lastframe + 1);
 
-    // Run think again
     if (soldier.think) {
         soldier.think(soldier, system);
     }
 
-    // Now it should have reset to firstframe, run AI for frame 0, and incremented to 1
-    // So the loop is 29 -> 30 -> 1. Frame 0 is skipped in the loop.
     expect(soldier.frame).toBe(move.firstframe + 1);
   });
 });
@@ -124,7 +114,6 @@ describe('monster_think (Freeze Logic)', () => {
   beforeEach(() => {
     const testContext = createTestContext();
     context = testContext.entities;
-    // Patch targetAwareness for freeze logic tests as well if needed
     if (context.targetAwareness) {
         (context.targetAwareness as any).activePlayers = [];
         (context.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
@@ -132,12 +121,12 @@ describe('monster_think (Freeze Logic)', () => {
     }
 
     entity = context.spawn();
-    entity.inUse = true; // Ensure entity is marked active for M_MoveFrame
+    entity.inUse = true;
     entity.monsterinfo = {
       current_move: {
         firstframe: 0,
         lastframe: 10,
-        frames: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}], // Dummy frames to avoid index error
+        frames: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}],
         endfunc: null
       },
       aiflags: 0,
@@ -167,33 +156,25 @@ describe('monster_think (Freeze Logic)', () => {
 
   it('should apply freeze effect and stop animation when frozen', () => {
     context.timeSeconds = 10;
-    entity.monsterinfo!.freeze_time = 15; // Frozen for 5 seconds
+    entity.monsterinfo!.freeze_time = 15;
 
     monster_think(entity, context);
 
-    // Should have renderfx
     expect((entity.renderfx & RenderFx.ShellBlue)).toBeTruthy();
     expect((entity.renderfx & RenderFx.ShellGreen)).toBeTruthy();
-
-    // Should NOT have advanced frame (because monster_think returns early)
     expect(entity.frame).toBe(0);
-
-    // Should reschedule think
     expect(entity.nextthink).toBeGreaterThan(context.timeSeconds);
   });
 
   it('should clear freeze effect when timer expires', () => {
     context.timeSeconds = 20;
-    entity.monsterinfo!.freeze_time = 15; // Expired
-    entity.renderfx = RenderFx.ShellBlue | RenderFx.ShellGreen; // Pre-set
+    entity.monsterinfo!.freeze_time = 15;
+    entity.renderfx = RenderFx.ShellBlue | RenderFx.ShellGreen;
 
     monster_think(entity, context);
 
-    // Should clear renderfx
     expect((entity.renderfx & RenderFx.ShellBlue)).toBeFalsy();
     expect((entity.renderfx & RenderFx.ShellGreen)).toBeFalsy();
-
-    // Should have advanced frame (because M_MoveFrame was called)
     expect(entity.frame).toBe(1);
     expect(entity.monsterinfo!.freeze_time).toBe(0);
   });
