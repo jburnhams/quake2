@@ -2,34 +2,25 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer } from '../../src/render/webgpu/renderer.js';
 import { Camera } from '../../src/render/camera.js';
 import { mat4 } from 'gl-matrix';
-import { create } from 'webgpu';
 import { PNG } from 'pngjs';
 import * as fs from 'fs';
 import * as path from 'path';
+import { initHeadlessWebGPU } from '@quake2ts/test-utils/src/setup/webgpu';
 
 describe('WebGPURenderer Integration (Headless with Dawn)', () => {
-  let globals: any;
+  let cleanup: () => Promise<void>;
 
-  beforeAll(() => {
-    // Attempt to initialize headless WebGPU environment
-    try {
-        globals = create();
-        Object.assign(global, globals);
-    } catch (e) {
-        throw new Error(`Dawn init failed: ${e}`);
-    }
-
-    // Polyfill navigator.gpu if it wasn't set by create()
-    if (!global.navigator) {
-        (global as any).navigator = {};
-    }
-    if (!(global.navigator as any).gpu) {
-         throw new Error('navigator.gpu is missing after Dawn init');
-    }
+  beforeAll(async () => {
+    // Initialize headless WebGPU environment using shared helper
+    // This handles globals injection and navigator.gpu polyfilling
+    const setup = await initHeadlessWebGPU();
+    cleanup = setup.cleanup;
   });
 
-  afterAll(() => {
-      // Cleanup if necessary
+  afterAll(async () => {
+    if (cleanup) {
+        await cleanup();
+    }
   });
 
   it('renders a solid sprite to a texture', async () => {
