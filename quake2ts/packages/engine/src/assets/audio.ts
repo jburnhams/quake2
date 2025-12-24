@@ -14,14 +14,29 @@ export class AudioRegistryError extends Error {
 
 export interface AudioRegistryOptions {
   readonly cacheSize?: number;
+  readonly workerPath?: string;
 }
 
 export class AudioRegistry {
   private readonly cache: LruCache<DecodedAudio>;
   private readonly refCounts = new Map<string, number>();
+  private readonly worker?: Worker;
+  private nextRequestId = 0;
 
   constructor(private readonly vfs: VirtualFileSystem, options: AudioRegistryOptions = {}) {
     this.cache = new LruCache<DecodedAudio>(options.cacheSize ?? 64);
+    if (options.workerPath) {
+        this.worker = new Worker(options.workerPath, { type: 'module' });
+    } else if (typeof Worker !== 'undefined') {
+         // Try to load default worker if in browser environment and path not specified?
+         // For now, only use worker if explicitly provided or we can infer it.
+         // In this codebase, workers are often loaded relative to import.meta.url
+         try {
+             this.worker = new Worker(new URL('./audio.worker.ts', import.meta.url), { type: 'module' });
+         } catch (e) {
+             console.warn('Failed to initialize audio worker, falling back to main thread:', e);
+         }
+    }
   }
 
   get size(): number {
@@ -60,9 +75,16 @@ export class AudioRegistry {
     this.refCounts.clear();
   }
 
+  set capacity(value: number) {
+      this.cache.capacity = value;
+  }
+
   private async decodeByExtension(path: string, buffer: ArrayBuffer): Promise<DecodedAudio> {
     const lower = path.toLowerCase();
     if (lower.endsWith('.wav')) {
+      if (this.worker) {
+          return this.decodeWavInWorker(buffer);
+      }
       const wav = parseWav(buffer);
       const channels = wav.channels;
       const channelData: Float32Array[] = Array.from({ length: channels }, () => new Float32Array(wav.samples.length / channels));
@@ -75,5 +97,37 @@ export class AudioRegistry {
       return decodeOgg(buffer);
     }
     throw new AudioRegistryError(`Unsupported audio format: ${path}`);
+  }
+
+  private decodeWavInWorker(buffer: ArrayBuffer): Promise<DecodedAudio> {
+      return new Promise((resolve, reject) => {
+          if (!this.worker) {
+              reject(new Error('Worker not initialized'));
+              return;
+          }
+
+          const requestId = this.nextRequestId++;
+
+          const handler = (event: MessageEvent) => {
+              if (event.data.id !== requestId) return;
+
+              this.worker!.removeEventListener('message', handler);
+              if (event.data.type === 'success') {
+                  const wav = event.data.data;
+                  // Reconstruct channel data from flat samples
+                  const channels = wav.channels;
+                  const channelData: Float32Array[] = Array.from({ length: channels }, () => new Float32Array(wav.samples.length / channels));
+                  for (let i = 0; i < wav.samples.length; i += 1) {
+                    channelData[i % channels]![Math.floor(i / channels)] = wav.samples[i]!;
+                  }
+                  resolve({ sampleRate: wav.sampleRate, channels, bitDepth: wav.bitsPerSample, channelData });
+              } else {
+                  reject(new Error(event.data.message));
+              }
+          };
+
+          this.worker.addEventListener('message', handler);
+          this.worker.postMessage({ id: requestId, buffer, type: 'wav' }, [buffer]);
+      });
   }
 }
