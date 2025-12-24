@@ -94,7 +94,8 @@ export class GPUBufferResource {
       mappedAtCreation?: boolean;
     }
   ) {
-    this.size = descriptor.size;
+    // Ensure buffer size is a multiple of 4 bytes as required by WebGPU
+    this.size = Math.ceil(descriptor.size / 4) * 4;
     this.usage = descriptor.usage;
 
     this.buffer = device.createBuffer({
@@ -108,12 +109,21 @@ export class GPUBufferResource {
   }
 
   write(data: BufferSource, offset = 0): void {
+    const dataSize = data.byteLength;
+    if (offset + dataSize > this.size) {
+       throw new Error(`Buffer write out of bounds: offset ${offset} + data ${dataSize} > buffer ${this.size}`);
+    }
+
+    // Note: WebGPU requires that the size argument to writeBuffer is a multiple of 4 bytes.
+    // If we omit the size argument, it defaults to the rest of the data buffer, which works
+    // even if the data length is not a multiple of 4 (the driver handles it).
+    // However, the destination offset must be 4-byte aligned.
+
     this.device.queue.writeBuffer(
       this.buffer,
       offset,
       data,
-      0, // dataOffset
-      data.byteLength // size
+      0 // dataOffset
     );
   }
 

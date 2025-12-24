@@ -107,8 +107,8 @@ describe('WebGPU Buffer Resources', () => {
         buffer.buffer,
         0,
         data,
-        0,
-        data.byteLength
+        0
+        // size is optional/undefined in current implementation
       );
     });
 
@@ -122,8 +122,8 @@ describe('WebGPU Buffer Resources', () => {
         buffer.buffer,
         128,
         data,
-        0,
-        data.byteLength
+        0
+        // size is optional/undefined in current implementation
       );
     });
 

@@ -15,6 +15,11 @@
       "types": "./src/engine/mocks/webgpu.ts",
       "import": "./src/engine/mocks/webgpu.ts",
       "require": "./src/engine/mocks/webgpu.ts"
+    },
+    "./src/setup/webgpu": {
+      "types": "./src/setup/webgpu.ts",
+      "import": "./src/setup/webgpu.ts",
+      "require": "./src/setup/webgpu.ts"
     }
   },
   "files": [
