@@ -1,9 +1,15 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { setupBrowserEnvironment, createMockWebGL2Context } from './setup.js';
+import { setupBrowserEnvironment } from '../../src/setup/browser';
 
 describe('Integration Test Environment', () => {
   beforeAll(() => {
-    setupBrowserEnvironment();
+    setupBrowserEnvironment({
+      url: 'http://localhost:3000/',
+      pretendToBeVisual: true,
+      resources: 'usable',
+      enableWebGL2: true,
+      enablePointerLock: true
+    });
   });
 
   it('should provide a window and document global', () => {

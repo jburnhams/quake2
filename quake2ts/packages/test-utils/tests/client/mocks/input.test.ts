@@ -1,13 +1,18 @@
-
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { setupBrowserEnvironment } from './setup.js';
-import { createInputInjector, InputInjector, createMockPointerLock } from '@quake2ts/test-utils';
+import { setupBrowserEnvironment } from '../../../src/setup/browser';
+import { createInputInjector, InputInjector, createMockPointerLock } from '../../../src/client/mocks/input';
 
 describe('Input API Substitutes', () => {
   let injector: InputInjector;
 
   beforeAll(() => {
-    setupBrowserEnvironment();
+    setupBrowserEnvironment({
+        url: 'http://localhost:3000/',
+        pretendToBeVisual: true,
+        resources: 'usable',
+        enableWebGL2: true,
+        enablePointerLock: true
+    });
     injector = createInputInjector(document);
   });
 
