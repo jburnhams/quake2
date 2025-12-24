@@ -98,7 +98,39 @@ export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnap
 
 // -- Entity Factories --
 
-export function createEntityFactory(overrides: Partial<Entity> = {}): Entity {
+// Helper to remove internal fields that shouldn't be copied via Object.assign,
+// but PRESERVE the Entity prototype so getters/setters/methods work.
+function sanitizeEntity(ent: Entity): Partial<Entity> {
+  // We modify the instance in place (it's a factory-created one, so safe to mutate).
+  // We want to delete properties that would conflict with EntitySystem internals
+  // if this object is merged into another Entity via Object.assign.
+
+  // Actually, Object.assign(target, source) only copies enumerable own properties.
+  // If we delete them from 'ent', they won't be copied.
+  // BUT 'ent' must still be a valid Entity for tests that use the factory result directly.
+
+  // The issue in `dm-spawn.test.ts` was:
+  // Object.assign(player, createPlayerEntityFactory(...))
+  // 'player' is a REAL entity from the system.
+  // 'createPlayerEntityFactory' returns an Entity.
+  // 'Entity' class defines 'linkNext = null' etc as instance properties.
+  // So Object.assign copies 'linkNext: null'.
+
+  // We need to remove these properties from the returned object so Object.assign doesn't copy them.
+  // But we want to keep the prototype.
+
+  const safe = ent as any;
+  delete safe.index;
+  delete safe.inUse;
+  delete safe.freePending;
+  delete safe.linkPrevious;
+  delete safe.linkNext;
+  delete safe.linkcount;
+
+  return ent;
+}
+
+export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
   const ent = new Entity(1);
   Object.assign(ent, {
     classname: 'info_null',
@@ -112,10 +144,10 @@ export function createEntityFactory(overrides: Partial<Entity> = {}): Entity {
     svflags: 0,
     ...overrides
   });
-  return ent;
+  return sanitizeEntity(ent);
 }
 
-export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Entity {
+export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname: 'player',
     health: 100,
@@ -129,7 +161,7 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Enti
   });
 }
 
-export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
     health: 100,
@@ -143,7 +175,7 @@ export function createMonsterEntityFactory(classname: string, overrides: Partial
   });
 }
 
-export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,
@@ -152,7 +184,7 @@ export function createItemEntityFactory(classname: string, overrides: Partial<En
   });
 }
 
-export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Bsp,
@@ -162,7 +194,7 @@ export function createProjectileEntityFactory(classname: string, overrides: Part
   });
 }
 
-export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
+export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,
