@@ -8,7 +8,6 @@ describe('NetworkMessageParser', () => {
     const buffer = new Uint8Array([ServerCommand.print]); // svc_print needs more bytes
     const stream = new BinaryStream(buffer.buffer);
     const parser = new NetworkMessageParser(stream);
-    parser.setProtocolVersion(34);
 
     // Should not throw in non-strict mode
     expect(() => parser.parseMessage()).not.toThrow();
@@ -24,32 +23,28 @@ describe('NetworkMessageParser', () => {
     const parser = new NetworkMessageParser(stream);
 
     expect(() => parser.parseMessage()).not.toThrow();
-    // expect(parser.getErrorCount()).toBeGreaterThan(0); // Might be 0 if bad command returns
+    expect(parser.getErrorCount()).toBeGreaterThan(0);
   });
 
   it('should throw on unknown commands in strict mode', () => {
     const buffer = new Uint8Array([255]);
     const stream = new BinaryStream(buffer.buffer);
     const parser = new NetworkMessageParser(stream, undefined, true); // strict mode
-    parser.setProtocolVersion(2023);
 
     expect(() => parser.parseMessage()).toThrow(/Unknown server command/);
   });
 
   it('should recover from error and stop parsing the current block', () => {
-    // svc_download (16 in Rerelease/Legacy?)
-    // Need to set protocol to ensure 16 is download.
-    // Legacy: 16 is centerprint? No.
-    // Proto 34: 16 is centerprint. 4 is download.
-    // Let's use Proto 34 and command 4 (download).
+    // svc_download (16) expects a short (2 bytes), then data.
+    // We provide 16, then a short of 10, but NO data (buffer end).
+    // This guarantees readData will throw.
     const buffer = new ArrayBuffer(3);
     const view = new DataView(buffer);
-    view.setUint8(0, 4); // svc_download
+    view.setUint8(0, ServerCommand.download);
     view.setInt16(1, 10, true); // Expect 10 bytes
 
     const stream = new BinaryStream(buffer);
     const parser = new NetworkMessageParser(stream);
-    parser.setProtocolVersion(34);
 
     parser.parseMessage();
 

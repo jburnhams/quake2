@@ -73,7 +73,7 @@ describe('NetworkMessageParser with StreamingBuffer', () => {
         parser.parseMessage();
 
         expect(handler.onServerData).toHaveBeenCalledTimes(1);
-        expect(handler.onServerData).toHaveBeenCalledWith(25, 1, 0, 'baseq2', 0, 'maps/test', undefined, undefined);
+        expect(handler.onServerData).toHaveBeenCalledWith(25, 1, 0, 'baseq2', 0, 'maps/test');
         expect(parser.getProtocolVersion()).toBe(25);
     });
 

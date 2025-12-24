@@ -277,13 +277,13 @@ export class ResourceVisibilityAnalyzer {
                         const mins = { x: -MAX_ENTITY_SIZE, y: -MAX_ENTITY_SIZE, z: -MAX_ENTITY_SIZE };
                         const maxs = { x: MAX_ENTITY_SIZE, y: MAX_ENTITY_SIZE, z: MAX_ENTITY_SIZE };
 
-                        if (ent.modelIndex > 0) {
+                        if (ent.modelindex > 0) {
                             if (!this.isBoxInFrustum(frustumPlanes, mins, maxs, ent.origin)) {
                                 // Skip if outside frustum
                                 continue;
                             }
 
-                            const path = getModelPath(ent.modelIndex);
+                            const path = getModelPath(ent.modelindex);
                             if (path) {
                                 models.add(path);
                                 // Model Texture Derivation could happen here
@@ -291,7 +291,7 @@ export class ResourceVisibilityAnalyzer {
                         }
 
                         // Track sound (Looping sounds)
-                        if (ent.sound && ent.sound > 0) {
+                        if (ent.sound > 0) {
                              const path = getSoundPath(ent.sound);
                              if (path) {
                                  // Check distance

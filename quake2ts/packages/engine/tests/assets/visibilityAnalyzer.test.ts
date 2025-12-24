@@ -1,9 +1,72 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ResourceVisibilityAnalyzer, VisibilityTimeline } from '../../src/assets/visibilityAnalyzer.js';
-import { DemoWriter } from '../../src/demo/demoWriter.js';
+import { ResourceVisibilityAnalyzer } from '../../src/assets/visibilityAnalyzer.js';
 import { MessageWriter } from '../../src/demo/writer.js';
-import { FrameData, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
-import { ConfigStringIndex } from '@quake2ts/shared';
+import { ConfigStringIndex, TempEntity } from '@quake2ts/shared';
+import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
+
+// Helper to create synthetic demo data with Writer
+const createSyntheticDemo = (withTempEntity: boolean = false): Uint8Array => {
+    // We need to create blocks format: Length(4) + Data
+    const blocks: Uint8Array[] = [];
+
+    const addBlock = (writer: MessageWriter) => {
+        const data = writer.getData();
+        const block = new Uint8Array(4 + data.length);
+        const view = new DataView(block.buffer);
+        view.setUint32(0, data.length, true);
+        block.set(data, 4);
+        blocks.push(block);
+    };
+
+    // Block 1: ServerData + ConfigStrings
+    const w1 = new MessageWriter();
+    w1.writeServerData(34, 1, 0, "baseq2", 0, "map1");
+    // CS_MODELS starts at index 0 relative to base? No, ConfigStringIndex.Models is base.
+    // writeConfigString takes absolute index.
+    w1.writeConfigString(ConfigStringIndex.Models + 0, "models/test/model1.md2"); // Index 1 (0+1)
+    w1.writeConfigString(ConfigStringIndex.Models + 1, "models/test/model2.md2"); // Index 2
+    w1.writeConfigString(ConfigStringIndex.Sounds + 0, "sound/test/sound1.wav"); // Index 1
+    addBlock(w1);
+
+    // Block 2: Frame 1 with Entity using Model 1 and Sound 1
+    const w2 = new MessageWriter();
+    const ent1 = createEmptyEntityState();
+    ent1.number = 1;
+    ent1.modelindex = 1; // "models/test/model1.md2"
+    ent1.sound = 1;      // "sound/test/sound1.wav"
+
+    w2.writeFrame({
+        serverFrame: 1,
+        deltaFrame: 0,
+        surpressCount: 0,
+        areaBytes: 0,
+        areaBits: new Uint8Array(0),
+        playerState: createEmptyProtocolPlayerState(),
+        packetEntities: { delta: false, entities: [ent1] }
+    }, 34);
+
+    if (withTempEntity) {
+        // Add TempEntity via Frame (simulated) or just use generic write if available
+        // Frame parser handles packet entities, but temp entities are separate commands usually inside the frame block
+        // writer.writeTempEntity is a thing?
+        // Let's check MessageWriter
+        w2.writeTempEntity(TempEntity.ROCKET_EXPLOSION, {x:0, y:0, z:0});
+    }
+
+    addBlock(w2);
+
+    // Combine blocks
+    let totalLen = 0;
+    blocks.forEach(b => totalLen += b.length);
+    const combined = new Uint8Array(totalLen);
+    let offset = 0;
+    blocks.forEach(b => {
+        combined.set(b, offset);
+        offset += b.length;
+    });
+
+    return combined;
+};
 
 describe('ResourceVisibilityAnalyzer', () => {
     let analyzer: ResourceVisibilityAnalyzer;
@@ -12,102 +75,38 @@ describe('ResourceVisibilityAnalyzer', () => {
         analyzer = new ResourceVisibilityAnalyzer();
     });
 
-    // Helper to create a minimal demo with config strings and frames
-    const createTestDemo = (): Uint8Array => {
-        const writer = new DemoWriter();
-        const proto = 34;
-        const msgWriter = new MessageWriter();
+    it('should initialize correctly', () => {
+        expect(analyzer).toBeDefined();
+    });
 
-        // 1. ServerData
-        msgWriter.writeServerData(proto, 1, 0, 'baseq2', 0, 'q2dm1');
+    it('should return empty timeline for empty demo', async () => {
+        const buffer = new ArrayBuffer(4);
+        const view = new DataView(buffer);
+        view.setInt32(0, -1, true); // EOF
 
-        // 2. ConfigStrings (Models and Sounds)
-        msgWriter.writeConfigString(ConfigStringIndex.Models + 0, 'players/male/tris.md2');
-        msgWriter.writeConfigString(ConfigStringIndex.Sounds + 0, 'weapons/railgf1a.wav');
-
-        writer.writeBlock(msgWriter.getData());
-
-        // 3. Frame 1: Entity using Model 1
-        const frameWriter = new MessageWriter();
-        const frame1: FrameData = {
-            serverFrame: 1,
-            deltaFrame: -1,
-            surpressCount: 0,
-            areaBytes: 0,
-            areaBits: new Uint8Array(0),
-            playerState: createEmptyProtocolPlayerState(),
-            packetEntities: {
-                delta: false,
-                entities: [
-                    {
-                        number: 1,
-                        modelIndex: 1,
-                        modelIndex2: 0,
-                        modelIndex3: 0,
-                        modelIndex4: 0,
-                        frame: 0,
-                        skinNum: 0,
-                        effects: 0,
-                        renderfx: 0,
-                        origin: {x: 100, y: 0, z: 0},
-                        angles: {x: 0, y: 0, z: 0},
-                        oldOrigin: {x: 100, y: 0, z: 0},
-                        sound: 0,
-                        event: 0,
-                        solid: 0
-                    } as any
-                ]
-            }
-        };
-        frameWriter.writeFrame(frame1, proto);
-        writer.writeBlock(frameWriter.getData());
-
-        // 4. Frame 2: Sound event
-        const frameWriter2 = new MessageWriter();
-        frameWriter2.writeSound(
-            0, 1, 1, 1, 0, 1, {x: 100, y: 0, z: 0}, proto
-        );
-
-        const frame2: FrameData = {
-            serverFrame: 2,
-            deltaFrame: 1,
-            surpressCount: 0,
-            areaBytes: 0,
-            areaBits: new Uint8Array(0),
-            playerState: createEmptyProtocolPlayerState(),
-            packetEntities: { delta: false, entities: [] }
-        };
-        frameWriter2.writeFrame(frame2, proto);
-        writer.writeBlock(frameWriter2.getData());
-
-        writer.writeEOF();
-        return writer.getData();
-    };
+        const timeline = await analyzer.analyzeDemo(new Uint8Array(buffer));
+        expect(timeline.frames.size).toBe(0);
+    });
 
     it('should identify resources in a synthetic demo', async () => {
-        const demoData = createTestDemo();
+        const demoData = createSyntheticDemo();
         const timeline = await analyzer.analyzeDemo(demoData);
 
-        expect(timeline.frames.size).toBe(2);
-
+        expect(timeline.frames.has(1)).toBe(true);
         const frame1Res = timeline.frames.get(1)!;
-        expect(frame1Res).toBeDefined();
-        // Model 1 (tris.md2) should be visible
-        expect(frame1Res.visible.has("players/male/tris.md2")).toBe(true);
+
+        expect(frame1Res.visible.has("models/test/model1.md2")).toBe(true);
+        expect(frame1Res.audible.has("sound/test/sound1.wav")).toBe(true);
     });
 
     it('should identify resources from TempEntity events', async () => {
-        // Not implemented in createTestDemo yet, but analyzer supports it?
-        // Let's skip or implement if needed.
-        // The previous test run failed on this one because I broke the file.
-        // Let's implement a basic check if createTestDemo supports it.
-        // It doesn't.
-        // But the original file had 'should track audible sounds'.
-        // I will restore that one.
-
-        const demoData = createTestDemo();
+        const demoData = createSyntheticDemo(true);
         const timeline = await analyzer.analyzeDemo(demoData);
-        const frame2Res = timeline.frames.get(2)!;
-        expect(frame2Res.audible.has("weapons/railgf1a.wav")).toBe(true);
+
+        expect(timeline.frames.has(1)).toBe(true);
+        const frame1Res = timeline.frames.get(1)!;
+
+        // ROCKET_EXPLOSION should map to s_explod.sp2
+        expect(frame1Res.models.has("sprites/s_explod.sp2")).toBe(true);
     });
 });

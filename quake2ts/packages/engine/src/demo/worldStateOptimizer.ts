@@ -29,13 +29,13 @@ export class WorldStateOptimizer {
             referencedEntities.add(ent.number);
 
             // Models
-            if (ent.modelIndex > 0) markConfigString(ConfigStringIndex.Models + ent.modelIndex);
-            if (ent.modelIndex2 && ent.modelIndex2 > 0) markConfigString(ConfigStringIndex.Models + ent.modelIndex2);
-            if (ent.modelIndex3 && ent.modelIndex3 > 0) markConfigString(ConfigStringIndex.Models + ent.modelIndex3);
-            if (ent.modelIndex4 && ent.modelIndex4 > 0) markConfigString(ConfigStringIndex.Models + ent.modelIndex4);
+            if (ent.modelindex > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex);
+            if (ent.modelindex2 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex2);
+            if (ent.modelindex3 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex3);
+            if (ent.modelindex4 > 0) markConfigString(ConfigStringIndex.Models + ent.modelindex4);
 
             // Sounds
-            if (ent.sound && ent.sound > 0) markConfigString(ConfigStringIndex.Sounds + ent.sound);
+            if (ent.sound > 0) markConfigString(ConfigStringIndex.Sounds + ent.sound);
         };
 
         // 2. Analyze Current Entities (Start State)
@@ -55,32 +55,12 @@ export class WorldStateOptimizer {
                         for (const ent of frame.packetEntities.entities) {
                              referencedEntities.add(ent.number);
 
-                             // Since 'bits' is dynamically attached in parser or we need to check blindly
-                             // But entity updates are delta compressed. If we don't have 'bits', we assume values are updated if present?
-                             // But in EntityState, fields are just values.
-                             // 'bits' was used in parsing to know what changed.
-                             // If we are looking at a full entity state, we should just check the values.
-                             // But wait, are these EntityStates delta states or full states?
-                             // parser.onFrame provides packetEntities.entities which are DELTA states if packetEntities.delta is true.
-                             // But the parser implementation accumulates/mutates a temporary entity and pushes copy?
-                             // No, `parseDelta` modifies `to` (which is accumulatively updated if we were tracking state, but the parser's `collectPacketEntities` uses `createEmptyEntityState` and applies delta to it).
-                             // So `packetEntities.entities` contains sparse delta updates relative to... baseline?
-                             // No, `collectPacketEntities` applies delta to a FRESH empty state.
-                             // So it's effectively just the fields that changed.
+                             if (ent.bits & U_MODEL) markConfigString(ConfigStringIndex.Models + ent.modelindex);
+                             if (ent.bits & U_MODEL2) markConfigString(ConfigStringIndex.Models + ent.modelindex2);
+                             if (ent.bits & U_MODEL3) markConfigString(ConfigStringIndex.Models + ent.modelindex3);
+                             if (ent.bits & U_MODEL4) markConfigString(ConfigStringIndex.Models + ent.modelindex4);
 
-                             // So checking the value > 0 is correct-ish, but 0 is a valid value for some fields?
-                             // modelIndex 0 is usually invalid/null.
-                             // But we used to check `ent.bits & U_MODEL`.
-                             // Since I removed `bits` from type but attached it dynamically as `any` in parser...
-                             // I can cast to any here to check bits if I trust they are there.
-                             const bits = (ent as any).bits || 0;
-
-                             if (bits & U_MODEL) markConfigString(ConfigStringIndex.Models + ent.modelIndex);
-                             if (bits & U_MODEL2) markConfigString(ConfigStringIndex.Models + (ent.modelIndex2 || 0));
-                             if (bits & U_MODEL3) markConfigString(ConfigStringIndex.Models + (ent.modelIndex3 || 0));
-                             if (bits & U_MODEL4) markConfigString(ConfigStringIndex.Models + (ent.modelIndex4 || 0));
-
-                             if (bits & U_SOUND) markConfigString(ConfigStringIndex.Sounds + (ent.sound || 0));
+                             if (ent.bits & U_SOUND) markConfigString(ConfigStringIndex.Sounds + ent.sound);
                         }
                     }
                     break;
@@ -93,6 +73,11 @@ export class WorldStateOptimizer {
                 }
                 case ServerCommand.temp_entity: {
                     // TODO: Implement dependency tracking for TempEntities.
+                    // Many temp entities implicitly reference sprites or models (e.g. TE_EXPLOSION1 uses sprites/s_explod.sp2).
+                    // Without a complete mapping table, we risk pruning required assets.
+                    // For now, we rely on "Safe" optimization mode which should probably keep common sprites,
+                    // or assume the user accepts some missing visual effects in "Minimal" mode.
+                    // Ideally we should have a `TempEntityResources` map.
                     break;
                 }
                 case ServerCommand.spawnbaseline: {

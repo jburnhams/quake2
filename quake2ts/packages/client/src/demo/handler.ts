@@ -150,8 +150,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         }
 
         for (const partial of packetEntities.entities) {
-            const partialAny = partial as any;
-            if (partialAny.bits & U_REMOVE) {
+            if (partial.bits & U_REMOVE) {
                 // Explicit removal: remove from newEntities if present
                 newEntities.delete(partial.number);
                 continue;

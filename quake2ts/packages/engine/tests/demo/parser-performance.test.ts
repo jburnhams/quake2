@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NetworkMessageParser } from '../../src/demo/parser.js';
+import { NetworkMessageParser } from '../../src/demo/parser';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
 
 class ByteBuilder {
@@ -154,7 +154,7 @@ describe('NetworkMessageParser Performance', () => {
 
         console.log(`Parsed ${FRAMES} frames with ${ENTITIES_PER_FRAME} entities each in ${duration.toFixed(2)}ms`);
 
-        expect(duration).toBeLessThan(2000); // Increased limit for robustness
+        expect(duration).toBeLessThan(600); // Setting a reasonable baseline (increased for CI/slower envs)
         expect(handler.onFrame).toHaveBeenCalledTimes(FRAMES);
     });
 });

@@ -2,6 +2,45 @@ import { BinaryWriter, ServerCommand } from '@quake2ts/shared';
 import { EntityState, ProtocolPlayerState, FrameData, U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1, U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2, U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3, U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH } from './parser.js';
 import { Vec3, TempEntity } from '@quake2ts/shared';
 
+// Mapping from shared ServerCommand enum to Quake 2 Wire Protocol (Version 34)
+// Shared Enum values:
+// bad=0
+// muzzleflash=1, muzzleflash2=2, temp_entity=3, layout=4, inventory=5
+// nop=6, disconnect=7, reconnect=8, sound=9, print=10, stufftext=11
+// serverdata=12, configstring=13, spawnbaseline=14, centerprint=15, download=16
+// playerinfo=17, packetentities=18, deltapacketentities=19, frame=20...
+
+// Wire Protocol 34 (Standard Q2):
+// bad=0, nop=1, disconnect=2, reconnect=3, download=4
+// frame=5, inventory=6, layout=7, muzzleflash=8, temp_entity=9
+// sound=10, print=11, stufftext=12, serverdata=13, configstring=14
+// spawnbaseline=15, centerprint=16, playerinfo=17, packetentities=18, deltapacketentities=19
+// muzzleflash2=20
+
+// Note: Standard Q2 svc_serverdata is 13. svc_sound is 10.
+// (Source: q_shared.h from Q2 source)
+// #define svc_bad 0
+// #define svc_nop 1
+// #define svc_disconnect 2
+// #define svc_reconnect 3
+// #define svc_download 4
+// #define svc_frame 5
+// #define svc_inventory 6
+// #define svc_layout 7
+// #define svc_muzzleflash 8
+// #define svc_temp_entity 9
+// #define svc_sound 10
+// #define svc_print 11
+// #define svc_stufftext 12
+// #define svc_serverdata 13
+// #define svc_configstring 14
+// #define svc_spawnbaseline 15
+// #define svc_centerprint 16
+// #define svc_playerinfo 17
+// #define svc_packetentities 18
+// #define svc_deltapacketentities 19
+// #define svc_muzzleflash2 20
+
 const PROTO34_REVERSE_MAP: Record<number, number> = {
     [ServerCommand.bad]: 0,
     [ServerCommand.nop]: 1,
@@ -38,10 +77,15 @@ export class MessageWriter {
     }
 
     private writeCommand(cmd: ServerCommand, protocolVersion: number = 0): void {
+        // Always translate for P34 or default (0)
+        // If protocol is Rerelease (>=2023), mapping might differ, but usually backwards compatible?
+        // Actually Rerelease might use different ops or same.
+        // For now we assume standard Q2 wire for output unless specified.
         const translated = PROTO34_REVERSE_MAP[cmd];
         if (translated !== undefined) {
             this.writer.writeByte(translated);
         } else {
+             // Fallback to enum value if no translation (risky but allows extensions)
             this.writer.writeByte(cmd);
         }
     }
@@ -191,6 +235,8 @@ export class MessageWriter {
                 this.writer.writeByte(color || 0);
                 break;
             case TempEntity.STEAM:
+                // Note: nextId logic is complex as it requires knowing the entity logic.
+                // We'll write -1 for nextId for now, assuming simple case.
                 this.writer.writeShort(-1);
                 this.writer.writeByte(cnt || 0);
                 this.writer.writePos(pos);
@@ -346,29 +392,26 @@ export class MessageWriter {
         let bits = 0;
         let bitsHigh = 0;
 
-        // Use 'any' cast to access 'bits' and 'bitsHigh' which might be dynamically present
-        const toAny = to as any;
-
-        if (toAny.bits && toAny.bits !== 0 && !force) {
+        if (to.bits !== 0 && !force) {
             // Respect existing bits if not forcing
-            bits = toAny.bits;
-            bitsHigh = toAny.bitsHigh || 0;
+            bits = to.bits;
+            bitsHigh = to.bitsHigh;
         } else {
             // Calculate bits based on values (fallback or forced generation)
             // If force is true, we check non-zero values to generate bits.
 
-            if (to.modelIndex !== 0) bits |= U_MODEL;
-            if (to.modelIndex2 && to.modelIndex2 !== 0) bits |= U_MODEL2;
-            if (to.modelIndex3 && to.modelIndex3 !== 0) bits |= U_MODEL3;
-            if (to.modelIndex4 && to.modelIndex4 !== 0) bits |= U_MODEL4;
+            if (to.modelindex !== 0) bits |= U_MODEL;
+            if (to.modelindex2 !== 0) bits |= U_MODEL2;
+            if (to.modelindex3 !== 0) bits |= U_MODEL3;
+            if (to.modelindex4 !== 0) bits |= U_MODEL4;
 
             if (to.frame !== 0) {
                  if (to.frame >= 256) bits |= U_FRAME16;
                  else bits |= U_FRAME8;
             }
 
-            if (to.skinNum !== 0) {
-                if (to.skinNum >= 256) bits |= U_SKIN16;
+            if (to.skinnum !== 0) {
+                if (to.skinnum >= 256) bits |= U_SKIN16;
                 else bits |= U_SKIN8;
             }
 
@@ -390,21 +433,21 @@ export class MessageWriter {
             if (to.angles.y !== 0) bits |= U_ANGLE2;
             if (to.angles.z !== 0) bits |= U_ANGLE3;
 
-            if (to.oldOrigin && (to.oldOrigin.x !== 0 || to.oldOrigin.y !== 0 || to.oldOrigin.z !== 0)) bits |= U_OLDORIGIN;
+            if (to.old_origin.x !== 0 || to.old_origin.y !== 0 || to.old_origin.z !== 0) bits |= U_OLDORIGIN;
 
-            if (to.sound && to.sound !== 0) bits |= U_SOUND;
-            if (to.event && to.event !== 0) bits |= U_EVENT;
+            if (to.sound !== 0) bits |= U_SOUND;
+            if (to.event !== 0) bits |= U_EVENT;
             if (to.solid !== 0) bits |= U_SOLID;
 
             // Rerelease specific
             if (protocolVersion >= 2023) {
-                 if (to.alpha && to.alpha !== 0) bits |= U_ALPHA;
-                 if (to.scale && to.scale !== 0) bits |= U_SCALE;
-                 if (to.instanceBits && to.instanceBits !== 0) bits |= U_INSTANCE_BITS;
-                 if (to.loopVolume && to.loopVolume !== 0) bits |= U_LOOP_VOLUME;
-                 if (to.loopAttenuation && to.loopAttenuation !== 0) bitsHigh |= U_LOOP_ATTENUATION_HIGH;
-                 if (to.owner && to.owner !== 0) bitsHigh |= U_OWNER_HIGH;
-                 if (to.oldFrame && to.oldFrame !== 0) bitsHigh |= U_OLD_FRAME_HIGH;
+                 if (to.alpha !== 0) bits |= U_ALPHA;
+                 if (to.scale !== 0) bits |= U_SCALE;
+                 if (to.instanceBits !== 0) bits |= U_INSTANCE_BITS;
+                 if (to.loopVolume !== 0) bits |= U_LOOP_VOLUME;
+                 if (to.loopAttenuation !== 0) bitsHigh |= U_LOOP_ATTENUATION_HIGH;
+                 if (to.owner !== 0) bitsHigh |= U_OWNER_HIGH;
+                 if (to.oldFrame !== 0) bitsHigh |= U_OLD_FRAME_HIGH;
             }
 
             if (to.number >= 256) bits |= U_NUMBER16;
@@ -429,17 +472,17 @@ export class MessageWriter {
         if (bits & U_NUMBER16) this.writer.writeShort(to.number);
         else this.writer.writeByte(to.number);
 
-        if (bits & U_MODEL) this.writer.writeByte(to.modelIndex);
-        if (bits & U_MODEL2) this.writer.writeByte(to.modelIndex2 || 0);
-        if (bits & U_MODEL3) this.writer.writeByte(to.modelIndex3 || 0);
-        if (bits & U_MODEL4) this.writer.writeByte(to.modelIndex4 || 0);
+        if (bits & U_MODEL) this.writer.writeByte(to.modelindex);
+        if (bits & U_MODEL2) this.writer.writeByte(to.modelindex2);
+        if (bits & U_MODEL3) this.writer.writeByte(to.modelindex3);
+        if (bits & U_MODEL4) this.writer.writeByte(to.modelindex4);
 
         if (bits & U_FRAME8) this.writer.writeByte(to.frame);
         if (bits & U_FRAME16) this.writer.writeShort(to.frame);
 
-        if ((bits & U_SKIN8) && (bits & U_SKIN16)) this.writer.writeLong(to.skinNum);
-        else if (bits & U_SKIN8) this.writer.writeByte(to.skinNum);
-        else if (bits & U_SKIN16) this.writer.writeShort(to.skinNum);
+        if ((bits & U_SKIN8) && (bits & U_SKIN16)) this.writer.writeLong(to.skinnum);
+        else if (bits & U_SKIN8) this.writer.writeByte(to.skinnum);
+        else if (bits & U_SKIN16) this.writer.writeShort(to.skinnum);
 
         if ((bits & U_EFFECTS8) && (bits & U_EFFECTS16)) this.writer.writeLong(to.effects);
         else if (bits & U_EFFECTS8) this.writer.writeByte(to.effects);
@@ -457,24 +500,24 @@ export class MessageWriter {
         if (bits & U_ANGLE2) this.writer.writeAngle(to.angles.y);
         if (bits & U_ANGLE3) this.writer.writeAngle(to.angles.z);
 
-        if (bits & U_OLDORIGIN && to.oldOrigin) {
-             this.writer.writeCoord(to.oldOrigin.x);
-             this.writer.writeCoord(to.oldOrigin.y);
-             this.writer.writeCoord(to.oldOrigin.z);
+        if (bits & U_OLDORIGIN) {
+             this.writer.writeCoord(to.old_origin.x);
+             this.writer.writeCoord(to.old_origin.y);
+             this.writer.writeCoord(to.old_origin.z);
         }
 
-        if (bits & U_SOUND) this.writer.writeByte(to.sound || 0);
-        if (bits & U_EVENT) this.writer.writeByte(to.event || 0);
+        if (bits & U_SOUND) this.writer.writeByte(to.sound);
+        if (bits & U_EVENT) this.writer.writeByte(to.event);
         if (bits & U_SOLID) this.writer.writeShort(to.solid);
 
         if (protocolVersion >= 2023) {
-            if (bits & U_ALPHA) this.writer.writeByte(Math.round((to.alpha || 0) * 255));
-            if (bits & U_SCALE) this.writer.writeFloat(to.scale || 0);
-            if (bits & U_INSTANCE_BITS) this.writer.writeLong(to.instanceBits || 0);
-            if (bits & U_LOOP_VOLUME) this.writer.writeByte(Math.round((to.loopVolume || 0) * 255));
-            if (bitsHigh & U_LOOP_ATTENUATION_HIGH) this.writer.writeByte(Math.round((to.loopAttenuation || 0) * 255));
-            if (bitsHigh & U_OWNER_HIGH) this.writer.writeShort(to.owner || 0);
-            if (bitsHigh & U_OLD_FRAME_HIGH) this.writer.writeShort(to.oldFrame || 0);
+            if (bits & U_ALPHA) this.writer.writeByte(Math.round(to.alpha * 255));
+            if (bits & U_SCALE) this.writer.writeFloat(to.scale);
+            if (bits & U_INSTANCE_BITS) this.writer.writeLong(to.instanceBits);
+            if (bits & U_LOOP_VOLUME) this.writer.writeByte(Math.round(to.loopVolume * 255));
+            if (bitsHigh & U_LOOP_ATTENUATION_HIGH) this.writer.writeByte(Math.round(to.loopAttenuation * 255));
+            if (bitsHigh & U_OWNER_HIGH) this.writer.writeShort(to.owner);
+            if (bitsHigh & U_OLD_FRAME_HIGH) this.writer.writeShort(to.oldFrame);
         }
     }
 }

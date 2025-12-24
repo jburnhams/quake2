@@ -35,11 +35,10 @@ const createSyntheticDemo = (
     // Block 2: Frame 1
     const w2 = new MessageWriter();
     const ent1 = createEmptyEntityState();
-    const mutableEnt1 = ent1 as any;
-    mutableEnt1.number = 1;
-    mutableEnt1.modelIndex = entityModelIndex;
-    mutableEnt1.origin = entityOrigin;
-    mutableEnt1.sound = 1;
+    ent1.number = 1;
+    ent1.modelindex = entityModelIndex;
+    ent1.origin = entityOrigin;
+    ent1.sound = 1;
 
     const playerState = createEmptyProtocolPlayerState();
     playerState.origin = playerOrigin;

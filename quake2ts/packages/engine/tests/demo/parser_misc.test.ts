@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser, NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser.js';
+import { NetworkMessageParser, NetworkMessageHandler } from '../../src/demo/parser.js';
 import { BinaryStream } from '@quake2ts/shared';
 
 describe('NetworkMessageParser - Misc Rerelease Commands', () => {
@@ -12,7 +12,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onSplitClient: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onSplitClient).toHaveBeenCalledWith(clientNum);
   });
@@ -40,7 +39,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onLocPrint: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onLocPrint).toHaveBeenCalledWith(flags, base, [arg1]);
   });
@@ -54,7 +52,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onWaitingForPlayers: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onWaitingForPlayers).toHaveBeenCalledWith(count);
   });
@@ -78,7 +75,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onBotChat: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onBotChat).toHaveBeenCalledWith(locString);
   });
@@ -117,7 +113,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onPoi: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onPoi).toHaveBeenCalledWith(flags, expect.objectContaining({x:1, y:2, z:3}));
   });
@@ -147,7 +142,6 @@ describe('NetworkMessageParser - Misc Rerelease Commands', () => {
           onHelpPath: vi.fn()
       };
       const parser = new NetworkMessageParser(stream, handler);
-      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
       expect(handler.onHelpPath).toHaveBeenCalledWith(expect.objectContaining({x:10, y:20, z:30}));
   });
