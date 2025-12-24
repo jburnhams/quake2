@@ -6,3 +6,6 @@ dist/
 # Visual Test Artifacts
 **/__snapshots__/actual/
 **/__snapshots__/diff/
+
+# GitHub Pages
+pages-dist/

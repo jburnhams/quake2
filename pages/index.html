@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>quake2ts - Quake II in TypeScript</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>quake2ts<span class="terminal-cursor"></span></h1>
+            <p>A complete Quake II engine port to TypeScript & WebGL</p>
+        </header>
+
+        <div class="section">
+            <h2>Overview</h2>
+            <p>
+                <strong>quake2ts</strong> is a modern library designed to run Quake II directly in web browsers.
+                It is not just a renderer, but a complete game engine port including authoritative server logic,
+                client-side prediction, physics, and asset management.
+            </p>
+            <p>
+                Designed for web applications that need a robust FPS engine, it separates the
+                core engine logic from the UI, allowing developers to build custom interfaces
+                around the classic id Tech 2 gameplay.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Capabilities</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>WebGL 2 Rendering</h3>
+                    <p>Full 3D rendering pipeline supporting BSP maps, MD2/MD3 models, dynamic lighting, and particles.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Deterministic Physics</h3>
+                    <p>40Hz fixed timestep simulation ensuring identical behavior across clients and server.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Client Prediction</h3>
+                    <p>Lag-free movement using shared physics code (pmove) to predict outcomes locally.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Asset Agnostic</h3>
+                    <p>Loads assets dynamically from user-provided PAK files via a Virtual File System.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Multiplayer Ready</h3>
+                    <p>Architecture supports dedicated servers and WebSocket-based networking.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Demo System</h3>
+                    <p>Full record and playback of game sessions with timeline controls.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Status & Progress</h2>
+            <p>The project is currently in active development, structured into 7 phases.</p>
+
+            <h3>Roadmap</h3>
+            <ul>
+                <li><strong>Phase 1: Basic Asset Viewing</strong> - PAK Browser & Map Viewer APIs.</li>
+                <li><strong>Phase 2: Interactive Visualization</strong> - Entity inspection and tools.</li>
+                <li><strong>Phase 3: Demo Playback</strong> - Analysis and timeline tools.</li>
+                <li><strong>Phase 4: Single Player</strong> - Game loops, HUD, and Save/Load.</li>
+                <li><strong>Phase 5: Multiplayer</strong> - Client/Server networking.</li>
+                <li><strong>Phase 6: Advanced Features</strong> - Modding & Rendering enhancements.</li>
+                <li><strong>Phase 7: Polish</strong> - Testing & Documentation.</li>
+            </ul>
+
+            <div style="margin-top: 20px;">
+                <p><em>Current Focus: Building core library infrastructure and asset management.</em></p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Usage</h2>
+            <p>quake2ts is distributed as a set of NPM packages in a monorepo.</p>
+
+            <h3>Installation</h3>
+            <pre><code>npm install @quake2ts/engine @quake2ts/game @quake2ts/client</code></pre>
+
+            <h3>Basic Example</h3>
+            <pre><code>import { createGame, createClient } from '@quake2ts/game';
+
+// Initialize the system
+const game = createGame(imports, engine, options);
+const client = createClient(imports);
+
+// Start the loop
+game.init();
+client.Init();</code></pre>
+
+            <p>See the <a href="https://github.com/jburnhams/quake2">GitHub Repository</a> for full documentation.</p>
+        </div>
+
+        <footer>
+            <p>&copy; 2024 quake2ts Project. Quake II is a registered trademark of id Software, LLC.</p>
+            <p>
+                <a href="https://github.com/jburnhams/quake2">View on GitHub</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
