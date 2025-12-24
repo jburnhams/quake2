@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ai_checkattack } from '../../src/ai/targeting.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { Entity } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
-import { AIFlags, AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createMockMonsterAI } from '@quake2ts/test-utils';
+import { AttackState } from '../../src/ai/constants.js';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('ai_checkattack', () => {
   let context: EntitySystem;
@@ -14,9 +14,11 @@ describe('ai_checkattack', () => {
     const testCtx = createTestContext();
     context = testCtx.entities;
 
-    self = createMonsterEntityFactory('monster_test', {
+    const monsterData = createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 }
     });
+    self = context.spawn();
+    Object.assign(self, monsterData);
 
     // Override monsterinfo to provide checkattack mock which is required for this test.
     self.monsterinfo = {
@@ -25,9 +27,12 @@ describe('ai_checkattack', () => {
         attack_state: AttackState.Straight
     } as any;
 
-    enemy = createPlayerEntityFactory({
+    const playerData = createPlayerEntityFactory({
         origin: { x: 100, y: 0, z: 0 }
     });
+    enemy = context.spawn();
+    Object.assign(enemy, playerData);
+
     self.enemy = enemy;
   });
 

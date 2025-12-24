@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ai_run, monster_done_dodge } from '../../src/ai/movement.js';
-import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AIFlags, AttackState } from '../../src/ai/constants.js';
 import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
@@ -9,8 +9,8 @@ import * as perception from '../../src/ai/perception.js';
 
 describe('AI Dodge', () => {
   let context: EntitySystem;
-  let self: any;
-  let enemy: any;
+  let self: Entity;
+  let enemy: Entity;
 
   beforeEach(() => {
     const testCtx = createTestContext();
@@ -22,7 +22,7 @@ describe('AI Dodge', () => {
     });
 
     // Setup self (monster)
-    self = createMonsterEntityFactory('monster_test', {
+    const monsterData = createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 },
         angles: { x: 0, y: 0, z: 0 },
         ideal_yaw: 0,
@@ -30,6 +30,9 @@ describe('AI Dodge', () => {
         movetype: MoveType.Step,
         solid: Solid.Bbox,
     });
+    self = context.spawn();
+    Object.assign(self, monsterData);
+
     // Add flags not in default factory
     self.flags |= EntityFlags.Fly; // Allow movement without ground check for simplicity
 
@@ -40,13 +43,15 @@ describe('AI Dodge', () => {
       aiflags: 0,
       attack_state: AttackState.Straight,
       lefty: 0
-    };
+    } as any;
 
     // Setup enemy
-    enemy = createPlayerEntityFactory({
+    const playerData = createPlayerEntityFactory({
         origin: { x: 200, y: 0, z: 0 },
     });
-    (enemy as any).inUse = true;
+    enemy = context.spawn();
+    Object.assign(enemy, playerData);
+    enemy.inUse = true;
 
     self.enemy = enemy;
 
@@ -78,7 +83,7 @@ describe('AI Dodge', () => {
 
        const oldY = self.origin.y;
        // Mock trace to update endpos based on delta
-        (context.trace as any).mockImplementation((start, mins, maxs, end) => ({
+        (context.trace as any).mockImplementation((start: any, mins: any, maxs: any, end: any) => ({
             fraction: 1.0,
             ent: null,
             allsolid: false,
@@ -97,7 +102,7 @@ describe('AI Dodge', () => {
        self.ideal_yaw = 0;
        self.monsterinfo.attack_state = AttackState.Sliding;
 
-        (context.trace as any).mockImplementation((start, mins, maxs, end) => ({
+        (context.trace as any).mockImplementation((start: any, mins: any, maxs: any, end: any) => ({
             fraction: 1.0,
             ent: null,
             allsolid: false,
