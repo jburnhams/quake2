@@ -8,11 +8,11 @@ export class LruCache<T> {
   private currentMemoryUsage = 0;
 
   constructor(
-    private readonly capacity: number,
-    private readonly maxMemory: number = Infinity,
+    private _capacity: number,
+    private _maxMemory: number = Infinity,
     private readonly sizeCalculator: (value: T) => number = () => 0
   ) {
-    if (capacity <= 0) {
+    if (_capacity <= 0) {
       throw new RangeError('LRU cache capacity must be greater than zero');
     }
   }
@@ -23,6 +23,27 @@ export class LruCache<T> {
 
   get memoryUsage(): number {
     return this.currentMemoryUsage;
+  }
+
+  get capacity(): number {
+    return this._capacity;
+  }
+
+  set capacity(value: number) {
+    if (value <= 0) {
+      throw new RangeError('LRU cache capacity must be greater than zero');
+    }
+    this._capacity = value;
+    this.evict();
+  }
+
+  get maxMemory(): number {
+    return this._maxMemory;
+  }
+
+  set maxMemory(value: number) {
+    this._maxMemory = value;
+    this.evict();
   }
 
   has(key: string): boolean {
@@ -74,7 +95,7 @@ export class LruCache<T> {
 
   private evict(): void {
     // Evict based on capacity
-    while (this.map.size > this.capacity) {
+    while (this.map.size > this._capacity) {
       const oldestKey = this.map.keys().next();
       if (!oldestKey.done) {
         this.delete(oldestKey.value);
@@ -84,7 +105,7 @@ export class LruCache<T> {
     }
 
     // Evict based on memory
-    while (this.currentMemoryUsage > this.maxMemory && this.map.size > 0) {
+    while (this.currentMemoryUsage > this._maxMemory && this.map.size > 0) {
       const oldestKey = this.map.keys().next();
       if (!oldestKey.done) {
         this.delete(oldestKey.value);

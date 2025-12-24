@@ -84,11 +84,11 @@
 ### 6.4.2 Worker Thread Support
 - [x] Move BSP parsing to worker thread for non-blocking load
 - [x] Move demo parsing to worker thread
-- [ ] Move audio decoding to worker thread (already async via WASM)
+- [x] Move audio decoding to worker thread (already async via WASM, moved WAV to worker)
 - [ ] Expose worker-based API with progress callbacks
 
 ### 6.4.3 Memory Management
 - [x] Add method `getMemoryUsage(): MemoryUsage` reporting heap usage
 - [x] Add method `clearCache(type: AssetType): void` for manual cache clearing
-- [ ] Add automatic garbage collection triggers for low-memory scenarios
+- [x] Add automatic garbage collection triggers for low-memory scenarios (implemented via `enforceMemoryBudget`)
 - [ ] Document memory budget recommendations for different device classes

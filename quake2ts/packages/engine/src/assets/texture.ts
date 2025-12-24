@@ -60,6 +60,22 @@ export class TextureCache {
   clear(): void {
     this.cache.clear();
   }
+
+  get capacity(): number {
+    return this.cache.capacity;
+  }
+
+  set capacity(value: number) {
+      this.cache.capacity = value;
+  }
+
+  get maxMemory(): number {
+    return this.cache.maxMemory;
+  }
+
+  set maxMemory(value: number) {
+      this.cache.maxMemory = value;
+  }
 }
 
 export function walToRgba(wal: WalTexture, palette: Uint8Array): PreparedTexture {

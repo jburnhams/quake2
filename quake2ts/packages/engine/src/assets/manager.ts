@@ -19,6 +19,12 @@ export interface MemoryUsage {
     heapUsed?: number;
 }
 
+export interface MemoryBudget {
+    textureMemoryLimit?: number;
+    textureCacheCapacity?: number;
+    audioCacheSize?: number;
+}
+
 interface DependencyNode {
   readonly dependencies: Set<string>;
   loaded: boolean;
@@ -317,16 +323,24 @@ export class AssetManager {
           heapUsed = mem.heapUsed;
       }
 
-      // Audio memory estimation is tricky as it depends on decoded buffers.
-      // AudioRegistry tracks loaded sounds, but we might need to query it.
-      // Assuming basic tracking for now.
-
       return {
           textures: this.textures.memoryUsage,
-          audio: 0, // Placeholder
+          audio: this.audio.size, // Approximation or update AudioRegistry to track bytes
           heapTotal,
           heapUsed
       };
+  }
+
+  enforceMemoryBudget(budget: MemoryBudget): void {
+    if (budget.textureMemoryLimit !== undefined) {
+      this.textures.maxMemory = budget.textureMemoryLimit;
+    }
+    if (budget.textureCacheCapacity !== undefined) {
+      this.textures.capacity = budget.textureCacheCapacity;
+    }
+    if (budget.audioCacheSize !== undefined) {
+      this.audio.capacity = budget.audioCacheSize;
+    }
   }
 
   clearCache(type: AssetType): void {
@@ -340,10 +354,6 @@ export class AssetManager {
           case 'map':
               this.maps.clear();
               break;
-          // Models are currently handled by internal loaders (Md2Loader etc.)
-          // which wrap LruCache internally or similar?
-          // Looking at imports, Md2Loader is from ./md2.js. It likely has a cache.
-          // If we want to clear models, we need to expose clear on Md2Loader.
       }
   }
 
