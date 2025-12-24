@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../src/index.js';
 import { Entity, EntityFlags, MoveType } from '../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
-import type { GameImports } from '../src/index.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 import { T_Damage, DamageFlags, DamageMod } from '../src/combat/index.js';
 import { giveItem } from '../src/inventory/index.js';
 
@@ -30,33 +29,9 @@ describe('Admin/Cheat APIs', () => {
     let entities: any;
 
     beforeEach(() => {
-        const { entities: mockEntities, game: mockGame } = createTestContext();
-        const engine = mockEntities.engine;
+        const { imports, engine } = createGameImportsAndEngine();
 
-        const imports: Partial<GameImports> = {
-            trace: vi.fn(() => ({
-                fraction: 1,
-                ent: null,
-                allsolid: false,
-                startsolid: false,
-                endpos: { x: 0, y: 0, z: 0 },
-                plane: null,
-                surfaceFlags: 0,
-                contents: 0
-            })),
-            pointcontents: vi.fn(() => 0),
-            linkentity: vi.fn(),
-            multicast: vi.fn(),
-            unicast: vi.fn(),
-            configstring: vi.fn(),
-            serverCommand: vi.fn(),
-        };
-
-        const options = {
-            gravity: { x: 0, y: 0, z: -800 }
-        };
-
-        game = createGame(imports, engine, options);
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         // Mock the entity system find method to return a player
         player = new Entity(1);
