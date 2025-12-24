@@ -3,7 +3,7 @@ import { checkWater } from '../../src/physics/fluid.js';
 import { Entity, EntityFlags } from '../../src/entities/entity.js';
 import { CONTENTS_WATER, CONTENTS_LAVA } from '@quake2ts/shared';
 import { EntitySystem } from '../../src/entities/system.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('fluid physics', () => {
   let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
@@ -20,12 +20,14 @@ describe('fluid physics', () => {
   } as unknown as EntitySystem;
 
   it('should detect entering water', () => {
-    const ent = new Entity(1);
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.mins = { x: -16, y: -16, z: -24 };
-    ent.maxs = { x: 16, y: 16, z: 32 };
-    ent.waterlevel = 0;
-    ent.watertype = 0;
+    const ent = createEntityFactory({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 },
+        waterlevel: 0,
+        watertype: 0,
+    }) as Entity;
 
     // Feet in water
     mockImports.pointcontents.mockReturnValue(CONTENTS_WATER);
@@ -39,13 +41,15 @@ describe('fluid physics', () => {
   });
 
   it('should detect leaving water', () => {
-    const ent = new Entity(1);
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.mins = { x: -16, y: -16, z: -24 };
-    ent.maxs = { x: 16, y: 16, z: 32 };
-    ent.waterlevel = 1;
-    ent.watertype = CONTENTS_WATER;
-    ent.flags |= EntityFlags.Swim;
+    const ent = createEntityFactory({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 },
+        waterlevel: 1,
+        watertype: CONTENTS_WATER,
+        flags: EntityFlags.Swim
+    }) as Entity;
 
     // Not in water
     mockImports.pointcontents.mockReturnValue(0);
@@ -59,11 +63,13 @@ describe('fluid physics', () => {
   });
 
   it('should detect waist deep water', () => {
-    const ent = new Entity(1);
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.mins = { x: -16, y: -16, z: -24 };
-    ent.maxs = { x: 16, y: 16, z: 32 };
-    ent.waterlevel = 0;
+    const ent = createEntityFactory({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 },
+        waterlevel: 0
+    }) as Entity;
 
     // Feet in water, Waist in water, Head in air
     mockImports.pointcontents
@@ -77,10 +83,12 @@ describe('fluid physics', () => {
   });
 
   it('should play lava sound for lava', () => {
-    const ent = new Entity(1);
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.mins = { x: -16, y: -16, z: -24 };
-    ent.maxs = { x: 16, y: 16, z: 32 };
+    const ent = createEntityFactory({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 }
+    }) as Entity;
 
     mockImports.pointcontents.mockReturnValue(CONTENTS_LAVA);
 
