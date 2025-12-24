@@ -6,15 +6,12 @@ import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/sr
 
 describe('SpriteRenderer Integration (Headless)', () => {
   let gpuSetup: HeadlessWebGPUSetup | null = null;
-  let gpuAvailable = false;
 
   beforeAll(async () => {
     try {
       gpuSetup = await initHeadlessWebGPU();
-      gpuAvailable = true;
     } catch (error) {
-      console.warn('⚠️  WebGPU not available - integration tests will be skipped:', error);
-      gpuAvailable = false;
+      throw new Error(`Failed to initialize WebGPU: ${error}`);
     }
   });
 
@@ -25,8 +22,6 @@ describe('SpriteRenderer Integration (Headless)', () => {
   });
 
   it('renders a solid red rectangle', async () => {
-    if (!gpuAvailable) return;
-
     const context = await createWebGPUContext();
     const width = 256;
     const height = 256;

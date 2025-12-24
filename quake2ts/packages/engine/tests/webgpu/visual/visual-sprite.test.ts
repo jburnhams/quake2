@@ -1,6 +1,6 @@
-import { test } from '../helpers/visual-testing';
-import { SpriteRenderer } from '../../src/render/webgpu/pipelines/sprite';
-import { Texture2D } from '../../src/render/webgpu/resources';
+import { test } from '../../helpers/visual-testing';
+import { SpriteRenderer } from '../../../src/render/webgpu/pipelines/sprite';
+import { Texture2D } from '../../../src/render/webgpu/resources';
 
 test('sprite: solid red rectangle', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(

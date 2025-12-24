@@ -11,12 +11,20 @@ describe('WebGPURenderer Integration (Headless with Dawn)', () => {
   let globals: any;
 
   beforeAll(() => {
+    // Attempt to initialize headless WebGPU environment
     try {
-        // Attempt to initialize headless WebGPU environment
         globals = create();
         Object.assign(global, globals);
     } catch (e) {
-        console.warn("Dawn init failed, skipping real GPU test logic:", e);
+        throw new Error(`Dawn init failed: ${e}`);
+    }
+
+    // Polyfill navigator.gpu if it wasn't set by create()
+    if (!global.navigator) {
+        (global as any).navigator = {};
+    }
+    if (!(global.navigator as any).gpu) {
+         throw new Error('navigator.gpu is missing after Dawn init');
     }
   });
 
@@ -25,12 +33,6 @@ describe('WebGPURenderer Integration (Headless with Dawn)', () => {
   });
 
   it('renders a solid sprite to a texture', async () => {
-    // Only run if GPU is available
-    if (!global.navigator?.gpu) {
-        console.warn("Skipping test: No GPU available");
-        return;
-    }
-
     // 1. Create Renderer
     const renderer = await createWebGPURenderer();
 
