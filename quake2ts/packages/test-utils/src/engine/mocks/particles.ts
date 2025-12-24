@@ -1,14 +1,33 @@
 import { vi } from 'vitest';
 import { Vec3 } from '@quake2ts/shared';
-import { Particle, ParticleSystem, ParticleEmitter } from '@quake2ts/engine';
+import { ParticleSystem } from '@quake2ts/engine';
+
+// Mock types since Particle/ParticleEmitter are not exported
+export interface MockParticle {
+  position: Vec3;
+  velocity: Vec3;
+  color: [number, number, number, number];
+  size: number;
+  lifetime: number;
+  gravity: number;
+  damping: number;
+  bounce: number;
+  blendMode: 'alpha' | 'additive';
+  fade: boolean;
+}
+
+export interface MockParticleEmitter {
+  update: (dt: number) => void;
+  emit: () => void;
+}
 
 // Export types
-export { Particle, ParticleSystem, ParticleEmitter };
+export { ParticleSystem };
 
 /**
  * Creates a mock Particle with default values.
  */
-export function createMockParticle(overrides?: Partial<Particle>): Particle {
+export function createMockParticle(overrides?: Partial<MockParticle>): MockParticle {
   return {
     position: { x: 0, y: 0, z: 0 },
     velocity: { x: 0, y: 0, z: 0 },
@@ -26,17 +45,13 @@ export function createMockParticle(overrides?: Partial<Particle>): Particle {
 
 /**
  * Creates a mock ParticleEmitter.
- * Note: ParticleEmitter is a class in the engine, but we might want to mock it.
- * If it's just used as an interface in tests, an object literal is fine.
- * If the engine expects `instanceof ParticleEmitter`, we'd need to extend it or mock the prototype.
- * For now, assuming interface compatibility is sufficient.
  */
-export function createMockParticleEmitter(overrides?: Partial<ParticleEmitter>): ParticleEmitter {
+export function createMockParticleEmitter(overrides?: Partial<MockParticleEmitter>): MockParticleEmitter {
   return {
     update: vi.fn(),
     emit: vi.fn(),
     ...overrides,
-  } as unknown as ParticleEmitter;
+  };
 }
 
 /**
@@ -44,9 +59,7 @@ export function createMockParticleEmitter(overrides?: Partial<ParticleEmitter>):
  */
 export function createMockParticleSystem(overrides?: Partial<ParticleSystem>): ParticleSystem {
   return {
-    particles: [],
-    emitters: [],
-    count: 0,
+    maxParticles: 1000,
     rng: {
       frandom: vi.fn().mockReturnValue(0.5), // Deterministic default
       random: vi.fn().mockReturnValue(0.5),
@@ -54,10 +67,10 @@ export function createMockParticleSystem(overrides?: Partial<ParticleSystem>): P
     },
     update: vi.fn(),
     spawn: vi.fn(),
-    emit: vi.fn(),
-    clear: vi.fn(),
-    render: vi.fn(),
-    dispose: vi.fn(),
+    killAll: vi.fn(),
+    aliveCount: vi.fn().mockReturnValue(0),
+    getState: vi.fn(),
+    buildMesh: vi.fn(),
     ...overrides,
   } as unknown as ParticleSystem;
 }
