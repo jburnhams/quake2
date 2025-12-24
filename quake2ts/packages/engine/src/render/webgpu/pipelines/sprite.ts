@@ -208,7 +208,7 @@ export class SpriteRenderer {
     // WebGPU uses [0,1] Z range. gl-matrix's ortho produces [-1,1] by default.
     // If we use near=-1, far=1, input Z=0 maps to NDC Z=0, which is valid in both ranges.
     mat4.ortho(this.projectionMatrix, 0, width, height, 0, -1, 1);
-    this.uniformBuffer.write(this.projectionMatrix);
+    this.uniformBuffer.write(this.projectionMatrix as unknown as BufferSource);
   }
 
   begin(commandEncoder: GPUCommandEncoder, renderTarget: GPUTextureView): void {
@@ -320,7 +320,7 @@ export class SpriteRenderer {
 
     // Upload vertices
     const usedFloats = this.currentVertexCount * FLOATS_PER_VERTEX;
-    this.vertexBuffer.write(this.vertexData.subarray(0, usedFloats));
+    this.vertexBuffer.write(this.vertexData.subarray(0, usedFloats) as unknown as BufferSource);
 
     // Begin Render Pass
     const passEncoder = this._activeEncoder.beginRenderPass({
