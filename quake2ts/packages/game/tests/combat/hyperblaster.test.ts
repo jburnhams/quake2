@@ -39,8 +39,8 @@ describe('HyperBlaster', () => {
 
     it('should deal 20 damage in single-player', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
         const player = game.entities.spawn();
         player.client = {
@@ -55,8 +55,8 @@ describe('HyperBlaster', () => {
 
     it('should deal 15 damage in deathmatch', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const game = createGame({ multicast: vi.fn(), trace } as any, {} as any, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
         const player = game.entities.spawn();
         player.client = {
