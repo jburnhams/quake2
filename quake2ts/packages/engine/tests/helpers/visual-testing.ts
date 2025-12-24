@@ -68,16 +68,16 @@ export const test = base.extend<VisualTestContext>({
                 setup.context.device,
                 setup.context.format || 'rgba8unorm',
                 commandEncoder,
-                setup.renderTarget.view
+                setup.renderTargetView
             );
 
             if (typeof renderFn === 'function') {
                 // Legacy mode: Wrap in a render pass
                 const pass = commandEncoder.beginRenderPass({
                     colorAttachments: [{
-                        view: setup.renderTarget.view,
+                        view: setup.renderTargetView,
                         loadOp: 'clear',
-                        clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                        clearValue: { r: 0, g: 0, b: 0, a: 0 },
                         storeOp: 'store'
                     }]
                 });
