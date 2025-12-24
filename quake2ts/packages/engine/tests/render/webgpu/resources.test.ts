@@ -208,7 +208,7 @@ describe('WebGPU Texture Resources', () => {
             expect(mockDevice.createTexture).toHaveBeenCalledWith({
                 size: [256, 256, 1],
                 format: 'rgba8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
                 mipLevelCount: 1,
                 label: 'test-texture'
             });
@@ -264,6 +264,56 @@ describe('WebGPU Texture Resources', () => {
 
             texture.destroy();
             expect(texture.texture.destroy).toHaveBeenCalled();
+        });
+
+        it('generates mipmaps using render passes', () => {
+            const texture = new Texture2D(mockDevice, {
+                width: 256,
+                height: 256,
+                format: 'rgba8unorm',
+                mipLevelCount: 3 // levels 0, 1, 2
+            });
+
+            const commandEncoder = mockDevice.createCommandEncoder();
+            const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+
+            texture.generateMipmaps(commandEncoder);
+
+            // Should generate level 1 from 0, and level 2 from 1. Total 2 passes.
+            expect(beginRenderPassSpy).toHaveBeenCalledTimes(2);
+
+            // First pass: render to level 1
+            const pass1 = beginRenderPassSpy.mock.calls[0][0];
+            const attachments1 = pass1.colorAttachments as GPURenderPassColorAttachment[];
+            expect(attachments1[0].view).toBeDefined(); // can't easily check mip level on mock view without more complex mock
+
+            // Should create pipeline and sampler
+            expect(mockDevice.createRenderPipeline).toHaveBeenCalled();
+            expect(mockDevice.createSampler).toHaveBeenCalled();
+        });
+
+        it('uses cached mipmap pipeline for same format', () => {
+             const texture1 = new Texture2D(mockDevice, { width: 32, height: 32, format: 'rgba8unorm', mipLevelCount: 2 });
+             const texture2 = new Texture2D(mockDevice, { width: 32, height: 32, format: 'rgba8unorm', mipLevelCount: 2 });
+             const commandEncoder = mockDevice.createCommandEncoder();
+
+             texture1.generateMipmaps(commandEncoder);
+             texture2.generateMipmaps(commandEncoder);
+
+             // Should create pipeline only once for rgba8unorm
+             expect(mockDevice.createRenderPipeline).toHaveBeenCalledTimes(1);
+        });
+
+        it('creates new mipmap pipeline for different format', () => {
+             const texture1 = new Texture2D(mockDevice, { width: 32, height: 32, format: 'rgba8unorm', mipLevelCount: 2 });
+             const texture2 = new Texture2D(mockDevice, { width: 32, height: 32, format: 'bgra8unorm', mipLevelCount: 2 });
+             const commandEncoder = mockDevice.createCommandEncoder();
+
+             texture1.generateMipmaps(commandEncoder);
+             texture2.generateMipmaps(commandEncoder);
+
+             // Should create pipeline twice
+             expect(mockDevice.createRenderPipeline).toHaveBeenCalledTimes(2);
         });
     });
 

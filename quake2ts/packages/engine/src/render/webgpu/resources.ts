@@ -207,6 +207,8 @@ export class StorageBuffer extends GPUBufferResource {
 // TASK 2: Texture Abstractions
 // ============================================================================
 
+import { MIPMAP_SHADER } from './shaders/mipmapShader.js';
+
 // Helper to get byte size of a texture format
 function getBlockSize(format: GPUTextureFormat): number {
   // Common formats used in the engine
@@ -266,6 +268,10 @@ export class Texture2D {
   public readonly height: number;
   public readonly format: GPUTextureFormat;
 
+  // Cache pipelines per device and per format
+  private static mipmapPipelines = new WeakMap<GPUDevice, Map<GPUTextureFormat, GPURenderPipeline>>();
+  private static mipmapSamplers = new WeakMap<GPUDevice, GPUSampler>();
+
   constructor(
     protected readonly device: GPUDevice,
     descriptor: {
@@ -281,8 +287,8 @@ export class Texture2D {
     this.height = descriptor.height;
     this.format = descriptor.format;
 
-    // Default usage: TEXTURE_BINDING | COPY_DST
-    const usage = descriptor.usage ?? (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST);
+    // Default usage: TEXTURE_BINDING | COPY_DST | RENDER_ATTACHMENT (needed for mip generation)
+    const usage = descriptor.usage ?? (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT);
 
     this.texture = device.createTexture({
       size: [this.width, this.height, 1],
@@ -321,8 +327,98 @@ export class Texture2D {
     );
   }
 
+  private getMipmapPipeline(format: GPUTextureFormat): GPURenderPipeline {
+    let devicePipelines = Texture2D.mipmapPipelines.get(this.device);
+    if (!devicePipelines) {
+        devicePipelines = new Map();
+        Texture2D.mipmapPipelines.set(this.device, devicePipelines);
+    }
+
+    let pipeline = devicePipelines.get(format);
+    if (!pipeline) {
+       const module = this.device.createShaderModule({
+           code: MIPMAP_SHADER,
+           label: 'mipmap-shader'
+       });
+
+       pipeline = this.device.createRenderPipeline({
+           layout: 'auto',
+           vertex: {
+               module,
+               entryPoint: 'vs_main'
+           },
+           fragment: {
+               module,
+               entryPoint: 'fs_main',
+               targets: [{ format }]
+           },
+           primitive: {
+               topology: 'triangle-list'
+           },
+           label: `mipmap-pipeline-${format}`
+       });
+       devicePipelines.set(format, pipeline);
+    }
+    return pipeline;
+  }
+
+  private getMipmapSampler(): GPUSampler {
+      let sampler = Texture2D.mipmapSamplers.get(this.device);
+      if (!sampler) {
+          sampler = this.device.createSampler({
+              minFilter: 'linear',
+              magFilter: 'linear',
+              label: 'mipmap-sampler'
+          });
+          Texture2D.mipmapSamplers.set(this.device, sampler);
+      }
+      return sampler;
+  }
+
   generateMipmaps(commandEncoder: GPUCommandEncoder): void {
-    console.warn('Texture2D.generateMipmaps not yet implemented (requires RenderPipeline)');
+    const mipCount = this.texture.mipLevelCount;
+    if (mipCount <= 1) return;
+
+    const pipeline = this.getMipmapPipeline(this.format);
+    const sampler = this.getMipmapSampler();
+
+    // Use loop to generate each mip level from the previous one
+    for (let i = 1; i < mipCount; i++) {
+        const srcView = this.texture.createView({
+            baseMipLevel: i - 1,
+            mipLevelCount: 1,
+            label: `mipmap-src-${i-1}`
+        });
+
+        const dstView = this.texture.createView({
+            baseMipLevel: i,
+            mipLevelCount: 1,
+            label: `mipmap-dst-${i}`
+        });
+
+        const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: dstView,
+                loadOp: 'clear',
+                storeOp: 'store'
+            }],
+            label: `mipmap-pass-${i}`
+        });
+
+        const bindGroup = this.device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: sampler },
+                { binding: 1, resource: srcView }
+            ],
+            label: `mipmap-bindgroup-${i}`
+        });
+
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.draw(6);
+        passEncoder.end();
+    }
   }
 
   createView(descriptor?: GPUTextureViewDescriptor): GPUTextureView {

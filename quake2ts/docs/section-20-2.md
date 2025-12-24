@@ -136,7 +136,7 @@ class TextureCubeMap {
 **Subtasks:**
 1. Implement Texture2D class
 2. Support upload via queue.writeTexture()
-3. Implement mipmap generation (via compute or render passes) - *Note: Placeholder implemented, full implementation requires RenderPipeline/Blit*
+3. Implement mipmap generation (via compute or render passes)
 4. Calculate memory size (width × height × format bytes × mips)
 5. Implement TextureCubeMap with 6 layers
 6. Support cubemap face uploads
