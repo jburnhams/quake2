@@ -184,84 +184,85 @@ This section covers migration of engine-specific test utilities including WebGL 
 
 ### 5. Create Buffer/Shader Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Task 1 (WebGL mocks)
 
-- [ ] **5.1** Create `test-utils/src/engine/mocks/buffers.ts` file
+- [x] **5.1** Create `test-utils/src/engine/mocks/buffers.ts` file
 
-- [ ] **5.2** Add `createMockVertexBuffer()` factory
+- [x] **5.2** Add `createMockVertexBuffer()` factory
   - Signature: `createMockVertexBuffer(data?: Float32Array, usage?: number): VertexBuffer`
   - Methods: `bind()`, `update()`, `destroy()`
 
-- [ ] **5.3** Add `createMockIndexBuffer()` factory
+- [x] **5.3** Add `createMockIndexBuffer()` factory
   - Signature: `createMockIndexBuffer(data?: Uint16Array, usage?: number): IndexBuffer`
 
-- [ ] **5.4** Add `createMockShader()` factory
+- [x] **5.4** Add `createMockShader()` factory
   - Signature: `createMockShader(vertSource?: string, fragSource?: string): Shader`
   - Methods: `use()`, `setUniform()`, `destroy()`
 
-- [ ] **5.5** Add `createMockShaderProgram()` factory
+- [x] **5.5** Add `createMockShaderProgram()` factory
   - Signature: `createMockShaderProgram(overrides?: Partial<ShaderProgram>): ShaderProgram`
 
 ---
 
 ### 6. Create Lighting Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Currently inline mocks
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 3 (math helpers)
 
-- [ ] **6.1** Create `test-utils/src/engine/mocks/lighting.ts` file
+- [x] **6.1** Create `test-utils/src/engine/mocks/lighting.ts` file
 
-- [ ] **6.2** Add `createMockDLight()` factory
+- [x] **6.2** Add `createMockDLight()` factory
   - Signature: `createMockDLight(position?: Vector3, color?: Vector3, intensity?: number): DLight`
   - Include origin, color, intensity, decay
 
-- [ ] **6.3** Add `createMockDLightManager()` factory
+- [x] **6.3** Add `createMockDLightManager()` factory
   - Signature: `createMockDLightManager(overrides?: Partial<DLightManager>): DLightManager`
   - Methods: `addLight()`, `removeLight()`, `clear()`, `getLights()`
 
-- [ ] **6.4** Add `createMockLightmap()` factory
+- [x] **6.4** Add `createMockLightmap()` factory
   - Signature: `createMockLightmap(width?: number, height?: number): Lightmap`
 
-- [ ] **6.5** Cleanup inline lighting mocks in `client/tests/` directory
+- [x] **6.5** Cleanup inline lighting mocks in `client/tests/` directory
   - Estimated files: ~6
+  - *Note:* Cleaned up inline mocks in client tests that were using manual lighting setup, replaced with factory usage where applicable.
 
 ---
 
 ### 7. Create Particle System Mocks (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 3 (math helpers)
 
-- [ ] **7.1** Create `test-utils/src/engine/mocks/particles.ts` file
+- [x] **7.1** Create `test-utils/src/engine/mocks/particles.ts` file
 
-- [ ] **7.2** Add `createMockParticle()` factory
+- [x] **7.2** Add `createMockParticle()` factory
   - Signature: `createMockParticle(overrides?: Partial<Particle>): Particle`
   - Include: position, velocity, color, lifetime
 
-- [ ] **7.3** Add `createMockParticleEmitter()` factory
+- [x] **7.3** Add `createMockParticleEmitter()` factory
   - Signature: `createMockParticleEmitter(overrides?: Partial<ParticleEmitter>): ParticleEmitter`
 
-- [ ] **7.4** Add `createMockParticleSystem()` factory
+- [x] **7.4** Add `createMockParticleSystem()` factory
   - Signature: `createMockParticleSystem(overrides?: Partial<ParticleSystem>): ParticleSystem`
 
 ---
 
 ### 8. Documentation and Exports (LOW PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Tasks 1-7
 
-- [ ] **8.1** Add JSDoc comments to all engine utilities
+- [x] **8.1** Add JSDoc comments to all engine utilities
   - Include usage examples for WebGL, audio, renderer mocks
 
-- [ ] **8.2** Update `test-utils/README.md` with engine utilities section
+- [x] **8.2** Update `test-utils/README.md` with engine utilities section
   - Document: WebGL mocks, audio mocks, renderer factories, asset mocks
 
-- [ ] **8.3** Verify all engine utilities exported from `test-utils/src/index.ts`
+- [x] **8.3** Verify all engine utilities exported from `test-utils/src/index.ts`
   - Organized by category: `engine/mocks/*`, `engine/factories/*`
 
-- [ ] **8.4** Add TypeScript type exports
+- [x] **8.4** Add TypeScript type exports
   - Export mock types and interfaces
 
 ---
