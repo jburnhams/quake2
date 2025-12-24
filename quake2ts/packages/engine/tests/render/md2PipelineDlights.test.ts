@@ -1,33 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { Md2Pipeline, Md2BindOptions } from '../../src/render/md2Pipeline.js';
 import { DLight } from '../../src/render/dlight.js';
 
 // Mock WebGL context
-const gl = {
-  createProgram: vi.fn(() => ({})),
-  createShader: vi.fn(() => ({})),
-  shaderSource: vi.fn(),
-  compileShader: vi.fn(),
-  getShaderParameter: vi.fn(() => true),
-  attachShader: vi.fn(),
-  linkProgram: vi.fn(),
-  getProgramParameter: vi.fn(() => true),
-  useProgram: vi.fn(),
-  getUniformLocation: vi.fn((program, name) => name),
-  getAttribLocation: vi.fn(),
-  bindAttribLocation: vi.fn(),
-  enable: vi.fn(),
-  disable: vi.fn(),
-  uniformMatrix4fv: vi.fn(),
-  uniform3fv: vi.fn(),
-  uniform4fv: vi.fn(),
-  uniform4f: vi.fn(), // Added for u_solidColor
-  uniform1f: vi.fn(),
-  uniform1i: vi.fn(),
-  uniform3f: vi.fn(),
-  deleteProgram: vi.fn(),
-  deleteShader: vi.fn(),
-} as unknown as WebGL2RenderingContext;
+const gl = createMockWebGL2Context({
+  getUniformLocation: vi.fn((program, name) => name as any), // Return name to allow simple expectation checks
+}) as unknown as WebGL2RenderingContext;
 
 describe('Md2Pipeline', () => {
   let pipeline: Md2Pipeline;
