@@ -10,7 +10,7 @@ import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Railgun', () => {
     // Setup helper to create a game context
@@ -36,11 +36,17 @@ describe('Railgun', () => {
         // Mock T_Damage
         const tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => {});
 
+        // Use factory for player configuration
+        const playerTemplate = createPlayerEntityFactory({
+            classname: 'player',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 },
+            viewheight: 22
+        });
+
         const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.angles = { x: 0, y: 0, z: 0 };
-        player.viewheight = 22;
+        Object.assign(player, playerTemplate);
+
         player.client = {
             inventory: createPlayerInventory({
                 weapons: [WeaponId.Railgun],

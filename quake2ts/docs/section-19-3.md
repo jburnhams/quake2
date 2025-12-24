@@ -86,8 +86,12 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`
   - [x] Refactored `weapons/projectSource.test.ts`
+  - [x] Refactored `chaingun.test.ts`
+  - [x] Refactored `blaster.test.ts`
+  - [x] Refactored `railgun.test.ts`
+  - [x] Refactored `shotgun.test.ts`
   - Same pattern
-  - Estimated files: ~15
+  - Estimated files: ~11
 
 - [] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
   - [x] Refactored `entities/items/weapons.test.ts`
