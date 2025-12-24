@@ -1,10 +1,10 @@
 import { ResourceLoadTracker } from './resourceTracker.js';
 import { DemoReader } from '../demo/demoReader.js';
 import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState } from '../demo/parser.js';
-import { BinaryStream, Vec3, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_CLIENTS } from '@quake2ts/shared';
+import { BinaryStream, Vec3, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, MAX_CLIENTS, TempEntity } from '@quake2ts/shared';
 import { AssetManager } from './manager.js';
 import { Camera } from '../render/camera.js';
-import { BspLoader, BspMap, BspLeaf } from './bsp.js'; // Fixed Import
+import { BspLoader, BspMap, BspLeaf } from './bsp.js';
 import { vec3, mat4 } from 'gl-matrix';
 
 export interface FrameResources {
@@ -19,13 +19,10 @@ export interface FrameResources {
 }
 
 export interface VisibilityTimeline {
-    // Map from server frame number to resource set
     frames: Map<number, FrameResources>;
-    // Map from time (seconds) to resource set
     time: Map<number, FrameResources>;
 }
 
-// Relaxed vector type for compatibility
 interface Vector3Like {
     x: number;
     y: number;
@@ -107,14 +104,11 @@ export class ResourceVisibilityAnalyzer {
     }
 
     private isBoxInFrustum(planes: Float32Array[], mins: Vector3Like, maxs: Vector3Like, origin: Vector3Like): boolean {
-        // Transform box to world space (simple translation for AABB)
         const absMins = { x: mins.x + origin.x, y: mins.y + origin.y, z: mins.z + origin.z };
         const absMaxs = { x: maxs.x + origin.x, y: maxs.y + origin.y, z: maxs.z + origin.z };
 
         for (let i = 0; i < 6; i++) {
             const p = planes[i];
-
-            // Find the point on the box closest to the plane normal (positive side)
             let x = absMins.x;
             let y = absMins.y;
             let z = absMins.z;
@@ -123,7 +117,6 @@ export class ResourceVisibilityAnalyzer {
             if (p[1] >= 0) y = absMaxs.y;
             if (p[2] >= 0) z = absMaxs.z;
 
-            // If the "positive" point is behind the plane, the whole box is behind
             if (p[0] * x + p[1] * y + p[2] * z + p[3] < 0) {
                 return false;
             }
@@ -137,9 +130,6 @@ export class ResourceVisibilityAnalyzer {
         while (nodeIndex >= 0) {
             const node = map.nodes[nodeIndex];
             const plane = map.planes[node.planeIndex];
-
-            // Check which side of the plane the point is on
-            // Plane equation: normal * point - dist
             const dist = plane.normal[0] * point.x + plane.normal[1] * point.y + plane.normal[2] * point.z - plane.dist;
 
             if (dist >= 0) {
@@ -148,23 +138,17 @@ export class ResourceVisibilityAnalyzer {
                 nodeIndex = node.children[1];
             }
         }
-
-        // nodeIndex is now leaf index (negative)
-        // leaf index = -1 - nodeIndex
         const leafIndex = -1 - nodeIndex;
         return map.leafs[leafIndex];
     }
 
     private isClusterVisible(map: BspMap, fromCluster: number, toCluster: number): boolean {
         if (!map.visibility || fromCluster === -1 || toCluster === -1) {
-            return true; // No PVS or invalid cluster, assume visible
+            return true;
         }
-
-        // Check range
         if (fromCluster >= map.visibility.numClusters || toCluster >= map.visibility.numClusters) {
             return true;
         }
-
         const cluster = map.visibility.clusters[fromCluster];
         if (!cluster || !cluster.pvs) return true;
 
@@ -184,9 +168,6 @@ export class ResourceVisibilityAnalyzer {
         assetManager?: AssetManager,
         bspMap?: BspMap
     ): Promise<VisibilityTimeline> {
-        // If BspMap is provided, we use it. If not, we could potentially load it if assetManager is smart enough,
-        // but here we stick to provided map.
-
         const reader = new DemoReader(demo.buffer as ArrayBuffer);
         const timeline: VisibilityTimeline = {
             frames: new Map(),
@@ -196,7 +177,6 @@ export class ResourceVisibilityAnalyzer {
         const configStrings = new Map<number, string>();
         const baselines = new Map<number, EntityState>();
 
-        // Helper to resolve config string to path
         const getModelPath = (index: number): string | undefined => {
             if (index <= 0) return undefined;
             return configStrings.get(ConfigStringIndex.Models + index - 1);
@@ -209,19 +189,16 @@ export class ResourceVisibilityAnalyzer {
 
         let currentProtocol = 0;
         const pendingSounds = new Set<string>();
+        const pendingModels = new Set<string>();
 
-        // Camera for Frustum Culling
         const camera = new Camera();
-        camera.setFov(90); // Default FOV
+        camera.setFov(90);
 
-        // Constants for sound attenuation
-        const SOUND_MAX_DIST = 1000; // Approximate max audible distance
+        const SOUND_MAX_DIST = 1000;
 
         const handler: NetworkMessageHandler = {
             onServerData: (protocol, serverCount, attractLoop, gameDir, playerNum, levelName, tickRate, demoType) => {
                 currentProtocol = protocol;
-                // If we had logic to auto-load BSP using assetManager.loadBsp(levelName), it would go here.
-                // But we can't await here in the sync loop.
             },
             onConfigString: (index, str) => {
                 configStrings.set(index, str);
@@ -232,10 +209,10 @@ export class ResourceVisibilityAnalyzer {
             onFrame: (frame: FrameData) => {
                 if (frame.serverFrame < startFrame || frame.serverFrame > endFrame) {
                     pendingSounds.clear();
+                    pendingModels.clear();
                     return;
                 }
 
-                // Update Camera
                 if (frame.playerState) {
                     camera.setPosition(frame.playerState.origin.x, frame.playerState.origin.y, frame.playerState.origin.z);
                     camera.setRotation(frame.playerState.viewangles.x, frame.playerState.viewangles.y, frame.playerState.viewangles.z);
@@ -248,7 +225,6 @@ export class ResourceVisibilityAnalyzer {
                 const textures = new Set<string>();
                 const loaded = new Set<string>();
 
-                // Get PVS cluster for player if BSP is available
                 let pvsCluster = -1;
                 if (bspMap && frame.playerState) {
                     const leaf = this.findLeaf(bspMap, frame.playerState.origin);
@@ -259,42 +235,33 @@ export class ResourceVisibilityAnalyzer {
 
                 if (frame.packetEntities && frame.packetEntities.entities) {
                     for (const ent of frame.packetEntities.entities) {
-                        // Check PVS
                         if (bspMap && pvsCluster !== -1) {
-                            // Find entity leaf
                             const entLeaf = this.findLeaf(bspMap, ent.origin);
                             if (entLeaf && entLeaf.cluster !== -1) {
-                                // check visibility
                                 if (!this.isClusterVisible(bspMap, pvsCluster, entLeaf.cluster)) {
-                                    continue; // Skip if not in PVS
+                                    continue;
                                 }
                             }
                         }
 
-                        // Check Frustum
-                        // We use a large conservative bound to avoid culling large objects (bosses, trains).
                         const MAX_ENTITY_SIZE = 256;
                         const mins = { x: -MAX_ENTITY_SIZE, y: -MAX_ENTITY_SIZE, z: -MAX_ENTITY_SIZE };
                         const maxs = { x: MAX_ENTITY_SIZE, y: MAX_ENTITY_SIZE, z: MAX_ENTITY_SIZE };
 
                         if (ent.modelindex > 0) {
                             if (!this.isBoxInFrustum(frustumPlanes, mins, maxs, ent.origin)) {
-                                // Skip if outside frustum
                                 continue;
                             }
 
                             const path = getModelPath(ent.modelindex);
                             if (path) {
                                 models.add(path);
-                                // Model Texture Derivation could happen here
                             }
                         }
 
-                        // Track sound (Looping sounds)
                         if (ent.sound > 0) {
                              const path = getSoundPath(ent.sound);
                              if (path) {
-                                 // Check distance
                                  const dx = ent.origin.x - camera.position[0];
                                  const dy = ent.origin.y - camera.position[1];
                                  const dz = ent.origin.z - camera.position[2];
@@ -307,10 +274,13 @@ export class ResourceVisibilityAnalyzer {
                     }
                 }
 
-                // Add sound events
                 if (pendingSounds.size > 0) {
                     for (const s of pendingSounds) sounds.add(s);
                     pendingSounds.clear();
+                }
+                if (pendingModels.size > 0) {
+                    for (const s of pendingModels) models.add(s);
+                    pendingModels.clear();
                 }
 
                 const resources: FrameResources = {
@@ -341,7 +311,10 @@ export class ResourceVisibilityAnalyzer {
                 }
             },
             onTempEntity: (type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt) => {
-                // Placeholder
+                if (type === TempEntity.EXPLOSION1) {
+                    pendingModels.add("sprites/s_explod.sp2");
+                }
+                // Add more mappings as needed
             },
             onCenterPrint: () => {},
             onStuffText: () => {},
@@ -355,7 +328,6 @@ export class ResourceVisibilityAnalyzer {
             onDownload: () => {}
         };
 
-        // We use a lenient parser to handle partial data if needed
         while (reader.nextBlock()) {
             const block = reader.getBlock();
             const blockParser = new NetworkMessageParser(block.data, handler, false);

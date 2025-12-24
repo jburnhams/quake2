@@ -98,7 +98,6 @@ export function createProtocolHandler(version: number): ProtocolHandler {
     if (version === 34) {
         return new Quake2ProtocolHandler();
     }
-    // Default to Legacy for 0 or older versions if not strictly 34/2023?
-    // Or default to Legacy for now to support existing tests/demos.
-    return new LegacyProtocolHandler();
+    // Pass version to LegacyProtocolHandler
+    return new LegacyProtocolHandler(version);
 }

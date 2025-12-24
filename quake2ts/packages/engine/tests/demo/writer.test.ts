@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { MessageWriter } from '../../src/demo/writer.js';
 import { createEmptyEntityState, createEmptyProtocolPlayerState, FrameData } from '../../src/demo/parser.js';
-import { BinaryStream, ServerCommand } from '@quake2ts/shared';
+import { BinaryStream, ServerCommand, U_MOREBITS1, U_ORIGIN1, U_ANGLE1, U_MODEL } from '@quake2ts/shared';
 
-// Wire constants (Protocol 34)
+// Legacy Protocol 34 Constants for testing
 const WIRE_FRAME = 5;
 const WIRE_INVENTORY = 6;
 const WIRE_LAYOUT = 7;
@@ -24,10 +24,15 @@ const WIRE_MUZZLEFLASH2 = 20;
 describe('MessageWriter', () => {
     it('writes server data', () => {
         const writer = new MessageWriter();
+        // Pass protocol 34 to force legacy opcode if implemented, else check what is written
         writer.writeServerData(34, 123, 1, 'baseq2', 0, 'q2dm1');
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
-        expect(reader.readByte()).toBe(WIRE_SERVERDATA);
+
+        // MessageWriter.writeServerData handles protocol 34 by writing 13
+        const cmd = reader.readByte();
+        expect(cmd).toBe(WIRE_SERVERDATA); // 13
+
         expect(reader.readLong()).toBe(34);
         expect(reader.readLong()).toBe(123);
         expect(reader.readByte()).toBe(1);
@@ -48,9 +53,10 @@ describe('MessageWriter', () => {
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
 
+        expect(reader.readByte()).toBe(WIRE_PLAYERINFO);
+
         // Flags
         const flags = reader.readShort();
-        // 1 (pm_type) | 2 (origin) | 256 (viewangles) = 1 | 2 | 256 = 259
         expect(flags).toBe(259);
 
         // Fields in order
@@ -83,19 +89,51 @@ describe('MessageWriter', () => {
 
         expect(reader.readByte()).toBe(WIRE_PACKETENTITIES);
 
-        // Entity 1
-        const bitsByte = reader.readByte();
-        expect(bitsByte & 0x80).toBe(128); // Expect U_MOREBITS1
+        // Entity 1 header
 
-        // Read next byte
-        const bitsByte2 = reader.readByte();
-        expect(bitsByte2 & 8).toBe(8);
+        const b1 = reader.readByte();
+        expect(b1 & U_MOREBITS1).toBe(U_MOREBITS1);
 
-        // Number
+        const b2 = reader.readByte();
+        expect(b2 & 0xFF).toBe(216); // 11011000 (No U_ALPHA)
+
+        const b3 = reader.readByte();
+        expect(b3).toBe(241); // 11110001
+
+        const b4 = reader.readByte();
+        expect(b4).toBe(12); // 00001100 (U_SOUND, U_SOLID only)
+
+        // b5 not written in Protocol 34 (no High bits)
+
+        // Write Number (1)
         expect(reader.readByte()).toBe(1);
 
-        // Model
-        expect(reader.readByte()).toBe(10);
+        // Fields:
+        // U_MODEL (bit 11). b2 & 8 (bit 3). Yes.
+        expect(reader.readByte()).toBe(10); // modelindex
+
+        // U_FRAME8 (bit 4). In b1. b1 = 144 (10010000). Bit 4 is set.
+        expect(reader.readByte()).toBe(0); // frame
+
+        // U_SKIN8 (bit 16). In b3 (bit 0).
+        expect(reader.readByte()).toBe(0);
+
+        // U_EFFECTS8 (bit 14). In b2 (bit 6).
+        expect(reader.readByte()).toBe(0);
+
+        // U_RENDERFX8 (bit 12). In b2 (bit 4).
+        expect(reader.readByte()).toBe(0);
+
+        // U_MODEL2 (bit 20). In b3 (bit 4).
+        expect(reader.readByte()).toBe(0);
+        // U_MODEL3 (bit 21). In b3 (bit 5).
+        expect(reader.readByte()).toBe(0);
+        // U_MODEL4 (bit 22). In b3 (bit 6).
+        expect(reader.readByte()).toBe(0);
+
+        // U_SOUND (bit 26) and U_SOLID (bit 27) from b4
+        expect(reader.readByte()).toBe(0); // sound
+        expect(reader.readShort()).toBe(0); // solid
 
         // Terminator (0)
         expect(reader.readShort()).toBe(0);
@@ -118,18 +156,18 @@ describe('MessageWriter', () => {
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
 
-        expect(reader.readByte()).toBe(WIRE_FRAME);
+        expect(reader.readByte()).toBe(WIRE_FRAME); // 5
         expect(reader.readLong()).toBe(100);
         expect(reader.readLong()).toBe(99);
         expect(reader.readByte()).toBe(0); // surpress
         expect(reader.readByte()).toBe(0); // areaBytes
 
-        expect(reader.readByte()).toBe(WIRE_PLAYERINFO);
+        expect(reader.readByte()).toBe(WIRE_PLAYERINFO); // 17
         // Player state (empty) -> flags=0, stats=0
         expect(reader.readShort()).toBe(0); // flags
         expect(reader.readLong()).toBe(0); // statbits
 
-        expect(reader.readByte()).toBe(WIRE_DELTAPACKETENTITIES);
+        expect(reader.readByte()).toBe(WIRE_DELTAPACKETENTITIES); // 19
         expect(reader.readShort()).toBe(0); // terminator
     });
 
@@ -146,29 +184,29 @@ describe('MessageWriter', () => {
         const data = writer.getData();
         const reader = new BinaryStream(data.buffer);
 
-        expect(reader.readByte()).toBe(WIRE_STUFFTEXT);
+        expect(reader.readByte()).toBe(WIRE_STUFFTEXT); // 12
         expect(reader.readString()).toBe('cmd\n');
 
-        expect(reader.readByte()).toBe(WIRE_CENTERPRINT);
+        expect(reader.readByte()).toBe(WIRE_CENTERPRINT); // 16
         expect(reader.readString()).toBe('Hello');
 
-        expect(reader.readByte()).toBe(WIRE_PRINT);
+        expect(reader.readByte()).toBe(WIRE_PRINT); // 11
         expect(reader.readByte()).toBe(2);
         expect(reader.readString()).toBe('Message');
 
-        expect(reader.readByte()).toBe(WIRE_LAYOUT);
+        expect(reader.readByte()).toBe(WIRE_LAYOUT); // 7
         expect(reader.readString()).toBe('layout');
 
-        expect(reader.readByte()).toBe(WIRE_INVENTORY);
+        expect(reader.readByte()).toBe(WIRE_INVENTORY); // 6
         expect(reader.readShort()).toBe(1);
         expect(reader.readShort()).toBe(2);
         for(let i=2; i<256; i++) expect(reader.readShort()).toBe(0);
 
-        expect(reader.readByte()).toBe(WIRE_MUZZLEFLASH);
+        expect(reader.readByte()).toBe(WIRE_MUZZLEFLASH); // 8
         expect(reader.readShort()).toBe(10);
         expect(reader.readByte()).toBe(5);
 
-        expect(reader.readByte()).toBe(WIRE_MUZZLEFLASH2);
+        expect(reader.readByte()).toBe(WIRE_MUZZLEFLASH2); // 20
         expect(reader.readShort()).toBe(20);
         expect(reader.readByte()).toBe(6);
     });

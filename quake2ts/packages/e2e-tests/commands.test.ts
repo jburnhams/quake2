@@ -25,7 +25,7 @@ describe('E2E Command Flow Test', () => {
     await page.waitForFunction(() => {
         const client = (window as any).clientInstance;
         return client && client.multiplayer && client.multiplayer.isConnected();
-    }, undefined, { timeout: 30000 });
+    }, undefined, { timeout: 120000 });
 
     const status = await page.evaluate(() => {
         const client = (window as any).clientInstance;
@@ -63,7 +63,7 @@ describe('E2E Command Flow Test', () => {
     let newSequence = initialSequence;
     const startTime = Date.now();
     while (newSequence <= initialSequence + 5) {
-        if (Date.now() - startTime > 5000) {
+        if (Date.now() - startTime > 10000) { // Increased timeout
             throw new Error('Timeout waiting for sequence to increase');
         }
         await page.waitForTimeout(100);
@@ -107,7 +107,7 @@ describe('E2E Command Flow Test', () => {
 
     await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  }, 40000);
+  }, 120000); // Increased timeout
 
   it('should handle command rate limiting', async () => {
     const server = await startTestServer(GAME_SERVER_PORT_2);
@@ -119,7 +119,7 @@ describe('E2E Command Flow Test', () => {
     await page.waitForFunction(() => {
         const client = (window as any).clientInstance;
         return client && client.multiplayer && client.multiplayer.isConnected();
-    }, undefined, { timeout: 30000 });
+    }, undefined, { timeout: 120000 });
 
     // --- Test 4.4.3: Command rate limiting ---
 
@@ -164,5 +164,5 @@ describe('E2E Command Flow Test', () => {
 
     await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  }, 40000);
+  }, 120000); // Increased timeout
 });

@@ -1,11 +1,19 @@
 
 // Rerelease Protocol Impl
 import { BinaryStream, Vec3, ServerCommand, TempEntity, ANORMS } from '@quake2ts/shared';
+import {
+    U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1,
+    U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2,
+    U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
+    U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4,
+    U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH
+} from '@quake2ts/shared';
 import pako from 'pako';
 import { StreamingBuffer } from '../stream/streamingBuffer.js';
 import { ProtocolHandler } from './protocol/types.js';
 import { createProtocolHandler, BootstrapProtocolHandler } from './protocol/factory.js';
 import { PROTOCOL_VERSION_RERELEASE } from './protocol/rerelease.js';
+import { EntityState, ProtocolPlayerState, createEmptyEntityState, createEmptyProtocolPlayerState, MutableVec3, FrameData, FogData, DamageIndicator } from './state.js';
 
 // Export constants for other modules (Writer etc)
 export {
@@ -14,164 +22,25 @@ export {
     U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4,
     U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH
-} from './protocol/rerelease.js'; // Re-export from one place
+} from '@quake2ts/shared'; // Re-export from shared
+
+// Export types and factories
+export {
+    EntityState,
+    ProtocolPlayerState,
+    createEmptyEntityState,
+    createEmptyProtocolPlayerState,
+    MutableVec3,
+    FrameData,
+    FogData,
+    DamageIndicator,
+    PROTOCOL_VERSION_RERELEASE
+};
 
 const RECORD_NETWORK = 0x00;
 const RECORD_CLIENT  = 0x01;
 const RECORD_SERVER  = 0x02;
 const RECORD_RELAY   = 0x80;
-
-export interface MutableVec3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface EntityState {
-  number: number;
-  modelindex: number;
-  modelindex2: number;
-  modelindex3: number;
-  modelindex4: number;
-  frame: number;
-  skinnum: number;
-  effects: number;
-  renderfx: number;
-  origin: MutableVec3;
-  old_origin: MutableVec3;
-  angles: MutableVec3;
-  sound: number;
-  event: number;
-  solid: number;
-  bits: number;
-  bitsHigh: number;
-  alpha: number;
-  scale: number;
-  instanceBits: number;
-  loopVolume: number;
-  loopAttenuation: number;
-  owner: number;
-  oldFrame: number;
-}
-
-export const createEmptyEntityState = (): EntityState => ({
-  number: 0,
-  modelindex: 0,
-  modelindex2: 0,
-  modelindex3: 0,
-  modelindex4: 0,
-  frame: 0,
-  skinnum: 0,
-  effects: 0,
-  renderfx: 0,
-  origin: { x: 0, y: 0, z: 0 },
-  old_origin: { x: 0, y: 0, z: 0 },
-  angles: { x: 0, y: 0, z: 0 },
-  sound: 0,
-  event: 0,
-  solid: 0,
-  bits: 0,
-  bitsHigh: 0,
-  alpha: 0,
-  scale: 0,
-  instanceBits: 0,
-  loopVolume: 0,
-  loopAttenuation: 0,
-  owner: 0,
-  oldFrame: 0
-});
-
-export interface ProtocolPlayerState {
-  pm_type: number;
-  origin: MutableVec3;
-  velocity: MutableVec3;
-  pm_time: number;
-  pm_flags: number;
-  gravity: number;
-  delta_angles: MutableVec3;
-  viewoffset: MutableVec3;
-  viewangles: MutableVec3;
-  kick_angles: MutableVec3;
-  gun_index: number;
-  gun_frame: number;
-  gun_offset: MutableVec3;
-  gun_angles: MutableVec3;
-  blend: number[];
-  fov: number;
-  rdflags: number;
-  stats: number[];
-  gunskin: number;
-  gunrate: number;
-  damage_blend: number[];
-  team_id: number;
-  watertype: number;
-}
-
-export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
-  pm_type: 0,
-  origin: { x: 0, y: 0, z: 0 },
-  velocity: { x: 0, y: 0, z: 0 },
-  pm_time: 0,
-  pm_flags: 0,
-  gravity: 0,
-  delta_angles: { x: 0, y: 0, z: 0 },
-  viewoffset: { x: 0, y: 0, z: 0 },
-  viewangles: { x: 0, y: 0, z: 0 },
-  kick_angles: { x: 0, y: 0, z: 0 },
-  gun_index: 0,
-  gun_frame: 0,
-  gun_offset: { x: 0, y: 0, z: 0 },
-  gun_angles: { x: 0, y: 0, z: 0 },
-  blend: [0, 0, 0, 0],
-  fov: 0,
-  rdflags: 0,
-  stats: new Array(32).fill(0),
-  gunskin: 0,
-  gunrate: 0,
-  damage_blend: [0, 0, 0, 0],
-  team_id: 0,
-  watertype: 0
-});
-
-export interface FrameData {
-    serverFrame: number;
-    deltaFrame: number;
-    surpressCount: number;
-    areaBytes: number;
-    areaBits: Uint8Array;
-    playerState: ProtocolPlayerState;
-    packetEntities: {
-        delta: boolean;
-        entities: EntityState[];
-    };
-}
-
-export interface FogData {
-    density?: number;
-    skyfactor?: number;
-    red?: number;
-    green?: number;
-    blue?: number;
-    time?: number;
-    hf_falloff?: number;
-    hf_density?: number;
-    hf_start_r?: number;
-    hf_start_g?: number;
-    hf_start_b?: number;
-    hf_start_dist?: number;
-    hf_end_r?: number;
-    hf_end_g?: number;
-    hf_end_b?: number;
-    hf_end_dist?: number;
-}
-
-export interface DamageIndicator {
-    damage: number;
-    health: boolean;
-    armor: boolean;
-    power: boolean;
-    dir: Vec3;
-}
 
 export interface NetworkMessageHandler {
     onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string, tickRate?: number, demoType?: number): void;
@@ -285,7 +154,15 @@ export class NetworkMessageParser {
 
         switch (translatedCmd) {
           case ServerCommand.bad:
-            // Terminate this parse cycle, usually padding or end of demo block
+            // Allow 0 as padding (standard in demos)
+            if (originalCmd === 0) {
+                return;
+            }
+            // Treat anything else translating to BAD as an error
+            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos}`;
+            if (this.strictMode) throw new Error(errorMsg);
+            console.warn(errorMsg);
+            this.errorCount++;
             return;
           case ServerCommand.nop: break;
           case ServerCommand.disconnect: if (this.handler?.onDisconnect) this.handler.onDisconnect(); break;
@@ -322,9 +199,9 @@ export class NetworkMessageParser {
           case ServerCommand.achievement: this.parseAchievement(); break;
 
           default:
-            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos}`;
-            if (this.strictMode) throw new Error(errorMsg);
-            console.warn(errorMsg);
+            const errorMsgDef = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos}`;
+            if (this.strictMode) throw new Error(errorMsgDef);
+            console.warn(errorMsgDef);
             this.errorCount++;
             return;
         }
@@ -669,10 +546,6 @@ export class NetworkMessageParser {
       const deltaFrame = this.stream.readLong();
       let surpressCount = 0;
 
-      // Protocol 26 (legacy) hack:
-      // In original Quake 2, protocol 26 demos did NOT include the suppressCount byte.
-      // See full/client/cl_ents.c:679-681
-      // Protocol 25 also seems to lack this byte based on testing with demo1.dm2
       if (this.getProtocolVersion() !== 26 && this.getProtocolVersion() !== 25) {
           surpressCount = this.stream.readByte();
       }
@@ -730,16 +603,8 @@ export class NetworkMessageParser {
               continue;
           }
           const entity = createEmptyEntityState();
-          // Logic for force parsing: if bit 7 (MOREBITS1) is NOT set, but number is 0?
-          // No, usually if number is 0, we check if it is end of list.
-          // BUT if we read bits, and it was NOT remove, and number is 0?
-          // Standard Q2: if (num == 0) break;
-          // But there's a logic about 256 number.
 
           if (bits.number === 0) {
-              // Wait, if bits were read, number 0 means end of list?
-              // The `parseEntityBits` reads number.
-              // If number is 0, it is end.
               break;
           }
 
