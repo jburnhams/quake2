@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import {
   BspSurfacePipeline,
   deriveSurfaceRenderState,
@@ -141,41 +142,10 @@ describe('bspPipeline', () => {
   });
 
   describe('BspSurfacePipeline', () => {
-    const createMockGl = (): WebGL2RenderingContext =>
-      ({
-        uniformMatrix4fv: vi.fn(),
-        uniform2f: vi.fn(),
-        uniform4fv: vi.fn(),
-        uniform1f: vi.fn(),
-        uniform1i: vi.fn((...args) => console.log('uniform1i:', args)),
-        uniform4f: vi.fn(),
-        uniform3f: vi.fn(),
-        createShader: vi.fn().mockReturnValue({}),
-        createProgram: vi.fn().mockReturnValue({}),
-        shaderSource: vi.fn(),
-        compileShader: vi.fn(),
-        getShaderParameter: vi.fn().mockReturnValue(true),
-        getProgramParameter: vi.fn().mockReturnValue(true),
-        attachShader: vi.fn(),
-        linkProgram: vi.fn(),
-        useProgram: vi.fn(),
-        deleteShader: vi.fn(),
-        deleteProgram: vi.fn(),
-        getUniformLocation: vi.fn().mockImplementation((_, name) => mockLocations[name] || { id: 999 }),
-        getAttribLocation: vi.fn(),
-        bindAttribLocation: vi.fn(),
-        createVertexArray: vi.fn().mockReturnValue({}),
-        bindVertexArray: vi.fn(),
-        createBuffer: vi.fn().mockReturnValue({}),
-        bindBuffer: vi.fn(),
-        bufferData: vi.fn(),
-        enableVertexAttribArray: vi.fn(),
-        vertexAttribPointer: vi.fn(),
-        vertexAttribDivisor: vi.fn(),
-        createTexture: vi.fn().mockReturnValue({}),
-        bindTexture: vi.fn(),
-        texParameteri: vi.fn(),
-      } as any);
+    const createMockGl = () => createMockWebGL2Context({
+      getUniformLocation: vi.fn((_, name) => mockLocations[name] || { id: 999 }),
+      uniform1i: vi.fn((...args) => console.log('uniform1i:', args)),
+    } as any);
 
     const mockMvp = new Float32Array(16);
 

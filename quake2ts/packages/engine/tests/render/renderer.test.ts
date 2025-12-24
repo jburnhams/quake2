@@ -1,5 +1,6 @@
 import { FrameRenderer, RenderModeConfig } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../src/render/resources.js';
 import path from 'path';
@@ -92,61 +93,10 @@ describe('Renderer', () => {
         const mod = await import('../../src/render/renderer.js');
         createRenderer = mod.createRenderer;
 
-        mockGl = {
-            disable: vi.fn(),
-            enable: vi.fn(),
-            depthMask: vi.fn(),
+        mockGl = createMockWebGL2Context({
             getExtension: vi.fn().mockReturnValue({}), // Mock extension support for Profiler
-            createQuery: vi.fn().mockReturnValue({}),
-            beginQuery: vi.fn(),
-            endQuery: vi.fn(),
-            deleteQuery: vi.fn(),
-            getQueryParameter: vi.fn(),
-            getParameter: vi.fn(),
-            createTexture: vi.fn().mockReturnValue({}),
-            canvas: { width: 640, height: 480 },
-            // Shader/Program mocks for DebugRenderer
-            createShader: vi.fn().mockReturnValue({}),
-            shaderSource: vi.fn(),
-            compileShader: vi.fn(),
-            getShaderParameter: vi.fn().mockReturnValue(true),
-            createProgram: vi.fn().mockReturnValue({}),
-            attachShader: vi.fn(),
-            linkProgram: vi.fn(),
-            getProgramParameter: vi.fn().mockReturnValue(true),
-            getUniformLocation: vi.fn().mockReturnValue({}),
-            getAttribLocation: vi.fn().mockReturnValue(0),
-            useProgram: vi.fn(),
-            bindAttribLocation: vi.fn(),
-            enableVertexAttribArray: vi.fn(),
-            vertexAttribPointer: vi.fn(),
-            createBuffer: vi.fn().mockReturnValue({}),
-            bindBuffer: vi.fn(),
-            bufferData: vi.fn(),
-            createVertexArray: vi.fn().mockReturnValue({}),
-            bindVertexArray: vi.fn(),
-            deleteShader: vi.fn(),
-            deleteProgram: vi.fn(),
-            uniformMatrix4fv: vi.fn(),
-            uniform4fv: vi.fn(),
-            uniform1i: vi.fn(),
-            uniform1f: vi.fn(),
-            uniform4f: vi.fn(),
-            drawArrays: vi.fn(),
-            drawElements: vi.fn(),
-            activeTexture: vi.fn(),
-            bindTexture: vi.fn(),
-            texImage2D: vi.fn(),
-            createFramebuffer: vi.fn().mockReturnValue({}),
-            bindFramebuffer: vi.fn(),
-            deleteFramebuffer: vi.fn(),
-            clearColor: vi.fn(),
-            clear: vi.fn(),
-            framebufferTexture2D: vi.fn(),
-            enableVertexAttribArray: vi.fn(),
-            vertexAttribPointer: vi.fn(),
-            vertexAttribDivisor: vi.fn(),
-        } as unknown as WebGL2RenderingContext;
+            canvas: { width: 640, height: 480 } as any
+        }) as unknown as WebGL2RenderingContext;
     });
 
     afterEach(() => {

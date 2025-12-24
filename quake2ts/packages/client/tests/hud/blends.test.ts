@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createMockRenderer } from '@quake2ts/test-utils';
 import { Draw_Blends } from '../../src/hud/blends.js';
-import { Renderer } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 
 describe('Draw_Blends', () => {
     it('should draw a fullscreen rect when alpha > 0', () => {
-        const renderer = {
+        const renderer = createMockRenderer({
             width: 640,
             height: 480,
             drawfillRect: vi.fn(),
-        } as unknown as Renderer;
+        });
 
         const ps = {
             blend: [1, 0, 0, 0.5],
@@ -21,11 +21,11 @@ describe('Draw_Blends', () => {
     });
 
     it('should not draw when alpha is 0', () => {
-        const renderer = {
+        const renderer = createMockRenderer({
             width: 640,
             height: 480,
             drawfillRect: vi.fn(),
-        } as unknown as Renderer;
+        });
 
         const ps = {
             blend: [1, 0, 0, 0],
@@ -37,11 +37,11 @@ describe('Draw_Blends', () => {
     });
 
     it('should not draw when blend is missing', () => {
-        const renderer = {
+        const renderer = createMockRenderer({
             width: 640,
             height: 480,
             drawfillRect: vi.fn(),
-        } as unknown as Renderer;
+        });
 
         const ps = {
         } as unknown as PlayerState;
