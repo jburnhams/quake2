@@ -1,17 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '../src/index.js';
-import { ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES } from '@quake2ts/shared';
-import { AssetManager, Renderer, EngineImports, EngineHost } from '@quake2ts/engine';
-import { createMockRenderer } from '@quake2ts/test-utils';
+import { ConfigStringIndex } from '@quake2ts/shared';
+import { Renderer, EngineImports } from '@quake2ts/engine';
+import { createMockRenderer, createMockAssetManager, createMockTexture } from '@quake2ts/test-utils';
 
 // Mock dependencies
-const mockAssets = {
-  loadMd2Model: vi.fn().mockResolvedValue({}),
-  loadMd3Model: vi.fn().mockResolvedValue({}),
-  loadSprite: vi.fn().mockResolvedValue({}),
-  loadSound: vi.fn().mockResolvedValue({}),
-  loadTexture: vi.fn().mockResolvedValue({}),
-} as unknown as AssetManager;
+const mockAssets = createMockAssetManager();
 
 const mockRenderer = createMockRenderer();
 
@@ -80,7 +74,7 @@ describe('Client ConfigString Parsing', () => {
   it('should precache images and register them', async () => {
     const index = ConfigStringIndex.Images + 5;
     const imagePath = 'pics/hud/test.pcx';
-    const mockTexture = { width: 10, height: 10 };
+    const mockTexture = createMockTexture(10, 10);
     (mockAssets.loadTexture as any).mockResolvedValue(mockTexture);
 
     client.ParseConfigString(index, imagePath);

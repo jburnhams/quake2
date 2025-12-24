@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameSession, SessionOptions, createSession } from '../src/session.js';
-import { EngineImports, Renderer, EngineHost } from '@quake2ts/engine';
-import { GameExports, EntitySystem } from '@quake2ts/game';
-import { ClientExports } from '../src/index.js';
 
 // Mocks
 vi.mock('@quake2ts/game', async (importOriginal) => {
