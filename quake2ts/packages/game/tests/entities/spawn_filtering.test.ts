@@ -14,7 +14,7 @@ import {
   SPAWNFLAG_NOT_HARD,
   SPAWNFLAG_NOT_DEATHMATCH,
 } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Entity Spawn Filtering', () => {

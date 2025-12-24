@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, DeadFlag, Solid, MoveType, EntityFlags } from '../../src/entities/entity.js';
 import { PutClientInServer, Respawn } from '../../src/dm/game.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { WeaponId, createPlayerInventory } from '../../src/inventory/playerInventory.js';
 import { ServerCommand } from '@quake2ts/shared';
 

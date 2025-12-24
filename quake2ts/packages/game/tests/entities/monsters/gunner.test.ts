@@ -7,7 +7,7 @@ import { EntitySystem } from '../../../src/entities/system.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
 import { createGrenade } from '../../../src/entities/projectiles.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_medic_commander } from '../../../src/entities/monsters/medic.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, AiFlags } from '../../../src/entities/entity.js';
 import { Vec3 } from '@quake2ts/shared';

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { monster_fire_heat } from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Vec3 } from '@quake2ts/shared';
 
 describe('Heat-Seeking Missiles', () => {

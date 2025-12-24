@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { Entity, MoveType, ServerFlags, Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';

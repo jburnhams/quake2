@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SP_worldspawn } from '../../src/entities/worldspawn';
 import { Entity } from '../../src/entities/entity';
-import { createSpawnContext } from '../test-helpers';
+import { createTestContext } from '@quake2ts/test-utils';
 import { ConfigStringIndex } from '@quake2ts/shared';
 
 describe('worldspawn', () => {
   it('should set sky configstrings', () => {
-    const context = createSpawnContext();
+    const context = createTestContext();
     context.keyValues = {
       sky: 'unit1_sky',
       skyrotate: '10 20 30',
@@ -22,7 +22,7 @@ describe('worldspawn', () => {
   });
 
   it('should set cdtrack configstring from sounds key', () => {
-    const context = createSpawnContext();
+    const context = createTestContext();
     context.keyValues = {
       sounds: '4'
     };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_shambler } from '../../../src/entities/monsters/shambler.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 
 // Mock dependencies

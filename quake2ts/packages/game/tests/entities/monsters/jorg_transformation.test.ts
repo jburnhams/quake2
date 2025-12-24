@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_jorg } from '../../../src/entities/monsters/jorg.js';
 import { SP_monster_makron } from '../../../src/entities/monsters/makron.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
-import { createSpawnContext, createEntity } from '../../test-helpers.js';
+import { createTestContext, createEntity } from '@quake2ts/test-utils';
 
 // Mock makron import if needed, but we want to test integration
 // We need to access the private/internal 'makron_toss' or simulate the death frame sequence
@@ -14,7 +14,7 @@ describe('monster_jorg transformation', () => {
   let player: Entity;
 
   beforeEach(() => {
-    context = createSpawnContext();
+    context = createTestContext();
     context.health_multiplier = 1;
     jorg = context.entities.spawn();
     jorg.origin = { x: 100, y: 100, z: 0 };
