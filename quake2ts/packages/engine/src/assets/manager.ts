@@ -104,6 +104,7 @@ export interface AssetManagerOptions {
   readonly dependencyTracker?: AssetDependencyTracker;
   readonly resourceTracker?: ResourceLoadTracker;
   readonly maxConcurrentLoads?: number;
+  readonly bspWorkerPath?: string;
 }
 
 export class AssetManager {
@@ -133,7 +134,7 @@ export class AssetManager {
     this.md2 = new Md2Loader(vfs);
     this.md3 = new Md3Loader(vfs);
     this.sprite = new SpriteLoader(vfs);
-    this.bsp = new BspLoader(vfs);
+    this.bsp = new BspLoader(vfs, { useWorker: !!options.bspWorkerPath, workerPath: options.bspWorkerPath });
     this.maxConcurrentLoads = options.maxConcurrentLoads ?? 4;
 
     // Default grayscale palette until loaded
