@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/tests/src/setup.js';
+import { setupBrowserEnvironment } from './setup.js';
 import { AssetManager } from '../../src/assets/manager.js';
 import { PakFile } from '../../src/assets/pak.js';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
