@@ -1,10 +1,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { ClientEffectSystem } from '../src/effects-system.js';
-import { DynamicLightManager } from '@quake2ts/engine';
 import { EngineImports, EntityState } from '@quake2ts/engine';
 import { MZ_BLASTER, MZ_ROCKET, MZ_SHOTGUN, MZ_GRENADE, MZ_RAILGUN, TempEntity } from '@quake2ts/shared';
-import { Vec3 } from '@quake2ts/shared';
+import { createMockDLightManager } from '@quake2ts/test-utils';
 
 // Hoist mocks
 const mocks = vi.hoisted(() => ({
@@ -40,13 +39,8 @@ vi.mock('@quake2ts/engine', async (importOriginal) => {
     };
 });
 
-// Mock dependencies
-const mockDLightManager = {
-    addLight: vi.fn(),
-    getActiveLights: vi.fn().mockReturnValue([]),
-    update: vi.fn(),
-    clear: vi.fn()
-};
+// Use createMockDLightManager from test-utils
+const mockDLightManager = createMockDLightManager();
 
 const mockAudio = {
     soundindex: vi.fn().mockReturnValue(1),
@@ -92,7 +86,7 @@ describe('ClientEffectSystem', () => {
         Math.random = () => 0.6;
 
         effectSystem = new ClientEffectSystem(
-            mockDLightManager as any,
+            mockDLightManager,
             mockEngine,
             mockEntityProvider,
             mockConfigStrings as any
