@@ -9,12 +9,7 @@ import {
 } from '../../src/index.js';
 import { FL_NOVISIBLE, RANGE_MELEE, RANGE_MID, RANGE_NEAR, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../src/ai/constants.js';
 import type { TraceFunction } from '../../src/ai/perception.js';
-
-function createEntity(): Entity {
-  const entity = new Entity(0);
-  entity.inUse = true;
-  return entity;
-}
+import { createEntity } from '@quake2ts/test-utils';
 
 function withBounds(entity: Entity, origin: [number, number, number], mins: [number, number, number], maxs: [number, number, number]): Entity {
   entity.origin = { x: origin[0], y: origin[1], z: origin[2] };
@@ -25,22 +20,22 @@ function withBounds(entity: Entity, origin: [number, number, number], mins: [num
 
 describe('rangeTo', () => {
   it('returns zero for overlapping bounds', () => {
-    const a = withBounds(createEntity(), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
-    const b = withBounds(createEntity(), [0.5, 0.5, 0], [-1, -1, -1], [1, 1, 1]);
+    const a = withBounds(createEntity(0), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
+    const b = withBounds(createEntity(1), [0.5, 0.5, 0], [-1, -1, -1], [1, 1, 1]);
 
     expect(rangeTo(a, b)).toBe(0);
   });
 
   it('matches rerelease bounding box distance along one axis', () => {
-    const a = withBounds(createEntity(), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
-    const b = withBounds(createEntity(), [3, 0, 0], [-1, -1, -1], [1, 1, 1]);
+    const a = withBounds(createEntity(0), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
+    const b = withBounds(createEntity(1), [3, 0, 0], [-1, -1, -1], [1, 1, 1]);
 
     expect(rangeTo(a, b)).toBeCloseTo(1, 6);
   });
 
   it('sums separation on multiple axes before square root', () => {
-    const a = withBounds(createEntity(), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
-    const b = withBounds(createEntity(), [5, 5, 0], [-1, -1, -1], [1, 1, 1]);
+    const a = withBounds(createEntity(0), [0, 0, 0], [-1, -1, -1], [1, 1, 1]);
+    const b = withBounds(createEntity(1), [5, 5, 0], [-1, -1, -1], [1, 1, 1]);
 
     const expectedDistance = Math.sqrt(18);
     expect(rangeTo(a, b)).toBeCloseTo(expectedDistance, 6);
@@ -58,8 +53,8 @@ describe('classifyRange', () => {
 
 describe('infront', () => {
   it('uses the wide cone for normal monsters', () => {
-    const self = createEntity();
-    const other = createEntity();
+    const self = createEntity(0);
+    const other = createEntity(1);
     other.origin = { x: -1, y: 0, z: 0 };
     expect(infront(self, other)).toBe(false);
 
@@ -68,9 +63,9 @@ describe('infront', () => {
   });
 
   it('tightens FOV for ambush monsters without a target trail', () => {
-    const self = createEntity();
+    const self = createEntity(0);
     self.spawnflags |= SPAWNFLAG_MONSTER_AMBUSH;
-    const other = createEntity();
+    const other = createEntity(1);
     other.origin = { x: 0.1, y: 1, z: 0 };
 
     expect(infront(self, other)).toBe(false);
@@ -96,8 +91,8 @@ describe('visible', () => {
   }
 
   it('returns false when the target is flagged invisible', () => {
-    const self = createEntity();
-    const other = createEntity();
+    const self = createEntity(0);
+    const other = createEntity(1);
     other.flags |= FL_NOVISIBLE;
 
     const tracer = createTracer({ fraction: 0, ent: null });
@@ -105,9 +100,9 @@ describe('visible', () => {
   });
 
   it('accepts full traces or direct hits as visible', () => {
-    const self = createEntity();
+    const self = createEntity(0);
     self.viewheight = 24;
-    const other = createEntity();
+    const other = createEntity(1);
     other.viewheight = 16;
 
     let capturedStart: { x: number; y: number; z: number } | undefined;
@@ -127,8 +122,8 @@ describe('visible', () => {
   });
 
   it('passes the expected trace mask for glass and opaque checks', () => {
-    const self = createEntity();
-    const other = createEntity();
+    const self = createEntity(0);
+    const other = createEntity(1);
 
     const opaqueTracer = createTracer({ fraction: 0, ent: null, expectedMask: TraceMask.Opaque | TraceMask.Window });
     visible(self, other, opaqueTracer);
@@ -138,8 +133,8 @@ describe('visible', () => {
   });
 
   it('handles invisibility powerup correctly', () => {
-      const self = createEntity();
-      const other = createEntity();
+      const self = createEntity(0);
+      const other = createEntity(1);
 
       // Mock client inventory/state
       other.client = {
