@@ -37,6 +37,11 @@ describe('ClientConnection', () => {
   });
 
   it('handles svc_configstring correctly', () => {
+    // Initialize protocol first
+    const initWriter = new MessageWriter();
+    initWriter.writeServerData(34, 1, 0, '', 0, '');
+    connection.handleMessage(initWriter.getData());
+
     const writer = new MessageWriter();
     writer.writeConfigString(1, 'some value', 34); // Protocol 34
 

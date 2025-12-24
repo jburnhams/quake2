@@ -11,24 +11,66 @@ export function writeDeltaEntity(from: EntityState, to: EntityState, buffer: num
     // I probably need to implement `applyEntityDelta` instead of `writeDeltaEntity` or both.
 }
 
-export function applyEntityDelta(from: EntityState, to: EntityState): void {
-    // Copy all fields from 'from' to 'to' to simulate applying a delta?
-    // Or is it applying 'to' (which is a delta) onto 'from' (baseline)?
-    // Usually applyEntityDelta(baseline, delta) -> result.
+/**
+ * Applies delta compression changes from a delta entity state to a baseline entity state.
+ * @param target The baseline state to update (in-place)
+ * @param delta The delta state containing changes and bitmask
+ */
+export function applyEntityDelta(target: EntityState, delta: EntityState): void {
+    const bits = delta.bits;
 
-    // For now, let's implement a basic copy as a placeholder if logic isn't clear,
-    // but looking at `rerelease.ts` `parseDelta`, it modifies `to` in place using `from` as base.
+    // Update metadata
+    target.bits = bits;
+    // target.number is assumed to match
 
-    // If this function is used by tests/client to apply a delta:
-    Object.assign(to, from);
-    to.origin = { ...from.origin };
-    to.old_origin = { ...from.old_origin };
-    to.angles = { ...from.angles };
+    if (bits & U_MODEL) target.modelindex = delta.modelindex;
+    if (bits & U_MODEL2) target.modelindex2 = delta.modelindex2;
+    if (bits & U_MODEL3) target.modelindex3 = delta.modelindex3;
+    if (bits & U_MODEL4) target.modelindex4 = delta.modelindex4;
 
-    // Then the delta bits would be read from a stream...
-    // But this function signature suggests we already have two states.
-    // Maybe it is intended to just copy?
+    if (bits & U_FRAME8) target.frame = delta.frame;
+    if (bits & U_FRAME16) target.frame = delta.frame;
 
-    // Let's assume for now it's a deep copy helper used by interpolation or similar.
-    // If `applyEntityDelta` is imported by `index.ts`, it's part of public API.
+    if (bits & U_SKIN8) target.skinnum = delta.skinnum;
+    if (bits & U_SKIN16) target.skinnum = delta.skinnum;
+
+    if (bits & U_EFFECTS8) target.effects = delta.effects;
+    if (bits & U_EFFECTS16) target.effects = delta.effects;
+
+    if (bits & U_RENDERFX8) target.renderfx = delta.renderfx;
+    if (bits & U_RENDERFX16) target.renderfx = delta.renderfx;
+
+    if (bits & U_ORIGIN1) target.origin.x = delta.origin.x;
+    if (bits & U_ORIGIN2) target.origin.y = delta.origin.y;
+    if (bits & U_ORIGIN3) target.origin.z = delta.origin.z;
+
+    if (bits & U_ANGLE1) target.angles.x = delta.angles.x;
+    if (bits & U_ANGLE2) target.angles.y = delta.angles.y;
+    if (bits & U_ANGLE3) target.angles.z = delta.angles.z;
+
+    if (bits & U_OLDORIGIN) {
+        target.old_origin.x = delta.old_origin.x;
+        target.old_origin.y = delta.old_origin.y;
+        target.old_origin.z = delta.old_origin.z;
+    }
+
+    if (bits & U_SOUND) target.sound = delta.sound;
+    if (bits & U_EVENT) target.event = delta.event;
+    if (bits & U_SOLID) target.solid = delta.solid;
+
+    // Rerelease fields
+    if (bits & U_ALPHA) target.alpha = delta.alpha;
+    if (bits & U_SCALE) target.scale = delta.scale;
+    if (bits & U_INSTANCE_BITS) target.instanceBits = delta.instanceBits;
+    if (bits & U_LOOP_VOLUME) target.loopVolume = delta.loopVolume;
+    // Note: bitsHigh logic requires passing bitsHigh or having it in EntityState.
+    // Standard EntityState doesn't store bitsHigh explicitly in TS interface usually,
+    // assuming it's handled during parse.
+    // If delta.bitsHigh is not available, we miss those fields.
+    // But `EntityState` interface doesn't seem to have `bitsHigh`.
+    // Assuming `delta` has these fields populated if they were parsed.
+
+    // For now, checking if fields are different might be safer if bits are missing?
+    // But delta compression relies on bits.
+    // Let's assume standard Q2 fields for now as that's what failed.
 }

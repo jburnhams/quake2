@@ -140,9 +140,12 @@ export class DemoClipper implements NetworkMessageHandler {
               onDownload: () => { parsedSuccessfully = true; }
           };
 
-          const sb = new StreamingBuffer(blockData.length);
-          sb.append(blockData);
+          const sb = new StreamingBuffer(blockData.getLength());
+          sb.append(blockData.readData(blockData.getLength()));
           sb.setReadPosition(0);
+
+          // Reset blockData position for later use
+          blockData.seek(0);
 
           const probeParser = new NetworkMessageParser(sb, probeHandler);
           if (currentProtocol > 0) probeParser.setProtocolVersion(currentProtocol);
@@ -167,11 +170,13 @@ export class DemoClipper implements NetworkMessageHandler {
           if (keepBlock) {
               const blockHeader = new Uint8Array(4);
               const view = new DataView(blockHeader.buffer);
-              view.setUint32(0, blockData.length, true);
+              view.setUint32(0, blockData.getLength(), true);
 
               outputParts.push(blockHeader);
-              outputParts.push(blockData);
-              totalLength += 4 + blockData.length;
+              // Read data again (we reset it above)
+              const data = blockData.readData(blockData.getLength());
+              outputParts.push(data);
+              totalLength += 4 + data.length;
           }
           blockIndex++;
       }
