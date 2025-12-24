@@ -55,7 +55,7 @@ jobs:
 
             # Run the gallery generation script
             # We use npx tsx to run the typescript file directly without full project install
-            npx tsx packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json pages-dist
+            npx tsx quake2ts/packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json pages-dist
 
             mkdir -p pages-dist/snapshots
             cp -r visual-test-results/packages/engine/tests/__snapshots__/* pages-dist/snapshots/ || true
