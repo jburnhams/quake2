@@ -259,6 +259,7 @@ function fireRailgun(game: GameExports, player: Entity, start: Vec3, forward: an
 export function fireHandGrenade(game: GameExports, player: Entity, inventory: PlayerInventory, weaponState: WeaponState) {
     if (inventory.ammo.counts[AmmoType.Grenades] < 1) {
         NoAmmoWeaponChange(player);
+        return;
     }
 
     Throw_Generic(
