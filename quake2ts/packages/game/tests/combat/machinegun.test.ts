@@ -7,7 +7,7 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('Machinegun', () => {
     it('should consume 1 bullet and deal damage', () => {
@@ -17,9 +17,11 @@ describe('Machinegun', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 0, z: 0 };
+        Object.assign(playerStart, createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 }
+        }));
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
@@ -30,8 +32,9 @@ describe('Machinegun', () => {
         });
 
         const target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = 1;
+        Object.assign(target, createMonsterEntityFactory('monster_dummy', {
+            health: 100
+        }));
 
         imports.trace.mockReturnValue({
             ent: target,

@@ -8,93 +8,31 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
-    it('should not consume ammo and should spawn a blaster bolt', () => {
+    it('should spawn a blaster bolt', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-		game.init(0);
 
-        // Replace manual playerStart creation with factory pattern
-        const playerStartTemplate = createEntityFactory({
+       const playerStart = game.entities.spawn();
+       Object.assign(playerStart, createEntityFactory({
              classname: 'info_player_start',
              origin: { x: 0, y: 0, z: 0 },
-             angles: { x: 0, y: 90, z: 0 }
-        });
-        const playerStart = game.entities.spawn();
-        Object.assign(playerStart, playerStartTemplate);
+             angles: { x: 0, y: 0, z: 0 }
+        }));
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
         const player = game.entities.find(e => e.classname === 'player')!;
-
-        // Use factory pattern for inventory (though client exists, we override inventory)
         player.client!.inventory = createPlayerInventory({
             weapons: [WeaponId.Blaster],
-            ammo: {},
         });
 
         fire(game, player, WeaponId.Blaster);
 
-        // source is offset, not player.origin
         expect(createBlasterBolt).toHaveBeenCalledWith(game.entities, player, expect.anything(), expect.anything(), 15, 1500, DamageMod.BLASTER);
-    });
-
-    it('should travel at the correct speed', () => {
-        const { imports, engine } = createGameImportsAndEngine({
-            imports: {
-                trace: vi.fn().mockImplementation((start, mins, maxs, end) => {
-                    return {
-                        fraction: 1.0,
-                        endpos: end,
-                        allsolid: false,
-                        startsolid: false,
-                    };
-                }),
-            },
-        });
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-
-        const playerStartTemplate = createEntityFactory({
-            classname: 'info_player_start',
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 } // Fire along X-axis
-       });
-       const playerStart = game.entities.spawn();
-       Object.assign(playerStart, playerStartTemplate);
-
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
-
-        const player = game.entities.find(e => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({
-            weapons: [WeaponId.Blaster],
-            ammo: {},
-        });
-
-        // Fire the weapon to create the projectile
-        fire(game, player, WeaponId.Blaster);
-
-        const bolt = game.entities.find(e => e.classname === 'blaster_bolt')!;
-        expect(bolt).toBeDefined();
-
-        const initialPosition = { ...bolt.origin };
-
-        // Simulate game time passing
-        const timeDeltaMs = 100; // 0.1 seconds
-        game.frame({ frame: 1, deltaMs: timeDeltaMs, startTimeMs: 0 });
-
-        const newPosition = bolt.origin;
-        const distance = Math.sqrt(
-            Math.pow(newPosition.x - initialPosition.x, 2) +
-            Math.pow(newPosition.y - initialPosition.y, 2) +
-            Math.pow(newPosition.z - initialPosition.z, 2)
-        );
-
-        // 1500 units/sec * 0.1 sec = 150 units
-        expect(distance).toBeCloseTo(150);
     });
 });

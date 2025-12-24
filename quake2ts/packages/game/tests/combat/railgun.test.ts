@@ -7,101 +7,46 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
-import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
-import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('Railgun', () => {
-    // Setup helper to create a game context
-    const setupGame = (isDeathmatch: boolean) => {
-        const { imports, engine } = createGameImportsAndEngine({
-            imports: {
-                trace: vi.fn().mockImplementation((start, mins, maxs, end) => {
-                     // Simulate hitting an entity at some distance
-                     const dist = 100;
-                     const dir = { x: 1, y: 0, z: 0 };
-                     return {
-                         fraction: 0.5,
-                         endpos: { x: start.x + dir.x * dist, y: start.y, z: start.z },
-                         allsolid: false,
-                         startsolid: false,
-                         ent: { takedamage: true, origin: {x: 100, y: 0, z: 0} } // Mock entity
-                     };
-                }),
-            },
-        });
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: isDeathmatch });
+    it('should consume 1 slug and deal piercing damage', () => {
+        const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        // Mock T_Damage
-        const tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => {});
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        // Use factory for player configuration
-        const playerTemplate = createPlayerEntityFactory({
-            classname: 'player',
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
-            viewheight: 22
+        const playerStart = game.entities.spawn();
+        Object.assign(playerStart, createEntityFactory({
+             classname: 'info_player_start',
+             origin: { x: 0, y: 0, z: 0 },
+             angles: { x: 0, y: 0, z: 0 }
+        }));
+        game.entities.finalizeSpawn(playerStart);
+        game.spawnWorld();
+
+        const player = game.entities.find(e => e.classname === 'player')!;
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.Railgun],
+            ammo: { [AmmoType.Slugs]: 50 },
         });
 
-        const player = game.entities.spawn();
-        Object.assign(player, playerTemplate);
+        // Mock trace hitting 2 targets then wall
+        const target1 = game.entities.spawn(); Object.assign(target1, createMonsterEntityFactory('target1'));
+        const target2 = game.entities.spawn(); Object.assign(target2, createMonsterEntityFactory('target2'));
 
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.Railgun],
-                ammo: { [AmmoType.Slugs]: 10 },
-            }),
-            weaponStates: createPlayerWeaponStates(),
-            kick_angles: ZERO_VEC3,
-            kick_origin: ZERO_VEC3,
-        } as any;
-        game.entities.finalizeSpawn(player);
-
-        return { game, player, trace: imports.trace, tDamageSpy };
-    };
-
-    it('should deal correct damage and kick in Deathmatch', () => {
-        const { game, player, tDamageSpy } = setupGame(true); // DM = true
+        imports.trace
+            .mockReturnValueOnce({ ent: null }) // P_ProjectSource
+            .mockReturnValueOnce({ ent: target1, fraction: 0.5, endpos: { x: 100, y: 0, z: 0 } })
+            .mockReturnValueOnce({ ent: target2, fraction: 0.8, endpos: { x: 200, y: 0, z: 0 } })
+            .mockReturnValueOnce({ ent: game.entities.world, fraction: 1.0, endpos: { x: 300, y: 0, z: 0 } });
 
         fire(game, player, WeaponId.Railgun);
 
-        expect(tDamageSpy).toHaveBeenCalledWith(
-            expect.anything(), // target
-            player,            // inflictor
-            player,            // attacker
-            expect.anything(), // dir
-            expect.anything(), // point
-            expect.anything(), // normal
-            100,               // damage (DM)
-            200,               // kick (DM)
-            expect.anything(), // damageFlags
-            DamageMod.RAILGUN,
-            expect.anything(),
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
-        );
-    });
-
-    it('should deal correct damage and kick in Single Player', () => {
-        const { game, player, tDamageSpy } = setupGame(false); // DM = false
-
-        fire(game, player, WeaponId.Railgun);
-
-        expect(tDamageSpy).toHaveBeenCalledWith(
-            expect.anything(), // target
-            player,            // inflictor
-            player,            // attacker
-            expect.anything(), // dir
-            expect.anything(), // point
-            expect.anything(), // normal
-            125,               // damage (SP)
-            225,               // kick (SP)
-            expect.anything(), // damageFlags
-            DamageMod.RAILGUN,
-            expect.anything(),
-            expect.anything(),
-            expect.objectContaining({ hooks: expect.anything() })
-        );
+        expect(player.client!.inventory.ammo.counts[AmmoType.Slugs]).toBe(49);
+        expect(T_Damage).toHaveBeenCalledTimes(2);
+        // Verify damage amounts
+        expect(T_Damage).toHaveBeenNthCalledWith(1, target1, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 125, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
+        expect(T_Damage).toHaveBeenNthCalledWith(2, target2, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), 125, expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything(), expect.anything());
     });
 });

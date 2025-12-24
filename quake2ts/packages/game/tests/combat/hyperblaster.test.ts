@@ -8,7 +8,7 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('HyperBlaster', () => {
     it('should consume 1 cell and spawn a blaster bolt', () => {
@@ -18,9 +18,11 @@ describe('HyperBlaster', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 0, z: 0 };
+        Object.assign(playerStart, createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 }
+        }));
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
@@ -43,10 +45,12 @@ describe('HyperBlaster', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = false;
         const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
-            weaponStates: { states: new Map() }
-        } as any;
+        Object.assign(player, createPlayerEntityFactory({
+            client: {
+                inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
+                weaponStates: { states: new Map() }
+            } as any
+        }));
 
         fire(game, player, WeaponId.HyperBlaster);
 
@@ -59,10 +63,12 @@ describe('HyperBlaster', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.deathmatch = true;
         const player = game.entities.spawn();
-        player.client = {
-            inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
-            weaponStates: { states: new Map() }
-        } as any;
+        Object.assign(player, createPlayerEntityFactory({
+             client: {
+                inventory: createPlayerInventory({ weapons: [WeaponId.HyperBlaster], ammo: { [AmmoType.Cells]: 1 } }),
+                weaponStates: { states: new Map() }
+            } as any
+        }));
 
         fire(game, player, WeaponId.HyperBlaster);
 

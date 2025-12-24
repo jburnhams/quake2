@@ -3,7 +3,7 @@
 // =================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { fire } from '../../src/combat/weapons/firing.js';
+import { fireBFG } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
@@ -41,7 +41,7 @@ describe('BFG10K', () => {
         // We need to inject player into game.entities
         game.entities.find = vi.fn().mockReturnValue(player);
 
-        fire(game, player, WeaponId.BFG10K);
+        fireBFG(game, player);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Cells]).toBe(50);
         expect(createBfgBall).toHaveBeenCalled();
@@ -95,12 +95,13 @@ describe('BFG10K', () => {
 
         const player = createPlayerEntityFactory({
             client: {
-                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 100 } }),
                 weaponStates: { states: new Map() }
             } as any
         });
+        game.entities.find = vi.fn().mockReturnValue(player);
 
-        fire(game, player, WeaponId.BFG10K);
+        fireBFG(game, player);
 
         expect(createBfgBall).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 500, 400, 200);
     });
@@ -113,12 +114,13 @@ describe('BFG10K', () => {
 
         const player = createPlayerEntityFactory({
             client: {
-                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 100 } }),
                 weaponStates: { states: new Map() }
             } as any
         });
+        game.entities.find = vi.fn().mockReturnValue(player);
 
-        fire(game, player, WeaponId.BFG10K);
+        fireBFG(game, player);
 
         expect(createBfgBall).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), expect.anything(), 200, 400, 200);
     });

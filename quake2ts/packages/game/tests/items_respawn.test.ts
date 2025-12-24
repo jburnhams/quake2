@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
-import { Entity, Solid } from '../src/entities/entity.js';
+import { Solid } from '../src/entities/entity.js';
 import { createPlayerInventory } from '../src/inventory/playerInventory.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {
