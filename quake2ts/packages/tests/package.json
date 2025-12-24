@@ -4,7 +4,8 @@
   "private": true,
   "description": "Integration tests and browser substitutes for Quake II TS",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.82",

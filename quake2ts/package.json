@@ -106,6 +106,7 @@
     "test": "pnpm -r --if-present test",
     "test:unit": "TEST_TYPE=unit vitest run",
     "test:integration": "pnpm -r --if-present test:integration",
+    "test:browser": "pnpm -r --if-present test:browser",
     "test:webgpu": "pnpm -r --if-present test:webgpu",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
