@@ -1,15 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { checkWater } from '../../src/physics/fluid.js';
 import { Entity, EntityFlags } from '../../src/entities/entity.js';
-import { CONTENTS_WATER, CONTENTS_SOLID, CONTENTS_LAVA } from '@quake2ts/shared';
+import { CONTENTS_WATER, CONTENTS_LAVA } from '@quake2ts/shared';
 import { EntitySystem } from '../../src/entities/system.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('fluid physics', () => {
-  const mockImports = {
-    pointcontents: vi.fn(),
-    trace: vi.fn(),
-    linkentity: vi.fn(),
-  };
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+
+  beforeEach(() => {
+    const result = createGameImportsAndEngine();
+    mockImports = result.imports;
+    mockEngine = result.engine;
+  });
 
   const mockSystem = {
     sound: vi.fn(),

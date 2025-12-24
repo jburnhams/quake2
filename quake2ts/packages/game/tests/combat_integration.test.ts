@@ -3,54 +3,44 @@
 // =================================================================
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../src/entities/system.js';
-import { Entity, MoveType, Solid } from '../src/entities/entity.js';
+import { Entity } from '../src/entities/entity.js';
 import { createGame, GameExports } from '../src/index.js';
 import { WeaponId, PowerupId, addPowerup } from '../src/inventory/playerInventory.js';
 import { fire } from '../src/combat/weapons/firing.js';
-import { DamageMod } from '../src/combat/damageMods.js';
-import { createBfgBall } from '../src/entities/projectiles.js';
-import { ZERO_VEC3 } from '@quake2ts/shared';
-import { MulticastType } from '../src/imports.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
   let game: GameExports;
   let player: Entity;
   let world: Entity;
 
-  const mockEngine = {
-    trace: vi.fn(),
-    sound: vi.fn(),
-    centerprintf: vi.fn(),
-    modelIndex: vi.fn().mockReturnValue(1),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-  };
+  // We can't use `let` variables inside `createGameImportsAndEngine` overrides easily if we want to change them per test.
+  // Instead, we will create the mocks inside each test or use a mutable mock strategy.
+  // Since `vi.fn()` creates a mutable mock function, we can use `mockReturnValue` on it.
 
-  const mockImports = {
-    trace: vi.fn().mockReturnValue({
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      allsolid: false,
-      startsolid: false,
-      ent: null
-    }),
-    pointcontents: vi.fn().mockReturnValue(0),
-    linkentity: vi.fn(),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-  };
+  const { imports, engine } = createGameImportsAndEngine();
+  // We need access to the mocks to re-configure them.
+  // createGameImportsAndEngine returns new objects each call, so we should call it in beforeEach
+  // if we want fresh mocks, or reuse the same ones and clear them.
+
+  // Let's declare the mock objects at the suite level but initialize them in beforeEach.
+  // However, createGameImportsAndEngine returns objects with properties.
+  // To keep references stable for `game` creation if we did it once, we'd need to be careful.
+  // But here we recreate `game` in `beforeEach`, so we can recreate mocks too.
+
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Re-setup default mock return values after clear
-    mockImports.trace.mockReturnValue({
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      allsolid: false,
-      startsolid: false,
-      ent: null
-    });
+    const result = createGameImportsAndEngine();
+    mockImports = result.imports;
+    mockEngine = result.engine;
+
+    // The test expects trace to return specific format.
+    // The default from createGameImportsAndEngine returns { fraction: 1.0, endpos: {x,y,z}, ... }
+    // which matches what we need generally.
+
     game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld();
     world = game.entities.world;

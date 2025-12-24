@@ -1,37 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, Solid, MoveType, ServerFlags } from '../../src/entities/entity.js';
+import { Entity, MoveType } from '../../src/entities/entity.js';
 import { createGame } from '../../src/index.js';
 import { EntitySystem } from '../../src/entities/system.js';
-import { createPlayerInventory, WeaponId, serializePlayerInventory } from '../../src/inventory/playerInventory.js';
+import { createPlayerInventory, WeaponId } from '../../src/inventory/playerInventory.js';
 import { createPlayerWeaponStates, getWeaponState } from '../../src/combat/weapons/state.js';
 import { fireEtfRifle } from '../../src/combat/weapons/rogue.js';
 import { AmmoType } from '../../src/inventory/ammo.js';
-import { ServerCommand, TempEntity, ZERO_VEC3, MASK_SHOT } from '@quake2ts/shared';
-import { MulticastType } from '../../src/imports.js';
+import { ZERO_VEC3 } from '@quake2ts/shared';
 import { createFlechette } from '../../src/entities/projectiles.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { T_Damage } from '../../src/combat/damage.js';
+import { DamageFlags } from '../../src/combat/damageFlags.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
 
 describe('Rogue Weapons: ETF Rifle', () => {
   let game: any;
   let sys: EntitySystem;
   let player: Entity;
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
   beforeEach(() => {
-    const mockImports = {
-      trace: vi.fn(),
-      pointcontents: vi.fn(),
-      multicast: vi.fn(),
-      unicast: vi.fn(),
-      sound: vi.fn(),
-      configstring: vi.fn(),
-      linkentity: vi.fn(),
-      error: vi.fn(),
-    };
+    const result = createGameImportsAndEngine();
+    mockImports = result.imports;
+    mockEngine = result.engine;
 
-    const mockEngine = {
-      time: 10,
-    };
+    // Use a simpler trace for default
+    mockImports.trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null });
 
-    const gameExports = createGame(mockImports, mockEngine as any, { gravity: 800 });
+    // We need to ensure game time is controllable or fixed
+    // createGame uses internal clock initialized to 0
+
+    const gameExports = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
+
+    // Partially mock game entities system to spy on spawn
     game = {
       ...gameExports,
       entities: {
@@ -42,10 +44,12 @@ describe('Rogue Weapons: ETF Rifle', () => {
         finalizeSpawn: vi.fn(),
         scheduleThink: vi.fn(),
         findByRadius: vi.fn().mockReturnValue([]),
+        // Ensure multicast is available on sys
+        multicast: mockImports.multicast
       }
     };
     sys = game.entities;
-    game.trace = mockImports.trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+    game.trace = mockImports.trace;
     game.multicast = mockImports.multicast;
 
     player = new Entity(1);
@@ -90,16 +94,6 @@ describe('Rogue Weapons: ETF Rifle', () => {
   });
 
   it('should apply freeze effect on impact with monster', () => {
-    // Mock sys.multicast to be a function, but also handle .bind() in projectile code
-    // The error was "sys.multicast.bind is undefined" but sys.multicast is a mock function which has bind.
-    // Wait, createGame mockImports has multicast: vi.fn().
-    // Maybe sys.multicast is not correctly assigned?
-    // In beforeEach: game.multicast = mockImports.multicast;
-    // But sys is game.entities (EntitySystem).
-    // The EntitySystem constructor assigns sys.multicast from imports.multicast.
-    // However, here sys is mocked partially.
-    // Let's ensure sys.multicast is set.
-
     sys.multicast = game.multicast;
 
     const flechette = new Entity(2);
@@ -123,20 +117,6 @@ describe('Rogue Weapons: ETF Rifle', () => {
     const touch = flechette.touch!;
     touch(flechette, monster, null, null);
 
-    // Verify monster is frozen (freeze_time set to time + 3.0)
-    // Mock sys.timeSeconds is derived from game.time (10)
-    // Wait, sys.timeSeconds in createGame uses engine.time / 1000 usually?
-    // Let's check how sys.timeSeconds is set. In createGame, LevelClock is used.
-    // We should assume timeSeconds is related to mockEngine.time (10).
-    // But createGame wraps it.
-    // Let's just check if it is > 0.
-
-    // Actually, createGame sets up timeSeconds getter.
-    // We didn't pass real engine, just mock.
-    // sys.timeSeconds accesses gameExports.time -> levelClock.timeSeconds
-    // We might need to mock sys.timeSeconds directly if we can't control it easily.
-
-    // For this unit test, we can check if freeze_time is set to something reasonably close to expected.
     expect(monster.monsterinfo.freeze_time).toBeGreaterThan(0);
 
     // Also verify sys.free was called on flechette
@@ -150,42 +130,27 @@ describe('Rogue Weapons: ETF Rifle', () => {
      monster.takedamage = true;
      monster.health = 100;
      monster.monsterinfo = {
-        freeze_time: 20, // Future time (game.time is 10)
+        freeze_time: 20, // Future time
         aiflags: 0,
         last_sighting: ZERO_VEC3,
         trail_time: 0,
         pausetime: 0
     };
-
-    // We can't directly call T_Damage as it is not exported from a module we can spy on easily
-    // without it being the same module 'firing' uses.
-    // However, we imported fireEtfRifle which uses T_Damage from '../damage.js'.
-    // Here we want to test T_Damage logic itself.
-    // We should import T_Damage from the source.
   });
 });
-
-import { T_Damage } from '../../src/combat/damage.js';
-import { DamageFlags } from '../../src/combat/damageFlags.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
 
 describe('T_Damage Frozen Shatter', () => {
     let game: any;
     let sys: EntitySystem;
+    let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+    let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
     beforeEach(() => {
-        const mockImports = {
-            trace: vi.fn(),
-            pointcontents: vi.fn(),
-            multicast: vi.fn(),
-            unicast: vi.fn(),
-            sound: vi.fn(),
-            configstring: vi.fn(),
-            linkentity: vi.fn(),
-            error: vi.fn(),
-        };
-        const mockEngine = { time: 10 };
-        const gameExports = createGame(mockImports, mockEngine as any, { gravity: 800 });
+        const result = createGameImportsAndEngine();
+        mockImports = result.imports;
+        mockEngine = result.engine;
+
+        const gameExports = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
         game = { ...gameExports };
         sys = game.entities;
     });

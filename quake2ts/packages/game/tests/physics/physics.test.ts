@@ -4,6 +4,7 @@ import { runGravity, runBouncing, runProjectileMovement } from '../../src/physic
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 import { EntitySystem } from '../../src/entities/system.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 const mockTraceFn = (result: GameTraceResult) => {
   return (
@@ -16,9 +17,14 @@ const mockTraceFn = (result: GameTraceResult) => {
   ) => result;
 };
 
+// We will keep this local mock helper but implement it using default structures from test-utils where possible if needed.
+// However, here it wraps trace result dynamically.
 const mockImports = (result: GameTraceResult): GameImports => ({
   trace: mockTraceFn(result),
   pointcontents: () => 0,
+  linkentity: vi.fn(),
+  multicast: vi.fn(),
+  unicast: vi.fn(),
 });
 
 const createMockSystem = (): EntitySystem => {
@@ -108,8 +114,9 @@ describe('runProjectileMovement', () => {
     };
 
     const frametime = 0.1;
+    const { imports } = createGameImportsAndEngine({ imports: { trace: trace as any } });
 
-    runProjectileMovement(ent, { trace, pointcontents: () => 0 }, frametime);
+    runProjectileMovement(ent, imports, frametime);
 
     expect(passedClipmask).toBe(42);
   });
