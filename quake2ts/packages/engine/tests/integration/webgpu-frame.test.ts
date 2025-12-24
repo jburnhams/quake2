@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
-import { Camera } from '../../../src/render/camera.js';
+import { createWebGPURenderer } from '../../src/render/webgpu/renderer.js';
+import { Camera } from '../../src/render/camera.js';
 import { mat4 } from 'gl-matrix';
 import { create } from 'webgpu';
 import { PNG } from 'pngjs';
