@@ -21,7 +21,7 @@ export class AsyncDemoParser {
 
   public parse(buffer: ArrayBuffer, options: AsyncDemoParserOptions = {}): Promise<void> {
     return new Promise((resolve, reject) => {
-      const { protocolVersion } = options;
+      const { protocolVersion, onProgress } = options;
 
       const onComplete = (e: MessageEvent) => {
         const data = e.data as DemoWorkerResponse;
@@ -47,7 +47,9 @@ export class AsyncDemoParser {
       };
 
       // Store bound function to remove it later
-      this.boundHandleMessage = this.handleMessage.bind(this);
+      this.boundHandleMessage = (event: MessageEvent<DemoWorkerResponse>) => {
+        this.handleMessage(event, onProgress);
+      };
 
       this.worker.addEventListener('message', onComplete);
       this.worker.addEventListener('error', onError);
@@ -63,7 +65,7 @@ export class AsyncDemoParser {
 
   private boundHandleMessage!: (event: MessageEvent<DemoWorkerResponse>) => void;
 
-  private handleMessage(event: MessageEvent<DemoWorkerResponse>): void {
+  private handleMessage(event: MessageEvent<DemoWorkerResponse>, onProgress?: (percent: number) => void): void {
     const data = event.data;
     switch (data.type) {
       case 'serverData':
@@ -146,6 +148,9 @@ export class AsyncDemoParser {
         break;
       case 'achievement':
         if (this.handler.onAchievement) this.handler.onAchievement(data.id);
+        break;
+      case 'progress':
+        if (onProgress) onProgress(data.percent);
         break;
     }
   }

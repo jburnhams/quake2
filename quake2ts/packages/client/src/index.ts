@@ -50,6 +50,7 @@ import { ScoreboardManager, ScoreboardData, ScoreboardEntry } from './scoreboard
 import { ChatManager } from './chat.js';
 import { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';
 import { MenuState } from './ui/menu/types.js';
+import { lodRegistry, LodModel } from './lod.js';
 
 export { createDefaultBindings, InputBindings, normalizeCommand, normalizeInputCode } from './input/bindings.js';
 import { InputController, InputSource } from './input/controller.js';
@@ -191,6 +192,9 @@ export interface ClientExports extends ClientRenderer<PredictionState> {
   onNotify?: (message: string) => void;
   onPickupMessage?: (item: string) => void;
   onObituaryMessage?: (message: string) => void;
+
+  // LOD
+  registerLod(baseModel: string, lods: LodModel[]): void;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -878,7 +882,11 @@ export function createClient(imports: ClientImports): ClientExports {
           lastRendered = demoHandler.getPredictionState(demoPlayback.getCurrentTime());
           // Calculate alpha for interpolation
           const alpha = demoPlayback.getInterpolationFactor();
-          renderEntities = demoHandler.getRenderableEntities(alpha, configStrings);
+
+          // Get Camera info for LOD
+          let camPos = lastRendered ? { x: lastRendered.origin.x, y: lastRendered.origin.y, z: lastRendered.origin.z } : undefined;
+
+          renderEntities = demoHandler.getRenderableEntities(alpha, configStrings); // demo handler needs update to pass camera pos or we do it inside
 
           // Get packet entities for effect processing.
           if (demoHandler.latestFrame && demoHandler.latestFrame.packetEntities) {
@@ -1017,12 +1025,17 @@ export function createClient(imports: ClientImports): ClientExports {
             if ((sample.latest.state as any).packetEntities && (sample.previous.state as any).packetEntities) {
                 const latestPacketEntities = (sample.latest.state as any).packetEntities;
                 const previousPacketEntities = (sample.previous.state as any).packetEntities;
+
+                // Determine camera pos for LOD
+                const camPos = lastRendered ? { x: lastRendered.origin.x, y: lastRendered.origin.y, z: lastRendered.origin.z } : undefined;
+
                 renderEntities = buildRenderableEntities(
                     latestPacketEntities,
                     previousPacketEntities,
                     sample.alpha,
                     configStrings,
-                    imports
+                    imports,
+                    camPos
                 );
                 // Use latest packet entities for effects (or interpolate if we get fancy)
                 currentPacketEntities = latestPacketEntities;
@@ -1491,6 +1504,10 @@ export function createClient(imports: ClientImports): ClientExports {
     },
     getChatHistory() {
         return chatManager.getHistory();
+    },
+
+    registerLod(baseModel: string, lods: LodModel[]) {
+        lodRegistry.register(baseModel, lods);
     }
   };
 
