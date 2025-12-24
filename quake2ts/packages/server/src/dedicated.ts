@@ -2,7 +2,7 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
 import { parseBsp } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
@@ -974,6 +974,69 @@ export class DedicatedServer implements GameEngine {
     // GameEngine Implementation
     trace(start: any, end: any): any {
         return { fraction: 1.0 };
+    }
+
+    modelIndex(name: string): number {
+        console.log(`modelIndex(${name}) called`);
+        // Find existing
+        const start = ConfigStringIndex.Models;
+        const end = ConfigStringIndex.Sounds;
+        for (let i = start + 1; i < end; i++) {
+            if (this.sv.configStrings[i] === name) {
+                return i - start;
+            }
+        }
+
+        // Find empty slot
+        for (let i = start + 1; i < end; i++) {
+            if (!this.sv.configStrings[i]) {
+                this.SV_SetConfigString(i, name);
+                return i - start;
+            }
+        }
+
+        console.warn(`MAX_MODELS overflow for ${name}`);
+        return 0;
+    }
+
+    soundIndex(name: string): number {
+        const start = ConfigStringIndex.Sounds;
+        const end = ConfigStringIndex.Images;
+        for (let i = start + 1; i < end; i++) {
+            if (this.sv.configStrings[i] === name) {
+                return i - start;
+            }
+        }
+
+        for (let i = start + 1; i < end; i++) {
+            if (!this.sv.configStrings[i]) {
+                this.SV_SetConfigString(i, name);
+                return i - start;
+            }
+        }
+
+        console.warn(`MAX_SOUNDS overflow for ${name}`);
+        return 0;
+    }
+
+    imageIndex(name: string): number {
+        const start = ConfigStringIndex.Images;
+        const end = ConfigStringIndex.Lights;
+        for (let i = start + 1; i < end; i++) {
+            if (this.sv.configStrings[i] === name) {
+                return i - start;
+            }
+        }
+
+        for (let i = start + 1; i < end; i++) {
+            if (!this.sv.configStrings[i]) {
+                this.SV_SetConfigString(i, name);
+                return i - start;
+            }
+        }
+
+        console.warn(`MAX_IMAGES overflow for ${name}`);
+        return 0;
     }
 
     multicast(origin: any, type: MulticastType, event: ServerCommand, ...args: any[]): void {
