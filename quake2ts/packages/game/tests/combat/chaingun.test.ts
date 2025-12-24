@@ -11,8 +11,8 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 import { Entity } from '../../src/entities/entity.js';
 import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
 import { getWeaponState } from '../../src/combat/weapons/state.js';
-import { EntitySystem } from '../../src/entities/system.js';
 import { WeaponStateEnum } from '../../src/combat/weapons/state.js';
+import { createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -40,8 +40,17 @@ describe('Chaingun', () => {
 
         game.spawnWorld();
 
+        // Use factory for player configuration - explicitly set classname even if factory default is 'player', for clarity
+        const playerTemplate = createPlayerEntityFactory({
+            classname: 'player',
+            angles: { x: 0, y: 0, z: 0 },
+            origin: { x: 0, y: 0, z: 0 }
+        });
+
         player = game.entities.spawn();
-        player.classname = 'player';
+        Object.assign(player, playerTemplate);
+
+        // Manually set complex client objects that might not be in factory default yet or need specific test setup
         player.client = {
             inventory: createPlayerInventory({
                 weapons: [WeaponId.Chaingun],
@@ -50,15 +59,21 @@ describe('Chaingun', () => {
             weaponStates: { states: new Map() },
             buttons: 0,
             gun_frame: 0,
-            weaponstate: WeaponStateEnum.WEAPON_READY
+            weaponstate: WeaponStateEnum.WEAPON_READY,
+            kick_angles: {x: 0, y: 0, z: 0},
+            kick_origin: {x: 0, y: 0, z: 0},
         } as any;
-        player.angles = { x: 0, y: 0, z: 0 };
-        player.origin = { x: 0, y: 0, z: 0 };
+
         game.entities.finalizeSpawn(player);
 
+        // Use factory for target
+        const targetTemplate = createEntityFactory({
+            health: 100,
+            takedamage: true
+        });
         target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = true;
+        Object.assign(target, targetTemplate);
+
         game.entities.finalizeSpawn(target);
 
         trace.mockReturnValue({
@@ -140,8 +155,14 @@ describe('Chaingun', () => {
 
             game.spawnWorld();
 
+            const playerTemplate = createPlayerEntityFactory({
+                classname: 'player',
+                angles: { x: 0, y: 0, z: 0 },
+                origin: { x: 0, y: 0, z: 0 }
+            });
             const player = game.entities.spawn();
-            player.classname = 'player';
+            Object.assign(player, playerTemplate);
+
             player.client = {
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.Chaingun],
@@ -154,13 +175,14 @@ describe('Chaingun', () => {
                 gun_frame: 0,
                 weaponstate: WeaponStateEnum.WEAPON_READY
             } as any;
-            player.angles = { x: 0, y: 0, z: 0 };
-            player.origin = { x: 0, y: 0, z: 0 };
             game.entities.finalizeSpawn(player);
 
+            const targetTemplate = createEntityFactory({
+                health: 1000,
+                takedamage: true // Note: Number 1 vs boolean true mismatch in tests sometimes, Entity defines boolean or number? checked: boolean in Entity, but some tests use 1. Factory uses boolean.
+            });
             const target = game.entities.spawn();
-            target.health = 1000;
-            target.takedamage = 1;
+            Object.assign(target, targetTemplate);
             game.entities.finalizeSpawn(target);
 
             trace.mockReturnValue({

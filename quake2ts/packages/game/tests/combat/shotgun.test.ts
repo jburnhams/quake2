@@ -8,7 +8,7 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
 import { angleVectors } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Shotgun', () => {
     it('should consume 1 shell and fire 12 pellets', () => {
@@ -17,10 +17,14 @@ describe('Shotgun', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
+        // Use factory for playerStart
+        const playerStartTemplate = createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 90, z: 0 }
+        });
         const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 90, z: 0 };
+        Object.assign(playerStart, playerStartTemplate);
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
@@ -30,9 +34,13 @@ describe('Shotgun', () => {
             ammo: { [AmmoType.Shells]: 10 },
         });
 
+        // Use factory for target
+        const targetTemplate = createEntityFactory({
+            health: 100,
+            takedamage: true
+        });
         const target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = 1;
+        Object.assign(target, targetTemplate);
 
         // Mock hit at close range (10 units)
         imports.trace.mockReturnValue({
