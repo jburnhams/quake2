@@ -137,6 +137,16 @@ export function P_PlayerThink(ent: Entity, sys: EntitySystem) {
         }
     }
 
+    // Decay damage indicators
+    if (ent.client.damage_indicators && ent.client.damage_indicators.length > 0) {
+        // Decrease strength
+        for (let i = 0; i < ent.client.damage_indicators.length; i++) {
+            ent.client.damage_indicators[i].strength -= 0.1 * 2.0; // Same rate as alpha?
+        }
+        // Filter out dead ones
+        ent.client.damage_indicators = ent.client.damage_indicators.filter(ind => ind.strength > 0);
+    }
+
     // Decay kick angles
     // Simple linear decay for now
     if (ent.client.kick_angles) {

@@ -343,6 +343,30 @@ export function createGame(
         }
     });
 
+    // Copy and clear damage indicators
+    const damageIndicators = player?.client?.damage_indicators ? [...player.client.damage_indicators] : [];
+    // If we want transient behavior (only one frame), we clear them here.
+    // If we want persistent behavior with fading, we clear them in player_think (or don't clear).
+    // The client draws them with fade, but usually damage indicators are events (new hit).
+    // If we send them every frame while they fade, we need to manage that.
+    // Standard Q2: damage_* fields in player_state are instantaneous or smoothed on client?
+    // "damage_from" vector is in player_state.
+    // "damage_alpha" is in player_state.
+    // If we use damageIndicators list, we should probably clear it after snapshot so we don't send duplicate hits.
+    // Or we rely on client smoothing.
+    // Given the HUD implementation draws ALL indicators in the list, if we keep them here, they will persist forever.
+    // So we must clear them or manage their lifetime.
+    // Let's clear them after snapshotting for now, assuming client side handles persistence or they are just flashes.
+    // Wait, the client side HUD draws them. If we clear them, they disappear next frame.
+    // So if they are just 1-frame flashes, that might be too fast.
+    // However, existing HUD logic (Draw_Damage) doesn't have internal state/smoothing, it just draws what is in ps.damageIndicators.
+    // So we need to manage the decay/lifetime in the SERVER/GAME side if we want them to fade out.
+    //
+    // Let's modify P_PlayerThink to decay indicators instead of clearing them here.
+    // See player_think logic.
+    //
+    // But for snapshot, we just copy.
+
     return {
       frame,
       timeMs: frameLoop.time,
@@ -370,7 +394,7 @@ export function createGame(
         blend: calculateBlend(player, frameLoop.time),
         pickupIcon,
         damageAlpha: player?.client?.damage_alpha ?? 0,
-        damageIndicators: [],
+        damageIndicators,
 
         stats: player ? populatePlayerStats(player, levelClock.current.timeSeconds) : [],
         kick_angles: player?.client?.kick_angles ?? ZERO_VEC3,
@@ -591,6 +615,7 @@ export function createGame(
        ent.client.anim_priority = 0;
        ent.client.anim_end = 0;
        ent.frame = 0; // Stand
+       ent.client.damage_indicators = []; // Clear indicators
 
        // Reset Inventory for Deathmatch (or initial spawn)
        if (deathmatch) {

@@ -14,7 +14,7 @@ import {
 import { ArmorType, ARMOR_INFO, type RegularArmorState } from '../combat/armor.js';
 import { WeaponItem, ArmorItem, PowerupItem, PowerArmorItem, KeyItem, HealthItem, FlagItem } from './items.js';
 import { PlayerWeaponStates, createPlayerWeaponStates } from '../combat/weapons/state.js';
-import { Vec3, ZERO_VEC3 } from '@quake2ts/shared';
+import { Vec3, ZERO_VEC3, DamageIndicator } from '@quake2ts/shared';
 import { WeaponStateEnum } from '../combat/weapons/state.js';
 import type { Entity } from '../entities/entity.js';
 
@@ -145,6 +145,8 @@ export interface PlayerClient {
     // Damage feedback
     damage_alpha?: number;
     damage_blend?: [number, number, number];
+    damage_indicators?: DamageIndicator[];
+
     // Ammo cache for snapshot
     currentAmmoCount?: number;
     // Pending weapon switch
