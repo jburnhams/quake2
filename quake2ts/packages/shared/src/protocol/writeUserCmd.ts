@@ -23,7 +23,7 @@ export function writeUserCommand(writer: BinaryWriter, cmd: UserCommand): void {
   writer.writeShort(cmd.upmove);
 
   // impulse (byte)
-  writer.writeByte(0); // TODO: Impulse in UserCommand
+  writer.writeByte(cmd.impulse);
 
   // lightlevel (byte)
   writer.writeByte(0); // TODO: Lightlevel
