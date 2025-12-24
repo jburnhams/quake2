@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useTargetCamera, registerTargetCamera } from '../../../src/entities/camera.js';
 import { Entity, MoveType, Solid, ServerFlags } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
 

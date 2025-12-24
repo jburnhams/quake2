@@ -3,7 +3,7 @@ import { SP_monster_parasite } from '../../../src/entities/monsters/parasite.js'
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import * as gibsModule from '../../../src/entities/gibs.js';
 import * as damageModule from '../../../src/combat/damage.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('monster_parasite', () => {
   let parasite: Entity;

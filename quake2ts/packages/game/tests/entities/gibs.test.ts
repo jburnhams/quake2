@@ -4,7 +4,7 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { EntityEffects } from '../../src/entities/enums.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
 
 describe('Gibbing System', () => {

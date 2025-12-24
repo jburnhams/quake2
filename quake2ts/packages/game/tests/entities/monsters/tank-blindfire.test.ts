@@ -7,7 +7,7 @@ import { GameEngine } from '../../../src/engine.js';
 import { GameImports } from '../../../src/game.js';
 import { AIFlags, AttackState } from '../../../src/ai/constants.js';
 import { MASK_SHOT, Vec3 } from '@quake2ts/shared';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('monster_tank blindfire', () => {
   let tank: Entity;

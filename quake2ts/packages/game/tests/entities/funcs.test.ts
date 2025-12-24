@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { func_door_rotating } from '../../src/entities/funcs.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { lengthVec3 } from '@quake2ts/shared';
 import { createEntityFactory } from '@quake2ts/test-utils';

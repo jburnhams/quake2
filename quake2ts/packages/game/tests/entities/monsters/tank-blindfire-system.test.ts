@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_tank } from '../../../src/entities/monsters/tank.js';
 import { M_AdjustBlindfireTarget } from '../../../src/entities/monsters/common.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { AIFlags, AttackState } from '../../../src/ai/index.js';
 import { Vec3, MASK_SHOT } from '@quake2ts/shared';

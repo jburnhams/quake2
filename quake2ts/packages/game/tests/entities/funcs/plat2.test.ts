@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { registerFuncSpawns } from '../../../src/entities/funcs.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('func_plat2', () => {

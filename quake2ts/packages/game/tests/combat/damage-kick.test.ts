@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { player_pain, P_PlayerThink } from '../../src/entities/player.js';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { createPlayerInventory } from '../../src/inventory/playerInventory.js';

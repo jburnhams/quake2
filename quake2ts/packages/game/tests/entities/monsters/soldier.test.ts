@@ -12,7 +12,7 @@ import {
     monster_fire_blueblaster,
     monster_fire_dabeam
 } from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({

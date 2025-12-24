@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, EntityFlags, Solid } from '../../../src/entities/entity.js';
 import { registerTriggerFlashlight } from '../../../src/entities/triggers/flashlight.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { RenderFx } from '@quake2ts/shared';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 

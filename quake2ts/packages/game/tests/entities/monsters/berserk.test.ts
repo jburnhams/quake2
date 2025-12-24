@@ -3,7 +3,7 @@ import { SP_monster_berserk } from '../../../src/entities/monsters/berserk.js';
 import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('monster_berserk', () => {
   let context: any;

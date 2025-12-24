@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTrap, trapThink } from '../../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
 import { vec3 } from '@quake2ts/shared';
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFoodCubePickupEntity } from '../../../src/entities/items/index.js';
 import { Entity, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
 
 describe('Food Cube Item', () => {

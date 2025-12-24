@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createTestContext } from './test-helpers';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType } from '../src/entities/entity';
 import { Vec3, RandomGenerator, createRandomGenerator } from '@quake2ts/shared';
 import { monster_soldier } from '../src/entities/monsters/soldier';

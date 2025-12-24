@@ -88,11 +88,4 @@ describe('Player State Snapshot', () => {
 
         expect(snapshot.state.fov).toBe(110);
     });
-
-    // We will enable this test after implementing damage_alpha
-    // it('should report damageAlpha', () => {
-    //     player.client!.damage_alpha = 0.5;
-    //     const snapshot = game.frame({ deltaSeconds: 0.1, frame: 1 });
-    //     expect(snapshot.state.damageAlpha).toBe(0.5);
-    // });
 });

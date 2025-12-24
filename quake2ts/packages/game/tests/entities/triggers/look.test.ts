@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerTriggerLook } from '../../../src/entities/triggers/look.js';
 import { Entity, Solid, ServerFlags, MoveType } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { Vec3 } from '@quake2ts/shared';
 
