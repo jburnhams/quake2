@@ -37,6 +37,7 @@ export type DemoWorkerResponse =
   | { type: 'helpPath'; pos: Vec3 }
   | { type: 'muzzleFlash3'; ent: number; weapon: number }
   | { type: 'achievement'; id: string }
+  | { type: 'progress'; percent: number }
   | { type: 'complete' }
   | { type: 'error'; message: string };
 
@@ -142,16 +143,21 @@ ctx.onmessage = async (event: MessageEvent<DemoWorkerRequest>) => {
         parser.setProtocolVersion(protocolVersion);
       }
 
-      // Parse the whole stream
-      // NetworkMessageParser.parseMessage parses one message at a time.
-      // We need to loop until the stream is exhausted or an error occurs.
+      const totalBytes = stream.getLength();
+      let lastProgressTime = 0;
 
       while (stream.hasMore()) {
          parser.parseMessage();
-         // Optionally yield to event loop if needed, but in a worker it's fine to block
-         // unless we want to support cancellation or progress updates.
+
+         const now = Date.now();
+         if (now - lastProgressTime > 100) { // Update every 100ms
+            const percent = stream.getReadPosition() / totalBytes;
+            ctx.postMessage({ type: 'progress', percent });
+            lastProgressTime = now;
+         }
       }
 
+      ctx.postMessage({ type: 'progress', percent: 1.0 });
       ctx.postMessage({ type: 'complete' });
     } catch (e) {
       ctx.postMessage({ type: 'error', message: (e as Error).message });

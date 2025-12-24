@@ -1,9 +1,10 @@
 
 import { EntityState, RenderFx } from '@quake2ts/shared';
 import { RenderableEntity, Renderer } from '@quake2ts/engine';
-import { mat4 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { ClientConfigStrings } from './configStrings.js';
 import { ClientImports } from './index.js';
+import { lodRegistry } from './lod.js';
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -37,7 +38,8 @@ export function buildRenderableEntities(
     previousEntities: AnyEntityState[] | Map<number, AnyEntityState>,
     alpha: number,
     configStrings: ClientConfigStrings,
-    imports: ClientImports
+    imports: ClientImports,
+    cameraPosition?: { x: number, y: number, z: number } // Optional camera position for LOD
 ): RenderableEntity[] {
     const renderables: RenderableEntity[] = [];
     const assets = imports.engine.assets;
@@ -50,6 +52,8 @@ export function buildRenderableEntities(
         prevMap = new Map(previousEntities.map(e => [e.number, e]));
     }
 
+    const camVec = cameraPosition ? vec3.fromValues(cameraPosition.x, cameraPosition.y, cameraPosition.z) : null;
+
     for (const ent of latestEntities) {
         const prev = prevMap.get(ent.number) ?? ent;
 
@@ -59,11 +63,8 @@ export function buildRenderableEntities(
 
         if (modelIndex === undefined) continue;
 
-        const modelName = configStrings.getModelName(modelIndex);
+        let modelName = configStrings.getModelName(modelIndex);
         if (!modelName) continue;
-
-        const model = assets.getMd2Model(modelName) || assets.getMd3Model(modelName);
-        if (!model) continue;
 
         // Interpolate origin and angles
         const origin = {
@@ -71,6 +72,23 @@ export function buildRenderableEntities(
             y: lerp(prev.origin.y, ent.origin.y, alpha),
             z: lerp(prev.origin.z, ent.origin.z, alpha)
         };
+
+        // Check LOD
+        if (camVec) {
+            const dist = vec3.distance(camVec, vec3.fromValues(origin.x, origin.y, origin.z));
+            const lodModel = lodRegistry.getLodModel(modelName, dist);
+            if (lodModel) {
+                // If the LOD model is loaded, use it. Otherwise stick to base.
+                // We don't want to trigger sync loads or fail here.
+                // Assuming LOD models are preloaded or check existence.
+                if (assets.getMd2Model(lodModel) || assets.getMd3Model(lodModel)) {
+                    modelName = lodModel;
+                }
+            }
+        }
+
+        const model = assets.getMd2Model(modelName) || assets.getMd3Model(modelName);
+        if (!model) continue;
 
         const angles = {
             x: lerpAngle(prev.angles.x, ent.angles.x, alpha),
