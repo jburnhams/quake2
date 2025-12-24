@@ -44,5 +44,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: quake2ts/test-results/
+          path: quake2ts/packages/*/test-results/
           retention-days: 7
