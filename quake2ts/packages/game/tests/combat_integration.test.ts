@@ -4,10 +4,10 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Entity } from '../src/entities/entity.js';
-import { createGame, GameExports } from '../src/index.js';
+import { GameExports, createGame } from '../src/index.js';
 import { WeaponId, PowerupId, addPowerup } from '../src/inventory/playerInventory.js';
 import { fire } from '../src/combat/weapons/firing.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
   let game: GameExports;
@@ -26,7 +26,6 @@ describe('Combat and Items', () => {
     game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld();
     world = game.entities.world;
-    // player is spawned by spawnWorld in single player mode (default for createGame unless deathmatch: true)
     player = game.entities.find(e => e.classname === 'player')!;
   });
 
@@ -117,7 +116,4 @@ describe('Combat and Items', () => {
           expect(player.nextthink).toBeGreaterThan(0);
       });
   });
-
-  // Note: BFG in-flight laser tests are in tests/entities/bfg_ball.test.ts
-  // Those tests properly verify the think function that fires lasers during flight
 });

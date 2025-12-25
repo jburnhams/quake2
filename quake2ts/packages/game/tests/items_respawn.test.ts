@@ -20,7 +20,6 @@ describe('Item Respawn Logic', () => {
         const player = game.entities.spawn();
         Object.assign(player, createPlayerEntityFactory());
 
-
         // Simulate touch
         if (pickup.touch) {
             pickup.touch(pickup, player);

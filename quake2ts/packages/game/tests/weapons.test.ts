@@ -1,4 +1,3 @@
-
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { GameExports } from '../src';
 import { Entity } from '../src/entities/entity';
@@ -7,7 +6,6 @@ import { AmmoType } from '../src/inventory/ammo';
 import { DamageMod } from '../src/combat/damageMods';
 import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../src/combat/weapons/firing';
 import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles';
-import { fireRailgun } from '../src/combat/weapons/firing';
 import { T_Damage } from '../src/combat/damage';
 import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
@@ -52,7 +50,7 @@ describe('Weapon Tests', () => {
         });
 
         mockGame = {
-            ...engine, // Mix engine and game context for now as the functions expect GameExports which often includes engine stuff in tests
+            ...engine,
             ...imports,
             time: 100,
             deathmatch: false,
@@ -80,10 +78,15 @@ describe('Weapon Tests', () => {
                             [AmmoType.Rockets]: 100,
                             [AmmoType.Slugs]: 100,
                             [AmmoType.Grenades]: 100
-                        } as any, // Cast to any because the enum keys match but TS might be picky
+                        } as any,
                          caps: []
                     },
-                    ownedWeapons: new Set([WeaponId.Blaster, WeaponId.Shotgun, WeaponId.SuperShotgun, WeaponId.Machinegun, WeaponId.Chaingun, WeaponId.GrenadeLauncher, WeaponId.RocketLauncher, WeaponId.HyperBlaster, WeaponId.Railgun, WeaponId.BFG10K]),
+                    ownedWeapons: new Set([
+                        WeaponId.Blaster, WeaponId.Shotgun, WeaponId.SuperShotgun,
+                        WeaponId.Machinegun, WeaponId.Chaingun, WeaponId.GrenadeLauncher,
+                        WeaponId.RocketLauncher, WeaponId.HyperBlaster, WeaponId.Railgun,
+                        WeaponId.BFG10K
+                    ]),
                     powerups: new Map(),
                     keys: new Set(),
                     items: new Set()
@@ -99,7 +102,7 @@ describe('Weapon Tests', () => {
                 kick_angles: { x: 0, y: 0, z: 0 },
                 kick_origin: { x: 0, y: 0, z: 0 },
                 pm_flags: 0,
-                gun_frame: 0 // Legacy/Test mode
+                gun_frame: 0
             } as any
         }));
     });
@@ -201,11 +204,6 @@ describe('Weapon Tests', () => {
         it('should deal 8 damage in single player', () => {
              mockGame.deathmatch = false;
              // Ensure spinup count triggers shots
-             // We'll manually inject weapon state if needed or rely on default behavior
-             // fireChaingun implementation checks weaponState.lastFireTime.
-             // We need to ensure shots > 0.
-
-             // Mock trace hit
              const target = { takedamage: true };
              (mockGame.trace as any).mockReturnValue(createTraceMock({
                  fraction: 0.5,
@@ -237,7 +235,6 @@ describe('Weapon Tests', () => {
         it('should deal 6 damage in deathmatch', () => {
              mockGame.deathmatch = true;
 
-             // Mock trace hit
              const target = { takedamage: true };
              (mockGame.trace as any).mockReturnValue(createTraceMock({
                  fraction: 0.5,
@@ -266,9 +263,6 @@ describe('Weapon Tests', () => {
         });
 
         it('should burst 1->2->3 shots', () => {
-            // This requires maintaining state across calls.
-            // fireChaingun gets state from player.client.weaponStates
-
             // First shot (spinup 1) -> 1 shot + 1 source trace
             fireChaingun(mockGame, player);
             expect(mockGame.trace).toHaveBeenCalledTimes(2);
