@@ -134,9 +134,9 @@ function createVanillaDemoData(): ArrayBuffer {
   };
 
   // --- 1. ServerData (Vanilla) ---
-  // Protocol 34 svc_serverdata is 12.
-  // The parser translates initial cmd 12 to ServerCommand.serverdata (12).
-  writeByte(12); // svc_serverdata
+  // Protocol 34 svc_serverdata is 13 (Wire).
+  // The parser translates initial cmd 13 to ServerCommand.serverdata (12).
+  writeByte(13); // svc_serverdata
   writeLong(34); // Protocol 34
   writeLong(12345); // serverCount
   writeByte(0); // attractLoop (0=game, 1=demo)
@@ -145,10 +145,10 @@ function createVanillaDemoData(): ArrayBuffer {
   writeString("demo1"); // levelName
 
   // --- 2. ConfigString ---
-  // Protocol 34 svc_configstring is 13.
-  // ServerCommand.configstring is 15.
-  // Parser maps 13 -> 15.
-  writeByte(13); // svc_configstring (Wire 13)
+  // Protocol 34 svc_configstring is 14 (Wire).
+  // ServerCommand.configstring is 13.
+  // Parser maps 14 -> 13.
+  writeByte(14); // svc_configstring (Wire 14)
   writeShort(0); // index
   writeString("Vanilla v3.20");
 

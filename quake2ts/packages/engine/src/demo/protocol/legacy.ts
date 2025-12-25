@@ -18,20 +18,9 @@ export class LegacyProtocolHandler implements ProtocolHandler {
     }
 
     translateCommand(cmd: number): ServerCommand {
-        // Legacy Q2TS behavior (prior to fix)
-        // 7 = ServerData
-        // 12 = ServerData
-        if (cmd === 7) return ServerCommand.serverdata;
-        if (cmd === 12) return ServerCommand.serverdata;
-
-        // Protocol 25/26 mapping (cmd + 5)
-        // This was the old logic inside parser.ts
-        if (cmd === 0) return ServerCommand.bad;
-        const translated = cmd + 5;
-        if (translated >= ServerCommand.nop && translated <= ServerCommand.frame) {
-            return translated;
-        }
-        return ServerCommand.bad;
+        // Assume Identity mapping for Q2 legacy protocols (25-34)
+        // Previous cmd+5 logic was incorrect for Q2 Protocol 25/34 which share opcodes 0-20.
+        return cmd as ServerCommand;
     }
 
     parseServerData(stream: StreamingBuffer) {

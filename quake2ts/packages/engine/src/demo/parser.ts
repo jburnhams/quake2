@@ -159,7 +159,7 @@ export class NetworkMessageParser {
                 return;
             }
             // Treat anything else translating to BAD as an error
-            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos}`;
+            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos} (Protocol: ${this.getProtocolVersion()})`;
             if (this.strictMode) throw new Error(errorMsg);
             console.warn(errorMsg);
             this.errorCount++;
