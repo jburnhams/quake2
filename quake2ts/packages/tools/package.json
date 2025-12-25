@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/tools",
-  "version": "0.0.728",
+  "version": "0.0.729",
   "type": "module",
   "package": "private",
   "main": "./dist/cjs/index.cjs",
