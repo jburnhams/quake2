@@ -148,8 +148,6 @@ describe('AI Dodge', () => {
              monster_done_dodge(self);
              expect(self.monsterinfo.aiflags & AIFlags.Dodging).toBe(0);
              expect(self.monsterinfo.attack_state).toBe(AttackState.Straight);
-          } else {
-              // If not exported yet, we rely on implementation
           }
       });
   });

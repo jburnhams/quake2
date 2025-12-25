@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
-import { DeadFlag, Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { DeadFlag, Entity, Solid } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { ai_stand, ai_walk, ai_run } from '../../src/ai/movement.js';
 import { throwGibs } from '../../src/entities/gibs.js';
-import { createTestContext } from '@quake2ts/test-utils';
-import { createEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 // Mock ai functions
 vi.mock('../../src/ai/movement.js', async (importOriginal) => {
@@ -34,6 +32,8 @@ describe('monster_soldier', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Setup registry mock
         const spawnMap = new Map();
         registry = {
             register: (name, func) => spawnMap.set(name, func),
@@ -47,7 +47,8 @@ describe('monster_soldier', () => {
         const testContext = createTestContext();
         context = testContext.entities as unknown as EntitySystem;
 
-        entity = createMonsterEntityFactory('monster_soldier', {
+        // Use test-utils factory
+        const monsterData = createMonsterEntityFactory('monster_soldier', {
             number: 0,
             timestamp: 0,
             monsterinfo: {
@@ -55,8 +56,12 @@ describe('monster_soldier', () => {
                 last_sighting: { x: 0, y: 0, z: 0 },
                 trail_time: 0,
                 pausetime: 0,
-            }
+            } as any
         });
+
+        // We need a real entity instance that mimics spawning
+        entity = context.spawn();
+        Object.assign(entity, monsterData);
     });
 
     it('should set stand action that calls ai_stand', () => {
@@ -99,12 +104,15 @@ describe('monster_soldier', () => {
         spawnFunc(entity, { entities: context, health_multiplier: 1.0 });
 
         // Needs an enemy to run
-        entity.enemy = createPlayerEntityFactory({
+        const enemyData = createPlayerEntityFactory({
              health: 100,
              origin: { x: 100, y: 0, z: 0 },
              absmin: { x: 90, y: -10, z: -10 },
              absmax: { x: 110, y: 10, z: 10 }
         });
+        const enemy = context.spawn();
+        Object.assign(enemy, enemyData);
+        entity.enemy = enemy;
 
         // Switch to run
         entity.monsterinfo.run!(entity, context);

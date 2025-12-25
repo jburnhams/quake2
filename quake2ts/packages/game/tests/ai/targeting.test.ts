@@ -14,8 +14,10 @@ describe('ai_checkattack', () => {
     const testCtx = createTestContext();
     context = testCtx.entities;
 
+    // Use factory to create monster
     const monsterData = createMonsterEntityFactory('monster_test', {
-        origin: { x: 0, y: 0, z: 0 }
+        origin: { x: 0, y: 0, z: 0 },
+        inUse: true
     });
     self = context.spawn();
     Object.assign(self, monsterData);
@@ -27,8 +29,10 @@ describe('ai_checkattack', () => {
         attack_state: AttackState.Straight
     } as any;
 
+    // Use factory to create player enemy
     const playerData = createPlayerEntityFactory({
-        origin: { x: 100, y: 0, z: 0 }
+        origin: { x: 100, y: 0, z: 0 },
+        inUse: true
     });
     enemy = context.spawn();
     Object.assign(enemy, playerData);

@@ -3,15 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { GameExports } from '../../src/index.js';
 import { Entity } from '../../src/entities/entity.js';
-import { WeaponId } from '../../src/inventory/playerInventory.js';
+import { WeaponId, createPlayerInventory } from '../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../src/inventory/ammo.js';
-import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
 import { createPlayerWeaponStates, getWeaponState } from '../../src/combat/weapons/state.js';
 import * as damage from '../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createMockGameExports, createTraceMock } from '@quake2ts/test-utils';
+import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 vi.mock('../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
@@ -26,31 +25,42 @@ describe('Weapon Firing Logic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        player = new Entity(0);
-        Object.assign(player, {
+        // Use test-utils factories
+        const playerData = createPlayerEntityFactory({
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 },
             viewheight: 22,
             velocity: { ...ZERO_VEC3 },
-            client: {
-                inventory: createPlayerInventory(),
-                weaponStates: createPlayerWeaponStates(),
-            },
+            number: 0
         });
 
+        player = new Entity(0);
+        Object.assign(player, playerData);
+
+        // Ensure client side is set up with proper types
+        if (!player.client) {
+             player.client = {
+                 inventory: createPlayerInventory(),
+                 weaponStates: createPlayerWeaponStates(),
+                 ps: {} as any
+             } as any;
+        }
+
+        const targetData = createEntityFactory({
+             takedamage: true,
+             health: 100,
+             origin: { x: 100, y: 0, z: 0 },
+        });
         target1 = new Entity(1);
-        Object.assign(target1, {
-            takedamage: true,
-            health: 100,
-            origin: { x: 100, y: 0, z: 0 },
-        });
+        Object.assign(target1, targetData);
 
-        target2 = new Entity(2);
-        Object.assign(target2, {
+        const target2Data = createEntityFactory({
             takedamage: true,
             health: 100,
             origin: { x: 200, y: 0, z: 0 },
         });
+        target2 = new Entity(2);
+        Object.assign(target2, target2Data);
 
         // Use createMockGameExports from test-utils
         mockGame = createMockGameExports({

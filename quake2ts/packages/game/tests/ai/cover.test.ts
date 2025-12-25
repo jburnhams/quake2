@@ -15,11 +15,13 @@ describe('AI Cover Seeking', () => {
     const testCtx = createTestContext();
     context = testCtx.entities;
 
+    // Use factory for monster
     const monsterData = createMonsterEntityFactory('monster_soldier', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
+      inUse: true
     });
     monster = context.spawn();
     Object.assign(monster, monsterData);
@@ -31,20 +33,24 @@ describe('AI Cover Seeking', () => {
         run: vi.fn(),
     } as any;
 
+    // Use factory for player enemy
     const enemyData = createPlayerEntityFactory({
       origin: { x: 500, y: 0, z: 0 },
       viewheight: 22,
       flags: 0,
+      inUse: true
     });
     enemy = context.spawn();
     Object.assign(enemy, enemyData);
 
     monster.enemy = enemy;
 
+    // Create cover spots using generic factory
     const spot1Data = createEntityFactory({
       classname: 'point_combat',
       origin: { x: 0, y: 100, z: 0 },
       viewheight: 0,
+      inUse: true
     });
     coverSpot1 = context.spawn();
     Object.assign(coverSpot1, spot1Data);
@@ -54,13 +60,15 @@ describe('AI Cover Seeking', () => {
       classname: 'point_combat',
       origin: { x: 0, y: -100, z: 0 },
       viewheight: 0,
+      inUse: true
     });
     coverSpot2 = context.spawn();
     Object.assign(coverSpot2, spot2Data);
     coverSpot2.owner = null;
 
-    // Override finding logic to return our specific test cover spots
-    context.findByClassname = vi.fn().mockReturnValue([coverSpot1, coverSpot2]) as any;
+    // Mock findByClassname to return our test cover spots
+    // This allows findCover to iterate over potential cover locations
+    (context as any).findByClassname = vi.fn().mockReturnValue([coverSpot1, coverSpot2]);
   });
 
   it('should return false if no enemy', () => {
