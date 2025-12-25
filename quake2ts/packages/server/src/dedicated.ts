@@ -3,8 +3,9 @@ import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType
 import { Client, createClient, ClientState } from './client.js';
 import { ClientMessageParser } from './protocol.js';
 import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
-import { parseBsp } from '@quake2ts/engine';
+import { parseBsp, PakArchive } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity, writeRemoveEntity } from '@quake2ts/shared';
@@ -252,8 +253,49 @@ export class DedicatedServer implements GameEngine {
             this.sv.state = ServerState.Loading;
             this.sv.name = mapName;
 
-            const mapData = await fs.readFile(mapName);
-            const arrayBuffer = mapData.buffer.slice(mapData.byteOffset, mapData.byteOffset + mapData.byteLength);
+            let arrayBuffer: ArrayBuffer;
+
+            // Check if map exists on disk
+            try {
+                await fs.access(mapName);
+                const mapData = await fs.readFile(mapName);
+                arrayBuffer = mapData.buffer.slice(mapData.byteOffset, mapData.byteOffset + mapData.byteLength) as ArrayBuffer;
+            } catch (e) {
+                console.log(`Map file ${mapName} not found on disk, checking pak.pak...`);
+                // Check pak.pak
+                const possiblePakPaths = [
+                    path.resolve(process.cwd(), 'pak.pak'),
+                    path.resolve(process.cwd(), '../pak.pak'),
+                    path.resolve(process.cwd(), '../../pak.pak'),
+                    path.resolve('baseq2/pak.pak')
+                ];
+
+                let pakPath: string | null = null;
+                for (const p of possiblePakPaths) {
+                    try {
+                        await fs.access(p);
+                        pakPath = p;
+                        break;
+                    } catch {}
+                }
+
+                if (!pakPath) {
+                    throw new Error(`Map ${mapName} not found and pak.pak not found.`);
+                }
+
+                const pakBuffer = await fs.readFile(pakPath);
+                const pakArrayBuffer = pakBuffer.buffer.slice(pakBuffer.byteOffset, pakBuffer.byteOffset + pakBuffer.byteLength) as ArrayBuffer;
+                const pak = PakArchive.fromArrayBuffer('pak.pak', pakArrayBuffer);
+
+                const entry = pak.getEntry(mapName);
+                if (!entry) {
+                    throw new Error(`Map ${mapName} not found in pak.pak`);
+                }
+
+                const data = pak.readFile(mapName);
+                arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+            }
+
             const bspMap = parseBsp(arrayBuffer);
 
             // Convert BspMap to CollisionModel manually
