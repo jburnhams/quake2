@@ -132,7 +132,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         if (this.latestFrame) {
             this.previousFrame = this.latestFrame;
             // Store previous entities before updating
-            // We create a deep snapshot to ensure previous state is preserved exactly as it was
+            // TODO - We create a deep snapshot to ensure previous state is preserved exactly as it was but this is clearly inefficient each frame, need to fix so not needed or is optional for debug
             this.previousEntities = new Map();
             for (const [k, v] of this.entities) {
                 this.previousEntities.set(k, JSON.parse(JSON.stringify(v)));
@@ -144,7 +144,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         const packetEntities = frame.packetEntities;
         const newEntities = new Map<number, EntityState>();
 
-        // Fix: If delta frame, copy previous entities as starting state.
+        // TODO: If delta frame, then we deep copy copy previous entities as starting state but this is inefficient, perhaps just need to have debug plag to deep vs shallow 
         if (packetEntities.delta) {
              for (const [num, ent] of this.entities) {
                  newEntities.set(num, JSON.parse(JSON.stringify(ent)));
@@ -172,7 +172,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 source = createEmptyEntityState();
             }
 
-            // Apply delta
+            // TODO again another deep copy, should be behind a flag surely for debug only
             const final = JSON.parse(JSON.stringify(source!));
             applyEntityDelta(final, partial);
             newEntities.set(number, final);
@@ -216,7 +216,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         } else if (pos) {
              this.imports.engine.audio.positioned_sound(pos, soundNum, vol, attn);
         } else {
-             // Global sound?
+             // TODO Global sound?
              // this.imports.engine.audio.play_channel(...);
         }
     }
