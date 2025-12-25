@@ -56,11 +56,16 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
 
             const ghLink = 'https://github.com/jburnhams/quake2/blob/main/' + test.file + '#L' + test.line;
 
+            // Only show description if it is different from the title
+            const descriptionHtml = test.description && test.description !== test.testName
+                ? \`<div class="test-meta">\${test.description}</div>\`
+                : '';
+
             div.innerHTML = \`
                 <div class="test-header">
                     <div>
                         <div class="test-name">\${test.testName}</div>
-                        <div class="test-meta">\${test.description}</div>
+                        \${descriptionHtml}
                     </div>
                     <div class="test-meta">
                         <a href="\${ghLink}" target="_blank">View Code ↗</a>

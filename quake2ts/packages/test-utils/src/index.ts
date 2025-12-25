@@ -1,6 +1,7 @@
 // Export all test utilities
 export * from './shared/mocks.js';
 export * from './shared/bsp.js';
+export * from './shared/pak-loader.js';
 export * from './shared/math.js';
 export * from './shared/collision.js';
 export * from './shared/factories.js';
