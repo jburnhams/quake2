@@ -1,60 +1,91 @@
+// Removed top-level import to avoid side effects
+// import 'fake-indexeddb/auto';
+
 /**
- * Helper to create a storage-like object (localStorage/sessionStorage).
+ * Creates a mock LocalStorage implementation.
  */
-function createStorageMock(initialData: Record<string, string> = {}): Storage {
+export function createMockLocalStorage(initialData: Record<string, string> = {}): Storage {
   const store = new Map<string, string>(Object.entries(initialData));
 
   return {
-    getItem: (key: string) => store.get(key) || null,
-    setItem: (key: string, value: string) => store.set(key, value.toString()),
-    removeItem: (key: string) => store.delete(key),
-    clear: () => store.clear(),
-    key: (index: number) => Array.from(store.keys())[index] || null,
-    get length() { return store.size; }
+    getItem(key: string) {
+      return store.get(key) || null;
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    clear() {
+      store.clear();
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] || null;
+    },
+    get length() {
+      return store.size;
+    },
   } as Storage;
 }
 
 /**
- * Creates a mock LocalStorage instance.
- */
-export function createMockLocalStorage(initialData: Record<string, string> = {}): Storage {
-  return createStorageMock(initialData);
-}
-
-/**
- * Creates a mock SessionStorage instance.
+ * Creates a mock SessionStorage implementation (same as LocalStorage for testing).
  */
 export function createMockSessionStorage(initialData: Record<string, string> = {}): Storage {
-  return createStorageMock(initialData);
+  return createMockLocalStorage(initialData);
 }
 
 /**
  * Creates a mock IndexedDB factory.
- * Wraps fake-indexeddb.
+ * Requires fake-indexeddb to be installed.
  */
-export function createMockIndexedDB(databases?: IDBDatabase[]): IDBFactory {
-  // fake-indexeddb/auto already sets global.indexedDB
-  // If we need to return a specific instance or customized one, we can do it here.
-  // For now, return the global one or a fresh 'fake-indexeddb' instance if we were to import it directly.
-
-  // Since we imported 'fake-indexeddb/auto' in setup/browser.ts, global.indexedDB is already mocked.
-  // We can return that.
-  return global.indexedDB;
+export function createMockIndexedDB(): IDBFactory {
+    try {
+        // Use require to dynamically load if available, ensuring no global pollution unless requested here
+        // However, fake-indexeddb exports objects directly.
+        // If we want to return a factory without polling global:
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { indexedDB } = require('fake-indexeddb');
+        return indexedDB;
+    } catch (e) {
+        // Fallback to global if already set up
+        if (global.indexedDB) return global.indexedDB;
+        throw new Error('fake-indexeddb not found. Please install it to use createMockIndexedDB.');
+    }
 }
 
 export interface StorageScenario {
-  localStorage: Storage;
-  sessionStorage: Storage;
-  indexedDB: IDBFactory;
+    storage: Storage | IDBFactory;
+    type: 'local' | 'session' | 'indexed';
+    reset(): void;
 }
 
-/**
- * Creates a complete storage test scenario.
- */
-export function createStorageTestScenario(storageType: 'local' | 'session' | 'indexed' = 'local'): StorageScenario {
-  return {
-    localStorage: createMockLocalStorage(),
-    sessionStorage: createMockSessionStorage(),
-    indexedDB: createMockIndexedDB()
-  };
+export function createStorageTestScenario(type: 'local' | 'session' | 'indexed'): StorageScenario {
+    if (type === 'local') {
+        const storage = createMockLocalStorage();
+        return {
+            storage,
+            type,
+            reset: () => storage.clear()
+        };
+    } else if (type === 'session') {
+        const storage = createMockSessionStorage();
+        return {
+            storage,
+            type,
+            reset: () => storage.clear()
+        };
+    } else {
+        // IndexedDB
+        const storage = createMockIndexedDB();
+        return {
+            storage,
+            type,
+            reset: () => {
+                // Hard to reset global indexedDB easily without re-instantiating or deleting databases
+                // fake-indexeddb is usually reset by re-importing or using internal APIs if exposed
+            }
+        };
+    }
 }

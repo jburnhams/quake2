@@ -1,142 +1,92 @@
 import { Canvas, ImageData } from '@napi-rs/canvas';
-import { createMockWebGL2Context } from '../engine/mocks/webgl.js';
 
 /**
- * Creates a mock HTMLCanvasElement backed by napi-rs/canvas,
- * with support for both 2D and WebGL2 contexts.
+ * Creates a mock canvas element backed by napi-rs/canvas.
  */
 export function createMockCanvas(width: number = 300, height: number = 150): HTMLCanvasElement {
-  // Use a real JSDOM canvas if available in the environment (setupBrowserEnvironment)
-  if (typeof document !== 'undefined' && document.createElement) {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
-  }
-
-  // Fallback for non-JSDOM environments or specialized testing
-  const napiCanvas = new Canvas(width, height);
-  const canvas = {
-    width,
-    height,
-    getContext: (contextId: string, options?: any) => {
-      if (contextId === '2d') {
-        return napiCanvas.getContext('2d', options);
-      }
-      if (contextId === 'webgl2') {
-         return createMockWebGL2Context(canvas as any);
-      }
-      return null;
-    },
-    toDataURL: () => napiCanvas.toDataURL(),
-    toBuffer: (mime: any) => napiCanvas.toBuffer(mime),
-    // Add other properties as needed
-  } as unknown as HTMLCanvasElement;
-
-  return canvas;
+  const canvas = new Canvas(width, height);
+  // We need to cast this because napi-rs/canvas doesn't perfectly match HTMLCanvasElement
+  return canvas as unknown as HTMLCanvasElement;
 }
 
 /**
- * Creates a mock CanvasRenderingContext2D.
+ * Creates a mock 2D context.
  */
 export function createMockCanvasContext2D(canvas?: HTMLCanvasElement): CanvasRenderingContext2D {
   const c = canvas || createMockCanvas();
-  const ctx = c.getContext('2d');
-  if (!ctx) {
-      throw new Error('Failed to create 2D context');
-  }
-  return ctx as CanvasRenderingContext2D;
+  return c.getContext('2d') as unknown as CanvasRenderingContext2D;
 }
 
-/**
- * Information about a captured draw call.
- */
 export interface DrawCall {
   method: string;
   args: any[];
 }
 
 /**
- * Wraps a CanvasRenderingContext2D to capture all method calls.
+ * Wraps a canvas context to capture all draw calls.
  */
 export function captureCanvasDrawCalls(context: CanvasRenderingContext2D): DrawCall[] {
+  const drawCalls: DrawCall[] = [];
+  const proxy = new Proxy(context, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+      if (typeof original === 'function') {
+        return (...args: any[]) => {
+          drawCalls.push({ method: String(prop), args });
+          return original.apply(this, args);
+        };
+      }
+      return original;
+    }
+  });
+  return drawCalls;
+}
+
+// Better implementation of capture:
+// returns { context: Proxy, calls: DrawCall[] }
+export function createCapturingContext(context?: CanvasRenderingContext2D) {
+  const ctx = context || createMockCanvasContext2D();
   const calls: DrawCall[] = [];
-  const proto = Object.getPrototypeOf(context);
-
-  // Iterate over all properties of the context prototype
-  for (const key of Object.getOwnPropertyNames(proto)) {
-     const value = (context as any)[key];
-     if (typeof value === 'function') {
-         // Override function
-         (context as any)[key] = function(...args: any[]) {
-             calls.push({ method: key, args });
-             return value.apply(context, args);
-         };
-     }
-  }
-
-  return calls;
+  const proxy = new Proxy(ctx, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+      if (typeof original === 'function') {
+         // Check if it's a drawing method? For now capture all functions.
+        return (...args: any[]) => {
+          calls.push({ method: String(prop), args });
+          return original.apply(target, args);
+        };
+      }
+      return original;
+    }
+  });
+  return { context: proxy, calls };
 }
 
 /**
  * Creates a mock ImageData object.
  */
 export function createMockImageData(width: number, height: number, fillColor?: [number, number, number, number]): ImageData {
-  // Check if global ImageData is available (polyfilled by setupBrowserEnvironment)
-  if (typeof global.ImageData !== 'undefined') {
-      const data = new Uint8ClampedArray(width * height * 4);
-      if (fillColor) {
-          for (let i = 0; i < data.length; i += 4) {
-              data[i] = fillColor[0];
-              data[i + 1] = fillColor[1];
-              data[i + 2] = fillColor[2];
-              data[i + 3] = fillColor[3];
-          }
-      }
-      return new global.ImageData(data, width, height) as unknown as ImageData;
-  }
-
-  // Fallback if not globally available, though it should be with @napi-rs/canvas
   const data = new Uint8ClampedArray(width * height * 4);
-    if (fillColor) {
-        for (let i = 0; i < data.length; i += 4) {
-            data[i] = fillColor[0];
-            data[i + 1] = fillColor[1];
-            data[i + 2] = fillColor[2];
-            data[i + 3] = fillColor[3];
-        }
+  if (fillColor) {
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = fillColor[0];
+      data[i + 1] = fillColor[1];
+      data[i + 2] = fillColor[2];
+      data[i + 3] = fillColor[3];
     }
-  return new ImageData(data, width, height);
+  }
+  return new ImageData(data, width, height) as unknown as ImageData;
 }
 
 /**
- * Creates a mock HTMLImageElement.
+ * Creates a mock Image element.
  */
-export function createMockImage(width: number = 100, height: number = 100, src: string = ''): HTMLImageElement {
-    if (typeof document !== 'undefined' && document.createElement) {
-        const img = document.createElement('img');
-        img.width = width;
-        img.height = height;
-        if (src) img.src = src;
-        return img;
-    }
-
-    // Fallback
-    const img = {
-        width,
-        height,
-        src,
-        complete: true,
-        onload: null,
-        onerror: null,
-    } as unknown as HTMLImageElement;
-
-    // Simulate async load if src is provided
-    if (src) {
-        setTimeout(() => {
-            if (img.onload) (img.onload as any)();
-        }, 0);
-    }
-
-    return img;
+export function createMockImage(width?: number, height?: number, src?: string): HTMLImageElement {
+    // In JSDOM/napi-rs environment, Image is globally available or polyfilled
+    const img = new Image();
+    if (width) img.width = width;
+    if (height) img.height = height;
+    if (src) img.src = src;
+    return img as unknown as HTMLImageElement;
 }

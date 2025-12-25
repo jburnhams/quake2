@@ -1,5 +1,4 @@
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { createCanvas } from '@napi-rs/canvas';
+import { setupBrowserEnvironment, createMockCanvas } from '@quake2ts/test-utils';
 
 /**
  * Sets up a browser environment for testing using JSDOM and napi-rs/canvas.
@@ -24,7 +23,8 @@ export { createMockWebGL2Context, MockPointerLock, createMockPointerLock, create
 /**
  * Creates a headless canvas using napi-rs/canvas.
  * Prefer using test-utils factories in new code.
+ * @deprecated Use createMockCanvas from @quake2ts/test-utils instead
  */
 export function createHeadlessCanvas(width: number, height: number) {
-    return createCanvas(width, height);
+    return createMockCanvas(width, height) as any;
 }

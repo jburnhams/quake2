@@ -1,21 +1,20 @@
-/**
- * Setup helpers for Node.js environments.
- */
 export interface NodeSetupOptions {
-  // Add options as needed, e.g. mocking fs, process.env, etc.
+  enableConsoleMocks?: boolean;
 }
 
 /**
  * Sets up a Node.js environment for testing.
- * Currently a placeholder for future Node-specific setup.
+ * This should be called in your vitest.setup.ts file for non-browser packages.
  */
 export function setupNodeEnvironment(options: NodeSetupOptions = {}) {
-  // No-op for now, but provides a hook for future setup
+  const { enableConsoleMocks = true } = options;
+
+  if (enableConsoleMocks) {
+    // Mock console methods to reduce noise during tests if needed
+    // Currently relying on default behavior but can be extended
+  }
 }
 
-/**
- * Teardown for Node.js environment.
- */
 export function teardownNodeEnvironment() {
-  // No-op for now
+  // Restore console or other globals if modified
 }

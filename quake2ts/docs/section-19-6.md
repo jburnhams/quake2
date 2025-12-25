@@ -17,7 +17,7 @@ This section covers consolidation of test environment setup code, browser enviro
 
 ### 1. Consolidate Vitest Setup Files (MEDIUM PRIORITY)
 
-**Status:** Duplicate setup in client and engine packages
+**Status:** Completed
 **Dependencies:** Section 19-2 Task 1 (WebGL mocks)
 
 - [x] **1.1** Create `test-utils/src/setup/browser.ts` file
@@ -58,33 +58,28 @@ This section covers consolidation of test environment setup code, browser enviro
 
 ### 2. Migrate Browser Environment Utilities (MEDIUM PRIORITY)
 
-**Status:** Exists in tests package, needs consolidation
+**Status:** Completed
 **Dependencies:** Task 1
 
 - [x] **2.1** Audit `tests/src/setup.ts` for reusable utilities
-  - `setupBrowserEnvironment()` function (~100 lines)
-  - Mock WebGL2 context setup
-  - Pointer Lock API mock
-  - requestAnimationFrame/cancelAnimationFrame mocks
-  - Canvas API interception
+  - Found at `packages/engine/tests/integration/setup.ts`
+  - `setupBrowserEnvironment()` is already being imported from test-utils.
 
 - [x] **2.2** Migrate unique utilities from `tests/src/setup.ts` to `test-utils/src/setup/browser.ts`
-  - Avoid duplicating Task 1 work
-  - Focus on integration-specific setup
+  - `createHeadlessCanvas` logic is covered by `test-utils`'s `createMockCanvas`.
 
 - [x] **2.3** Update `tests/src/setup.ts` to re-export from test-utils
-  - Maintain backward compatibility
-  - Import from `@quake2ts/test-utils`
+  - `packages/engine/tests/integration/setup.ts` now re-exports from `test-utils`.
+  - `createHeadlessCanvas` is now a wrapper around `createMockCanvas`.
 
 - [x] **2.4** Update imports in `tests/src/` test files
-  - Verify no breaking changes
-  - Estimated files: ~5
+  - Verified usage in `engine` tests, no breaking changes.
 
 ---
 
 ### 3. Create Canvas/WebGL Test Helpers (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** Completed
 **Dependencies:** Section 19-2 Task 1 (WebGL mocks)
 
 - [x] **3.1** Create `test-utils/src/setup/canvas.ts` file
@@ -111,7 +106,7 @@ This section covers consolidation of test environment setup code, browser enviro
 
 ### 4. Create RAF/Timer Test Utilities (LOW PRIORITY)
 
-**Status:** Inline implementations exist
+**Status:** Completed
 **Dependencies:** None
 
 - [x] **4.1** Create `test-utils/src/setup/timing.ts` file
@@ -138,14 +133,13 @@ This section covers consolidation of test environment setup code, browser enviro
 
 ### 5. Migrate E2E Test Helpers (LOW PRIORITY)
 
-**Status:** Specialized E2E helpers exist
+**Status:** In Progress
 **Dependencies:** None
 
 - [x] **5.1** Audit `e2e-tests/helpers/testClient.ts` for reusable utilities
   - `launchBrowserClient()` - Playwright browser setup
   - `closeBrowser()` - Cleanup
   - `TestClient` interface
-  - **Note:** `e2e-tests` directory was not found in the expected location. The functionality is now provided by `test-utils`'s Playwright helpers.
 
 - [x] **5.2** Create `test-utils/src/e2e/playwright.ts` file
 
@@ -162,16 +156,15 @@ This section covers consolidation of test environment setup code, browser enviro
   - Signature: `captureGameState(page: Page): Promise<GameStateCapture>`
   - Capture current game state from browser
 
-- [x] **5.6** Update `e2e-tests/helpers/testClient.ts` to use test-utils
-  - Re-export from test-utils for backward compatibility
-  - Estimated files: ~8
-  - **Note:** Updated to import types and partially align with test-utils while preserving specific static server logic.
+- [ ] **5.6** Update `e2e-tests/helpers/testClient.ts` to use test-utils
+  - Re-exported `PlaywrightTestClient` from test-utils.
+  - Partial migration: `launchBrowserClient` logic retained locally due to static server dependency.
 
 ---
 
 ### 6. Create Storage Mock Utilities (LOW PRIORITY)
 
-**Status:** Basic mocks exist in setup
+**Status:** Completed
 **Dependencies:** None
 
 - [x] **6.1** Create `test-utils/src/setup/storage.ts` file
@@ -195,20 +188,20 @@ This section covers consolidation of test environment setup code, browser enviro
 
 ### 7. Create Audio Context Test Utilities (LOW PRIORITY)
 
-**Status:** Some audio mocks in Section 19-2
+**Status:** Not started
 **Dependencies:** Section 19-2 Task 2 (audio mocks)
 
-- [x] **7.1** Create `test-utils/src/setup/audio.ts` file
+- [ ] **7.1** Create `test-utils/src/setup/audio.ts` file
 
-- [x] **7.2** Add `setupMockAudioContext()` helper
+- [ ] **7.2** Add `setupMockAudioContext()` helper
   - Signature: `setupMockAudioContext(): void`
   - Replace global AudioContext with mock
 
-- [x] **7.3** Add `teardownMockAudioContext()` helper
+- [ ] **7.3** Add `teardownMockAudioContext()` helper
   - Signature: `teardownMockAudioContext(): void`
   - Restore original AudioContext
 
-- [x] **7.4** Add `captureAudioEvents()` helper
+- [ ] **7.4** Add `captureAudioEvents()` helper
   - Signature: `captureAudioEvents(context: AudioContext): AudioEvent[]`
   - Track audio operations for verification
 
@@ -219,16 +212,16 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Section 19-1 Task 2 (network mocks)
 
-- [x] **8.1** Create `test-utils/src/e2e/network.ts` file
+- [ ] **8.1** Create `test-utils/src/e2e/network.ts` file
 
-- [x] **8.2** Add `simulateNetworkCondition()` helper
+- [ ] **8.2** Add `simulateNetworkCondition()` helper
   - Signature: `simulateNetworkCondition(condition: 'good' | 'slow' | 'unstable' | 'offline'): NetworkSimulator`
   - Presets for common network conditions
 
-- [x] **8.3** Add `createCustomNetworkCondition()` helper
+- [ ] **8.3** Add `createCustomNetworkCondition()` helper
   - Signature: `createCustomNetworkCondition(latency: number, jitter: number, packetLoss: number): NetworkSimulator`
 
-- [x] **8.4** Add `throttleBandwidth()` helper
+- [ ] **8.4** Add `throttleBandwidth()` helper
   - Signature: `throttleBandwidth(bytesPerSecond: number): void`
   - For Playwright network throttling
 
@@ -239,17 +232,17 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Task 5 (E2E helpers)
 
-- [x] **9.1** Create `test-utils/src/e2e/visual.ts` file
+- [ ] **9.1** Create `test-utils/src/e2e/visual.ts` file
 
-- [x] **9.2** Add `captureGameScreenshot()` helper
+- [ ] **9.2** Add `captureGameScreenshot()` helper
   - Signature: `captureGameScreenshot(page: Page, name: string): Promise<Buffer>`
   - Capture and save game screenshot
 
-- [x] **9.3** Add `compareScreenshots()` helper
+- [ ] **9.3** Add `compareScreenshots()` helper
   - Signature: `compareScreenshots(baseline: Buffer, current: Buffer, threshold?: number): VisualDiff`
   - Pixel-by-pixel comparison
 
-- [x] **9.4** Add `createVisualTestScenario()` helper
+- [ ] **9.4** Add `createVisualTestScenario()` helper
   - Signature: `createVisualTestScenario(sceneName: string): VisualScenario`
   - Setup for visual regression testing
 
@@ -260,22 +253,22 @@ This section covers consolidation of test environment setup code, browser enviro
 **Status:** Not started
 **Dependencies:** Tasks 1-9
 
-- [x] **10.1** Add JSDoc comments to all setup/E2E utilities
+- [ ] **10.1** Add JSDoc comments to all setup/E2E utilities
   - Include usage examples for browser setup, E2E testing
 
-- [x] **10.2** Update `test-utils/README.md` with setup/E2E utilities section
+- [ ] **10.2** Update `test-utils/README.md` with setup/E2E utilities section
   - Document: browser setup, canvas mocks, RAF helpers, E2E utilities
 
-- [x] **10.3** Create migration guide for vitest.setup.ts files
+- [ ] **10.3** Create migration guide for vitest.setup.ts files
   - Document how to migrate existing setup files
 
-- [x] **10.4** Verify all setup/E2E utilities exported from `test-utils/src/index.ts`
+- [ ] **10.4** Verify all setup/E2E utilities exported from `test-utils/src/index.ts`
   - Organized by category: `setup/*`, `e2e/*`
 
-- [x] **10.5** Add TypeScript type exports
+- [ ] **10.5** Add TypeScript type exports
   - Export all setup options and E2E interfaces
 
-- [x] **10.6** Create example test files demonstrating setup usage
+- [ ] **10.6** Create example test files demonstrating setup usage
   - Example unit test with browser setup
   - Example E2E test with Playwright
   - Example integration test with full environment

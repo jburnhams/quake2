@@ -173,3 +173,6 @@ export async function closeBrowser(client: TestClient): Promise<void> {
       client.server.close();
   }
 }
+
+// Re-export from test-utils
+export { PlaywrightTestClient };
