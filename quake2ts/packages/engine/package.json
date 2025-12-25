@@ -37,7 +37,8 @@
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
-    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.52",
@@ -46,7 +47,6 @@
     "@types/node": "^25.0.3",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
-    "gl-matrix": "^3.4.4",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "tsup": "^8.1.0",

@@ -8,6 +8,27 @@ importers:
 
   .:
     dependencies:
+      '@quake2ts/client':
+        specifier: workspace:*
+        version: link:packages/client
+      '@quake2ts/engine':
+        specifier: workspace:*
+        version: link:packages/engine
+      '@quake2ts/game':
+        specifier: workspace:*
+        version: link:packages/game
+      '@quake2ts/server':
+        specifier: workspace:*
+        version: link:packages/server
+      '@quake2ts/shared':
+        specifier: workspace:*
+        version: link:packages/shared
+      '@quake2ts/test-utils':
+        specifier: workspace:*
+        version: link:packages/test-utils
+      '@quake2ts/tools':
+        specifier: workspace:*
+        version: link:packages/tools
       '@wasm-audio-decoders/ogg-vorbis':
         specifier: ^0.1.20
         version: 0.1.20
@@ -24,9 +45,6 @@ importers:
       '@playwright/test':
         specifier: 1.57.0
         version: 1.57.0
-      '@quake2ts/test-utils':
-        specifier: workspace:^
-        version: link:packages/test-utils
       '@types/node':
         specifier: ^24.10.1
         version: 24.10.1
@@ -100,6 +118,9 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
     devDependencies:
       '@quake2ts/test-utils':
         specifier: workspace:^
@@ -155,6 +176,9 @@ importers:
       '@wasm-audio-decoders/ogg-vorbis':
         specifier: ^0.1.20
         version: 0.1.20
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
     devDependencies:
       '@napi-rs/canvas':
         specifier: ^0.1.52
@@ -174,9 +198,6 @@ importers:
       fake-indexeddb:
         specifier: ^6.0.0
         version: 6.2.5
-      gl-matrix:
-        specifier: ^3.4.4
-        version: 3.4.4
       pixelmatch:
         specifier: ^7.1.0
         version: 7.1.0
@@ -201,6 +222,9 @@ importers:
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../shared
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
     devDependencies:
       '@quake2ts/test-utils':
         specifier: workspace:^
@@ -272,6 +296,9 @@ importers:
       '@types/pngjs':
         specifier: ^6.0.5
         version: 6.0.5
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
       pixelmatch:
         specifier: ^7.1.0
         version: 7.1.0
