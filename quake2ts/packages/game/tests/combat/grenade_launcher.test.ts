@@ -9,7 +9,7 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {
@@ -18,18 +18,25 @@ describe('Grenade Launcher', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        playerStart.angles = { x: 0, y: 0, z: 0 };
+        const playerStart = createEntityFactory({
+             classname: 'info_player_start',
+             origin: { x: 0, y: 0, z: 0 },
+             angles: { x: 0, y: 0, z: 0 }
+        });
+        game.entities.spawn = vi.fn().mockReturnValue(playerStart);
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
-        const player = game.entities.find(e => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({
-            weapons: [WeaponId.GrenadeLauncher],
-            ammo: { [AmmoType.Grenades]: 10 },
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.GrenadeLauncher],
+                    ammo: { [AmmoType.Grenades]: 10 },
+                }),
+                weaponStates: { states: new Map() }
+            } as any
         });
+        game.entities.find = vi.fn().mockReturnValue(player);
 
         fire(game, player, WeaponId.GrenadeLauncher);
 
@@ -43,20 +50,24 @@ describe('Grenade Launcher', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
+        const player = createPlayerEntityFactory({
+             origin: { x: 0, y: 0, z: 0 },
+        });
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
-        const target = game.entities.spawn();
-        target.health = 100;
-        target.takedamage = 1;
+        const target = createEntityFactory({
+             health: 100,
+             takedamage: true
+        });
         game.entities.finalizeSpawn(target);
 
-        projectiles.createGrenade(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
-        const grenade = game.entities.find(e => e.classname === 'grenade')!;
+        // We need to inject the grenade into the system or mock return value
+        const grenade = createEntityFactory({ classname: 'grenade' });
+        // Since createGrenade calls spawn, let's mock spawn to return our grenade
+        game.entities.spawn = vi.fn().mockReturnValue(grenade);
 
-        expect(grenade).toBeDefined();
+        projectiles.createGrenade(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 120, 600);
 
         // Simulate touch with target
         if (grenade.touch) {

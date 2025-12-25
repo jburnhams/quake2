@@ -8,9 +8,8 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
-import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createMonsterEntityFactory, createEntityFactory, createItemEntityFactory } from '@quake2ts/test-utils';
 import { ServerFlags, MoveType, Solid, DeadFlag } from '../../src/entities/entity.js';
 
 describe('BFG10K', () => {
@@ -65,9 +64,6 @@ describe('BFG10K', () => {
         });
 
         // Manually create BFG ball to test its touch function
-        // We need to make sure entities.spawn works if createBfgBall uses it
-        // but here we are calling createBfgBall directly which uses game.entities
-        // Let's mock game.entities.spawn to return a new entity
         const bfgBall = createEntityFactory({ classname: 'bfg blast' });
         game.entities.spawn = vi.fn().mockReturnValue(bfgBall);
 

@@ -50,13 +50,14 @@ describe('Weapon Pickup Entities', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
-        const player = createPlayerEntityFactory() as Entity;
-        player.client = {
-            ...createPlayerStateFactory(),
-            inventory: createPlayerInventory(),
-        } as any;
+        const player = createPlayerEntityFactory({
+            client: {
+                ...createPlayerStateFactory(),
+                inventory: createPlayerInventory(),
+            } as any
+        }) as Entity;
 
-        entity.touch(entity, player);
+        entity.touch!(entity, player);
 
         expect(player.client!.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
@@ -72,7 +73,7 @@ describe('Weapon Pickup Entities', () => {
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
         entity.solid = Solid.Not;
-        entity.think(entity);
+        entity.think!(entity, mockGame.entities);
 
         expect(entity.solid).toBe(Solid.Trigger);
     });
@@ -83,7 +84,7 @@ describe('Weapon Pickup Entities', () => {
 
         const nonPlayer = createEntityFactory() as Entity;
 
-        entity.touch(entity, nonPlayer);
+        entity.touch!(entity, nonPlayer);
 
         expect(mockGame.sound).not.toHaveBeenCalled();
     });

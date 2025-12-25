@@ -12,7 +12,7 @@ export * from './game/helpers/save.js';
 export * from './game/mocks/ai.js';
 export * from './game/mocks/combat.js';
 export * from './game/mocks/items.js';
-export * from './game/mocks.js';
+// Removed export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mockTransport.js';
 export * from './server/mockNetDriver.js';

@@ -8,7 +8,7 @@ import { fireEtfRifle } from '../../src/combat/weapons/rogue.js';
 import { AmmoType } from '../../src/inventory/ammo.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { createFlechette } from '../../src/entities/projectiles.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
@@ -28,9 +28,6 @@ describe('Rogue Weapons: ETF Rifle', () => {
     // Use a simpler trace for default
     mockImports.trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null });
 
-    // We need to ensure game time is controllable or fixed
-    // createGame uses internal clock initialized to 0
-
     const gameExports = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
 
     // Partially mock game entities system to spy on spawn
@@ -38,7 +35,7 @@ describe('Rogue Weapons: ETF Rifle', () => {
       ...gameExports,
       entities: {
         ...gameExports.entities,
-        spawn: vi.fn().mockImplementation(() => new Entity(0)),
+        spawn: vi.fn().mockImplementation(() => createEntityFactory({ number: 0 })),
         free: vi.fn(),
         modelIndex: vi.fn().mockReturnValue(1),
         finalizeSpawn: vi.fn(),
@@ -52,28 +49,29 @@ describe('Rogue Weapons: ETF Rifle', () => {
     game.trace = mockImports.trace;
     game.multicast = mockImports.multicast;
 
-    player = new Entity(1);
-    player.origin = { x: 100, y: 100, z: 100 };
-    player.angles = { x: 0, y: 90, z: 0 }; // Facing North (Y+)
-    player.viewheight = 22;
-    player.client = {
-      inventory: createPlayerInventory(),
-      weaponStates: createPlayerWeaponStates(),
-      buttons: 0,
-      pm_type: 0,
-      pm_time: 0,
-      pm_flags: 0,
-      gun_frame: 0,
-      rdflags: 0,
-      fov: 90
-    };
+    player = createPlayerEntityFactory({
+      origin: { x: 100, y: 100, z: 100 },
+      angles: { x: 0, y: 90, z: 0 }, // Facing North (Y+)
+      viewheight: 22,
+      client: {
+        inventory: createPlayerInventory(),
+        weaponStates: createPlayerWeaponStates(),
+        buttons: 0,
+        pm_type: 0,
+        pm_time: 0,
+        pm_flags: 0,
+        gun_frame: 0,
+        rdflags: 0,
+        fov: 90
+      } as any
+    }) as Entity;
   });
 
   it('should fire a flechette projectile', () => {
     player.client!.inventory.ammo.counts[AmmoType.Flechettes] = 10;
 
     // Setup spy on createFlechette via sys.spawn
-    const flechette = new Entity(2);
+    const flechette = createEntityFactory({ number: 2 }) as Entity;
     sys.spawn = vi.fn().mockReturnValue(flechette);
 
     const start = { x: 100, y: 100, z: 122 };
@@ -96,14 +94,14 @@ describe('Rogue Weapons: ETF Rifle', () => {
   it('should apply freeze effect on impact with monster', () => {
     sys.multicast = game.multicast;
 
-    const flechette = new Entity(2);
+    const flechette = createEntityFactory({ number: 2 }) as Entity;
     sys.spawn = vi.fn().mockReturnValue(flechette);
 
     const forward = { x: 0, y: 1, z: 0 };
     createFlechette(sys, player, player.origin, forward, 10, 900);
 
     // Simulate touch with a monster
-    const monster = new Entity(3);
+    const monster = createEntityFactory({ number: 3 }) as Entity;
     monster.takedamage = true;
     monster.health = 100;
     monster.monsterinfo = {
@@ -112,30 +110,15 @@ describe('Rogue Weapons: ETF Rifle', () => {
         last_sighting: ZERO_VEC3,
         trail_time: 0,
         pausetime: 0
-    };
+    } as any;
 
     const touch = flechette.touch!;
     touch(flechette, monster, null, null);
 
-    expect(monster.monsterinfo.freeze_time).toBeGreaterThan(0);
+    expect(monster.monsterinfo!.freeze_time).toBeGreaterThan(0);
 
     // Also verify sys.free was called on flechette
     expect(sys.free).toHaveBeenCalledWith(flechette);
-  });
-
-  it('should shatter frozen monster on damage', () => {
-     sys.multicast = game.multicast;
-
-     const monster = new Entity(3);
-     monster.takedamage = true;
-     monster.health = 100;
-     monster.monsterinfo = {
-        freeze_time: 20, // Future time
-        aiflags: 0,
-        last_sighting: ZERO_VEC3,
-        trail_time: 0,
-        pausetime: 0
-    };
   });
 });
 
@@ -156,7 +139,7 @@ describe('T_Damage Frozen Shatter', () => {
     });
 
     it('should instantly kill frozen entity', () => {
-        const monster = new Entity(1);
+        const monster = createEntityFactory({ number: 1 }) as Entity;
         monster.takedamage = true;
         monster.health = 100;
         monster.monsterinfo = {
@@ -165,7 +148,7 @@ describe('T_Damage Frozen Shatter', () => {
             last_sighting: ZERO_VEC3,
             trail_time: 0,
             pausetime: 0
-        };
+        } as any;
 
         const result = T_Damage(
             monster as any,
