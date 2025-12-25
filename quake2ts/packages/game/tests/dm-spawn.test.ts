@@ -3,8 +3,7 @@ import { EntitySystem } from '../src/entities/system.js';
 import { Entity } from '../src/entities/entity.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createRandomGenerator } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createPlayerStateFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let entities: EntitySystem;
@@ -35,8 +34,10 @@ describe('Deathmatch Spawn', () => {
         }));
 
         const spots = entities.findByClassname('info_player_deathmatch');
-        const index = Math.floor(0.5 * spots.length);
-        const expected = spots[index];
+        // If frandom returns 0.5, index = floor(0.5 * 2) = 1.
+        // But findByClassname order might depend on internal implementation.
+        // Assuming push order is preserved.
+        const expected = spots[1];
 
         const selected = SelectDeathmatchSpawnPoint(entities);
         expect(selected).toBe(expected);
@@ -75,24 +76,6 @@ describe('GameExports Respawn', () => {
         // Create a player using factories
         const player = game.entities.spawn();
         Object.assign(player, createPlayerEntityFactory({
-            client: {
-                inventory: {
-                    ammo: { counts: [], caps: [] },
-                    ownedWeapons: new Set(),
-                    powerups: new Map(),
-                    keys: new Set(),
-                    items: new Set()
-                },
-                weaponStates: new Map(), // Initialize empty map instead of empty object or array
-                pers: {} as any,
-                buttons: 0,
-                pm_type: 0,
-                pm_time: 0,
-                pm_flags: 0,
-                gun_frame: 0,
-                rdflags: 0,
-                fov: 90
-            } as any, // Cast to any because the interface might be strict about some missing properties we don't need for this test
             health: 0,
             deadflag: 2 // Dead
         }));
