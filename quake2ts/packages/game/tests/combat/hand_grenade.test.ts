@@ -12,7 +12,6 @@ import {
     FRAME_GRENADE_THROW_FIRST
 } from '../../src/combat/weapons/frames.js';
 import { fireHandGrenade } from '../../src/combat/weapons/firing.js';
-import { createMockGameExports, createPlayerEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 
 describe('Hand Grenade Combat Logic', () => {
     let sys: EntitySystem;
@@ -20,68 +19,63 @@ describe('Hand Grenade Combat Logic', () => {
     let player: Entity;
 
     beforeEach(() => {
-        // Create Mock GameExports
-        game = createMockGameExports({
+        // Mock EntitySystem inside GameExports
+        const entitiesMock = {
+            spawn: vi.fn(() => new Entity(2)),
+            sound: vi.fn(),
+            timeSeconds: 10.0,
+            modelIndex: vi.fn(() => 1),
+            linkentity: vi.fn(),
+            scheduleThink: vi.fn(),
+            finalizeSpawn: vi.fn(),
+        } as unknown as EntitySystem;
+
+        // Mock GameExports
+        game = {
             time: 10.0,
             trace: vi.fn().mockReturnValue({
                 fraction: 1.0,
                 endpos: { x: 0, y: 0, z: 0 },
                 ent: null
             }),
-            entities: {
-                spawn: vi.fn(() => new Entity(2)),
-                sound: vi.fn(),
-                timeSeconds: 10.0,
-                modelIndex: vi.fn(() => 1),
-                linkentity: vi.fn(),
-                scheduleThink: vi.fn(),
-                finalizeSpawn: vi.fn(),
-                // Add required properties for internal logic if needed,
-                // but for this test these mocks seem sufficient based on original code.
-            } as unknown as EntitySystem
-        });
+            multicast: vi.fn(),
+            sound: vi.fn(),
+            random: {
+                crandom: () => 0.5,
+                frandom: () => 0.5,
+                irandom: () => 100,
+            },
+            entities: entitiesMock, // Pass the entities mock here
+        } as unknown as GameExports;
 
-        // Helper sys alias
-        sys = game.entities as unknown as EntitySystem;
+        // Helper sys (same as game.entities for consistency in expectation checks if needed)
+        sys = entitiesMock;
 
         // Mock Player
-        // We use createPlayerEntityFactory and then merge/assign specific properties.
-        const playerBase = createPlayerEntityFactory({
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 }
-        });
-
-        // We need to cast playerBase back to Entity or use it as base.
-        // Since createPlayerEntityFactory returns Partial<Entity>, we cast it or use Object.assign on a new Entity if strictness matters.
-        // But here we can just treat it as Entity for the test context.
-        player = playerBase as Entity;
-        player.index = 1;
-
-        // Populate client state
-        player.client = {
-            ...createPlayerStateFactory({
+        player = {
+            client: {
                 weaponstate: WeaponStateEnum.WEAPON_READY,
                 gun_frame: 0,
-                // weapon_think_time: 0, // Not in PlayerState interface? Check if it is on PlayerClient.
-                // buttons: 0,
-                // pm_flags: 0,
-            }),
-            weapon_think_time: 0,
-            buttons: 0,
-            inventory: {
-                ammo: {
-                    counts: {
-                        [AmmoType.Grenades]: 5,
+                weapon_think_time: 0,
+                buttons: 0,
+                pm_flags: 0, // Mock pm_flags for animation check
+                inventory: {
+                    ammo: {
+                        counts: {
+                            [AmmoType.Grenades]: 5,
+                        },
                     },
+                    powerups: new Map(),
+                    weaponStates: {
+                        [WeaponId.HandGrenade]: { lastFireTime: 0 }
+                    }
                 },
-                powerups: new Map(),
-                weaponStates: {
-                    [WeaponId.HandGrenade]: { lastFireTime: 0 }
-                }
+                angles: { x: 0, y: 0, z: 0 },
             },
-            grenade_time: 0,
-            grenade_blew_up: false
-        } as any; // Cast to any or PlayerClient if imports allow
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 },
+            index: 1,
+        } as unknown as Entity;
     });
 
     it('should start throw sequence on fire button', () => {

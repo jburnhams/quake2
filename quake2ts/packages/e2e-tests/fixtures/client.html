@@ -12,14 +12,6 @@
     <button id="disconnectBtn" onclick="doDisconnect()">Disconnect</button>
 
     <script>
-        // Capture logs to DOM
-        const oldLog = console.log;
-        console.log = function(msg) {
-            oldLog(msg);
-            const logs = document.getElementById('logs');
-            if (logs) logs.innerHTML += msg + '<br>';
-        };
-
         // Removed ES module import as it fails in this simple setup
 
         // Since we cannot easily load the real module system without bundling or a complex dev server in this test environment,
@@ -108,9 +100,6 @@
                     document.getElementById('status').textContent = 'Connected';
                     console.log('Connected');
 
-                    // Handshake
-                    this.sendStringCmd('connect \\name\\TestPlayer');
-
                     // Start command loop
                     this.startLoop();
                 };
@@ -121,12 +110,11 @@
                     // Process via NetChan to update acks
                     this.netchan.process(event.data);
 
-                    // Minimal heuristic: If we receive a packet > 40 bytes, it's likely containing configstrings/serverdata
+                    // Minimal heuristic: If we receive a packet > 100 bytes, it's likely containing configstrings/serverdata
                     // A keepalive or empty packet is small (header only ~10 bytes).
-                    if (event.data.byteLength > 40) {
+                    if (event.data.byteLength > 100) {
                          console.log('Handshake Data Received');
                          document.getElementById('status').textContent = 'Active';
-                         this.sendStringCmd('begin');
                     }
                 };
 
@@ -144,24 +132,6 @@
                 return this.connected;
             }
 
-            sendStringCmd(str) {
-                if (!this.connected) return;
-
-                // stringcmd = 4
-                // [4] [string bytes] [0]
-
-                const enc = new TextEncoder();
-                const strBytes = enc.encode(str);
-                const buffer = new ArrayBuffer(1 + strBytes.length + 1);
-                const view = new DataView(buffer);
-
-                view.setUint8(0, 4); // clc_stringcmd
-                new Uint8Array(buffer, 1).set(strBytes);
-                view.setUint8(1 + strBytes.length, 0); // null terminator
-
-                this.netchan.transmit(new Uint8Array(buffer));
-            }
-
             sendCommand(cmd) {
                 if (!this.connected) return;
 
@@ -173,7 +143,7 @@
                 // clc_move = 3
 
                 // Protocol:
-                // clc_move (2) : byte (Matches ClientCommand.move in ops.ts)
+                // clc_move (3) : byte
                 // checksum : byte
                 // lastFrame : int32 (4 bytes)
                 // ... UserCommand struct ...
@@ -182,15 +152,13 @@
                 const view = new DataView(buffer);
                 let offset = 0;
 
-                view.setUint8(offset++, 2); // clc_move
+                view.setUint8(offset++, 3); // clc_move
                 view.setUint8(offset++, 0); // checksum (0 for now, server warns but processes)
                 view.setUint32(offset, 0, true); // lastFrame
                 offset += 4;
 
                 // UserCommand struct (partial/dummy)
-                // We need exactly 16 bytes for the UserCmd body (msec...lightlevel)
-                // msec(1)+buttons(1)+angles(6)+fwd(2)+side(2)+up(2)+impulse(1)+light(1) = 16.
-                offset += 16;
+                offset += 32; // Skip 32 bytes of zeros (valid dummy command + padding)
 
                 const packet = new Uint8Array(buffer, 0, offset);
                 // Pass the VIEW (Uint8Array), not the buffer, so byteLength is correct.

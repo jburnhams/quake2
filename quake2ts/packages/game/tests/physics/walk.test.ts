@@ -4,7 +4,6 @@ import { runStep } from '../../src/physics/movement.js';
 import { GameImports } from '../../src/imports.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createMockGameExports, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Physics: runStep', () => {
   let ent: Entity;
@@ -13,21 +12,30 @@ describe('Physics: runStep', () => {
   const frametime = 0.1;
 
   beforeEach(() => {
-    // We use createMockGameExports to generate imports and system mock implicitly,
-    // but runStep takes imports directly.
-    // Let's just mock imports since runStep is a low level physics function.
-    // Or we can use createGameImportsAndEngine logic from test-utils.
+    ent = new Entity(1);
+    ent.movetype = MoveType.Step;
+    ent.gravity = 1;
+    ent.velocity = { x: 0, y: 0, z: 0 };
+    ent.origin = { x: 0, y: 0, z: 100 };
+    ent.mins = { x: -16, y: -16, z: -24 };
+    ent.maxs = { x: 16, y: 16, z: 32 };
+    ent.flags = 0;
 
     imports = {
-      trace: vi.fn().mockReturnValue(createTraceMock({
+      trace: vi.fn().mockReturnValue({
         fraction: 1.0,
         endpos: { x: 0, y: 0, z: 0 },
-      })),
+        plane: null,
+        allsolid: false,
+        startsolid: false,
+        ent: null
+      }),
       pointcontents: vi.fn().mockReturnValue(0),
       linkentity: vi.fn(),
+      areaEdicts: vi.fn().mockReturnValue(null), // Default null for fallback
       multicast: vi.fn(),
       unicast: vi.fn(),
-    } as any;
+    };
 
     system = {
       // Mocking trace to delegate to imports.trace, which is what EntitySystem does
@@ -36,17 +44,6 @@ describe('Physics: runStep', () => {
       forEachEntity: vi.fn(),
       findInBox: vi.fn().mockReturnValue([]), // Mock findInBox
     } as unknown as EntitySystem;
-
-    ent = createEntityFactory({
-        index: 1,
-        movetype: MoveType.Step,
-        gravity: 1,
-        velocity: { x: 0, y: 0, z: 0 },
-        origin: { x: 0, y: 0, z: 100 },
-        mins: { x: -16, y: -16, z: -24 },
-        maxs: { x: 16, y: 16, z: 32 },
-        flags: 0,
-    }) as Entity;
   });
 
   it('should apply gravity if not on ground and not flying/swimming', () => {
@@ -54,10 +51,11 @@ describe('Physics: runStep', () => {
     const gravity = { x: 0, y: 0, z: -800 };
 
     // Mock trace to show no collision (falling through air)
-    (imports.trace as any).mockReturnValue(createTraceMock({
+    (imports.trace as any).mockReturnValue({
         fraction: 1.0,
         endpos: { x: 0, y: 0, z: 100 + (-800 * frametime * frametime) }, // roughly
-    }));
+        plane: null
+    });
 
     runStep(ent, system, imports, gravity, frametime);
 
@@ -88,9 +86,10 @@ describe('Physics: runStep', () => {
     ent.velocity = { x: 100, y: 0, z: 0 };
 
     // Mock trace to allow full movement
-    (imports.trace as any).mockImplementation((start, mins, maxs, end) => createTraceMock({
+    (imports.trace as any).mockImplementation((start, mins, maxs, end) => ({
         fraction: 1.0,
         endpos: end,
+        plane: null
     }));
 
     runStep(ent, system, imports, gravity, frametime);
@@ -107,11 +106,13 @@ describe('Physics: runStep', () => {
       ent.origin = { x: 0, y: 0, z: 10 };
 
       // Mock hitting the floor
-      (imports.trace as any).mockReturnValue(createTraceMock({
+      (imports.trace as any).mockReturnValue({
           fraction: 0.5, // Hit halfway
           endpos: { x: 0, y: 0, z: 0 },
-          plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }, // Floor plane
-      }));
+          plane: { normal: { x: 0, y: 0, z: 1 } }, // Floor plane
+          allsolid: false,
+          startsolid: false
+      });
 
       runStep(ent, system, imports, gravity, frametime);
 
@@ -119,5 +120,8 @@ describe('Physics: runStep', () => {
       // clipVelocityVec3 with normal (0,0,1) and vel (0,0,-200) -> 0
       // But runStep logic typically adds gravity first.
       // If we implement it like SV_Physics_Step, it handles clipping.
+
+      // Let's see implementation details.
+      // Expectation depends on implementation.
   });
 });

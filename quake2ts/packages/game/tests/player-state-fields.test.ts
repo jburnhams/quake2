@@ -1,14 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../src/index';
+import { createGame, GameImports } from '../src/index';
+import { Entity, EntitySystem } from '../src/entities/system';
+import { Vec3 } from '@quake2ts/shared';
+import { EngineHost } from '@quake2ts/engine';
 import { WeaponId } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Player State Exports', () => {
   it('should expose correct player state fields in snapshot', () => {
-    // Setup minimal game using createGameImportsAndEngine
-    const { imports, engine } = createGameImportsAndEngine();
+    // Setup minimal game
+    const imports: Partial<GameImports> = {
+      trace: vi.fn(),
+      pointcontents: vi.fn(),
+    };
+    const engine: EngineHost = {
+      modelIndex: vi.fn(),
+      soundIndex: vi.fn(),
+    } as any;
 
-    const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+    const game = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld(); // Should spawn player in default mode
 
     // Manually set some player state

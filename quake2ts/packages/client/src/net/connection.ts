@@ -18,7 +18,6 @@ import {
   EntityState,
   FrameData,
   createEmptyEntityState,
-  applyEntityDelta,
   PROTOCOL_VERSION_RERELEASE,
   DemoRecorder,
   FogData,
@@ -366,13 +365,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     }
 
     for (const ent of packetEntities.entities) {
-        let current = this.entities.get(ent.number);
-        if (!current) {
-            current = createEmptyEntityState();
-            current.number = ent.number;
-            this.entities.set(ent.number, current);
-        }
-        applyEntityDelta(current, ent);
+        this.entities.set(ent.number, ent);
     }
 
     if (this.prediction && frame.playerState) {

@@ -93,8 +93,7 @@ export function createMockGameExports(overrides?: Partial<GameExports>): GameExp
             onMapUnload: vi.fn(),
             onPlayerSpawn: vi.fn(),
             onPlayerDeath: vi.fn(),
-            register: vi.fn(),
-            onPickup: vi.fn(), // Added onPickup mock
+            register: vi.fn()
         } as any,
         setSpectator: vi.fn(),
         registerEntitySpawn: vi.fn(),

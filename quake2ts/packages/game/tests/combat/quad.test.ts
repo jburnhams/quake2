@@ -6,7 +6,6 @@ import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { createMockGameExports, createPlayerEntityFactory, createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 
 describe('Quad Damage', () => {
     let attacker: Entity;
@@ -14,48 +13,45 @@ describe('Quad Damage', () => {
     let game: GameExports;
 
     beforeEach(() => {
-        game = createMockGameExports({
-            time: 10,
-            multicast: vi.fn()
-        });
+        attacker = {
+            classname: 'player',
+            takedamage: true,
+            health: 100,
+            origin: { x: 0, y: 0, z: 0 },
+            velocity: { x: 0, y: 0, z: 0 },
+            client: {
+                inventory: {
+                    ammo: { counts: [] },
+                    items: new Set(),
+                    ownedWeapons: new Set(),
+                },
+                weaponStates: [],
+                quad_time: 0,
+                double_time: 0
+            }
+        } as unknown as Entity;
 
-        // Use createPlayerEntityFactory for attacker
-        attacker = createPlayerEntityFactory({
-             origin: { x: 0, y: 0, z: 0 },
-             velocity: { x: 0, y: 0, z: 0 }
-        }) as Entity;
-
-        // Populate minimal client state for quad logic
-        attacker.client = {
-            ...createPlayerStateFactory(),
-            inventory: {
-                ammo: { counts: [] },
-                items: new Set(),
-                ownedWeapons: new Set(),
-            } as any,
-            weaponStates: [],
-            quad_time: 0,
-            double_time: 0
-        } as any;
-
-        // Use createEntityFactory for target
-        target = createEntityFactory({
+        target = {
             classname: 'monster_soldier',
             takedamage: true,
             health: 100,
             origin: { x: 100, y: 0, z: 0 },
             velocity: { x: 0, y: 0, z: 0 },
-        }) as Entity;
+            pain: vi.fn(),
+            die: vi.fn()
+        } as unknown as Entity;
 
-        target.pain = vi.fn();
-        target.die = vi.fn();
+        game = {
+            time: 10,
+            multicast: vi.fn()
+        } as unknown as GameExports;
     });
 
     it('should deal normal damage when no powerups are active', () => {
         const result = T_Damage(
-            target,
-            attacker,
-            attacker,
+            target as any,
+            attacker as any,
+            attacker as any,
             { x: 1, y: 0, z: 0 },
             target.origin,
             ZERO_VEC3,
@@ -76,9 +72,9 @@ describe('Quad Damage', () => {
         }
 
         const result = T_Damage(
-            target,
-            attacker,
-            attacker,
+            target as any,
+            attacker as any,
+            attacker as any,
             { x: 1, y: 0, z: 0 },
             target.origin,
             ZERO_VEC3,
@@ -91,6 +87,7 @@ describe('Quad Damage', () => {
         );
 
         expect(result?.take).toBe(40);
+        // Also check knockback if possible, but T_Damage returns "knocked" vector
         expect(result?.knocked.x).not.toBe(0);
     });
 
@@ -100,9 +97,9 @@ describe('Quad Damage', () => {
         }
 
         const result = T_Damage(
-            target,
-            attacker,
-            attacker,
+            target as any,
+            attacker as any,
+            attacker as any,
             { x: 1, y: 0, z: 0 },
             target.origin,
             ZERO_VEC3,
@@ -124,9 +121,9 @@ describe('Quad Damage', () => {
         }
 
         const result = T_Damage(
-            target,
-            attacker,
-            attacker,
+            target as any,
+            attacker as any,
+            attacker as any,
             { x: 1, y: 0, z: 0 },
             target.origin,
             ZERO_VEC3,

@@ -2,9 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTrap, trapThink } from '../../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext, createMockGameExports, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { vec3 } from '@quake2ts/shared';
 
 describe('Trap Projectile', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -12,20 +12,22 @@ describe('Trap Projectile', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        // Use createMockGameExports to ensure cleaner game object setup, reusing context entities mock
         const sys = context.entities;
 
-        game = createMockGameExports({
+        game = {
             sound: sys.engine.sound,
             centerprintf: sys.engine.centerprintf,
             time: 100,
             deathmatch: true,
-            entities: sys as unknown as EntitySystem
-        });
+            entities: sys
+        } as unknown as GameExports;
+
+        // Mock sys methods if needed override
+        // sys.spawn is already mocked in createTestContext
     });
 
     it('should create a trap projectile', () => {
-        const owner = createEntityFactory({ index: 1 }) as Entity;
+        const owner = new Entity(1);
         const start = { x: 0, y: 0, z: 0 };
         const dir = { x: 1, y: 0, z: 0 };
         const speed = 400;
@@ -41,12 +43,10 @@ describe('Trap Projectile', () => {
     });
 
     it('should deploy when on ground', () => {
-        const trap = createEntityFactory({
-             index: 10,
-             groundentity: new Entity(99),
-             frame: 0,
-             timestamp: 1000
-        }) as Entity;
+        const trap = new Entity(10);
+        trap.groundentity = new Entity(99);
+        trap.frame = 0;
+        trap.timestamp = 1000;
 
         // Mock context time
         const ctx = { ...context.entities, timeSeconds: 100 } as any;
@@ -58,29 +58,21 @@ describe('Trap Projectile', () => {
     });
 
     it('should hunt targets when deployed', () => {
-        const trap = createEntityFactory({
-             index: 10,
-             groundentity: new Entity(99),
-             frame: 4, // Deployed
-             timestamp: 1000,
-             origin: { x: 0, y: 0, z: 0 }
-        }) as Entity;
+        const trap = new Entity(10);
+        trap.groundentity = new Entity(99);
+        trap.frame = 4; // Deployed
+        trap.timestamp = 1000;
+        trap.origin = { x: 0, y: 0, z: 0 };
 
-        const target = createEntityFactory({
-            index: 20,
-            origin: { x: 100, y: 0, z: 0 }, // Within 256
-            health: 100,
-            takedamage: true
-        }) as Entity;
-
-        // createEntityFactory removes inUse, but trap logic might check it (though usually visible() checks it).
-        // Let's force it to be true just in case.
+        const target = new Entity(20);
         target.inUse = true;
+        target.origin = { x: 100, y: 0, z: 0 }; // Within 256
+        target.health = 100;
+        target.takedamage = true;
 
         const sys = context.entities;
         sys.forEachEntity = vi.fn((cb: any) => cb(target));
-        // Ensure engine access in sys matches game
-        sys.engine = game;
+        sys.engine = game; // Ensure engine access
         sys.timeSeconds = 100;
 
         trapThink(trap, sys);

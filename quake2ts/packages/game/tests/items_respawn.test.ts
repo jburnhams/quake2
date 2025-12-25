@@ -19,26 +19,17 @@ describe('Item Respawn Logic', () => {
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory({
-            client: {
-                inventory: {
-                    ammo: { counts: [], caps: [] },
-                    ownedWeapons: new Set(),
-                    powerups: new Map(),
-                    keys: new Set(),
-                    items: new Set()
-                },
-                weaponStates: {
-                    currentWeapon: null,
-                    lastFireTime: 0,
-                    weaponFrame: 0,
-                    weaponIdleTime: 0,
-                    weapons: {},
-                    activeWeaponId: null
-                }
-            } as any
-        }));
-
+        player.client = {
+            inventory: createPlayerInventory(),
+            weaponStates: {
+                currentWeapon: null,
+                lastFireTime: 0,
+                weaponFrame: 0,
+                weaponIdleTime: 0,
+                weapons: {},
+                activeWeaponId: null
+            }
+        };
 
         // Simulate touch
         if (pickup.touch) {
@@ -63,25 +54,17 @@ describe('Item Respawn Logic', () => {
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory({
-            client: {
-                inventory: {
-                    ammo: { counts: [], caps: [] },
-                    ownedWeapons: new Set(),
-                    powerups: new Map(),
-                    keys: new Set(),
-                    items: new Set()
-                },
-                weaponStates: {
-                    currentWeapon: null,
-                    lastFireTime: 0,
-                    weaponFrame: 0,
-                    weaponIdleTime: 0,
-                    weapons: {},
-                    activeWeaponId: null
-                }
-            } as any
-        }));
+        player.client = {
+            inventory: createPlayerInventory(),
+            weaponStates: {
+                currentWeapon: null,
+                lastFireTime: 0,
+                weaponFrame: 0,
+                weaponIdleTime: 0,
+                weapons: {},
+                activeWeaponId: null
+            }
+        };
 
         // Simulate touch
         if (pickup.touch) {

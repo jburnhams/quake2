@@ -10,13 +10,13 @@ import { createPlayerInventory, WeaponId } from '../../../src/inventory/playerIn
 import { AmmoType } from '../../../src/inventory/ammo';
 import { GameExports } from '../../../src';
 import { Solid } from '../../../src/entities/entity';
-import { createPlayerEntityFactory, createEntityFactory, createMockGameExports, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Weapon Pickup Entities', () => {
     let mockGame: GameExports;
 
     beforeEach(() => {
-        mockGame = createMockGameExports({
+        mockGame = {
             sound: vi.fn(),
             multicast: vi.fn(),
             centerprintf: vi.fn(),
@@ -25,16 +25,11 @@ describe('Weapon Pickup Entities', () => {
             entities: {
                 scheduleThink: vi.fn(),
                 modelIndex: vi.fn().mockReturnValue(1),
-            } as any,
-            hooks: {
-                onPickup: vi.fn(),
-                onMapLoad: vi.fn(),
-                onMapUnload: vi.fn(),
-                onPlayerSpawn: vi.fn(),
-                onPlayerDeath: vi.fn(),
-                register: vi.fn(),
-            } as any
-        });
+                scriptHooks: {
+                    onPickup: vi.fn(),
+                }
+            },
+        } as unknown as GameExports;
     });
 
     it('should create a weapon pickup entity with a touch function', () => {
@@ -50,16 +45,17 @@ describe('Weapon Pickup Entities', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
-        const player = createPlayerEntityFactory() as Entity;
+        // Use createPlayerEntityFactory but need to mock inventory manually as factory might not do deep complex objects yet
+        // or we use the factory and then override client
+        const player = createPlayerEntityFactory();
         player.client = {
-            ...createPlayerStateFactory(),
             inventory: createPlayerInventory(),
         } as any;
 
         entity.touch(entity, player);
 
-        expect(player.client!.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
-        expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
+        expect(player.client.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
+        expect(player.client.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
         expect(mockGame.sound).toHaveBeenCalledWith(player, 0, 'items/pkup.wav', 1, 1, 0);
         expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got the Shotgun');
         expect(entity.solid).toBe(Solid.Not);
@@ -81,7 +77,7 @@ describe('Weapon Pickup Entities', () => {
         const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
-        const nonPlayer = createEntityFactory() as Entity;
+        const nonPlayer = createEntityFactory();
 
         entity.touch(entity, nonPlayer);
 
