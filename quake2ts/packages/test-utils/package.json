@@ -39,12 +39,17 @@
     "gl-matrix": "^3.4.4"
   },
   "peerDependencies": {
+    "@webgpu/types": "^0.1.68",
     "pixelmatch": "^7.1.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "webgpu": "^0.3.8"
   },
   "peerDependenciesMeta": {
+    "@webgpu/types": {
+      "optional": true
+    },
     "pixelmatch": {
       "optional": true
     },
@@ -52,6 +57,9 @@
       "optional": true
     },
     "pngjs": {
+      "optional": true
+    },
+    "webgpu": {
       "optional": true
     }
   },

@@ -1,4 +1,3 @@
-import { create, globals } from 'webgpu';
 
 // Types for our setup
 export interface HeadlessWebGPUSetup {
@@ -26,6 +25,16 @@ export async function initHeadlessWebGPU(
   // Check if we are in Node.js environment
   if (typeof process === 'undefined' || process.release?.name !== 'node') {
     throw new Error('initHeadlessWebGPU should only be called in a Node.js environment');
+  }
+
+  // Dynamic import to avoid hard dependency
+  let create, globals;
+  try {
+      const webgpu = await import('webgpu');
+      create = webgpu.create;
+      globals = webgpu.globals;
+  } catch (e) {
+      throw new Error(`Failed to load "webgpu" package. Please ensure it is installed. Original error: ${e}`);
   }
 
   // Inject WebGPU globals into globalThis if not already present

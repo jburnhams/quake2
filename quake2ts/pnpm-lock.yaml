@@ -26,9 +26,6 @@ importers:
       '@quake2ts/test-utils':
         specifier: workspace:*
         version: link:packages/test-utils
-      '@quake2ts/tools':
-        specifier: workspace:*
-        version: link:packages/tools
       '@wasm-audio-decoders/ogg-vorbis':
         specifier: ^0.1.20
         version: 0.1.20
