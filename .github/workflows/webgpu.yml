@@ -56,4 +56,4 @@ jobs:
           name: visual-test-results
           path: |
             quake2ts/visual-tests.json
-            quake2ts/packages/engine/tests/__snapshots__
+            quake2ts/packages/engine/tests/webgpu/visual/__snapshots__
