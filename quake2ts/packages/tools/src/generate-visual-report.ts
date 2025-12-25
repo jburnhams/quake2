@@ -6,12 +6,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+interface VisualTestStats {
+    passed: boolean;
+    percentDifferent: number;
+    pixelsDifferent: number;
+    totalPixels: number;
+    threshold: number;
+    maxDifferencePercent: number;
+}
+
 interface VisualTestInfo {
   testName: string;
   snapshotName: string;
   file: string;
   line: number;
   description: string;
+  stats?: VisualTestStats;
 }
 
 function findVisualTests(rootDir: string): VisualTestInfo[] {
@@ -55,12 +65,14 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
                  // Arg 1 is usually the name string
                  const nameArg = node.arguments[1];
                  if (nameArg && ts.isStringLiteral(nameArg)) {
+                     const snapshotName = nameArg.text;
                      tests.push({
                          testName,
-                         snapshotName: nameArg.text,
+                         snapshotName,
                          file: path.relative(rootDir, filePath),
                          line,
-                         description: testName
+                         description: testName,
+                         stats: loadStats(filePath, snapshotName)
                      });
                  }
             }
@@ -78,12 +90,14 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
                      );
 
                      if (nameProp && ts.isPropertyAssignment(nameProp) && ts.isStringLiteral(nameProp.initializer)) {
+                          const snapshotName = nameProp.initializer.text;
                           tests.push({
                              testName,
-                             snapshotName: nameProp.initializer.text,
+                             snapshotName,
                              file: path.relative(rootDir, filePath),
                              line,
-                             description: testName
+                             description: testName,
+                             stats: loadStats(filePath, snapshotName)
                          });
                      }
                  }
@@ -94,6 +108,20 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
     }
 
     visit(sourceFile);
+  }
+
+  function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
+      const testDir = path.dirname(testFilePath);
+      const statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
+      if (fs.existsSync(statsPath)) {
+          try {
+              const data = fs.readFileSync(statsPath, 'utf-8');
+              return JSON.parse(data) as VisualTestStats;
+          } catch (e) {
+              console.warn(`Failed to read stats for ${snapshotName}:`, e);
+          }
+      }
+      return undefined;
   }
 
   function walkDir(dir: string) {

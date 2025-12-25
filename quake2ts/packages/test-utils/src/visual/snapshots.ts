@@ -249,6 +249,18 @@ export async function expectSnapshot(
     // Compare
     const result = await compareSnapshots(pixels, baseline.data, width, height, options);
 
+    // Save stats
+    const statsPath = path.join(snapshotDir, 'stats', `${name}.json`);
+    await fs.mkdir(path.dirname(statsPath), { recursive: true });
+    await fs.writeFile(statsPath, JSON.stringify({
+        passed: result.passed,
+        percentDifferent: result.percentDifferent,
+        pixelsDifferent: result.pixelsDifferent,
+        totalPixels: result.totalPixels,
+        threshold: options.threshold ?? 0.1,
+        maxDifferencePercent: options.maxDifferencePercent ?? 0.1
+    }, null, 2));
+
     if (!result.passed || alwaysSave) {
         // Save actual and diff
         await savePNG(pixels, width, height, actualPath);
