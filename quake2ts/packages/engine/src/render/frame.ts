@@ -15,7 +15,7 @@ import {
 import { mat4 } from 'gl-matrix';
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
-import { PostProcessPipeline } from './postProcess.js';
+import { PostProcessPipeline } from './postprocessing/pipeline.js';
 import { BloomPipeline } from './bloom.js';
 
 export { FrameRenderStats, FrameRenderOptions };
@@ -80,6 +80,7 @@ interface FrameRenderOptions {
   readonly underwaterWarp?: boolean; // Enable underwater distortion
   readonly bloom?: boolean; // Enable bloom
   readonly bloomIntensity?: number; // Bloom intensity (default 0.5)
+  readonly portalState?: ReadonlyArray<boolean>; // Portal visibility state
 }
 
 interface FrameRendererDependencies {
@@ -323,7 +324,8 @@ export const createFrameRenderer = (
         waterTint,
         underwaterWarp,
         bloom,
-        bloomIntensity
+        bloomIntensity,
+        portalState
     } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
@@ -343,7 +345,7 @@ export const createFrameRenderer = (
         y: camera.position[1] ?? 0,
         z: camera.position[2] ?? 0,
       };
-      const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
+      const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum, portalState);
 
       // Split faces into Opaque and Transparent/Warping
       const opaqueFaces: VisibleFace[] = [];

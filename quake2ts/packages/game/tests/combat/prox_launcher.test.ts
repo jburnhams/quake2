@@ -9,23 +9,14 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Prox Launcher', () => {
     it('should fire a prox mine and consume ammo', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
         const createProxMine = vi.spyOn(projectiles, 'createProxMine');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
 
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -47,20 +38,10 @@ describe('Prox Launcher', () => {
     });
 
     it('should not fire if out of ammo', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
         const createProxMine = vi.spyOn(projectiles, 'createProxMine');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
 
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const player = game.entities.spawn();
@@ -81,20 +62,8 @@ describe('Prox Launcher', () => {
     });
 
     it('mine should stick to walls', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const linkentity = vi.fn();
-        const sound = vi.fn();
-
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity, multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         const player = game.entities.spawn();

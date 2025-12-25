@@ -3,7 +3,7 @@ import { createClient, ClientImports, ClientExports } from '../src/index.js';
 import { ClientConfigStrings } from '../src/configStrings.js';
 import { EngineImports, EngineHost, Renderer } from '@quake2ts/engine';
 import { AssetManager } from '@quake2ts/engine';
-import { createMockRenderer } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager } from '@quake2ts/test-utils';
 
 // Mock CGame
 vi.mock('@quake2ts/cgame', async (importOriginal) => {
@@ -50,17 +50,14 @@ describe('Client <-> CGame Integration', () => {
       registerTexture: vi.fn().mockReturnValue({ width: 32, height: 32 }),
     });
 
-    const mockAssets = {
-        getMd2Model: vi.fn(),
-        getMd3Model: vi.fn(),
-        getMap: vi.fn(),
+    const mockAssets = createMockAssetManager({
         loadSound: vi.fn().mockResolvedValue({}),
         loadTexture: vi.fn().mockResolvedValue({}),
         loadMd2Model: vi.fn().mockResolvedValue({}),
         loadMd3Model: vi.fn().mockResolvedValue({}),
         loadSprite: vi.fn().mockResolvedValue({}),
         listFiles: vi.fn().mockReturnValue([]),
-    } as unknown as AssetManager;
+    });
 
     mockEngine = {
       renderer: mockRenderer,

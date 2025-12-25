@@ -2,24 +2,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Solid } from '../../src/entities/entity.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('target_speaker', () => {
   let entities: EntitySystem;
   let registry: any;
   let mockEngine: any;
+  let context: ReturnType<typeof createTestContext>;
 
-  beforeEach(() => {
-    mockEngine = {
-        soundIndex: vi.fn().mockImplementation((name) => {
-            if (name === 'world/amb1.wav') return 10;
-            return 0;
-        }),
-        modelIndex: vi.fn().mockReturnValue(1),
-        sound: vi.fn(),
-    };
-    entities = new EntitySystem(mockEngine as any, undefined, undefined, 2048);
-    registry = createDefaultSpawnRegistry();
+  beforeEach(async () => {
+    // Use createTestContext to get a standardized mocked environment
+    context = await createTestContext();
+    entities = context.entities;
+    // createDefaultSpawnRegistry calls registerTargetSpawns internally
+    registry = createDefaultSpawnRegistry(context.game);
     entities.setSpawnRegistry(registry);
+
+    // Override engine mocks specific to this test
+    mockEngine = context.engine;
+    mockEngine.soundIndex = vi.fn().mockImplementation((name) => {
+        if (name === 'world/amb1.wav') return 10;
+        return 0;
+    });
+    mockEngine.modelIndex = vi.fn().mockReturnValue(1);
+    mockEngine.sound = vi.fn();
   });
 
   it('should initialize correctly with noise', () => {
@@ -58,7 +64,7 @@ describe('target_speaker', () => {
     }, { registry, entities });
 
     if (target?.use) {
-        target.use(target, null, null, entities);
+        target.use(target, null, null, context.entities);
     }
 
     expect(mockEngine.sound).toHaveBeenCalledWith(
@@ -86,7 +92,7 @@ describe('target_speaker', () => {
 
     // Toggle off
     if (target?.use) {
-        target.use(target, null, null, entities);
+        target.use(target, null, null, context.entities);
     }
 
     expect(target?.spawnflags & LOOPED_ON).toBe(0);
@@ -95,7 +101,7 @@ describe('target_speaker', () => {
 
     // Toggle on
     if (target?.use) {
-        target.use(target, null, null, entities);
+        target.use(target, null, null, context.entities);
     }
 
     expect(target?.spawnflags & LOOPED_ON).toBe(LOOPED_ON);

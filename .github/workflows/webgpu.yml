@@ -1,0 +1,59 @@
+name: WebGpu Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  integration:
+    name: WebGpu Tests (Node 25)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quake2ts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
+
+      # WebGPU headless testing requires Vulkan drivers
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers vulkan-tools
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build workspace
+        run: pnpm run build
+
+      # Run webgpu tests
+      # We use 'vitest run' to ensure single pass execution
+      # We explicitly set the ICD filename to point to Lavapipe (software rasterizer)
+      # which is required for headless WebGPU testing on GitHub Actions runners.
+      - name: Run Full Test Suite
+        env:
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          ALWAYS_SAVE_SNAPSHOTS: '1'
+        run: pnpm run test:webgpu
+
+      - name: Generate Visual Report
+        run: npx tsx packages/tools/src/generate-visual-report.ts
+
+      - name: Upload Visual Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-test-results
+          path: |
+            quake2ts/visual-tests.json
+            quake2ts/packages/engine/tests/webgpu/visual/__snapshots__

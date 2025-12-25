@@ -4,7 +4,7 @@ import { createClient, ClientExports, ClientImports } from '../src/index.js';
 import { ClientMode, ClientRenderer } from '../src/index.js';
 import { EngineImports, GameRenderSample, PredictionState, EngineHost, Renderer, DemoPlaybackController, ClientNetworkHandler, RenderableEntity } from '@quake2ts/engine';
 import { UserCommand } from '@quake2ts/shared';
-import { createMockCamera } from '@quake2ts/test-utils';
+import { createMockDemoCameraResult } from '@quake2ts/test-utils';
 
 // Mock dependencies
 const mockTrace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, contents: 0 });
@@ -87,13 +87,13 @@ describe('Client Demo Playback Integration', () => {
 
     const mockGetDemoCamera = vi.spyOn(mockDemoHandler, 'getDemoCamera');
 
-    // getDemoCamera returns { origin, angles, fov }, NOT a Camera instance.
-    // We can manually construct this or helper.
-    mockGetDemoCamera.mockReturnValue({
+    // Use createMockDemoCameraResult for correct shape
+    const mockCameraResult = createMockDemoCameraResult({
         origin: { x: 200, y: 200, z: 200 },
         angles: { x: 0, y: 90, z: 0 },
         fov: 90
     });
+    mockGetDemoCamera.mockReturnValue(mockCameraResult);
 
     // Mock getPredictionState to avoid undefined lastRendered
     const mockGetPredictionState = vi.spyOn(mockDemoHandler, 'getPredictionState');
@@ -132,6 +132,10 @@ describe('Client Demo Playback Integration', () => {
 
     expect(camera).toBeDefined();
     // Check camera position (Float32Array)
+    // The camera position should be derived from lastRendered state, which is updated from demoCamera logic in render()
+    // Logic: lastRendered.origin = demoCamera.origin (200,200,200) if FirstPerson (default)
+    // Then camera.position = lastRendered.origin
+    // So expected 200
     expect(camera.position[0]).toBeCloseTo(200);
     expect(camera.position[1]).toBeCloseTo(200);
     expect(camera.position[2]).toBeCloseTo(200);

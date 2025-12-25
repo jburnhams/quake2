@@ -1,28 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports, GameEngine, GameCreateOptions } from '../src/index.js';
-import { EntitySystem } from '../src/entities/system.js';
-import { Entity, MoveType, Solid } from '../src/entities/entity.js';
-import { createPlayerInventory, WeaponId, AmmoType } from '../src/inventory/index.js';
-import { Vec3 } from '@quake2ts/shared';
+import { createGame, GameExports, GameCreateOptions } from '../src/index.js';
+import { Entity } from '../src/entities/entity.js';
+import { createPlayerInventory, WeaponId } from '../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
-
-// Mock engine
-const mockEngine: GameEngine = {
-    trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: {x:0,y:0,z:0} }),
-    sound: vi.fn(),
-    soundIndex: vi.fn().mockReturnValue(1),
-    centerprintf: vi.fn(),
-    modelIndex: vi.fn().mockReturnValue(1),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-    configstring: vi.fn(),
-    serverCommand: vi.fn(),
-};
-
-const mockImports = {
-    trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: {x:0,y:0,z:0} }),
-    pointcontents: vi.fn().mockReturnValue(0),
-};
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 const options: GameCreateOptions = {
     gravity: { x: 0, y: 0, z: -800 },
@@ -33,12 +14,19 @@ describe('Player State Snapshot', () => {
     let game: GameExports;
     let player: Entity;
 
+    // Use createGameImportsAndEngine for mocking
+    let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+    let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+
     beforeEach(() => {
         vi.clearAllMocks();
+        // 1. Refactor to use createGameImportsAndEngine
+        const result = createGameImportsAndEngine();
+        mockImports = result.imports;
+        mockEngine = result.engine;
+
         game = createGame(mockImports, mockEngine, options);
         game.init(0);
-        // Spawn a player manually or via game mechanics if possible
-        // game.spawnWorld() handles player spawn in SP
         game.spawnWorld();
         player = game.entities.find(e => e.classname === 'player')!;
 
@@ -63,7 +51,7 @@ describe('Player State Snapshot', () => {
                  gun_frame: 0,
                  rdflags: 0,
                  fov: 90
-             });
+             } as any);
              player = game.entities.find(e => e.classname === 'player')!;
         }
     });
@@ -99,11 +87,4 @@ describe('Player State Snapshot', () => {
 
         expect(snapshot.state.fov).toBe(110);
     });
-
-    // We will enable this test after implementing damage_alpha
-    // it('should report damageAlpha', () => {
-    //     player.client!.damage_alpha = 0.5;
-    //     const snapshot = game.frame({ deltaSeconds: 0.1, frame: 1 });
-    //     expect(snapshot.state.damageAlpha).toBe(0.5);
-    // });
 });

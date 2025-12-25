@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/client",
-  "version": "0.0.1",
+  "version": "0.0.730",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -35,7 +35,8 @@
     "@quake2ts/cgame": "workspace:^",
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
-    "@quake2ts/shared": "workspace:*"
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
     "@quake2ts/test-utils": "workspace:^",

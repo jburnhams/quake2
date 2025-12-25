@@ -75,6 +75,7 @@ export function createMockRenderer(overrides?: Partial<Renderer>): Renderer {
     setBloom: vi.fn(),
     setBloomIntensity: vi.fn(),
     setLodBias: vi.fn(),
+    setAreaPortalState: vi.fn(),
     renderInstanced: vi.fn(),
     dispose: vi.fn(),
     ...overrides,

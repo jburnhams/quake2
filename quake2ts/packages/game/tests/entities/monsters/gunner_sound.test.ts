@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SP_monster_gunner } from '../../../src/entities/monsters/gunner.js';
 import { Entity, EntityFlags, Solid, MoveType } from '../../../src/entities/entity.js';
 import { MonsterFrame } from '../../../src/entities/entity.js';

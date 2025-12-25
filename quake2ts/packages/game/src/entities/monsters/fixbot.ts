@@ -9,8 +9,11 @@ import {
   Vec3,
   ZERO_VEC3,
   copyVec3,
-  vectorToYaw
+  vectorToYaw,
+  ServerCommand,
+  TempEntity
 } from '@quake2ts/shared';
+import { MulticastType } from '../../imports.js';
 import {
   ai_charge,
   ai_move,
@@ -162,7 +165,7 @@ function fixbot_dead(self: Entity): void {
 
 function fixbot_die(self: Entity, inflictor: Entity | null, attacker: Entity | null, damage: number, point: Vec3, mod: DamageMod, context: EntitySystem): void {
     context.engine.sound?.(self, 0, 'flyer/flydeth1.wav', 1, 1, 0);
-    // BecomeExplosion1(self); // TODO: implement explosion effect
+    context.multicast?.(self.origin, MulticastType.Pvs, ServerCommand.temp_entity, TempEntity.EXPLOSION1, self.origin);
     throwGibs(context, self.origin, damage, GIB_METALLIC); // Placeholder for explosion
     self.deadflag = DeadFlag.Dead;
     self.takedamage = false; // Usually dead things don't take damage unless gibbed

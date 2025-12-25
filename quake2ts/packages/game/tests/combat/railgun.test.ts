@@ -10,42 +10,43 @@ import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Railgun', () => {
     // Setup helper to create a game context
     const setupGame = (isDeathmatch: boolean) => {
-        const trace = vi.fn().mockImplementation((start, mins, maxs, end) => {
-             // Simulate hitting an entity at some distance
-             const dist = 100;
-             const dir = { x: 1, y: 0, z: 0 };
-             return {
-                 fraction: 0.5,
-                 endpos: { x: start.x + dir.x * dist, y: start.y, z: start.z },
-                 allsolid: false,
-                 startsolid: false,
-                 ent: { takedamage: true, origin: {x: 100, y: 0, z: 0} } // Mock entity
-             };
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: vi.fn().mockImplementation((start, mins, maxs, end) => {
+                     // Simulate hitting an entity at some distance
+                     const dist = 100;
+                     const dir = { x: 1, y: 0, z: 0 };
+                     return {
+                         fraction: 0.5,
+                         endpos: { x: start.x + dir.x * dist, y: start.y, z: start.z },
+                         allsolid: false,
+                         startsolid: false,
+                         ent: { takedamage: true, origin: {x: 100, y: 0, z: 0} } // Mock entity
+                     };
+                }),
+            },
         });
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: isDeathmatch });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: isDeathmatch });
 
         // Mock T_Damage
         const tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => {});
 
+        // Use factory for player configuration
+        const playerTemplate = createPlayerEntityFactory({
+            classname: 'player',
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 },
+            viewheight: 22
+        });
+
         const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.angles = { x: 0, y: 0, z: 0 };
-        player.viewheight = 22;
+        Object.assign(player, playerTemplate);
+
         player.client = {
             inventory: createPlayerInventory({
                 weapons: [WeaponId.Railgun],
@@ -57,7 +58,7 @@ describe('Railgun', () => {
         } as any;
         game.entities.finalizeSpawn(player);
 
-        return { game, player, trace, tDamageSpy };
+        return { game, player, trace: imports.trace, tDamageSpy };
     };
 
     it('should deal correct damage and kick in Deathmatch', () => {

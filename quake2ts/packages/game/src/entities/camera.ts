@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid, ServerFlags, AiFlags } from './entity.js';
 import { EntitySystem } from './system.js';
-import { scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, lengthVec3, Vec3, ConfigStringIndex } from '@quake2ts/shared';
+import { scaleVec3, normalizeVec3, subtractVec3, addVec3, copyVec3, ZERO_VEC3, lengthVec3, Vec3, ConfigStringIndex, PmType } from '@quake2ts/shared';
 import { G_PickTarget } from './utils.js';
 
 // Replaced HACKFLAGs with semantic constants
@@ -11,6 +11,23 @@ const CAMERA_END_OF_UNIT = 128;
 const YAW = 1;
 const PITCH = 0;
 const ROLL = 2;
+
+export function MoveClientToIntermission(ent: Entity, context: EntitySystem) {
+    if (!ent.client) return;
+
+    ent.origin = { ...context.level.intermission_origin };
+    ent.velocity = { ...ZERO_VEC3 };
+    ent.angles = { ...context.level.intermission_angle };
+    ent.client.pm_type = PmType.Freeze;
+    ent.client.v_angle = { ...context.level.intermission_angle };
+
+    // Clear velocity in client state if present (client.oldvelocity)
+    if (ent.client.oldvelocity) {
+        ent.client.oldvelocity = { ...ZERO_VEC3 };
+    }
+
+    context.linkentity(ent);
+}
 
 function camera_lookat_pathtarget(self: Entity, origin: Vec3, dest: Vec3, context: EntitySystem): Vec3 {
     let result = { ...dest };
@@ -121,13 +138,7 @@ function update_target_camera(self: Entity, context: EntitySystem) {
              // Move all clients to intermission point
              context.forEachEntity((client) => {
                  if (client.client) {
-                     // MoveClientToIntermission(client); // TODO: Expose this or implement
-                     // Minimal implementation:
-                     client.origin = { ...context.level.intermission_origin };
-                     client.angles = { ...context.level.intermission_angle };
-                     // client.viewangles = { ...context.level.intermission_angle }; // Not on entity
-                     // client.client.ps.pm_type = MoveType.Freeze; // PM_FREEZE? Or INTERMISSION
-                     client.client.v_angle = { ...context.level.intermission_angle };
+                     MoveClientToIntermission(client, context);
                  }
              });
         }
@@ -205,7 +216,7 @@ export function useTargetCamera(self: Entity, other: Entity | null, activator: E
         if (client.health <= 0) {
             // respawn logic
         }
-        // MoveClientToIntermission(client);
+        MoveClientToIntermission(client, context);
     });
 
     self.activator = activator || null;

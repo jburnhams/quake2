@@ -204,6 +204,7 @@ export class InputController {
   private readonly invertGamepadY: boolean;
 
   private sequence = 0;
+  private impulse = 0;
 
   public onInputCommand?: (cmd: UserCommand) => void;
 
@@ -420,11 +421,13 @@ export class InputController {
       serverFrame,
       sequence: this.sequence,
       lightlevel: 0,
-      impulse: 0
+      impulse: this.impulse,
     } satisfies UserCommand;
 
+    this.impulse = 0;
+
     if (this.onInputCommand) {
-        this.onInputCommand(command);
+      this.onInputCommand(command);
     }
 
     return command;
@@ -541,7 +544,17 @@ export class InputController {
         this.commandQueue.push(action.replace('+', '-'));
       }
     } else if (isDown) {
-      this.commandQueue.push(command);
+      if (command.startsWith('impulse ')) {
+        const parts = command.split(' ');
+        if (parts.length > 1) {
+          const val = parseInt(parts[1], 10);
+          if (!isNaN(val)) {
+            this.impulse = Math.max(0, Math.min(255, val));
+          }
+        }
+      } else {
+        this.commandQueue.push(command);
+      }
     }
   }
 

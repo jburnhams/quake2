@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_guncmdr } from '../../../src/entities/monsters/gunnerCommander.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import * as rogueAi from '../../../src/ai/rogue.js';
 import * as projectiles from '../../../src/entities/projectiles.js';

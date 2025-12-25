@@ -34,6 +34,7 @@ export interface EngineExports {
   init(): void;
   shutdown(): void;
   createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop;
+  setAreaPortalState(portalNum: number, open: boolean): void;
 }
 
 export function createEngine(imports: EngineImports): EngineExports {
@@ -47,6 +48,11 @@ export function createEngine(imports: EngineImports): EngineExports {
     createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop {
       return new FixedTimestepLoop(callbacks, options);
     },
+    setAreaPortalState(portalNum: number, open: boolean): void {
+      if (imports.renderer && imports.renderer.setAreaPortalState) {
+          imports.renderer.setAreaPortalState(portalNum, open);
+      }
+    }
   };
 }
 
@@ -353,3 +359,5 @@ export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type Va
 export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
 export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
 export { IRenderer } from './render/interface.js';
+
+export { ClientConnection, ConnectionState, type ConnectionEvents, type ClientConnectionOptions } from './network/clientConnection.js';

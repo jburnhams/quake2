@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/tests/src/setup.js';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { createGame, type GameExports } from '../../src/index.js';
 import type { GameImports } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';

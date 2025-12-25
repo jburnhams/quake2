@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createWidow } from '../../../../src/entities/monsters/rogue/widow.js';
-import { createTestContext } from '../../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType, Solid, AiFlags } from '../../../../src/entities/entity.js';
 import { M_SlotsLeft } from '../../../../src/entities/monsters/rogue/common.js';
 

@@ -5,6 +5,7 @@ import { SP_monster_floater } from '../../../src/entities/monsters/floater.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { createRandomGenerator } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Boss/Monster Spawns', () => {
   let entity: Entity;
@@ -12,10 +13,7 @@ describe('Boss/Monster Spawns', () => {
 
   beforeEach(() => {
     entity = new Entity(1);
-    const engine = {
-        sound: vi.fn(),
-        modelIndex: vi.fn(() => 0),
-    };
+    const { imports, engine } = createGameImportsAndEngine();
     context = {
       keyValues: {},
       entities: {
@@ -26,8 +24,8 @@ describe('Boss/Monster Spawns', () => {
         timeSeconds: 10,
         modelIndex: vi.fn(() => 0),
         scheduleThink: vi.fn(),
-        linkentity: vi.fn(),
-        multicast: vi.fn(),
+        linkentity: imports.linkentity,
+        multicast: imports.multicast,
         engine, // Attach mocked engine
         sound: engine.sound,
         rng: createRandomGenerator(12345),

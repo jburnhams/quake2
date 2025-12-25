@@ -23,14 +23,14 @@
 - [x] Implement damage screen flash (red overlay)
 - [x] Implement pickup flash (yellow overlay)
 - [x] Implement underwater distortion
-- [ ] Add bloom/glow for bright surfaces
+- [x] Add bloom/glow for bright surfaces
 - [x] Add configurable gamma/brightness adjustment
 
 ### 6.1.4 Advanced Culling
-- [ ] Optimize PVS lookup for large maps
+- [x] Optimize PVS lookup for large maps
 - [ ] Add occlusion culling for complex scenes
-- [ ] Add distance-based LOD for models (if supported by assets)
-- [ ] Add portal culling for indoor areas
+- [x] Add distance-based LOD for models (if supported by assets)
+- [x] Add portal culling for indoor areas
 
 ---
 
@@ -82,13 +82,13 @@
 - [x] Add configurable memory limits per asset type
 
 ### 6.4.2 Worker Thread Support
-- [ ] Move BSP parsing to worker thread for non-blocking load
-- [ ] Move demo parsing to worker thread
-- [ ] Move audio decoding to worker thread (already async via WASM)
-- [ ] Expose worker-based API with progress callbacks
+- [x] Move BSP parsing to worker thread for non-blocking load
+- [x] Move demo parsing to worker thread
+- [x] Move audio decoding to worker thread (already async via WASM, moved WAV to worker)
+- [x] Expose worker-based API with progress callbacks (Implemented for Demo Parser)
 
 ### 6.4.3 Memory Management
 - [x] Add method `getMemoryUsage(): MemoryUsage` reporting heap usage
 - [x] Add method `clearCache(type: AssetType): void` for manual cache clearing
-- [ ] Add automatic garbage collection triggers for low-memory scenarios
-- [ ] Document memory budget recommendations for different device classes
+- [x] Add automatic garbage collection triggers for low-memory scenarios (implemented via `enforceMemoryBudget`)
+- [x] Document memory budget recommendations for different device classes (See `docs/memory-recommendations.md`)

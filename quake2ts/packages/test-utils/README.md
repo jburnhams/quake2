@@ -18,6 +18,134 @@ setupBrowserEnvironment({
 });
 ```
 
+### Engine & Rendering Testing
+
+#### WebGL & Buffer Mocks
+
+Create mocks for WebGL contexts and resources:
+
+```typescript
+import {
+  createMockWebGL2Context,
+  createMockVertexBuffer,
+  createMockIndexBuffer,
+  createMockShaderProgram
+} from '@quake2ts/test-utils';
+
+// Context
+const gl = createMockWebGL2Context();
+
+// Buffers
+const vb = createMockVertexBuffer(new Float32Array([1, 0, 1]));
+const ib = createMockIndexBuffer(new Uint16Array([0, 1, 2]));
+
+// Shaders
+const program = createMockShaderProgram({
+  use: vi.fn(),
+  getUniformLocation: vi.fn().mockReturnValue(1)
+});
+```
+
+#### Renderer Mocks
+
+Mock the high-level renderer or specific pipelines:
+
+```typescript
+import {
+  createMockRenderer,
+  createMockFrameRenderer,
+  createMockMd2Pipeline
+} from '@quake2ts/test-utils';
+
+const renderer = createMockRenderer();
+renderer.renderFrame(scene);
+
+const md2Pipeline = createMockMd2Pipeline();
+```
+
+#### Lighting Mocks
+
+Test dynamic lighting and lightmaps:
+
+```typescript
+import {
+  createMockDLight,
+  createMockDLightManager,
+  createMockLightmap
+} from '@quake2ts/test-utils';
+
+const dlight = createMockDLight({ x: 10, y: 10, z: 10 }, { x: 1, y: 0, z: 0 }, 300);
+const manager = createMockDLightManager();
+manager.addLight(dlight);
+```
+
+#### Particle System Mocks
+
+Test particle effects and systems:
+
+```typescript
+import {
+  createMockParticle,
+  createMockParticleSystem
+} from '@quake2ts/test-utils';
+
+const particle = createMockParticle({ size: 5, lifetime: 2.0 });
+const system = createMockParticleSystem();
+system.spawn(particle);
+```
+
+#### Asset Mocks
+
+Mock the asset manager and resources:
+
+```typescript
+import {
+  createMockAssetManager,
+  createMockMd2Model,
+  createMockTexture
+} from '@quake2ts/test-utils';
+
+const assets = createMockAssetManager();
+const model = createMockMd2Model();
+const texture = createMockTexture(64, 64);
+```
+
+### WebGPU Testing
+
+#### Unit Tests (Mocked)
+
+For testing logic without GPU:
+
+```typescript
+import { createMockWebGPUContext } from '@quake2ts/test-utils';
+
+test('creates uniform buffer', () => {
+  const { device } = createMockWebGPUContext();
+  const buffer = device.createBuffer({
+      size: 256,
+      usage: GPUBufferUsage.UNIFORM
+  });
+  expect(buffer.size).toBe(256);
+});
+```
+
+#### Integration Tests (Headless)
+
+For testing actual rendering with @webgpu/dawn (in Node.js):
+
+```typescript
+import { createRenderTestSetup, renderAndCapture } from '@quake2ts/test-utils';
+
+test('renders triangle', async () => {
+  const setup = await createRenderTestSetup();
+  const pixels = await renderAndCapture(setup, (pass) => {
+    // ... render triangle
+  });
+  // Validate pixels
+  await setup.cleanup();
+});
+```
+
 ### Client Utilities
 
 The library includes mocks and helpers for testing client-side systems like input, view/camera, HUD, and network.
@@ -311,9 +439,11 @@ scenario.localStorage.setItem('foo', 'bar');
 
 - **Browser Mocks:** JSDOM enhancement, Pointer Lock, RAF, Performance.
 - **Client Mocks:** Input, View, HUD, Network, Console.
+- **Engine Mocks:** Rendering, Audio, Assets, Lighting, Particles, WebGL.
 - **Shared Utilities:** BSP construction, Collision tracing, Math helpers, Binary mocks.
 - **Server Utilities:** Network mocks, Server state factories, Multiplayer simulation, Snapshot analysis.
 - **Canvas/WebGL:** Mock implementations for headless testing.
+- **WebGPU:** Headless testing with @webgpu/dawn and comprehensive mocks.
 - **Storage:** LocalStorage, SessionStorage, IndexedDB mocks.
 - **Audio:** Basic Web Audio API mock with event capturing.
 - **E2E:** Playwright wrappers, network simulation, visual regression helpers.
@@ -322,10 +452,3 @@ scenario.localStorage.setItem('foo', 'bar');
 ## Migration Guide
 
 For detailed instructions on migrating existing tests to use this package, see [MIGRATION.md](./MIGRATION.md).
-
-Quick summary:
-1. Replace `setupBrowserEnvironment` imports from local helpers to `@quake2ts/test-utils`.
-2. Use shared helpers (e.g., `createVector3`, `makePlane`) instead of recreating them.
-3. Use `createMockCanvas` instead of `createCanvas` for better DOM compatibility.
-4. Use `setupMockAudioContext` instead of custom inline mocks.
-5. Use client utilities for specialized mocks (input, view, network).

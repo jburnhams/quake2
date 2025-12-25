@@ -13,6 +13,8 @@ import {
     FRAME_RAILGUN_IDLE_LAST,
     FRAME_RAILGUN_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { Entity } from '../../../src/entities/entity.js';
 
 // Railgun frames:
 // FRAME_ACTIVATE_LAST = 3
@@ -27,41 +29,29 @@ describe('Railgun Animation', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        game.init(0);
-
+        const { imports, engine } = createGameImportsAndEngine();
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         sys = game.entities;
-        game.init(1.0);
 
-        const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
+        // Mock time
+        Object.defineProperty(game, 'time', { value: 1.0, writable: true });
 
-        player = game.entities.find((e: any) => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({
-            weapons: [WeaponId.Railgun],
-            ammo: { [AmmoType.Slugs]: 10 },
-            currentWeapon: WeaponId.Railgun
-        });
-        player.client.weaponstate = WeaponStateEnum.WEAPON_READY;
-        player.client.gun_frame = FRAME_RAILGUN_FIRE_LAST + 1;
-        player.client.weapon_think_time = 0;
+        // Create player directly using factory
+        player = game.entities.spawn();
+        Object.assign(player, createPlayerEntityFactory({
+            classname: 'player',
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.Railgun],
+                    ammo: { [AmmoType.Slugs]: 10 },
+                    currentWeapon: WeaponId.Railgun
+                }),
+                weaponstate: WeaponStateEnum.WEAPON_READY,
+                gun_frame: FRAME_RAILGUN_FIRE_LAST + 1,
+                weapon_think_time: 0,
+                ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
+            } as any
+        }));
     });
 
     it('should fire and play animation when button is pressed', () => {
@@ -75,7 +65,7 @@ describe('Railgun Animation', () => {
         expect(player.client.gun_frame).toBe(FRAME_RAILGUN_ACTIVATE_LAST + 1); // 4
 
         // Advance time to trigger fire logic
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
+        game.time += 0.1;
         player.client.weapon_think_time = 0;
 
         railgunThink(player, sys);
@@ -90,7 +80,7 @@ describe('Railgun Animation', () => {
         player.client.gun_frame = 4;
 
         // Advance time
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
+        game.time += 0.1;
         player.client.weapon_think_time = 0;
 
         railgunThink(player, sys);

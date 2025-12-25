@@ -13,6 +13,7 @@ import {
     FRAME_GRENADELAUNCHER_IDLE_LAST,
     FRAME_GRENADELAUNCHER_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 // Grenade Launcher frames:
 // FRAME_ACTIVATE_LAST = 5
@@ -27,21 +28,8 @@ describe('Grenade Launcher Animation', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         sys = game.entities;

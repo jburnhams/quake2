@@ -127,7 +127,8 @@ describe('FrameRenderer', () => {
     expect(deps.gatherVisibleFaces).toHaveBeenCalledWith(
       world.map,
       { x: 1, y: 2, z: 3 },
-      []
+      [],
+      undefined
     );
     expect(callOrder).toEqual([
       'diffuse',

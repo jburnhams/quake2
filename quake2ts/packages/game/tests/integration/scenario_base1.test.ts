@@ -1,7 +1,8 @@
 
 import { describe, it, expect, beforeAll, vi, afterEach } from 'vitest';
 import { AssetManager, VirtualFileSystem, PakArchive, BspLoader, type BspMap, type BspNode, type BspLeaf } from '@quake2ts/engine';
-import { setupBrowserEnvironment } from '@quake2ts/tests/src/setup.js';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
+import { findPakFile } from '@quake2ts/test-utils';
 import {
   createGame,
   type GameExports,
@@ -122,15 +123,7 @@ describe('Full Gameplay Scenario Integration (Scenario 1: Base1)', () => {
   let collisionModel: CollisionModel;
   let collisionIndex: CollisionEntityIndex;
 
-  // Try to find pak.pak in various locations
-  const possiblePaths = [
-      path.resolve(process.cwd(), 'pak.pak'),
-      path.resolve(process.cwd(), '../pak.pak'),
-      path.resolve(process.cwd(), '../../pak.pak'),
-      path.resolve('/app/quake2ts/pak.pak')
-  ];
-
-  const pakPath = possiblePaths.find(p => fs.existsSync(p));
+  const pakPath = findPakFile();
   const hasPak = !!pakPath;
 
   beforeAll(async () => {
@@ -153,7 +146,7 @@ describe('Full Gameplay Scenario Integration (Scenario 1: Base1)', () => {
     try {
       bsp = await bspLoader.load('maps/base1.bsp');
     } catch (e) {
-      console.warn('Could not load maps/base1.bsp, trying maps/demo1.bsp map if available or skipping');
+      console.warn('Could not load maps/base1.bsp, trying maps/demo1.bsp map from pak if available or skipping');
       try {
           bsp = await bspLoader.load('maps/demo1.bsp');
       } catch (e2) {
@@ -311,9 +304,6 @@ describe('Full Gameplay Scenario Integration (Scenario 1: Base1)', () => {
     });
 
     // In demo1.dm2 map (demo1.bsp), there should be items.
-    // However, if we fail to load map, we might not have items.
-    // The previous logs say "Could not load maps/base1.bsp, trying maps/demo1.bsp".
-    // If demo1.bsp loaded, we should have items.
     expect(itemCount).toBeGreaterThan(0);
   });
 

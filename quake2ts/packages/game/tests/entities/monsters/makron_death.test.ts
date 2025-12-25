@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_makron } from '../../../src/entities/monsters/makron.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
-import { createSpawnContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('monster_makron death', () => {
   let context: any;
   let makron: Entity;
 
   beforeEach(() => {
-    context = createSpawnContext();
+    context = createTestContext();
     makron = context.entities.spawn();
     makron.origin = { x: 100, y: 100, z: 0 };
     makron.angles = { x: 0, y: 90, z: 0 };

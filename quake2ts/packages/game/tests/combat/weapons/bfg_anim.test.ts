@@ -13,6 +13,8 @@ import {
     FRAME_BFG_IDLE_LAST,
     FRAME_BFG_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { Entity } from '../../../src/entities/entity.js';
 
 // BFG frames:
 // FRAME_ACTIVATE_LAST = 8
@@ -27,41 +29,31 @@ describe('BFG10K Animation', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
+        const { imports, engine } = createGameImportsAndEngine();
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        game.init(0);
-
+        // Mock time explicitly on imports/engine if needed, or use game object.
+        // createGame initializes game.time to 0.
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         sys = game.entities;
-        game.init(1.0); // Set start time
 
-        const playerStart = game.entities.spawn();
-        playerStart.classname = 'info_player_start';
-        playerStart.origin = { x: 0, y: 0, z: 0 };
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
+        // Mock time
+        Object.defineProperty(game, 'time', { value: 1.0, writable: true });
 
-        player = game.entities.find((e: any) => e.classname === 'player')!;
-        player.client!.inventory = createPlayerInventory({
-            weapons: [WeaponId.BFG10K],
-            ammo: { [AmmoType.Cells]: 100 },
-            currentWeapon: WeaponId.BFG10K
-        });
-        player.client.weaponstate = WeaponStateEnum.WEAPON_READY;
-        player.client.gun_frame = FRAME_BFG_FIRE_LAST + 1;
-        player.client.weapon_think_time = 0;
+        player = game.entities.spawn();
+        Object.assign(player, createPlayerEntityFactory({
+            classname: 'player',
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.BFG10K],
+                    ammo: { [AmmoType.Cells]: 100 },
+                    currentWeapon: WeaponId.BFG10K
+                }),
+                weaponstate: WeaponStateEnum.WEAPON_READY,
+                gun_frame: FRAME_BFG_FIRE_LAST + 1,
+                weapon_think_time: 0,
+                ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
+            } as any
+        }));
     });
 
     it('should consume ammo at frame 9', () => {
@@ -73,7 +65,7 @@ describe('BFG10K Animation', () => {
         expect(player.client.gun_frame).toBe(FRAME_BFG_ACTIVATE_LAST + 1); // 9
 
         // Advance time to trigger fire logic
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
+        game.time += 0.1;
         player.client.weapon_think_time = 0;
 
         bfgThink(player, sys);
@@ -93,6 +85,9 @@ describe('BFG10K Animation', () => {
 
         // Ensure think doesn't exit due to timer
         player.client.weapon_think_time = 0;
+
+        // We need to advance time so Weapon_Generic thinks enough time has passed
+        game.time += 0.1;
 
         bfgThink(player, sys);
 

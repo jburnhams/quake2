@@ -1,6 +1,6 @@
 {
   "name": "quake2ts",
-  "version": "0.0.620",
+  "version": "0.0.730",
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
   "packageManager": "pnpm@8.15.7",
@@ -24,78 +24,7 @@
     "url": "https://github.com/jburnhams/quake2/issues"
   },
   "homepage": "https://github.com/jburnhams/quake2#readme",
-  "exports": {
-    "./shared": {
-      "types": "./packages/shared/dist/types/index.d.ts",
-      "import": "./packages/shared/dist/esm/index.js",
-      "require": "./packages/shared/dist/cjs/index.cjs",
-      "default": "./packages/shared/dist/esm/index.js"
-    },
-    "./shared/browser": {
-      "types": "./packages/shared/dist/types/index.d.ts",
-      "default": "./packages/shared/dist/browser/index.js"
-    },
-    "./engine": {
-      "types": "./packages/engine/dist/types/index.d.ts",
-      "import": "./packages/engine/dist/esm/index.js",
-      "require": "./packages/engine/dist/cjs/index.cjs",
-      "default": "./packages/engine/dist/esm/index.js"
-    },
-    "./engine/browser": {
-      "types": "./packages/engine/dist/types/index.d.ts",
-      "default": "./packages/engine/dist/browser/index.js"
-    },
-    "./game": {
-      "types": "./packages/game/dist/types/index.d.ts",
-      "import": "./packages/game/dist/esm/index.js",
-      "require": "./packages/game/dist/cjs/index.cjs",
-      "default": "./packages/game/dist/esm/index.js"
-    },
-    "./game/browser": {
-      "types": "./packages/game/dist/types/index.d.ts",
-      "default": "./packages/game/dist/browser/index.js"
-    },
-    "./client": {
-      "types": "./packages/client/dist/types/index.d.ts",
-      "import": "./packages/client/dist/esm/index.js",
-      "require": "./packages/client/dist/cjs/index.cjs",
-      "default": "./packages/client/dist/esm/index.js"
-    },
-    "./client/browser": {
-      "types": "./packages/client/dist/types/index.d.ts",
-      "default": "./packages/client/dist/browser/index.js"
-    },
-    "./tools": {
-      "types": "./packages/tools/dist/types/index.d.ts",
-      "import": "./packages/tools/dist/esm/index.js",
-      "require": "./packages/tools/dist/cjs/index.cjs",
-      "default": "./packages/tools/dist/esm/index.js"
-    },
-    "./tools/browser": {
-      "types": "./packages/tools/dist/types/index.d.ts",
-      "default": "./packages/tools/dist/browser/index.js"
-    },
-    "./viewer": {
-      "types": "./apps/viewer/dist/types/index.d.ts",
-      "import": "./apps/viewer/dist/esm/index.js",
-      "require": "./apps/viewer/dist/cjs/index.cjs",
-      "default": "./apps/viewer/dist/esm/index.js"
-    },
-    "./viewer/browser": {
-      "types": "./apps/viewer/dist/types/index.d.ts",
-      "default": "./apps/viewer/dist/browser/index.js"
-    },
-    "./test-utils": {
-      "types": "./packages/test-utils/dist/index.d.ts",
-      "import": "./packages/test-utils/dist/index.js",
-      "require": "./packages/test-utils/dist/index.cjs",
-      "default": "./packages/test-utils/dist/index.js"
-    },
-    "./package.json": "./package.json"
-  },
   "files": [
-    "packages/*/dist",
-    "apps/*/dist",
     "README.md",
     "LICENSE"
   ],
@@ -106,27 +35,35 @@
     "test": "pnpm -r --if-present test",
     "test:unit": "TEST_TYPE=unit vitest run",
     "test:integration": "pnpm -r --if-present test:integration",
+    "test:browser": "pnpm -r --if-present test:browser",
+    "test:webgpu": "pnpm -r --if-present test:webgpu",
     "prepublishOnly": "pnpm run build && pnpm run test"
+  },
+  "dependencies": {
+    "@quake2ts/client": "workspace:*",
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/test-utils": "workspace:*",
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
+    "gl-matrix": "^3.4.3",
+    "pako": "^2.1.0"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.82",
     "@playwright/test": "1.57.0",
     "@quake2ts/test-utils": "workspace:^",
-    "@quake2ts/tests": "workspace:^",
     "@types/node": "^24.10.1",
     "@types/pako": "^2.0.4",
     "@types/serve-handler": "^6.1.4",
     "@webgpu/types": "^0.1.68",
+    "cross-env": "^10.1.0",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.2.0",
     "playwright": "1.57.0",
     "tsx": "^4.20.6",
     "typescript": "^5.4.5",
     "vitest": "^1.5.3"
-  },
-  "dependencies": {
-    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
-    "gl-matrix": "^3.4.3",
-    "pako": "^2.1.0"
   }
 }

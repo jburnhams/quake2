@@ -14,6 +14,8 @@ export interface WebGPUContextState {
   features: Set<GPUFeatureName>;
   limits: GPUSupportedLimits;
   isHeadless: boolean;
+  width: number;
+  height: number;
 }
 
 export interface WebGPUCapabilities {
@@ -69,6 +71,8 @@ export async function createWebGPUContext(
   let context: GPUCanvasContext | undefined;
   let format: GPUTextureFormat = 'bgra8unorm'; // Fallback default
   let isHeadless = true;
+  let width = 0;
+  let height = 0;
 
   if (canvas) {
     context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -78,12 +82,18 @@ export async function createWebGPUContext(
 
     isHeadless = false;
     format = navigator.gpu.getPreferredCanvasFormat();
+    width = canvas.width;
+    height = canvas.height;
 
     context.configure({
       device,
       format,
       alphaMode: 'opaque', // Standard for game rendering
     });
+  } else {
+    // Default headless size
+    width = 800;
+    height = 600;
   }
 
   // Collect enabled features
@@ -101,7 +111,9 @@ export async function createWebGPUContext(
     format,
     features,
     limits: device.limits,
-    isHeadless
+    isHeadless,
+    width,
+    height
   };
 }
 

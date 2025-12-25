@@ -162,6 +162,41 @@ describe('InputController', () => {
     expect(controller.consumeConsoleCommands()).toEqual([]);
   });
 
+  it('handles impulse commands via bindings', () => {
+    const bindings = new InputBindings();
+    bindings.bind('KeyI', 'impulse 10');
+    const controller = new InputController({}, bindings);
+
+    // Press key bound to impulse 10
+    controller.handleKeyDown('KeyI', 0);
+
+    // Console commands should be empty (impulse is consumed)
+    expect(controller.consumeConsoleCommands()).toEqual([]);
+
+    // Build command
+    const cmd = controller.buildCommand(16, 16);
+    expect(cmd.impulse).toBe(10);
+
+    // Next frame should reset impulse
+    const cmd2 = controller.buildCommand(16, 32);
+    expect(cmd2.impulse).toBe(0);
+  });
+
+  it('clamps impulse commands to byte range', () => {
+    const bindings = new InputBindings();
+    bindings.bind('KeyA', 'impulse -5');
+    bindings.bind('KeyB', 'impulse 300');
+    const controller = new InputController({}, bindings);
+
+    controller.handleKeyDown('KeyA', 0);
+    let cmd = controller.buildCommand(16, 16);
+    expect(cmd.impulse).toBe(0);
+
+    controller.handleKeyDown('KeyB', 32);
+    cmd = controller.buildCommand(16, 48);
+    expect(cmd.impulse).toBe(255);
+  });
+
   it('emits +action/-action command strings only on transitions', () => {
     const controller = createController();
 

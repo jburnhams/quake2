@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '../../src/index.js';
 import type { GameExports } from '../../src/index.js';
 import { MoveType, Solid, Entity } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 // Increase timeout for performance tests
 const TIMEOUT = 10000;

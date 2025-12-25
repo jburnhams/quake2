@@ -3,57 +3,30 @@
 // =================================================================
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../src/entities/system.js';
-import { Entity, MoveType, Solid } from '../src/entities/entity.js';
+import { Entity } from '../src/entities/entity.js';
 import { createGame, GameExports } from '../src/index.js';
 import { WeaponId, PowerupId, addPowerup } from '../src/inventory/playerInventory.js';
 import { fire } from '../src/combat/weapons/firing.js';
-import { DamageMod } from '../src/combat/damageMods.js';
-import { createBfgBall } from '../src/entities/projectiles.js';
-import { ZERO_VEC3 } from '@quake2ts/shared';
-import { MulticastType } from '../src/imports.js';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
   let game: GameExports;
   let player: Entity;
   let world: Entity;
 
-  const mockEngine = {
-    trace: vi.fn(),
-    sound: vi.fn(),
-    centerprintf: vi.fn(),
-    modelIndex: vi.fn().mockReturnValue(1),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-  };
-
-  const mockImports = {
-    trace: vi.fn().mockReturnValue({
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      allsolid: false,
-      startsolid: false,
-      ent: null
-    }),
-    pointcontents: vi.fn().mockReturnValue(0),
-    linkentity: vi.fn(),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-  };
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Re-setup default mock return values after clear
-    mockImports.trace.mockReturnValue({
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      allsolid: false,
-      startsolid: false,
-      ent: null
-    });
+    const result = createGameImportsAndEngine();
+    mockImports = result.imports;
+    mockEngine = result.engine;
+
     game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld();
     world = game.entities.world;
+    // player is spawned by spawnWorld in single player mode (default for createGame unless deathmatch: true)
     player = game.entities.find(e => e.classname === 'player')!;
   });
 
@@ -76,18 +49,22 @@ describe('Combat and Items', () => {
     it('should hit multiple aligned entities', () => {
        // Setup aligned targets
        const target1 = game.entities.spawn();
-       target1.takedamage = true;
-       target1.health = 100;
-       target1.origin = { x: 100, y: 0, z: 0 };
-       target1.mins = { x: -10, y: -10, z: -10 };
-       target1.maxs = { x: 10, y: 10, z: 10 };
+       Object.assign(target1, createEntityFactory({
+           takedamage: true,
+           health: 100,
+           origin: { x: 100, y: 0, z: 0 },
+           mins: { x: -10, y: -10, z: -10 },
+           maxs: { x: 10, y: 10, z: 10 }
+       }));
 
        const target2 = game.entities.spawn();
-       target2.takedamage = true;
-       target2.health = 100;
-       target2.origin = { x: 200, y: 0, z: 0 }; // Behind target1
-       target2.mins = { x: -10, y: -10, z: -10 };
-       target2.maxs = { x: 10, y: 10, z: 10 };
+       Object.assign(target2, createEntityFactory({
+           takedamage: true,
+           health: 100,
+           origin: { x: 200, y: 0, z: 0 }, // Behind target1
+           mins: { x: -10, y: -10, z: -10 },
+           maxs: { x: 10, y: 10, z: 10 }
+       }));
 
        // Mock trace sequence for Railgun loop
        // 0. P_ProjectSource Check (Eye to Muzzle) -> No hit
@@ -123,9 +100,6 @@ describe('Combat and Items', () => {
        fire(game, player, WeaponId.Railgun);
 
        // Verify damage applied to both
-       // Note: In our mocked T_Damage, we might need to spy on it or check health directly if logic runs
-       // But T_Damage is imported directly in firing.ts, so we check health.
-
        expect(target1.health).toBeLessThan(100);
        expect(target2.health).toBeLessThan(100);
     });
@@ -138,40 +112,7 @@ describe('Combat and Items', () => {
 
           expect(player.client!.inventory.powerups.has(PowerupId.QuadDamage)).toBe(true);
 
-          // Advance time
-          // We need to simulate the player think which calls clearExpiredPowerups
-          // Or check if game loop calls it.
-          // In our integration, game.frame calls entities.runFrame which calls player.think
-
-          // But we need to ensure player think is scheduled?
-          // Spawn sets nextthink to time + 0.1
-
-          // Mock time advance
-          // We can't easily advance game.time directly without running frames.
-          // Let's just call player.think manually for unit testing logic.
-
-          // Manually update system time
-          // entities.beginFrame(game.time + 0.2);
-
-          // Wait, createGame uses a local variable for time via LevelClock.
-          // We can't force update it easily without running frames.
-
-          // Let's assume we can call player_think with a mocked system time.
-          // But player_think is not exported from index.
-
-          // We'll rely on running a frame.
-          // We need to ensure the time step is large enough.
-
-          // Actually, we can just invoke clearExpiredPowerups directly to verify logic if needed,
-          // but integration test prefers running the system.
-
-          // Let's try running frame.
-          // game.frame({ deltaSeconds: 0.2, timeSeconds: 0.2 });
-          // But createGame uses internal loop logic.
-
-          // For now, let's verify logic via direct call if we can export it or assume it works.
-          // Let's verify the `player_think` was attached correctly in `createGame`.
-
+          // Verify the `player_think` was attached correctly in `createGame`.
           expect(player.think).toBeDefined();
           expect(player.nextthink).toBeGreaterThan(0);
       });

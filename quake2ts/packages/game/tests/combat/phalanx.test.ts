@@ -11,20 +11,14 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { MulticastType } from '../../src/imports.js';
 import { ServerCommand, TempEntity, MZ_PHALANX, MZ_PHALANX2 } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Phalanx', () => {
     it('should fire standard shot (Frame != 8) with radius 120 and MZ_PHALANX', () => {
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const multicast = vi.fn();
         const createPhalanxBall = vi.spyOn(projectiles, 'createPhalanxBall');
 
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
-        const game = createGame({ trace, pointcontents: vi.fn(), linkentity: vi.fn(), multicast, unicast: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
 
         vi.spyOn(game.random, 'irandomRange').mockReturnValue(75);
 
@@ -55,23 +49,16 @@ describe('Phalanx', () => {
             120, // radius
             725 // speed
         );
-        expect(multicast).toHaveBeenCalledWith(
+        expect(imports.multicast).toHaveBeenCalledWith(
             expect.anything(), MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_PHALANX
         );
     });
 
     it('should fire alternate shot (Frame 8) with radius 30 and MZ_PHALANX2', () => {
-        const trace = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-        const multicast = vi.fn();
         const createPhalanxBall = vi.spyOn(projectiles, 'createPhalanxBall');
 
-        const engine = {
-            trace,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn().mockReturnValue(1),
-        };
-        const game = createGame({ trace, pointcontents: vi.fn(), linkentity: vi.fn(), multicast, unicast: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
 
         vi.spyOn(game.random, 'irandomRange').mockReturnValue(75);
         game.init(0);
@@ -100,7 +87,7 @@ describe('Phalanx', () => {
             30, // radius
             725 // speed
         );
-        expect(multicast).toHaveBeenCalledWith(
+        expect(imports.multicast).toHaveBeenCalledWith(
             expect.anything(), MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_PHALANX2
         );
     });

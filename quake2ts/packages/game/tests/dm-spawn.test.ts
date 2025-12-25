@@ -3,17 +3,14 @@ import { EntitySystem } from '../src/entities/system.js';
 import { Entity } from '../src/entities/entity.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createRandomGenerator } from '@quake2ts/shared';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let entities: EntitySystem;
     let mockRng: any;
 
     beforeEach(() => {
-        const engine = {
-            soundIndex: vi.fn(),
-            modelIndex: vi.fn(),
-        } as any;
+        const { engine } = createGameImportsAndEngine();
 
         mockRng = {
             frandom: vi.fn(() => 0.5),
@@ -25,27 +22,22 @@ describe('Deathmatch Spawn', () => {
 
     it('SelectDeathmatchSpawnPoint should return a random spawn point', () => {
         const s1 = entities.spawn();
-        s1.classname = 'info_player_deathmatch';
-        s1.origin = { x: 100, y: 0, z: 0 };
+        Object.assign(s1, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 100, y: 0, z: 0 }
+        }));
 
         const s2 = entities.spawn();
-        s2.classname = 'info_player_deathmatch';
-        s2.origin = { x: 200, y: 0, z: 0 };
-
-        // With 0.5, it should pick index 1.
-        // entities.findByClassname iterates internal pool.
-        // If s1 is spawned first (index 0) and s2 (index 1), the array should be [s1, s2].
-        // 0.5 * 2 = 1.0 -> index 1 -> s2.
-        // However, checking the failure, it seems it got s1 (x=100) instead of s2 (x=200).
-        // Let's debug by checking if order is preserved or reversed, or RNG mock behavior.
-        // Assuming findByClassname returns insertion order [s1, s2].
-        // If it returns [s2, s1], then index 1 is s1.
-        // Or if RNG returns < 0.5? mock is fixed to 0.5.
-        // Let's assert against whatever logic is active, but first ensure consistent mock.
+        Object.assign(s2, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 200, y: 0, z: 0 }
+        }));
 
         const spots = entities.findByClassname('info_player_deathmatch');
-        const index = Math.floor(0.5 * spots.length);
-        const expected = spots[index];
+        // If frandom returns 0.5, index = floor(0.5 * 2) = 1.
+        // But findByClassname order might depend on internal implementation.
+        // Assuming push order is preserved.
+        const expected = spots[1];
 
         const selected = SelectDeathmatchSpawnPoint(entities);
         expect(selected).toBe(expected);
@@ -53,8 +45,10 @@ describe('Deathmatch Spawn', () => {
 
     it('SelectDeathmatchSpawnPoint should fall back to info_player_start if no deathmatch spots', () => {
         const start = entities.spawn();
-        start.classname = 'info_player_start';
-        start.origin = { x: 10, y: 10, z: 10 };
+        Object.assign(start, createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 10, y: 10, z: 10 }
+        }));
 
         // SelectDeathmatchSpawnPoint returns undefined if no DM spots.
         // We should test SelectSpawnPoint which includes the fallback logic.
@@ -65,36 +59,26 @@ describe('Deathmatch Spawn', () => {
 
 describe('GameExports Respawn', () => {
     it('respawn should reset player state', () => {
-        const game = createGame({}, {} as any, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+
+        // Force RNG to return 0 to pick the first spot deterministically
+        vi.spyOn(game.random, 'frandom').mockReturnValue(0);
 
         // Mock SelectSpawnPoint implicitly by having a spawn point
         const spawn = game.entities.spawn();
-        spawn.classname = 'info_player_deathmatch';
-        spawn.origin = { x: 500, y: 500, z: 500 };
-        spawn.angles = { x: 0, y: 90, z: 0 };
+        Object.assign(spawn, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 500, y: 500, z: 500 },
+            angles: { x: 0, y: 90, z: 0 }
+        }));
 
-        // Create a player
+        // Create a player using factories
         const player = game.entities.spawn();
-        player.client = {
-            inventory: {
-                ammo: { counts: [], caps: [] },
-                ownedWeapons: new Set(),
-                powerups: new Map(),
-                keys: new Set(),
-                items: new Set()
-            },
-            weaponStates: [] as any,
-            pers: {} as any,
-            buttons: 0,
-            pm_type: 0,
-            pm_time: 0,
-            pm_flags: 0,
-            gun_frame: 0,
-            rdflags: 0,
-            fov: 90
-        };
-        player.health = 0;
-        player.deadflag = 2; // Dead
+        Object.assign(player, createPlayerEntityFactory({
+            health: 0,
+            deadflag: 2 // Dead
+        }));
 
         game.respawn(player);
 

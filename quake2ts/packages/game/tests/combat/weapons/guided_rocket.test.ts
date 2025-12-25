@@ -7,6 +7,7 @@ import { createGame } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import { fireRocket } from '../../../src/combat/weapons/firing.js';
 import { normalizeVec3, dotVec3 } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Guided Rocket', () => {
     let game: any;
@@ -14,22 +15,8 @@ describe('Guided Rocket', () => {
     let sys: any;
 
     beforeEach(() => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const linkentity = vi.fn();
-
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
-
-        game = createGame({ trace, pointcontents, linkentity, multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
         game.init(0);
 
         sys = game.entities;

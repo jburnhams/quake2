@@ -137,7 +137,7 @@ export interface BspLeafLists {
   readonly leafBrushes: readonly number[][];
 }
 
-export interface BspMap {
+export interface BspData {
   readonly header: BspHeader;
   readonly entities: BspEntities;
   readonly planes: readonly BspPlane[];
@@ -155,7 +155,11 @@ export interface BspMap {
   readonly brushes: readonly BspBrush[];
   readonly brushSides: readonly BspBrushSide[];
   readonly visibility: BspVisibility | undefined;
+  readonly areas: readonly BspArea[];
+  readonly areaPortals: readonly BspAreaPortal[];
+}
 
+export interface BspMap extends BspData {
   /**
    * Finds the closest brush-based entity that intersects with the given ray.
    * @param ray An object defining the origin and direction of the ray.
@@ -167,6 +171,17 @@ export interface BspMap {
     model: BspModel;
     distance: number;
   } | null;
+
+  /**
+   * Finds the leaf node containing the given point.
+   */
+  findLeaf(origin: Vec3): BspLeaf;
+
+  /**
+   * Returns the PVS (Potentially Visible Set) for the given point.
+   * Returns undefined if the point is not in a valid cluster or visibility data is missing.
+   */
+  calculatePVS(origin: Vec3): Uint8Array | undefined;
 }
 
 export enum BspLump {
@@ -193,18 +208,184 @@ export enum BspLump {
 
 export class BspParseError extends Error {}
 
+export interface BspLoaderOptions {
+    useWorker?: boolean;
+    workerPath?: string;
+}
+
 export class BspLoader {
-  constructor(private readonly vfs: VirtualFileSystem) {}
+  constructor(
+      private readonly vfs: VirtualFileSystem,
+      private readonly options: BspLoaderOptions = {}
+  ) {}
 
   async load(path: string): Promise<BspMap> {
     const buffer = await this.vfs.readFile(path);
+
+    // Create a copy because buffer might be shared or reused, and we might transfer it.
+    // Also, ArrayBuffer from vfs.readFile might be SharedArrayBuffer or offset.
+    // parseBsp expects ArrayBuffer.
     const copy = new Uint8Array(buffer.byteLength);
-    copy.set(buffer);
+    copy.set(new Uint8Array(buffer));
+
+    if (this.options.useWorker && typeof Worker !== 'undefined') {
+        try {
+            const data = await this.parseInWorker(copy.buffer);
+            return createBspMap(data);
+        } catch (e) {
+            console.warn('BSP worker parsing failed, falling back to main thread', e);
+        }
+    }
+
     return parseBsp(copy.buffer);
+  }
+
+  private parseInWorker(buffer: ArrayBuffer): Promise<BspData> {
+      return new Promise((resolve, reject) => {
+        // Assume the worker script is available at the given path or default location.
+        // In a real build setup (Vite/Webpack), we might import it with ?worker.
+        // For now, we assume it is served or bundled.
+        // Since we are in a library, using a Blob URL or a specific path provided by the app is best.
+
+        // If options.workerPath is not provided, we can't spawn the worker easily in this environment
+        // without a bundler transform.
+        // However, if we assume standard Vite ?worker import is not available here in source (it is a library).
+
+        // For this task, I will assume the caller provides a Worker instance or URL,
+        // OR we just use the path if provided.
+        if (!this.options.workerPath) {
+            reject(new Error('No worker path provided'));
+            return;
+        }
+
+        const worker = new Worker(this.options.workerPath, { type: 'module' });
+
+        worker.onmessage = (event) => {
+            const { type, data, message } = event.data;
+            if (type === 'success') {
+                // Reconstruct objects if needed, but structured clone should handle data
+                // We need to re-attach methods which is done by createBspMap caller.
+                // However, Map objects (like lumps) might need care if they were Map in source.
+                // In BspData, 'lumps' is ReadonlyMap. Structured clone handles Map.
+
+                // One catch: BspEntities methods like getUniqueClassnames are missing from the data returned by worker.
+                // BspData has 'entities: BspEntities'.
+                // 'BspEntities' interface has 'getUniqueClassnames()'.
+                // The worker returns the object structure, but methods are not cloned.
+                // So 'data.entities.getUniqueClassnames' will be undefined.
+                // We need to re-hydrate the methods.
+
+                // Let's handle re-hydration of BspEntities methods here or in createBspMap.
+                // createBspMap assumes data has BspEntities structure.
+                // Currently parseEntities returns an object with the method attached.
+                // I need to ensure createBspMap or a helper restores this method.
+
+                resolve(this.rehydrateData(data));
+                worker.terminate();
+            } else {
+                reject(new Error(message));
+                worker.terminate();
+            }
+        };
+
+        worker.onerror = (err) => {
+            reject(err);
+            worker.terminate();
+        };
+
+        worker.postMessage(buffer, [buffer]);
+      });
+  }
+
+  private rehydrateData(data: BspData): BspData {
+      // Restore methods lost during serialization
+      if (data.entities && !data.entities.getUniqueClassnames) {
+          // We need to cast to mutable to re-assign
+          const ent = data.entities as any;
+          ent.getUniqueClassnames = function() {
+              const classnames = new Set<string>();
+              for (const entity of (this as BspEntities).entities) {
+                if (entity.classname) {
+                  classnames.add(entity.classname);
+                }
+              }
+              return Array.from(classnames).sort();
+          };
+      }
+      return data;
   }
 }
 
 export function parseBsp(buffer: ArrayBuffer): BspMap {
+  const data = parseBspData(buffer);
+  return createBspMap(data);
+}
+
+export function createBspMap(data: BspData): BspMap {
+  return {
+    ...data,
+    pickEntity(ray) {
+      let closest: { entity: BspEntity; model: BspModel; distance: number } | null = null;
+      let minDistance = Infinity;
+
+      for (const entity of data.entities.entities) {
+        const modelKey = entity.properties['model'];
+        if (!modelKey || !modelKey.startsWith('*')) {
+          continue;
+        }
+
+        const modelIndex = parseInt(modelKey.substring(1), 10);
+        if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= data.models.length) {
+          continue;
+        }
+
+        const model = data.models[modelIndex];
+        const dist = intersectRayAabb(ray.origin, ray.direction, model.mins, model.maxs);
+
+        if (dist !== null && dist < minDistance) {
+          minDistance = dist;
+          closest = { entity, model, distance: dist };
+        }
+      }
+
+      return closest;
+    },
+    findLeaf(origin: Vec3): BspLeaf {
+      const headNode = data.models[0].headNode;
+      let nodeIndex = headNode;
+
+      while (nodeIndex >= 0) {
+        const node = data.nodes[nodeIndex];
+        const plane = data.planes[node.planeIndex];
+        const distance =
+          plane.normal[0] * origin[0] +
+          plane.normal[1] * origin[1] +
+          plane.normal[2] * origin[2] -
+          plane.dist;
+
+        if (distance >= 0) {
+          nodeIndex = node.children[0];
+        } else {
+          nodeIndex = node.children[1];
+        }
+      }
+
+      return data.leafs[-(nodeIndex + 1)];
+    },
+    calculatePVS(origin: Vec3): Uint8Array | undefined {
+      const leaf = this.findLeaf(origin);
+      if (leaf.cluster === -1 || !data.visibility) {
+        return undefined;
+      }
+      if (leaf.cluster < 0 || leaf.cluster >= data.visibility.clusters.length) {
+        return undefined;
+      }
+      return data.visibility.clusters[leaf.cluster].pvs;
+    },
+  };
+}
+
+export function parseBspData(buffer: ArrayBuffer): BspData {
   if (buffer.byteLength < HEADER_SIZE) {
     throw new BspParseError('BSP too small to contain header');
   }
@@ -246,8 +427,10 @@ export function parseBsp(buffer: ArrayBuffer): BspMap {
   const brushSides = parseBrushSides(buffer, lumps.get(BspLump.BrushSides)!);
   const leafLists = parseLeafLists(buffer, lumps.get(BspLump.LeafFaces)!, lumps.get(BspLump.LeafBrushes)!, leafs);
   const visibility = parseVisibility(buffer, lumps.get(BspLump.Visibility)!);
+  const areas = parseAreas(buffer, lumps.get(BspLump.Areas)!);
+  const areaPortals = parseAreaPortals(buffer, lumps.get(BspLump.AreaPortals)!);
 
-  const map: BspMap = {
+  return {
     header,
     entities,
     planes,
@@ -265,35 +448,9 @@ export function parseBsp(buffer: ArrayBuffer): BspMap {
     brushes,
     brushSides,
     visibility,
-    pickEntity(ray) {
-      let closest: { entity: BspEntity; model: BspModel; distance: number } | null = null;
-      let minDistance = Infinity;
-
-      for (const entity of entities.entities) {
-        const modelKey = entity.properties['model'];
-        if (!modelKey || !modelKey.startsWith('*')) {
-          continue;
-        }
-
-        const modelIndex = parseInt(modelKey.substring(1), 10);
-        if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= models.length) {
-          continue;
-        }
-
-        const model = models[modelIndex];
-        const dist = intersectRayAabb(ray.origin, ray.direction, model.mins, model.maxs);
-
-        if (dist !== null && dist < minDistance) {
-          minDistance = dist;
-          closest = { entity, model, distance: dist };
-        }
-      }
-
-      return closest;
-    },
+    areas,
+    areaPortals,
   };
-
-  return map;
 }
 
 function intersectRayAabb(origin: Vec3, direction: Vec3, mins: Vec3, maxs: Vec3): number | null {
@@ -573,6 +730,46 @@ function parseBrushSides(buffer: ArrayBuffer, info: BspLumpInfo): BspBrushSide[]
   }
   return sides;
 }
+
+function parseAreas(buffer: ArrayBuffer, info: BspLumpInfo): BspArea[] {
+  const view = new DataView(buffer, info.offset, info.length);
+  const entrySize = 8;
+  const count = info.length / entrySize;
+  if (count % 1 !== 0) {
+    throw new BspParseError('Area lump has invalid length');
+  }
+  const areas: BspArea[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const base = i * entrySize;
+    const numAreaPortals = view.getInt32(base, true);
+    const firstAreaPortal = view.getInt32(base + 4, true);
+    areas.push({ numAreaPortals, firstAreaPortal });
+  }
+  return areas;
+}
+
+function parseAreaPortals(buffer: ArrayBuffer, info: BspLumpInfo): BspAreaPortal[] {
+  // Use 8 bytes for dareaportal_t based on Quake 2 source q_shared.h
+  return parseAreaPortals8(buffer, info);
+}
+
+function parseAreaPortals8(buffer: ArrayBuffer, info: BspLumpInfo): BspAreaPortal[] {
+  const view = new DataView(buffer, info.offset, info.length);
+  const entrySize = 8;
+  const count = info.length / entrySize;
+  if (count % 1 !== 0) {
+    throw new BspParseError('AreaPortal lump has invalid length');
+  }
+  const portals: BspAreaPortal[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const base = i * entrySize;
+    const portalNumber = view.getInt32(base, true);
+    const otherArea = view.getInt32(base + 4, true);
+    portals.push({ portalNumber, otherArea });
+  }
+  return portals;
+}
+
 
 function parseLeafLists(
   buffer: ArrayBuffer,

@@ -7,22 +7,19 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Super Shotgun', () => {
     it('should consume 2 shells and fire 20 pellets', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
+        const customTrace = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: customTrace,
+            },
+        });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -41,7 +38,7 @@ describe('Super Shotgun', () => {
         target.health = 100;
         target.takedamage = 1;
 
-        trace.mockReturnValue({
+        customTrace.mockReturnValue({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
@@ -50,25 +47,21 @@ describe('Super Shotgun', () => {
         fire(game, player, WeaponId.SuperShotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
-        expect(trace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
+        expect(customTrace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
         // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
         expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, game.time, expect.any(Function), expect.objectContaining({ hooks: expect.anything() }));
     });
 
     it('should fire two volleys with horizontal spread', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
-        const multicast = vi.fn();
-        const unicast = vi.fn();
+        const customTrace = vi.fn();
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: customTrace,
+            },
+        });
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -87,7 +80,7 @@ describe('Super Shotgun', () => {
         target.health = 100;
         target.takedamage = 1;
 
-        trace.mockReturnValue({
+        customTrace.mockReturnValue({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
@@ -95,10 +88,10 @@ describe('Super Shotgun', () => {
 
         fire(game, player, WeaponId.SuperShotgun);
 
-        expect(trace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
+        expect(customTrace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
 
         // Check the trace calls to verify the spread pattern
-        const calls = trace.mock.calls;
+        const calls = customTrace.mock.calls;
         // calls[0] is source
         // 1-10 is first volley
         // 11-20 is second volley

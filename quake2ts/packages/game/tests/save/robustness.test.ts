@@ -3,7 +3,6 @@ import {
   createSaveFile,
   parseSaveFile,
   applySaveFile,
-  type GameSaveFile,
   type SaveApplyTargets,
 } from '../../src/save/save.js';
 import { EntitySystem, type Entity } from '../../src/entities/system.js';
@@ -13,6 +12,7 @@ import { CvarRegistry } from '@quake2ts/engine';
 import { createPlayerInventory, type PlayerInventory, WeaponId, PowerupId } from '../../src/inventory/playerInventory.js';
 import { DeadFlag } from '../../src/entities/entity.js';
 import { AmmoType } from '../../src/inventory/items.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Save/Load Robustness', () => {
   let entitySystem: EntitySystem;
@@ -22,23 +22,15 @@ describe('Save/Load Robustness', () => {
   let playerInventory: PlayerInventory;
   let targets: SaveApplyTargets;
 
-  beforeEach(() => {
-    // Mock Engine
-    const mockEngine = {
-      registerCommand: vi.fn(),
-      registerCvar: vi.fn(),
-      time: 0,
-    } as any;
+  // Use createGameImportsAndEngine for mocking
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
-    // Mock Imports
-    const mockImports = {
-      trace: vi.fn(),
-      pointcontents: vi.fn(),
-      linkentity: vi.fn(),
-      unlinkentity: vi.fn(),
-      multicast: vi.fn(),
-      unicast: vi.fn(),
-    } as any;
+
+  beforeEach(() => {
+    const result = createGameImportsAndEngine();
+    mockImports = result.imports;
+    mockEngine = result.engine;
 
     entitySystem = new EntitySystem(mockEngine, mockImports, undefined, 800);
     levelClock = new LevelClock();
@@ -76,7 +68,7 @@ describe('Save/Load Robustness', () => {
     });
 
     // 3. Clear System
-    entitySystem = new EntitySystem({} as any, { linkentity: vi.fn(), multicast: vi.fn(), unicast: vi.fn() } as any, undefined, 800);
+    entitySystem = new EntitySystem(mockEngine, mockImports, undefined, 800);
     const newTargets = { ...targets, entitySystem };
 
     // 4. Load
@@ -189,7 +181,7 @@ describe('Save/Load Robustness', () => {
     });
 
     // Reset
-    const newSystem = new EntitySystem({} as any, { linkentity: vi.fn(), multicast: vi.fn(), unicast: vi.fn() } as any, undefined, 800);
+    const newSystem = new EntitySystem(mockEngine, mockImports, undefined, 800);
     applySaveFile(save, { ...targets, entitySystem: newSystem });
 
     // Verify count

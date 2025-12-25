@@ -48,7 +48,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createTriggerEntityFactory(triggerType: string, overrides?: Partial<Entity>): Entity`
   - Pre-set: bounds, touch callback, solid type
 
-- [ ] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
+- [x] **1.8** Cleanup inline entity creation in `game/tests/entities/` directory
   - [x] Refactored `player.test.ts`
   - [x] Refactored `monster_soldier.test.ts`
   - [x] Refactored `monsters.test.ts`
@@ -57,14 +57,47 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `projectiles.test.ts`
   - [x] Refactored `bfg_ball.test.ts`
   - [x] Refactored `funcs.test.ts`
+  - [x] Refactored `func_door_*.test.ts` (3 files)
+  - [x] Refactored `func_explosive.test.ts`
+  - [x] Refactored `func_misc.test.ts`
+  - [x] Refactored `func_object.test.ts`
+  - [x] Refactored `func_plat.test.ts`
+  - [x] Refactored `func_rotating.test.ts`
+  - [x] Refactored `func_timer.test.ts`
+  - [x] Refactored `func_train.test.ts`
+  - [x] Refactored `target_autosave.test.ts`
+  - [x] Refactored `target_blaster.test.ts`
+  - [x] Refactored `target_crosslevel.test.ts`
+  - [x] Refactored `target_healthbar.test.ts`
+  - [x] Refactored `target_laser.test.ts`
+  - [x] Refactored `target_music.test.ts`
+  - [x] Refactored `target_spawner.test.ts`
+  - [x] Refactored `target_speaker.test.ts`
+  - [x] Refactored `trigger_multiple.test.ts`
+  - [x] Refactored `trigger_conditions.test.ts`
+  - [x] Refactored `triggers.test.ts`
+  - [x] Refactored `misc.test.ts`
+  - [x] Refactored `lights.test.ts`
+  - [x] Refactored `paths.test.ts`
   - Replace manual entity creation with factories
-  - Estimated files: ~25 (Remaining: ~17)
+  - Estimated files: ~25 (Remaining: 0)
 
-- [ ] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+- [] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+  - [x] Refactored `damage.test.ts`
+  - [x] Refactored `damage-kick.test.ts`
+  - [x] Refactored `weapons/projectSource.test.ts`
+  - [x] Refactored `chaingun.test.ts`
+  - [x] Refactored `blaster.test.ts`
+  - [x] Refactored `railgun.test.ts`
+  - [x] Refactored `shotgun.test.ts`
+  - [x] Refactored `machinegun.test.ts`
+  - [x] Refactored `rocket_launcher.test.ts`
   - Same pattern
-  - Estimated files: ~15
+  - Estimated files: ~11
 
-- [ ] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+- [] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+  - [x] Refactored `entities/items/weapons.test.ts`
+  - [x] Refactored `entities/items/ammo.test.ts`
   - Same pattern
   - Estimated files: ~10
 
@@ -93,6 +126,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Include collision world, traces
 
 - [ ] **2.5** Cleanup context creation in `game/tests/spawn/` directory
+  - [x] Refactored `game/tests/integration/spawning.test.ts`
   - Replace custom contexts with factory functions
   - Estimated files: ~8
 
@@ -127,15 +161,23 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createMockDamageInfo(overrides?: Partial<DamageInfo>): DamageInfo`
   - Include: attacker, target, amount, type, point, direction
 
-- [ ] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+- [] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+  - [x] Refactored `radiusDamage.test.ts`
+  - [x] Refactored `damage.test.ts`
+  - [x] Refactored `damage-kick.test.ts`
+  - [x] Refactored `hyperblaster.test.ts`
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 
-- [ ] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+- [] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+  - [x] Refactored `targeting.test.ts`
+  - [x] Refactored `cover.test.ts`
+  - [x] Refactored `dodge.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
-- [ ] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+- [] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+  - [x] Refactored `soldier_variants.test.ts`
   - Replace inline attack function mocks
   - Estimated files: ~15
 
@@ -169,24 +211,24 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 5. Create Physics Test Helpers (MEDIUM PRIORITY)
 
-**Status:** Some helpers exist, need expansion
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 4 (collision helpers)
 
-- [ ] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
+- [x] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
 
-- [ ] **5.2** Add `simulateMovement()` helper
+- [x] **5.2** Add `simulateMovement()` helper
   - Signature: `simulateMovement(entity: Entity, destination: Vector3, context: TestContext): Trace`
   - Simulate movement with collision detection
 
-- [ ] **5.3** Add `simulateGravity()` helper
+- [x] **5.3** Add `simulateGravity()` helper
   - Signature: `simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void`
   - Apply gravity and ground detection
 
-- [ ] **5.4** Add `simulateJump()` helper
+- [x] **5.4** Add `simulateJump()` helper
   - Signature: `simulateJump(entity: Entity, context: TestContext): void`
   - Apply jump velocity with ground check
 
-- [ ] **5.5** Add `createPhysicsTestScenario()` helper
+- [x] **5.5** Add `createPhysicsTestScenario()` helper
   - Signature: `createPhysicsTestScenario(scenarioType: 'stairs' | 'ladder' | 'platform' | 'slope'): PhysicsScenario`
   - Return pre-configured BSP model and entity setup
 
@@ -198,24 +240,24 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 6. Create Save/Load Test Utilities (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** In Progress
 **Dependencies:** Task 1, Task 2
 
-- [ ] **6.1** Create `test-utils/src/game/helpers/save.ts` file
+- [x] **6.1** Create `test-utils/src/game/helpers/save.ts` file
 
-- [ ] **6.2** Add `createMockSaveGame()` factory
+- [x] **6.2** Add `createMockSaveGame()` factory
   - Signature: `createMockSaveGame(overrides?: Partial<SaveGame>): SaveGame`
   - Include: game state, entities, level info, player state
 
-- [ ] **6.3** Add `createSaveGameSnapshot()` helper
+- [x] **6.3** Add `createSaveGameSnapshot()` helper
   - Signature: `createSaveGameSnapshot(context: TestContext): SaveGame`
   - Capture current test context as save game
 
-- [ ] **6.4** Add `restoreSaveGameSnapshot()` helper
+- [x] **6.4** Add `restoreSaveGameSnapshot()` helper
   - Signature: `restoreSaveGameSnapshot(saveGame: SaveGame, context: TestContext): void`
   - Restore test context from save game
 
-- [ ] **6.5** Add `compareSaveGames()` helper
+- [x] **6.5** Add `compareSaveGames()` helper
   - Signature: `compareSaveGames(a: SaveGame, b: SaveGame): SaveGameDiff`
   - Find differences for testing save/load integrity
 

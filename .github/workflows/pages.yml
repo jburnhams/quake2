@@ -1,0 +1,86 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: ["WebGpu Tests"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    # Only run if the WebGpu Tests workflow was successful AND it was on the main branch
+    if: ${{ (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Download Visual Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-test-results
+          path: visual-test-results
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Build Pages
+        run: |
+          mkdir -p pages-dist
+          cp -r pages/* pages-dist/
+
+          if [ -f "visual-test-results/visual-tests.json" ]; then
+            echo "Building Visual Tests Gallery..."
+
+            # Run the gallery generation script
+            # We use npx tsx to run the typescript file directly without full project install
+            npx tsx quake2ts/packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json pages-dist
+
+            mkdir -p pages-dist/snapshots
+            # Find and copy all snapshots from nested structure to flattened pages-dist/snapshots structure
+            # The structure in artifacts is likely .../webgpu/visual/__snapshots__/baselines/...
+            # We want pages-dist/snapshots/baselines/...
+
+            # Create destination dirs
+            mkdir -p pages-dist/snapshots/baselines
+            mkdir -p pages-dist/snapshots/actual
+            mkdir -p pages-dist/snapshots/diff
+
+            # Find and copy using rsync to merge directories or simple cp
+            # Finding all 'baselines' directories in the artifact
+            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages-dist/snapshots/baselines/ \; || true
+            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages-dist/snapshots/actual/ \; || true
+            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages-dist/snapshots/diff/ \; || true
+
+          else
+            echo "No visual test results found, skipping gallery generation."
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './pages-dist'
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

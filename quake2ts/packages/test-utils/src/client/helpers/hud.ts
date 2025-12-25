@@ -15,7 +15,10 @@ export interface HudState {
     health: number;
     armor: number;
     ammo: number;
-    stats: FrameRenderStats;
+    stats: number[]; // Game stats (health, armor, ammo indices)
+    pickupIcon?: string;
+    damageIndicators?: any[];
+    renderStats?: FrameRenderStats; // Optional render stats for verification
     timeMs: number;
     messages: any; // Using any for now to avoid circular dependency
 }
@@ -45,15 +48,12 @@ export function createMockHudState(overrides?: Partial<HudState>): HudState {
         }
     } as unknown as PlayerClient;
 
-    const defaultStats: FrameRenderStats = {
-        fps: 60,
-        drawCalls: 100,
-        facesDrawn: 1000,
-        skyDrawn: true,
-        viewModelDrawn: true,
-        vertexCount: 10000,
-        batches: 10
-    };
+    // Use a numeric array for game stats (EntityState.stats)
+    // Indexes: 1=Health, 2=Ammo, 4=Armor (based on client/src/index.ts usage)
+    const defaultStats = new Array(32).fill(0);
+    defaultStats[1] = 100; // Health
+    defaultStats[2] = 25;  // Ammo
+    defaultStats[4] = 50;  // Armor
 
     const defaultMessages = {
         drawCenterPrint: vi.fn(),
@@ -68,8 +68,11 @@ export function createMockHudState(overrides?: Partial<HudState>): HudState {
         client: overrides?.client ?? defaultClient,
         health: overrides?.health ?? 100,
         armor: overrides?.armor ?? 50,
-        ammo: overrides?.ammo ?? 20,
+        ammo: overrides?.ammo ?? 25,
         stats: overrides?.stats ?? defaultStats,
+        pickupIcon: overrides?.pickupIcon,
+        damageIndicators: overrides?.damageIndicators,
+        renderStats: overrides?.renderStats,
         timeMs: overrides?.timeMs ?? 1000,
         messages: overrides?.messages ?? defaultMessages
     };

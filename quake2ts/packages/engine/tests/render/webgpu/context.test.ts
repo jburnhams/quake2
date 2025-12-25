@@ -56,8 +56,12 @@ describe('WebGPU Context', () => {
 
       await expect(createWebGPUContext()).rejects.toThrow('WebGPU is not supported');
 
-      // Restore
-      Object.defineProperty(navigator, 'gpu', { value: originalGpu });
+      // Restore with configurable/writable so subsequent tests can overwrite it if needed
+      Object.defineProperty(navigator, 'gpu', {
+        value: originalGpu,
+        configurable: true,
+        writable: true
+      });
     });
 
     it('throws error if no adapter found', async () => {

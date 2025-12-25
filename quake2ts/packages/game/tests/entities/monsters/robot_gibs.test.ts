@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import * as gibs from '../../../src/entities/gibs.js';
 import { SP_monster_medic } from '../../../src/entities/monsters/medic.js';
 import { SP_monster_flyer } from '../../../src/entities/monsters/flyer.js';

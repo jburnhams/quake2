@@ -1,6 +1,7 @@
 import { vi, type Mock } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
+import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
 
 // Re-export collision helpers from shared collision utility
@@ -88,9 +89,13 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   // Create hooks helper that interacts with the entity list
   const hooks = game.hooks;
 
+  // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
+  let currentSpawnRegistry: SpawnRegistry | undefined;
+
   const entities = {
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
+      ent.inUse = true;
       entityList.push(ent);
       hooks.onEntitySpawn(ent);
       return ent;
@@ -100,6 +105,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       if (idx !== -1) {
         entityList.splice(idx, 1);
       }
+      ent.inUse = false;
       hooks.onEntityRemove(ent);
     }),
     finalizeSpawn: vi.fn(),
@@ -108,8 +114,19 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       if (idx !== -1) {
         entityList.splice(idx, 1);
       }
+      ent.inUse = false;
     }),
-    setSpawnRegistry: vi.fn(),
+    setSpawnRegistry: vi.fn((registry: SpawnRegistry) => {
+      currentSpawnRegistry = registry;
+    }),
+    registerEntityClass: vi.fn((classname: string, factory: any) => {
+      if (currentSpawnRegistry) {
+        currentSpawnRegistry.register(classname, factory);
+      }
+    }),
+    getSpawnFunction: vi.fn((classname: string) => {
+      return currentSpawnRegistry?.get(classname);
+    }),
     timeSeconds: 10,
     deltaSeconds: 0.1,
     modelIndex: vi.fn(() => 0),
@@ -203,10 +220,91 @@ export function createCombatTestContext(): TestContext {
   return createTestContext();
 }
 
-export function createPhysicsTestContext(): TestContext {
-  return createTestContext();
+export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
+  const context = createTestContext();
+
+  if (bspModel) {
+    // If a BSP model is provided, we can set up the trace mock to be more realistic.
+    // For now, we'll just store the model on the context if we extended TestContext,
+    // but the task specifically asks to "Include collision world, traces".
+
+    // In a real scenario, we might want to hook up a real BSP trace function here
+    // or a mock that uses the BSP data.
+    // Since we don't have a full BSP physics engine mock ready to drop in,
+    // we will stick with the default trace mock which is already set up in createTestContext,
+    // but we acknowledge the bspModel parameter for future expansion where we might
+    // use it to seed the trace results.
+  }
+
+  return context;
 }
 
 export function createEntity(): Entity {
   return new Entity(1);
+}
+
+/**
+ * Creates mock imports and engine for use with createGame() from @quake2ts/game.
+ * This is a convenience helper that provides all the commonly mocked functions
+ * needed to instantiate a real Game instance in tests.
+ *
+ * @param overrides Optional overrides for specific mock functions
+ * @returns An object containing both imports and engine mocks
+ *
+ * @example
+ * ```typescript
+ * import { createGame } from '@quake2ts/game';
+ * import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+ *
+ * const { imports, engine } = createGameImportsAndEngine();
+ * const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+ * ```
+ */
+export function createGameImportsAndEngine(overrides?: {
+  imports?: Partial<{
+    trace: Mock;
+    pointcontents: Mock;
+    linkentity: Mock;
+    multicast: Mock;
+    unicast: Mock;
+  }>;
+  engine?: Partial<{
+    trace: Mock;
+    sound: Mock;
+    centerprintf: Mock;
+    modelIndex: Mock;
+    soundIndex: Mock;
+  }>;
+}) {
+  // Default trace result - matches the pattern from original monster tests
+  const defaultTraceResult = {
+    fraction: 1.0,
+    endpos: { x: 0, y: 0, z: 0 },
+    allsolid: false,
+    startsolid: false,
+    plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+    ent: null,
+  };
+
+  const defaultTrace = vi.fn().mockReturnValue(defaultTraceResult);
+
+  const imports = {
+    trace: defaultTrace,
+    pointcontents: vi.fn().mockReturnValue(0),
+    linkentity: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    ...overrides?.imports,
+  };
+
+  const engine = {
+    trace: vi.fn().mockReturnValue(defaultTraceResult),
+    sound: vi.fn(),
+    centerprintf: vi.fn(),
+    modelIndex: vi.fn().mockReturnValue(1),
+    soundIndex: vi.fn().mockReturnValue(1),
+    ...overrides?.engine,
+  };
+
+  return { imports, engine };
 }

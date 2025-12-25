@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { player_pain, P_PlayerThink } from '../../src/entities/player.js';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Player Damage Kick', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -13,8 +14,14 @@ describe('Player Damage Kick', () => {
 
     beforeEach(() => {
         context = createTestContext();
-        player = context.entities.spawn();
-        player.classname = 'player';
+
+        player = createPlayerEntityFactory({
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 }
+        });
+
+        // Populate client which createPlayerEntityFactory does not fully populate with complex objects yet
+        // TODO: Update createPlayerEntityFactory to include these defaults
         player.client = {
             inventory: createPlayerInventory(),
             weaponStates: createPlayerWeaponStates(),
@@ -36,11 +43,11 @@ describe('Player Damage Kick', () => {
                 selected_item: 0
             }
         } as any;
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.angles = { x: 0, y: 0, z: 0 }; // Facing East (0 yaw)
 
-        attacker = context.entities.spawn();
-        attacker.origin = { x: 100, y: 0, z: 0 }; // In front
+        // Attacker is just an entity
+        attacker = createEntityFactory({
+             origin: { x: 100, y: 0, z: 0 }
+        });
     });
 
     it('applies pitch kick on damage', () => {

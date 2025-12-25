@@ -1628,10 +1628,29 @@ const func_killbox: SpawnFunction = (entity, context) => {
 };
 
 const func_areaportal: SpawnFunction = (entity, context) => {
+    // Determine portal number from style or portalnum
+    const portalNum = (entity as any).style || (entity as any).portalnum || 0;
+
+    // Initial state:
+    // If targetname is set, it starts closed (false).
+    let isOpen = !entity.targetname;
+
+    // Set initial state in engine
+    if (portalNum > 0) {
+        context.entities.engine.setAreaPortalState?.(portalNum, isOpen);
+    }
+
     entity.use = (self, other, activator) => {
-        entity.state = entity.state === DoorState.Open ? DoorState.Closed : DoorState.Open;
-        // Real implementation would update PVS visibility
+        isOpen = !isOpen;
+        self.state = isOpen ? DoorState.Open : DoorState.Closed;
+
+        if (portalNum > 0) {
+            context.entities.engine.setAreaPortalState?.(portalNum, isOpen);
+        }
     };
+
+    // Set initial internal state
+    entity.state = isOpen ? DoorState.Open : DoorState.Closed;
 }
 
 // ============================================================================

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientExports, ClientImports, ClientMode } from '../../src/index.js';
+import { createClient, ClientExports, ClientImports } from '../../src/index.js';
 import { DemoCameraMode } from '../../src/demo/camera.js';
-import { DemoPlaybackController, Renderer, EngineImports, EngineHost, GameRenderSample } from '@quake2ts/engine';
-import { Vec3, UserCommand } from '@quake2ts/shared';
+import { EngineHost, GameRenderSample, Renderer, EngineImports } from '@quake2ts/engine';
 import { mat4 } from 'gl-matrix';
+import { createMockDemoCameraResult } from '@quake2ts/test-utils';
 
 describe('Demo Camera Modes and Collision', () => {
     let client: ClientExports;
@@ -74,11 +74,14 @@ describe('Demo Camera Modes and Collision', () => {
 
         vi.spyOn(client.demoHandler, 'getPredictionState').mockReturnValue(mockState as any);
         vi.spyOn(client.demoHandler, 'getRenderableEntities').mockReturnValue([]);
-        vi.spyOn(client.demoHandler, 'getDemoCamera').mockReturnValue({
+
+        const mockCamera = createMockDemoCameraResult({
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 },
             fov: 90
         });
+
+        vi.spyOn(client.demoHandler, 'getDemoCamera').mockReturnValue(mockCamera);
 
         // Trigger render
         const sample: GameRenderSample<any> = {
@@ -113,11 +116,14 @@ describe('Demo Camera Modes and Collision', () => {
 
         vi.spyOn(client.demoHandler, 'getPredictionState').mockReturnValue(mockState as any);
         vi.spyOn(client.demoHandler, 'getRenderableEntities').mockReturnValue([]);
-        vi.spyOn(client.demoHandler, 'getDemoCamera').mockReturnValue({
+
+        const mockCamera = createMockDemoCameraResult({
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 },
             fov: 90
         });
+
+        vi.spyOn(client.demoHandler, 'getDemoCamera').mockReturnValue(mockCamera);
 
         // Mock trace hitting a wall at 50 units
         traceMock.mockReturnValue({
@@ -236,7 +242,6 @@ describe('Demo Camera Modes and Collision', () => {
         client.render(sample);
 
         // Should snap to target (100, 100, 100) because it's the first frame (distance > 1000 from default 0,0,0 or initialized state)
-        // Wait, default currentFollowOrigin is undefined, so it snaps.
         expect(client.lastRendered?.origin.x).toBeCloseTo(100);
         expect(client.lastRendered?.origin.y).toBeCloseTo(100);
         expect(client.lastRendered?.origin.z).toBeCloseTo(100);

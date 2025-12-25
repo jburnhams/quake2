@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/engine",
-  "version": "0.0.1",
+  "version": "0.0.730",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -29,21 +29,24 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests"
+    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests",
+    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run",
+    "test:visual": "vitest run tests/integration/visual",
+    "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
+    "test:visual:watch": "vitest tests/integration/visual"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*",
-    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.52",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
-    "@quake2ts/tests": "workspace:^",
     "@types/node": "^25.0.3",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
-    "gl-matrix": "^3.4.4",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "tsup": "^8.1.0",

@@ -1,0 +1,895 @@
+
+> quake2ts@0.0.629 test /app/quake2ts
+> pnpm -r --if-present test
+
+Scope: 10 of 11 workspace projects
+packages/shared test$ pnpm run test:unit
+packages/shared test: > @quake2ts/shared@0.0.1 test:unit /app/quake2ts/packages/shared
+packages/shared test: > TEST_TYPE=unit vitest run
+packages/shared test:  RUN  v1.6.1 /app/quake2ts/packages/shared
+packages/shared test:  ✓ tests/collision.test.ts  (19 tests) 22ms
+packages/shared test:  ✓ tests/pmove-viewangles.test.ts  (26 tests) 82ms
+packages/shared test:  ✓ tests/pmove.test.ts  (21 tests) 26ms
+packages/shared test: stdout | tests/pmove.test.ts > pmove order of operations (friction before acceleration) > demonstrates prediction drift when orders differ between client and server
+packages/shared test: Prediction drift per frame: 48.00 units/sec
+packages/shared test: Client velocity: (277.72, 160.11)
+packages/shared test: Server velocity: (234.78, 138.64)
+packages/shared test:  ✓ tests/move.test.ts  (18 tests) 23ms
+packages/shared test:  ✓ tests/vec3.test.ts  (18 tests) 14ms
+packages/shared test:  ✓ tests/water-physics.test.ts  (12 tests) 11ms
+packages/shared test:  ✓ tests/slide.test.ts  (14 tests) 14ms
+packages/shared test:  ✓ tests/contents.test.ts  (50 tests) 11ms
+packages/shared test:  ✓ tests/bsp/trace.bsp-split.test.ts  (7 tests) 10ms
+packages/shared test:  ✓ tests/bsp/trace.corners.test.ts  (8 tests) 11ms
+packages/shared test:  ✓ tests/bsp/trace.grazing.test.ts  (13 tests) 13ms
+packages/shared test:  ✓ tests/currents.test.ts  (9 tests) 8ms
+packages/shared test:  ✓ tests/categorize.test.ts  (6 tests) 9ms
+packages/shared test:  ✓ tests/entityCollision.test.ts  (5 tests) 9ms
+packages/shared test:  ✓ tests/duck.test.ts  (7 tests) 8ms
+packages/shared test:  ✓ tests/protocol/bitpack.test.ts  (8 tests) 7ms
+packages/shared test:  ✓ tests/determinism.test.ts  (7 tests) 35ms
+packages/shared test:  ✓ tests/special.test.ts  (4 tests) 7ms
+packages/shared test:  ✓ tests/bsp/trace.optimization.test.ts  (2 tests) 5ms
+packages/shared test:  ✓ tests/stuck.test.ts  (3 tests) 12ms
+packages/shared test:  ✓ tests/io/binaryWriter.test.ts  (11 tests) 9ms
+packages/shared test:  ✓ tests/bsp/collision_verification.test.ts  (6 tests) 7ms
+packages/shared test:  ✓ tests/bsp/trace_verification.test.ts  (3 tests) 9ms
+packages/shared test:  ✓ tests/bsp/trace.debug.test.ts  (2 tests) 7ms
+packages/shared test:  ✓ tests/bsp/entityIndex.test.ts  (3 tests) 10ms
+packages/shared test:  ✓ tests/angles.test.ts  (7 tests) 8ms
+packages/shared test:  ✓ tests/constants.test.ts  (5 tests) 7ms
+packages/shared test:  ✓ tests/random.test.ts  (9 tests) 11ms
+packages/shared test:  ✓ tests/configstrings.test.ts  (6 tests) 6ms
+packages/shared test:  ✓ tests/snap.test.ts  (6 tests) 8ms
+packages/shared test:  ✓ tests/net/netchan-fragments.test.ts  (2 tests) 46ms
+packages/shared test:  ✓ tests/protocol/stats.test.ts  (8 tests) 6ms
+packages/shared test:  ✓ tests/inventory-helpers.test.ts  (8 tests) 8ms
+packages/shared test:  ✓ tests/net/netchan-transmit.test.ts  (6 tests) 12ms
+packages/shared test:  ✓ tests/net/netchan-process.test.ts  (5 tests) 8ms
+packages/shared test:  ✓ tests/io/messageBuilder.test.ts  (7 tests) 8ms
+packages/shared test:  ✓ tests/water.test.ts  (4 tests) 6ms
+packages/shared test:  ✓ tests/net/netchan.test.ts  (10 tests) 11ms
+packages/shared test: stdout | tests/bsp/trace.scaling.test.ts > Entity Collision Scaling > should handle 100+ entities with low overhead
+packages/shared test: Scaling Test: 500 entities, 1000 traces, avg 0.303ms/trace
+packages/shared test: stdout | tests/bsp/trace.scaling.test.ts > Entity Collision Scaling > should execute a pmove frame (20 traces) in under 5ms
+packages/shared test: PMove Simulation: 20 traces took avg 0.667ms (over 100 runs)
+packages/shared test:  ✓ tests/bsp/trace.scaling.test.ts  (2 tests) 379ms
+packages/shared test:  ✓ tests/bsp/trace.perf.test.ts  (1 test) 181ms
+packages/shared test: stdout | tests/bsp/trace.perf.test.ts > Trace Performance > should run 10,000 traces in under 1s
+packages/shared test: Perftester: 10000 traces in 175.68ms (56921 traces/sec)
+packages/shared test:  ✓ tests/bsp/trace.complex.test.ts  (2 tests) 6ms
+packages/shared test:  ✓ tests/flymove.test.ts  (4 tests) 8ms
+packages/shared test:  ✓ tests/jump.test.ts  (7 tests) 8ms
+packages/shared test:  ✓ tests/bsp/trace.simple.test.ts  (3 tests) 6ms
+packages/shared test:  ✓ tests/audio/constants.test.ts  (4 tests) 5ms
+packages/shared test:  ✓ tests/pmove/jump.test.ts  (8 tests) 7ms
+packages/shared test:  ✓ tests/mat4.test.ts  (5 tests) 6ms
+packages/shared test:  ✓ tests/serialization.test.ts  (3 tests) 11ms
+packages/shared test:  ✓ tests/io/binaryStream.test.ts  (8 tests) 6ms
+packages/shared test:  ✓ tests/usercmd.test.ts  (5 tests) 6ms
+packages/shared test:  ✓ tests/items/weaponInfo.test.ts  (3 tests) 7ms
+packages/shared test:  ✓ tests/contracts.test.ts  (3 tests) 9ms
+packages/shared test:  ✓ tests/bsp/trace.solid.test.ts  (4 tests) 6ms
+packages/shared test:  ✓ tests/color.test.ts  (3 tests) 6ms
+packages/shared test:  ✓ tests/bsp/trace.epsilon.test.ts  (2 tests) 13ms
+packages/shared test:  ✓ tests/net/netchan-timeout.test.ts  (3 tests) 7ms
+packages/shared test:  ✓ test/random.test.ts  (3 tests) 6ms
+packages/shared test:  ✓ tests/view.test.ts  (4 tests) 7ms
+packages/shared test:  ✓ tests/bsp/trace.bsp-traversal.test.ts  (3 tests) 4ms
+packages/shared test:  ✓ tests/items/ammo.test.ts  (4 tests) 4ms
+packages/shared test:  ✓ tests/net/netchan-reliable.test.ts  (4 tests) 6ms
+packages/shared test:  ✓ tests/protocol/entityState.test.ts  (2 tests) 5ms
+packages/shared test:  ✓ tests/items/weapons.test.ts  (2 tests) 5ms
+packages/shared test:  ✓ tests/items/powerups.test.ts  (2 tests) 7ms
+packages/shared test:  ✓ tests/protocol/ops.test.ts  (2 tests) 4ms
+packages/shared test:  ✓ tests/protocol/cvar.test.ts  (1 test) 3ms
+packages/shared test:  Test Files  66 passed (66)
+packages/shared test:       Tests  462 passed (462)
+packages/shared test:    Start at  19:09:02
+packages/shared test:    Duration  21.02s (transform 5.58s, setup 6ms, collect 32.59s, tests 1.25s, environment 18ms, prepare 9.51s)
+packages/shared test: Done
+packages/engine test$ pnpm run test:unit
+packages/game test$ pnpm run test:unit
+packages/server test$ pnpm run test:unit
+packages/test-utils test$ vitest run --passWithNoTests
+packages/server test: > @quake2ts/server@0.0.1 test:unit /app/quake2ts/packages/server
+packages/server test: > TEST_TYPE=unit vitest run
+packages/test-utils test:  RUN  v1.6.1 /app/quake2ts/packages/test-utils
+packages/engine test: > @quake2ts/engine@0.0.1 test:unit /app/quake2ts/packages/engine
+packages/engine test: > TEST_TYPE=unit vitest run --passWithNoTests
+packages/game test: > @quake2ts/game@0.0.1 test:unit /app/quake2ts/packages/game
+packages/game test: > TEST_TYPE=unit vitest run --passWithNoTests
+packages/server test:  RUN  v1.6.1 /app/quake2ts/packages/server
+packages/engine test:  RUN  v1.6.1 /app/quake2ts/packages/engine
+packages/game test:  RUN  v1.6.1 /app/quake2ts/packages/game
+packages/server test:  ✓ tests/protocol/player.test.ts  (3 tests) 13ms
+packages/game test:  ✓ tests/combat/specialDamage.test.ts  (19 tests) 60ms
+packages/game test:  ✓ tests/weapons.test.ts  (11 tests) 57ms
+packages/server test:  ✓ tests/dedicated.test.ts  (4 tests) 72ms
+packages/game test:  ✓ tests/entities/bfg_ball.test.ts  (5 tests) 268ms
+packages/game test:  ✓ tests/combat/chaingun.test.ts  (6 tests) 355ms
+packages/game test:  ✓ tests/physics/runPush.test.ts  (7 tests) 252ms
+packages/game test:  ✓ tests/combat/weapons.test.ts  (7 tests) 55ms
+packages/test-utils test:  ✓ tests/server/snapshot.test.ts  (5 tests) 12ms
+packages/game test:  ✓ tests/physics/push.test.ts  (7 tests) 22ms
+packages/game test:  ✓ tests/combat/bfg.test.ts  (5 tests) 211ms
+packages/test-utils test:  ✓ tests/server/multiplayer.test.ts  (6 tests) 92ms
+packages/game test:  ✓ tests/entities/selection.test.ts  (7 tests) 199ms
+packages/test-utils test:  ✓ tests/game/mocks/items.test.ts  (12 tests) 81ms
+packages/game test:  ✓ tests/regression/weapons_regression.test.ts  (5 tests) 193ms
+packages/game test:  ✓ tests/combat/damage.test.ts  (14 tests) 53ms
+packages/engine test:  ✓ tests/audio/system.test.ts  (19 tests) 80ms
+packages/engine test:  ✓ tests/render/camera-comprehensive.test.ts  (20 tests) 76ms
+packages/engine test:  ✓ tests/render/bspPipeline.test.ts  (19 tests) 154ms
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > disables lightmap uniforms when no lightmap is provided
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > enables lightmap uniforms when a sampler is provided
+packages/engine test: uniform1i: [ { id: 6 }, 1 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 2 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind warp uniforms when SURF_WARP is set
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 1 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind flow uniforms for time 2
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind flow uniforms for time 5
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind flow uniforms for time +0
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind flow uniforms for time 4
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: stdout | tests/render/bspPipeline.test.ts > bspPipeline > BspSurfacePipeline > should bind style layer mapping and factors
+packages/engine test: uniform1i: [ { id: 6 }, 0 ]
+packages/engine test: uniform1i: [ { id: 7 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 8 }, 0 ]
+packages/engine test: uniform1i: [ { id: 9 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test: uniform1i: [ { id: 11 }, 0 ]
+packages/engine test: uniform1i: [ { id: 14 }, 0 ]
+packages/engine test: uniform1i: [ { id: 999 }, 0 ]
+packages/engine test:  ✓ tests/render/frame.test.ts  (6 tests) 100ms
+packages/engine test:  ✓ tests/render.md3Pipeline.test.ts  (9 tests) 94ms
+packages/engine test: stdout | tests/render/renderer.test.ts > Renderer > should set initial GL state and call the underlying frame renderer
+packages/engine test: MockFrameRenderer.renderFrame called with: [
+packages/engine test:   {
+packages/engine test:     camera: {
+packages/engine test:       viewProjectionMatrix: [Float32Array],
+packages/engine test:       viewMatrix: [Float32Array],
+packages/engine test:       position: [Array]
+packages/engine test:     },
+packages/engine test:     sky: undefined,
+packages/engine test:     renderMode: undefined,
+packages/engine test:     disableLightmaps: false,
+packages/engine test:     dlights: undefined,
+packages/engine test:     lightmapOnly: false,
+packages/engine test:     brightness: 1,
+packages/engine test:     gamma: 1,
+packages/engine test:     fullbright: false,
+packages/engine test:     ambient: 0,
+packages/engine test:     lightStyleOverrides: Map(0) {},
+packages/engine test:     underwaterWarp: false,
+packages/engine test:     bloom: false,
+packages/engine test:     bloomIntensity: 0.5
+packages/engine test:   }
+packages/engine test: ]
+packages/engine test: stderr | tests/render/renderer.test.ts > Renderer > should set initial GL state and call the underlying frame renderer
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stdout | tests/render/renderer.test.ts > Renderer > should render an MD3 entity
+packages/engine test: MockFrameRenderer.renderFrame called with: [
+packages/engine test:   {
+packages/engine test:     camera: {
+packages/engine test:       viewProjectionMatrix: [Float32Array],
+packages/engine test:       viewMatrix: [Float32Array],
+packages/engine test:       position: [Array]
+packages/engine test:     },
+packages/engine test:     sky: undefined,
+packages/engine test:     renderMode: undefined,
+packages/engine test:     disableLightmaps: false,
+packages/engine test:     dlights: undefined,
+packages/engine test:     lightmapOnly: false,
+packages/engine test:     brightness: 1,
+packages/engine test:     gamma: 1,
+packages/engine test:     fullbright: false,
+packages/engine test:     ambient: 0,
+packages/engine test:     lightStyleOverrides: Map(0) {},
+packages/engine test:     underwaterWarp: false,
+packages/engine test:     bloom: false,
+packages/engine test:     bloomIntensity: 0.5
+packages/engine test:   }
+packages/engine test: ]
+packages/engine test: stderr | tests/render/renderer.test.ts > Renderer > should render an MD3 entity
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/rendererHighlight.test.ts > Renderer Highlighting > should render highlighted entity with a second wireframe pass
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/game test:  ✓ tests/entities/monsters/soldier.test.ts  (16 tests) 227ms
+packages/test-utils test:  ✓ tests/server/connection.test.ts  (7 tests) 23ms
+packages/engine test: stderr | tests/render/rendererHighlight.test.ts > Renderer Highlighting > should clear highlight and stop rendering second pass
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stdout | tests/render/renderer.test.ts > Renderer > should bind textures for MD3 entities
+packages/engine test: MockFrameRenderer.renderFrame called with: [
+packages/engine test:   {
+packages/engine test:     camera: {
+packages/engine test:       viewProjectionMatrix: [Float32Array],
+packages/engine test:       viewMatrix: [Float32Array],
+packages/engine test:       position: [Array]
+packages/engine test:     },
+packages/engine test:     world: { textures: [Map], map: [Object] },
+packages/engine test:     sky: undefined,
+packages/engine test:     renderMode: undefined,
+packages/engine test:     disableLightmaps: false,
+packages/engine test:     dlights: undefined,
+packages/engine test:     lightmapOnly: false,
+packages/engine test:     brightness: 1,
+packages/engine test:     gamma: 1,
+packages/engine test:     fullbright: false,
+packages/engine test:     ambient: 0,
+packages/engine test:     lightStyleOverrides: Map(0) {},
+packages/engine test:     underwaterWarp: false,
+packages/engine test:     bloom: false,
+packages/engine test:     bloomIntensity: 0.5
+packages/engine test:   }
+packages/engine test: ]
+packages/engine test: stderr | tests/render/renderer.test.ts > Renderer > should bind textures for MD3 entities
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/webgpu/resources.test.ts  (15 tests) 689ms
+packages/engine test: stderr | tests/render/rendererHighlight.test.ts > Renderer Highlighting > should handle multiple highlighted entities
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/rendererHighlight.test.ts  (3 tests) 1041ms
+packages/engine test: stdout | tests/render/renderer.test.ts > Renderer > should pass RenderMode configuration to pipeline when textures are missing and not applyToAll
+packages/engine test: MockFrameRenderer.renderFrame called with: [
+packages/engine test:   {
+packages/engine test:     camera: {
+packages/engine test:       viewProjectionMatrix: [Float32Array],
+packages/engine test:       viewMatrix: [Float32Array],
+packages/engine test:       position: [Array]
+packages/engine test:     },
+packages/engine test:     renderMode: { mode: 'wireframe', applyToAll: false },
+packages/engine test:     sky: undefined,
+packages/engine test:     disableLightmaps: false,
+packages/engine test:     dlights: undefined,
+packages/engine test:     lightmapOnly: false,
+packages/engine test:     brightness: 1,
+packages/engine test:     gamma: 1,
+packages/engine test:     fullbright: false,
+packages/engine test:     ambient: 0,
+packages/engine test:     lightStyleOverrides: Map(0) {},
+packages/engine test:     underwaterWarp: false,
+packages/engine test:     bloom: false,
+packages/engine test:     bloomIntensity: 0.5
+packages/engine test:   }
+packages/engine test: ]
+packages/engine test: stderr | tests/render/renderer.test.ts > Renderer > should pass RenderMode configuration to pipeline when textures are missing and not applyToAll
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/synthetic_parser.test.ts  (5 tests) 42ms
+packages/engine test:  ✓ tests/assets/visibilityAnalyzerCulling.test.ts  (4 tests) 27ms
+packages/engine test: stdout | tests/render/renderer.test.ts > Renderer > should generate random color when configured for entity with ID
+packages/engine test: MockFrameRenderer.renderFrame called with: [
+packages/engine test:   {
+packages/engine test:     camera: {
+packages/engine test:       viewProjectionMatrix: [Float32Array],
+packages/engine test:       viewMatrix: [Float32Array],
+packages/engine test:       position: [Array]
+packages/engine test:     },
+packages/engine test:     renderMode: { mode: 'solid', applyToAll: true, generateRandomColor: true },
+packages/engine test:     sky: undefined,
+packages/engine test:     disableLightmaps: false,
+packages/engine test:     dlights: undefined,
+packages/engine test:     lightmapOnly: false,
+packages/engine test:     brightness: 1,
+packages/engine test:     gamma: 1,
+packages/engine test:     fullbright: false,
+packages/engine test:     ambient: 0,
+packages/engine test:     lightStyleOverrides: Map(0) {},
+packages/engine test:     underwaterWarp: false,
+packages/engine test:     bloom: false,
+packages/engine test:     bloomIntensity: 0.5
+packages/engine test:   }
+packages/engine test: ]
+packages/engine test: stderr | tests/render/renderer.test.ts > Renderer > should generate random color when configured for entity with ID
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/renderer.test.ts  (5 tests) 1952ms
+packages/engine test:  ✓ tests/vfs.test.ts  (15 tests) 124ms
+packages/engine test:  ✓ tests/demo/parser_misc.test.ts  (6 tests) 10ms
+packages/test-utils test:  ✓ tests/webgpu-mocks.test.ts  (5 tests) 74ms
+packages/engine test:  ✓ tests/assets/bsp-features.test.ts  (4 tests) 17ms
+packages/engine test:  ✓ tests/bsp.test.ts  (12 tests) 28ms
+packages/engine test: stderr | tests/render/render-options.test.ts > Renderer Options & Debug > should respect wireframe option
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/parser_blast.test.ts  (2 tests) 73ms
+packages/engine test: stderr | tests/render/render-options.test.ts > Renderer Options & Debug > should respect showSkybox option
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/worldStateOptimizer.test.ts  (5 tests) 33ms
+packages/engine test:  ✓ tests/demo/offset.test.ts  (7 tests) 49ms
+packages/engine test: stderr | tests/render/render-options.test.ts > Renderer Options & Debug > should debug draw 3D text labels (Integration)
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/playback.test.ts  (9 tests) 111ms
+packages/engine test:  ✓ tests/render.particleSystem.test.ts  (6 tests) 52ms
+packages/engine test:  ✓ tests/demo/optimalClipFinder.test.ts  (9 tests) 11ms
+packages/engine test:  ✓ tests/assets/tga.test.ts  (8 tests) 15ms
+packages/engine test: stderr | tests/render/render-options.test.ts > Renderer Options & Debug > should generate performance report
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: 1021,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/render-options.test.ts  (5 tests) 1401ms
+packages/engine test:  ✓ tests/demo/streaming.e2e.test.ts  (2 tests) 10ms
+packages/engine test:  ✓ tests/editor/bsp-inspector.test.ts  (8 tests) 5ms
+packages/engine test:  ✓ tests/demo/playbackTracking.test.ts  (3 tests | 1 skipped) 15ms
+packages/game test:  ✓ tests/combat/etf_rifle.test.ts  (4 tests) 613ms
+packages/game test:  ✓ tests/entities/monsters/gunner.test.ts  (8 tests) 90ms
+packages/engine test:  ✓ tests/render.md2Pipeline.test.ts  (5 tests) 25ms
+packages/server test:  ✓ tests/lag.test.ts  (4 tests) 47ms
+packages/engine test: stderr | tests/render/debugMode.test.ts > DebugMode Integration > should trigger debug rendering in renderFrame
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/writer.test.ts  (5 tests) 7ms
+packages/engine test:  ✓ tests/demo/visibilityAnalyzer.test.ts  (4 tests) 34ms
+packages/engine test: stderr | tests/render/debugMode.test.ts > DebugMode Integration > should handle PVSClusters mode without crashing
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/test-utils test:  ✓ tests/game/factories.test.ts  (7 tests) 19ms
+packages/engine test:  ✓ tests/ingestion.test.ts  (8 tests) 102ms
+packages/engine test:  ✓ tests/render/pipeline_memory.test.ts  (9 tests) 8ms
+packages/engine test:  ✓ tests/demo/playback-tracking.test.ts  (2 tests) 13ms
+packages/engine test: stderr | tests/render/rendererStats.test.ts > Renderer Statistics > should return initial zero statistics
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/debugMode.test.ts > DebugMode Integration > should handle Lightmaps mode without crashing
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/debugMode.test.ts  (3 tests) 825ms
+packages/engine test:  ✓ tests/md2.test.ts  (6 tests) 20ms
+packages/engine test: stderr | tests/render/rendererStats.test.ts > Renderer Statistics > should update statistics after rendering a frame
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/demo/parser.streaming.test.ts  (2 tests) 2ms
+packages/game test:  ✓ tests/entities/monsters/medic-reinforcements.test.ts  (4 tests) 28ms
+packages/engine test:  ✓ tests/assets/preview.test.ts  (5 tests) 5ms
+packages/engine test: stderr | tests/render/rendererStats.test.ts > Renderer Statistics > should aggregate entity draw calls into stats
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/rendererStats.test.ts  (3 tests) 632ms
+packages/engine test:  ✓ tests/assets/crossReference.test.ts  (4 tests) 6ms
+packages/game test:  ✓ tests/combat/weapons/shotgun_anim.test.ts  (1 test) 11ms
+packages/engine test: stderr | tests/demo/packager.test.ts > DemoPackager > should handle missing resources gracefully
+packages/engine test: [DemoPackager] Missing resource: models/test.md2
+packages/engine test: [DemoPackager] Missing resource: sound/test.wav
+packages/engine test:  ✓ tests/demo/packager.test.ts  (4 tests) 5ms
+packages/engine test:  ✓ tests/host.test.ts  (6 tests) 13ms
+packages/engine test:  ✓ tests/demo/parser.test.ts  (6 tests) 11ms
+packages/engine test: stderr | tests/demo/parser.test.ts > NetworkMessageParser > should be resilient to unknown commands
+packages/engine test: Unknown server command: 255 (translated: 255) at offset 0
+packages/engine test:  ✓ tests/audio/music.test.ts  (4 tests) 9ms
+packages/engine test:  ✓ tests/demo/rerelease_protocol.test.ts  (5 tests) 3ms
+packages/engine test:  ✓ tests/render.resources.test.ts  (6 tests) 28ms
+packages/engine test:  ✓ tests/demo/analysis.test.ts  (2 tests) 3ms
+packages/test-utils test:  ✓ tests/shared/factories.test.ts  (6 tests) 15ms
+packages/engine test:  ✓ tests/assets/streamingPak.test.ts  (5 tests) 4ms
+packages/engine test:  ✓ tests/render.bspTraversal.test.ts  (7 tests) 31ms
+packages/engine test:  ✓ tests/assets/pakWriter.test.ts  (9 tests) 3ms
+packages/engine test:  ✓ tests/camera.test.ts  (7 tests) 3ms
+packages/engine test:  ✓ tests/render/gizmo.test.ts  (9 tests) 60ms
+packages/engine test:  ✓ tests/audio/stress.test.ts  (3 tests) 18ms
+packages/engine test:  ✓ tests/assets/interactionGraph.test.ts  (4 tests) 3ms
+packages/game test:  ✓ tests/entities/func_door_secret.test.ts  (2 tests) 35ms
+packages/engine test: stderr | tests/render/lod.test.ts > LOD Support > should allow setting LOD bias
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/webgpu/context.test.ts > WebGPU Context > setupDeviceLossHandling > registers lost handler
+packages/engine test: WebGPU Device Lost: destroyed - test
+packages/engine test:  ✓ tests/render/webgpu/context.test.ts  (8 tests) 66ms
+packages/engine test:  ✓ tests/render/lod.test.ts  (1 test) 17ms
+packages/engine test:  ✓ tests/render/skybox.test.ts  (4 tests) 3ms
+packages/engine test:  ✓ tests/render.bspPipeline.test.ts  (3 tests) 5ms
+packages/engine test:  ✓ tests/assets/ent.test.ts  (10 tests) 4ms
+packages/engine test:  ✓ tests/commands.test.ts  (14 tests) 5ms
+packages/engine test:  ✓ tests/render/materialLoader.test.ts  (4 tests) 3ms
+packages/engine test:  ✓ tests/loop.test.ts  (6 tests) 3ms
+packages/engine test:  ✓ tests/demo/clipper.test.ts  (2 tests) 2ms
+packages/engine test:  ✓ tests/demo/parser-performance.test.ts  (1 test) 1310ms
+packages/engine test: stdout | tests/demo/parser-performance.test.ts > NetworkMessageParser Performance > should parse 1000 frames with 100 entities each within reasonable time
+packages/engine test: Parsed 1000 frames with 100 entities each in 342.07ms
+packages/engine test: stderr | tests/render/instancing.test.ts > Renderer Instancing API > should expose renderInstanced method
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/instancing.test.ts > Renderer Instancing API > should accept MD2 model and instances
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/instancing.test.ts > Renderer Instancing API > should accept MD3 model and instances
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/instancing.test.ts  (3 tests) 161ms
+packages/engine test:  ✓ tests/assets/managerWithTracker.test.ts  (4 tests) 14ms
+packages/engine test:  ✓ tests/assets/vfs_priority.test.ts  (5 tests) 2ms
+packages/engine test:  ✓ tests/sprite.test.ts  (6 tests) 13ms
+packages/engine test:  ✓ tests/cvars.test.ts  (8 tests) 12ms
+packages/engine test:  ✓ tests/demo/api.test.ts  (4 tests) 19ms
+packages/engine test:  ✓ tests/audio/precache.test.ts  (3 tests) 14ms
+packages/engine test:  ✓ tests/render/md3Pipeline.test.ts  (2 tests) 2ms
+packages/engine test:  ✓ tests/assets/visibilityAnalyzer.test.ts  (3 tests) 3ms
+packages/engine test:  ✓ tests/runtime.determinism.test.ts  (2 tests) 210ms
+packages/test-utils test:  ✓ tests/game/mocks/combat.test.ts  (7 tests) 51ms
+packages/engine test:  ✓ tests/render/bsp/renderer.test.ts  (1 test) 7ms
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should set brightness
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should clamp brightness values
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should set gamma
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should set fullbright
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should set ambient
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/lighting.test.ts > Renderer Lighting Control > should set light style overrides
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ✓ tests/render/lighting.test.ts  (6 tests) 597ms
+packages/engine test:  ✓ tests/stream/streamingBuffer.test.ts  (11 tests) 4ms
+packages/engine test:  ✓ tests/audio/api.test.ts  (3 tests) 13ms
+packages/engine test: stderr | tests/render/memory.test.ts > Renderer Memory Tracking > should track shader memory
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/memory.test.ts > Renderer Memory Tracking > should track texture memory
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test: stderr | tests/render/memory.test.ts > Renderer Memory Tracking > should report total memory correctly
+packages/engine test: Shader bytes is NaN. Breakdown: {
+packages/engine test:   bsp: undefined,
+packages/engine test:   skybox: undefined,
+packages/engine test:   md2: undefined,
+packages/engine test:   md3: undefined,
+packages/engine test:   sprite: undefined,
+packages/engine test:   collisionVis: undefined,
+packages/engine test:   debug: undefined,
+packages/engine test:   particle: 581
+packages/engine test: }
+packages/engine test:  ❯ tests/render/memory.test.ts  (3 tests | 1 failed) 395ms
+packages/engine test:    ❯ tests/render/memory.test.ts > Renderer Memory Tracking > should track shader memory
+packages/engine test:      → expected NaN to be greater than 0
+packages/engine test:  ✓ tests/render/dlight.test.ts  (6 tests) 5ms
+packages/engine test:  ✓ tests/demo/playback_speed.test.ts  (4 tests) 12ms
+packages/engine test:  ✓ tests/render/lightCulling.test.ts  (5 tests) 2ms
+packages/engine test:  ✓ tests/render.bsp.test.ts  (2 tests) 22ms
+packages/engine test:  ✓ tests/render/camera.test.ts  (4 tests) 3ms
+packages/game test:  ✓ tests/ai/perception.test.ts  (10 tests) 33ms
+packages/engine test:  ✓ tests/render/gpuProfiler.test.ts  (5 tests) 17ms
+packages/engine test:  ✓ tests/editor/ent.test.ts  (5 tests) 4ms
+packages/engine test:  ✓ tests/assets/manager-tracking.test.ts  (4 tests) 7ms
+packages/game test:  ✓ tests/ai/monster.test.ts  (5 tests) 171ms
+packages/engine test:  ✓ tests/assetManager.test.ts  (2 tests) 16ms
+packages/engine test:  ✓ tests/assets/mapStatistics.test.ts  (4 tests) 11ms
+packages/engine test:  ✓ tests/render/cameraController.test.ts  (4 tests) 2ms
+packages/engine test:  ✓ tests/render/bsp/geometry-options.test.ts  (2 tests) 6ms
+packages/engine test:  ✓ tests/demo/demoStream.test.ts  (3 tests) 4ms
+packages/engine test:  ✓ tests/demo/playbackEvents.test.ts  (2 tests) 28ms
+packages/engine test:  ✓ tests/md3.test.ts  (3 tests) 1ms
+packages/server test:  ✓ tests/unit/dedicated_timeout.test.ts  (2 tests) 57ms
+packages/engine test:  ✓ tests/render.context.test.ts  (3 tests) 19ms
+packages/engine test:  ✓ tests/demo/message.test.ts  (3 tests) 3ms
+packages/engine test:  ✓ tests/demo/real_demo.test.ts  (1 test) 159ms
+packages/engine test: stdout | tests/demo/real_demo.test.ts > Real Demo Parsing (demo1.dm2) > should parse real demo1.dm2 without errors
+packages/engine test: Demo Protocol Version: 25
+packages/engine test:  ✓ tests/render/bspPipelineDlights.test.ts  (2 tests) 10ms
+packages/engine test:  ✓ tests/demo/analyzer.test.ts  (2 tests) 64ms
+packages/engine test:  ✓ tests/audio/ambient.test.ts  (4 tests) 2ms
+packages/engine test:  ✓ tests/render/bsp/surface.test.ts  (1 test) 1ms
+packages/engine test:  ✓ tests/browserIngestion.test.ts  (4 tests) 39ms
+packages/engine test:  ✓ tests/pakIndexStore.test.ts  (3 tests) 22ms
+packages/engine test:  ✓ tests/render/bsp/geometry.test.ts  (1 test) 3ms
+packages/engine test:  ✓ tests/audio/reverb.test.ts  (6 tests) 2ms
+packages/engine test:  ✓ tests/render/culling.test.ts  (4 tests) 1ms
+packages/engine test:  ✓ tests/render.shaderProgram.test.ts  (3 tests) 10ms
+packages/engine test:  ✓ tests/audio/room.test.ts  (3 tests) 1ms
+packages/test-utils test:  ✓ tests/game/helpers.test.ts  (5 tests) 43ms
+packages/engine test:  ✓ tests/render/md2PipelineDlights.test.ts  (3 tests) 23ms
+packages/engine test:  ✓ tests/runtime.test.ts  (2 tests) 3ms
+packages/engine test:  ✓ tests/audio/channels.test.ts  (5 tests) 2ms
+packages/server test:  ✓ tests/protocol/write.test.ts  (7 tests) 22ms
+packages/engine test:  ✓ tests/render/postProcess.test.ts  (3 tests) 17ms
+packages/engine test:  ✓ tests/demo/validator.test.ts  (6 tests) 2ms
+packages/engine test:  ✓ tests/audio.test.ts  (3 tests) 86ms
+packages/engine test:  ✓ tests/render/light.test.ts  (5 tests) 2ms
+packages/engine test:  ✓ tests/assets/headlessLoader.test.ts  (3 tests) 90ms
+packages/engine test:  ✓ tests/assets/managerTga.test.ts  (2 tests) 2ms
+packages/game test:  ✓ tests/entities/triggers.test.ts  (5 tests) 59ms
+packages/engine test:  ✓ tests/demo/playback_metadata.test.ts  (6 tests) 3ms
+packages/engine test:  ✓ tests/render.skybox.test.ts  (4 tests) 11ms
+packages/engine test:  ✓ tests/cli/demoOptimizer.test.ts  (3 tests) 8ms
+packages/engine test:  ✓ tests/audio/api_wrapper.test.ts  (3 tests) 3ms
+packages/engine test:  ✓ tests/assets/resourceTracker.test.ts  (4 tests) 1ms
+packages/engine test:  ✓ tests/configstrings.test.ts  (4 tests) 21ms
+packages/engine test:  ✓ tests/audio/playback_rate.test.ts  (3 tests) 2ms
+packages/engine test:  ✓ tests/demo/parser_damage.test.ts  (1 test) 2ms
+packages/engine test:  ✓ tests/render/materials.test.ts  (4 tests) 1ms
+packages/engine test:  ✓ tests/audio/occlusion.test.ts  (3 tests) 1ms
+packages/engine test:  ✓ tests/pak.test.ts  (5 tests) 2ms
+packages/engine test: stderr | tests/demo/parser-robustness.test.ts > NetworkMessageParser > should handle truncated data gracefully
+packages/engine test: Error parsing command 10 (offset 0, cmd 10, protocol 0): Offset is outside the bounds of the DataView
+packages/engine test: stderr | tests/demo/parser-robustness.test.ts > NetworkMessageParser > should handle unknown commands gracefully in non-strict mode
+packages/engine test: Unknown server command: 255 (translated: 255) at offset 0
+packages/engine test: stderr | tests/demo/parser-robustness.test.ts > NetworkMessageParser > should throw on unknown commands in strict mode
+packages/engine test: Error parsing command 255 (offset 0, cmd 255, protocol 0): Unknown server command: 255 (translated: 255) at offset 0
+packages/engine test: stderr | tests/demo/parser-robustness.test.ts > NetworkMessageParser > should recover from error and stop parsing the current block
+packages/engine test: Error parsing command 16 (offset 0, cmd 16, protocol 0): Offset is outside the bounds of the DataView
+packages/engine test:  ✓ tests/demo/parser-robustness.test.ts  (4 tests) 1ms
+packages/engine test:  ✓ tests/demo/parser_fog.test.ts  (1 test) 2ms
+packages/engine test:  ✓ tests/demo/metadata.test.ts  (2 tests) 190ms
+packages/game test:  ✓ tests/entities/projectiles/prox.test.ts  (4 tests | 1 skipped) 255ms
+packages/engine test:  ✓ tests/demo/recorder.test.ts  (3 tests) 4ms
+packages/engine test: stdout | tests/demo/recorder.test.ts > DemoRecorder > should start recording
+packages/engine test: DemoRecorder: Started recording to test.dm2
+packages/engine test: stdout | tests/demo/recorder.test.ts > DemoRecorder > should record messages and stop
+packages/engine test: DemoRecorder: Started recording to test.dm2
+packages/engine test: DemoRecorder: Stopped recording. Frames: 2, Size: 19 bytes
+packages/engine test:  ✓ tests/render/webgpu/headless.test.ts  (2 tests) 49ms
+packages/engine test:  ✓ tests/demo/demoReader.test.ts  (2 tests) 1ms
+packages/engine test:  ✓ tests/render/camera.viewmodel.test.ts  (4 tests) 2ms
+packages/engine test:  ✓ tests/render/bsp/lightmap-extraction.test.ts  (1 test)
+packages/engine test:  ✓ tests/assets/fileType.test.ts  (4 tests) 13ms
+packages/engine test:  ✓ tests/render/colors.test.ts  (4 tests) 2ms
+packages/engine test:  ✓ tests/render/debug.test.ts  (3 tests) 3ms
+packages/engine test:  ✓ tests/pakValidation.test.ts  (3 tests) 2ms
+packages/engine test:  ✓ tests/audio/registry.test.ts  (2 tests) 1ms
+packages/engine test:  ✓ tests/cvars_enhanced.test.ts  (2 tests) 8ms
+packages/engine test:  ✓ tests/ogg.test.ts  (2 tests) 2ms
+packages/engine test:  ✓ tests/render/lightStyles.test.ts  (3 tests) 1ms
+packages/engine test:  ✓ tests/animation.test.ts  (4 tests) 7ms
+packages/engine test:  ✓ tests/cache.test.ts  (4 tests) 1ms
+packages/engine test:  ✓ tests/texture.test.ts  (2 tests) 3ms
+packages/engine test:  ✓ tests/pcx.test.ts  (2 tests) 1ms
+packages/engine test:  ✓ tests/wav.test.ts  (2 tests) 2ms
+packages/engine test:  ✓ tests/demo/inspect_pak.test.ts  (1 test) 185ms
+packages/engine test: stdout | tests/demo/inspect_pak.test.ts > Real PAK Inspection > should list files in pak.pak
+packages/engine test: Files in pak.pak:
+packages/engine test: - default.cfg (2260 bytes)
+packages/engine test: - demos/demo1.dm2 (354605 bytes)
+packages/engine test: - env/sky1bk.pcx (84484 bytes)
+packages/engine test: - env/sky1rt.pcx (89088 bytes)
+packages/engine test: - env/sky1rt.tga (196944 bytes)
+packages/engine test: - maps/demo1.bsp (1983276 bytes)
+packages/engine test: - models/deadbods/dude/dead1.pcx (62076 bytes)
+packages/engine test: - models/deadbods/dude/tris.md2 (18892 bytes)
+packages/engine test: - pics/colormap.pcx (96984 bytes)
+packages/engine test: - pics/num_0.pcx (1578 bytes)
+packages/engine test: - pics/victory.pcx (95149 bytes)
+packages/engine test: - sound/berserk/attack.wav (9707 bytes)
+packages/engine test: - sprites/s_explod.sp2 (492 bytes)
+packages/engine test: - sprites/s_explod_0.pcx (6986 bytes)
+packages/engine test: - sprites/s_explod_1.pcx (6888 bytes)
+packages/engine test: - sprites/s_explod_2.pcx (6149 bytes)
+packages/engine test: - sprites/s_explod_3.pcx (6517 bytes)
+packages/engine test: - sprites/s_explod_4.pcx (6644 bytes)
+packages/engine test: - sprites/s_explod_5.pcx (7002 bytes)
+packages/engine test: - textures/e1u1/btactmach.wal (1460 bytes)
+packages/engine test: - textures/e1u1/clip.wal (1460 bytes)
+packages/engine test: Demo files found: [ 'demos/demo1.dm2' ]
+packages/engine test:  ✓ tests/wal.test.ts  (2 tests) 2ms
+packages/engine test: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+packages/engine test:  FAIL  tests/render/memory.test.ts > Renderer Memory Tracking > should track shader memory
+packages/engine test: AssertionError: expected NaN to be greater than 0
+packages/engine test:  ❯ tests/render/memory.test.ts:73:37
+packages/engine test:      71|         const memory = renderer.getMemoryUsage();
+packages/engine test:      72|         // Check that shaderBytes is greater than 0, assuming shaders …
+packages/engine test:      73|         expect(memory.shadersBytes).toBeGreaterThan(0);
+packages/engine test:        |                                     ^
+packages/engine test:      74|     });
+packages/engine test:      75|
+packages/engine test: ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+packages/engine test:  Test Files  1 failed | 147 passed (148)
+packages/engine test:       Tests  1 failed | 680 passed | 1 skipped (682)
+packages/engine test:    Start at  19:09:24
+packages/engine test:    Duration  30.32s (transform 12.36s, setup 47.28s, collect 7.96s, tests 12.21s, environment 12.13s, prepare 1.92s)
+packages/engine test:  ELIFECYCLE  Command failed with exit code 1.
+packages/engine test: Failed
+/app/quake2ts/packages/engine:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @quake2ts/engine@0.0.1 test: `pnpm run test:unit`
+Exit status 1
+ ELIFECYCLE  Test failed. See above for more details.

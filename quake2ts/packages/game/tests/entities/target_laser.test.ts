@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { Entity, MoveType, ServerFlags, Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand, RenderFx } from '@quake2ts/shared';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 // Mock T_Damage
 vi.mock('../../src/combat/damage.js', () => ({
@@ -23,10 +24,12 @@ describe('target_laser', () => {
         registry = new SpawnRegistry();
         registerTargetSpawns(registry);
 
-        entity = new Entity(1);
-        entity.classname = 'target_laser';
-        entity.angles = { x: 0, y: 0, z: 0 };
-        entity.origin = { x: 0, y: 0, z: 0 };
+        entity = createEntityFactory({
+            number: 1,
+            classname: 'target_laser',
+            angles: { x: 0, y: 0, z: 0 },
+            origin: { x: 0, y: 0, z: 0 }
+        });
         vi.clearAllMocks();
     });
 

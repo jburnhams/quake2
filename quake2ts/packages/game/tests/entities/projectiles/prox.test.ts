@@ -8,6 +8,7 @@ import { createGame } from '../../../src/index.js';
 import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
 import * as damage from '../../../src/combat/damage.js';
 import { Vec3 } from '@quake2ts/shared';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Prox Mine', () => {
     let trace: any;
@@ -22,41 +23,32 @@ describe('Prox Mine', () => {
     });
 
     const createTestGame = () => {
-        trace = vi.fn().mockReturnValue({
-            fraction: 1.0,
-            ent: null
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                trace: vi.fn().mockReturnValue({
+                    fraction: 1.0,
+                    ent: null
+                }),
+                linkentity: vi.fn((ent) => {
+                    // Mock linkentity to set absmin/absmax for findInBox
+                    ent.absmin = {
+                        x: ent.origin.x + (ent.mins?.x || -16),
+                        y: ent.origin.y + (ent.mins?.y || -16),
+                        z: ent.origin.z + (ent.mins?.z || -24),
+                    };
+                    ent.absmax = {
+                        x: ent.origin.x + (ent.maxs?.x || 16),
+                        y: ent.origin.y + (ent.maxs?.y || 16),
+                        z: ent.origin.z + (ent.maxs?.z || 32),
+                    };
+                }),
+            }
         });
-        const pointcontents = vi.fn().mockReturnValue(0);
-        const multicast = vi.fn();
-        const unicast = vi.fn();
-        const sound = vi.fn();
-        const modelIndex = vi.fn().mockReturnValue(1);
 
-        const engine = {
-            trace,
-            sound,
-            centerprintf: vi.fn(),
-            modelIndex,
-        };
+        trace = imports.trace;
 
         const game = createGame({
-            trace,
-            pointcontents,
-            linkentity: (ent) => {
-                // Mock linkentity to set absmin/absmax for findInBox
-                ent.absmin = {
-                    x: ent.origin.x + (ent.mins?.x || -16),
-                    y: ent.origin.y + (ent.mins?.y || -16),
-                    z: ent.origin.z + (ent.mins?.z || -24),
-                };
-                ent.absmax = {
-                    x: ent.origin.x + (ent.maxs?.x || 16),
-                    y: ent.origin.y + (ent.maxs?.y || 16),
-                    z: ent.origin.z + (ent.maxs?.z || 32),
-                };
-            },
-            multicast,
-            unicast,
+            ...imports,
             areaEdicts: vi.fn().mockReturnValue(null) // Use fallback iteration
         }, engine, { gravity: { x: 0, y: 0, z: 0 }, deathmatch: true }); // Disable gravity, enable deathmatch to skip auto-spawn player
 
@@ -113,14 +105,14 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, undefined, undefined); // Land
 
         // Advance time to arm (1000ms delay)
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Move player near mine
         player.origin = { ...mine.origin };
         game.entities.linkentity(player);
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should not have exploded
         expect(T_RadiusDamage).not.toHaveBeenCalled();
@@ -137,7 +129,7 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, undefined, undefined);
 
         // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Create enemy
         const enemy = game.entities.spawn();
@@ -152,14 +144,14 @@ describe('Prox Mine', () => {
         game.entities.linkentity(enemy);
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should have exploded
         expect(T_RadiusDamage).toHaveBeenCalled();
         expect(mine.inUse).toBe(false);
     });
 
-    it.skip('should trigger via laser tripwire (trace check)', () => {
+    it('should trigger via laser tripwire (trace check)', () => {
         const { game, player, trace } = createTestGame();
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
@@ -170,7 +162,7 @@ describe('Prox Mine', () => {
         mine.touch!(mine, null, plane as any, undefined);
 
         // Advance time to arm
-        game.frame({ time: 1500, delta: 1.5 });
+        game.frame({ frame: 1, deltaMs: 1500, nowMs: 1500 } as any);
 
         // Create enemy far away (out of radius) but in beam path
         const enemy = game.entities.spawn();
@@ -192,7 +184,7 @@ describe('Prox Mine', () => {
         });
 
         // Run frame
-        game.frame({ time: 1600, delta: 0.1 });
+        game.frame({ frame: 2, deltaMs: 100, nowMs: 1600 } as any);
 
         // Should have exploded due to beam
         expect(T_RadiusDamage).toHaveBeenCalled();

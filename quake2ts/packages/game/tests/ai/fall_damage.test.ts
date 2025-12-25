@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import { runStep } from '../../src/physics/movement.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('Monster Fall Damage', () => {
   it('should apply damage when a monster falls', async () => {

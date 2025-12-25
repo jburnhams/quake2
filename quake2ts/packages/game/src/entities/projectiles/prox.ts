@@ -123,6 +123,7 @@ export function createProxMine(
         }
 
         self.nextthink = entities.timeSeconds + 0.1;
+        entities.scheduleThink(self, self.nextthink);
     };
 
     const proxMineTouch = (self: Entity, other: Entity | null, plane?: CollisionPlane | null, surf?: CollisionSurface | null) => {
@@ -153,6 +154,7 @@ export function createProxMine(
 
             self.think = proxMineThink;
             self.nextthink = entities.timeSeconds + (PROX_MINE_DELAY / 1000);
+            entities.scheduleThink(self, self.nextthink);
 
             self.health = PROX_MINE_HEALTH;
             self.takedamage = true;

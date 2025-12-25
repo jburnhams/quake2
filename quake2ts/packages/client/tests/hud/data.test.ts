@@ -2,21 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientImports } from '../../src/index.js';
 import { ClientPrediction } from '@quake2ts/cgame';
 import { DemoPlaybackController } from '@quake2ts/engine';
+import { createMockHudState, createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
 
 // Mocks
 vi.mock('@quake2ts/cgame', async (importOriginal) => {
     const actual = await importOriginal();
+    // Use helper to create consistent mock state
+    const { createMockHudState } = await import('@quake2ts/test-utils');
+    const mockState = createMockHudState({
+        health: 100,
+        armor: 50,
+        ammo: 25,
+        pickupIcon: 'icons/armor',
+        damageIndicators: []
+    });
+
     return {
         ...(actual as object),
         ClientPrediction: vi.fn().mockImplementation(() => ({
             setAuthoritative: vi.fn(),
-            getPredictedState: vi.fn(() => ({
-                health: 100,
-                armor: 50,
-                ammo: 25,
-                pickupIcon: 'icons/armor',
-                damageIndicators: []
-            })),
+            getPredictedState: vi.fn(() => mockState),
             enqueueCommand: vi.fn(),
             decayError: vi.fn()
         })),
@@ -28,7 +33,10 @@ vi.mock('@quake2ts/cgame', async (importOriginal) => {
             NotifyMessage: vi.fn(),
             ParseConfigString: vi.fn(),
             ShowSubtitle: vi.fn()
-        }))
+        })),
+        // Mock interpolation to just return the destination state to preserve properties like pickupIcon
+        // without relying on complex interpolation logic in unit tests
+        interpolatePredictionState: vi.fn((from, to, alpha) => to)
     };
 });
 
@@ -70,22 +78,17 @@ describe('HUD Data API', () => {
     mockEngine = {
       trace: vi.fn(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } })),
       cmd: { executeText: vi.fn() },
-      renderer: {
+      renderer: createMockRenderer({
           width: 800,
           height: 600,
-          begin2D: vi.fn(),
-          end2D: vi.fn(),
-          renderFrame: vi.fn(),
-          getPerformanceReport: vi.fn(() => ({})),
-          setGamma: vi.fn(),
-          setBrightness: vi.fn(),
-          setBloom: vi.fn(),
-          setBloomIntensity: vi.fn(),
-          setUnderwaterWarp: vi.fn(),
-      },
-      assets: {
-          listFiles: vi.fn(() => [])
-      }
+          registerTexture: vi.fn().mockReturnValue({
+            width: 32,
+            height: 32,
+            upload: vi.fn(),
+            bind: vi.fn()
+          })
+      }),
+      assets: createMockAssetManager()
     };
 
     client = createClient({ engine: mockEngine } as ClientImports);
@@ -95,14 +98,16 @@ describe('HUD Data API', () => {
     // We can manually set it or mock run a frame.
     // For test simplicity, let's trigger a render.
 
+    const initialState = createMockHudState({
+        health: 100,
+        armor: 50,
+        ammo: 25,
+        pickupIcon: 'icons/armor',
+        damageIndicators: []
+    });
+
     client.init({
-        state: {
-            health: 100,
-            armor: 50,
-            ammo: 25,
-            pickupIcon: 'icons/armor',
-            damageIndicators: []
-        } as any,
+        state: initialState as any,
         timeMs: 0
     });
 
@@ -111,11 +116,7 @@ describe('HUD Data API', () => {
         nowMs: 100,
         latest: {
             state: {
-                health: 100,
-                armor: 50,
-                ammo: 25,
-                pickupIcon: 'icons/armor',
-                damageIndicators: [],
+                ...initialState,
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },
                 viewAngles: { x: 0, y: 0, z: 0 },
@@ -125,11 +126,7 @@ describe('HUD Data API', () => {
         },
         previous: {
             state: {
-                health: 100,
-                armor: 50,
-                ammo: 25,
-                pickupIcon: 'icons/armor',
-                damageIndicators: [],
+                ...initialState,
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },
                 viewAngles: { x: 0, y: 0, z: 0 },
@@ -172,11 +169,15 @@ describe('HUD Data API', () => {
     const callback = vi.fn();
     client.onHudUpdate = callback;
 
+    const updatedState = createMockHudState({
+        health: 90
+    });
+
     client.render({
         nowMs: 200,
         latest: {
             state: {
-                health: 90,
+                ...updatedState,
                 blend: [0, 0, 0, 0],
                 origin: { x: 0, y: 0, z: 0 },
                 velocity: { x: 0, y: 0, z: 0 },

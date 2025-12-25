@@ -3,7 +3,14 @@ import { DedicatedServer } from '../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState } from '../src/client.js';
 import { UPDATE_BACKUP } from '@quake2ts/shared';
-import { createMockTransport, MockTransport, createMockServerClient, createMockGameExports, createGameStateSnapshotFactory } from '@quake2ts/test-utils';
+import {
+    createMockTransport,
+    MockTransport,
+    createMockServerClient,
+    createMockGameExports,
+    createGameStateSnapshotFactory,
+    createServerSnapshot
+} from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('node:fs/promises', () => ({
@@ -83,7 +90,8 @@ describe('DedicatedServer', () => {
   });
 
   it('should run the main game loop and process client commands', () => {
-    // Create frames array for backup
+    // Use helper to create default frames if needed, or rely on createMockServerClient defaults if updated
+    // For now, we still need frames for the dedicated server logic to work properly
     const frames = [];
     for (let i = 0; i < UPDATE_BACKUP; i++) {
         frames.push({
@@ -119,7 +127,14 @@ describe('DedicatedServer', () => {
     vi.advanceTimersByTime(FRAME_TIME_MS);
     expect(mockGame.frame).toHaveBeenCalledTimes(2);
     expect(mockGame.frame).toHaveBeenCalledWith(expect.objectContaining({ frame: 3 }));
+
+    // Test server snapshot creation using helper
+    // This serves as a sanity check that the helpers are compatible with the server state
+    const snapshot = createServerSnapshot(server.sv, 0);
+    expect(snapshot).toBeDefined();
+    expect(snapshot.serverTime).toBe(server.sv.time);
   });
+
 
   it('should not process commands for clients that are not active', () => {
     const frames = [];

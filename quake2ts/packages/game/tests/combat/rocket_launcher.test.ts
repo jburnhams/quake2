@@ -7,24 +7,14 @@ import { fire, firingRandom } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Rocket Launcher', () => {
     it('should consume 1 rocket and spawn a projectile', () => {
-        const trace = vi.fn();
-        const pointcontents = vi.fn();
         const createRocket = vi.spyOn(projectiles, 'createRocket');
-        const multicast = vi.fn();
-        const unicast = vi.fn();
 
-        const engine = {
-            trace: vi.fn(),
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-        const game = createGame({ trace, pointcontents, linkentity: vi.fn(), multicast, unicast }, engine, { gravity: { x: 0, y: 0, z: -800 }, random: firingRandom });
-
-        trace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+        const { imports, engine } = createGameImportsAndEngine();
+        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, random: firingRandom });
 
         firingRandom.seed(12345);
 

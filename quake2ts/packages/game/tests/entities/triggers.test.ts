@@ -1,11 +1,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '../test-helpers';
+import { createTestContext } from '@quake2ts/test-utils';
 import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
 import { registerTargetSpawns } from '../../src/entities/targets';
 import { Entity } from '../../src/entities/entity';
 import { Solid } from '../../src/entities/entity';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Triggers', () => {
   let context: ReturnType<typeof createTestContext>;
@@ -22,7 +23,7 @@ describe('Triggers', () => {
     // Mock spawn to track entities
     const originalSpawn = entities.spawn;
     entities.spawn = () => {
-        const e = originalSpawn();
+        const e = createEntityFactory({ number: 1 });
         spawnedEntities.push(e);
         return e;
     };

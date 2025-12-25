@@ -1,0 +1,50 @@
+name: Browser Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  browser:
+    name: Browser Tests (Node 25)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quake2ts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build workspace
+        run: pnpm run build
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Validate Dependencies
+        run: pnpm exec tsx packages/tools/src/validate-deps.ts
+
+      - name: Run Browser Test Suite
+        run: pnpm run test:browser
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-results
+          path: quake2ts/packages/*/test-results/
+          retention-days: 7

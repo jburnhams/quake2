@@ -118,6 +118,8 @@ describe('Lightmap Styles Integration', () => {
       brushes: [],
       brushSides: [],
       visibility: undefined,
+      areas: [],
+      areaPortals: [],
     } as unknown as BspMap;
   });
 

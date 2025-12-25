@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClientEffectSystem, EntityProvider } from '../src/effects-system.js';
-import { DynamicLightManager, EngineImports, Renderer, ParticleSystem, spawnBulletImpact, spawnBlood, spawnExplosion, spawnMuzzleFlash, spawnSplash, spawnSteam } from '@quake2ts/engine';
+import { EngineImports, Renderer, ParticleSystem, spawnBulletImpact, spawnBlood, spawnExplosion, spawnMuzzleFlash, spawnSplash, spawnSteam } from '@quake2ts/engine';
 import { TempEntity, Vec3, MZ_BLASTER } from '@quake2ts/shared';
+import { createMockDLightManager } from '@quake2ts/test-utils';
 
 // Mock engine dependencies
 const mockRenderer = {
@@ -25,11 +26,7 @@ const mockEngine = {
   renderer: mockRenderer
 } as unknown as EngineImports;
 
-const mockDLightManager = {
-  addLight: vi.fn(),
-  update: vi.fn(),
-  getActiveLights: vi.fn().mockReturnValue([])
-} as unknown as DynamicLightManager;
+const mockDLightManager = createMockDLightManager();
 
 const mockEntityProvider: EntityProvider = {
   getEntity: vi.fn(),

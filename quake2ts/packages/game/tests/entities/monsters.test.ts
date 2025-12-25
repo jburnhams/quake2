@@ -2,34 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../../src/index.js';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { Solid } from '../../src/entities/entity.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Monster Spawning', () => {
-  const mockEngine = {
-    sound: vi.fn(),
-    modelIndex: vi.fn((model) => 1),
-  };
+  const { imports, engine } = createGameImportsAndEngine();
 
-  const mockImports = {
-    trace: vi.fn(() => ({
-      allsolid: false,
-      startsolid: false,
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      plane: null,
-      surfaceFlags: 0,
-      contents: 0,
-      ent: null,
-    })),
-    pointcontents: vi.fn(() => 0),
-    linkentity: vi.fn(),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-  };
-
-  const game = createGame(mockImports as any, mockEngine as any, { gravity: { x: 0, y: 0, z: -800 } });
-  const entities = new EntitySystem(mockEngine as any, mockImports as any);
+  const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+  const entities = new EntitySystem(engine, imports);
   const registry = createDefaultSpawnRegistry(game);
 
   const monsters = [

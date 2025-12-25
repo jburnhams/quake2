@@ -3,7 +3,7 @@ import { registerTargetSpeaker } from '../../../src/entities/target/speaker.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, Solid, ServerFlags } from '../../../src/entities/entity.js';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createTestContext } from '../../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('target_speaker', () => {
   let context: ReturnType<typeof createTestContext>;

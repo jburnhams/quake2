@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerMiscSpawns } from '../../src/entities/misc.js';
 import { Entity, MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
-import { createTestContext } from '../test-helpers.js';
+import { createTestContext } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { T_Damage } from '../../src/combat/damage.js';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 vi.mock('../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
@@ -19,10 +20,12 @@ describe('func_object', () => {
     registry = new SpawnRegistry();
     registerMiscSpawns(registry);
 
-    entity = new Entity(1);
-    entity.classname = 'func_object';
-    entity.mins = { x: 0, y: 0, z: 0 };
-    entity.maxs = { x: 10, y: 10, z: 10 };
+    entity = createEntityFactory({
+      number: 1,
+      classname: 'func_object',
+      mins: { x: 0, y: 0, z: 0 },
+      maxs: { x: 10, y: 10, z: 10 }
+    });
     vi.clearAllMocks();
   });
 

@@ -1,14 +1,13 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../src/entities/system.js';
-import { Entity, ServerFlags } from '../src/entities/entity.js';
-import { createTestContext } from './test-helpers.js';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { foundTarget } from '../src/ai/targeting.js';
 
 describe('Difficulty Scaling - Reaction Time', () => {
     let context: EntitySystem;
-    let monster: Entity;
-    let enemy: Entity;
+    let monster: any;
+    let enemy: any;
 
     beforeEach(async () => {
         const spawnContext = await createTestContext();
@@ -20,10 +19,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
             writable: true
         });
 
-        monster = {
-            classname: 'monster_test',
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
+        monster = createMonsterEntityFactory('monster_test', {
             monsterinfo: {
                 aiflags: 0,
                 last_sighting: { x: 0, y: 0, z: 0 },
@@ -33,17 +29,15 @@ describe('Difficulty Scaling - Reaction Time', () => {
             },
             s: { number: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 0, z: 0 } },
             attack_finished_time: 0,
-        } as any;
+        });
 
-        enemy = {
-            classname: 'player',
+        enemy = createPlayerEntityFactory({
             origin: { x: 100, y: 0, z: 0 },
-            velocity: { x: 0, y: 0, z: 0 }, // Added velocity
-            svflags: ServerFlags.Player,
-            inUse: true,
+            velocity: { x: 0, y: 0, z: 0 },
             flags: 0,
             light_level: 128
-        } as any;
+        });
+
         monster.enemy = enemy;
     });
 

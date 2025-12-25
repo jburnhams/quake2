@@ -1,79 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createTestContext } from './test-helpers';
-import { Entity, MoveType } from '../src/entities/entity';
-import { Vec3, RandomGenerator, createRandomGenerator } from '@quake2ts/shared';
-import { monster_soldier } from '../src/entities/monsters/soldier';
-import { EntitySystem } from '../src/entities/system';
-import { execSync } from 'child_process';
-
-const GRAVITY = { x: 0, y: 0, z: -800 } as const;
-
-// Helper to create a deterministic game instance
-function createDeterministicGame(seed: number, options: Partial<GameCreateOptions> = {}) {
-  const mockEngine = {
-    trace(start: any, end: any) {
-      return { start, end, fraction: 1 };
-    },
-    pointcontents: () => 0,
-    multicast: () => {},
-    unicast: () => {},
-    sound: () => {},
-    configstring: () => {},
-    serverCommand: () => {},
-    modelIndex: () => 1,
-    soundIndex: () => 1,
-  };
-
-  const rng = new RandomGenerator({ seed });
-
-  return createGame(
-    {
-      ...mockEngine
-    } as any,
-    mockEngine as any,
-    {
-      gravity: GRAVITY,
-      random: rng,
-      ...options
-    }
-  );
-}
-
-function runGameHashes(seed: number, frames: number, options: { injectRng?: boolean, spawnMonster?: boolean } = {}): number[] {
-  const game = createDeterministicGame(seed, options);
-  const hashes: number[] = [];
-
-  // Init
-  const initial = game.init(0);
-  if (initial?.state) {
-    hashes.push(hashGameState(initial.state));
-  }
-
-  // Inject an entity that uses RNG to ensure divergence if seed differs
-  if (options.injectRng) {
-      const ent = game.entities.spawn();
-      ent.classname = 'rng_tester';
-      ent.modelindex = 1; // Ensure it's included in snapshot
-      ent.think = (self) => {
-          // Use RNG to change position to ensure hashGameState picks it up
-          // hashGameState includes entity.origin
-          const shift = (game.random.frandom() - 0.5) * 10;
-          self.origin.x += shift;
-          self.nextthink = game.entities.timeSeconds + 0.1;
-          game.entities.scheduleThink(self, self.nextthink);
-      };
-      ent.nextthink = game.entities.timeSeconds + 0.1;
-      game.entities.scheduleThink(ent, ent.nextthink);
-  }
-
-  // Run frames
-  for (let frame = 1; frame <= frames; frame += 1) {
-    const snapshot = game.frame({ frame, deltaMs: 100, nowMs: frame * 100 });
-    hashes.push(hashGameState(snapshot.state));
-  }
-
-  return hashes;
-}
+import { describe, it, expect } from 'vitest';
+import { createTestContext } from '@quake2ts/test-utils';
+import { Entity } from '../src/entities/entity.js';
 
 describe('Determinism', () => {
   it('should produce identical state for identical seeds', async () => {
@@ -109,14 +36,12 @@ describe('Determinism', () => {
         currentTime = Number((currentTime + 0.1).toFixed(1));
         entities.timeSeconds = currentTime;
 
-        // Debug
-        // console.log(`Tick ${i}, Time ${currentTime}, NextThink ${monster.nextthink}`);
-
         if (monster.nextthink > 0 && monster.nextthink <= currentTime + 0.001) { // Epsilon for float comparison
-            const think = monster.think;
-             // Clear nextthink before calling, standard engine behavior
-             // But here we just call it.
-            monster.think(monster);
+            // Clear nextthink before calling, standard engine behavior
+            // But here we just call it.
+            if (monster.think) {
+              monster.think(monster);
+            }
         }
 
         positionsX.push(monster.origin.x);

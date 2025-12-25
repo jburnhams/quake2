@@ -4,6 +4,7 @@ import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
 import { MessageSystem } from '../src/hud/messages.js';
+import { createMockAssetManager } from '@quake2ts/test-utils';
 
 // Mock engine dependencies
 const mockRenderer = {
@@ -19,9 +20,10 @@ const mockRenderer = {
     height: 480
 } as unknown as Renderer;
 
-const mockAssetManager = {
+// Mock AssetManager using centralized factory from test-utils
+const mockAssetManager = createMockAssetManager({
     loadTexture: vi.fn().mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' } as PreparedTexture)
-} as unknown as AssetManager;
+});
 
 describe('HUD Rendering', () => {
     let ps: PlayerState;
