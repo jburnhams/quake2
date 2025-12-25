@@ -28,6 +28,18 @@ export function createMockSaveGame(overrides?: Partial<MockSaveGame>): MockSaveG
         deltaSeconds: 0.1
     };
 
+    const defaultLevel: LevelState = {
+        next_auto_save: 0,
+        health_bar_entities: [null, null, null, null],
+        intermission_angle: { x: 0, y: 0, z: 0 },
+        intermission_origin: { x: 0, y: 0, z: 0 },
+        helpmessage1: "",
+        helpmessage2: "",
+        help1changed: 0,
+        help2changed: 0,
+        mapname: 'test_map'
+    };
+
     const defaultGame: GameSaveFile = {
         version: 2,
         timestamp: Date.now(),
@@ -52,41 +64,12 @@ export function createMockSaveGame(overrides?: Partial<MockSaveGame>): MockSaveG
             },
             crossLevelFlags: 0,
             crossUnitFlags: 0,
-            level: {
-                next_auto_save: 0,
-                health_bar_entities: [null, null, null, null],
-                intermission_angle: { x: 0, y: 0, z: 0 },
-                intermission_origin: { x: 0, y: 0, z: 0 },
-                helpmessage1: "",
-                helpmessage2: "",
-                help1changed: 0,
-                help2changed: 0
-            }
+            level: defaultLevel
         },
         rng: { mt: { index: 0, state: [] } },
         gameState: {},
         cvars: [],
         configstrings: []
-    };
-
-    const defaultLevel: LevelState = {
-        framenum: 100,
-        time: 10.0,
-        level_name: 'test_map',
-        mapname: 'test_map',
-        next_map: '',
-        found_secrets: 0,
-        total_secrets: 0,
-        found_goals: 0,
-        total_goals: 0,
-        found_monsters: 0,
-        total_monsters: 0,
-        current_entity: null,
-        body_que: 0,
-        temp_entities: null,
-        pic_health: null,
-        next_auto_save: 0,
-        health_bar_entities: null
     };
 
     return {
@@ -121,13 +104,14 @@ export function createSaveGameSnapshot(context: TestContext): MockSaveGame {
     });
 
     // We need to construct a LevelFrameState for the save file
-    // Assuming context.game.level has similar properties or we default
     const levelFrameState: LevelFrameState = {
-        frameNumber: (context.game as any).level?.framenum ?? 0,
-        timeSeconds: (context.game as any).level?.time ?? 0,
+        frameNumber: (context.game as any).level?.frameNumber ?? 0,
+        timeSeconds: (context.game as any).level?.timeSeconds ?? (context.game as any).time ?? 0,
         previousTimeSeconds: 0,
         deltaSeconds: 0.1
     };
+
+    const currentLevel = (context.entities as any).level || {};
 
     return {
         game: {
@@ -145,7 +129,7 @@ export function createSaveGameSnapshot(context: TestContext): MockSaveGame {
         },
         entities,
         client: {},
-        level: (context.game as any).level ? { ...(context.game as any).level } : {} as any,
+        level: currentLevel as LevelState,
         timestamp: Date.now()
     };
 }
@@ -174,8 +158,8 @@ export function restoreSaveGameSnapshot(saveGame: MockSaveGame, context: TestCon
     });
 
     // Restore level state
-    if ((context.game as any).level) {
-        Object.assign((context.game as any).level, saveGame.level);
+    if ((context.entities as any).level) {
+        Object.assign((context.entities as any).level, saveGame.level);
     }
 }
 
@@ -204,7 +188,6 @@ export function compareSaveGames(a: MockSaveGame, b: MockSaveGame): SaveGameDiff
     };
 
     // Compare game state
-    // Check level.timeSeconds instead of levelState which doesn't exist on GameSaveFile
     const aTime = a.game.level.timeSeconds;
     const bTime = b.game.level.timeSeconds;
     if (aTime !== bTime) diffs.gameStateDiffs.push(`time: ${aTime} vs ${bTime}`);
