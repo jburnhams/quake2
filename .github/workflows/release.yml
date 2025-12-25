@@ -39,11 +39,25 @@ jobs:
           minor-wording: 'minor,Minor,feat,Feat,feature,Feature'
           patch-wording: 'patch,Patch,fix,Fix,fixes,Fixes'
           rc-wording: 'rc,pre,beta,alpha'  # For pre-releases
-          commit-message: 'ci: bump version to {{version}} [skip ci]'  # Skips re-triggering
-          push: true  # Pushes the commit/tag back to main
+          skip-commit: 'true'
+          skip-tag: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           PACKAGEJSON_DIR: 'quake2ts'
+
+      - name: 'Sync versions'
+        run: node packages/tools/sync-versions.js
+
+      - name: 'Commit, Tag and Push'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "ci: bump version to ${{ steps.version-bump.outputs.newTag }} [skip ci]"
+          git tag ${{ steps.version-bump.outputs.newTag }}
+          git push origin HEAD:main --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: 'cat package.json'
         run: cat ./package.json
