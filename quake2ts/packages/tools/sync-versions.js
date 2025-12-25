@@ -21,7 +21,14 @@ if (!fs.existsSync(ROOT_PACKAGE_PATH)) {
 const rootPackage = JSON.parse(fs.readFileSync(ROOT_PACKAGE_PATH, 'utf8'));
 const newVersion = rootPackage.version;
 
+const REPOSITORY_FIELD = {
+    type: "git",
+    url: "https://github.com/jburnhams/quake2.git"
+};
+
 console.log(`Syncing version ${newVersion} to subpackages...`);
+
+let hasError = false;
 
 // Iterate through subdirectories in 'packages'
 if (fs.existsSync(PACKAGES_DIR)) {
@@ -35,18 +42,29 @@ if (fs.existsSync(PACKAGES_DIR)) {
                 try {
                     const pkgContent = fs.readFileSync(packageJsonPath, 'utf8');
                     const pkg = JSON.parse(pkgContent);
+                    let changed = false;
 
                     if (pkg.version !== newVersion) {
-                        console.log(`Updating ${dirent.name} from ${pkg.version} to ${newVersion}`);
+                        console.log(`Updating ${dirent.name} version from ${pkg.version} to ${newVersion}`);
                         pkg.version = newVersion;
+                        changed = true;
+                    }
 
+                    if (JSON.stringify(pkg.repository) !== JSON.stringify(REPOSITORY_FIELD)) {
+                         console.log(`Updating ${dirent.name} repository field`);
+                         pkg.repository = REPOSITORY_FIELD;
+                         changed = true;
+                    }
+
+                    if (changed) {
                         // Preserve formatting
                         fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
                     } else {
-                        console.log(`Skipping ${dirent.name} (already at ${newVersion})`);
+                        console.log(`Skipping ${dirent.name} (already up to date)`);
                     }
                 } catch (err) {
                     console.error(`Error processing ${dirent.name}:`, err.message);
+                    hasError = true;
                 }
             }
         }
@@ -56,4 +74,9 @@ if (fs.existsSync(PACKAGES_DIR)) {
     process.exit(1);
 }
 
-console.log('Version sync complete.');
+if (hasError) {
+    console.error('One or more packages failed to sync.');
+    process.exit(1);
+}
+
+console.log('Sync complete.');
