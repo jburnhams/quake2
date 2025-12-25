@@ -32,13 +32,15 @@ describe('Player Death', () => {
     });
 
     it('should throw gibs if health is low enough', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const system = new EntitySystem(engine, imports);
+        const { imports, engine } = createGameImportsAndEngine({
+            imports: {
+                // Mock linkentity as well
+                linkentity: vi.fn(),
+            }
+        });
+        const system = new EntitySystem(engine, imports as any);
         // Mock spawn to return a valid entity so gibs don't crash
         const spawnSpy = vi.spyOn(system, 'spawn').mockImplementation(() => new Entity(100));
-
-        // Mock linkentity as well
-        vi.spyOn(system, 'linkentity').mockImplementation(() => {});
 
         const player = new Entity(1);
         Object.assign(player, createPlayerEntityFactory({
@@ -59,7 +61,7 @@ describe('Player Death', () => {
 
     it('should display obituary', () => {
         const { imports, engine } = createGameImportsAndEngine();
-        const system = new EntitySystem(engine, imports);
+        const system = new EntitySystem(engine, imports as any);
 
         const player = new Entity(1);
         Object.assign(player, createPlayerEntityFactory({

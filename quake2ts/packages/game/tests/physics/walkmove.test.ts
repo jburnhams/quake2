@@ -4,7 +4,7 @@ import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { AIFlags } from '../../src/ai/constants.js';
-import { createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createEntityFactory, createTraceMock, createTestContext } from '@quake2ts/test-utils';
 
 describe('M_walkmove', () => {
   let entity: Entity;
@@ -13,7 +13,13 @@ describe('M_walkmove', () => {
   let pointContentsMock: any;
 
   beforeEach(() => {
-    entity = createEntityFactory({
+    const testContext = createTestContext();
+    context = testContext.entities;
+    traceMock = context.trace;
+    pointContentsMock = context.pointcontents;
+
+    entity = context.spawn();
+    Object.assign(entity, createEntityFactory({
       origin: { x: 0, y: 0, z: 100 },
       oldOrigin: { x: 0, y: 0, z: 100 },
       mins: { x: -16, y: -16, z: -24 },
@@ -22,19 +28,11 @@ describe('M_walkmove', () => {
       flags: 0,
       groundentity: { index: 1 } as Entity,
       waterlevel: 0,
-    }) as Entity;
+    }));
 
     // monsterinfo is not on Entity interface directly, usually on monster entities,
     // but M_walkmove uses it if available or Entity flags.
     (entity as any).monsterinfo = { aiflags: 0 };
-
-    traceMock = vi.fn();
-    pointContentsMock = vi.fn();
-
-    context = {
-      trace: traceMock,
-      pointcontents: pointContentsMock,
-    } as unknown as EntitySystem;
   });
 
   it('should return false if checkBottom fails (step off ledge)', () => {

@@ -12,7 +12,7 @@ import {
     monster_fire_blueblaster,
     monster_fire_dabeam
 } from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -130,8 +130,10 @@ describe('monster_soldier', () => {
 
   it('soldier fires blaster (default)', () => {
     SP_monster_soldier(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
     soldier.origin = { x: 0, y: 0, z: 0 };
 
     // Simulate attack frame
@@ -152,8 +154,10 @@ describe('monster_soldier', () => {
 
   it('soldier fires ssg', () => {
     SP_monster_soldier_ssg(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
 
     soldier.monsterinfo.attack!(soldier, context.entities as any);
     const attackMove = soldier.monsterinfo.current_move;
@@ -170,8 +174,10 @@ describe('monster_soldier', () => {
   it('soldier fires machinegun burst', () => {
     soldier.spawnflags = 4;
     SP_monster_soldier(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
 
     soldier.monsterinfo.attack!(soldier, context.entities as any);
     const attackMove = soldier.monsterinfo.current_move;
@@ -186,8 +192,10 @@ describe('monster_soldier', () => {
 
   it('soldier ripper fires ionripper', () => {
     SP_monster_soldier_ripper(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
 
     soldier.monsterinfo.attack!(soldier, context.entities as any);
     const attackMove = soldier.monsterinfo.current_move;
@@ -202,8 +210,10 @@ describe('monster_soldier', () => {
 
   it('soldier hypergun fires blue blaster', () => {
     SP_monster_soldier_hypergun(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
 
     soldier.monsterinfo.attack!(soldier, context.entities as any);
     const attackMove = soldier.monsterinfo.current_move;
@@ -218,8 +228,10 @@ describe('monster_soldier', () => {
 
   it('soldier lasergun fires beam', () => {
     SP_monster_soldier_lasergun(soldier, context);
-    soldier.enemy = new Entity(2);
-    soldier.enemy.origin = { x: 100, y: 0, z: 0 };
+    soldier.enemy = sys.spawn();
+    Object.assign(soldier.enemy, createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 }
+    }));
 
     // Should use machinegun/burst frames (attack_move_mg)
     soldier.monsterinfo.attack!(soldier, context.entities as any);
