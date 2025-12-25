@@ -228,12 +228,8 @@ export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
     // For now, we'll just store the model on the context if we extended TestContext,
     // but the task specifically asks to "Include collision world, traces".
 
-    // In a real scenario, we might want to hook up a real BSP trace function here
+    // In a real scenario, we might want to hook up a real BSP physics engine mock here
     // or a mock that uses the BSP data.
-    // Since we don't have a full BSP physics engine mock ready to drop in,
-    // we will stick with the default trace mock which is already set up in createTestContext,
-    // but we acknowledge the bspModel parameter for future expansion where we might
-    // use it to seed the trace results.
   }
 
   return context;
@@ -307,4 +303,38 @@ export function createGameImportsAndEngine(overrides?: {
   };
 
   return { imports, engine };
+}
+
+/**
+ * Creates a mock GameExports object with mocked properties.
+ * This is useful for testing game logic that consumes the game object.
+ *
+ * @param overrides Optional overrides for the game object properties
+ */
+export function createMockGameExports(overrides: Partial<any> = {}): any {
+  return {
+      init: vi.fn(),
+      shutdown: vi.fn(),
+      frame: vi.fn().mockReturnValue({ state: {} }),
+      clientThink: vi.fn(),
+      time: 0,
+      spawnWorld: vi.fn(),
+      deathmatch: false,
+      coop: false,
+      gameImports: {},
+      gameEngine: {},
+      entities: {
+          spawn: vi.fn(),
+          free: vi.fn(),
+          find: vi.fn(),
+          findByClassname: vi.fn(),
+          findByRadius: vi.fn(() => []),
+          forEachEntity: vi.fn(),
+          timeSeconds: 0,
+          ...overrides.entities,
+      },
+      multicast: vi.fn(),
+      unicast: vi.fn(),
+      ...overrides
+  };
 }

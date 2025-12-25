@@ -10,7 +10,7 @@ import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import * as damage from '../../src/combat/damage.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Plasma Beam (Heatbeam)', () => {
     it('should fire a beam, consume ammo, and deal damage', () => {
@@ -30,18 +30,20 @@ describe('Plasma Beam (Heatbeam)', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
         game.init(0);
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.viewheight = 22;
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.PlasmaBeam],
-                ammo: { [AmmoType.Cells]: 50 },
-            }),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 1, // BUTTON_ATTACK
-        } as any;
+        const player = createPlayerEntityFactory({
+            classname: 'player',
+            origin: { x: 0, y: 0, z: 0 },
+            viewheight: 22,
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.PlasmaBeam],
+                    ammo: { [AmmoType.Cells]: 50 },
+                }),
+                weaponStates: createPlayerWeaponStates(),
+                buttons: 1, // BUTTON_ATTACK
+            } as any
+        }) as any;
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
         // Fire
@@ -97,19 +99,17 @@ describe('Plasma Beam (Heatbeam)', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: 0 } });
         game.init(0);
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        const inventory = createPlayerInventory({
-            weapons: [WeaponId.PlasmaBeam],
-            ammo: { [AmmoType.Cells]: 0 },
+        const player = createPlayerEntityFactory({
+            classname: 'player',
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.PlasmaBeam],
+                    ammo: { [AmmoType.Cells]: 0 },
+                }),
+                weaponStates: createPlayerWeaponStates(),
+            } as any
         });
-        // Ensure ammo is zero
-        inventory.ammo.counts[AmmoType.Cells] = 0;
-
-        player.client = {
-            inventory,
-            weaponStates: createPlayerWeaponStates(),
-        } as any;
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
         fire(game, player, WeaponId.PlasmaBeam);

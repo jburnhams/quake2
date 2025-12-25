@@ -1,35 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { T_Damage, Damageable, DamageOptions } from '../../src/combat/damage';
-import { Entity, MoveType, Solid } from '../../src/entities/entity';
-import { DamageMod } from '../../src/combat/damageMods';
-import { DamageFlags } from '../../src/combat/damageFlags';
+import { T_Damage, Damageable, DamageOptions } from '../../src/combat/damage.js';
+import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
+import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { Vec3 } from '@quake2ts/shared';
-import { PlayerClient } from '../../src/inventory/playerInventory';
+import { PlayerClient } from '../../src/inventory/playerInventory.js';
+import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('T_Damage Indicator Logic', () => {
     let attacker: Entity;
     let target: Entity;
 
     beforeEach(() => {
-        attacker = {
-            origin: { x: 100, y: 100, z: 0 },
-            client: {} as PlayerClient, // Attacker needs to be player for some logic?
-            takedamage: true
-        } as unknown as Entity;
+        attacker = createEntityFactory({
+             origin: { x: 100, y: 100, z: 0 },
+             takedamage: true
+        }) as Entity;
 
-        target = {
-            classname: 'player',
+        target = createPlayerEntityFactory({
             origin: { x: 0, y: 0, z: 0 },
             health: 100,
             takedamage: true,
             solid: Solid.BoundingBox,
             movetype: MoveType.Walk,
             client: {
-                damage_indicators: []
-            } as unknown as PlayerClient,
-            pain: vi.fn(),
-            die: vi.fn()
-        } as unknown as Entity;
+                damage_indicators: [],
+                // Ensure inventory.items exists for hasItem check in T_Damage -> applyProtection
+                inventory: {
+                    items: new Set(),
+                    powerups: new Map(),
+                    ammo: { counts: [] },
+                    ownedWeapons: new Set(),
+                    keys: new Set(),
+                }
+            } as any
+        }) as Entity;
+        target.pain = vi.fn();
+        target.die = vi.fn();
     });
 
     it('should add a damage indicator to the target client when damaged by attacker', () => {

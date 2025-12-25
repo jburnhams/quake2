@@ -11,7 +11,7 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { MulticastType } from '../../src/imports.js';
 import { ServerCommand, TempEntity, MZ_PHALANX, MZ_PHALANX2 } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Phalanx', () => {
     it('should fire standard shot (Frame != 8) with radius 120 and MZ_PHALANX', () => {
@@ -24,20 +24,22 @@ describe('Phalanx', () => {
 
         game.init(0);
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.viewheight = 22;
-        player.angles = { x: 0, y: 0, z: 0 };
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.Phalanx],
-                ammo: { [AmmoType.MagSlugs]: 10 },
-            }),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 1,
-            gun_frame: 0 // Standard Shot
-        } as any;
+        const player = createPlayerEntityFactory({
+            classname: 'player',
+            origin: { x: 0, y: 0, z: 0 },
+            viewheight: 22,
+            angles: { x: 0, y: 0, z: 0 },
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.Phalanx],
+                    ammo: { [AmmoType.MagSlugs]: 10 },
+                }),
+                weaponStates: createPlayerWeaponStates(),
+                buttons: 1,
+                gun_frame: 0 // Standard Shot
+            } as any
+        }) as Entity;
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
         fire(game, player, WeaponId.Phalanx);
@@ -63,20 +65,22 @@ describe('Phalanx', () => {
         vi.spyOn(game.random, 'irandomRange').mockReturnValue(75);
         game.init(0);
 
-        const player = game.entities.spawn();
-        player.classname = 'player';
-        player.origin = { x: 0, y: 0, z: 0 };
-        player.viewheight = 22;
-        player.angles = { x: 0, y: 0, z: 0 };
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.Phalanx],
-                ammo: { [AmmoType.MagSlugs]: 10 },
-            }),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 1,
-            gun_frame: 8 // Alternate Shot
-        } as any;
+        const player = createPlayerEntityFactory({
+            classname: 'player',
+            origin: { x: 0, y: 0, z: 0 },
+            viewheight: 22,
+            angles: { x: 0, y: 0, z: 0 },
+            client: {
+                inventory: createPlayerInventory({
+                    weapons: [WeaponId.Phalanx],
+                    ammo: { [AmmoType.MagSlugs]: 10 },
+                }),
+                weaponStates: createPlayerWeaponStates(),
+                buttons: 1,
+                gun_frame: 8 // Alternate Shot
+            } as any
+        }) as Entity;
+        game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
         fire(game, player, WeaponId.Phalanx);
