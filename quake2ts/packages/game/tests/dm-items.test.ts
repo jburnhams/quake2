@@ -62,6 +62,7 @@ describe('Item Respawn', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const spGame = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
         const spItem = spGame.entities.spawn();
+        Object.assign(spItem, createItemEntityFactory('item_health'));
 
         spGame.entities.free = vi.fn();
 
