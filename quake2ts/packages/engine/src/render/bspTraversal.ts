@@ -195,7 +195,7 @@ export function gatherVisibleFaces(
   const viewArea = viewLeafData ? viewLeafData.area : -1;
 
   let reachableAreas: Set<number> | null = null;
-  if (portalState && viewArea >= 0 && map.areas.length > 0) {
+  if (portalState && viewArea >= 0 && map.areas && map.areas.length > 0) {
     reachableAreas = calculateReachableAreas(map, viewArea, portalState);
   }
 
