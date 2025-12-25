@@ -5,12 +5,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+interface VisualTestStats {
+    passed: boolean;
+    percentDifferent: number;
+    pixelsDifferent: number;
+    totalPixels: number;
+    threshold: number;
+    maxDifferencePercent: number;
+}
+
 interface VisualTestInfo {
   testName: string;
   snapshotName: string;
   file: string;
   line: number;
   description: string;
+  stats?: VisualTestStats;
 }
 
 const HTML_TEMPLATE = `<!DOCTYPE html>
@@ -24,7 +34,7 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
         h1 { border-bottom: 1px solid #333; padding-bottom: 10px; }
         .test-case { background: #2a2a2a; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
         .test-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .test-name { font-size: 1.2em; font-weight: bold; color: #4CAF50; }
+        .test-name { font-size: 1.2em; font-weight: bold; color: #4CAF50; display: flex; align-items: center; gap: 10px; }
         .test-meta { font-size: 0.9em; color: #888; }
         .test-meta a { color: #888; text-decoration: none; }
         .test-meta a:hover { text-decoration: underline; }
@@ -34,6 +44,17 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
         .label { font-size: 0.8em; text-transform: uppercase; color: #aaa; margin-bottom: 5px; }
         .nav { margin-bottom: 20px; }
         .nav a { color: #4CAF50; text-decoration: none; margin-right: 15px; }
+        .status-icon { font-size: 1.2em; }
+        .status-pass { color: #4CAF50; }
+        .status-fail { color: #F44336; }
+        .stats-badge {
+            background: #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 10px;
+            cursor: help;
+        }
     </style>
 </head>
 <body>
@@ -61,10 +82,32 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
                 ? \`<div class="test-meta">\${test.description}</div>\`
                 : '';
 
+            let statusHtml = '';
+            let statsHtml = '';
+
+            if (test.stats) {
+                const isPass = test.stats.passed;
+                const icon = isPass ? '✓' : '✗';
+                const statusClass = isPass ? 'status-pass' : 'status-fail';
+                const percentMatch = (100 - test.stats.percentDifferent).toFixed(2);
+
+                const tooltip = \`Pixels Different: \${test.stats.pixelsDifferent} / \${test.stats.totalPixels}
+Error: \${test.stats.percentDifferent.toFixed(4)}%
+Max Allowed: \${test.stats.maxDifferencePercent}%
+Threshold: \${test.stats.threshold}\`;
+
+                statusHtml = \`<span class="status-icon \${statusClass}">\${icon}</span>\`;
+                statsHtml = \`<span class="stats-badge" title="\${tooltip}">Match: \${percentMatch}%</span>\`;
+            }
+
             div.innerHTML = \`
                 <div class="test-header">
                     <div>
-                        <div class="test-name">\${test.testName}</div>
+                        <div class="test-name">
+                            \${statusHtml}
+                            \${test.testName}
+                            \${statsHtml}
+                        </div>
                         \${descriptionHtml}
                     </div>
                     <div class="test-meta">
