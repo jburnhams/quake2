@@ -16,6 +16,11 @@ export class BootstrapProtocolHandler implements ProtocolHandler {
         if (cmd === 7) return ServerCommand.serverdata;
         if (cmd === 12) return ServerCommand.serverdata; // Legacy Q2TS
         if (cmd === 13) return ServerCommand.serverdata; // Standard Q2
+
+        // Allow stufftext (11 in Rerelease/Ops) for tunneled handshake challenges
+        // Standard Q2 uses 11 for print, but standard Q2 doesn't send In-Band packets before serverdata.
+        if (cmd === ServerCommand.stufftext) return ServerCommand.stufftext;
+
         return ServerCommand.bad;
     }
 
