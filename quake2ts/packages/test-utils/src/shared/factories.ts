@@ -1,5 +1,5 @@
 import { Cvar, type ConfigStringEntry } from '@quake2ts/engine';
-import { CvarFlags } from '@quake2ts/shared';
+import { CvarFlags, PlayerState } from '@quake2ts/shared';
 
 // Re-export Cvar for convenience if needed, but the factory returns Cvar instance
 export { Cvar } from '@quake2ts/engine';
@@ -48,4 +48,41 @@ export function createCvarMock(name: string, value: string, flags: number = Cvar
     defaultValue: value,
     flags,
   });
+}
+
+/**
+ * Creates a mock PlayerState with sensible defaults.
+ * Corresponds to player_state_t in q_shared.h.
+ *
+ * @param overrides - Partial PlayerState to override defaults.
+ * @returns A complete PlayerState object.
+ */
+export function createMockPlayerState(overrides?: Partial<PlayerState>): PlayerState {
+  return {
+    origin: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    viewAngles: { x: 0, y: 0, z: 0 },
+    onGround: false,
+    waterLevel: 0,
+    watertype: 0,
+    mins: { x: -16, y: -16, z: -24 },
+    maxs: { x: 16, y: 16, z: 32 },
+    damageAlpha: 0,
+    damageIndicators: [],
+    blend: [0, 0, 0, 0],
+    stats: new Array(32).fill(0),
+    kick_angles: { x: 0, y: 0, z: 0 },
+    kick_origin: { x: 0, y: 0, z: 0 },
+    gunoffset: { x: 0, y: 0, z: 0 },
+    gunangles: { x: 0, y: 0, z: 0 },
+    gunindex: 0,
+    pm_type: 0,
+    pm_time: 0,
+    pm_flags: 0,
+    gun_frame: 0,
+    rdflags: 0,
+    fov: 90,
+    renderfx: 0,
+    ...overrides
+  };
 }
