@@ -211,24 +211,24 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 5. Create Physics Test Helpers (MEDIUM PRIORITY)
 
-**Status:** Some helpers exist, need expansion
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 4 (collision helpers)
 
-- [ ] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
+- [x] **5.1** Create `test-utils/src/game/helpers/physics.ts` file
 
-- [ ] **5.2** Add `simulateMovement()` helper
+- [x] **5.2** Add `simulateMovement()` helper
   - Signature: `simulateMovement(entity: Entity, destination: Vector3, context: TestContext): Trace`
   - Simulate movement with collision detection
 
-- [ ] **5.3** Add `simulateGravity()` helper
+- [x] **5.3** Add `simulateGravity()` helper
   - Signature: `simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void`
   - Apply gravity and ground detection
 
-- [ ] **5.4** Add `simulateJump()` helper
+- [x] **5.4** Add `simulateJump()` helper
   - Signature: `simulateJump(entity: Entity, context: TestContext): void`
   - Apply jump velocity with ground check
 
-- [ ] **5.5** Add `createPhysicsTestScenario()` helper
+- [x] **5.5** Add `createPhysicsTestScenario()` helper
   - Signature: `createPhysicsTestScenario(scenarioType: 'stairs' | 'ladder' | 'platform' | 'slope'): PhysicsScenario`
   - Return pre-configured BSP model and entity setup
 
@@ -240,24 +240,24 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 6. Create Save/Load Test Utilities (MEDIUM PRIORITY)
 
-**Status:** Not started
+**Status:** In Progress
 **Dependencies:** Task 1, Task 2
 
-- [ ] **6.1** Create `test-utils/src/game/helpers/save.ts` file
+- [x] **6.1** Create `test-utils/src/game/helpers/save.ts` file
 
-- [ ] **6.2** Add `createMockSaveGame()` factory
+- [x] **6.2** Add `createMockSaveGame()` factory
   - Signature: `createMockSaveGame(overrides?: Partial<SaveGame>): SaveGame`
   - Include: game state, entities, level info, player state
 
-- [ ] **6.3** Add `createSaveGameSnapshot()` helper
+- [x] **6.3** Add `createSaveGameSnapshot()` helper
   - Signature: `createSaveGameSnapshot(context: TestContext): SaveGame`
   - Capture current test context as save game
 
-- [ ] **6.4** Add `restoreSaveGameSnapshot()` helper
+- [x] **6.4** Add `restoreSaveGameSnapshot()` helper
   - Signature: `restoreSaveGameSnapshot(saveGame: SaveGame, context: TestContext): void`
   - Restore test context from save game
 
-- [ ] **6.5** Add `compareSaveGames()` helper
+- [x] **6.5** Add `compareSaveGames()` helper
   - Signature: `compareSaveGames(a: SaveGame, b: SaveGame): SaveGameDiff`
   - Find differences for testing save/load integrity
 
