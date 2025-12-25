@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage } from '../../src/combat/index.js';
 import { createEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
 import { Entity } from '../../src/entities/entity.js';
+import { AmmoType } from '../../src/inventory/ammo.js';
 
 const MOD_UNKNOWN = DamageMod.UNKNOWN;
 
@@ -23,9 +24,17 @@ describe('T_Damage', () => {
   it('applies power armor before regular armor and updates stores', () => {
     const target = spawnEntity(context, createPlayerEntityFactory({
       origin: { x: 0, y: 0, z: 0 },
-      powerArmor: { type: 'shield', cellCount: 10, angles: { x: 0, y: 0, z: 0 }, origin: { x: 0, y: 0, z: 0 }, health: 100 },
       regularArmor: { armorType: ArmorType.BODY, armorCount: 100 },
     }));
+
+    // Setup Power Armor via inventory (required for Player entities)
+    if (target.client) {
+        target.client.inventory.items.add('item_power_shield');
+        target.client.inventory.ammo.counts[AmmoType.Cells] = 10;
+        // Angles required for shield direction check
+        target.client.v_angle = { x: 0, y: 0, z: 0 };
+        target.angles = { x: 0, y: 0, z: 0 };
+    }
 
     const result = T_Damage(target, null, null, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 60, 0, DamageFlags.NONE, MOD_UNKNOWN, 0);
 

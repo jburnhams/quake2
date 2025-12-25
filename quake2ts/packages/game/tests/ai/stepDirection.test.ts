@@ -3,6 +3,7 @@ import { SV_StepDirection } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { createEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;
@@ -11,7 +12,8 @@ describe('SV_StepDirection', () => {
   let pointContentsMock: any;
 
   beforeEach(() => {
-    entity = {
+    // Create entity using factory
+    const entData = createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 100 },
       old_origin: { x: 0, y: 0, z: 100 },
       mins: { x: -16, y: -16, z: -24 },
@@ -22,9 +24,16 @@ describe('SV_StepDirection', () => {
       waterlevel: 0,
       monsterinfo: {
           aiflags: 0
-      },
+      } as any,
       angles: { x: 0, y: 0, z: 0 }
-    } as unknown as Entity;
+    });
+
+    // We can't easily use createTestContext().entities.spawn() here because SV_StepDirection takes an entity and context directly,
+    // and we want to mock trace on the context heavily.
+    // Although createTestContext returns a context with mocked trace, we might want manual control.
+    // Let's stick to a simple object for entity but use the factory data.
+
+    entity = entData as any; // Cast because factory returns Partial<Entity>
 
     traceMock = vi.fn();
     pointContentsMock = vi.fn();

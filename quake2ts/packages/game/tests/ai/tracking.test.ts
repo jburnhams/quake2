@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import { huntTarget, TargetAwarenessState } from '../../src/ai/targeting.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('AI Tracking (Lost Sight)', () => {
   let system: EntitySystem;
@@ -14,8 +14,6 @@ describe('AI Tracking (Lost Sight)', () => {
     const testContext = createTestContext();
     system = testContext.entities;
 
-    // Mock targetAwareness if not already provided by test-utils in the desired way
-    // createTestContext provides a basic targetAwareness, we can extend/override it
     awareness = {
         timeSeconds: 0,
         frameNumber: 0,
@@ -27,6 +25,7 @@ describe('AI Tracking (Lost Sight)', () => {
         sound2EntityFrame: 0,
         sightClient: null
     };
+
     // Override the getter or property
     if (system.targetAwareness) {
         Object.assign(system.targetAwareness, awareness);
@@ -36,10 +35,13 @@ describe('AI Tracking (Lost Sight)', () => {
         });
     }
 
-
     monster = system.spawn();
-    monster.origin = { x: 0, y: 0, z: 0 };
-    monster.angles = { x: 0, y: 0, z: 0 };
+    Object.assign(monster, createMonsterEntityFactory('monster_test', {
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 },
+        ideal_yaw: 0
+    }));
+
     monster.monsterinfo = {
         stand: vi.fn(),
         run: vi.fn(),
@@ -48,12 +50,11 @@ describe('AI Tracking (Lost Sight)', () => {
         last_sighting: { x: 100, y: 0, z: 0 }, // Last seen location
         search_time: 0
     } as any;
-    monster.ideal_yaw = 0;
 
     player = system.spawn();
-    player.classname = 'player';
-    player.origin = { x: 200, y: 0, z: 0 }; // Current location (different from last sighting)
-    player.svflags |= ServerFlags.Player;
+    Object.assign(player, createPlayerEntityFactory({
+        origin: { x: 200, y: 0, z: 0 } // Current location
+    }));
 
     monster.enemy = player;
   });

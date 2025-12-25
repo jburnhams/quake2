@@ -3,6 +3,7 @@ import { SV_NewChaseDir } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('SV_NewChaseDir', () => {
   let entity: Entity;
@@ -12,7 +13,8 @@ describe('SV_NewChaseDir', () => {
   let enemy: Entity;
 
   beforeEach(() => {
-    entity = {
+    // Create entity using factory
+    const entData = createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
@@ -22,17 +24,19 @@ describe('SV_NewChaseDir', () => {
       waterlevel: 0,
       monsterinfo: {
           aiflags: 0
-      },
+      } as any,
       ideal_yaw: 0,
       angles: { x: 0, y: 0, z: 0 },
       enemy: null
-    } as unknown as Entity;
+    });
+    entity = entData as any;
 
-    enemy = {
+    const enemyData = createPlayerEntityFactory({
         origin: { x: 100, y: 0, z: 0 },
         mins: { x: -16, y: -16, z: -24 },
         maxs: { x: 16, y: 16, z: 32 },
-    } as unknown as Entity;
+    });
+    enemy = enemyData as any;
 
     traceMock = vi.fn();
     pointContentsMock = vi.fn();

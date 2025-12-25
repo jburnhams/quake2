@@ -4,7 +4,7 @@ import { Entity } from '../src/entities/entity.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
 import { createRandomGenerator } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createPlayerStateFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let entities: EntitySystem;
@@ -23,12 +23,16 @@ describe('Deathmatch Spawn', () => {
 
     it('SelectDeathmatchSpawnPoint should return a random spawn point', () => {
         const s1 = entities.spawn();
-        s1.classname = 'info_player_deathmatch';
-        s1.origin = { x: 100, y: 0, z: 0 };
+        Object.assign(s1, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 100, y: 0, z: 0 }
+        }));
 
         const s2 = entities.spawn();
-        s2.classname = 'info_player_deathmatch';
-        s2.origin = { x: 200, y: 0, z: 0 };
+        Object.assign(s2, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 200, y: 0, z: 0 }
+        }));
 
         const spots = entities.findByClassname('info_player_deathmatch');
         const index = Math.floor(0.5 * spots.length);
@@ -40,8 +44,10 @@ describe('Deathmatch Spawn', () => {
 
     it('SelectDeathmatchSpawnPoint should fall back to info_player_start if no deathmatch spots', () => {
         const start = entities.spawn();
-        start.classname = 'info_player_start';
-        start.origin = { x: 10, y: 10, z: 10 };
+        Object.assign(start, createEntityFactory({
+            classname: 'info_player_start',
+            origin: { x: 10, y: 10, z: 10 }
+        }));
 
         // SelectDeathmatchSpawnPoint returns undefined if no DM spots.
         // We should test SelectSpawnPoint which includes the fallback logic.
@@ -60,9 +66,11 @@ describe('GameExports Respawn', () => {
 
         // Mock SelectSpawnPoint implicitly by having a spawn point
         const spawn = game.entities.spawn();
-        spawn.classname = 'info_player_deathmatch';
-        spawn.origin = { x: 500, y: 500, z: 500 };
-        spawn.angles = { x: 0, y: 90, z: 0 };
+        Object.assign(spawn, createEntityFactory({
+            classname: 'info_player_deathmatch',
+            origin: { x: 500, y: 500, z: 500 },
+            angles: { x: 0, y: 90, z: 0 }
+        }));
 
         // Create a player using factories
         const player = game.entities.spawn();
@@ -75,7 +83,7 @@ describe('GameExports Respawn', () => {
                     keys: new Set(),
                     items: new Set()
                 },
-                weaponStates: [] as any,
+                weaponStates: new Map(), // Initialize empty map instead of empty object or array
                 pers: {} as any,
                 buttons: 0,
                 pm_type: 0,
@@ -84,7 +92,7 @@ describe('GameExports Respawn', () => {
                 gun_frame: 0,
                 rdflags: 0,
                 fov: 90
-            },
+            } as any, // Cast to any because the interface might be strict about some missing properties we don't need for this test
             health: 0,
             deadflag: 2 // Dead
         }));
