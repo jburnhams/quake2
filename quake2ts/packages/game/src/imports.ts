@@ -67,4 +67,5 @@ export interface GameEngine {
     serverCommand?(cmd: string): void;
     cvar?(name: string): { number: number; string: string; value: string } | undefined;
     setLagCompensation?(active: boolean, client?: Entity, lagMs?: number): void;
+    setAreaPortalState?(portalNum: number, open: boolean): void;
 }

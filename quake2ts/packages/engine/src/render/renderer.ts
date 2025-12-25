@@ -13,7 +13,7 @@ import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight } from './light.js';
 import { GpuProfiler, RenderStatistics, FrameStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
-import { findLeafForPoint, gatherVisibleFaces, isClusterVisible } from './bspTraversal.js';
+import { findLeafForPoint, gatherVisibleFaces, isClusterVisible, calculateReachableAreas } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
@@ -35,7 +35,9 @@ type MutableRenderableMd2 = { -readonly [K in keyof RenderableMd2]: RenderableMd
 type MutableRenderableMd3 = { -readonly [K in keyof RenderableMd3]: RenderableMd3[K] };
 type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
 
-export type Renderer = IRenderer;
+export interface Renderer extends IRenderer {
+    setAreaPortalState(portalNum: number, open: boolean): void;
+}
 
 // Helper to generate a stable pseudo-random color from a number
 function colorFromId(id: number): [number, number, number, number] {
@@ -119,6 +121,10 @@ export const createRenderer = (
 
     // LOD state
     let lodBias = 1.0;
+
+    // Portal state
+    // MAX_MAP_AREAPORTALS is usually small (e.g. 1024 or 256)
+    const portalState: boolean[] = new Array(1024).fill(true); // Default open
 
     const frameRenderer = createFrameRenderer(gl, bspPipeline, skyboxPipeline);
 
@@ -253,7 +259,8 @@ export const createRenderer = (
             lightStyleOverrides,
             underwaterWarp,
             bloom,
-            bloomIntensity
+            bloomIntensity,
+            portalState // Pass it here.
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
@@ -266,6 +273,9 @@ export const createRenderer = (
         let culledSurfaces = totalSurfaces - visibleSurfaces;
 
         let viewCluster = -1;
+        let viewArea = -1;
+        let reachableAreas: Set<number> | null = null;
+
         if (options.world && renderOptions?.cullingEnabled !== false) {
             const cameraPosition = {
                 x: options.camera.position[0],
@@ -274,7 +284,13 @@ export const createRenderer = (
             };
             const viewLeafIndex = findLeafForPoint(options.world.map, cameraPosition);
             if (viewLeafIndex >= 0) {
-                viewCluster = options.world.map.leafs[viewLeafIndex].cluster;
+                const leaf = options.world.map.leafs[viewLeafIndex];
+                viewCluster = leaf.cluster;
+                viewArea = leaf.area;
+
+                if (viewArea >= 0 && options.world.map.areas.length > 0) {
+                  reachableAreas = calculateReachableAreas(options.world.map, viewArea, portalState);
+                }
             }
         }
 
@@ -333,7 +349,16 @@ export const createRenderer = (
                 }
 
                 if (entityLeafIndex >= 0) {
-                    const entityCluster = options.world.map.leafs[entityLeafIndex].cluster;
+                    const leaf = options.world.map.leafs[entityLeafIndex];
+                    const entityCluster = leaf.cluster;
+                    const entityArea = leaf.area;
+
+                    // Check area reachability
+                    if (reachableAreas && entityArea >= 0 && !reachableAreas.has(entityArea)) {
+                        culledEntities++;
+                        continue;
+                    }
+
                     if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
                         culledEntities++;
                         continue;
@@ -595,7 +620,7 @@ export const createRenderer = (
                     y: options.camera.position[1],
                     z: options.camera.position[2],
                 };
-                const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
+                const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum, portalState); // Pass portalState
 
                 for (const { faceIndex, leafIndex } of visibleFaces) {
                     const leaf = options.world.map.leafs[leafIndex];
@@ -629,37 +654,6 @@ export const createRenderer = (
             }
         }
 
-        if (renderOptions?.showBounds || debugMode === DebugMode.BoundingBoxes || debugMode === DebugMode.CollisionHulls) {
-             for (const entity of entities) {
-                  let minBounds: Vec3 = { x: -16, y: -16, z: -16 };
-                  let maxBounds: Vec3 = { x: 16, y: 16, z: 16 };
-
-                  if (entity.type === 'md2') {
-                      const frame = entity.model.frames[entity.blend.frame0 % entity.model.frames.length];
-                      minBounds = frame.minBounds;
-                      maxBounds = frame.maxBounds;
-                  } else if (entity.type === 'md3') {
-                      const frame = entity.model.frames[entity.blend.frame0 % entity.model.frames.length];
-                      if (frame) {
-                          minBounds = frame.minBounds;
-                          maxBounds = frame.maxBounds;
-                      }
-                  }
-
-                  const worldBounds = transformAabb(minBounds, maxBounds, entity.transform);
-                  const color = debugMode === DebugMode.CollisionHulls ? { r: 0, g: 1, b: 1 } : { r: 1, g: 1, b: 0 };
-                  debugRenderer.drawBoundingBox(worldBounds.mins, worldBounds.maxs, color);
-
-                  const origin = {
-                      x: entity.transform[12],
-                      y: entity.transform[13],
-                      z: entity.transform[14]
-                  };
-                  debugRenderer.drawAxes(origin, 8);
-             }
-        }
-
-
         if ((renderOptions?.showNormals || debugMode === DebugMode.Normals) && options.world) {
              const frustum = extractFrustumPlanes(viewProjection);
              const cameraPosition = {
@@ -667,7 +661,7 @@ export const createRenderer = (
                  y: options.camera.position[1],
                  z: options.camera.position[2],
              };
-             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum);
+             const visibleFaces = gatherVisibleFaces(options.world.map, cameraPosition, frustum, portalState); // Pass portalState
 
              for (const { faceIndex } of visibleFaces) {
                   const face = options.world.map.faces[faceIndex];
@@ -894,6 +888,12 @@ export const createRenderer = (
         lodBias = Math.max(0.0, Math.min(2.0, bias));
     };
 
+    const setAreaPortalState = (portalNum: number, open: boolean) => {
+        if (portalNum >= 0 && portalNum < portalState.length) {
+            portalState[portalNum] = open;
+        }
+    };
+
     const renderInstanced = (model: Md2Model | Md3Model, instances: InstanceData[]) => {
         const isMd2 = 'glCommands' in model;
         const type = isMd2 ? 'md2' : 'md3';
@@ -986,6 +986,7 @@ export const createRenderer = (
         setBloom,
         setBloomIntensity,
         setLodBias,
+        setAreaPortalState,
         renderInstanced,
         dispose: () => {
             // Cleanup logic if needed, typically resource disposal

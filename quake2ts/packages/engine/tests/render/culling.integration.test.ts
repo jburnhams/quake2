@@ -173,6 +173,8 @@ describe('PVS Culling Integration', () => {
       brushes: [],
       brushSides: [],
       visibility,
+      areas: [],
+      areaPortals: [],
     } as unknown as BspMap;
   });
 
