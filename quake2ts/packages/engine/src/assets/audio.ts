@@ -27,15 +27,6 @@ export class AudioRegistry {
     this.cache = new LruCache<DecodedAudio>(options.cacheSize ?? 64);
     if (options.workerPath) {
         this.worker = new Worker(options.workerPath, { type: 'module' });
-    } else if (typeof Worker !== 'undefined') {
-         // Try to load default worker if in browser environment and path not specified?
-         // For now, only use worker if explicitly provided or we can infer it.
-         // In this codebase, workers are often loaded relative to import.meta.url
-         try {
-             this.worker = new Worker(new URL('./audio.worker.ts', import.meta.url), { type: 'module' });
-         } catch (e) {
-             console.warn('Failed to initialize audio worker, falling back to main thread:', e);
-         }
     }
   }
 
