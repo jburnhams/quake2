@@ -92,6 +92,7 @@ This section covers migration of client-specific test utilities including input 
   - Replace inline camera/view mocks
   - Estimated files: ~12
   - **Note:** Applied to `demo/camera.test.ts` and `demo-render-integration.test.ts`. Further cleanup can be done incrementally.
+  - **Update:** Added `createMockPlayerState` to shared factories and refactored `blend.test.ts` to use it.
 
 ---
 
