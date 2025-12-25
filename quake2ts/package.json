@@ -46,7 +46,6 @@
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:*",
-    "@quake2ts/tools": "workspace:*",
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
     "gl-matrix": "^3.4.3",
     "pako": "^2.1.0"
