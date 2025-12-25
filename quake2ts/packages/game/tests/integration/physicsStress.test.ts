@@ -8,7 +8,7 @@ import { createGame } from '../../src/index.js';
 import { EntitySystem } from '../../src/entitySystem.js';
 import { hashEntitySystem } from '../../src/checksum.js';
 import type { GameExports, GameImports } from '../../src/index.js';
-import { setupBrowserEnvironment } from '../../../tests/src/setup.js';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 
 // Define createMockGameImports locally since it's not exported from shared test helpers
 const createMockGameImports = (): GameImports => ({
