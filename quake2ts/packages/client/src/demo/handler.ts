@@ -125,14 +125,18 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
 
     onSpawnBaseline(entity: EntityState): void {
         // Deep copy to ensure baseline is preserved
-        this.baselines.set(entity.number, structuredClone(entity));
+        this.baselines.set(entity.number, JSON.parse(JSON.stringify(entity)));
     }
 
     onFrame(frame: FrameData): void {
         if (this.latestFrame) {
             this.previousFrame = this.latestFrame;
             // Store previous entities before updating
-            this.previousEntities = this.entities;
+            // We create a deep snapshot to ensure previous state is preserved exactly as it was
+            this.previousEntities = new Map();
+            for (const [k, v] of this.entities) {
+                this.previousEntities.set(k, JSON.parse(JSON.stringify(v)));
+            }
         }
         this.latestFrame = frame;
         this.stats = [...frame.playerState.stats];
@@ -143,7 +147,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         // Fix: If delta frame, copy previous entities as starting state.
         if (packetEntities.delta) {
              for (const [num, ent] of this.entities) {
-                 newEntities.set(num, structuredClone(ent));
+                 newEntities.set(num, JSON.parse(JSON.stringify(ent)));
              }
         } else {
             // If not delta, we start fresh (empty newEntities)
@@ -169,7 +173,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             }
 
             // Apply delta
-            const final = structuredClone(source!);
+            const final = JSON.parse(JSON.stringify(source!));
             applyEntityDelta(final, partial);
             newEntities.set(number, final);
         }
