@@ -13,7 +13,10 @@ import { InstanceData } from './instancing.js';
 import { RenderOptions } from './options.js';
 import { RenderStatistics } from './gpuProfiler.js';
 
-export type Pic = Texture2D;
+export interface Pic {
+  width: number;
+  height: number;
+}
 
 export interface IRenderer {
   width: number;

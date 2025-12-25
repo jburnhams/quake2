@@ -301,7 +301,7 @@ export {
   type SparksContext,
   type BlasterImpactContext,
 } from './render/particleSystem.js';
-export { Pic, Renderer } from './render/renderer.js';
+export { Renderer } from './render/renderer.js';
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState, type FrameRenderer, type RenderModeConfig } from './render/frame.js'; // Export FrameRenderer and RenderModeConfig
 export { SpriteRenderer } from './render/sprite.js'; // Export SpriteRenderer
 export { RenderOptions } from './render/options.js'; // Export RenderOptions
@@ -358,6 +358,6 @@ export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type Va
 // WebGPU
 export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
 export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
-export { IRenderer } from './render/interface.js';
+export { IRenderer, Pic } from './render/interface.js';
 
 export { ClientConnection, ConnectionState, type ConnectionEvents, type ClientConnectionOptions } from './network/clientConnection.js';

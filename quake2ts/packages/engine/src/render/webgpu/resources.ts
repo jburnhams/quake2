@@ -311,30 +311,38 @@ export class Texture2D {
     globalTracker?.trackTexture(this);
   }
 
-  upload(data: BufferSource, options: TextureUploadOptions = {}): void {
+  upload(data: BufferSource | ImageBitmap, options: TextureUploadOptions = {}): void {
     const width = options.width ?? this.width;
     const height = options.height ?? this.height;
     const depthOrArrayLayers = options.depthOrArrayLayers ?? 1;
     const mipLevel = options.mipLevel ?? 0;
 
-    // Calculate bytesPerRow if not provided
-    const blockSize = getBlockSize(this.format);
-    let bytesPerRow = options.bytesPerRow;
+    if (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) {
+      this.device.queue.copyExternalImageToTexture(
+        { source: data },
+        { texture: this.texture, mipLevel, origin: { x: 0, y: 0, z: 0 } },
+        { width, height, depthOrArrayLayers }
+      );
+    } else {
+      // Calculate bytesPerRow if not provided
+      const blockSize = getBlockSize(this.format);
+      let bytesPerRow = options.bytesPerRow;
 
-    if (!bytesPerRow) {
-        bytesPerRow = width * blockSize;
+      if (!bytesPerRow) {
+          bytesPerRow = width * blockSize;
+      }
+
+      this.device.queue.writeTexture(
+        { texture: this.texture, mipLevel, origin: { x: 0, y: 0, z: 0 } },
+        data as BufferSource,
+        {
+          offset: 0,
+          bytesPerRow: bytesPerRow,
+          rowsPerImage: options.rowsPerImage ?? height
+        },
+        { width, height, depthOrArrayLayers }
+      );
     }
-
-    this.device.queue.writeTexture(
-      { texture: this.texture, mipLevel, origin: { x: 0, y: 0, z: 0 } },
-      data,
-      {
-        offset: 0,
-        bytesPerRow: bytesPerRow,
-        rowsPerImage: options.rowsPerImage ?? height
-      },
-      { width, height, depthOrArrayLayers }
-    );
   }
 
   private getMipmapPipeline(format: GPUTextureFormat): GPURenderPipeline {

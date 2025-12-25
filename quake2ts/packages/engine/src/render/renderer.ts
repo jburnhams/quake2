@@ -26,10 +26,7 @@ import { InstanceData } from './instancing.js';
 import { Md2Model } from '../assets/md2.js';
 import { Md3Model } from '../assets/md3.js';
 import { RenderableMd2, RenderableMd3 } from './scene.js';
-import { IRenderer } from './interface.js';
-
-// A handle to a registered picture.
-export type Pic = Texture2D;
+import { IRenderer, Pic } from './interface.js';
 
 type MutableRenderableMd2 = { -readonly [K in keyof RenderableMd2]: RenderableMd2[K] };
 type MutableRenderableMd3 = { -readonly [K in keyof RenderableMd3]: RenderableMd3[K] };
@@ -779,7 +776,7 @@ export const createRenderer = (
     };
 
     const drawPic = (x: number, y: number, pic: Pic, color?: [number, number, number, number]) => {
-        pic.bind(0);
+        (pic as Texture2D).bind(0);
         spriteRenderer.draw(x, y, pic.width, pic.height, 0, 0, 1, 1, color);
     };
 
@@ -798,7 +795,7 @@ export const createRenderer = (
         const u1 = u0 + charWidth / font.width;
         const v1 = v0 + charHeight / font.height;
 
-        font.bind(0);
+        (font as Texture2D).bind(0);
         spriteRenderer.draw(x, y, charWidth, charHeight, u0, v0, u1, v1, color);
     }
 
