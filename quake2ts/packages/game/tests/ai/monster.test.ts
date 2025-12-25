@@ -12,17 +12,14 @@ describe('Monster AI - Soldier', () => {
   let testContext: ReturnType<typeof createTestContext>;
 
   beforeEach(() => {
-    // 1. Use createTestContext which provides mocked engine and system
     testContext = createTestContext();
     system = testContext.entities;
 
-    // Ensure modelIndex returns 1 as expected by the test
     vi.spyOn(testContext.engine, 'modelIndex').mockReturnValue(1);
-
-    // 2. Use createDefaultSpawnRegistry with the mocked engine
     registry = createDefaultSpawnRegistry(testContext.engine);
 
-    // Patch targetAwareness with necessary mocks if not already fully mocked by createTestContext
+    // Patch targetAwareness with necessary mocks
+    // Note: These should ideally be part of the test-utils mock if used frequently
     if (system.targetAwareness) {
         (system.targetAwareness as any).activePlayers = [];
         (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
@@ -36,7 +33,6 @@ describe('Monster AI - Soldier', () => {
     const spawnFunc = registry.get('monster_soldier');
     expect(spawnFunc).toBeDefined();
 
-    // Use testContext as the spawn context, as it implements SpawnContext
     spawnFunc(soldier, testContext);
 
     expect(soldier.health).toBe(20);
@@ -137,7 +133,7 @@ describe('monster_think (Freeze Logic)', () => {
         viewheight: 0,
         allow_spawn: null,
         freeze_time: 0
-      } as any, // Cast as any because createMonsterEntityFactory expects partial Entity, and monsterinfo types can be complex
+      } as any, // Cast as any because createMonsterEntityFactory expects partial Entity
       frame: 0,
       renderfx: 0,
       inUse: true
