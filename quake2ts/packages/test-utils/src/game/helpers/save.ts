@@ -1,7 +1,15 @@
-import { Entity, LevelState, LevelFrameState } from '@quake2ts/game';
+import { Entity, LevelState } from '@quake2ts/game';
 import type { GameSaveFile } from '@quake2ts/game';
 import { TestContext } from '../helpers.js';
 import { Vec3 } from '@quake2ts/shared';
+
+// If LevelFrameState is not exported from @quake2ts/game, we define a compatible interface here
+export interface LevelFrameState {
+    readonly frameNumber: number;
+    readonly timeSeconds: number;
+    readonly previousTimeSeconds: number;
+    readonly deltaSeconds: number;
+}
 
 /**
  * Interface for a mock save game object.
