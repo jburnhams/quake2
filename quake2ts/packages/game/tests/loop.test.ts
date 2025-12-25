@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrameLoop } from '../src/loop.js';
+import { MoveType } from '../src/entities/entity.js';
+import { EntitySystem } from '../src/entities/system.js';
+import { createGameImportsAndEngine, createTraceMock } from '@quake2ts/test-utils';
 
 const noopStep = { frame: 1, deltaMs: 25, nowMs: 25 };
 
@@ -108,24 +111,11 @@ describe('GameFrameLoop', () => {
   });
 });
 
-import { MoveType } from '../src/entities/entity.js';
-import { EntitySystem } from '../src/entities/system.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
-
 describe('GameFrameLoop Physics Integration', () => {
   it('should call the correct physics function for an entity with MOVETYPE_TOSS', () => {
     const { imports } = createGameImportsAndEngine({
       imports: {
-        trace: () => ({
-          fraction: 1.0,
-          plane: null,
-          contents: 0,
-          surfaceFlags: 0,
-          startsolid: false,
-          allsolid: false,
-          endpos: { x: 0, y: 0, z: 0 },
-          ent: null,
-        }) as any
+        trace: () => createTraceMock({ fraction: 1.0 })
       }
     });
 
@@ -146,6 +136,7 @@ describe('GameFrameLoop Physics Integration', () => {
       deltaSeconds: 0.1,
     });
 
+    // Check that gravity was applied
     expect(ent.velocity.z).toBeLessThan(100);
   });
 
