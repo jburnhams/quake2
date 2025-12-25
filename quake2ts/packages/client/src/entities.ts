@@ -50,8 +50,16 @@ export function buildRenderableEntities(
         prevMap = new Map(previousEntities.map(e => [e.number, e]));
     }
 
+    console.log('--- buildRenderableEntities Debug ---');
+    console.log('PrevMap Keys:', Array.from(prevMap.keys()));
+
     for (const ent of latestEntities) {
+        console.log(`Processing Entity: ${ent.number} (frame: ${ent.frame})`);
+
+        // This is the suspicious line
         const prev = prevMap.get(ent.number) ?? ent;
+
+        console.log(`Matched Previous: ${prev === ent ? 'SAME AS CURRENT' : 'FOUND PREVIOUS'} (frame: ${prev.frame})`);
 
         // Normalize property access
         const modelIndex = ent.modelIndex ?? ent.modelindex;
