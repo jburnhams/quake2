@@ -1,23 +1,55 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../src/entities/system.js';
-import { Entity } from '../src/entities/entity.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, TestContext } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let entities: EntitySystem;
-    let mockRng: any;
 
     beforeEach(() => {
-        const { engine } = createGameImportsAndEngine();
+        // Task 2.5: Cleanup context creation.
+        // We use createSpawnTestContext to get a standard context.
+        // Then we can use its mocked entities.
+        // Note: The original test manually constructed EntitySystem to test internal storage logic (findByClassname).
+        // createTestContext provides a mock EntitySystem that simulates findByClassname using an array,
+        // which is sufficient for this test.
 
-        mockRng = {
+        const context = createSpawnTestContext();
+
+        // We need to ensure the RNG behaves deterministically for the test logic below.
+        // createTestContext already mocks the RNG, but we want specific return values.
+        // The mock RNG in createTestContext is a real seeded generator.
+        // We want to override it with specific mocks for these tests.
+
+        // However, entities.rng is readonly in the interface, but we can cast or modify the mock.
+        // The context.entities.rng is created via createRandomGenerator({ seed }).
+        // We want to spy on it or replace it.
+
+        // Ideally, we should inject our mock RNG.
+        // Since createTestContext doesn't accept a custom RNG, we'll manually construct EntitySystem
+        // using the engine from context, but with our mock RNG, to keep the test clean and focused on
+        // the RNG logic it's verifying.
+
+        const mockRng = {
             frandom: vi.fn(() => 0.5),
-            random: vi.fn(() => 0.5)
+            random: vi.fn(() => 0.5),
+            crandom: vi.fn(() => 0),
+            vrandom: vi.fn(() => ({ x: 0, y: 0, z: 0 })),
+            randomInt: vi.fn(() => 0)
         };
 
-        entities = new EntitySystem(engine, undefined, undefined, undefined, undefined, true, 1, mockRng); // Deathmatch = true
+        // We reuse the engine mock from the context to avoid duplicating that setup.
+        entities = new EntitySystem(
+            context.engine,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            true, // deathmatch
+            1,
+            mockRng
+        );
     });
 
     it('SelectDeathmatchSpawnPoint should return a random spawn point', () => {
@@ -33,10 +65,8 @@ describe('Deathmatch Spawn', () => {
             origin: { x: 200, y: 0, z: 0 }
         }));
 
+        // The mocked RNG returns 0.5, so it should select the second spot (index 1)
         const spots = entities.findByClassname('info_player_deathmatch');
-        // If frandom returns 0.5, index = floor(0.5 * 2) = 1.
-        // But findByClassname order might depend on internal implementation.
-        // Assuming push order is preserved.
         const expected = spots[1];
 
         const selected = SelectDeathmatchSpawnPoint(entities);
@@ -50,8 +80,6 @@ describe('Deathmatch Spawn', () => {
             origin: { x: 10, y: 10, z: 10 }
         }));
 
-        // SelectDeathmatchSpawnPoint returns undefined if no DM spots.
-        // We should test SelectSpawnPoint which includes the fallback logic.
         const selected = SelectSpawnPoint(entities);
         expect(selected).toBe(start);
     });
@@ -65,7 +93,6 @@ describe('GameExports Respawn', () => {
         // Force RNG to return 0 to pick the first spot deterministically
         vi.spyOn(game.random, 'frandom').mockReturnValue(0);
 
-        // Mock SelectSpawnPoint implicitly by having a spawn point
         const spawn = game.entities.spawn();
         Object.assign(spawn, createEntityFactory({
             classname: 'info_player_deathmatch',
@@ -73,7 +100,6 @@ describe('GameExports Respawn', () => {
             angles: { x: 0, y: 90, z: 0 }
         }));
 
-        // Create a player using factories
         const player = game.entities.spawn();
         Object.assign(player, createPlayerEntityFactory({
             health: 0,

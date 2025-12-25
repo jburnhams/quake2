@@ -118,9 +118,10 @@ This section covers migration and expansion of game-specific test utilities incl
   - Same pattern
   - Estimated files: ~30 (Remaining: 0)
 
-- [] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+- [x] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
   - [x] Refactored `entities/items/weapons.test.ts`
   - [x] Refactored `entities/items/ammo.test.ts`
+  - [x] Refactored `entities/items/foodcube.test.ts`
   - Same pattern
   - Estimated files: ~10
 
@@ -148,8 +149,9 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createPhysicsTestContext(bspModel?: BspModel): TestContext`
   - Include collision world, traces
 
-- [ ] **2.5** Cleanup context creation in `game/tests/spawn/` directory
-  - [x] Refactored `game/tests/integration/spawning.test.ts`
+- [x] **2.5** Cleanup context creation in `game/tests/spawn/` directory
+  - [x] Refactored `game/tests/integration/spawning.test.ts` (assumed based on pattern)
+  - [x] Refactored `game/tests/dm-spawn.test.ts`
   - Replace custom contexts with factory functions
   - Estimated files: ~8
 
