@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage } from '../../src/combat/index.js';
 import { createEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
 import { Entity } from '../../src/entities/entity.js';
+import { AmmoType } from '../../src/inventory/index.js';
 
 const MOD_UNKNOWN = DamageMod.UNKNOWN;
 
@@ -27,6 +28,12 @@ describe('T_Damage', () => {
       regularArmor: { armorType: ArmorType.BODY, armorCount: 100 },
     }));
 
+    // Ensure target has cells for power armor
+    // We set it to 10 to match the expected depletion behavior (10 cells absorb 20 damage)
+    if (target.client && target.client.inventory) {
+        target.client.inventory.ammo.counts[AmmoType.Cells] = 10;
+    }
+
     const result = T_Damage(target, null, null, { x: 1, y: 0, z: 0 }, target.origin, { x: 0, y: 0, z: 1 }, 60, 0, DamageFlags.NONE, MOD_UNKNOWN, 0);
 
     expect(result).toEqual({
@@ -38,7 +45,9 @@ describe('T_Damage', () => {
       remainingCells: 0,
       remainingArmor: 68,
     });
+
     expect(target.health).toBe(92);
+    // Entity.powerArmor getter reads from inventory, so it should be 0.
     expect(target.powerArmor?.cellCount).toBe(0);
     expect(target.regularArmor?.armorCount).toBe(68);
   });

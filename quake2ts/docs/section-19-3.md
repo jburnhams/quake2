@@ -17,7 +17,7 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 1. Expand Entity Factories (HIGH PRIORITY)
 
-**Status:** Basic entity factory exists, needs expansion
+**Status:** Completed
 **Dependencies:** Section 19-1 Task 3 (math helpers)
 
 - [x] **1.1** Audit current entity factories in `test-utils/src/game/factories.ts`
@@ -82,7 +82,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Replace manual entity creation with factories
   - Estimated files: ~25 (Remaining: 0)
 
-- [] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+- [x] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`
   - [x] Refactored `weapons/projectSource.test.ts`
@@ -93,7 +93,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Same pattern
   - Estimated files: ~11
 
-- [] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+- [x] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
   - [x] Refactored `entities/items/weapons.test.ts`
   - [x] Refactored `entities/items/ammo.test.ts`
   - Same pattern
@@ -103,7 +103,7 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 2. Expand Game Context Helpers (MEDIUM PRIORITY)
 
-**Status:** Basic helpers exist, need enhancement
+**Status:** Completed
 **Dependencies:** Task 1
 
 - [x] **2.1** Enhance `createTestContext()` in `test-utils/src/game/helpers.ts`
@@ -123,7 +123,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createPhysicsTestContext(bspModel?: BspModel): TestContext`
   - Include collision world, traces
 
-- [ ] **2.5** Cleanup context creation in `game/tests/spawn/` directory
+- [x] **2.5** Cleanup context creation in `game/tests/spawn/` directory
   - [x] Refactored `game/tests/integration/spawning.test.ts`
   - Replace custom contexts with factory functions
   - Estimated files: ~8
@@ -132,7 +132,7 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 3. Create AI/Combat Mock Factories (HIGH PRIORITY)
 
-**Status:** Currently scattered mocks
+**Status:** Partially completed
 **Dependencies:** None
 
 - [x] **3.1** Create `test-utils/src/game/mocks/ai.ts` file
@@ -159,7 +159,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createMockDamageInfo(overrides?: Partial<DamageInfo>): DamageInfo`
   - Include: attacker, target, amount, type, point, direction
 
-- [] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+- [x] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
   - [x] Refactored `radiusDamage.test.ts`
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`
@@ -167,14 +167,14 @@ This section covers migration and expansion of game-specific test utilities incl
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 
-- [] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+- [x] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
   - [x] Refactored `targeting.test.ts`
   - [x] Refactored `cover.test.ts`
   - [x] Refactored `dodge.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
-- [] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+- [x] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
   - [x] Refactored `soldier_variants.test.ts`
   - Replace inline attack function mocks
   - Estimated files: ~15
@@ -183,7 +183,7 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 4. Create Inventory/Item Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Partially completed
+**Status:** Completed
 **Dependencies:** Task 1 (entity factories)
 
 - [x] **4.1** Create `test-utils/src/game/mocks/items.ts` file
@@ -202,7 +202,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **4.5** Add `createMockPowerup()` factory
   - Signature: `createMockPowerup(powerupType: string, duration?: number): Powerup`
 
-- [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
+- [x] **4.6** Cleanup item mocks in `game/tests/items/` directory
   - Estimated files: ~10
 
 ---

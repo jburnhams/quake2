@@ -8,6 +8,7 @@ import {
 } from '@quake2ts/game';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot } from '@quake2ts/game';
+import { AMMO_TYPE_COUNT } from '@quake2ts/shared';
 
 // -- Shared / Game State Factories --
 
@@ -100,14 +101,10 @@ export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnap
 
 // Helper to remove internal fields that shouldn't be copied via Object.assign,
 // but PRESERVE the Entity prototype so getters/setters/methods work.
-function sanitizeEntity(ent: Entity): Partial<Entity> {
+function sanitizeEntity(ent: Entity): Entity {
   // We modify the instance in place (it's a factory-created one, so safe to mutate).
   // We want to delete properties that would conflict with EntitySystem internals
   // if this object is merged into another Entity via Object.assign.
-
-  // Actually, Object.assign(target, source) only copies enumerable own properties.
-  // If we delete them from 'ent', they won't be copied.
-  // BUT 'ent' must still be a valid Entity for tests that use the factory result directly.
 
   // The issue in `dm-spawn.test.ts` was:
   // Object.assign(player, createPlayerEntityFactory(...))
@@ -130,12 +127,15 @@ function sanitizeEntity(ent: Entity): Partial<Entity> {
   return ent;
 }
 
-export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createEntityFactory(overrides: Partial<Entity> = {}): Entity {
   const ent = new Entity(1);
   Object.assign(ent, {
     classname: 'info_null',
     health: 0,
     max_health: 0,
+    origin: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    angles: { x: 0, y: 0, z: 0 },
     takedamage: false,
     deadflag: DeadFlag.Alive,
     solid: Solid.Not,
@@ -147,8 +147,8 @@ export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<En
   return sanitizeEntity(ent);
 }
 
-export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
-  return createEntityFactory({
+export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Entity {
+  const ent = createEntityFactory({
     classname: 'player',
     health: 100,
     max_health: 100,
@@ -159,9 +159,33 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
     viewheight: 22,
     ...overrides
   });
+
+  // Set up minimal client structure for player
+  (ent as any).client = {
+      ps: createPlayerStateFactory(),
+      pers: {
+          health: 100,
+          max_health: 100,
+      },
+      inventory: {
+          items: new Set(),
+          keys: new Set(),
+          ownedWeapons: new Set(),
+          ammo: {
+              counts: Array(AMMO_TYPE_COUNT).fill(0),
+              caps: Array(AMMO_TYPE_COUNT).fill(100)
+          },
+          powerups: new Map()
+      },
+      weaponStates: {
+          states: new Map()
+      }
+  };
+
+  return ent;
 }
 
-export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
   return createEntityFactory({
     classname,
     health: 100,
@@ -171,11 +195,12 @@ export function createMonsterEntityFactory(classname: string, overrides: Partial
     movetype: MoveType.Step,
     svflags: ServerFlags.Monster,
     deadflag: DeadFlag.Alive,
+    // Ensure monsterinfo exists (handled by Entity constructor, but explicit if needed)
     ...overrides
   });
 }
 
-export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,
@@ -184,7 +209,7 @@ export function createItemEntityFactory(classname: string, overrides: Partial<En
   });
 }
 
-export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
   return createEntityFactory({
     classname,
     solid: Solid.Bsp,
@@ -194,7 +219,7 @@ export function createProjectileEntityFactory(classname: string, overrides: Part
   });
 }
 
-export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Entity {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,

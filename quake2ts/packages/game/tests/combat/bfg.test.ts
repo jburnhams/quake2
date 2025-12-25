@@ -95,7 +95,7 @@ describe('BFG10K', () => {
 
         const player = createPlayerEntityFactory({
             client: {
-                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 100 } }),
                 weaponStates: { states: new Map() }
             } as any
         });
@@ -113,7 +113,7 @@ describe('BFG10K', () => {
 
         const player = createPlayerEntityFactory({
             client: {
-                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
+                inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 100 } }),
                 weaponStates: { states: new Map() }
             } as any
         });
