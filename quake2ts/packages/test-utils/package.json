@@ -36,8 +36,7 @@
     "@quake2ts/game": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "gl-matrix": "^3.4.4",
-    "serve-handler": "^6.1.6"
+    "gl-matrix": "^3.4.4"
   },
   "peerDependencies": {
     "pixelmatch": "^7.1.0",
@@ -61,7 +60,6 @@
     "@types/jsdom": "^27.0.0",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
-    "@types/serve-handler": "^6.1.4",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^27.3.0",
