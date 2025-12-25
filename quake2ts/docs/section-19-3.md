@@ -90,6 +90,8 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `blaster.test.ts`
   - [x] Refactored `railgun.test.ts`
   - [x] Refactored `shotgun.test.ts`
+  - [x] Refactored `machinegun.test.ts`
+  - [x] Refactored `rocket_launcher.test.ts`
   - Same pattern
   - Estimated files: ~11
 
