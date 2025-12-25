@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeAll, vi, afterEach } from 'vitest';
 import { AssetManager, VirtualFileSystem, PakArchive, BspLoader, type BspMap, type BspNode, type BspLeaf } from '@quake2ts/engine';
-import { setupBrowserEnvironment } from '@quake2ts/tests/src/setup.js';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import {
   createGame,
   type GameExports,

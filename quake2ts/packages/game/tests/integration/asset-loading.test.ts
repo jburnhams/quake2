@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { AssetManager, VirtualFileSystem, PakArchive } from '@quake2ts/engine';
-import { setupBrowserEnvironment } from '@quake2ts/tests/src/setup.js';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { buildPak, textData } from '../../../engine/tests/helpers/pakBuilder.js';
 
 describe('Asset Loading Integration', () => {
