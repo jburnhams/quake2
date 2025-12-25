@@ -34,7 +34,7 @@ export async function initHeadlessWebGPU(
       create = webgpu.create;
       globals = webgpu.globals;
   } catch (e) {
-      throw new Error('WebGPU package is not installed. Please install "webgpu" to use headless WebGPU testing.');
+      throw new Error(`Failed to load "webgpu" package. Please ensure it is installed. Original error: ${e}`);
   }
 
   // Inject WebGPU globals into globalThis if not already present
