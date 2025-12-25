@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/cgame",
-  "version": "0.0.733",
+  "version": "0.0.734",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
