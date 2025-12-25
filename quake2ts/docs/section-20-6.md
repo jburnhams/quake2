@@ -124,6 +124,22 @@ export async function createWebGPURenderer(
 
 ---
 
+### Task 4: Integration with Renderer Interface []
+
+**File:** `packages/engine/src/render/webgpu/renderer.ts`
+
+Integrate sprite renderer into main renderer:
+
+**Subtasks:**
+1. Create WebGPURenderer class skeleton [ ] 
+2. Integrate SpriteRenderer [ ]
+3. Implement begin2D/end2D [ ]
+4. Implement drawPic (textured quad) [ ]
+5. Implement drawfillRect (solid rect) [ ]
+6. Implement drawString (texture atlas for text) [ ]
+7. Handle texture caching [ ]
+8. Match WebGL renderer API exactly [ ]
+
 **Reference:** `packages/engine/src/render/frame.ts`
 
 **Next Section:** [20-7: Skybox Pipeline](section-20-7.md)
