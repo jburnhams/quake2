@@ -8,7 +8,7 @@ import {
   monster_jump_finished,
   BlockedJumpResult
 } from '../../src/ai/rogue.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 import { Entity, EntityFlags, ServerFlags, Solid } from '../../src/entities/entity.js';
 import { Vec3, ZERO_VEC3, copyVec3 } from '@quake2ts/shared';
 
@@ -17,28 +17,35 @@ describe('Rogue AI Extensions', () => {
   let self: Entity;
   let enemy: Entity;
 
-  // Mock createEntity helper
-  const createEntity = () => new Entity(1);
-
   beforeEach(async () => {
-    context = await createTestContext();
-    self = createEntity();
-    enemy = createEntity();
-    self.inUse = true;
-    enemy.inUse = true;
+    // 1. Use test-utils helpers
+    const testCtx = createTestContext();
+    context = testCtx;
+    const system = testCtx.entities;
 
-    self.origin = { x: 0, y: 0, z: 0 };
+    // Use factories
+    const monsterData = createMonsterEntityFactory('monster_rogue', {
+      origin: { x: 0, y: 0, z: 0 },
+      monsterinfo: {
+        jump_height: 64,
+        drop_height: 128
+      } as any,
+      inUse: true
+    });
+    self = system.spawn();
+    Object.assign(self, monsterData);
+
+    const enemyData = createPlayerEntityFactory({
+      origin: { x: 100, y: 0, z: 0 },
+      velocity: { ...ZERO_VEC3 },
+      viewheight: 22,
+      svflags: ServerFlags.Player,
+      inUse: true
+    });
+    enemy = system.spawn();
+    Object.assign(enemy, enemyData);
+
     self.enemy = enemy;
-    self.monsterinfo = {
-      ...self.monsterinfo,
-      jump_height: 64,
-      drop_height: 128
-    };
-
-    enemy.origin = { x: 100, y: 0, z: 0 };
-    enemy.velocity = { ...ZERO_VEC3 };
-    enemy.viewheight = 22;
-    enemy.svflags |= ServerFlags.Player;
   });
 
   describe('PredictAim', () => {

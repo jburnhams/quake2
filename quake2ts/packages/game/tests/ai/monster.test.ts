@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory } from '@quake2ts/test-utils';
 import { monster_think } from '../../src/ai/monster.js';
 import { RenderFx } from '@quake2ts/shared';
 import { Entity } from '../../src/entities/entity.js';
@@ -106,39 +106,44 @@ describe('monster_think (Freeze Logic)', () => {
     }
 
     entity = context.spawn();
-    entity.inUse = true;
 
-    entity.monsterinfo = {
-      current_move: {
-        firstframe: 0,
-        lastframe: 10,
-        frames: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}],
-        endfunc: null
-      },
-      aiflags: 0,
-      nextframe: 0,
-      scale: 1,
-      stand: null,
-      walk: null,
-      run: null,
-      dodge: null,
-      attack: null,
-      melee: null,
-      sight: null,
-      idle: null,
-      checkattack: null,
-      search: null,
-      pause_time: 0,
-      attack_finished: 0,
-      saved_goal: null,
-      last_sighting: { x: 0, y: 0, z: 0 },
-      trail_time: 0,
-      viewheight: 0,
-      allow_spawn: null,
-      freeze_time: 0
-    };
-    entity.frame = 0;
-    entity.renderfx = 0;
+    // Use factory to create a monster-like entity structure
+    const monsterData = createMonsterEntityFactory('monster_soldier', {
+      monsterinfo: {
+        current_move: {
+          firstframe: 0,
+          lastframe: 10,
+          frames: Array(11).fill({}),
+          endfunc: null
+        },
+        aiflags: 0,
+        nextframe: 0,
+        scale: 1,
+        stand: null,
+        walk: null,
+        run: null,
+        dodge: null,
+        attack: null,
+        melee: null,
+        sight: null,
+        idle: null,
+        checkattack: null,
+        search: null,
+        pause_time: 0,
+        attack_finished: 0,
+        saved_goal: null,
+        last_sighting: { x: 0, y: 0, z: 0 },
+        trail_time: 0,
+        viewheight: 0,
+        allow_spawn: null,
+        freeze_time: 0
+      } as any, // Cast as any because createMonsterEntityFactory expects partial Entity, and monsterinfo types can be complex
+      frame: 0,
+      renderfx: 0,
+      inUse: true
+    });
+
+    Object.assign(entity, monsterData);
   });
 
   it('should apply freeze effect and stop animation when frozen', () => {
