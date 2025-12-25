@@ -16,12 +16,8 @@ describe('Player Death', () => {
             origin: { x: 0, y: 0, z: 0 }
         }));
 
-        // Ensure client prop exists as player_die might access it (e.g. for weapon state)
-        player.client = {
-            weaponStates: new Map(),
-            inventory: createPlayerInventory(),
-            ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
-        } as any;
+        // Factory provides client, but we might want to ensure specific sub-props for player_die if needed
+        // The factory mock is fairly complete for this test.
 
         player_die(player, null, null, 10, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN);
 
@@ -48,11 +44,6 @@ describe('Player Death', () => {
             health: -50,
             origin: { x: 0, y: 0, z: 0 }
         }));
-        player.client = {
-            weaponStates: new Map(),
-            inventory: createPlayerInventory(),
-            ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
-        } as any;
 
         player_die(player, null, null, 100, { x: 0, y: 0, z: 0 }, DamageMod.ROCKET, system);
 
@@ -68,11 +59,6 @@ describe('Player Death', () => {
             number: 1,
             health: 0
         }));
-        player.client = {
-            weaponStates: new Map(),
-            inventory: createPlayerInventory(),
-            ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
-        } as any;
 
         const attacker = new Entity(2);
         Object.assign(attacker, createMonsterEntityFactory('monster_soldier', {

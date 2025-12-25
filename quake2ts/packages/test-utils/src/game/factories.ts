@@ -157,6 +157,23 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
     movetype: MoveType.Walk,
     svflags: ServerFlags.Player,
     viewheight: 22,
+    client: {
+        inventory: {
+            ammo: { counts: [], caps: [] },
+            ownedWeapons: new Set(),
+            powerups: new Map(),
+            keys: new Set(),
+            items: new Set()
+        },
+        weaponStates: {
+            currentWeapon: null,
+            lastFireTime: 0,
+            weaponFrame: 0,
+            weaponIdleTime: 0,
+            states: new Map(), // Initialize states map correctly
+            activeWeaponId: null
+        }
+    } as any,
     ...overrides
   });
 }

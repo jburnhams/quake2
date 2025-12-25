@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '../src/index.js';
 import { handleItemPickup } from '../src/entities/items/common.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createItemEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Item Respawn', () => {
     let game: any;
@@ -15,18 +15,18 @@ describe('Item Respawn', () => {
         game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
 
         item = game.entities.spawn();
-        item.classname = 'item_health';
-        item.solid = Solid.Trigger;
-        item.model = 'models/items/healing/medium/tris.md2';
-        item.modelindex = 1;
-        item.think = (self: any) => {
-            self.solid = Solid.Trigger;
-            self.modelindex = 1;
-            self.svflags &= ~1;
-        };
+        Object.assign(item, createItemEntityFactory('item_health', {
+            model: 'models/items/healing/medium/tris.md2',
+            modelindex: 1,
+            think: (self: any) => {
+                self.solid = Solid.Trigger;
+                self.modelindex = 1;
+                self.svflags &= ~1;
+            }
+        }));
 
         player = game.entities.spawn();
-        player.classname = 'player';
+        Object.assign(player, createPlayerEntityFactory());
     });
 
     it('handleItemPickup should schedule respawn in deathmatch', () => {
