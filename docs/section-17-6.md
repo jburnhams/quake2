@@ -30,7 +30,7 @@
 - [x] Optimize PVS lookup for large maps
 - [ ] Add occlusion culling for complex scenes
 - [x] Add distance-based LOD for models (if supported by assets)
-- [ ] Add portal culling for indoor areas
+- [x] Add portal culling for indoor areas
 
 ---
 

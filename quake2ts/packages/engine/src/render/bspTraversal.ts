@@ -81,11 +81,18 @@ function traverse(
   frustum: readonly FrustumPlane[],
   viewCluster: number,
   visibleFaces: VisibleFace[],
-  visitedFaces: Set<number>
+  visitedFaces: Set<number>,
+  reachableAreas: ReadonlySet<number> | null
 ): void {
   if (childIsLeaf(nodeIndex)) {
     const leafIndex = childLeafIndex(nodeIndex);
     const leaf = map.leafs[leafIndex];
+
+    // Check area reachability
+    if (reachableAreas && leaf.area >= 0 && !reachableAreas.has(leaf.area)) {
+      return;
+    }
+
     if (!isClusterVisible(map.visibility, viewCluster, leaf.cluster)) {
       return;
     }
@@ -122,20 +129,78 @@ function traverse(
     { x: node.maxs[0], y: node.maxs[1], z: node.maxs[2] },
     frustum,
   )) {
-    traverse(map, nearChild, camera, frustum, viewCluster, visibleFaces, visitedFaces);
-    traverse(map, farChild, camera, frustum, viewCluster, visibleFaces, visitedFaces);
+    traverse(map, nearChild, camera, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
+    traverse(map, farChild, camera, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
   }
+}
+
+export function calculateReachableAreas(
+  map: BspMap,
+  startArea: number,
+  portalState: ReadonlyArray<boolean>
+): Set<number> {
+  const reachable = new Set<number>();
+  if (startArea < 0 || startArea >= map.areas.length) {
+    // If invalid start area (e.g. -1 for solid), return empty set or maybe all?
+    // Usually means outside map.
+    // Let's assume nothing is reachable if we are in solid, or maybe we want to see everything?
+    // If we are in solid, PVS usually handles it (empty).
+    // If startArea is -1, we likely want to just rely on PVS if any.
+    return reachable;
+  }
+
+  const stack = [startArea];
+  reachable.add(startArea);
+
+  while (stack.length > 0) {
+    const currentAreaIndex = stack.pop()!;
+    const area = map.areas[currentAreaIndex];
+
+    // Areas are connected via portals
+    // But map.areas just lists portals in that area?
+    // "numAreaPortals" and "firstAreaPortal" in BspArea refer to indices in map.areaPortals
+
+    for (let i = 0; i < area.numAreaPortals; i++) {
+      const portalIndex = area.firstAreaPortal + i;
+      const portal = map.areaPortals[portalIndex];
+      const otherArea = portal.otherArea;
+
+      // Check if this connection is open
+      // portal.portalNumber is the ID of the portal (controlled by func_areaportal)
+      // If portalNumber is valid and portalState says it's closed, skip.
+      // If portalNumber is 0 (or some sentinel?), it might be always open?
+      // Usually portalNumber > 0.
+
+      const isOpen = portal.portalNumber <= 0 || (portalState[portal.portalNumber]);
+
+      if (isOpen && !reachable.has(otherArea)) {
+        reachable.add(otherArea);
+        stack.push(otherArea);
+      }
+    }
+  }
+
+  return reachable;
 }
 
 export function gatherVisibleFaces(
   map: BspMap,
   cameraPosition: Vec3,
   frustum: readonly FrustumPlane[],
+  portalState?: ReadonlyArray<boolean>
 ): VisibleFace[] {
   const viewLeaf = findLeafForPoint(map, cameraPosition);
-  const viewCluster = viewLeaf >= 0 ? map.leafs[viewLeaf].cluster : -1;
+  const viewLeafData = viewLeaf >= 0 ? map.leafs[viewLeaf] : null;
+  const viewCluster = viewLeafData ? viewLeafData.cluster : -1;
+  const viewArea = viewLeafData ? viewLeafData.area : -1;
+
+  let reachableAreas: Set<number> | null = null;
+  if (portalState && viewArea >= 0 && map.areas.length > 0) {
+    reachableAreas = calculateReachableAreas(map, viewArea, portalState);
+  }
+
   const visibleFaces: VisibleFace[] = [];
   const visitedFaces = new Set<number>();
-  traverse(map, 0, cameraPosition, frustum, viewCluster, visibleFaces, visitedFaces);
+  traverse(map, 0, cameraPosition, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
   return visibleFaces;
 }

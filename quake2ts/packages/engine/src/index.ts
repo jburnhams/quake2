@@ -34,6 +34,7 @@ export interface EngineExports {
   init(): void;
   shutdown(): void;
   createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop;
+  setAreaPortalState(portalNum: number, open: boolean): void;
 }
 
 export function createEngine(imports: EngineImports): EngineExports {
@@ -47,6 +48,11 @@ export function createEngine(imports: EngineImports): EngineExports {
     createMainLoop(callbacks: LoopCallbacks, options?: Partial<LoopOptions>): FixedTimestepLoop {
       return new FixedTimestepLoop(callbacks, options);
     },
+    setAreaPortalState(portalNum: number, open: boolean): void {
+      if (imports.renderer && imports.renderer.setAreaPortalState) {
+          imports.renderer.setAreaPortalState(portalNum, open);
+      }
+    }
   };
 }
 

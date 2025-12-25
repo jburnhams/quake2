@@ -80,6 +80,7 @@ interface FrameRenderOptions {
   readonly underwaterWarp?: boolean; // Enable underwater distortion
   readonly bloom?: boolean; // Enable bloom
   readonly bloomIntensity?: number; // Bloom intensity (default 0.5)
+  readonly portalState?: ReadonlyArray<boolean>; // Portal visibility state
 }
 
 interface FrameRendererDependencies {
@@ -323,7 +324,8 @@ export const createFrameRenderer = (
         waterTint,
         underwaterWarp,
         bloom,
-        bloomIntensity
+        bloomIntensity,
+        portalState
     } = options;
     const viewProjection = new Float32Array(camera.viewProjectionMatrix);
 
@@ -343,7 +345,7 @@ export const createFrameRenderer = (
         y: camera.position[1] ?? 0,
         z: camera.position[2] ?? 0,
       };
-      const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum);
+      const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum, portalState);
 
       // Split faces into Opaque and Transparent/Warping
       const opaqueFaces: VisibleFace[] = [];
