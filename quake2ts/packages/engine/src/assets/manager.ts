@@ -111,6 +111,7 @@ export interface AssetManagerOptions {
   readonly resourceTracker?: ResourceLoadTracker;
   readonly maxConcurrentLoads?: number;
   readonly bspWorkerPath?: string;
+  readonly audioWorkerPath?: string;
 }
 
 export class AssetManager {
@@ -134,7 +135,10 @@ export class AssetManager {
         capacity: options.textureCacheCapacity ?? 128,
         maxMemory: options.textureMemoryLimit
     });
-    this.audio = new AudioRegistry(vfs, { cacheSize: options.audioCacheSize ?? 64 });
+    this.audio = new AudioRegistry(vfs, {
+        cacheSize: options.audioCacheSize ?? 64,
+        workerPath: options.audioWorkerPath
+    });
     this.dependencyTracker = options.dependencyTracker ?? new AssetDependencyTracker();
     this.resourceTracker = options.resourceTracker;
     this.md2 = new Md2Loader(vfs);
