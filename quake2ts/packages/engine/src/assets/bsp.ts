@@ -155,6 +155,8 @@ export interface BspData {
   readonly brushes: readonly BspBrush[];
   readonly brushSides: readonly BspBrushSide[];
   readonly visibility: BspVisibility | undefined;
+  readonly areas: readonly BspArea[];
+  readonly areaPortals: readonly BspAreaPortal[];
 }
 
 export interface BspMap extends BspData {
@@ -425,6 +427,8 @@ export function parseBspData(buffer: ArrayBuffer): BspData {
   const brushSides = parseBrushSides(buffer, lumps.get(BspLump.BrushSides)!);
   const leafLists = parseLeafLists(buffer, lumps.get(BspLump.LeafFaces)!, lumps.get(BspLump.LeafBrushes)!, leafs);
   const visibility = parseVisibility(buffer, lumps.get(BspLump.Visibility)!);
+  const areas = parseAreas(buffer, lumps.get(BspLump.Areas)!);
+  const areaPortals = parseAreaPortals(buffer, lumps.get(BspLump.AreaPortals)!);
 
   return {
     header,
@@ -444,6 +448,8 @@ export function parseBspData(buffer: ArrayBuffer): BspData {
     brushes,
     brushSides,
     visibility,
+    areas,
+    areaPortals,
   };
 }
 
@@ -724,6 +730,46 @@ function parseBrushSides(buffer: ArrayBuffer, info: BspLumpInfo): BspBrushSide[]
   }
   return sides;
 }
+
+function parseAreas(buffer: ArrayBuffer, info: BspLumpInfo): BspArea[] {
+  const view = new DataView(buffer, info.offset, info.length);
+  const entrySize = 8;
+  const count = info.length / entrySize;
+  if (count % 1 !== 0) {
+    throw new BspParseError('Area lump has invalid length');
+  }
+  const areas: BspArea[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const base = i * entrySize;
+    const numAreaPortals = view.getInt32(base, true);
+    const firstAreaPortal = view.getInt32(base + 4, true);
+    areas.push({ numAreaPortals, firstAreaPortal });
+  }
+  return areas;
+}
+
+function parseAreaPortals(buffer: ArrayBuffer, info: BspLumpInfo): BspAreaPortal[] {
+  // Use 8 bytes for dareaportal_t based on Quake 2 source q_shared.h
+  return parseAreaPortals8(buffer, info);
+}
+
+function parseAreaPortals8(buffer: ArrayBuffer, info: BspLumpInfo): BspAreaPortal[] {
+  const view = new DataView(buffer, info.offset, info.length);
+  const entrySize = 8;
+  const count = info.length / entrySize;
+  if (count % 1 !== 0) {
+    throw new BspParseError('AreaPortal lump has invalid length');
+  }
+  const portals: BspAreaPortal[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const base = i * entrySize;
+    const portalNumber = view.getInt32(base, true);
+    const otherArea = view.getInt32(base + 4, true);
+    portals.push({ portalNumber, otherArea });
+  }
+  return portals;
+}
+
 
 function parseLeafLists(
   buffer: ArrayBuffer,
