@@ -101,7 +101,13 @@
                         execute: () => {}
                     },
                     cvars: {
-                        get: () => ({ string: 'Player', number: 90, flags: 0 }),
+                        get: (name) => {
+                            if (name === 'net_qport') {
+                                const qport = params.get('qport');
+                                if (qport) return { string: qport, number: parseInt(qport, 10), flags: 0 };
+                            }
+                            return { string: 'Player', number: 90, flags: 0 };
+                        },
                         register: () => {},
                         list: () => [],
                         setValue: () => {}
