@@ -9,7 +9,6 @@ import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaste
 import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles';
 import { fireRailgun } from '../src/combat/weapons/firing';
 import { T_Damage } from '../src/combat/damage';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 // Mock projectiles
 vi.mock('../src/entities/projectiles', () => ({
@@ -33,31 +32,16 @@ describe('Weapon Tests', () => {
         vi.clearAllMocks();
         (T_Damage as any).mockClear();
 
-        const { imports, engine } = createGameImportsAndEngine({
-            imports: {
-                trace: vi.fn().mockReturnValue(createTraceMock({
-                    fraction: 1.0,
-                    endpos: { x: 100, y: 0, z: 0 },
-                    ent: null
-                })),
-                pointcontents: vi.fn(),
-            },
-            engine: {
-                trace: vi.fn().mockReturnValue(createTraceMock({
-                    fraction: 1.0,
-                    endpos: { x: 100, y: 0, z: 0 },
-                    ent: null
-                })),
-            }
-        });
-
         mockGame = {
-            ...engine, // Mix engine and game context for now as the functions expect GameExports which often includes engine stuff in tests
-            ...imports,
             time: 100,
             deathmatch: false,
             multicast: vi.fn(),
             sound: vi.fn(),
+            trace: vi.fn().mockReturnValue({
+                fraction: 1.0,
+                endpos: { x: 100, y: 0, z: 0 },
+                ent: null
+            }),
             entities: {
                 world: { index: 0 }
             },
@@ -68,8 +52,11 @@ describe('Weapon Tests', () => {
             }
         } as unknown as GameExports;
 
-        player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
+        player = {
+            index: 1,
+            origin: { x: 0, y: 0, z: 0 },
+            angles: { x: 0, y: 0, z: 0 },
+            viewheight: 22,
             client: {
                 inventory: {
                     ammo: {
@@ -80,28 +67,19 @@ describe('Weapon Tests', () => {
                             [AmmoType.Rockets]: 100,
                             [AmmoType.Slugs]: 100,
                             [AmmoType.Grenades]: 100
-                        } as any, // Cast to any because the enum keys match but TS might be picky
-                         caps: []
+                        }
                     },
-                    ownedWeapons: new Set([WeaponId.Blaster, WeaponId.Shotgun, WeaponId.SuperShotgun, WeaponId.Machinegun, WeaponId.Chaingun, WeaponId.GrenadeLauncher, WeaponId.RocketLauncher, WeaponId.HyperBlaster, WeaponId.Railgun, WeaponId.BFG10K]),
-                    powerups: new Map(),
-                    keys: new Set(),
-                    items: new Set()
+                    ownedWeapons: new Set([WeaponId.Blaster, WeaponId.Shotgun, WeaponId.SuperShotgun, WeaponId.Machinegun, WeaponId.Chaingun, WeaponId.GrenadeLauncher, WeaponId.RocketLauncher, WeaponId.HyperBlaster, WeaponId.Railgun, WeaponId.BFG10K])
                 },
                 weaponStates: {
-                    states: new Map(),
-                    currentWeapon: null,
-                    lastFireTime: 0,
-                    weaponFrame: 0,
-                    weaponIdleTime: 0,
-                    activeWeaponId: null
+                    states: new Map()
                 },
                 kick_angles: { x: 0, y: 0, z: 0 },
                 kick_origin: { x: 0, y: 0, z: 0 },
                 pm_flags: 0,
                 gun_frame: 0 // Legacy/Test mode
-            } as any
-        }));
+            }
+        } as unknown as Entity;
     });
 
     describe('Blaster', () => {
@@ -126,18 +104,18 @@ describe('Weapon Tests', () => {
             const target = { takedamage: true };
             // Hit once then stop (fraction 1.0)
             (mockGame.trace as any)
-                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
-                .mockReturnValueOnce(createTraceMock({
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null }) // P_ProjectSource trace check
+                .mockReturnValueOnce({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
-                    ent: target as any,
-                    plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
-                }))
-                .mockReturnValue(createTraceMock({
+                    ent: target,
+                    plane: { normal: { x: -1, y: 0, z: 0 } }
+                })
+                .mockReturnValue({
                     fraction: 1.0,
                     endpos: { x: 100, y: 0, z: 0 },
                     ent: null
-                }));
+                });
 
             fireRailgunShot(mockGame, player);
 
@@ -164,18 +142,18 @@ describe('Weapon Tests', () => {
             const target = { takedamage: true };
             // Hit once then stop
             (mockGame.trace as any)
-                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
-                .mockReturnValueOnce(createTraceMock({
+                .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null }) // P_ProjectSource trace check
+                .mockReturnValueOnce({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
-                    ent: target as any,
-                    plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
-                }))
-                .mockReturnValue(createTraceMock({
+                    ent: target,
+                    plane: { normal: { x: -1, y: 0, z: 0 } }
+                })
+                .mockReturnValue({
                     fraction: 1.0,
                     endpos: { x: 100, y: 0, z: 0 },
                     ent: null
-                }));
+                });
 
             fireRailgunShot(mockGame, player);
 
@@ -207,12 +185,12 @@ describe('Weapon Tests', () => {
 
              // Mock trace hit
              const target = { takedamage: true };
-             (mockGame.trace as any).mockReturnValue(createTraceMock({
+             (mockGame.trace as any).mockReturnValue({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
-                 ent: target as any,
-                 plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
-             }));
+                 ent: target,
+                 plane: { normal: { x: -1, y: 0, z: 0 } }
+             });
 
              fireChaingun(mockGame, player);
 
@@ -239,12 +217,12 @@ describe('Weapon Tests', () => {
 
              // Mock trace hit
              const target = { takedamage: true };
-             (mockGame.trace as any).mockReturnValue(createTraceMock({
+             (mockGame.trace as any).mockReturnValue({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
-                 ent: target as any,
-                 plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
-             }));
+                 ent: target,
+                 plane: { normal: { x: -1, y: 0, z: 0 } }
+             });
 
              fireChaingun(mockGame, player);
 

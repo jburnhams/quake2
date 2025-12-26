@@ -18,13 +18,12 @@ describe('Monster AI - Soldier', () => {
     vi.spyOn(testContext.engine, 'modelIndex').mockReturnValue(1);
     registry = createDefaultSpawnRegistry(testContext.engine);
 
-    // Mock targetAwareness if it exists
+    // Patch targetAwareness with necessary mocks
+    // Note: These should ideally be part of the test-utils mock if used frequently
     if (system.targetAwareness) {
-        Object.assign(system.targetAwareness, {
-            activePlayers: [],
-            monsterAlertedByPlayers: vi.fn().mockReturnValue(null),
-            soundClient: vi.fn().mockReturnValue(null)
-        });
+        (system.targetAwareness as any).activePlayers = [];
+        (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+        (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
     }
   });
 
@@ -97,15 +96,14 @@ describe('monster_think (Freeze Logic)', () => {
     const testContext = createTestContext();
     context = testContext.entities;
     if (context.targetAwareness) {
-        Object.assign(context.targetAwareness, {
-            activePlayers: [],
-            monsterAlertedByPlayers: vi.fn().mockReturnValue(null),
-            soundClient: vi.fn().mockReturnValue(null)
-        });
+        (context.targetAwareness as any).activePlayers = [];
+        (context.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
+        (context.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
     }
 
     entity = context.spawn();
 
+    // Use factory to create a monster-like entity structure
     const monsterData = createMonsterEntityFactory('monster_soldier', {
       monsterinfo: {
         current_move: {
@@ -135,7 +133,7 @@ describe('monster_think (Freeze Logic)', () => {
         viewheight: 0,
         allow_spawn: null,
         freeze_time: 0
-      } as any,
+      } as any, // Cast as any because createMonsterEntityFactory expects partial Entity
       frame: 0,
       renderfx: 0,
       inUse: true

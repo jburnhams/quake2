@@ -51,7 +51,7 @@ describe('Player State Snapshot', () => {
                  gun_frame: 0,
                  rdflags: 0,
                  fov: 90
-             } as any);
+             });
              player = game.entities.find(e => e.classname === 'player')!;
         }
     });
