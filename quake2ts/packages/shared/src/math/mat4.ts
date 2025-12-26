@@ -11,6 +11,14 @@ export function createMat4Identity(): Mat4 {
   ]);
 }
 
+export function mat4Identity(out: Mat4 = new Float32Array(16)): Mat4 {
+  out[0] = 1; out[1] = 0; out[2] = 0; out[3] = 0;
+  out[4] = 0; out[5] = 1; out[6] = 0; out[7] = 0;
+  out[8] = 0; out[9] = 0; out[10] = 1; out[11] = 0;
+  out[12] = 0; out[13] = 0; out[14] = 0; out[15] = 1;
+  return out;
+}
+
 export function multiplyMat4(a: Float32Array, b: Float32Array): Mat4 {
   const out = new Float32Array(16);
   for (let row = 0; row < 4; row += 1) {
@@ -54,5 +62,39 @@ export function mat4FromBasis(origin: Vec3, axis: readonly [Vec3, Vec3, Vec3]): 
   out[13] = origin.y;
   out[14] = origin.z;
 
+  return out;
+}
+
+export function mat4Translate(out: Mat4, v: Vec3): Mat4 {
+  const x = v.x, y = v.y, z = v.z;
+  out[12] = out[0] * x + out[4] * y + out[8] * z + out[12];
+  out[13] = out[1] * x + out[5] * y + out[9] * z + out[13];
+  out[14] = out[2] * x + out[6] * y + out[10] * z + out[14];
+  out[15] = out[3] * x + out[7] * y + out[11] * z + out[15];
+  return out;
+}
+
+export function mat4Perspective(out: Mat4, fovy: number, aspect: number, near: number, far: number): Mat4 {
+  const f = 1.0 / Math.tan(fovy / 2);
+  out[0] = f / aspect;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = f;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[11] = -1;
+  out[15] = 0;
+  if (far != null && far !== Infinity) {
+    const nf = 1 / (near - far);
+    out[10] = (far + near) * nf;
+    out[14] = 2 * far * near * nf;
+  } else {
+    out[10] = -1;
+    out[14] = -2 * near;
+  }
   return out;
 }
