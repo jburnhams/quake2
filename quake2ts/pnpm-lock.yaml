@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@quake2ts/cgame':
+        specifier: workspace:*
+        version: link:packages/cgame
       '@quake2ts/client':
         specifier: workspace:*
         version: link:packages/client
