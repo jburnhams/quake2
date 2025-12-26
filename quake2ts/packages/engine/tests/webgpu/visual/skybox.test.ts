@@ -135,9 +135,10 @@ describe('Skybox Pipeline', () => {
       camera.setAspectRatio(1.0);
 
       // Look at a corner
-      // Yaw 45 (Left), Pitch -45 (Up)
+      // Yaw 45 (Left), Pitch -35.26 (Up) to center the corner
+      // The angle between diagonal (1,1,1) and horizontal plane is atan(1/sqrt(2)) ~= 35.26 deg
       camera.setPosition(0, 0, 0);
-      camera.setRotation(-45, 45, 0);
+      camera.setRotation(-35.26, 45, 0);
 
       renderer.renderFrame({
           camera,
