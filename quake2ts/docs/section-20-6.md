@@ -148,14 +148,17 @@ Integrate sprite renderer into main renderer:
 - [x] Texture caching works (registerPic/registerTexture)
 - [x] 2D drawing methods integrate with sprite renderer
 - [x] Unit tests pass (57/57 tests passing)
+- [x] Integration tests for 2D rendering added (6 tests: drawPic, drawfillRect, color tinting, layering, clear color, begin2D/end2D boundaries)
 
 **Implementation Notes:**
 - WebGPURenderer extends IRenderer interface for full API compatibility
-- The Pic type in interface.ts was updated to support both WebGL and WebGPU textures
+- The Pic type in interface.ts was updated to support both WebGL and WebGPU textures (union type)
+- WebGL renderer.ts updated to import and re-export Pic from interface.ts for type consistency
 - 2D rendering is coordinated through FrameRenderer's begin2DPass/end2DPass methods
 - Font rendering requires font texture to be loaded (gracefully skips if not loaded)
 - Stub methods added for features to be implemented in later sections (collision vis, debug rendering, particle system, highlighting, render settings, instanced rendering)
 - White texture created for solid color rendering (1x1 RGBA texture)
+- Integration tests added for visual verification of 2D rendering (skips gracefully if WebGPU not available)
 
 **Known Limitations:**
 - Entity rendering not yet implemented (TODO for later sections)
