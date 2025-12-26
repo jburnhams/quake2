@@ -84,8 +84,6 @@ describe('Streaming Parser E2E', () => {
         const builder = new DemoBuilder();
 
         // Block 1: ServerData command start
-        // svc_serverdata = 12 (modern) or 7 (proto 25). Let's use Modern (Proto 34) for simplicity or Proto 25.
-        // Let's use Proto 34 (Cmd 12).
         // Protocol version 34.
 
         // Block 1: Command + Protocol (partial)
@@ -105,9 +103,38 @@ describe('Streaming Parser E2E', () => {
             .endBlock();
 
         // Block 3: ConfigString
-        // Protocol 34 svc_configstring is 13.
+        // Protocol 34 svc_configstring is 13 or 14?
+        // 14 is configstring in Q2.
+        // But writer test expects 13? No, writer.test.ts defines WIRE_CONFIGSTRING=14.
+        // Wait, e2e test wrote 13 in original.
+        // Let's use ServerCommand.configstring (13 in shared enum).
+        // If I write 13, and Parser (legacy) maps 13 to serverdata (LegacyProtocolHandler translates 13->serverdata).
+        // Wait, `LegacyProtocolHandler`:
+        // if (cmd===7) serverdata
+        // if (cmd===12) serverdata
+        // if (cmd===0) bad
+        // translated = cmd + 5.
+        // if (13) -> 18 (packetentities).
+        // So 13 is NOT configstring in Legacy.
+        // 14 is configstring. 14+5=19 (deltapacketentities??).
+        // Let's check `LegacyProtocolHandler`.
+        // translated = cmd + 5.
+        // `ServerCommand` enum:
+        // configstring = 13.
+        // Legacy wire = 14.
+        // If I send 13: 13+5 = 18 = packetentities.
+        // If I send 14: 14+5 = 19 = deltapacketentities.
+        // Something is wrong with Legacy mapping or I am misremembering.
+        // `LegacyProtocolHandler`:
+        // `PROTO34_MAP` in `quake2.ts` (which is used for version 34) handles 34.
+        // `LegacyProtocolHandler` (for older) uses `cmd+5`.
+        // `streaming.e2e` sets protocol 34.
+        // So it uses `Quake2ProtocolHandler` (which has `PROTO34_MAP`).
+        // `PROTO34_MAP` maps 14 -> `ServerCommand.configstring` (13).
+        // So we should write 14.
+
         builder.startBlock()
-            .writeByte(13) // svc_configstring (Wire 13)
+            .writeByte(14) // svc_configstring (Wire 14)
             .writeShort(1)
             .writeString("gamename")
             .endBlock();
@@ -132,14 +159,13 @@ describe('Streaming Parser E2E', () => {
             onReconnect: vi.fn(),
             onDownload: vi.fn(),
             onStuffText: vi.fn(),
-            onStuffText: vi.fn(),
         };
 
         const parser = new NetworkMessageParser(demoStream.getBuffer(), handler, true);
         parser.parseMessage();
 
         expect(handler.onServerData).toHaveBeenCalledTimes(1);
-        expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 0, "maps/test");
+        expect(handler.onServerData).toHaveBeenCalledWith(34, 123, 1, "baseq2", 0, "maps/test", undefined, undefined);
 
         expect(handler.onConfigString).toHaveBeenCalledTimes(1);
         expect(handler.onConfigString).toHaveBeenCalledWith(1, "gamename");
@@ -161,8 +187,9 @@ describe('Streaming Parser E2E', () => {
 
         // Split Print command
         // Block 2: Command + Level + Part of string
+        // Protocol 34 print = 11.
         builder.startBlock()
-            .writeByte(ServerCommand.print)
+            .writeByte(11) // ServerCommand.print (Wire 11)
             .writeByte(1) // Level
             .writeBytes([ 'H'.charCodeAt(0), 'e'.charCodeAt(0) ])
             .endBlock();

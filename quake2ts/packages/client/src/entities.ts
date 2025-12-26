@@ -55,7 +55,12 @@ export function buildRenderableEntities(
     const camVec = cameraPosition ? vec3.fromValues(cameraPosition.x, cameraPosition.y, cameraPosition.z) : null;
 
     for (const ent of latestEntities) {
+        console.log(`Processing Entity: ${ent.number} (frame: ${ent.frame})`);
+
+        // This is the suspicious line
         const prev = prevMap.get(ent.number) ?? ent;
+
+        console.log(`Matched Previous: ${prev === ent ? 'SAME AS CURRENT' : 'FOUND PREVIOUS'} (frame: ${prev.frame})`);
 
         // Normalize property access
         const modelIndex = ent.modelIndex ?? ent.modelindex;
