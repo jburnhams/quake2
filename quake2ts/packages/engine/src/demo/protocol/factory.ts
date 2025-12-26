@@ -97,6 +97,9 @@ export class BootstrapProtocolHandler implements ProtocolHandler {
 }
 
 export function createProtocolHandler(version: number): ProtocolHandler {
+    if (version === 0) {
+        return new BootstrapProtocolHandler();
+    }
     if (version === PROTOCOL_VERSION_RERELEASE) {
         return new RereleaseProtocolHandler();
     }
