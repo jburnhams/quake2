@@ -43,8 +43,9 @@ describe('E2E Entity Synchronization Test', () => {
     const { page } = client;
 
     await page.waitForSelector('#status');
+    // Connection might be fast, so it could already be Active
     const status = await page.textContent('#status');
-    expect(status).toBe('Connected');
+    expect(['Connected', 'Active']).toContain(status);
 
     // Wait for initial game state
     await page.waitForFunction(() => document.getElementById('status')?.textContent === 'Active', { timeout: 10000 }).catch(() => {});

@@ -17,10 +17,20 @@
             background: rgba(0,0,0,0.5);
             padding: 5px;
         }
+        #status {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: lime;
+            font-family: monospace;
+            z-index: 100;
+        }
     </style>
 </head>
 <body>
     <div id="debug">Initializing...</div>
+    <div id="status">Disconnected</div>
+    <div id="logs" style="display:none;"></div>
     <canvas id="game-canvas"></canvas>
 
     <script src="/packages/client/dist/browser/index.global.js"></script>
@@ -30,6 +40,7 @@
             console.log('Harness script loaded.');
 
             const debug = document.getElementById('debug');
+            const statusDiv = document.getElementById('status');
             debug.innerText = 'Loading client...';
             console.log('Starting harness...');
 
@@ -52,7 +63,6 @@
                 }
 
                 // MOCK ENGINE
-                // We need to provide ClientImports to createClient
                 const mockRenderer = {
                     width: 1280,
                     height: 720,
@@ -71,7 +81,11 @@
                     setBrightness: () => {},
                     setBloom: () => {},
                     setBloomIntensity: () => {},
-                    setUnderwaterWarp: () => {}
+                    setUnderwaterWarp: () => {},
+                    getPerformanceReport: () => ({ textureBinds: 0, triangles: 0, drawCalls: 0, vertices: 0 }),
+                    setDebugMode: () => {},
+                    setEntityHighlight: () => {},
+                    clearEntityHighlight: () => {}
                 };
 
                 const mockAssets = {
@@ -85,14 +99,23 @@
                 const mockEngine = {
                     renderer: mockRenderer,
                     assets: mockAssets,
-                    trace: (start, end) => ({
-                        fraction: 1.0,
-                        contents: 0,
-                        allSolid: false,
-                        startSolid: false,
-                        endpos: { x: end.x, y: end.y, z: end.z },
-                        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
-                    })
+                    trace: (start, end, mins, maxs) => {
+                        // Return a clear trace
+                        return {
+                            fraction: 1.0,
+                            contents: 0,
+                            allSolid: false,
+                            startSolid: false,
+                            endpos: { x: end.x, y: end.y, z: end.z },
+                            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
+                        };
+                    },
+                    audio: {
+                        play_track: () => {},
+                        play_music: () => {},
+                        stop_music: () => {},
+                        set_music_volume: () => {}
+                    }
                 };
 
                 const mockHost = {
@@ -106,7 +129,8 @@
                                 const qport = params.get('qport');
                                 if (qport) return { string: qport, number: parseInt(qport, 10), flags: 0 };
                             }
-                            return { string: 'Player', number: 90, flags: 0 };
+                            if (name === 'name') return { string: 'TestPlayer', number: 0, flags: 0 };
+                            return { string: '', number: 0, flags: 0 };
                         },
                         register: () => {},
                         list: () => [],
@@ -117,21 +141,22 @@
                 // Mock InputController to allow test injection
                 const mockInputController = {
                     buildCommand: (dt, now) => {
-                        const cmd = window.testInput || {
+                        // Ensure window.testInput is used if present
+                        if (window.testInput) {
+                            const cmd = window.testInput;
+                            cmd.time = now;
+                            return cmd;
+                        }
+                        return {
                             angles: {x:0, y:0, z:0},
                             forwardmove: 0,
                             sidemove: 0,
                             upmove: 0,
                             buttons: 0,
                             impulse: 0,
-                            msec: 16,
+                            msec: 16, // Default msec
                             time: now
                         };
-                        // Ensure time is updated if using override
-                        if (window.testInput) {
-                            cmd.time = now;
-                        }
-                        return cmd;
                     },
                     bindInputSource: () => {},
                     setKeyBinding: () => {},
@@ -149,6 +174,14 @@
                 });
 
                 window.clientInstance = client;
+
+                // Monitor connection state
+                client.multiplayer.onConnectionStateChange = (state) => {
+                    const states = ['Disconnected', 'Connecting', 'Challenge', 'Connected', 'Loading', 'Active'];
+                    const stateName = states[state] || 'Unknown';
+                    console.log(`Connection State: ${stateName}`);
+                    statusDiv.textContent = stateName;
+                };
 
                 // Create dummy state to prevent render crash
                 const dummyState = {
@@ -176,17 +209,20 @@
                 debug.innerText = `Client initialized. Connecting to ${serverUrl}...`;
                 console.log('Client initialized.');
 
+                // Force menu closed just in case
+                if (client.hidePauseMenu) client.hidePauseMenu();
+
                 // Connect
-                // The multiplayer connection is exposed on client.multiplayer
                 try {
                     console.log('Initiating connection...');
                     await client.multiplayer.connect(serverUrl);
                     debug.innerText = 'Connected!';
                     console.log('Connected!');
+                    statusDiv.textContent = 'Connected';
                 } catch (err) {
                      debug.innerText = `Connection failed: ${err.message}`;
                      console.error(`Connection failed: ${err.message}`);
-                     throw err;
+                     // Don't throw, let loop start (but connection state will be disconnected)
                 }
 
                 // Start Render Loop to drive processing
@@ -195,12 +231,10 @@
                         const now = performance.now();
 
                         // Render (drives frame logic and input generation)
-                        // We pass null for latest/previous to avoid overwriting the authoritative state
-                        // maintained by the MultiplayerConnection and ClientPrediction logic.
                         client.render({
                             nowMs: now,
                             alpha: 1.0,
-                            latest: null,
+                            latest: null, // We rely on multiplayer connection to update state internally if needed
                             previous: null
                         });
 

@@ -14,10 +14,10 @@ describe('E2E Command Flow Test', () => {
     // Start server
     const server = await startTestServer(GAME_SERVER_PORT_1);
 
-    // Launch client
-    // Note: We don't provide clientUrl, so it defaults to serving the repo root and using real-client.html
+    // Launch client with qport to ensure NetChan initializes correctly
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_1}`, {
-        headless: true
+        headless: true,
+        queryParams: { qport: '12345' }
     });
 
     // Wait for connection to be established (Active state)
@@ -64,7 +64,7 @@ describe('E2E Command Flow Test', () => {
     const startTime = Date.now();
     while (newSequence <= initialSequence + 5) {
         if (Date.now() - startTime > 10000) { // Increased timeout
-            throw new Error('Timeout waiting for sequence to increase');
+            throw new Error(`Timeout waiting for sequence to increase. Initial: ${initialSequence}, Current: ${newSequence}`);
         }
         await page.waitForTimeout(100);
         newSequence = await page.evaluate(() => {
@@ -112,7 +112,8 @@ describe('E2E Command Flow Test', () => {
   it('should handle command rate limiting', async () => {
     const server = await startTestServer(GAME_SERVER_PORT_2);
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_2}`, {
-        headless: true
+        headless: true,
+        queryParams: { qport: '67890' }
     });
 
     // Wait for active
