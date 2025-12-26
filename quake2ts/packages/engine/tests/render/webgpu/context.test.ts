@@ -45,7 +45,7 @@ describe('WebGPU Context', () => {
       expect(state.device).toBeDefined();
       expect(state.context).toBeUndefined();
       expect(state.isHeadless).toBe(true);
-      expect(state.format).toBe('bgra8unorm'); // Default fallback
+      expect(state.format).toBe('rgba8unorm'); // Default for headless (matches test framework)
     });
 
     it('throws error if WebGPU is not supported', async () => {
