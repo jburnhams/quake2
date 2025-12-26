@@ -229,7 +229,10 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **4.5** Add `createMockPowerup()` factory
   - Signature: `createMockPowerup(powerupType: string, duration?: number): Powerup`
 
-- [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
+- [x] **4.6** Cleanup item mocks in `game/tests/items/` directory
+  - [x] Refactored `entities/items/weapons.test.ts`
+  - [x] Refactored `entities/items/ammo.test.ts`
+  - [x] Refactored `items_respawn.test.ts`
   - Estimated files: ~10
 
 ---
@@ -258,6 +261,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Return pre-configured BSP model and entity setup
 
 - [ ] **5.6** Cleanup physics tests in `game/tests/physics/` directory
+  - [x] Refactored `movement.test.ts`
   - Replace manual physics simulation with helpers
   - Estimated files: ~15
 

@@ -4,13 +4,19 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createWeaponPickupEntity } from '../../../src/entities/items';
-import { WEAPON_ITEMS } from '../../../src/inventory';
 import { Entity } from '../../../src/entities';
-import { createPlayerInventory, WeaponId } from '../../../src/inventory/playerInventory';
+import { WeaponId } from '../../../src/inventory/playerInventory';
 import { AmmoType } from '../../../src/inventory/ammo';
 import { GameExports } from '../../../src';
 import { Solid } from '../../../src/entities/entity';
-import { createPlayerEntityFactory, createEntityFactory, createMockGameExports, createPlayerStateFactory } from '@quake2ts/test-utils';
+import {
+    createPlayerEntityFactory,
+    createEntityFactory,
+    createMockGameExports,
+    createPlayerStateFactory,
+    createMockWeaponItem,
+    createMockInventory
+} from '@quake2ts/test-utils';
 
 describe('Weapon Pickup Entities', () => {
     let mockGame: GameExports;
@@ -38,7 +44,7 @@ describe('Weapon Pickup Entities', () => {
     });
 
     it('should create a weapon pickup entity with a touch function', () => {
-        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const shotgunItem = createMockWeaponItem(WeaponId.Shotgun);
         const entity = createWeaponPickupEntity(mockGame, shotgunItem);
 
         expect(entity.classname).toBe('weapon_shotgun');
@@ -47,13 +53,15 @@ describe('Weapon Pickup Entities', () => {
     });
 
     it('should become non-solid and set a respawn timer when touched by a player', () => {
-        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const shotgunItem = createMockWeaponItem(WeaponId.Shotgun, {
+            pickupAmmo: 10
+        });
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
         const player = createPlayerEntityFactory({
             client: {
                 ...createPlayerStateFactory(),
-                inventory: createPlayerInventory(),
+                inventory: createMockInventory(),
             } as any
         }) as Entity;
 
@@ -62,14 +70,14 @@ describe('Weapon Pickup Entities', () => {
         expect(player.client!.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
         expect(mockGame.sound).toHaveBeenCalledWith(player, 0, 'items/pkup.wav', 1, 1, 0);
-        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got the Shotgun');
+        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, `You got the ${shotgunItem.name}`);
         expect(entity.solid).toBe(Solid.Not);
         expect(entity.nextthink).toBe(130);
         expect(mockGame.entities.scheduleThink).toHaveBeenCalledWith(entity, 130);
     });
 
     it('should respawn when the think function is called', () => {
-        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const shotgunItem = createMockWeaponItem(WeaponId.Shotgun);
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
         entity.solid = Solid.Not;
@@ -79,7 +87,7 @@ describe('Weapon Pickup Entities', () => {
     });
 
     it('should not do anything when touched by a non-player', () => {
-        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const shotgunItem = createMockWeaponItem(WeaponId.Shotgun);
         const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
 
         const nonPlayer = createEntityFactory() as Entity;
