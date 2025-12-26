@@ -98,7 +98,10 @@ describe('DedicatedServer Trace Integration', () => {
         });
 
         await server.start('test.bsp');
-        const imports = createGameSpy.mock.calls[0][0] as any;
+        // Use lastCall to ensure we get the latest call, robust against spy accumulation
+        const lastCall = createGameSpy.mock.lastCall;
+        expect(lastCall).toBeDefined();
+        const imports = lastCall![0] as any;
 
         // Mock game instance
         (server as any).game = {
