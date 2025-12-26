@@ -8,7 +8,7 @@ test('renders clear color', async ({ renderAndExpectSnapshot }) => {
         // Pass does nothing, just clears to transparent black
       };
     },
-    'clear-default'
+    { name: 'clear-default', description: 'A completely transparent black screen (default clear state).' }
   );
 });
 
@@ -62,6 +62,6 @@ test('renders simple triangle', async ({ renderAndExpectSnapshot }) => {
         pass.draw(3);
       };
     },
-    'triangle-simple'
+    { name: 'triangle-simple', description: 'A red triangle centered in the viewport.' }
   );
 });

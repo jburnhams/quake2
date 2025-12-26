@@ -8,7 +8,7 @@ import {
 import path from 'path';
 
 interface VisualTestContext {
-  expectSnapshot: (pixels: Uint8ClampedArray, name: string) => Promise<void>;
+  expectSnapshot: (pixels: Uint8ClampedArray, nameOrOptions: string | { name: string; description: string }) => Promise<void>;
   renderAndExpectSnapshot: (
     fn: (
         device: GPUDevice,
@@ -16,20 +16,24 @@ interface VisualTestContext {
         encoder: GPUCommandEncoder,
         view: GPUTextureView
     ) => Promise<((pass: GPURenderPassEncoder) => void) | void>,
-    name: string
+    nameOrOptions: string | { name: string; description: string }
   ) => Promise<void>;
 }
 
 export const test = base.extend<VisualTestContext>({
   expectSnapshot: async ({ task }, use) => {
-    const impl = async (pixels: Uint8ClampedArray, name: string) => {
+    const impl = async (pixels: Uint8ClampedArray, nameOrOptions: string | { name: string; description: string }) => {
         const updateBaseline = process.env.UPDATE_VISUAL === '1' || process.argv.includes('--update-snapshots') || process.argv.includes('-u');
         const testFile = task.file?.filepath;
         const testDir = testFile ? path.dirname(testFile) : path.join(process.cwd(), 'tests');
         const snapshotDir = path.join(testDir, '__snapshots__');
 
+        const name = typeof nameOrOptions === 'string' ? nameOrOptions : nameOrOptions.name;
+        const description = typeof nameOrOptions === 'string' ? undefined : nameOrOptions.description;
+
         await expectSnapshot(pixels, {
             name,
+            description,
             width: 256,
             height: 256,
             updateBaseline,
@@ -54,9 +58,11 @@ export const test = base.extend<VisualTestContext>({
             encoder: GPUCommandEncoder,
             view: GPUTextureView
         ) => Promise<((pass: GPURenderPassEncoder) => void) | void>,
-        name: string
+        nameOrOptions: string | { name: string; description: string }
     ) => {
         setup = await createRenderTestSetup(256, 256);
+        const name = typeof nameOrOptions === 'string' ? nameOrOptions : nameOrOptions.name;
+        const description = typeof nameOrOptions === 'string' ? undefined : nameOrOptions.description;
 
         try {
             const commandEncoder = setup.context.device.createCommandEncoder();
@@ -94,6 +100,7 @@ export const test = base.extend<VisualTestContext>({
 
             await expectSnapshot(pixels, {
                 name,
+                description,
                 width: setup.width,
                 height: setup.height,
                 updateBaseline,

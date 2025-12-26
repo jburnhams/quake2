@@ -60,6 +60,9 @@ test('pipeline: particles-basic', async ({ renderAndExpectSnapshot }) => {
           renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
       };
     },
-    'particles-basic'
+    {
+      name: 'particles-basic',
+      description: 'Basic particle rendering showing alpha-blended and additive particles of different colors (Red, Green, Blue, Yellow) and sizes.'
+    }
   );
 });

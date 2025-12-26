@@ -103,6 +103,9 @@ describe('MD3 Pipeline Attachments', () => {
                     );
                  }
             };
-        }, 'md3-attachment');
+        }, {
+            name: 'md3-attachment',
+            description: 'A red triangle attached to a parent model\'s "tag_weapon", offset by 10 units in Y, viewed from a distance.'
+        });
     });
 });

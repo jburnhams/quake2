@@ -82,6 +82,7 @@ describe('Skybox Pipeline', () => {
 
     await expectSnapshot(pixels, {
         name: 'skybox_front',
+        description: 'Red skybox face (+X) visible when looking forward.',
         width: 256,
         height: 256,
         updateBaseline,
@@ -120,6 +121,7 @@ describe('Skybox Pipeline', () => {
 
       await expectSnapshot(pixels, {
           name: 'skybox_top',
+        description: 'Green skybox face (+Y) visible when looking up.',
           width: 256,
           height: 256,
           updateBaseline,
@@ -153,6 +155,7 @@ describe('Skybox Pipeline', () => {
 
       await expectSnapshot(pixels, {
           name: 'skybox_scrolling',
+        description: 'Skybox with scrolling texture offset applied, showing partial texture wrap.',
           width: 256,
           height: 256,
           updateBaseline,
