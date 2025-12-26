@@ -30,6 +30,7 @@ describe('DedicatedServer Trace Integration', () => {
             }
             server.stop();
         }
+        vi.restoreAllMocks();
     });
 
     it('should invoke CollisionEntityIndex.trace and resolve entity', async () => {
