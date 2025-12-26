@@ -87,7 +87,8 @@ describe('MD3 Pipeline Lighting', () => {
             };
         }, {
             name: 'md3-lighting',
-            description: 'A white triangle illuminated by a red directional light from the right side, showing dynamic lighting effects.'
+            description: 'A white triangle illuminated by a red directional light from the right side, showing dynamic lighting effects.',
+            depth: true
         });
     });
 });

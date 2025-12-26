@@ -83,7 +83,8 @@ describe('MD3 Pipeline', () => {
             };
         }, {
             name: 'md3-single-surface',
-            description: 'A single white triangle surface from a mock MD3 model, centered and facing the camera.'
+            description: 'A single white triangle surface from a mock MD3 model, centered and facing the camera.',
+            depth: true
         });
     });
 });
