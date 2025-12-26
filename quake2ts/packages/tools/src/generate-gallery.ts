@@ -83,6 +83,27 @@ const HTML_TEMPLATE = `<!DOCTYPE html>
         }
         .toggle-btn:hover { background: #555; }
         .footer-controls { margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #333; }
+
+        /* Copy Button Styles */
+        .copy-btn {
+            background: transparent;
+            color: #888;
+            border: 1px solid #444;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+        .copy-btn:hover {
+            background: #444;
+            color: #fff;
+            border-color: #555;
+        }
+        .copy-btn:active {
+            transform: translateY(1px);
+        }
     </style>
 </head>
 <body>
@@ -206,6 +227,10 @@ Threshold: \${test.stats.threshold}\`;
                     statsHtml = \`<span class="stats-badge" title="\${tooltip}">Match: \${percentMatch}%</span>\`;
                 }
 
+                const copyText = \`\${fileName} - \${test.testName}\${(test.description && test.description !== test.testName) ? ' - ' + test.description : ''}\`;
+                // Escape HTML attributes for data-clipboard-text
+                const copyTextAttr = copyText.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
                 div.innerHTML = \`
                     <div class="test-header">
                         <div>
@@ -217,6 +242,7 @@ Threshold: \${test.stats.threshold}\`;
                             \${descriptionHtml}
                         </div>
                         <div class="test-meta">
+                            <button class="copy-btn" data-clipboard-text="\${copyTextAttr}" onclick="navigator.clipboard.writeText(this.dataset.clipboardText)" title="Copy to clipboard">📋</button>
                             <a href="\${ghLink}" target="_blank">View Code ↗</a>
                         </div>
                     </div>
