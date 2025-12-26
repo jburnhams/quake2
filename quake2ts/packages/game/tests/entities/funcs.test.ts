@@ -21,16 +21,7 @@ describe('func_door_rotating acceleration', () => {
             spawnflags: 0 // Z-axis default (Yaw)
         });
 
-        // Mock EntitySystem properties needed for move_calc/angle_move_calc
-        // We need to capture the think callback to simulate frames
-        context.entities.scheduleThink = vi.fn((ent, time) => {
-            ent.nextthink = time;
-        });
-
-        context.entities.linkentity = vi.fn();
-
-        // Mock sound on context.entities as well
-        context.entities.sound = vi.fn();
+        // Use mocks from createTestContext - no manual mocking needed
     });
 
     it('should accelerate angular velocity when opening', () => {
@@ -47,6 +38,8 @@ describe('func_door_rotating acceleration', () => {
         expect(entity.state).toBe(1); // DoorState.Opening
 
         // Check initial think setup
+        // The scheduleThink mock is provided by createTestContext and handles updating nextthink
+        // We can check if it was called if needed, but it's cleaner to check the result on the entity.
         expect(context.entities.scheduleThink).toHaveBeenCalled();
         const thinkFn = entity.think;
         expect(thinkFn).toBeDefined();
