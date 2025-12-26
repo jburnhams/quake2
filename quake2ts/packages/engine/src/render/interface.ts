@@ -4,7 +4,7 @@ import { CollisionVisRenderer } from './collisionVis.js';
 import { DebugRenderer } from './debug.js';
 import { ParticleSystem } from './particleSystem.js';
 import { MemoryUsage } from './types.js';
-import { Texture2D } from './resources.js';
+import { Texture2D as WebGLTexture2D } from './resources.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { DebugMode } from './debugMode.js';
 import { Md2Model } from '../assets/md2.js';
@@ -13,7 +13,14 @@ import { InstanceData } from './instancing.js';
 import { RenderOptions } from './options.js';
 import { RenderStatistics } from './gpuProfiler.js';
 
-export type Pic = Texture2D;
+// Pic can be either WebGL or WebGPU texture
+export type Pic = WebGLTexture2D | {
+  readonly width: number;
+  readonly height: number;
+  readonly texture?: GPUTexture;
+  upload?: (data: BufferSource, options?: any) => void;
+  destroy?: () => void;
+};
 
 export interface IRenderer {
   width: number;
