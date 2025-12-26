@@ -1,8 +1,7 @@
 import { test } from '../../helpers/visual-testing.js';
 import { ParticleRenderer } from '../../../src/render/webgpu/pipelines/particleSystem.js';
 import { ParticleSystem } from '../../../src/render/particleSystem.js';
-import { RandomGenerator } from '@quake2ts/shared';
-import { mat4 } from 'gl-matrix';
+import { RandomGenerator, createMat4Identity, mat4Ortho } from '@quake2ts/shared';
 
 test('pipeline: particles-basic', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(
@@ -49,8 +48,8 @@ test('pipeline: particles-basic', async ({ renderAndExpectSnapshot }) => {
       system.update(0);
 
       // Prepare View
-      const projection = mat4.create();
-      mat4.ortho(projection, -10, 10, -10, 10, 0.1, 100);
+      const projection = createMat4Identity();
+      mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
 
       const viewRight = { x: 1, y: 0, z: 0 };
       const viewUp = { x: 0, y: 1, z: 0 };
