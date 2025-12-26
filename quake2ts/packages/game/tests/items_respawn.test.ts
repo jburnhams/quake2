@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
-import { WEAPON_ITEMS } from '../src/inventory/items.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createMockWeaponItem, spawnEntity } from '@quake2ts/test-utils';
+import { WeaponId } from '../src/inventory/playerInventory.js';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {
@@ -13,8 +13,9 @@ describe('Item Respawn Logic', () => {
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
 
-        const weaponItem = WEAPON_ITEMS['weapon_shotgun'];
-        const pickup = spawnEntity(game.entities, createWeaponPickupEntity(game, weaponItem));
+        const weaponItem = createMockWeaponItem(WeaponId.Shotgun);
+        const pickup = game.entities.spawn();
+        Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory());
 
@@ -36,8 +37,9 @@ describe('Item Respawn Logic', () => {
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
 
-        const weaponItem = WEAPON_ITEMS['weapon_shotgun'];
-        const pickup = spawnEntity(game.entities, createWeaponPickupEntity(game, weaponItem));
+        const weaponItem = createMockWeaponItem(WeaponId.Shotgun);
+        const pickup = game.entities.spawn();
+        Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory());
 

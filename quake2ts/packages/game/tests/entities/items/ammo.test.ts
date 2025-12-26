@@ -3,7 +3,7 @@ import { createAmmoPickupEntity } from '../../../src/entities/items/ammo.js';
 import { AmmoItemId } from '../../../src/inventory/ammo.js';
 import { Solid } from '../../../src/entities/entity.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createPlayerEntityFactory, createMockGameExports } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createMockGameExports, createMockInventory } from '@quake2ts/test-utils';
 
 describe('Ammo Pickup Entities', () => {
     const mockGame = createMockGameExports({
@@ -27,12 +27,12 @@ describe('Ammo Pickup Entities', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
         const player = createPlayerEntityFactory({
             client: {
-                inventory: {
+                inventory: createMockInventory({
                     ammo: {
                         caps: [100, 100], // shells is index 1
                         counts: [0, 0]
                     }
-                }
+                })
             } as any
         }) as Entity;
 
@@ -52,12 +52,12 @@ describe('Ammo Pickup Entities', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
          const player = createPlayerEntityFactory({
             client: {
-                inventory: {
+                inventory: createMockInventory({
                     ammo: {
                         caps: [100, 100],
                         counts: [0, 100] // already max
                     }
-                }
+                })
             } as any
         }) as Entity;
 
