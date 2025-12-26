@@ -12,7 +12,7 @@ import { Entity } from '../../src/entities/entity.js';
 import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
 import { getWeaponState } from '../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../src/combat/weapons/state.js';
-import { createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -23,17 +23,14 @@ describe('Chaingun', () => {
     let engine: any;
 
     beforeEach(() => {
-        const multicast = vi.fn();
-        trace = vi.fn();
+        const { imports, engine: mockEngine } = createGameImportsAndEngine();
+        trace = imports.trace;
+        engine = mockEngine;
+
+        // Spy on T_Damage to verify damage application
         T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        engine = {
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            modelIndex: vi.fn(),
-        };
-
-        game = createGame({ trace, multicast, pointcontents: vi.fn(), unicast: vi.fn(), linkentity: vi.fn() }, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
+        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
 
         // Ensure circular reference for tests using sys.game using defineProperty to bypass readonly
         Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
@@ -134,16 +131,11 @@ describe('Chaingun', () => {
 
     describe('Spin-up Mechanic', () => {
         it('should increase shots fired during continuous fire', () => {
-            const trace = vi.fn();
-            const multicast = vi.fn();
-            const sound = vi.fn();
+            const { imports, engine: mockEngine } = createGameImportsAndEngine();
+            const trace = imports.trace;
             vi.spyOn(damage, 'T_Damage');
 
-            const game = createGame({ trace, multicast, sound, pointcontents: vi.fn(), linkentity: vi.fn(), unicast: vi.fn() }, {
-                sound: vi.fn(),
-                centerprintf: vi.fn(),
-                modelIndex: vi.fn(),
-            }, { gravity: { x: 0, y: 0, z: -800 } });
+            const game = createGame(imports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
 
             Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
 
@@ -179,7 +171,7 @@ describe('Chaingun', () => {
 
             const targetTemplate = createEntityFactory({
                 health: 1000,
-                takedamage: true // Note: Number 1 vs boolean true mismatch in tests sometimes, Entity defines boolean or number? checked: boolean in Entity, but some tests use 1. Factory uses boolean.
+                takedamage: true
             });
             const target = game.entities.spawn();
             Object.assign(target, targetTemplate);
