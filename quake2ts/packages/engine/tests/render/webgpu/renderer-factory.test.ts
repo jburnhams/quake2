@@ -35,6 +35,7 @@ const mockGpu = {
       queue: {
         submit: vi.fn(),
         writeBuffer: vi.fn(),
+        writeTexture: vi.fn(),
       },
       lost: Promise.resolve({ reason: 'destroyed' }),
       destroy: vi.fn(),
@@ -88,13 +89,14 @@ describe('WebGPURenderer Integration (Mocked)', () => {
     expect(renderer.type).toBe('webgpu');
 
     const camera = new Camera(mat4.create());
-    const stats = renderer.renderFrame({
+    // renderFrame returns void per IRenderer interface
+    renderer.renderFrame({
       camera,
       timeSeconds: 0,
     });
 
-    expect(stats).toBeDefined();
-    expect(stats.fps).toBeDefined();
+    // Verify no errors thrown during rendering
+    expect(renderer).toBeDefined();
 
     // Check if pipelines were initialized
     expect(renderer.pipelines.sprite).toBeDefined();

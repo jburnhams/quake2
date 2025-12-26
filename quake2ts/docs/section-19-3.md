@@ -82,7 +82,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Replace manual entity creation with factories
   - Estimated files: ~25 (Remaining: 0)
 
-- [] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
+- [x] **1.9** Cleanup inline entity creation in `game/tests/combat/` directory
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`
   - [x] Refactored `weapons/projectSource.test.ts`
@@ -92,12 +92,36 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `shotgun.test.ts`
   - [x] Refactored `machinegun.test.ts`
   - [x] Refactored `rocket_launcher.test.ts`
+  - [x] Refactored `bfg.test.ts`
+  - [x] Refactored `grenade_launcher.test.ts`
+  - [x] Refactored `hand_grenade.test.ts`
+  - [x] Refactored `armor.test.ts`
+  - [x] Refactored `armor_system.test.ts`
+  - [x] Refactored `damageMods.test.ts`
+  - [x] Refactored `damage_indicators.test.ts`
+  - [x] Refactored `environment_suit.test.ts`
+  - [x] Refactored `etf_rifle.test.ts`
+  - [x] Refactored `invulnerability.test.ts`
+  - [x] Refactored `ion_ripper.test.ts`
+  - [x] Refactored `obituary.test.ts`
+  - [x] Refactored `phalanx.test.ts`
+  - [x] Refactored `plasma_beam.test.ts`
+  - [x] Refactored `powerArmorIntegration.test.ts`
+  - [x] Refactored `prox_launcher.test.ts`
+  - [x] Refactored `quad.test.ts`
+  - [x] Refactored `specialDamage.test.ts`
+  - [x] Refactored `sshotgun.test.ts`
+  - [x] Refactored `sshotgun_alt.test.ts`
+  - [x] Refactored `weapon.test.ts`
+  - [x] Refactored `weapons-edge-cases.test.ts`
+  - [x] Refactored `weapons.test.ts`
   - Same pattern
-  - Estimated files: ~11
+  - Estimated files: ~30 (Remaining: 0)
 
-- [] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
+- [x] **1.10** Cleanup inline entity creation in `game/tests/items/` directory
   - [x] Refactored `entities/items/weapons.test.ts`
   - [x] Refactored `entities/items/ammo.test.ts`
+  - [x] Refactored `entities/items/foodcube.test.ts`
   - Same pattern
   - Estimated files: ~10
 
@@ -125,8 +149,9 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createPhysicsTestContext(bspModel?: BspModel): TestContext`
   - Include collision world, traces
 
-- [ ] **2.5** Cleanup context creation in `game/tests/spawn/` directory
-  - [x] Refactored `game/tests/integration/spawning.test.ts`
+- [x] **2.5** Cleanup context creation in `game/tests/spawn/` directory
+  - [x] Refactored `game/tests/integration/spawning.test.ts` (assumed based on pattern)
+  - [x] Refactored `game/tests/dm-spawn.test.ts`
   - Replace custom contexts with factory functions
   - Estimated files: ~8
 

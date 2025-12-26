@@ -69,7 +69,7 @@ export async function createWebGPUContext(
   const device = await adapter.requestDevice(deviceDescriptor);
 
   let context: GPUCanvasContext | undefined;
-  let format: GPUTextureFormat = 'bgra8unorm'; // Fallback default
+  let format: GPUTextureFormat = 'rgba8unorm'; // Default for headless (matches test framework)
   let isHeadless = true;
   let width = 0;
   let height = 0;
@@ -81,7 +81,7 @@ export async function createWebGPUContext(
     }
 
     isHeadless = false;
-    format = navigator.gpu.getPreferredCanvasFormat();
+    format = navigator.gpu.getPreferredCanvasFormat(); // Use preferred format for canvas (usually bgra8unorm)
     width = canvas.width;
     height = canvas.height;
 

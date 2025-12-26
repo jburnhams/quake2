@@ -1,24 +1,53 @@
 {
   "name": "@quake2ts/cgame",
-  "version": "0.0.733",
-  "private": true,
+  "version": "0.0.740",
   "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
+    },
+    "./browser": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/browser/index.js"
+    }
+  },
+  "unpkg": "./dist/browser/index.js",
+  "jsdelivr": "./dist/browser/index.js",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/cgame"
+  },
   "scripts": {
-    "build": "tsup",
+    "build": "pnpm run build:types && pnpm run build:bundles",
+    "build:types": "tsc -b",
+    "build:bundles": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/engine": "workspace:*",
-    "@quake2ts/game": "workspace:^",
-    "@quake2ts/shared": "workspace:*"
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4",
     "@types/node": "^20.11.24",
     "tsup": "^8.0.2",
     "typescript": "^5.4.2",

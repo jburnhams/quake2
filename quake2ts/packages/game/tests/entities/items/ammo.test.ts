@@ -3,10 +3,10 @@ import { createAmmoPickupEntity } from '../../../src/entities/items/ammo.js';
 import { AmmoItemId } from '../../../src/inventory/ammo.js';
 import { Solid } from '../../../src/entities/entity.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createMockGameExports } from '@quake2ts/test-utils';
 
 describe('Ammo Pickup Entities', () => {
-    const mockGame = {
+    const mockGame = createMockGameExports({
         sound: vi.fn(),
         centerprintf: vi.fn(),
         time: 100,
@@ -14,7 +14,7 @@ describe('Ammo Pickup Entities', () => {
         entities: {
             scheduleThink: vi.fn()
         }
-    };
+    });
 
     it('should create an ammo pickup entity', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells);
@@ -25,22 +25,23 @@ describe('Ammo Pickup Entities', () => {
 
     it('should pickup ammo when touched by player', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
-        const player = createPlayerEntityFactory();
-        player.client = {
-            inventory: {
-                ammo: {
-                    caps: [100, 100], // shells is index 1
-                    counts: [0, 0]
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: {
+                    ammo: {
+                        caps: [100, 100], // shells is index 1
+                        counts: [0, 0]
+                    }
                 }
-            }
-        } as any;
+            } as any
+        }) as Entity;
 
         // Ensure touch is defined
         if (!ammo.touch) throw new Error('Touch callback undefined');
 
         ammo.touch(ammo, player);
 
-        expect(player.client.inventory.ammo.counts[1]).toBe(10); // default shell count
+        expect(player.client!.inventory.ammo.counts[1]).toBe(10); // default shell count
         expect(mockGame.sound).toHaveBeenCalled();
         expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got 10 Shells');
         expect(ammo.solid).toBe(Solid.Not);
@@ -49,15 +50,16 @@ describe('Ammo Pickup Entities', () => {
 
     it('should not pickup if maxed out', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
-         const player = createPlayerEntityFactory();
-         player.client = {
-            inventory: {
-                ammo: {
-                    caps: [100, 100],
-                    counts: [0, 100] // already max
+         const player = createPlayerEntityFactory({
+            client: {
+                inventory: {
+                    ammo: {
+                        caps: [100, 100],
+                        counts: [0, 100] // already max
+                    }
                 }
-            }
-        } as any;
+            } as any
+        }) as Entity;
 
         if (!ammo.touch) throw new Error('Touch callback undefined');
 
@@ -66,7 +68,7 @@ describe('Ammo Pickup Entities', () => {
 
         ammo.touch(ammo, player);
 
-        expect(player.client.inventory.ammo.counts[1]).toBe(100);
+        expect(player.client!.inventory.ammo.counts[1]).toBe(100);
         expect(mockGame.sound).not.toHaveBeenCalled();
     });
 });

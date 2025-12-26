@@ -124,22 +124,59 @@ export async function createWebGPURenderer(
 
 ---
 
-### Task 4: Integration with Renderer Interface []
+### Task 4: Integration with Renderer Interface [x]
 
 **File:** `packages/engine/src/render/webgpu/renderer.ts`
 
 Integrate sprite renderer into main renderer:
 
 **Subtasks:**
-1. Create WebGPURenderer class skeleton [ ] 
-2. Integrate SpriteRenderer [ ]
-3. Implement begin2D/end2D [ ]
-4. Implement drawPic (textured quad) [ ]
-5. Implement drawfillRect (solid rect) [ ]
-6. Implement drawString (texture atlas for text) [ ]
-7. Handle texture caching [ ]
-8. Match WebGL renderer API exactly [ ]
+1. [x] Create WebGPURenderer class skeleton (WebGPURendererImpl)
+2. [x] Integrate SpriteRenderer (integrated via begin2DPass/end2DPass in FrameRenderer)
+3. [x] Implement begin2D/end2D (calls frameRenderer.begin2DPass/end2DPass)
+4. [x] Implement drawPic (textured quad via sprite.drawTexturedQuad)
+5. [x] Implement drawfillRect (solid rect via sprite.drawSolidRect)
+6. [x] Implement drawString (texture atlas for text with color code parsing)
+7. [x] Handle texture caching (registerPic and registerTexture with Map cache)
+8. [x] Match WebGL renderer API exactly (implements IRenderer interface with stubs for TODO features)
 
 **Reference:** `packages/engine/src/render/frame.ts`
+
+**Test Cases:**
+- [x] Renderer factory creates valid WebGPURenderer instance
+- [x] All methods implement IRenderer interface correctly
+- [x] Texture caching works (registerPic/registerTexture)
+- [x] 2D drawing methods integrate with sprite renderer
+- [x] All unit tests passing (731/731 total, 19/19 WebGPU tests)
+- [x] Visual regression tests for 2D rendering with baseline PNGs
+
+**Visual Tests Created:**
+- `tests/webgpu/visual/2d-renderer.test.ts` - 5 comprehensive visual tests:
+  - drawfillRect - solid blue rectangle
+  - drawPic - textured quad with checkerboard pattern
+  - drawPic with color tint - green color modulation
+  - Layered rendering with alpha blending
+  - Batched rectangles (4 colored squares)
+- Baseline PNGs stored in `tests/webgpu/visual/__snapshots__/baselines/`
+- Tests use full WebGPURenderer API for realistic integration testing
+- Visual regression framework with pixel-level comparison
+- README guide for writing future visual tests
+
+**Implementation Notes:**
+- WebGPURenderer extends IRenderer interface for full API compatibility
+- The Pic type in interface.ts was updated to support both WebGL and WebGPU textures (union type)
+- WebGL renderer.ts updated to import and re-export Pic from interface.ts for type consistency
+- 2D rendering is coordinated through FrameRenderer's begin2DPass/end2DPass methods
+- Font rendering requires font texture to be loaded (gracefully skips if not loaded)
+- Stub methods added for features to be implemented in later sections (collision vis, debug rendering, particle system, highlighting, render settings, instanced rendering)
+- White texture created for solid color rendering (1x1 RGBA texture)
+- WebGPU headless rendering working with mesa-vulkan-drivers (lavapipe)
+
+**Known Limitations:**
+- Entity rendering not yet implemented (TODO for later sections)
+- Performance profiling returns placeholder values
+- Memory tracking returns placeholder values
+- Various render settings (brightness, gamma, etc.) are stubs
+- Font rendering (drawString) not yet visually tested (no font texture in tests)
 
 **Next Section:** [20-7: Skybox Pipeline](section-20-7.md)

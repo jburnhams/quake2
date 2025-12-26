@@ -1,8 +1,8 @@
 {
   "name": "@quake2ts/tools",
-  "version": "0.0.733",
+  "version": "0.0.740",
   "type": "module",
-  "package": "private",
+  "private": true,
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
@@ -24,17 +24,24 @@
     "dist"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/tools"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
     "test": "vitest run --passWithNoTests"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
     "@types/node": "^25.0.3",
     "tsup": "^8.1.0",
     "typescript": "^5.9.3"

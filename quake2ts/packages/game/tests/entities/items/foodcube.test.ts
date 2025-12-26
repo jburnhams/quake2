@@ -1,8 +1,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFoodCubePickupEntity } from '../../../src/entities/items/index.js';
-import { Entity, Solid } from '../../../src/entities/entity.js';
-import { createTestContext, createMockGameExports, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { Solid } from '../../../src/entities/entity.js';
+import { createTestContext, createMockGameExports, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 
@@ -34,15 +34,16 @@ describe('Food Cube Item', () => {
     });
 
     it('should heal player on touch', () => {
-        const entity = new Entity(1);
-        Object.assign(entity, createFoodCubePickupEntity(game));
-        entity.count = 40; // Large food cube (but < 50)
+        const entity = createEntityFactory({
+            ...createFoodCubePickupEntity(game),
+            count: 40 // Large food cube (but < 50)
+        });
 
         const player = createPlayerEntityFactory({
             index: 2,
             health: 50,
             max_health: 100,
-        }) as Entity;
+        });
         player.client = {} as any;
 
         if (entity.touch) {
@@ -55,15 +56,16 @@ describe('Food Cube Item', () => {
     });
 
     it('should ignore max health cap', () => {
-        const entity = new Entity(1);
-        Object.assign(entity, createFoodCubePickupEntity(game));
-        entity.count = 20;
+        const entity = createEntityFactory({
+            ...createFoodCubePickupEntity(game),
+            count: 20
+        });
 
         const player = createPlayerEntityFactory({
             index: 2,
             health: 100,
             max_health: 100
-        }) as Entity;
+        });
         player.client = {} as any;
 
         if (entity.touch) {

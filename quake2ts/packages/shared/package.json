@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/shared",
-  "version": "0.0.733",
+  "version": "0.0.740",
   "description": "Shared math, physics, and protocol helpers for the Quake II TypeScript port.",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
@@ -28,6 +28,11 @@
     "src"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/shared"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",

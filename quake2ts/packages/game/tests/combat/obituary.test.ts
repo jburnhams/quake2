@@ -5,6 +5,7 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../src/imports.js';
+import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 // Mock getGender since it's hardcoded to "male" but we want to test female paths if possible.
 // We can use vi.mock to mock the module, but since we are testing the module itself, that's tricky.
@@ -22,13 +23,17 @@ describe('ClientObituary', () => {
             multicast: multicastSpy,
         } as any;
 
-        victim = new Entity(1);
-        victim.classname = 'player';
-        victim.client = {} as any; // Mock client presence
+        victim = createPlayerEntityFactory({
+            classname: 'player',
+            client: {} as any
+        }) as Entity;
+        victim.index = 1;
 
-        attacker = new Entity(2);
-        attacker.classname = 'player';
-        attacker.client = {} as any;
+        attacker = createPlayerEntityFactory({
+            classname: 'player',
+            client: {} as any
+        }) as Entity;
+        attacker.index = 2;
     });
 
     it('should broadcast suicide message', () => {
