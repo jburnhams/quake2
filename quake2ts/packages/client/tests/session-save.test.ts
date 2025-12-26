@@ -36,35 +36,39 @@ vi.mock('@quake2ts/game', async (importOriginal) => {
       })),
       loadSave: vi.fn()
     })),
-    SaveStorage: vi.fn().mockImplementation(() => ({
-        save: vi.fn().mockResolvedValue({ id: 'slot1', name: 'Slot 1' }),
-        load: vi.fn().mockResolvedValue({
-             version: 2,
-             map: 'base1',
-             difficulty: 2,
-             playtimeSeconds: 123.45,
-             gameState: {},
-             level: { frameNumber: 100 },
-             rng: { mt: { index: 0, state: [] } },
-             entities: { entities: [] },
-             cvars: [],
-             configstrings: []
-        }),
-        quickSave: vi.fn().mockResolvedValue({ id: 'quicksave', name: 'Quick Save' }),
-        quickLoad: vi.fn().mockResolvedValue({
-             version: 2,
-             map: 'base1',
-             difficulty: 2,
-             playtimeSeconds: 123.45,
-             gameState: {},
-             level: { frameNumber: 100 },
-             rng: { mt: { index: 0, state: [] } },
-             entities: { entities: [] },
-             cvars: [],
-             configstrings: []
-        }),
-        list: vi.fn().mockResolvedValue([{ id: 'slot1', name: 'Slot 1' }, { id: 'quicksave', name: 'Quick Save' }])
-    }))
+    SaveStorage: class {
+        constructor() {
+            return {
+                save: vi.fn().mockResolvedValue({ id: 'slot1', name: 'Slot 1' }),
+                load: vi.fn().mockResolvedValue({
+                     version: 2,
+                     map: 'base1',
+                     difficulty: 2,
+                     playtimeSeconds: 123.45,
+                     gameState: {},
+                     level: { frameNumber: 100 },
+                     rng: { mt: { index: 0, state: [] } },
+                     entities: { entities: [] },
+                     cvars: [],
+                     configstrings: []
+                }),
+                quickSave: vi.fn().mockResolvedValue({ id: 'quicksave', name: 'Quick Save' }),
+                quickLoad: vi.fn().mockResolvedValue({
+                     version: 2,
+                     map: 'base1',
+                     difficulty: 2,
+                     playtimeSeconds: 123.45,
+                     gameState: {},
+                     level: { frameNumber: 100 },
+                     rng: { mt: { index: 0, state: [] } },
+                     entities: { entities: [] },
+                     cvars: [],
+                     configstrings: []
+                }),
+                list: vi.fn().mockResolvedValue([{ id: 'slot1', name: 'Slot 1' }, { id: 'quicksave', name: 'Quick Save' }])
+            };
+        }
+    }
   };
 });
 
@@ -90,11 +94,15 @@ vi.mock('../src/index.js', async (importOriginal) => {
 
 vi.mock('@quake2ts/engine', () => {
     return {
-        EngineHost: vi.fn().mockImplementation(() => ({
-            start: vi.fn(),
-            stop: vi.fn(),
-            paused: true
-        }))
+        EngineHost: class {
+            constructor() {
+                return {
+                    start: vi.fn(),
+                    stop: vi.fn(),
+                    paused: true
+                };
+            }
+        }
     };
 });
 
@@ -105,6 +113,7 @@ describe('GameSession Save/Load', () => {
   let saveStorageMock: any;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     mockEngine = {
       trace: vi.fn(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } })),
       cmd: { executeText: vi.fn() },
@@ -121,14 +130,11 @@ describe('GameSession Save/Load', () => {
     session.startNewGame('base1', 2);
 
     // Access the mocked storage instance
-    // Since SaveStorage is mocked class, we need to inspect the instance created inside session.
-    // For now, we can spy on the methods if we expose them or use the mock class directly.
-    // We exposed getSaveStorage() in previous step.
     saveStorageMock = session.getSaveStorage();
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should save game to slot', async () => {
@@ -153,15 +159,12 @@ describe('GameSession Save/Load', () => {
 
   it('should quick save', async () => {
     await session.quickSave();
-    // Verify quickSave called with correct data
-    // We can't easily capture the argument without more complex mocking or inspecting the mock calls
     expect(saveStorageMock.quickSave).toHaveBeenCalled();
   });
 
   it('should quick load', async () => {
     await session.quickLoad();
     expect(saveStorageMock.quickLoad).toHaveBeenCalled();
-    // It should also trigger loadSavedGame flow
     expect(mockEngine.cmd.executeText).toHaveBeenCalledWith('map base1');
   });
 

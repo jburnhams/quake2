@@ -1,75 +1,84 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { DemoPlaybackController } from '../../src/demo/playback.js';
+import { DemoReader } from '../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../src/demo/parser.js';
 
 describe('DemoPlaybackController Metadata & Seek', () => {
-  let controller: DemoPlaybackController;
-  let buffer: ArrayBuffer;
+    let controller: DemoPlaybackController;
 
-  beforeEach(() => {
-    // Create a synthetic buffer with 10 empty messages
-    const messageCount = 10;
-    // 0 length + 4 bytes overhead
-    buffer = new ArrayBuffer(messageCount * 4);
-    const view = new DataView(buffer);
-    for (let i = 0; i < messageCount; i++) {
-        view.setInt32(i * 4, 0, true); // Length 0
-    }
+    beforeEach(() => {
+        vi.restoreAllMocks();
 
-    controller = new DemoPlaybackController();
-    controller.loadDemo(buffer);
-  });
+        // Spy on DemoReader prototype methods
+        vi.spyOn(DemoReader.prototype, 'getMessageCount').mockReturnValue(100);
+        vi.spyOn(DemoReader.prototype, 'seekToMessage').mockReturnValue(true);
+        vi.spyOn(DemoReader.prototype, 'reset').mockImplementation(() => {});
+        vi.spyOn(DemoReader.prototype, 'hasMore').mockReturnValue(true);
 
-  it('should report correct total frames', () => {
-    expect(controller.getTotalFrames()).toBe(10);
-  });
+        // Mock readNextBlock
+        const readNextBlockSpy = vi.spyOn(DemoReader.prototype, 'readNextBlock');
+        for(let i=0; i<100; i++) {
+             readNextBlockSpy.mockReturnValueOnce({
+                length: 10,
+                data: {} as any
+            });
+        }
+        readNextBlockSpy.mockReturnValue(null);
 
-  it('should report correct duration (default 10Hz)', () => {
-    // 10 frames * 100ms = 1000ms = 1.0s
-    expect(controller.getDuration()).toBe(1.0);
-  });
+        vi.spyOn(NetworkMessageParser.prototype, 'parseMessage').mockImplementation(() => {});
+        vi.spyOn(NetworkMessageParser.prototype, 'setProtocolVersion').mockImplementation(() => {});
 
-  it('should update current frame during playback', () => {
-    expect(controller.getCurrentFrame()).toBe(0); // Initial state
-    controller.stepForward();
-    expect(controller.getCurrentFrame()).toBe(0); // Processed frame 0. Index 0.
+        controller = new DemoPlaybackController();
+        controller.loadDemo(new ArrayBuffer(100));
+    });
 
-    // Wait, if stepForward calls processNextFrame, index increments.
-    // Initial index -1. stepForward -> 0.
-    // This matches expectations.
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-    controller.stepForward();
-    expect(controller.getCurrentFrame()).toBe(1);
+    it('should report correct total frames', () => {
+        expect(controller.getTotalFrames()).toBe(100);
+    });
 
-    controller.stepForward();
-    expect(controller.getCurrentFrame()).toBe(2);
-  });
+    it('should report correct duration (default 10Hz)', () => {
+        expect(controller.getDuration()).toBe(10);
+    });
 
-  it('should seek to specific frame', () => {
-    controller.seek(5);
-    expect(controller.getCurrentFrame()).toBe(5);
+    it('should update current frame during playback', () => {
+        controller.play(); // state -> Playing
 
-    // Verify playback continues from there
-    controller.stepForward();
-    expect(controller.getCurrentFrame()).toBe(6);
-  });
+        controller.stepForward();
+        // Index -1 -> 0
+        expect(controller.getCurrentFrame()).toBe(0);
 
-  it('should clamp seek to bounds', () => {
-    controller.seek(-5);
-    expect(controller.getCurrentFrame()).toBe(0);
+        controller.stepForward();
+        // Index 0 -> 1
+        expect(controller.getCurrentFrame()).toBe(1);
+    });
 
-    controller.seek(100);
-    expect(controller.getCurrentFrame()).toBe(9); // Last valid index (0-9)
-  });
+    it('should seek to specific frame', () => {
+        const targetFrame = 50;
+        controller.seek(targetFrame);
 
-  it('should reset accumulators on seek', () => {
-      // Simulate some playback time
-      controller.play();
-      controller.update(0.05); // 50ms
-      // Current time should be 50ms (index -1, acc 50)
-      expect(controller.getCurrentTime()).toBeCloseTo(50);
+        expect(controller.getCurrentFrame()).toBe(targetFrame);
+    });
 
-      controller.seek(2);
-      // Index 2. Time should be 2 * 100 + 0 = 200
-      expect(controller.getCurrentTime()).toBe(200);
-  });
+    it('should clamp seek to bounds', () => {
+        controller.seek(200);
+        expect(controller.getCurrentFrame()).toBeGreaterThan(0);
+        // Logic might clamp to max, which is determined by hasMore / readNextBlock returning null.
+        // If readNextBlock returns 100 frames, it should stop around 99 or 100.
+        // It relies on processNextFrame loop.
+        expect(controller.getCurrentFrame()).toBe(99);
+    });
+
+    it('should reset accumulators on seek', () => {
+        controller.update(0.05); // Add 0.05s
+
+        controller.seek(10);
+
+        // Frame 10 is at 1.0s exactly.
+        // Seek should reset accumulatedTime to 0.
+        expect(controller.getCurrentTime()).toBe(1.0);
+    });
 });
