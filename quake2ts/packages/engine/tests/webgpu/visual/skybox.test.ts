@@ -129,6 +129,41 @@ describe('Skybox Pipeline', () => {
       });
   });
 
+  it('renders skybox corner', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+
+      // Look at a corner
+      // Yaw 45 (Left), Pitch -45 (Up)
+      camera.setPosition(0, 0, 0);
+      camera.setRotation(-45, 45, 0);
+
+      renderer.renderFrame({
+          camera,
+          sky: {
+              cubemap
+          }
+      });
+
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(
+          renderer.device,
+          frameRenderer.headlessTarget,
+          256,
+          256
+      );
+
+      await expectSnapshot(pixels, {
+          name: 'skybox_corner',
+          description: 'Corner view of the skybox showing intersection of three faces.',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
   it('renders skybox with scrolling', async () => {
       const camera = new Camera();
       camera.setFov(90);
