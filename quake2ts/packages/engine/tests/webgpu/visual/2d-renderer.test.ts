@@ -52,6 +52,7 @@ test('2d-renderer: drawfillRect - solid blue rectangle', async () => {
 
   await expectSnapshot(pixels, {
     name: '2d-renderer-fillrect',
+    description: 'A blue centered rectangle on a black background.',
     width: 256,
     height: 256,
     updateBaseline,
@@ -112,6 +113,7 @@ test('2d-renderer: drawPic - textured quad with checkerboard', async () => {
 
   await expectSnapshot(pixels, {
     name: '2d-renderer-drawpic',
+    description: 'A 4x4 red and black checkerboard texture scaled to 128x128 in the center.',
     width: 256,
     height: 256,
     updateBaseline,
@@ -168,6 +170,7 @@ test('2d-renderer: drawPic with color tint', async () => {
 
   await expectSnapshot(pixels, {
     name: '2d-renderer-tint',
+    description: 'A white texture drawn with a green color tint (0, 1, 0, 1).',
     width: 256,
     height: 256,
     updateBaseline,
@@ -213,6 +216,7 @@ test('2d-renderer: layered rendering with alpha blending', async () => {
 
   await expectSnapshot(pixels, {
     name: '2d-renderer-alpha',
+    description: 'A solid blue square partially covered by a semi-transparent red square, demonstrating alpha blending.',
     width: 256,
     height: 256,
     updateBaseline,
@@ -264,6 +268,7 @@ test('2d-renderer: batched rectangles', async () => {
 
   await expectSnapshot(pixels, {
     name: '2d-renderer-batched',
+    description: 'Four colored squares (Red, Green, Blue, White) in the corners of a dark gray background.',
     width: 256,
     height: 256,
     updateBaseline,
