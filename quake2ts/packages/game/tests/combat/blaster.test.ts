@@ -4,10 +4,11 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
+import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity, createPlayerEntityFactory, createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {

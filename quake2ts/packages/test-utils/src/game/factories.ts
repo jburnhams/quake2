@@ -172,7 +172,8 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
             weaponIdleTime: 0,
             states: new Map(), // Initialize states map correctly
             activeWeaponId: null
-        }
+        },
+        gun_frame: 0 // Initialize gun_frame
     } as any,
     ...overrides
   });
