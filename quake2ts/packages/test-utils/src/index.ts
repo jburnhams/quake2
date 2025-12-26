@@ -29,6 +29,7 @@ export * from './server/helpers/bandwidth.js';
 export * from './setup/browser.js';
 export * from './setup/canvas.js';
 export * from './setup/webgpu.js';
+export * from './setup/headless-webgl.js'; // Added
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
@@ -71,6 +72,7 @@ export type { StorageScenario } from './setup/storage.js';
 export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
 export type { VisualScenario, VisualDiff } from './e2e/visual.js';
 export type { HeadlessWebGPUSetup, WebGPUContextState } from './setup/webgpu.js';
+export type { HeadlessWebGLContext, HeadlessWebGLOptions } from './setup/headless-webgl.js'; // Added
 export type { RenderTestSetup, ComputeTestSetup } from './engine/helpers/webgpu-rendering.js';
 export type { GeometryBuffers } from './engine/helpers/pipeline-test-template.js';
 
