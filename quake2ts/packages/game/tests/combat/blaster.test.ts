@@ -5,10 +5,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
-import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
+import { createPlayerInventory, WeaponId } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
@@ -18,20 +18,9 @@ describe('Blaster', () => {
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 		game.init(0);
 
-        // Replace manual playerStart creation with factory pattern
-        const playerStartTemplate = createEntityFactory({
-             classname: 'info_player_start',
-             origin: { x: 0, y: 0, z: 0 },
-             angles: { x: 0, y: 90, z: 0 }
-        });
-        const playerStart = game.entities.spawn();
-        Object.assign(playerStart, playerStartTemplate);
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
-
-        const player = game.entities.find(e => e.classname === 'player')!;
-
-        // Use factory pattern for inventory (though client exists, we override inventory)
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
+            angles: { x: 0, y: 90, z: 0 }
+        }));
         player.client!.inventory = createPlayerInventory({
             weapons: [WeaponId.Blaster],
             ammo: {},
@@ -44,32 +33,24 @@ describe('Blaster', () => {
     });
 
     it('should travel at the correct speed', () => {
-        const { imports, engine } = createGameImportsAndEngine({
-            imports: {
-                trace: vi.fn().mockImplementation((start, mins, maxs, end) => {
-                    return {
-                        fraction: 1.0,
-                        endpos: end,
-                        allsolid: false,
-                        startsolid: false,
-                    };
-                }),
-            },
+        const { imports, engine } = createGameImportsAndEngine();
+        // Custom trace mock for empty world
+        // Trace signature: (start, mins, maxs, end, ...)
+        imports.trace.mockImplementation((start, mins, maxs, end) => {
+            return {
+                fraction: 1.0,
+                endpos: end,
+                allsolid: false,
+                startsolid: false,
+                plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+            };
         });
+
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        const playerStartTemplate = createEntityFactory({
-            classname: 'info_player_start',
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 } // Fire along X-axis
-       });
-       const playerStart = game.entities.spawn();
-       Object.assign(playerStart, playerStartTemplate);
-
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
-
-        const player = game.entities.find(e => e.classname === 'player')!;
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
+             angles: { x: 0, y: 0, z: 0 } // Fire along X-axis
+        }));
         player.client!.inventory = createPlayerInventory({
             weapons: [WeaponId.Blaster],
             ammo: {},
