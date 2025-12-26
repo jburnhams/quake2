@@ -198,6 +198,8 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `targeting.test.ts`
   - [x] Refactored `cover.test.ts`
   - [x] Refactored `dodge.test.ts`
+  - [x] Refactored `perception.test.ts`
+  - [x] Refactored `monster.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
