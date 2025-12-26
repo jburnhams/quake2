@@ -4,6 +4,8 @@ export interface WebGPUContextOptions {
   powerPreference?: 'low-power' | 'high-performance';
   requiredFeatures?: GPUFeatureName[];
   requiredLimits?: Record<string, number>;
+  width?: number;
+  height?: number;
 }
 
 export interface WebGPUContextState {
@@ -11,6 +13,7 @@ export interface WebGPUContextState {
   device: GPUDevice;
   context?: GPUCanvasContext;  // undefined for headless
   format: GPUTextureFormat;
+  depthFormat: GPUTextureFormat; // New: Standardized depth format
   features: Set<GPUFeatureName>;
   limits: GPUSupportedLimits;
   isHeadless: boolean;
@@ -69,10 +72,11 @@ export async function createWebGPUContext(
   const device = await adapter.requestDevice(deviceDescriptor);
 
   let context: GPUCanvasContext | undefined;
-  let format: GPUTextureFormat = 'rgba8unorm'; // Default for headless (matches test framework)
+  let format: GPUTextureFormat = 'rgba8unorm'; // Default for headless
+  const depthFormat: GPUTextureFormat = 'depth24plus'; // Standard depth format
   let isHeadless = true;
-  let width = 0;
-  let height = 0;
+  let width = options?.width || 800;
+  let height = options?.height || 600;
 
   if (canvas) {
     context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -81,7 +85,7 @@ export async function createWebGPUContext(
     }
 
     isHeadless = false;
-    format = navigator.gpu.getPreferredCanvasFormat(); // Use preferred format for canvas (usually bgra8unorm)
+    format = navigator.gpu.getPreferredCanvasFormat(); // Use preferred format for canvas
     width = canvas.width;
     height = canvas.height;
 
@@ -90,16 +94,10 @@ export async function createWebGPUContext(
       format,
       alphaMode: 'opaque', // Standard for game rendering
     });
-  } else {
-    // Default headless size
-    width = 800;
-    height = 600;
   }
 
   // Collect enabled features
   const features = new Set<GPUFeatureName>();
-  // adapter.features is a set-like object, iterate it
-  // Note: in some envs iterator might be different, but for standard WebGPU:
   for (const feature of adapter.features) {
     features.add(feature as GPUFeatureName);
   }
@@ -109,6 +107,7 @@ export async function createWebGPUContext(
     device,
     context,
     format,
+    depthFormat,
     features,
     limits: device.limits,
     isHeadless,
@@ -144,7 +143,6 @@ export function setupDeviceLossHandling(
   onLost: ContextLostHandler
 ): void {
   device.lost.then((info) => {
-    // info.reason can be 'destroyed', 'unknown'
     console.warn(`WebGPU Device Lost: ${info.reason} - ${info.message}`);
     onLost(info.reason);
   });
