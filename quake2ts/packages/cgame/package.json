@@ -6,6 +6,11 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/cgame"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

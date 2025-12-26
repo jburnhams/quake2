@@ -23,6 +23,11 @@
     "dist"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/engine"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
@@ -35,12 +40,16 @@
     "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
     "test:visual:watch": "vitest tests/integration/visual"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/shared": "workspace:*",
-    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
     "gl-matrix": "^3.4.4"
   },
+  "dependencies": {
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
+  },
   "devDependencies": {
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4",
     "@napi-rs/canvas": "^0.1.52",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
