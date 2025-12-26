@@ -16,7 +16,7 @@ interface VisualTestContext {
         encoder: GPUCommandEncoder,
         view: GPUTextureView
     ) => Promise<((pass: GPURenderPassEncoder) => void) | void>,
-    nameOrOptions: string | { name: string; description: string }
+    nameOrOptions: string | { name: string; description: string; depth?: boolean }
   ) => Promise<void>;
 }
 
@@ -58,35 +58,51 @@ export const test = base.extend<VisualTestContext>({
             encoder: GPUCommandEncoder,
             view: GPUTextureView
         ) => Promise<((pass: GPURenderPassEncoder) => void) | void>,
-        nameOrOptions: string | { name: string; description: string }
+        nameOrOptions: string | { name: string; description: string; depth?: boolean }
     ) => {
-        setup = await createRenderTestSetup(256, 256);
         const name = typeof nameOrOptions === 'string' ? nameOrOptions : nameOrOptions.name;
         const description = typeof nameOrOptions === 'string' ? undefined : nameOrOptions.description;
+        const depth = typeof nameOrOptions === 'string' ? false : !!nameOrOptions.depth;
+
+        setup = await createRenderTestSetup(256, 256, { depth });
+        const { device } = setup.context;
 
         try {
-            const commandEncoder = setup.context.device.createCommandEncoder();
+            const commandEncoder = device.createCommandEncoder();
 
             // Allow the test to create resources and get the render function
             // We pass all context info so the test can manage passes manually if needed
             // Fallback to 'rgba8unorm' if format is missing (quick fix)
             const renderFn = await fn(
-                setup.context.device,
+                device,
                 setup.context.format || 'rgba8unorm',
                 commandEncoder,
                 setup.renderTargetView
             );
 
+            device.pushErrorScope('validation');
+
             if (typeof renderFn === 'function') {
                 // Legacy mode: Wrap in a render pass
-                const pass = commandEncoder.beginRenderPass({
+                const passDescriptor: GPURenderPassDescriptor = {
                     colorAttachments: [{
                         view: setup.renderTargetView,
                         loadOp: 'clear',
                         clearValue: { r: 0, g: 0, b: 0, a: 0 },
                         storeOp: 'store'
                     }]
-                });
+                };
+
+                if (setup.depthTargetView) {
+                    passDescriptor.depthStencilAttachment = {
+                        view: setup.depthTargetView,
+                        depthClearValue: 1.0,
+                        depthLoadOp: 'clear',
+                        depthStoreOp: 'discard'
+                    };
+                }
+
+                const pass = commandEncoder.beginRenderPass(passDescriptor);
                 renderFn(pass);
                 pass.end();
             } else {
@@ -94,9 +110,14 @@ export const test = base.extend<VisualTestContext>({
                 // We ensure it's submitted
             }
 
-            setup.context.device.queue.submit([commandEncoder.finish()]);
+            device.queue.submit([commandEncoder.finish()]);
 
-            const pixels = await captureTexture(setup.context.device, setup.renderTarget, setup.width, setup.height);
+            const error = await device.popErrorScope();
+            if (error) {
+                throw new Error(`WebGPU validation error: ${error.message}`);
+            }
+
+            const pixels = await captureTexture(device, setup.renderTarget, setup.width, setup.height);
 
             await expectSnapshot(pixels, {
                 name,

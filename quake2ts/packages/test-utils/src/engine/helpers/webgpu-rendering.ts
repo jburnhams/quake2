@@ -7,6 +7,8 @@ export interface RenderTestSetup {
   context: WebGPUContextState;
   renderTarget: GPUTexture;
   renderTargetView: GPUTextureView;
+  depthTarget?: GPUTexture;
+  depthTargetView?: GPUTextureView;
   commandEncoder: GPUCommandEncoder;
   cleanup: () => Promise<void>;
   width: number;
@@ -19,7 +21,8 @@ export interface RenderTestSetup {
  */
 export async function createRenderTestSetup(
   width: number = 256,
-  height: number = 256
+  height: number = 256,
+  options: { depth?: boolean } = {}
 ): Promise<RenderTestSetup> {
   const setup = await initHeadlessWebGPU();
   const { device } = setup;
@@ -33,6 +36,18 @@ export async function createRenderTestSetup(
   });
 
   const renderTargetView = renderTarget.createView();
+
+  let depthTarget: GPUTexture | undefined;
+  let depthTargetView: GPUTextureView | undefined;
+
+  if (options.depth) {
+    depthTarget = device.createTexture({
+      size: { width, height, depthOrArrayLayers: 1 },
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    depthTargetView = depthTarget.createView();
+  }
 
   const commandEncoder = device.createCommandEncoder();
 
@@ -48,11 +63,14 @@ export async function createRenderTestSetup(
     context,
     renderTarget,
     renderTargetView,
+    depthTarget,
+    depthTargetView,
     commandEncoder,
     width,
     height,
     cleanup: async () => {
         renderTarget.destroy();
+        depthTarget?.destroy();
         await setup.cleanup();
     }
   };
@@ -135,19 +153,32 @@ export async function renderAndCapture(
   renderFn: (pass: GPURenderPassEncoder) => void
 ): Promise<Uint8ClampedArray> {
   const { device, queue } = setup.context;
-  const { renderTargetView, commandEncoder, width, height } = setup;
+  const { renderTargetView, commandEncoder, width, height, depthTargetView } = setup;
+
+  const colorAttachment: GPURenderPassColorAttachment = {
+    view: renderTargetView,
+    clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    loadOp: 'clear',
+    storeOp: 'store',
+  };
+
+  const descriptor: GPURenderPassDescriptor = {
+    colorAttachments: [colorAttachment],
+  };
+
+  if (depthTargetView) {
+    descriptor.depthStencilAttachment = {
+      view: depthTargetView,
+      depthClearValue: 1.0,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'discard',
+    };
+  }
+
+  device.pushErrorScope('validation');
 
   // Begin render pass
-  const passEncoder = commandEncoder.beginRenderPass({
-    colorAttachments: [
-      {
-        view: renderTargetView,
-        clearValue: { r: 0, g: 0, b: 0, a: 0 },
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  });
+  const passEncoder = commandEncoder.beginRenderPass(descriptor);
 
   // Invoke user render function
   renderFn(passEncoder);
@@ -157,6 +188,11 @@ export async function renderAndCapture(
 
   // Submit the render commands
   queue.submit([commandEncoder.finish()]);
+
+  const error = await device.popErrorScope();
+  if (error) {
+    throw new Error(`WebGPU validation error: ${error.message}`);
+  }
 
   // Capture the texture (using a new encoder)
   return captureTexture(device, setup.renderTarget, width, height);
