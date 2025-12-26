@@ -3,7 +3,7 @@ import { ai_checkattack } from '../../src/ai/targeting.js';
 import { Entity } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('ai_checkattack', () => {
   let context: EntitySystem;
@@ -15,11 +15,9 @@ describe('ai_checkattack', () => {
     context = testCtx.entities;
 
     // Use factory to create monster
-    const monsterData = createMonsterEntityFactory('monster_test', {
+    self = spawnEntity(context, createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 }
-    });
-    self = context.spawn();
-    Object.assign(self, monsterData);
+    }));
 
     // Override monsterinfo to provide checkattack mock which is required for this test.
     self.monsterinfo = {
@@ -29,11 +27,9 @@ describe('ai_checkattack', () => {
     } as any;
 
     // Use factory to create player enemy
-    const playerData = createPlayerEntityFactory({
+    enemy = spawnEntity(context, createPlayerEntityFactory({
         origin: { x: 100, y: 0, z: 0 }
-    });
-    enemy = context.spawn();
-    Object.assign(enemy, playerData);
+    }));
 
     self.enemy = enemy;
   });

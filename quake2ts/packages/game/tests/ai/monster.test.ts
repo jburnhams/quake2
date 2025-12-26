@@ -18,14 +18,7 @@ describe('Monster AI - Soldier', () => {
     vi.spyOn(testContext.engine, 'modelIndex').mockReturnValue(1);
     registry = createDefaultSpawnRegistry(testContext.engine);
 
-    // Mock targetAwareness if it exists
-    if (system.targetAwareness) {
-        Object.assign(system.targetAwareness, {
-            activePlayers: [],
-            monsterAlertedByPlayers: vi.fn().mockReturnValue(null),
-            soundClient: vi.fn().mockReturnValue(null)
-        });
-    }
+    // targetAwareness mocks are now provided by createTestContext in test-utils
   });
 
   it('spawns a soldier with default state', () => {
@@ -96,13 +89,7 @@ describe('monster_think (Freeze Logic)', () => {
   beforeEach(() => {
     const testContext = createTestContext();
     context = testContext.entities;
-    if (context.targetAwareness) {
-        Object.assign(context.targetAwareness, {
-            activePlayers: [],
-            monsterAlertedByPlayers: vi.fn().mockReturnValue(null),
-            soundClient: vi.fn().mockReturnValue(null)
-        });
-    }
+    // targetAwareness mocks are now provided by createTestContext
 
     entity = context.spawn();
 

@@ -3,7 +3,7 @@ import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {
@@ -14,11 +14,9 @@ describe('Item Respawn Logic', () => {
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
 
         const weaponItem = WEAPON_ITEMS['weapon_shotgun'];
-        const pickup = game.entities.spawn();
-        Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
+        const pickup = spawnEntity(game.entities, createWeaponPickupEntity(game, weaponItem));
 
-        const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory());
+        const player = spawnEntity(game.entities, createPlayerEntityFactory());
 
         // Simulate touch
         if (pickup.touch) {
@@ -39,11 +37,9 @@ describe('Item Respawn Logic', () => {
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
 
         const weaponItem = WEAPON_ITEMS['weapon_shotgun'];
-        const pickup = game.entities.spawn();
-        Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
+        const pickup = spawnEntity(game.entities, createWeaponPickupEntity(game, weaponItem));
 
-        const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory());
+        const player = spawnEntity(game.entities, createPlayerEntityFactory());
 
         // Simulate touch
         if (pickup.touch) {

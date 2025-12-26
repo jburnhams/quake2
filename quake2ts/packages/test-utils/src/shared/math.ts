@@ -63,3 +63,5 @@ export const randomVector3 = (min: number = -100, max: number = 100): Vec3 => ({
     y: Math.random() * (max - min) + min,
     z: Math.random() * (max - min) + min,
 });
+
+export { ZERO_VEC3 } from '@quake2ts/shared';
