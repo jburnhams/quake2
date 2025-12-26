@@ -1,26 +1,27 @@
-import { vi, type Mock } from 'vitest';
+import { vi } from 'vitest';
+import { LegacyMock, legacyFn } from '../vitest-compat.js';
 
 /**
  * Interface for the BinaryWriter mock.
  */
 export interface BinaryWriterMock {
-    writeByte: Mock<[number], void>;
-    writeShort: Mock<[number], void>;
-    writeLong: Mock<[number], void>;
-    writeString: Mock<[string], void>;
-    writeBytes: Mock<[Uint8Array], void>;
-    getBuffer: Mock<[], Uint8Array>;
-    reset: Mock<[], void>;
-    writeInt8: Mock<[number], void>;
-    writeUint8: Mock<[number], void>;
-    writeInt16: Mock<[number], void>;
-    writeUint16: Mock<[number], void>;
-    writeInt32: Mock<[number], void>;
-    writeUint32: Mock<[number], void>;
-    writeFloat: Mock<[number], void>;
-    getData: Mock<[], Uint8Array>;
-    writePos: Mock<[any], void>;
-    writeDir: Mock<[any], void>;
+    writeByte: LegacyMock<[number], void>;
+    writeShort: LegacyMock<[number], void>;
+    writeLong: LegacyMock<[number], void>;
+    writeString: LegacyMock<[string], void>;
+    writeBytes: LegacyMock<[Uint8Array], void>;
+    getBuffer: LegacyMock<[], Uint8Array>;
+    reset: LegacyMock<[], void>;
+    writeInt8: LegacyMock<[number], void>;
+    writeUint8: LegacyMock<[number], void>;
+    writeInt16: LegacyMock<[number], void>;
+    writeUint16: LegacyMock<[number], void>;
+    writeInt32: LegacyMock<[number], void>;
+    writeUint32: LegacyMock<[number], void>;
+    writeFloat: LegacyMock<[number], void>;
+    getData: LegacyMock<[], Uint8Array>;
+    writePos: LegacyMock<[any], void>;
+    writeDir: LegacyMock<[any], void>;
 }
 
 /**
@@ -34,7 +35,7 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeLong: vi.fn(),
   writeString: vi.fn(),
   writeBytes: vi.fn(),
-  getBuffer: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
+  getBuffer: legacyFn<[], Uint8Array>(() => new Uint8Array(0)),
   reset: vi.fn(),
   // Legacy methods (if any)
   writeInt8: vi.fn(),
@@ -44,10 +45,41 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
   writeInt32: vi.fn(),
   writeUint32: vi.fn(),
   writeFloat: vi.fn(),
-  getData: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
+  getData: legacyFn<[], Uint8Array>(() => new Uint8Array(0)),
   writePos: vi.fn(),
   writeDir: vi.fn(),
 });
+
+export interface NetChanMock {
+  qport: number;
+  incomingSequence: number;
+  outgoingSequence: number;
+  incomingAcknowledged: number;
+  incomingReliableAcknowledged: boolean;
+  incomingReliableSequence: number;
+  outgoingReliableSequence: number;
+  reliableMessage: BinaryWriterMock;
+  reliableLength: number;
+  fragmentSendOffset: number;
+  fragmentBuffer: any;
+  fragmentLength: number;
+  fragmentReceived: number;
+  lastReceived: number;
+  lastSent: number;
+  remoteAddress: { type: string, port: number };
+  setup: LegacyMock;
+  reset: LegacyMock;
+  transmit: LegacyMock;
+  process: LegacyMock;
+  canSendReliable: LegacyMock<[], boolean>;
+  writeReliableByte: LegacyMock;
+  writeReliableShort: LegacyMock;
+  writeReliableLong: LegacyMock;
+  writeReliableString: LegacyMock;
+  getReliableData: LegacyMock<[], Uint8Array>;
+  needsKeepalive: LegacyMock<[], boolean>;
+  isTimedOut: LegacyMock<[], boolean>;
+}
 
 /**
  * Creates a mock NetChan (Network Channel) for testing network communication.
@@ -55,7 +87,7 @@ export const createBinaryWriterMock = (): BinaryWriterMock => ({
  *
  * @returns A mocked NetChan object.
  */
-export const createNetChanMock = () => ({
+export const createNetChanMock = (): NetChanMock => ({
   qport: 1234,
 
   // Sequencing
@@ -92,7 +124,7 @@ export const createNetChanMock = () => ({
   writeReliableShort: vi.fn(),
   writeReliableLong: vi.fn(),
   writeReliableString: vi.fn(),
-  getReliableData: vi.fn<[], Uint8Array>(() => new Uint8Array(0)),
+  getReliableData: legacyFn<[], Uint8Array>(() => new Uint8Array(0)),
   needsKeepalive: vi.fn(() => false),
   isTimedOut: vi.fn(() => false),
 });
@@ -101,34 +133,34 @@ export const createNetChanMock = () => ({
  * Interface for the BinaryStream mock.
  */
 export interface BinaryStreamMock {
-    getPosition: Mock<[], number>;
-    getReadPosition: Mock<[], number>;
-    getLength: Mock<[], number>;
-    getRemaining: Mock<[], number>;
-    seek: Mock<[number], void>;
-    setReadPosition: Mock<[number], void>;
-    hasMore: Mock<[], boolean>;
-    hasBytes: Mock<[number], boolean>;
+    getPosition: LegacyMock<[], number>;
+    getReadPosition: LegacyMock<[], number>;
+    getLength: LegacyMock<[], number>;
+    getRemaining: LegacyMock<[], number>;
+    seek: LegacyMock<[number], void>;
+    setReadPosition: LegacyMock<[number], void>;
+    hasMore: LegacyMock<[], boolean>;
+    hasBytes: LegacyMock<[number], boolean>;
 
-    readChar: Mock<[], number>;
-    readByte: Mock<[], number>;
-    readShort: Mock<[], number>;
-    readUShort: Mock<[], number>;
-    readLong: Mock<[], number>;
-    readULong: Mock<[], number>;
-    readFloat: Mock<[], number>;
+    readChar: LegacyMock<[], number>;
+    readByte: LegacyMock<[], number>;
+    readShort: LegacyMock<[], number>;
+    readUShort: LegacyMock<[], number>;
+    readLong: LegacyMock<[], number>;
+    readULong: LegacyMock<[], number>;
+    readFloat: LegacyMock<[], number>;
 
-    readString: Mock<[], string>;
-    readStringLine: Mock<[], string>;
+    readString: LegacyMock<[], string>;
+    readStringLine: LegacyMock<[], string>;
 
-    readCoord: Mock<[], number>;
-    readAngle: Mock<[], number>;
-    readAngle16: Mock<[], number>;
+    readCoord: LegacyMock<[], number>;
+    readAngle: LegacyMock<[], number>;
+    readAngle16: LegacyMock<[], number>;
 
-    readData: Mock<[number], Uint8Array>;
+    readData: LegacyMock<[number], Uint8Array>;
 
-    readPos: Mock<[], any>; // Use proper type if available, e.g., Vec3
-    readDir: Mock<[], any>;
+    readPos: LegacyMock<[], any>; // Use proper type if available, e.g., Vec3
+    readDir: LegacyMock<[], any>;
 }
 
 /**
@@ -161,7 +193,7 @@ export const createBinaryStreamMock = (): BinaryStreamMock => ({
   readAngle: vi.fn(() => 0),
   readAngle16: vi.fn(() => 0),
 
-  readData: vi.fn<[number], Uint8Array>((length: number) => new Uint8Array(length)),
+  readData: legacyFn<[number], Uint8Array>((length: number) => new Uint8Array(length)),
 
   readPos: vi.fn(),
   readDir: vi.fn(),
@@ -171,8 +203,8 @@ export const createBinaryStreamMock = (): BinaryStreamMock => ({
  * Interface for MessageWriter mock, extending BinaryWriterMock with additional message-specific methods.
  */
 export interface MessageWriterMock extends BinaryWriterMock {
-    writeInt: Mock<[number], void>;
-    writeVector: Mock<[any], void>;
+    writeInt: LegacyMock<[number], void>;
+    writeVector: LegacyMock<[any], void>;
 }
 
 /**
@@ -196,8 +228,8 @@ export const createMessageWriterMock = (overrides?: Partial<MessageWriterMock>):
  * Interface for MessageReader mock, extending BinaryStreamMock with additional message-specific methods.
  */
 export interface MessageReaderMock extends BinaryStreamMock {
-    readInt: Mock<[], number>;
-    readVector: Mock<[], any>;
+    readInt: LegacyMock<[], number>;
+    readVector: LegacyMock<[], any>;
 }
 
 /**

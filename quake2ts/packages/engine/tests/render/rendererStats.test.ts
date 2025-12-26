@@ -4,26 +4,77 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn(() => ({ shaderSize: 100 })) }));
-vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn(() => ({ shaderSize: 100 })) }));
+vi.mock('../../src/render/bspPipeline', () => {
+    return {
+        BspSurfacePipeline: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    draw: vi.fn(),
+                    bind: vi.fn(),
+                    drawSurface: vi.fn()
+                };
+            }
+        }
+    };
+});
+
+vi.mock('../../src/render/skybox', () => {
+    return {
+        SkyboxPipeline: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    render: vi.fn()
+                };
+            }
+        }
+    };
+});
+
 vi.mock('../../src/render/md2Pipeline', () => ({
-    Md2Pipeline: vi.fn(() => ({
-        bind: vi.fn(),
-        draw: vi.fn(),
-        shaderSize: 100
-    })),
-    Md2MeshBuffers: vi.fn(() => ({
-        update: vi.fn(),
-        geometry: { vertices: new Float32Array(30) }
-    }))
+    Md2Pipeline: class {
+        constructor() {
+            return {
+                bind: vi.fn(),
+                draw: vi.fn(),
+                shaderSize: 100
+            };
+        }
+    },
+    Md2MeshBuffers: class {
+        constructor() {
+            return {
+                update: vi.fn(),
+                geometry: { vertices: new Float32Array(30) }
+            };
+        }
+    }
 }));
-vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn(() => ({ shaderSize: 100 })) }));
+
+vi.mock('../../src/render/sprite', () => {
+    return {
+        SpriteRenderer: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    render: vi.fn()
+                };
+            }
+        }
+    };
+});
+
 vi.mock('../../src/render/collisionVis', () => ({
-    CollisionVisRenderer: vi.fn(() => ({
-        render: vi.fn(),
-        clear: vi.fn(),
-        shaderSize: 100
-    })),
+    CollisionVisRenderer: class {
+        constructor() {
+            return {
+                render: vi.fn(),
+                clear: vi.fn(),
+                shaderSize: 100
+            };
+        }
+    },
 }));
 
 // Use manual mock for frame.js
@@ -31,29 +82,41 @@ vi.mock('../../src/render/frame.js');
 
 // Mock Md3Pipeline and Md3ModelMesh
 vi.mock('../../src/render/md3Pipeline', () => ({
-    Md3Pipeline: vi.fn(() => ({
-        bind: vi.fn(),
-        drawSurface: vi.fn(),
-        shaderSize: 100
-    })),
-    Md3ModelMesh: vi.fn(() => ({
-        update: vi.fn(),
-        surfaces: new Map([['test', {
-            geometry: { vertices: new Float32Array(30) },
-            update: vi.fn()
-        }]])
-    }))
+    Md3Pipeline: class {
+        constructor() {
+            return {
+                bind: vi.fn(),
+                drawSurface: vi.fn(),
+                shaderSize: 100
+            };
+        }
+    },
+    Md3ModelMesh: class {
+        constructor() {
+            return {
+                update: vi.fn(),
+                surfaces: new Map([['test', {
+                    geometry: { vertices: new Float32Array(30) },
+                    update: vi.fn()
+                }]])
+            };
+        }
+    }
 }));
 
 // Mock DebugRenderer
 vi.mock('../../src/render/debug', () => ({
-    DebugRenderer: vi.fn(() => ({
-        drawBoundingBox: vi.fn(),
-        render: vi.fn(),
-        clear: vi.fn(),
-        getLabels: vi.fn().mockReturnValue([]),
-        shaderSize: 100
-    })),
+    DebugRenderer: class {
+        constructor() {
+            return {
+                drawBoundingBox: vi.fn(),
+                render: vi.fn(),
+                clear: vi.fn(),
+                getLabels: vi.fn().mockReturnValue([]),
+                shaderSize: 100
+            };
+        }
+    },
 }));
 
 // Mock culling to always verify visibility

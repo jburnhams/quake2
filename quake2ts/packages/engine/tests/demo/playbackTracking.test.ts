@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback';
-import { ResourceLoadTracker } from '../../src/assets/resourceTracker';
+import { DemoPlaybackController, PlaybackState, FrameOffset, TimeOffset } from '../../src/demo/playback';
+import { ResourceLoadTracker, ResourceLoadLog } from '../../src/assets/resourceTracker';
 import { NetworkMessageParser } from '../../src/demo/parser';
+import { DemoReader } from '../../src/demo/demoReader';
 
 // Dummy BinaryStream
 const dummyStream = {
@@ -20,37 +21,25 @@ const dummyStream = {
     getPosition: () => 0
 };
 
-// Mock DemoReader with extension
-vi.mock('../../src/demo/demoReader.js', () => {
+// Mock DemoReader
+// Use a single mock call without extension to match TypeScript import resolution
+vi.mock('../../src/demo/demoReader', () => {
   return {
-    DemoReader: vi.fn().mockImplementation(() => ({
-      reset: vi.fn(),
-      hasMore: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false), // 2 frames then stop
-      readNextBlock: vi.fn().mockReturnValue({ length: 10, data: dummyStream }),
-      seekToMessage: vi.fn().mockReturnValue(true),
-      getMessageCount: vi.fn().mockReturnValue(100),
-      getOffset: vi.fn().mockReturnValue(0),
-      getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0, percent: 0 }),
-    }))
+    DemoReader: class {
+        constructor() {
+            return {
+                reset: vi.fn(),
+                hasMore: vi.fn().mockReturnValue(true), // Default true
+                readNextBlock: vi.fn().mockReturnValue({ length: 10, data: dummyStream }),
+                seekToMessage: vi.fn().mockReturnValue(true),
+                getMessageCount: vi.fn().mockReturnValue(100),
+                getOffset: vi.fn().mockReturnValue(0),
+                getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0, percent: 0 }),
+            };
+        }
+    }
   };
 });
-
-// Mock DemoReader without extension
-vi.mock('../../src/demo/demoReader', () => {
-    return {
-      DemoReader: vi.fn().mockImplementation(() => ({
-        reset: vi.fn(),
-        hasMore: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false), // 2 frames then stop
-        readNextBlock: vi.fn().mockReturnValue({ length: 10, data: dummyStream }),
-        seekToMessage: vi.fn().mockReturnValue(true),
-        getMessageCount: vi.fn().mockReturnValue(100),
-        getOffset: vi.fn().mockReturnValue(0),
-        getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0, percent: 0 }),
-      }))
-    };
-  });
-
-// No module mock for parser. We use spy.
 
 describe('DemoPlaybackController with Tracking', () => {
   let controller: DemoPlaybackController;
@@ -91,15 +80,15 @@ describe('DemoPlaybackController with Tracking', () => {
     const setFrameSpy = vi.spyOn(tracker, 'setCurrentFrame');
     const setTimeSpy = vi.spyOn(tracker, 'setCurrentTime');
 
-    // Override mock for this test to be sure of behavior
+    // Access reader mock instance
     const readerMock = (controller as any).reader;
-    if (readerMock) {
-         // Force the implementation to be strictly what we expect
-         readerMock.hasMore = vi.fn()
-             .mockReturnValueOnce(true)
-             .mockReturnValueOnce(true)
-             .mockReturnValue(false);
-    }
+
+    // Setup reader behavior: 2 frames then stop
+    readerMock.hasMore
+        .mockReturnValueOnce(true) // Start check
+        .mockReturnValueOnce(true) // Frame 0
+        .mockReturnValueOnce(true) // Frame 1
+        .mockReturnValue(false);   // Stop
 
     const playbackPromise = controller.playWithTracking(tracker);
 
@@ -122,11 +111,8 @@ describe('DemoPlaybackController with Tracking', () => {
   });
 
   it('should handle playRangeWithTracking', async () => {
-      // Access reader mock instance
       const reader = (controller as any).reader;
-
-      // We need it to run for 2 frames
-      // Reset the mock if necessary or rely on new instance from beforeEach
+      reader.hasMore.mockReturnValue(true);
 
       const playbackPromise = controller.playRangeWithTracking(
           { type: 'frame', frame: 0 },
@@ -137,7 +123,7 @@ describe('DemoPlaybackController with Tracking', () => {
       controller.update(0.1); // Frame 0
       controller.update(0.1); // Frame 1 -> Should pause and resolve
 
-      // Update more to trigger completion
+      // Update more to trigger completion if needed
       controller.update(0.1);
 
       await playbackPromise;
@@ -146,22 +132,11 @@ describe('DemoPlaybackController with Tracking', () => {
   });
 
   it('should handle fastForward mode', async () => {
-    // Reset mocks for this test to ensure reader has enough frames
     const reader = (controller as any).reader;
-
-    // Explicitly cast to access mock methods
-    if (!vi.isMockFunction(reader.hasMore)) {
-        vi.spyOn(reader, 'hasMore');
-        vi.spyOn(reader, 'readNextBlock');
-    }
-
-    const mockHasMore = (reader.hasMore as any);
-    const mockReadNextBlock = (reader.readNextBlock as any);
-
-    // Mock readNextBlock to decrement a counter
     let frames = 5;
-    mockHasMore.mockImplementation(() => frames > 0);
-    mockReadNextBlock.mockImplementation(() => {
+
+    reader.hasMore.mockImplementation(() => frames > 0);
+    reader.readNextBlock.mockImplementation(() => {
         frames--;
         return { length: 10, data: dummyStream };
     });
@@ -170,7 +145,7 @@ describe('DemoPlaybackController with Tracking', () => {
 
     expect(log).toBeDefined();
     expect(log.byFrame.size).toBe(0); // No actual resources recorded in this mock
-    expect(mockHasMore).toHaveBeenCalled();
+    expect(reader.hasMore).toHaveBeenCalled();
     expect(tracker['tracking']).toBe(false);
   });
 });

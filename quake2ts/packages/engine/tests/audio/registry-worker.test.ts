@@ -18,8 +18,12 @@ describe('AudioRegistry Worker', () => {
             terminate: vi.fn(),
         };
 
-        // Mock global Worker
-        (global as any).Worker = vi.fn(() => workerMock);
+        // Mock global Worker using class syntax
+        (global as any).Worker = class {
+            constructor() {
+                return workerMock;
+            }
+        };
     });
 
     afterEach(() => {

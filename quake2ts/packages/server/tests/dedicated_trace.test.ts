@@ -6,11 +6,16 @@ import { createMockCollisionEntityIndex } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/shared', async () => {
-    const actual = await vi.importActual('@quake2ts/shared');
+    const actual = await vi.importActual<typeof import('@quake2ts/shared')>('@quake2ts/shared');
     return {
         ...actual,
         traceBox: vi.fn(),
-        CollisionEntityIndex: vi.fn().mockImplementation(() => createMockCollisionEntityIndex())
+        // Mock CollisionEntityIndex as a class constructor that returns a proxied mock object
+        CollisionEntityIndex: class {
+            constructor() {
+                return createMockCollisionEntityIndex();
+            }
+        }
     };
 });
 

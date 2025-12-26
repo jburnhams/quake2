@@ -13,21 +13,29 @@ const mockNetworkMessageParser = {
   getProtocolVersion: vi.fn().mockReturnValue(31),
 };
 
-const demoReaderMockImpl = () => mockDemoReader;
-vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: vi.fn().mockImplementation(demoReaderMockImpl) }));
-vi.mock('../../src/demo/demoReader', () => ({ DemoReader: vi.fn().mockImplementation(demoReaderMockImpl) }));
-
-const parserMockImpl = (data, handler) => {
-    (global as any).mockParserHandler = handler;
-    return mockNetworkMessageParser;
+const demoReaderMockClass = class {
+  constructor() {
+    return mockDemoReader;
+  }
 };
+
+vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: demoReaderMockClass }));
+vi.mock('../../src/demo/demoReader', () => ({ DemoReader: demoReaderMockClass }));
+
+const parserMockImpl = class {
+    constructor(data, handler) {
+        (global as any).mockParserHandler = handler;
+        return mockNetworkMessageParser;
+    }
+};
+
 vi.mock('../../src/demo/parser.js', () => ({
-  NetworkMessageParser: vi.fn().mockImplementation(parserMockImpl),
+  NetworkMessageParser: parserMockImpl,
   createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
   createEmptyProtocolPlayerState: () => ({}),
 }));
 vi.mock('../../src/demo/parser', () => ({
-  NetworkMessageParser: vi.fn().mockImplementation(parserMockImpl),
+  NetworkMessageParser: parserMockImpl,
   createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
   createEmptyProtocolPlayerState: () => ({}),
 }));

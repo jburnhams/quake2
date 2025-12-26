@@ -4,47 +4,110 @@ import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../src/render/resources.js';
 
 // Mock the pipeline dependencies to prevent WebGL calls
-vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
-vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn() }));
-vi.mock('../../src/render/md2Pipeline', () => ({ Md2Pipeline: vi.fn() }));
-vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn() }));
+vi.mock('../../src/render/bspPipeline', () => {
+    return {
+        BspSurfacePipeline: class {
+            constructor() {
+                return {
+                    bind: vi.fn(),
+                    drawSurface: vi.fn(),
+                    draw: vi.fn(),
+                };
+            }
+        },
+    };
+});
+
+vi.mock('../../src/render/skybox', () => {
+    return {
+        SkyboxPipeline: class {
+            constructor() {
+                return {
+                    render: vi.fn(),
+                };
+            }
+        },
+    };
+});
+
+vi.mock('../../src/render/md2Pipeline', () => {
+    return {
+        Md2Pipeline: class {
+            constructor() {
+                return {
+                    bind: vi.fn(),
+                    draw: vi.fn(),
+                };
+            }
+        },
+    };
+});
+
+vi.mock('../../src/render/sprite', () => {
+    return {
+        SpriteRenderer: class {
+            constructor() {
+                return {
+                    render: vi.fn(),
+                };
+            }
+        },
+    };
+});
+
 vi.mock('../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0),
     isClusterVisible: vi.fn().mockReturnValue(true),
     gatherVisibleFaces: vi.fn().mockReturnValue([]),
 }));
+
 vi.mock('../../src/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
+
 vi.mock('../../src/render/culling.js', () => ({
     boxIntersectsFrustum: vi.fn().mockReturnValue(true),
     extractFrustumPlanes: vi.fn().mockReturnValue([]),
     transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
 }));
-vi.mock('../../src/render/collisionVis', () => ({
-    CollisionVisRenderer: vi.fn(() => ({
-        render: vi.fn(),
-        clear: vi.fn(),
-    })),
-}));
+
+vi.mock('../../src/render/collisionVis', () => {
+    return {
+        CollisionVisRenderer: class {
+            constructor() {
+                return {
+                    render: vi.fn(),
+                    clear: vi.fn(),
+                };
+            }
+        },
+    };
+});
 
 const mockMd3Pipeline = {
     bind: vi.fn(),
     drawSurface: vi.fn(),
+    draw: vi.fn(),
 };
 
 vi.mock('../../src/render/md3Pipeline.js', async () => {
-    const actual = await vi.importActual('../../src/render/md3Pipeline.js') as any;
     return {
-        ...actual,
-        Md3Pipeline: vi.fn(() => mockMd3Pipeline),
-        Md3ModelMesh: vi.fn(() => ({
-            surfaces: new Map([['test', {
-                geometry: { vertices: new Array(10) },
-                update: vi.fn()
-            }]]),
-            update: vi.fn(),
-        })),
+        Md3Pipeline: class {
+            constructor() {
+                return mockMd3Pipeline;
+            }
+        },
+        Md3ModelMesh: class {
+            constructor() {
+                return {
+                    surfaces: new Map([['test', {
+                        geometry: { vertices: new Array(10) },
+                        update: vi.fn()
+                    }]]),
+                    update: vi.fn(),
+                };
+            }
+        },
     };
 });
 

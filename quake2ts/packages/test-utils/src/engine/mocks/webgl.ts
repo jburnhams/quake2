@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { legacyFn } from '../../vitest-compat.js';
 
 interface ShaderRecord {
   readonly id: number;
@@ -175,7 +176,10 @@ export class MockWebGL2RenderingContext {
         `texImage2D:${target}:${level}:${internalFormat}:${width}:${height}:${border}:${format}:${type}:${pixels ? 'data' : 'null'}`
       )
   );
-  texImage3D = vi.fn(); // Stub for compatibility
+
+  // Explicitly typing this one with legacyFn or manually typing it to avoid inference errors
+  texImage3D = legacyFn<[GLenum, GLint, GLint, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, ArrayBufferView | null], void>();
+
   deleteTexture = vi.fn((texture: WebGLTexture) => this.calls.push(`deleteTexture:${!!texture}`));
 
   createFramebuffer = vi.fn(() => ({ fb: {} } as unknown as WebGLFramebuffer));
@@ -211,11 +215,11 @@ export class MockWebGL2RenderingContext {
 
   // Queries
   createQuery = vi.fn(() => ({}) as WebGLQuery);
-  beginQuery = vi.fn();
-  endQuery = vi.fn();
-  deleteQuery = vi.fn();
-  getQueryParameter = vi.fn();
-  getParameter = vi.fn();
+  beginQuery = legacyFn<[GLenum], void>();
+  endQuery = legacyFn<[GLenum], void>();
+  deleteQuery = legacyFn<[WebGLQuery | null], void>();
+  getQueryParameter = legacyFn<[WebGLQuery, GLenum], any>();
+  getParameter = legacyFn<[GLenum], any>();
 
   uniform1f = vi.fn((location: WebGLUniformLocation | null, x: GLfloat) =>
     this.calls.push(`uniform1f:${location ? 'set' : 'null'}:${x}`)
@@ -243,7 +247,7 @@ export class MockWebGL2RenderingContext {
       this.calls.push(`uniformMatrix4fv:${location ? 'set' : 'null'}:${transpose}:${Array.from(data as Iterable<number>).join(',')}`)
   );
 
-  uniformBlockBinding = vi.fn();
+  uniformBlockBinding = legacyFn<[WebGLProgram, number, number], void>();
 
   isContextLost = vi.fn(() => false);
 }

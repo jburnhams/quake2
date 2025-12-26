@@ -5,29 +5,95 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../src/render/bspPipeline', () => ({ BspSurfacePipeline: vi.fn() }));
-vi.mock('../../src/render/skybox', () => ({ SkyboxPipeline: vi.fn() }));
-vi.mock('../../src/render/md2Pipeline', () => ({ Md2Pipeline: vi.fn() }));
-vi.mock('../../src/render/sprite', () => ({ SpriteRenderer: vi.fn() }));
-vi.mock('../../src/render/collisionVis', () => ({
-    CollisionVisRenderer: vi.fn(() => ({
-        render: vi.fn(),
-        clear: vi.fn(),
-    })),
-}));
+vi.mock('../../src/render/bspPipeline', () => {
+    return {
+        BspSurfacePipeline: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    draw: vi.fn(),
+                    bind: vi.fn(),
+                    drawSurface: vi.fn()
+                };
+            }
+        }
+    };
+});
+
+vi.mock('../../src/render/skybox', () => {
+    return {
+        SkyboxPipeline: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    render: vi.fn()
+                };
+            }
+        }
+    };
+});
+
+vi.mock('../../src/render/md2Pipeline', () => {
+    return {
+        Md2Pipeline: class {
+            constructor() {
+                return {
+                    bind: vi.fn(),
+                    draw: vi.fn(),
+                    shaderSize: 100
+                };
+            }
+        }
+    };
+});
+
+vi.mock('../../src/render/sprite', () => {
+    return {
+        SpriteRenderer: class {
+            constructor() {
+                return {
+                    shaderSize: 100,
+                    render: vi.fn()
+                };
+            }
+        }
+    };
+});
+
+vi.mock('../../src/render/collisionVis', () => {
+    return {
+        CollisionVisRenderer: class {
+            constructor() {
+                return {
+                    render: vi.fn(),
+                    clear: vi.fn(),
+                    shaderSize: 100
+                };
+            }
+        }
+    };
+});
 
 // Properly mock Md3Pipeline and Md3ModelMesh
 vi.mock('../../src/render/md3Pipeline', async (importOriginal) => {
-    // const actual = await importOriginal(); // Not needed if we mock everything used
     return {
-        Md3Pipeline: vi.fn(() => ({
-            bind: vi.fn(),
-            drawSurface: vi.fn(),
-        })),
-        Md3ModelMesh: vi.fn(() => ({
-            update: vi.fn(),
-            surfaces: new Map(), // Mock empty surfaces
-        })),
+        Md3Pipeline: class {
+            constructor() {
+                return {
+                    bind: vi.fn(),
+                    drawSurface: vi.fn(),
+                    shaderSize: 100
+                };
+            }
+        },
+        Md3ModelMesh: class {
+            constructor() {
+                return {
+                    update: vi.fn(),
+                    surfaces: new Map(), // Mock empty surfaces
+                };
+            }
+        },
     };
 });
 
@@ -45,7 +111,11 @@ const mockDebugRenderer = {
 };
 
 vi.mock('../../src/render/debug', () => ({
-    DebugRenderer: vi.fn(() => mockDebugRenderer),
+    DebugRenderer: class {
+        constructor() {
+            return mockDebugRenderer;
+        }
+    },
 }));
 
 // Mock culling and traversal

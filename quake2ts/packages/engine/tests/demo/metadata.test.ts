@@ -7,11 +7,17 @@ import { DemoHeader, ServerInfo } from '../../src/demo/analysis.js';
 vi.mock('../../src/demo/demoReader.js');
 vi.mock('../../src/demo/demoReader');
 
-const analyzerMockImpl = () => mockAnalyzer;
-vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: vi.fn().mockImplementation(analyzerMockImpl) }));
-vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: vi.fn().mockImplementation(analyzerMockImpl) }));
-
+// Use a getter or similar to ensure the mock returns the current mockAnalyzer instance
 let mockAnalyzer: any;
+
+const analyzerMockClass = class {
+  constructor() {
+    return mockAnalyzer;
+  }
+};
+
+vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
 
 describe('DemoPlaybackController Metadata', () => {
   let controller: any;
@@ -40,6 +46,11 @@ describe('DemoPlaybackController Metadata', () => {
         weaponStats: new Map()
       })
     };
+
+    // Need to re-setup mocks because of resetModules?
+    // Actually, vi.mock is hoisted, but variables referenced might need care.
+    // The analyzerMockClass refers to 'mockAnalyzer' variable which is in scope.
+    // However, resetModules re-evaluates the module under test, which imports the mocked module.
 
     // Dynamic import to pick up new mocks
     const { DemoPlaybackController } = await import('../../src/demo/playback.js');

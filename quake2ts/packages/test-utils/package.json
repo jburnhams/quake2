@@ -82,24 +82,24 @@
     }
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^0.1.86",
     "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "gl-matrix": "^3.4.4",
-    "@napi-rs/canvas": "^0.1.84",
     "@types/jsdom": "^27.0.0",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
     "@webgpu/types": "^0.1.68",
-    "fake-indexeddb": "^6.0.0",
-    "jsdom": "^27.3.0",
+    "fake-indexeddb": "^6.2.5",
+    "gl-matrix": "^3.4.4",
+    "jsdom": "^27.4.0",
     "pixelmatch": "^7.1.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
-    "tsup": "^8.1.0",
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16",
     "webgpu": "^0.3.8"
   }
 }

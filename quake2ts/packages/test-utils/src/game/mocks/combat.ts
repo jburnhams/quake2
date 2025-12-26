@@ -37,7 +37,16 @@ const WEAPON_NAMES: Record<string, string> = {
   'weapon_bfg': 'BFG10K',
 };
 
-export function createMockWeapon(name: string = 'Mock Weapon') {
+export interface MockWeapon {
+  name: string;
+  ammoType: string;
+  ammoUse: number;
+  selection: Mock;
+  think: Mock;
+  command: Mock;
+}
+
+export function createMockWeapon(name: string = 'Mock Weapon'): MockWeapon {
   const displayName = WEAPON_NAMES[name] || name;
   return {
     name: displayName,
@@ -49,7 +58,16 @@ export function createMockWeapon(name: string = 'Mock Weapon') {
   };
 }
 
-export const mockMonsterAttacks = {
+export const mockMonsterAttacks: {
+  fireBlaster: Mock;
+  fireRocket: Mock;
+  fireGrenade: Mock;
+  fireHeat: Mock;
+  fireBullet: Mock;
+  fireShotgun: Mock;
+  fireRailgun: Mock;
+  fireBFG: Mock;
+} = {
   fireBlaster: vi.fn(),
   fireRocket: vi.fn(),
   fireGrenade: vi.fn(),

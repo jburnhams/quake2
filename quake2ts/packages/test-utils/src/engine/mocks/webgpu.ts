@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { globals } from 'webgpu';
+import { LegacyMock } from '../../vitest-compat.js';
 
 export interface MockWebGPUContext {
   adapter: GPUAdapter;
@@ -7,26 +8,34 @@ export interface MockWebGPUContext {
   queue: GPUQueue;
 }
 
+export interface WebGPUMocks {
+  mockGpu: {
+    requestAdapter: LegacyMock<[GPURequestAdapterOptions?], Promise<GPUAdapter | null>>;
+    getPreferredCanvasFormat: LegacyMock<[], GPUTextureFormat>;
+  };
+  mockAdapter: GPUAdapter;
+  mockDevice: GPUDevice;
+}
+
 /**
  * Patches globalThis with WebGPU globals (GPUBufferUsage, etc.)
  * and optionally patches navigator.gpu.
  */
-export function setupWebGPUMocks() {
+export function setupWebGPUMocks(): WebGPUMocks {
     // 1. Inject globals like GPUBufferUsage, GPUTextureUsage
     Object.assign(globalThis, globals);
 
-    // 2. Setup Navigator mock
-    const mockGpu = {
-      requestAdapter: vi.fn(),
-      getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm'),
-    };
-
-    // Create mocks for Adapter and Device
+    // Create mocks for Adapter and Device first so we can use them in the GPU mock
     const mockAdapter = createMockGPUAdapter();
     const mockDevice = createMockGPUDevice();
 
+    // 2. Setup Navigator mock
+    const mockGpu = {
+      requestAdapter: vi.fn().mockResolvedValue(mockAdapter) as unknown as LegacyMock<[GPURequestAdapterOptions?], Promise<GPUAdapter | null>>,
+      getPreferredCanvasFormat: vi.fn().mockReturnValue('bgra8unorm') as unknown as LegacyMock<[], GPUTextureFormat>,
+    };
+
     // Wire them up
-    mockGpu.requestAdapter.mockResolvedValue(mockAdapter);
     // @ts-ignore - vitest mock manipulation
     mockAdapter.requestDevice.mockResolvedValue(mockDevice);
 

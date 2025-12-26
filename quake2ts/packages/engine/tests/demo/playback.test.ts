@@ -1,60 +1,70 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState, FrameOffset, TimeOffset } from '../../src/demo/playback';
-import { DemoReader } from '../../src/demo/demoReader';
-import { NetworkMessageParser } from '../../src/demo/parser';
+import { DemoPlaybackController, PlaybackState, FrameOffset, TimeOffset } from '../../src/demo/playback.js';
+import { DemoReader } from '../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../src/demo/parser.js';
 
-// Dummy BinaryStream
-const dummyStream = {
-    hasBytes: () => false,
-    readByte: () => -1,
-    readShort: () => 0,
-    readLong: () => 0,
-    readFloat: () => 0,
-    readString: () => '',
-    readData: () => new Uint8Array(0),
-    getReadPosition: () => 0,
-    setReadPosition: () => {},
-    // Adapter methods
-    hasMore: () => false,
-    getRemaining: () => 0,
-    getPosition: () => 0
-};
+// Define keys for mock logic if needed, but for simplicity we'll create fresh mocks in the factory
+// Since we can't share variables easily without vi.hoisted, and we want fresh state,
+// we will construct fresh mocks in the class constructor.
 
 // Mock DemoReader with extension
 vi.mock('../../src/demo/demoReader.js', () => {
     return {
-        DemoReader: vi.fn().mockImplementation(() => {
-            return {
-                getMessageCount: vi.fn().mockReturnValue(100),
-                getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
-                getOffset: vi.fn().mockReturnValue(0),
-                reset: vi.fn(),
-                hasMore: vi.fn().mockReturnValue(true),
-                readNextBlock: vi.fn().mockReturnValue({ data: dummyStream }),
-                seekToMessage: vi.fn().mockReturnValue(true)
-            };
-        })
+        DemoReader: class {
+            getMessageCount = vi.fn().mockReturnValue(100);
+            getProgress = vi.fn().mockReturnValue({ total: 1000, current: 0 });
+            getOffset = vi.fn().mockReturnValue(0);
+            reset = vi.fn();
+            hasMore = vi.fn().mockReturnValue(true);
+            readNextBlock = vi.fn().mockReturnValue({
+                data: {
+                    hasBytes: () => false,
+                    readByte: () => -1,
+                    readShort: () => 0,
+                    readLong: () => 0,
+                    readFloat: () => 0,
+                    readString: () => '',
+                    readData: () => new Uint8Array(0),
+                    getReadPosition: () => 0,
+                    setReadPosition: () => {},
+                    hasMore: () => false,
+                    getRemaining: () => 0,
+                    getPosition: () => 0
+                }
+            });
+            seekToMessage = vi.fn().mockReturnValue(true);
+        }
     };
 });
 
-// Mock DemoReader without extension
 vi.mock('../../src/demo/demoReader', () => {
     return {
-        DemoReader: vi.fn().mockImplementation(() => {
-            return {
-                getMessageCount: vi.fn().mockReturnValue(100),
-                getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0 }),
-                getOffset: vi.fn().mockReturnValue(0),
-                reset: vi.fn(),
-                hasMore: vi.fn().mockReturnValue(true),
-                readNextBlock: vi.fn().mockReturnValue({ data: dummyStream }),
-                seekToMessage: vi.fn().mockReturnValue(true)
-            };
-        })
+        DemoReader: class {
+            getMessageCount = vi.fn().mockReturnValue(100);
+            getProgress = vi.fn().mockReturnValue({ total: 1000, current: 0 });
+            getOffset = vi.fn().mockReturnValue(0);
+            reset = vi.fn();
+            hasMore = vi.fn().mockReturnValue(true);
+            readNextBlock = vi.fn().mockReturnValue({
+                data: {
+                    hasBytes: () => false,
+                    readByte: () => -1,
+                    readShort: () => 0,
+                    readLong: () => 0,
+                    readFloat: () => 0,
+                    readString: () => '',
+                    readData: () => new Uint8Array(0),
+                    getReadPosition: () => 0,
+                    setReadPosition: () => {},
+                    hasMore: () => false,
+                    getRemaining: () => 0,
+                    getPosition: () => 0
+                }
+            });
+            seekToMessage = vi.fn().mockReturnValue(true);
+        }
     };
 });
-
-// Do NOT mock parser module. Spy on prototype.
 
 describe('DemoPlaybackController Offset Parameters', () => {
     let controller: DemoPlaybackController;
@@ -69,9 +79,6 @@ describe('DemoPlaybackController Offset Parameters', () => {
 
         // Spy on parseMessage to trigger callback
         vi.spyOn(NetworkMessageParser.prototype, 'parseMessage').mockImplementation(function(this: any) {
-            // Access the handler passed to constructor?
-            // NetworkMessageParser stores handler in private property 'handler'.
-            // We can try to access it via 'this' if we cast to any.
             if (this.handler && this.handler.onFrame) {
                 this.handler.onFrame({
                     sequence: 0,
@@ -91,7 +98,8 @@ describe('DemoPlaybackController Offset Parameters', () => {
         controller = new DemoPlaybackController();
         controller.loadDemo(new ArrayBuffer(100));
 
-        mockReader = (controller as any).reader;
+        // @ts-ignore
+        mockReader = controller.reader;
     });
 
     it('should convert frame to time', () => {

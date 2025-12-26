@@ -3,6 +3,7 @@ import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type Enti
 import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
+import { LegacyMock } from '../vitest-compat.js';
 
 // Re-export collision helpers from shared collision utility
 export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock } from '../shared/collision.js';
@@ -10,22 +11,22 @@ export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock
 // -- Types --
 
 export interface MockEngine {
-  sound: Mock<[Entity, number, string, number, number, number], void>;
-  soundIndex: Mock<[string], number>;
-  modelIndex: Mock<[string], number>;
-  centerprintf: Mock<[Entity, string], void>;
+  sound: LegacyMock<[Entity, number, string, number, number, number], void>;
+  soundIndex: LegacyMock<[string], number>;
+  modelIndex: LegacyMock<[string], number>;
+  centerprintf: LegacyMock<[Entity, string], void>;
 }
 
 export interface MockGame {
   random: ReturnType<typeof createRandomGenerator>;
-  registerEntitySpawn: Mock<[string, (entity: Entity) => void], void>;
-  unregisterEntitySpawn: Mock<[string], void>;
-  getCustomEntities: Mock<[], string[]>;
+  registerEntitySpawn: LegacyMock<[string, (entity: Entity) => void], void>;
+  unregisterEntitySpawn: LegacyMock<[string], void>;
+  getCustomEntities: LegacyMock<[], string[]>;
   hooks: ScriptHookRegistry;
-  registerHooks: Mock<[any], any>;
-  spawnWorld: Mock<[], void>;
-  clientBegin: Mock<[any], void>;
-  damage: Mock<[number], void>;
+  registerHooks: LegacyMock<[any], any>;
+  spawnWorld: LegacyMock<[], void>;
+  clientBegin: LegacyMock<[any], void>;
+  damage: LegacyMock<[number], void>;
 }
 
 export interface TestContext extends SpawnContext {
@@ -250,6 +251,23 @@ export function spawnEntity(system: EntitySystem, data: Partial<Entity>): Entity
   return ent;
 }
 
+export interface MockImportsAndEngine {
+  imports: {
+    trace: Mock;
+    pointcontents: Mock;
+    linkentity: Mock;
+    multicast: Mock;
+    unicast: Mock;
+  };
+  engine: {
+    trace: Mock;
+    sound: Mock;
+    centerprintf: Mock;
+    modelIndex: Mock;
+    soundIndex: Mock;
+  };
+}
+
 /**
  * Creates mock imports and engine for use with createGame() from @quake2ts/game.
  * This is a convenience helper that provides all the commonly mocked functions
@@ -282,7 +300,7 @@ export function createGameImportsAndEngine(overrides?: {
     modelIndex: Mock;
     soundIndex: Mock;
   }>;
-}) {
+}): MockImportsAndEngine {
   const defaultTraceResult = {
     fraction: 1.0,
     endpos: { x: 0, y: 0, z: 0 },
