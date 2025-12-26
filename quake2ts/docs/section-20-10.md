@@ -25,8 +25,11 @@ Similar to MD2 but with:
 - Skeletal transformation matrices
 - Per-surface materials
 - Multi-pass rendering for different surfaces
+- Vertex color support for pre-computed lighting
 
 **Reference:** `md3Pipeline.ts` lines 42-150
+
+**Status:** Completed.
 
 ### Task 2: Md3Pipeline Implementation
 
@@ -37,16 +40,20 @@ Similar to MD2 but with:
 2. Tag-based attachments
 3. Per-surface rendering
 4. Material system
-5. Dynamic lighting
+5. Dynamic lighting (via CPU-side vertex color calculation passed to shader)
+
+**Status:** Completed.
 
 ### Task 3: Testing
 
 **Visual Tests:**
-- `md3-single.png` - Single surface
-- `md3-multi.png` - Multiple surfaces
-- `md3-attached.png` - Weapon attachment
+- `md3-single-surface.png` - Single surface rendering
+- `md3-attachment.png` - Model attachment via tags
+- `md3-lighting.png` - Dynamic lighting verification
 
 **Reference:** `packages/engine/src/render/md3Pipeline.ts`
+
+**Status:** Completed.
 
 ---
 
