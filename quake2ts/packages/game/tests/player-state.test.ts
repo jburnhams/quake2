@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports, GameCreateOptions } from '../src/index.js';
 import { Entity } from '../src/entities/entity.js';
-import { createPlayerInventory, WeaponId } from '../src/inventory/index.js';
+import { WeaponId } from '../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
@@ -14,44 +14,44 @@ describe('Player State Snapshot', () => {
     let game: GameExports;
     let player: Entity;
 
-    let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
-    let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
-
     beforeEach(() => {
         vi.clearAllMocks();
-        const result = createGameImportsAndEngine();
-        mockImports = result.imports;
-        mockEngine = result.engine;
+        const { imports, engine } = createGameImportsAndEngine();
 
-        game = createGame(mockImports, mockEngine, options);
+        game = createGame(imports, engine, options);
         game.init(0);
         game.spawnWorld();
-        player = game.entities.find(e => e.classname === 'player')!;
 
-        // Ensure player has client
-        if (!player.client) {
-             const inventory = createPlayerInventory();
-             game.clientBegin({
-                 inventory,
-                 weaponStates: { states: new Map() },
-                 pers: {
-                     connected: true,
-                     inventory: [],
-                     health: 100,
-                     max_health: 100,
-                     savedFlags: 0,
-                     selected_item: 0
-                 },
-                 buttons: 0,
-                 pm_type: 0,
-                 pm_time: 0,
-                 pm_flags: 0,
-                 gun_frame: 0,
-                 rdflags: 0,
-                 fov: 90
-             } as any);
-             player = game.entities.find(e => e.classname === 'player')!;
-        }
+        // We simulate client connection with a minimal object that satisfies the game.
+        const mockClient = {
+            pers: {
+                connected: true,
+                inventory: [],
+                health: 100,
+                max_health: 100,
+                savedFlags: 0,
+                selected_item: 0
+            },
+            inventory: {
+                ammo: { counts: [], caps: [] },
+                ownedWeapons: new Set(),
+                powerups: new Map(),
+                keys: new Set(),
+                items: new Set(),
+                currentWeapon: null
+            },
+            weaponStates: { states: new Map() },
+            buttons: 0,
+            pm_type: 0,
+            pm_time: 0,
+            pm_flags: 0,
+            gun_frame: 0,
+            rdflags: 0,
+            fov: 90
+        };
+
+        game.clientBegin(mockClient as any);
+        player = game.entities.find(e => e.classname === 'player')!;
     });
 
     it('should correctly report ammo for current weapon', () => {

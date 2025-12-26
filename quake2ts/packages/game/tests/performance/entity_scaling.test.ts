@@ -2,49 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '../../src/index.js';
 import type { GameExports } from '../../src/index.js';
 import { MoveType, Solid, Entity } from '../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 // Increase timeout for performance tests
 const TIMEOUT = 10000;
 
 describe('Entity System Performance', () => {
   let game: GameExports;
-  const engineMock = {
-    trace: vi.fn(() => ({
-      fraction: 1,
-      allsolid: false,
-      startsolid: false,
-      endpos: { x: 0, y: 0, z: 0 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-      ent: null
-    })),
-    pointcontents: vi.fn(() => 0),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-    sound: vi.fn(),
-    centerprintf: vi.fn(),
-    error: vi.fn(),
-    print: vi.fn(),
-    linkentity: vi.fn(),
-    unlinkentity: vi.fn(),
-    configstring: vi.fn(),
-    setmodel: vi.fn(),
-    modelIndex: vi.fn(() => 1),
-    imageIndex: vi.fn(() => 1),
-    soundIndex: vi.fn(() => 1),
-    boxEdicts: vi.fn(() => []),
-    areaportalOpen: vi.fn(),
-    cvar: vi.fn((name, val, flags) => ({ name, value: parseFloat(val), flags, string: val, modified: false })),
-    cvar_set: vi.fn(),
-    cvar_force_set: vi.fn(),
-    cvar_string: vi.fn(),
-    addCommand: vi.fn(),
-    removeCommand: vi.fn(),
-    args: vi.fn(() => ''),
-    argv: vi.fn(() => ''),
-    argc: vi.fn(() => 0),
-    milliseconds: vi.fn(() => 0),
-  };
+  let engineMock: ReturnType<typeof createGameImportsAndEngine>['engine'];
+  let importsMock: ReturnType<typeof createGameImportsAndEngine>['imports'];
 
   const gameOptions = {
     gravity: 800,
@@ -53,8 +19,31 @@ describe('Entity System Performance', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // We'll use createGame to get a real entity system
-    game = createGame(engineMock, engineMock as any, gameOptions);
+    const result = createGameImportsAndEngine();
+    engineMock = result.engine;
+    importsMock = result.imports;
+
+    // Additional engine mocks needed for this test file that are not in default createGameImportsAndEngine
+    Object.assign(engineMock, {
+        boxEdicts: vi.fn(() => []),
+        areaportalOpen: vi.fn(),
+        cvar: vi.fn((name, val, flags) => ({ name, value: parseFloat(val), flags, string: val, modified: false })),
+        cvar_set: vi.fn(),
+        cvar_force_set: vi.fn(),
+        cvar_string: vi.fn(),
+        addCommand: vi.fn(),
+        removeCommand: vi.fn(),
+        args: vi.fn(() => ''),
+        argv: vi.fn(() => ''),
+        argc: vi.fn(() => 0),
+        milliseconds: vi.fn(() => 0),
+    });
+
+    // Also need to ensure imports has cvar support if used via imports (usually not, but GameImports might have it)
+    // createGame usually passes imports which match GameImports.
+    // Let's check if createGame uses engine for cvars or imports. It uses engine.
+
+    game = createGame(importsMock, engineMock, gameOptions);
     game.init(0);
   });
 
@@ -103,11 +92,6 @@ describe('Entity System Performance', () => {
     }
 
     // Advance time to just before think
-
-    // Let's assume time starts at 0.
-    // Run frames until we hit the think time
-    // We want to measure the specific frame where they all execute
-
     let time = 0;
     let frameCount = 0;
     while (time < thinkTime - 0.15) {
@@ -146,19 +130,12 @@ describe('Entity System Performance', () => {
     mover.movetype = MoveType.Walk;
     mover.absmin = { x: 0, y: 0, z: 0 };
     mover.absmax = { x: 10, y: 10, z: 10 };
-    // To trigger G_TouchTriggers, it needs to move or be checked.
-    // G_TouchTriggers is called after move.
-
-    // We actually want to test the scenario where many entities are checking triggers
-    // or many triggers exist.
 
     // Let's verify the cost of one entity checking against 200 triggers
     const startCheck = performance.now();
-    // Manually invoke checking triggers logic if possible, or run a frame where it moves
-    // runFrame -> physics -> ...
 
     // Mock trace to allow movement
-    engineMock.trace.mockReturnValue({
+    (engineMock.trace as any).mockReturnValue({
         fraction: 1,
         allsolid: false,
         startsolid: false,
