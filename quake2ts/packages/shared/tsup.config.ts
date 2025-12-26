@@ -1,40 +1,11 @@
 import { defineConfig } from 'tsup';
+import { createLibraryConfig } from '../../build-config/tsup.factory';
 
-export default defineConfig([
-  {
-    entry: ['src/index.ts'],
-    format: ['esm'],
-    target: 'es2020',
-    sourcemap: true,
-    clean: true,
-    splitting: false,
-    dts: false,
-    outDir: 'dist/esm'
-  },
-  {
-    entry: ['src/index.ts'],
-    format: ['cjs'],
-    target: 'es2020',
-    sourcemap: true,
-    clean: false,
-    splitting: false,
-    dts: false,
-    outDir: 'dist/cjs',
-    outExtension() {
-      return { js: '.cjs' };
-    }
-  },
-  {
-    entry: { index: 'src/index.ts' },
-    format: ['iife'],
-    target: 'es2020',
-    sourcemap: true,
-    clean: false,
-    splitting: false,
-    dts: false,
-    outDir: 'dist/browser',
+export default defineConfig(
+  createLibraryConfig({
     globalName: 'Quake2Shared',
-    minify: true,
-    platform: 'browser'
-  }
-]);
+    browserBundle: true,
+    // Only external dependency is gl-matrix (used in types but not bundled)
+    external: ['gl-matrix'],
+  })
+);

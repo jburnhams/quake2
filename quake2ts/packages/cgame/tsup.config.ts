@@ -1,13 +1,13 @@
 import { defineConfig } from 'tsup';
+import { createLibraryConfig } from '../../build-config/tsup.factory';
 
-export default defineConfig({
-  entry: ['src/index.ts'],
-  format: ['esm', 'cjs'],
-  dts: {
-    resolve: true,
-  },
-  sourcemap: true,
-  clean: true,
-  treeshake: true,
-  tsconfig: './tsconfig.build.json',
-});
+export default defineConfig(
+  createLibraryConfig({
+    globalName: 'Quake2CGame',
+    browserBundle: true,
+    external: [
+      /@quake2ts\/.*/,
+      'gl-matrix',
+    ],
+  })
+);

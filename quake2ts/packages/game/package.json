@@ -23,6 +23,11 @@
     "dist"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/game"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
@@ -31,12 +36,15 @@
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
     "test:integration": "TEST_TYPE=integration NODE_OPTIONS='--max-old-space-size=4096' vitest run tests/integration/entitySystem.test.ts tests/integration/combat.test.ts tests/integration/gameplay.test.ts tests/integration/hooks.test.ts tests/integration/scenario_base1.test.ts tests/integration/physicsStress.test.ts tests/integration/saveLoad.test.ts tests/integration/asset-loading.test.ts"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4",
     "@quake2ts/test-utils": "workspace:^",
     "fake-indexeddb": "^6.0.0",
     "tsup": "^8.1.0"

@@ -1,0 +1,13 @@
+{
+  "name": "@quake2ts/build-config",
+  "version": "0.0.738",
+  "private": true,
+  "description": "Shared build configuration for quake2ts monorepo",
+  "type": "module",
+  "exports": {
+    "./tsup.factory": "./tsup.factory.ts"
+  },
+  "peerDependencies": {
+    "tsup": "^8.1.0"
+  }
+}

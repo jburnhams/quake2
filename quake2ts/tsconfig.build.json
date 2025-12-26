@@ -4,7 +4,9 @@
     { "path": "./packages/shared" },
     { "path": "./packages/engine" },
     { "path": "./packages/game" },
+    { "path": "./packages/cgame" },
     { "path": "./packages/client" },
+    { "path": "./packages/server" },
     { "path": "./packages/tools" },
     { "path": "./packages/test-utils" }
   ]

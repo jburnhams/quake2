@@ -28,6 +28,11 @@
     "src"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/shared"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
