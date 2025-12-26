@@ -379,6 +379,14 @@ export class SpriteRenderer {
     this._activeRenderTarget = null;
   }
 
+  /**
+   * Check if sprite renderer is currently in an active render pass
+   * Ref: Defensive check to prevent GPU resource leaks
+   */
+  get isActive(): boolean {
+    return this._activeEncoder !== null;
+  }
+
   destroy(): void {
       this.vertexBuffer.destroy();
       this.indexBuffer.destroy();

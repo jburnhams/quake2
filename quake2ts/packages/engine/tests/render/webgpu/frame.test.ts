@@ -109,10 +109,12 @@ describe('FrameRenderer', () => {
       })]
     }));
 
-    // Sprite pass
-    expect(mockSpriteRenderer.setProjection).toHaveBeenCalledWith(800, 600);
-    expect(mockSpriteRenderer.begin).toHaveBeenCalled();
-    expect(mockSpriteRenderer.end).toHaveBeenCalled();
+    // Sprite pass is no longer called directly by FrameRenderer
+    // It's now called through begin2DPass/end2DPass which are invoked by the renderer's begin2D/end2D
+    // The onDraw2D callback is where user code would call renderer.begin2D()
+    expect(mockSpriteRenderer.setProjection).not.toHaveBeenCalled();
+    expect(mockSpriteRenderer.begin).not.toHaveBeenCalled();
+    expect(mockSpriteRenderer.end).not.toHaveBeenCalled();
 
     // Submission
     expect(mockDevice.queue.submit).toHaveBeenCalled();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createPlayerEntityFactory, createMonsterEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createMonsterEntityFactory, createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils';
 import { player_die } from '../../src/entities/player.js';
 import { DeadFlag, Solid, MoveType, Entity } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
@@ -8,8 +8,6 @@ import { EntitySystem } from '../../src/entities/system.js';
 describe('Player Death', () => {
     it('should set dead flags and properties', () => {
         // We need a real entity for methods, factory returns partial
-        // Using Object.assign on new Entity(1) is the safe way to ensure we have a full Entity instance
-        // but populating it with factory data.
         const player = new Entity(1);
         Object.assign(player, createPlayerEntityFactory({
             number: 1,
@@ -34,8 +32,13 @@ describe('Player Death', () => {
         const system = new EntitySystem(engine, imports as any);
         const spawnSpy = vi.spyOn(system, 'spawn').mockImplementation(() => new Entity(100));
 
-        const player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
+        // Use spawnEntity helper (although here we want to use the spy, spawnEntity calls system.spawn)
+        // However, spawnEntity takes system and data.
+        // It calls system.spawn(), which calls our spy.
+        // Then it Object.assigns.
+        // So we can use it.
+
+        const player = spawnEntity(system, createPlayerEntityFactory({
             number: 1,
             health: -50,
             origin: { x: 0, y: 0, z: 0 }
@@ -50,14 +53,12 @@ describe('Player Death', () => {
         const { imports, engine } = createGameImportsAndEngine();
         const system = new EntitySystem(engine, imports as any);
 
-        const player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
+        const player = spawnEntity(system, createPlayerEntityFactory({
             number: 1,
             health: 0
         }));
 
-        const attacker = new Entity(2);
-        Object.assign(attacker, createMonsterEntityFactory('monster_soldier', {
+        const attacker = spawnEntity(system, createMonsterEntityFactory('monster_soldier', {
             number: 2
         }));
 

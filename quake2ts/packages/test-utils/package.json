@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/test-utils",
-  "version": "0.0.736",
+  "version": "0.0.741",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -26,20 +26,23 @@
     "dist",
     "src"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/test-utils"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "test": "vitest run --passWithNoTests",
     "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "gl-matrix": "^3.4.4"
-  },
-  "peerDependencies": {
     "@webgpu/types": "^0.1.68",
+    "gl-matrix": "^3.4.4",
     "pixelmatch": "^7.1.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
@@ -47,7 +50,22 @@
     "webgpu": "^0.3.8"
   },
   "peerDependenciesMeta": {
+    "@quake2ts/engine": {
+      "optional": true
+    },
+    "@quake2ts/game": {
+      "optional": true
+    },
+    "@quake2ts/server": {
+      "optional": true
+    },
+    "@quake2ts/shared": {
+      "optional": true
+    },
     "@webgpu/types": {
+      "optional": true
+    },
+    "gl-matrix": {
       "optional": true
     },
     "pixelmatch": {
@@ -64,6 +82,11 @@
     }
   },
   "devDependencies": {
+    "@quake2ts/engine": "workspace:^",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4",
     "@napi-rs/canvas": "^0.1.84",
     "@types/jsdom": "^27.0.0",
     "@types/pixelmatch": "^5.2.6",

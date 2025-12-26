@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/client",
-  "version": "0.0.736",
+  "version": "0.0.741",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -23,6 +23,11 @@
     "dist"
   ],
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/client"
+  },
   "scripts": {
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
@@ -31,7 +36,7 @@
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
     "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@quake2ts/cgame": "workspace:^",
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
@@ -39,6 +44,11 @@
     "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
+    "@quake2ts/cgame": "workspace:^",
+    "@quake2ts/engine": "workspace:*",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4",
     "@quake2ts/test-utils": "workspace:^",
     "tsup": "^8.1.0"
   }

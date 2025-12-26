@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createWebGPURenderer } from '../../src/render/webgpu/renderer.js';
 import { Camera } from '../../src/render/camera.js';
 import { mat4 } from 'gl-matrix';
@@ -36,9 +36,11 @@ describe('WebGPURenderer Integration (Headless with Dawn)', () => {
       timeSeconds: 0,
       clearColor: [0, 0, 0, 1], // Black background
       onDraw2D: () => {
-          // Draw a full-screen red rectangle
-          // Coordinates 0,0 to 800,600
-          renderer.pipelines.sprite.drawSolidRect(0, 0, 800, 600, [1, 0, 0, 1]);
+          // Draw a full-screen red rectangle using proper 2D API
+          // Ref: WebGPU renderer 2D drawing requires begin2D/end2D
+          renderer.begin2D();
+          renderer.drawfillRect(0, 0, 800, 600, [1, 0, 0, 1]);
+          renderer.end2D();
       }
     });
 
@@ -123,5 +125,40 @@ describe('WebGPURenderer Integration (Headless with Dawn)', () => {
     console.log(`Wrote headless frame to ${outputPath}`);
 
     readBuffer.unmap();
+  });
+
+  it('defensively closes 2D pass if end2D() is forgotten', async () => {
+    // Test defensive cleanup to prevent GPU resource leaks
+    const renderer = await createWebGPURenderer();
+    const camera = new Camera(mat4.create());
+
+    // Spy on console.warn to verify warning is logged
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      // Render without calling end2D() - should auto-cleanup
+      renderer.renderFrame({
+        camera,
+        timeSeconds: 0,
+        clearColor: [0, 0, 0, 1],
+        onDraw2D: () => {
+          renderer.begin2D();
+          renderer.drawfillRect(0, 0, 800, 600, [1, 0, 0, 1]);
+          // Intentionally NOT calling renderer.end2D() to test defensive cleanup
+        }
+      });
+
+      // Should have logged a warning about auto-closing the pass
+      expect(warnSpy).toHaveBeenCalledWith(
+        '2D render pass was not properly closed - auto-closing to prevent resource leak'
+      );
+
+      // Verify sprite renderer is no longer active after auto-cleanup
+      const frameRenderer = (renderer as any).frameRenderer;
+      expect(frameRenderer.pipelines.sprite.isActive).toBe(false);
+
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });

@@ -6,7 +6,9 @@ dist/
 # Visual Test Artifacts
 **/__snapshots__/actual/
 **/__snapshots__/diff/
+**/__snapshots__/stats/
 visual-tests.json
+test_output/
 
 # GitHub Pages
 pages-dist/

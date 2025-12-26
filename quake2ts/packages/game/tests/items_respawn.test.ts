@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createMockWeaponItem } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createMockWeaponItem, spawnEntity } from '@quake2ts/test-utils';
 import { WeaponId } from '../src/inventory/playerInventory.js';
 
 describe('Item Respawn Logic', () => {
@@ -17,8 +17,7 @@ describe('Item Respawn Logic', () => {
         const pickup = game.entities.spawn();
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
-        const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory());
+        const player = spawnEntity(game.entities, createPlayerEntityFactory());
 
         // Simulate touch
         if (pickup.touch) {
@@ -42,8 +41,7 @@ describe('Item Respawn Logic', () => {
         const pickup = game.entities.spawn();
         Object.assign(pickup, createWeaponPickupEntity(game, weaponItem));
 
-        const player = game.entities.spawn();
-        Object.assign(player, createPlayerEntityFactory());
+        const player = spawnEntity(game.entities, createPlayerEntityFactory());
 
         // Simulate touch
         if (pickup.touch) {
