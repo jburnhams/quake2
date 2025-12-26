@@ -67,7 +67,7 @@ function createMockModel(): Md2Model {
           { s: 64, t: 128 }
       ],
       triangles: [
-          { vertexIndices: [0, 1, 2], texCoordIndices: [0, 1, 2] }
+          { vertexIndices: [0, 2, 1], texCoordIndices: [0, 2, 1] }
       ],
       frames: [frame0, frame1],
       glCommands: [] // Use triangles fallback
@@ -145,7 +145,7 @@ test('md2: static render', async ({ renderAndExpectSnapshot }) => {
             pipeline.draw(pass, mesh);
             pass.end();
         },
-        'md2-static'
+        { name: 'md2-static', description: 'A simple white triangle rendered from an MD2 model' }
     );
 });
 
@@ -196,7 +196,7 @@ test('md2: interpolated render', async ({ renderAndExpectSnapshot }) => {
             pipeline.draw(pass, mesh);
             pass.end();
         },
-        'md2-interpolated'
+        { name: 'md2-interpolated', description: 'A green tinted triangle interpolated between two frames' }
     );
 });
 
@@ -245,13 +245,14 @@ test('md2: dynamic light', async ({ renderAndExpectSnapshot }) => {
 
             pipeline.bind(pass, {
                 modelViewProjection: mvp,
-                ambientLight: 0.2,
+                ambientLight: 0.1,
+                lightDirection: [0, 1, 0], // perpendicular to normal, so no directional light
                 dlights: dlights
             }, texture, 0.0);
 
             pipeline.draw(pass, mesh);
             pass.end();
         },
-        'md2-lit'
+        { name: 'md2-lit', description: 'A red lit triangle showing dynamic lighting' }
     );
 });
