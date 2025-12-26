@@ -280,6 +280,14 @@ export class FrameRenderer {
         options.onDraw2D();
     }
 
+    // Defensive cleanup: If 2D pass was started but not ended, close it
+    // to prevent GPU resource leaks when the command encoder is finalized
+    // Ref: User should call renderer.end2D(), but this handles forgotten calls
+    if (this.pipelines.sprite.isActive) {
+        console.warn('2D render pass was not properly closed - auto-closing to prevent resource leak');
+        this.end2DPass();
+    }
+
     // Finalize
     this.context.device.queue.submit([commandEncoder.finish()]);
 
