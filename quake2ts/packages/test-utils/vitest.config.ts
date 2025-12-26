@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 const isWebGPU = process.env.TEST_TYPE === 'webgpu';
+const isWebGL = process.env.TEST_TYPE === 'webgl';
 const isIntegration = process.env.TEST_TYPE === 'integration';
 const isUnit = process.env.TEST_TYPE === 'unit';
 
@@ -10,11 +11,15 @@ const exclude = [
   '**/dist/**',
   // Exclude WebGPU tests from standard runs
   ...((!isWebGPU) ? ['**/tests/webgpu/**'] : []),
+  // Exclude WebGL tests from standard runs
+  ...((!isWebGL) ? ['**/tests/webgl/**'] : []),
 ];
 
 const include = isWebGPU
   ? ['**/tests/webgpu/**/*.test.ts']
-  : ['tests/**/*.test.ts']; // Default pattern for test-utils
+  : isWebGL
+    ? ['**/tests/webgl/**/*.test.ts']
+    : ['tests/**/*.test.ts']; // Default pattern for test-utils
 
 export default defineConfig({
   test: {
@@ -33,7 +38,7 @@ export default defineConfig({
       isolate: false,
     } : {}),
     // Force sequential execution for integration and webgpu tests
-    ...((isIntegration || isWebGPU) ? {
+    ...((isIntegration || isWebGPU || isWebGL) ? {
       pool: 'forks',
       poolOptions: {
         forks: {

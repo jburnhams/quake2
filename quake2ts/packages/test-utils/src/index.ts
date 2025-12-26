@@ -5,7 +5,6 @@ export * from './shared/pak-loader.js';
 export * from './shared/math.js';
 export * from './shared/collision.js';
 export * from './shared/factories.js';
-export * from './shared/rendering-common.js'; // Added
 export * from './game/factories.js';
 export * from './game/helpers.js';
 export * from './game/helpers/physics.js';
@@ -45,7 +44,6 @@ export * from './engine/rendering.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 export * from './engine/helpers/webgpu-rendering.js';
-export * from './engine/helpers/webgl-rendering.js'; // Added
 export * from './engine/helpers/pipeline-test-template.js';
 
 // Client Mocks
@@ -76,7 +74,6 @@ export type { VisualScenario, VisualDiff } from './e2e/visual.js';
 export type { HeadlessWebGPUSetup, WebGPUContextState } from './setup/webgpu.js';
 export type { HeadlessWebGLContext, HeadlessWebGLOptions } from './setup/headless-webgl.js'; // Added
 export type { RenderTestSetup, ComputeTestSetup } from './engine/helpers/webgpu-rendering.js';
-export type { WebGLRenderTestSetup } from './engine/helpers/webgl-rendering.js'; // Added
 export type { GeometryBuffers } from './engine/helpers/pipeline-test-template.js';
 
 // Shared Types

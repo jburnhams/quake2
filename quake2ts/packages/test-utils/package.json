@@ -34,7 +34,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "test": "vitest run --passWithNoTests",
-    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run"
+    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run",
+    "test:webgl": "cross-env TEST_TYPE=webgl vitest run"
   },
   "peerDependencies": {
     "@quake2ts/engine": "workspace:^",

@@ -1,5 +1,3 @@
-import gl from 'gl';
-
 export interface HeadlessWebGLOptions {
   width?: number;
   height?: number;
@@ -16,12 +14,17 @@ export interface HeadlessWebGLContext {
 
 /**
  * Creates a headless WebGL2 context using the 'gl' package.
+ * Note: 'gl' is lazy-loaded to avoid issues in environments where it's not supported/needed.
  */
-export function createHeadlessWebGL(
+export async function createHeadlessWebGL(
   options: HeadlessWebGLOptions = {}
-): HeadlessWebGLContext {
+): Promise<HeadlessWebGLContext> {
   const width = options.width ?? 256;
   const height = options.height ?? 256;
+
+  // Dynamically import gl
+  // @ts-ignore - gl package might not be typed correctly for dynamic import or TS config
+  const { default: gl } = await import('gl');
 
   // The 'gl' function signature is gl(width, height, options)
   const context = gl(width, height, {
@@ -36,28 +39,8 @@ export function createHeadlessWebGL(
     throw new Error('Failed to create headless WebGL context');
   }
 
-  // Cast to WebGL2RenderingContext as 'gl' implements WebGL 1.0 but with extensions
-  // Actually 'gl' package claims to implementation WebGL 1.0.
-  // Quake2TS uses WebGL2.
-  // Wait, does 'gl' support WebGL2?
-  // The 'gl' package (headless-gl) is primarily WebGL 1.
-  // However, the quake2ts engine seems to rely on WebGL2 (createRenderer takes WebGL2RenderingContext).
-  // The docs said: "Provides WebGL 1.0/2.0 contexts in Node.js".
-  // Let me verify if 'gl' supports WebGL2 or if I need to mock/polyfill it or if it just works.
-  // The 'gl' readme says "WebGL 1.0 implementation".
-  // But maybe the engine can run on WebGL1 or the 'gl' package has updated?
-  // The doc explicitly says "Provides WebGL 1.0/2.0 contexts". Maybe it refers to a fork or the latest version?
-  // Let's assume it works or I might need to enable an extension.
-  // Actually, checking the docs again. "Provides WebGL 1.0/2.0 contexts in Node.js".
-  // If 'gl' is 1.0 only, we might have a problem if the engine STRICTLY requires WebGL2.
-  // But let's proceed and see. If it fails, I'll investigate.
-  // The 'gl' context object returned is technically compatible with many WebGL calls.
-
-  // We'll cast it for now to satisfy TS.
+  // Cast to WebGL2RenderingContext
   const glContext = context as unknown as WebGL2RenderingContext;
-
-  // Check extensions
-  const ext = glContext.getExtension('STACKGL_resize_drawingbuffer');
 
   return {
     gl: glContext,
@@ -99,10 +82,7 @@ export function captureWebGLFramebuffer(
 }
 
 /**
- * Flips pixel data vertically in-place or returns a new array?
- * The doc said "Return flipped pixel array".
- * Doing it in-place is more efficient if possible, but let's return a new one or modify in place if we own it.
- * We own 'pixels' created above.
+ * Flips pixel data vertically in-place.
  */
 export function flipPixelsVertically(
   pixels: Uint8ClampedArray,

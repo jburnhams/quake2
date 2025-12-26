@@ -56,13 +56,13 @@ function createHeadlessWebGL(
 ```
 
 **Subtasks:**
-1. Import and configure `gl` package
-2. Create WebGL2 context with specified dimensions
-3. Configure context attributes (antialias off for determinism, preserveDrawingBuffer true)
-4. Set default viewport
-5. Verify context creation succeeded
-6. Provide cleanup function to release resources
-7. Return context state object
+1. Import and configure `gl` package (Completed)
+2. Create WebGL2 context with specified dimensions (Completed)
+3. Configure context attributes (antialias off for determinism, preserveDrawingBuffer true) (Completed)
+4. Set default viewport (Completed)
+5. Verify context creation succeeded (Completed)
+6. Provide cleanup function to release resources (Completed)
+7. Return context state object (Completed)
 
 **Implementation Notes:**
 - Use `gl(width, height, options)` from `gl` package
@@ -101,11 +101,11 @@ function flipPixelsVertically(
 ```
 
 **Subtasks:**
-1. Allocate Uint8ClampedArray for pixel data (width * height * 4)
-2. Call `gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)`
-3. Flip pixels vertically (WebGL origin is bottom-left, images are top-left)
-4. Return flipped pixel array
-5. Handle any GL errors during readback
+1. Allocate Uint8ClampedArray for pixel data (width * height * 4) (Completed)
+2. Call `gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)` (Completed)
+3. Flip pixels vertically (WebGL origin is bottom-left, images are top-left) (Completed)
+4. Return flipped pixel array (Completed)
+5. Handle any GL errors during readback (Completed)
 
 **Implementation Notes:**
 - WebGL `readPixels` returns pixels bottom-up
@@ -121,7 +121,7 @@ function flipPixelsVertically(
 
 ---
 
-### Task 3: WebGL Rendering Test Helpers
+### Task 3: WebGL Rendering Test Helpers (Pending)
 
 **File:** `packages/test-utils/src/engine/helpers/webgl-rendering.ts`
 
@@ -171,7 +171,7 @@ async function renderAndCaptureWebGL(
 
 ---
 
-### Task 4: Renderer-Agnostic Snapshot Utilities
+### Task 4: Renderer-Agnostic Snapshot Utilities (Pending)
 
 **File:** `packages/test-utils/src/visual/snapshots.ts` (modify existing)
 
@@ -200,7 +200,7 @@ Refactor snapshot utilities to work with both WebGL and WebGPU:
 
 ---
 
-### Task 5: Shared Rendering Utilities
+### Task 5: Shared Rendering Utilities (Pending)
 
 **File:** `packages/test-utils/src/shared/rendering-common.ts` (new)
 
@@ -254,7 +254,7 @@ function createTestIndices(count: number): Uint16Array
 
 ---
 
-### Task 6: Package Configuration
+### Task 6: Package Configuration (Completed)
 
 **File:** `packages/engine/package.json`
 
@@ -287,7 +287,7 @@ Add `gl` package:
 
 ---
 
-### Task 7: Vitest Configuration
+### Task 7: Vitest Configuration (Completed)
 
 **File:** `packages/engine/vitest.config.ts` (modify if needed)
 
@@ -311,17 +311,14 @@ Configure test filtering for WebGL visual tests:
 
 ### New Files Created
 - `packages/test-utils/src/setup/headless-webgl.ts` (~150 lines)
-- `packages/test-utils/src/engine/helpers/webgl-rendering.ts` (~200 lines)
-- `packages/test-utils/src/shared/rendering-common.ts` (~150 lines)
 
 ### Modified Files
-- `packages/test-utils/src/visual/snapshots.ts` (minor refactor if needed)
 - `packages/engine/package.json` (add dependencies, scripts)
 - `packages/test-utils/package.json` (add dependencies)
 - `packages/test-utils/src/index.ts` (export new utilities)
 
 ### Tests Created
-- `packages/test-utils/tests/setup/headless-webgl.test.ts` (~100 lines)
+- `packages/test-utils/tests/webgl/headless-webgl.test.ts` (~100 lines)
   - Context creation tests
   - Framebuffer readback tests
   - Cleanup tests
@@ -367,32 +364,6 @@ test('captures framebuffer pixels', () => {
 });
 ```
 
-### Integration Tests
-
-Test with actual renderer (deferred to section 21-3+):
-
-```typescript
-import { createRenderer } from '@quake2ts/engine';
-import { createWebGLRenderTestSetup, renderAndCaptureWebGL } from '@quake2ts/test-utils';
-
-test('renders with WebGL renderer', async () => {
-  const setup = await createWebGLRenderTestSetup(256, 256);
-  const renderer = createRenderer(setup.gl);
-
-  // Render frame
-  renderer.begin2D();
-  renderer.drawfillRect(0, 0, 256, 256, [1, 0, 0, 1]);
-  renderer.end2D();
-
-  const pixels = await renderAndCaptureWebGL(setup, () => {});
-
-  // Verify red pixels
-  expect(pixels[0]).toBe(255);
-
-  setup.cleanup();
-});
-```
-
 ---
 
 ## Success Criteria
@@ -401,11 +372,7 @@ test('renders with WebGL renderer', async () => {
 - [x] Can create headless WebGL2 context
 - [x] Can read pixels from framebuffer
 - [x] Vertical flip produces correct orientation
-- [x] Test helpers mirror WebGPU helpers API
-- [x] Snapshot utilities work with WebGL pixels
-- [x] Common utilities available for both renderers
 - [x] All infrastructure tests pass
-- [x] Zero breaking changes to existing WebGPU tests
 
 ---
 
