@@ -147,8 +147,20 @@ Integrate sprite renderer into main renderer:
 - [x] All methods implement IRenderer interface correctly
 - [x] Texture caching works (registerPic/registerTexture)
 - [x] 2D drawing methods integrate with sprite renderer
-- [x] Unit tests pass (57/57 tests passing)
-- [x] Integration tests for 2D rendering added (6 tests: drawPic, drawfillRect, color tinting, layering, clear color, begin2D/end2D boundaries)
+- [x] All unit tests passing (731/731 total, 19/19 WebGPU tests)
+- [x] Visual regression tests for 2D rendering with baseline PNGs
+
+**Visual Tests Created:**
+- `tests/webgpu/visual/2d-renderer.test.ts` - 5 comprehensive visual tests:
+  - drawfillRect - solid blue rectangle
+  - drawPic - textured quad with checkerboard pattern
+  - drawPic with color tint - green color modulation
+  - Layered rendering with alpha blending
+  - Batched rectangles (4 colored squares)
+- Baseline PNGs stored in `tests/webgpu/visual/__snapshots__/baselines/`
+- Tests use full WebGPURenderer API for realistic integration testing
+- Visual regression framework with pixel-level comparison
+- README guide for writing future visual tests
 
 **Implementation Notes:**
 - WebGPURenderer extends IRenderer interface for full API compatibility
@@ -158,13 +170,13 @@ Integrate sprite renderer into main renderer:
 - Font rendering requires font texture to be loaded (gracefully skips if not loaded)
 - Stub methods added for features to be implemented in later sections (collision vis, debug rendering, particle system, highlighting, render settings, instanced rendering)
 - White texture created for solid color rendering (1x1 RGBA texture)
-- Integration tests added for visual verification of 2D rendering (skips gracefully if WebGPU not available)
+- WebGPU headless rendering working with mesa-vulkan-drivers (lavapipe)
 
 **Known Limitations:**
 - Entity rendering not yet implemented (TODO for later sections)
 - Performance profiling returns placeholder values
 - Memory tracking returns placeholder values
 - Various render settings (brightness, gamma, etc.) are stubs
-- Integration tests not yet written (would require full rendering pipeline)
+- Font rendering (drawString) not yet visually tested (no font texture in tests)
 
 **Next Section:** [20-7: Skybox Pipeline](section-20-7.md)
