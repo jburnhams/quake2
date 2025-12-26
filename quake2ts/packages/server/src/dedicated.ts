@@ -53,6 +53,7 @@ export interface ServerOptions {
     deathmatch?: boolean;
     port?: number;
     transport?: NetworkTransport;
+    floodLimit?: number;
 }
 
 export class DedicatedServer implements GameEngine {
@@ -80,6 +81,7 @@ export class DedicatedServer implements GameEngine {
             port: 27910,
             maxPlayers: DEFAULT_MAX_CLIENTS,
             deathmatch: true,
+            floodLimit: 200,
             ...options
         };
 
@@ -875,7 +877,8 @@ export class DedicatedServer implements GameEngine {
                     client.commandCount = 0;
                 }
 
-                if (client.commandCount > 200) {
+                const limit = this.options.floodLimit ?? 200;
+                if (client.commandCount > limit) {
                      console.warn(`Client ${client.index} kicked for command flooding (count: ${client.commandCount})`);
                      this.dropClient(client);
                      continue;

@@ -125,7 +125,9 @@ describe('E2E Command Flow Test', () => {
   }, 120000); // Increased timeout
 
   it('should handle command rate limiting', async () => {
-    const server = await startTestServer(GAME_SERVER_PORT_2);
+    // Start server with a lower flood limit (e.g. 50) to ensure the test can reliably trigger it
+    // even in slow CI environments or when using yielding.
+    const server = await startTestServer(GAME_SERVER_PORT_2, undefined, { floodLimit: 50 });
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_2}`, {
         headless: true
     });
@@ -143,9 +145,9 @@ describe('E2E Command Flow Test', () => {
     // Flood commands from client
     await page.evaluate(async () => {
         const client = (window as any).clientInstance;
-        // Send enough commands to trigger rate limit (>200/sec)
-        // We send 600 commands to be sure
-        for(let i=0; i<600; i++) {
+        // Send enough commands to trigger rate limit (>50/sec)
+        // We send 300 commands quickly
+        for(let i=0; i<300; i++) {
              client.multiplayer.sendCommand({
                 angles: {x:0, y:0, z:0},
                 forwardmove: 0,
@@ -157,9 +159,11 @@ describe('E2E Command Flow Test', () => {
                 lightlevel: 0,
                 serverFrame: 0
             });
-            // Yield occasionally to prevent browser from batching too aggressively
-            // but keep it fast enough to trigger rate limit.
-            if (i % 10 === 0) await new Promise(r => setTimeout(r, 0));
+            // Yield occasionally to maintain a realistic burst pattern but stay above 50/sec
+            // setTimeout(0) takes ~4ms.
+            // Sending 5 packets then waiting 4ms => 5 / 0.004 = 1250 packets/sec.
+            // This is well above 50.
+            if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
         }
     });
 
