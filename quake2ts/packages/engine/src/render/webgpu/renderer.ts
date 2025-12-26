@@ -1,5 +1,6 @@
 import { FrameRenderer, FrameRenderOptions, FrameRenderStats } from './frame.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
+import { SkyboxPipeline } from './pipelines/skybox.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IRenderer, Pic } from '../interface.js';
@@ -26,6 +27,7 @@ export interface WebGPURenderer extends IRenderer {
   // Pipeline access (for testing/debug)
   readonly pipelines: {
     readonly sprite: SpriteRenderer;
+    readonly skybox: SkyboxPipeline;
   };
 }
 
@@ -51,6 +53,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     private frameRenderer: FrameRenderer,
     public readonly pipelines: {
         sprite: SpriteRenderer;
+        skybox: SkyboxPipeline;
     }
   ) {
     // Create 1x1 white texture for solid color rendering
@@ -400,6 +403,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
   dispose(): void {
     // Destroy pipelines
     this.pipelines.sprite.destroy();
+    this.pipelines.skybox.destroy();
 
     // Destroy cached textures
     for (const texture of this.picCache.values()) {
@@ -427,10 +431,12 @@ export async function createWebGPURenderer(
 
   // Initialize Pipelines
   const spriteRenderer = new SpriteRenderer(context.device, context.format);
+  const skyboxPipeline = new SkyboxPipeline(context.device, context.format);
 
   // Registry of pipelines
   const pipelines = {
-    sprite: spriteRenderer
+    sprite: spriteRenderer,
+    skybox: skyboxPipeline
   };
 
   // Create Frame Renderer

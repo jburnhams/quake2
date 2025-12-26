@@ -1,5 +1,7 @@
-import { Texture2D } from './resources.js';
+import { Texture2D, TextureCubeMap } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
+import { SkyboxPipeline } from './pipelines/skybox.js';
+import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { WebGPUContextState } from './context.js';
 import { mat4 } from 'gl-matrix';
@@ -24,8 +26,14 @@ export interface RenderModeConfig {
   readonly generateRandomColor?: boolean;
 }
 
+export interface SkyRenderState {
+  readonly scrollSpeeds?: readonly [number, number];
+  readonly cubemap?: TextureCubeMap;
+}
+
 export interface FrameRenderOptions {
   readonly camera: Camera;
+  readonly sky?: SkyRenderState;
   readonly timeSeconds?: number;
   readonly deltaTime?: number;
   readonly clearColor?: readonly [number, number, number, number];
@@ -65,7 +73,8 @@ export class FrameRenderer {
     private context: WebGPUContextState,
     private pipelines: {
       sprite: SpriteRenderer;
-      // Future pipelines: bsp, skybox, md2, etc.
+      skybox: SkyboxPipeline;
+      // Future pipelines: bsp, md2, etc.
     }
   ) {}
 
@@ -221,8 +230,21 @@ export class FrameRenderer {
 
     const opaquePass = commandEncoder.beginRenderPass(opaquePassDescriptor);
 
-    // Placeholder: Render Skybox
-    // this.pipelines.skybox.draw(opaquePass, ...);
+    // Render Skybox
+    if (options.sky && options.sky.cubemap) {
+        const viewNoTranslation = removeViewTranslation(options.camera.viewMatrix);
+        const skyViewProjection = mat4.create();
+        mat4.multiply(skyViewProjection, options.camera.projectionMatrix, viewNoTranslation);
+
+        const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
+
+        this.pipelines.skybox.draw(opaquePass, {
+            viewProjection: skyViewProjection as Float32Array,
+            scroll,
+            cubemap: options.sky.cubemap
+        });
+        stats.skyDrawn = true;
+    }
 
     // Placeholder: Render BSP Opaque
     // this.pipelines.bsp.drawOpaque(opaquePass, ...);

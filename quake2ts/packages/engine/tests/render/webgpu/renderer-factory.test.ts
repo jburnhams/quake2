@@ -14,6 +14,7 @@ const mockGpu = {
           setPipeline: vi.fn(),
           setVertexBuffer: vi.fn(),
           setIndexBuffer: vi.fn(),
+          draw: vi.fn(),
           drawIndexed: vi.fn(),
         })),
         finish: vi.fn(),
@@ -24,10 +25,14 @@ const mockGpu = {
       })),
       createPipelineLayout: vi.fn(() => ({})),
       createBindGroupLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({
+        getBindGroupLayout: vi.fn(() => ({})),
+      })),
       createShaderModule: vi.fn(() => ({})),
-      createBuffer: vi.fn(() => ({
+      createBuffer: vi.fn((descriptor: any) => ({
         destroy: vi.fn(),
+        getMappedRange: vi.fn(() => new ArrayBuffer(descriptor.size)),
+        unmap: vi.fn(),
       })),
       createBindGroup: vi.fn(() => ({})),
       createSampler: vi.fn(() => ({})),
@@ -49,7 +54,7 @@ const mockGpu = {
   gpu: mockGpu
 };
 
-// Mock GPUTextureUsage/BufferUsage if needed (likely handled by previous test fix)
+// Mock GPUTextureUsage/BufferUsage if needed
 if (typeof GPUTextureUsage === 'undefined') {
   (global as any).GPUTextureUsage = {
     COPY_SRC: 0x01,
@@ -88,7 +93,7 @@ describe('WebGPURenderer Integration (Mocked)', () => {
     expect(renderer).toBeDefined();
     expect(renderer.type).toBe('webgpu');
 
-    const camera = new Camera(mat4.create());
+    const camera = new Camera(90, 1.0);
     // renderFrame returns void per IRenderer interface
     renderer.renderFrame({
       camera,
