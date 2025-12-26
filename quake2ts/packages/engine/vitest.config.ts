@@ -13,13 +13,13 @@ const exclude = [
   '**/node_modules/**',
   '**/dist/**',
   // Exclude webgpu specific tests from standard runs
-  ...((!isWebGPU) ? ['**/webgpu/**'] : []),
+  ...((!isWebGPU) ? ['**/webgpu/**/*.test.ts'] : []),
   // Exclude integration tests from unit tests
   ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
 ];
 
 const include = isWebGPU
-  ? ['**/webgpu/**']
+  ? ['**/webgpu/**/*.test.ts']
   : isIntegration
     ? ['**/integration/**', '**/*integration*', '**/performance/**']
     : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
