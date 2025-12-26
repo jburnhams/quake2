@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
-import { ZERO_VEC3 } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createTraceMock, ZERO_VEC3 } from '@quake2ts/test-utils';
 
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {
@@ -28,12 +27,10 @@ describe('createGame', () => {
     // to match the original test's assumption that movement succeeds fully.
     const { imports, engine } = createGameImportsAndEngine({
       engine: {
-        trace: vi.fn((start, end) => ({
-          start,
-          end,
+        trace: vi.fn((start, end) => createTraceMock({
           fraction: 1,
-          endpos: end // Ensure endpos is returned as the target
-        })) as any
+          endpos: end
+        }))
       }
     });
 
