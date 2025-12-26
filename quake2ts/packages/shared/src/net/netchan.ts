@@ -223,7 +223,7 @@ export class NetChan {
    * Returns the payload data (reliable + unreliable) to be processed, or null if discarded
    */
   process(packet: Uint8Array): Uint8Array | null {
-    if (packet.length < NetChan.PACKET_HEADER) {
+    if (packet.length < 4) {
       return null;
     }
 
@@ -231,6 +231,16 @@ export class NetChan {
 
     const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
     const sequence = view.getUint32(0, true);
+
+    // Handle connectionless packet (sequence -1)
+    if (sequence === 0xFFFFFFFF) {
+        return packet.subarray(4);
+    }
+
+    if (packet.length < NetChan.PACKET_HEADER) {
+        return null;
+    }
+
     const ack = view.getUint32(4, true);
     const qport = view.getUint16(8, true);
 
