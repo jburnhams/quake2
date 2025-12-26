@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import { createReadStream, createWriteStream, existsSync } from 'fs';
 import path from 'path';
 import { RenderTestSetup, renderAndCapture } from '../engine/helpers/webgpu-rendering.js';
+import { WebGLRenderTestSetup, renderAndCaptureWebGL } from '../engine/helpers/webgl-rendering.js';
 
 export interface CaptureOptions {
   width: number;
@@ -204,6 +205,10 @@ export function getSnapshotPath(name: string, type: 'baseline' | 'actual' | 'dif
     return path.join(snapshotDir, dirMap[type], `${name}.png`);
 }
 
+/**
+ * Expects a snapshot to match the baseline.
+ * Renderer-agnostic: accepts raw pixel data (Uint8ClampedArray).
+ */
 export async function expectSnapshot(
   pixels: Uint8ClampedArray,
   options: SnapshotTestOptions
@@ -279,12 +284,31 @@ export async function expectSnapshot(
     }
 }
 
+/**
+ * WebGPU Helper: Renders and compares snapshot.
+ */
 export async function renderAndExpectSnapshot(
   setup: RenderTestSetup,
   renderFn: (pass: GPURenderPassEncoder) => void,
   options: Omit<SnapshotTestOptions, 'width' | 'height'>
 ): Promise<void> {
     const pixels = await renderAndCapture(setup, renderFn);
+    await expectSnapshot(pixels, {
+        ...options,
+        width: setup.width,
+        height: setup.height
+    });
+}
+
+/**
+ * WebGL Helper: Renders and compares snapshot.
+ */
+export async function renderAndExpectSnapshotWebGL(
+  setup: WebGLRenderTestSetup,
+  renderFn: (gl: WebGL2RenderingContext) => void,
+  options: Omit<SnapshotTestOptions, 'width' | 'height'>
+): Promise<void> {
+    const pixels = await renderAndCaptureWebGL(setup, renderFn);
     await expectSnapshot(pixels, {
         ...options,
         width: setup.width,
