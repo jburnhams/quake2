@@ -38,7 +38,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
 
     function visit(node: ts.Node) {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-        if (node.expression.text === 'test') {
+        if (node.expression.text === 'test' || node.expression.text === 'it') {
           // Found a test('name', ...) call
           const testNameArg = node.arguments[0];
           if (ts.isStringLiteral(testNameArg)) {
