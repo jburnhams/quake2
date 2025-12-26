@@ -3,6 +3,7 @@ import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type Enti
 import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
+import { createGame } from '@quake2ts/game';
 
 // Re-export collision helpers from shared collision utility
 export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock } from '../shared/collision.js';
@@ -30,8 +31,9 @@ export interface MockGame {
 
 export interface TestContext extends SpawnContext {
   entities: EntitySystem;
-  game: MockGame;
+  game: any; // ReturnType<typeof createGame> or MockGame;
   engine: MockEngine;
+  imports: any;
 }
 
 // -- Factories --
@@ -72,15 +74,20 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
   return { game, spawnRegistry };
 };
 
+/**
+ * Creates a test context with a fully mocked EntitySystem and Game.
+ * Use this for isolated unit tests that don't need real engine/game logic logic.
+ */
 export function createTestContext(options?: { seed?: number, initialEntities?: Entity[] }): TestContext {
   const engine = createMockEngine();
   const seed = options?.seed ?? 12345;
   const { game, spawnRegistry } = createMockGame(seed);
 
-  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
+  const traceFn = vi.fn((start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number) =>
     createTraceMock({
       endpos: end,
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+      surfaceFlags: 0
     })
   );
 
@@ -197,6 +204,62 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     entities,
     game,
     engine,
+    imports: entities.imports,
+    health_multiplier: 1,
+    warn: vi.fn(),
+    free: vi.fn(),
+    precacheModel: vi.fn(),
+    precacheSound: vi.fn(),
+    precacheImage: vi.fn(),
+  } as unknown as TestContext;
+}
+
+/**
+ * Creates a test context with a REAL Game and EntitySystem instance.
+ * Use this for integration tests or logic that relies on internal engine mechanics (like physics, weapon logic).
+ */
+export function createRealGameContext(options?: { seed?: number, initialEntities?: Entity[], gravity?: Vec3, deathmatch?: boolean }): TestContext {
+  const engine = createMockEngine();
+  const seed = options?.seed ?? 12345;
+  const gravity = options?.gravity ?? { x: 0, y: 0, z: -800 };
+  const deathmatch = options?.deathmatch ?? false;
+
+  const traceFn = vi.fn((start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number) =>
+    createTraceMock({
+      endpos: end,
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+      surfaceFlags: 0
+    })
+  );
+
+  const imports = {
+    trace: traceFn,
+    pointcontents: vi.fn(() => 0),
+    linkentity: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    configstring: vi.fn(),
+    serverCommand: vi.fn()
+  };
+
+  // Create REAL Game and EntitySystem
+  const game = createGame(imports, engine as any, { gravity, deathmatch, random: createRandomGenerator({ seed }) });
+  const entities = game.entities;
+
+  if (options?.initialEntities) {
+      options.initialEntities.forEach(ent => {
+          const newEnt = entities.spawn();
+          Object.assign(newEnt, ent);
+          entities.finalizeSpawn(newEnt);
+      });
+  }
+
+  return {
+    keyValues: {},
+    entities,
+    game,
+    engine,
+    imports,
     health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),
@@ -247,6 +310,14 @@ export function createEntity(): Entity {
 export function spawnEntity(system: EntitySystem, data: Partial<Entity>): Entity {
   const ent = system.spawn();
   Object.assign(ent, data);
+  // Important: If the factory set classname, we should ensure the system knows about it if we care about registration
+  // But strictly speaking spawn() just gives us a slot.
+
+  // Check if we need to link it
+  if (ent.inUse && system.finalizeSpawn) {
+      system.finalizeSpawn(ent);
+  }
+
   return ent;
 }
 
@@ -290,9 +361,10 @@ export function createGameImportsAndEngine(overrides?: {
     startsolid: false,
     plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
     ent: null,
+    surfaceFlags: 0,
   };
 
-  const defaultTrace = vi.fn().mockReturnValue(defaultTraceResult);
+  const defaultTrace = vi.fn((start: Vec3, mins: Vec3 | null, maxs: Vec3 | null, end: Vec3, passent: Entity | null, contentmask: number) => defaultTraceResult);
 
   const imports = {
     trace: defaultTrace,
