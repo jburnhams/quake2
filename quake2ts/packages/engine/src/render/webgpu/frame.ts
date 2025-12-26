@@ -58,6 +58,9 @@ export class FrameRenderer {
   private lastHeight = 0;
   private lastFrameTime = 0;
 
+  // Current frame context (available during frame rendering)
+  private currentFrameContext: FrameContext | null = null;
+
   constructor(
     private context: WebGPUContextState,
     private pipelines: {
@@ -158,6 +161,26 @@ export class FrameRenderer {
     };
   }
 
+  /**
+   * Begin 2D rendering pass. Called by WebGPURenderer.begin2D()
+   */
+  begin2DPass(): void {
+    if (!this.currentFrameContext) {
+      throw new Error('begin2DPass called outside of renderFrame');
+    }
+
+    const { commandEncoder, renderTarget, width, height } = this.currentFrameContext;
+    this.pipelines.sprite.setProjection(width, height);
+    this.pipelines.sprite.begin(commandEncoder, renderTarget);
+  }
+
+  /**
+   * End 2D rendering pass. Called by WebGPURenderer.end2D()
+   */
+  end2DPass(): void {
+    this.pipelines.sprite.end();
+  }
+
   renderFrame(options: FrameRenderOptions): FrameRenderStats {
     const now = performance.now();
     const fps = this.lastFrameTime > 0 ? 1000 / (now - this.lastFrameTime) : 0;
@@ -174,6 +197,7 @@ export class FrameRenderer {
     };
 
     const frameCtx = this.beginFrame();
+    this.currentFrameContext = frameCtx; // Store for 2D rendering
     const { commandEncoder, renderTarget, depthTexture } = frameCtx;
     const { clearColor = [0, 0, 0, 1] } = options;
 
@@ -249,18 +273,18 @@ export class FrameRenderer {
     }
 
     // --- Pass 4: 2D / HUD ---
-    // Uses separate pipeline that manages its own pass (loading previous content)
-    this.pipelines.sprite.setProjection(frameCtx.width, frameCtx.height);
-    this.pipelines.sprite.begin(commandEncoder, renderTarget);
-
+    // The onDraw2D callback should call renderer.begin2D() which will
+    // set up the sprite pipeline and projection
+    // Ref: WebGL renderer.ts:605-608
     if (options.onDraw2D) {
         options.onDraw2D();
     }
 
-    this.pipelines.sprite.end();
-
     // Finalize
     this.context.device.queue.submit([commandEncoder.finish()]);
+
+    // Clear frame context
+    this.currentFrameContext = null;
 
     return stats;
   }
