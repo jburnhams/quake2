@@ -3,7 +3,7 @@ import { ai_stand, ai_walk, ai_run, ai_charge } from '../../src/ai/movement.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AIFlags } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import * as targeting from '../../src/ai/targeting.js';
 import * as perception from '../../src/ai/perception.js';
 
@@ -22,16 +22,12 @@ describe('AI Movement', () => {
     });
 
     // Setup self (monster)
-    // We need to cast the result of factories to Entity because they return Partial<Entity>
-    const monsterData = createMonsterEntityFactory('monster_test', {
+    self = spawnEntity(context, createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 },
         angles: { x: 0, y: 0, z: 0 },
         movetype: MoveType.Step,
         solid: Solid.Bbox,
-    });
-    // Create a real entity and assign properties to ensure methods exist
-    self = context.spawn();
-    Object.assign(self, monsterData);
+    }));
 
     // Add fly flag
     self.flags |= EntityFlags.Fly; // Allow movement without ground check for simplicity
@@ -41,13 +37,11 @@ describe('AI Movement', () => {
     self.yaw_speed = 200; // Fast enough to turn in one frame
 
     // Setup enemy
-    const playerData = createPlayerEntityFactory({
+    enemy = spawnEntity(context, createPlayerEntityFactory({
         origin: { x: 200, y: 0, z: 0 },
-        classname: 'player'
-    });
-    enemy = context.spawn();
-    Object.assign(enemy, playerData);
-    enemy.inUse = true;
+        classname: 'player',
+        inUse: true
+    }));
 
     // Mock external dependencies
     vi.spyOn(targeting, 'findTarget').mockReturnValue(false);
