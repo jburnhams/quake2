@@ -1,47 +1,78 @@
 # WebGL Visual Tests
 
-This directory contains visual regression tests for the WebGL renderer. These tests render frames headlessly using the production WebGL renderer and compare them against baseline images to ensure visual consistency.
+This directory contains visual regression tests for the WebGL renderer. These tests render frames headlessly using **Playwright** (running Chromium in headless mode) and compare them against baseline images to ensure visual consistency.
 
-## Overview
+## Methodology
 
-Unlike the WebGPU visual tests which require a GPU or software emulation (SwiftShader), the WebGL tests use `headless-gl` (the `gl` npm package) to provide a WebGL 1.0 context in Node.js. This allows them to run on most standard CI runners (like `ubuntu-latest`) without special configuration.
-
-The goal is to verify that the WebGL renderer produces the correct visual output for:
-- 2D HUD elements
-- 3D world geometry (BSP)
-- Models (MD2)
-- Particles and effects
-- Dynamic lighting
+The tests utilize the `testWebGLRenderer` helper from `@quake2ts/test-utils`. This helper:
+1.  Spinning up a local static server to serve the engine assets and build artifacts.
+2.  Launching a headless Chromium instance via Playwright.
+3.  Injecting the test code into the browser context.
+4.  Executing the rendering commands using the actual `Quake2Engine` build.
+5.  Capturing the canvas output and comparing it with baseline snapshots.
 
 ## Prerequisites
 
-The tests run in Node.js (version 20+ recommended). The `gl` package is a native dependency that handles OpenGL calls.
+The tests require Playwright browsers to be installed:
 
-### System Dependencies
-
-**Linux (Ubuntu/Debian):**
-Most CI environments have these, but locally you may need:
 ```bash
-sudo apt-get install -y build-essential libxi-dev libglu1-mesa-dev libglew-dev pkg-config
+pnpm exec playwright install chromium --with-deps
 ```
 
-**macOS / Windows:**
-Typically works out of the box with standard build tools installed.
+(Note: This is automatically handled in CI, but may be needed locally).
 
-## Running Tests Locally
+## Writing New Tests
+
+Create new test files in `packages/engine/tests/webgl/visual/` (or subdirectories like `2d/`) ending in `.test.ts`.
+
+### Basic Pattern
+
+```typescript
+import { test } from 'vitest';
+import { testWebGLRenderer } from '@quake2ts/test-utils';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Setup snapshot directory path relative to this file
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
+
+test('my feature: renders correctly', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(`
+    // 1. Setup scene or clear background
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // 2. Use the renderer API (available as 'renderer' in this scope)
+    renderer.begin2D();
+    renderer.drawfillRect(50, 50, 100, 100, [0, 1, 0, 1]); // Green box
+    renderer.end2D();
+  `, {
+    name: 'my-feature-snapshot',
+    description: 'Description of what is being tested',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+```
+
+### Key Parameters
+- **code**: The first argument to `testWebGLRenderer`. A string containing the JavaScript/TypeScript code to execute **inside the browser context**.
+- **name**: The name of the snapshot file (e.g., `my-feature-snapshot.png`).
+- **width/height**: Dimensions of the framebuffer.
+- **snapshotDir**: Absolute path to where snapshots should be stored/compared.
+
+## Running Tests
 
 Run all WebGL visual tests:
 ```bash
 pnpm test:webgl
 ```
 
-Run in watch mode:
-```bash
-pnpm test:webgl:watch
-```
-
 **Updating Baselines:**
-If you have made intentional changes to the rendering pipeline, you can update the baseline snapshots:
+If intentional changes cause failures, update the baselines:
 ```bash
 pnpm test:webgl:update
 ```
@@ -50,45 +81,8 @@ or
 UPDATE_VISUAL=1 pnpm test:webgl
 ```
 
-## Writing New Tests
+## Debugging
 
-Create new test files in `packages/engine/tests/webgl/visual/` ending in `.test.ts`.
+Since tests run in a headless browser, `console.log` inside the test string will be forwarded to the Node.js console with a `[Browser]` prefix.
 
-Example pattern:
-```typescript
-import { describe, it, expect } from 'vitest';
-import { createWebGLTestContext } from '../setup'; // Helper you will need to create
-
-describe('MyFeature', () => {
-  it('renders correctly', async () => {
-    const { renderer, snapshot } = await createWebGLTestContext();
-
-    // Setup scene
-    // ...
-
-    // Render frame
-    renderer.render(scene, camera);
-
-    // Compare snapshot
-    await expect(snapshot('my-feature')).resolves.toBeMatchingBaseline();
-  });
-});
-```
-
-## Test Organization
-
-- `__snapshots__/`: Contains the baseline PNG images.
-- `__snapshots__/stats/`: Contains JSON results for report generation.
-- `actual/`: (Generated during run) Contains the rendered output.
-- `diff/`: (Generated on failure) Contains the visual difference.
-
-## CI/CD
-
-These tests run automatically on GitHub Actions via the `WebGL Visual Tests` workflow.
-Results are aggregated and deployed to GitHub Pages alongside WebGPU results.
-
-## Debugging Failed Tests
-
-1. Check the `diff` directory in artifacts or local folder.
-2. Red pixels indicate mismatch.
-3. If the change is expected, run with `UPDATE_VISUAL=1`.
+Errors in the browser context will be reported as test failures.
