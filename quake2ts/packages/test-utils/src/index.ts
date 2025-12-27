@@ -47,6 +47,7 @@ export * from './setup/audio.js';
 export * from './engine/helpers/webgpu-rendering.js';
 export * from './engine/helpers/webgl-rendering.js';
 export * from './engine/helpers/pipeline-test-template.js';
+export * from './engine/helpers/textures.js';
 
 // Client Mocks
 export * from './client/mocks/input.js';

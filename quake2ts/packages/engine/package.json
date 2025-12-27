@@ -60,6 +60,7 @@
     "@types/node": "^25.0.3",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
+    "gl": "^8.1.6",
     "gl-matrix": "^3.4.4",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
