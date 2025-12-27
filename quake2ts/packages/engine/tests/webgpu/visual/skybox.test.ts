@@ -135,10 +135,10 @@ describe('Skybox Pipeline', () => {
       camera.setAspectRatio(1.0);
 
       // Look at a corner
-      // Yaw 45 (Left), Pitch -20 (Up)
-      // Adjusted pitch to ensure all three faces (Top, Front, Right) are visible
+      // We look at vector (10, 10, 10) which corresponds to Forward, Left, Up
+      // This should center the view on the corner where three faces meet
       camera.setPosition(0, 0, 0);
-      camera.setRotation(-20, 45, 0);
+      camera.lookAt([10, 10, 10]);
 
       renderer.renderFrame({
           camera,
