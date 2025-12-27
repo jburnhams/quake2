@@ -201,16 +201,18 @@ export function createGame(
 
   const wrappedLinkEntity = (ent: Entity) => {
     // Game-side logic: update AABB from origin/mins/maxs
-    ent.absmin = {
-      x: ent.origin.x + ent.mins.x,
-      y: ent.origin.y + ent.mins.y,
-      z: ent.origin.z + ent.mins.z,
-    };
-    ent.absmax = {
-      x: ent.origin.x + ent.maxs.x,
-      y: ent.origin.y + ent.maxs.y,
-      z: ent.origin.z + ent.maxs.z,
-    };
+    if (ent.mins && ent.maxs && ent.origin) {
+      ent.absmin = {
+        x: ent.origin.x + ent.mins.x,
+        y: ent.origin.y + ent.mins.y,
+        z: ent.origin.z + ent.mins.z,
+      };
+      ent.absmax = {
+        x: ent.origin.x + ent.maxs.x,
+        y: ent.origin.y + ent.maxs.y,
+        z: ent.origin.z + ent.maxs.z,
+      };
+    }
 
     // Call engine linkentity if provided
     if (linkentity) {
