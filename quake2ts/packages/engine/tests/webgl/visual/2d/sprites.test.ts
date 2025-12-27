@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('sprite: textured quad - checkerboard', async () => {
+test('sprite: textured quad - checkerboard', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create checkerboard texture (128x128, 16px checker size, red/black)
     const texWidth = 128;
@@ -111,9 +111,9 @@ test('sprite: textured quad - checkerboard', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('sprite: simple rendering', async () => {
+test('renderer: drawPic', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create simple 32x32 green/blue checkerboard texture
     const texWidth = 32;
@@ -213,9 +213,9 @@ test('sprite: simple rendering', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('sprite: alpha blending', async () => {
+test('sprite: alpha blending', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Semi-transparent blue texture
     const texWidth = 128;
@@ -314,9 +314,9 @@ test('sprite: alpha blending', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('sprite: batch rendering', async () => {
+test('sprite: batch rendering', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Solid red texture
     const texWidth = 64;
@@ -446,4 +446,4 @@ test('sprite: batch rendering', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});

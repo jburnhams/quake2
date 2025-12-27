@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('combined: red background in single evaluate', async () => {
+test('renderer: 2d pass', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Clear to red
     gl.clearColor(1, 0, 0, 1);
@@ -19,4 +19,4 @@ test('combined: red background in single evaluate', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});

@@ -78,9 +78,9 @@ test('ui: filled rectangle - solid color', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('ui: multiple rectangles - overlapping', async () => {
+test('ui: multiple rectangles - overlapping', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     const vertexShaderSource = [
       '#version 300 es',
@@ -169,9 +169,9 @@ test('ui: multiple rectangles - overlapping', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('ui: rectangle with transparency', async () => {
+test('ui: rectangle with transparency', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     const vertexShaderSource = [
       '#version 300 es',
@@ -270,9 +270,9 @@ test('ui: rectangle with transparency', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('ui: gradient approximation', async () => {
+test('ui: gradient approximation', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     const vertexShaderSource = [
       '#version 300 es',
@@ -340,4 +340,4 @@ test('ui: gradient approximation', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});

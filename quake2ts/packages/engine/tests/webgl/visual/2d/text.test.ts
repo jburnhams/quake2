@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('text: simple string', async () => {
+test('renderer: drawString - basic', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create simple test font texture (16x8 grid of 8x8 characters = 128x64)
     const fontWidth = 128;
@@ -152,9 +152,9 @@ test('text: simple string', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('text: multi-line', async () => {
+test('text: multi-line', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create font texture
     const fontWidth = 128;
@@ -296,9 +296,9 @@ test('text: multi-line', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
 
-test('text: colored', async () => {
+test('text: colored', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create font texture
     const fontWidth = 128;
@@ -443,4 +443,4 @@ test('text: colored', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});
