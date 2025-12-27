@@ -10,27 +10,55 @@ import path from 'path';
 
 // Helper to create test geometry
 function createTestBspGeometry(options: { min: [number, number, number], max: [number, number, number], texture: string }) {
-    // Basic quad or box
-    // Just minimal data to satisfy BspSurfaceGeometry
-    const width = options.max[0] - options.min[0];
-    const height = options.max[1] - options.min[1];
+    const min = options.min;
+    const max = options.max;
 
-    // Create a quad facing Z+ (like a floor) or Y+ (like a wall)
-    // For wall test (X=200), we want YZ plane facing -X?
-    // Let's make it simpler. We just create 2 triangles.
+    // Detect flat axis
+    const dx = max[0] - min[0];
+    const dy = max[1] - min[1];
+    const dz = max[2] - min[2];
 
-    // Vertices: X Y Z U V LmU LmV
-    // We need 8 floats per vertex for interleaved format
-    const vertices = new Float32Array([
-        // Triangle 1
-        options.min[0], options.min[1], options.min[2], 0, 0, 0, 0, 0,
-        options.max[0], options.min[1], options.min[2], 1, 0, 0, 0, 0,
-        options.min[0], options.max[1], options.max[2], 0, 1, 0, 0, 0,
-        // Triangle 2
-        options.max[0], options.min[1], options.min[2], 1, 0, 0, 0, 0,
-        options.max[0], options.max[1], options.max[2], 1, 1, 0, 0, 0,
-        options.min[0], options.max[1], options.max[2], 0, 1, 0, 0, 0,
-    ]);
+    let vertices: Float32Array;
+
+    // We need 8 floats per vertex: x, y, z, u, v, lm_u, lm_v, lm_step
+
+    if (dx < 0.001) {
+        // Flat in X (YZ plane) - e.g. Wall
+        // Normal is +X or -X. Let's assume facing -X (visible from X < wall)
+        vertices = new Float32Array([
+            // Triangle 1
+            min[0], min[1], min[2], 0, 1, 0, 0, 0, // Bottom-Left
+            max[0], min[1], max[2], 0, 0, 0, 0, 0, // Top-Left
+            min[0], max[1], min[2], 1, 1, 0, 0, 0, // Bottom-Right
+            // Triangle 2
+            max[0], min[1], max[2], 0, 0, 0, 0, 0, // Top-Left
+            max[0], max[1], max[2], 1, 0, 0, 0, 0, // Top-Right
+            min[0], max[1], min[2], 1, 1, 0, 0, 0, // Bottom-Right
+        ]);
+    } else if (dy < 0.001) {
+        // Flat in Y (XZ plane)
+        vertices = new Float32Array([
+            min[0], min[1], min[2], 0, 1, 0, 0, 0,
+            min[0], max[1], max[2], 0, 0, 0, 0, 0,
+            max[0], min[1], min[2], 1, 1, 0, 0, 0,
+
+            min[0], max[1], max[2], 0, 0, 0, 0, 0,
+            max[0], max[1], max[2], 1, 0, 0, 0, 0,
+            max[0], min[1], min[2], 1, 1, 0, 0, 0,
+        ]);
+    } else {
+        // Flat in Z (XY plane) - e.g. Floor
+        // Or default generic box logic (just one face for simplicity)
+        vertices = new Float32Array([
+            min[0], min[1], min[2], 0, 0, 0, 0, 0,
+            max[0], min[1], min[2], 1, 0, 0, 0, 0,
+            min[0], max[1], max[2], 0, 1, 0, 0, 0,
+
+            max[0], min[1], min[2], 1, 0, 0, 0, 0,
+            max[0], max[1], max[2], 1, 1, 0, 0, 0,
+            min[0], max[1], max[2], 0, 1, 0, 0, 0,
+        ]);
+    }
 
     // Indices: 0 1 2, 3 4 5
     const indices = new Uint16Array([0, 1, 2, 3, 4, 5]);
@@ -69,8 +97,8 @@ describe('WebGPU Lighting', () => {
             headless: true
         });
         camera = new Camera(800, 600);
-        camera.setPosition(0, -200, 50);
-        camera.setRotation(0, 90, 0); // Look forward (+X)
+        camera.setPosition(0, 0, 100); // Centered Y/Z relative to wall
+        camera.setRotation(0, 0, 0); // Yaw 0 = +X (Look at wall)
     });
 
     // Helper to create a minimal valid BSP map structure
@@ -78,7 +106,7 @@ describe('WebGPU Lighting', () => {
         const plane: BspPlane = { normal: [1, 0, 0], dist: 0, type: 0 };
         const node: BspNode = {
             planeIndex: 0,
-            children: [-1, -1], // Leaf 0 on both sides
+            children: [-1, -1],
             mins: [-1000, -1000, -1000],
             maxs: [1000, 1000, 1000],
             firstFace: 0,
@@ -91,12 +119,11 @@ describe('WebGPU Lighting', () => {
             mins: [-1000, -1000, -1000],
             maxs: [1000, 1000, 1000],
             firstLeafFace: 0,
-            numLeafFaces: facesCount, // Should cover all faces
+            numLeafFaces: facesCount,
             firstLeafBrush: 0,
             numLeafBrushes: 0
         };
 
-        // Create dummy faces to match the surface count
         const faces = [];
         const leafFaces = [];
         for(let i=0; i<facesCount; i++) {
@@ -109,12 +136,11 @@ describe('WebGPU Lighting', () => {
                 styles: [0, 255, 255, 255] as [number, number, number, number],
                 lightOffset: -1
             });
-            leafFaces.push([i]); // Each leafFace list entry
+            leafFaces.push([i]);
         }
 
-        // We need leafLists structure
         const leafLists = {
-            leafFaces: [Array.from({length: facesCount}, (_, i) => i)], // Leaf 0 has all faces
+            leafFaces: [Array.from({length: facesCount}, (_, i) => i)],
             leafBrushes: [[]]
         };
 
@@ -122,8 +148,8 @@ describe('WebGPU Lighting', () => {
             header: { version: 38, lumps: new Map() },
             planes: [plane],
             nodes: [node],
-            leafs: [leaf], // Leaf 0
-            surfaces: [], // Not used directly by traversal, uses 'faces'
+            leafs: [leaf],
+            surfaces: [],
             faces: faces,
             leafLists: leafLists,
             visibility: { numClusters: 1, clusters: [{ pvs: new Uint8Array([255]), phs: new Uint8Array([255]) }] },
@@ -140,16 +166,15 @@ describe('WebGPU Lighting', () => {
             texInfo: [],
             brushes: [],
             brushSides: [],
-
-            // Methods
             pickEntity: () => null,
             findLeaf: () => leaf,
             calculatePVS: () => new Uint8Array([255]),
             getUniqueClassnames: () => []
-        } as unknown as BspMap; // Cast because some fields might be partial or mocks
+        } as unknown as BspMap;
     };
 
     it('lighting-point.png', async () => {
+        // Wall at X=200
         const wall = createTestBspGeometry({
             min: [200, -100, 0],
             max: [200, 100, 200],
@@ -159,6 +184,7 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
+        // Red light near the wall (X=180 is 20 units away)
         const dlights: DLight[] = [{
             origin: { x: 180, y: 0, z: 100 },
             color: { x: 1, y: 0, z: 0 },
@@ -170,9 +196,10 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
-            disableLightmaps: true, // Only dynamic lights
+            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
+            disableLightmaps: true,
             fullbright: false,
-            ambient: 0.1, // Low ambient to contrast light
+            ambient: 0.1,
             timeSeconds: 0
         });
 
@@ -195,6 +222,7 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-multiple.png', async () => {
+        // Same wall
         const wall = createTestBspGeometry({
             min: [200, -100, 0],
             max: [200, 100, 200],
@@ -204,6 +232,7 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
+        // Red on left, Blue on right
         const dlights: DLight[] = [
             {
                 origin: { x: 180, y: -50, z: 100 },
@@ -223,6 +252,7 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
+            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
@@ -248,6 +278,7 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-colored.png', async () => {
+        // Floor at Z=0
         const floor = createTestBspGeometry({
             min: [-100, -100, 0],
             max: [100, 100, 0],
@@ -257,10 +288,12 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
+        // Look down from Z=200
         const cam = new Camera(800, 600);
         cam.setPosition(0, 0, 200);
-        cam.setRotation(90, 0, 0); // Look down
+        cam.setRotation(90, 0, 0); // Pitch 90 = Down
 
+        // Green light in center
         const dlights: DLight[] = [{
             origin: { x: 0, y: 0, z: 50 },
             color: { x: 0, y: 1, z: 0 },
@@ -272,6 +305,7 @@ describe('WebGPU Lighting', () => {
             camera: cam,
             world: { map, surfaces: [floor] },
             dlights,
+            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.0,
