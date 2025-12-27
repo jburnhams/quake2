@@ -11,7 +11,7 @@ import { mat4, vec3, vec4 } from 'gl-matrix';
 import { MAX_DLIGHTS, DLight } from '../../dlight.js';
 import { BspSurfaceGeometry } from '../../bsp.js';
 import { RenderModeConfig } from '../../frame.js';
-import bspShader from '../shaders/bsp.wgsl';
+import bspShader from '../shaders/bsp.wgsl?raw';
 
 // Declare extensions locally for this file
 declare module '../../bsp.js' {
