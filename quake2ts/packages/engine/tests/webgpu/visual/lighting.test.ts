@@ -97,7 +97,8 @@ describe('WebGPU Lighting', () => {
             height: 256,
             headless: true
         });
-        camera = new Camera(800, 600);
+        // Use 256x256 aspect ratio (1.0) to match render target
+        camera = new Camera(256, 256);
         camera.setPosition(0, 0, 100);
         camera.setRotation(0, 0, 0);
     });
@@ -286,7 +287,7 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
-        const cam = new Camera(800, 600);
+        const cam = new Camera(256, 256);
         cam.setPosition(0, 0, 200);
         cam.setRotation(90, 0, 0);
 

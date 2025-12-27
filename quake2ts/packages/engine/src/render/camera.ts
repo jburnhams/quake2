@@ -315,7 +315,12 @@ export class Camera {
     // Rotations are applied in reverse order to the world
     // Quake's axes for rotation are: Z(yaw), Y(pitch), X(roll)
     mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
-    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+
+    // Invert Pitch for View Matrix construction (Positive Pitch is Down in Quake, Up in GL Rotation)
+    // See reasoning: Pitch 90 (Down) needs to rotate World Up (+90 around Y).
+    // Previous code used -pitchRad (-90).
+    mat4.rotateY(rotationQuake, rotationQuake, pitchRad);
+
     mat4.rotateX(rotationQuake, rotationQuake, -rollRad);
 
     // 4. Combine Quake rotation with coordinate transformation
