@@ -20,12 +20,22 @@ describe('Skybox Pipeline', () => {
     }) as WebGPURenderer;
 
     // Create a simple colored cubemap
-    // +X (Right): Red
-    // -X (Left): Cyan
-    // +Y (Top): Green
-    // -Y (Bottom): Magenta
-    // +Z (Front): Blue
-    // -Z (Back): Yellow
+    // We map Quake directions to Cubemap faces so that:
+    // Quake Front (+X) -> GL Back (-Z) -> Face 5
+    // Quake Back (-X) -> GL Front (+Z) -> Face 4
+    // Quake Left (+Y) -> GL Left (-X) -> Face 1
+    // Quake Right (-Y) -> GL Right (+X) -> Face 0
+    // Quake Up (+Z) -> GL Top (+Y) -> Face 2
+    // Quake Down (-Z) -> GL Bottom (-Y) -> Face 3
+
+    // Colors:
+    // Front (+X) = Red
+    // Back (-X) = Cyan
+    // Left (+Y) = Green
+    // Right (-Y) = Magenta
+    // Up (+Z) = Blue
+    // Down (-Z) = Yellow
+
     const size = 64;
     cubemap = new TextureCubeMap(renderer.device, {
         size,
@@ -44,12 +54,18 @@ describe('Skybox Pipeline', () => {
         return data;
     };
 
-    cubemap.uploadFace(0, createColorData(255, 0, 0));     // +X Right (Red)
-    cubemap.uploadFace(1, createColorData(0, 255, 255));   // -X Left (Cyan)
-    cubemap.uploadFace(2, createColorData(0, 255, 0));     // +Y Top (Green)
-    cubemap.uploadFace(3, createColorData(255, 0, 255));   // -Y Bottom (Magenta)
-    cubemap.uploadFace(4, createColorData(0, 0, 255));     // +Z Front (Blue)
-    cubemap.uploadFace(5, createColorData(255, 255, 0));   // -Z Back (Yellow)
+    // Face 0: GL Right (+X) -> Quake Right (-Y) -> Magenta
+    cubemap.uploadFace(0, createColorData(255, 0, 255));
+    // Face 1: GL Left (-X) -> Quake Left (+Y) -> Green
+    cubemap.uploadFace(1, createColorData(0, 255, 0));
+    // Face 2: GL Top (+Y) -> Quake Up (+Z) -> Blue
+    cubemap.uploadFace(2, createColorData(0, 0, 255));
+    // Face 3: GL Bottom (-Y) -> Quake Down (-Z) -> Yellow
+    cubemap.uploadFace(3, createColorData(255, 255, 0));
+    // Face 4: GL Front (+Z) -> Quake Back (-X) -> Cyan
+    cubemap.uploadFace(4, createColorData(0, 255, 255));
+    // Face 5: GL Back (-Z) -> Quake Front (+X) -> Red
+    cubemap.uploadFace(5, createColorData(255, 0, 0));
   });
 
   it('renders skybox front face', async () => {
@@ -57,11 +73,7 @@ describe('Skybox Pipeline', () => {
     camera.setFov(90);
     camera.setAspectRatio(1.0);
 
-    // Look Forward (+X) -> Should see Right face of cubemap (+X)?
-    // Wait, "Right" in cubemap terminology means +X.
-    // Quake X is Forward.
-    // So looking Forward in Quake (+X) should map to +X face of cubemap (Right).
-    // So we expect Red.
+    // Look Forward (+X) -> Should see GL Back (-Z) -> Red
     camera.setPosition(0, 0, 0);
     camera.setRotation(0, 0, 0);
 
@@ -96,11 +108,7 @@ describe('Skybox Pipeline', () => {
       camera.setAspectRatio(1.0);
 
       // Look Up: Pitch -90
-      // Quake Z is Up.
-      // So looking Up should see +Y (Top) face of cubemap?
-      // Wait, Quake Z (Up) -> WebGL Y (Up).
-      // Cubemap +Y is Top.
-      // So we expect Green.
+      // Quake Z is Up. Should see GL Top (+Y) -> Blue
       camera.setPosition(0, 0, 0);
       camera.setRotation(-90, 0, 0);
 
@@ -121,7 +129,7 @@ describe('Skybox Pipeline', () => {
 
       await expectSnapshot(pixels, {
           name: 'skybox_top',
-        description: 'Green skybox face (+Y) visible when looking up.',
+          description: 'Blue skybox face (+Z) visible when looking up.',
           width: 256,
           height: 256,
           updateBaseline,
@@ -129,51 +137,194 @@ describe('Skybox Pipeline', () => {
       });
   });
 
-  const testCases = [
-    { target: [10, 0, 0], name: 'look_forward', desc: 'Forward (+X). Expected: Yellow (-Z Back)' },
-    { target: [-10, 0, 0], name: 'look_back', desc: 'Back (-X). Expected: Blue (+Z Front)' },
-    { target: [0, 10, 0], name: 'look_left', desc: 'Left (+Y). Expected: Cyan (-X Left)' },
-    { target: [0, -10, 0], name: 'look_right', desc: 'Right (-Y). Expected: Red (+X Right)' },
-    { target: [0, 0, 10], name: 'look_up', desc: 'Up (+Z). Expected: Green (+Y Top)' },
-    { target: [0, 0, -10], name: 'look_down', desc: 'Down (-Z). Expected: Magenta (-Y Bottom)' },
+  // Explicitly unrolled test cases for gallery visibility
+  it('renders look_forward', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([10, 0, 0]); // Forward (+X)
 
-    { target: [10, 10, 0], name: 'look_fwd_left', desc: 'Forward-Left (+X +Y). Expected: Yellow/Cyan Vertical Split' },
-    { target: [10, 0, 10], name: 'look_fwd_up', desc: 'Forward-Up (+X +Z). Expected: Yellow/Green Horizontal Split' },
-    { target: [10, 10, 10], name: 'look_corner', desc: 'Corner (+X +Y +Z). Expected: Yellow/Cyan/Green Intersection' },
-  ];
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
 
-  testCases.forEach(conf => {
-    it(`renders ${conf.name}`, async () => {
-        const camera = new Camera();
-        camera.setFov(90);
-        camera.setAspectRatio(1.0);
-        camera.setPosition(0, 0, 0);
-        camera.lookAt(conf.target as [number, number, number]);
+      await expectSnapshot(pixels, {
+          name: 'look_forward',
+          description: 'Forward (+X). Expected: Red (Front)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
 
-        renderer.renderFrame({
-            camera,
-            sky: {
-                cubemap
-            }
-        });
+  it('renders look_back', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([-10, 0, 0]); // Back (-X)
 
-        const frameRenderer = (renderer as any).frameRenderer;
-        const pixels = await captureTexture(
-            renderer.device,
-            frameRenderer.headlessTarget,
-            256,
-            256
-        );
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
 
-        await expectSnapshot(pixels, {
-            name: conf.name,
-            description: conf.desc,
-            width: 256,
-            height: 256,
-            updateBaseline,
-            snapshotDir
-        });
-    });
+      await expectSnapshot(pixels, {
+          name: 'look_back',
+          description: 'Back (-X). Expected: Cyan (Back)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_left', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([0, 10, 0]); // Left (+Y)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_left',
+          description: 'Left (+Y). Expected: Green (Left)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_right', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([0, -10, 0]); // Right (-Y)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_right',
+          description: 'Right (-Y). Expected: Magenta (Right)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_up', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([0, 0, 10]); // Up (+Z)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_up',
+          description: 'Up (+Z). Expected: Blue (Top)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_down', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([0, 0, -10]); // Down (-Z)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_down',
+          description: 'Down (-Z). Expected: Yellow (Bottom)',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_fwd_left', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([10, 10, 0]); // Forward-Left (+X +Y)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_fwd_left',
+          description: 'Forward-Left (+X +Y). Expected: Red/Green Vertical Split',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_fwd_up', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([10, 0, 10]); // Forward-Up (+X +Z)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_fwd_up',
+          description: 'Forward-Up (+X +Z). Expected: Red/Blue Horizontal Split',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
+  });
+
+  it('renders look_corner', async () => {
+      const camera = new Camera();
+      camera.setFov(90);
+      camera.setAspectRatio(1.0);
+      camera.setPosition(0, 0, 0);
+      camera.lookAt([10, 10, 10]); // Corner (+X +Y +Z)
+
+      renderer.renderFrame({ camera, sky: { cubemap } });
+      const frameRenderer = (renderer as any).frameRenderer;
+      const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+      await expectSnapshot(pixels, {
+          name: 'look_corner',
+          description: 'Corner (+X +Y +Z). Expected: Red/Green/Blue Intersection',
+          width: 256,
+          height: 256,
+          updateBaseline,
+          snapshotDir
+      });
   });
 
   it('renders skybox with scrolling', async () => {
