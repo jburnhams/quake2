@@ -368,14 +368,14 @@ If issues arise:
 
 ## Success Criteria
 
-- [ ] CameraState interface defined and documented
-- [ ] Camera.toState() method works correctly
-- [ ] FrameRenderOptions extended safely
-- [ ] Coordinate system documentation complete
-- [ ] 10+ unit tests passing
-- [ ] Zero breaking changes (all existing tests pass)
-- [ ] TypeScript compilation clean
-- [ ] Ready for 22-2 (matrix builders can consume CameraState)
+- [x] CameraState interface defined and documented
+- [x] Camera.toState() method works correctly
+- [x] FrameRenderOptions extended safely
+- [x] Coordinate system documentation complete
+- [x] 10+ unit tests passing
+- [x] Zero breaking changes (all existing tests pass)
+- [x] TypeScript compilation clean
+- [x] Ready for 22-2 (matrix builders can consume CameraState)
 
 ---
 

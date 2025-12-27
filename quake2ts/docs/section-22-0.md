@@ -236,11 +236,11 @@ CameraState (position, angles, FOV - pure data)
 ## Acceptance Criteria
 
 ### Phase 1 Complete
-- [ ] `CameraState` interface defined and documented
+- [x] `CameraState` interface defined and documented
 - [ ] Matrix builders pass unit tests (GL, WebGPU, identity transforms)
 - [ ] Null renderer validates call sequences
 - [ ] Logging renderer outputs human-readable render commands
-- [ ] Zero breaking changes to existing renderers
+- [x] Zero breaking changes to existing renderers
 
 ### Phase 2 Complete
 - [ ] WebGPU skybox renders without double-transform

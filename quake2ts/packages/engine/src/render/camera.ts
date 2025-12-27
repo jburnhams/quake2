@@ -1,6 +1,10 @@
 import { mat4, vec3 } from 'gl-matrix';
 import { DEG2RAD, RAD2DEG } from '@quake2ts/shared';
+import { CameraState as RendererCameraState } from './types/camera.js';
 
+/**
+ * @deprecated Use RendererCameraState for full state, or specific event payload type.
+ */
 export interface CameraState {
   position: vec3;
   angles: vec3;
@@ -108,6 +112,21 @@ export class Camera {
   set aspect(value: number) {
     this._aspect = value;
     this._dirty = true;
+  }
+
+  /**
+   * Export camera state in Quake-space coordinates.
+   * For use with new renderer architecture.
+   */
+  toState(): RendererCameraState {
+    return {
+      position: vec3.clone(this._position),
+      angles: vec3.clone(this._angles),
+      fov: this._fov,
+      aspect: this._aspect,
+      near: this._near,
+      far: this._far
+    };
   }
 
   // API Methods

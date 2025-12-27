@@ -273,4 +273,19 @@ describe('FrameRenderer', () => {
     expect(gl.depthRange).toHaveBeenCalledWith(0, 1);
     expect(stats.viewModelDrawn).toBe(true);
   });
+
+  it('accepts frame options with cameraState (legacy renderer ignores it)', () => {
+    const { renderer } = makeRenderer();
+    const camera = new Camera();
+    const cameraState = camera.toState();
+
+    // Should not throw
+    const stats = renderer.renderFrame({
+      camera,
+      cameraState, // New optional field
+      timeSeconds: 0
+    });
+
+    expect(stats).toBeDefined();
+  });
 });
