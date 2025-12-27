@@ -44,6 +44,7 @@
     "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
     "test:visual:watch": "vitest tests/integration/visual"
   },
+  "_comment_gl": "gl is optional only in test-utils and installed on demand and in the webgl github action",
   "peerDependencies": {
     "@quake2ts/shared": "workspace:*",
     "gl-matrix": "^3.4.4"

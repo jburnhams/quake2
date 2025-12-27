@@ -40,7 +40,8 @@ export function createHeadlessWebGL(
     preserveDrawingBuffer: options.preserveDrawingBuffer ?? true, // Needed for readback
     stencil: true,
     depth: true,
-    alpha: true
+    alpha: true,
+    webgl2: true // Request WebGL 2.0 context for GLSL 3.00 ES support
   });
 
   if (!glContext) {

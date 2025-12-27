@@ -19,6 +19,11 @@ jobs:
         with:
           lfs: true
 
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libxi-dev libglu1-mesa-dev libglew-dev pkg-config xvfb
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -40,7 +45,7 @@ jobs:
       - name: Run WebGL Visual Tests
         env:
           ALWAYS_SAVE_SNAPSHOTS: '1'
-        run: pnpm run test:webgl
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' pnpm run test:webgl
 
       - name: Generate Visual Report
         run: npx tsx packages/tools/src/generate-webgl-report.ts
