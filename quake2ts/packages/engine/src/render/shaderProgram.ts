@@ -9,7 +9,8 @@ function compileShader(gl: WebGL2RenderingContext, type: GLenum, source: string)
     throw new Error('Failed to allocate shader');
   }
 
-  gl.shaderSource(shader, source);
+  // Ensure no leading whitespace/newlines for #version directive
+  gl.shaderSource(shader, source.trim());
   gl.compileShader(shader);
   const ok = gl.getShaderParameter(shader, gl.COMPILE_STATUS) as boolean;
   if (!ok) {

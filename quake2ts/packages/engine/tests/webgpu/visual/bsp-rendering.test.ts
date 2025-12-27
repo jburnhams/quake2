@@ -14,19 +14,22 @@ function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, ind
   // Pos(3), Tex(2), LM(2), Step(1)
   // Interleaved: x, y, z, u, v, lu, lv, step
   const vertices = new Float32Array([
-    // TL
+    // TL (0)
     -10, 10, z,  0, 0,  0, 0,  1,
-    // TR
+    // TR (1)
     10, 10, z,   1, 0,  1, 0,  1,
-    // BR
+    // BR (2)
     10, -10, z,  1, 1,  1, 1,  1,
-    // BL
+    // BL (3)
     -10, -10, z, 0, 1,  0, 1,  1,
   ]);
 
+  // Use CCW winding for front-facing (assuming culling is enabled)
+  // 0(TL) -> 3(BL) -> 2(BR)
+  // 0(TL) -> 2(BR) -> 1(TR)
   const indices = new Uint16Array([
-    0, 1, 2,
-    0, 2, 3
+    0, 3, 2,
+    0, 2, 1
   ]);
 
   const vertexBuffer = new VertexBuffer(device, { size: vertices.byteLength });
@@ -79,7 +82,9 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     const redData = new Uint8Array(4 * 4 * 4).fill(255);
     // Make it checkerboard red/blue
     for(let i=0; i<16; i++) {
-        const isRed = (i % 2) === 0;
+        const x = i % 4;
+        const y = Math.floor(i / 4);
+        const isRed = ((x + y) % 2) === 0;
         redData[i*4] = isRed ? 255 : 0;
         redData[i*4+1] = 0;
         redData[i*4+2] = isRed ? 0 : 255;
@@ -125,7 +130,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
         }
     });
 
-    // Mock geometry object conforming to BspSurfaceGeometry structure used by pipeline
     const mockGeometry = {
         gpuVertexBuffer: vertexBuffer.buffer,
         gpuIndexBuffer: indexBuffer.buffer,
@@ -153,6 +157,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
 
     await expectSnapshot(pixels, {
         name: 'bsp-simple-textured',
+        description: 'A simple textured quad with checkerboard pattern, fullbright enabled.',
         width,
         height,
         snapshotDir,
@@ -254,6 +259,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
 
       await expectSnapshot(pixels, {
           name: 'bsp-lightmapped',
+          description: 'A quad with white diffuse texture modulated by a green split lightmap.',
           width,
           height,
           snapshotDir,
@@ -354,6 +360,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
 
       await expectSnapshot(pixels, {
           name: 'bsp-dynamic-light',
+          description: 'A quad lit by a red dynamic light at the center.',
           width,
           height,
           snapshotDir,
