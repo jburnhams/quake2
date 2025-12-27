@@ -25,7 +25,12 @@ fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var dir = normalize(position);
   dir.x += uniforms.scroll.x;
   dir.y += uniforms.scroll.y;
-  output.direction = dir;
+
+  // Transform from Quake coordinates (Z-up) to WebGL coordinates (Y-up)
+  // Quake Forward (X) -> WebGL Back (-Z)
+  // Quake Left (Y) -> WebGL Left (-X)
+  // Quake Up (Z) -> WebGL Top (Y)
+  output.direction = vec3<f32>(-dir.y, dir.z, -dir.x);
 
   // Calculate position
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);

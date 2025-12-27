@@ -129,6 +129,53 @@ describe('Skybox Pipeline', () => {
       });
   });
 
+  const testCases = [
+    { target: [10, 0, 0], name: 'look_forward', desc: 'Forward (+X). Expected: Yellow (-Z Back)' },
+    { target: [-10, 0, 0], name: 'look_back', desc: 'Back (-X). Expected: Blue (+Z Front)' },
+    { target: [0, 10, 0], name: 'look_left', desc: 'Left (+Y). Expected: Cyan (-X Left)' },
+    { target: [0, -10, 0], name: 'look_right', desc: 'Right (-Y). Expected: Red (+X Right)' },
+    { target: [0, 0, 10], name: 'look_up', desc: 'Up (+Z). Expected: Green (+Y Top)' },
+    { target: [0, 0, -10], name: 'look_down', desc: 'Down (-Z). Expected: Magenta (-Y Bottom)' },
+
+    { target: [10, 10, 0], name: 'look_fwd_left', desc: 'Forward-Left (+X +Y). Expected: Yellow/Cyan Vertical Split' },
+    { target: [10, 0, 10], name: 'look_fwd_up', desc: 'Forward-Up (+X +Z). Expected: Yellow/Green Horizontal Split' },
+    { target: [10, 10, 10], name: 'look_corner', desc: 'Corner (+X +Y +Z). Expected: Yellow/Cyan/Green Intersection' },
+  ];
+
+  testCases.forEach(conf => {
+    it(`renders ${conf.name}`, async () => {
+        const camera = new Camera();
+        camera.setFov(90);
+        camera.setAspectRatio(1.0);
+        camera.setPosition(0, 0, 0);
+        camera.lookAt(conf.target as [number, number, number]);
+
+        renderer.renderFrame({
+            camera,
+            sky: {
+                cubemap
+            }
+        });
+
+        const frameRenderer = (renderer as any).frameRenderer;
+        const pixels = await captureTexture(
+            renderer.device,
+            frameRenderer.headlessTarget,
+            256,
+            256
+        );
+
+        await expectSnapshot(pixels, {
+            name: conf.name,
+            description: conf.desc,
+            width: 256,
+            height: 256,
+            updateBaseline,
+            snapshotDir
+        });
+    });
+  });
+
   it('renders skybox with scrolling', async () => {
       const camera = new Camera();
       camera.setFov(90);
