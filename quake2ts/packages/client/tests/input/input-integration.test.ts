@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { InputController, InputAction } from '../../src/input/controller.js';
 import { InputBindings } from '../../src/input/bindings.js';

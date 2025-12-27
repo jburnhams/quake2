@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
 import { ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '../src/assets/browserIngestion.js';
