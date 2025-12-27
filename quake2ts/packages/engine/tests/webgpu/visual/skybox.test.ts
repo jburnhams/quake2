@@ -129,40 +129,48 @@ describe('Skybox Pipeline', () => {
       });
   });
 
-  it('renders skybox corner', async () => {
-      const camera = new Camera();
-      camera.setFov(90);
-      camera.setAspectRatio(1.0);
+  const debugConfigs = [
+    { p: 0, y: 0, name: 'debug_P0_Y0', desc: 'Forward (Pitch 0, Yaw 0)' },
+    { p: 90, y: 0, name: 'debug_P90_Y0', desc: 'Down (Pitch 90, Yaw 0)' },
+    { p: -90, y: 0, name: 'debug_Pm90_Y0', desc: 'Up (Pitch -90, Yaw 0)' },
+    { p: 0, y: 90, name: 'debug_P0_Y90', desc: 'Left (Pitch 0, Yaw 90)' },
+    { p: 0, y: -90, name: 'debug_P0_Ym90', desc: 'Right (Pitch 0, Yaw -90)' },
+    { p: 45, y: 45, name: 'debug_P45_Y45', desc: 'Corner Down-Left (Pitch 45, Yaw 45)' },
+    { p: -45, y: 45, name: 'debug_Pm45_Y45', desc: 'Corner Up-Left (Pitch -45, Yaw 45)' },
+  ];
 
-      // Look at a corner
-      // Pitch 20 (Down), Yaw 45 (Left)
-      // We look down to see the intersection of Bottom, Front, and Left faces
-      camera.setPosition(0, 0, 0);
-      camera.setRotation(20, 45, 0);
+  debugConfigs.forEach(conf => {
+    it(`renders ${conf.name}`, async () => {
+        const camera = new Camera();
+        camera.setFov(90);
+        camera.setAspectRatio(1.0);
+        camera.setPosition(0, 0, 0);
+        camera.setRotation(conf.p, conf.y, 0);
 
-      renderer.renderFrame({
-          camera,
-          sky: {
-              cubemap
-          }
-      });
+        renderer.renderFrame({
+            camera,
+            sky: {
+                cubemap
+            }
+        });
 
-      const frameRenderer = (renderer as any).frameRenderer;
-      const pixels = await captureTexture(
-          renderer.device,
-          frameRenderer.headlessTarget,
-          256,
-          256
-      );
+        const frameRenderer = (renderer as any).frameRenderer;
+        const pixels = await captureTexture(
+            renderer.device,
+            frameRenderer.headlessTarget,
+            256,
+            256
+        );
 
-      await expectSnapshot(pixels, {
-          name: 'skybox_corner',
-          description: 'Corner view of the skybox showing intersection of three faces.',
-          width: 256,
-          height: 256,
-          updateBaseline,
-          snapshotDir
-      });
+        await expectSnapshot(pixels, {
+            name: conf.name,
+            description: conf.desc,
+            width: 256,
+            height: 256,
+            updateBaseline,
+            snapshotDir
+        });
+    });
   });
 
   it('renders skybox with scrolling', async () => {
