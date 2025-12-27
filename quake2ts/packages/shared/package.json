@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/shared",
-  "version": "0.0.781",
+  "version": "0.0.782",
   "description": "Shared math, physics, and protocol helpers for the Quake II TypeScript port.",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
