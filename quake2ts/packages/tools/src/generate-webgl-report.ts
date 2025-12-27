@@ -72,6 +72,38 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
                  }
             }
 
+            // Check for testWebGLRenderer helper
+            if (ts.isIdentifier(node.expression) && node.expression.text === 'testWebGLRenderer') {
+                 const optionsArg = node.arguments[1];
+                 if (optionsArg && ts.isObjectLiteralExpression(optionsArg)) {
+                     const nameProp = optionsArg.properties.find(p =>
+                        p.name && ts.isIdentifier(p.name) && p.name.text === 'name'
+                     );
+                     let snapshotName = '';
+                     let description = testName;
+
+                     if (nameProp && ts.isPropertyAssignment(nameProp) && ts.isStringLiteral(nameProp.initializer)) {
+                          snapshotName = nameProp.initializer.text;
+                     }
+
+                     const descProp = optionsArg.properties.find(p => p.name && ts.isIdentifier(p.name) && p.name.text === 'description');
+                     if (descProp && ts.isPropertyAssignment(descProp) && ts.isStringLiteral(descProp.initializer)) {
+                          description = descProp.initializer.text;
+                     }
+
+                     if (snapshotName) {
+                          tests.push({
+                             testName,
+                             snapshotName,
+                             file: path.relative(rootDir, filePath),
+                             line,
+                             description,
+                             stats: loadStats(filePath, snapshotName)
+                         });
+                     }
+                 }
+            }
+
             // Keep support for expectSnapshot helpers if used
              if (ts.isIdentifier(node.expression) && node.expression.text === 'expectSnapshot') {
                  const optionsArg = node.arguments[1];
