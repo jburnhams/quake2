@@ -1,3 +1,5 @@
+import { createRequire } from 'module';
+
 export interface HeadlessWebGLOptions {
   width?: number;
   height?: number;
@@ -12,27 +14,42 @@ export interface HeadlessWebGLContext {
   cleanup: () => void;
 }
 
-/**
- * Creates a headless WebGL2 context using the 'gl' package.
- * Note: 'gl' is lazy-loaded to avoid issues in environments where it's not supported/needed.
- */
-export async function createHeadlessWebGL(
+// Use createRequire to load 'gl' dynamically/safely if needed, or just to handle the CommonJS nature better.
+// We also wrap the require in a try-catch or just checking existence if we were worried about load-time failure,
+// but usually 'gl' loads fine and fails at runtime.
+const require = createRequire(import.meta.url);
+
+let headlessGL: any;
+try {
+  headlessGL = require('gl');
+} catch (e) {
+  // If 'gl' is not installed or fails to load bindings, we leave it undefined.
+  // The createHeadlessWebGL function will handle this.
+  console.warn('Failed to load "gl" package. Headless WebGL creation will fail.', e);
+}
+
+export function createHeadlessWebGL(
   options: HeadlessWebGLOptions = {}
-): Promise<HeadlessWebGLContext> {
+): HeadlessWebGLContext {
+  if (!headlessGL) {
+    throw new Error('Headless GL package is not available or failed to load.');
+  }
+
   const width = options.width ?? 256;
   const height = options.height ?? 256;
 
-  // Dynamically import gl
-  // @ts-ignore - gl package might not be typed correctly for dynamic import or TS config
-  const { default: gl } = await import('gl');
+  // Ensure antialias is false for deterministic testing unless explicitly enabled
+  const antialias = options.antialias ?? false;
+  // Ensure preserveDrawingBuffer is true for readback unless explicitly disabled
+  const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
 
-  // The 'gl' function signature is gl(width, height, options)
-  const context = gl(width, height, {
-    antialias: options.antialias ?? false, // Default to false for determinism
-    preserveDrawingBuffer: options.preserveDrawingBuffer ?? true, // Default to true for readback
+  // Create context using 'gl' package
+  const context = headlessGL(width, height, {
+    antialias,
+    preserveDrawingBuffer,
     stencil: true,
-    alpha: true,
     depth: true,
+    alpha: true
   });
 
   if (!context) {
@@ -40,73 +57,50 @@ export async function createHeadlessWebGL(
   }
 
   // Cast to WebGL2RenderingContext
-  const glContext = context as unknown as WebGL2RenderingContext;
+  // Note: The 'gl' package implements WebGL 1, but we cast to WebGL 2 for type compatibility.
+  // Engine code should gracefuly handle missing WebGL 2 features or this environment is for specific subsets.
+  // WARNING: Calling actual WebGL 2 methods (e.g. createVertexArray) will crash at runtime.
+  const gl2 = context as unknown as WebGL2RenderingContext;
 
   return {
-    gl: glContext,
+    gl: gl2,
     width,
     height,
     cleanup: () => {
-      // gl package extension to destroy context
-      const ext = glContext.getExtension('STACKGL_destroy_context');
-      if (ext) {
+      const ext = context.getExtension('STACKGL_destroy_context');
+      if (ext && typeof ext.destroy === 'function') {
         ext.destroy();
       }
-    },
+    }
   };
 }
 
-/**
- * Captures the current framebuffer content as a Uint8ClampedArray (RGBA).
- * Flips the pixels vertically to match standard image orientation (top-left origin).
- */
-export function captureWebGLFramebuffer(
-  glContext: WebGL2RenderingContext,
-  width: number,
-  height: number
-): Uint8ClampedArray {
-  const pixels = new Uint8ClampedArray(width * height * 4);
-
-  // readPixels reads from bottom-left
-  glContext.readPixels(
-    0,
-    0,
-    width,
-    height,
-    glContext.RGBA,
-    glContext.UNSIGNED_BYTE,
-    pixels
-  );
-
-  return flipPixelsVertically(pixels, width, height);
-}
-
-/**
- * Flips pixel data vertically in-place.
- */
 export function flipPixelsVertically(
   pixels: Uint8ClampedArray,
   width: number,
   height: number
 ): Uint8ClampedArray {
+  const flipped = new Uint8ClampedArray(pixels.length);
   const rowSize = width * 4;
-  const halfHeight = Math.floor(height / 2);
-  const tempRow = new Uint8Array(rowSize);
 
-  // Swap rows
-  for (let y = 0; y < halfHeight; y++) {
-    const topOffset = y * rowSize;
-    const bottomOffset = (height - 1 - y) * rowSize;
-
-    // Copy top to temp
-    tempRow.set(pixels.subarray(topOffset, topOffset + rowSize));
-
-    // Copy bottom to top
-    pixels.copyWithin(topOffset, bottomOffset, bottomOffset + rowSize);
-
-    // Copy temp to bottom
-    pixels.set(tempRow, bottomOffset);
+  for (let y = 0; y < height; y++) {
+    const srcRowStart = y * rowSize;
+    const dstRowStart = (height - 1 - y) * rowSize;
+    // Copy row
+    flipped.set(pixels.subarray(srcRowStart, srcRowStart + rowSize), dstRowStart);
   }
 
-  return pixels;
+  return flipped;
+}
+
+export function captureWebGLFramebuffer(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number
+): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  // Read pixels (returns bottom-up)
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  // Flip to top-down
+  return flipPixelsVertically(pixels, width, height);
 }

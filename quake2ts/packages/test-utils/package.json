@@ -20,6 +20,11 @@
       "types": "./src/setup/webgpu.ts",
       "import": "./src/setup/webgpu.ts",
       "require": "./src/setup/webgpu.ts"
+    },
+    "./src/setup/headless-webgl": {
+      "types": "./src/setup/headless-webgl.ts",
+      "import": "./src/setup/headless-webgl.ts",
+      "require": "./src/setup/headless-webgl.ts"
     }
   },
   "files": [
