@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('example: blue rectangle using actual renderer', async () => {
+test('example: blue rectangle using actual renderer', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Clear background to black
     gl.clearColor(0, 0, 0, 1);
@@ -24,4 +24,4 @@ test('example: blue rectangle using actual renderer', async () => {
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-}, { timeout: 30000 });
+});

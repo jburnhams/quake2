@@ -153,8 +153,9 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
   }
 
   function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
-      const testDir = path.dirname(testFilePath);
-      const statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
+      // Tests are configured to save to packages/engine/tests/webgl/__snapshots__
+      const snapshotDir = path.join(rootDir, 'packages/engine/tests/webgl/__snapshots__');
+      const statsPath = path.join(snapshotDir, 'stats', `${snapshotName}.json`);
       if (fs.existsSync(statsPath)) {
           try {
               const data = fs.readFileSync(statsPath, 'utf-8');
