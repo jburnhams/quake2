@@ -80,7 +80,8 @@ function setPlayerAttackAnim(player: Entity) {
 function checkAmmo(game: GameExports, player: Entity, ammoType: AmmoType, count: number): boolean {
     if (!player.client) return false;
 
-    if (player.client.inventory.ammo.counts[ammoType] < count) {
+    const ammoCount = player.client.inventory.ammo.counts[ammoType];
+    if (ammoCount === undefined || ammoCount < count) {
         // Play no ammo sound
         // Original logic checks pain_debounce_time to avoid spamming sound,
         // but here we might not have it exposed easily on entity.
@@ -774,7 +775,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             break;
         }
         case WeaponId.ProxLauncher: {
-             if (inventory.ammo.counts[AmmoType.Prox] < 1) {
+             if (!checkAmmo(game, player, AmmoType.Prox, 1)) {
                 return;
             }
             inventory.ammo.counts[AmmoType.Prox]--;
