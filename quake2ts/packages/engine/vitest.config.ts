@@ -49,11 +49,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles,
     globals: true,
-     // Optimize unit test performance
-    ...(isUnit ? {
-      pool: 'threads',
-      isolate: false,
-    } : {}),
     // Force sequential execution for integration, webgpu, and webgl tests
     ...((isIntegration || isWebGPU || isWebGL) ? {
       pool: 'forks',
