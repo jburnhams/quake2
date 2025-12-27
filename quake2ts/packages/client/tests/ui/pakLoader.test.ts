@@ -6,7 +6,15 @@ describe('PakLoaderUI', () => {
 
   beforeEach(() => {
     // JSDOM setup for container
-    container = document.createElement('div');
+    if (typeof document !== 'undefined') {
+        container = document.createElement('div');
+    } else {
+        container = {
+            querySelector: vi.fn().mockReturnValue({ textContent: '', innerHTML: '', disabled: false }),
+            appendChild: vi.fn(),
+            removeChild: vi.fn()
+        } as any;
+    }
   });
 
   it('should load .pak files via handleFileSelect', async () => {
