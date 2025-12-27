@@ -75,12 +75,6 @@ test('pipeline: particles-smoke', async ({ renderAndExpectSnapshot }) => {
       const system = new ParticleSystem(100, rng);
 
       // spawnSteam uses rng, so we should get deterministic output with seeded rng
-      import('../../../src/render/particleSystem.js').then(module => {
-           module.spawnSteam({
-               system,
-               origin: { x: 0, y: 0, z: -10 }
-           });
-      });
       // But we need to call it synchronously for the test setup if possible, or wait.
       // Since we are inside the async setup, we can just call it if we import it top-level or use dynamic import await.
 

@@ -211,11 +211,11 @@ export class ParticleRenderer {
         // Shader logic: smoothstep(0.35, 0.5, shaderDist)
         // Texture logic: smoothstep(0.7, 1.0, texDist)
 
-        let alpha = 1.0 - (dist < 0.7 ? 0 : (dist - 0.7) / 0.3); // Linear approx
-        if (dist > 1.0) alpha = 0;
-        else if (dist < 0.7) alpha = 1;
-        else {
-            // Smoothstep
+        let alpha = 0;
+        if (dist < 0.7) {
+             alpha = 1;
+        } else if (dist <= 1.0) {
+             // Smoothstep
              const t = (dist - 0.7) / 0.3;
              alpha = 1.0 - (t * t * (3 - 2 * t));
         }
@@ -361,12 +361,12 @@ export class ParticleRenderer {
       uniformData.set([viewRight.x, viewRight.y, viewRight.z, 0], 16);
       uniformData.set([viewUp.x, viewUp.y, viewUp.z, 0], 20);
 
-      this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
+      this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData as unknown as BufferSource);
 
       // Upload Buffers
-      this.device.queue.writeBuffer(this.positionBuffer, 0, positions);
-      this.device.queue.writeBuffer(this.colorBuffer, 0, colors);
-      this.device.queue.writeBuffer(this.sizeBuffer, 0, sizes);
+      this.device.queue.writeBuffer(this.positionBuffer, 0, positions as unknown as BufferSource);
+      this.device.queue.writeBuffer(this.colorBuffer, 0, colors as unknown as BufferSource);
+      this.device.queue.writeBuffer(this.sizeBuffer, 0, sizes as unknown as BufferSource);
 
       // Bind common resources
       passEncoder.setBindGroup(0, this.bindGroup0);
