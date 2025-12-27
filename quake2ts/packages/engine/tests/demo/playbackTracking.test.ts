@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
+import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
 import { DemoReader } from '../../src/demo/demoReader.js';
 import { NetworkMessageParser } from '../../src/demo/parser.js';
 
@@ -14,6 +14,7 @@ describe('DemoPlaybackController with Tracking', () => {
         vi.spyOn(DemoReader.prototype, 'getMessageCount').mockReturnValue(100);
         vi.spyOn(DemoReader.prototype, 'seekToMessage').mockReturnValue(true);
         vi.spyOn(DemoReader.prototype, 'reset').mockImplementation(() => {});
+        vi.spyOn(DemoReader.prototype, 'hasMore').mockReturnValue(true);
 
         // Mock readNextBlock
         const readNextBlockSpy = vi.spyOn(DemoReader.prototype, 'readNextBlock');
@@ -62,9 +63,12 @@ describe('DemoPlaybackController with Tracking', () => {
         expect(tracker.startTracking).toHaveBeenCalled();
 
         // Manual update loop
+        // We need to pump enough updates to reach frame 5
         let i = 0;
-        while(controller.getState() === 1 && i < 20) {
+        // Limit iterations to prevent infinite loop, but make sure it's enough
+        while(i < 50) {
             controller.update(0.1);
+            if (controller.getState() !== PlaybackState.Playing) break;
             i++;
         }
 
@@ -83,7 +87,7 @@ describe('DemoPlaybackController with Tracking', () => {
 
         expect(tracker.startTracking).toHaveBeenCalled();
         expect(tracker.stopTracking).toHaveBeenCalled();
-        expect(controller.getState()).not.toBe(1);
+        expect(controller.getState()).not.toBe(PlaybackState.Playing);
     });
 
     it('should update tracker frame/time during playback', async () => {
@@ -101,8 +105,9 @@ describe('DemoPlaybackController with Tracking', () => {
 
         // Finish
         let i = 0;
-        while(controller.getState() === 1 && i < 20) {
+        while(i < 50) {
             controller.update(0.1);
+            if (controller.getState() !== PlaybackState.Playing) break;
             i++;
         }
         await promise;
