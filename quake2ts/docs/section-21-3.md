@@ -119,7 +119,7 @@ test('sprite: textured quad - checkerboard', async () => {
 **Assets Needed:**
 - None (procedural generation via `createCheckerboardTexture`, etc.)
 
-**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl).
+**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
@@ -157,7 +157,7 @@ test('sprite: textured quad - checkerboard', async () => {
 4. Implement gradient test (Completed)
 5. Generate baselines and review (Completed)
 
-**Status:** Implemented. Same environment limitation applies.
+**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
@@ -192,7 +192,7 @@ test('sprite: textured quad - checkerboard', async () => {
 3. Validate character glyph rendering (Completed)
 4. Check spacing and kerning (Completed)
 
-**Status:** Implemented. Same environment limitation applies.
+**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
@@ -212,13 +212,13 @@ test('sprite: textured quad - checkerboard', async () => {
 
 ## Success Criteria
 
-- [ ] All sprite rendering tests pass (Implemented, pending env)
-- [ ] Texture sampling works correctly (Implemented, pending env)
-- [ ] UI rectangles render with correct colors (Implemented, pending env)
-- [ ] Alpha blending produces expected results (Implemented, pending env)
-- [ ] Text renders legibly (if text API exists) (Implemented, pending env)
-- [ ] Baselines reviewed and approved (Pending first successful run)
-- [ ] ~11 visual tests passing (Pending env)
+- [ ] All sprite rendering tests pass (Implemented, pending CI verification)
+- [ ] Texture sampling works correctly (Implemented, pending CI verification)
+- [ ] UI rectangles render with correct colors (Implemented, pending CI verification)
+- [ ] Alpha blending produces expected results (Implemented, pending CI verification)
+- [ ] Text renders legibly (if text API exists) (Implemented, pending CI verification)
+- [ ] Baselines reviewed and approved (Pending CI artifact generation)
+- [ ] ~11 visual tests passing (Pending CI verification)
 
 ---
 
