@@ -22,16 +22,20 @@ const include = isWebGPU
     : ['tests/**/*.test.ts']; // Default pattern for test-utils
 
 export default defineConfig({
-  test: {
-    include,
-    exclude,
+  resolve: {
     alias: {
       '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
       '@quake2ts/game': path.resolve(__dirname, '../game/src/index.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, './src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
       '@quake2ts/engine': path.resolve(__dirname, '../engine/src/index.ts'),
+      '@quake2ts/client': path.resolve(__dirname, '../client/src/index.ts'),
+      '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
     },
+  },
+  test: {
+    include,
+    exclude,
     // Optimize unit test performance with threads and no isolation
     ...(isUnit ? {
       pool: 'threads',
