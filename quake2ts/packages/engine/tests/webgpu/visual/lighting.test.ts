@@ -97,7 +97,6 @@ describe('WebGPU Lighting', () => {
             height: 256,
             headless: true
         });
-        // Use 256x256 aspect ratio (1.0) to match render target
         camera = new Camera(256, 256);
         camera.setPosition(0, 0, 100);
         camera.setRotation(0, 0, 0);
@@ -176,15 +175,17 @@ describe('WebGPU Lighting', () => {
     };
 
     it('lighting-point.png', async () => {
+        // Wall at X=200. Larger size 400x400 to ensure full screen coverage.
         const wall = createTestBspGeometry({
-            min: [200, -100, 0],
-            max: [200, 100, 200],
+            min: [200, -200, -100],
+            max: [200, 200, 300],
             texture: 'wall'
         });
         renderer.uploadBspGeometry([wall]);
 
         const map = createMinimalMap(1);
 
+        // Red light near the wall
         const dlights: DLight[] = [{
             origin: { x: 180, y: 0, z: 100 },
             color: { x: 1, y: 0, z: 0 },
@@ -223,9 +224,10 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-multiple.png', async () => {
+        // Same wall
         const wall = createTestBspGeometry({
-            min: [200, -100, 0],
-            max: [200, 100, 200],
+            min: [200, -200, -100],
+            max: [200, 200, 300],
             texture: 'wall'
         });
         renderer.uploadBspGeometry([wall]);
@@ -278,9 +280,10 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-colored.png', async () => {
+        // Floor at Z=0. Larger size 400x400
         const floor = createTestBspGeometry({
-            min: [-100, -100, 0],
-            max: [100, 100, 0],
+            min: [-200, -200, 0],
+            max: [200, 200, 0],
             texture: 'floor'
         });
         renderer.uploadBspGeometry([floor]);
