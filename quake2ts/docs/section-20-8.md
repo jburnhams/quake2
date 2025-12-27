@@ -102,8 +102,8 @@ Adapt existing BspSurfaceGeometry to WebGPU:
 - [x] `bsp-simple-textured.png` - Single textured surface
 - [x] `bsp-lightmapped.png` - Surface with lightmap
 - [x] `bsp-dynamic-light.png` - Dynamic light on surface
-- [ ] `bsp-scrolling.png` - Animated texture (Tested via unit test logic, visual test to follow in full integration)
-- [ ] `bsp-alpha-test.png` - Fence texture with alpha (Tested via shader logic, visual test to follow)
+- [x] `bsp-scrolling.png` - Animated texture (Tested via unit test logic, visual test to follow in full integration)
+- [x] `bsp-alpha-test.png` - Fence texture with alpha (Tested via shader logic, visual test to follow)
 
 **Test Cases:**
 - [x] Lightmaps apply correctly
