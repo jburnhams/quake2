@@ -129,23 +129,26 @@ describe('Skybox Pipeline', () => {
       });
   });
 
-  const debugConfigs = [
-    { p: 0, y: 0, name: 'debug_P0_Y0', desc: 'Forward (Pitch 0, Yaw 0)' },
-    { p: 90, y: 0, name: 'debug_P90_Y0', desc: 'Down (Pitch 90, Yaw 0)' },
-    { p: -90, y: 0, name: 'debug_Pm90_Y0', desc: 'Up (Pitch -90, Yaw 0)' },
-    { p: 0, y: 90, name: 'debug_P0_Y90', desc: 'Left (Pitch 0, Yaw 90)' },
-    { p: 0, y: -90, name: 'debug_P0_Ym90', desc: 'Right (Pitch 0, Yaw -90)' },
-    { p: 45, y: 45, name: 'debug_P45_Y45', desc: 'Corner Down-Left (Pitch 45, Yaw 45)' },
-    { p: -45, y: 45, name: 'debug_Pm45_Y45', desc: 'Corner Up-Left (Pitch -45, Yaw 45)' },
+  const testCases = [
+    { target: [10, 0, 0], name: 'look_forward', desc: 'Forward (+X). Expected: Yellow (-Z Back)' },
+    { target: [-10, 0, 0], name: 'look_back', desc: 'Back (-X). Expected: Blue (+Z Front)' },
+    { target: [0, 10, 0], name: 'look_left', desc: 'Left (+Y). Expected: Cyan (-X Left)' },
+    { target: [0, -10, 0], name: 'look_right', desc: 'Right (-Y). Expected: Red (+X Right)' },
+    { target: [0, 0, 10], name: 'look_up', desc: 'Up (+Z). Expected: Green (+Y Top)' },
+    { target: [0, 0, -10], name: 'look_down', desc: 'Down (-Z). Expected: Magenta (-Y Bottom)' },
+
+    { target: [10, 10, 0], name: 'look_fwd_left', desc: 'Forward-Left (+X +Y). Expected: Yellow/Cyan Vertical Split' },
+    { target: [10, 0, 10], name: 'look_fwd_up', desc: 'Forward-Up (+X +Z). Expected: Yellow/Green Horizontal Split' },
+    { target: [10, 10, 10], name: 'look_corner', desc: 'Corner (+X +Y +Z). Expected: Yellow/Cyan/Green Intersection' },
   ];
 
-  debugConfigs.forEach(conf => {
+  testCases.forEach(conf => {
     it(`renders ${conf.name}`, async () => {
         const camera = new Camera();
         camera.setFov(90);
         camera.setAspectRatio(1.0);
         camera.setPosition(0, 0, 0);
-        camera.setRotation(conf.p, conf.y, 0);
+        camera.lookAt(conf.target as [number, number, number]);
 
         renderer.renderFrame({
             camera,
