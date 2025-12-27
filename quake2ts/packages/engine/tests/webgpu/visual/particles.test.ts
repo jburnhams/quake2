@@ -179,8 +179,8 @@ test('pipeline: particles-explosion', async ({ renderAndExpectSnapshot }) => {
              const x = (i % grid) - grid/2;
              const y = (Math.floor(i / grid)) - grid/2;
              system.spawn({
-                position: { x: x * 0.5, y: y * 0.5, z: -50 },
-                color: [rng.frandom(), rng.frandom(), rng.frandom(), 1],
+                position: { x: x * 1.2, y: y * 1.2, z: -50 },
+                color: [rng.frandom() * 0.5, rng.frandom() * 0.5, rng.frandom() * 0.5, 0.2],
                 size: 2,
                 lifetime: 100,
                 blendMode: 'additive'
