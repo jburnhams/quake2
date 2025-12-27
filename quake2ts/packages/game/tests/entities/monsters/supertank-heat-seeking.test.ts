@@ -13,6 +13,9 @@ describe('Heat Seeking Missiles (Supertank)', () => {
     let enemy: Entity;
 
     beforeEach(async () => {
+        // Ensure clean slate for spies
+        vi.restoreAllMocks();
+
         context = await createTestContext();
         sys = context.entities;
 

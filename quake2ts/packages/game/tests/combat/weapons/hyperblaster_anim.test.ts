@@ -77,7 +77,8 @@ describe('HyperBlaster Animation', () => {
         game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
         player.client.weapon_think_time = 0;
 
-        hyperBlasterThink(player, sys);
+        // Note: game.frame() executes the frame which runs player think.
+        // We do not need to call hyperBlasterThink(player, sys) manually.
 
         // Check ammo consumed
         expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
@@ -90,7 +91,6 @@ describe('HyperBlaster Animation', () => {
         game.frame({ frame: 2, deltaMs: 100, startTimeMs: 1100 });
         player.client.weapon_think_time = 0;
 
-        hyperBlasterThink(player, sys);
         // Should loop back to FRAME_FIRE_FRAME
         expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_FRAME);
     });

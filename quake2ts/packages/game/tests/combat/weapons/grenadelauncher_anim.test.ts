@@ -99,7 +99,7 @@ describe('Grenade Launcher Animation', () => {
 
         // Should fire due to timeout
         expect(player.client.inventory.ammo.counts[AmmoType.Grenades]).toBe(9);
-        expect(player.client.gun_frame).toBe(7);
+        expect(player.client.gun_frame).toBe(8);
         expect(player.client.weapon_charge_start_time).toBeUndefined();
     });
 

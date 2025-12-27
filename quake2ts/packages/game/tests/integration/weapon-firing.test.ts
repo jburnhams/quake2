@@ -43,10 +43,21 @@ describe('Weapon Firing Integration Test', () => {
     let target: Entity;
 
     beforeEach(() => {
-        const collisionModel = new CollisionModel([makeBrushFromMinsMaxs({ x: -1000, y: -1000, z: -1000 }, { x: 1000, y: 1000, z: 1000 })]);
-        const collisionIndex = new CollisionEntityIndex(collisionModel);
+        const collisionIndex = new CollisionEntityIndex();
         const imports = createMockGameImports();
-        imports.trace = collisionIndex.trace.bind(collisionIndex);
+
+        // Adapt game trace signature to CollisionEntityIndex.trace signature
+        imports.trace = (start, end, mins, maxs, passEntity, contentMask) => {
+            return collisionIndex.trace({
+                model: undefined as any, // No BSP model
+                start,
+                end,
+                mins,
+                maxs,
+                contentMask,
+                passId: passEntity ? passEntity.index : undefined
+            });
+        };
 
         const mockEngine = {
             trace: imports.trace,

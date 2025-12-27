@@ -455,8 +455,8 @@ export class DemoPlaybackController {
   }
 
   public getCurrentTime(): number {
-      if (this.currentFrameIndex < 0) return this.accumulatedTime;
-      return (this.currentFrameIndex * this.frameDuration) + this.accumulatedTime;
+      if (this.currentFrameIndex < 0) return this.accumulatedTime / 1000;
+      return ((this.currentFrameIndex * this.frameDuration) + this.accumulatedTime) / 1000;
   }
 
   public getFrameCount(): number {

@@ -75,7 +75,9 @@ describe('Blaster Animation', () => {
         // We can check if projectile count increased or just trust the integration.
         // For unit test, we verify frame progression.
 
-        blasterThink(player, sys);
+        // Note: game.frame() executes the frame which runs player think (blasterThink).
+        // So we don't need to call it manually again.
+
         // Should advance to next frame
         expect(player.client.gun_frame).toBe(FRAME_BLASTER_ACTIVATE_LAST + 2);
     });

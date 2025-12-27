@@ -56,7 +56,12 @@ vi.mock('../../src/render/resources.js', () => {
     dispose: vi.fn(),
   }));
 
-  return { VertexArray, VertexBuffer, TextureCubeMap };
+  return {
+    __esModule: true,
+    VertexArray,
+    VertexBuffer,
+    TextureCubeMap
+  };
 });
 
 describe('skybox', () => {
