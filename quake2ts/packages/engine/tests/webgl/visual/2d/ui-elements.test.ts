@@ -1,6 +1,5 @@
 import { test } from 'vitest';
-import { chromium } from 'playwright';
-import { expectSnapshot } from '@quake2ts/test-utils';
+import { testWebGLRenderer } from '@quake2ts/test-utils';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,496 +7,337 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
 test('ui: filled rectangle - solid color', async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 256, height: 256 } });
+  await testWebGLRenderer(`
+    const vertexShaderSource = [
+      '#version 300 es',
+      'in vec2 a_position;',
+      'void main() {',
+      '  gl_Position = vec4(a_position, 0.0, 1.0);',
+      '}'
+    ].join('\\n');
 
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-      <body style="margin:0; padding:0;">
-        <canvas id="glCanvas" width="256" height="256"></canvas>
-      </body>
-    </html>
-  `);
+    const fragmentShaderSource = [
+      '#version 300 es',
+      'precision highp float;',
+      'uniform vec4 u_color;',
+      'out vec4 outColor;',
+      'void main() {',
+      '  outColor = u_color;',
+      '}'
+    ].join('\\n');
 
-  try {
-    const pixelData = await page.evaluate(() => {
-      const canvas = document.getElementById('glCanvas') as HTMLCanvasElement;
-      const gl = canvas.getContext('webgl2')!;
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
 
-      const vertexShaderSource = [
-        '#version 300 es',
-        'in vec2 a_position;',
-        'void main() {',
-        '  gl_Position = vec4(a_position, 0.0, 1.0);',
-        '}'
-      ].join('\n');
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
 
-      const fragmentShaderSource = [
-        '#version 300 es',
-        'precision highp float;',
-        'uniform vec4 u_color;',
-        'out vec4 outColor;',
-        'void main() {',
-        '  outColor = u_color;',
-        '}'
-      ].join('\n');
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-      const vertexShader = gl.createShader(gl.VERTEX_SHADER)!;
-      gl.shaderSource(vertexShader, vertexShaderSource);
-      gl.compileShader(vertexShader);
+    // Blue rectangle at 64,64 with size 128x128
+    const x = 64, y = 64, w = 128, h = 128;
+    const x0 = (x / 256) * 2 - 1;
+    const y0 = 1 - (y / 256) * 2;
+    const x1 = ((x + w) / 256) * 2 - 1;
+    const y1 = 1 - ((y + h) / 256) * 2;
 
-      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
-      gl.shaderSource(fragmentShader, fragmentShaderSource);
-      gl.compileShader(fragmentShader);
+    const vertices = new Float32Array([
+      x0, y0,
+      x1, y0,
+      x0, y1,
+      x1, y1,
+    ]);
 
-      const program = gl.createProgram()!;
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      gl.useProgram(program);
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-      // Blue rectangle at 64,64 with size 128x128
-      const x = 64, y = 64, w = 128, h = 128;
-      const x0 = (x / 256) * 2 - 1;
-      const y0 = 1 - (y / 256) * 2;
-      const x1 = ((x + w) / 256) * 2 - 1;
-      const y1 = 1 - ((y + h) / 256) * 2;
+    const a_position = gl.getAttribLocation(program, 'a_position');
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(a_position);
 
-      const vertices = new Float32Array([
-        x0, y0,
-        x1, y0,
-        x0, y1,
-        x1, y1,
-      ]);
+    const u_color = gl.getUniformLocation(program, 'u_color');
 
-      const vbo = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-      const a_position = gl.getAttribLocation(program, 'a_position');
-      gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(a_position);
-
-      const u_color = gl.getUniformLocation(program, 'u_color');
-
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      // Draw blue rectangle
-      gl.uniform4f(u_color, 0, 0, 1, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      gl.finish();
-
-      const pixels = new Uint8Array(256 * 256 * 4);
-      gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-      const flipped = new Uint8Array(pixels.length);
-      const rowSize = 256 * 4;
-      for (let y = 0; y < 256; y++) {
-        const srcRow = (256 - 1 - y) * rowSize;
-        const dstRow = y * rowSize;
-        for (let x = 0; x < rowSize; x++) {
-          flipped[dstRow + x] = pixels[srcRow + x];
-        }
-      }
-
-      return Array.from(flipped);
-    });
-
-    const pixels = new Uint8ClampedArray(pixelData);
-
-    await expectSnapshot(pixels, {
-      name: '2d-ui-rect-solid',
-      description: 'Solid blue rectangle on black',
-      width: 256,
-      height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
-      snapshotDir
-    });
-  } finally {
-    await browser.close();
-  }
+    // Draw blue rectangle
+    gl.uniform4f(u_color, 0, 0, 1, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  `, {
+    name: '2d-ui-rect-solid',
+    description: 'Solid blue rectangle on black',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
 }, { timeout: 30000 });
 
 test('ui: multiple rectangles - overlapping', async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 256, height: 256 } });
+  await testWebGLRenderer(`
+    const vertexShaderSource = [
+      '#version 300 es',
+      'in vec2 a_position;',
+      'void main() {',
+      '  gl_Position = vec4(a_position, 0.0, 1.0);',
+      '}'
+    ].join('\\n');
 
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-      <body style="margin:0; padding:0;">
-        <canvas id="glCanvas" width="256" height="256"></canvas>
-      </body>
-    </html>
-  `);
+    const fragmentShaderSource = [
+      '#version 300 es',
+      'precision highp float;',
+      'uniform vec4 u_color;',
+      'out vec4 outColor;',
+      'void main() {',
+      '  outColor = u_color;',
+      '}'
+    ].join('\\n');
 
-  try {
-    const pixelData = await page.evaluate(() => {
-      const canvas = document.getElementById('glCanvas') as HTMLCanvasElement;
-      const gl = canvas.getContext('webgl2')!;
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
 
-      const vertexShaderSource = [
-        '#version 300 es',
-        'in vec2 a_position;',
-        'void main() {',
-        '  gl_Position = vec4(a_position, 0.0, 1.0);',
-        '}'
-      ].join('\n');
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
 
-      const fragmentShaderSource = [
-        '#version 300 es',
-        'precision highp float;',
-        'uniform vec4 u_color;',
-        'out vec4 outColor;',
-        'void main() {',
-        '  outColor = u_color;',
-        '}'
-      ].join('\n');
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-      const vertexShader = gl.createShader(gl.VERTEX_SHADER)!;
-      gl.shaderSource(vertexShader, vertexShaderSource);
-      gl.compileShader(vertexShader);
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 
-      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
-      gl.shaderSource(fragmentShader, fragmentShaderSource);
-      gl.compileShader(fragmentShader);
+    const a_position = gl.getAttribLocation(program, 'a_position');
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(a_position);
 
-      const program = gl.createProgram()!;
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      gl.useProgram(program);
+    const u_color = gl.getUniformLocation(program, 'u_color');
 
-      const vbo = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-      const a_position = gl.getAttribLocation(program, 'a_position');
-      gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(a_position);
+    // Red rectangle at 40,40
+    let x = 40, y = 40, w = 100, h = 100;
+    let x0 = (x / 256) * 2 - 1;
+    let y0 = 1 - (y / 256) * 2;
+    let x1 = ((x + w) / 256) * 2 - 1;
+    let y1 = 1 - ((y + h) / 256) * 2;
 
-      const u_color = gl.getUniformLocation(program, 'u_color');
+    let vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 1, 0, 0, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+    // Green rectangle at 80,80
+    x = 80; y = 80;
+    x0 = (x / 256) * 2 - 1;
+    y0 = 1 - (y / 256) * 2;
+    x1 = ((x + w) / 256) * 2 - 1;
+    y1 = 1 - ((y + h) / 256) * 2;
 
-      // Red rectangle at 40,40
-      let x = 40, y = 40, w = 100, h = 100;
-      let x0 = (x / 256) * 2 - 1;
-      let y0 = 1 - (y / 256) * 2;
-      let x1 = ((x + w) / 256) * 2 - 1;
-      let y1 = 1 - ((y + h) / 256) * 2;
+    vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 0, 1, 0, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      let vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 1, 0, 0, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // Blue rectangle at 120,120
+    x = 120; y = 120;
+    x0 = (x / 256) * 2 - 1;
+    y0 = 1 - (y / 256) * 2;
+    x1 = ((x + w) / 256) * 2 - 1;
+    y1 = 1 - ((y + h) / 256) * 2;
 
-      // Green rectangle at 80,80
-      x = 80; y = 80;
-      x0 = (x / 256) * 2 - 1;
-      y0 = 1 - (y / 256) * 2;
-      x1 = ((x + w) / 256) * 2 - 1;
-      y1 = 1 - ((y + h) / 256) * 2;
-
-      vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 0, 1, 0, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      // Blue rectangle at 120,120
-      x = 120; y = 120;
-      x0 = (x / 256) * 2 - 1;
-      y0 = 1 - (y / 256) * 2;
-      x1 = ((x + w) / 256) * 2 - 1;
-      y1 = 1 - ((y + h) / 256) * 2;
-
-      vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 0, 0, 1, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      gl.finish();
-
-      const pixels = new Uint8Array(256 * 256 * 4);
-      gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-      const flipped = new Uint8Array(pixels.length);
-      const rowSize = 256 * 4;
-      for (let y = 0; y < 256; y++) {
-        const srcRow = (256 - 1 - y) * rowSize;
-        const dstRow = y * rowSize;
-        for (let x = 0; x < rowSize; x++) {
-          flipped[dstRow + x] = pixels[srcRow + x];
-        }
-      }
-
-      return Array.from(flipped);
-    });
-
-    const pixels = new Uint8ClampedArray(pixelData);
-
-    await expectSnapshot(pixels, {
-      name: '2d-ui-rect-overlap',
-      description: 'Three overlapping rectangles (Red, Green, Blue)',
-      width: 256,
-      height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
-      snapshotDir
-    });
-  } finally {
-    await browser.close();
-  }
+    vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 0, 0, 1, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  `, {
+    name: '2d-ui-rect-overlap',
+    description: 'Three overlapping rectangles (Red, Green, Blue)',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
 }, { timeout: 30000 });
 
 test('ui: rectangle with transparency', async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 256, height: 256 } });
+  await testWebGLRenderer(`
+    const vertexShaderSource = [
+      '#version 300 es',
+      'in vec2 a_position;',
+      'void main() {',
+      '  gl_Position = vec4(a_position, 0.0, 1.0);',
+      '}'
+    ].join('\\n');
 
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-      <body style="margin:0; padding:0;">
-        <canvas id="glCanvas" width="256" height="256"></canvas>
-      </body>
-    </html>
-  `);
+    const fragmentShaderSource = [
+      '#version 300 es',
+      'precision highp float;',
+      'uniform vec4 u_color;',
+      'out vec4 outColor;',
+      'void main() {',
+      '  outColor = u_color;',
+      '}'
+    ].join('\\n');
 
-  try {
-    const pixelData = await page.evaluate(() => {
-      const canvas = document.getElementById('glCanvas') as HTMLCanvasElement;
-      const gl = canvas.getContext('webgl2')!;
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
 
-      const vertexShaderSource = [
-        '#version 300 es',
-        'in vec2 a_position;',
-        'void main() {',
-        '  gl_Position = vec4(a_position, 0.0, 1.0);',
-        '}'
-      ].join('\n');
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
 
-      const fragmentShaderSource = [
-        '#version 300 es',
-        'precision highp float;',
-        'uniform vec4 u_color;',
-        'out vec4 outColor;',
-        'void main() {',
-        '  outColor = u_color;',
-        '}'
-      ].join('\n');
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-      const vertexShader = gl.createShader(gl.VERTEX_SHADER)!;
-      gl.shaderSource(vertexShader, vertexShaderSource);
-      gl.compileShader(vertexShader);
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 
-      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
-      gl.shaderSource(fragmentShader, fragmentShaderSource);
-      gl.compileShader(fragmentShader);
+    const a_position = gl.getAttribLocation(program, 'a_position');
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(a_position);
 
-      const program = gl.createProgram()!;
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      gl.useProgram(program);
+    const u_color = gl.getUniformLocation(program, 'u_color');
 
-      const vbo = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    // Enable blending
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-      const a_position = gl.getAttribLocation(program, 'a_position');
-      gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(a_position);
+    gl.clearColor(0.2, 0.2, 0.2, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-      const u_color = gl.getUniformLocation(program, 'u_color');
+    // White background (full canvas)
+    let vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 1, 1, 1, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // Enable blending
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Black quadrant (top-left)
+    let x = 0, y = 0, w = 128, h = 128;
+    let x0 = (x / 256) * 2 - 1;
+    let y0 = 1 - (y / 256) * 2;
+    let x1 = ((x + w) / 256) * 2 - 1;
+    let y1 = 1 - ((y + h) / 256) * 2;
 
-      gl.clearColor(0.2, 0.2, 0.2, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+    vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 0, 0, 0, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      // White background (full canvas)
-      let vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 1, 1, 1, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // Black quadrant (bottom-right)
+    x = 128; y = 128;
+    x0 = (x / 256) * 2 - 1;
+    y0 = 1 - (y / 256) * 2;
+    x1 = ((x + w) / 256) * 2 - 1;
+    y1 = 1 - ((y + h) / 256) * 2;
 
-      // Black quadrant (top-left)
-      let x = 0, y = 0, w = 128, h = 128;
-      let x0 = (x / 256) * 2 - 1;
-      let y0 = 1 - (y / 256) * 2;
-      let x1 = ((x + w) / 256) * 2 - 1;
-      let y1 = 1 - ((y + h) / 256) * 2;
+    vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 0, 0, 0, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-      vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 0, 0, 0, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // Semi-transparent red overlay at 64,64
+    x = 64; y = 64; w = 128; h = 128;
+    x0 = (x / 256) * 2 - 1;
+    y0 = 1 - (y / 256) * 2;
+    x1 = ((x + w) / 256) * 2 - 1;
+    y1 = 1 - ((y + h) / 256) * 2;
 
-      // Black quadrant (bottom-right)
-      x = 128; y = 128;
-      x0 = (x / 256) * 2 - 1;
-      y0 = 1 - (y / 256) * 2;
-      x1 = ((x + w) / 256) * 2 - 1;
-      y1 = 1 - ((y + h) / 256) * 2;
-
-      vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 0, 0, 0, 1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      // Semi-transparent red overlay at 64,64
-      x = 64; y = 64; w = 128; h = 128;
-      x0 = (x / 256) * 2 - 1;
-      y0 = 1 - (y / 256) * 2;
-      x1 = ((x + w) / 256) * 2 - 1;
-      y1 = 1 - ((y + h) / 256) * 2;
-
-      vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-      gl.uniform4f(u_color, 1, 0, 0, 0.5);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-      gl.finish();
-
-      const pixels = new Uint8Array(256 * 256 * 4);
-      gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-      const flipped = new Uint8Array(pixels.length);
-      const rowSize = 256 * 4;
-      for (let y = 0; y < 256; y++) {
-        const srcRow = (256 - 1 - y) * rowSize;
-        const dstRow = y * rowSize;
-        for (let x = 0; x < rowSize; x++) {
-          flipped[dstRow + x] = pixels[srcRow + x];
-        }
-      }
-
-      return Array.from(flipped);
-    });
-
-    const pixels = new Uint8ClampedArray(pixelData);
-
-    await expectSnapshot(pixels, {
-      name: '2d-ui-rect-alpha',
-      description: 'Semi-transparent red rect over checkerboard background',
-      width: 256,
-      height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
-      snapshotDir
-    });
-  } finally {
-    await browser.close();
-  }
+    vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    gl.uniform4f(u_color, 1, 0, 0, 0.5);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  `, {
+    name: '2d-ui-rect-alpha',
+    description: 'Semi-transparent red rect over checkerboard background',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
 }, { timeout: 30000 });
 
 test('ui: gradient approximation', async () => {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 256, height: 256 } });
+  await testWebGLRenderer(`
+    const vertexShaderSource = [
+      '#version 300 es',
+      'in vec2 a_position;',
+      'void main() {',
+      '  gl_Position = vec4(a_position, 0.0, 1.0);',
+      '}'
+    ].join('\\n');
 
-  await page.setContent(`
-    <!DOCTYPE html>
-    <html>
-      <body style="margin:0; padding:0;">
-        <canvas id="glCanvas" width="256" height="256"></canvas>
-      </body>
-    </html>
-  `);
+    const fragmentShaderSource = [
+      '#version 300 es',
+      'precision highp float;',
+      'uniform vec4 u_color;',
+      'out vec4 outColor;',
+      'void main() {',
+      '  outColor = u_color;',
+      '}'
+    ].join('\\n');
 
-  try {
-    const pixelData = await page.evaluate(() => {
-      const canvas = document.getElementById('glCanvas') as HTMLCanvasElement;
-      const gl = canvas.getContext('webgl2')!;
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
 
-      const vertexShaderSource = [
-        '#version 300 es',
-        'in vec2 a_position;',
-        'void main() {',
-        '  gl_Position = vec4(a_position, 0.0, 1.0);',
-        '}'
-      ].join('\n');
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
 
-      const fragmentShaderSource = [
-        '#version 300 es',
-        'precision highp float;',
-        'uniform vec4 u_color;',
-        'out vec4 outColor;',
-        'void main() {',
-        '  outColor = u_color;',
-        '}'
-      ].join('\n');
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-      const vertexShader = gl.createShader(gl.VERTEX_SHADER)!;
-      gl.shaderSource(vertexShader, vertexShaderSource);
-      gl.compileShader(vertexShader);
+    const vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
 
-      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
-      gl.shaderSource(fragmentShader, fragmentShaderSource);
-      gl.compileShader(fragmentShader);
+    const a_position = gl.getAttribLocation(program, 'a_position');
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(a_position);
 
-      const program = gl.createProgram()!;
-      gl.attachShader(program, vertexShader);
-      gl.attachShader(program, fragmentShader);
-      gl.linkProgram(program);
-      gl.useProgram(program);
+    const u_color = gl.getUniformLocation(program, 'u_color');
 
-      const vbo = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-      const a_position = gl.getAttribLocation(program, 'a_position');
-      gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(a_position);
+    // Draw horizontal strips to simulate gradient from black to white
+    for (let i = 0; i < 256; i += 16) {
+      const val = i / 255;
+      const x = i, y = 0, w = 16, h = 256;
+      const x0 = (x / 256) * 2 - 1;
+      const y0 = 1;
+      const x1 = ((x + w) / 256) * 2 - 1;
+      const y1 = -1;
 
-      const u_color = gl.getUniformLocation(program, 'u_color');
-
-      gl.clearColor(0, 0, 0, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      // Draw horizontal strips to simulate gradient from black to white
-      for (let i = 0; i < 256; i += 16) {
-        const val = i / 255;
-        const x = i, y = 0, w = 16, h = 256;
-        const x0 = (x / 256) * 2 - 1;
-        const y0 = 1;
-        const x1 = ((x + w) / 256) * 2 - 1;
-        const y1 = -1;
-
-        const vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-        gl.uniform4f(u_color, val, val, val, 1);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      }
-
-      gl.finish();
-
-      const pixels = new Uint8Array(256 * 256 * 4);
-      gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-      const flipped = new Uint8Array(pixels.length);
-      const rowSize = 256 * 4;
-      for (let y = 0; y < 256; y++) {
-        const srcRow = (256 - 1 - y) * rowSize;
-        const dstRow = y * rowSize;
-        for (let x = 0; x < rowSize; x++) {
-          flipped[dstRow + x] = pixels[srcRow + x];
-        }
-      }
-
-      return Array.from(flipped);
-    });
-
-    const pixels = new Uint8ClampedArray(pixelData);
-
-    await expectSnapshot(pixels, {
-      name: '2d-ui-gradient',
-      description: 'Horizontal gradient stripes black to white',
-      width: 256,
-      height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
-      snapshotDir
-    });
-  } finally {
-    await browser.close();
-  }
+      const vertices = new Float32Array([x0, y0, x1, y0, x0, y1, x1, y1]);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+      gl.uniform4f(u_color, val, val, val, 1);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+  `, {
+    name: '2d-ui-gradient',
+    description: 'Horizontal gradient stripes black to white',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
 }, { timeout: 30000 });
