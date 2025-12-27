@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/test-utils",
-  "version": "0.0.766",
+  "version": "0.0.778",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -93,10 +93,11 @@
     "@quake2ts/game": "workspace:*",
     "@quake2ts/server": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "@types/gl": "^6.0.5",
     "@types/jsdom": "^27.0.0",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
+    "@types/serve-handler": "^6.1.4",
+    "@types/upng-js": "^2.1.5",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^27.4.0",
@@ -108,9 +109,10 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16",
+    "serve-handler": "^6.1.6",
     "webgpu": "^0.3.8"
   },
-  "optionalDependencies": {
-    "gl": "^8.1.6"
+  "dependencies": {
+    "upng-js": "^2.1.0"
   }
 }

@@ -8,7 +8,14 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/visual-tests" element={<Gallery />} />
+        <Route
+          path="/visual-tests"
+          element={<Gallery dataSource="visual-tests.json" snapshotBaseUrl="snapshots" title="WebGPU Visual Tests" />}
+        />
+        <Route
+          path="/webgl-visual-tests"
+          element={<Gallery dataSource="webgl-visual-tests.json" snapshotBaseUrl="webgl-snapshots" title="WebGL Visual Tests" />}
+        />
       </Routes>
     </Router>
   );

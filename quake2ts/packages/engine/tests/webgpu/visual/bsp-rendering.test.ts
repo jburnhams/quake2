@@ -1,0 +1,592 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createWebGPUContext } from '../../../src/render/webgpu/context';
+import { BspSurfacePipeline } from '../../../src/render/webgpu/pipelines/bspPipeline';
+import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
+import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
+import { expectSnapshot } from '@quake2ts/test-utils';
+import { Texture2D, VertexBuffer, IndexBuffer } from '../../../src/render/webgpu/resources';
+import { mat4, vec3 } from 'gl-matrix';
+import path from 'path';
+import fs from 'fs';
+
+// Helper to create a simple quad geometry
+function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, indexBuffer: IndexBuffer, indexCount: number } {
+  // Pos(3), Tex(2), LM(2), Step(1)
+  // Interleaved: x, y, z, u, v, lu, lv, step
+  const vertices = new Float32Array([
+    // TL (0)
+    -10, 10, z,  0, 0,  0, 0,  1,
+    // TR (1)
+    10, 10, z,   1, 0,  1, 0,  1,
+    // BR (2)
+    10, -10, z,  1, 1,  1, 1,  1,
+    // BL (3)
+    -10, -10, z, 0, 1,  0, 1,  1,
+  ]);
+
+  // Use CCW winding for front-facing (assuming culling is enabled)
+  // 0(TL) -> 3(BL) -> 2(BR)
+  // 0(TL) -> 2(BR) -> 1(TR)
+  const indices = new Uint16Array([
+    0, 3, 2,
+    0, 2, 1
+  ]);
+
+  const vertexBuffer = new VertexBuffer(device, { size: vertices.byteLength });
+  vertexBuffer.write(vertices);
+
+  const indexBuffer = new IndexBuffer(device, { size: indices.byteLength });
+  indexBuffer.write(indices);
+
+  return { vertexBuffer, indexBuffer, indexCount: 6 };
+}
+
+describe('BspSurfacePipeline Visual (Headless)', () => {
+  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  const snapshotDir = path.join(__dirname, '__snapshots__');
+  const updateBaseline = process.env.UPDATE_VISUAL === '1';
+
+  beforeAll(async () => {
+    try {
+      gpuSetup = await initHeadlessWebGPU();
+      if (!fs.existsSync(snapshotDir)) {
+          fs.mkdirSync(snapshotDir, { recursive: true });
+      }
+    } catch (error) {
+      console.warn('Skipping WebGPU visual tests: ' + error);
+    }
+  });
+
+  afterAll(async () => {
+    if (gpuSetup) {
+      await gpuSetup.cleanup();
+    }
+  });
+
+  it('renders a textured quad', async () => {
+    if (!gpuSetup) return;
+
+    const width = 256;
+    const height = 256;
+    const context = await createWebGPUContext(undefined, { width, height });
+    const device = context.device;
+
+    const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
+    const pipeline = new BspSurfacePipeline(device, 'rgba8unorm', 'depth24plus');
+
+    // Create resources
+    const { vertexBuffer, indexBuffer, indexCount } = createQuad(device, -50);
+
+    // Create dummy textures
+    const diffuseTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+    const redData = new Uint8Array(4 * 4 * 4).fill(255);
+    // Make it checkerboard red/blue
+    for(let i=0; i<16; i++) {
+        const x = i % 4;
+        const y = Math.floor(i / 4);
+        const isRed = ((x + y) % 2) === 0;
+        redData[i*4] = isRed ? 255 : 0;
+        redData[i*4+1] = 0;
+        redData[i*4+2] = isRed ? 0 : 255;
+        redData[i*4+3] = 255;
+    }
+    diffuseTex.upload(redData);
+
+    const lightmapTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+    const whiteData = new Uint8Array(4 * 4 * 4).fill(255);
+    lightmapTex.upload(whiteData);
+
+    const sampler = device.createSampler({ minFilter: 'nearest', magFilter: 'nearest' });
+
+    // Matrices
+    const projection = mat4.create();
+    mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+    const viewM = mat4.create(); // Identity camera at 0,0,0
+    const mvp = mat4.create();
+    mat4.multiply(mvp, projection, viewM);
+
+    // Render
+    const encoder = device.createCommandEncoder();
+
+    // We need depth buffer
+    const depthTexture = device.createTexture({
+        size: [width, height, 1],
+        format: 'depth24plus',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+    });
+
+    const pass = encoder.beginRenderPass({
+        colorAttachments: [{
+            view,
+            loadOp: 'clear',
+            clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+            storeOp: 'store'
+        }],
+        depthStencilAttachment: {
+            view: depthTexture.createView(),
+            depthClearValue: 1.0,
+            depthLoadOp: 'clear',
+            depthStoreOp: 'store'
+        }
+    });
+
+    const mockGeometry = {
+        gpuVertexBuffer: vertexBuffer.buffer,
+        gpuIndexBuffer: indexBuffer.buffer,
+        indexCount: indexCount
+    } as any;
+
+    pipeline.bind(pass, {
+        modelViewProjection: mvp,
+        diffuseTexture: diffuseTex.createView(),
+        diffuseSampler: sampler,
+        lightmapTexture: lightmapTex.createView(),
+        lightmapSampler: sampler,
+        lightmapOnly: false,
+        fullbright: true, // Disable lighting for simple texture test
+        brightness: 1.0,
+        gamma: 1.0
+    });
+
+    pipeline.draw(pass, mockGeometry);
+    pass.end();
+
+    device.queue.submit([encoder.finish()]);
+
+    const pixels = await captureRenderTarget(device, texture);
+
+    await expectSnapshot(pixels, {
+        name: 'bsp-simple-textured',
+        description: 'A simple textured quad with checkerboard pattern, fullbright enabled.',
+        width,
+        height,
+        snapshotDir,
+        updateBaseline
+    });
+
+    // Cleanup
+    vertexBuffer.destroy();
+    indexBuffer.destroy();
+    diffuseTex.destroy();
+    lightmapTex.destroy();
+    depthTexture.destroy();
+    texture.destroy();
+  });
+
+  it('renders with lightmap', async () => {
+      if (!gpuSetup) return;
+
+      const width = 256;
+      const height = 256;
+      const context = await createWebGPUContext(undefined, { width, height });
+      const device = context.device;
+
+      const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
+      const pipeline = new BspSurfacePipeline(device, 'rgba8unorm', 'depth24plus');
+
+      const { vertexBuffer, indexBuffer, indexCount } = createQuad(device, -50);
+
+      // White base
+      const diffuseTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      diffuseTex.upload(new Uint8Array(4 * 4 * 4).fill(255));
+
+      // Green lightmap (left side dark, right side bright green)
+      const lightmapTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      const lmData = new Uint8Array(4 * 4 * 4).fill(0);
+      for(let i=0; i<16; i++) {
+          if ((i % 4) >= 2) { // Right side
+              lmData[i*4+1] = 255; // Green
+          }
+      }
+      lightmapTex.upload(lmData);
+
+      const sampler = device.createSampler({ minFilter: 'nearest', magFilter: 'nearest' });
+
+      const projection = mat4.create();
+      mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+      const mvp = mat4.create();
+      mat4.multiply(mvp, projection, mat4.create());
+
+      const encoder = device.createCommandEncoder();
+      const depthTexture = device.createTexture({
+          size: [width, height, 1],
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
+
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
+              storeOp: 'store'
+          }],
+          depthStencilAttachment: {
+              view: depthTexture.createView(),
+              depthClearValue: 1.0,
+              depthLoadOp: 'clear',
+              depthStoreOp: 'store'
+          }
+      });
+
+      const mockGeometry = {
+          gpuVertexBuffer: vertexBuffer.buffer,
+          gpuIndexBuffer: indexBuffer.buffer,
+          indexCount: indexCount
+      } as any;
+
+      pipeline.bind(pass, {
+          modelViewProjection: mvp,
+          diffuseTexture: diffuseTex.createView(),
+          diffuseSampler: sampler,
+          lightmapTexture: lightmapTex.createView(),
+          lightmapSampler: sampler,
+          lightmapOnly: false,
+          fullbright: false, // Enable lighting
+          brightness: 1.0,
+          gamma: 1.0,
+          // Map layer 0 to style 0
+          styleLayers: [0, -1, -1, -1],
+          styleValues: [1.0]
+      });
+
+      pipeline.draw(pass, mockGeometry);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureRenderTarget(device, texture);
+
+      await expectSnapshot(pixels, {
+          name: 'bsp-lightmapped',
+          description: 'A quad with white diffuse texture modulated by a green split lightmap.',
+          width,
+          height,
+          snapshotDir,
+          updateBaseline
+      });
+
+      vertexBuffer.destroy();
+      indexBuffer.destroy();
+      diffuseTex.destroy();
+      lightmapTex.destroy();
+      depthTexture.destroy();
+      texture.destroy();
+    });
+
+    it('renders with scrolling texture', async () => {
+      if (!gpuSetup) return;
+
+      const width = 256;
+      const height = 256;
+      const context = await createWebGPUContext(undefined, { width, height });
+      const device = context.device;
+
+      const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
+      const pipeline = new BspSurfacePipeline(device, 'rgba8unorm', 'depth24plus');
+
+      const { vertexBuffer, indexBuffer, indexCount } = createQuad(device, -50);
+
+      // Create a 4x4 texture with 4 quadrants
+      // TL: Red, TR: Green
+      // BL: Blue, BR: Yellow
+      const diffuseTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      const data = new Uint8Array(4 * 4 * 4);
+      for (let y = 0; y < 4; y++) {
+        for (let x = 0; x < 4; x++) {
+          const i = (y * 4 + x) * 4;
+          const isRight = x >= 2;
+          const isBottom = y >= 2;
+
+          if (!isRight && !isBottom) { // TL - Red
+             data[i] = 255; data[i+1] = 0; data[i+2] = 0; data[i+3] = 255;
+          } else if (isRight && !isBottom) { // TR - Green
+             data[i] = 0; data[i+1] = 255; data[i+2] = 0; data[i+3] = 255;
+          } else if (!isRight && isBottom) { // BL - Blue
+             data[i] = 0; data[i+1] = 0; data[i+2] = 255; data[i+3] = 255;
+          } else { // BR - Yellow
+             data[i] = 255; data[i+1] = 255; data[i+2] = 0; data[i+3] = 255;
+          }
+        }
+      }
+      diffuseTex.upload(data);
+
+      const lightmapTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      lightmapTex.upload(new Uint8Array(4 * 4 * 4).fill(255)); // White lightmap
+
+      const sampler = device.createSampler({ minFilter: 'nearest', magFilter: 'nearest', addressModeU: 'repeat', addressModeV: 'repeat' });
+
+      const projection = mat4.create();
+      mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+      const mvp = mat4.create();
+      mat4.multiply(mvp, projection, mat4.create());
+
+      const encoder = device.createCommandEncoder();
+      const depthTexture = device.createTexture({
+          size: [width, height, 1],
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
+
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view,
+              loadOp: 'clear',
+              clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+              storeOp: 'store'
+          }],
+          depthStencilAttachment: {
+              view: depthTexture.createView(),
+              depthClearValue: 1.0,
+              depthLoadOp: 'clear',
+              depthStoreOp: 'store'
+          }
+      });
+
+      const mockGeometry = {
+          gpuVertexBuffer: vertexBuffer.buffer,
+          gpuIndexBuffer: indexBuffer.buffer,
+          indexCount: indexCount
+      } as any;
+
+      // Scroll by 0.5 in both U and V.
+      // This should shift the texture:
+      // TL (0,0) + 0.5 -> 0.5, 0.5 (Center) -> BR pixel (Yellow)
+      pipeline.bind(pass, {
+          modelViewProjection: mvp,
+          diffuseTexture: diffuseTex.createView(),
+          diffuseSampler: sampler,
+          lightmapTexture: lightmapTex.createView(),
+          lightmapSampler: sampler,
+          lightmapOnly: false,
+          fullbright: true,
+          texScroll: [0.5, 0.5]
+      });
+
+      pipeline.draw(pass, mockGeometry);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureRenderTarget(device, texture);
+
+      await expectSnapshot(pixels, {
+          name: 'bsp-scrolling',
+          description: 'A quad with texture scrolled by 0.5 UV, shifting the quadrants.',
+          width,
+          height,
+          snapshotDir,
+          updateBaseline
+      });
+
+      vertexBuffer.destroy();
+      indexBuffer.destroy();
+      diffuseTex.destroy();
+      lightmapTex.destroy();
+      depthTexture.destroy();
+      texture.destroy();
+    });
+
+    it('renders alpha tested surface', async () => {
+      if (!gpuSetup) return;
+
+      const width = 256;
+      const height = 256;
+      const context = await createWebGPUContext(undefined, { width, height });
+      const device = context.device;
+
+      const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
+      const pipeline = new BspSurfacePipeline(device, 'rgba8unorm', 'depth24plus');
+
+      const { vertexBuffer, indexBuffer, indexCount } = createQuad(device, -50);
+
+      // Texture: Left half Opaque Red, Right half Transparent (Alpha 0)
+      const diffuseTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      const data = new Uint8Array(4 * 4 * 4);
+      for (let i = 0; i < 16; i++) {
+          const x = i % 4;
+          if (x < 2) {
+              // Left: Red Opaque
+              data[i*4] = 255; data[i*4+1] = 0; data[i*4+2] = 0; data[i*4+3] = 255;
+          } else {
+              // Right: Transparent
+              data[i*4] = 0; data[i*4+1] = 0; data[i*4+2] = 0; data[i*4+3] = 0;
+          }
+      }
+      diffuseTex.upload(data);
+
+      const lightmapTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      lightmapTex.upload(new Uint8Array(4 * 4 * 4).fill(255));
+
+      const sampler = device.createSampler({ minFilter: 'nearest', magFilter: 'nearest' });
+
+      const projection = mat4.create();
+      mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+      const mvp = mat4.create();
+      mat4.multiply(mvp, projection, mat4.create());
+
+      const encoder = device.createCommandEncoder();
+      const depthTexture = device.createTexture({
+          size: [width, height, 1],
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
+
+      // Clear to Blue
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view,
+              loadOp: 'clear',
+              clearValue: { r: 0.0, g: 0.0, b: 1.0, a: 1 }, // Blue background
+              storeOp: 'store'
+          }],
+          depthStencilAttachment: {
+              view: depthTexture.createView(),
+              depthClearValue: 1.0,
+              depthLoadOp: 'clear',
+              depthStoreOp: 'store'
+          }
+      });
+
+      const mockGeometry = {
+          gpuVertexBuffer: vertexBuffer.buffer,
+          gpuIndexBuffer: indexBuffer.buffer,
+          indexCount: indexCount
+      } as any;
+
+      pipeline.bind(pass, {
+          modelViewProjection: mvp,
+          diffuseTexture: diffuseTex.createView(),
+          diffuseSampler: sampler,
+          lightmapTexture: lightmapTex.createView(),
+          lightmapSampler: sampler,
+          lightmapOnly: false,
+          fullbright: true,
+          alpha: 1.0 // Ensure we don't multiply by 0 global alpha unless intended
+      });
+
+      pipeline.draw(pass, mockGeometry);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureRenderTarget(device, texture);
+
+      await expectSnapshot(pixels, {
+          name: 'bsp-alpha-test',
+          description: 'A quad with alpha testing. Left side red (opaque), right side blue (background showing through).',
+          width,
+          height,
+          snapshotDir,
+          updateBaseline
+      });
+
+      vertexBuffer.destroy();
+      indexBuffer.destroy();
+      diffuseTex.destroy();
+      lightmapTex.destroy();
+      depthTexture.destroy();
+      texture.destroy();
+    });
+
+    it('renders with dynamic light', async () => {
+      if (!gpuSetup) return;
+
+      const width = 256;
+      const height = 256;
+      const context = await createWebGPUContext(undefined, { width, height });
+      const device = context.device;
+
+      const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
+      const pipeline = new BspSurfacePipeline(device, 'rgba8unorm', 'depth24plus');
+
+      const { vertexBuffer, indexBuffer, indexCount } = createQuad(device, -50);
+
+      // Gray base
+      const diffuseTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      diffuseTex.upload(new Uint8Array(4 * 4 * 4).fill(128));
+
+      // Black lightmap
+      const lightmapTex = new Texture2D(device, { width: 4, height: 4, format: 'rgba8unorm' });
+      lightmapTex.upload(new Uint8Array(4 * 4 * 4).fill(0));
+
+      const sampler = device.createSampler({ minFilter: 'nearest', magFilter: 'nearest' });
+
+      const projection = mat4.create();
+      mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+      const mvp = mat4.create();
+      mat4.multiply(mvp, projection, mat4.create());
+
+      const encoder = device.createCommandEncoder();
+      const depthTexture = device.createTexture({
+          size: [width, height, 1],
+          format: 'depth24plus',
+          usage: GPUTextureUsage.RENDER_ATTACHMENT
+      });
+
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
+              storeOp: 'store'
+          }],
+          depthStencilAttachment: {
+              view: depthTexture.createView(),
+              depthClearValue: 1.0,
+              depthLoadOp: 'clear',
+              depthStoreOp: 'store'
+          }
+      });
+
+      const mockGeometry = {
+          gpuVertexBuffer: vertexBuffer.buffer,
+          gpuIndexBuffer: indexBuffer.buffer,
+          indexCount: indexCount
+      } as any;
+
+      // Red dynamic light at center
+      const dlight = {
+          origin: { x: 0, y: 0, z: -40 } as any, // 10 units in front of wall at -50
+          color: { x: 1, y: 0, z: 0 } as any,
+          intensity: 200,
+          die: 0
+      };
+
+      pipeline.bind(pass, {
+          modelViewProjection: mvp,
+          diffuseTexture: diffuseTex.createView(),
+          diffuseSampler: sampler,
+          lightmapTexture: lightmapTex.createView(),
+          lightmapSampler: sampler,
+          lightmapOnly: false,
+          fullbright: false,
+          brightness: 1.0,
+          gamma: 1.0,
+          dlights: [dlight]
+      });
+
+      pipeline.draw(pass, mockGeometry);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureRenderTarget(device, texture);
+
+      await expectSnapshot(pixels, {
+          name: 'bsp-dynamic-light',
+          description: 'A quad lit by a red dynamic light at the center.',
+          width,
+          height,
+          snapshotDir,
+          updateBaseline
+      });
+
+      vertexBuffer.destroy();
+      indexBuffer.destroy();
+      diffuseTex.destroy();
+      lightmapTex.destroy();
+      depthTexture.destroy();
+      texture.destroy();
+    });
+});

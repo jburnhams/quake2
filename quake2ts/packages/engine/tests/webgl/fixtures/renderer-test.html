@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGL Renderer Test Harness</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas" width="256" height="256"></canvas>
+
+    <!-- Load built engine IIFE bundle (includes all dependencies) -->
+    <script src="/packages/engine/dist/browser/index.global.js"></script>
+
+    <script>
+        // Expose renderer globally for tests
+        window.createRendererTest = async function() {
+            const canvas = document.getElementById('glCanvas');
+            const gl = canvas.getContext('webgl2');
+
+            if (!gl) {
+                throw new Error('WebGL2 not supported');
+            }
+
+            // Use the global Quake2Engine from the IIFE build
+            const renderer = Quake2Engine.createRenderer(gl);
+
+            // Expose renderer and gl for tests
+            window.testRenderer = renderer;
+            window.testGl = gl;
+            window.testCanvas = canvas;
+
+            return renderer;
+        };
+
+        // Utility to capture canvas as pixels
+        window.captureCanvas = function() {
+            const gl = window.testGl;
+            const canvas = window.testCanvas;
+            const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+            gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+            // Flip vertically (WebGL coordinates are bottom-up)
+            const flipped = new Uint8Array(pixels.length);
+            const rowSize = canvas.width * 4;
+            for (let y = 0; y < canvas.height; y++) {
+                const srcRow = (canvas.height - 1 - y) * rowSize;
+                const dstRow = y * rowSize;
+                for (let x = 0; x < rowSize; x++) {
+                    flipped[dstRow + x] = pixels[srcRow + x];
+                }
+            }
+
+            return Array.from(flipped);
+        };
+
+        console.log('Renderer test harness ready');
+    </script>
+</body>
+</html>
