@@ -72,8 +72,8 @@ jobs:
       - name: Prepare Gallery Data
         run: |
           # Ensure target directories exist in the build output
-          mkdir -p pages/dist/snapshots
-          mkdir -p pages/dist/webgl-snapshots
+          mkdir -p pages/dist/webgpu/snapshots
+          mkdir -p pages/dist/webgl/snapshots
 
           # --- Process WebGPU Results ---
           if [ -f "visual-test-results/visual-tests.json" ]; then
@@ -81,10 +81,10 @@ jobs:
             cp visual-test-results/visual-tests.json pages/dist/visual-tests.json
 
             # Copy snapshots
-            mkdir -p pages/dist/snapshots/{baselines,actual,diff}
-            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/snapshots/baselines/ \; || true
-            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/snapshots/actual/ \; || true
-            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/snapshots/diff/ \; || true
+            mkdir -p pages/dist/webgpu/snapshots/{baselines,actual,diff}
+            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgpu/snapshots/baselines/ \; || true
+            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgpu/snapshots/actual/ \; || true
+            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgpu/snapshots/diff/ \; || true
           else
              echo "[]" > pages/dist/visual-tests.json
           fi
@@ -95,10 +95,10 @@ jobs:
             cp webgl-visual-test-results/webgl-visual-tests.json pages/dist/webgl-visual-tests.json
 
             # Copy snapshots
-            mkdir -p pages/dist/webgl-snapshots/{baselines,actual,diff}
-            find webgl-visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgl-snapshots/baselines/ \; || true
-            find webgl-visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgl-snapshots/actual/ \; || true
-            find webgl-visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgl-snapshots/diff/ \; || true
+            mkdir -p pages/dist/webgl/snapshots/{baselines,actual,diff}
+            find webgl-visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgl/snapshots/baselines/ \; || true
+            find webgl-visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgl/snapshots/actual/ \; || true
+            find webgl-visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgl/snapshots/diff/ \; || true
           else
              echo "[]" > pages/dist/webgl-visual-tests.json
           fi

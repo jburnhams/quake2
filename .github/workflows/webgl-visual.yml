@@ -55,4 +55,4 @@ jobs:
           name: webgl-visual-test-results
           path: |
             quake2ts/webgl-visual-tests.json
-            quake2ts/packages/engine/tests/webgl/visual/__snapshots__
+            quake2ts/packages/engine/tests/webgl/__snapshots__
