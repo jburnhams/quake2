@@ -1,10 +1,11 @@
 import { FrameRenderer, FrameRenderOptions, FrameRenderStats } from './frame.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline } from './pipelines/skybox.js';
+import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IRenderer, Pic } from '../interface.js';
-import { Texture2D } from './resources.js';
+import { Texture2D, VertexBuffer, IndexBuffer } from './resources.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { RenderableEntity } from '../scene.js';
 import { CollisionVisRenderer } from '../collisionVis.js';
@@ -18,6 +19,7 @@ import { Md3Model } from '../../assets/md3.js';
 import { InstanceData } from '../instancing.js';
 import { RenderStatistics } from '../gpuProfiler.js';
 import { parseColorString } from '../colors.js';
+import { BspSurfaceGeometry } from '../bsp.js';
 
 // WebGPU-specific renderer interface
 export interface WebGPURenderer extends IRenderer {
@@ -28,7 +30,11 @@ export interface WebGPURenderer extends IRenderer {
   readonly pipelines: {
     readonly sprite: SpriteRenderer;
     readonly skybox: SkyboxPipeline;
+    readonly bsp: BspSurfacePipeline;
   };
+
+  // Helper methods to upload geometry
+  uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void;
 }
 
 export class WebGPURendererImpl implements WebGPURenderer {
@@ -43,7 +49,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
   private is2DActive = false;
 
   // Stub implementations for required properties
-  // TODO: Implement proper collision visualization, debug rendering, and particle system
   readonly collisionVis: CollisionVisRenderer;
   readonly debug: DebugRenderer;
   readonly particleSystem: ParticleSystem;
@@ -54,10 +59,10 @@ export class WebGPURendererImpl implements WebGPURenderer {
     public readonly pipelines: {
         sprite: SpriteRenderer;
         skybox: SkyboxPipeline;
+        bsp: BspSurfacePipeline;
     }
   ) {
     // Create 1x1 white texture for solid color rendering
-    // Ref: WebGL renderer sprite.ts:68-69
     this.whiteTexture = new Texture2D(context.device, {
       width: 1,
       height: 1,
@@ -66,7 +71,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     });
     this.whiteTexture.upload(new Uint8Array([255, 255, 255, 255]));
 
-    // Create stub instances (TODO: implement properly in later sections)
+    // Create stub instances
     this.collisionVis = null as any;
     this.debug = null as any;
     this.particleSystem = null as any;
@@ -93,28 +98,53 @@ export class WebGPURendererImpl implements WebGPURenderer {
     entities: readonly RenderableEntity[] = [],
     renderOptions?: RenderOptions
   ): void {
-    // TODO: Process entities and pass to frame renderer
-    // For now, just render the frame without entities
-    // Note: WebGL renderer doesn't return anything, but we could return stats for debugging
+    // For now, pass options to frame renderer.
+    // In the future, we will collect draw calls here and execute passes.
     this.frameRenderer.renderFrame(options);
   }
 
   // =========================================================================
+  // Geometry Management
+  // =========================================================================
+
+  uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void {
+      for (const surface of surfaces) {
+          // Check if already uploaded
+          if (surface.gpuVertexBuffer && surface.gpuIndexBuffer) continue;
+
+          // Create GPU buffers using our resource abstraction
+          const vb = new VertexBuffer(this.device, {
+              size: surface.vertexData.byteLength,
+              label: `bsp-surface-vb-${surface.texture}`
+          });
+          // Explicit cast to BufferSource
+          vb.write(surface.vertexData as unknown as BufferSource);
+
+          const ib = new IndexBuffer(this.device, {
+              size: surface.indexData.byteLength,
+              label: `bsp-surface-ib-${surface.texture}`
+          });
+          // Explicit cast to BufferSource
+          ib.write(surface.indexData as unknown as BufferSource);
+
+          // Assign to surface properties (casting to write readonly/extended props)
+          const mutableSurface = surface as any;
+          mutableSurface.gpuVertexBuffer = vb.buffer;
+          mutableSurface.gpuIndexBuffer = ib.buffer;
+      }
+  }
+
+  // =========================================================================
   // Texture Management
-  // Ref: WebGL renderer.ts:725-761
   // =========================================================================
 
   async registerPic(name: string, data: ArrayBuffer): Promise<Pic> {
-    // Check cache first
     if (this.picCache.has(name)) {
       return this.picCache.get(name)!;
     }
 
-    // For now, assume data is raw RGBA8 format
-    // TODO: Add proper image decoding (PNG, TGA, etc.)
-    // This is a simplified implementation
     const texture = new Texture2D(this.device, {
-      width: 256, // TODO: Extract actual dimensions from image data
+      width: 256,
       height: 256,
       format: this.context.format,
       label: `pic-${name}`
@@ -126,12 +156,10 @@ export class WebGPURendererImpl implements WebGPURenderer {
   }
 
   registerTexture(name: string, texture: PreparedTexture): Pic {
-    // Check cache first
     if (this.picCache.has(name)) {
       return this.picCache.get(name)!;
     }
 
-    // Create WebGPU texture from PreparedTexture
     const gpuTexture = new Texture2D(this.device, {
       width: texture.width,
       height: texture.height,
@@ -140,8 +168,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
       label: `texture-${name}`
     });
 
-    // Upload all mip levels
-    // Ref: PreparedTexture structure from assets/texture.ts:13-18
     for (const mipLevel of texture.levels) {
       gpuTexture.upload(mipLevel.rgba as BufferSource, {
         width: mipLevel.width,
@@ -156,19 +182,14 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // =========================================================================
   // 2D Drawing API
-  // Ref: WebGL renderer.ts:763-830
   // =========================================================================
 
   begin2D(): void {
-    // Begin 2D rendering pass through frame renderer
-    // Ref: WebGL renderer.ts:763-773
     this.frameRenderer.begin2DPass();
     this.is2DActive = true;
   }
 
   end2D(): void {
-    // End 2D rendering session
-    // Ref: WebGL renderer.ts:775-779
     this.frameRenderer.end2DPass();
     this.is2DActive = false;
   }
@@ -182,14 +203,11 @@ export class WebGPURendererImpl implements WebGPURenderer {
     if (!this.is2DActive) {
       throw new Error('drawPic called outside begin2D/end2D');
     }
-
-    // Use sprite renderer to draw textured quad
-    // Ref: WebGL renderer.ts:781-784
     this.pipelines.sprite.drawTexturedQuad(
       x, y,
       pic.width, pic.height,
       pic as Texture2D,
-      0, 0, 1, 1, // Full texture UVs
+      0, 0, 1, 1,
       color
     );
   }
@@ -204,9 +222,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
     if (!this.is2DActive) {
       throw new Error('drawfillRect called outside begin2D/end2D');
     }
-
-    // Use sprite renderer with solid color
-    // Ref: WebGL renderer.ts:827-829
     this.pipelines.sprite.drawSolidRect(x, y, width, height, color);
   }
 
@@ -221,12 +236,9 @@ export class WebGPURendererImpl implements WebGPURenderer {
     }
 
     if (!this.font) {
-      // Font not loaded yet - skip drawing
       return;
     }
 
-    // Parse color codes and render text
-    // Ref: WebGL renderer.ts:805-818
     const segments = parseColorString(text);
     let currentX = x;
     const charWidth = 8;
@@ -259,9 +271,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
     if (!this.is2DActive) {
       throw new Error('drawCenterString called outside begin2D/end2D');
     }
-
-    // Calculate centered X position
-    // Ref: WebGL renderer.ts:820-825
     const stripped = text.replace(/\^[0-9]/g, '');
     const charWidth = 8;
     const width = stripped.length * charWidth;
@@ -271,7 +280,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // =========================================================================
   // Entity Highlighting (Stubs)
-  // TODO: Implement in later sections
   // =========================================================================
 
   setEntityHighlight(entityId: number, color: [number, number, number, number]): void {
@@ -292,7 +300,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // =========================================================================
   // Render Settings (Stubs)
-  // TODO: Implement in later sections
   // =========================================================================
 
   setDebugMode(mode: DebugMode): void {
@@ -337,7 +344,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // =========================================================================
   // Instanced Rendering (Stub)
-  // TODO: Implement in later sections
   // =========================================================================
 
   renderInstanced(model: Md2Model | Md3Model, instances: InstanceData[]): void {
@@ -349,8 +355,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
 
   getPerformanceReport(): RenderStatistics {
-    // TODO: Implement GPU profiling
-    // Ref: gpuProfiler.ts:8-26
     return {
       frameTimeMs: 0,
       gpuTimeMs: 0,
@@ -373,8 +377,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
   }
 
   getMemoryUsage(): MemoryUsage {
-    // TODO: Implement memory tracking
-    // Ref: types.ts:27-32
     return {
       texturesBytes: 0,
       geometryBytes: 0,
@@ -390,31 +392,24 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   resize(width: number, height: number): void {
     if (this.context.context && !this.context.isHeadless) {
-        // In browser, canvas resize usually handled externally, but we might need to update swap chain config
         this.context.width = width;
         this.context.height = height;
     } else {
-        // Headless
         this.context.width = width;
         this.context.height = height;
     }
   }
 
   dispose(): void {
-    // Destroy pipelines
     this.pipelines.sprite.destroy();
     this.pipelines.skybox.destroy();
+    this.pipelines.bsp.destroy();
 
-    // Destroy cached textures
     for (const texture of this.picCache.values()) {
       (texture as Texture2D).destroy();
     }
     this.picCache.clear();
-
-    // Destroy white texture
     this.whiteTexture.destroy();
-
-    // Destroy device resources if needed (most auto-destroyed with device)
     this.context.device.destroy();
   }
 
@@ -433,19 +428,26 @@ export async function createWebGPURenderer(
   const spriteRenderer = new SpriteRenderer(context.device, context.format);
   const skyboxPipeline = new SkyboxPipeline(context.device, context.format);
 
+  // Use context.depthFormat for the BSP pipeline
+  // Ensure we are passing correct formats
+  const bspPipeline = new BspSurfacePipeline(
+      context.device,
+      context.format,
+      context.depthFormat || 'depth24plus'
+  );
+
   // Registry of pipelines
   const pipelines = {
     sprite: spriteRenderer,
-    skybox: skyboxPipeline
+    skybox: skyboxPipeline,
+    bsp: bspPipeline
   };
 
-  // Create Frame Renderer
-  // Note: We need to pass the context state which includes width/height
   if (canvas) {
       context.width = canvas.width;
       context.height = canvas.height;
   } else {
-      context.width = 800; // Default headless size
+      context.width = 800;
       context.height = 600;
   }
 

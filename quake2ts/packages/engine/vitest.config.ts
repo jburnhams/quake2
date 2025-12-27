@@ -14,7 +14,7 @@ const exclude = [
   '**/node_modules/**',
   '**/dist/**',
   // Exclude webgpu specific tests from standard runs
-  ...((!isWebGPU) ? ['**/tests/webgpu/**'] : []),
+  ...((!isWebGPU) ? ['**/webgpu/**/*.test.ts'] : []),
   // Exclude webgl visual tests from standard runs
   ...((!isWebGL) ? ['**/tests/webgl/**'] : []),
   // Exclude integration tests from unit tests
@@ -22,7 +22,7 @@ const exclude = [
 ];
 
 const include = isWebGPU
-  ? ['**/tests/webgpu/**/*.test.ts']
+  ? ['**/webgpu/**/*.test.ts']
   : isWebGL
     ? ['**/tests/webgl/**/*.test.ts']
     : isIntegration
