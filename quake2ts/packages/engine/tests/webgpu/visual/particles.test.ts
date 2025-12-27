@@ -1,222 +1,373 @@
-import { test } from '../../helpers/visual-testing.js';
+import { describe, it, beforeAll, afterAll } from 'vitest';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
 import { ParticleRenderer } from '../../../src/render/webgpu/pipelines/particleSystem.js';
-import { ParticleSystem } from '../../../src/render/particleSystem.js';
+import { ParticleSystem, spawnSteam, spawnExplosion, spawnBlood } from '../../../src/render/particleSystem.js';
 import { RandomGenerator, createMat4Identity, mat4Ortho } from '@quake2ts/shared';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
+import path from 'path';
+import fs from 'fs';
 
-test('pipeline: particles-basic', async ({ renderAndExpectSnapshot }) => {
-  await renderAndExpectSnapshot(
-    async (device, format, encoder, view) => {
-      // Setup
+const snapshotDir = path.join(__dirname, '__snapshots__');
+const updateBaseline = process.env.UPDATE_VISUAL === '1';
+
+describe('Particle System Visual Tests', () => {
+  let gpuSetup: HeadlessWebGPUSetup | null = null;
+
+  beforeAll(async () => {
+      try {
+        gpuSetup = await initHeadlessWebGPU();
+        if (!fs.existsSync(snapshotDir)) {
+            fs.mkdirSync(snapshotDir, { recursive: true });
+        }
+      } catch (error) {
+        console.warn('Skipping WebGPU visual tests: ' + error);
+      }
+  });
+
+  afterAll(async () => {
+    if (gpuSetup) {
+      await gpuSetup.cleanup();
+    }
+  });
+
+  it('particles-basic', async () => {
+      if (!gpuSetup) return;
+
+      const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
+      const { device, format } = context;
+
       const renderer = new ParticleRenderer(device, format);
       const rng = new RandomGenerator(12345);
       const system = new ParticleSystem(100, rng);
 
-      // Spawn a few particles
       system.spawn({
-        position: { x: -5, y: -5, z: -10 },
-        color: [1, 0, 0, 0.5], // Red, Alpha 0.5
-        size: 5,
-        lifetime: 10,
-        blendMode: 'alpha'
+          position: { x: -5, y: -5, z: -10 },
+          color: [1, 0, 0, 0.5],
+          size: 5,
+          lifetime: 10,
+          blendMode: 'alpha'
       });
-
       system.spawn({
-        position: { x: 5, y: 5, z: -10 },
-        color: [0, 1, 0, 0.5], // Green, Alpha 0.5
-        size: 5,
-        lifetime: 10,
-        blendMode: 'additive'
+          position: { x: 5, y: 5, z: -10 },
+          color: [0, 1, 0, 0.5],
+          size: 5,
+          lifetime: 10,
+          blendMode: 'additive'
       });
-
-      // Overlapping particles to test blending
       system.spawn({
           position: { x: 0, y: 0, z: -10 },
-          color: [0, 0, 1, 0.5], // Blue
+          color: [0, 0, 1, 0.5],
           size: 8,
           lifetime: 10,
           blendMode: 'alpha'
       });
       system.spawn({
           position: { x: 2, y: 2, z: -10 },
-          color: [1, 1, 0, 0.5], // Yellow
+          color: [1, 1, 0, 0.5],
           size: 8,
           lifetime: 10,
           blendMode: 'additive'
       });
 
-      // Update system to process 0 time (just to ensure state is ready)
       system.update(0);
 
-      // Prepare View
       const projection = createMat4Identity();
       mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
-
       const viewRight = { x: 1, y: 0, z: 0 };
       const viewUp = { x: 0, y: 1, z: 0 };
 
-      // We return a callback that uses the RenderPassEncoder
-      return (pass) => {
-          renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-      };
-    },
-    {
-      name: 'particles-basic',
-      description: 'Basic particle rendering showing alpha-blended and additive particles of different colors (Red, Green, Blue, Yellow) and sizes.'
-    }
-  );
-});
-
-test('pipeline: particles-smoke', async ({ renderAndExpectSnapshot }) => {
-  await renderAndExpectSnapshot(
-    async (device, format, encoder, view) => {
-      const renderer = new ParticleRenderer(device, format);
-      const rng = new RandomGenerator(9999);
-      const system = new ParticleSystem(100, rng);
-
-      // spawnSteam uses rng, so we should get deterministic output with seeded rng
-      // But we need to call it synchronously for the test setup if possible, or wait.
-      // Since we are inside the async setup, we can just call it if we import it top-level or use dynamic import await.
-
-      const { spawnSteam } = await import('../../../src/render/particleSystem.js');
-      spawnSteam({
-           system,
-           origin: { x: 0, y: 0, z: -10 }
+      const encoder = device.createCommandEncoder();
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view: renderTargetView,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              storeOp: 'store'
+          }]
       });
 
-      system.update(0);
+      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+      pass.end();
 
-      const projection = createMat4Identity();
-      mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
-      const viewRight = { x: 1, y: 0, z: 0 };
-      const viewUp = { x: 0, y: 1, z: 0 };
+      device.queue.submit([encoder.finish()]);
 
-      return (pass) => {
-          renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-      };
-    },
-    {
-      name: 'particles-smoke',
-      description: 'Smoke/Steam particles generated by spawnSteam.'
-    }
-  );
-});
+      const pixels = await captureTexture(device, renderTarget, 256, 256);
+      await expectSnapshot(pixels, {
+          name: 'particles-basic',
+          description: 'Basic particle rendering showing alpha-blended and additive particles.',
+          width: 256,
+          height: 256,
+          snapshotDir,
+          updateBaseline
+      });
 
-test('pipeline: particles-explosion', async ({ renderAndExpectSnapshot }) => {
-    await renderAndExpectSnapshot(
-      async (device, format, encoder, view) => {
-        const renderer = new ParticleRenderer(device, format);
-        const rng = new RandomGenerator(8888);
-        const system = new ParticleSystem(200, rng);
-
-        const { spawnExplosion } = await import('../../../src/render/particleSystem.js');
-        spawnExplosion({
-             system,
-             origin: { x: 0, y: 0, z: -20 }
-        });
-
-        system.update(0);
-
-        const projection = createMat4Identity();
-        mat4Ortho(projection, -20, 20, -20, 20, 0.1, 100);
-        const viewRight = { x: 1, y: 0, z: 0 };
-        const viewUp = { x: 0, y: 1, z: 0 };
-
-        return (pass) => {
-            renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-        };
-      },
-      {
-        name: 'particles-explosion',
-        description: 'Explosion particles generated by spawnExplosion.'
-      }
-    );
+      await cleanup();
+      renderer.dispose();
   });
 
-  test('pipeline: particles-blood', async ({ renderAndExpectSnapshot }) => {
-    await renderAndExpectSnapshot(
-      async (device, format, encoder, view) => {
-        const renderer = new ParticleRenderer(device, format);
-        const rng = new RandomGenerator(7777);
+  it('particles-smoke', async () => {
+    if (!gpuSetup) return;
+
+    const width = 256;
+    const height = 256;
+    const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
+    const { device, format } = context;
+
+    const renderer = new ParticleRenderer(device, format);
+
+    const fps = 10;
+    const durationSeconds = 1.5;
+    const frameCount = fps * durationSeconds;
+
+    await expectAnimationSnapshot(async (frameIndex) => {
+        const time = frameIndex * (1.0 / fps);
+
+        // Recreate system state deterministically
+        const rng = new RandomGenerator(9999);
         const system = new ParticleSystem(100, rng);
+        spawnSteam({ system, origin: { x: 0, y: 0, z: -10 } });
 
-        const { spawnBlood } = await import('../../../src/render/particleSystem.js');
-        spawnBlood({
-             system,
-             origin: { x: 0, y: 0, z: -10 },
-             direction: { x: 0, y: 1, z: 0 }
-        });
-
-        system.update(0);
+        // Update system to current time
+        const dt = 1/20;
+        let t = 0;
+        while(t < time) {
+            const step = Math.min(dt, time - t);
+            system.update(step);
+            t += step;
+        }
 
         const projection = createMat4Identity();
         mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
         const viewRight = { x: 1, y: 0, z: 0 };
         const viewUp = { x: 0, y: 1, z: 0 };
 
-        return (pass) => {
-            renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-        };
-      },
-      {
-        name: 'particles-blood',
-        description: 'Blood particles generated by spawnBlood.'
-      }
-    );
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTargetView,
+                loadOp: 'clear',
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                storeOp: 'store'
+            }]
+        });
+
+        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+        return captureTexture(device, renderTarget, width, height);
+
+    }, {
+        name: 'particles-smoke',
+        description: 'Smoke/Steam particles rising and fading over time.',
+        width,
+        height,
+        snapshotDir,
+        updateBaseline,
+        fps,
+        frameCount
+    });
+
+    await cleanup();
+    renderer.dispose();
   });
 
-  test('pipeline: particles-many-performance', async ({ renderAndExpectSnapshot }) => {
-    await renderAndExpectSnapshot(
-      async (device, format, encoder, view) => {
-        const renderer = new ParticleRenderer(device, format);
-        const rng = new RandomGenerator(1111);
-        const count = 5000;
-        const system = new ParticleSystem(count, rng);
+  it('particles-explosion', async () => {
+    if (!gpuSetup) return;
 
-        // Spawn many particles in a grid
-        const grid = Math.ceil(Math.sqrt(count));
-        for(let i=0; i<count; i++) {
-             const x = (i % grid) - grid/2;
-             const y = (Math.floor(i / grid)) - grid/2;
-             system.spawn({
-                position: { x: x * 1.2, y: y * 1.2, z: -10 },
-                color: [rng.frandom(), rng.frandom(), rng.frandom(), 0.5],
-                size: 2,
-                lifetime: 100,
-                blendMode: 'additive'
-             });
+    const width = 256;
+    const height = 256;
+    const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
+    const { device, format } = context;
+
+    const renderer = new ParticleRenderer(device, format);
+
+    const fps = 10;
+    const durationSeconds = 1.0;
+    const frameCount = fps * durationSeconds;
+
+    await expectAnimationSnapshot(async (frameIndex) => {
+        const time = frameIndex * (1.0 / fps);
+        const rng = new RandomGenerator(8888);
+        const system = new ParticleSystem(200, rng);
+        spawnExplosion({ system, origin: { x: 0, y: 0, z: -20 } });
+
+        const dt = 1/20;
+        let t = 0;
+        while(t < time) {
+            const step = Math.min(dt, time - t);
+            system.update(step);
+            t += step;
         }
 
-        system.update(0);
-
         const projection = createMat4Identity();
-        mat4Ortho(projection, -50, 50, -50, 50, 0.1, 100);
+        mat4Ortho(projection, -20, 20, -20, 20, 0.1, 100);
         const viewRight = { x: 1, y: 0, z: 0 };
         const viewUp = { x: 0, y: 1, z: 0 };
 
-        return (pass) => {
-            const start = performance.now();
-            renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-            const end = performance.now();
-            // Just logging for now, or could assert on time but that's flaky in CI
-            // console.log(`Rendered ${count} particles in ${end - start}ms`);
-        };
-      },
-      {
-        name: 'particles-many',
-        description: 'Performance test rendering 5000 particles.'
-      }
-    );
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTargetView,
+                loadOp: 'clear',
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                storeOp: 'store'
+            }]
+        });
+
+        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+        return captureTexture(device, renderTarget, width, height);
+    }, {
+        name: 'particles-explosion',
+        description: 'Explosion particles expanding outwards.',
+        width,
+        height,
+        snapshotDir,
+        updateBaseline,
+        fps,
+        frameCount
+    });
+
+    await cleanup();
+    renderer.dispose();
   });
 
-test('pipeline: particles-textured', async ({ renderAndExpectSnapshot }) => {
-  await renderAndExpectSnapshot(
-    async (device, format, encoder, view) => {
+  it('particles-blood', async () => {
+    if (!gpuSetup) return;
+
+    const width = 256;
+    const height = 256;
+    const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
+    const { device, format } = context;
+
+    const renderer = new ParticleRenderer(device, format);
+
+    const fps = 10;
+    const durationSeconds = 0.8;
+    const frameCount = fps * durationSeconds;
+
+    await expectAnimationSnapshot(async (frameIndex) => {
+        const time = frameIndex * (1.0 / fps);
+        const rng = new RandomGenerator(7777);
+        const system = new ParticleSystem(100, rng);
+        spawnBlood({ system, origin: { x: 0, y: 0, z: -10 }, direction: { x: 0, y: 1, z: 0 } });
+
+        const dt = 1/20;
+        let t = 0;
+        while(t < time) {
+            const step = Math.min(dt, time - t);
+            system.update(step);
+            t += step;
+        }
+
+        const projection = createMat4Identity();
+        mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
+        const viewRight = { x: 1, y: 0, z: 0 };
+        const viewUp = { x: 0, y: 1, z: 0 };
+
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTargetView,
+                loadOp: 'clear',
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                storeOp: 'store'
+            }]
+        });
+
+        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+        return captureTexture(device, renderTarget, width, height);
+    }, {
+        name: 'particles-blood',
+        description: 'Blood particles spraying directionally.',
+        width,
+        height,
+        snapshotDir,
+        updateBaseline,
+        fps,
+        frameCount
+    });
+
+    await cleanup();
+    renderer.dispose();
+  });
+
+  it('particles-many-performance', async () => {
+      if (!gpuSetup) return;
+
+      const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
+      const { device, format } = context;
+
+      const renderer = new ParticleRenderer(device, format);
+      const rng = new RandomGenerator(1111);
+      const count = 5000;
+      const system = new ParticleSystem(count, rng);
+
+      const grid = Math.ceil(Math.sqrt(count));
+      for(let i=0; i<count; i++) {
+           const x = (i % grid) - grid/2;
+           const y = (Math.floor(i / grid)) - grid/2;
+           system.spawn({
+              position: { x: x * 1.2, y: y * 1.2, z: -10 },
+              color: [rng.frandom(), rng.frandom(), rng.frandom(), 0.5],
+              size: 2,
+              lifetime: 100,
+              blendMode: 'additive'
+           });
+      }
+
+      system.update(0);
+
+      const projection = createMat4Identity();
+      mat4Ortho(projection, -50, 50, -50, 50, 0.1, 100);
+      const viewRight = { x: 1, y: 0, z: 0 };
+      const viewUp = { x: 0, y: 1, z: 0 };
+
+      const encoder = device.createCommandEncoder();
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view: renderTargetView,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              storeOp: 'store'
+          }]
+      });
+
+      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureTexture(device, renderTarget, 256, 256);
+      await expectSnapshot(pixels, {
+          name: 'particles-many',
+          description: 'Performance test rendering 5000 particles.',
+          width: 256,
+          height: 256,
+          snapshotDir,
+          updateBaseline
+      });
+
+      await cleanup();
+      renderer.dispose();
+  });
+
+  it('particles-textured', async () => {
+      if (!gpuSetup) return;
+
+      const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
+      const { device, format } = context;
+
       const renderer = new ParticleRenderer(device, format);
       const rng = new RandomGenerator(67890);
       const system = new ParticleSystem(100, rng);
 
-      // Create a test texture (checkerboard)
       const size = 32;
       const data = new Uint8Array(size * size * 4);
       for (let y = 0; y < size; y++) {
@@ -237,11 +388,9 @@ test('pipeline: particles-textured', async ({ renderAndExpectSnapshot }) => {
       });
       texture.upload(data);
 
-      // Map of textures
       const textures = new Map<number, Texture2D>();
-      textures.set(1, texture); // Index 1
+      textures.set(1, texture);
 
-      // Spawn default particles (texture index 0, soft circle)
       system.spawn({
           position: { x: -3, y: 0, z: -10 },
           color: [1, 0, 0, 1],
@@ -250,10 +399,9 @@ test('pipeline: particles-textured', async ({ renderAndExpectSnapshot }) => {
           textureIndex: 0
       });
 
-      // Spawn textured particles (texture index 1, checkerboard)
       system.spawn({
           position: { x: 3, y: 0, z: -10 },
-          color: [0, 1, 0, 1], // Green tint
+          color: [0, 1, 0, 1],
           size: 6,
           lifetime: 10,
           textureIndex: 1
@@ -266,13 +414,33 @@ test('pipeline: particles-textured', async ({ renderAndExpectSnapshot }) => {
       const viewRight = { x: 1, y: 0, z: 0 };
       const viewUp = { x: 0, y: 1, z: 0 };
 
-      return (pass) => {
-          renderer.render(pass, projection as Float32Array, viewRight, viewUp, system, textures);
-      };
-    },
-    {
-      name: 'particles-textured',
-      description: 'Particles with custom textures. Left: Default soft circle (Red). Right: Checkerboard texture (Green).'
-    }
-  );
+      const encoder = device.createCommandEncoder();
+      const pass = encoder.beginRenderPass({
+          colorAttachments: [{
+              view: renderTargetView,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              storeOp: 'store'
+          }]
+      });
+
+      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system, textures);
+      pass.end();
+
+      device.queue.submit([encoder.finish()]);
+
+      const pixels = await captureTexture(device, renderTarget, 256, 256);
+      await expectSnapshot(pixels, {
+          name: 'particles-textured',
+          description: 'Particles with custom textures. Left: Default soft circle (Red). Right: Checkerboard texture (Green).',
+          width: 256,
+          height: 256,
+          snapshotDir,
+          updateBaseline
+      });
+
+      await cleanup();
+      renderer.dispose();
+      texture.destroy();
+  });
 });
