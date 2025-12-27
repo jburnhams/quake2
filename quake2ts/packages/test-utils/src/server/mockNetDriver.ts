@@ -1,5 +1,6 @@
 import { NetDriver } from '@quake2ts/shared';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
+import { LegacyMock, legacyFn } from '../vitest-compat.js';
 
 export interface MockNetDriverState {
     connected: boolean;
@@ -23,16 +24,16 @@ export class MockNetDriver implements NetDriver {
         errorHandlers: []
     };
 
-    public connectSpy = vi.fn().mockImplementation(async (url: string) => {
+    public connectSpy: LegacyMock<[string], Promise<void>> = legacyFn(async (url: string) => {
         this.state.connected = true;
     });
 
-    public disconnectSpy = vi.fn().mockImplementation(() => {
+    public disconnectSpy: LegacyMock<[], void> = legacyFn(() => {
         this.state.connected = false;
         this.state.closeHandlers.forEach(h => h());
     });
 
-    public sendSpy = vi.fn().mockImplementation((data: Uint8Array) => {
+    public sendSpy: LegacyMock<[Uint8Array], void> = legacyFn((data: Uint8Array) => {
         this.state.messagesSent.push(new Uint8Array(data));
     });
 

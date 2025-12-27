@@ -2,31 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BspLoader } from '../../src/assets/bsp.js';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
 
-// Mock Worker
-class MockWorker {
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: ErrorEvent) => void) | null = null;
-  postMessage: (message: any, transfer: any[]) => void;
-  terminate: () => void;
-
-  constructor(stringUrl: string) {
-    this.postMessage = vi.fn();
-    this.terminate = vi.fn();
-  }
-}
-
 describe('BspLoader with Worker', () => {
   let vfs: VirtualFileSystem;
   let loader: BspLoader;
 
   beforeEach(() => {
     vfs = {
-      readFile: vi.fn().mockResolvedValue(new ArrayBuffer(1024)), // Mock minimal valid BSP?
+      readFile: vi.fn().mockResolvedValue(new ArrayBuffer(1024)),
     } as unknown as VirtualFileSystem;
   });
 
   afterEach(() => {
-    vi.stubGlobal('Worker', undefined);
+    vi.unstubAllGlobals();
   });
 
   it('should use worker when configured', async () => {
@@ -42,16 +29,20 @@ describe('BspLoader with Worker', () => {
 
     // Capture worker
     let capturedWorker: any;
-    vi.stubGlobal('Worker', vi.fn().mockImplementation(() => {
-        const worker = {
-            postMessage: vi.fn(),
-            terminate: vi.fn(),
-            onmessage: null,
-            onerror: null,
-        } as unknown as Worker;
-        capturedWorker = worker;
-        return worker;
-    }));
+
+    // Stub Global Worker with a Class that returns the mock instance
+    vi.stubGlobal('Worker', class {
+        constructor() {
+            const worker = {
+                postMessage: vi.fn(),
+                terminate: vi.fn(),
+                onmessage: null,
+                onerror: null,
+            };
+            capturedWorker = worker;
+            return worker;
+        }
+    });
 
     loader = new BspLoader(vfs, { useWorker: true, workerPath: '/worker.js' });
 

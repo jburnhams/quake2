@@ -41,22 +41,27 @@ vi.mock('../../src/render/shaderProgram.js', () => {
 });
 
 vi.mock('../../src/render/resources.js', () => {
-  const VertexArray = vi.fn(() => ({
-    configureAttributes: vi.fn(),
-    bind: vi.fn(),
-    dispose: vi.fn(),
-  }));
-  const VertexBuffer = vi.fn(() => ({
-    upload: vi.fn(),
-    dispose: vi.fn(),
-  }));
-  const TextureCubeMap = vi.fn(() => ({
-    setParameters: vi.fn(),
-    bind: vi.fn(),
-    dispose: vi.fn(),
-  }));
+  const VertexArray = class {
+    configureAttributes = vi.fn();
+    bind = vi.fn();
+    dispose = vi.fn();
+  };
+  const VertexBuffer = class {
+    upload = vi.fn();
+    dispose = vi.fn();
+  };
+  const TextureCubeMap = class {
+    setParameters = vi.fn();
+    bind = vi.fn();
+    dispose = vi.fn();
+  };
 
-  return { VertexArray, VertexBuffer, TextureCubeMap };
+  return {
+    __esModule: true,
+    VertexArray,
+    VertexBuffer,
+    TextureCubeMap
+  };
 });
 
 describe('skybox', () => {

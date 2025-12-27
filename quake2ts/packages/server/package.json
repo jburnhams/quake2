@@ -32,16 +32,16 @@
     "@quake2ts/shared": "workspace:*"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:*",
-    "@types/ws": "^8.5.12",
-    "tsup": "^8.0.2",
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.0"
+    "@types/ws": "^8.18.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   }
 }

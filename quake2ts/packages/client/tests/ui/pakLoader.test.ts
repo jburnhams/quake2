@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PakLoaderUI } from '../../src/ui/pakLoader.js';
 
@@ -6,7 +7,37 @@ describe('PakLoaderUI', () => {
 
   beforeEach(() => {
     // JSDOM setup for container
-    container = document.createElement('div');
+    if (typeof document !== 'undefined') {
+        container = document.createElement('div');
+    } else {
+        container = {
+            innerHTML: '',
+            querySelector: vi.fn().mockImplementation((selector) => {
+                if (selector === 'h1') return { textContent: 'Quake II TS' };
+                if (selector === '#drop-zone') return {
+                    addEventListener: vi.fn(),
+                    style: {},
+                    click: vi.fn()
+                };
+                if (selector === '#pak-input') return {
+                    files: [],
+                    click: vi.fn(),
+                    addEventListener: vi.fn(),
+                    value: ''
+                };
+                if (selector === '#pak-list') return { innerHTML: '' };
+                if (selector === '#start-button') return {
+                    disabled: true,
+                    style: {},
+                    addEventListener: vi.fn(),
+                    click: vi.fn()
+                };
+                return null;
+            }),
+            appendChild: vi.fn(),
+            removeChild: vi.fn()
+        } as any;
+    }
   });
 
   it('should load .pak files via handleFileSelect', async () => {
@@ -80,9 +111,34 @@ describe('PakLoaderUI', () => {
 
       await loader.handleFileSelect(files);
 
+      // In JSDOM, innerHTML update reflects. In mock, we check querySelector('#pak-list') innerHTML.
+      // But querySelector mock returns static object.
+      // We need to capture the reference for '#pak-list' to check updates if mocking.
+
+      const pakListMock = { innerHTML: '' };
+      if (typeof document === 'undefined') {
+          (container.querySelector as any).mockImplementation((selector: string) => {
+              if (selector === '#pak-list') return pakListMock;
+              // ... other selectors
+              if (selector === 'h1') return { textContent: 'Quake II TS' };
+              if (selector === '#drop-zone') return { addEventListener: vi.fn(), style: {}, click: vi.fn() };
+              if (selector === '#pak-input') return { files: [], click: vi.fn(), addEventListener: vi.fn(), value: '' };
+              if (selector === '#start-button') return { disabled: true, style: {}, addEventListener: vi.fn(), click: vi.fn() };
+              return null;
+          });
+      }
+
       const list = container.querySelector('#pak-list');
-      expect(list?.innerHTML).toContain('pak0.pak');
-      expect(list?.innerHTML).toContain('1.0 MB');
+      // If mock, pakListMock should have been updated by logic (if logic holds reference)
+      // PakLoaderUI: this.pakList = container.querySelector(...)
+      // So it holds the returned object.
+
+      // We expect the list to contain the file info.
+      // If real DOM, it works. If mock, pakListMock.innerHTML should match.
+
+      const content = list?.innerHTML;
+      expect(content).toContain('pak0.pak');
+      expect(content).toContain('1.0 MB');
 
       const btn = container.querySelector('#start-button') as HTMLButtonElement;
       expect(btn.disabled).toBe(false);

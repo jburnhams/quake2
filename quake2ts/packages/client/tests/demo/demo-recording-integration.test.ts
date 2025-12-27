@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '../../src/index.js';
 // We don't strictly need to import classes if we mock them, but it helps with types/vi.mocked
@@ -12,7 +13,7 @@ vi.mock('@quake2ts/engine', async () => {
     const actual = await vi.importActual('@quake2ts/engine');
     return {
         ...actual,
-        DemoRecorder: vi.fn().mockImplementation(() => {
+        DemoRecorder: vi.fn().mockImplementation(function() {
             mockRecorderInstance = {
                 startRecording: vi.fn(),
                 recordMessage: vi.fn(),
@@ -21,26 +22,28 @@ vi.mock('@quake2ts/engine', async () => {
             };
             return mockRecorderInstance;
         }),
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            setHandler: vi.fn(),
-            loadDemo: vi.fn(),
-            setSpeed: vi.fn(),
-            setFrameDuration: vi.fn(),
-            getCurrentTime: vi.fn(),
-            getDuration: vi.fn(),
-            getState: vi.fn(),
-            getSpeed: vi.fn(),
-            play: vi.fn(),
-            pause: vi.fn(),
-            stop: vi.fn()
-        })),
+        DemoPlaybackController: vi.fn().mockImplementation(function() {
+            return {
+                setHandler: vi.fn(),
+                loadDemo: vi.fn(),
+                setSpeed: vi.fn(),
+                setFrameDuration: vi.fn(),
+                getCurrentTime: vi.fn(),
+                getDuration: vi.fn(),
+                getState: vi.fn(),
+                getSpeed: vi.fn(),
+                play: vi.fn(),
+                pause: vi.fn(),
+                stop: vi.fn()
+            };
+        }),
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
 });
 
 vi.mock('../../src/net/connection.js', () => ({
-    MultiplayerConnection: vi.fn().mockImplementation(() => {
+    MultiplayerConnection: vi.fn().mockImplementation(function() {
         mockMultiplayerInstance = {
             setDemoRecorder: vi.fn(),
             setEffectSystem: vi.fn(),
@@ -53,14 +56,16 @@ vi.mock('../../src/net/connection.js', () => ({
 }));
 
 vi.mock('../../src/ui/menu/system.js', () => ({
-    MenuSystem: vi.fn().mockImplementation(() => ({
-        isActive: vi.fn(),
-        pushMenu: vi.fn(),
-        closeAll: vi.fn(),
-        render: vi.fn(),
-        handleInput: vi.fn(),
-        getState: vi.fn().mockReturnValue({})
-    }))
+    MenuSystem: vi.fn().mockImplementation(function() {
+        return {
+            isActive: vi.fn(),
+            pushMenu: vi.fn(),
+            closeAll: vi.fn(),
+            render: vi.fn(),
+            handleInput: vi.fn(),
+            getState: vi.fn().mockReturnValue({})
+        };
+    })
 }));
 
 vi.mock('../../src/hud.js', () => ({
@@ -70,9 +75,9 @@ vi.mock('../../src/hud.js', () => ({
 
 vi.mock('@quake2ts/cgame', async () => {
   return {
-    ClientPrediction: vi.fn().mockImplementation(() => ({})),
+    ClientPrediction: vi.fn().mockImplementation(function() { return {}; }),
     interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(() => ({})),
+    ViewEffects: vi.fn().mockImplementation(function() { return {}; }),
     GetCGameAPI: vi.fn().mockReturnValue({
         Init: vi.fn(),
         Shutdown: vi.fn(),
@@ -89,6 +94,18 @@ describe('Demo Recording Integration', () => {
         vi.clearAllMocks();
         mockRecorderInstance = undefined;
         mockMultiplayerInstance = undefined;
+
+        // Mock localStorage if missing (though jsdom env should provide it)
+        if (typeof localStorage === 'undefined') {
+            global.localStorage = {
+                getItem: vi.fn(),
+                setItem: vi.fn(),
+                removeItem: vi.fn(),
+                clear: vi.fn(),
+                length: 0,
+                key: vi.fn()
+            };
+        }
 
         mockEngine = {
             trace: vi.fn().mockReturnValue({ fraction: 1.0 }),

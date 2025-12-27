@@ -159,13 +159,13 @@ describe('bspPipeline', () => {
       });
 
       const applyLmCall = (gl.uniform1i as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_applyLightmap
+        (call: any) => call[0]?.id === mockLocations.u_applyLightmap.id
       );
       expect(applyLmCall).toBeDefined();
       expect(applyLmCall[1]).toBe(0);
 
       const lightmapCall = (gl.uniform1i as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_lightmapAtlas
+        (call: any) => call[0]?.id === mockLocations.u_lightmapAtlas.id
       );
       expect(lightmapCall).toBeDefined();
       expect(lightmapCall[1]).toBe(0);
@@ -181,13 +181,13 @@ describe('bspPipeline', () => {
       });
 
       const applyLmCall = (gl.uniform1i as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_applyLightmap
+        (call: any) => call[0]?.id === mockLocations.u_applyLightmap.id
       );
       expect(applyLmCall).toBeDefined();
       expect(applyLmCall[1]).toBe(1);
 
       const lightmapCall = (gl.uniform1i as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_lightmapAtlas
+        (call: any) => call[0]?.id === mockLocations.u_lightmapAtlas.id
       );
       expect(lightmapCall).toBeDefined();
       expect(lightmapCall[1]).toBe(2);
@@ -203,7 +203,7 @@ describe('bspPipeline', () => {
       });
 
       const warpUniformCall = (gl.uniform1i as any).mock.calls.find(
-        (call: any) => call[0] === mockLocations.u_warp
+        (call: any) => call[0]?.id === mockLocations.u_warp.id
       );
       expect(warpUniformCall).toBeDefined();
       expect(warpUniformCall[1]).toBe(1);
@@ -227,14 +227,14 @@ describe('bspPipeline', () => {
         });
 
         const texScrollCall = (gl.uniform2f as any).mock.calls.find(
-          (call: any) => call[0] === mockLocations.u_texScroll
+          (call: any) => call[0]?.id === mockLocations.u_texScroll.id
         );
         expect(texScrollCall).toBeDefined();
         expect(texScrollCall[1]).toBeCloseTo(expectedOffset, 5);
         expect(texScrollCall[2]).toBe(0);
 
         const lmScrollCall = (gl.uniform2f as any).mock.calls.find(
-          (call: any) => call[0] === mockLocations.u_lightmapScroll
+          (call: any) => call[0]?.id === mockLocations.u_lightmapScroll.id
         );
         expect(lmScrollCall).toBeDefined();
         expect(lmScrollCall[1]).toBeCloseTo(expectedOffset, 5);
@@ -255,7 +255,7 @@ describe('bspPipeline', () => {
 
         // Check u_styleLayerMapping
         const layerCall = (gl.uniform4fv as any).mock.calls.find(
-            (call: any) => call[0] === mockLocations.u_styleLayerMapping
+            (call: any) => call[0]?.id === mockLocations.u_styleLayerMapping.id
         );
         expect(layerCall).toBeDefined();
         expect(layerCall[1]).toEqual([0, -1, 1, -1]);
@@ -263,7 +263,7 @@ describe('bspPipeline', () => {
         // Check u_lightStyleFactors
         // Float32Array [1, 0, 0.5, 0]
         const factorsCall = (gl.uniform4fv as any).mock.calls.find(
-             (call: any) => call[0] === mockLocations.u_lightStyleFactors
+             (call: any) => call[0]?.id === mockLocations.u_lightStyleFactors.id
         );
         expect(factorsCall).toBeDefined();
         // Compare with Float32Array values

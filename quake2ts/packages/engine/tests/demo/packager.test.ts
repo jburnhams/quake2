@@ -8,37 +8,49 @@ import { Offset } from '../../src/demo/types.js';
 vi.mock('../../src/assets/vfs.js');
 vi.mock('../../src/demo/clipper.js', () => {
     return {
-        DemoClipper: vi.fn().mockImplementation(() => ({
-            extractClip: vi.fn().mockReturnValue(new Uint8Array(100))
-        }))
+        DemoClipper: class {
+            constructor() {
+                return {
+                    extractClip: vi.fn().mockReturnValue(new Uint8Array(100))
+                };
+            }
+        }
     };
 });
 vi.mock('../../src/demo/optimalClipFinder.js', () => {
     return {
-        OptimalClipFinder: vi.fn().mockImplementation(() => ({
-            findMinimalWindow: vi.fn().mockResolvedValue({ start: { type: 'frame', frame: 0 }, end: { type: 'frame', frame: 100 } })
-        }))
+        OptimalClipFinder: class {
+            constructor() {
+                return {
+                    findMinimalWindow: vi.fn().mockResolvedValue({ start: { type: 'frame', frame: 0 }, end: { type: 'frame', frame: 100 } })
+                };
+            }
+        }
     };
 });
 
 // Mock visibility analyzer to return different sets for visible vs loaded
 vi.mock('../../src/assets/visibilityAnalyzer.js', () => {
     return {
-        ResourceVisibilityAnalyzer: vi.fn().mockImplementation(() => ({
-            analyzeDemo: vi.fn().mockResolvedValue({
-                frames: new Map([
-                    [0, {
-                        models: new Set(['models/test.md2', 'models/hidden.md2']),
-                        sounds: new Set(['sound/test.wav']),
-                        textures: new Set(),
-                        loaded: new Set(),
-                        visible: new Set(['models/test.md2']), // visible only has test.md2
-                        audible: new Set(['sound/test.wav'])
-                    }]
-                ]),
-                time: new Map()
-            })
-        }))
+        ResourceVisibilityAnalyzer: class {
+            constructor() {
+                return {
+                    analyzeDemo: vi.fn().mockResolvedValue({
+                        frames: new Map([
+                            [0, {
+                                models: new Set(['models/test.md2', 'models/hidden.md2']),
+                                sounds: new Set(['sound/test.wav']),
+                                textures: new Set(),
+                                loaded: new Set(),
+                                visible: new Set(['models/test.md2']), // visible only has test.md2
+                                audible: new Set(['sound/test.wav'])
+                            }]
+                        ]),
+                        time: new Map()
+                    })
+                };
+            }
+        }
     };
 });
 

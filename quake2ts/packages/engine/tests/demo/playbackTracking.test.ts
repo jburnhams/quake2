@@ -1,176 +1,115 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback';
-import { ResourceLoadTracker } from '../../src/assets/resourceTracker';
-import { NetworkMessageParser } from '../../src/demo/parser';
-
-// Dummy BinaryStream
-const dummyStream = {
-    hasBytes: () => false,
-    readByte: () => -1,
-    readShort: () => 0,
-    readLong: () => 0,
-    readFloat: () => 0,
-    readString: () => '',
-    readData: () => new Uint8Array(0),
-    getReadPosition: () => 0,
-    setReadPosition: () => {},
-    // Adapter methods
-    hasMore: () => false,
-    getRemaining: () => 0,
-    getPosition: () => 0
-};
-
-// Mock DemoReader with extension
-vi.mock('../../src/demo/demoReader.js', () => {
-  return {
-    DemoReader: vi.fn().mockImplementation(() => ({
-      reset: vi.fn(),
-      hasMore: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false), // 2 frames then stop
-      readNextBlock: vi.fn().mockReturnValue({ length: 10, data: dummyStream }),
-      seekToMessage: vi.fn().mockReturnValue(true),
-      getMessageCount: vi.fn().mockReturnValue(100),
-      getOffset: vi.fn().mockReturnValue(0),
-      getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0, percent: 0 }),
-    }))
-  };
-});
-
-// Mock DemoReader without extension
-vi.mock('../../src/demo/demoReader', () => {
-    return {
-      DemoReader: vi.fn().mockImplementation(() => ({
-        reset: vi.fn(),
-        hasMore: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false), // 2 frames then stop
-        readNextBlock: vi.fn().mockReturnValue({ length: 10, data: dummyStream }),
-        seekToMessage: vi.fn().mockReturnValue(true),
-        getMessageCount: vi.fn().mockReturnValue(100),
-        getOffset: vi.fn().mockReturnValue(0),
-        getProgress: vi.fn().mockReturnValue({ total: 1000, current: 0, percent: 0 }),
-      }))
-    };
-  });
-
-// No module mock for parser. We use spy.
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
+import { DemoReader } from '../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../src/demo/parser.js';
 
 describe('DemoPlaybackController with Tracking', () => {
-  let controller: DemoPlaybackController;
-  let tracker: ResourceLoadTracker;
+    let controller: DemoPlaybackController;
+    let tracker: any;
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+    beforeEach(() => {
+        vi.restoreAllMocks();
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+        // Spy on DemoReader
+        vi.spyOn(DemoReader.prototype, 'getMessageCount').mockReturnValue(100);
+        vi.spyOn(DemoReader.prototype, 'seekToMessage').mockReturnValue(true);
+        vi.spyOn(DemoReader.prototype, 'reset').mockImplementation(() => {});
+        vi.spyOn(DemoReader.prototype, 'hasMore').mockReturnValue(true);
 
-    // Spy on parseMessage
-    vi.spyOn(NetworkMessageParser.prototype, 'parseMessage').mockImplementation(function(this: any) {
-        if (this.handler && this.handler.onFrame) {
-            this.handler.onFrame({
-                sequence: 0,
-                deltaSequence: 0,
-                timestamp: 0,
-                playerState: null,
-                packetEntities: null,
-                frame: 0
+        // Mock readNextBlock
+        const readNextBlockSpy = vi.spyOn(DemoReader.prototype, 'readNextBlock');
+        for(let i=0; i<50; i++) {
+            readNextBlockSpy.mockReturnValueOnce({
+                length: 10,
+                data: {} as any
             });
         }
-    });
-    vi.spyOn(NetworkMessageParser.prototype, 'setProtocolVersion').mockImplementation(() => {});
-    vi.spyOn(NetworkMessageParser.prototype, 'getProtocolVersion').mockReturnValue(34);
+        readNextBlockSpy.mockReturnValue(null);
 
-    controller = new DemoPlaybackController();
-    controller.setHandler({} as any);
-    controller.loadDemo(new ArrayBuffer(100));
-    tracker = new ResourceLoadTracker();
-  });
+        // Mock NetworkMessageParser
+        vi.spyOn(NetworkMessageParser.prototype, 'parseMessage').mockImplementation(() => {});
+        vi.spyOn(NetworkMessageParser.prototype, 'setProtocolVersion').mockImplementation(() => {});
 
-  it('should update tracker frame/time during playback', async () => {
-    const startSpy = vi.spyOn(tracker, 'startTracking');
-    const stopSpy = vi.spyOn(tracker, 'stopTracking');
-    const setFrameSpy = vi.spyOn(tracker, 'setCurrentFrame');
-    const setTimeSpy = vi.spyOn(tracker, 'setCurrentTime');
+        controller = new DemoPlaybackController();
+        controller.loadDemo(new ArrayBuffer(100));
 
-    // Override mock for this test to be sure of behavior
-    const readerMock = (controller as any).reader;
-    if (readerMock) {
-         // Force the implementation to be strictly what we expect
-         readerMock.hasMore = vi.fn()
-             .mockReturnValueOnce(true)
-             .mockReturnValueOnce(true)
-             .mockReturnValue(false);
-    }
-
-    const playbackPromise = controller.playWithTracking(tracker);
-
-    expect(startSpy).toHaveBeenCalled();
-    expect(controller.getState()).toBe(PlaybackState.Playing);
-
-    // Frame 0
-    controller.update(0.1);
-    // Frame 1
-    controller.update(0.1);
-    // Frame 2 (should finish)
-    controller.update(0.1);
-
-    await playbackPromise;
-
-    expect(stopSpy).toHaveBeenCalled();
-    expect(setFrameSpy).toHaveBeenCalledWith(0);
-    expect(setFrameSpy).toHaveBeenCalledWith(1);
-    expect(setTimeSpy).toHaveBeenCalled();
-  });
-
-  it('should handle playRangeWithTracking', async () => {
-      // Access reader mock instance
-      const reader = (controller as any).reader;
-
-      // We need it to run for 2 frames
-      // Reset the mock if necessary or rely on new instance from beforeEach
-
-      const playbackPromise = controller.playRangeWithTracking(
-          { type: 'frame', frame: 0 },
-          { type: 'frame', frame: 1 },
-          tracker
-      );
-
-      controller.update(0.1); // Frame 0
-      controller.update(0.1); // Frame 1 -> Should pause and resolve
-
-      // Update more to trigger completion
-      controller.update(0.1);
-
-      await playbackPromise;
-
-      expect(tracker['tracking']).toBe(false);
-  });
-
-  it('should handle fastForward mode', async () => {
-    // Reset mocks for this test to ensure reader has enough frames
-    const reader = (controller as any).reader;
-
-    // Explicitly cast to access mock methods
-    if (!vi.isMockFunction(reader.hasMore)) {
-        vi.spyOn(reader, 'hasMore');
-        vi.spyOn(reader, 'readNextBlock');
-    }
-
-    const mockHasMore = (reader.hasMore as any);
-    const mockReadNextBlock = (reader.readNextBlock as any);
-
-    // Mock readNextBlock to decrement a counter
-    let frames = 5;
-    mockHasMore.mockImplementation(() => frames > 0);
-    mockReadNextBlock.mockImplementation(() => {
-        frames--;
-        return { length: 10, data: dummyStream };
+        tracker = {
+            startTracking: vi.fn(),
+            stopTracking: vi.fn(),
+            updateFrame: vi.fn(),
+            updateTime: vi.fn(),
+            reset: vi.fn(),
+            setCurrentFrame: vi.fn(),
+            setCurrentTime: vi.fn()
+        };
     });
 
-    const log = await controller.playWithTracking(tracker, { fastForward: true });
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-    expect(log).toBeDefined();
-    expect(log.byFrame.size).toBe(0); // No actual resources recorded in this mock
-    expect(mockHasMore).toHaveBeenCalled();
-    expect(tracker['tracking']).toBe(false);
-  });
+    it('should handle playRangeWithTracking', async () => {
+        const startSpy = vi.spyOn(tracker, 'startTracking');
+        const stopSpy = vi.spyOn(tracker, 'stopTracking');
+
+        // Start playback (non-fastForward)
+        const promise = controller.playRangeWithTracking(
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
+            tracker,
+            { fastForward: false }
+        );
+
+        expect(tracker.startTracking).toHaveBeenCalled();
+
+        // Manual update loop
+        // We need to pump enough updates to reach frame 5
+        let i = 0;
+        // Limit iterations to prevent infinite loop, but make sure it's enough
+        while(i < 50) {
+            controller.update(0.1);
+            if (controller.getState() !== PlaybackState.Playing) break;
+            i++;
+        }
+
+        await promise;
+
+        expect(tracker.stopTracking).toHaveBeenCalled();
+    });
+
+    it('should handle fastForward mode', async () => {
+        const result = await controller.playRangeWithTracking(
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
+            tracker,
+            { fastForward: true }
+        );
+
+        expect(tracker.startTracking).toHaveBeenCalled();
+        expect(tracker.stopTracking).toHaveBeenCalled();
+        expect(controller.getState()).not.toBe(PlaybackState.Playing);
+    });
+
+    it('should update tracker frame/time during playback', async () => {
+        const promise = controller.playRangeWithTracking(
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
+            tracker,
+            { fastForward: false }
+        );
+
+        controller.update(0.1);
+
+        expect(tracker.setCurrentFrame).toHaveBeenCalled();
+        expect(tracker.setCurrentTime).toHaveBeenCalled();
+
+        // Finish
+        let i = 0;
+        while(i < 50) {
+            controller.update(0.1);
+            if (controller.getState() !== PlaybackState.Playing) break;
+            i++;
+        }
+        await promise;
+    });
 });

@@ -87,8 +87,7 @@ describe('Spawning Integration Tests', () => {
         game.frame({ frame: 2, deltaSeconds: 0.1, time: 200, pause: false });
         expect(ent.inUse).toBe(false);
     });
-
-    it('activates trigger_multiple when walked into', () => {
+it('activates trigger_multiple when walked into', () => {
         // Use spawn registry to create proper trigger
         const triggerLump = `
         {

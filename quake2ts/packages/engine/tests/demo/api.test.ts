@@ -6,51 +6,71 @@ import { PakArchive } from '../../src/assets/pak.js';
 vi.mock('../../src/assets/pak.js');
 vi.mock('../../src/demo/packager.js', () => {
     return {
-        DemoPackager: vi.fn().mockImplementation(() => ({
-            extractDemoPackage: vi.fn().mockResolvedValue({
-                demoData: new Uint8Array(100),
-                pakData: new Uint8Array(200),
-                manifest: { resources: {} }
-            })
-        }))
+        DemoPackager: class {
+            constructor() {
+                return {
+                    extractDemoPackage: vi.fn().mockResolvedValue({
+                        demoData: new Uint8Array(100),
+                        pakData: new Uint8Array(200),
+                        manifest: { resources: {} }
+                    })
+                };
+            }
+        }
     };
 });
 vi.mock('../../src/demo/clipper.js', () => {
     return {
-        DemoClipper: vi.fn().mockImplementation(() => ({
-            extractClip: vi.fn().mockReturnValue(new Uint8Array(50))
-        }))
+        DemoClipper: class {
+            constructor() {
+                return {
+                    extractClip: vi.fn().mockReturnValue(new Uint8Array(50))
+                };
+            }
+        }
     };
 });
 vi.mock('../../src/demo/optimalClipFinder.js', () => {
     return {
-        OptimalClipFinder: vi.fn().mockImplementation(() => ({
-            findOptimalWindows: vi.fn().mockResolvedValue([{
-                start: { type: 'time', seconds: 10 },
-                end: { type: 'time', seconds: 20 },
-                score: 100
-            }])
-        }))
+        OptimalClipFinder: class {
+            constructor() {
+                return {
+                    findOptimalWindows: vi.fn().mockResolvedValue([{
+                        start: { type: 'time', seconds: 10 },
+                        end: { type: 'time', seconds: 20 },
+                        score: 100
+                    }])
+                };
+            }
+        }
     };
 });
 
 vi.mock('../../src/demo/analyzer.js', () => {
     return {
-        DemoAnalyzer: vi.fn().mockImplementation(() => ({
-            analyze: vi.fn().mockReturnValue({
-                statistics: { duration: 120 },
-                events: [],
-                summary: {}
-            })
-        }))
+        DemoAnalyzer: class {
+            constructor() {
+                return {
+                    analyze: vi.fn().mockReturnValue({
+                        statistics: { duration: 120 },
+                        events: [],
+                        summary: {}
+                    })
+                };
+            }
+        }
     };
 });
 
 vi.mock('../../src/assets/visibilityAnalyzer.js', () => {
     return {
-        ResourceVisibilityAnalyzer: vi.fn().mockImplementation(() => ({
-            analyzeDemo: vi.fn().mockResolvedValue({ frames: new Map(), time: new Map() })
-        }))
+        ResourceVisibilityAnalyzer: class {
+            constructor() {
+                return {
+                    analyzeDemo: vi.fn().mockResolvedValue({ frames: new Map(), time: new Map() })
+                };
+            }
+        }
     };
 });
 

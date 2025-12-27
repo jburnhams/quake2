@@ -48,8 +48,8 @@
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "gl-matrix": "^3.4.4",
     "@quake2ts/test-utils": "workspace:^",
-    "tsup": "^8.1.0"
+    "gl-matrix": "^3.4.4",
+    "tsup": "^8.5.1"
   }
 }

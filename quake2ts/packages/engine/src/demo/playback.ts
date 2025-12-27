@@ -282,12 +282,18 @@ export class DemoPlaybackController {
               if (originalOnFrameUpdate) originalOnFrameUpdate(frame);
               if (this.currentFrameIndex >= endFrame) {
                   this.pause();
+
+                  // Capture the callback BEFORE resetting callbacks.
+                  // In the context of playRangeWithTracking, this.callbacks IS rangeCallback (which has the wrapper onPlaybackComplete).
+                  const completeCallback = this.callbacks?.onPlaybackComplete;
+
                   // Reset callbacks to remove interception
                   if (this.callbacks === rangeCallback) {
                        this.setCallbacks({ ...this.callbacks, onFrameUpdate: originalOnFrameUpdate });
                   }
-                  if (this.callbacks?.onPlaybackComplete) {
-                      this.callbacks.onPlaybackComplete();
+
+                  if (completeCallback) {
+                      completeCallback();
                   }
               }
           }
@@ -455,8 +461,8 @@ export class DemoPlaybackController {
   }
 
   public getCurrentTime(): number {
-      if (this.currentFrameIndex < 0) return this.accumulatedTime;
-      return (this.currentFrameIndex * this.frameDuration) + this.accumulatedTime;
+      if (this.currentFrameIndex < 0) return this.accumulatedTime / 1000;
+      return ((this.currentFrameIndex * this.frameDuration) + this.accumulatedTime) / 1000;
   }
 
   public getFrameCount(): number {
@@ -771,6 +777,7 @@ export class DemoPlaybackController {
                   while (count < CHUNK_SIZE) {
                       if (!this.processNextFrame()) {
                           // Finished
+                          this.transitionState(PlaybackState.Stopped);
                           const log = tracker.stopTracking();
                           this.tracker = null;
                           if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
@@ -786,6 +793,7 @@ export class DemoPlaybackController {
 
               return await processChunk();
           } catch (e) {
+              this.transitionState(PlaybackState.Stopped);
               tracker.stopTracking();
               this.tracker = null;
               throw e;
@@ -848,6 +856,7 @@ export class DemoPlaybackController {
                   let count = 0;
                   while (count < CHUNK_SIZE) {
                       if (this.currentFrameIndex >= endFrame || !this.processNextFrame()) {
+                          this.transitionState(PlaybackState.Stopped);
                           const log = tracker.stopTracking();
                           this.tracker = null;
                           if (this.callbacks?.onPlaybackComplete) this.callbacks.onPlaybackComplete();
@@ -863,6 +872,7 @@ export class DemoPlaybackController {
               return await processChunk();
 
           } catch (e) {
+              this.transitionState(PlaybackState.Stopped);
               tracker.stopTracking();
               this.tracker = null;
               throw e;

@@ -1,6 +1,7 @@
 import { NetworkTransport } from '@quake2ts/server';
 import { NetDriver } from '@quake2ts/shared';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
+import { LegacyMock, legacyFn } from '../../vitest-compat.js';
 
 /**
  * Mock implementation of the NetworkTransport interface for server testing.
@@ -15,11 +16,11 @@ export class MockTransport implements NetworkTransport {
     public receivedMessages: Uint8Array[] = [];
     public listening: boolean = false;
 
-    public listenSpy = vi.fn().mockImplementation(async (port: number) => {
+    public listenSpy: LegacyMock<[number], Promise<void>> = legacyFn(async (port: number) => {
         this.port = port;
         this.listening = true;
     });
-    public closeSpy = vi.fn().mockImplementation(() => {
+    public closeSpy: LegacyMock<[], void> = legacyFn(() => {
         this.listening = false;
     });
 

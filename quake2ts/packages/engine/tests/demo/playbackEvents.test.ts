@@ -4,19 +4,34 @@ import { DemoAnalyzer } from '../../src/demo/analyzer.js';
 import { DemoEventType } from '../../src/demo/analysis.js';
 
 // Mock DemoReader and DemoAnalyzer
-const readerMock = vi.fn(() => ({
-    reset: vi.fn(),
-    hasMore: vi.fn().mockReturnValue(false),
-    readNextBlock: vi.fn().mockReturnValue(null),
-    getProgress: vi.fn().mockReturnValue({ total: 0, current: 0 })
-}));
+const readerMock = class {
+    constructor() {
+        return {
+            reset: vi.fn(),
+            hasMore: vi.fn().mockReturnValue(false),
+            readNextBlock: vi.fn().mockReturnValue(null),
+            getProgress: vi.fn().mockReturnValue({ total: 0, current: 0 })
+        };
+    }
+};
 
 vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: readerMock }));
 vi.mock('../../src/demo/demoReader', () => ({ DemoReader: readerMock }));
 
-// Spy on analyze method
-// Note: We don't mock the module, we spy on the class method.
-// But we need to make sure the imported class is the same one used in playback.ts
+// We need to mock DemoAnalyzer because DemoPlaybackController instantiates it.
+// If we just spy on the prototype, we assume the real class is being used.
+// But if other tests mock the module, we might get interference.
+// For safety, let's mock the module here too, similar to metadata.test.ts.
+
+let mockAnalyzer: any;
+const analyzerMockClass = class {
+    constructor() {
+        return mockAnalyzer;
+    }
+};
+
+vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
 
 describe('DemoPlaybackController', () => {
     let controller: DemoPlaybackController;
@@ -25,42 +40,46 @@ describe('DemoPlaybackController', () => {
         vi.restoreAllMocks();
     });
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        vi.resetModules();
         vi.clearAllMocks();
 
-        // Spy on DemoAnalyzer.prototype.analyze
-        vi.spyOn(DemoAnalyzer.prototype, 'analyze').mockReturnValue({
-            events: [
-                {
-                    type: DemoEventType.Death,
-                    frame: 10,
-                    time: 1.0,
-                    description: 'Player died'
+        mockAnalyzer = {
+            analyze: vi.fn().mockReturnValue({
+                events: [
+                    {
+                        type: DemoEventType.Death,
+                        frame: 10,
+                        time: 1.0,
+                        description: 'Player died'
+                    },
+                    {
+                        type: DemoEventType.Chat,
+                        frame: 20,
+                        time: 2.0,
+                        description: 'Hello world',
+                        data: { level: 3 }
+                    }
+                ],
+                summary: {
+                    totalKills: 0,
+                    totalDeaths: 1,
+                    damageDealt: 0,
+                    damageReceived: 0,
+                    weaponUsage: new Map()
                 },
-                {
-                    type: DemoEventType.Chat,
-                    frame: 20,
-                    time: 2.0,
-                    description: 'Hello world',
-                    data: { level: 3 }
-                }
-            ],
-            summary: {
-                totalKills: 0,
-                totalDeaths: 1,
-                damageDealt: 0,
-                damageReceived: 0,
-                weaponUsage: new Map()
-            },
-            header: null,
-            configStrings: new Map(),
-            serverInfo: {},
-            statistics: null,
-            playerStats: new Map(),
-            weaponStats: new Map()
-        });
+                header: null,
+                configStrings: new Map(),
+                serverInfo: {},
+                statistics: null,
+                playerStats: new Map(),
+                weaponStats: new Map()
+            })
+        };
 
-        controller = new DemoPlaybackController();
+        // Re-import to pick up mocks
+        const { DemoPlaybackController: Controller } = await import('../../src/demo/playback.js');
+        controller = new Controller();
     });
 
     it('should extract events using getEvents', () => {

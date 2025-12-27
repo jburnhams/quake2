@@ -19,12 +19,16 @@ vi.mock('@quake2ts/cgame', async (importOriginal) => {
 
     return {
         ...(actual as object),
-        ClientPrediction: vi.fn().mockImplementation(() => ({
-            setAuthoritative: vi.fn(),
-            getPredictedState: vi.fn(() => mockState),
-            enqueueCommand: vi.fn(),
-            decayError: vi.fn()
-        })),
+        ClientPrediction: class {
+            constructor() {
+                return {
+                    setAuthoritative: vi.fn(),
+                    getPredictedState: vi.fn(() => mockState),
+                    enqueueCommand: vi.fn(),
+                    decayError: vi.fn()
+                };
+            }
+        },
         GetCGameAPI: vi.fn(() => ({
             Init: vi.fn(),
             Shutdown: vi.fn(),
@@ -44,29 +48,45 @@ vi.mock('@quake2ts/engine', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...(actual as object),
-        DemoPlaybackController: vi.fn().mockImplementation(() => ({
-            loadDemo: vi.fn(),
-            setHandler: vi.fn(),
-            update: vi.fn(),
-            getCurrentTime: vi.fn(() => 0),
-            getInterpolationFactor: vi.fn(() => 0),
-            setFrameDuration: vi.fn()
-        })),
-        DemoRecorder: vi.fn().mockImplementation(() => ({
-            startRecording: vi.fn(),
-            stopRecording: vi.fn(),
-            getIsRecording: vi.fn(() => false)
-        })),
-        ClientNetworkHandler: vi.fn().mockImplementation(() => ({
-            setView: vi.fn(),
-            setCallbacks: vi.fn(),
-            latestServerFrame: 0,
-            entities: new Map()
-        })),
-        DynamicLightManager: vi.fn().mockImplementation(() => ({
-            update: vi.fn(),
-            getActiveLights: vi.fn(() => [])
-        }))
+        DemoPlaybackController: class {
+            constructor() {
+                return {
+                    loadDemo: vi.fn(),
+                    setHandler: vi.fn(),
+                    update: vi.fn(),
+                    getCurrentTime: vi.fn(() => 0),
+                    getInterpolationFactor: vi.fn(() => 0),
+                    setFrameDuration: vi.fn()
+                };
+            }
+        },
+        DemoRecorder: class {
+            constructor() {
+                return {
+                    startRecording: vi.fn(),
+                    stopRecording: vi.fn(),
+                    getIsRecording: vi.fn(() => false)
+                };
+            }
+        },
+        ClientNetworkHandler: class {
+            constructor() {
+                return {
+                    setView: vi.fn(),
+                    setCallbacks: vi.fn(),
+                    latestServerFrame: 0,
+                    entities: new Map()
+                };
+            }
+        },
+        DynamicLightManager: class {
+            constructor() {
+                return {
+                    update: vi.fn(),
+                    getActiveLights: vi.fn(() => [])
+                };
+            }
+        }
     };
 });
 

@@ -12,39 +12,80 @@ vi.mock('@quake2ts/cgame', () => ({
         NotifyMessage: vi.fn(),
         ParseConfigString: vi.fn(),
     })),
-    ClientPrediction: vi.fn(),
-    ViewEffects: vi.fn(),
+    ClientPrediction: class {
+        constructor() {
+            return {
+                setAuthoritative: vi.fn(),
+                getPredictedState: vi.fn(),
+                enqueueCommand: vi.fn(),
+                decayError: vi.fn()
+            };
+        }
+    },
+    ViewEffects: class {
+        constructor() {
+            return {
+                render: vi.fn(),
+                update: vi.fn()
+            };
+        }
+    },
     createCGameImport: vi.fn(),
 }));
 
 vi.mock('@quake2ts/engine', () => ({
-    EngineHost: vi.fn(),
-    DemoPlaybackController: vi.fn(() => ({
-        setHandler: vi.fn(),
-        setFrameDuration: vi.fn(),
-        getCurrentTime: vi.fn(() => 0),
-        update: vi.fn(),
-    })),
-    Renderer: vi.fn(),
-    DynamicLightManager: vi.fn(),
-    DemoRecorder: vi.fn(),
-}));
-
-vi.mock('../src/demo/handler.js', () => ({
-    ClientNetworkHandler: vi.fn(() => ({
-        setView: vi.fn(),
-        setCallbacks: vi.fn(),
-    }))
+    EngineHost: class { constructor() {} },
+    DemoPlaybackController: class {
+        constructor() {
+            return {
+                setHandler: vi.fn(),
+                setFrameDuration: vi.fn(),
+                getCurrentTime: vi.fn(() => 0),
+                update: vi.fn(),
+                loadDemo: vi.fn()
+            };
+        }
+    },
+    Renderer: class { constructor() {} },
+    DynamicLightManager: class {
+        constructor() {
+            return {
+                update: vi.fn(),
+                getActiveLights: vi.fn(() => [])
+            };
+        }
+    },
+    DemoRecorder: class {
+        constructor() {
+            return {
+                startRecording: vi.fn(),
+                stopRecording: vi.fn(),
+                getIsRecording: vi.fn(() => false)
+            };
+        }
+    },
+    ClientNetworkHandler: class {
+        constructor() {
+            return {
+                setView: vi.fn(),
+                setCallbacks: vi.fn()
+            };
+        }
+    }
 }));
 
 vi.mock('../src/ui/menu/system.js', () => ({
-    MenuSystem: vi.fn(() => ({
-        onStateChange: undefined,
-        isActive: vi.fn(() => false),
-        closeAll: vi.fn(),
-        pushMenu: vi.fn(),
-        handleInput: vi.fn()
-    }))
+    MenuSystem: class {
+        constructor() {
+            return {
+                onStateChange: undefined,
+                isActive: vi.fn(() => false),
+                closeAll: vi.fn(),
+                pushMenu: vi.fn(),
+                handleInput: vi.fn()
+            };
+        }
+    }
 }));
 
 describe('ClientExports Message Parsing', () => {
@@ -59,8 +100,8 @@ describe('ClientExports Message Parsing', () => {
             Shutdown: vi.fn(),
             DrawHUD: vi.fn(),
             ParseCenterPrint: vi.fn(),
-            NotifyMessage: vi.fn(),
             ParseConfigString: vi.fn(),
+            NotifyMessage: vi.fn(),
         };
         (CGame.GetCGameAPI as any).mockReturnValue(mockCg);
 
@@ -68,6 +109,8 @@ describe('ClientExports Message Parsing', () => {
             engine: {
                 trace: vi.fn(() => ({})),
                 renderer: {} as any,
+                assets: {} as any,
+                cmd: {} as any
             } as any,
             host: {
                 cvars: {

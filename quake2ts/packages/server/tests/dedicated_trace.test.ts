@@ -6,11 +6,16 @@ import { createMockCollisionEntityIndex } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/shared', async () => {
-    const actual = await vi.importActual('@quake2ts/shared');
+    const actual = await vi.importActual<typeof import('@quake2ts/shared')>('@quake2ts/shared');
     return {
         ...actual,
         traceBox: vi.fn(),
-        CollisionEntityIndex: vi.fn().mockImplementation(() => createMockCollisionEntityIndex())
+        // Mock CollisionEntityIndex as a class constructor that returns a proxied mock object
+        CollisionEntityIndex: class {
+            constructor() {
+                return createMockCollisionEntityIndex();
+            }
+        }
     };
 });
 
@@ -25,6 +30,7 @@ describe('DedicatedServer Trace Integration', () => {
             }
             server.stop();
         }
+        vi.restoreAllMocks();
     });
 
     it('should invoke CollisionEntityIndex.trace and resolve entity', async () => {
@@ -92,7 +98,10 @@ describe('DedicatedServer Trace Integration', () => {
         });
 
         await server.start('test.bsp');
-        const imports = createGameSpy.mock.calls[0][0] as any;
+        // Use lastCall to ensure we get the latest call, robust against spy accumulation
+        const lastCall = createGameSpy.mock.lastCall;
+        expect(lastCall).toBeDefined();
+        const imports = lastCall![0] as any;
 
         // Mock game instance
         (server as any).game = {

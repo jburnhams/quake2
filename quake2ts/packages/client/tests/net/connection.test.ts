@@ -1,11 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MultiplayerConnection, ConnectionState } from '../../src/net/connection';
+import { MultiplayerConnection, ConnectionState } from '../../src/net/connection.js';
 import { NetDriver, UserCommand, ClientCommand, ServerCommand, BinaryWriter, NetChan } from '@quake2ts/shared';
 import { MockNetDriver } from '@quake2ts/test-utils';
-import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver';
+import { BrowserWebSocketNetDriver } from '../../src/net/browserWsDriver.js';
 
-// Mock dependencies - just the module, implementation will be set in beforeEach
-vi.mock('../../src/net/browserWsDriver');
+// Mock dependencies
+vi.mock('../../src/net/browserWsDriver.js', () => {
+    return {
+        BrowserWebSocketNetDriver: class {
+            constructor() {
+                return new MockNetDriver();
+            }
+        }
+    };
+});
 
 describe('MultiplayerConnection', () => {
     let connection: MultiplayerConnection;
@@ -22,9 +30,7 @@ describe('MultiplayerConnection', () => {
     };
 
     beforeEach(() => {
-        // Setup the mock implementation using the imported MockNetDriver class
-        (BrowserWebSocketNetDriver as any).mockImplementation(() => new MockNetDriver());
-
+        vi.clearAllMocks();
         connection = new MultiplayerConnection({
             username: 'Player',
             model: 'male',
@@ -34,7 +40,7 @@ describe('MultiplayerConnection', () => {
     });
 
     afterEach(() => {
-        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('should initialize in disconnected state', () => {

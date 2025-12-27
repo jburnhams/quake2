@@ -9,6 +9,8 @@ class MockWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   private listeners: Map<string, EventListenerOrEventListenerObject[]> = new Map();
 
+  constructor() {}
+
   postMessage(data: any, transfer?: Transferable[]) {
     // Simulate worker receiving message
     const request = data as DemoWorkerRequest;
@@ -54,7 +56,8 @@ class MockWorker {
     return true;
   }
 
-  private emitResponse(data: DemoWorkerResponse) {
+  // Changed to public so tests can call it
+  public emitResponse(data: DemoWorkerResponse) {
       const event = new MessageEvent('message', { data });
       this.dispatchEvent(event);
   }
@@ -68,7 +71,14 @@ describe('AsyncDemoParser', () => {
 
   beforeEach(() => {
     mockWorker = new MockWorker();
-    global.Worker = vi.fn(() => mockWorker) as any;
+    // Use a class that returns the mock instance to satisfy 'new Worker()'
+    global.Worker = class {
+        constructor() {
+            return mockWorker;
+        }
+    } as any;
+    // Add spy properties if needed, e.g. for inspection
+    vi.spyOn(global, 'Worker');
   });
 
   afterEach(() => {
@@ -115,11 +125,10 @@ describe('AsyncDemoParser', () => {
       const parser = new AsyncDemoParser(handler);
 
       // Override mock for this test to throw error
+      // We need to override the postMessage method on the instance we created
       mockWorker.postMessage = (data: any) => {
            // Simulate error
-           // We need to use emitResponse but we need access to the mockWorker instance
-           // which we have in the test scope.
-           (mockWorker as any).emitResponse({ type: 'error', message: 'Parse failed' });
+           mockWorker.emitResponse({ type: 'error', message: 'Parse failed' });
       };
 
       await expect(parser.parse(new ArrayBuffer(0))).rejects.toThrow('Parse failed');

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { createWebGLContext } from '../src/render/context.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';

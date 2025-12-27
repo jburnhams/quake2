@@ -44,11 +44,15 @@ vi.mock('../src/index.js', async (importOriginal) => {
 
 vi.mock('@quake2ts/engine', () => {
     return {
-        EngineHost: vi.fn().mockImplementation(() => ({
-            start: vi.fn(),
-            stop: vi.fn(),
-            paused: true
-        }))
+        EngineHost: class {
+            constructor() {
+                return {
+                    start: vi.fn(),
+                    stop: vi.fn(),
+                    paused: true
+                };
+            }
+        }
     };
 });
 
