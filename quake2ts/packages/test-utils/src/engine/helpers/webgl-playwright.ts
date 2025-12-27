@@ -118,9 +118,19 @@ export async function captureWebGLCanvas(
       throw new Error('WebGL2 context not available');
     }
 
+    // Ensure all WebGL commands are completed
+    gl.finish();
+
     // Read pixels from the canvas
     const pixels = new Uint8Array(width * height * 4);
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+    // Debug: count non-zero pixels
+    let nonZero = 0;
+    for (let i = 0; i < pixels.length; i++) {
+      if (pixels[i] !== 0) nonZero++;
+    }
+    console.log(`[CAPTURE DEBUG] Non-zero bytes: ${nonZero}/${pixels.length}, first 16 bytes:`, Array.from(pixels.slice(0, 16)).join(','));
 
     // Flip vertically (WebGL coordinates are bottom-up, images are top-down)
     const flipped = new Uint8Array(pixels.length);
@@ -136,11 +146,19 @@ export async function captureWebGLCanvas(
     return Array.from(flipped);
   }, { width, height });
 
-  return new Uint8ClampedArray(pixelData);
+  const result = new Uint8ClampedArray(pixelData);
+  let nonZero = 0;
+  for (let i = 0; i < result.length; i++) {
+    if (result[i] !== 0) nonZero++;
+  }
+  console.log(`[CAPTURE] Received ${pixelData.length} bytes, non-zero: ${nonZero}, first 40 bytes:`, Array.from(result.slice(0, 40)).join(','));
+  return result;
 }
 
 /**
  * Helper to render and capture a WebGL scene in a Playwright browser.
+ * NOTE: This captures AFTER the renderFn completes, but they are separate page.evaluate() calls.
+ * If you need to combine render+capture in one evaluate, pass a render function that returns pixels.
  */
 export async function renderAndCaptureWebGLPlaywright(
   setup: WebGLPlaywrightSetup,
@@ -148,6 +166,9 @@ export async function renderAndCaptureWebGLPlaywright(
 ): Promise<Uint8ClampedArray> {
   // Execute the render function
   await renderFn(setup.page);
+
+  // Add a small delay to ensure rendering completes
+  await setup.page.waitForTimeout(100);
 
   // Capture the result
   return await captureWebGLCanvas(setup.page, setup.width, setup.height);
