@@ -261,11 +261,7 @@ function createTestIndices(count: number): Uint16Array
 Add dependencies and test scripts:
 
 **Subtasks:**
-1. Add `gl` package to `devDependencies`:
-   ```json
-   "gl": "^8.1.6"
-   ```
-   (Note: Used ^8.1.6 instead of ^6.0.2 to support newer Node environments, although local tests still skipped due to missing system libs)
+1. Ensure `gl` is NOT in `devDependencies` (moved to test-utils optional dependency)
 2. Add `@types/gl` if available (check npm) (Completed)
 3. Add test script for WebGL visual tests:
    ```json
@@ -279,7 +275,13 @@ Add dependencies and test scripts:
 Add `gl` package:
 
 **Subtasks:**
-1. Add `gl` to `devDependencies` (same version as engine) (Completed)
+1. Add `gl` to `optionalDependencies`:
+   ```json
+   "optionalDependencies": {
+     "gl": "^8.1.6"
+   }
+   ```
+   **Important:** `gl` must be an **optional dependency** because it relies on native system libraries (like X11, OpenGL headers) that may not be present in all environments (e.g., CI, some dev machines). This prevents `pnpm install` from failing if the native build fails.
 2. No changes to exports needed (helpers exported from index) (Completed - Added export in index.ts and package.json)
 
 **Implementation Notes:**

@@ -59,6 +59,7 @@ export function createHeadlessWebGL(
   // Cast to WebGL2RenderingContext
   // Note: The 'gl' package implements WebGL 1, but we cast to WebGL 2 for type compatibility.
   // Engine code should gracefuly handle missing WebGL 2 features or this environment is for specific subsets.
+  // WARNING: Calling actual WebGL 2 methods (e.g. createVertexArray) will crash at runtime.
   const gl2 = context as unknown as WebGL2RenderingContext;
 
   return {
