@@ -7,7 +7,7 @@ import { DamageMod } from '../src/combat/damageMods';
 import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../src/combat/weapons/firing';
 import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles';
 import { T_Damage } from '../src/combat/damage';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock, createMockGameExports } from '@quake2ts/test-utils';
 
 // Mock projectiles
 vi.mock('../src/entities/projectiles', () => ({
@@ -49,22 +49,16 @@ describe('Weapon Tests', () => {
             }
         });
 
-        mockGame = {
+        // Use helper to create mock game
+        mockGame = createMockGameExports({
             ...engine,
             ...imports,
             time: 100,
             deathmatch: false,
-            multicast: vi.fn(),
-            sound: vi.fn(),
             entities: {
                 world: { index: 0 }
-            },
-            random: {
-                crandom: () => 0.5,
-                frandom: () => 0.5,
-                irandom: (max: number) => Math.floor(0.5 * max)
             }
-        } as unknown as GameExports;
+        });
 
         player = new Entity(1);
         Object.assign(player, createPlayerEntityFactory({
@@ -124,7 +118,7 @@ describe('Weapon Tests', () => {
 
     describe('Railgun', () => {
         it('should deal 125 damage in single player', () => {
-            mockGame.deathmatch = false;
+            (mockGame as any).deathmatch = false;
             // We need trace to hit something
             const target = { takedamage: true };
             // Hit once then stop (fraction 1.0)
@@ -162,7 +156,7 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 100 damage in deathmatch', () => {
-            mockGame.deathmatch = true;
+            (mockGame as any).deathmatch = true;
             // We need trace to hit something
             const target = { takedamage: true };
             // Hit once then stop
@@ -202,7 +196,7 @@ describe('Weapon Tests', () => {
 
     describe('Chaingun', () => {
         it('should deal 8 damage in single player', () => {
-             mockGame.deathmatch = false;
+             (mockGame as any).deathmatch = false;
              // Ensure spinup count triggers shots
              const target = { takedamage: true };
              (mockGame.trace as any).mockReturnValue(createTraceMock({
@@ -233,7 +227,7 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 6 damage in deathmatch', () => {
-             mockGame.deathmatch = true;
+             (mockGame as any).deathmatch = true;
 
              const target = { takedamage: true };
              (mockGame.trace as any).mockReturnValue(createTraceMock({
@@ -320,7 +314,7 @@ describe('Weapon Tests', () => {
 
     describe('HyperBlaster', () => {
          it('should deal 20 damage in single player', () => {
-            mockGame.deathmatch = false;
+            (mockGame as any).deathmatch = false;
             fireHyperBlaster(mockGame, player);
 
             expect(createBlasterBolt).toHaveBeenCalledWith(
@@ -335,7 +329,7 @@ describe('Weapon Tests', () => {
          });
 
          it('should deal 15 damage in deathmatch', () => {
-            mockGame.deathmatch = true;
+            (mockGame as any).deathmatch = true;
             fireHyperBlaster(mockGame, player);
 
             expect(createBlasterBolt).toHaveBeenCalledWith(
@@ -352,7 +346,7 @@ describe('Weapon Tests', () => {
 
     describe('BFG10K', () => {
         it('should deal 500 damage in single player', () => {
-            mockGame.deathmatch = false;
+            (mockGame as any).deathmatch = false;
             player.client!.gun_frame = 22; // Fire frame
 
             fireBFG(mockGame, player);
@@ -369,7 +363,7 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 200 damage in deathmatch', () => {
-            mockGame.deathmatch = true;
+            (mockGame as any).deathmatch = true;
             player.client!.gun_frame = 22; // Fire frame
 
             fireBFG(mockGame, player);

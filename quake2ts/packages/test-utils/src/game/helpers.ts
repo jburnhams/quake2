@@ -349,6 +349,7 @@ export function createMockGameExports(overrides: Partial<any> = {}): any {
       spawnWorld: vi.fn(),
       deathmatch: false,
       coop: false,
+      skill: 1,
       gameImports: {},
       gameEngine: {},
       entities: {
@@ -363,6 +364,11 @@ export function createMockGameExports(overrides: Partial<any> = {}): any {
       },
       multicast: vi.fn(),
       unicast: vi.fn(),
+      trace: vi.fn().mockReturnValue(createTraceMock()),
+      pointcontents: vi.fn().mockReturnValue(0),
+      sound: vi.fn(),
+      centerprintf: vi.fn(),
+      random: createRandomGenerator({ seed: 12345 }),
       ...overrides
   };
 }

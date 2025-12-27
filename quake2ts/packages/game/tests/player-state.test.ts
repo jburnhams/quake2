@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports, GameCreateOptions } from '../src/index.js';
+import { createGame, GameExports, GameCreateOptions, createPlayerInventory } from '../src/index.js';
 import { Entity } from '../src/entities/entity.js';
 import { WeaponId } from '../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
@@ -22,7 +22,6 @@ describe('Player State Snapshot', () => {
         game.init(0);
         game.spawnWorld();
 
-        // We simulate client connection with a minimal object that satisfies the game.
         const mockClient = {
             pers: {
                 connected: true,
@@ -32,14 +31,7 @@ describe('Player State Snapshot', () => {
                 savedFlags: 0,
                 selected_item: 0
             },
-            inventory: {
-                ammo: { counts: [], caps: [] },
-                ownedWeapons: new Set(),
-                powerups: new Map(),
-                keys: new Set(),
-                items: new Set(),
-                currentWeapon: null
-            },
+            inventory: createPlayerInventory(),
             weaponStates: { states: new Map() },
             buttons: 0,
             pm_type: 0,
