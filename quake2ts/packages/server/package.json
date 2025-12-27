@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/server",
-  "version": "0.0.798",
+  "version": "0.0.799",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
