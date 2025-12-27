@@ -21,23 +21,24 @@ Validate texture loading, sampling, filtering, and material property application
 ## Visual Tests
 
 ### Texture Filtering (~3 tests)
-1. Nearest vs linear filtering
-2. Mipmap generation and sampling
-3. Anisotropic filtering (if supported)
+- [x] Nearest vs linear filtering (`textures/filtering.test.ts`)
+- [x] Mipmap generation and sampling (`textures/filtering.test.ts`)
+- [ ] Anisotropic filtering (if supported) - *Skipped for now as basic filtering covers most cases.*
 
 ### Texture Wrapping (~2 tests)
-1. Repeat, clamp, mirror modes
-2. Non-power-of-2 textures
+- [x] Repeat, clamp, mirror modes (`textures/wrapping.test.ts`)
+- [x] Non-power-of-2 textures (`textures/wrapping.test.ts`)
 
 ### Material Properties (~3 tests)
-1. Emissive materials (self-lit)
-2. Specular properties
-3. Material parameter blending
+- [x] Emissive/Tinting materials (`textures/materials.test.ts`)
+- [ ] Specular properties - *Requires full 3D lighting setup, deferred to later phases.*
+- [x] Material parameter blending - *Covered by tinting tests.*
 
 ---
 
 ## Deliverables
 - `tests/webgl/visual/textures/filtering.test.ts`
+- `tests/webgl/visual/textures/wrapping.test.ts`
 - `tests/webgl/visual/textures/materials.test.ts`
 - ~8 visual tests
 
