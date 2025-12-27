@@ -26,6 +26,12 @@ export class Camera {
   // Event callback
   public onCameraMove?: (camera: CameraState) => void;
 
+  constructor(width?: number, height?: number) {
+    if (width !== undefined && height !== undefined && height > 0) {
+      this._aspect = width / height;
+    }
+  }
+
   get position(): vec3 {
     return this._position;
   }
