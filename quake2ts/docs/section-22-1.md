@@ -206,20 +206,20 @@ export interface RenderCommandLog {
 ## Validation
 
 ### Pre-Merge Checklist
-- [ ] All new files created in `types/` directory
-- [ ] `Camera.toState()` method added without modifying existing methods
-- [ ] `FrameRenderOptions` extended, not replaced
-- [ ] Coordinate documentation is accurate and comprehensive
-- [ ] Unit tests pass (should add ~10 new tests)
-- [ ] Existing integration tests still pass (no regressions)
-- [ ] TypeScript compiles without errors or warnings
-- [ ] No breaking changes to existing code
+- [x] All new files created in `types/` directory
+- [x] `Camera.toState()` method added without modifying existing methods
+- [x] `FrameRenderOptions` extended, not replaced
+- [x] Coordinate documentation is accurate and comprehensive
+- [x] Unit tests pass (should add ~10 new tests)
+- [x] Existing integration tests still pass (no regressions)
+- [x] TypeScript compiles without errors or warnings
+- [x] No breaking changes to existing code
 
 ### Integration Validation
-- [ ] Existing WebGL renderer still works (uses `options.camera`)
-- [ ] Existing WebGPU renderer still works (uses `options.camera`)
-- [ ] New `cameraState` optional field doesn't break anything
-- [ ] Can create CameraState manually for testing
+- [x] Existing WebGL renderer still works (uses `options.camera`)
+- [x] Existing WebGPU renderer still works (uses `options.camera`)
+- [x] New `cameraState` optional field doesn't break anything
+- [x] Can create CameraState manually for testing
 
 ---
 
