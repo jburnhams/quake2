@@ -44,7 +44,12 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
             const testName = testNameArg.text;
             const line = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
-            const testFn = node.arguments[1];
+            let testFn = node.arguments[1];
+            // Handle 3-argument version: test(name, options, fn)
+            if (node.arguments.length >= 3 && ts.isObjectLiteralExpression(node.arguments[1])) {
+              testFn = node.arguments[2];
+            }
+
             if (testFn && (ts.isArrowFunction(testFn) || ts.isFunctionExpression(testFn))) {
                findSnapshotCalls(testFn.body, testName, filePath, line);
             }
