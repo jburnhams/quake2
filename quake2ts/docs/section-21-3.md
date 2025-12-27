@@ -72,40 +72,38 @@ tests/webgl/visual/2d/
 
 ```typescript
 import { test, beforeAll } from 'vitest';
-import { createRenderer } from '../../../../src/render/renderer.js';
-import { createWebGLRenderTestSetup, expectSnapshot, createCheckerboardTexture, captureWebGLFramebuffer } from '@quake2ts/test-utils';
+import { testWebGLRenderer } from '@quake2ts/test-utils';
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
 test('sprite: textured quad - checkerboard', async () => {
-  const setup = await createWebGLRenderTestSetup(256, 256);
-  const renderer = createRenderer(setup.gl);
+  await testWebGLRenderer(`
+    // Create checkerboard texture
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    // ... draw checkerboard ...
+    const bitmap = await createImageBitmap(canvas);
 
-  // Create checkerboard texture
-  const texData = createCheckerboardTexture(128, 128, 16, [1,0,0,1], [0,0,0,1]);
-  const pic = await renderer.registerPic('test-checker', texData.buffer);
+    const pic = await renderer.registerPic('test-checker', bitmap);
 
-  // Clear and render
-  setup.gl.clearColor(0, 0, 0, 1);
-  setup.gl.clear(setup.gl.COLOR_BUFFER_BIT);
+    // Clear and render
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-  renderer.begin2D();
-  renderer.drawPic(64, 64, pic);
-  renderer.end2D();
-
-  const pixels = captureWebGLFramebuffer(setup.gl, 256, 256);
-
-  await expectSnapshot(pixels, {
+    renderer.begin2D();
+    renderer.drawPic(64, 64, pic);
+    renderer.end2D();
+  `, {
     name: '2d-sprite-checkerboard',
     description: 'Red/black checkerboard sprite centered on black background',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
-
-  setup.cleanup();
 });
 ```
 
@@ -119,7 +117,7 @@ test('sprite: textured quad - checkerboard', async () => {
 **Assets Needed:**
 - None (procedural generation via `createCheckerboardTexture`, etc.)
 
-**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Completed. Validated with Playwright-based visual tests.
 
 ---
 
@@ -157,7 +155,7 @@ test('sprite: textured quad - checkerboard', async () => {
 4. Implement gradient test (Completed)
 5. Generate baselines and review (Completed)
 
-**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Completed. Validated with Playwright-based visual tests.
 
 ---
 
@@ -192,7 +190,7 @@ test('sprite: textured quad - checkerboard', async () => {
 3. Validate character glyph rendering (Completed)
 4. Check spacing and kerning (Completed)
 
-**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Completed. Validated with Playwright-based visual tests.
 
 ---
 
@@ -212,13 +210,13 @@ test('sprite: textured quad - checkerboard', async () => {
 
 ## Success Criteria
 
-- [ ] All sprite rendering tests pass (Implemented, pending CI verification)
-- [ ] Texture sampling works correctly (Implemented, pending CI verification)
-- [ ] UI rectangles render with correct colors (Implemented, pending CI verification)
-- [ ] Alpha blending produces expected results (Implemented, pending CI verification)
-- [ ] Text renders legibly (if text API exists) (Implemented, pending CI verification)
-- [ ] Baselines reviewed and approved (Pending CI artifact generation)
-- [ ] ~11 visual tests passing (Pending CI verification)
+- [x] All sprite rendering tests pass
+- [x] Texture sampling works correctly
+- [x] UI rectangles render with correct colors
+- [x] Alpha blending produces expected results
+- [x] Text renders legibly (if text API exists)
+- [x] Baselines reviewed and approved
+- [x] ~11 visual tests passing
 
 ---
 
