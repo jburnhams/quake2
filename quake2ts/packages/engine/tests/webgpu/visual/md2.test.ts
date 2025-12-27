@@ -1,17 +1,17 @@
-import { test } from '../../helpers/visual-testing.js';
+import { describe, it, beforeAll, afterAll } from 'vitest';
 import { Md2Pipeline, Md2MeshBuffers } from '../../../src/render/webgpu/pipelines/md2Pipeline.js';
 import { Md2Model } from '../../../src/assets/md2.js';
 import { mat4, vec3 } from 'gl-matrix';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
+import path from 'path';
+import fs from 'fs';
+
+const snapshotDir = path.join(__dirname, '__snapshots__');
+const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 // Create a mock MD2 model with a simple triangle
 function createMockModel(): Md2Model {
-  // A simple pyramid or triangle
-  // Vertex 0: (-10, -10, 0)
-  // Vertex 1: (10, -10, 0)
-  // Vertex 2: (0, 10, 0)
-  // Frame 2 has them moved up by 10 units
-
   const v1 = {
       position: { x: -10, y: -10, z: 0 },
       normal: { x: 0, y: 0, z: 1 }
@@ -81,106 +81,147 @@ function createWhiteTexture(device: GPUDevice): Texture2D {
         format: 'rgba8unorm',
         label: 'white-texture'
     });
-
     texture.upload(new Uint8Array([255, 255, 255, 255]));
-
     return texture;
 }
 
-function createDepthTexture(device: GPUDevice, width: number, height: number): GPUTextureView {
-    const texture = device.createTexture({
+function createDepthTexture(device: GPUDevice, width: number, height: number): GPUTexture {
+    return device.createTexture({
         size: [width, height],
         format: 'depth24plus',
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
         label: 'depth-texture'
     });
-    return texture.createView();
 }
 
-test('md2: static render', async ({ renderAndExpectSnapshot }) => {
-    const model = createMockModel();
-    let mesh: Md2MeshBuffers;
-    let texture: Texture2D;
+describe('MD2 Visual Tests', () => {
+    let gpuSetup: HeadlessWebGPUSetup | null = null;
 
-    await renderAndExpectSnapshot(
-        async (device, format, encoder, view) => {
-            const pipeline = new Md2Pipeline(device, format);
-            if (!mesh) mesh = new Md2MeshBuffers(device, model);
-            if (!texture) texture = createWhiteTexture(device);
+    beforeAll(async () => {
+        try {
+            gpuSetup = await initHeadlessWebGPU();
+            if (!fs.existsSync(snapshotDir)) {
+                fs.mkdirSync(snapshotDir, { recursive: true });
+            }
+        } catch (error) {
+            console.warn('Skipping WebGPU visual tests: ' + error);
+        }
+    });
 
-            // Update mesh for frame 0
-            mesh.update(model, { frame0: 0, frame1: 0, lerp: 0 });
+    afterAll(async () => {
+        if (gpuSetup) {
+            await gpuSetup.cleanup();
+        }
+    });
 
-            // Setup camera
+    it('md2: static render', async () => {
+        if (!gpuSetup) return;
+        const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
+        const { device, format } = context;
+
+        const model = createMockModel();
+        const pipeline = new Md2Pipeline(device, format);
+        const mesh = new Md2MeshBuffers(device, model);
+        const texture = createWhiteTexture(device);
+
+        // Update mesh for frame 0
+        mesh.update(model, { frame0: 0, frame1: 0, lerp: 0 });
+
+        // Setup camera
+        const projection = mat4.create();
+        mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+        const viewMatrix = mat4.create();
+        mat4.lookAt(viewMatrix, [0, 0, 50], [0, 0, 0], [0, 1, 0]);
+
+        const mvp = mat4.create();
+        mat4.multiply(mvp, projection, viewMatrix);
+
+        const depthTexture = createDepthTexture(device, 256, 256);
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTargetView,
+                loadOp: 'clear',
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                storeOp: 'store'
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'discard'
+            }
+        });
+
+        pipeline.bind(pass, {
+            modelViewProjection: mvp,
+            ambientLight: 1.0, // Fully lit
+        }, texture, 0.0);
+
+        pipeline.draw(pass, mesh);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+
+        const pixels = await captureTexture(device, renderTarget, 256, 256);
+        await expectSnapshot(pixels, {
+            name: 'md2-static',
+            description: 'A simple white triangle rendered from an MD2 model',
+            width: 256,
+            height: 256,
+            snapshotDir,
+            updateBaseline
+        });
+
+        await cleanup();
+        mesh.dispose();
+        texture.destroy();
+        depthTexture.destroy();
+    });
+
+    it('md2: interpolated render', async () => {
+        if (!gpuSetup) return;
+        const width = 256;
+        const height = 256;
+        const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
+        const { device, format } = context;
+
+        const model = createMockModel();
+        const pipeline = new Md2Pipeline(device, format);
+        const mesh = new Md2MeshBuffers(device, model);
+        const texture = createWhiteTexture(device);
+
+        const fps = 10;
+        const durationSeconds = 2.0;
+        const frameCount = fps * durationSeconds;
+
+        await expectAnimationSnapshot(async (frameIndex) => {
+            const time = frameIndex * (1.0 / fps);
+            // Cycle lerp 0 -> 1 -> 0
+            // Sine wave 0..1
+            const lerp = (Math.sin(time * Math.PI) + 1) / 2;
+
+            mesh.update(model, { frame0: 0, frame1: 1, lerp });
+
             const projection = mat4.create();
             mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
             const viewMatrix = mat4.create();
-            mat4.lookAt(viewMatrix, [0, 0, 50], [0, 0, 0], [0, 1, 0]);
+            mat4.lookAt(viewMatrix, [0, -30, 20], [0, 0, 5], [0, 1, 0]);
 
             const mvp = mat4.create();
             mat4.multiply(mvp, projection, viewMatrix);
 
-            // Manual render pass with depth
-            const depthView = createDepthTexture(device, 256, 256);
+            const depthTexture = createDepthTexture(device, width, height);
+            const encoder = device.createCommandEncoder();
             const pass = encoder.beginRenderPass({
                 colorAttachments: [{
-                    view: view,
+                    view: renderTargetView,
                     loadOp: 'clear',
                     clearValue: { r: 0, g: 0, b: 0, a: 0 },
                     storeOp: 'store'
                 }],
                 depthStencilAttachment: {
-                    view: depthView,
-                    depthClearValue: 1.0,
-                    depthLoadOp: 'clear',
-                    depthStoreOp: 'discard'
-                }
-            });
-
-            pipeline.bind(pass, {
-                modelViewProjection: mvp,
-                ambientLight: 1.0, // Fully lit
-            }, texture, 0.0);
-
-            pipeline.draw(pass, mesh);
-            pass.end();
-        },
-        { name: 'md2-static', description: 'A simple white triangle rendered from an MD2 model' }
-    );
-});
-
-test('md2: interpolated render', async ({ renderAndExpectSnapshot }) => {
-    const model = createMockModel();
-    let mesh: Md2MeshBuffers;
-    let texture: Texture2D;
-
-    await renderAndExpectSnapshot(
-        async (device, format, encoder, view) => {
-            const pipeline = new Md2Pipeline(device, format);
-            if (!mesh) mesh = new Md2MeshBuffers(device, model);
-            if (!texture) texture = createWhiteTexture(device);
-
-            // Update mesh for frame 0->1
-            mesh.update(model, { frame0: 0, frame1: 1, lerp: 0.5 });
-
-            const projection = mat4.create();
-            mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
-            const viewMatrix = mat4.create();
-            mat4.lookAt(viewMatrix, [0, -30, 20], [0, 0, 5], [0, 1, 0]); // Angled view to see depth
-
-            const mvp = mat4.create();
-            mat4.multiply(mvp, projection, viewMatrix);
-
-            const depthView = createDepthTexture(device, 256, 256);
-            const pass = encoder.beginRenderPass({
-                colorAttachments: [{
-                    view: view,
-                    loadOp: 'clear',
-                    clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                    storeOp: 'store'
-                }],
-                depthStencilAttachment: {
-                    view: depthView,
+                    view: depthTexture.createView(),
                     depthClearValue: 1.0,
                     depthLoadOp: 'clear',
                     depthStoreOp: 'discard'
@@ -191,68 +232,99 @@ test('md2: interpolated render', async ({ renderAndExpectSnapshot }) => {
                 modelViewProjection: mvp,
                 ambientLight: 1.0,
                 tint: [0, 1, 0, 1]
-            }, texture, 0.5);
+            }, texture, lerp);
 
             pipeline.draw(pass, mesh);
             pass.end();
-        },
-        { name: 'md2-interpolated', description: 'A green tinted triangle interpolated between two frames' }
-    );
-});
 
-test('md2: dynamic light', async ({ renderAndExpectSnapshot }) => {
-    const model = createMockModel();
-    let mesh: Md2MeshBuffers;
-    let texture: Texture2D;
+            device.queue.submit([encoder.finish()]);
+            depthTexture.destroy(); // Important in loop
 
-    await renderAndExpectSnapshot(
-        async (device, format, encoder, view) => {
-            const pipeline = new Md2Pipeline(device, format);
-            if (!mesh) mesh = new Md2MeshBuffers(device, model);
-            if (!texture) texture = createWhiteTexture(device);
+            return captureTexture(device, renderTarget, width, height);
+        }, {
+            name: 'md2-interpolated',
+            description: 'A green tinted triangle interpolated between two frames over time.',
+            width,
+            height,
+            snapshotDir,
+            updateBaseline,
+            fps,
+            frameCount
+        });
 
-            mesh.update(model, { frame0: 0, frame1: 0, lerp: 0 });
+        await cleanup();
+        mesh.dispose();
+        texture.destroy();
+    });
 
-            const projection = mat4.create();
-            mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
-            const viewMatrix = mat4.create();
-            mat4.lookAt(viewMatrix, [0, 0, 50], [0, 0, 0], [0, 1, 0]);
+    it('md2: dynamic light', async () => {
+        if (!gpuSetup) return;
+        const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
+        const { device, format } = context;
 
-            const mvp = mat4.create();
-            mat4.multiply(mvp, projection, viewMatrix);
+        const model = createMockModel();
+        const pipeline = new Md2Pipeline(device, format);
+        const mesh = new Md2MeshBuffers(device, model);
+        const texture = createWhiteTexture(device);
 
-            const dlights = [{
-                origin: { x: 0, y: 0, z: 10 },
-                color: { x: 1, y: 0, z: 0 },
-                intensity: 50
-            }];
+        mesh.update(model, { frame0: 0, frame1: 0, lerp: 0 });
 
-            const depthView = createDepthTexture(device, 256, 256);
-            const pass = encoder.beginRenderPass({
-                colorAttachments: [{
-                    view: view,
-                    loadOp: 'clear',
-                    clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                    storeOp: 'store'
-                }],
-                depthStencilAttachment: {
-                    view: depthView,
-                    depthClearValue: 1.0,
-                    depthLoadOp: 'clear',
-                    depthStoreOp: 'discard'
-                }
-            });
+        const projection = mat4.create();
+        mat4.perspective(projection, Math.PI / 4, 1, 0.1, 100);
+        const viewMatrix = mat4.create();
+        mat4.lookAt(viewMatrix, [0, 0, 50], [0, 0, 0], [0, 1, 0]);
 
-            pipeline.bind(pass, {
-                modelViewProjection: mvp,
-                ambientLight: 0.1,
-                lightDirection: [0, 1, 0], // perpendicular to normal, so no directional light
-                dlights: dlights
-            }, texture, 0.0);
+        const mvp = mat4.create();
+        mat4.multiply(mvp, projection, viewMatrix);
 
-            pipeline.draw(pass, mesh);
-            pass.end();
-        },
-        { name: 'md2-lit', description: 'A red lit triangle showing dynamic lighting' }
-    );
+        const dlights = [{
+            origin: { x: 0, y: 0, z: 10 } as any,
+            color: { x: 1, y: 0, z: 0 } as any,
+            intensity: 50
+        }];
+
+        const depthTexture = createDepthTexture(device, 256, 256);
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTargetView,
+                loadOp: 'clear',
+                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                storeOp: 'store'
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'discard'
+            }
+        });
+
+        pipeline.bind(pass, {
+            modelViewProjection: mvp,
+            ambientLight: 0.1,
+            lightDirection: [0, 1, 0],
+            dlights: dlights
+        }, texture, 0.0);
+
+        pipeline.draw(pass, mesh);
+        pass.end();
+
+        device.queue.submit([encoder.finish()]);
+
+        const pixels = await captureTexture(device, renderTarget, 256, 256);
+        await expectSnapshot(pixels, {
+            name: 'md2-lit',
+            description: 'A red lit triangle showing dynamic lighting',
+            width: 256,
+            height: 256,
+            snapshotDir,
+            updateBaseline
+        });
+
+        await cleanup();
+        mesh.dispose();
+        texture.destroy();
+        depthTexture.destroy();
+    });
 });
