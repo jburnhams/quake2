@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('webgl: example clear to green', { timeout: 30000 }, async () => {
+test('example: blue rectangle using actual renderer', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Clear background to black
     gl.clearColor(0, 0, 0, 1);

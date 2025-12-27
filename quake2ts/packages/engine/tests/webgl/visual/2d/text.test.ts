@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('renderer: drawString - basic', { timeout: 30000 }, async () => {
+test('text: simple string', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create simple test font texture (16x8 grid of 8x8 characters = 128x64)
     const fontWidth = 128;

@@ -113,7 +113,7 @@ test('sprite: textured quad - checkerboard', { timeout: 30000 }, async () => {
   });
 });
 
-test('renderer: drawPic', { timeout: 30000 }, async () => {
+test('sprite: simple rendering', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     // Create simple 32x32 green/blue checkerboard texture
     const texWidth = 32;
