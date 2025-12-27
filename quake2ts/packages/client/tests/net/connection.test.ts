@@ -101,12 +101,14 @@ describe('MultiplayerConnection', () => {
         // --- 2. Server sends serverdata ---
         const writer2 = new BinaryWriter();
         writer2.writeByte(ServerCommand.serverdata);
-        writer2.writeLong(34);
-        writer2.writeLong(1);
-        writer2.writeByte(0);
-        writer2.writeString("baseq2");
-        writer2.writeShort(0);
-        writer2.writeString("maps/test.bsp");
+        // Protocol 34 (Standard Q2)
+        writer2.writeLong(34); // Protocol
+        writer2.writeLong(1);  // Server count
+        writer2.writeByte(0);  // Attract loop
+        writer2.writeString("baseq2"); // Game dir
+        writer2.writeShort(0); // Player num
+        writer2.writeString("maps/test.bsp"); // Level name
+
         const serverDataPacket = serverNetChan.transmit(writer2.getData());
 
         mockDriver.receiveMessage(serverDataPacket);

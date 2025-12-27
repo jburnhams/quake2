@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/engine",
-  "version": "0.0.743",
+  "version": "0.0.766",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -36,6 +36,7 @@
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
     "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests",
     "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run",
+    "test:webgl": "cross-env TEST_TYPE=webgl vitest run --passWithNoTests",
     "test:visual": "vitest run tests/integration/visual",
     "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
     "test:visual:watch": "vitest tests/integration/visual"
@@ -52,6 +53,7 @@
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
+    "@types/gl": "^6.0.5",
     "@types/node": "^25.0.3",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.2.5",

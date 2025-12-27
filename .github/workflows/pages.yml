@@ -45,42 +45,47 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
 
-      - name: Build Pages
+      - name: Build React App
+        working-directory: pages
         run: |
-          mkdir -p pages-dist
-          cp -r pages/* pages-dist/
+          npm ci
+          npm run build
+
+      - name: Prepare Gallery Data
+        run: |
+          # Ensure build output exists (Vite builds to dist by default)
+          mkdir -p pages/dist/snapshots/baselines
+          mkdir -p pages/dist/snapshots/actual
+          mkdir -p pages/dist/snapshots/diff
 
           if [ -f "visual-test-results/visual-tests.json" ]; then
-            echo "Building Visual Tests Gallery..."
+            echo "Processing visual test results..."
 
-            # Run the gallery generation script
-            # We use npx tsx to run the typescript file directly without full project install
-            npx tsx quake2ts/packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json pages-dist
+            # Validate JSON using the tool script (optional, but good for logs)
+            npx tsx quake2ts/packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json
 
-            mkdir -p pages-dist/snapshots
-            # Find and copy all snapshots from nested structure to flattened pages-dist/snapshots structure
+            # Copy the JSON to the build output
+            cp visual-test-results/visual-tests.json pages/dist/visual-tests.json
+
+            # Find and copy all snapshots from nested structure to flattened structure
             # The structure in artifacts is likely .../webgpu/visual/__snapshots__/baselines/...
-            # We want pages-dist/snapshots/baselines/...
+            # We want pages/dist/snapshots/baselines/...
 
-            # Create destination dirs
-            mkdir -p pages-dist/snapshots/baselines
-            mkdir -p pages-dist/snapshots/actual
-            mkdir -p pages-dist/snapshots/diff
-
-            # Find and copy using rsync to merge directories or simple cp
-            # Finding all 'baselines' directories in the artifact
-            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages-dist/snapshots/baselines/ \; || true
-            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages-dist/snapshots/actual/ \; || true
-            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages-dist/snapshots/diff/ \; || true
+            echo "Copying snapshots..."
+            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/snapshots/baselines/ \; || true
+            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/snapshots/actual/ \; || true
+            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/snapshots/diff/ \; || true
 
           else
-            echo "No visual test results found, skipping gallery generation."
+            echo "No visual test results found. Gallery will be empty."
+            # Create empty JSON so fetch doesn't 404
+            echo "[]" > pages/dist/visual-tests.json
           fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './pages-dist'
+          path: 'pages/dist'
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4

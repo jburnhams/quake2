@@ -36,11 +36,11 @@ var interpolatedNormal = normalize(mix(normalFrame1, normalFrame2, u_frameBlend)
 ```
 
 **Subtasks:**
-1. Dual-frame vertex input
-2. Frame interpolation in vertex shader
-3. Normal interpolation
-4. Dynamic lighting per vertex
-5. Texture mapping
+1. [x] Dual-frame vertex input
+2. [x] Frame interpolation in vertex shader
+3. [x] Normal interpolation
+4. [x] Dynamic lighting per vertex
+5. [x] Texture mapping
 
 **Reference:** `md2Pipeline.ts` lines 41-128
 
@@ -49,12 +49,12 @@ var interpolatedNormal = normalize(mix(normalFrame1, normalFrame2, u_frameBlend)
 **File:** `pipelines/md2Pipeline.ts`
 
 **Subtasks:**
-1. Render pipeline with frame interpolation
-2. Dual vertex buffers (current/next frame)
-3. Frame blending uniform
-4. Texture binding
-5. Dynamic light support
-6. Backface culling
+1. [x] Render pipeline with frame interpolation
+2. [x] Dual vertex buffers (current/next frame)
+3. [x] Frame blending uniform
+4. [x] Texture binding
+5. [x] Dynamic light support
+6. [x] Backface culling
 
 ### Task 3: Integration & Testing
 
@@ -64,10 +64,10 @@ var interpolatedNormal = normalize(mix(normalFrame1, normalFrame2, u_frameBlend)
 - `md2-lit.png` - With dynamic light
 
 **Test Cases:**
-- Frame interpolation smooth
-- Normals interpolate correctly
-- Dynamic lights work
-- Texture mapping correct
+- [x] Frame interpolation smooth
+- [x] Normals interpolate correctly
+- [x] Dynamic lights work
+- [x] Texture mapping correct
 
 **Reference:** `packages/engine/src/render/md2Pipeline.ts`
 
