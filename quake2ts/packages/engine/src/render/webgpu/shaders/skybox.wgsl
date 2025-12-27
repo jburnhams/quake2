@@ -16,23 +16,21 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Calculate direction with scroll offset
-  // The skybox mesh vertices are in GL coordinates (X right, Y up, Z back).
-  // These directions are used directly to sample the cubemap.
-  // No coordinate transform is needed here - the view matrix already handles
-  // the Quake→GL coordinate transform.
-
+  // Calculate direction with scroll offset applied in GL space
   var dir = normalize(position);
   dir.x += uniforms.scroll.x;
   dir.y += uniforms.scroll.y;
 
-  output.direction = dir;
+  // Transform GL direction to cubemap sampling direction
+  // The skybox mesh is in GL coordinates (X right, Y up, Z back) but the
+  // cubemap faces are mapped for Quake coordinate lookups. This transform
+  // converts the direction for correct face sampling.
+  //
+  // Note: This transform works correctly for cardinal directions but has
+  // known issues with diagonal views (see SKYBOX_INVESTIGATION.md).
+  output.direction = vec3<f32>(-dir.y, dir.z, -dir.x);
 
-  // Calculate position
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
-
-  // Ensure skybox is always at maximum depth (if needed)
-  // or just rely on drawing order and depth writes disabled
 
   return output;
 }
