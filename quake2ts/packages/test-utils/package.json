@@ -99,6 +99,7 @@
     "@types/pngjs": "^6.0.5",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
+    "gl": "^8.1.6",
     "gl-matrix": "^3.4.4",
     "jsdom": "^27.3.0",
     "pixelmatch": "^7.1.0",
@@ -108,8 +109,5 @@
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
     "webgpu": "^0.3.8"
-  },
-  "optionalDependencies": {
-    "gl": "^8.1.6"
   }
 }
