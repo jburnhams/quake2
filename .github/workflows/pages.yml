@@ -63,28 +63,25 @@ jobs:
           download_latest "webgpu.yml" "visual-test-results" "visual-test-results"
           download_latest "webgl-visual.yml" "webgl-visual-test-results" "webgl-visual-test-results"
 
-      # We are replacing the React app with the static generated gallery
-      # because the new generated gallery handles both WebGPU and WebGL navigation
-      # and is simpler to maintain for this specific purpose.
-      # The previous React app logic is removed to avoid confusion/redundancy.
+      - name: Build React App
+        working-directory: pages
+        run: |
+          npm ci
+          npm run build
 
       - name: Prepare Gallery Data
         run: |
+          # Ensure target directories exist in the build output
           mkdir -p pages/dist/snapshots
           mkdir -p pages/dist/webgl-snapshots
 
           # --- Process WebGPU Results ---
           if [ -f "visual-test-results/visual-tests.json" ]; then
             echo "Processing WebGPU results..."
-            mkdir -p pages/dist/snapshots/{baselines,actual,diff}
-
-            npx tsx quake2ts/packages/tools/src/generate-gallery.ts \
-                visual-test-results/visual-tests.json \
-                pages/dist \
-                --renderer webgpu
-
             cp visual-test-results/visual-tests.json pages/dist/visual-tests.json
 
+            # Copy snapshots
+            mkdir -p pages/dist/snapshots/{baselines,actual,diff}
             find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/snapshots/baselines/ \; || true
             find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/snapshots/actual/ \; || true
             find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/snapshots/diff/ \; || true
@@ -95,20 +92,15 @@ jobs:
           # --- Process WebGL Results ---
           if [ -f "webgl-visual-test-results/webgl-visual-tests.json" ]; then
             echo "Processing WebGL results..."
-            mkdir -p pages/dist/webgl-snapshots/{baselines,actual,diff}
-
-            npx tsx quake2ts/packages/tools/src/generate-gallery.ts \
-                webgl-visual-test-results/webgl-visual-tests.json \
-                pages/dist \
-                --renderer webgl
-
             cp webgl-visual-test-results/webgl-visual-tests.json pages/dist/webgl-visual-tests.json
 
+            # Copy snapshots
+            mkdir -p pages/dist/webgl-snapshots/{baselines,actual,diff}
             find webgl-visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgl-snapshots/baselines/ \; || true
             find webgl-visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgl-snapshots/actual/ \; || true
             find webgl-visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgl-snapshots/diff/ \; || true
           else
-             echo "{ \"tests\": [] }" > pages/dist/webgl-visual-tests.json
+             echo "[]" > pages/dist/webgl-visual-tests.json
           fi
 
       - name: Upload artifact

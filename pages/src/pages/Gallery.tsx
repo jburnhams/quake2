@@ -20,7 +20,17 @@ interface VisualTestInfo {
   stats?: VisualTestStats;
 }
 
-const Gallery: React.FC = () => {
+interface GalleryProps {
+  dataSource?: string;
+  snapshotBaseUrl?: string;
+  title?: string;
+}
+
+const Gallery: React.FC<GalleryProps> = ({
+  dataSource = 'visual-tests.json',
+  snapshotBaseUrl = 'snapshots',
+  title = 'Visual Tests Gallery'
+}) => {
   const [data, setData] = useState<VisualTestInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +38,8 @@ const Gallery: React.FC = () => {
   const [allExpanded, setAllExpanded] = useState(false);
 
   useEffect(() => {
-    // With HashRouter, we are always at the root path physically, so relative fetch works.
-    fetch('visual-tests.json')
+    setLoading(true);
+    fetch(dataSource)
       .then(res => {
         if (!res.ok) throw new Error('Failed to load visual tests data');
         return res.json();
@@ -40,7 +50,7 @@ const Gallery: React.FC = () => {
         setError('Could not load visual test results. They may not have been generated yet.');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [dataSource]);
 
   const toggleAll = () => {
     if (allExpanded) {
@@ -77,7 +87,7 @@ const Gallery: React.FC = () => {
   return (
     <Layout>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white uppercase tracking-wider">Visual Tests Gallery</h2>
+        <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{title}</h2>
         <button
           onClick={toggleAll}
           className="bg-q2-panel hover:bg-zinc-700 text-white px-4 py-2 rounded border border-q2-border transition-colors"
@@ -117,7 +127,7 @@ const Gallery: React.FC = () => {
               {isExpanded && (
                 <div className="bg-zinc-900 p-6 border-t border-q2-border space-y-8">
                   {tests.map((test, idx) => (
-                    <TestCase key={idx} test={test} />
+                    <TestCase key={idx} test={test} snapshotBaseUrl={snapshotBaseUrl} />
                   ))}
                 </div>
               )}
@@ -138,7 +148,7 @@ const Gallery: React.FC = () => {
   );
 };
 
-const TestCase: React.FC<{ test: VisualTestInfo }> = ({ test }) => {
+const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({ test, snapshotBaseUrl }) => {
   const isPass = test.stats?.passed;
   const percentMatch = test.stats ? (100 - test.stats.percentDifferent).toFixed(2) : '0';
 
@@ -189,9 +199,9 @@ const TestCase: React.FC<{ test: VisualTestInfo }> = ({ test }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-        <ImageColumn label="Reference" src={`snapshots/baselines/${test.snapshotName}.png`} />
-        <ImageColumn label="Actual" src={`snapshots/actual/${test.snapshotName}.png`} />
-        <ImageColumn label="Difference" src={`snapshots/diff/${test.snapshotName}.png`} />
+        <ImageColumn label="Reference" src={`${snapshotBaseUrl}/baselines/${test.snapshotName}.png`} />
+        <ImageColumn label="Actual" src={`${snapshotBaseUrl}/actual/${test.snapshotName}.png`} />
+        <ImageColumn label="Difference" src={`${snapshotBaseUrl}/diff/${test.snapshotName}.png`} />
       </div>
     </div>
   );

@@ -1,160 +1,160 @@
-import fs from 'fs/promises';
+import ts from 'typescript';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Paths
-const WORKSPACE_ROOT = path.resolve(__dirname, '../../../');
-const ENGINE_ROOT = path.join(WORKSPACE_ROOT, 'packages/engine');
-const SNAPSHOTS_ROOT = path.join(ENGINE_ROOT, 'tests/webgl/visual/__snapshots__');
-const STATS_DIR = path.join(SNAPSHOTS_ROOT, 'stats');
-const OUTPUT_FILE = path.join(WORKSPACE_ROOT, 'webgl-visual-tests.json');
-
-interface WebGLVisualTestResult {
-  name: string;
-  category: string;
-  passed: boolean;
-  percentDifferent: number;
-  pixelsDifferent: number;
-  totalPixels: number;
-  baselineExists: boolean;
-  hasActual: boolean;
-  hasDiff: boolean;
-  timestamp: number;
-  width: number;
-  height: number;
+interface VisualTestStats {
+    passed: boolean;
+    percentDifferent: number;
+    pixelsDifferent: number;
+    totalPixels: number;
+    threshold: number;
+    maxDifferencePercent: number;
 }
 
-interface WebGLVisualReport {
-  timestamp: string;
-  totalTests: number;
-  passed: number;
-  failed: number;
-  tests: WebGLVisualTestResult[];
+interface VisualTestInfo {
+  testName: string;
+  snapshotName: string;
+  file: string;
+  line: number;
+  description: string;
+  stats?: VisualTestStats;
 }
 
-interface TestStats {
-  name: string;
-  passed: boolean;
-  percentDifferent: number;
-  pixelsDifferent: number;
-  totalPixels: number;
-  width: number;
-  height: number;
-  diffPath?: string;
-  actualPath?: string;
-  baselinePath?: string;
-}
+function findVisualTests(rootDir: string): VisualTestInfo[] {
+  const tests: VisualTestInfo[] = [];
 
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
+  function processFile(filePath: string) {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const sourceFile = ts.createSourceFile(
+      filePath,
+      content,
+      ts.ScriptTarget.Latest,
+      true
+    );
 
-async function generateWebGLVisualReport(): Promise<void> {
-  console.log('Generating WebGL visual test report...');
-  console.log(`Stats directory: ${STATS_DIR}`);
+    function visit(node: ts.Node) {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        if (node.expression.text === 'test' || node.expression.text === 'it') {
+          const testNameArg = node.arguments[0];
+          if (ts.isStringLiteral(testNameArg)) {
+            const testName = testNameArg.text;
+            const line = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
-  const report: WebGLVisualReport = {
-    timestamp: new Date().toISOString(),
-    totalTests: 0,
-    passed: 0,
-    failed: 0,
-    tests: []
-  };
-
-  try {
-    if (!await exists(STATS_DIR)) {
-      console.warn(`Stats directory not found: ${STATS_DIR}`);
-      // Write empty report so CI doesn't fail on missing artifact
-      await fs.writeFile(OUTPUT_FILE, JSON.stringify(report, null, 2));
-      return;
+            const testFn = node.arguments[1];
+            if (testFn && (ts.isArrowFunction(testFn) || ts.isFunctionExpression(testFn))) {
+               findSnapshotCalls(testFn.body, testName, filePath, line);
+            }
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
     }
 
-    const files = await fs.readdir(STATS_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    function findSnapshotCalls(node: ts.Node, testName: string, filePath: string, line: number) {
+        if (ts.isCallExpression(node)) {
+            // Check for snapshot('name') call (based on my infrastructure.test.ts placeholder)
+            if (ts.isIdentifier(node.expression) && node.expression.text === 'snapshot') {
+                 const nameArg = node.arguments[0];
+                 if (nameArg && ts.isStringLiteral(nameArg)) {
+                     const snapshotName = nameArg.text;
+                     tests.push({
+                        testName,
+                        snapshotName,
+                        file: path.relative(rootDir, filePath),
+                        line,
+                        description: testName,
+                        stats: loadStats(filePath, snapshotName)
+                     });
+                 }
+            }
 
-    console.log(`Found ${jsonFiles.length} stats files.`);
+            // Keep support for expectSnapshot helpers if used
+             if (ts.isIdentifier(node.expression) && node.expression.text === 'expectSnapshot') {
+                 const optionsArg = node.arguments[1];
+                 if (optionsArg && ts.isObjectLiteralExpression(optionsArg)) {
+                     const nameProp = optionsArg.properties.find(p =>
+                        p.name && ts.isIdentifier(p.name) && p.name.text === 'name'
+                     );
+                     let snapshotName = '';
+                     let description = testName;
 
-    for (const file of jsonFiles) {
-      try {
-        const filePath = path.join(STATS_DIR, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        const stats: TestStats = JSON.parse(content);
+                     if (nameProp && ts.isPropertyAssignment(nameProp) && ts.isStringLiteral(nameProp.initializer)) {
+                          snapshotName = nameProp.initializer.text;
+                     }
 
-        // Determine category from name or path convention if applicable
-        // WebGL tests might follow: category-testname or similar
-        // For now, default to 'general' or try to parse
-        let category = 'general';
-        if (stats.name.includes('/')) {
-          category = stats.name.split('/')[0];
-        } else if (stats.name.includes('-')) {
-             // Heuristic: take first part of dash-separated name as category
-             // e.g. "hud-crosshair" -> "hud"
-             category = stats.name.split('-')[0];
+                     const descProp = optionsArg.properties.find(p => p.name && ts.isIdentifier(p.name) && p.name.text === 'description');
+                     if (descProp && ts.isPropertyAssignment(descProp) && ts.isStringLiteral(descProp.initializer)) {
+                          description = descProp.initializer.text;
+                     }
+
+                     if (snapshotName) {
+                          tests.push({
+                             testName,
+                             snapshotName,
+                             file: path.relative(rootDir, filePath),
+                             line,
+                             description,
+                             stats: loadStats(filePath, snapshotName)
+                         });
+                     }
+                 } else if (optionsArg && ts.isStringLiteral(optionsArg)) {
+                     const snapshotName = optionsArg.text;
+                     tests.push({
+                        testName,
+                        snapshotName,
+                        file: path.relative(rootDir, filePath),
+                        line,
+                        description: testName,
+                        stats: loadStats(filePath, snapshotName)
+                    });
+                 }
+             }
         }
+        ts.forEachChild(node, (child) => findSnapshotCalls(child, testName, filePath, line));
+    }
 
-        // Check for image files relative to snapshots root
-        // The stats file name is typically "testname.json"
-        // Images are in "testname.png" (baseline), "actual/testname.png", "diff/testname.png"
-        // But the test name in vitest might contain slashes which are flattened or handled by vitest
-        // We assume our custom matcher writes stats with a 'name' that matches the file structure
+    visit(sourceFile);
+  }
 
-        // Since we are writing the matcher logic later (or it exists in test-utils),
-        // we assume standard structure:
-        // snapshots/testname.png
-        // snapshots/actual/testname.png
-        // snapshots/diff/testname.png
+  function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
+      const testDir = path.dirname(testFilePath);
+      const statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
+      if (fs.existsSync(statsPath)) {
+          try {
+              const data = fs.readFileSync(statsPath, 'utf-8');
+              return JSON.parse(data) as VisualTestStats;
+          } catch (e) {
+              console.warn(`Failed to read stats for ${snapshotName}:`, e);
+          }
+      }
+      return undefined;
+  }
 
-        const baselinePath = path.join(SNAPSHOTS_ROOT, `${stats.name}.png`);
-        const actualPath = path.join(SNAPSHOTS_ROOT, 'actual', `${stats.name}.png`);
-        const diffPath = path.join(SNAPSHOTS_ROOT, 'diff', `${stats.name}.png`);
-
-        const result: WebGLVisualTestResult = {
-          name: stats.name,
-          category,
-          passed: stats.passed,
-          percentDifferent: stats.percentDifferent,
-          pixelsDifferent: stats.pixelsDifferent,
-          totalPixels: stats.totalPixels,
-          baselineExists: await exists(baselinePath),
-          hasActual: await exists(actualPath),
-          hasDiff: await exists(diffPath),
-          timestamp: Date.now(),
-          width: stats.width,
-          height: stats.height
-        };
-
-        report.tests.push(result);
-        report.totalTests++;
-        if (result.passed) {
-          report.passed++;
-        } else {
-          report.failed++;
-        }
-
-      } catch (err) {
-        console.error(`Error processing stats file ${file}:`, err);
+  function walkDir(dir: string) {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+      const fullPath = path.join(dir, file);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        walkDir(fullPath);
+      } else if (file.endsWith('.test.ts')) {
+        processFile(fullPath);
       }
     }
-
-    // Sort tests by name
-    report.tests.sort((a, b) => a.name.localeCompare(b.name));
-
-    await fs.writeFile(OUTPUT_FILE, JSON.stringify(report, null, 2));
-    console.log(`Report generated at: ${OUTPUT_FILE}`);
-    console.log(`Total: ${report.totalTests}, Passed: ${report.passed}, Failed: ${report.failed}`);
-
-  } catch (err) {
-    console.error('Failed to generate report:', err);
-    process.exit(1);
   }
+
+  walkDir(path.join(rootDir, 'packages/engine/tests/webgl/visual'));
+  return tests;
 }
 
-generateWebGLVisualReport();
+const rootDir = path.resolve(__dirname, '../../../');
+const tests = findVisualTests(rootDir);
+console.log(JSON.stringify(tests, null, 2));
+
+const outputPath = path.join(process.cwd(), 'webgl-visual-tests.json');
+fs.writeFileSync(outputPath, JSON.stringify(tests, null, 2));
