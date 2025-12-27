@@ -37,6 +37,7 @@
     "test:integration": "pnpm -r --if-present test:integration",
     "test:browser": "pnpm -r --if-present test:browser",
     "test:webgpu": "pnpm -r --if-present test:webgpu",
+    "test:webgl": "pnpm -r --if-present test:webgl",
     "prepublishOnly": "pnpm run build && pnpm run test"
   },
   "dependencies": {

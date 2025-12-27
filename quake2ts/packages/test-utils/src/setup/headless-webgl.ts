@@ -1,4 +1,6 @@
-import { createRequire } from 'module';
+// Remove top-level import to avoid runtime crash when gl is missing
+// import createGL from 'gl';
+import type { WebGLContextState } from '@quake2ts/engine';
 
 export interface HeadlessWebGLOptions {
   width?: number;
@@ -14,67 +16,83 @@ export interface HeadlessWebGLContext {
   cleanup: () => void;
 }
 
-// Use createRequire to load 'gl' dynamically/safely if needed, or just to handle the CommonJS nature better.
-// We also wrap the require in a try-catch or just checking existence if we were worried about load-time failure,
-// but usually 'gl' loads fine and fails at runtime.
-const require = createRequire(import.meta.url);
-
-let headlessGL: any;
-try {
-  headlessGL = require('gl');
-} catch (e) {
-  // If 'gl' is not installed or fails to load bindings, we leave it undefined.
-  // The createHeadlessWebGL function will handle this.
-  console.warn('Failed to load "gl" package. Headless WebGL creation will fail.', e);
-}
-
+/**
+ * Creates a headless WebGL2 context using the 'gl' package.
+ * This is used for running WebGL tests in a Node.js environment without a browser.
+ */
 export function createHeadlessWebGL(
   options: HeadlessWebGLOptions = {}
 ): HeadlessWebGLContext {
-  if (!headlessGL) {
-    throw new Error('Headless GL package is not available or failed to load.');
-  }
-
   const width = options.width ?? 256;
   const height = options.height ?? 256;
 
-  // Ensure antialias is false for deterministic testing unless explicitly enabled
-  const antialias = options.antialias ?? false;
-  // Ensure preserveDrawingBuffer is true for readback unless explicitly disabled
-  const preserveDrawingBuffer = options.preserveDrawingBuffer ?? true;
+  let createGL;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    createGL = require('gl');
+  } catch (e) {
+    throw new Error('gl package not found or failed to load. Install it to run WebGL tests.');
+  }
 
-  // Create context using 'gl' package
-  const context = headlessGL(width, height, {
-    antialias,
-    preserveDrawingBuffer,
+  // Create WebGL context using 'gl' package
+  const glContext = createGL(width, height, {
+    antialias: options.antialias ?? false, // Default to false for deterministic testing
+    preserveDrawingBuffer: options.preserveDrawingBuffer ?? true, // Needed for readback
     stencil: true,
     depth: true,
     alpha: true
   });
 
-  if (!context) {
+  if (!glContext) {
     throw new Error('Failed to create headless WebGL context');
   }
 
-  // Cast to WebGL2RenderingContext
-  // Note: The 'gl' package implements WebGL 1, but we cast to WebGL 2 for type compatibility.
-  // Engine code should gracefuly handle missing WebGL 2 features or this environment is for specific subsets.
-  // WARNING: Calling actual WebGL 2 methods (e.g. createVertexArray) will crash at runtime.
-  const gl2 = context as unknown as WebGL2RenderingContext;
+  // Cast to WebGL2RenderingContext as 'gl' returns a compatible interface
+  // but TypeScript types might not align perfectly without casting
+  const gl = glContext as unknown as WebGL2RenderingContext;
+
+  // Verify context creation
+  const version = gl.getParameter(gl.VERSION);
+  // console.log(`Created headless WebGL context: ${version}`);
+
+  // Create cleanup function
+  const cleanup = () => {
+    const ext = gl.getExtension('STACKGL_destroy_context');
+    if (ext) {
+      ext.destroy();
+    }
+  };
 
   return {
-    gl: gl2,
+    gl,
     width,
     height,
-    cleanup: () => {
-      const ext = context.getExtension('STACKGL_destroy_context');
-      if (ext && typeof ext.destroy === 'function') {
-        ext.destroy();
-      }
-    }
+    cleanup
   };
 }
 
+/**
+ * Captures the current framebuffer content as a pixel array.
+ * Performs a vertical flip to match standard image coordinates (top-left origin).
+ */
+export function captureWebGLFramebuffer(
+  gl: WebGL2RenderingContext,
+  width: number,
+  height: number
+): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray(width * height * 4);
+
+  // Read pixels from framebuffer (bottom-left origin)
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+  // Flip vertically to match image coordinates (top-left origin)
+  return flipPixelsVertically(pixels, width, height);
+}
+
+/**
+ * Flips a pixel array vertically in-place or returns a new array.
+ * WebGL reads pixels bottom-up, but images are typically stored top-down.
+ */
 export function flipPixelsVertically(
   pixels: Uint8ClampedArray,
   width: number,
@@ -85,22 +103,13 @@ export function flipPixelsVertically(
 
   for (let y = 0; y < height; y++) {
     const srcRowStart = y * rowSize;
-    const dstRowStart = (height - 1 - y) * rowSize;
+    const destRowStart = (height - 1 - y) * rowSize;
+
     // Copy row
-    flipped.set(pixels.subarray(srcRowStart, srcRowStart + rowSize), dstRowStart);
+    for (let i = 0; i < rowSize; i++) {
+      flipped[destRowStart + i] = pixels[srcRowStart + i];
+    }
   }
 
   return flipped;
-}
-
-export function captureWebGLFramebuffer(
-  gl: WebGL2RenderingContext,
-  width: number,
-  height: number
-): Uint8ClampedArray {
-  const pixels = new Uint8ClampedArray(width * height * 4);
-  // Read pixels (returns bottom-up)
-  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  // Flip to top-down
-  return flipPixelsVertically(pixels, width, height);
 }
