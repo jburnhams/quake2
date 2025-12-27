@@ -119,7 +119,7 @@ test('sprite: textured quad - checkerboard', async () => {
 **Assets Needed:**
 - None (procedural generation via `createCheckerboardTexture`, etc.)
 
-**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
@@ -157,7 +157,7 @@ test('sprite: textured quad - checkerboard', async () => {
 4. Implement gradient test (Completed)
 5. Generate baselines and review (Completed)
 
-**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
@@ -192,7 +192,7 @@ test('sprite: textured quad - checkerboard', async () => {
 3. Validate character glyph rendering (Completed)
 4. Check spacing and kerning (Completed)
 
-**Status:** Implemented but failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
+**Status:** Implemented. Failing locally due to missing system dependencies for `gl` (headless-gl) in the restricted sandbox environment. Verification requires running in CI.
 
 ---
 
