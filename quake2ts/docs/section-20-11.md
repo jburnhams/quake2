@@ -37,21 +37,21 @@ Implement particle rendering for explosions, blood, trails, etc.
 2. Dynamic vertex buffer updates [COMPLETED]
 3. Additive blending [COMPLETED]
 4. Depth test (no write for transparency) [COMPLETED]
-5. Batching by texture [TODO]
+5. Batching by texture [COMPLETED]
 
-### Task 3: Testing [IN PROGRESS]
+### Task 3: Testing [COMPLETED]
 
 **Visual Tests:**
 - `particles-basic.png` [COMPLETED]
-- `particles-smoke.png` [TODO]
-- `particles-explosion.png` [TODO]
-- `particles-blood.png` [TODO]
+- `particles-smoke.png` [COMPLETED]
+- `particles-explosion.png` [COMPLETED]
+- `particles-blood.png` [COMPLETED]
 
 **Test Cases:**
 - Billboarding works [COMPLETED]
 - Additive blending correct [COMPLETED]
 - Alpha fade works [COMPLETED]
-- Many particles performant [TODO]
+- Many particles performant [COMPLETED]
 
 **Reference:** `packages/engine/src/render/particleSystem.ts`
 

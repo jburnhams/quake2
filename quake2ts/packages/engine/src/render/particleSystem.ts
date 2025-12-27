@@ -19,6 +19,10 @@ export interface ParticleSpawnOptions {
    * When true, fades alpha from 1 to 0 across the lifetime instead of remaining constant.
    */
   readonly fade?: boolean;
+  /**
+   * Texture index to use for the particle. If undefined, uses the default (0).
+   */
+  readonly textureIndex?: number;
 }
 
 export interface ParticleSimulationOptions {
@@ -62,6 +66,7 @@ export class ParticleSystem {
   private readonly bounce: Float32Array;
   private readonly fade: Uint8Array;
   private readonly blendMode: Uint8Array; // 0 alpha, 1 additive
+  private readonly textureIndex: Int16Array;
 
   constructor(maxParticles: number, rng: RandomGenerator) {
     this.maxParticles = maxParticles;
@@ -85,6 +90,7 @@ export class ParticleSystem {
     this.bounce = new Float32Array(maxParticles);
     this.fade = new Uint8Array(maxParticles);
     this.blendMode = new Uint8Array(maxParticles);
+    this.textureIndex = new Int16Array(maxParticles);
   }
 
   spawn(options: ParticleSpawnOptions): number | null {
@@ -115,6 +121,7 @@ export class ParticleSystem {
     this.bounce[index] = options.bounce ?? 0.25;
     this.fade[index] = options.fade ? 1 : 0;
     this.blendMode[index] = options.blendMode === 'additive' ? 1 : 0;
+    this.textureIndex[index] = options.textureIndex ?? 0;
 
     return index;
   }
@@ -172,6 +179,7 @@ export class ParticleSystem {
     readonly color: readonly [number, number, number, number];
     readonly size: number;
     readonly blendMode: ParticleBlendMode;
+    readonly textureIndex: number;
   } {
     return {
       alive: this.alive[index] === 1,
@@ -189,6 +197,7 @@ export class ParticleSystem {
       color: [this.colorR[index], this.colorG[index], this.colorB[index], this.colorA[index]],
       size: this.size[index],
       blendMode: this.blendMode[index] === 1 ? 'additive' : 'alpha',
+      textureIndex: this.textureIndex[index],
     };
   }
 

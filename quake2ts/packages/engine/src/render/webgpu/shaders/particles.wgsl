@@ -5,6 +5,8 @@ struct Uniforms {
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(1) @binding(0) var t_diffuse: texture_2d<f32>;
+@group(1) @binding(1) var s_diffuse: sampler;
 
 struct VertexInput {
   @location(0) position: vec3<f32>,  // Instance position (center)
@@ -72,12 +74,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
-  let dist = distance(input.uv, vec2<f32>(0.5, 0.5));
-  let alpha = input.color.a * (1.0 - smoothstep(0.35, 0.5, dist));
+  let textureColor = textureSample(t_diffuse, s_diffuse, input.uv);
+  let alpha = input.color.a * textureColor.a;
 
   if (alpha <= 0.0) {
     discard;
   }
 
-  return vec4<f32>(input.color.rgb, alpha);
+  return vec4<f32>(input.color.rgb * textureColor.rgb, alpha);
 }
