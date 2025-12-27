@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/e2e-tests",
-  "version": "0.0.773",
+  "version": "0.0.774",
   "private": true,
   "description": "End-to-end tests for Quake 2 TS",
   "repository": {
