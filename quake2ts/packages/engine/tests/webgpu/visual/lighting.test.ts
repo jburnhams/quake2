@@ -170,10 +170,9 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
-            disableLightmaps: true,
+            disableLightmaps: true, // Only dynamic lights
             fullbright: false,
-            ambient: 0.1,
+            ambient: 0.1, // Low ambient to contrast light
             timeSeconds: 0
         });
 
@@ -224,7 +223,6 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
@@ -274,7 +272,6 @@ describe('WebGPU Lighting', () => {
             camera: cam,
             world: { map, surfaces: [floor] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.0,
