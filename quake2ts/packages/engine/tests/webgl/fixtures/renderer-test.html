@@ -19,13 +19,10 @@
 <body>
     <canvas id="glCanvas" width="256" height="256"></canvas>
 
-    <!-- Load gl-matrix dependency -->
-    <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3/gl-matrix-min.js"></script>
+    <!-- Load built engine IIFE bundle (includes all dependencies) -->
+    <script src="/packages/engine/dist/browser/index.global.js"></script>
 
-    <!-- Load built engine module -->
-    <script type="module">
-        import { createRenderer } from '/packages/engine/dist/esm/index.js';
-
+    <script>
         // Expose renderer globally for tests
         window.createRendererTest = async function() {
             const canvas = document.getElementById('glCanvas');
@@ -35,7 +32,8 @@
                 throw new Error('WebGL2 not supported');
             }
 
-            const renderer = createRenderer(gl);
+            // Use the global Quake2Engine from the IIFE build
+            const renderer = Quake2Engine.createRenderer(gl);
 
             // Expose renderer and gl for tests
             window.testRenderer = renderer;

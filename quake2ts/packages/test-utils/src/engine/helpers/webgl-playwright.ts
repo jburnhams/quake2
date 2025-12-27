@@ -134,7 +134,7 @@ export async function createWebGLPlaywrightSetup(
  * @param renderFn - Function code as string that uses window.testRenderer
  * @returns Captured pixel data
  */
-export async function renderAndCapture(
+export async function renderAndCaptureWebGLPlaywright(
   page: Page,
   renderFn: string
 ): Promise<Uint8ClampedArray> {
@@ -190,7 +190,7 @@ export async function testWebGLRenderer(
   const setup = await createWebGLPlaywrightSetup(options);
 
   try {
-    const pixels = await renderAndCapture(setup.page, renderCode);
+    const pixels = await renderAndCaptureWebGLPlaywright(setup.page, renderCode);
 
     await expectSnapshot(pixels, {
       name: options.name,

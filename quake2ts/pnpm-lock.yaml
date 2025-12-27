@@ -314,6 +314,9 @@ importers:
       '@types/pngjs':
         specifier: ^6.0.5
         version: 6.0.5
+      '@types/serve-handler':
+        specifier: ^6.1.4
+        version: 6.1.4
       '@webgpu/types':
         specifier: ^0.1.68
         version: 0.1.68
@@ -338,6 +341,9 @@ importers:
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
+      serve-handler:
+        specifier: ^6.1.6
+        version: 6.1.6
       tsup:
         specifier: ^8.1.0
         version: 8.5.1(tsx@4.21.0)(typescript@5.9.3)
