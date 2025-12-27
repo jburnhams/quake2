@@ -161,7 +161,7 @@ describe('NetworkMessageParser Synthetic Tests', () => {
       parser.parseMessage();
 
       expect(handler.onServerData).toHaveBeenCalledWith(
-          34, 1234, 0, "baseq2", 0, "maps/base1.bsp"
+          34, 1234, 0, "baseq2", 0, "maps/base1.bsp", undefined, undefined
       );
   });
 

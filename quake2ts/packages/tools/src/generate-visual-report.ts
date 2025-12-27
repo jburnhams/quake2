@@ -38,7 +38,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
 
     function visit(node: ts.Node) {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-        if (node.expression.text === 'test') {
+        if (node.expression.text === 'test' || node.expression.text === 'it') {
           // Found a test('name', ...) call
           const testNameArg = node.arguments[0];
           if (ts.isStringLiteral(testNameArg)) {
@@ -62,44 +62,83 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
         if (ts.isCallExpression(node)) {
             // Check for renderAndExpectSnapshot
             if (ts.isIdentifier(node.expression) && node.expression.text === 'renderAndExpectSnapshot') {
-                 // Arg 1 is usually the name string
+                 // Arg 1 can be string OR object
                  const nameArg = node.arguments[1];
-                 if (nameArg && ts.isStringLiteral(nameArg)) {
-                     const snapshotName = nameArg.text;
-                     tests.push({
-                         testName,
-                         snapshotName,
-                         file: path.relative(rootDir, filePath),
-                         line,
-                         description: testName,
-                         stats: loadStats(filePath, snapshotName)
-                     });
+                 if (nameArg) {
+                    let snapshotName = '';
+                    let description = testName;
+
+                    if (ts.isStringLiteral(nameArg)) {
+                        snapshotName = nameArg.text;
+                    } else if (ts.isObjectLiteralExpression(nameArg)) {
+                        const nameProp = nameArg.properties.find(p => p.name && ts.isIdentifier(p.name) && p.name.text === 'name');
+                        if (nameProp && ts.isPropertyAssignment(nameProp) && ts.isStringLiteral(nameProp.initializer)) {
+                            snapshotName = nameProp.initializer.text;
+                        }
+
+                        const descProp = nameArg.properties.find(p => p.name && ts.isIdentifier(p.name) && p.name.text === 'description');
+                        if (descProp && ts.isPropertyAssignment(descProp) && ts.isStringLiteral(descProp.initializer)) {
+                            description = descProp.initializer.text;
+                        }
+                    }
+
+                    if (snapshotName) {
+                        tests.push({
+                            testName,
+                            snapshotName,
+                            file: path.relative(rootDir, filePath),
+                            line,
+                            description,
+                            stats: loadStats(filePath, snapshotName)
+                        });
+                    }
                  }
             }
-             // Check for object property destructuring alias usage, e.g. test('...', async ({ renderAndExpectSnapshot }) => ...
-             // The above visitor is generic, but usually the test function is async ({ renderAndExpectSnapshot }) => { await renderAndExpectSnapshot(...) }
-             // In the visual-testing.ts helper, renderAndExpectSnapshot is passed as an argument.
 
-             // Also check for expectSnapshot(pixels, { name: 'foo' }) or expectSnapshot(pixels, 'foo') (if overloaded, but our signature is object)
+             // Check for expectSnapshot(pixels, { name: 'foo' }) or expectSnapshot(pixels, 'foo')
              if (ts.isIdentifier(node.expression) && node.expression.text === 'expectSnapshot') {
-                 // Arg 1 is options object usually
                  const optionsArg = node.arguments[1];
+
+                 // Case 1: expectSnapshot(pixels, { name: 'foo' })
                  if (optionsArg && ts.isObjectLiteralExpression(optionsArg)) {
                      const nameProp = optionsArg.properties.find(p =>
                         p.name && ts.isIdentifier(p.name) && p.name.text === 'name'
                      );
 
+                     let snapshotName = '';
+                     let description = testName;
+
                      if (nameProp && ts.isPropertyAssignment(nameProp) && ts.isStringLiteral(nameProp.initializer)) {
-                          const snapshotName = nameProp.initializer.text;
+                          snapshotName = nameProp.initializer.text;
+                     }
+
+                     const descProp = optionsArg.properties.find(p => p.name && ts.isIdentifier(p.name) && p.name.text === 'description');
+                     if (descProp && ts.isPropertyAssignment(descProp) && ts.isStringLiteral(descProp.initializer)) {
+                          description = descProp.initializer.text;
+                     }
+
+                     if (snapshotName) {
                           tests.push({
                              testName,
                              snapshotName,
                              file: path.relative(rootDir, filePath),
                              line,
-                             description: testName,
+                             description,
                              stats: loadStats(filePath, snapshotName)
                          });
                      }
+                 }
+                 // Case 2: expectSnapshot(pixels, 'foo') (Legacy/Overload support if added later)
+                 else if (optionsArg && ts.isStringLiteral(optionsArg)) {
+                     const snapshotName = optionsArg.text;
+                     tests.push({
+                        testName,
+                        snapshotName,
+                        file: path.relative(rootDir, filePath),
+                        line,
+                        description: testName,
+                        stats: loadStats(filePath, snapshotName)
+                    });
                  }
              }
         }

@@ -17,41 +17,41 @@ Implement particle rendering for explosions, blood, trails, etc.
 
 ## Tasks
 
-### Task 1: WGSL Shader
+### Task 1: WGSL Shader [COMPLETED]
 
 **File:** `shaders/particles.wgsl`
 
 **Features:**
 - Billboard quads (always face camera)
 - Per-particle color and alpha
-- Texture atlas sampling
 - Additive blending
 
 **Reference:** `particleSystem.ts` (inline GLSL)
 
-### Task 2: ParticleRenderer Implementation
+### Task 2: ParticleRenderer Implementation [IN PROGRESS]
 
 **File:** `pipelines/particleSystem.ts`
 
 **Subtasks:**
-1. Instanced rendering (one quad per particle)
-2. Dynamic vertex buffer updates
-3. Additive blending
-4. Depth test (no write for transparency)
-5. Batching by texture
+1. Instanced rendering (one quad per particle) [COMPLETED]
+2. Dynamic vertex buffer updates [COMPLETED]
+3. Additive blending [COMPLETED]
+4. Depth test (no write for transparency) [COMPLETED]
+5. Batching by texture [TODO]
 
-### Task 3: Testing
+### Task 3: Testing [IN PROGRESS]
 
 **Visual Tests:**
-- `particles-smoke.png`
-- `particles-explosion.png`
-- `particles-blood.png`
+- `particles-basic.png` [COMPLETED]
+- `particles-smoke.png` [TODO]
+- `particles-explosion.png` [TODO]
+- `particles-blood.png` [TODO]
 
 **Test Cases:**
-- Billboarding works
-- Additive blending correct
-- Alpha fade works
-- Many particles performant
+- Billboarding works [COMPLETED]
+- Additive blending correct [COMPLETED]
+- Alpha fade works [COMPLETED]
+- Many particles performant [TODO]
 
 **Reference:** `packages/engine/src/render/particleSystem.ts`
 

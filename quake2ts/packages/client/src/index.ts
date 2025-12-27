@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS, CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '@quake2ts/shared';
+import { NetChan, UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS, CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -349,12 +349,21 @@ export function createClient(imports: ClientImports): ClientExports {
   });
   const cg: CGameExport = GetCGameAPI(cgameImport);
 
+  // Initialize NetChan with optional qport override
+  let netchan: NetChan | undefined;
+  const qportCvar = imports.host?.cvars?.get('net_qport');
+  if (qportCvar && !isNaN(qportCvar.number)) {
+      netchan = new NetChan();
+      netchan.setup(qportCvar.number);
+  }
+
   // Networking
   const multiplayer = new MultiplayerConnection({
       get username() { return imports.host?.cvars?.get('name')?.string || 'Player'; },
       get model() { return imports.host?.cvars?.get('model')?.string || 'male'; },
       get skin() { return imports.host?.cvars?.get('skin')?.string || 'grunt'; },
-      get fov() { return fovValue; }
+      get fov() { return fovValue; },
+      netchan
   });
   multiplayer.setDemoRecorder(demoRecorder);
   multiplayer.setEffectSystem(effectSystem); // Inject Effect System

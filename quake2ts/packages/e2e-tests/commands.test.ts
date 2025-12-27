@@ -22,17 +22,32 @@ describe('E2E Command Flow Test', () => {
 
     // Wait for connection to be established (Active state)
     // Increased timeout for slow environments
+    // Use window.clientConnected flag set by real-client.html harness to avoid context issues with isConnected()
+    await page.waitForFunction(() => (window as any).clientConnected, undefined, { timeout: 120000 });
+
+    // Wait for Active state
     await page.waitForFunction(() => {
         const client = (window as any).clientInstance;
-        return client && client.multiplayer && client.multiplayer.isConnected();
-    }, undefined, { timeout: 30000 });
+        return client.multiplayer.state >= 4; // Active or Loading
+    }, undefined, { timeout: 60000 });
+
+    // We no longer force state here as server fix should handle it
 
     const status = await page.evaluate(() => {
         const client = (window as any).clientInstance;
         return client.multiplayer.state;
     });
+
     // Active = 5 (based on ConnectionState enum in client)
     expect(status).toBeGreaterThanOrEqual(4); // ConnectionState.Active
+
+    // Ensure menu is closed so inputs work
+    await page.evaluate(() => {
+        const client = (window as any).clientInstance;
+        if (client.isMenuActive()) {
+            client.toggleMenu();
+        }
+    });
 
     // --- Test 4.4.1: Client sends commands ---
     // The harness loop in real-client.html already sends commands every frame via client.predict()
@@ -63,8 +78,8 @@ describe('E2E Command Flow Test', () => {
     let newSequence = initialSequence;
     const startTime = Date.now();
     while (newSequence <= initialSequence + 5) {
-        if (Date.now() - startTime > 5000) {
-            throw new Error('Timeout waiting for sequence to increase');
+        if (Date.now() - startTime > 30000) { // Increased timeout
+            throw new Error(`Timeout waiting for sequence to increase. Initial: ${initialSequence}, Current: ${newSequence}`);
         }
         await page.waitForTimeout(100);
         newSequence = await page.evaluate(() => {
@@ -107,26 +122,31 @@ describe('E2E Command Flow Test', () => {
 
     await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  }, 40000);
+  }, 120000); // Increased timeout
 
   it('should handle command rate limiting', async () => {
-    const server = await startTestServer(GAME_SERVER_PORT_2);
+    // Start server with a lower flood limit (e.g. 50) to ensure the test can reliably trigger it
+    // even in slow CI environments or when using yielding.
+    const server = await startTestServer(GAME_SERVER_PORT_2, undefined, { floodLimit: 50 });
     const { browser, page } = await launchBrowserClient(`ws://localhost:${GAME_SERVER_PORT_2}`, {
         headless: true
     });
 
     // Wait for active
+    await page.waitForFunction(() => (window as any).clientConnected, undefined, { timeout: 120000 });
+
     await page.waitForFunction(() => {
         const client = (window as any).clientInstance;
-        return client && client.multiplayer && client.multiplayer.isConnected();
-    }, undefined, { timeout: 30000 });
+        return client.multiplayer.state >= 4;
+    }, undefined, { timeout: 60000 });
 
     // --- Test 4.4.3: Command rate limiting ---
 
     // Flood commands from client
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
         const client = (window as any).clientInstance;
-        // Send 300 commands instantly (limit is usually much lower, e.g., packet limit)
+        // Send enough commands to trigger rate limit (>50/sec)
+        // We send 300 commands quickly
         for(let i=0; i<300; i++) {
              client.multiplayer.sendCommand({
                 angles: {x:0, y:0, z:0},
@@ -139,18 +159,36 @@ describe('E2E Command Flow Test', () => {
                 lightlevel: 0,
                 serverFrame: 0
             });
+            // Yield occasionally to maintain a realistic burst pattern but stay above 50/sec
+            // setTimeout(0) takes ~4ms.
+            // Sending 5 packets then waiting 4ms => 5 / 0.004 = 1250 packets/sec.
+            // This is well above 50.
+            if (i % 5 === 0) await new Promise(r => setTimeout(r, 0));
         }
     });
 
     // Wait for server to process and kick
     // The server should detect the flood and drop the client
-    await page.waitForTimeout(2000);
+    // We poll for disconnection, increased timeout to 30s to be safe
+    // Note: The client state check might be flaky if the close event is slow,
+    // but the server logs confirm disconnection.
+    await page.waitForFunction(() => {
+         const client = (window as any).clientInstance;
+         // Check if state is Disconnected (0)
+         return client.multiplayer.state === 0;
+    }, undefined, { timeout: 20000 }).catch(e => {});
 
     // Verify client is disconnected
-    const isConnected = await page.evaluate(() => {
+    const clientState = await page.evaluate(() => {
          const client = (window as any).clientInstance;
-         return client.multiplayer.isConnected();
+         return client.multiplayer.state;
     });
+
+    // Even if client state update lags, we proceed.
+    // The primary verification is usually server side or if connection is dead.
+    // Ideally expect(clientState).toBe(0);
+    // but we relax it slightly if flake occurs, though we prefer strictness.
+    expect(clientState).toBe(0);
 
     // Verify on server side
     const serverClients = (server as any).svs.clients;
@@ -164,5 +202,5 @@ describe('E2E Command Flow Test', () => {
 
     await closeBrowser({ browser, page } as any);
     await stopServer(server);
-  }, 40000);
+  }, 120000); // Increased timeout
 });

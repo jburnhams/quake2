@@ -17,6 +17,7 @@ export interface TestClientOptions {
   clientUrl?: string; // URL where the web client is hosted
   width?: number;
   height?: number;
+  queryParams?: Record<string, string>;
 }
 
 export interface TestClient extends PlaywrightTestClient {
@@ -116,7 +117,14 @@ export async function launchBrowserClient(serverUrl: string, options: TestClient
   });
 
   // Navigate to the client application
-  const fullUrl = `${clientUrl}?connect=${encodeURIComponent(serverUrl)}`;
+  const query = new URLSearchParams();
+  query.set('connect', serverUrl);
+  if (options.queryParams) {
+      for (const [key, value] of Object.entries(options.queryParams)) {
+          query.set(key, value);
+      }
+  }
+  const fullUrl = `${clientUrl}?${query.toString()}`;
   console.log(`Navigating to: ${fullUrl}`);
 
   try {

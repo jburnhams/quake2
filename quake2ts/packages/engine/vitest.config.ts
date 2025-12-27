@@ -6,6 +6,7 @@ const sharedSrc = fileURLToPath(new URL('../shared/src/index.ts', import.meta.ur
 const gameSrc = fileURLToPath(new URL('../game/src/index.ts', import.meta.url));
 
 const isWebGPU = process.env.TEST_TYPE === 'webgpu';
+const isWebGL = process.env.TEST_TYPE === 'webgl';
 const isIntegration = process.env.TEST_TYPE === 'integration';
 const isUnit = process.env.TEST_TYPE === 'unit';
 
@@ -14,26 +15,21 @@ const exclude = [
   '**/dist/**',
   // Exclude webgpu specific tests from standard runs
   ...((!isWebGPU) ? ['**/webgpu/**/*.test.ts'] : []),
+  // Exclude webgl visual tests from standard runs
+  ...((!isWebGL) ? ['**/tests/webgl/**'] : []),
   // Exclude integration tests from unit tests
   ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
 ];
 
 const include = isWebGPU
   ? ['**/webgpu/**/*.test.ts']
-  : isIntegration
-    ? ['**/integration/**', '**/*integration*', '**/performance/**']
-    : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
+  : isWebGL
+    ? ['**/tests/webgl/**/*.test.ts']
+    : isIntegration
+      ? ['**/integration/**', '**/*integration*', '**/performance/**']
+      : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 const setupFiles = ['./vitest.setup.ts'];
-// Remove setup-webgpu.ts from standard runs, it's specific to webgpu tests or if needed for mocks
-// If mocks are needed for integration/unit, ensure they don't trigger real webgpu init
-if (isIntegration && !isWebGPU) {
-    // If there are other integration tests needing mocks but not real webgpu:
-    // setupFiles.push('./tests/setup-webgpu.ts');
-    // BUT the goal is to split real webgpu.
-    // Assuming setup-webgpu.ts was the one triggering real usage?
-    // Let's keep it clean.
-}
 
 export default defineConfig({
   resolve: {
@@ -58,8 +54,8 @@ export default defineConfig({
       pool: 'threads',
       isolate: false,
     } : {}),
-    // Force sequential execution for integration and webgpu tests
-    ...((isIntegration || isWebGPU) ? {
+    // Force sequential execution for integration, webgpu, and webgl tests
+    ...((isIntegration || isWebGPU || isWebGL) ? {
       pool: 'forks',
       poolOptions: {
         forks: {

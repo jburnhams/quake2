@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { ClientNetworkHandler } from '../../src/demo/handler.js';
 import { DEMO_ITEM_MAPPING } from '../../src/demo/itemMapping.js';
 import { WeaponId, PowerupId, AmmoType } from '@quake2ts/game';
-import { FrameData, createEmptyProtocolPlayerState, EntityState, createEmptyEntityState, U_ORIGIN1, U_ANGLE1, U_FRAME8, U_MODEL } from '@quake2ts/engine';
+import { FrameData, createEmptyProtocolPlayerState, EntityState, createEmptyEntityState, U_ORIGIN1, U_ANGLE1, U_FRAME8, U_MODEL, U_NUMBER16 } from '@quake2ts/engine';
 import { ConfigStringIndex } from '@quake2ts/shared';
 import { ClientConfigStrings } from '../../src/configStrings.js';
 import { ClientImports } from '../../src/index.js';
@@ -182,7 +182,7 @@ describe('ClientNetworkHandler', () => {
          // Frame 1
          const ent1 = createEmptyEntityState();
          ent1.number = 1;
-         ent1.bits = U_MODEL | U_FRAME8 | U_ORIGIN1;
+         ent1.bits = U_MODEL | U_FRAME8 | U_ORIGIN1 | U_NUMBER16;
          ent1.modelindex = modelIndex;
          ent1.origin = { x: 0, y: 0, z: 0 };
          ent1.frame = 10;
@@ -199,10 +199,12 @@ describe('ClientNetworkHandler', () => {
         };
         handler.onFrame(frame1);
 
+        expect(handler.entities.size).toBe(1);
+
         // Frame 2
         const ent2 = createEmptyEntityState();
         ent2.number = 1;
-        ent2.bits = U_ORIGIN1 | U_FRAME8;
+        ent2.bits = U_ORIGIN1 | U_FRAME8 | U_NUMBER16;
         ent2.origin = { x: 100, y: 0, z: 0 };
         ent2.frame = 20;
 

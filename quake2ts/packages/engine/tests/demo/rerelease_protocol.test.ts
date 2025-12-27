@@ -111,6 +111,7 @@ describe('Rerelease Protocol (Protocol 2023)', () => {
     } as unknown as NetworkMessageHandler;
 
     const parser = new NetworkMessageParser(stream, handlerMock);
+    parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE); // Force protocol for this test
     parser.parseMessage();
 
     expect(handlerMock.onBotChat).toHaveBeenCalledWith("Hello World");
@@ -133,6 +134,7 @@ describe('Rerelease Protocol (Protocol 2023)', () => {
     } as unknown as NetworkMessageHandler;
 
     const parser = new NetworkMessageParser(stream, handlerMock);
+    parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
     parser.parseMessage();
 
     expect(handlerMock.onPoi).toHaveBeenCalledWith(7, {x:10, y:20, z:30});
@@ -153,6 +155,7 @@ describe('Rerelease Protocol (Protocol 2023)', () => {
       } as unknown as NetworkMessageHandler;
 
       const parser = new NetworkMessageParser(stream, handlerMock);
+      parser.setProtocolVersion(PROTOCOL_VERSION_RERELEASE);
       parser.parseMessage();
 
       expect(handlerMock.onHelpPath).toHaveBeenCalledWith(expect.objectContaining({

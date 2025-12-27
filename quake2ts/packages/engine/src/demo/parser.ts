@@ -1,209 +1,46 @@
 
 // Rerelease Protocol Impl
 import { BinaryStream, Vec3, ServerCommand, TempEntity, ANORMS } from '@quake2ts/shared';
+import {
+    U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1,
+    U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2,
+    U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
+    U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4,
+    U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH
+} from '@quake2ts/shared';
 import pako from 'pako';
 import { StreamingBuffer } from '../stream/streamingBuffer.js';
+import { ProtocolHandler } from './protocol/types.js';
+import { createProtocolHandler, BootstrapProtocolHandler } from './protocol/factory.js';
+import { PROTOCOL_VERSION_RERELEASE } from './protocol/rerelease.js';
+import { EntityState, ProtocolPlayerState, createEmptyEntityState, createEmptyProtocolPlayerState, MutableVec3, FrameData, FogData, DamageIndicator } from './state.js';
 
-export const PROTOCOL_VERSION_RERELEASE = 2023;
+// Export constants for other modules (Writer etc)
+export {
+    U_ORIGIN1, U_ORIGIN2, U_ANGLE2, U_ANGLE3, U_FRAME8, U_EVENT, U_REMOVE, U_MOREBITS1,
+    U_NUMBER16, U_ORIGIN3, U_ANGLE1, U_MODEL, U_RENDERFX8, U_ALPHA, U_EFFECTS8, U_MOREBITS2,
+    U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
+    U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4,
+    U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH
+} from '@quake2ts/shared'; // Re-export from shared
 
-// Constants from Q2 source (qcommon/qcommon.h)
-export const U_ORIGIN1   = (1 << 0);
-export const U_ORIGIN2   = (1 << 1);
-export const U_ANGLE2    = (1 << 2);
-export const U_ANGLE3    = (1 << 3);
-export const U_FRAME8    = (1 << 4);
-export const U_EVENT     = (1 << 5);
-export const U_REMOVE    = (1 << 6);
-export const U_MOREBITS1 = (1 << 7);
-
-export const U_NUMBER16  = (1 << 8);
-export const U_ORIGIN3   = (1 << 9);
-export const U_ANGLE1    = (1 << 10);
-export const U_MODEL     = (1 << 11);
-export const U_RENDERFX8 = (1 << 12);
-export const U_ALPHA     = (1 << 13);
-export const U_EFFECTS8  = (1 << 14);
-export const U_MOREBITS2 = (1 << 15);
-
-export const U_SKIN8     = (1 << 16);
-export const U_FRAME16   = (1 << 17);
-export const U_RENDERFX16 = (1 << 18);
-export const U_EFFECTS16 = (1 << 19);
-export const U_MODEL2    = (1 << 20);
-export const U_MODEL3    = (1 << 21);
-export const U_MODEL4    = (1 << 22);
-export const U_MOREBITS3 = (1 << 23);
-
-export const U_OLDORIGIN = (1 << 24);
-export const U_SKIN16    = (1 << 25);
-export const U_SOUND     = (1 << 26);
-export const U_SOLID     = (1 << 27);
-
-export const U_SCALE         = (1 << 28);
-export const U_INSTANCE_BITS = (1 << 29);
-export const U_LOOP_VOLUME   = (1 << 30);
-export const U_MOREBITS4     = 0x80000000 | 0;
-
-export const U_LOOP_ATTENUATION_HIGH = (1 << 0);
-export const U_OWNER_HIGH            = (1 << 1);
-export const U_OLD_FRAME_HIGH        = (1 << 2);
+// Export types and factories
+export {
+    EntityState,
+    ProtocolPlayerState,
+    createEmptyEntityState,
+    createEmptyProtocolPlayerState,
+    MutableVec3,
+    FrameData,
+    FogData,
+    DamageIndicator,
+    PROTOCOL_VERSION_RERELEASE
+};
 
 const RECORD_NETWORK = 0x00;
 const RECORD_CLIENT  = 0x01;
 const RECORD_SERVER  = 0x02;
 const RECORD_RELAY   = 0x80;
-
-export interface MutableVec3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface EntityState {
-  number: number;
-  modelindex: number;
-  modelindex2: number;
-  modelindex3: number;
-  modelindex4: number;
-  frame: number;
-  skinnum: number;
-  effects: number;
-  renderfx: number;
-  origin: MutableVec3;
-  old_origin: MutableVec3;
-  angles: MutableVec3;
-  sound: number;
-  event: number;
-  solid: number;
-  bits: number;
-  bitsHigh: number;
-  alpha: number;
-  scale: number;
-  instanceBits: number;
-  loopVolume: number;
-  loopAttenuation: number;
-  owner: number;
-  oldFrame: number;
-}
-
-export const createEmptyEntityState = (): EntityState => ({
-  number: 0,
-  modelindex: 0,
-  modelindex2: 0,
-  modelindex3: 0,
-  modelindex4: 0,
-  frame: 0,
-  skinnum: 0,
-  effects: 0,
-  renderfx: 0,
-  origin: { x: 0, y: 0, z: 0 },
-  old_origin: { x: 0, y: 0, z: 0 },
-  angles: { x: 0, y: 0, z: 0 },
-  sound: 0,
-  event: 0,
-  solid: 0,
-  bits: 0,
-  bitsHigh: 0,
-  alpha: 0,
-  scale: 0,
-  instanceBits: 0,
-  loopVolume: 0,
-  loopAttenuation: 0,
-  owner: 0,
-  oldFrame: 0
-});
-
-export interface ProtocolPlayerState {
-  pm_type: number;
-  origin: MutableVec3;
-  velocity: MutableVec3;
-  pm_time: number;
-  pm_flags: number;
-  gravity: number;
-  delta_angles: MutableVec3;
-  viewoffset: MutableVec3;
-  viewangles: MutableVec3;
-  kick_angles: MutableVec3;
-  gun_index: number;
-  gun_frame: number;
-  gun_offset: MutableVec3;
-  gun_angles: MutableVec3;
-  blend: number[];
-  fov: number;
-  rdflags: number;
-  stats: number[];
-  gunskin: number;
-  gunrate: number;
-  damage_blend: number[];
-  team_id: number;
-  watertype: number;
-}
-
-export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({
-  pm_type: 0,
-  origin: { x: 0, y: 0, z: 0 },
-  velocity: { x: 0, y: 0, z: 0 },
-  pm_time: 0,
-  pm_flags: 0,
-  gravity: 0,
-  delta_angles: { x: 0, y: 0, z: 0 },
-  viewoffset: { x: 0, y: 0, z: 0 },
-  viewangles: { x: 0, y: 0, z: 0 },
-  kick_angles: { x: 0, y: 0, z: 0 },
-  gun_index: 0,
-  gun_frame: 0,
-  gun_offset: { x: 0, y: 0, z: 0 },
-  gun_angles: { x: 0, y: 0, z: 0 },
-  blend: [0, 0, 0, 0],
-  fov: 0,
-  rdflags: 0,
-  stats: new Array(32).fill(0),
-  gunskin: 0,
-  gunrate: 0,
-  damage_blend: [0, 0, 0, 0],
-  team_id: 0,
-  watertype: 0
-});
-
-export interface FrameData {
-    serverFrame: number;
-    deltaFrame: number;
-    surpressCount: number;
-    areaBytes: number;
-    areaBits: Uint8Array;
-    playerState: ProtocolPlayerState;
-    packetEntities: {
-        delta: boolean;
-        entities: EntityState[];
-    };
-}
-
-export interface FogData {
-    density?: number;
-    skyfactor?: number;
-    red?: number;
-    green?: number;
-    blue?: number;
-    time?: number;
-    hf_falloff?: number;
-    hf_density?: number;
-    hf_start_r?: number;
-    hf_start_g?: number;
-    hf_start_b?: number;
-    hf_start_dist?: number;
-    hf_end_r?: number;
-    hf_end_g?: number;
-    hf_end_b?: number;
-    hf_end_dist?: number;
-}
-
-export interface DamageIndicator {
-    damage: number;
-    health: boolean;
-    armor: boolean;
-    power: boolean;
-    dir: Vec3;
-}
 
 export interface NetworkMessageHandler {
     onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string, tickRate?: number, demoType?: number): void;
@@ -268,39 +105,14 @@ class BinaryStreamAdapter extends StreamingBuffer {
     }
 }
 
-// Protocol 34 (Original Q2) Opcode Mapping
-const PROTO34_MAP: Record<number, number> = {
-    0: ServerCommand.bad,
-    1: ServerCommand.nop,
-    2: ServerCommand.disconnect,
-    3: ServerCommand.reconnect,
-    4: ServerCommand.download,
-    5: ServerCommand.frame,
-    6: ServerCommand.inventory,
-    7: ServerCommand.layout,
-    8: ServerCommand.muzzleflash,
-    9: ServerCommand.sound,
-    10: ServerCommand.print,
-    11: ServerCommand.stufftext,
-    12: ServerCommand.serverdata,
-    13: ServerCommand.configstring,
-    14: ServerCommand.spawnbaseline,
-    15: ServerCommand.centerprint,
-    16: ServerCommand.download,
-    17: ServerCommand.playerinfo,
-    18: ServerCommand.packetentities,
-    19: ServerCommand.deltapacketentities,
-    23: ServerCommand.temp_entity, // Wire 23 -> Enum 3 (TempEntity)
-    22: ServerCommand.muzzleflash2 // Wire 22 -> Enum 2 (MuzzleFlash2)
-};
-
 export class NetworkMessageParser {
   private stream: StreamingBuffer;
-  private protocolVersion: number = 0;
-  private isDemo: number = RECORD_CLIENT;
   private handler?: NetworkMessageHandler;
   private strictMode: boolean = false;
   private errorCount: number = 0;
+
+  private protocolHandler: ProtocolHandler;
+  private isDemo: number = RECORD_CLIENT;
 
   constructor(stream: StreamingBuffer | BinaryStream, handler?: NetworkMessageHandler, strictMode: boolean = false) {
     if (stream instanceof BinaryStream) {
@@ -310,52 +122,21 @@ export class NetworkMessageParser {
     }
     this.handler = handler;
     this.strictMode = strictMode;
+    this.protocolHandler = new BootstrapProtocolHandler();
   }
 
   public setProtocolVersion(version: number): void {
-      this.protocolVersion = version;
+      if (this.protocolHandler.protocolVersion !== version) {
+          this.protocolHandler = createProtocolHandler(version);
+      }
   }
 
   public getProtocolVersion(): number {
-      return this.protocolVersion;
+      return this.protocolHandler.protocolVersion;
   }
 
   public getErrorCount(): number {
       return this.errorCount;
-  }
-
-  private translateCommand(cmd: number): number {
-    if (this.protocolVersion === 0) {
-        if (cmd === 7) return ServerCommand.serverdata;
-        if (cmd === 12) return ServerCommand.serverdata;
-        return cmd;
-    }
-
-    if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
-      return cmd;
-    }
-
-    if (this.protocolVersion === 25 || this.protocolVersion === 26) {
-        if (cmd === 0) return ServerCommand.bad;
-        const translated = cmd + 5;
-        if (translated >= ServerCommand.nop && translated <= ServerCommand.frame) {
-            return translated;
-        }
-        return ServerCommand.bad;
-    }
-
-    if (this.protocolVersion === 34) {
-        // Use the mapping table
-        if (PROTO34_MAP[cmd] !== undefined) {
-            return PROTO34_MAP[cmd];
-        }
-        // Fallback for known identity commands or missing mappings?
-        // But strict protocol 34 mapping is safer.
-        // For now, if not in map, return bad.
-        return ServerCommand.bad;
-    }
-
-    return cmd;
   }
 
   public parseMessage(): void {
@@ -369,11 +150,19 @@ export class NetworkMessageParser {
         if (cmd === -1) break;
 
         const originalCmd = cmd;
-        cmd = this.translateCommand(cmd);
+        const translatedCmd = this.protocolHandler.translateCommand(cmd);
 
-        switch (cmd) {
+        switch (translatedCmd) {
           case ServerCommand.bad:
-            // Terminate this parse cycle, usually padding or end of demo block
+            // Allow 0 as padding (standard in demos)
+            if (originalCmd === 0) {
+                return;
+            }
+            // Treat anything else translating to BAD as an error
+            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos} (Protocol: ${this.getProtocolVersion()})`;
+            if (this.strictMode) throw new Error(errorMsg);
+            console.warn(errorMsg);
+            this.errorCount++;
             return;
           case ServerCommand.nop: break;
           case ServerCommand.disconnect: if (this.handler?.onDisconnect) this.handler.onDisconnect(); break;
@@ -410,9 +199,9 @@ export class NetworkMessageParser {
           case ServerCommand.achievement: this.parseAchievement(); break;
 
           default:
-            const errorMsg = `Unknown server command: ${originalCmd} (translated: ${cmd}) at offset ${startPos}`;
-            if (this.strictMode) throw new Error(errorMsg);
-            console.warn(errorMsg);
+            const errorMsgDef = `Unknown server command: ${originalCmd} (translated: ${translatedCmd}) at offset ${startPos}`;
+            if (this.strictMode) throw new Error(errorMsgDef);
+            console.warn(errorMsgDef);
             this.errorCount++;
             return;
         }
@@ -428,7 +217,7 @@ export class NetworkMessageParser {
               return;
           }
 
-          const context = `offset ${startPos}, cmd ${cmd}, protocol ${this.protocolVersion}`;
+          const context = `offset ${startPos}, cmd ${cmd}, protocol ${this.getProtocolVersion()}`;
           console.warn(`Error parsing command ${cmd} (${context}): ${errMsg}`);
           this.errorCount++;
 
@@ -480,31 +269,29 @@ export class NetworkMessageParser {
   }
 
   private parseServerData(): void {
-    this.protocolVersion = this.stream.readLong();
-    if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
-        const spawnCount = this.stream.readLong();
-        const demoType = this.stream.readByte();
-        this.isDemo = demoType;
-        const tickRate = this.stream.readByte();
-        const gameDir = this.stream.readString();
-        let playerNum = this.stream.readShort();
-        if (playerNum === -2) {
-             const numSplits = this.stream.readShort();
-             for (let i = 0; i < numSplits; i++) this.stream.readShort();
-             playerNum = 0;
-        } else if (playerNum === -1) {
-            playerNum = -1;
-        }
-        const levelName = this.stream.readString();
-        if (this.handler) this.handler.onServerData(this.protocolVersion, spawnCount, 0, gameDir, playerNum, levelName, tickRate, demoType);
+    const data = this.protocolHandler.parseServerData(this.stream);
+
+    // Switch Protocol Handler
+    this.setProtocolVersion(data.protocol);
+
+    if (this.handler) {
+        this.handler.onServerData(
+            data.protocol,
+            data.serverCount,
+            data.attractLoop,
+            data.gameDir,
+            data.playerNum,
+            data.levelName,
+            data.tickRate,
+            data.demoType
+        );
+    }
+
+    // Set Demo Flag
+    if (data.protocol === PROTOCOL_VERSION_RERELEASE) {
+        this.isDemo = data.demoType ?? RECORD_CLIENT;
     } else {
-        const serverCount = this.stream.readLong();
-        const attractLoop = this.stream.readByte();
-        this.isDemo = attractLoop;
-        const gameDir = this.stream.readString();
-        const playerNum = this.stream.readShort();
-        const levelName = this.stream.readString();
-        if (this.handler) this.handler.onServerData(this.protocolVersion, serverCount, attractLoop, gameDir, playerNum, levelName);
+        this.isDemo = data.attractLoop;
     }
   }
 
@@ -544,7 +331,7 @@ export class NetworkMessageParser {
           const decompressed = pako.inflate(compressedData);
           const blastStream = new BinaryStream(decompressed.buffer);
           const blastParser = new NetworkMessageParser(blastStream, this.handler, this.strictMode);
-          blastParser.setProtocolVersion(this.protocolVersion);
+          blastParser.setProtocolVersion(this.getProtocolVersion());
           while (blastStream.hasMore()) {
               blastParser.parseSpawnBaseline();
           }
@@ -720,9 +507,9 @@ export class NetworkMessageParser {
         case TempEntity.SPLASH: case TempEntity.LASER_SPARKS: case TempEntity.WELDING_SPARKS: case TempEntity.TUNNEL_SPARKS:
             cnt = this.stream.readByte(); this.readPos(pos); this.readDir(dir); color = this.stream.readByte(); break;
         case TempEntity.BLUEHYPERBLASTER:
-            if (this.protocolVersion >= 32) { this.readPos(pos); this.readPos(pos2); } else { this.readPos(pos); this.readDir(dir); } break;
+            if (this.getProtocolVersion() >= 32) { this.readPos(pos); this.readPos(pos2); } else { this.readPos(pos); this.readDir(dir); } break;
         case TempEntity.GREENBLOOD:
-            if (this.protocolVersion >= 32) { this.readPos(pos); this.readDir(dir); } else { this.readPos(pos); this.readPos(pos2); } break;
+            if (this.getProtocolVersion() >= 32) { this.readPos(pos); this.readDir(dir); } else { this.readPos(pos); this.readPos(pos2); } break;
         case TempEntity.RAILTRAIL: case TempEntity.BUBBLETRAIL: case TempEntity.BFG_LASER: case TempEntity.DEBUGTRAIL: case TempEntity.BUBBLETRAIL2:
             this.readPos(pos); this.readPos(pos2); break;
         case TempEntity.PARASITE_ATTACK: case TempEntity.MEDIC_CABLE_ATTACK:
@@ -748,9 +535,9 @@ export class NetworkMessageParser {
   }
 
   private parseSpawnBaseline(): void {
-    const bits = this.parseEntityBits();
+    const bits = this.protocolHandler.parseEntityBits(this.stream);
     const entity = createEmptyEntityState();
-    this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
+    this.protocolHandler.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh, this.stream);
     if (this.handler) this.handler.onSpawnBaseline(entity);
   }
 
@@ -759,11 +546,7 @@ export class NetworkMessageParser {
       const deltaFrame = this.stream.readLong();
       let surpressCount = 0;
 
-      // Protocol 26 (legacy) hack:
-      // In original Quake 2, protocol 26 demos did NOT include the suppressCount byte.
-      // See full/client/cl_ents.c:679-681
-      // Protocol 25 also seems to lack this byte based on testing with demo1.dm2
-      if (this.protocolVersion !== 26 && this.protocolVersion !== 25) {
+      if (this.getProtocolVersion() !== 26 && this.getProtocolVersion() !== 25) {
           surpressCount = this.stream.readByte();
       }
 
@@ -771,7 +554,7 @@ export class NetworkMessageParser {
       const areaBits = this.stream.readData(areaBytes);
 
       let piCmd = this.stream.readByte();
-      piCmd = this.translateCommand(piCmd);
+      piCmd = this.protocolHandler.translateCommand(piCmd);
       if (piCmd !== ServerCommand.playerinfo) {
           if (this.strictMode) throw new Error(`Expected svc_playerinfo after svc_frame, got ${piCmd}`);
           return;
@@ -779,7 +562,7 @@ export class NetworkMessageParser {
       const playerState = this.parsePlayerState();
 
       let peCmd = this.stream.readByte();
-      peCmd = this.translateCommand(peCmd);
+      peCmd = this.protocolHandler.translateCommand(peCmd);
       if (peCmd !== ServerCommand.packetentities && peCmd !== ServerCommand.deltapacketentities) {
           if (this.strictMode) throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
           return;
@@ -799,43 +582,7 @@ export class NetworkMessageParser {
   }
 
   private parsePlayerState(): ProtocolPlayerState {
-      const ps = createEmptyProtocolPlayerState();
-      const flags = this.stream.readShort();
-      if (flags & 1) ps.pm_type = this.stream.readByte();
-      if (flags & 2) { ps.origin.x = this.readCoord(); ps.origin.y = this.readCoord(); ps.origin.z = this.readCoord(); }
-      if (flags & 4) { ps.velocity.x = this.readCoord(); ps.velocity.y = this.readCoord(); ps.velocity.z = this.readCoord(); }
-      if (flags & 8) ps.pm_time = this.stream.readByte();
-      if (flags & 16) ps.pm_flags = this.stream.readByte();
-      if (flags & 32) ps.gravity = this.stream.readShort();
-      if (flags & 64) { ps.delta_angles.x = this.stream.readShort() * (180 / 32768); ps.delta_angles.y = this.stream.readShort() * (180 / 32768); ps.delta_angles.z = this.stream.readShort() * (180 / 32768); }
-      if (flags & 128) {
-          ps.viewoffset.x = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.viewoffset.y = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.viewoffset.z = (this.stream.readByte() << 24 >> 24) * 0.25;
-      }
-      if (flags & 256) { ps.viewangles.x = this.readAngle16(); ps.viewangles.y = this.readAngle16(); ps.viewangles.z = this.readAngle16(); }
-      if (flags & 512) {
-          ps.kick_angles.x = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.kick_angles.y = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.kick_angles.z = (this.stream.readByte() << 24 >> 24) * 0.25;
-      }
-      if (flags & 4096) ps.gun_index = this.stream.readByte();
-      if (flags & 8192) {
-          ps.gun_frame = this.stream.readByte();
-          ps.gun_offset.x = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.gun_offset.y = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.gun_offset.z = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.gun_angles.x = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.gun_angles.y = (this.stream.readByte() << 24 >> 24) * 0.25;
-          ps.gun_angles.z = (this.stream.readByte() << 24 >> 24) * 0.25;
-      }
-      if (flags & 1024) { ps.blend[0] = this.stream.readByte(); ps.blend[1] = this.stream.readByte(); ps.blend[2] = this.stream.readByte(); ps.blend[3] = this.stream.readByte(); }
-      if (flags & 2048) ps.fov = this.stream.readByte();
-      if (flags & 16384) ps.rdflags = this.stream.readByte();
-      if (flags & 32768) ps.watertype = this.stream.readByte(); // 1 << 15
-      const statbits = this.stream.readLong();
-      for (let i = 0; i < 32; i++) if (statbits & (1 << i)) ps.stats[i] = this.stream.readShort();
-      return ps;
+      return this.protocolHandler.parsePlayerState(this.stream);
   }
 
   private parsePacketEntities(delta: boolean): void {
@@ -850,82 +597,20 @@ export class NetworkMessageParser {
   private collectPacketEntities(): EntityState[] {
       const entities: EntityState[] = [];
       while (true) {
-          const bits = this.parseEntityBits();
+          const bits = this.protocolHandler.parseEntityBits(this.stream);
           if (bits.bits & U_REMOVE) {
               if (bits.number === 0) break;
               continue;
           }
           const entity = createEmptyEntityState();
-          const forceParse = bits.number === 0 && !(bits.bits & U_MOREBITS1);
-          if (bits.number !== 0 || forceParse) {
-              this.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh);
+
+          if (bits.number === 0) {
+              break;
           }
-          if (bits.number === 0) break;
+
+          this.protocolHandler.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh, this.stream);
           entities.push(entity);
       }
       return entities;
-  }
-
-  private parseEntityBits(): { number: number; bits: number; bitsHigh: number } {
-      let total = this.stream.readByte();
-      if (total & U_MOREBITS1) total |= (this.stream.readByte() << 8);
-      if (total & U_MOREBITS2) total |= (this.stream.readByte() << 16);
-      if (total & U_MOREBITS3) total |= (this.stream.readByte() << 24);
-      let bitsHigh = 0;
-      if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
-          if (total & U_MOREBITS4) bitsHigh = this.stream.readByte();
-      }
-      let number: number;
-      if (total & U_NUMBER16) number = this.stream.readShort();
-      else number = this.stream.readByte();
-      return { number, bits: total, bitsHigh };
-  }
-
-  private parseDelta(from: EntityState, to: EntityState, number: number, bits: number, bitsHigh: number = 0): void {
-      to.number = from.number; to.modelindex = from.modelindex; to.modelindex2 = from.modelindex2; to.modelindex3 = from.modelindex3; to.modelindex4 = from.modelindex4;
-      to.frame = from.frame; to.skinnum = from.skinnum; to.effects = from.effects; to.renderfx = from.renderfx;
-      to.origin.x = from.origin.x; to.origin.y = from.origin.y; to.origin.z = from.origin.z;
-      to.old_origin.x = from.origin.x; to.old_origin.y = from.origin.y; to.old_origin.z = from.origin.z;
-      to.angles.x = from.angles.x; to.angles.y = from.angles.y; to.angles.z = from.angles.z;
-      to.sound = from.sound; to.event = from.event; to.solid = from.solid;
-      to.alpha = from.alpha; to.scale = from.scale; to.instanceBits = from.instanceBits;
-      to.loopVolume = from.loopVolume; to.loopAttenuation = from.loopAttenuation; to.owner = from.owner; to.oldFrame = from.oldFrame;
-      to.number = number; to.bits = bits; to.bitsHigh = bitsHigh;
-
-      if (bits & U_MODEL) to.modelindex = this.stream.readByte();
-      if (bits & U_MODEL2) to.modelindex2 = this.stream.readByte();
-      if (bits & U_MODEL3) to.modelindex3 = this.stream.readByte();
-      if (bits & U_MODEL4) to.modelindex4 = this.stream.readByte();
-      if (bits & U_FRAME8) to.frame = this.stream.readByte();
-      if (bits & U_FRAME16) to.frame = this.stream.readShort();
-      if ((bits & U_SKIN8) && (bits & U_SKIN16)) to.skinnum = this.stream.readLong();
-      else if (bits & U_SKIN8) to.skinnum = this.stream.readByte();
-      else if (bits & U_SKIN16) to.skinnum = this.stream.readShort();
-      if ((bits & U_EFFECTS8) && (bits & U_EFFECTS16)) to.effects = this.stream.readLong();
-      else if (bits & U_EFFECTS8) to.effects = this.stream.readByte();
-      else if (bits & U_EFFECTS16) to.effects = this.stream.readShort();
-      if ((bits & U_RENDERFX8) && (bits & U_RENDERFX16)) to.renderfx = this.stream.readLong();
-      else if (bits & U_RENDERFX8) to.renderfx = this.stream.readByte();
-      else if (bits & U_RENDERFX16) to.renderfx = this.stream.readShort();
-      if (bits & U_ORIGIN1) to.origin.x = this.readCoord();
-      if (bits & U_ORIGIN2) to.origin.y = this.readCoord();
-      if (bits & U_ORIGIN3) to.origin.z = this.readCoord();
-      if (bits & U_ANGLE1) to.angles.x = this.readAngle();
-      if (bits & U_ANGLE2) to.angles.y = this.readAngle();
-      if (bits & U_ANGLE3) to.angles.z = this.readAngle();
-      if (bits & U_OLDORIGIN) this.readPos(to.old_origin);
-      if (bits & U_SOUND) to.sound = this.stream.readByte();
-      if (bits & U_EVENT) to.event = this.stream.readByte(); else to.event = 0;
-      if (bits & U_SOLID) to.solid = this.stream.readShort();
-
-      if (this.protocolVersion === PROTOCOL_VERSION_RERELEASE) {
-          if (bits & U_ALPHA) to.alpha = this.stream.readByte() / 255.0;
-          if (bits & U_SCALE) to.scale = this.stream.readFloat();
-          if (bits & U_INSTANCE_BITS) to.instanceBits = this.stream.readLong();
-          if (bits & U_LOOP_VOLUME) to.loopVolume = this.stream.readByte() / 255.0;
-          if (bitsHigh & U_LOOP_ATTENUATION_HIGH) to.loopAttenuation = this.stream.readByte() / 255.0;
-          if (bitsHigh & U_OWNER_HIGH) to.owner = this.stream.readShort();
-          if (bitsHigh & U_OLD_FRAME_HIGH) to.oldFrame = this.stream.readShort();
-      }
   }
 }

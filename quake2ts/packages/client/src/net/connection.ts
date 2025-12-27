@@ -324,7 +324,6 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   }
 
   onStuffText(msg: string): void {
-      console.log(`Server StuffText: ${msg}`);
       if (msg.startsWith('precache')) {
           this.finishLoading();
       }

@@ -188,6 +188,7 @@ export async function compareSnapshots(
 
 export interface SnapshotTestOptions extends ComparisonOptions {
   name: string;
+  description?: string;
   width?: number;
   height?: number;
   updateBaseline?: boolean;

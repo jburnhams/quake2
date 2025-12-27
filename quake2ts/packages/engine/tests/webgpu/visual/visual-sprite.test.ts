@@ -12,7 +12,7 @@ test('sprite: solid red rectangle', async ({ renderAndExpectSnapshot }) => {
       renderer.drawSolidRect(64, 64, 128, 128, [1, 0, 0, 1]);
       renderer.end();
     },
-    'sprite-red-rect'
+    { name: 'sprite-red-rect', description: 'A solid red rectangle centered on a black background.' }
   );
 });
 
@@ -41,7 +41,7 @@ test('sprite: textured quad', async ({ renderAndExpectSnapshot }) => {
       renderer.drawTexturedQuad(64, 64, 128, 128, texture);
       renderer.end();
     },
-    'sprite-textured'
+    { name: 'sprite-textured', description: 'A black and white checkerboard texture scaled to 128x128 in the center.' }
   );
 });
 
@@ -68,7 +68,7 @@ test('sprite: batched quads', async ({ renderAndExpectSnapshot }) => {
 
       renderer.end();
     },
-    'sprite-batched'
+    { name: 'sprite-batched', description: 'Four small colored squares (Red, Green, Blue, White) positioned in the corners.' }
   );
 });
 
@@ -89,6 +89,6 @@ test('sprite: alpha blending', async ({ renderAndExpectSnapshot }) => {
 
       renderer.end();
     },
-    'sprite-alpha'
+    { name: 'sprite-alpha', description: 'A semi-transparent red square overlaid on a solid blue square, demonstrating alpha blending.' }
   );
 });
