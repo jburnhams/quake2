@@ -12,6 +12,7 @@ import { MAX_DLIGHTS, DLight } from '../../dlight.js';
 import { BspSurfaceGeometry } from '../../bsp.js';
 import { RenderModeConfig } from '../../frame.js';
 import bspShader from '../shaders/bsp.wgsl?raw';
+import { Texture2D, createLinearSampler, Sampler } from '../resources.js';
 
 // Declare extensions locally for this file
 declare module '../../bsp.js' {
@@ -118,6 +119,11 @@ export class BspSurfacePipeline {
   private surfaceBindGroupLayout: GPUBindGroupLayout;
   private textureBindGroupLayout: GPUBindGroupLayout;
 
+  // Default resources
+  private defaultWhiteTexture: Texture2D;
+  private defaultSampler: Sampler;
+  private defaultBindGroup: GPUBindGroup;
+
   // Cache for texture bind groups
   private textureBindGroupCache: Map<string, GPUBindGroup> = new Map();
 
@@ -156,6 +162,27 @@ export class BspSurfacePipeline {
         { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
       ],
+    });
+
+    // Create Default Resources
+    this.defaultSampler = createLinearSampler(device);
+    this.defaultWhiteTexture = new Texture2D(device, {
+        width: 1,
+        height: 1,
+        format: 'rgba8unorm',
+        label: 'bsp-default-white'
+    });
+    this.defaultWhiteTexture.upload(new Uint8Array([255, 255, 255, 255]));
+
+    // Create default bind group
+    this.defaultBindGroup = device.createBindGroup({
+        layout: this.textureBindGroupLayout,
+        entries: [
+            { binding: 0, resource: this.defaultWhiteTexture.createView() },
+            { binding: 1, resource: this.defaultSampler.sampler },
+            { binding: 2, resource: this.defaultWhiteTexture.createView() }, // Use white texture as lightmap fallback
+            { binding: 3, resource: this.defaultSampler.sampler },
+        ]
     });
 
     this.createPipelines(format, depthFormat);
@@ -379,6 +406,9 @@ export class BspSurfacePipeline {
             ]
         });
         passEncoder.setBindGroup(2, textureBindGroup);
+    } else {
+        // Fallback to default bind group if textures are missing
+        passEncoder.setBindGroup(2, this.defaultBindGroup);
     }
 
     // Set Pipeline
@@ -406,6 +436,7 @@ export class BspSurfacePipeline {
   destroy(): void {
     this.frameUniformBuffer.destroy();
     this.surfaceUniformBuffer.destroy();
+    this.defaultWhiteTexture.destroy();
     // Pipelines, layouts, and bind groups are generally collected by the device,
     // but we can release references or if needed explicit destroy (if API supported, typically destroy() is on device/buffer/texture/querySet)
     // Pipeline layouts don't have destroy.

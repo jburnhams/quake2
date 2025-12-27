@@ -94,29 +94,35 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
             base = textureSample(diffuseMap, diffuseSampler, input.texCoord);
         }
 
-        var totalLight = vec3<f32>(1.0, 1.0, 1.0);
+        var totalLight = vec3<f32>(0.0, 0.0, 0.0);
 
-        if (surface.applyLightmap != 0u && frame.fullbright == 0u) {
-            var light = vec3<f32>(0.0, 0.0, 0.0);
-            var hasLight = false;
+        if (frame.fullbright != 0u) {
+            totalLight = vec3<f32>(1.0, 1.0, 1.0);
+        } else {
+            // Apply Lightmaps
+            if (surface.applyLightmap != 0u) {
+                var hasLight = false;
+                for (var i = 0; i < 4; i++) {
+                    let layer = surface.styleLayerMapping[i];
+                    let factor = surface.lightStyleFactors[i];
 
-            for (var i = 0; i < 4; i++) {
-                let layer = surface.styleLayerMapping[i];
-                let factor = surface.lightStyleFactors[i];
+                    if (layer >= -0.5) {
+                        let offset = vec2<f32>(0.0, layer * input.lightmapStep);
+                        totalLight += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor;
+                        hasLight = true;
+                    }
+                }
 
-                if (layer >= -0.5) {
-                    let offset = vec2<f32>(0.0, layer * input.lightmapStep);
-                    light += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor;
-                    hasLight = true;
+                // If lightmap enabled but no active layers, fallback to white?
+                // Quake 2 logic usually implies at least one style is active if surfaced has SURF_LIGHT
+                // But if we have no lightmap data, we start black.
+                if (!hasLight) {
+                    // Fallback to avoid pitch black if lightmap intended but missing?
+                    // totalLight = vec3<f32>(1.0, 1.0, 1.0);
                 }
             }
 
-            if (!hasLight) {
-                light = vec3<f32>(1.0, 1.0, 1.0);
-            }
-            totalLight = light;
-
-            // Dynamic Lights
+            // Apply Dynamic Lights
             for (var i = 0u; i < 32u; i++) {
                 if (i >= frame.numDlights) {
                     break;
@@ -129,9 +135,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
                     totalLight += dlight.color * contribution;
                 }
             }
-
-        } else if (frame.fullbright != 0u) {
-            totalLight = vec3<f32>(1.0, 1.0, 1.0);
         }
 
         totalLight = max(totalLight, vec3<f32>(frame.ambient));
