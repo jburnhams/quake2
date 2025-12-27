@@ -3,6 +3,7 @@ import { applySurfaceState, BspSurfacePipeline } from './bspPipeline.js';
 import { gatherVisibleFaces, type VisibleFace } from './bspTraversal.js';
 import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
+import { CameraState } from './types/camera.js';
 import type { BspSurfaceGeometry, LightmapAtlas } from './bsp.js';
 import { Texture2D } from './resources.js';
 import type { MaterialManager } from './materials.js';
@@ -61,6 +62,7 @@ export interface RenderModeConfig {
 
 interface FrameRenderOptions {
   readonly camera: Camera;
+  readonly cameraState?: CameraState;
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
   readonly viewModel?: ViewModelRenderState;
