@@ -138,26 +138,36 @@ export async function renderAndCaptureWebGLPlaywright(
   page: Page,
   renderFn: string
 ): Promise<Uint8ClampedArray> {
-  const pixelData = await page.evaluate((code) => {
-    const renderer = (window as any).testRenderer;
-    const gl = (window as any).testGl;
+  try {
+    const pixelData = await page.evaluate((code) => {
+      const renderer = (window as any).testRenderer;
+      const gl = (window as any).testGl;
 
-    if (!renderer || !gl) {
-      throw new Error('Renderer not initialized');
-    }
+      if (!renderer || !gl) {
+        throw new Error('Renderer not initialized');
+      }
 
-    // Execute the render function
-    const fn = new Function('renderer', 'gl', code);
-    fn(renderer, gl);
+      try {
+        // Execute the render function
+        const fn = new Function('renderer', 'gl', code);
+        fn(renderer, gl);
+      } catch (err: any) {
+        // Capture context for better debugging
+        throw new Error(`Renderer Execution Error: ${err.message}\nCode:\n${code}`);
+      }
 
-    // Ensure rendering is complete
-    gl.finish();
+      // Ensure rendering is complete
+      gl.finish();
 
-    // Capture pixels
-    return (window as any).captureCanvas();
-  }, renderFn);
+      // Capture pixels
+      return (window as any).captureCanvas();
+    }, renderFn);
 
-  return new Uint8ClampedArray(pixelData);
+    return new Uint8ClampedArray(pixelData);
+  } catch (err: any) {
+    // Re-throw with clear message
+    throw new Error(`Browser Test Error: ${err.message}`);
+  }
 }
 
 /**
