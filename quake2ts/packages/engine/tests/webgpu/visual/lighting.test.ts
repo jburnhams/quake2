@@ -7,6 +7,7 @@ import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { initHeadlessWebGPU, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
+import crypto from 'crypto';
 
 // Helper to create test geometry
 function createTestBspGeometry(options: { min: [number, number, number], max: [number, number, number], texture: string }) {
@@ -48,7 +49,6 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
         ]);
     } else {
         // Flat in Z (XY plane) - e.g. Floor
-        // Or default generic box logic (just one face for simplicity)
         vertices = new Float32Array([
             min[0], min[1], min[2], 0, 0, 0, 0, 0,
             max[0], min[1], min[2], 1, 0, 0, 0, 0,
@@ -88,6 +88,7 @@ const updateBaseline = process.env.UPDATE_VISUAL === '1';
 describe('WebGPU Lighting', () => {
     let renderer: Awaited<ReturnType<typeof createWebGPURenderer>>;
     let camera: Camera;
+    let hashes: string[] = [];
 
     beforeAll(async () => {
         await initHeadlessWebGPU();
@@ -97,8 +98,8 @@ describe('WebGPU Lighting', () => {
             headless: true
         });
         camera = new Camera(800, 600);
-        camera.setPosition(0, 0, 100); // Centered Y/Z relative to wall
-        camera.setRotation(0, 0, 0); // Yaw 0 = +X (Look at wall)
+        camera.setPosition(0, 0, 100);
+        camera.setRotation(0, 0, 0);
     });
 
     // Helper to create a minimal valid BSP map structure
@@ -174,7 +175,6 @@ describe('WebGPU Lighting', () => {
     };
 
     it('lighting-point.png', async () => {
-        // Wall at X=200
         const wall = createTestBspGeometry({
             min: [200, -100, 0],
             max: [200, 100, 200],
@@ -184,7 +184,6 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
-        // Red light near the wall (X=180 is 20 units away)
         const dlights: DLight[] = [{
             origin: { x: 180, y: 0, z: 100 },
             color: { x: 1, y: 0, z: 0 },
@@ -196,7 +195,6 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
@@ -211,6 +209,8 @@ describe('WebGPU Lighting', () => {
             256
         );
 
+        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
+
         await expectSnapshot(pixels, {
             name: 'lighting-point',
             description: 'Red point light illuminating a wall',
@@ -222,7 +222,6 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-multiple.png', async () => {
-        // Same wall
         const wall = createTestBspGeometry({
             min: [200, -100, 0],
             max: [200, 100, 200],
@@ -232,7 +231,6 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
-        // Red on left, Blue on right
         const dlights: DLight[] = [
             {
                 origin: { x: 180, y: -50, z: 100 },
@@ -252,7 +250,6 @@ describe('WebGPU Lighting', () => {
             camera,
             world: { map, surfaces: [wall] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
@@ -267,6 +264,8 @@ describe('WebGPU Lighting', () => {
             256
         );
 
+        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
+
         await expectSnapshot(pixels, {
             name: 'lighting-multiple',
             description: 'Red and Blue lights illuminating a wall',
@@ -278,7 +277,6 @@ describe('WebGPU Lighting', () => {
     });
 
     it('lighting-colored.png', async () => {
-        // Floor at Z=0
         const floor = createTestBspGeometry({
             min: [-100, -100, 0],
             max: [100, 100, 0],
@@ -288,12 +286,10 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
-        // Look down from Z=200
         const cam = new Camera(800, 600);
         cam.setPosition(0, 0, 200);
-        cam.setRotation(90, 0, 0); // Pitch 90 = Down
+        cam.setRotation(90, 0, 0);
 
-        // Green light in center
         const dlights: DLight[] = [{
             origin: { x: 0, y: 0, z: 50 },
             color: { x: 0, y: 1, z: 0 },
@@ -305,7 +301,6 @@ describe('WebGPU Lighting', () => {
             camera: cam,
             world: { map, surfaces: [floor] },
             dlights,
-            renderMode: { mode: 'solid', applyToAll: true, color: [1, 1, 1, 1] },
             disableLightmaps: true,
             fullbright: false,
             ambient: 0.0,
@@ -320,6 +315,8 @@ describe('WebGPU Lighting', () => {
             256
         );
 
+        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
+
         await expectSnapshot(pixels, {
             name: 'lighting-colored',
             description: 'Green light illuminating a floor',
@@ -328,5 +325,10 @@ describe('WebGPU Lighting', () => {
             updateBaseline,
             snapshotDir
         });
+    });
+
+    it('should verify all rendered images are distinct', () => {
+        const uniqueHashes = new Set(hashes);
+        expect(uniqueHashes.size).toBe(3);
     });
 });
