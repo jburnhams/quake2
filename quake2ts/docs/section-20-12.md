@@ -17,22 +17,22 @@ Implement dynamic point lights that illuminate BSP surfaces and models in real-t
 
 ## Tasks
 
-1. **Light Uniform Buffer Management**
+1. **Light Uniform Buffer Management** [x]
    - Structure for up to 8 dynamic lights
    - Light position, color, radius, intensity
    - Update buffer per frame
 
-2. **Per-Pixel Lighting Calculations** (already in shaders)
+2. **Per-Pixel Lighting Calculations** [x] (already in shaders)
    - Attenuation based on distance
    - Diffuse lighting (N·L)
    - Color modulation
 
-3. **Light Culling**
+3. **Light Culling** [x]
    - Frustum culling for lights
    - Surface-light intersection testing
    - Only pass relevant lights to shader
 
-4. **Integration & Testing**
+4. **Integration & Testing** [x]
    - Visual test: `lighting-point.png`
    - Visual test: `lighting-multiple.png`
    - Visual test: `lighting-colored.png`

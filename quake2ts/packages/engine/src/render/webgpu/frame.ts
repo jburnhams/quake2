@@ -1,10 +1,19 @@
 import { Texture2D, TextureCubeMap } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
-import { SkyboxPipeline } from './pipelines/skybox.js';
+import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
+import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { WebGPUContextState } from './context.js';
 import { mat4 } from 'gl-matrix';
+import { DLight } from '../dlight.js';
+import { BspSurfaceGeometry } from '../bsp.js';
+import { BspMap } from '../../assets/bsp.js';
+import { gatherVisibleFaces, VisibleFace } from '../bspTraversal.js';
+import { extractFrustumPlanes } from '../culling.js';
+import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
+import { MaterialManager } from '../materials.js';
+import { PreparedTexture } from '../../assets/texture.js';
 
 // Types ported from WebGL implementation but adapted for WebGPU
 export interface FrameRenderStats {
@@ -31,8 +40,17 @@ export interface SkyRenderState {
   readonly cubemap?: TextureCubeMap;
 }
 
+export interface WorldRenderState {
+  readonly map: BspMap;
+  readonly surfaces: readonly BspSurfaceGeometry[];
+  readonly textures?: ReadonlyMap<string, Texture2D>;
+  readonly materials?: MaterialManager;
+  readonly lightStyles?: ReadonlyArray<number>;
+}
+
 export interface FrameRenderOptions {
   readonly camera: Camera;
+  readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
   readonly timeSeconds?: number;
   readonly deltaTime?: number;
@@ -43,6 +61,15 @@ export interface FrameRenderOptions {
   readonly bloomIntensity?: number; // Bloom intensity (default 0.5)
   // Callback for drawing 2D elements during the HUD pass
   readonly onDraw2D?: () => void;
+  readonly dlights?: readonly DLight[];
+  readonly disableLightmaps?: boolean;
+  readonly lightmapOnly?: boolean;
+  readonly brightness?: number;
+  readonly gamma?: number;
+  readonly fullbright?: boolean;
+  readonly ambient?: number;
+  readonly lightStyleOverrides?: Map<number, string>;
+  readonly portalState?: ReadonlyArray<boolean>;
 }
 
 export { WebGPUContextState };
@@ -54,6 +81,24 @@ export interface FrameContext {
   depthTexture: GPUTextureView;
   width: number;
   height: number;
+}
+
+// Helper to evaluate light style pattern at a given time
+function evaluateLightStyle(pattern: string, time: number): number {
+    if (!pattern) return 1.0;
+    const frame = Math.floor(time * 10) % pattern.length;
+    const charCode = pattern.charCodeAt(frame);
+    return (charCode - 97) / 12.0;
+}
+
+// Front-to-back sorting for opaque surfaces
+function sortVisibleFacesFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
+  return [...faces].sort((a, b) => b.sortKey - a.sortKey);
+}
+
+// Back-to-front sorting for transparent surfaces
+function sortVisibleFacesBackToFront(faces: readonly VisibleFace[]): VisibleFace[] {
+  return [...faces].sort((a, b) => a.sortKey - b.sortKey);
 }
 
 export class FrameRenderer {
@@ -74,7 +119,8 @@ export class FrameRenderer {
     private pipelines: {
       sprite: SpriteRenderer;
       skybox: SkyboxPipeline;
-      // Future pipelines: bsp, md2, etc.
+      bsp: BspSurfacePipeline;
+      // Future pipelines: md2, etc.
     }
   ) {}
 
@@ -208,7 +254,24 @@ export class FrameRenderer {
     const frameCtx = this.beginFrame();
     this.currentFrameContext = frameCtx; // Store for 2D rendering
     const { commandEncoder, renderTarget, depthTexture } = frameCtx;
-    const { clearColor = [0, 0, 0, 1] } = options;
+    const {
+        clearColor = [0, 0, 0, 1],
+        world,
+        camera,
+        timeSeconds = 0,
+        dlights,
+        renderMode,
+        disableLightmaps,
+        lightmapOnly,
+        brightness,
+        gamma,
+        fullbright,
+        ambient,
+        lightStyleOverrides,
+        portalState
+    } = options;
+
+    const viewProjection = new Float32Array(options.camera.viewProjectionMatrix);
 
     // --- Pass 1: Opaque & Skybox ---
     // Clears the screen and draws solid geometry
@@ -246,65 +309,134 @@ export class FrameRenderer {
         stats.skyDrawn = true;
     }
 
-    // Placeholder: Render BSP Opaque
-    // this.pipelines.bsp.drawOpaque(opaquePass, ...);
+    // Render BSP Opaque
+    const opaqueFaces: VisibleFace[] = [];
+    const transparentFaces: VisibleFace[] = [];
 
-    // Placeholder: Render MD2/MD3
-    // this.pipelines.md2.draw(opaquePass, ...);
+    if (world) {
+        // Update materials (if any logic needed)
+        world.materials?.update(timeSeconds);
 
-    opaquePass.end();
+        const frustum = extractFrustumPlanes(Array.from(viewProjection));
+        const cameraPosition = {
+          x: camera.position[0] ?? 0,
+          y: camera.position[1] ?? 0,
+          z: camera.position[2] ?? 0,
+        };
+        const visibleFaces = gatherVisibleFaces(world.map, cameraPosition, frustum, portalState);
 
+        for (const face of visibleFaces) {
+            const geometry = world.surfaces[face.faceIndex];
+            if (!geometry) continue;
 
-    // --- Intermediate: Copy for Refraction/Warp if needed ---
-    // In WebGL we copied to texture here if transparent surfaces need background.
-    // In WebGPU we would resolve or copy texture.
-    // if (hasTransparentSurfaces) {
-    //    this.copyToTexture(commandEncoder, context.getCurrentTexture(), this.ensureCopyTexture(...));
-    // }
+            const isTransparent = (geometry.surfaceFlags & (SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)) !== 0;
 
+            if (isTransparent) {
+                transparentFaces.push(face);
+            } else {
+                opaqueFaces.push(face);
+            }
+        }
 
-    // --- Pass 2: Transparent ---
-    // Loads the result of Pass 1 and draws transparent geometry on top
-    const transparentPassDescriptor: GPURenderPassDescriptor = {
-        colorAttachments: [{
-          view: renderTarget,
-          loadOp: 'load',
-          storeOp: 'store'
-        }],
-        depthStencilAttachment: {
-          view: depthTexture,
-          depthLoadOp: 'load',
-          depthStoreOp: 'store'
-        },
-        label: 'transparent-render-pass'
-    };
+        const sortedOpaque = sortVisibleFacesFrontToBack(opaqueFaces);
 
-    const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
+        // Prepare effective light styles
+        let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
+        if (lightStyleOverrides && lightStyleOverrides.size > 0) {
+            const styles = [...(world.lightStyles || [])];
+            for (const [index, pattern] of lightStyleOverrides) {
+               while (styles.length <= index) styles.push(1.0);
+               styles[index] = evaluateLightStyle(pattern, timeSeconds);
+            }
+            effectiveLightStyles = styles;
+        }
 
-    // Placeholder: Render BSP Transparent
-    // this.pipelines.bsp.drawTransparent(transparentPass, ...);
+        // Draw Opaque Batch
+        const drawSurfaceBatch = (faces: VisibleFace[], pass: GPURenderPassEncoder, lightStyles: ReadonlyArray<number>) => {
+             for (const { faceIndex } of faces) {
+                  const geometry = world.surfaces[faceIndex];
+                  if (!geometry) continue;
+                  if ((geometry.surfaceFlags & SURF_SKY) !== 0) continue;
 
-    transparentPass.end();
+                  const faceStyles = world.map.faces[faceIndex]?.styles;
+
+                  // Resolve Textures (Simplified for WebGPU POC)
+                  // const diffuse = world.textures?.get(geometry.texture);
+
+                  // Bind Pipeline
+                  this.pipelines.bsp.bind(pass, {
+                      modelViewProjection: viewProjection,
+                      styleIndices: faceStyles,
+                      styleValues: lightStyles,
+                      surfaceFlags: geometry.surfaceFlags,
+                      timeSeconds,
+                      // diffuseTexture: diffuse?.gpuTexture.createView(), // Need view
+                      // diffuseSampler: ...
+                      // lightmapTexture: ...
+                      // lightmapSampler: ...
+                      dlights,
+                      renderMode,
+                      lightmapOnly,
+                      brightness,
+                      gamma,
+                      fullbright,
+                      ambient,
+                      cameraPosition: options.camera.position as Float32Array
+                  });
+
+                  this.pipelines.bsp.draw(pass, geometry, renderMode);
+                  stats.facesDrawn++;
+                  stats.drawCalls++;
+                  stats.vertexCount += geometry.vertexCount;
+             }
+        };
+
+        // Draw opaque
+        drawSurfaceBatch(sortedOpaque, opaquePass, effectiveLightStyles);
+
+        // Placeholder: Render MD2/MD3
+        // this.pipelines.md2.draw(opaquePass, ...);
+
+        opaquePass.end();
+
+        // --- Pass 2: Transparent ---
+        const transparentPassDescriptor: GPURenderPassDescriptor = {
+            colorAttachments: [{
+              view: renderTarget,
+              loadOp: 'load',
+              storeOp: 'store'
+            }],
+            depthStencilAttachment: {
+              view: depthTexture,
+              depthLoadOp: 'load',
+              depthStoreOp: 'store'
+            },
+            label: 'transparent-render-pass'
+        };
+
+        const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
+
+        if (transparentFaces.length > 0) {
+            const sortedTransparent = sortVisibleFacesBackToFront(transparentFaces);
+            drawSurfaceBatch(sortedTransparent, transparentPass, effectiveLightStyles);
+        }
+
+        transparentPass.end();
+    } else {
+        opaquePass.end();
+    }
 
     // --- Pass 3: Post Processing (Bloom, Warp) ---
-    // TODO: Implement Ping-Pong Rendering for PostFX
-    // For now, placeholders.
     if (options.underwaterWarp || options.bloom) {
-         // Copy current render target to texture for input
-         // Apply effects
+         // Placeholder
     }
 
     // --- Pass 4: 2D / HUD ---
-    // The onDraw2D callback should call renderer.begin2D() which will
-    // set up the sprite pipeline and projection
-    // Ref: WebGL renderer.ts:605-608
     if (options.onDraw2D) {
         options.onDraw2D();
     }
 
-    // Defensive cleanup: If 2D pass was started but not ended, close it
-    // to prevent GPU resource leaks when the command encoder is finalized
-    // Ref: User should call renderer.end2D(), but this handles forgotten calls
+    // Defensive cleanup
     if (this.pipelines.sprite.isActive) {
         console.warn('2D render pass was not properly closed - auto-closing to prevent resource leak');
         this.end2DPass();

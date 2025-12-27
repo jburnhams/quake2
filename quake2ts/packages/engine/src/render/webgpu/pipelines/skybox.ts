@@ -54,6 +54,9 @@ export interface SkyboxRenderOptions {
   cubemap: TextureCubeMap;
 }
 
+// Alias for compatibility
+export type SkyboxBindOptions = SkyboxRenderOptions;
+
 export class SkyboxPipeline {
   private pipeline: GPURenderPipeline;
   private vertexBuffer: GPUBuffer;

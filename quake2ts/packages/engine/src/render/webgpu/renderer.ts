@@ -1,4 +1,4 @@
-import { FrameRenderer, FrameRenderOptions, FrameRenderStats } from './frame.js';
+import { FrameRenderer, FrameRenderOptions as WebGPUFrameRenderOptions, FrameRenderStats } from './frame.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
@@ -20,8 +20,14 @@ import { InstanceData } from '../instancing.js';
 import { RenderStatistics } from '../gpuProfiler.js';
 import { parseColorString } from '../colors.js';
 import { BspSurfaceGeometry } from '../bsp.js';
+import { cullLights } from '../lightCulling.js';
+import { extractFrustumPlanes } from '../culling.js';
+import { FrameRenderOptions } from '../frame.js'; // Shared interface
 
 // WebGPU-specific renderer interface
+// We define it as extending IRenderer but we need to override the renderFrame signature to match implementation?
+// No, implementation must match interface.
+// The interface uses SharedFrameRenderOptions.
 export interface WebGPURenderer extends IRenderer {
   readonly type: 'webgpu';
   readonly device: GPUDevice;
@@ -94,13 +100,38 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
 
   renderFrame(
-    options: FrameRenderOptions,
+    options: FrameRenderOptions, // From shared interface
     entities: readonly RenderableEntity[] = [],
     renderOptions?: RenderOptions
   ): void {
+
+    // Cast options to WebGPU options (runtime objects are compatible enough for this usage,
+    // mainly mismatch on Texture2D class type which we ignore by casting)
+    const localOptions = options as unknown as WebGPUFrameRenderOptions;
+
+    // Perform Light Culling
+    let culledLights = localOptions.dlights;
+    if (localOptions.dlights && localOptions.dlights.length > 0) {
+        const viewProjection = new Float32Array(localOptions.camera.viewProjectionMatrix);
+        const frustumPlanes = extractFrustumPlanes(viewProjection);
+        const cameraPos = { x: localOptions.camera.position[0], y: localOptions.camera.position[1], z: localOptions.camera.position[2] };
+
+        culledLights = cullLights(
+            localOptions.dlights,
+            frustumPlanes,
+            cameraPos,
+            32 // Max lights
+        );
+    }
+
+    const augmentedOptions: WebGPUFrameRenderOptions = {
+        ...localOptions,
+        dlights: culledLights
+    };
+
     // For now, pass options to frame renderer.
     // In the future, we will collect draw calls here and execute passes.
-    this.frameRenderer.renderFrame(options);
+    this.frameRenderer.renderFrame(augmentedOptions);
   }
 
   // =========================================================================
