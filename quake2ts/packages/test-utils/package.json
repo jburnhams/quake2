@@ -97,6 +97,7 @@
     "@types/jsdom": "^27.0.0",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
+    "@types/upng-js": "^2.1.5",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
     "gl-matrix": "^3.4.4",
@@ -111,5 +112,8 @@
   },
   "optionalDependencies": {
     "gl": "^8.1.6"
+  },
+  "dependencies": {
+    "upng-js": "^2.1.0"
   }
 }

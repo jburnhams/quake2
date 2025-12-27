@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { createWebGPURenderer, WebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { TextureCubeMap } from '../../../src/render/webgpu/resources.js';
 import { Camera } from '../../../src/render/camera.js';
-import { initHeadlessWebGPU, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { initHeadlessWebGPU, captureTexture, expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
@@ -334,30 +334,39 @@ describe('Skybox Pipeline', () => {
       camera.setPosition(0, 0, 0);
       camera.setRotation(0, 0, 0);
 
-      renderer.renderFrame({
-          camera,
-          sky: {
-              cubemap,
-              scrollSpeeds: [0.1, 0.1]
-          },
-          timeSeconds: 10.0
-      });
+      // Animation parameters
+      const fps = 10;
+      const durationSeconds = 2.0;
+      const frameCount = fps * durationSeconds;
 
-      const frameRenderer = (renderer as any).frameRenderer;
-      const pixels = await captureTexture(
-          renderer.device,
-          frameRenderer.headlessTarget,
-          256,
-          256
-      );
+      await expectAnimationSnapshot(async (frameIndex) => {
+          const time = frameIndex * (1.0 / fps);
 
-      await expectSnapshot(pixels, {
+          renderer.renderFrame({
+              camera,
+              sky: {
+                  cubemap,
+                  scrollSpeeds: [0.1, 0.1]
+              },
+              timeSeconds: time
+          });
+
+          const frameRenderer = (renderer as any).frameRenderer;
+          return captureTexture(
+              renderer.device,
+              frameRenderer.headlessTarget,
+              256,
+              256
+          );
+      }, {
           name: 'skybox_scrolling',
-        description: 'Skybox with scrolling texture offset applied, showing partial texture wrap.',
+          description: 'Skybox with scrolling texture offset applied over time.',
           width: 256,
           height: 256,
           updateBaseline,
-          snapshotDir
+          snapshotDir,
+          frameCount,
+          fps
       });
   });
 });
