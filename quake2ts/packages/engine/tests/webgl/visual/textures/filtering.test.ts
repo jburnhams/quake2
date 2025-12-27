@@ -89,40 +89,9 @@ test('Texture Filtering: Mipmapping', { timeout: 30000 }, async () => {
       magFilter: gl.NEAREST
     });
 
-    // Draw at different scales to trigger mipmaps
     renderer.begin2D();
-    // Large (Base level - Red)
-    // Manually invoking spriteRenderer to control size
-    // renderer.drawPic uses tex.width/height by default which is just the base size
 
-    // Note: Since renderer.drawPic uses internal spriteRenderer.draw(..., w, h, ...),
-    // it draws it at the texture's native resolution if passed directly if we don't scale it.
-    // The renderer.drawPic signature is (x, y, pic, color). It draws at pic.width/height.
-
-    // To test mipmaps we need to draw at different screen sizes.
-    // We can't easily change the size with drawPic unless we hack the pic object or use spriteRenderer directly.
-    // But spriteRenderer is not exposed directly on the renderer object.
-    // BUT! I can use a trick:
-    // define a fake pic object with modified dimensions.
-
-    const drawScaled = (x, y, w, h) => {
-       const fakePic = {
-         width: w,
-         height: h,
-         texture: tex.texture,
-         bind: (unit) => tex.bind(unit)
-       };
-       // The renderer casts it to Texture2D to call bind, so we need a bind method.
-       // It also accesses .texture property for framebuffers but drawPic doesn't need it.
-       renderer.drawPic(x, y, fakePic);
-    };
-
-    // Actually, drawPic implementation:
-    // (pic as Texture2D).bind(0);
-    // spriteRenderer.draw(x, y, pic.width, pic.height, 0, 0, 1, 1, color);
-
-    // So if I pass an object that looks like a Texture2D (has bind, width, height), it should work.
-
+    // Helper to mock a Pic object with specific dimensions to force scaling in drawPic
     const makeFakePic = (w, h) => {
         return {
             bind: (u) => tex.bind(u),
@@ -133,9 +102,9 @@ test('Texture Filtering: Mipmapping', { timeout: 30000 }, async () => {
         };
     };
 
-    renderer.drawPic(10, 10, makeFakePic(64, 64)); // Red
-    renderer.drawPic(90, 10, makeFakePic(16, 16)); // Green
-    renderer.drawPic(130, 10, makeFakePic(4, 4));  // Yellow
+    renderer.drawPic(10, 10, makeFakePic(64, 64)); // Red (Base level)
+    renderer.drawPic(90, 10, makeFakePic(16, 16)); // Green (Mip level 1)
+    renderer.drawPic(130, 10, makeFakePic(4, 4));  // Yellow (Mip level 3)
 
     renderer.end2D();
 

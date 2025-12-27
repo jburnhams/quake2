@@ -132,19 +132,31 @@ export async function createWebGLPlaywrightSetup(
  *
  * @param page - Playwright page
  * @param renderFn - Function code as string that uses window.testRenderer
+ * @param width - Optional width to resize the canvas to
+ * @param height - Optional height to resize the canvas to
  * @returns Captured pixel data
  */
 export async function renderAndCaptureWebGLPlaywright(
   page: Page,
-  renderFn: string
+  renderFn: string,
+  width?: number,
+  height?: number
 ): Promise<Uint8ClampedArray> {
   try {
-    const pixelData = await page.evaluate((code) => {
+    const pixelData = await page.evaluate(({ code, width, height }) => {
       const renderer = (window as any).testRenderer;
       const gl = (window as any).testGl;
+      const canvas = (window as any).testCanvas;
 
-      if (!renderer || !gl) {
+      if (!renderer || !gl || !canvas) {
         throw new Error('Renderer not initialized');
+      }
+
+      // Resize canvas if needed
+      if (width !== undefined && height !== undefined) {
+        canvas.width = width;
+        canvas.height = height;
+        gl.viewport(0, 0, width, height);
       }
 
       try {
@@ -161,7 +173,7 @@ export async function renderAndCaptureWebGLPlaywright(
 
       // Capture pixels
       return (window as any).captureCanvas();
-    }, renderFn);
+    }, { code: renderFn, width, height });
 
     return new Uint8ClampedArray(pixelData);
   } catch (err: any) {
@@ -200,7 +212,12 @@ export async function testWebGLRenderer(
   const setup = await createWebGLPlaywrightSetup(options);
 
   try {
-    const pixels = await renderAndCaptureWebGLPlaywright(setup.page, renderCode);
+    const pixels = await renderAndCaptureWebGLPlaywright(
+        setup.page,
+        renderCode,
+        options.width,
+        options.height
+    );
 
     await expectSnapshot(pixels, {
       name: options.name,

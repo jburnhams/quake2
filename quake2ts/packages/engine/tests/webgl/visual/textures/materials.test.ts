@@ -8,11 +8,6 @@ const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
 test('Material: Tinting', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
-    // Resize canvas to match test dimensions
-    gl.canvas.width = 128;
-    gl.canvas.height = 64;
-    gl.viewport(0, 0, 128, 64);
-
     gl.clearColor(0.0, 0.0, 0.0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 

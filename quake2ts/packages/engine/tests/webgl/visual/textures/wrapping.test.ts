@@ -11,9 +11,6 @@ test('Texture Wrapping: Repeat', { timeout: 30000 }, async () => {
     gl.clearColor(0.2, 0.2, 0.2, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // Create a 4x4 texture with a distinct pattern
-    // Top-left: Red, Top-right: Green
-    // Bot-left: Blue, Bot-right: Yellow
     const tex = new Quake2Engine.Texture2D(gl);
     const size = 4;
     const data = new Uint8Array(size * size * 4);
@@ -43,50 +40,7 @@ test('Texture Wrapping: Repeat', { timeout: 30000 }, async () => {
       magFilter: gl.NEAREST
     });
 
-    // Draw with UVs from 0 to 2.0 (should show the texture tiled 2x2 times)
-    renderer.begin2D();
-
-    // Custom draw to control UVs
-    // We can't use renderer.drawPic easily for custom UVs > 1 without hacking.
-    // renderer.drawPic implementation: spriteRenderer.draw(x, y, w, h, 0, 0, 1, 1, color)
-    // We need to call spriteRenderer.draw(x, y, w, h, 0, 0, 2, 2, color)
-    // Use the same hack as filtering test: mock the pic object? No, mock object doesn't control UVs passed to draw.
-    // Access spriteRenderer directly? It's private/protected in Renderer implementation.
-    // However, createRenderer returns an object that *is* the renderer.
-    // Let's check if 'spriteRenderer' is exposed on the returned object?
-    // In 'renderer.ts': return { ..., drawPic, ... }; It does NOT expose spriteRenderer.
-
-    // BUT! renderer.drawPic implementation:
-    /*
-      const drawPic = (x: number, y: number, pic: Pic, color?: [number, number, number, number]) => {
-        (pic as Texture2D).bind(0);
-        spriteRenderer.draw(x, y, pic.width, pic.height, 0, 0, 1, 1, color);
-      };
-    */
-    // Wait, renderer.drawChar uses UVs.
-    /*
-      const drawChar = (..., u0, v0, u1, v1, ...) => ...
-    */
-    // But drawChar uses 'font' texture.
-
-    // Let's use 'drawTexture' from the sprite renderer directly if we can access it?
-    // We cannot.
-
-    // Workaround: We can use 'drawString' if we register our texture as 'conchars'.
-    // "if (name.includes('conchars')) { font = texture; }"
-    // So if we register a texture named "conchars", it becomes the font.
-    // Then we can use drawString or drawChar.
-
-    // But drawChar calculates UVs based on character index. We want 0..2.
-
-    // Alternative: Use a custom shader or raw GL calls?
-    // We have 'gl' context. We can just draw a quad ourselves using the texture.
-    // The test helper gives us 'renderer' and 'gl'.
-    // We can assume the renderer has set up some state, but we can override it.
-
-    // Let's just write a raw GL draw for this test. It's testing the texture parameters, not the renderer's drawPic method specifically.
-    // We verify that the Texture2D abstraction correctly sets the GL parameters.
-
+    // Draw with raw GL
     const program = gl.createProgram();
     const vs = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vs,
@@ -106,17 +60,6 @@ test('Texture Wrapping: Repeat', { timeout: 30000 }, async () => {
     gl.useProgram(program);
 
     // Quad covering the screen (-1 to 1), UVs 0 to 2
-    const vertData = new Float32Array([
-      -0.8, -0.8,  0.0, 2.0, // Top-Left (GL coords y is up) -> wait.
-                             // Let's map standard GL clip space.
-                             // -1,-1 is bottom left.
-                             // We want to verify tiling.
-      -0.8,  0.8,  0.0, 0.0, // Top-Left
-       0.8, -0.8,  2.0, 2.0, // Bottom-Right
-       0.8,  0.8,  2.0, 0.0  // Top-Right
-    ]);
-    // Standard triangle strip: TL, BL, TR, BR ?
-    // No.
     // TL (-0.8, 0.8), BL (-0.8, -0.8), TR (0.8, 0.8), BR (0.8, -0.8)
     const verts = new Float32Array([
        -0.8, -0.8, 0.0, 2.0, // BL, UV(0,2)
@@ -142,7 +85,6 @@ test('Texture Wrapping: Repeat', { timeout: 30000 }, async () => {
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    // Clean up to not mess other tests if they reused context (they don't usually)
     gl.deleteBuffer(buf);
     gl.deleteProgram(program);
     gl.deleteShader(vs);
@@ -166,17 +108,7 @@ test('Texture Wrapping: Clamp', { timeout: 30000 }, async () => {
     const tex = new Quake2Engine.Texture2D(gl);
     const size = 4;
     const data = new Uint8Array(size * size * 4);
-    // Simple gradient or pattern
-    for(let i=0; i<data.length; i+=4) {
-        data[i] = 255;   // Red
-        data[i+1] = 0;
-        data[i+2] = 0;
-        data[i+3] = 255;
-    }
-    // Make center distinct? No, let's just use the red texture.
-    // If we clamp, the edge pixels (Red) should extend.
-    // If we repeat, we might see boundary if we had one.
-    // Let's use the same 4-quad pattern as above.
+
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const i = (y * size + x) * 4;
@@ -197,7 +129,6 @@ test('Texture Wrapping: Clamp', { timeout: 30000 }, async () => {
       magFilter: gl.NEAREST
     });
 
-    // Draw with raw GL
     const program = gl.createProgram();
     const vs = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vs, "#version 300 es\\nin vec2 position; in vec2 uv; out vec2 vUv; void main() { gl_Position = vec4(position, 0, 1); vUv = uv; }");
@@ -209,12 +140,6 @@ test('Texture Wrapping: Clamp', { timeout: 30000 }, async () => {
     gl.attachShader(program, fs);
     gl.linkProgram(program);
     gl.useProgram(program);
-
-    // UVs -0.5 to 1.5. Center 0..1 should be normal. Outside should be clamped.
-    // Since texture is 2x2 blocks of color.
-    // 0..1 is R,G / B,Y.
-    // >1 should extend G and Y.
-    // <0 should extend R and B.
 
     const verts = new Float32Array([
        -0.8, -0.8, -0.5, 1.5, // BL
