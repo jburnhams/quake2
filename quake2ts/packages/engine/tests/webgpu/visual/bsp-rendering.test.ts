@@ -82,7 +82,9 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     const redData = new Uint8Array(4 * 4 * 4).fill(255);
     // Make it checkerboard red/blue
     for(let i=0; i<16; i++) {
-        const isRed = (i % 2) === 0;
+        const x = i % 4;
+        const y = Math.floor(i / 4);
+        const isRed = ((x + y) % 2) === 0;
         redData[i*4] = isRed ? 255 : 0;
         redData[i*4+1] = 0;
         redData[i*4+2] = isRed ? 0 : 255;
