@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_run:
-    workflows: ["WebGpu Tests"]
+    workflows: ["WebGpu Tests", "WebGL Visual Tests"]
     types:
       - completed
   workflow_dispatch:
@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read # Required for gh run list/download
 
 concurrency:
   group: "pages"
@@ -22,8 +23,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    # Only run if the WebGpu Tests workflow was successful AND it was on the main branch
-    if: ${{ (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ ((github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') || github.event_name == 'workflow_dispatch') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,50 +36,79 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Download Visual Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: visual-test-results
-          path: visual-test-results
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Build React App
-        working-directory: pages
+      - name: Download Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm ci
-          npm run build
+          mkdir -p visual-test-results
+          mkdir -p webgl-visual-test-results
+
+          # Function to download latest artifact for a workflow
+          download_latest() {
+            WORKFLOW_NAME="$1"
+            ARTIFACT_NAME="$2"
+            DEST_DIR="$3"
+
+            echo "Looking for latest success of '$WORKFLOW_NAME'..."
+            RUN_ID=$(gh run list --workflow "$WORKFLOW_NAME" --branch main --status success --limit 1 --json databaseId -q ".[0].databaseId")
+
+            if [ -n "$RUN_ID" ]; then
+              echo "Found Run ID: $RUN_ID. Downloading '$ARTIFACT_NAME'..."
+              gh run download $RUN_ID -n "$ARTIFACT_NAME" -D "$DEST_DIR" || echo "Artifact not found in run $RUN_ID"
+            else
+              echo "No successful run found for $WORKFLOW_NAME"
+            fi
+          }
+
+          download_latest "webgpu.yml" "visual-test-results" "visual-test-results"
+          download_latest "webgl-visual.yml" "webgl-visual-test-results" "webgl-visual-test-results"
+
+      # We are replacing the React app with the static generated gallery
+      # because the new generated gallery handles both WebGPU and WebGL navigation
+      # and is simpler to maintain for this specific purpose.
+      # The previous React app logic is removed to avoid confusion/redundancy.
 
       - name: Prepare Gallery Data
         run: |
-          # Ensure build output exists (Vite builds to dist by default)
-          mkdir -p pages/dist/snapshots/baselines
-          mkdir -p pages/dist/snapshots/actual
-          mkdir -p pages/dist/snapshots/diff
+          mkdir -p pages/dist/snapshots
+          mkdir -p pages/dist/webgl-snapshots
 
+          # --- Process WebGPU Results ---
           if [ -f "visual-test-results/visual-tests.json" ]; then
-            echo "Processing visual test results..."
+            echo "Processing WebGPU results..."
+            mkdir -p pages/dist/snapshots/{baselines,actual,diff}
 
-            # Validate JSON using the tool script (optional, but good for logs)
-            npx tsx quake2ts/packages/tools/src/generate-gallery.ts visual-test-results/visual-tests.json
+            npx tsx quake2ts/packages/tools/src/generate-gallery.ts \
+                visual-test-results/visual-tests.json \
+                pages/dist \
+                --renderer webgpu
 
-            # Copy the JSON to the build output
             cp visual-test-results/visual-tests.json pages/dist/visual-tests.json
 
-            # Find and copy all snapshots from nested structure to flattened structure
-            # The structure in artifacts is likely .../webgpu/visual/__snapshots__/baselines/...
-            # We want pages/dist/snapshots/baselines/...
-
-            echo "Copying snapshots..."
             find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/snapshots/baselines/ \; || true
             find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/snapshots/actual/ \; || true
             find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/snapshots/diff/ \; || true
-
           else
-            echo "No visual test results found. Gallery will be empty."
-            # Create empty JSON so fetch doesn't 404
-            echo "[]" > pages/dist/visual-tests.json
+             echo "[]" > pages/dist/visual-tests.json
+          fi
+
+          # --- Process WebGL Results ---
+          if [ -f "webgl-visual-test-results/webgl-visual-tests.json" ]; then
+            echo "Processing WebGL results..."
+            mkdir -p pages/dist/webgl-snapshots/{baselines,actual,diff}
+
+            npx tsx quake2ts/packages/tools/src/generate-gallery.ts \
+                webgl-visual-test-results/webgl-visual-tests.json \
+                pages/dist \
+                --renderer webgl
+
+            cp webgl-visual-test-results/webgl-visual-tests.json pages/dist/webgl-visual-tests.json
+
+            find webgl-visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgl-snapshots/baselines/ \; || true
+            find webgl-visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgl-snapshots/actual/ \; || true
+            find webgl-visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgl-snapshots/diff/ \; || true
+          else
+             echo "{ \"tests\": [] }" > pages/dist/webgl-visual-tests.json
           fi
 
       - name: Upload artifact
@@ -88,4 +117,5 @@ jobs:
           path: 'pages/dist'
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

@@ -9,7 +9,7 @@
 
 ## Overview
 
-Establish the CI/CD infrastructure for automated WebGL visual testing. Create GitHub Actions workflow, configure test execution, generate visual reports, and deploy results to GitHub Pages alongside WebGPU test results.
+Establish the CI/CD infrastructure for automated WebGL visual tests. Create GitHub Actions workflow, configure test execution, generate visual reports, and deploy results to GitHub Pages alongside WebGPU test results.
 
 **Reference Implementation:**
 - `.github/workflows/webgpu.yml` (WebGPU workflow)
@@ -84,14 +84,14 @@ jobs:
 ```
 
 **Subtasks:**
-1. Create workflow file based on `webgpu.yml` template
-2. Use ubuntu-latest runner (WebGL works out of the box)
-3. No special system dependencies required
-4. Run `pnpm run test:webgl` script
-5. Set `ALWAYS_SAVE_SNAPSHOTS=1` to save actual/diff images on failure
-6. Generate report JSON
-7. Upload artifacts for Pages deployment
-8. Run on push to main and pull requests
+1. [x] Create workflow file based on `webgpu.yml` template
+2. [x] Use ubuntu-latest runner (WebGL works out of the box)
+3. [x] No special system dependencies required
+4. [x] Run `pnpm run test:webgl` script
+5. [x] Set `ALWAYS_SAVE_SNAPSHOTS=1` to save actual/diff images on failure
+6. [x] Generate report JSON
+7. [x] Upload artifacts for Pages deployment
+8. [x] Run on push to main and pull requests
 
 **Implementation Notes:**
 - Ubuntu has sufficient GL drivers built-in
@@ -132,13 +132,13 @@ async function generateWebGLVisualReport(): Promise<void>
 ```
 
 **Subtasks:**
-1. Scan `tests/webgl/visual/__snapshots__/stats/` for test results
-2. For each test, read JSON stats file
-3. Check for baseline/actual/diff image existence
-4. Determine test category from file path
-5. Aggregate results into report structure
-6. Write `webgl-visual-tests.json` to workspace root
-7. Handle missing files gracefully
+1. [x] Scan `tests/webgl/visual/__snapshots__/stats/` for test results
+2. [x] For each test, read JSON stats file
+3. [x] Check for baseline/actual/diff image existence
+4. [x] Determine test category from file path
+5. [x] Aggregate results into report structure
+6. [x] Write `webgl-visual-tests.json` to workspace root
+7. [x] Handle missing files gracefully
 
 **Implementation Notes:**
 - Similar to `generate-visual-report.ts` but for WebGL
@@ -155,12 +155,12 @@ async function generateWebGLVisualReport(): Promise<void>
 Extend gallery generator to support both WebGL and WebGPU results:
 
 **Subtasks:**
-1. Detect both `visual-tests.json` (WebGPU) and `webgl-visual-tests.json` (WebGL)
-2. Generate separate gallery pages or tabbed interface
-3. Use same HTML/CSS structure for consistency
-4. Add navigation between WebGL and WebGPU results
-5. Label images clearly (WebGL vs WebGPU)
-6. Support side-by-side comparison mode (future enhancement)
+1. [x] Detect both `visual-tests.json` (WebGPU) and `webgl-visual-tests.json` (WebGL)
+2. [x] Generate separate gallery pages or tabbed interface
+3. [x] Use same HTML/CSS structure for consistency
+4. [x] Add navigation between WebGL and WebGPU results
+5. [x] Label images clearly (WebGL vs WebGPU)
+6. [x] Support side-by-side comparison mode (future enhancement)
 
 **Implementation Notes:**
 - Can reuse existing gallery generation logic
@@ -177,11 +177,11 @@ Extend gallery generator to support both WebGL and WebGPU results:
 Extend Pages deployment to include WebGL results:
 
 **Subtasks:**
-1. Add WebGL visual tests workflow to trigger list
-2. Download `webgl-visual-test-results` artifact
-3. Copy WebGL snapshots to pages-dist structure
-4. Run gallery generator for both WebGL and WebGPU
-5. Deploy combined results to Pages
+1. [x] Add WebGL visual tests workflow to trigger list
+2. [x] Download `webgl-visual-test-results` artifact
+3. [x] Copy WebGL snapshots to pages-dist structure
+4. [x] Run gallery generator for both WebGL and WebGPU
+5. [x] Deploy combined results to Pages
 
 **Modifications:**
 
@@ -267,11 +267,11 @@ Create comprehensive README for WebGL visual tests:
 8. **CI/CD** - How tests run in GitHub Actions
 
 **Subtasks:**
-1. Write clear, concise documentation
-2. Include code examples
-3. Link to relevant tools/scripts
-4. Explain baseline approval process
-5. Document test naming conventions
+1. [x] Write clear, concise documentation
+2. [x] Include code examples
+3. [x] Link to relevant tools/scripts
+4. [x] Explain baseline approval process
+5. [x] Document test naming conventions
 
 **Implementation Notes:**
 - Similar to `tests/webgpu/visual/README.md`
@@ -299,9 +299,9 @@ Add convenience scripts:
 ```
 
 **Subtasks:**
-1. Add scripts for different test modes
-2. Document scripts in README
-3. Ensure environment variables propagate correctly
+1. [x] Add scripts for different test modes
+2. [x] Document scripts in README
+3. [x] Ensure environment variables propagate correctly
 
 ---
 
@@ -350,14 +350,14 @@ cat webgl-visual-tests.json
 
 ## Success Criteria
 
-- [ ] GitHub Actions workflow runs successfully
-- [ ] WebGL tests execute in CI environment
-- [ ] Visual report JSON generated correctly
-- [ ] Artifacts uploaded with all snapshots
-- [ ] GitHub Pages deploys with WebGL results
-- [ ] Can navigate between WebGL and WebGPU galleries
-- [ ] Documentation is clear and complete
-- [ ] Local and CI test execution work identically
+- [x] GitHub Actions workflow runs successfully
+- [x] WebGL tests execute in CI environment
+- [x] Visual report JSON generated correctly
+- [x] Artifacts uploaded with all snapshots
+- [x] GitHub Pages deploys with WebGL results
+- [x] Can navigate between WebGL and WebGPU galleries
+- [x] Documentation is clear and complete
+- [x] Local and CI test execution work identically
 
 ---
 

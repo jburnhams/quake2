@@ -1,47 +1,94 @@
 # WebGL Visual Tests
 
-This directory contains visual regression tests for the WebGL renderer.
+This directory contains visual regression tests for the WebGL renderer. These tests render frames headlessly using the production WebGL renderer and compare them against baseline images to ensure visual consistency.
+
+## Overview
+
+Unlike the WebGPU visual tests which require a GPU or software emulation (SwiftShader), the WebGL tests use `headless-gl` (the `gl` npm package) to provide a WebGL 1.0 context in Node.js. This allows them to run on most standard CI runners (like `ubuntu-latest`) without special configuration.
+
+The goal is to verify that the WebGL renderer produces the correct visual output for:
+- 2D HUD elements
+- 3D world geometry (BSP)
+- Models (MD2)
+- Particles and effects
+- Dynamic lighting
 
 ## Prerequisites
 
-These tests require the `gl` package (headless-gl) to provide a WebGL context in Node.js.
-Because `gl` is a native module with system dependencies (like X11 and OpenGL headers on Linux), it is listed as an **optional dependency** in `@quake2ts/test-utils`.
+The tests run in Node.js (version 20+ recommended). The `gl` package is a native dependency that handles OpenGL calls.
 
-### Installing `gl`
-
-If you want to run these tests locally, you may need to install system dependencies first:
+### System Dependencies
 
 **Linux (Ubuntu/Debian):**
+Most CI environments have these, but locally you may need:
 ```bash
 sudo apt-get install -y build-essential libxi-dev libglu1-mesa-dev libglew-dev pkg-config
 ```
 
 **macOS / Windows:**
-Usually works out of the box or requires standard build tools (Xcode / Visual Studio).
+Typically works out of the box with standard build tools installed.
 
-Then, ensure `gl` is installed:
-```bash
-pnpm install
-```
-(If it failed during initial install due to missing deps, try rebuilding or reinstalling after installing system deps).
+## Running Tests Locally
 
-## Running Tests
-
-To run the WebGL visual tests:
-
+Run all WebGL visual tests:
 ```bash
 pnpm test:webgl
 ```
 
-This command runs `vitest` with `TEST_TYPE=webgl`, which enables the WebGL-specific test files and ensures they run in a compatible environment.
+Run in watch mode:
+```bash
+pnpm test:webgl:watch
+```
 
-## Test Structure
+**Updating Baselines:**
+If you have made intentional changes to the rendering pipeline, you can update the baseline snapshots:
+```bash
+pnpm test:webgl:update
+```
+or
+```bash
+UPDATE_VISUAL=1 pnpm test:webgl
+```
 
-Tests are organized by feature:
-- `headless-webgl.test.ts`: Infrastructure tests (context creation, readback).
-- (Future): Specific rendering feature tests.
+## Writing New Tests
 
-## Troubleshooting
+Create new test files in `packages/engine/tests/webgl/visual/` ending in `.test.ts`.
 
-- **Module did not self-register / dlopen failed**: This usually means the `gl` binary was compiled against a different Node.js version or is missing system libraries. Try `pnpm rebuild gl` or remove `node_modules` and reinstall.
-- **Context creation failed**: Ensure you have a valid display or use `xvfb-run` on Linux if you don't have a physical display (though `headless-gl` can often work without X via OSMesa if configured, strictly it often relies on X11 on Linux).
+Example pattern:
+```typescript
+import { describe, it, expect } from 'vitest';
+import { createWebGLTestContext } from '../setup'; // Helper you will need to create
+
+describe('MyFeature', () => {
+  it('renders correctly', async () => {
+    const { renderer, snapshot } = await createWebGLTestContext();
+
+    // Setup scene
+    // ...
+
+    // Render frame
+    renderer.render(scene, camera);
+
+    // Compare snapshot
+    await expect(snapshot('my-feature')).resolves.toBeMatchingBaseline();
+  });
+});
+```
+
+## Test Organization
+
+- `__snapshots__/`: Contains the baseline PNG images.
+- `__snapshots__/stats/`: Contains JSON results for report generation.
+- `actual/`: (Generated during run) Contains the rendered output.
+- `diff/`: (Generated on failure) Contains the visual difference.
+
+## CI/CD
+
+These tests run automatically on GitHub Actions via the `WebGL Visual Tests` workflow.
+Results are aggregated and deployed to GitHub Pages alongside WebGPU results.
+
+## Debugging Failed Tests
+
+1. Check the `diff` directory in artifacts or local folder.
+2. Red pixels indicate mismatch.
+3. If the change is expected, run with `UPDATE_VISUAL=1`.

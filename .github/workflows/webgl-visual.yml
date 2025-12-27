@@ -1,0 +1,56 @@
+name: WebGL Visual Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  visual-tests:
+    name: WebGL Visual Tests (Node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quake2ts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.15.7
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build workspace
+        run: pnpm run build
+
+      - name: Run WebGL Visual Tests
+        env:
+          ALWAYS_SAVE_SNAPSHOTS: '1'
+        run: pnpm run test:webgl
+
+      - name: Generate Visual Report
+        run: npx tsx packages/tools/src/generate-webgl-report.ts
+
+      - name: Upload Visual Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webgl-visual-test-results
+          path: |
+            quake2ts/webgl-visual-tests.json
+            quake2ts/packages/engine/tests/webgl/visual/__snapshots__
