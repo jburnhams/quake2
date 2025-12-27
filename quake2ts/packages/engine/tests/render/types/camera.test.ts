@@ -12,7 +12,7 @@ describe('CameraState', () => {
     expect(state.position).toEqual(new Float32Array([10, 20, 30]));
     expect(state.angles).toEqual(new Float32Array([15, 45, 0]));
 
-    // Verify immutability (by changing camera and checking state didn't change)
+    // Verify immutability
     camera.setPosition(0, 0, 0);
     expect(state.position).toEqual(new Float32Array([10, 20, 30])); // Unchanged
   });

@@ -288,4 +288,25 @@ describe('FrameRenderer', () => {
 
     expect(stats).toBeDefined();
   });
+
+  describe('FrameRenderOptions', () => {
+    it('accepts legacy camera only', () => {
+      const camera = new Camera();
+      const options: FrameRenderOptions = {
+        camera,
+        // cameraState omitted - legacy path
+      };
+      expect(options.camera).toBe(camera);
+    });
+
+    it('accepts both camera and cameraState', () => {
+      const camera = new Camera();
+      const cameraState = camera.toState();
+      const options: FrameRenderOptions = {
+        camera,
+        cameraState
+      };
+      expect(options.cameraState).toEqual(cameraState);
+    });
+  });
 });
