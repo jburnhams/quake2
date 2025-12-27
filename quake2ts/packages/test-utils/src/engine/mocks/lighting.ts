@@ -1,9 +1,11 @@
 import { vi } from 'vitest';
 import { Vec3 } from '@quake2ts/shared';
-import { DLight, DynamicLightManager } from '@quake2ts/engine';
+import { DynamicLightManager } from '@quake2ts/engine';
+import type { DLight } from '@quake2ts/engine';
 
 // Export types
-export { DLight, DynamicLightManager };
+export { DynamicLightManager };
+export type { DLight };
 
 // Mock Lightmap type since it's typically just a raw buffer or texture in the engine
 // But based on the task "Add createMockLightmap() factory", we'll create a simple structure.
