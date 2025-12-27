@@ -17,20 +17,16 @@ fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
   // Calculate direction with scroll offset
-  // Original GLSL:
-  // vec3 dir = normalize(a_position);
-  // dir.xy += u_scroll;
-  // v_direction = dir;
+  // The skybox mesh vertices are in GL coordinates (X right, Y up, Z back).
+  // These directions are used directly to sample the cubemap.
+  // No coordinate transform is needed here - the view matrix already handles
+  // the Quake→GL coordinate transform.
 
   var dir = normalize(position);
   dir.x += uniforms.scroll.x;
   dir.y += uniforms.scroll.y;
 
-  // Transform from Quake coordinates (Z-up) to WebGL coordinates (Y-up)
-  // Quake Forward (X) -> WebGL Back (-Z)
-  // Quake Left (Y) -> WebGL Left (-X)
-  // Quake Up (Z) -> WebGL Top (Y)
-  output.direction = vec3<f32>(-dir.y, dir.z, -dir.x);
+  output.direction = dir;
 
   // Calculate position
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
