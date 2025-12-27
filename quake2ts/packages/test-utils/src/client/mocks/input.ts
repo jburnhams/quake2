@@ -240,7 +240,8 @@ export function createMockPointerLock(element?: HTMLElement): MockPointerLock {
 export function createInputInjector(target?: EventTarget): InputInjector {
   // If target is provided and is a Document, use it.
   // Otherwise default to global document.
-  const doc = (target instanceof Document) ? target : document;
-  const win = (doc.defaultView) ? doc.defaultView : window;
+  const isDocument = typeof Document !== 'undefined' && target instanceof Document;
+  const doc = isDocument ? target : (typeof document !== 'undefined' ? document : {} as Document);
+  const win = (doc.defaultView) ? doc.defaultView : (typeof window !== 'undefined' ? window : {} as Window);
   return new InputInjector(doc, win);
 }
