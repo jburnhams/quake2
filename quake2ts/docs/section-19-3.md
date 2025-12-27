@@ -186,7 +186,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Signature: `createMockDamageInfo(overrides?: Partial<DamageInfo>): DamageInfo`
   - Include: attacker, target, amount, type, point, direction
 
-- [] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
+- [x] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
   - [x] Refactored `radiusDamage.test.ts`
   - [x] Refactored `damage.test.ts`
   - [x] Refactored `damage-kick.test.ts`

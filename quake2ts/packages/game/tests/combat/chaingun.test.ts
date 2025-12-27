@@ -77,6 +77,11 @@ describe('Chaingun', () => {
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
             plane: { normal: { x: -1, y: 0, z: 0 } },
+            fraction: 0.1,
+            surface: null,
+            contents: 0,
+            startsolid: false,
+            allsolid: false
         });
     });
 
@@ -181,7 +186,11 @@ describe('Chaingun', () => {
                 ent: target,
                 endpos: { x: 10, y: 0, z: 0 },
                 plane: { normal: { x: -1, y: 0, z: 0 } },
-                fraction: 0.1
+                fraction: 0.1,
+                surface: null,
+                contents: 0,
+                startsolid: false,
+                allsolid: false
             });
 
             let totalTraceCalls = 0;

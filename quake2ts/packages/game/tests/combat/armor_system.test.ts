@@ -3,14 +3,14 @@ import { applyPowerArmor, applyRegularArmor, ARMOR_INFO, ArmorType } from '../..
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { createPlayerInventory, pickupArmor } from '../../src/inventory/playerInventory.js';
 import { ArmorItem } from '../../src/inventory/items.js';
+import { createPowerArmorState } from '@quake2ts/test-utils';
 
 describe('Armor System', () => {
     describe('Power Armor', () => {
         const origin = { x: 0, y: 0, z: 0 };
-        const forward = { x: 1, y: 0, z: 0 }; // Facing +X
         const angles = { x: 0, y: 0, z: 0 };
 
-        const makeState = (type: 'screen' | 'shield', cells: number) => ({
+        const makeState = (type: 'screen' | 'shield', cells: number) => createPowerArmorState({
             type,
             cellCount: cells,
             origin,
