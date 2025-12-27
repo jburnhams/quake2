@@ -66,8 +66,8 @@ describe('DemoPlaybackController Offset Parameters', () => {
             type: 'time'
         });
 
-        // getCurrentTime returns MS in current implementation
-        expect(controller.getCurrentTime()).toBeCloseTo(startTime * 1000, 1);
+        // getCurrentTime returns Seconds (not MS)
+        expect(controller.getCurrentTime()).toBeCloseTo(startTime, 1);
         expect(controller.getState()).toBe(1);
     });
 
