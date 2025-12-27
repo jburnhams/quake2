@@ -53,8 +53,8 @@ describe('DemoPlaybackController with Tracking', () => {
 
         // Start playback (non-fastForward)
         const promise = controller.playRangeWithTracking(
-            { startOffset: 0, type: 'frame' },
-            { endOffset: 5, type: 'frame' },
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
             tracker,
             { fastForward: false }
         );
@@ -75,8 +75,8 @@ describe('DemoPlaybackController with Tracking', () => {
 
     it('should handle fastForward mode', async () => {
         const result = await controller.playRangeWithTracking(
-            { startOffset: 0, type: 'frame' },
-            { endOffset: 5, type: 'frame' },
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
             tracker,
             { fastForward: true }
         );
@@ -88,8 +88,8 @@ describe('DemoPlaybackController with Tracking', () => {
 
     it('should update tracker frame/time during playback', async () => {
         const promise = controller.playRangeWithTracking(
-            { startOffset: 0, type: 'frame' },
-            { endOffset: 5, type: 'frame' },
+            { frame: 0, type: 'frame' } as any,
+            { frame: 5, type: 'frame' } as any,
             tracker,
             { fastForward: false }
         );
