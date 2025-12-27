@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest';
-import { DamageMod, Entity, EntitySystem, WeaponState } from '@quake2ts/game';
+import { DamageMod, Entity, ArmorType, type RegularArmorState, type PowerArmorState } from '@quake2ts/game';
 
 export interface MockDamageInfo {
   damage: number;
@@ -77,3 +77,21 @@ export const mockMonsterAttacks: {
   fireRailgun: vi.fn(),
   fireBFG: vi.fn(),
 };
+
+const FORWARD_ANGLES = { x: 0, y: 0, z: 0 } as const;
+const ORIGIN = { x: 0, y: 0, z: 0 } as const;
+
+export function createRegularArmorState(armorType: ArmorType | null, armorCount: number): RegularArmorState {
+  return { armorType, armorCount };
+}
+
+export function createPowerArmorState(partial: Partial<PowerArmorState> = {}): PowerArmorState {
+  return {
+    type: null,
+    cellCount: 0,
+    angles: FORWARD_ANGLES,
+    origin: ORIGIN,
+    health: 100,
+    ...partial,
+  };
+}

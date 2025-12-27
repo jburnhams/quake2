@@ -9,7 +9,13 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createMonsterEntityFactory, createEntityFactory, createItemEntityFactory } from '@quake2ts/test-utils';
+import {
+    createGameImportsAndEngine,
+    createPlayerEntityFactory,
+    createMonsterEntityFactory,
+    createEntityFactory,
+    createItemEntityFactory
+} from '@quake2ts/test-utils';
 import { ServerFlags, MoveType, Solid, DeadFlag } from '../../src/entities/entity.js';
 
 describe('BFG10K', () => {
@@ -74,6 +80,11 @@ describe('BFG10K', () => {
              ent: target,
              fraction: 1.0,
              endpos: target.origin,
+             plane: null,
+             contents: 0,
+             surface: null,
+             startsolid: false,
+             allsolid: false
         });
 
         // Trigger touch
@@ -167,10 +178,10 @@ describe('BFG10K', () => {
         findByRadiusSpy.mockReturnValue([target]);
 
         trace
-            .mockReturnValueOnce({ fraction: 1.0 }) // LOS Check: Clear
-            .mockReturnValueOnce({ fraction: 0.1, ent: target, endpos: target.origin }) // Laser Trace: Hit Target
-            .mockReturnValueOnce({ fraction: 1.0 }) // Laser Trace Next: Miss (stop piercing)
-            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 200, y: 0, z: 0 } }); // Effect Trace
+            .mockReturnValueOnce({ fraction: 1.0, plane: null, surface: null, ent: null }) // LOS Check: Clear
+            .mockReturnValueOnce({ fraction: 0.1, ent: target, endpos: target.origin, plane: null, surface: null }) // Laser Trace: Hit Target
+            .mockReturnValueOnce({ fraction: 1.0, plane: null, surface: null, ent: null }) // Laser Trace Next: Miss (stop piercing)
+            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 200, y: 0, z: 0 }, plane: null, surface: null, ent: null }); // Effect Trace
 
         // Execute think
         const thinkFn = bfgBall.think!;

@@ -8,7 +8,7 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
@@ -42,6 +42,9 @@ describe('Blaster', () => {
                 endpos: end,
                 allsolid: false,
                 startsolid: false,
+                ent: null,
+                surface: null,
+                contents: 0,
                 plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
             };
         });

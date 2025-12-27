@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { GameExports } from '../../src/index.js';
