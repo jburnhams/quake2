@@ -7,12 +7,11 @@ import { Entity } from '../src/entities/entity.js';
 import { GameExports, createGame } from '../src/index.js';
 import { WeaponId, PowerupId, addPowerup } from '../src/inventory/playerInventory.js';
 import { fire } from '../src/combat/weapons/firing.js';
-import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
   let game: GameExports;
   let player: Entity;
-  let world: Entity;
 
   let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
   let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
@@ -25,7 +24,6 @@ describe('Combat and Items', () => {
 
     game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
     game.spawnWorld();
-    world = game.entities.world;
     player = game.entities.find(e => e.classname === 'player')!;
   });
 
@@ -67,31 +65,31 @@ describe('Combat and Items', () => {
 
        // Mock trace sequence for Railgun loop
        // 0. P_ProjectSource Check (Eye to Muzzle) -> No hit
-       mockImports.trace.mockReturnValueOnce({
+       mockImports.trace.mockReturnValueOnce(createTraceMock({
           fraction: 1.0,
           endpos: { x: 0, y: 0, z: 0 },
           ent: null
-       })
+       }))
        // 1. Hit target1
-       .mockReturnValueOnce({
+       .mockReturnValueOnce(createTraceMock({
           fraction: 0.1,
           endpos: target1.origin,
           ent: target1,
-          plane: { normal: { x: -1, y: 0, z: 0 } }
-       })
+          plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
+       }))
        // 2. Hit target2
-       .mockReturnValueOnce({
+       .mockReturnValueOnce(createTraceMock({
           fraction: 0.2, // Relative to start
           endpos: target2.origin,
           ent: target2,
-          plane: { normal: { x: -1, y: 0, z: 0 } }
-       })
+          plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
+       }))
        // 3. Hit nothing (end of range)
-       .mockReturnValueOnce({
+       .mockReturnValueOnce(createTraceMock({
           fraction: 1.0,
           endpos: { x: 8192, y: 0, z: 0 },
           ent: null
-       });
+       }));
 
        player.client!.inventory.ownedWeapons.add(WeaponId.Railgun);
        player.client!.inventory.ammo.counts[5] = 10; // Slugs are index 5

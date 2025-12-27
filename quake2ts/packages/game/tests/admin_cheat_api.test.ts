@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../src/index.js';
 import { Entity, EntityFlags, MoveType } from '../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { T_Damage, DamageFlags, DamageMod } from '../src/combat/index.js';
 import { giveItem } from '../src/inventory/index.js';
 
@@ -34,24 +34,19 @@ describe('Admin/Cheat APIs', () => {
         game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         // Mock the entity system find method to return a player
+        // Use createPlayerEntityFactory to ensure a consistent player mock
         player = new Entity(1);
-        player.classname = 'player';
-        player.flags = 0;
-        player.movetype = MoveType.Walk;
-        player.origin = { x: 10, y: 20, z: 30 };
-        player.velocity = { x: 0, y: 0, z: 0 };
+        Object.assign(player, createPlayerEntityFactory({
+             flags: 0,
+             movetype: MoveType.Walk,
+             origin: { x: 10, y: 20, z: 30 },
+             velocity: { x: 0, y: 0, z: 0 }
+        }));
 
         // Inject player into the internal entity system
-        // Since createGame creates its own internal EntitySystem, we need to inspect how 'find' is implemented there.
-        // It iterates over `game.entities`.
-
-        // We can't easily inject into the private EntitySystem of game.
-        // But game.entities is exposed!
         entities = game.entities;
 
-        // We need to mock 'find' on game.entities or add the player to it.
-        // 'find' iterates using forEachEntity.
-        // Let's spy on find directly since it is exposed.
+        // Spy on find directly since it is exposed.
         vi.spyOn(entities, 'find').mockReturnValue(player);
 
         // Also mock unlink/link for teleport
@@ -90,15 +85,6 @@ describe('Admin/Cheat APIs', () => {
 
     it('damage should call T_Damage on player', () => {
         game.damage(50);
-        // Correct expectation for arguments.
-        // The call in index.ts:
-        // T_Damage(
-        //   player, null, null, ZERO_VEC3, player.origin, ZERO_VEC3, amount, 0, DamageFlags.NONE, DamageMod.UNKNOWN,
-        //   levelClock.current.timeSeconds, undefined, { hooks: hookRegistry }
-        // );
-        // Arg 10: levelClock.current.timeSeconds (matches expectation '0' from test helper context)
-        // Arg 11: undefined
-        // Arg 12: options object containing hooks
         expect(T_Damage).toHaveBeenCalledWith(
             player,
             null,
@@ -110,9 +96,9 @@ describe('Admin/Cheat APIs', () => {
             0,
             DamageFlags.NONE,
             DamageMod.UNKNOWN,
-            expect.any(Number), // dflags (passed levelClock.timeSeconds)
-            undefined,          // multicast (passed undefined explicitly)
-            expect.objectContaining({ hooks: expect.any(Object) }) // options (received hooks)
+            expect.any(Number),
+            undefined,
+            expect.objectContaining({ hooks: expect.any(Object) })
         );
     });
 
