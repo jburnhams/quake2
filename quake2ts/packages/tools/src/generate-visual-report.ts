@@ -152,7 +152,10 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
         ts.forEachChild(node, (child) => findSnapshotCalls(child, testName, filePath, line));
     }
 
-    function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
+    visit(sourceFile);
+  }
+
+  function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
       const testDir = path.dirname(testFilePath);
       const statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
       if (fs.existsSync(statsPath)) {
@@ -167,6 +170,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
   }
 
   function walkDir(dir: string) {
+    if (!fs.existsSync(dir)) return;
     const files = fs.readdirSync(dir);
     for (const file of files) {
       const fullPath = path.join(dir, file);

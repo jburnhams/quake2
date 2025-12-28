@@ -155,7 +155,10 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
         ts.forEachChild(node, (child) => findSnapshotCalls(child, testName, filePath, line));
     }
 
-    function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
+    visit(sourceFile);
+  }
+
+  function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
       // Tests are configured to save to packages/engine/tests/webgl/__snapshots__
       // But checking relative to test file as well just in case
       let statsPath = path.join(rootDir, 'packages/engine/tests/webgl/__snapshots__', 'stats', `${snapshotName}.json`);
