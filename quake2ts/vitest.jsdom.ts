@@ -20,11 +20,9 @@ export default defineConfig({
     include: [
       'packages/engine/tests/**/*.test.ts',
       'packages/client/tests/**/*.test.ts',
-      'packages/cgame/tests/**/*.test.ts',
       // Include src tests if any
       'packages/engine/src/**/*.test.ts',
       'packages/client/src/**/*.test.ts',
-      'packages/cgame/src/**/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',
@@ -44,9 +42,7 @@ export default defineConfig({
     outputFile: {
       junit: 'test-results/junit-jsdom.xml',
     },
-    // Ensure mocks are reset between tests
+    // Only clear mock history, do not reset implementations as engine tests rely on persistent mocks
     clearMocks: true,
-    mockReset: true,
-    restoreMocks: true,
   },
 });

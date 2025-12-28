@@ -22,12 +22,14 @@ export default defineConfig({
       'packages/server/tests/**/*.test.ts',
       'packages/shared/tests/**/*.test.ts',
       'packages/test-utils/tests/**/*.test.ts',
+      'packages/cgame/tests/**/*.test.ts',
       // Asset processing tests that require Node environment (Buffer/DataView compatibility)
       'packages/engine/tests/assets/preview.test.ts',
       'packages/engine/tests/assets/preview_bounds.test.ts',
       // Include src tests if any
       'packages/game/src/**/*.test.ts',
       'packages/shared/src/**/*.test.ts',
+      'packages/cgame/src/**/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',
