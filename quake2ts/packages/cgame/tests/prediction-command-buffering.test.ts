@@ -20,6 +20,8 @@ describe('ClientPrediction Command Buffering', () => {
   };
 
   beforeEach(() => {
+    mockTrace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 } });
+    mockPointContents.mockReturnValue(0);
     prediction = new ClientPrediction({ trace: mockTrace, pointContents: mockPointContents }, settings);
   });
 

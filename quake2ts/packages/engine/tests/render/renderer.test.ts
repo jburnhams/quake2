@@ -22,7 +22,9 @@ vi.mock('../../src/render/skybox', () => {
             constructor() {
                 return { shaderSize: 100 };
             }
-        }
+        },
+        computeSkyScroll: vi.fn(),
+        removeViewTranslation: vi.fn(),
     };
 });
 

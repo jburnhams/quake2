@@ -2,6 +2,7 @@ import { FrameRenderer, RenderModeConfig } from '../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../src/render/resources.js';
+import path from 'path';
 
 // Mock the pipeline dependencies to prevent WebGL calls
 vi.mock('../../src/render/bspPipeline', () => {
@@ -15,6 +16,8 @@ vi.mock('../../src/render/bspPipeline', () => {
                 };
             }
         },
+        computeSkyScroll: vi.fn(),
+        removeViewTranslation: vi.fn(),
     };
 });
 
@@ -123,10 +126,6 @@ const mockFrameRenderer: FrameRenderer = {
     }),
 };
 
-vi.mock('../../src/render/frame', () => ({
-    createFrameRenderer: vi.fn(() => mockFrameRenderer),
-}));
-
 describe('Renderer Highlighting', () => {
     let mockGl: WebGL2RenderingContext;
     let createRenderer: any;
@@ -134,6 +133,22 @@ describe('Renderer Highlighting', () => {
     beforeEach(async () => {
         vi.resetModules();
         vi.clearAllMocks();
+
+        const framePath = path.resolve(__dirname, '../../src/render/frame.js');
+        vi.doMock(framePath, () => ({
+            createFrameRenderer: vi.fn(() => mockFrameRenderer),
+        }));
+
+        // Restore return value
+        mockFrameRenderer.renderFrame.mockReturnValue({
+            drawCalls: 0,
+            vertexCount: 0,
+            batches: 0,
+            facesDrawn: 0,
+            skyDrawn: false,
+            viewModelDrawn: false,
+            fps: 60
+        });
 
         const mod = await import('../../src/render/renderer.js');
         createRenderer = mod.createRenderer;

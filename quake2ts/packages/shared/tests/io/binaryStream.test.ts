@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { BinaryStream } from '../../src/io/binaryStream.js';
 import { Vec3 } from '../../src/math/vec3.js';
