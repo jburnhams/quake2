@@ -5,15 +5,10 @@
  * Loads the actual built renderer code via a static server, similar to e2e-tests.
  */
 
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import type { Browser, Page, BrowserContext } from 'playwright';
 import { expectSnapshot, SnapshotTestOptions } from '../../visual/snapshots.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
-import handler from 'serve-handler';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export interface WebGLPlaywrightSetup {
   browser: Browser;
@@ -42,8 +37,27 @@ export async function createWebGLPlaywrightSetup(
   const height = options.height ?? 256;
   const headless = options.headless ?? true;
 
+  // Dynamic imports for optional dependencies
+  let chromium;
+  let handler;
+
+  try {
+    const playwright = await import('playwright');
+    chromium = playwright.chromium;
+  } catch (e) {
+    throw new Error('Failed to load "playwright" package. Please ensure it is installed.');
+  }
+
+  try {
+    const serveHandler = await import('serve-handler');
+    handler = serveHandler.default;
+  } catch (e) {
+    throw new Error('Failed to load "serve-handler" package. Please ensure it is installed.');
+  }
+
   // Start static server to serve built files
   // Serve from repo root so we can access packages/engine/dist
+  // Note: __dirname is handled by tsup shims to work in both ESM and CJS
   const repoRoot = path.resolve(__dirname, '../../../../..');
 
   const staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
