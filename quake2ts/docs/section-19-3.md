@@ -194,14 +194,19 @@ This section covers migration and expansion of game-specific test utilities incl
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 
-- [] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+- [ ] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
   - [x] Refactored `targeting.test.ts`
   - [x] Refactored `cover.test.ts`
   - [x] Refactored `dodge.test.ts`
+  - [x] Refactored `gravity.test.ts`
+  - [x] Refactored `perception.test.ts`
+  - [x] Refactored `patrol.test.ts`
+  - [x] Refactored `ground.test.ts`
+  - [x] Refactored `movement.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
-- [] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+- [ ] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
   - [x] Refactored `soldier_variants.test.ts`
   - Replace inline attack function mocks
   - Estimated files: ~15
