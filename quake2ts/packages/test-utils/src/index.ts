@@ -49,6 +49,7 @@ export * from './engine/helpers/webgl-rendering.js';
 export * from './engine/helpers/webgl-playwright.js';
 export * from './engine/helpers/pipeline-test-template.js';
 export * from './engine/helpers/textures.js';
+export * from './engine/renderers.js';
 
 // Client Mocks
 export * from './client/mocks/input.js';

@@ -1,21 +1,27 @@
 import { describe, test, expect, vi } from 'vitest';
 import { createGame } from '../../src/index.js';
-import { createNullRenderer } from '../../../test-utils/src/engine/renderers.js';
-import { createTestContext } from '../../tests/test-helpers.js';
+import { createNullRenderer, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { Camera } from '@quake2ts/engine';
 
 describe('Headless Rendering Integration', () => {
   test('runs game loop with NullRenderer', async () => {
     // Setup a minimal game environment with NullRenderer
     const renderer = createNullRenderer();
-    const context = createTestContext();
+    const camera = new Camera(); // Create a real camera for the test
+
+    // Pass the camera to the engine mock
+    const { imports, engine } = createGameImportsAndEngine({
+      engine: {
+        camera
+      }
+    });
 
     // Inject the renderer into the engine mock if possible,
     // or simulate the engine loop manually invoking the renderer.
-    // Since createGame expects an Engine interface which includes renderFrame calls usually managed by the loop,
-    // we simulate the loop here.
 
-    const game = await createGame(context.imports, context.engine, {
-      deathmatch: false
+    const game = await createGame(imports, engine, {
+      deathmatch: false,
+      gravity: [0, 0, -800] // Provide gravity to avoid undefined errors in physics loop
     });
 
     // Simulate a few frames
@@ -25,8 +31,8 @@ describe('Headless Rendering Integration', () => {
       // Manually trigger a render frame as the game loop usually does this
       // The game.frame updates game state, then we render
       renderer.renderFrame({
-        camera: context.engine.camera,
-        cameraState: context.engine.camera.toState()
+        camera: engine.camera!,
+        cameraState: engine.camera!.toState()
       }, []);
     }
 

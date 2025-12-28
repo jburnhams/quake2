@@ -1,6 +1,4 @@
-import { NullRenderer } from '@quake2ts/engine/src/render/null/renderer.js';
-import { LoggingRenderer } from '@quake2ts/engine/src/render/logging/renderer.js';
-import { CoordinateSystem } from '@quake2ts/engine/src/render/types/coordinates.js';
+import { NullRenderer, LoggingRenderer, CoordinateSystem } from '@quake2ts/engine';
 import { expect } from 'vitest';
 
 export function createNullRenderer(width = 800, height = 600): NullRenderer {
@@ -28,6 +26,6 @@ export function expectRendererCalls(
 
 export function expectNoDoubleTransform(renderer: LoggingRenderer): void {
   const logs = renderer.getLogs();
-  const warnings = logs.filter(log => log.includes('double-transform'));
+  const warnings = logs.filter((log: string) => log.includes('double-transform'));
   expect(warnings).toHaveLength(0);
 }
