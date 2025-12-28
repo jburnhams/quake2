@@ -57,9 +57,9 @@ export async function createWebGLPlaywrightSetup(
   }
 
   // Start static server to serve built files
-  // Serve from repo root so we can access packages/engine/dist
-  // Note: __dirname is handled by tsup shims to work in both ESM and CJS
-  const repoRoot = path.resolve(__dirname, '../../../../..');
+  // Serve from current working directory (repo root when running tests)
+  // This avoids issues with relative paths from built files
+  const repoRoot = process.cwd();
 
   const staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
     return handler(request, response, {
