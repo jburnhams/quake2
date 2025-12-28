@@ -10,6 +10,7 @@ import { expectSnapshot, SnapshotTestOptions } from '../../visual/snapshots.js';
 import { expectAnimationSnapshot, AnimationSnapshotOptions } from '../../visual/animation-snapshots.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import path from 'path';
+import fs from 'fs';
 
 export interface WebGLPlaywrightSetup {
   browser: Browser;
@@ -25,6 +26,18 @@ export interface WebGLPlaywrightOptions {
   width?: number;
   height?: number;
   headless?: boolean;
+}
+
+function findWorkspaceRoot(startDir: string): string {
+  let currentDir = startDir;
+  while (currentDir !== path.parse(currentDir).root) {
+    if (fs.existsSync(path.join(currentDir, 'pnpm-workspace.yaml'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  // Fallback to process.cwd() if not found (though unexpected in this repo)
+  return process.cwd();
 }
 
 /**
@@ -57,9 +70,9 @@ export async function createWebGLPlaywrightSetup(
   }
 
   // Start static server to serve built files
-  // Serve from current working directory (repo root when running tests)
-  // This avoids issues with relative paths from built files
-  const repoRoot = process.cwd();
+  // Find workspace root robustly (works from src or dist, and regardless of CWD)
+  // We start looking from __dirname (which might be src/... or dist/...)
+  const repoRoot = findWorkspaceRoot(__dirname);
 
   const staticServer = createServer((request: IncomingMessage, response: ServerResponse) => {
     return handler(request, response, {
