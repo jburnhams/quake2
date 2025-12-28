@@ -13,6 +13,7 @@ interface VisualTestStats {
     totalPixels: number;
     threshold: number;
     maxDifferencePercent: number;
+    frameCount?: number;
 }
 
 interface VisualTestInfo {
@@ -46,7 +47,12 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
             const line = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
             // Look for snapshot calls inside the test body
-            const testFn = node.arguments[1];
+            let testFn = node.arguments[1];
+             // Handle 3-argument version: test(name, options, fn)
+            if (node.arguments.length >= 3 && ts.isObjectLiteralExpression(node.arguments[1])) {
+              testFn = node.arguments[2];
+            }
+
             if (testFn && (ts.isArrowFunction(testFn) || ts.isFunctionExpression(testFn))) {
                findSnapshotCalls(testFn.body, testName, filePath, line);
             }
@@ -96,7 +102,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
             }
 
              // Check for expectSnapshot(pixels, { name: 'foo' }) or expectSnapshot(pixels, 'foo')
-             if (ts.isIdentifier(node.expression) && node.expression.text === 'expectSnapshot') {
+             if (ts.isIdentifier(node.expression) && (node.expression.text === 'expectSnapshot' || node.expression.text === 'expectAnimationSnapshot')) {
                  const optionsArg = node.arguments[1];
 
                  // Case 1: expectSnapshot(pixels, { name: 'foo' })
@@ -146,10 +152,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
         ts.forEachChild(node, (child) => findSnapshotCalls(child, testName, filePath, line));
     }
 
-    visit(sourceFile);
-  }
-
-  function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
+    function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
       const testDir = path.dirname(testFilePath);
       const statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
       if (fs.existsSync(statsPath)) {

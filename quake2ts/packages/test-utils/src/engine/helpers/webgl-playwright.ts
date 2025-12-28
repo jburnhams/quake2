@@ -7,6 +7,7 @@
 
 import type { Browser, Page, BrowserContext } from 'playwright';
 import { expectSnapshot, SnapshotTestOptions } from '../../visual/snapshots.js';
+import { expectAnimationSnapshot, AnimationSnapshotOptions } from '../../visual/animation-snapshots.js';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import path from 'path';
 
@@ -148,16 +149,18 @@ export async function createWebGLPlaywrightSetup(
  * @param renderFn - Function code as string that uses window.testRenderer
  * @param width - Optional width to resize the canvas to
  * @param height - Optional height to resize the canvas to
+ * @param frameIndex - Optional frame index passed to the render function
  * @returns Captured pixel data
  */
 export async function renderAndCaptureWebGLPlaywright(
   page: Page,
   renderFn: string,
   width?: number,
-  height?: number
+  height?: number,
+  frameIndex: number = 0
 ): Promise<Uint8ClampedArray> {
   try {
-    const pixelData = await page.evaluate(({ code, width, height }) => {
+    const pixelData = await page.evaluate(({ code, width, height, frameIndex }) => {
       const renderer = (window as any).testRenderer;
       const gl = (window as any).testGl;
       const canvas = (window as any).testCanvas;
@@ -175,8 +178,8 @@ export async function renderAndCaptureWebGLPlaywright(
 
       try {
         // Execute the render function
-        const fn = new Function('renderer', 'gl', code);
-        fn(renderer, gl);
+        const fn = new Function('renderer', 'gl', 'frameIndex', code);
+        fn(renderer, gl, frameIndex);
       } catch (err: any) {
         // Capture context for better debugging
         throw new Error(`Renderer Execution Error: ${err.message}\nCode:\n${code}`);
@@ -187,7 +190,7 @@ export async function renderAndCaptureWebGLPlaywright(
 
       // Capture pixels
       return (window as any).captureCanvas();
-    }, { code: renderFn, width, height });
+    }, { code: renderFn, width, height, frameIndex });
 
     return new Uint8ClampedArray(pixelData);
   } catch (err: any) {
@@ -240,6 +243,58 @@ export async function testWebGLRenderer(
       height: setup.height,
       updateBaseline: options.updateBaseline,
       snapshotDir: options.snapshotDir
+    });
+  } finally {
+    await setup.cleanup();
+  }
+}
+
+/**
+ * Runs a WebGL animated visual test with the actual quake2ts renderer.
+ *
+ * Usage:
+ * ```ts
+ * await testWebGLAnimation(`
+ *   // frameIndex is available here
+ *   gl.clearColor(frameIndex * 0.1, 0, 0, 1);
+ *   gl.clear(gl.COLOR_BUFFER_BIT);
+ * `, {
+ *   name: 'animated-red',
+ *   description: 'Fading red animation',
+ *   width: 256,
+ *   height: 256,
+ *   frameCount: 10,
+ *   fps: 10,
+ *   snapshotDir: __dirname
+ * });
+ * ```
+ */
+export async function testWebGLAnimation(
+  renderCode: string,
+  options: AnimationSnapshotOptions & WebGLPlaywrightOptions
+): Promise<void> {
+  const setup = await createWebGLPlaywrightSetup(options);
+
+  try {
+    await expectAnimationSnapshot(async (frameIndex) => {
+        return renderAndCaptureWebGLPlaywright(
+            setup.page,
+            renderCode,
+            options.width,
+            options.height,
+            frameIndex
+        );
+    }, {
+      name: options.name,
+      description: options.description,
+      width: setup.width,
+      height: setup.height,
+      frameCount: options.frameCount,
+      fps: options.fps,
+      updateBaseline: options.updateBaseline,
+      snapshotDir: options.snapshotDir,
+      threshold: options.threshold,
+      maxDifferencePercent: options.maxDifferencePercent
     });
   } finally {
     await setup.cleanup();

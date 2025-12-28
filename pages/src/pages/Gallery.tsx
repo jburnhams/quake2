@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
-import { Copy, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
+import { Copy, ExternalLink, CheckCircle, XCircle, Film } from 'lucide-react';
 
 interface VisualTestStats {
   passed: boolean;
@@ -9,6 +9,7 @@ interface VisualTestStats {
   totalPixels: number;
   threshold: number;
   maxDifferencePercent: number;
+  frameCount?: number;
 }
 
 interface VisualTestInfo {
@@ -151,6 +152,7 @@ const Gallery: React.FC<GalleryProps> = ({
 const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({ test, snapshotBaseUrl }) => {
   const isPass = test.stats?.passed;
   const percentMatch = test.stats ? (100 - test.stats.percentDifferent).toFixed(2) : '0';
+  const isAnimated = (test.stats?.frameCount || 0) > 1;
 
   const copyText = `${test.file.split('/').pop()} - ${test.testName}${test.description && test.description !== test.testName ? ' - ' + test.description : ''}`;
 
@@ -165,6 +167,12 @@ const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({
                {isPass ? '✓' : '✗'}
             </span>
             <span className="text-white">{test.testName}</span>
+            {isAnimated && (
+                <span className="flex items-center gap-1 bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded ml-2 border border-blue-800">
+                    <Film size={12} />
+                    Animated ({test.stats?.frameCount} frames)
+                </span>
+            )}
             {test.stats && (
               <span
                 className="bg-zinc-700 text-white text-xs px-2 py-1 rounded ml-2 cursor-help"
@@ -199,17 +207,20 @@ const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-        <ImageColumn label="Reference" src={`${snapshotBaseUrl}/baselines/${test.snapshotName}.png`} />
-        <ImageColumn label="Actual" src={`${snapshotBaseUrl}/actual/${test.snapshotName}.png`} />
-        <ImageColumn label="Difference" src={`${snapshotBaseUrl}/diff/${test.snapshotName}.png`} />
+        <ImageColumn label="Reference" src={`${snapshotBaseUrl}/baselines/${test.snapshotName}.png`} isAnimated={isAnimated} />
+        <ImageColumn label="Actual" src={`${snapshotBaseUrl}/actual/${test.snapshotName}.png`} isAnimated={isAnimated} />
+        <ImageColumn label="Difference" src={`${snapshotBaseUrl}/diff/${test.snapshotName}.png`} isAnimated={isAnimated} />
       </div>
     </div>
   );
 };
 
-const ImageColumn: React.FC<{ label: string; src: string }> = ({ label, src }) => (
+const ImageColumn: React.FC<{ label: string; src: string; isAnimated?: boolean }> = ({ label, src, isAnimated }) => (
   <div className="bg-black p-3 rounded border border-zinc-800">
-    <div className="text-xs uppercase text-gray-500 mb-2 font-bold">{label}</div>
+    <div className="text-xs uppercase text-gray-500 mb-2 font-bold flex justify-center items-center gap-2">
+        {label}
+        {isAnimated && <Film size={12} className="text-blue-500" />}
+    </div>
     <img
       src={src}
       alt={label}
