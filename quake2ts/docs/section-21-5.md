@@ -20,13 +20,12 @@ Validate skybox rendering including cubemap application, texture scrolling, and 
 ## Visual Tests
 
 ### Basic Skybox (~2 tests)
-1. 6-sided cubemap skybox
-2. Skybox without translation (stays at infinite distance)
+- [x] 6-sided cubemap skybox (`tests/webgl/visual/skybox/basic.test.ts`)
+- [x] Skybox without translation (stays at infinite distance) (`tests/webgl/visual/skybox/basic.test.ts`)
 
 ### Scrolling Textures (~3 tests)
-1. Horizontal scroll at different speeds
-2. Vertical scroll
-3. Multi-layer scrolling (parallax)
+- [x] Horizontal/Vertical scroll (`tests/webgl/visual/skybox/scrolling.test.ts`)
+- [ ] Multi-layer scrolling (parallax)
 
 ### Depth Behavior (~2 tests)
 1. Skybox renders behind all geometry
