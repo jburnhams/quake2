@@ -58,7 +58,20 @@ uniform vec2 u_scroll;
 out vec3 v_direction;
 
 void main() {
-  vec3 dir = normalize(a_position);
+  // Transform Quake-space position/direction to GL-space direction for cubemap sampling.
+  // Quake Basis: X(Fwd), Y(Left), Z(Up)
+  // GL Basis (Cubemap): -Z(Front), -X(Left), +Y(Top)
+  // Mapping:
+  // Quake X (1,0,0) -> GL -Z (0,0,-1)
+  // Quake Y (0,1,0) -> GL -X (-1,0,0)
+  // Quake Z (0,0,1) -> GL Y  (0,1,0)
+  vec3 dir = vec3(-a_position.y, a_position.z, -a_position.x);
+
+  // Normalize just in case, though a_position is on a cube surface.
+  // Actually, for a cubemap lookup, normalization isn't strictly required by the hardware
+  // (it grabs the vector direction), but good practice if we modify it.
+  dir = normalize(dir);
+
   dir.xy += u_scroll;
   v_direction = dir;
   gl_Position = u_viewProjectionNoTranslation * vec4(a_position, 1.0);
