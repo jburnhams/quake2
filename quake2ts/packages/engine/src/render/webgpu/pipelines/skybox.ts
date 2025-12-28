@@ -1,6 +1,9 @@
 import { TextureCubeMap } from '../resources.js';
 import { WebGPUContextState } from '../context.js';
 import skyboxShader from '../shaders/skybox.wgsl?raw';
+import { CameraState } from '../../types/camera.js';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
+import { mat4 } from 'gl-matrix';
 
 // Reusing positions from the original implementation
 const SKYBOX_POSITIONS = new Float32Array([
@@ -49,7 +52,8 @@ const SKYBOX_POSITIONS = new Float32Array([
 ]);
 
 export interface SkyboxRenderOptions {
-  viewProjection: Float32Array;
+  viewProjection?: Float32Array; // Legacy
+  cameraState?: CameraState;     // New
   scroll: readonly [number, number];
   cubemap: TextureCubeMap;
 }
@@ -63,8 +67,11 @@ export class SkyboxPipeline {
   private bindGroupHelper: SkyboxBindGroupHelper;
   private uniformBuffer: GPUBuffer;
   private sampler: GPUSampler;
+  private matrixBuilder: WebGPUMatrixBuilder;
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
+    this.matrixBuilder = new WebGPUMatrixBuilder();
+
     // Compile shader
     const module = device.createShaderModule({
       label: 'skybox-shader',
@@ -82,8 +89,8 @@ export class SkyboxPipeline {
     this.vertexBuffer.unmap();
 
     // Create uniform buffer (mat4 + vec2 + padding)
-    // 16 floats (64 bytes) + 2 floats (8 bytes) -> round up to 80 bytes for alignment or simplicty
-    // Struct: mat4 (0-64), vec2 (64-72). Total 72 bytes. Aligned to 16 bytes -> 80 bytes.
+    // 16 floats (64 bytes) + 2 floats (8 bytes) + 1 float (4 bytes) -> round up to 80 bytes for alignment or simplicty
+    // Struct: mat4 (0-64), vec2 (64-72), float (72-76). Total 76 bytes. Aligned to 16 bytes -> 80 bytes.
     this.uniformBuffer = device.createBuffer({
         label: 'skybox-uniform-buffer',
         size: 80,
@@ -174,11 +181,37 @@ export class SkyboxPipeline {
   }
 
   draw(passEncoder: GPURenderPassEncoder, options: SkyboxRenderOptions): void {
+    let viewProjection: Float32Array;
+    let useNative = 0;
+
+    if (options.cameraState) {
+        // Native WebGPU path
+        const view = this.matrixBuilder.buildViewMatrix(options.cameraState);
+        const projection = this.matrixBuilder.buildProjectionMatrix(options.cameraState);
+
+        // Remove translation for skybox
+        view[12] = 0;
+        view[13] = 0;
+        view[14] = 0;
+
+        const vp = mat4.create();
+        mat4.multiply(vp, projection, view);
+        viewProjection = vp as Float32Array;
+        useNative = 1;
+    } else if (options.viewProjection) {
+        // Legacy path
+        viewProjection = options.viewProjection;
+        useNative = 0;
+    } else {
+        throw new Error('SkyboxPipeline: Either cameraState or viewProjection must be provided');
+    }
+
     // Update uniforms
     const uniformData = new Float32Array(20); // 80 bytes
-    uniformData.set(options.viewProjection); // 0-15
+    uniformData.set(viewProjection); // 0-15
     uniformData[16] = options.scroll[0];
     uniformData[17] = options.scroll[1];
+    uniformData[18] = useNative;
 
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
