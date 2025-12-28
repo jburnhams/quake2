@@ -80,9 +80,8 @@ const mat4Polyfill = `
     };
 `;
 
-test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
-  await testWebGLRenderer(`
-    // Wrap async imports in an IIFE to allow top-level await behavior
+function createSkyboxTestScript(pitch: number, yaw: number) {
+  return `
     (async () => {
       const { SkyboxPipeline, Camera } = Quake2Engine;
       ${mat4Polyfill}
@@ -90,7 +89,7 @@ test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
       // 1. Setup Camera
       const camera = new Camera(800 / 600);
       camera.setPosition(0, 0, 0);
-      camera.setRotation(0, 0, 0); // Facing forward
+      camera.setRotation(${pitch}, ${yaw}, 0);
 
       // Force update
       const _ = camera.viewMatrix;
@@ -101,10 +100,10 @@ test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
       ${setupColoredCubemapScript}
 
       // 4. Render
-      gl.clearColor(0, 0, 0, 1);
+      gl.clearColor(0.5, 0.5, 0.5, 1); // Gray background
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // Remove translation manually for skybox rendering test (simulating renderSky)
+      // Simulate renderSky logic which removes translation
       const viewNoTranslation = new Float32Array(camera.viewMatrix);
       viewNoTranslation[12] = 0;
       viewNoTranslation[13] = 0;
@@ -123,9 +122,18 @@ test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
 
       pipeline.dispose();
     })();
-  `, {
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Existing Tests
+// ----------------------------------------------------------------------------
+
+test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
+  // Existing test uses 0,0,0
+  await testWebGLRenderer(createSkyboxTestScript(0, 0), {
     name: 'skybox-basic-cubemap',
-    description: 'Verifies basic skybox rendering with distinct colored faces',
+    description: 'Verifies basic skybox rendering (Front Face - Magenta)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -142,7 +150,7 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
       // 1. Setup Camera at a large offset
       const camera = new Camera(800 / 600);
       camera.setPosition(10000, 10000, 10000); // Large offset
-      camera.setRotation(0, 90, 0); // Facing Right (Positive X) -> Should see Red face?
+      camera.setRotation(0, 90, 0); // Facing Right (Positive X) -> Red
 
       // Force update
       const _ = camera.viewMatrix;
@@ -153,7 +161,7 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
       ${setupColoredCubemapScript}
 
       // 4. Render
-      gl.clearColor(0.5, 0.5, 0.5, 1); // Gray background to detect holes
+      gl.clearColor(0.5, 0.5, 0.5, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       // Simulate renderSky logic which removes translation
@@ -178,6 +186,106 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
   `, {
     name: 'skybox-no-translation',
     description: 'Verifies skybox appears same despite camera position (infinite distance)',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+// ----------------------------------------------------------------------------
+// New Face Tests
+// ----------------------------------------------------------------------------
+
+test('Skybox: Face Front (-Z)', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(createSkyboxTestScript(0, 0), {
+    name: 'skybox-face-front',
+    description: 'Expects Magenta face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Face Back (+Z)', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(createSkyboxTestScript(0, 180), {
+    name: 'skybox-face-back',
+    description: 'Expects Cyan face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Face Right (+X)', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(createSkyboxTestScript(0, 90), {
+    name: 'skybox-face-right',
+    description: 'Expects Red face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Face Left (-X)', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(createSkyboxTestScript(0, -90), {
+    name: 'skybox-face-left',
+    description: 'Expects Green face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Face Top (+Y)', { timeout: 30000 }, async () => {
+  // Pitch -90 usually means looking UP in Quake coordinates
+  await testWebGLRenderer(createSkyboxTestScript(-90, 0), {
+    name: 'skybox-face-top',
+    description: 'Expects Blue face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Face Bottom (-Y)', { timeout: 30000 }, async () => {
+  // Pitch 90 usually means looking DOWN in Quake coordinates
+  await testWebGLRenderer(createSkyboxTestScript(90, 0), {
+    name: 'skybox-face-bottom',
+    description: 'Expects Yellow face',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Angle Tests (Corners/Edges)
+// ----------------------------------------------------------------------------
+
+test('Skybox: Edge View (Right-Front)', { timeout: 30000 }, async () => {
+  // Yaw 45: Between Front (0) and Right (90)
+  await testWebGLRenderer(createSkyboxTestScript(0, 45), {
+    name: 'skybox-angle-edge',
+    description: 'Expects split between Red (Right) and Magenta (Front)',
+    width: 800,
+    height: 600,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('Skybox: Corner View (Right-Top-Front)', { timeout: 30000 }, async () => {
+  // Pitch -45 (Up), Yaw 45 (Right-Front)
+  await testWebGLRenderer(createSkyboxTestScript(-45, 45), {
+    name: 'skybox-angle-corner',
+    description: 'Expects corner of Red (Right), Blue (Top), and Magenta (Front)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
