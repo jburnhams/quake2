@@ -9,7 +9,7 @@ import {
 } from '../../src/index.js';
 import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../src/ai/constants.js';
 import type { TraceFunction } from '../../src/ai/perception.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
 // Helper to create a full Entity instance from factory data
@@ -24,6 +24,14 @@ function createTestEntity(id: number = 1, overrides: Partial<Entity> = {}): Enti
     if (!ent.maxs) ent.maxs = { x: 16, y: 16, z: 32 };
 
     return ent;
+}
+
+function createPlayerTestEntity(id: number = 1, overrides: Partial<Entity> = {}): Entity {
+  const ent = new Entity(id);
+  const data = createPlayerEntityFactory(overrides);
+  Object.assign(ent, data);
+  if (!ent.origin) ent.origin = { ...ZERO_VEC3 };
+  return ent;
 }
 
 function withBounds(entity: Entity, origin: [number, number, number], mins: [number, number, number], maxs: [number, number, number]): Entity {
@@ -151,31 +159,37 @@ describe('visible', () => {
 
   it('handles invisibility powerup correctly', () => {
       const self = createTestEntity(1);
-      const other = createTestEntity(2);
+      // Use createPlayerEntityFactory to set up client structure automatically
+      const other = createPlayerTestEntity(2, {
+          client: {
+              inventory: { armor: null, powerups: new Map(), items: new Set(), keys: new Set(), ammo: { counts: [], caps: [] }, ownedWeapons: new Set() },
+              buttons: 0,
+              fov: 90,
+              gun_frame: 0,
+              pers: {} as any,
+              pm_flags: 0,
+              pm_time: 0,
+              pm_type: 0,
+              rdflags: 0,
+              weaponStates: {} as any,
+              stats: [],
+              kick_angles: { x: 0, y: 0, z: 0 },
+              kick_origin: { x: 0, y: 0, z: 0 },
+              gunoffset: { x: 0, y: 0, z: 0 },
+              gunangles: { x: 0, y: 0, z: 0 },
+              gunindex: 0,
+              blend: [0, 0, 0, 0],
+              ps: {} as any,
+              invisible_time: 0,
+              invisibility_fade_time: 0
+          } as any // Partially mock client for specific test needs if factory defaults aren't enough, but factory should handle structure
+      });
 
-      // Mock client inventory/state manually as factory might be shallow
-      other.client = {
-          inventory: { armor: null, powerups: new Map(), items: new Set(), keys: new Set(), ammo: { counts: [], caps: [] }, ownedWeapons: new Set() },
-          buttons: 0,
-          fov: 90,
-          gun_frame: 0,
-          pers: {} as any,
-          pm_flags: 0,
-          pm_time: 0,
-          pm_type: 0,
-          rdflags: 0,
-          weaponStates: {} as any,
-          stats: [],
-          kick_angles: { x: 0, y: 0, z: 0 },
-          kick_origin: { x: 0, y: 0, z: 0 },
-          gunoffset: { x: 0, y: 0, z: 0 },
-          gunangles: { x: 0, y: 0, z: 0 },
-          gunindex: 0,
-          blend: [0, 0, 0, 0],
-          ps: {} as any,
-          invisible_time: 0,
-          invisibility_fade_time: 0
-      };
+      // The factory provides the structure, we just need to override values relevant to the test
+      if (other.client) {
+          other.client.invisible_time = 0;
+          other.client.invisibility_fade_time = 0;
+      }
 
       const tracer: TraceFunction = (s, m1, m2, e) => ({ fraction: 1, ent: null, entity: null, startsolid: false, allsolid: false, endpos: e, plane: { normal: { x:0, y:0, z:1}, dist:0 } as any });
 
@@ -183,8 +197,8 @@ describe('visible', () => {
       expect(visible(self, other, tracer, { timeSeconds: 10 })).toBe(true);
 
       // Invisible active, not fading
-      other.client.invisible_time = 20; // expires at 20
-      other.client.invisibility_fade_time = 17; // fades at 17
+      other.client!.invisible_time = 20; // expires at 20
+      other.client!.invisibility_fade_time = 17; // fades at 17
 
       // Current time 10: fully invisible
       expect(visible(self, other, tracer, { timeSeconds: 10 })).toBe(false);
