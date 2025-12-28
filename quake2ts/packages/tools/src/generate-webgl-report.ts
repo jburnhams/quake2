@@ -13,6 +13,7 @@ interface VisualTestStats {
     totalPixels: number;
     threshold: number;
     maxDifferencePercent: number;
+    frameCount?: number;
 }
 
 interface VisualTestInfo {
@@ -61,7 +62,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
 
     function findSnapshotCalls(node: ts.Node, testName: string, filePath: string, line: number) {
         if (ts.isCallExpression(node)) {
-            // Check for snapshot('name') call (based on my infrastructure.test.ts placeholder)
+            // Check for snapshot('name') call
             if (ts.isIdentifier(node.expression) && node.expression.text === 'snapshot') {
                  const nameArg = node.arguments[0];
                  if (nameArg && ts.isStringLiteral(nameArg)) {
@@ -78,7 +79,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
             }
 
             // Check for testWebGLRenderer helper
-            if (ts.isIdentifier(node.expression) && node.expression.text === 'testWebGLRenderer') {
+            if (ts.isIdentifier(node.expression) && (node.expression.text === 'testWebGLRenderer' || node.expression.text === 'testWebGLAnimation')) {
                  const optionsArg = node.arguments[1];
                  if (optionsArg && ts.isObjectLiteralExpression(optionsArg)) {
                      const nameProp = optionsArg.properties.find(p =>
@@ -110,7 +111,7 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
             }
 
             // Keep support for expectSnapshot helpers if used
-             if (ts.isIdentifier(node.expression) && node.expression.text === 'expectSnapshot') {
+             if (ts.isIdentifier(node.expression) && (node.expression.text === 'expectSnapshot' || node.expression.text === 'expectAnimationSnapshot')) {
                  const optionsArg = node.arguments[1];
                  if (optionsArg && ts.isObjectLiteralExpression(optionsArg)) {
                      const nameProp = optionsArg.properties.find(p =>
@@ -159,8 +160,13 @@ function findVisualTests(rootDir: string): VisualTestInfo[] {
 
   function loadStats(testFilePath: string, snapshotName: string): VisualTestStats | undefined {
       // Tests are configured to save to packages/engine/tests/webgl/__snapshots__
-      const snapshotDir = path.join(rootDir, 'packages/engine/tests/webgl/__snapshots__');
-      const statsPath = path.join(snapshotDir, 'stats', `${snapshotName}.json`);
+      // But checking relative to test file as well just in case
+      let statsPath = path.join(rootDir, 'packages/engine/tests/webgl/__snapshots__', 'stats', `${snapshotName}.json`);
+      if (!fs.existsSync(statsPath)) {
+          const testDir = path.dirname(testFilePath);
+          statsPath = path.join(testDir, '__snapshots__', 'stats', `${snapshotName}.json`);
+      }
+
       if (fs.existsSync(statsPath)) {
           try {
               const data = fs.readFileSync(statsPath, 'utf-8');

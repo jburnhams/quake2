@@ -96,5 +96,68 @@
     "file": "packages/engine/tests/webgl/visual/2d/ui-elements.test.ts",
     "line": 275,
     "description": "Horizontal gradient stripes black to white"
+  },
+  {
+    "testName": "Skybox: Basic Cubemap",
+    "snapshotName": "skybox-basic-cubemap",
+    "file": "packages/engine/tests/webgl/visual/skybox/basic.test.ts",
+    "line": 83,
+    "description": "Verifies basic skybox rendering with distinct colored faces"
+  },
+  {
+    "testName": "Skybox: No Translation",
+    "snapshotName": "skybox-no-translation",
+    "file": "packages/engine/tests/webgl/visual/skybox/basic.test.ts",
+    "line": 136,
+    "description": "Verifies skybox appears same despite camera position (infinite distance)"
+  },
+  {
+    "testName": "Skybox: Scrolling Animation",
+    "snapshotName": "skybox-scrolling-anim",
+    "file": "packages/engine/tests/webgl/visual/skybox/scrolling.test.ts",
+    "line": 9,
+    "description": "Verifies skybox scrolling animation over 2 frames"
+  },
+  {
+    "testName": "Texture Filtering: Nearest vs Linear",
+    "snapshotName": "texture-filtering-nearest-linear",
+    "file": "packages/engine/tests/webgl/visual/textures/filtering.test.ts",
+    "line": 9,
+    "description": "Compares NEAREST vs LINEAR magnification filtering on a 2x2 texture"
+  },
+  {
+    "testName": "Texture Filtering: Mipmapping",
+    "snapshotName": "texture-filtering-mipmaps",
+    "file": "packages/engine/tests/webgl/visual/textures/filtering.test.ts",
+    "line": 49,
+    "description": "Verifies mipmap selection by rendering a texture with distinct colors per mip level at different scales"
+  },
+  {
+    "testName": "Material: Tinting",
+    "snapshotName": "material-tinting",
+    "file": "packages/engine/tests/webgl/visual/textures/materials.test.ts",
+    "line": 9,
+    "description": "Verifies material tinting/modulation using drawPic with color argument"
+  },
+  {
+    "testName": "Texture Wrapping: Repeat",
+    "snapshotName": "texture-wrapping-repeat",
+    "file": "packages/engine/tests/webgl/visual/textures/wrapping.test.ts",
+    "line": 9,
+    "description": "Verifies GL_REPEAT texture wrapping by drawing a quad with UVs 0..2"
+  },
+  {
+    "testName": "Texture Wrapping: Clamp",
+    "snapshotName": "texture-wrapping-clamp",
+    "file": "packages/engine/tests/webgl/visual/textures/wrapping.test.ts",
+    "line": 103,
+    "description": "Verifies GL_CLAMP_TO_EDGE texture wrapping by drawing a quad with UVs outside 0..1"
+  },
+  {
+    "testName": "Texture Wrapping: NPOT",
+    "snapshotName": "texture-wrapping-npot",
+    "file": "packages/engine/tests/webgl/visual/textures/wrapping.test.ts",
+    "line": 182,
+    "description": "Verifies support for Non-Power-Of-Two textures (WebGL 2 feature)"
   }
 ]
