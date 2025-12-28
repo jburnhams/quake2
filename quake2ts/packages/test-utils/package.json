@@ -52,6 +52,7 @@
     "pixelmatch": "^7.1.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
+    "serve-handler": "^6.1.6",
     "vitest": "^1.6.0",
     "webgpu": "^0.3.8"
   },
@@ -81,6 +82,9 @@
       "optional": true
     },
     "pngjs": {
+      "optional": true
+    },
+    "serve-handler": {
       "optional": true
     },
     "webgpu": {
