@@ -16,8 +16,8 @@ const setupColoredCubemapScript = `
         [0, 255, 0, 255],   // NEGATIVE_X (Left) - Green
         [0, 0, 255, 255],   // POSITIVE_Y (Top) - Blue
         [255, 255, 0, 255], // NEGATIVE_Y (Bottom) - Yellow
-        [0, 255, 255, 255], // POSITIVE_Z (Back) - Cyan
-        [255, 0, 255, 255], // NEGATIVE_Z (Front) - Magenta
+        [128, 0, 128, 255], // POSITIVE_Z (Back) - Purple (Changed from Cyan to distinguish from Green if Blue is lost)
+        [255, 128, 0, 255], // NEGATIVE_Z (Front) - Orange (Changed from Magenta to distinguish from Red if Blue is lost)
       ];
 
       const targets = [
@@ -133,7 +133,7 @@ test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
   // Existing test uses 0,0,0
   await testWebGLRenderer(createSkyboxTestScript(0, 0), {
     name: 'skybox-basic-cubemap',
-    description: 'Verifies basic skybox rendering (Front Face - Magenta)',
+    description: 'Verifies basic skybox rendering (Front Face - Orange)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -200,7 +200,7 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
 test('Skybox: Face Forward (+X)', { timeout: 30000 }, async () => {
   await testWebGLRenderer(createSkyboxTestScript(0, 0), {
     name: 'skybox-face-front', // Keeping original filename to avoid churn, but desc update
-    description: 'Expects Magenta face (Forward)',
+    description: 'Expects Orange face (Forward)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -211,7 +211,7 @@ test('Skybox: Face Forward (+X)', { timeout: 30000 }, async () => {
 test('Skybox: Face Backward (-X)', { timeout: 30000 }, async () => {
   await testWebGLRenderer(createSkyboxTestScript(0, 180), {
     name: 'skybox-face-back',
-    description: 'Expects Cyan face (Backward)',
+    description: 'Expects Purple face (Backward)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -271,19 +271,16 @@ test('Skybox: Face Down (-Z)', { timeout: 30000 }, async () => {
 // Angle Tests (Corners/Edges)
 // ----------------------------------------------------------------------------
 
-test('Skybox: Edge View (Right-Front)', { timeout: 30000 }, async () => {
-  // Yaw 45: Between Front (0) and Left (90) - Wait
+test('Skybox: Edge View (Left-Front)', { timeout: 30000 }, async () => {
+  // Yaw 45: Between Front (0) and Left (90)
   // Quake Angle 45 is Left-Front (between +X and +Y)
-  // +X maps to Front (Magenta)
+  // +X maps to Front (Orange)
   // +Y maps to Left (Green)
-  // So 45 should show Magenta/Green seam.
-  // Original test name: 'Edge View (Right-Front)' -> Implied +X/+Y or similar.
-  // If the author thought +Y was Right, they would call this Right-Front.
-  // But +Y is Left. So this is actually Left-Front.
-  // I'll rename it to avoid confusion, but keep the logic (0, 45).
+  // So 45 should show Orange/Green seam.
+  // Original test name: 'Edge View (Right-Front)' was incorrect as +Y is Left in Quake.
   await testWebGLRenderer(createSkyboxTestScript(0, 45), {
     name: 'skybox-angle-edge',
-    description: 'Expects split between Magenta (Front) and Green (Left)',
+    description: 'Expects split between Orange (Front) and Green (Left)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -294,10 +291,10 @@ test('Skybox: Edge View (Right-Front)', { timeout: 30000 }, async () => {
 test('Skybox: Corner View (Left-Top-Front)', { timeout: 30000 }, async () => {
   // Pitch -45 (Up), Yaw 45 (Left-Front)
   // Should see split between:
-  // Front (Magenta), Left (Green), Top (Blue)
+  // Front (Orange), Left (Green), Top (Blue)
   await testWebGLRenderer(createSkyboxTestScript(-45, 45), {
     name: 'skybox-angle-corner',
-    description: 'Expects corner of Magenta (Front), Green (Left), and Blue (Top)',
+    description: 'Expects corner of Orange (Front), Green (Left), and Blue (Top)',
     width: 800,
     height: 600,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
