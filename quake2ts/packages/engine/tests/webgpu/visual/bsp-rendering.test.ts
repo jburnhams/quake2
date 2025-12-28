@@ -3,7 +3,7 @@ import { createWebGPUContext } from '../../../src/render/webgpu/context';
 import { BspSurfacePipeline } from '../../../src/render/webgpu/pipelines/bspPipeline';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
 import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
-import { expectSnapshot } from '@quake2ts/test-utils';
+import { expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import { Texture2D, VertexBuffer, IndexBuffer } from '../../../src/render/webgpu/resources';
 import { mat4, vec3 } from 'gl-matrix';
 import path from 'path';
@@ -321,69 +321,80 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
       const mvp = mat4.create();
       mat4.multiply(mvp, projection, mat4.create());
 
-      const encoder = device.createCommandEncoder();
-      const depthTexture = device.createTexture({
-          size: [width, height, 1],
-          format: 'depth24plus',
-          usage: GPUTextureUsage.RENDER_ATTACHMENT
-      });
+      // Animation loop
+      const fps = 10;
+      const durationSeconds = 2.0;
+      const frameCount = fps * durationSeconds;
 
-      const pass = encoder.beginRenderPass({
-          colorAttachments: [{
-              view,
-              loadOp: 'clear',
-              clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
-              storeOp: 'store'
-          }],
-          depthStencilAttachment: {
-              view: depthTexture.createView(),
-              depthClearValue: 1.0,
-              depthLoadOp: 'clear',
-              depthStoreOp: 'store'
-          }
-      });
+      await expectAnimationSnapshot(async (frameIndex) => {
+        const time = frameIndex * (1.0 / fps);
+        const encoder = device.createCommandEncoder();
+        const depthTexture = device.createTexture({
+            size: [width, height, 1],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
 
-      const mockGeometry = {
-          gpuVertexBuffer: vertexBuffer.buffer,
-          gpuIndexBuffer: indexBuffer.buffer,
-          indexCount: indexCount
-      } as any;
+        const pass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view,
+                loadOp: 'clear',
+                clearValue: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+                storeOp: 'store'
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'discard' // Changed to discard as we don't need to read it back
+            }
+        });
 
-      // Scroll by 0.5 in both U and V.
-      // This should shift the texture:
-      // TL (0,0) + 0.5 -> 0.5, 0.5 (Center) -> BR pixel (Yellow)
-      pipeline.bind(pass, {
-          modelViewProjection: mvp,
-          diffuseTexture: diffuseTex.createView(),
-          diffuseSampler: sampler,
-          lightmapTexture: lightmapTex.createView(),
-          lightmapSampler: sampler,
-          lightmapOnly: false,
-          fullbright: true,
-          texScroll: [0.5, 0.5]
-      });
+        const mockGeometry = {
+            gpuVertexBuffer: vertexBuffer.buffer,
+            gpuIndexBuffer: indexBuffer.buffer,
+            indexCount: indexCount
+        } as any;
 
-      pipeline.draw(pass, mockGeometry);
-      pass.end();
+        // Scroll by time in both U and V.
+        // at t=0, scroll=0,0 -> TL pixel
+        // at t=0.5, scroll=0.5,0.5 -> Center
+        // at t=1.0, scroll=1.0,1.0 -> Wrap around to TL
+        const scrollVal = (time * 0.5) % 1.0; // 0.5 units per second
 
-      device.queue.submit([encoder.finish()]);
+        pipeline.bind(pass, {
+            modelViewProjection: mvp,
+            diffuseTexture: diffuseTex.createView(),
+            diffuseSampler: sampler,
+            lightmapTexture: lightmapTex.createView(),
+            lightmapSampler: sampler,
+            lightmapOnly: false,
+            fullbright: true,
+            texScroll: [scrollVal, scrollVal]
+        });
 
-      const pixels = await captureRenderTarget(device, texture);
+        pipeline.draw(pass, mockGeometry);
+        pass.end();
 
-      await expectSnapshot(pixels, {
+        device.queue.submit([encoder.finish()]);
+        depthTexture.destroy();
+
+        return captureRenderTarget(device, texture);
+      }, {
           name: 'bsp-scrolling',
-          description: 'A quad with texture scrolled by 0.5 UV, shifting the quadrants.',
+          description: 'A quad with texture scrolling over time.',
           width,
           height,
           snapshotDir,
-          updateBaseline
+          updateBaseline,
+          fps,
+          frameCount
       });
 
       vertexBuffer.destroy();
       indexBuffer.destroy();
       diffuseTex.destroy();
       lightmapTex.destroy();
-      depthTexture.destroy();
       texture.destroy();
     });
 
