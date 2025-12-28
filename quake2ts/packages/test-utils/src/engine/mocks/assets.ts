@@ -106,9 +106,17 @@ export function createMockMd3Model(overrides?: Partial<Md3Model>): Md3Model {
 }
 
 export function createMockBspMap(overrides?: Partial<BspMap>): BspMap {
-    return {
-        version: 38,
-        entities: [],
+    const defaultMap = {
+        header: {
+            version: 38,
+            lumps: new Map()
+        },
+        entities: {
+            raw: '',
+            entities: [],
+            worldspawn: undefined,
+            getUniqueClassnames: vi.fn().mockReturnValue([])
+        },
         planes: [],
         vertices: [],
         visibility: new Uint8Array(0),
@@ -124,6 +132,10 @@ export function createMockBspMap(overrides?: Partial<BspMap>): BspMap {
         models: [],
         brushes: [],
         brushSides: [],
+    };
+
+    return {
+        ...defaultMap,
         ...overrides
-    } as BspMap;
+    } as unknown as BspMap;
 }

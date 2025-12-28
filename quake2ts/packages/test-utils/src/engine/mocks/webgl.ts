@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { legacyFn } from '../../vitest-compat.js';
+import { WebGLContextState } from '@quake2ts/engine';
 
 interface ShaderRecord {
   readonly id: number;
@@ -268,4 +269,16 @@ export function createMockWebGL2Context(
   }
 
   return context;
+}
+
+export function createMockWebGLContextState(canvas?: HTMLCanvasElement): WebGLContextState {
+    const gl = createMockWebGL2Context(canvas);
+    return {
+        gl,
+        extensions: new Map(),
+        isLost: vi.fn().mockReturnValue(false),
+        onLost: vi.fn(() => vi.fn()),
+        onRestored: vi.fn(() => vi.fn()),
+        dispose: vi.fn()
+    };
 }
