@@ -12,11 +12,12 @@ vi.mock('../../src/render/bspPipeline', () => {
             constructor() {
                 return { shaderSize: 100 };
             }
-        }
+        },
+        computeSkyScroll: vi.fn(),
     };
 });
 
-vi.mock('../../src/render/skybox', () => {
+vi.mock('../../src/render/skybox.js', () => {
     return {
         SkyboxPipeline: class {
             constructor() {

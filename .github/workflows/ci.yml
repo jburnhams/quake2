@@ -30,4 +30,4 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Run unit tests
-        run: pnpm -r --filter "!@quake2ts/e2e-tests" --if-present test:unit
+        run: pnpm test:unit

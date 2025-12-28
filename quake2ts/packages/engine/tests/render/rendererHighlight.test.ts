@@ -123,7 +123,7 @@ const mockFrameRenderer: FrameRenderer = {
     }),
 };
 
-vi.mock('../../src/render/frame', () => ({
+vi.mock('../../src/render/frame.js', () => ({
     createFrameRenderer: vi.fn(() => mockFrameRenderer),
 }));
 
