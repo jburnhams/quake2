@@ -16,6 +16,16 @@
       "import": "./src/engine/mocks/webgpu.ts",
       "require": "./src/engine/mocks/webgpu.ts"
     },
+    "./src/engine/mocks/assets": {
+      "types": "./src/engine/mocks/assets.ts",
+      "import": "./src/engine/mocks/assets.ts",
+      "require": "./src/engine/mocks/assets.ts"
+    },
+    "./src/engine/mocks/webgl": {
+      "types": "./src/engine/mocks/webgl.ts",
+      "import": "./src/engine/mocks/webgl.ts",
+      "require": "./src/engine/mocks/webgl.ts"
+    },
     "./src/setup/webgpu": {
       "types": "./src/setup/webgpu.ts",
       "import": "./src/setup/webgpu.ts",
