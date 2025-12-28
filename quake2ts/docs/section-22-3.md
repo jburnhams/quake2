@@ -19,6 +19,10 @@ Implement two non-rendering "renderers" that validate architecture and aid debug
 
 ### Task 1: Null Renderer Implementation
 
+- [x] Create `packages/engine/src/render/null/renderer.ts`
+- [x] Implement stub methods
+- [x] Add call logging
+
 **File:** `packages/engine/src/render/null/renderer.ts` (new file)
 
 **Minimal no-op renderer for testing:**
@@ -169,6 +173,10 @@ export class NullRenderer implements IRenderer {
 ---
 
 ### Task 2: Logging Renderer Implementation
+
+- [x] Create `packages/engine/src/render/logging/renderer.ts`
+- [x] Implement transform validation
+- [x] Implement detailed logging
 
 **File:** `packages/engine/src/render/logging/renderer.ts` (new file)
 
@@ -405,6 +413,10 @@ export class LoggingRenderer implements IRenderer {
 
 ### Task 3: Test Utilities
 
+- [x] Create `packages/test-utils/src/engine/renderers.ts`
+- [x] Add factory functions
+- [x] Add assertion helpers
+
 **File:** `packages/test-utils/src/engine/renderers.ts` (new file)
 
 **Factory functions for test renderers:**
@@ -449,13 +461,13 @@ export function expectNoDoubleTransform(renderer: LoggingRenderer): void {
 ## Validation
 
 ### Pre-Merge Checklist
-- [ ] NullRenderer implements full IRenderer interface
-- [ ] LoggingRenderer validates coordinate transforms
-- [ ] Both renderers usable in tests without GPU
-- [ ] Test utilities in test-utils package
-- [ ] Documentation explains usage
-- [ ] 15+ unit tests passing
-- [ ] Integration tests demonstrate value
+- [x] NullRenderer implements full IRenderer interface
+- [x] LoggingRenderer validates coordinate transforms
+- [x] Both renderers usable in tests without GPU
+- [x] Test utilities in test-utils package
+- [x] Documentation explains usage
+- [x] 15+ unit tests passing
+- [x] Integration tests demonstrate value
 
 ### Critical Validation
 
@@ -571,12 +583,12 @@ Human-readable render command log:
 
 ## Success Criteria
 
-- [ ] NullRenderer usable in CI tests (no GPU required)
-- [ ] LoggingRenderer catches double-transform bugs
-- [ ] Test utilities in test-utils package
-- [ ] 15+ unit tests passing
-- [ ] Documentation shows usage examples
-- [ ] Demonstrates value for future debugging
+- [x] NullRenderer usable in CI tests (no GPU required)
+- [x] LoggingRenderer catches double-transform bugs
+- [x] Test utilities in test-utils package
+- [x] 15+ unit tests passing
+- [x] Documentation shows usage examples
+- [x] Demonstrates value for future debugging
 
 ---
 
