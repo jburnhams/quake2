@@ -274,7 +274,7 @@ export function createMockWebGL2Context(
 export function createMockWebGLContextState(canvas?: HTMLCanvasElement): WebGLContextState {
     const gl = createMockWebGL2Context(canvas);
     return {
-        gl,
+        gl: gl as unknown as WebGL2RenderingContext,
         extensions: new Map(),
         isLost: vi.fn().mockReturnValue(false),
         onLost: vi.fn(() => vi.fn()),
