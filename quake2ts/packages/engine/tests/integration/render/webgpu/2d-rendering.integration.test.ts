@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
-import { Camera } from '../../../src/render/camera.js';
+import { Camera } from '@quake2ts/engine';
 import { mat4 } from 'gl-matrix';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import { captureRenderTarget } from '../../../src/render/webgpu/headless.js';

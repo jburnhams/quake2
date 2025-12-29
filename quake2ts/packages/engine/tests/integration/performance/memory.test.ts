@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '../../../src/render/renderer.js';
+import { createRenderer, Renderer } from '@quake2ts/engine';
 
 // Mock WebGL2RenderingContext
 const gl = {

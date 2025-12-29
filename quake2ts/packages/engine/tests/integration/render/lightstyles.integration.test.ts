@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '../../src/render/renderer.js';
-import { BspMap } from '../../src/assets/bsp.js';
-import { Camera } from '../../src/render/camera.js';
+import { createRenderer, Renderer } from '@quake2ts/engine';
+import { BspMap } from '@quake2ts/engine';
+import { Camera } from '@quake2ts/engine';
 import { FrameRenderOptions } from '../../src/render/frame.js';
-import { createBspSurfaces } from '../../src/render/bsp/surface.js';
-import { buildBspGeometry } from '../../src/render/bsp/geometry.js';
+import { createBspSurfaces } from '@quake2ts/engine';
+import { buildBspGeometry } from '@quake2ts/engine';
 
 // Mock WebGL2 Context
 function createMockWebGL2Context() {
@@ -133,7 +133,7 @@ describe('Lightmap Styles Integration', () => {
       surfaceFlags: 0,
       vertexCount: 4,
       indexCount: 6,
-      vao: geometry.vao,
+      vao: geometry.vao!,
       indexBuffer: geometry.ibo,
       lightmap: { atlasIndex: 0, texture: undefined } // Needs a lightmap to trigger lightmap code path
     };

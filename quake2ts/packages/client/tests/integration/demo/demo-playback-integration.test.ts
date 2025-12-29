@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientExports, ClientImports, ClientMode } from '../../src/index.js';
+import { createClient, ClientExports, ClientImports, ClientMode } from '@quake2ts/client';
 import { DemoPlaybackController, EngineImports } from '@quake2ts/engine';
-import { ClientNetworkHandler } from '../../src/demo/handler.js';
-import { DemoControls } from '../../src/ui/demo-controls.js';
+import { ClientNetworkHandler } from '../../../src/demo/handler.js';
+import { DemoControls } from '@quake2ts/client';
+
+const { mockEngineAssets } = vi.hoisted(() => {
+    return {
+        mockEngineAssets: {
+            listFiles: vi.fn().mockReturnValue([]),
+            getMap: vi.fn(),
+            loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }),
+            loadSprite: vi.fn(), // If needed
+            loadPcx: vi.fn() // If needed
+        }
+    };
+});
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
@@ -35,7 +47,7 @@ vi.mock('@quake2ts/engine', async () => {
     };
 });
 
-vi.mock('../../src/demo/handler.js', () => ({
+vi.mock('../../../src/demo/handler.js', () => ({
     ClientNetworkHandler: class {
         setView = vi.fn();
         setCallbacks = vi.fn();
@@ -57,23 +69,29 @@ vi.mock('../../src/demo/handler.js', () => ({
     }
 }));
 
-vi.mock('../../src/ui/demo-controls.js', () => ({
-    DemoControls: vi.fn(function() {
-        return {
-            render: vi.fn(),
-            handleInput: vi.fn().mockReturnValue(false),
-            setDemoName: vi.fn()
-        };
-    })
-}));
+vi.mock('@quake2ts/client', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual as any,
+        DemoControls: vi.fn(function() {
+            return {
+                render: vi.fn(),
+                handleInput: vi.fn().mockReturnValue(false),
+                setDemoName: vi.fn()
+            };
+        })
+    };
+});
 
 // Mock cgameBridge to avoid complex dependencies
-vi.mock('../../src/cgameBridge.js', () => ({
+vi.mock('../../../src/cgameBridge.js', () => ({
     createCGameImport: vi.fn(),
     ClientStateProvider: vi.fn()
 }));
 
-vi.mock('../../src/hud.js', () => ({
+// Mock HUD using path relative to test file.
+// We mock it to do nothing to avoid asset loading issues.
+vi.mock('../../../src/hud.js', () => ({
     Init_Hud: vi.fn().mockResolvedValue(undefined),
     Draw_Hud: vi.fn()
 }));
@@ -101,7 +119,7 @@ vi.mock('@quake2ts/cgame', async () => {
   }
 });
 
-vi.mock('../../src/ui/menu/system.js', () => ({
+vi.mock('../../../src/ui/menu/system.js', () => ({
     MenuSystem: class {
         isActive = vi.fn().mockReturnValue(false);
         closeAll = vi.fn();
@@ -142,11 +160,7 @@ describe('Demo Playback Integration', () => {
 
         mockEngine = {
             trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
-            assets: {
-                listFiles: vi.fn().mockReturnValue([]),
-                getMap: vi.fn(),
-                loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }), // Mock loadTexture
-            } as any,
+            assets: mockEngineAssets as any,
             renderer: mockRenderer,
             cmd: {
                 executeText: vi.fn(),
