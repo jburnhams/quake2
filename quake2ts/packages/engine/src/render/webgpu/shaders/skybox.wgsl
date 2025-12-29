@@ -16,13 +16,19 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Direction for cubemap sampling
-  // Matrix already handles coordinate transforms
-  var dir = normalize(position);
+  // Transform Quake coordinates (X-Fwd, Y-Left, Z-Up)
+  // to WebGPU/GL cubemap coordinates (Right-handed? -Z Fwd, +X Right, +Y Up)
+  // Quake X  -> GL -Z
+  // Quake Y  -> GL -X
+  // Quake Z  -> GL Y
+  let qDir = normalize(position);
+  var dir = vec3<f32>(-qDir.y, qDir.z, -qDir.x);
+
+  // Apply scroll
   dir.x += uniforms.scroll.x;
   dir.y += uniforms.scroll.y;
 
-  output.direction = dir;  // NO TRANSFORM - matrices handle it!
+  output.direction = dir;
 
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
   return output;
