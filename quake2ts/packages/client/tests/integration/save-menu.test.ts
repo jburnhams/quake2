@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports, ClientExports } from '../../src/index.js';
+import { createClient, ClientImports, ClientExports } from '@quake2ts/client';
 import { SaveStorage, SaveSlotMetadata, GameSaveFile } from '@quake2ts/game';
 import { MenuSystem } from '../../src/ui/menu/system.js';
 import { MainMenuFactory } from '../../src/ui/menu/main.js';

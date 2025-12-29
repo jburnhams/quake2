@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "gl-matrix": "^3.4.4",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "vitest": "^4.0.16"
   }
 }

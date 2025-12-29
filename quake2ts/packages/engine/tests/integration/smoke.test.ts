@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createEngineRuntime } from '../../src/runtime.js';
-import type { GameFrameResult, GameSimulation, ClientExports, ClientImports } from '../../src/host.js';
-import { EngineRuntime } from '../../src/runtime.js';
+import { createEngineRuntime } from '@quake2ts/engine';
+import type { GameFrameResult, GameSimulation, ClientExports, ClientImports } from '@quake2ts/engine';
+import { EngineRuntime } from '@quake2ts/engine';
 
 describe('Integration Point Smoke Tests', () => {
   let runtime: EngineRuntime;
