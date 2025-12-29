@@ -114,7 +114,14 @@ describe('Lightmap Styles Integration', () => {
       leafLists: { leafFaces: [[0]], leafBrushes: [] },
       edges: [{vertices:[0,1]}, {vertices:[1,2]}, {vertices:[2,3]}, {vertices:[3,0]}],
       surfEdges: new Int32Array([0,1,2,3]),
-      models: [],
+      models: [{
+        mins: [-1000, -1000, -1000],
+        maxs: [1000, 1000, 1000],
+        origin: [0, 0, 0],
+        headNode: 0,
+        firstFace: 0,
+        numFaces: 1
+      }],
       brushes: [],
       brushSides: [],
       visibility: undefined,
