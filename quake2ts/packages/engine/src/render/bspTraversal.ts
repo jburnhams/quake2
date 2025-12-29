@@ -50,7 +50,13 @@ function leafIntersectsFrustum(leaf: BspLeaf, planes: readonly FrustumPlane[]): 
 }
 
 export function findLeafForPoint(map: BspMap, point: Vec3): number {
-  let nodeIndex = 0;
+  if (map.models.length === 0) {
+    return -1;
+  }
+
+  let nodeIndex = map.models[0].headNode;
+
+  // If map is a single leaf (headNode < 0), this loop won't execute and we handle it below
   while (nodeIndex >= 0) {
     const node: BspNode = map.nodes[nodeIndex];
     const plane = map.planes[node.planeIndex];
@@ -62,6 +68,12 @@ export function findLeafForPoint(map: BspMap, point: Vec3): number {
     }
     nodeIndex = child;
   }
+
+  // Handle case where headNode points directly to a leaf
+  if (childIsLeaf(nodeIndex)) {
+      return childLeafIndex(nodeIndex);
+  }
+
   return -1;
 }
 
@@ -201,6 +213,11 @@ export function gatherVisibleFaces(
 
   const visibleFaces: VisibleFace[] = [];
   const visitedFaces = new Set<number>();
-  traverse(map, 0, cameraPosition, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
+
+  if (map.models.length > 0) {
+      const headNode = map.models[0].headNode;
+      traverse(map, headNode, cameraPosition, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
+  }
+
   return visibleFaces;
 }

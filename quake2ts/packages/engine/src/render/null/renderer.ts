@@ -7,6 +7,8 @@ import type { Md3Model } from '../../assets/md3.js';
 import type { InstanceData } from '../instancing.js';
 import type { MemoryUsage } from '../types.js';
 import type { RenderStatistics } from '../gpuProfiler.js';
+import { BspMap } from '../../assets/bsp.js';
+import { BspGeometryBuildResult } from '../bsp.js';
 
 export class NullRenderer implements IRenderer {
   width = 0;
@@ -69,6 +71,11 @@ export class NullRenderer implements IRenderer {
 
   drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void {
     this.callLog.push(`drawfillRect(${x}, ${y}, ${width}, ${height})`);
+  }
+
+  uploadBspGeometry(map: BspMap): BspGeometryBuildResult {
+    this.callLog.push(`uploadBspGeometry(${map.faces.length})`);
+    return { surfaces: [], lightmaps: [] };
   }
 
   setEntityHighlight(entityId: number, color: [number, number, number, number]): void {}

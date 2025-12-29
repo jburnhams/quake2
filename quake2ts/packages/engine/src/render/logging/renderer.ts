@@ -15,6 +15,8 @@ import type { MemoryUsage } from '../types.js';
 import type { RenderStatistics } from '../gpuProfiler.js';
 import { DebugMode } from '../debugMode.js';
 import { mat4, ReadonlyVec3 } from 'gl-matrix';
+import { BspMap } from '../../assets/bsp.js';
+import { BspGeometryBuildResult } from '../bsp.js';
 
 export interface LoggingRendererOptions {
   readonly targetSystem?: CoordinateSystem;
@@ -171,6 +173,11 @@ export class LoggingRenderer implements IRenderer {
   }
   drawfillRect(x: number, y: number, width: number, height: number, color: [number, number, number, number]): void {
     this.log(`drawfillRect(${x}, ${y}, ${width}x${height})`);
+  }
+
+  uploadBspGeometry(map: BspMap): BspGeometryBuildResult {
+    this.log(`uploadBspGeometry(map with ${map.faces.length} faces)`);
+    return { surfaces: [], lightmaps: [] };
   }
 
   // All other IRenderer methods as no-ops

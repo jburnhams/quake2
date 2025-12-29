@@ -77,6 +77,7 @@ export function createMockRenderer(overrides?: Partial<Renderer>): Renderer {
     setLodBias: vi.fn(),
     setAreaPortalState: vi.fn(),
     renderInstanced: vi.fn(),
+    uploadBspGeometry: vi.fn().mockReturnValue({ surfaces: [], lightmaps: [] }),
     dispose: vi.fn(),
     ...overrides,
   };
