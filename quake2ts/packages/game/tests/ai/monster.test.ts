@@ -1,7 +1,8 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
-import { createTestContext, createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { monster_think } from '../../src/ai/monster.js';
 import { RenderFx } from '@quake2ts/shared';
 import { Entity } from '../../src/entities/entity.js';
@@ -91,8 +92,6 @@ describe('monster_think (Freeze Logic)', () => {
     context = testContext.entities;
     // targetAwareness mocks are now provided by createTestContext
 
-    entity = context.spawn();
-
     const monsterData = createMonsterEntityFactory('monster_soldier', {
       monsterinfo: {
         current_move: {
@@ -128,7 +127,7 @@ describe('monster_think (Freeze Logic)', () => {
       inUse: true
     });
 
-    Object.assign(entity, monsterData);
+    entity = spawnEntity(context, monsterData);
   });
 
   it('should apply freeze effect and stop animation when frozen', () => {

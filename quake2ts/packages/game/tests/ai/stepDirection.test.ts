@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SV_StepDirection } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
-import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
-import { createEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { MoveType } from '../../src/entities/entity.js';
+import { createMonsterEntityFactory } from '@quake2ts/test-utils';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;
@@ -12,7 +12,11 @@ describe('SV_StepDirection', () => {
   let pointContentsMock: any;
 
   beforeEach(() => {
-    // Create entity using factory
+    // We can't easily use createTestContext().entities because SV_StepDirection takes an entity and context directly,
+    // and we want to mock trace on the context heavily.
+    // Although createTestContext returns a context with mocked trace, we might want manual control.
+    // Let's stick to a simple object for entity but use the factory data.
+
     const entData = createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 100 },
       old_origin: { x: 0, y: 0, z: 100 },
@@ -27,11 +31,6 @@ describe('SV_StepDirection', () => {
       } as any,
       angles: { x: 0, y: 0, z: 0 }
     });
-
-    // We can't easily use createTestContext().entities.spawn() here because SV_StepDirection takes an entity and context directly,
-    // and we want to mock trace on the context heavily.
-    // Although createTestContext returns a context with mocked trace, we might want manual control.
-    // Let's stick to a simple object for entity but use the factory data.
 
     entity = entData as any; // Cast because factory returns Partial<Entity>
 
@@ -52,7 +51,7 @@ describe('SV_StepDirection', () => {
     // M_walkmove checkBottom also needs to pass
     // First trace in walkMove (move) -> success
     // Second/Third trace in checkBottom -> success (fraction < 1.0 means ground hit)
-    traceMock.mockImplementation((start, mins, maxs, end) => {
+    traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         // If checking bottom (downwards trace)
         if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // If moving (horizontal)
@@ -65,7 +64,7 @@ describe('SV_StepDirection', () => {
 
   it('should try alternate angles if straight move fails', () => {
      // Mock trace failure for straight move
-    traceMock.mockImplementation((start, mins, maxs, end) => {
+    traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
         // Checking bottom always succeeds
         if (end.z < start.z - 10) {
@@ -111,7 +110,7 @@ describe('SV_StepDirection', () => {
 
   it('should return false if all directions are blocked', () => {
     // All blocked
-     traceMock.mockImplementation((start, mins, maxs, end) => {
+     traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         // Checking bottom always succeeds
         if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // Move always fails

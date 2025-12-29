@@ -194,7 +194,7 @@ This section covers migration and expansion of game-specific test utilities incl
   - Replace inline weapon/damage mocks
   - Estimated files: ~12
 
-- [ ] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
+- [x] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
   - [x] Refactored `targeting.test.ts`
   - [x] Refactored `cover.test.ts`
   - [x] Refactored `dodge.test.ts`
@@ -203,6 +203,16 @@ This section covers migration and expansion of game-specific test utilities incl
   - [x] Refactored `patrol.test.ts`
   - [x] Refactored `ground.test.ts`
   - [x] Refactored `movement.test.ts`
+  - [x] Refactored `fall_damage.test.ts`
+  - [x] Refactored `flags_consistency.test.ts`
+  - [x] Refactored `monster.test.ts`
+  - [x] Refactored `newChaseDir.test.ts`
+  - [x] Refactored `rogue.test.ts`
+  - [x] Refactored `slopes.test.ts`
+  - [x] Refactored `sound_targeting.test.ts`
+  - [x] Refactored `stepDirection.test.ts`
+  - [x] Refactored `third_eye.test.ts`
+  - [x] Refactored `tracking.test.ts`
   - Replace inline AI mocks
   - Estimated files: ~20
 
