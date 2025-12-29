@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMonsterEntityFactory, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createEntityFactory, createPlayerEntityFactory, mockMonsterAttacks } from '@quake2ts/test-utils';
 import { registerGunnerSpawns } from '../../../src/entities/monsters/gunner.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
@@ -10,9 +10,12 @@ import { AIFlags } from '../../../src/ai/constants.js';
 import { createTestContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../../src/entities/monsters/attack.js', () => ({
-  monster_fire_bullet: vi.fn(),
-}));
+vi.mock('../../../src/entities/monsters/attack.js', async () => {
+  const { mockMonsterAttacks } = await import('@quake2ts/test-utils');
+  return {
+    monster_fire_bullet: mockMonsterAttacks.fireBullet,
+  };
+});
 
 vi.mock('../../../src/entities/projectiles.js', () => ({
   createGrenade: vi.fn(),

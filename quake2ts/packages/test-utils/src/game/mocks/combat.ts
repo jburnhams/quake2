@@ -67,6 +67,9 @@ export const mockMonsterAttacks: {
   fireShotgun: Mock;
   fireRailgun: Mock;
   fireBFG: Mock;
+  fireIonripper: Mock;
+  fireBlueblaster: Mock;
+  fireDabeam: Mock;
 } = {
   fireBlaster: vi.fn(),
   fireRocket: vi.fn(),
@@ -76,6 +79,9 @@ export const mockMonsterAttacks: {
   fireShotgun: vi.fn(),
   fireRailgun: vi.fn(),
   fireBFG: vi.fn(),
+  fireIonripper: vi.fn(),
+  fireBlueblaster: vi.fn(),
+  fireDabeam: vi.fn(),
 };
 
 const FORWARD_ANGLES = { x: 0, y: 0, z: 0 } as const;
