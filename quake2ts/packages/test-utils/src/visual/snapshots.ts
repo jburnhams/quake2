@@ -212,7 +212,7 @@ export async function expectSnapshot(
         name,
         width,
         height,
-        updateBaseline = false,
+        updateBaseline: updateBaselineOption = false,
         snapshotDir = path.join(process.cwd(), 'tests', '__snapshots__') // Default to current working dir/tests/__snapshots__
     } = options;
 
@@ -225,6 +225,8 @@ export async function expectSnapshot(
     const diffPath = getSnapshotPath(name, 'diff', snapshotDir);
 
     const alwaysSave = process.env.ALWAYS_SAVE_SNAPSHOTS === '1';
+    // Check global env var for updating snapshots
+    const updateBaseline = updateBaselineOption || process.env.UPDATE_SNAPSHOTS === '1';
 
     // If update baseline is requested or baseline doesn't exist, save as baseline and return
     if (updateBaseline || !existsSync(baselinePath)) {

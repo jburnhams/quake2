@@ -1,10 +1,9 @@
 import { describe, test, expect, vi } from 'vitest';
 import { Camera } from '../../../../src/render/camera.js';
 import { initHeadlessWebGPU } from '@quake2ts/test-utils/src/setup/webgpu';
-
-// Note: This test requires a Node environment with @webgpu/dawn available.
-// It is intended for visual verification in integration CI/CD.
-// In jsdom environment, it will likely be skipped or mocked.
+import { captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { SkyboxPipeline } from '../../../../src/render/webgpu/pipelines/skybox.js';
+import { TextureCubeMap } from '../../../../src/render/webgpu/resources.js';
 
 describe('Skybox Diagonal Views (Visual)', () => {
   // Logic check first (always runs)
@@ -20,12 +19,89 @@ describe('Skybox Diagonal Views (Visual)', () => {
   });
 
   // Visual check
-  test.skip('renders correctly at 45/45 angle', async () => {
-    /*
+  test('renders correctly at 45/45 angle', async () => {
     const { device, context } = await initHeadlessWebGPU();
-    // ... setup pipeline ...
-    // This is currently skipped until we have the full pipeline test factory
-    // fully integrated and exported from test-utils for this specific package.
-    */
+    const width = 256;
+    const height = 256;
+    const format = 'bgra8unorm';
+
+    // Create pipeline
+    const pipeline = new SkyboxPipeline(device, format);
+
+    // Create Camera
+    const camera = new Camera(width, height);
+    camera.setPosition(0, 0, 0);
+    camera.setRotation(45, 45, 0);
+
+    // Create colored cubemap
+    const cubemap = new TextureCubeMap(device, {
+        size: 1,
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+    });
+
+    const colors = [
+        [255, 0, 0, 255],     // +X (Right)
+        [0, 255, 255, 255],   // -X (Left)
+        [0, 255, 0, 255],     // +Y (Top)
+        [255, 0, 255, 255],   // -Y (Bottom)
+        [0, 0, 255, 255],     // +Z (Front? or Back depending on RH/LH)
+        [255, 255, 0, 255]    // -Z
+    ];
+
+    for(let i=0; i<6; i++) {
+        cubemap.uploadFace(i, new Uint8Array(colors[i]));
+    }
+
+    // Render
+    const texture = device.createTexture({
+        size: [width, height],
+        format: format,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+    });
+    const view = texture.createView();
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+            view: view,
+            loadOp: 'clear',
+            storeOp: 'store',
+            clearValue: { r: 0, g: 0, b: 0, a: 1 }
+        }]
+    });
+
+    pipeline.draw(passEncoder, {
+        cameraState: camera.toState(),
+        scroll: [0, 0],
+        cubemap: cubemap
+    });
+
+    passEncoder.end();
+    device.queue.submit([commandEncoder.finish()]);
+
+    // Capture and verify
+    const result = await captureTexture(device, texture, width, height);
+
+    // Check if we should update based on Vitest flag
+    // Vitest doesn't expose `updateSnapshot` flag directly to code easily,
+    // but the test runner we invoke sets env vars or we can assume ALWAYS_SAVE_SNAPSHOTS=1 logic
+    // from previous findings in snapshots.ts.
+
+    // We pass explicit object options to match signature:
+    // expectSnapshot(pixels, options: SnapshotTestOptions)
+
+    await expectSnapshot(result, {
+        name: 'skybox-diagonal-45-45',
+        width,
+        height,
+        snapshotDir: __dirname // Use local dir
+    });
+
+    // Cleanup
+    pipeline.destroy();
+    cubemap.destroy();
+    texture.destroy();
+    device.destroy();
   });
 });
