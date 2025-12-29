@@ -61,6 +61,14 @@ describe('Skybox Diagonal Views (Visual)', () => {
     });
     const view = texture.createView();
 
+    // Create Depth Texture (Required by SkyboxPipeline)
+    const depthTexture = device.createTexture({
+      size: [width, height],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT
+    });
+    const depthView = depthTexture.createView();
+
     const commandEncoder = device.createCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass({
         colorAttachments: [{
@@ -68,7 +76,13 @@ describe('Skybox Diagonal Views (Visual)', () => {
             loadOp: 'clear',
             storeOp: 'store',
             clearValue: { r: 0, g: 0, b: 0, a: 1 }
-        }]
+        }],
+        depthStencilAttachment: {
+          view: depthView,
+          depthClearValue: 1.0,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store'
+        }
     });
 
     pipeline.draw(passEncoder, {
@@ -102,6 +116,7 @@ describe('Skybox Diagonal Views (Visual)', () => {
     pipeline.destroy();
     cubemap.destroy();
     texture.destroy();
+    depthTexture.destroy();
     device.destroy();
   });
 });
