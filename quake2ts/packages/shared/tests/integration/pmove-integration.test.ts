@@ -4,14 +4,7 @@ import {
   makeBrushFromMinsMaxs,
   makePlane,
 } from '@quake2ts/test-utils';
-import { traceBox, TraceResult } from '../src/bsp/collision.js';
-import { applyPmoveAirMove, applyPmoveWaterMove } from '../src/pmove/move.js';
-import { categorizePosition } from '../src/pmove/categorize.js';
-import { checkJump } from '../src/pmove/jump.js';
-import { runPmove } from '../src/pmove/pmove.js';
-import { PmoveState, PmoveCmd } from '../src/pmove/types.js';
-import { ZERO_VEC3, copyVec3 } from '../src/math/vec3.js';
-import { PmType, PmFlag, PlayerButton } from '../src/pmove/constants.js';
+import { traceBox, TraceResult, applyPmoveAirMove, applyPmoveWaterMove, categorizePosition, checkJump, runPmove, PmoveState, PmoveCmd, ZERO_VEC3, copyVec3, PmType, PmFlag, PlayerButton } from '@quake2ts/shared';
 
 // Mock TraceFunction
 function createTrace(model: any): (start: any, end: any, mins: any, maxs: any) => TraceResult {

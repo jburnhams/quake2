@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
-import { registerTargetSpawns } from '../../src/entities/targets.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { registerTargetSpawns } from '../../../src/entities/targets.js';
 import { TempEntity } from '@quake2ts/shared';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Performance: Spawn Time', () => {

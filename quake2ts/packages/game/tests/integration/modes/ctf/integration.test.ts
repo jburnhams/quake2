@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkPlayerFlagDrop } from '../../../src/modes/ctf/integration.js';
-import { FlagEntity, FlagState } from '../../../src/modes/ctf/state.js';
-import { Entity, Solid } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { KeyId } from '../../../src/inventory/playerInventory.js';
-import { GameExports } from '../../../src/index.js';
+import { checkPlayerFlagDrop } from '../../../../src/modes/ctf/integration.js';
+import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
+import { Entity, Solid } from '../../../../src/entities/entity.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { KeyId } from '../../../../src/inventory/playerInventory.js';
+import { GameExports } from '../../../../src/index.js';
 
 describe('CTF Integration', () => {
     let player: Entity;

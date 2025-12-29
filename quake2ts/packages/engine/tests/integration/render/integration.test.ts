@@ -6,7 +6,7 @@ import { BspMap } from '../../src/assets/bsp.js';
 
 // Import helpers
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
-import { buildTestBsp, BspFixtureOptions } from '../helpers/bspBuilder.js';
+import { buildTestBsp, BspFixtureOptions } from '../../helpers/bspBuilder.js';
 import { parseBsp } from '../../src/assets/bsp.js';
 
 describe('Renderer Integration', () => {

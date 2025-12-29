@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyPmove } from '../src/pmove/apply.js';
-import type { PlayerState } from '../src/protocol/player-state.js';
-import type { PmoveCmd, PmoveTraceResult } from '../src/pmove/types.js';
-import type { Vec3 } from '../src/math/vec3.js';
-import { lengthVec3, normalizeVec3, dotVec3 } from '../src/math/vec3.js';
+import { applyPmove } from '@quake2ts/shared';
+import type { PlayerState, PmoveCmd, PmoveTraceResult, Vec3 } from '@quake2ts/shared';
+import { lengthVec3, normalizeVec3, dotVec3 } from '@quake2ts/shared';
 
 /**
  * Integration tests for applyPmove with view angles.

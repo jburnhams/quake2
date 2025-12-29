@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../src/entities/spawn.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { DoorState, registerFuncSpawns } from '../../src/entities/funcs.js';
+import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { DoorState, registerFuncSpawns } from '../../../src/entities/funcs.js';
 
 describe('Funcs Integration', () => {
   const registry = createDefaultSpawnRegistry(null);

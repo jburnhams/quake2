@@ -3,10 +3,10 @@
 // =================================================================
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Entity } from '../src/entities/entity.js';
-import { GameExports, createGame } from '../src/index.js';
-import { WeaponId, PowerupId, addPowerup } from '../src/inventory/playerInventory.js';
-import { fire } from '../src/combat/weapons/firing.js';
+import { Entity } from '../../src/entities/entity.js';
+import { GameExports, createGame } from '../../src/index.js';
+import { WeaponId, PowerupId, addPowerup } from '../../src/inventory/playerInventory.js';
+import { fire } from '../../src/combat/weapons/firing.js';
 import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
