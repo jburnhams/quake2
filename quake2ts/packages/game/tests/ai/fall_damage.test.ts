@@ -1,13 +1,12 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import { runStep } from '../../src/physics/movement.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Monster Fall Damage', () => {
-  it('should apply damage when a monster falls', async () => {
-    const context = await createTestContext();
+  it('should apply damage when a monster falls', () => {
+    const context = createTestContext();
     const sys = context.entities;
 
     // Mock findInBox which is used by runStep -> checkTriggers
@@ -16,27 +15,24 @@ describe('Monster Fall Damage', () => {
     }
 
     // Create a monster entity
-    const monster = sys.spawn();
-    monster.classname = 'monster_test';
-    monster.solid = Solid.BBox;
-    monster.movetype = MoveType.Step;
-    monster.health = 100;
-    monster.max_health = 100;
-    monster.takedamage = true;
-    monster.flags = 0; // Not flying or swimming
+    const monsterData = createMonsterEntityFactory('monster_test', {
+      solid: Solid.BBox,
+      movetype: MoveType.Step,
+      health: 100,
+      max_health: 100,
+      takedamage: true,
+      flags: 0, // Not flying or swimming
+      origin: { x: 0, y: 0, z: 200 },
+      velocity: { x: 0, y: 0, z: -1000 }, // Falling fast
+      gravityVector: { x: 0, y: 0, z: -1 },
+      mins: { x: -16, y: -16, z: -24 },
+      maxs: { x: 16, y: 16, z: 32 }
+    });
 
-    // Set position in air
-    monster.origin = { x: 0, y: 0, z: 200 };
-    monster.velocity = { x: 0, y: 0, z: -1000 }; // Falling fast
-    monster.gravityVector = { x: 0, y: 0, z: -1 };
-
-    // Set mins/maxs
-    monster.mins = { x: -16, y: -16, z: -24 };
-    monster.maxs = { x: 16, y: 16, z: 32 };
+    const monster = spawnEntity(sys, monsterData);
 
     // Mock trace to simulate hitting ground
     sys.trace = (start, mins, maxs, end, passEntity, contentMask) => {
-        const dist = end.z - start.z;
         if (start.z > 0 && end.z < 0) {
             const fraction = (start.z - 0) / (start.z - end.z);
             return {

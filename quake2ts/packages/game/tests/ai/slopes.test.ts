@@ -1,33 +1,32 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity';
-import { M_MoveStep } from '../../src/ai/movement';
+import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
+import { M_MoveStep } from '../../src/ai/movement.js';
 import { MASK_MONSTERSOLID } from '@quake2ts/shared';
-
-// Create a mock EntitySystem with necessary methods
-const mockContext = {
-  trace: vi.fn(),
-  pointcontents: vi.fn(),
-  linkentity: vi.fn(),
-} as any;
+import { createMonsterEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Sloping Surface Traversal', () => {
   let entity: Entity;
+  let context: ReturnType<typeof createTestContext>;
+  let mockContext: any; // The entity system part
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    entity = {
+    context = createTestContext();
+    mockContext = context.entities;
+
+    const monsterData = createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       gravityVector: { x: 0, y: 0, z: -1 }, // Default gravity
       svflags: 0,
-      spawnflags: { has: () => false },
+      spawnflags: { has: () => false } as any,
       movetype: MoveType.Step,
       flags: 0,
-      groundentity: {} as any, // Simulate grounded
+      groundentity: { index: 1 } as Entity, // Simulate grounded
       waterlevel: 0,
-    } as any;
+    });
+    entity = spawnEntity(mockContext, monsterData);
   });
 
   it('should adjust move for slopes when blocked', () => {

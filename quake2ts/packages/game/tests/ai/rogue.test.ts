@@ -17,7 +17,7 @@ describe('Rogue AI Extensions', () => {
   let self: Entity;
   let enemy: Entity;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // 1. Use test-utils helpers
     const testCtx = createTestContext();
     context = testCtx;

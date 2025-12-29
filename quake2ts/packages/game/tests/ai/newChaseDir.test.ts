@@ -1,18 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SV_NewChaseDir } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
-import type { EntitySystem } from '../../src/entities/system.js';
-import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { MoveType } from '../../src/entities/entity.js';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
 
 describe('SV_NewChaseDir', () => {
   let entity: Entity;
-  let context: EntitySystem;
+  let context: any; // ReturnType<typeof createTestContext>
   let traceMock: any;
   let pointContentsMock: any;
   let enemy: Entity;
 
   beforeEach(() => {
+    // 1. Create context using new test-utils helper
+    const testCtx = createTestContext();
+    context = testCtx.entities;
+
     // Create entity using factory
     const entData = createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 0 },
@@ -29,25 +32,27 @@ describe('SV_NewChaseDir', () => {
       angles: { x: 0, y: 0, z: 0 },
       enemy: null
     });
-    entity = entData as any;
+    entity = context.spawn();
+    Object.assign(entity, entData);
 
     const enemyData = createPlayerEntityFactory({
         origin: { x: 100, y: 0, z: 0 },
         mins: { x: -16, y: -16, z: -24 },
         maxs: { x: 16, y: 16, z: 32 },
     });
-    enemy = enemyData as any;
+    enemy = context.spawn();
+    Object.assign(enemy, enemyData);
 
-    traceMock = vi.fn();
-    pointContentsMock = vi.fn();
+    traceMock = context.trace;
+    pointContentsMock = context.pointcontents;
 
-    context = {
-      trace: traceMock,
-      pointcontents: pointContentsMock,
-      random: {
-          value: () => 0.5
-      }
-    } as unknown as EntitySystem;
+    // Setup mocks
+    // context.entities.rng is what we want to mock
+    if (!context.rng) {
+      context.rng = { value: () => 0.5 };
+    } else {
+      context.rng.value = () => 0.5;
+    }
   });
 
   it('should not move if enemy is not set', () => {
@@ -60,7 +65,7 @@ describe('SV_NewChaseDir', () => {
     // Enemy is at (100, 0, 0) relative to (0,0,0). ideal_yaw should be 0.
 
     // Mock trace success
-    traceMock.mockImplementation((start, mins, maxs, end) => {
+    traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
          // If checking bottom (downwards trace)
         if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
         // If moving (horizontal)
@@ -79,7 +84,7 @@ describe('SV_NewChaseDir', () => {
     // Enemy at (100, 0, 0).
 
      // Mock trace failure for straight move
-    traceMock.mockImplementation((start, mins, maxs, end) => {
+    traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
         // Checking bottom always succeeds
         if (end.z < start.z - 10) {

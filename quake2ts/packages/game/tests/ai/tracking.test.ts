@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import { huntTarget, TargetAwarenessState } from '../../src/ai/targeting.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 
 describe('AI Tracking (Lost Sight)', () => {
   let system: EntitySystem;
   let monster: Entity;
   let player: Entity;
-  let awareness: TargetAwarenessState;
+  let awareness: any; // TargetAwarenessState
 
   beforeEach(() => {
     const testContext = createTestContext();
@@ -23,36 +23,35 @@ describe('AI Tracking (Lost Sight)', () => {
         soundEntityFrame: 0,
         sound2Entity: null,
         sound2EntityFrame: 0,
-        sightClient: null
+        sightClient: null,
+        activePlayers: [],
+        monsterAlertedByPlayers: vi.fn(),
+        soundClient: vi.fn(),
     };
 
-    // Override the getter or property
+    // Override the getter or property if not present or just set it
     if (system.targetAwareness) {
         Object.assign(system.targetAwareness, awareness);
     } else {
-         Object.defineProperty(system, 'targetAwareness', {
-            get: () => awareness
-        });
+        // Since we are mocking, we can just attach it.
+        (system as any).targetAwareness = awareness;
     }
 
-    monster = system.spawn();
-    Object.assign(monster, createMonsterEntityFactory('monster_test', {
+    monster = spawnEntity(system, createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 },
         angles: { x: 0, y: 0, z: 0 },
-        ideal_yaw: 0
+        ideal_yaw: 0,
+        monsterinfo: {
+            stand: vi.fn(),
+            run: vi.fn(),
+            sight: vi.fn(),
+            aiflags: 0,
+            last_sighting: { x: 100, y: 0, z: 0 }, // Last seen location
+            search_time: 0
+        } as any
     }));
 
-    monster.monsterinfo = {
-        stand: vi.fn(),
-        run: vi.fn(),
-        sight: vi.fn(),
-        aiflags: 0,
-        last_sighting: { x: 100, y: 0, z: 0 }, // Last seen location
-        search_time: 0
-    } as any;
-
-    player = system.spawn();
-    Object.assign(player, createPlayerEntityFactory({
+    player = spawnEntity(system, createPlayerEntityFactory({
         origin: { x: 200, y: 0, z: 0 } // Current location
     }));
 
