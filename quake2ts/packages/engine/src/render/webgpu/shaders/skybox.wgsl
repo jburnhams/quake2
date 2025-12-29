@@ -16,28 +16,15 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Calculate direction with scroll offset
-  // Original GLSL:
-  // vec3 dir = normalize(a_position);
-  // dir.xy += u_scroll;
-  // v_direction = dir;
-
+  // Direction for cubemap sampling
+  // Matrix already handles coordinate transforms
   var dir = normalize(position);
   dir.x += uniforms.scroll.x;
   dir.y += uniforms.scroll.y;
 
-  // Transform from Quake coordinates (Z-up) to WebGL coordinates (Y-up)
-  // Quake Forward (X) -> WebGL Back (-Z)
-  // Quake Left (Y) -> WebGL Left (-X)
-  // Quake Up (Z) -> WebGL Top (Y)
-  output.direction = vec3<f32>(-dir.y, dir.z, -dir.x);
+  output.direction = dir;  // NO TRANSFORM - matrices handle it!
 
-  // Calculate position
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
-
-  // Ensure skybox is always at maximum depth (if needed)
-  // or just rely on drawing order and depth writes disabled
-
   return output;
 }
 

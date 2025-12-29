@@ -14,6 +14,9 @@ import { extractFrustumPlanes } from '../culling.js';
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
 import { MaterialManager } from '../materials.js';
 import { PreparedTexture } from '../../assets/texture.js';
+import { CameraState } from '../types/camera.js';
+
+const USE_NATIVE_COORDINATE_SYSTEM = true;  // Feature flag
 
 // Types ported from WebGL implementation but adapted for WebGPU
 export interface FrameRenderStats {
@@ -50,6 +53,7 @@ export interface WorldRenderState {
 
 export interface FrameRenderOptions {
   readonly camera: Camera;
+  readonly cameraState?: CameraState; // New: Optional CameraState for native path
   readonly world?: WorldRenderState;
   readonly sky?: SkyRenderState;
   readonly timeSeconds?: number;
@@ -295,17 +299,28 @@ export class FrameRenderer {
 
     // Render Skybox
     if (options.sky && options.sky.cubemap) {
-        const viewNoTranslation = removeViewTranslation(options.camera.viewMatrix);
-        const skyViewProjection = mat4.create();
-        mat4.multiply(skyViewProjection, options.camera.projectionMatrix, viewNoTranslation);
+        if (USE_NATIVE_COORDINATE_SYSTEM) {
+             // New path (22-4)
+            const cameraState = options.cameraState ?? options.camera.toState();
+            const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
+            this.pipelines.skybox.draw(opaquePass, {
+                cameraState,  // NEW: let pipeline build matrices
+                scroll,
+                cubemap: options.sky.cubemap
+            });
+        } else {
+            const viewNoTranslation = removeViewTranslation(options.camera.viewMatrix);
+            const skyViewProjection = mat4.create();
+            mat4.multiply(skyViewProjection, options.camera.projectionMatrix, viewNoTranslation);
 
-        const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
+            const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
 
-        this.pipelines.skybox.draw(opaquePass, {
-            viewProjection: skyViewProjection as Float32Array,
-            scroll,
-            cubemap: options.sky.cubemap
-        });
+            this.pipelines.skybox.draw(opaquePass, {
+                viewProjection: skyViewProjection as Float32Array,
+                scroll,
+                cubemap: options.sky.cubemap
+            });
+        }
         stats.skyDrawn = true;
     }
 

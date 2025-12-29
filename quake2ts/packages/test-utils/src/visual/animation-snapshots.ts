@@ -70,7 +70,7 @@ export async function expectAnimationSnapshot(
         height,
         frameCount,
         fps = 10,
-        updateBaseline = false,
+        updateBaseline: updateBaselineOption = false,
         snapshotDir = path.join(process.cwd(), 'tests', '__snapshots__'),
         threshold = 0.1,
         maxDifferencePercent = 0.1
@@ -84,6 +84,9 @@ export async function expectAnimationSnapshot(
     const actualPath = getSnapshotPath(name, 'actual', snapshotDir);
     const diffPath = getSnapshotPath(name, 'diff', snapshotDir);
     const alwaysSave = process.env.ALWAYS_SAVE_SNAPSHOTS === '1';
+
+    // Check global env var for updating snapshots
+    const updateBaseline = updateBaselineOption || process.env.UPDATE_SNAPSHOTS === '1';
 
     // 1. Capture all frames
     const actualFrames: Uint8ClampedArray[] = [];
