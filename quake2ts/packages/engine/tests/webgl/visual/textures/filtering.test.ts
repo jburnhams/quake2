@@ -19,13 +19,24 @@ test('Texture Filtering: Nearest vs Linear', { timeout: 30000 }, async () => {
     ]);
     tex.upload(2, 2, data);
 
+    // Helper to force draw size
+    const makeFakePic = (w, h) => {
+        return {
+            bind: (u) => tex.bind(u),
+            width: w,
+            height: h,
+            target: tex.target,
+            texture: tex.texture
+        };
+    };
+
     // Draw left quad using Nearest filtering
     tex.setParameters({
       minFilter: gl.NEAREST,
       magFilter: gl.NEAREST
     });
     renderer.begin2D();
-    renderer.drawPic(10, 50, tex);
+    renderer.drawPic(10, 50, makeFakePic(100, 100));
     renderer.end2D();
 
     // Draw right quad using Linear filtering
@@ -34,7 +45,7 @@ test('Texture Filtering: Nearest vs Linear', { timeout: 30000 }, async () => {
       magFilter: gl.LINEAR
     });
     renderer.begin2D();
-    renderer.drawPic(146, 50, tex);
+    renderer.drawPic(146, 50, makeFakePic(100, 100));
     renderer.end2D();
   `, {
     name: 'texture-filtering-nearest-linear',
