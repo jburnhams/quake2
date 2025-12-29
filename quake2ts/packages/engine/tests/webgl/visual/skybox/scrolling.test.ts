@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
-test('Skybox: Scrolling Animation', { timeout: 60000 }, async () => {
+test('Skybox: Scrolling Animation', { timeout: 120000 }, async () => {
   await testWebGLAnimation(`
     (async () => {
       // Lazy init of resources
@@ -116,10 +116,10 @@ test('Skybox: Scrolling Animation', { timeout: 60000 }, async () => {
     })();
   `, {
     name: 'skybox-scrolling-anim',
-    description: 'Verifies skybox scrolling animation over 2 frames',
+    description: 'Verifies skybox scrolling animation over 3 frames',
     width: 800,
     height: 600,
-    frameCount: 2, // Reduced from 5
+    frameCount: 3,
     fps: 5,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
