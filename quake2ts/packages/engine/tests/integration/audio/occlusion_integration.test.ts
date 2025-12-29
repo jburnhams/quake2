@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AudioContextController } from '../../src/audio/context.js';
-import { SoundRegistry } from '../../src/audio/registry.js';
-import { AudioSystem } from '../../src/audio/system.js';
-import { SoundChannel, ATTN_NORM } from '../../src/audio/constants.js';
+import { AudioContextController } from '@quake2ts/engine';
+import { SoundRegistry } from '@quake2ts/engine';
+import { AudioSystem } from '@quake2ts/engine';
+import { SoundChannel, ATTN_NORM } from '@quake2ts/engine';
 import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
-import { createOcclusionResolver } from '../../src/audio/occlusion.js';
+import { createOcclusionResolver } from '@quake2ts/engine';
 
 describe('AudioSystem Integration with Occlusion', () => {
     it('integrates AudioOcclusion resolver to modify sound parameters', async () => {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InputController, InputAction } from '../../src/input/controller.js';
-import { InputBindings } from '../../src/input/bindings.js';
+import { InputController, InputAction } from '@quake2ts/client';
+import { InputBindings } from '@quake2ts/client';
 import { BrowserInputSource, createInputInjector, InputInjector } from '@quake2ts/test-utils';
 
 describe('InputController Integration', () => {

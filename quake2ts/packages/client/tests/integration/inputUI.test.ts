@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { InputController } from '../../src/input/controller.js';
+import { InputController } from '@quake2ts/client';
 import { MenuSystem } from '../../src/ui/menu/system.js';
 
 describe('Input and UI Integration', () => {

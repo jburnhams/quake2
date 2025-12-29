@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { Camera } from '../../../src/render/camera.js';
+import { Camera } from '@quake2ts/engine';
 import { WebGLMatrixBuilder } from '../../../src/render/matrix/webgl.js';
 import { buildMatrices } from '../../../src/render/matrix/builders.js';
 import { mat4 } from 'gl-matrix';

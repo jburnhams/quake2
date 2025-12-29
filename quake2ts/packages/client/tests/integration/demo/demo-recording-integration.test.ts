@@ -1,12 +1,35 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientExports, ClientImports } from '../../src/index.js';
+import { createClient, ClientExports, ClientImports } from '@quake2ts/client';
 // We don't strictly need to import classes if we mock them, but it helps with types/vi.mocked
-import { MultiplayerConnection } from '../../src/net/connection.js';
+import { MultiplayerConnection } from '../../../src/net/connection.js';
 import { DemoRecorder } from '@quake2ts/engine';
 
-let mockRecorderInstance: any;
-let mockMultiplayerInstance: any;
+const { mockRecorderInstance, mockMultiplayerInstance, mockEngineAssets } = vi.hoisted(() => {
+    return {
+        mockRecorderInstance: {
+            startRecording: vi.fn(),
+            recordMessage: vi.fn(),
+            stopRecording: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
+            getIsRecording: vi.fn().mockReturnValue(true)
+        },
+        mockMultiplayerInstance: {
+            setDemoRecorder: vi.fn(),
+            setEffectSystem: vi.fn(),
+            isConnected: vi.fn().mockReturnValue(true),
+            disconnect: vi.fn(),
+            sendCommand: vi.fn(),
+            connect: vi.fn().mockResolvedValue(undefined)
+        },
+        mockEngineAssets: {
+            listFiles: vi.fn().mockReturnValue([]),
+            getMap: vi.fn(),
+            loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }),
+            loadSprite: vi.fn(),
+            loadPcx: vi.fn()
+        }
+    };
+});
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
@@ -14,12 +37,6 @@ vi.mock('@quake2ts/engine', async () => {
     return {
         ...actual,
         DemoRecorder: vi.fn().mockImplementation(function() {
-            mockRecorderInstance = {
-                startRecording: vi.fn(),
-                recordMessage: vi.fn(),
-                stopRecording: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-                getIsRecording: vi.fn().mockReturnValue(true)
-            };
             return mockRecorderInstance;
         }),
         DemoPlaybackController: vi.fn().mockImplementation(function() {
@@ -42,20 +59,13 @@ vi.mock('@quake2ts/engine', async () => {
     };
 });
 
-vi.mock('../../src/net/connection.js', () => ({
+vi.mock('../../../src/net/connection.js', () => ({
     MultiplayerConnection: vi.fn().mockImplementation(function() {
-        mockMultiplayerInstance = {
-            setDemoRecorder: vi.fn(),
-            setEffectSystem: vi.fn(),
-            isConnected: vi.fn().mockReturnValue(true),
-            disconnect: vi.fn(),
-            sendCommand: vi.fn()
-        };
         return mockMultiplayerInstance;
     })
 }));
 
-vi.mock('../../src/ui/menu/system.js', () => ({
+vi.mock('../../../src/ui/menu/system.js', () => ({
     MenuSystem: vi.fn().mockImplementation(function() {
         return {
             isActive: vi.fn(),
@@ -68,7 +78,7 @@ vi.mock('../../src/ui/menu/system.js', () => ({
     })
 }));
 
-vi.mock('../../src/hud.js', () => ({
+vi.mock('../../../src/hud.js', () => ({
     Init_Hud: vi.fn().mockResolvedValue(undefined),
     Draw_Hud: vi.fn()
 }));
@@ -92,8 +102,11 @@ describe('Demo Recording Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockRecorderInstance = undefined;
-        mockMultiplayerInstance = undefined;
+        // Reset mock implementations
+        // @ts-ignore
+        mockMultiplayerInstance.isConnected.mockReturnValue(true);
+        // @ts-ignore
+        mockRecorderInstance.getIsRecording.mockReturnValue(true);
 
         // Mock localStorage if missing (though jsdom env should provide it)
         if (typeof localStorage === 'undefined') {
@@ -109,9 +122,7 @@ describe('Demo Recording Integration', () => {
 
         mockEngine = {
             trace: vi.fn().mockReturnValue({ fraction: 1.0 }),
-            assets: {
-                listFiles: vi.fn().mockReturnValue([])
-            },
+            assets: mockEngineAssets as any,
             renderer: {
                 width: 800,
                 height: 600,
@@ -168,6 +179,7 @@ describe('Demo Recording Integration', () => {
     });
 
     it('should not start recording when not connected', () => {
+        // @ts-ignore
         mockMultiplayerInstance.isConnected.mockReturnValue(false);
 
         client.startRecording('my_demo.dm2');
@@ -197,6 +209,7 @@ describe('Demo Recording Integration', () => {
         } as any;
         global.Blob = vi.fn();
 
+        // @ts-ignore
         mockRecorderInstance.getIsRecording.mockReturnValue(true);
 
         client.stopRecording();

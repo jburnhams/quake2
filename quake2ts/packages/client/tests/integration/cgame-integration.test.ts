@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports, ClientExports } from '../src/index.js';
+import { createClient, ClientImports, ClientExports } from '@quake2ts/client';
 import { ClientConfigStrings } from '../src/configStrings.js';
 import { EngineImports, EngineHost, Renderer } from '@quake2ts/engine';
 import { AssetManager } from '@quake2ts/engine';

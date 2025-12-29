@@ -1,13 +1,13 @@
-import { createRenderer, Renderer } from '../../src/render/renderer.js';
+import { createRenderer, Renderer } from '@quake2ts/engine';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { mat4, vec3 } from 'gl-matrix';
-import { Camera } from '../../src/render/camera.js';
-import { BspMap } from '../../src/assets/bsp.js';
+import { Camera } from '@quake2ts/engine';
+import { BspMap } from '@quake2ts/engine';
 
 // Import helpers
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { buildTestBsp, BspFixtureOptions } from '../../helpers/bspBuilder.js';
-import { parseBsp } from '../../src/assets/bsp.js';
+import { parseBsp } from '@quake2ts/engine';
 
 describe('Renderer Integration', () => {
     let mockGl: ReturnType<typeof createMockWebGL2Context>;
