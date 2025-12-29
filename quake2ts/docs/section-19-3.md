@@ -218,6 +218,9 @@ This section covers migration and expansion of game-specific test utilities incl
 
 - [ ] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
   - [x] Refactored `soldier_variants.test.ts`
+  - [x] Refactored `soldier.test.ts`
+  - [x] Refactored `gladiator.test.ts`
+  - [x] Refactored `gunner.test.ts`
   - Replace inline attack function mocks
   - Estimated files: ~15
 

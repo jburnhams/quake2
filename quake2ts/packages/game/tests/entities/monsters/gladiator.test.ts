@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_gladiator } from '../../../src/entities/monsters/gladiator.js';
-import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
+import { MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+
+// Mock dependencies
+vi.mock('../../../src/entities/monsters/attack.js', async () => {
+    const { mockMonsterAttacks } = await import('@quake2ts/test-utils');
+    return {
+        monster_fire_railgun: mockMonsterAttacks.fireRailgun,
+        monster_fire_bullet: mockMonsterAttacks.fireBullet // Gladiator doesn't use bullet but adding for completeness
+    };
+});
 
 describe('monster_gladiator', () => {
   let system: EntitySystem;
