@@ -1,35 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerIcarusSpawns } from '../../../src/entities/monsters/icarus.js';
-import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { createGame } from '../../../src/index.js';
-import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_icarus', () => {
-  let system: EntitySystem;
-  let context: SpawnContext;
+  let context: any;
   let registry: SpawnRegistry;
 
   beforeEach(() => {
-    const { imports, engine } = createGameImportsAndEngine();
-
-    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 } });
-    system = (gameExports as any).entities;
-    context = {
-      keyValues: {},
-      entities: system,
-      health_multiplier: 1,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
+    context = createTestContext();
     registry = new SpawnRegistry();
     registerIcarusSpawns(registry);
   });
 
   it('spawns with correct properties', () => {
-    const ent = system.spawn();
-    ent.classname = 'monster_icarus';
+    const ent = createMonsterEntityFactory('monster_icarus');
     const spawnFunc = registry.get('monster_icarus');
     spawnFunc!(ent, context);
 
@@ -42,7 +28,7 @@ describe('monster_icarus', () => {
   });
 
   it('has AI states', () => {
-    const ent = system.spawn();
+    const ent = createMonsterEntityFactory('monster_icarus');
     registry.get('monster_icarus')!(ent, context);
     expect(ent.monsterinfo.stand).toBeDefined();
     expect(ent.monsterinfo.walk).toBeDefined();
@@ -51,10 +37,10 @@ describe('monster_icarus', () => {
   });
 
   it('attacks when in range', () => {
-    const ent = system.spawn();
+    const ent = createMonsterEntityFactory('monster_icarus');
     registry.get('monster_icarus')!(ent, context);
 
-    const enemy = system.spawn();
+    const enemy = createPlayerEntityFactory();
     enemy.health = 100;
     enemy.origin = { x: 100, y: 0, z: 0 };
     ent.enemy = enemy;
