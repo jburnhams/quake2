@@ -12,7 +12,7 @@ const mockAssets = {
 } as unknown as AssetManager;
 
 const mockRenderer = {
-  registerTexture: vi.fn(),
+  registerTexture: vi.fn().mockReturnValue({ width: 64, height: 64 }), // Return valid texture object
   begin2D: vi.fn(),
   end2D: vi.fn(),
   drawfillRect: vi.fn(),
@@ -87,6 +87,7 @@ describe('Client FOV and View', () => {
     });
 
     client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
+    client.Init(); // Initialize client including CGame
   });
 
   it('should register fov cvar', () => {

@@ -71,6 +71,15 @@ describe('queryMasterServer', () => {
   });
 
   it('should handle fetch errors gracefully', async () => {
+    // Suppress expected error logs
+    const originalConsoleError = console.error;
+    console.error = vi.fn((msg, ...args) => {
+        if (typeof msg === 'string' && msg.includes('Failed to query master server')) {
+            return;
+        }
+        originalConsoleError(msg, ...args);
+    });
+
     mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
@@ -79,9 +88,19 @@ describe('queryMasterServer', () => {
 
     const servers = await queryMasterServer('http://master.quake2ts.com');
     expect(servers).toEqual([]);
+
+    console.error = originalConsoleError;
   });
 
   it('should handle invalid JSON response', async () => {
+    const originalConsoleError = console.error;
+    console.error = vi.fn((msg, ...args) => {
+        if (typeof msg === 'string' && msg.includes('Failed to query master server')) {
+            return;
+        }
+        originalConsoleError(msg, ...args);
+    });
+
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ error: 'invalid format' }) // Not an array
@@ -89,12 +108,24 @@ describe('queryMasterServer', () => {
 
     const servers = await queryMasterServer('http://master.quake2ts.com');
     expect(servers).toEqual([]);
+
+    console.error = originalConsoleError;
   });
 
   it('should handle network errors', async () => {
+    const originalConsoleError = console.error;
+    console.error = vi.fn((msg, ...args) => {
+        if (typeof msg === 'string' && msg.includes('Failed to query master server')) {
+            return;
+        }
+        originalConsoleError(msg, ...args);
+    });
+
     mockFetch.mockRejectedValue(new Error('Network error'));
 
     const servers = await queryMasterServer('http://master.quake2ts.com');
     expect(servers).toEqual([]);
+
+    console.error = originalConsoleError;
   });
 });

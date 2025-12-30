@@ -55,10 +55,16 @@ describe('Client FOV and Zoom', () => {
     (mockCvars.list as any).mockReturnValue([]);
 
     // Capture callbacks
-    (mockCvars.register as any).mockImplementation((name: string, def: string, flags: number, callback: any) => {
-      if (name === 'fov') {
-        fovCallback = callback;
+    (mockCvars.register as any).mockImplementation((def: any) => {
+      if (def.name === 'fov') {
+        fovCallback = def.onChange;
       }
+      return {
+          name: def.name,
+          defaultValue: def.defaultValue,
+          string: def.defaultValue, // Mock string getter
+          number: parseFloat(def.defaultValue),
+      };
     });
 
     (mockCommands.register as any).mockImplementation((name: string, callback: any) => {
@@ -67,6 +73,7 @@ describe('Client FOV and Zoom', () => {
     });
 
     client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
+    client.Init(); // Initialize client
   });
 
   it('should zoom in when +zoom is executed', () => {

@@ -142,6 +142,15 @@ describe('MultiplayerConnection', () => {
     });
 
     it('should handle connection errors', async () => {
+        // Suppress expected error logs
+        const originalConsoleError = console.error;
+        console.error = vi.fn((msg, ...args) => {
+            if (typeof msg === 'string' && msg.includes('Connection failed')) {
+                return;
+            }
+            originalConsoleError(msg, ...args);
+        });
+
         const errorSpy = vi.fn();
         connection.onConnectionError = errorSpy;
 
@@ -151,6 +160,9 @@ describe('MultiplayerConnection', () => {
         await expect(connection.connect('ws://bad-url')).rejects.toThrow('Connection failed');
         expect(errorSpy).toHaveBeenCalledWith(error);
         expect((connection as any).state).toBe(ConnectionState.Disconnected);
+
+        // Restore console.error
+        console.error = originalConsoleError;
     });
 
     it('should update ping on message receipt', async () => {
@@ -169,9 +181,20 @@ describe('MultiplayerConnection', () => {
         writer.writeByte(ServerCommand.nop);
         const packet = serverNetChan.transmit(writer.getData());
 
+        // Suppress expected "Unknown server command" due to partial mock
+        const originalConsoleError = console.error;
+        console.error = vi.fn((msg, ...args) => {
+            if (typeof msg === 'string' && msg.includes('Unknown server command')) {
+                return;
+            }
+            originalConsoleError(msg, ...args);
+        });
+
         mockDriver.receiveMessage(packet);
 
         expect(connection.getPing()).toBeGreaterThanOrEqual(50);
+
+        console.error = originalConsoleError;
     });
 
     it('should buffer last 64 commands', async () => {

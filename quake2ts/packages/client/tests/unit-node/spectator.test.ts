@@ -42,9 +42,9 @@ describe('Spectator Client API', () => {
       } as any
     });
     client.Init({
-        frame: 0,
+        state: {} as any,
         timeMs: 0,
-        state: {} as any
+        serverFrame: 0
     });
   });
 
