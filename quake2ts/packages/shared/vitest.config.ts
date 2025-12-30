@@ -7,11 +7,11 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  ...(isUnit ? ['**/integration/**', '**/*integration*'] : [])
+  ...(isUnit ? ['**/integration/**'] : [])
 ];
 
 const include = isIntegration
-  ? ['**/integration/**', '**/*integration*']
+  ? ['tests/integration/**/*.test.ts']
   : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 export default defineConfig({
