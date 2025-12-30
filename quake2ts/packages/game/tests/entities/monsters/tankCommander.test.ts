@@ -1,28 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_tank_commander } from '../../../src/entities/monsters/tankCommander.js';
-import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { createGame } from '../../../src/index.js';
-import { SpawnContext } from '../../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('monster_tank_commander', () => {
   let system: EntitySystem;
-  let context: SpawnContext;
+  let context: ReturnType<typeof createTestContext>;
 
   beforeEach(() => {
-    // Mock game engine and imports
-    const { imports, engine } = createGameImportsAndEngine();
-
-    const gameExports = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-    system = (gameExports as any).entities;
-
-    context = {
-      keyValues: {},
-      entities: system,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
+    context = createTestContext();
+    system = context.entities;
   });
 
   it('spawns with correct properties', () => {

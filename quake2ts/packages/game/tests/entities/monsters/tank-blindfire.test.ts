@@ -1,13 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_tank } from '../../../src/entities/monsters/tank.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
-import { SpawnContext } from '../../../src/entities/spawn.js';
-import { GameEngine } from '../../../src/engine.js';
-import { GameImports } from '../../../src/game.js';
+import { Entity } from '../../../src/entities/entity.js';
 import { AIFlags, AttackState } from '../../../src/ai/constants.js';
-import { MASK_SHOT, Vec3 } from '@quake2ts/shared';
-import { createTestContext } from '@quake2ts/test-utils';
+import { MASK_SHOT } from '@quake2ts/shared';
+import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_tank blindfire', () => {
   let tank: Entity;
@@ -21,18 +17,16 @@ describe('monster_tank blindfire', () => {
     mockSys = mockContext.entities;
 
     // Customize mocks
-    mockSys.spawn.mockImplementation(() => ({ origin: { x: 0, y: 0, z: 0 } } as Entity));
+    mockSys.spawn.mockImplementation(() => createEntityFactory({ origin: { x: 0, y: 0, z: 0 } }));
     mockSys.trace.mockReturnValue({ fraction: 1.0, ent: null, startsolid: false, allsolid: false });
     mockSys.timeSeconds = 100;
 
-    tank = new Entity(1);
-    tank.timestamp = 100;
-    tank.origin = { x: 0, y: 0, z: 0 };
+    tank = mockSys.spawn();
+    Object.assign(tank, { index: 1, timestamp: 100 });
     SP_monster_tank(tank, mockContext);
 
-    enemy = new Entity(2);
-    enemy.origin = { x: 200, y: 0, z: 0 };
-    enemy.health = 100;
+    enemy = mockSys.spawn();
+    Object.assign(enemy, { index: 2, origin: { x: 200, y: 0, z: 0 }, health: 100 });
     tank.enemy = enemy;
   });
 
@@ -73,6 +67,7 @@ describe('monster_tank blindfire', () => {
 
     tank.monsterinfo.attack!(tank);
 
+    // ManualSteering is 1 << 11 (2048)
     expect(tank.monsterinfo.aiflags & AIFlags.ManualSteering).toBeTruthy();
     expect(tank.monsterinfo.blind_fire_delay).toBeGreaterThan(5.0); // Should be increased
   });
@@ -83,7 +78,7 @@ describe('monster_tank blindfire', () => {
      // We can invoke it via frame logic if we set it up.
 
      // Set manual steering to trigger blindfire logic
-     tank.monsterinfo.aiflags |= AIFlags.ManualSteering;
+     tank.monsterinfo.aiflags |= AIFlags.ManualSteering; // ManualSteering
      tank.monsterinfo.blind_fire_target = { x: 200, y: 50, z: 0 };
 
      // We want to verify that context.trace is called with MASK_SHOT to verify target
