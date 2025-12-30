@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSession, GameSession } from '../../src/session';
+import { createSession, GameSession } from '@quake2ts/client/session';
 import { createGame } from '@quake2ts/game';
-import { createClient } from '../../src/index';
+import { createClient } from '@quake2ts/client/index';
 import { EngineHost } from '@quake2ts/engine';
 
 // Use real implementations for createGame and createClient to test integration

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports } from '../../src/index.js';
+import { createClient, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer, GameFrameResult } from '@quake2ts/engine';
 import { UserCommand } from '@quake2ts/shared';
 import { createMockRenderer } from '@quake2ts/test-utils';

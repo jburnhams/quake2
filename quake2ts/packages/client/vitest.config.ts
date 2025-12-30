@@ -12,7 +12,7 @@ const exclude = [
 
 const include = isIntegration
   ? ['tests/integration/**']
-  : ['tests/**/*.test.ts'];
+  : ['tests/unit-node/**'];
 
 export default defineConfig({
   resolve: {
@@ -23,7 +23,7 @@ export default defineConfig({
       '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
-      '@quake2ts/client': path.resolve(__dirname, './src/index.ts'),
+      '@quake2ts/client': path.resolve(__dirname, './src'),
     },
   },
   test: {
