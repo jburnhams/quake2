@@ -9,6 +9,7 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
+  'tests/unit-node/**', // Exclude node-specific unit tests as they run with vitest.node.config.ts
   // Exclude webgpu specific tests from standard runs
   ...((!isWebGPU) ? ['**/webgpu/**/*.test.ts'] : []),
   // Exclude webgl visual tests from standard runs
