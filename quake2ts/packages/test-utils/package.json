@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/test-utils",
-  "version": "0.0.829",
+  "version": "0.0.830",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
