@@ -312,23 +312,27 @@ test('bsp: surface with scrolling texture', { timeout: 30000 }, async () => {
     // One large quad with scrolling texture
     const surface = {
       vertices: [[-10, -10, 0], [10, -10, 0], [10, 10, 0], [-10, 10, 0]],
-      texInfo: { texture: 'scroll_tex', s: [0.1, 0, 0], t: [0, 0.1, 0] }
+      // Add SURF_FLOWING (1 << 6 = 64) flag to enable scrolling
+      texInfo: { texture: 'scroll_tex', s: [0.1, 0, 0], t: [0, 0.1, 0], flags: 64 }
     };
 
     const bspMap = createTestBspMap({ surfaces: [surface] });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    // Create a 4x4 checkerboard texture to make scrolling obvious
+    // Create a 2x2 checkerboard texture to make scrolling obvious
+    // 2x2 pixels = 4 pixels * 4 bytes = 16 bytes
+    // Red, Black
+    // Black, Red
     const texData = new Uint8Array([
       255, 0, 0, 255,   0, 0, 0, 255,
-      0, 0, 0, 255,     255, 0, 0, 255,
-      255, 0, 0, 255,   0, 0, 0, 255,
-      0, 0, 0, 255,     255, 0, 0, 255,
+      0, 0, 0, 255,     255, 0, 0, 255
     ]);
     renderer.registerTexture('scroll_tex', createRawTexture(2, 2, texData));
 
     const camera = createLookAtCamera([0, 0, 30]);
 
+    // Render multiple frames to show animation/scrolling
+    // t=0: Initial state
     renderer.renderFrame({
       camera,
       world: {
@@ -337,11 +341,27 @@ test('bsp: surface with scrolling texture', { timeout: 30000 }, async () => {
         lightmaps: geometry.lightmaps,
         textures: renderer.getTextures ? renderer.getTextures() : undefined
       },
+      timeSeconds: 0,
+      clearColor: [0, 0, 0, 1]
+    }, []);
+
+    // t=1: Scrolled state (timeSeconds changes flow offset)
+    // The shader uses (time * 0.25) % 1 for scrolling
+    // t=1.0 means 0.25 shift
+    renderer.renderFrame({
+      camera,
+      world: {
+        map: bspMap,
+        surfaces: geometry.surfaces,
+        lightmaps: geometry.lightmaps,
+        textures: renderer.getTextures ? renderer.getTextures() : undefined
+      },
+      timeSeconds: 1.0,
       clearColor: [0, 0, 0, 1]
     }, []);
   `, {
-    name: 'bsp-scroll-static',
-    description: 'Static textured surface (scroll test placeholder)',
+    name: 'bsp-scroll-animated',
+    description: 'Scrolling textured surface (SURF_FLOWING)',
     width: 256,
     height: 256,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
