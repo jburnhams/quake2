@@ -1,9 +1,6 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientExports, ClientImports } from '../src/index.js';
-import { ClientMode, ClientRenderer } from '../src/index.js';
-import { EngineImports, GameRenderSample, PredictionState, EngineHost, Renderer, DemoPlaybackController, ClientNetworkHandler, RenderableEntity } from '@quake2ts/engine';
-import { UserCommand } from '@quake2ts/shared';
+import { createClient, ClientExports, ClientImports, ClientMode } from '@quake2ts/client';
+import { EngineImports, GameRenderSample, PredictionState, EngineHost, Renderer, RenderableEntity } from '@quake2ts/engine';
 import { createMockDemoCameraResult } from '@quake2ts/test-utils';
 
 // Mock dependencies
