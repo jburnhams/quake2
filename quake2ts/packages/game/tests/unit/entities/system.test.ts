@@ -1,8 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { EntitySystem } from '../../src/entities/index.js';
-import type { GameImports } from '../../src/imports.js';
-import { Vec3 } from '@quake2ts/shared';
+import { EntitySystem } from '@quake2ts/game';
+import type { GameImports } from '@quake2ts/game';
 
 // Mock GameImports
 const createMockGameImports = (): GameImports => ({
@@ -31,7 +30,7 @@ const createMockGameImports = (): GameImports => ({
   positiondms: vi.fn()
 } as unknown as GameImports);
 
-describe('Entity System Integration', () => {
+describe('Entity System Unit Tests', () => {
   let entitySystem: EntitySystem;
   let imports: GameImports;
 
@@ -57,32 +56,7 @@ describe('Entity System Integration', () => {
     ent.think = vi.fn();
 
     // Schedule think
-    // nextthink is absolute time
-    // But `EntitySystem.scheduleThink` uses absolute time
-    // And `EntitySystem` tracks `currentTimeSeconds`.
-    // We set start time to 0.05
     entitySystem.beginFrame(0.05);
-
-    // We set nextthink. But `EntitySystem` uses `scheduleThink`.
-    // Wait, setting `ent.nextthink` directly doesn't automatically schedule it in `ThinkScheduler`?
-    // In original Quake 2, `SV_RunEntity` checks `ent->nextthink`.
-    // In this port, `ThinkScheduler` handles it.
-    // Does `EntitySystem` sync `ent.nextthink` with scheduler?
-    // Let's check `packages/game/src/entities/system.ts`.
-    // It has `scheduleThink(entity, nextThinkSeconds)`.
-    // Entities usually call `self.nextthink = level.time + 0.1`.
-    // But does assigning to the property update the scheduler?
-    // The `Entity` class might have a setter, or `EntitySystem.runFrame` checks it.
-    // `runFrame` calls `this.thinkScheduler.runDueThinks`.
-    // So we MUST use `entitySystem.scheduleThink` or ensure `ent.nextthink` works.
-    // The `Entity` object is just a proxy or struct.
-    // `EntitySystem` exposes `scheduleThink`.
-
-    // If I use `ent.nextthink = ...`, does it work?
-    // Quake 2 logic relies on `nextthink`.
-    // If `EntitySystem` uses `ThinkScheduler`, it likely needs explicit scheduling or `ent.nextthink` is just a storage.
-    // `ThinkScheduler.runDueThinks` iterates scheduled thinks.
-    // Let's use `entitySystem.scheduleThink` to be safe, as seen in `useTargets`.
 
     entitySystem.scheduleThink(ent, 0.1); // Run at 0.1s
 
@@ -121,10 +95,6 @@ describe('Entity System Integration', () => {
 
     // Mark for removal using free()
     entitySystem.free(ent);
-
-    // EntitySystem cleanup happens at end of frame or immediately?
-    // `free` calls `pool.deferFree(entity)`.
-    // `pool.flushFreeList()` is called at end of `runFrame`.
 
     expect(ent.freePending).toBe(true);
 

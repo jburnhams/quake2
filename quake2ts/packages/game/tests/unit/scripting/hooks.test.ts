@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ScriptHookRegistry, ScriptHooks } from '../../src/scripting/hooks.js';
-import { Entity } from '../../src/entities/entity.js';
-import { DamageFlags } from '../../src/combat/damageFlags.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGame, GameExports } from '../../src/index.js';
+import { ScriptHookRegistry, ScriptHooks } from '../../../src/scripting/hooks.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { DamageFlags } from '../../../src/combat/damageFlags.js';
+import { DamageMod } from '../../../src/combat/damageMods.js';
+import { createGame } from '../../../src/index.js';
+import { T_Damage } from '../../../src/combat/damage.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { T_Damage } from '../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
 describe('ScriptHookRegistry', () => {

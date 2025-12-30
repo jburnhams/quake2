@@ -7,11 +7,17 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
+  // If unit tests, exclude integration folder
+  ...(isUnit ? ['tests/integration/**', '**/*integration*'] : []),
+  // If integration tests, exclude unit tests.
+  // We exclude everything that is NOT in tests/integration
+  // But include only allows specific files.
+  // The 'exclude' list is applied after 'include'.
+  // If include is ['tests/integration/**'], we don't strictly need exclude for others, but good for safety.
 ];
 
 const include = isIntegration
-  ? ['**/integration/**', '**/*integration*']
+  ? ['tests/integration/**/*.test.ts']
   : ['tests/**/*.test.ts', 'src/save/tests/**/*.test.ts'];
 
 export default defineConfig({
@@ -29,11 +35,6 @@ export default defineConfig({
   test: {
     include,
     exclude,
-    // pool: 'forks', // Default is threads, which is faster but might have isolation issues. Forks provides better isolation.
-    // Let's stick to forks but allow parallelism.
-    // Switching to threads for unit tests to improve performance (reduce overhead).
-    // Integration tests often require strict isolation or serial execution, so we keep forks/threads logic distinct if needed.
-    // However, for now, let's try threads for everything unless it breaks.
     pool: isIntegration ? 'forks' : 'threads',
     poolOptions: {
       forks: {
@@ -41,7 +42,7 @@ export default defineConfig({
       },
     },
     fileParallelism: !isIntegration,
-    isolate: true, // Keep isolation on for reliability
+    isolate: true,
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
