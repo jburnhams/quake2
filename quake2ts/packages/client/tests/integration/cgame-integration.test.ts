@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports, ClientExports } from '../src/index.js';
-import { ClientConfigStrings } from '../src/configStrings.js';
+import { createClient, ClientImports, ClientExports } from '../../src/index.js';
+import { ClientConfigStrings } from '../../src/configStrings.js';
 import { EngineImports, EngineHost, Renderer } from '@quake2ts/engine';
 import { AssetManager } from '@quake2ts/engine';
 import { createMockRenderer, createMockAssetManager } from '@quake2ts/test-utils';

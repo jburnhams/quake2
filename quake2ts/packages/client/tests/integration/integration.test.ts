@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientImports } from '../src/index.js';
+import { createClient, ClientImports } from '../../src/index.js';
 import { EngineImports, Renderer, GameFrameResult } from '@quake2ts/engine';
 import { UserCommand } from '@quake2ts/shared';
 import { createMockRenderer } from '@quake2ts/test-utils';
@@ -131,6 +131,6 @@ describe('Client Integration', () => {
 
     it('should handle ParseCenterPrint', () => {
         client.ParseCenterPrint('Hello World');
-        // We can't easily check internal message system state, but we can verify it doesn't crash.
+        // We can't easily check internal message state, but we can verify it doesn't crash.
     });
 });
