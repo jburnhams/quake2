@@ -61,19 +61,19 @@ tests/webgl/visual/world/
    - [x] Validate animation progression
 
 3. **Warp: Multiple warp surfaces - same texture**
-   - Create 2 warp surfaces (floor, ceiling)
-   - Both use same water texture
-   - Validate independent rendering
+   - [x] Create 2 warp surfaces (floor, ceiling)
+   - [x] Both use same water texture
+   - [x] Validate independent rendering
 
 4. **Warp: Warp surface with different textures**
-   - Test with water, slime, lava textures
-   - Validate warp effect applies to all
-   - Verify texture sampling
+   - [x] Test with water, slime, lava textures
+   - [x] Validate warp effect applies to all
+   - [x] Verify texture sampling
 
 5. **Warp: No lightmaps on warp surfaces**
-   - Create warp surface with lightmap data
-   - Verify lightmap is ignored
-   - Only base texture and warp distortion
+   - [x] Create warp surface with lightmap data
+   - [x] Verify lightmap is ignored
+   - [x] Only base texture and warp distortion
 
 ---
 
@@ -102,17 +102,22 @@ tests/webgl/visual/world/
   - Successfully running basic warp and animation tests.
   - `test-utils` helper `createTestBspMap` improved to support basic BSP structure.
   - `Renderer` interface updated to expose `getTexture` for easier testing/debugging (optional but helpful).
+  - Implemented tests for multiple warp surfaces and different textures.
+  - Implemented test for warp surfaces ignoring lightmaps.
 
 ---
 
 ## Deliverables
 
 ### Test Files Created
-- `tests/webgl/visual/world/water-surfaces.test.ts` (~200 lines, 2 tests implemented so far)
+- `tests/webgl/visual/world/water-surfaces.test.ts` (~500 lines, 5 tests implemented)
 
 ### Baseline Images
 - `__snapshots__/baselines/warp-water-t0.png`
 - `__snapshots__/baselines/warp-water-animation.png`
+- `__snapshots__/baselines/warp-multiple-surfaces.png`
+- `__snapshots__/baselines/warp-different-textures.png`
+- `__snapshots__/baselines/warp-no-lightmap.png`
 
 ---
 
@@ -121,10 +126,10 @@ tests/webgl/visual/world/
 - [x] SURF_WARP surfaces identified correctly
 - [x] Warp distortion applied to texture coordinates
 - [x] Animation progresses smoothly over time
-- [ ] Different textures warp correctly
-- [ ] Lightmaps don't apply to warp surfaces
+- [x] Different textures warp correctly
+- [x] Lightmaps don't apply to warp surfaces
 - [ ] No visual artifacts at surface edges
-- [ ] ~7 visual tests passing (2/7 passing)
+- [ ] ~7 visual tests passing (5/7 passing)
 
 ---
 
