@@ -95,6 +95,14 @@ export {
   type BspModel,
   type BspVisibility,
   type BspVisibilityCluster,
+  type BspEdge,
+  type BspLightmapInfo,
+  type BspLeafLists,
+  type BspData,
+  type BspBrush,
+  type BspBrushSide,
+  type BspArea,
+  type BspAreaPortal,
 } from './assets/bsp.js';
 export {
   Md2Loader,

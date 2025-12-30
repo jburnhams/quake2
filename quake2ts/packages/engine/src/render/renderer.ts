@@ -27,6 +27,8 @@ import { Md2Model } from '../assets/md2.js';
 import { Md3Model } from '../assets/md3.js';
 import { RenderableMd2, RenderableMd3 } from './scene.js';
 import { IRenderer, Pic } from './interface.js';
+import { BspMap } from '../assets/bsp.js';
+import { BspGeometryBuildResult, buildBspGeometry, createBspSurfaces } from './bsp.js';
 
 // Re-export Pic for backward compatibility
 export type { Pic };
@@ -37,6 +39,7 @@ type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
 
 export interface Renderer extends IRenderer {
     setAreaPortalState(portalNum: number, open: boolean): void;
+    uploadBspGeometry(map: BspMap): BspGeometryBuildResult;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -957,6 +960,11 @@ export const createRenderer = (
         }
     };
 
+    const uploadBspGeometry = (map: BspMap): BspGeometryBuildResult => {
+        const surfaces = createBspSurfaces(map);
+        return buildBspGeometry(gl, surfaces, map);
+    };
+
     return {
         get width() { return gl.canvas.width; },
         get height() { return gl.canvas.height; },
@@ -990,6 +998,7 @@ export const createRenderer = (
         setLodBias,
         setAreaPortalState,
         renderInstanced,
+        uploadBspGeometry,
         dispose: () => {
             // Cleanup logic if needed, typically resource disposal
             gpuProfiler.dispose();

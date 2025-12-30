@@ -66,7 +66,16 @@ function makeTestMap(): BspMap {
     leafLists: { leafFaces: [[0], [1]], leafBrushes: [[], []] },
     edges: [],
     surfEdges: new Int32Array(),
-    models: [],
+    models: [
+      {
+        mins: [-12, -12, -12] as [number, number, number],
+        maxs: [12, 12, 12] as [number, number, number],
+        origin: [0, 0, 0] as [number, number, number],
+        headNode: 0,
+        firstFace: 0,
+        numFaces: 0,
+      },
+    ],
     brushes: [],
     brushSides: [],
     visibility: { numClusters: 2, clusters: [{ pvs: pvsRow0, phs: pvsRow0 }, { pvs: pvsRow1, phs: pvsRow1 }] },

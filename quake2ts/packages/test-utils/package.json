@@ -114,15 +114,15 @@
     "@types/upng-js": "^2.1.5",
     "@webgpu/types": "^0.1.68",
     "fake-indexeddb": "^6.0.0",
-    "jsdom": "^27.4.0",
     "gl-matrix": "^3.4.4",
+    "jsdom": "^27.4.0",
     "pixelmatch": "^7.1.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
+    "serve-handler": "^6.1.6",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16",
-    "serve-handler": "^6.1.6",
     "webgpu": "^0.3.8"
   },
   "dependencies": {

@@ -256,15 +256,15 @@ test('bsp: single textured quad', async () => {
 
 ## Success Criteria
 
-- [ ] BSP surfaces render correctly
-- [ ] Texture mapping works
-- [ ] Lightmaps apply properly
-- [ ] Multi-style lightmaps blend correctly
-- [ ] Batching optimizes draw calls
-- [ ] Sorting produces correct visual output
-- [ ] Face culling works (back faces not rendered)
-- [ ] Depth testing prevents Z-fighting
-- [ ] ~13 visual tests passing
+- [x] BSP surfaces render correctly
+- [x] Texture mapping works
+- [x] Lightmaps apply properly
+- [x] Multi-style lightmaps blend correctly
+- [x] Batching optimizes draw calls
+- [x] Sorting produces correct visual output
+- [x] Face culling works (back faces not rendered)
+- [x] Depth testing prevents Z-fighting
+- [x] ~13 visual tests passing
 
 ---
 
