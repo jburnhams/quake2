@@ -27,6 +27,13 @@ describe('Client ConfigString Parsing', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Explicitly reset the mock return value to be a Promise for loadSound
+    mockAssets.loadSound = vi.fn().mockResolvedValue({} as any);
+    mockAssets.loadMd2Model = vi.fn().mockResolvedValue({} as any);
+    mockAssets.loadMd3Model = vi.fn().mockResolvedValue({} as any);
+    mockAssets.loadSprite = vi.fn().mockResolvedValue({} as any);
+    mockAssets.loadTexture = vi.fn().mockResolvedValue(createMockTexture(10, 10));
+
     client = createClient({ engine: mockEngine } as ClientImports);
   });
 

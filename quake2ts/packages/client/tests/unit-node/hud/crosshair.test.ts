@@ -19,6 +19,10 @@ const mockAssetManager = createMockAssetManager({
 describe('Crosshair', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Explicitly set mock implementations again to ensure they persist
+        (mockRenderer.registerTexture as any).mockImplementation((name: string) => ({ width: 16, height: 16, name }));
+        (mockRenderer.registerPic as any).mockResolvedValue({ width: 16, height: 16, name: 'mock' });
+        (mockAssetManager.loadTexture as any).mockResolvedValue({ width: 16, height: 16, levels: [], source: 'pcx' });
     });
 
     it('should initialize and draw default crosshair', async () => {
@@ -28,16 +32,6 @@ describe('Crosshair', () => {
 
         expect(mockAssetManager.loadTexture).toHaveBeenCalled();
         expect(mockRenderer.registerTexture).toHaveBeenCalled();
-
-        // The crosshair drawing relies on the pic actually being registered and available.
-        // In the original test, it asserted arguments.
-        // If drawPic wasn't called, it might be because the crosshair pic wasn't found or loaded in the internal state of crosshair module.
-        // Or `crosshair_pic` variable in the module wasn't set.
-
-        // Let's assume Init_Crosshair successfully sets the internal state if mocks work.
-        // The mock implementation of registerTexture returns a valid object, so it should work.
-
-        // If it's still failing, we might need to verify if Init_Crosshair waits for loading. It is async.
 
         expect(mockRenderer.drawPic).toHaveBeenCalledWith(
             312, 232, // (640-16)/2, (480-16)/2

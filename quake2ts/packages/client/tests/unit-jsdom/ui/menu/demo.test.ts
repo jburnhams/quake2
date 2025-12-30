@@ -3,6 +3,7 @@ import { DemoMenuFactory } from '@quake2ts/client/ui/menu/demo.js';
 import { MenuSystem } from '@quake2ts/client/ui/menu/system.js';
 import { ClientExports } from '@quake2ts/client/index.js';
 import { DemoValidator } from '@quake2ts/engine';
+import 'fake-indexeddb/auto'; // Polyfill IndexedDB for JSDOM
 
 // Mock DemoValidator
 vi.mock('@quake2ts/engine', async () => {

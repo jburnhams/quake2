@@ -94,6 +94,16 @@ describe('ClientExports Message Parsing', () => {
     let mockImports: ClientImports;
 
     beforeEach(() => {
+        // Mock localStorage
+        global.localStorage = {
+            getItem: vi.fn(),
+            setItem: vi.fn(),
+            removeItem: vi.fn(),
+            clear: vi.fn(),
+            length: 0,
+            key: vi.fn(),
+        };
+
         // Setup CGame mock return
         mockCg = {
             Init: vi.fn(),
