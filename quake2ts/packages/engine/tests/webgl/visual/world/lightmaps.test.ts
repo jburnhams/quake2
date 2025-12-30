@@ -9,8 +9,6 @@ const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 const HELPER_SCRIPTS = `
 // Re-using helper scripts from bsp-geometry.test.ts (inlined for now)
 function createTestBspMap(options = {}) {
-  // ... (Same implementation as before, abbreviated for brevity in this tool call,
-  // but I will paste the full implementation to ensure it works)
   const vertices = [];
   const edges = [];
   const surfEdges = [];
@@ -129,11 +127,11 @@ function createLookAtCamera(pos) {
   return camera;
 }
 
-function createRawTexture(width, height, rgba) {
+function createRawTexture(width, height, rgba, name = 'test') {
     return {
         width,
         height,
-        name: 'test',
+        name: name,
         levels: [{ level: 0, width, height, rgba }]
     };
 }
@@ -157,8 +155,8 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     // Quad with a red lightmap
     const lm = createTestLightmap(16, 16, 255, 0, 0); // Red
     const surface = {
-      vertices: [[-10, -10, 0], [10, -10, 0], [10, 10, 0], [-10, 10, 0]],
-      texInfo: { texture: 'base', s: [0.1, 0, 0], t: [0, 0.1, 0] },
+      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255] // Style 0 only
     };
@@ -167,9 +165,11 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     const geometry = renderer.uploadBspGeometry(bspMap);
 
     // White base texture so lightmap color shows clearly
-    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255])));
+    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 25]);
+    const camera = createLookAtCamera([0, 0, 300]);
+
+    renderer.setFullbright(false);
 
     renderer.renderFrame({
       camera,
@@ -183,7 +183,7 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     }, []);
   `, {
     name: 'lightmap-static-red',
-    description: 'Surface with static red lightmap',
+    description: 'Surface with static red lightmap. Should be RED.',
     width: 256,
     height: 256,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -199,8 +199,8 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
     // Should result in green surface
     const lm = createTestLightmap(16, 16, 0, 255, 0); // Green
     const surface = {
-      vertices: [[-10, -10, 0], [10, -10, 0], [10, 10, 0], [-10, 10, 0]],
-      texInfo: { texture: 'checker', s: [0.1, 0, 0], t: [0, 0.1, 0] },
+      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      texInfo: { texture: 'checker', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255]
     };
@@ -213,9 +213,11 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
         255, 255, 255, 255,  128, 128, 128, 255,
         128, 128, 128, 255,  255, 255, 255, 255
     ]);
-    renderer.registerTexture('checker', createRawTexture(2, 2, checker));
+    renderer.registerTexture('checker', createRawTexture(2, 2, checker, 'checker'));
 
-    const camera = createLookAtCamera([0, 0, 25]);
+    const camera = createLookAtCamera([0, 0, 300]);
+
+    renderer.setFullbright(false);
 
     renderer.renderFrame({
       camera,
@@ -229,7 +231,7 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
     }, []);
   `, {
     name: 'lightmap-blend',
-    description: 'Base texture blended with lightmap',
+    description: 'Base texture (Checker) blended with lightmap (Green). Should be GREEN CHECKERBOARD.',
     width: 256,
     height: 256,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -244,8 +246,8 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     // Quad with dark lightmap (blue), but rendered in fullbright
     const lm = createTestLightmap(16, 16, 0, 0, 50); // Dark Blue
     const surface = {
-      vertices: [[-10, -10, 0], [10, -10, 0], [10, 10, 0], [-10, 10, 0]],
-      texInfo: { texture: 'base', s: [0.1, 0, 0], t: [0, 0.1, 0] },
+      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255]
     };
@@ -253,9 +255,9 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     const bspMap = createTestBspMap({ surfaces: [surface] });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255])));
+    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 25]);
+    const camera = createLookAtCamera([0, 0, 300]);
 
     // Enable fullbright
     renderer.setFullbright(true);
@@ -272,7 +274,7 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     }, []);
   `, {
     name: 'lightmap-fullbright',
-    description: 'Lightmaps ignored in fullbright mode',
+    description: 'Lightmaps ignored in fullbright mode. Should be WHITE (base texture only).',
     width: 256,
     height: 256,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
@@ -285,11 +287,6 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Quad with multiple light styles
-    // Style 0: Red
-    // Style 1: Blue
-    // Style 2: Green
-    // We will pack them sequentially in the lightmap data
-    // 16x16 pixels * 3 bytes * 3 styles
     const width = 16;
     const height = 16;
     const data = new Uint8Array(width * height * 3 * 3);
@@ -315,8 +312,8 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     }
 
     const surface = {
-      vertices: [[-10, -10, 0], [10, -10, 0], [10, 10, 0], [-10, 10, 0]],
-      texInfo: { texture: 'base', s: [0.1, 0, 0], t: [0, 0.1, 0] },
+      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: data,
       styles: [0, 1, 2, 255] // Uses styles 0, 1, and 2
     };
@@ -324,16 +321,11 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     const bspMap = createTestBspMap({ surfaces: [surface] });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255])));
+    renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 25]);
+    const camera = createLookAtCamera([0, 0, 300]);
 
-    // Define light styles
-    // We can set light style values in the renderer or passing them in options?
-    // Renderer.setLightStyle(index, value) sets string pattern (e.g. 'm').
-    // Engine converts patterns to values 0.0-2.0.
-    // 'm' is normal (value ~1.0 or 0.5? 'm' is 12 -> 1.0 approx).
-    // 'a' is 0 (off), 'z' is 2.0 (double bright).
+    renderer.setFullbright(false);
 
     renderer.setLightStyle(0, 'm'); // On
     renderer.setLightStyle(1, 'm'); // On
@@ -353,7 +345,7 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     }, []);
   `, {
     name: 'lightmap-styles',
-    description: 'Multi-style lightmap blending',
+    description: 'Multi-style lightmap blending. Red + Blue = MAGENTA.',
     width: 256,
     height: 256,
     updateBaseline: process.env.UPDATE_VISUAL === '1',
