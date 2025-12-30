@@ -51,15 +51,14 @@ tests/webgl/visual/world/
 **Visual Tests:**
 
 1. **Warp: Basic water surface - static time**
-   - Create BSP surface with `SURF_WARP` flag
-   - Apply water texture
-   - Freeze time at t=0.0
-   - Validate distortion pattern
+   - [x] Create BSP surface with `SURF_WARP` flag
+   - [x] Apply water texture
+   - [x] Freeze time at t=0.0
+   - [x] Validate distortion pattern
 
 2. **Warp: Animated - multiple time snapshots**
-   - Same surface at t=0.0, t=1.0, t=2.0
-   - Validate animation progression
-   - Compare different time values
+   - [x] Same surface at t=0.0, t=1.0, t=2.0
+   - [x] Validate animation progression
 
 3. **Warp: Multiple warp surfaces - same texture**
    - Create 2 warp surfaces (floor, ceiling)
@@ -75,119 +74,6 @@ tests/webgl/visual/world/
    - Create warp surface with lightmap data
    - Verify lightmap is ignored
    - Only base texture and warp distortion
-
-**Implementation Pattern:**
-
-```typescript
-import { test } from 'vitest';
-import { createRenderer } from '../../../src/render/renderer';
-import { createWebGLRenderTestSetup, expectSnapshot } from '@quake2ts/test-utils';
-import { createTestBspMap } from '@quake2ts/test-utils';
-import { Camera } from '../../../src/render/camera';
-import { SURF_WARP } from '@quake2ts/shared';
-import { mat4 } from 'gl-matrix';
-import path from 'path';
-
-const snapshotDir = path.join(__dirname, '..', '__snapshots__');
-
-test('warp: basic water surface at t=0', async () => {
-  const setup = await createWebGLRenderTestSetup(256, 256);
-  const renderer = createRenderer(setup.gl);
-
-  // Create BSP surface with SURF_WARP flag
-  const bspMap = createTestBspMap({
-    surfaces: [
-      {
-        vertices: [/* horizontal quad */],
-        flags: SURF_WARP,
-        texInfo: { textureName: 'water1', /* ... */ }
-      }
-    ]
-  });
-
-  const geometry = renderer.uploadBspGeometry(bspMap);
-  const camera = new Camera(mat4.create());
-  camera.setPosition([0, 3, 0]);  // Above water
-  camera.lookAt([0, 0, 0]);
-  camera.setPerspective(90, 1.0, 0.1, 100);
-
-  // Render at specific time for determinism
-  renderer.renderFrame({
-    camera,
-    world: {
-      map: bspMap,
-      surfaces: [geometry],
-      textures: renderer.getTextures()
-    },
-    timeSeconds: 0.0,  // Freeze time
-    clearColor: [0.5, 0.7, 1.0, 1.0]  // Sky blue background
-  });
-
-  const pixels = captureWebGLFramebuffer(setup.gl, 256, 256);
-
-  await expectSnapshot(pixels, {
-    name: 'warp-water-t0',
-    description: 'Water surface with warp distortion at time=0',
-    width: 256,
-    height: 256,
-    snapshotDir
-  });
-
-  setup.cleanup();
-});
-
-test('warp: animated water over time', async () => {
-  const setup = await createWebGLRenderTestSetup(768, 256);  // 3 frames side-by-side
-  const renderer = createRenderer(setup.gl);
-
-  const bspMap = createTestBspMap({/* same as above */});
-  const geometry = renderer.uploadBspGeometry(bspMap);
-  const camera = new Camera(mat4.create());
-
-  // Render 3 time samples side-by-side
-  const times = [0.0, 1.0, 2.0];
-  for (let i = 0; i < times.length; i++) {
-    // Setup viewport for this sub-region
-    setup.gl.viewport(i * 256, 0, 256, 256);
-    setup.gl.scissor(i * 256, 0, 256, 256);
-    setup.gl.enable(setup.gl.SCISSOR_TEST);
-
-    renderer.renderFrame({
-      camera,
-      world: { map: bspMap, surfaces: [geometry], textures: renderer.getTextures() },
-      timeSeconds: times[i],
-      clearColor: [0.5, 0.7, 1.0, 1.0]
-    });
-  }
-
-  setup.gl.disable(setup.gl.SCISSOR_TEST);
-
-  const pixels = captureWebGLFramebuffer(setup.gl, 768, 256);
-
-  await expectSnapshot(pixels, {
-    name: 'warp-water-animation',
-    description: 'Water surface at t=0, t=1, t=2 (left to right)',
-    width: 768,
-    height: 256,
-    snapshotDir
-  });
-
-  setup.cleanup();
-});
-```
-
-**Subtasks:**
-1. Create warp surface test geometry
-2. Implement time-frozen test
-3. Implement animation sequence test
-4. Test multiple warp surfaces
-5. Verify lightmaps don't apply
-
-**Assets Needed:**
-- Water texture (blue with slight pattern)
-- Slime texture (green, viscous looking)
-- Lava texture (red/orange, glowing)
-- Can use procedural textures or load from pak.pak
 
 ---
 
@@ -205,37 +91,40 @@ test('warp: animated water over time', async () => {
    - Verify no artifacts at surface edges
    - Validate texture coordinate clamping
 
-**Implementation Notes:**
-- Warp formula typically: `uv += sin(uv * frequency + time) * amplitude`
-- Check `bspPipeline.ts` for actual implementation
-- Values may come from `TURBSCALE` constants in original Quake 2
+---
 
-**Subtasks:**
-1. Analyze warp shader/algorithm in bspPipeline.ts
-2. Create validation tests
-3. Document warp parameters
+## Progress Report
+
+- **Water Surface Rendering Tests**:
+  - Implemented initial test setup in `water-surfaces.test.ts`.
+  - Encountered `Cannot read properties of undefined (reading 'bind')` error, resolved by correctly passing a texture map to `renderFrame` and fixing geometry handling (accessing `result.surfaces`).
+  - Resolved `de is not iterable` crash by passing an empty array `[]` as the second argument (`entities`) to `renderer.renderFrame`, which is required by the function signature but was missing in the test call.
+  - Successfully running basic warp and animation tests.
+  - `test-utils` helper `createTestBspMap` improved to support basic BSP structure.
+  - `Renderer` interface updated to expose `getTexture` for easier testing/debugging (optional but helpful).
 
 ---
 
 ## Deliverables
 
 ### Test Files Created
-- `tests/webgl/visual/world/water-surfaces.test.ts` (~200 lines, 7 tests)
+- `tests/webgl/visual/world/water-surfaces.test.ts` (~200 lines, 2 tests implemented so far)
 
-### Baseline Images (~7 images)
-- `__snapshots__/baselines/warp-*.png`
+### Baseline Images
+- `__snapshots__/baselines/warp-water-t0.png`
+- `__snapshots__/baselines/warp-water-animation.png`
 
 ---
 
 ## Success Criteria
 
-- [ ] SURF_WARP surfaces identified correctly
-- [ ] Warp distortion applied to texture coordinates
-- [ ] Animation progresses smoothly over time
+- [x] SURF_WARP surfaces identified correctly
+- [x] Warp distortion applied to texture coordinates
+- [x] Animation progresses smoothly over time
 - [ ] Different textures warp correctly
 - [ ] Lightmaps don't apply to warp surfaces
 - [ ] No visual artifacts at surface edges
-- [ ] ~7 visual tests passing
+- [ ] ~7 visual tests passing (2/7 passing)
 
 ---
 
