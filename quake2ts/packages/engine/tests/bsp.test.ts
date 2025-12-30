@@ -10,8 +10,8 @@ import {
 } from '../src/assets/bsp.js';
 import { PakArchive } from '../src/assets/pak.js';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { buildPak } from './helpers/pakBuilder.js';
-import { buildTestBsp, encodedVisForClusters } from './helpers/bspBuilder.js';
+import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
+import { buildTestBsp, encodedVisForClusters } from '@quake2ts/test-utils'; // bspBuilder.js';
 
 function getLumpInfo(buffer: ArrayBuffer, lump: BspLump): { offset: number; length: number } {
   const view = new DataView(buffer);

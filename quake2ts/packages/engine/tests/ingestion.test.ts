@@ -5,7 +5,7 @@ import { VirtualFileSystem } from '../src/assets/vfs.js';
 import { PakArchive } from '../src/assets/pak.js';
 import { PakIndexStore } from '../src/assets/pakIndexStore.js';
 import { PakValidator } from '../src/assets/pakValidation.js';
-import { buildPak, textData } from './helpers/pakBuilder.js';
+import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('ingestPaks', () => {
   it('mounts multiple PAK sources and reports progress', async () => {

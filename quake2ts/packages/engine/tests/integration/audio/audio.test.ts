@@ -1,9 +1,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
-import { AudioContextController } from '../../src/audio/context.js';
-import { SoundRegistry } from '../../src/audio/registry.js';
-import { AudioSystem } from '../../src/audio/system.js';
-import { SoundChannel, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '../../src/audio/constants.js';
+import { AudioContextController } from '@quake2ts/engine/audio/context.js';
+import { SoundRegistry } from '@quake2ts/engine/audio/registry.js';
+import { AudioSystem } from '@quake2ts/engine/audio/system.js';
+import { SoundChannel, ATTN_NORM, ATTN_IDLE, ATTN_STATIC, ATTN_NONE } from '@quake2ts/engine/audio/constants.js';
 import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 describe('AudioSystem Integration Tests', () => {

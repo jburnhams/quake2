@@ -1,4 +1,4 @@
-import { test } from '../../helpers/visual-testing';
+import { test } from '@quake2ts/test-utils'; // visual-testing';
 import { SpriteRenderer } from '../../../src/render/webgpu/pipelines/sprite';
 import { Texture2D } from '../../../src/render/webgpu/resources';
 

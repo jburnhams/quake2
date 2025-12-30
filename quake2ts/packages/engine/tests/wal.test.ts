@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseWal, WalParseError } from '../src/assets/wal.js';
-import { buildWal } from './helpers/walBuilder.js';
+import { buildWal } from '@quake2ts/test-utils'; // walBuilder.js';
 
 describe('WAL loader', () => {
   it('parses mip chain and metadata', () => {

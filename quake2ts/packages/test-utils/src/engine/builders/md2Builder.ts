@@ -1,4 +1,4 @@
-import { Vec3 } from '@quake2ts/shared';
+import { Vec3 } from '@quake2ts/shared/math/vec3';
 
 export interface Md2FrameVertexInput {
   readonly position: Vec3;
@@ -152,5 +152,5 @@ export function buildMd2(options: Md2BuilderOptions): ArrayBuffer {
   new Uint8Array(view.buffer, offsetFrames, frameBlockSize).set(encodeFrames(options.frames, numVertices));
   new Uint8Array(view.buffer, offsetGlCommands, glSize).set(glData);
 
-  return view.buffer;
+  return view.buffer as ArrayBuffer;
 }

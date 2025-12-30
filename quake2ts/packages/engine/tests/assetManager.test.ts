@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { AssetDependencyError, AssetManager } from '../src/assets/manager.js';
 import { PakArchive } from '../src/assets/pak.js';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { buildPak, textData } from './helpers/pakBuilder.js';
-import { buildMd2 } from './helpers/md2Builder.js';
-import { buildWav } from './helpers/wavBuilder.js';
+import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
+import { buildMd2 } from '@quake2ts/test-utils'; // md2Builder.js';
+import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
 
 const preparedTexture = {
   width: 1,

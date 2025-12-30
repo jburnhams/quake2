@@ -1,5 +1,5 @@
 import { describe } from 'vitest';
-import { test } from '../../helpers/visual-testing';
+import { test } from '@quake2ts/test-utils'; // visual-testing';
 import { Md3ModelMeshGPU, Md3PipelineGPU } from '../../../src/render/webgpu/pipelines/md3';
 import { Md3Model } from '../../../src/assets/md3';
 import { Texture2D } from '../../../src/render/webgpu/resources';

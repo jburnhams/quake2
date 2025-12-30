@@ -12,6 +12,16 @@
       "require": "./dist/cjs/index.cjs",
       "default": "./dist/esm/index.js"
     },
+    "./assets/pak.js": {
+        "types": "./dist/types/assets/pak.d.ts",
+        "import": "./dist/esm/assets/pak.js",
+        "require": "./dist/cjs/assets/pak.cjs"
+    },
+    "./assets/bsp.js": {
+        "types": "./dist/types/assets/bsp.d.ts",
+        "import": "./dist/esm/assets/bsp.js",
+        "require": "./dist/cjs/assets/bsp.cjs"
+    },
     "./browser": {
       "types": "./dist/types/index.d.ts",
       "default": "./dist/browser/index.js"

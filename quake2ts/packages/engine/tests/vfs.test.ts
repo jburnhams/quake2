@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
 import { PakArchive } from '../src/assets/pak.js';
-import { buildPak, textData } from './helpers/pakBuilder.js';
+import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('VirtualFileSystem', () => {
   function makePak(name: string, entries: { path: string; data: string }[]): PakArchive {

@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '../../src/render/renderer.js';
-import { BspMap } from '../../src/assets/bsp.js';
-import { Camera } from '../../src/render/camera.js';
-import { FrameRenderOptions } from '../../src/render/frame.js';
-import { createBspSurfaces } from '../../src/render/bsp/surface.js';
-import { buildBspGeometry } from '../../src/render/bsp/geometry.js';
+import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
+import { BspMap } from '@quake2ts/engine/assets/bsp.js';
+import { Camera } from '@quake2ts/engine/render/camera.js';
+import { FrameRenderOptions } from '@quake2ts/engine/render/frame.js';
+import { createBspSurfaces } from '@quake2ts/engine/render/bsp/surface.js';
+import { buildBspGeometry } from '@quake2ts/engine/render/bsp/geometry.js';
 
 // Mock WebGL2 Context
 function createMockWebGL2Context() {

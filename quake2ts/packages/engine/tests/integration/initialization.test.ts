@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { setupBrowserEnvironment } from './setup.js';
-import { EngineHost } from '../../src/host.js';
+import { EngineHost } from '@quake2ts/engine/host.js';
 import type { GameExports } from '@quake2ts/game';
 import type { ClientExports } from '@quake2ts/client';
 

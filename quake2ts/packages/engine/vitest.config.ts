@@ -14,7 +14,7 @@ const exclude = [
   // Exclude webgl visual tests from standard runs
   ...((!isWebGL) ? ['**/tests/webgl/**'] : []),
   // Exclude integration tests from unit tests
-  ...(isUnit ? ['**/integration/**', '**/*integration*', '**/performance/**'] : [])
+  ...(isUnit ? ['**/tests/integration/**', '**/performance/**'] : [])
 ];
 
 const include = isWebGPU
@@ -22,7 +22,7 @@ const include = isWebGPU
   : isWebGL
     ? ['**/tests/webgl/**/*.test.ts']
     : isIntegration
-      ? ['**/integration/**', '**/*integration*', '**/performance/**']
+      ? ['**/tests/integration/**/*.test.ts', '**/performance/**/*.test.ts']
       : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 const setupFiles = ['./vitest.setup.ts'];
@@ -30,8 +30,10 @@ const setupFiles = ['./vitest.setup.ts'];
 export default defineConfig({
   resolve: {
     alias: {
+      '@quake2ts/shared/': path.resolve(__dirname, '../shared/src') + '/',
       '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
       '@quake2ts/game': path.resolve(__dirname, '../game/src/index.ts'),
+      '@quake2ts/engine/': path.resolve(__dirname, './src') + '/',
       '@quake2ts/engine': path.resolve(__dirname, './src/index.ts'),
       '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(__dirname, '../test-utils/src/engine/mocks/webgpu.ts'),
       '@quake2ts/test-utils/src/setup/webgpu': path.resolve(__dirname, '../test-utils/src/setup/webgpu.ts'),
