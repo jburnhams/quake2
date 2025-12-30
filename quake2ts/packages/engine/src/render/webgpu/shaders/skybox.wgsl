@@ -1,6 +1,7 @@
 struct Uniforms {
   viewProjection: mat4x4<f32>,
   scroll: vec2<f32>,
+  useNative: f32, // 0.0 = old (swizzle), 1.0 = new (native)
 }
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -16,22 +17,20 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Normalize input position (Quake Coordinates)
   var qDir = normalize(position);
-
-  // Apply scrolling in Quake Coordinates (Horizontal Plane X/Y)
-  // This ensures clouds scroll horizontally regardless of the final mapping.
   qDir.x += uniforms.scroll.x;
   qDir.y += uniforms.scroll.y;
 
-  // Transform Quake coordinates (X-Fwd, Y-Left, Z-Up)
-  // to WebGPU/GL cubemap coordinates (Right-handed? -Z Fwd, +X Right, +Y Up)
-  // Quake X  -> GL -Z
-  // Quake Y  -> GL -X
-  // Quake Z  -> GL Y
-  var dir = vec3<f32>(-qDir.y, qDir.z, -qDir.x);
-
-  output.direction = dir;
+  if (uniforms.useNative > 0.5) {
+      // Native: Matrix handles transform, no swizzle
+      output.direction = qDir;
+  } else {
+      // Legacy: Swizzle Quake (Z-up) to WebGL (Y-up)
+      // Quake X  -> GL -Z
+      // Quake Y  -> GL -X
+      // Quake Z  -> GL Y
+      output.direction = vec3<f32>(-qDir.y, qDir.z, -qDir.x);
+  }
 
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
   return output;

@@ -14,6 +14,7 @@ Rebuild WebGPU skybox pipeline using native coordinate system. **Supersedes Sect
 **Files Changed:**
 - `packages/engine/src/render/webgpu/pipelines/skybox.ts` (modify)
 - `packages/engine/src/render/webgpu/shaders/skybox.wgsl` (modify)
+- `packages/engine/src/render/webgpu/frame.ts` (modify)
 
 ---
 
