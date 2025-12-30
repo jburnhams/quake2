@@ -6,7 +6,7 @@ import { SURF_WARP } from '@quake2ts/shared';
 
 // Setup snapshot directory path relative to this file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const snapshotDir = path.join(__dirname, '..', '..', '..', 'visual', '__snapshots__');
+const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
 // Helper to serialize BspMap for browser injection
 function serializeBspMap(bspMap: any) {
