@@ -504,3 +504,170 @@ test('warp: no lightmaps on warp surfaces', { timeout: 30000 }, async () => {
       snapshotDir
     });
 });
+
+test('warp: distortion magnitude verification', { timeout: 30000 }, async () => {
+    // Task 2.1
+    // Use a high-frequency grid pattern to clearly see the wave magnitude.
+    const bspMap = createTestBspMap({
+      surfaces: [
+        {
+          vertices: [
+            [-64, 0, -64],
+            [ 64, 0, -64],
+            [ 64, 0,  64],
+            [-64, 0,  64]
+          ],
+          texInfo: {
+              texture: 'grid',
+              flags: SURF_WARP
+          },
+          styles: [0, 0, 0, 0]
+        }
+      ]
+    });
+
+    const serializedBsp = serializeBspMap(bspMap);
+
+    await testWebGLRenderer(`
+      ${getPolyfills()}
+      const bspData = ${serializedBsp};
+      bspData.surfEdges = new Int32Array(bspData.surfEdges);
+      bspData.lightMaps = new Uint8Array(bspData.lightMaps);
+      if (bspData.leafs.length > 0) {
+          bspData.findLeaf = () => bspData.leafs[0];
+          bspData.leafs[0].area = -1;
+      } else {
+          bspData.findLeaf = () => null;
+      }
+
+      const { Camera, Texture2D } = Quake2Engine;
+      const camera = new Camera(1.0);
+      camera.setPosition(0, 150, 0);
+      camera.setRotation(0, -90, 0);
+
+      // Create a fine grid texture
+      const size = 64;
+      const pixels = new Uint8ClampedArray(size * size * 4);
+      for(let y=0; y<size; y++) {
+          for(let x=0; x<size; x++) {
+              const i = (y * size + x) * 4;
+              // 4 pixel grid
+              const isLine = (x % 8 === 0) || (y % 8 === 0);
+              pixels[i] = isLine ? 255 : 0;
+              pixels[i+1] = isLine ? 255 : 0;
+              pixels[i+2] = isLine ? 255 : 0;
+              pixels[i+3] = 255;
+          }
+      }
+      const textureData = new ImageData(pixels, size, size);
+
+      const t = new Texture2D(gl);
+      t.upload(size, size, textureData);
+
+      const textureMap = new Map();
+      textureMap.set('grid', t);
+
+      const result = renderer.uploadBspGeometry(bspData);
+
+      renderer.renderFrame({
+        camera,
+        world: {
+          map: bspData,
+          surfaces: result.surfaces,
+          textures: textureMap
+        },
+        timeSeconds: 1.0, // Significant warp time
+        clearColor: [0.0, 0.0, 0.0, 1.0]
+      }, []);
+    `, {
+      name: 'warp-distortion-magnitude',
+      description: 'Warp distortion magnitude verification with grid',
+      width: 256,
+      height: 256,
+      snapshotDir
+    });
+});
+
+test('warp: edge clamping behavior', { timeout: 30000 }, async () => {
+    // Task 2.2
+    // Verify texture sampling at edges when warped.
+    const bspMap = createTestBspMap({
+      surfaces: [
+        {
+          vertices: [
+            [-64, 0, -64],
+            [ 64, 0, -64],
+            [ 64, 0,  64],
+            [-64, 0,  64]
+          ],
+          texInfo: {
+              texture: 'border',
+              flags: SURF_WARP
+          },
+          styles: [0, 0, 0, 0]
+        }
+      ]
+    });
+
+    const serializedBsp = serializeBspMap(bspMap);
+
+    await testWebGLRenderer(`
+      ${getPolyfills()}
+      const bspData = ${serializedBsp};
+      bspData.surfEdges = new Int32Array(bspData.surfEdges);
+      bspData.lightMaps = new Uint8Array(bspData.lightMaps);
+      if (bspData.leafs.length > 0) {
+          bspData.findLeaf = () => bspData.leafs[0];
+          bspData.leafs[0].area = -1;
+      } else {
+          bspData.findLeaf = () => null;
+      }
+
+      const { Camera, Texture2D } = Quake2Engine;
+      const camera = new Camera(1.0);
+      camera.setPosition(0, 150, 0);
+      camera.setRotation(0, -90, 0);
+
+      // Create a texture with a distinct border
+      const size = 64;
+      const pixels = new Uint8ClampedArray(size * size * 4);
+      for(let y=0; y<size; y++) {
+          for(let x=0; x<size; x++) {
+              const i = (y * size + x) * 4;
+              const isBorder = x < 4 || x >= 60 || y < 4 || y >= 60;
+              if (isBorder) {
+                  pixels[i] = 255; pixels[i+1] = 0; pixels[i+2] = 0; // Red border
+              } else {
+                  pixels[i] = 0; pixels[i+1] = 255; pixels[i+2] = 0; // Green center
+              }
+              pixels[i+3] = 255;
+          }
+      }
+      const textureData = new ImageData(pixels, size, size);
+
+      const t = new Texture2D(gl);
+      t.upload(size, size, textureData);
+
+      const textureMap = new Map();
+      textureMap.set('border', t);
+
+      const result = renderer.uploadBspGeometry(bspData);
+
+      renderer.renderFrame({
+        camera,
+        world: {
+          map: bspData,
+          surfaces: result.surfaces,
+          textures: textureMap
+        },
+        timeSeconds: 2.0, // Ensure warp pushes coordinates around
+        clearColor: [0.0, 0.0, 0.0, 1.0]
+      }, []);
+    `, {
+      name: 'warp-edge-clamping',
+      description: 'Warp edge clamping behavior',
+      width: 256,
+      height: 256,
+      snapshotDir
+    });
+});
