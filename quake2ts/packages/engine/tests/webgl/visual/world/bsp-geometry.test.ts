@@ -276,14 +276,14 @@ test('bsp: textured cube - 6 faces', { timeout: 30000 }, async () => {
     const geometry = renderer.uploadBspGeometry(bspMap);
 
     renderer.registerTexture('front', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
-    renderer.registerTexture('back', createRawTexture(1, 1, new Uint8Array([100, 0, 0, 255])));
+    renderer.registerTexture('back', createRawTexture(1, 1, new Uint8Array([0, 255, 255, 255]))); // Cyan
     renderer.registerTexture('right', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
-    renderer.registerTexture('left', createRawTexture(1, 1, new Uint8Array([0, 100, 0, 255])));
+    renderer.registerTexture('left', createRawTexture(1, 1, new Uint8Array([255, 0, 255, 255]))); // Magenta
     renderer.registerTexture('top', createRawTexture(1, 1, new Uint8Array([0, 0, 255, 255])));
-    renderer.registerTexture('bottom', createRawTexture(1, 1, new Uint8Array([0, 0, 100, 255])));
+    renderer.registerTexture('bottom', createRawTexture(1, 1, new Uint8Array([255, 255, 0, 255]))); // Yellow
 
     // View from a corner to see 3 faces (Front, Right, Top)
-    const camera = createLookAtCamera([25, 25, 25]);
+    const camera = createLookAtCamera([40, 40, 40]);
 
     renderer.renderFrame({
       camera,
