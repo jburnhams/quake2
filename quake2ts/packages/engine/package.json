@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/engine",
-  "version": "0.0.838",
+  "version": "0.0.839",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -13,14 +13,14 @@
       "default": "./dist/esm/index.js"
     },
     "./assets/pak.js": {
-        "types": "./dist/types/assets/pak.d.ts",
-        "import": "./dist/esm/assets/pak.js",
-        "require": "./dist/cjs/assets/pak.cjs"
+      "types": "./dist/types/assets/pak.d.ts",
+      "import": "./dist/esm/assets/pak.js",
+      "require": "./dist/cjs/assets/pak.cjs"
     },
     "./assets/bsp.js": {
-        "types": "./dist/types/assets/bsp.d.ts",
-        "import": "./dist/esm/assets/bsp.js",
-        "require": "./dist/cjs/assets/bsp.cjs"
+      "types": "./dist/types/assets/bsp.d.ts",
+      "import": "./dist/esm/assets/bsp.js",
+      "require": "./dist/cjs/assets/bsp.cjs"
     },
     "./browser": {
       "types": "./dist/types/index.d.ts",
