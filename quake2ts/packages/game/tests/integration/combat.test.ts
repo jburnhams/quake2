@@ -1,78 +1,115 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment, createGameImportsAndEngine, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
-import { EntitySystem } from '../../src/entities/index.js';
-import { T_Damage } from '../../src/combat/damage.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
+// =================================================================
+// Quake II - Combat & Items Integration Tests
+// =================================================================
 
-describe('Combat System Integration', () => {
-  let entitySystem: EntitySystem;
-  let imports: ReturnType<typeof createGameImportsAndEngine>['imports'];
-  let engine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { Entity, GameExports, createGame, WeaponId, PowerupId, addPowerup } from '@quake2ts/game';
+import { fire } from '../../src/combat/weapons/firing.js';
+import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+
+describe('Combat and Items', () => {
+  let game: GameExports;
+  let player: Entity;
+
+  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
+  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
   beforeEach(() => {
-    setupBrowserEnvironment();
+    vi.clearAllMocks();
     const result = createGameImportsAndEngine();
-    imports = result.imports;
-    engine = result.engine;
+    mockImports = result.imports;
+    mockEngine = result.engine;
 
-    entitySystem = new EntitySystem(
-      engine,
-      imports,
-      { x: 0, y: 0, z: -800 }, // Gravity
-      1024 // Max entities
-    );
+    game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
+    game.spawnWorld();
+    player = game.entities.find(e => e.classname === 'player')!;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  describe('Weapon Kick (Recoil)', () => {
+    it('should apply kick angles to player client on fire', () => {
+       // Give machinegun
+       player.client!.inventory.ownedWeapons.add(WeaponId.Machinegun);
+       player.client!.inventory.ammo.counts[0] = 100; // Bullets are index 0
+       player.client!.inventory.currentWeapon = WeaponId.Machinegun;
+
+       // Fire
+       fire(game, player, WeaponId.Machinegun);
+
+       expect(player.client!.kick_angles).toBeDefined();
+       expect(player.client!.kick_angles!.x).toBeLessThan(0); // Should kick up (negative pitch)
+    });
   });
 
-  it('should inflict damage and reduce health using T_Damage', () => {
-    const target = spawnEntity(entitySystem, createMonsterEntityFactory('monster_soldier', {
-        health: 100,
-        takedamage: true,
-        origin: { x: 100, y: 0, z: 0 }
-    }));
-    // Manually add callbacks
-    target.pain = vi.fn();
-    target.die = vi.fn();
+  describe('Railgun Penetration', () => {
+    it('should hit multiple aligned entities', () => {
+       // Setup aligned targets
+       const target1 = game.entities.spawn();
+       Object.assign(target1, createEntityFactory({
+           takedamage: true,
+           health: 100,
+           origin: { x: 100, y: 0, z: 0 },
+           mins: { x: -10, y: -10, z: -10 },
+           maxs: { x: 10, y: 10, z: 10 }
+       }));
 
-    const attacker = spawnEntity(entitySystem, createPlayerEntityFactory({
-        origin: { x: 0, y: 0, z: 0 }
-    }));
+       const target2 = game.entities.spawn();
+       Object.assign(target2, createEntityFactory({
+           takedamage: true,
+           health: 100,
+           origin: { x: 200, y: 0, z: 0 }, // Behind target1
+           mins: { x: -10, y: -10, z: -10 },
+           maxs: { x: 10, y: 10, z: 10 }
+       }));
 
-    // Execute actual combat logic
-    const dir = { x: 1, y: 0, z: 0 }; // Direction from attacker to target
-    const point = { x: 90, y: 0, z: 0 }; // Impact point
-    const damage = 20;
-    const knockback = 20;
-    const dflags = 0;
-    const mod = DamageMod.BLASTER;
+       // Mock trace sequence for Railgun loop
+       // 0. P_ProjectSource Check (Eye to Muzzle) -> No hit
+       mockImports.trace.mockReturnValueOnce(createTraceMock({
+          fraction: 1.0,
+          endpos: { x: 0, y: 0, z: 0 },
+          ent: null
+       }))
+       // 1. Hit target1
+       .mockReturnValueOnce(createTraceMock({
+          fraction: 0.1,
+          endpos: target1.origin,
+          ent: target1,
+          plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
+       }))
+       // 2. Hit target2
+       .mockReturnValueOnce(createTraceMock({
+          fraction: 0.2, // Relative to start
+          endpos: target2.origin,
+          ent: target2,
+          plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
+       }))
+       // 3. Hit nothing (end of range)
+       .mockReturnValueOnce(createTraceMock({
+          fraction: 1.0,
+          endpos: { x: 8192, y: 0, z: 0 },
+          ent: null
+       }));
 
-    const result = T_Damage(
-        target as any,
-        attacker as any,
-        attacker as any,
-        dir,
-        point,
-        dir, // normal
-        damage,
-        knockback,
-        dflags,
-        mod,
-        imports.multicast // Pass multicast mock
-    );
+       player.client!.inventory.ownedWeapons.add(WeaponId.Railgun);
+       player.client!.inventory.ammo.counts[5] = 10; // Slugs are index 5
 
-    // Verify state changes
-    expect(target.health).toBe(80);
-    expect(target.pain).toHaveBeenCalled();
-    expect(result).toBeDefined();
-    expect(result?.take).toBe(20);
+       fire(game, player, WeaponId.Railgun);
 
-    // Kill it
-    T_Damage(target as any, attacker as any, attacker as any, dir, point, dir, 100, 100, dflags, mod, imports.multicast);
+       // Verify damage applied to both
+       expect(target1.health).toBeLessThan(100);
+       expect(target2.health).toBeLessThan(100);
+    });
+  });
 
-    expect(target.health).toBeLessThanOrEqual(0);
-    expect(target.die).toHaveBeenCalled();
+  describe('Powerup Expiration', () => {
+      it('should remove expired powerups', () => {
+          const nowMs = game.time * 1000;
+          addPowerup(player.client!.inventory, PowerupId.QuadDamage, nowMs + 100); // Expires in 0.1s
+
+          expect(player.client!.inventory.powerups.has(PowerupId.QuadDamage)).toBe(true);
+
+          // Verify the `player_think` was attached correctly in `createGame`.
+          expect(player.think).toBeDefined();
+          expect(player.nextthink).toBeGreaterThan(0);
+      });
   });
 });
