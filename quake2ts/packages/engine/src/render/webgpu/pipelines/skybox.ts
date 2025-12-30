@@ -90,9 +90,9 @@ export class SkyboxPipeline {
     new Float32Array(this.vertexBuffer.getMappedRange()).set(SKYBOX_POSITIONS);
     this.vertexBuffer.unmap();
 
-    // Create uniform buffer (mat4 + vec2 + padding)
-    // 16 floats (64 bytes) + 2 floats (8 bytes) + 1 float (4 bytes) -> round up to 80 bytes for alignment or simplicty
-    // Struct: mat4 (0-64), vec2 (64-72), float (72-76). Total 76 bytes. Aligned to 16 bytes -> 80 bytes.
+    // Create uniform buffer (mat4 + vec2 + f32 + padding)
+    // 16 floats (64 bytes) + 2 floats (8 bytes) + 1 float (4 bytes) -> 76 bytes.
+    // Aligned to 16 bytes -> 80 bytes.
     this.uniformBuffer = device.createBuffer({
         label: 'skybox-uniform-buffer',
         size: 80,
