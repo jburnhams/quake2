@@ -137,7 +137,7 @@ describe('Particle System Visual Tests', () => {
         }
 
         const projection = createMat4Identity();
-        mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
+        mat4Ortho(projection, -100, 100, -50, 150, 0.1, 500);
         const viewRight = { x: 1, y: 0, z: 0 };
         const viewUp = { x: 0, y: 1, z: 0 };
 
@@ -264,7 +264,8 @@ describe('Particle System Visual Tests', () => {
         }
 
         const projection = createMat4Identity();
-        mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
+        // Use a larger viewport to capture the directional spray of blood particles
+        mat4Ortho(projection, -100, 100, -50, 150, 0.1, 500);
         const viewRight = { x: 1, y: 0, z: 0 };
         const viewUp = { x: 0, y: 1, z: 0 };
 
