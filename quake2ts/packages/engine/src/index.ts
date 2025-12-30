@@ -85,7 +85,6 @@ export {
   type BspHeader,
   type BspEntities,
   type BspEntity,
-  type BspLump,
   type BspLumpInfo,
   type BspFace,
   type BspLeaf,
@@ -103,6 +102,7 @@ export {
   type BspBrushSide,
   type BspArea,
   type BspAreaPortal,
+  BspLump,
 } from './assets/bsp.js';
 export {
   Md2Loader,

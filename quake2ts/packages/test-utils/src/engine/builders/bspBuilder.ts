@@ -1,4 +1,6 @@
-import { BspBrush, BspBrushSide, BspFace, BspLeaf, BspLump, BspModel, BspNode, BspPlane, BspTexInfo, Vec3 } from '@quake2ts/engine/assets/bsp.js';
+import { BspBrush, BspBrushSide, BspFace, BspLeaf, BspLump, BspModel, BspNode, BspPlane, BspTexInfo } from '@quake2ts/engine';
+
+type Vec3 = [number, number, number];
 
 const HEADER_LUMPS = 19;
 const HEADER_SIZE = 4 + 4 + HEADER_LUMPS * 8;

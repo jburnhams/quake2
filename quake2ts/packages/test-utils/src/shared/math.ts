@@ -1,4 +1,4 @@
-import type { Vec3, Bounds3 } from '@quake2ts/shared/math/vec3';
+import type { Vec3, Bounds3 } from '@quake2ts/shared';
 
 /**
  * Creates a Vector3 object.
@@ -64,4 +64,4 @@ export const randomVector3 = (min: number = -100, max: number = 100): Vec3 => ({
     z: Math.random() * (max - min) + min,
 });
 
-export { ZERO_VEC3 } from '@quake2ts/shared/math/vec3';
+export { ZERO_VEC3 } from '@quake2ts/shared';
