@@ -1,5 +1,9 @@
 import { vi, type Mock } from 'vitest';
-import { DamageMod, Entity, ArmorType, type RegularArmorState, type PowerArmorState } from '@quake2ts/game';
+// Import directly from source to avoid loading entire game index
+import { DamageMod } from '@quake2ts/game/src/combat/damageMods.js';
+import { Entity } from '@quake2ts/game/src/entities/entity.js';
+import { ArmorType } from '@quake2ts/game/src/inventory/items.js';
+import type { RegularArmorState, PowerArmorState } from '@quake2ts/game/src/inventory/armor.js';
 
 export interface MockDamageInfo {
   damage: number;

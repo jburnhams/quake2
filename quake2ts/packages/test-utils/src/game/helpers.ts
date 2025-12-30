@@ -1,58 +1,38 @@
 import { vi, type Mock } from 'vitest';
-import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
-import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
-import { type BspModel } from '@quake2ts/engine';
+import { type GameEngine, type GameExports } from '@quake2ts/game/src/index.js';
+import { type GameImports } from '@quake2ts/game/src/imports.js';
+import { Entity } from '@quake2ts/game/src/entities/entity.js';
+import { EntitySystem } from '@quake2ts/game/src/entities/system.js';
+import { SpawnRegistry, type SpawnContext } from '@quake2ts/game/src/entities/spawn.js';
+import { ScriptHookRegistry } from '@quake2ts/game/src/scripting/hooks.js';
+import { type BspModel } from '@quake2ts/engine/src/assets/bsp.js';
+import { type Vec3 } from '@quake2ts/shared/src/math/vec3.js';
+import { createRandomGenerator } from '@quake2ts/shared/src/math/random.js';
 import { createTraceMock } from '../shared/collision.js';
-import { LegacyMock } from '../vitest-compat.js';
-
-// Re-export collision helpers from shared collision utility
-export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock } from '../shared/collision.js';
-
-// -- Types --
-
-export interface MockEngine {
-  sound: LegacyMock<[Entity, number, string, number, number, number], void>;
-  soundIndex: LegacyMock<[string], number>;
-  modelIndex: LegacyMock<[string], number>;
-  centerprintf: LegacyMock<[Entity, string], void>;
-}
-
-export interface MockGame {
-  random: ReturnType<typeof createRandomGenerator>;
-  registerEntitySpawn: LegacyMock<[string, (entity: Entity) => void], void>;
-  unregisterEntitySpawn: LegacyMock<[string], void>;
-  getCustomEntities: LegacyMock<[], string[]>;
-  hooks: ScriptHookRegistry;
-  registerHooks: LegacyMock<[any], any>;
-  spawnWorld: LegacyMock<[], void>;
-  clientBegin: LegacyMock<[any], void>;
-  damage: LegacyMock<[number], void>;
-  entities: any;
-}
+import { createMockEngine } from '../engine/mocks/assets.js';
 
 export interface TestContext extends SpawnContext {
-  entities: EntitySystem;
-  game: MockGame;
-  engine: MockEngine;
+  game: GameExports;
+  spawnRegistry: SpawnRegistry;
+  engine: GameEngine;
+  keyValues: Record<string, string>;
+  health_multiplier: number;
+  warn: Mock;
+  free: Mock;
+  precacheModel?: Mock;
+  precacheSound?: Mock;
+  precacheImage?: Mock;
 }
 
-// -- Factories --
-
-export const createMockEngine = (): MockEngine => ({
-  sound: vi.fn(),
-  soundIndex: vi.fn((sound: string) => 0),
-  modelIndex: vi.fn((model: string) => 0),
-  centerprintf: vi.fn(),
-});
-
-export const createMockGame = (seed: number = 12345): { game: MockGame, spawnRegistry: SpawnRegistry } => {
+export const createMockGame = (seed = 12345) => {
   const spawnRegistry = new SpawnRegistry();
   const hooks = new ScriptHookRegistry();
 
-  const game: MockGame = {
-    random: createRandomGenerator({ seed }),
-    registerEntitySpawn: vi.fn((classname: string, spawnFunc: (entity: Entity) => void) => {
-      spawnRegistry.register(classname, (entity) => spawnFunc(entity));
+  const game = {
+    registerEntitySpawn: vi.fn((classname: string, factory: any) => {
+      spawnRegistry.register(classname, (entity: Entity) => {
+        factory(entity);
+      });
     }),
     unregisterEntitySpawn: vi.fn((classname: string) => {
       spawnRegistry.unregister(classname);
@@ -210,14 +190,17 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     coop: false,
     activeCount: entityList.length,
     world: entityList.find(e => e.classname === 'worldspawn') || new Entity(0),
-  } as unknown as EntitySystem;
+    // Explicitly add private property to satisfy TS type check for mock object
+    // @ts-ignore - Intentionally accessing private property for mock structure compatibility
+    spawnRegistry: undefined as unknown as SpawnRegistry
+  };
 
   // Fix circular reference
-  game.entities = entities;
+  game.entities = entities as unknown as EntitySystem;
 
   return {
     keyValues: {},
-    entities,
+    entities: entities as unknown as EntitySystem,
     game,
     engine,
     health_multiplier: 1,
