@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_mutant } from '../../../src/entities/monsters/mutant.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_mutant', () => {
   let mutant: Entity;
@@ -11,8 +11,9 @@ describe('monster_mutant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockContext = createTestContext();
-    mutant = new Entity(1);
-    mutant.timestamp = 10;
+    mutant = createMonsterEntityFactory('monster_mutant', {
+        timestamp: 10
+    });
     SP_monster_mutant(mutant, mockContext);
   });
 
@@ -57,11 +58,9 @@ describe('monster_mutant', () => {
   });
 
   it('checkattack logic selects jump', () => {
-      const enemy = new Entity(2);
-      enemy.origin = { x: 300, y: 0, z: 0 }; // Distance 300, perfect for jump
+      const enemy = createEntityFactory({ index: 2, origin: { x: 300, y: 0, z: 0 }, health: 100 });
       mutant.enemy = enemy;
       mutant.origin = { x: 0, y: 0, z: 0 };
-      enemy.health = 100;
 
       // Mock random to trigger jump ( < 0.3 )
       vi.spyOn(mockContext.entities.rng, 'frandom').mockReturnValue(0.1);
@@ -74,11 +73,9 @@ describe('monster_mutant', () => {
   });
 
   it('checkattack logic selects melee when close', () => {
-      const enemy = new Entity(2);
-      enemy.origin = { x: 50, y: 0, z: 0 }; // Close
+      const enemy = createEntityFactory({ index: 2, origin: { x: 50, y: 0, z: 0 }, health: 100 });
       mutant.enemy = enemy;
       mutant.origin = { x: 0, y: 0, z: 0 };
-      enemy.health = 100;
 
       // Mock random to trigger attack ( < 0.5 )
       vi.spyOn(mockContext.entities.rng, 'frandom').mockReturnValue(0.1);

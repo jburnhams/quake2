@@ -3,7 +3,7 @@ import { SP_monster_berserk } from '../../../src/entities/monsters/berserk.js';
 import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_berserk', () => {
   let context: any;
@@ -15,36 +15,27 @@ describe('monster_berserk', () => {
     context = testCtx.entities;
 
     // Setup entities
-    berserk = {
-      index: 1,
-      origin: { x: 0, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
-      mins: { x: -24, y: -24, z: -24 },
-      maxs: { x: 24, y: 24, z: 32 },
-      viewheight: 32,
-      classname: 'monster_berserk',
-      health: 240,
-      max_health: 240,
-      monsterinfo: {
-        current_move: null,
-      },
-      enemy: null,
-      spawnflags: 0,
-      velocity: { x: 0, y: 0, z: 0 },
-      timestamp: 0, // Initialize timestamp!
-    } as any;
+    berserk = createMonsterEntityFactory('monster_berserk', {
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        health: 240,
+        max_health: 240,
+        viewheight: 32,
+        spawnflags: 0,
+        velocity: { x: 0, y: 0, z: 0 },
+        timestamp: 0,
+        monsterinfo: {
+            current_move: null,
+        } as any,
+        enemy: null
+    });
 
-    player = {
-      index: 2,
-      origin: { x: 100, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
-      classname: 'player',
-      health: 100,
-      takedamage: true,
-      flags: 0,
-      mins: { x: -16, y: -16, z: -24 },
-      maxs: { x: 16, y: 16, z: 32 },
-    } as any;
+    player = createPlayerEntityFactory({
+        index: 2,
+        origin: { x: 100, y: 0, z: 0 },
+        health: 100,
+        takedamage: true,
+    });
 
     context.findByRadius = vi.fn().mockReturnValue([player]);
     context.trace.mockReturnValue({
