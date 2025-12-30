@@ -11,3 +11,5 @@ results.json
 junit.xml
 node_modules/
 dist/
+stats/
+**/stats/

@@ -1,8 +1,0 @@
-{
-  "passed": true,
-  "percentDifferent": 0,
-  "pixelsDifferent": 0,
-  "totalPixels": 65536,
-  "threshold": 0.1,
-  "maxDifferencePercent": 0.1
-}
