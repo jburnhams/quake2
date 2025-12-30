@@ -11,19 +11,19 @@ const exclude = [
   '**/dist/**',
   'tests/unit-node/**', // Exclude node-specific unit tests as they run with vitest.node.config.ts
   // Exclude webgpu specific tests from standard runs
-  ...((!isWebGPU) ? ['**/webgpu/**/*.test.ts'] : []),
+  ...((!isWebGPU) ? ['tests/webgpu/**/*.test.ts'] : []),
   // Exclude webgl visual tests from standard runs
-  ...((!isWebGL) ? ['**/tests/webgl/**'] : []),
+  ...((!isWebGL) ? ['tests/webgl/**'] : []),
   // Exclude integration tests from unit tests
-  ...(isUnit ? ['**/tests/integration/**', '**/performance/**'] : [])
+  ...(isUnit ? ['tests/integration/**'] : [])
 ];
 
 const include = isWebGPU
-  ? ['**/webgpu/**/*.test.ts']
+  ? ['tests/webgpu/**/*.test.ts']
   : isWebGL
-    ? ['**/tests/webgl/**/*.test.ts']
+    ? ['tests/webgl/**/*.test.ts']
     : isIntegration
-      ? ['**/tests/integration/**/*.test.ts', '**/performance/**/*.test.ts']
+      ? ['tests/integration/**/*.test.ts']
       : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 const setupFiles = ['./vitest.setup.ts'];
