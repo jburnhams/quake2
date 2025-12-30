@@ -72,77 +72,7 @@ tests/webgl/visual/world/
    - Freeze animation at specific time
    - Validate texture coordinate offset
 
-**Implementation Pattern:**
-
-```typescript
-import { test } from 'vitest';
-import { createRenderer } from '../../../src/render/renderer';
-import { createWebGLRenderTestSetup, expectSnapshot } from '@quake2ts/test-utils';
-import { createTestBspGeometry, createTestBspMap } from '@quake2ts/test-utils';
-import { Camera } from '../../../src/render/camera';
-import { mat4 } from 'gl-matrix';
-import path from 'path';
-
-const snapshotDir = path.join(__dirname, '..', '__snapshots__');
-
-test('bsp: single textured quad', async () => {
-  const setup = await createWebGLRenderTestSetup(256, 256);
-  const renderer = createRenderer(setup.gl);
-
-  // Create test BSP geometry (helper creates minimal valid BSP data)
-  const bspMap = createTestBspMap({
-    surfaces: [
-      {
-        vertices: [/* quad vertices */],
-        texInfo: { textureName: 'test-brick', /* ... */ }
-      }
-    ]
-  });
-
-  const geometry = renderer.uploadBspGeometry(bspMap);
-
-  // Setup camera to view the quad
-  const camera = new Camera(mat4.create());
-  camera.setPosition([0, 0, 5]);
-  camera.lookAt([0, 0, 0]);
-  camera.setPerspective(90, 1.0, 0.1, 100);
-
-  // Render frame
-  renderer.renderFrame({
-    camera,
-    world: {
-      map: bspMap,
-      surfaces: [geometry],
-      textures: renderer.getTextures()
-    },
-    clearColor: [0, 0, 0, 1]
-  });
-
-  const pixels = captureWebGLFramebuffer(setup.gl, 256, 256);
-
-  await expectSnapshot(pixels, {
-    name: 'bsp-single-quad',
-    description: 'Single textured quad from BSP geometry',
-    width: 256,
-    height: 256,
-    snapshotDir
-  });
-
-  setup.cleanup();
-});
-```
-
-**Subtasks:**
-1. Create `createTestBspGeometry` helper in test-utils
-2. Implement minimal BSP data generation
-3. Setup camera for good viewing angle
-4. Render and capture
-5. Implement each visual test
-
-**Assets Needed:**
-- Simple test textures (brick, metal, etc.)
-- Can use procedural textures or load from pak.pak
-- Minimal BSP geometry (no full maps needed)
+**Status:** COMPLETE
 
 ---
 
@@ -177,22 +107,7 @@ test('bsp: single textured quad', async () => {
    - Verify lightmaps are ignored
    - Base texture only
 
-**Implementation Notes:**
-- Use `BspSurfaceGeometry` with `lightmapAtlas` data
-- Test `applySurfaceState` from `bspPipeline.ts`
-- Validate light style array indices [0-3]
-- Check lightmap coordinate generation
-
-**Subtasks:**
-1. Create lightmap test data generator
-2. Implement static lightmap test
-3. Implement multi-style blending test
-4. Test fullbright override
-5. Validate blend equations
-
-**Assets Needed:**
-- Simple lightmap textures (grayscale, colored lighting)
-- Can generate procedurally (gradient, spots, etc.)
+**Status:** COMPLETE
 
 ---
 
@@ -222,16 +137,7 @@ test('bsp: single textured quad', async () => {
    - Verify sorted back-to-front
    - Validate blending order
 
-**Implementation Notes:**
-- Check `sortVisibleFacesFrontToBack` and `sortVisibleFacesBackToFront` in `frame.ts`
-- Use render statistics to verify draw calls
-- Visual output should be identical regardless of batching (performance vs correctness)
-
-**Subtasks:**
-1. Create multi-surface test scenarios
-2. Capture render statistics (draw calls)
-3. Verify batching behavior
-4. Validate sorting via visual output
+**Status:** COMPLETE
 
 ---
 
