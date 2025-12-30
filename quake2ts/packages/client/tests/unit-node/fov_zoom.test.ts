@@ -43,6 +43,16 @@ describe('Client FOV and Zoom', () => {
   let zoomEndCallback: () => void;
 
   beforeEach(async () => {
+    // Mock localStorage
+    global.localStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+        length: 0,
+        key: vi.fn(),
+    };
+
     mockTrace.mockReturnValue({
       fraction: 1,
       endpos: { x: 0, y: 0, z: 0 },

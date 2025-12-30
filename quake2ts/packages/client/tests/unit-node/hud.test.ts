@@ -4,25 +4,22 @@ import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
 import { MessageSystem } from '@quake2ts/client/hud/messages.js';
-import { createMockAssetManager } from '@quake2ts/test-utils';
+import { createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock engine dependencies
-const mockRenderer = {
-    begin2D: vi.fn(),
-    end2D: vi.fn(),
-    drawPic: vi.fn(),
-    drawfillRect: vi.fn(),
-    drawString: vi.fn(),
-    drawCenterString: vi.fn(),
-    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24, name: 'mock' } as any),
-    registerTexture: vi.fn().mockReturnValue({ width: 24, height: 24, name: 'mock' } as any),
+const mockRenderer = createMockRenderer({
     width: 640,
-    height: 480
-} as unknown as Renderer;
+    height: 480,
+    // Ensure registerTexture returns a valid object that has 'width' property
+    registerTexture: vi.fn().mockReturnValue({ width: 24, height: 24, name: 'mock' } as any),
+    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24, name: 'mock' } as any),
+});
 
 // Mock AssetManager using centralized factory from test-utils
 const mockAssetManager = createMockAssetManager({
-    loadTexture: vi.fn().mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' } as PreparedTexture)
+    loadTexture: vi.fn().mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' } as PreparedTexture),
+    // Ensure crosshair loading doesn't fail
+    loadSprite: vi.fn().mockResolvedValue({}),
 });
 
 describe('HUD Rendering', () => {
@@ -32,6 +29,12 @@ describe('HUD Rendering', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
+
+        // Re-apply return values in beforeEach to persist across tests
+        (mockRenderer.registerTexture as any).mockReturnValue({ width: 24, height: 24, name: 'mock' });
+        (mockRenderer.registerPic as any).mockResolvedValue({ width: 24, height: 24, name: 'mock' });
+        (mockAssetManager.loadTexture as any).mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' });
+
 
         ps = {
             damageAlpha: 0,

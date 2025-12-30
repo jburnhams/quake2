@@ -48,6 +48,7 @@ const mockEngine: EngineImports & { renderer: Renderer } = {
   assets: mockAssets,
   renderer: mockRenderer,
   trace: mockTrace,
+  pointcontents: vi.fn().mockReturnValue(0), // Mock pointcontents for checkWater
 } as any;
 
 describe('Client FOV and View', () => {
@@ -56,6 +57,28 @@ describe('Client FOV and View', () => {
 
   beforeEach(async () => { // Make async to handle async Init
     vi.clearAllMocks();
+
+    // Re-apply mocks in beforeEach in case clearAllMocks wipes them out
+
+    // Explicitly using mockImplementation to ensure it works even if createMockRenderer was called once
+    mockRenderer.getPerformanceReport = vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 });
+
+    // Fix registerPic returning a Promise or not?
+    // Init_Hud expects registerTexture, but cgameBridge might use registerPic (if it exists on renderer in engine)
+    // The renderer interface has registerTexture which returns a Pic.
+    // Wait, renderer.registerTexture returns a Pic (object), not a Promise.
+
+    mockRenderer.registerTexture = vi.fn().mockReturnValue({ width: 64, height: 64 });
+    mockRenderer.registerPic = vi.fn().mockReturnValue({ width: 32, height: 32 }); // Use sync return if that matches interface
+
+
+    // Ensure trace returns a valid result every time
+    mockTrace.mockReturnValue({
+      fraction: 1,
+      endpos: { x: 0, y: 0, z: 0 },
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+      ent: -1
+    });
 
     // Ensure list returns empty array by default
     (mockCvars.list as any).mockReturnValue([]);

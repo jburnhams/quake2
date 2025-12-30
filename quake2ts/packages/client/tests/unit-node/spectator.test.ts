@@ -25,9 +25,19 @@ describe('Spectator Client API', () => {
   beforeEach(async () => {
     vi.clearAllMocks(); // Resets implementations if mockReset: true
 
+    // Mock localStorage
+    global.localStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+        length: 0,
+        key: vi.fn(),
+    };
+
     // Re-setup mocks
-    mockRenderer.registerPic.mockResolvedValue({ width: 32, height: 32 });
-    mockRenderer.registerTexture.mockReturnValue({ width: 32, height: 32, upload: vi.fn(), bind: vi.fn() });
+    (mockRenderer.registerPic as any).mockResolvedValue({ width: 32, height: 32 });
+    (mockRenderer.registerTexture as any).mockReturnValue({ width: 32, height: 32, upload: vi.fn(), bind: vi.fn() });
 
     mockTrace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
 
