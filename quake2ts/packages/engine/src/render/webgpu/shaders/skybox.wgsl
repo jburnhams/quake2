@@ -16,17 +16,20 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
+  // Normalize input position (Quake Coordinates)
+  var qDir = normalize(position);
+
+  // Apply scrolling in Quake Coordinates (Horizontal Plane X/Y)
+  // This ensures clouds scroll horizontally regardless of the final mapping.
+  qDir.x += uniforms.scroll.x;
+  qDir.y += uniforms.scroll.y;
+
   // Transform Quake coordinates (X-Fwd, Y-Left, Z-Up)
   // to WebGPU/GL cubemap coordinates (Right-handed? -Z Fwd, +X Right, +Y Up)
   // Quake X  -> GL -Z
   // Quake Y  -> GL -X
   // Quake Z  -> GL Y
-  let qDir = normalize(position);
   var dir = vec3<f32>(-qDir.y, qDir.z, -qDir.x);
-
-  // Apply scroll
-  dir.x += uniforms.scroll.x;
-  dir.y += uniforms.scroll.y;
 
   output.direction = dir;
 
