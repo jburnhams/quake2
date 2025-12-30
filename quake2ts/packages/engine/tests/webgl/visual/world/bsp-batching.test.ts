@@ -6,10 +6,9 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotDir = path.join(__dirname, '..', '__snapshots__');
 
+// Inline helpers to avoid complex file loading in browser context
 const HELPER_SCRIPTS = `
-// Re-using helper scripts from bsp-geometry.test.ts (inlined for now)
 function createTestBspMap(options = {}) {
-  // ... (Abbreviated implementation)
   const vertices = [];
   const edges = [];
   const surfEdges = [];
@@ -154,7 +153,7 @@ test('bsp: batching - multiple surfaces same texture', { timeout: 30000 }, async
     const bspMap = createTestBspMap({ surfaces });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('shared', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
+    const texShared = renderer.registerTexture('shared', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
 
     const camera = createLookAtCamera([0, 0, 30]);
 
@@ -164,7 +163,7 @@ test('bsp: batching - multiple surfaces same texture', { timeout: 30000 }, async
         map: bspMap,
         surfaces: geometry.surfaces,
         lightmaps: geometry.lightmaps,
-        textures: renderer.getTextures ? renderer.getTextures() : undefined
+        textures: new Map([['shared', texShared]])
       },
       clearColor: [0, 0, 0, 1]
     }, []);
@@ -172,6 +171,7 @@ test('bsp: batching - multiple surfaces same texture', { timeout: 30000 }, async
     const report = renderer.getPerformanceReport();
     if (report.drawCalls > 1) {
        console.log('Draw calls:', report.drawCalls);
+       // We expect 1 batch, so 1 draw call for surfaces.
     }
   `, {
     name: 'bsp-batching-same',
@@ -200,8 +200,8 @@ test('bsp: batching - multiple textures', { timeout: 30000 }, async () => {
     const bspMap = createTestBspMap({ surfaces });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('texA', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
-    renderer.registerTexture('texB', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
+    const texA = renderer.registerTexture('texA', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
+    const texB = renderer.registerTexture('texB', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
 
     const camera = createLookAtCamera([0, 0, 30]);
 
@@ -211,7 +211,7 @@ test('bsp: batching - multiple textures', { timeout: 30000 }, async () => {
         map: bspMap,
         surfaces: geometry.surfaces,
         lightmaps: geometry.lightmaps,
-        textures: renderer.getTextures ? renderer.getTextures() : undefined
+        textures: new Map([['texA', texA], ['texB', texB]])
       },
       clearColor: [0, 0, 0, 1]
     }, []);
@@ -244,8 +244,8 @@ test('bsp: sorting - opaque front-to-back', { timeout: 30000 }, async () => {
     const bspMap = createTestBspMap({ surfaces });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('red', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
-    renderer.registerTexture('green', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
+    const texRed = renderer.registerTexture('red', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
+    const texGreen = renderer.registerTexture('green', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
 
     const camera = createLookAtCamera([0, 0, 30]);
 
@@ -255,7 +255,7 @@ test('bsp: sorting - opaque front-to-back', { timeout: 30000 }, async () => {
         map: bspMap,
         surfaces: geometry.surfaces,
         lightmaps: geometry.lightmaps,
-        textures: renderer.getTextures ? renderer.getTextures() : undefined
+        textures: new Map([['red', texRed], ['green', texGreen]])
       },
       clearColor: [0, 0, 0, 1]
     }, []);
@@ -272,15 +272,6 @@ test('bsp: sorting - opaque front-to-back', { timeout: 30000 }, async () => {
 test('bsp: sorting - transparent back-to-front', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
     ${HELPER_SCRIPTS}
-
-    // Two overlapping transparent surfaces
-    // Back (Red 50%), Front (Green 50%)
-    // Sorted Back-to-Front means Red drawn first, then Green blends over.
-    // Result: Red + (Green over Red)
-    // If Green first: Green + (Red behind Green).
-    // If Red is behind, it should be blended if Green didn't write depth or depth test passes.
-    // Standard transparency usually disables depth write or relies on sorting.
-    // Quake 2 BSP transparent surfaces (SURF_TRANS33/66) are sorted.
 
     // SURF_TRANS33 = 0x10
     const SURF_TRANS33 = 0x10;
@@ -299,8 +290,8 @@ test('bsp: sorting - transparent back-to-front', { timeout: 30000 }, async () =>
     const bspMap = createTestBspMap({ surfaces });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('red', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
-    renderer.registerTexture('green', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
+    const texRed = renderer.registerTexture('red', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
+    const texGreen = renderer.registerTexture('green', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
 
     const camera = createLookAtCamera([0, 0, 30]);
 
@@ -310,7 +301,7 @@ test('bsp: sorting - transparent back-to-front', { timeout: 30000 }, async () =>
         map: bspMap,
         surfaces: geometry.surfaces,
         lightmaps: geometry.lightmaps,
-        textures: renderer.getTextures ? renderer.getTextures() : undefined
+        textures: new Map([['red', texRed], ['green', texGreen]])
       },
       clearColor: [0, 0, 0, 1]
     }, []);
