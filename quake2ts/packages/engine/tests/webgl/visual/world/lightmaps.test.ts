@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const snapshotDir = path.join(__dirname, '..', '__snapshots__');
+const snapshotDir = path.join(__dirname, '..', '..', '..', 'visual', '__snapshots__');
 
 const HELPER_SCRIPTS = `
 // Re-using helper scripts from bsp-geometry.test.ts (inlined for now)

@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
+const snapshotDir = path.join(__dirname, '..', '..', '..', 'visual', '__snapshots__');
 
 test('sprite: textured quad - checkerboard', { timeout: 30000 }, async () => {
   await testWebGLRenderer(`
