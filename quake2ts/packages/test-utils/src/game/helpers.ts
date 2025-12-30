@@ -315,7 +315,18 @@ export function createGameImportsAndEngine(overrides?: {
   const imports = {
     trace: defaultTrace,
     pointcontents: vi.fn().mockReturnValue(0),
-    linkentity: vi.fn(),
+    linkentity: vi.fn((ent: Entity) => {
+      ent.absmin = {
+        x: ent.origin.x + ent.mins.x,
+        y: ent.origin.y + ent.mins.y,
+        z: ent.origin.z + ent.mins.z,
+      };
+      ent.absmax = {
+        x: ent.origin.x + ent.maxs.x,
+        y: ent.origin.y + ent.maxs.y,
+        z: ent.origin.z + ent.maxs.z,
+      };
+    }),
     multicast: vi.fn(),
     unicast: vi.fn(),
     ...overrides?.imports,
