@@ -4,17 +4,14 @@ import { ConfigStringIndex } from '@quake2ts/shared';
 import { createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock dependencies
+const mockRenderer = createMockRenderer();
+const mockAssets = createMockAssetManager();
+const mockTrace = vi.fn();
+
 const mockEngine = {
-  renderer: createMockRenderer({
-    registerTexture: vi.fn().mockReturnValue({
-      width: 32,
-      height: 32,
-      upload: vi.fn(),
-      bind: vi.fn()
-    })
-  }),
-  assets: createMockAssetManager(),
-  trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
+  renderer: mockRenderer,
+  assets: mockAssets,
+  trace: mockTrace,
   audio: {
       play_track: vi.fn(),
       play_music: vi.fn(),
@@ -25,7 +22,15 @@ const mockEngine = {
 describe('Spectator Client API', () => {
   let client: ClientExports;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.clearAllMocks(); // Resets implementations if mockReset: true
+
+    // Re-setup mocks
+    mockRenderer.registerPic.mockResolvedValue({ width: 32, height: 32 });
+    mockRenderer.registerTexture.mockReturnValue({ width: 32, height: 32, upload: vi.fn(), bind: vi.fn() });
+
+    mockTrace.mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
+
     client = createClient({
       engine: mockEngine as any,
       host: {
@@ -41,7 +46,8 @@ describe('Spectator Client API', () => {
           } as any
       } as any
     });
-    client.Init({
+
+    await client.Init({
         state: {} as any,
         timeMs: 0,
         serverFrame: 0
@@ -50,26 +56,13 @@ describe('Spectator Client API', () => {
 
   it('should set spectator target', () => {
     client.setSpectatorTarget(42);
-    // We can't access demoCameraState directly to verify, but we can verify behavior via side effects or internal state if exposed?
-    // Actually, createClient doesn't expose demoCameraState.
-    // But we can check if render logic changes? Or trust the code.
-    // We can verify logic by checking if we can unset it.
-
-    // Better: We can check getSpectatorTargets if we populate config strings.
   });
 
   it('should list spectator targets from config strings', () => {
-    // Populate some player names
     const player1Name = "PlayerOne";
     const player2Name = "PlayerTwo";
-
-    // CS_PLAYERS starts at ConfigStringIndex.Players
-    // We need to use the actual index.
-    // Note: ConfigStringIndex.Players was added in my patch.
     const CS_PLAYERS = ConfigStringIndex.Players;
 
-    // Simulate server sending config strings for players
-    // Format: \name\PlayerName\skin\male/grunt...
     client.ParseConfigString(CS_PLAYERS + 0, `\\name\\${player1Name}\\skin\\male/grunt`);
     client.ParseConfigString(CS_PLAYERS + 1, `\\name\\${player2Name}\\skin\\female/athena`);
 
@@ -82,6 +75,5 @@ describe('Spectator Client API', () => {
 
   it('should handle clearing spectator target', () => {
       client.setSpectatorTarget(null);
-      // Logic check: ensure no error throws
   });
 });

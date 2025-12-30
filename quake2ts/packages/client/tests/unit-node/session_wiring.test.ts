@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameSession, SessionOptions, createSession } from '@quake2ts/client/session.js';
 import { ClientExports, createClient } from '@quake2ts/client/index.js';
+import { EngineHost } from '@quake2ts/engine';
 
 // Mocks
 vi.mock('@quake2ts/game', async (importOriginal) => {
@@ -30,7 +31,6 @@ vi.mock('@quake2ts/client/index.js', async (importOriginal) => {
     return {
         ...actual,
         createClient: vi.fn((imports) => {
-             // We create a mock that has the properties we need to test
              mockClientInstance = {
                 init: vi.fn(),
                 render: vi.fn(),
@@ -39,15 +39,11 @@ vi.mock('@quake2ts/client/index.js', async (importOriginal) => {
                 ParseConfigString: vi.fn(),
                 ParseNotify: vi.fn(),
                 lastRendered: {},
-
-                // Properties to hold event handlers
                 onCenterPrint: undefined,
                 onNotify: undefined,
                 onPickupMessage: undefined,
                 onObituaryMessage: undefined,
                 onMenuStateChange: undefined,
-
-                // Menu API
                 showPauseMenu: vi.fn(),
                 hidePauseMenu: vi.fn(),
                 isMenuActive: vi.fn(() => false),
@@ -58,19 +54,20 @@ vi.mock('@quake2ts/client/index.js', async (importOriginal) => {
     };
 });
 
-vi.mock('@quake2ts/engine', () => {
+// Mock EngineHost manually to ensure instance methods exist
+vi.mock('@quake2ts/engine', async (importOriginal) => {
+    const actual = await importOriginal() as any;
     return {
-        EngineHost: vi.fn().mockImplementation(function() {
-            return {
-                start: vi.fn(),
-                stop: vi.fn(),
-                paused: true,
-                commands: { execute: vi.fn() }
-            };
-        })
+        ...actual,
+        EngineHost: class {
+            start = vi.fn();
+            stop = vi.fn();
+            paused = true;
+            commands = { execute: vi.fn(), registerAutocompleteProvider: vi.fn() };
+            constructor() {}
+        }
     };
 });
-
 
 describe('GameSession Integration Tests', () => {
   let session: GameSession;
@@ -80,7 +77,9 @@ describe('GameSession Integration Tests', () => {
     mockEngine = {
       trace: vi.fn(() => ({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } })),
       cmd: { executeText: vi.fn() },
-      renderer: {}
+      renderer: {},
+      start: vi.fn(),
+      stop: vi.fn()
     };
 
     const options: SessionOptions = {

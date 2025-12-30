@@ -3,28 +3,22 @@ import { createClient, ClientExports, ClientImports } from '@quake2ts/client/ind
 import { AssetManager, Renderer, EngineImports, EngineHost } from '@quake2ts/engine';
 import { createMockRenderer } from '@quake2ts/test-utils';
 
-// Mock dependencies
 const mockAssets = {
-  loadMd2Model: vi.fn().mockResolvedValue({}),
-  loadMd3Model: vi.fn().mockResolvedValue({}),
-  loadSprite: vi.fn().mockResolvedValue({}),
-  loadSound: vi.fn().mockResolvedValue({}),
-  loadTexture: vi.fn().mockResolvedValue({}),
+  loadMd2Model: vi.fn(),
+  loadMd3Model: vi.fn(),
+  loadSprite: vi.fn(),
+  loadSound: vi.fn(),
+  loadTexture: vi.fn(),
 } as unknown as AssetManager;
 
 const mockRenderer = createMockRenderer();
 
-const mockTrace = vi.fn().mockReturnValue({
-  fraction: 1,
-  endpos: { x: 0, y: 0, z: 0 },
-  plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-  ent: -1
-});
+const mockTrace = vi.fn();
 
 const mockCvars = {
   register: vi.fn(),
   get: vi.fn(),
-  list: vi.fn().mockReturnValue([]), // Added list
+  list: vi.fn(),
 };
 
 const mockCommands = {
@@ -48,13 +42,25 @@ describe('Client FOV and Zoom', () => {
   let zoomStartCallback: () => void;
   let zoomEndCallback: () => void;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    mockTrace.mockReturnValue({
+      fraction: 1,
+      endpos: { x: 0, y: 0, z: 0 },
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+      ent: -1
+    });
 
-    // Ensure list returns empty array
+    (mockAssets.loadMd2Model as any).mockResolvedValue({});
+    (mockAssets.loadMd3Model as any).mockResolvedValue({});
+    (mockAssets.loadSprite as any).mockResolvedValue({});
+    (mockAssets.loadSound as any).mockResolvedValue({});
+    (mockAssets.loadTexture as any).mockResolvedValue({});
+
+    mockRenderer.registerPic.mockResolvedValue({ width: 32, height: 32 });
+    mockRenderer.registerTexture.mockReturnValue({ width: 64, height: 64 });
+    mockRenderer.getPerformanceReport.mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 });
+
     (mockCvars.list as any).mockReturnValue([]);
-
-    // Capture callbacks
     (mockCvars.register as any).mockImplementation((def: any) => {
       if (def.name === 'fov') {
         fovCallback = def.onChange;
@@ -62,7 +68,7 @@ describe('Client FOV and Zoom', () => {
       return {
           name: def.name,
           defaultValue: def.defaultValue,
-          string: def.defaultValue, // Mock string getter
+          string: def.defaultValue,
           number: parseFloat(def.defaultValue),
       };
     });
@@ -73,7 +79,7 @@ describe('Client FOV and Zoom', () => {
     });
 
     client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
-    client.Init(); // Initialize client
+    await client.Init();
   });
 
   it('should zoom in when +zoom is executed', () => {
@@ -108,21 +114,16 @@ describe('Client FOV and Zoom', () => {
       serverFrame: 1
     };
 
-    // Standard render
     client.render({ latest: frame, previous: frame, alpha: 0 });
     expect(client.camera?.fov).toBe(90);
 
-    // Start zoom
     zoomStartCallback();
 
-    // Render again
     client.render({ latest: frame, previous: frame, alpha: 0 });
     expect(client.camera?.fov).toBe(40);
 
-    // End zoom
     zoomEndCallback();
 
-    // Render again
     client.render({ latest: frame, previous: frame, alpha: 0 });
     expect(client.camera?.fov).toBe(90);
   });
