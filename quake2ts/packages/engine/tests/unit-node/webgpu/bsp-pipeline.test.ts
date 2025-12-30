@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BspSurfacePipeline } from '../../src/render/webgpu/pipelines/bspPipeline';
+import { BspSurfacePipeline } from '../../../src/render/webgpu/pipelines/bspPipeline';
 import { createMockGPUDevice, setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
 // Mock shader import
-vi.mock('../../src/render/webgpu/shaders/bsp.wgsl', () => ({
+vi.mock('../../../src/render/webgpu/shaders/bsp.wgsl', () => ({
   default: '/* mock shader */',
 }));
 
