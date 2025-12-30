@@ -7,44 +7,44 @@ import { mat4 } from 'gl-matrix';
 
 // Skybox cube positions in Quake coordinates:
 // X = Forward, Y = Left, Z = Up
-// The shader expects these positions and transforms them to GL cubemap coordinates.
+// The shader transforms directions from Quake to GL cubemap coordinates for sampling.
 const SKYBOX_POSITIONS = new Float32Array([
-  // Front face (+X) - looking forward
+  // Front face (+X) - Quake forward direction
   1, -1, -1,
   1,  1, -1,
   1,  1,  1,
   1, -1, -1,
   1,  1,  1,
   1, -1,  1,
-  // Back face (-X) - looking backward
+  // Back face (-X) - Quake backward direction
   -1,  1, -1,
   -1, -1, -1,
   -1, -1,  1,
   -1,  1, -1,
   -1, -1,  1,
   -1,  1,  1,
-  // Left face (+Y) - looking left
+  // Left face (+Y) - Quake left direction
   -1, 1, -1,
   -1, 1,  1,
    1, 1,  1,
   -1, 1, -1,
    1, 1,  1,
    1, 1, -1,
-  // Right face (-Y) - looking right
+  // Right face (-Y) - Quake right direction
    1, -1, -1,
    1, -1,  1,
   -1, -1,  1,
    1, -1, -1,
   -1, -1,  1,
   -1, -1, -1,
-  // Top face (+Z) - looking up
+  // Top face (+Z) - Quake up direction
   -1, -1, 1,
    1, -1, 1,
    1,  1, 1,
   -1, -1, 1,
    1,  1, 1,
   -1,  1, 1,
-  // Bottom face (-Z) - looking down
+  // Bottom face (-Z) - Quake down direction
   -1,  1, -1,
    1,  1, -1,
    1, -1, -1,
@@ -170,8 +170,8 @@ export class SkyboxPipeline {
       },
       depthStencil: {
         format: 'depth24plus',
-        depthWriteEnabled: false,
-        depthCompare: 'always' // Skybox is usually drawn first or last. If first, always pass.
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal' // Proper depth testing ensures front faces occlude back faces
       },
       primitive: {
         topology: 'triangle-list',
