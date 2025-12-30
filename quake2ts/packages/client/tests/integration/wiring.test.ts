@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createClient, ClientImports } from '../../src/index.js';
+import { createClient, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer, AssetManager, EngineHost } from '@quake2ts/engine';
 import { ConfigStringIndex } from '@quake2ts/shared';
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MainMenuFactory, MainMenuOptions } from '../../src/ui/menu/main.js';
-import { SaveLoadMenuFactory } from '../../src/ui/menu/saveLoad.js';
-import { MenuSystem } from '../../src/ui/menu/system.js';
+import { MainMenuFactory, MainMenuOptions } from '@quake2ts/client/ui/menu/main.js';
+import { SaveLoadMenuFactory } from '@quake2ts/client/ui/menu/saveLoad.js';
+import { MenuSystem } from '@quake2ts/client/ui/menu/system.js';
 import { SaveStorage, SaveSlotMetadata } from '@quake2ts/game';
 
 describe('Menu Lifecycle Integration', () => {
