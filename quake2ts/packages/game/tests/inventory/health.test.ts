@@ -3,12 +3,13 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { createPlayerInventory, canPickupHealth } from '../../src/inventory/index.js';
+import { canPickupHealth } from '../../src/inventory/index.js';
 import { HEALTH_ITEMS } from '../../src/inventory/items.js';
+import { createMockInventory } from '@quake2ts/test-utils';
 
 describe('Health Pickups', () => {
     it('should be able to pick up health when below max', () => {
-        const inventory = createPlayerInventory();
+        const inventory = createMockInventory();
         const health = 50;
         const item = HEALTH_ITEMS['item_health'];
         const canPickup = canPickupHealth(inventory, health, item);
@@ -16,7 +17,7 @@ describe('Health Pickups', () => {
     });
 
     it('should not be able to pick up health when at max', () => {
-        const inventory = createPlayerInventory();
+        const inventory = createMockInventory();
         const health = 100;
         const item = HEALTH_ITEMS['item_health'];
         const canPickup = canPickupHealth(inventory, health, item);
@@ -24,7 +25,7 @@ describe('Health Pickups', () => {
     });
 
     it('should correctly calculate new health without exceeding max', () => {
-        const inventory = createPlayerInventory();
+        const inventory = createMockInventory();
         let health = 95;
         const item = HEALTH_ITEMS['item_health'];
 
@@ -39,7 +40,7 @@ describe('Health Pickups', () => {
     });
 
     it('should correctly handle mega health pickup', () => {
-        const inventory = createPlayerInventory();
+        const inventory = createMockInventory();
         let health = 100;
         const item = HEALTH_ITEMS['item_health_mega'];
 

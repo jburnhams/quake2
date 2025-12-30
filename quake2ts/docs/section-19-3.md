@@ -60,11 +60,12 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **3.7** Add `createMockDamageInfo()` factory
 - [x] **3.8** Cleanup combat mocks in `game/tests/combat/` directory
 - [x] **3.9** Cleanup AI mocks in `game/tests/ai/` directory
-- [ ] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
+- [x] **3.10** Cleanup monster attack mocks in `game/tests/monsters/` directory
     - [x] Refactored `soldier_variants.test.ts`
     - [x] Refactored `infantry.test.ts`, `berserk.test.ts`, `gladiator.test.ts`, `medic.test.ts`, `mutant.test.ts`, `parasite.test.ts`
+    - [x] Refactored `boss2.test.ts`, `brain.test.ts`, `chick.test.ts`, `flipper.test.ts`, `flyer.test.ts`, `gekk.test.ts`, `guardian.test.ts`, `gunner.test.ts`, `icarus.test.ts`, `insane.test.ts`, `soldier.test.ts`
     - Replace inline attack function mocks
-    - Estimated files: ~15 (Refactored 7)
+    - Estimated files: ~26 (Refactored 18)
 
 ---
 
@@ -80,6 +81,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **4.5** Add `createMockPowerup()` factory
 - [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
     - [x] Refactored `ammo.test.ts` and `weapons.test.ts`
+    - [x] Refactored `health.test.ts`
     - Estimated files: ~10
 
 ---
