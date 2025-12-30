@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { AssetManager, Renderer, EngineImports, EngineHost } from '@quake2ts/engine';
+import { createMockRenderer } from '@quake2ts/test-utils';
 
 // Mock dependencies
 const mockAssets = {
@@ -11,23 +12,15 @@ const mockAssets = {
   loadTexture: vi.fn().mockResolvedValue({}),
 } as unknown as AssetManager;
 
-const mockRenderer = {
-  registerTexture: vi.fn().mockReturnValue({ width: 64, height: 64 }), // Return valid texture object
-  begin2D: vi.fn(),
-  end2D: vi.fn(),
-  drawfillRect: vi.fn(),
-  drawCenterString: vi.fn(),
-  drawString: vi.fn(),
-  renderFrame: vi.fn(),
-  getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
-  setGamma: vi.fn(),
-  setBrightness: vi.fn(),
-  setBloom: vi.fn(),
-  setBloomIntensity: vi.fn(),
-  setUnderwaterWarp: vi.fn(),
+// Use createMockRenderer to ensure we have all methods including registerTexture
+const mockRenderer = createMockRenderer({
   width: 800,
   height: 600,
-} as unknown as Renderer;
+  // Ensure registerTexture returns a valid object that has 'width' property for Init_Hud
+  registerPic: vi.fn().mockResolvedValue({ width: 32, height: 32 }),
+  registerTexture: vi.fn().mockReturnValue({ width: 64, height: 64 }),
+  getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
+});
 
 const mockTrace = vi.fn().mockReturnValue({
   fraction: 1,
@@ -61,7 +54,7 @@ describe('Client FOV and View', () => {
   let client: ClientExports;
   let fovCallback: (cvar: any) => void;
 
-  beforeEach(() => {
+  beforeEach(async () => { // Make async to handle async Init
     vi.clearAllMocks();
 
     // Ensure list returns empty array by default
@@ -87,7 +80,7 @@ describe('Client FOV and View', () => {
     });
 
     client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
-    client.Init(); // Initialize client including CGame
+    await client.Init(); // Initialize client including CGame, await it
   });
 
   it('should register fov cvar', () => {
