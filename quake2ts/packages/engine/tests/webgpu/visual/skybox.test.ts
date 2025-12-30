@@ -54,17 +54,19 @@ describe('Skybox Pipeline', () => {
         return data;
     };
 
-    // Face 0: GL Right (+X) -> Quake Right (-Y) -> Magenta
+    // Cubemap faces mapped via Quake→GL transform in shader:
+    // cubemapDir.x=-dir.y, cubemapDir.y=dir.z, cubemapDir.z=-dir.x
+    // Face 0 (+X in GL): Quake -Y (right) -> Magenta
     cubemap.uploadFace(0, createColorData(255, 0, 255));
-    // Face 1: GL Left (-X) -> Quake Left (+Y) -> Green
+    // Face 1 (-X in GL): Quake +Y (left) -> Green
     cubemap.uploadFace(1, createColorData(0, 255, 0));
-    // Face 2: GL Top (+Y) -> Quake Up (+Z) -> Blue
+    // Face 2 (+Y in GL): Quake +Z (up) -> Blue
     cubemap.uploadFace(2, createColorData(0, 0, 255));
-    // Face 3: GL Bottom (-Y) -> Quake Down (-Z) -> Yellow
+    // Face 3 (-Y in GL): Quake -Z (down) -> Yellow
     cubemap.uploadFace(3, createColorData(255, 255, 0));
-    // Face 4: GL Front (+Z) -> Quake Back (-X) -> Cyan
+    // Face 4 (+Z in GL): Quake -X (back) -> Cyan
     cubemap.uploadFace(4, createColorData(0, 255, 255));
-    // Face 5: GL Back (-Z) -> Quake Front (+X) -> Red
+    // Face 5 (-Z in GL): Quake +X (forward) -> Red
     cubemap.uploadFace(5, createColorData(255, 0, 0));
   });
 

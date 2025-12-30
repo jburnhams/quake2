@@ -5,6 +5,8 @@ import { captureTexture, expectSnapshot } from '@quake2ts/test-utils';
 import { SkyboxPipeline } from '../../../../src/render/webgpu/pipelines/skybox.js';
 import { TextureCubeMap } from '../../../../src/render/webgpu/resources.js';
 
+const updateBaseline = process.env.UPDATE_VISUAL === '1';
+
 describe('Skybox Diagonal Views (Visual)', () => {
   // Logic check first (always runs)
   test('Camera.toState produces correct angles for diagonal view', () => {
@@ -40,13 +42,15 @@ describe('Skybox Diagonal Views (Visual)', () => {
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
     });
 
+    // Cubemap faces mapped via Quake→GL transform in shader:
+    // cubemapDir.x=-dir.y, cubemapDir.y=dir.z, cubemapDir.z=-dir.x
     const colors = [
-        [255, 0, 0, 255],     // +X (Right)
-        [0, 255, 255, 255],   // -X (Left)
-        [0, 255, 0, 255],     // +Y (Top)
-        [255, 0, 255, 255],   // -Y (Bottom)
-        [0, 0, 255, 255],     // +Z (Front? or Back depending on RH/LH)
-        [255, 255, 0, 255]    // -Z
+        [255, 0, 255, 255],   // Face 0 (+X in GL): Quake -Y (right) -> Magenta
+        [0, 255, 0, 255],     // Face 1 (-X in GL): Quake +Y (left) -> Green
+        [0, 0, 255, 255],     // Face 2 (+Y in GL): Quake +Z (up) -> Blue
+        [255, 255, 0, 255],   // Face 3 (-Y in GL): Quake -Z (down) -> Yellow
+        [0, 255, 255, 255],   // Face 4 (+Z in GL): Quake -X (back) -> Cyan
+        [255, 0, 0, 255]      // Face 5 (-Z in GL): Quake +X (forward) -> Red
     ];
 
     for(let i=0; i<6; i++) {
@@ -109,6 +113,7 @@ describe('Skybox Diagonal Views (Visual)', () => {
         name: 'skybox-diagonal-45-45',
         width,
         height,
+        updateBaseline,
         snapshotDir: __dirname // Use local dir
     });
 

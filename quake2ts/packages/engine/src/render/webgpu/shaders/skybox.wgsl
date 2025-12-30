@@ -16,28 +16,30 @@ struct VertexOutput {
 fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Normalize input position (Quake Coordinates)
-  var qDir = normalize(position);
+  // Pass the RAW position (not normalized) as direction
+  // This preserves the face-relative direction and avoids corner tie issues
+  // The cubemap sampler handles normalization internally
+  var dir = position;
 
-  // Apply scrolling in Quake Coordinates (Horizontal Plane X/Y)
-  // This ensures clouds scroll horizontally regardless of the final mapping.
-  qDir.x += uniforms.scroll.x;
-  qDir.y += uniforms.scroll.y;
-
-  // Transform Quake coordinates (X-Fwd, Y-Left, Z-Up)
-  // to WebGPU/GL cubemap coordinates (Right-handed? -Z Fwd, +X Right, +Y Up)
-  // Quake X  -> GL -Z
-  // Quake Y  -> GL -X
-  // Quake Z  -> GL Y
-  var dir = vec3<f32>(-qDir.y, qDir.z, -qDir.x);
+  // Apply scrolling in Quake horizontal plane (X/Y)
+  // Small scrolling offset that doesn't break dominant component detection
+  dir.x += uniforms.scroll.x * 0.01;
+  dir.y += uniforms.scroll.y * 0.01;
 
   output.direction = dir;
-
   output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
   return output;
 }
 
 @fragment
 fn fragmentMain(@location(0) direction: vec3<f32>) -> @location(0) vec4<f32> {
-  return textureSample(t_skybox, s_skybox, direction);
+  // Transform from Quake coordinates to GL/WebGPU cubemap coordinates
+  // Quake: +X forward, +Y left, +Z up
+  // GL cubemap: +X right, +Y up, -Z forward
+  var cubemapDir: vec3<f32>;
+  cubemapDir.x = -direction.y;  // Quake +Y (left) → GL -X (left)
+  cubemapDir.y = direction.z;   // Quake +Z (up) → GL +Y (up)
+  cubemapDir.z = -direction.x;  // Quake +X (forward) → GL -Z (forward)
+
+  return textureSample(t_skybox, s_skybox, cubemapDir);
 }
