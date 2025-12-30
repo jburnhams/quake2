@@ -5,50 +5,52 @@ import { CameraState } from '../../types/camera.js';
 import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
 import { mat4 } from 'gl-matrix';
 
-// Reusing positions from the original implementation
+// Skybox cube positions in Quake coordinates:
+// X = Forward, Y = Left, Z = Up
+// The shader expects these positions and transforms them to GL cubemap coordinates.
 const SKYBOX_POSITIONS = new Float32Array([
-  // Front
-  -1, -1, 1,
-  1, -1, 1,
-  1, 1, 1,
-  -1, -1, 1,
-  1, 1, 1,
-  -1, 1, 1,
-  // Back
-  -1, -1, -1,
-  -1, 1, -1,
-  1, 1, -1,
-  -1, -1, -1,
-  1, 1, -1,
+  // Front face (+X) - looking forward
   1, -1, -1,
-  // Left
+  1,  1, -1,
+  1,  1,  1,
+  1, -1, -1,
+  1,  1,  1,
+  1, -1,  1,
+  // Back face (-X) - looking backward
+  -1,  1, -1,
   -1, -1, -1,
+  -1, -1,  1,
+  -1,  1, -1,
+  -1, -1,  1,
+  -1,  1,  1,
+  // Left face (+Y) - looking left
+  -1, 1, -1,
+  -1, 1,  1,
+   1, 1,  1,
+  -1, 1, -1,
+   1, 1,  1,
+   1, 1, -1,
+  // Right face (-Y) - looking right
+   1, -1, -1,
+   1, -1,  1,
+  -1, -1,  1,
+   1, -1, -1,
+  -1, -1,  1,
+  -1, -1, -1,
+  // Top face (+Z) - looking up
   -1, -1, 1,
-  -1, 1, 1,
-  -1, -1, -1,
-  -1, 1, 1,
-  -1, 1, -1,
-  // Right
-  1, -1, -1,
-  1, 1, -1,
-  1, 1, 1,
-  1, -1, -1,
-  1, 1, 1,
-  1, -1, 1,
-  // Top
-  -1, 1, -1,
-  -1, 1, 1,
-  1, 1, 1,
-  -1, 1, -1,
-  1, 1, 1,
-  1, 1, -1,
-  // Bottom
-  -1, -1, -1,
-  1, -1, -1,
-  1, -1, 1,
-  -1, -1, -1,
-  1, -1, 1,
+   1, -1, 1,
+   1,  1, 1,
   -1, -1, 1,
+   1,  1, 1,
+  -1,  1, 1,
+  // Bottom face (-Z) - looking down
+  -1,  1, -1,
+   1,  1, -1,
+   1, -1, -1,
+  -1,  1, -1,
+   1, -1, -1,
+  -1, -1, -1,
 ]);
 
 export interface SkyboxRenderOptions {
