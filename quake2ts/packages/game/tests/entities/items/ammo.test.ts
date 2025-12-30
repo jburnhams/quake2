@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createAmmoPickupEntity } from '../../../src/entities/items/ammo.js';
-import { AmmoItemId } from '../../../src/inventory/ammo.js';
+import { AmmoItemId, AmmoType } from '../../../src/inventory/ammo.js';
 import { Solid } from '../../../src/entities/entity.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createPlayerEntityFactory, createMockGameExports } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createMockGameExports, createMockInventory } from '@quake2ts/test-utils';
 
 describe('Ammo Pickup Entities', () => {
     const mockGame = createMockGameExports({
@@ -25,14 +25,14 @@ describe('Ammo Pickup Entities', () => {
 
     it('should pickup ammo when touched by player', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
+
+        const inventory = createMockInventory();
+        // Ensure starting shell count is 0 for clear assertion
+        inventory.ammo.counts[AmmoType.Shells] = 0;
+
         const player = createPlayerEntityFactory({
             client: {
-                inventory: {
-                    ammo: {
-                        caps: [100, 100], // shells is index 1
-                        counts: [0, 0]
-                    }
-                }
+                inventory
             } as any
         }) as Entity;
 
@@ -41,7 +41,7 @@ describe('Ammo Pickup Entities', () => {
 
         ammo.touch(ammo, player);
 
-        expect(player.client!.inventory.ammo.counts[1]).toBe(10); // default shell count
+        expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(10); // default shell count
         expect(mockGame.sound).toHaveBeenCalled();
         expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got 10 Shells');
         expect(ammo.solid).toBe(Solid.Not);
@@ -50,14 +50,15 @@ describe('Ammo Pickup Entities', () => {
 
     it('should not pickup if maxed out', () => {
         const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
-         const player = createPlayerEntityFactory({
+
+        const inventory = createMockInventory();
+        // Set to max
+        inventory.ammo.counts[AmmoType.Shells] = inventory.ammo.caps[AmmoType.Shells];
+        const max = inventory.ammo.counts[AmmoType.Shells];
+
+        const player = createPlayerEntityFactory({
             client: {
-                inventory: {
-                    ammo: {
-                        caps: [100, 100],
-                        counts: [0, 100] // already max
-                    }
-                }
+                inventory
             } as any
         }) as Entity;
 
@@ -68,7 +69,7 @@ describe('Ammo Pickup Entities', () => {
 
         ammo.touch(ammo, player);
 
-        expect(player.client!.inventory.ammo.counts[1]).toBe(100);
+        expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(max);
         expect(mockGame.sound).not.toHaveBeenCalled();
     });
 });

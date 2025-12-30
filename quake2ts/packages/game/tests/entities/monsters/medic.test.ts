@@ -4,7 +4,7 @@ import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_medic', () => {
   let context: any;
@@ -23,26 +23,20 @@ describe('monster_medic', () => {
     context.getSpawnFunction = vi.fn().mockReturnValue(spawnFunction);
 
     // Setup entities
-    medic = {
-      index: 1,
-      origin: { x: 0, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
-      mins: { x: -24, y: -24, z: -24 },
-      maxs: { x: 24, y: 24, z: 32 },
-      viewheight: 32,
-      classname: 'monster_medic',
-      health: 300,
-      max_health: 300,
-      monsterinfo: {
-        current_move: null,
-      },
-      enemy: null,
-    } as any;
+    medic = createMonsterEntityFactory('monster_medic', {
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        health: 300,
+        max_health: 300,
+        viewheight: 32,
+        spawnflags: 0,
+        velocity: { x: 0, y: 0, z: 0 },
+        enemy: null,
+    });
 
-    deadMonster = {
+    deadMonster = createEntityFactory({
       index: 2,
       origin: { x: 50, y: 0, z: 0 },
-      angles: { x: 0, y: 0, z: 0 },
       classname: 'monster_infantry',
       deadflag: DeadFlag.Dead,
       health: 0,
@@ -50,10 +44,10 @@ describe('monster_medic', () => {
       solid: Solid.Not,
       monsterinfo: {
         stand: vi.fn(),
-      },
+      } as any,
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
-    } as any;
+    });
   });
 
   it('should start cable attack sequence when close to dead monster', () => {

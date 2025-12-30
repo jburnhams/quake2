@@ -3,7 +3,7 @@ import { SP_monster_parasite } from '../../../src/entities/monsters/parasite.js'
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import * as gibsModule from '../../../src/entities/gibs.js';
 import * as damageModule from '../../../src/combat/damage.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_parasite', () => {
   let parasite: Entity;
@@ -16,8 +16,7 @@ describe('monster_parasite', () => {
     // Customize context if needed
     mockContext.entities.trace = vi.fn().mockReturnValue({ fraction: 1.0, ent: null });
 
-    parasite = new Entity(1);
-    parasite.timestamp = 10;
+    parasite = createMonsterEntityFactory('monster_parasite', { timestamp: 10 });
     SP_monster_parasite(parasite, mockContext);
   });
 
@@ -85,10 +84,12 @@ describe('monster_parasite', () => {
 
   it('drains health on attack', () => {
     // Setup enemy
-    const enemy = new Entity(2);
-    enemy.origin = { x: 100, y: 0, z: 0 };
-    enemy.mins = { x: -16, y: -16, z: -24 };
-    enemy.maxs = { x: 16, y: 16, z: 32 };
+    const enemy = createEntityFactory({
+        index: 2,
+        origin: { x: 100, y: 0, z: 0 },
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 }
+    });
     parasite.enemy = enemy;
     parasite.origin = { x: 0, y: 0, z: 0 };
     parasite.angles = { x: 0, y: 0, z: 0 };

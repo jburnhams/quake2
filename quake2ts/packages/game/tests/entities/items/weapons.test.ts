@@ -6,11 +6,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createWeaponPickupEntity } from '../../../src/entities/items';
 import { WEAPON_ITEMS } from '../../../src/inventory';
 import { Entity } from '../../../src/entities';
-import { createPlayerInventory, WeaponId } from '../../../src/inventory/playerInventory';
+import { WeaponId } from '../../../src/inventory/playerInventory';
 import { AmmoType } from '../../../src/inventory/ammo';
 import { GameExports } from '../../../src';
 import { Solid } from '../../../src/entities/entity';
-import { createPlayerEntityFactory, createEntityFactory, createMockGameExports, createPlayerStateFactory } from '@quake2ts/test-utils';
+import {
+    createPlayerEntityFactory,
+    createEntityFactory,
+    createMockGameExports,
+    createMockInventory,
+    // If createPlayerStateFactory exists, use it, otherwise omit or use generic
+} from '@quake2ts/test-utils';
 
 describe('Weapon Pickup Entities', () => {
     let mockGame: GameExports;
@@ -52,8 +58,7 @@ describe('Weapon Pickup Entities', () => {
 
         const player = createPlayerEntityFactory({
             client: {
-                ...createPlayerStateFactory(),
-                inventory: createPlayerInventory(),
+                inventory: createMockInventory(),
             } as any
         }) as Entity;
 

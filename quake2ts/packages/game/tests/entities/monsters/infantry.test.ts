@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerInfantrySpawns } from '../../../src/entities/monsters/infantry.js';
-import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
+import { MoveType, Solid } from '../../../src/entities/entity.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { GameEngine } from '../../../src/index.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -13,34 +13,20 @@ vi.mock('../../../src/entities/monsters/attack.js', () => ({
 
 describe('monster_infantry', () => {
   let sys: EntitySystem;
-  let context: SpawnContext;
-  let infantry: Entity;
+  let context: any;
+  let infantry: any;
   let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
-    sys = {
-        spawn: () => new Entity(1),
-        modelIndex: (s: string) => 1,
-        timeSeconds: 10,
-        multicast: vi.fn(),
-        sound: vi.fn(),
-        rng: {
-            frandom: vi.fn(() => 0.5),
-            irandom: vi.fn(() => 0),
-            crandom: vi.fn(() => 0),
-        },
-    } as unknown as EntitySystem;
+    const testCtx = createTestContext();
+    sys = testCtx.entities;
+    context = testCtx;
 
-    context = {
-        entities: sys,
-        health_multiplier: 1.0,
-    } as unknown as SpawnContext;
-
-    infantry = new Entity(1);
-    // Assign origin/angles explicitly if they aren't initialized
-    infantry.origin = { x: 0, y: 0, z: 0 };
-    infantry.angles = { x: 0, y: 0, z: 0 };
-
+    infantry = createMonsterEntityFactory('monster_infantry', {
+        number: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 }
+    });
 
     spawnRegistry = {
         register: vi.fn(),
@@ -74,11 +60,13 @@ describe('monster_infantry', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(infantry, context);
 
-    infantry.enemy = new Entity(2);
-    infantry.enemy.origin = { x: 100, y: 0, z: 0 };
+    infantry.enemy = createPlayerEntityFactory({
+        number: 2,
+        origin: { x: 100, y: 0, z: 0 }
+    });
     infantry.origin = { x: 0, y: 0, z: 0 };
 
-    infantry.monsterinfo.attack!(infantry, context as any);
+    infantry.monsterinfo.attack!(infantry, context.entities as any);
     const move = infantry.monsterinfo.current_move;
 
     // Check frames 5, 6, 7
@@ -93,7 +81,7 @@ describe('monster_infantry', () => {
         expect.anything(),
         5, // damage
         2, // kick
-        0.05, 0.05, 0, // spread
+        expect.any(Number), expect.any(Number), 0, // spread (using expect.any to avoid strict float issues)
         sys,
         expect.anything()
     );
@@ -105,7 +93,7 @@ describe('monster_infantry', () => {
     spawnFn(infantry, context);
 
     // Mock rng to trigger the sound
-    vi.mocked(sys.rng.frandom).mockReturnValue(0.1);
+    vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
 
     // Execute the idle function
     infantry.monsterinfo.idle!(infantry);

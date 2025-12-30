@@ -27,6 +27,7 @@ export interface MockGame {
   spawnWorld: LegacyMock<[], void>;
   clientBegin: LegacyMock<[any], void>;
   damage: LegacyMock<[number], void>;
+  entities: any;
 }
 
 export interface TestContext extends SpawnContext {
@@ -67,7 +68,10 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
     }),
     damage: vi.fn((amount: number) => {
       hooks.onDamage({} as any, null, null, amount, 0, 0);
-    })
+    }),
+    entities: {
+      spawnRegistry
+    }
   };
 
   return { game, spawnRegistry };
@@ -91,7 +95,11 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const hooks = game.hooks;
 
   // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
-  let currentSpawnRegistry: SpawnRegistry | undefined;
+  let currentSpawnRegistry: SpawnRegistry | undefined = spawnRegistry;
+
+  const findByTargetName = (targetname: string) => {
+      return entityList.filter(e => e.targetname === targetname && e.inUse);
+  };
 
   const entities = {
     spawn: vi.fn(() => {
@@ -147,9 +155,20 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     }),
     soundIndex: vi.fn((sound: string) => engine.soundIndex(sound)),
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
+        if (entity.target) {
+            const targets = findByTargetName(entity.target);
+            for (const t of targets) {
+                t.use?.(t, entity, activator);
+            }
+        }
     }),
-    findByTargetName: vi.fn(() => []),
-    pickTarget: vi.fn(() => null),
+    findByTargetName: vi.fn(findByTargetName),
+    pickTarget: vi.fn((targetname: string | undefined) => {
+        if (!targetname) return null;
+        const matches = findByTargetName(targetname);
+        if (matches.length === 0) return null;
+        return matches[0];
+    }),
     killBox: vi.fn(),
     rng: createRandomGenerator({ seed }),
     imports: {
@@ -171,7 +190,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
       return entityList.find(predicate);
     }),
     findByClassname: vi.fn((classname: string) => {
-      return entityList.find(e => e.classname === classname);
+      return entityList.filter(e => e.classname === classname);
     }),
     beginFrame: vi.fn((timeSeconds: number) => {
       (entities as any).timeSeconds = timeSeconds;
@@ -192,6 +211,9 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     activeCount: entityList.length,
     world: entityList.find(e => e.classname === 'worldspawn') || new Entity(0),
   } as unknown as EntitySystem;
+
+  // Fix circular reference
+  game.entities = entities;
 
   return {
     keyValues: {},
