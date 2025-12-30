@@ -1,4 +1,4 @@
-import type { Vec3, Bounds3 } from '@quake2ts/shared/math/vec3';
+import type { Vec3, Bounds3 } from '@quake2ts/shared';
 
 /**
  * Creates a Vector3 object.

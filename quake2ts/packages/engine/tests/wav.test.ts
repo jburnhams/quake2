@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseWav, WavParseError } from '../src/assets/wav.js';
-import { buildWav } from './helpers/wavBuilder.js';
+import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
 
 describe('WAV loader', () => {
   it('decodes PCM samples to float data', () => {

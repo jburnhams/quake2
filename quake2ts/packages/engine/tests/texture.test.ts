@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { preparePcxTexture, TextureCache, walToRgba } from '../src/assets/texture.js';
-import { buildPcx } from './helpers/pcxBuilder.js';
-import { buildWal } from './helpers/walBuilder.js';
+import { buildPcx } from '@quake2ts/test-utils'; // pcxBuilder.js';
+import { buildWal } from '@quake2ts/test-utils'; // walBuilder.js';
 import { parsePcx } from '../src/assets/pcx.js';
 import { parseWal } from '../src/assets/wal.js';
 

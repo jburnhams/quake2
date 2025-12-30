@@ -51,6 +51,13 @@ export * from './engine/helpers/webgl-playwright.js';
 export * from './engine/helpers/pipeline-test-template.js';
 export * from './engine/helpers/textures.js';
 export * from './engine/renderers.js';
+export * from './engine/builders/bspBuilder.js';
+export * from './engine/builders/md2Builder.js';
+export * from './engine/builders/md3Builder.js';
+export * from './engine/builders/pakBuilder.js';
+export * from './engine/builders/pcxBuilder.js';
+export * from './engine/builders/walBuilder.js';
+export * from './engine/builders/wavBuilder.js';
 
 // Client Mocks
 export * from './client/mocks/input.js';

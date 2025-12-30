@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PakArchive } from '../src/assets/pak.js';
 import { PakValidator, PakValidationError } from '../src/assets/pakValidation.js';
-import { buildPak, textData } from './helpers/pakBuilder.js';
+import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('PakValidator', () => {
   const pakBuffer = buildPak([{ path: 'maps/base1.bsp', data: textData('world') }]);

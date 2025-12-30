@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { exportLightmaps } from '../src/tools/lightmapExport.js';
-import { buildTestBsp } from './helpers/bspBuilder.js';
+import { buildTestBsp } from '@quake2ts/test-utils'; // bspBuilder.js';
 import { parseBsp } from '../src/assets/bsp.js';
 
 describe('Lightmap Export', () => {

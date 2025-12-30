@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AudioRegistry, AudioRegistryError } from '../src/assets/audio.js';
-import { buildPak } from './helpers/pakBuilder.js';
+import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
 import { PakArchive } from '../src/assets/pak.js';
 import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { buildWav } from './helpers/wavBuilder.js';
+import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
 import type { OggAudio } from '../src/assets/ogg.js';
 
 const mockOgg: OggAudio = {

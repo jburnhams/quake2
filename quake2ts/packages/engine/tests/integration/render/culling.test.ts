@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '../../src/render/renderer.js';
-import { BspMap, BspLeaf, BspNode, BspVisibility } from '../../src/assets/bsp.js';
-import { Camera } from '../../src/render/camera.js';
-import { FrameRenderOptions } from '../../src/render/frame.js';
-import { RenderableEntity } from '../../src/render/scene.js';
-import { Md2Model } from '../../src/assets/md2.js';
+import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
+import { BspMap, BspLeaf, BspNode, BspVisibility } from '@quake2ts/engine/assets/bsp.js';
+import { Camera } from '@quake2ts/engine/render/camera.js';
+import { FrameRenderOptions } from '@quake2ts/engine/render/frame.js';
+import { RenderableEntity } from '@quake2ts/engine/render/scene.js';
+import { Md2Model } from '@quake2ts/engine/assets/md2.js';
 
 // Mock WebGL2 Context (Simplified for this test)
 function createMockWebGL2Context() {
@@ -206,12 +206,6 @@ describe('PVS Culling Integration', () => {
           minBounds: { x: -10, y: -10, z: -10 },
           maxBounds: { x: 10, y: 10, z: 10 }
       }],
-      triangles: [
-          { vertexIndices: new Uint16Array([0, 1, 2]), texCoordIndices: new Uint16Array([0, 0, 0]) }
-      ],
-      texCoords: [
-          { s: 0, t: 0 }
-      ],
       glCommands: new Int32Array(0)
     } as unknown as Md2Model;
 
@@ -282,12 +276,6 @@ describe('PVS Culling Integration', () => {
                 minBounds: { x: -10, y: -10, z: -10 },
                 maxBounds: { x: 10, y: 10, z: 10 }
             }
-        ],
-        triangles: [
-            { vertexIndices: new Uint16Array([0, 1, 2]), texCoordIndices: new Uint16Array([0, 0, 0]) }
-        ],
-        texCoords: [
-            { s: 0, t: 0 }
         ],
         glCommands: new Int32Array(0)
       } as unknown as Md2Model;

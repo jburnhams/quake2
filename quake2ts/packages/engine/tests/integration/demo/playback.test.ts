@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '../../src/demo/playback.js';
-import { NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser.js';
+import { DemoPlaybackController, PlaybackState } from '@quake2ts/engine/demo/playback.js';
+import { NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '@quake2ts/engine/demo/parser.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { BinaryStream } from '@quake2ts/shared';
 import pako from 'pako';

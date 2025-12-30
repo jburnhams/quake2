@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parsePcx, pcxToRgba, PcxParseError } from '../src/assets/pcx.js';
-import { buildPcx } from './helpers/pcxBuilder.js';
+import { buildPcx } from '@quake2ts/test-utils'; // pcxBuilder.js';
 
 describe('PCX loader', () => {
   it('decodes RLE image data and palette to RGBA', () => {

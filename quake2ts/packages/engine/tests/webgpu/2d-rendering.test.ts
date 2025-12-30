@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
-import { Camera } from '../../../src/render/camera.js';
+import { createWebGPURenderer } from '@quake2ts/engine/render/webgpu/renderer.js';
+import { Camera } from '@quake2ts/engine/render/camera.js';
 import { mat4 } from 'gl-matrix';
-import { Texture2D } from '../../../src/render/webgpu/resources.js';
-import { captureRenderTarget } from '../../../src/render/webgpu/headless.js';
+import { Texture2D } from '@quake2ts/engine/render/webgpu/resources.js';
+import { captureRenderTarget } from '@quake2ts/engine/render/webgpu/headless.js';
 
 describe('WebGPU 2D Rendering Integration', () => {
   let renderer: Awaited<ReturnType<typeof createWebGPURenderer>>;
