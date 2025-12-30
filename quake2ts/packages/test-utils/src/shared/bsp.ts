@@ -282,7 +282,8 @@ export function createTestBspMap(options: TestBspMapOptions = {}): BspMap {
 
   const models: BspModel[] = [{
       mins: [-1000, -1000, -1000], maxs: [1000, 1000, 1000], origin: [0,0,0],
-      headNode: 0, firstFace: 0, numFaces: faces.length
+      headNode: -1, // -1 points to Leaf 0 (implied, assuming simple map)
+      firstFace: 0, numFaces: faces.length
   }];
 
   const data: BspData = {

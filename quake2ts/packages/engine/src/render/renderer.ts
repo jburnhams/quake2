@@ -763,6 +763,10 @@ export const createRenderer = (
         return tex;
     };
 
+    const getTexture = (name: string): Pic | undefined => {
+        return picCache.get(name);
+    };
+
     begin2D = () => {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -976,6 +980,7 @@ export const createRenderer = (
         renderFrame,
         registerPic,
         registerTexture,
+        getTexture,
         begin2D,
         end2D,
         drawPic,
