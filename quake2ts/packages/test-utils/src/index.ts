@@ -72,6 +72,7 @@ export * from './client/helpers/prediction.js';
 // Visual Testing
 export * from './visual/snapshots.js';
 export * from './visual/animation-snapshots.js';
+export { test } from './engine/builders/visual-testing.js';
 
 // E2E
 export * from './e2e/playwright.js';

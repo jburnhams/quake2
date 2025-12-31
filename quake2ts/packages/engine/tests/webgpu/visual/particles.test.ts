@@ -11,27 +11,20 @@ const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Particle System Visual Tests', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  let gpuSetup: HeadlessWebGPUSetup;
 
   beforeAll(async () => {
-      try {
-        gpuSetup = await initHeadlessWebGPU();
-        if (!fs.existsSync(snapshotDir)) {
-            fs.mkdirSync(snapshotDir, { recursive: true });
-        }
-      } catch (error) {
-        console.warn('Skipping WebGPU visual tests: ' + error);
-      }
-  });
-
-  afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
+    gpuSetup = await initHeadlessWebGPU();
+    if (!fs.existsSync(snapshotDir)) {
+      fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
+  afterAll(async () => {
+    await gpuSetup.cleanup();
+  });
+
   it('particles-basic', async () => {
-      if (!gpuSetup) return;
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;
@@ -106,7 +99,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-smoke', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -173,7 +166,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-explosion', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -236,7 +229,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-blood', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -300,7 +293,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-many-performance', async () => {
-      if (!gpuSetup) return;
+
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;
@@ -360,7 +353,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-textured', async () => {
-      if (!gpuSetup) return;
+
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;

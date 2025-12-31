@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { initHeadlessWebGPU } from '@quake2ts/test-utils';
 import { createWebGPURenderer } from '@quake2ts/engine/render/webgpu/renderer.js';
 import { Camera } from '@quake2ts/engine/render/camera.js';
 import { mat4 } from 'gl-matrix';
@@ -11,53 +12,34 @@ describe('WebGPU 2D Rendering Integration', () => {
   let frameRenderer: any; // Access to internal frame renderer
 
   beforeAll(async () => {
-    // Setup WebGPU for Node.js environment (Dawn)
-    // Ref: CLAUDE.md WebGPU Headless Rendering Setup
-    if (typeof navigator === 'undefined') {
-      try {
-        const { globals } = await import('webgpu');
-        Object.assign(globalThis, globals);
+    // Setup WebGPU using test-utils helper
+    await initHeadlessWebGPU();
 
-        // @ts-ignore
-        globalThis.navigator = {
-          gpu: globals.navigator.gpu
-        };
-      } catch (e) {
-        console.warn('WebGPU not available - skipping integration tests. Install mesa-vulkan-drivers on Linux or run in browser.');
-        return; // Tests will be skipped
-      }
+    renderer = await createWebGPURenderer(undefined, {
+      width: 320,
+      height: 240,
+      headless: true
+    });
+
+    // Access frame renderer for headlessTarget
+    frameRenderer = (renderer as any).frameRenderer;
+
+    // Create a simple test texture (8x8 red square)
+    testTexture = new Texture2D(renderer.device, {
+      width: 8,
+      height: 8,
+      format: 'bgra8unorm',
+      label: 'test-texture'
+    });
+
+    const redSquare = new Uint8Array(8 * 8 * 4);
+    for (let i = 0; i < 8 * 8; i++) {
+      redSquare[i * 4 + 0] = 255; // B
+      redSquare[i * 4 + 1] = 0;   // G
+      redSquare[i * 4 + 2] = 0;   // R
+      redSquare[i * 4 + 3] = 255; // A
     }
-
-    try {
-      renderer = await createWebGPURenderer(undefined, {
-        width: 320,
-        height: 240,
-        headless: true
-      });
-
-      // Access frame renderer for headlessTarget
-      frameRenderer = (renderer as any).frameRenderer;
-
-      // Create a simple test texture (8x8 red square)
-      testTexture = new Texture2D(renderer.device, {
-        width: 8,
-        height: 8,
-        format: 'bgra8unorm',
-        label: 'test-texture'
-      });
-
-      const redSquare = new Uint8Array(8 * 8 * 4);
-      for (let i = 0; i < 8 * 8; i++) {
-        redSquare[i * 4 + 0] = 255; // B
-        redSquare[i * 4 + 1] = 0;   // G
-        redSquare[i * 4 + 2] = 0;   // R
-        redSquare[i * 4 + 3] = 255; // A
-      }
-      testTexture.upload(redSquare);
-    } catch (e) {
-      console.warn('Failed to initialize WebGPU renderer for tests:', e);
-      // Tests will be skipped if renderer is not initialized
-    }
+    testTexture.upload(redSquare);
   });
 
   afterAll(async () => {
@@ -68,11 +50,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('renders a solid rectangle with drawfillRect', async () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     renderer.renderFrame({
@@ -99,11 +76,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('renders a textured quad with drawPic', async () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     renderer.renderFrame({
@@ -130,11 +102,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('renders with color tinting', async () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     renderer.renderFrame({
@@ -161,11 +128,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('renders multiple 2D elements in correct order', async () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     renderer.renderFrame({
@@ -193,11 +155,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('clears the frame buffer with clearColor', async () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     renderer.renderFrame({
@@ -217,11 +174,6 @@ describe('WebGPU 2D Rendering Integration', () => {
   });
 
   it('respects begin2D/end2D boundaries', () => {
-    if (!renderer) {
-      console.log('Skipping test - WebGPU not available');
-      return;
-    }
-
     const camera = new Camera(mat4.create());
 
     // Should throw when calling draw methods outside begin2D/end2D

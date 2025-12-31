@@ -1,18 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { initHeadlessWebGPU } from '@quake2ts/test-utils';
 import { createWebGPUContext } from '../../src/render/webgpu/context';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
-
-// Import webgpu/dawn bindings for Node.js
-import { create, globals } from 'webgpu';
-
-// Register globals for Node.js environment
-Object.assign(global, globals);
-
-// Polyfill navigator.gpu
-if (!global.navigator) {
-  (global as any).navigator = {};
-}
-(global.navigator as any).gpu = create([]);
 
 /**
  * Integration tests for real WebGPU rendering using the webgpu npm package with Dawn.
@@ -22,28 +11,14 @@ if (!global.navigator) {
  * - Metal (macOS): Built-in on macOS 10.11+
  * - D3D12 (Windows): Built-in on Windows 10+
  *
- * These tests will skip gracefully if GPU/drivers are unavailable (common in CI environments).
- * See docs/section-20-1.md for setup instructions.
- *
  * Ref: packages/engine/src/render/webgpu/context.ts
  */
 describe('WebGPU Integration (Real)', () => {
-  let gpuAvailable = true;
   const devices: GPUDevice[] = [];
 
   beforeAll(async () => {
-    // Check if GPU is available by attempting adapter request
-    try {
-      const adapter = await navigator.gpu.requestAdapter();
-      gpuAvailable = adapter !== null;
-      if (!gpuAvailable) {
-        console.warn('⚠️  WebGPU adapter not available - integration tests will be skipped');
-        console.warn('   To run these tests locally, install GPU drivers (see docs/section-20-1.md)');
-      }
-    } catch (error) {
-      gpuAvailable = false;
-      console.warn('⚠️  WebGPU not available:', error);
-    }
+    // Setup WebGPU using test-utils helper
+    await initHeadlessWebGPU();
   });
 
   // Clean up devices after all tests
@@ -57,11 +32,6 @@ describe('WebGPU Integration (Real)', () => {
   });
 
   it('should create a real WebGPU context headlessly', async () => {
-    if (!gpuAvailable) {
-      console.log('⏭️  Skipping: GPU drivers not available');
-      return;
-    }
-
     const context = await createWebGPUContext();
     devices.push(context.device); // Track for cleanup
     expect(context.device).toBeDefined();
@@ -70,11 +40,6 @@ describe('WebGPU Integration (Real)', () => {
   });
 
   it('should support basic rendering commands', async () => {
-    if (!gpuAvailable) {
-      console.log('⏭️  Skipping: GPU drivers not available');
-      return;
-    }
-
     const context = await createWebGPUContext();
     const device = context.device;
     devices.push(device); // Track for cleanup

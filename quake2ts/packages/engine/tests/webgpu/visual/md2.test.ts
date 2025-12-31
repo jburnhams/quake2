@@ -95,27 +95,21 @@ function createDepthTexture(device: GPUDevice, width: number, height: number): G
 }
 
 describe('MD2 Visual Tests', () => {
-    let gpuSetup: HeadlessWebGPUSetup | null = null;
+    let gpuSetup: HeadlessWebGPUSetup;
 
     beforeAll(async () => {
-        try {
-            gpuSetup = await initHeadlessWebGPU();
-            if (!fs.existsSync(snapshotDir)) {
-                fs.mkdirSync(snapshotDir, { recursive: true });
-            }
-        } catch (error) {
-            console.warn('Skipping WebGPU visual tests: ' + error);
+        gpuSetup = await initHeadlessWebGPU();
+        if (!fs.existsSync(snapshotDir)) {
+            fs.mkdirSync(snapshotDir, { recursive: true });
         }
     });
 
     afterAll(async () => {
-        if (gpuSetup) {
-            await gpuSetup.cleanup();
-        }
+        await gpuSetup.cleanup();
     });
 
     it('md2: static render', async () => {
-        if (!gpuSetup) return;
+
         const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
         const { device, format } = context;
 
@@ -180,7 +174,7 @@ describe('MD2 Visual Tests', () => {
     });
 
     it('md2: interpolated render', async () => {
-        if (!gpuSetup) return;
+
         const width = 256;
         const height = 256;
         const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
@@ -258,7 +252,7 @@ describe('MD2 Visual Tests', () => {
     });
 
     it('md2: dynamic light', async () => {
-        if (!gpuSetup) return;
+
         const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
         const { device, format } = context;
 

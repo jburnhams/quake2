@@ -18,27 +18,17 @@ import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/sr
  * Verifies that our resource wrappers work correctly with a real GPU driver.
  */
 describe('WebGPU Resources Integration (Real)', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
-  let gpuAvailable = false;
+  let gpuSetup: HeadlessWebGPUSetup;
 
   beforeAll(async () => {
-    try {
-      gpuSetup = await initHeadlessWebGPU();
-      gpuAvailable = true;
-    } catch (error) {
-      console.warn('⚠️  WebGPU not available - integration tests will be skipped:', error);
-      gpuAvailable = false;
-    }
+    gpuSetup = await initHeadlessWebGPU();
   });
 
   afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
-    }
+    await gpuSetup.cleanup();
   });
 
   it('should create and write to a vertex buffer', async () => {
-    if (!gpuAvailable || !gpuSetup) return;
 
     const context = await createWebGPUContext();
     // No need to track devices manually as createWebGPUContext uses the global navigator.gpu which we shimmed
@@ -61,8 +51,6 @@ describe('WebGPU Resources Integration (Real)', () => {
   });
 
   it('should create and upload a texture', async () => {
-    if (!gpuAvailable || !gpuSetup) return;
-
     const context = await createWebGPUContext();
 
     const width = 64;
@@ -93,8 +81,6 @@ describe('WebGPU Resources Integration (Real)', () => {
   });
 
   it('should compile a shader module', async () => {
-    if (!gpuAvailable || !gpuSetup) return;
-
     const context = await createWebGPUContext();
 
     const code = `
@@ -119,8 +105,6 @@ describe('WebGPU Resources Integration (Real)', () => {
   });
 
   it('should create a render pipeline and render a triangle', async () => {
-    if (!gpuAvailable || !gpuSetup) return;
-
     const context = await createWebGPUContext();
 
     const shader = new ShaderModule(context.device, {
