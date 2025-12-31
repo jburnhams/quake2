@@ -20,5 +20,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['tests/unit-jsdom/**/*.test.ts'],
+    passWithNoTests: true,
   },
 });
