@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSprite, SpriteParseError } from '@quake2ts/engine/assets/sprite.js';
+import { parseSprite, SpriteParseError } from '../../src/assets/sprite.js';
 
 const IDSPRITEHEADER = 0x32534449; // 'IDS2' (Little Endian)
 const SPRITE_VERSION = 2;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createEngineRuntime } from '@quake2ts/engine/runtime.js';
-import type { GameFrameResult } from '@quake2ts/engine/host.js';
+import { createEngineRuntime } from '../../src/runtime.js';
+import type { GameFrameResult } from '../../src/host.js';
 
 describe('EngineRuntime', () => {
   it('initializes engine before wiring the host and client', () => {

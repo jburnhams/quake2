@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DemoReader } from '@quake2ts/engine/demo/index.js';
+import { DemoReader } from '../../../src/demo/index.js';
 
 // Helper to create a synthetic demo buffer
 function createDemoBuffer(blocks: Uint8Array[]): ArrayBuffer {

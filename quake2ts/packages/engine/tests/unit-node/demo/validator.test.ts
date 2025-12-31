@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DemoValidator } from '@quake2ts/engine/demo/validator.js';
+import { DemoValidator } from '../../../src/demo/validator.js';
 import { ServerCommand } from '@quake2ts/shared';
 
 describe('DemoValidator', () => {

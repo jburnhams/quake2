@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { DemoClipper, WorldState } from '@quake2ts/engine/demo/clipper.js';
-import { DemoReader } from '@quake2ts/engine/demo/demoReader.js';
+import { DemoClipper, WorldState } from '../../../src/demo/clipper.js';
+import { DemoReader } from '../../../src/demo/demoReader.js';
 
 describe('DemoClipper', () => {
   let clipper: DemoClipper;
