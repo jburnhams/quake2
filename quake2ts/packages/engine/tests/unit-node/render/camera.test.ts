@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Camera } from '../../src/render/camera';
+import { Camera } from '../../../src/render/camera';
 import { vec3, mat4 } from 'gl-matrix';
 
 describe('Camera', () => {

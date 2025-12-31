@@ -5,7 +5,7 @@ import {
   quakeToWebGPU,
   webGLToQuake,
   webGPUToQuake
-} from '../../../src/render/matrix/transforms.js';
+} from '../../../../src/render/matrix/transforms.js';
 
 function expectVec3ToEqual(a: vec3, b: vec3) {
   // Use toBeCloseTo to handle -0 vs 0 issues

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { mat4 } from 'gl-matrix';
-import { IdentityMatrixBuilder } from '../../../src/render/matrix/identity.js';
+import { IdentityMatrixBuilder } from '../../../../src/render/matrix/identity.js';
 
 describe('IdentityMatrixBuilder', () => {
   test('returns simple matrices without coordinate transforms', () => {

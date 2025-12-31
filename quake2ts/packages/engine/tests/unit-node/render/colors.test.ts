@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseColorString, QUAKE2_COLORS } from '../../src/render/colors.js';
+import { parseColorString, QUAKE2_COLORS } from '../../../src/render/colors.js';
 
 describe('Color Code Parsing', () => {
   it('should parse text without colors', () => {

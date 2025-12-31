@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { mat4 } from 'gl-matrix';
-import { WebGLMatrixBuilder } from '../../../src/render/matrix/webgl.js';
-import { Camera } from '../../../src/render/camera.js';
-import { CameraState } from '../../../src/render/types/camera.js';
+import { WebGLMatrixBuilder } from '../../../../src/render/matrix/webgl.js';
+import { Camera } from '../../../../src/render/camera.js';
+import { CameraState } from '../../../../src/render/types/camera.js';
 
 // Custom matcher helper
 function expectMatricesToBeClose(received: mat4, expected: mat4, epsilon = 1e-6) {

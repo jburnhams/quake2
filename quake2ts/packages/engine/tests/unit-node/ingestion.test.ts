@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, vi } from 'vitest';
-import { ingestPaks, PakIngestionError } from '../src/assets/ingestion.js';
-import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { PakArchive } from '../src/assets/pak.js';
-import { PakIndexStore } from '../src/assets/pakIndexStore.js';
-import { PakValidator } from '../src/assets/pakValidation.js';
+import { ingestPaks, PakIngestionError } from '../../src/assets/ingestion.js';
+import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { PakArchive } from '../../src/assets/pak.js';
+import { PakIndexStore } from '../../src/assets/pakIndexStore.js';
+import { PakValidator } from '../../src/assets/pakValidation.js';
 import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('ingestPaks', () => {

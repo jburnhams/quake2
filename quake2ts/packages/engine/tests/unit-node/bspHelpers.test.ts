@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBsp } from '../src/assets/bsp.js';
+import { parseBsp } from '../../src/assets/bsp.js';
 import { buildTestBsp, encodedVisForClusters } from '@quake2ts/test-utils'; // bspBuilder.js';
 
 describe('BspMap Helpers', () => {
