@@ -397,7 +397,7 @@ export class FrameRenderer {
                       fullbright,
                       ambient,
                       cameraPosition: options.camera.position as Float32Array,
-                      origin: geometry.origin as Float32Array,
+                      origin: geometry.origin as unknown as Float32Array,
                   });
 
                   this.pipelines.bsp.draw(pass, geometry, renderMode);
