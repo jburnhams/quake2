@@ -40,6 +40,7 @@ export default defineConfig({
       // Exclude asset preview tests that require Node environment
       'packages/engine/tests/assets/preview.test.ts',
       'packages/engine/tests/assets/preview_bounds.test.ts',
+      'packages/engine/tests/unit-node/**/*.test.ts',
       'packages/client/tests/unit-node/**/*.test.ts',
     ],
     pool: 'threads',

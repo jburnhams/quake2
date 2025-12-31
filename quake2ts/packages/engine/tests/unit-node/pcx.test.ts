@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePcx, pcxToRgba, PcxParseError } from '../src/assets/pcx.js';
+import { parsePcx, pcxToRgba, PcxParseError } from '../../src/assets/pcx.js';
 import { buildPcx } from '@quake2ts/test-utils'; // pcxBuilder.js';
 
 describe('PCX loader', () => {

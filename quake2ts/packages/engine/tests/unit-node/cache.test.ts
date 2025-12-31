@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LruCache } from '../src/assets/cache.js';
+import { LruCache } from '../../src/assets/cache.js';
 
 describe('LruCache', () => {
   it('evicts least recently used entries when capacity exceeded', () => {

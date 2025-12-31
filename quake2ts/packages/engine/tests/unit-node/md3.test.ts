@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { PakArchive } from '../src/assets/pak.js';
+import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { PakArchive } from '../../src/assets/pak.js';
 import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
 import { buildMd3 } from '@quake2ts/test-utils'; // md3Builder.js';
-import { Md3Loader, Md3ParseError, parseMd3 } from '../src/assets/md3.js';
+import { Md3Loader, Md3ParseError, parseMd3 } from '../../src/assets/md3.js';
 
 describe('MD3 loader', () => {
   const baseBuffer = buildMd3({

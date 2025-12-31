@@ -30,6 +30,8 @@ export default defineConfig({
       // Asset processing tests that require Node environment (Buffer/DataView compatibility)
       'packages/engine/tests/assets/preview.test.ts',
       'packages/engine/tests/assets/preview_bounds.test.ts',
+      // Engine unit-node tests
+      'packages/engine/tests/unit-node/**/*.test.ts',
       // Include src tests if any
       'packages/game/src/**/*.test.ts',
       'packages/shared/src/**/*.test.ts',

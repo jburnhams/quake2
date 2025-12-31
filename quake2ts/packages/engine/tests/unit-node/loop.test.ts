@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FixedTimestepLoop } from '../src/loop.js';
+import { FixedTimestepLoop } from '../../src/loop.js';
 
 function recorders() {
   const simulated: number[] = [];
