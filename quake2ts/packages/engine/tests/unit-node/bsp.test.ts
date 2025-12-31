@@ -7,9 +7,9 @@ import {
   createFaceLightmap,
   parseBsp,
   parseWorldspawnSettings,
-} from '@quake2ts/engine/assets/bsp.js';
-import { PakArchive } from '@quake2ts/engine/assets/pak.js';
-import { VirtualFileSystem } from '@quake2ts/engine/assets/vfs.js';
+} from '../../src/assets/bsp.js';
+import { PakArchive } from '../../src/assets/pak.js';
+import { VirtualFileSystem } from '../../src/assets/vfs.js';
 import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
 import { buildTestBsp, encodedVisForClusters } from '@quake2ts/test-utils'; // bspBuilder.js';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CvarFlags } from '@quake2ts/shared';
-import { Cvar, CvarRegistry } from '@quake2ts/engine/cvars.js';
+import { Cvar, CvarRegistry } from '../../src/cvars.js';
 
 describe('Cvar', () => {
   it('tracks numeric/integer/boolean views', () => {

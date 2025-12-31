@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createWebGPURenderer, Camera } from '@quake2ts/engine';
+import { createWebGPURenderer, Camera } from '../../../src/index';
 import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
 describe('WebGPURenderer Integration (Mocked)', () => {
