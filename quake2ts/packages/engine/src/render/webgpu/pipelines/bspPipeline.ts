@@ -336,17 +336,9 @@ export class BspSurfacePipeline {
     let lightOffset = 32;
     for (let i = 0; i < numDlights; i++) {
         const l = dlights[i];
-        // FIXME: Coordinate transform needed for WebGPU
-        // The vertices are in Quake space (X forward, Y left, Z up)
-        // But the view matrix transforms Quake→GL, so light positions
-        // need to match the vertex coordinate space
-        // Apply the same Quake→GL transform as the camera:
-        //   Quake X → GL -Z
-        //   Quake Y → GL -X
-        //   Quake Z → GL Y
-        frameData[lightOffset + 0] = -l.origin.y;  // GL X = -Quake Y
-        frameData[lightOffset + 1] = l.origin.z;   // GL Y = Quake Z
-        frameData[lightOffset + 2] = -l.origin.x;  // GL Z = -Quake X
+        frameData[lightOffset + 0] = l.origin.x;
+        frameData[lightOffset + 1] = l.origin.y;
+        frameData[lightOffset + 2] = l.origin.z;
         frameData[lightOffset + 3] = l.intensity;
         frameData[lightOffset + 4] = l.color.x;
         frameData[lightOffset + 5] = l.color.y;
