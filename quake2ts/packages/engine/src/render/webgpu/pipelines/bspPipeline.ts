@@ -46,6 +46,7 @@ export interface BspSurfaceBindOptions {
   readonly fullbright?: boolean;
   readonly ambient?: number;
   readonly cameraPosition?: Float32List;
+  readonly origin?: Float32List;
 }
 
 export interface SurfaceRenderState {
@@ -301,6 +302,7 @@ export class BspSurfacePipeline {
       fullbright = false,
       ambient = 0.0,
       cameraPosition = [0,0,0],
+      origin = [0,0,0],
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
@@ -385,6 +387,10 @@ export class BspSurfacePipeline {
     surfaceUint[18] = finalWarp ? 1 : 0;
     surfaceUint[19] = lightmapOnly ? 1 : 0;
     surfaceUint[20] = modeInt;
+
+    // Use offset 24 (byte 96) to ensure 16-byte alignment for vec3 in the uniform struct.
+    // Bytes 84-96 (indices 21-23) are padding.
+    surfaceData.set(origin as Float32Array, 24);
 
     this.device.queue.writeBuffer(this.surfaceUniformBuffer, 0, surfaceData);
 
