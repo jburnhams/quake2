@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated';
 import { ClientState } from '../../src/client';
 import { NetworkTransport } from '../../src/transport';
@@ -22,6 +22,12 @@ describe('Rate Limiting', () => {
     beforeEach(() => {
         transport = new MockServerTransport();
         server = new DedicatedServer({ transport, maxPlayers: 1, floodLimit: 200 });
+    });
+
+    afterEach(() => {
+        if (server) {
+            server.stopServer();
+        }
     });
 
     it('should kick a client that sends too many commands in a second', async () => {
