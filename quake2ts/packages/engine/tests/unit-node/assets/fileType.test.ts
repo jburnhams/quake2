@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectFileType, FileType, isTextFile, isBinaryFile } from '../../src/assets/fileType.js';
+import { detectFileType, FileType, isTextFile, isBinaryFile } from '../../../src/assets/fileType.js';
 
 describe('FileType Detection', () => {
   it('detects file type by extension', () => {
