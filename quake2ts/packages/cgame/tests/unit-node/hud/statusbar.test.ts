@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Draw_StatusBar } from '../../src/hud/statusbar.js';
-import { CGameImport } from '../../src/types.js';
+import { Draw_StatusBar } from '../../../src/hud/statusbar.js';
+import { CGameImport } from '../../../src/types.js';
 import { PlayerState, PlayerStat } from '@quake2ts/shared';
-import { getHudLayout } from '../../src/hud/layout.js';
+import { getHudLayout } from '../../../src/hud/layout.js';
 
 describe('Draw_StatusBar', () => {
   it('should draw health, armor, and ammo from ps.stats', () => {

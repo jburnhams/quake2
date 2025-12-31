@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClientPrediction, defaultPredictionState, PredictionState } from '../src/prediction/index';
+import { ClientPrediction, defaultPredictionState, PredictionState } from '../../src/prediction/index';
 import type { UserCommand, PmoveTraceFn } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
 

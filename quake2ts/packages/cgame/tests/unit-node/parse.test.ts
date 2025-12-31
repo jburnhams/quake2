@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetCGameAPI, CGameImport, CGameExport } from '../src/index.js';
+import { GetCGameAPI, CGameImport, CGameExport } from '../../src/index.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
-import { CG_GetMessageSystem } from '../src/screen.js';
+import { CG_GetMessageSystem } from '../../src/screen.js';
 
 describe('CGame Parsing', () => {
     let cg: CGameExport;

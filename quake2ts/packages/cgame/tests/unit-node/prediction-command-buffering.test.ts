@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClientPrediction } from '../src/prediction/index';
+import { ClientPrediction } from '../../src/prediction/index';
 import type { UserCommand, PmoveTraceFn } from '@quake2ts/shared';
 
 describe('ClientPrediction Command Buffering', () => {

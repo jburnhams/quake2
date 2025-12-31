@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetCGameAPI, CGameImport, CGameExport } from '../src/index';
-import { PmoveInfo } from '../src/types';
+import { GetCGameAPI, CGameImport, CGameExport } from '../../src/index';
+import { PmoveInfo } from '../../src/types';
 
 describe('CGame Prediction CVars', () => {
     let cgame: CGameExport;

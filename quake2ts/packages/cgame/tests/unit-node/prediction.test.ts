@@ -10,7 +10,7 @@ import {
   type UserCommand,
   type Vec3,
 } from '@quake2ts/shared';
-import { ClientPrediction, defaultPredictionState, interpolatePredictionState, PredictionState } from '../src/index.js';
+import { ClientPrediction, defaultPredictionState, interpolatePredictionState, PredictionState } from '../../src/index.js';
 import { PmoveTraceResult } from '@quake2ts/shared';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 } as const;

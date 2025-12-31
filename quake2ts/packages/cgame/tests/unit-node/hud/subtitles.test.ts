@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SubtitleSystem } from '../../src/hud/subtitles.js';
-import { CGameImport } from '../../src/types.js';
+import { SubtitleSystem } from '../../../src/hud/subtitles.js';
+import { CGameImport } from '../../../src/types.js';
 
 const mockCgi = {
   SCR_DrawCenterString: vi.fn(),
