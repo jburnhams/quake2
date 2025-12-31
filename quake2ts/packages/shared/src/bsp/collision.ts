@@ -656,7 +656,14 @@ function recursiveHullCheck(params: {
   // fraction1 (frac) is used for "move up to node" - the near-side recursion
   // fraction2 (frac2) is used for "go past the node" - the far-side recursion
   let side = 0;
-  let idist = 1 / (startDist - endDist);
+  const distDelta = startDist - endDist;
+
+  // Handle parallel case to avoid division by zero/infinity (matches Q2 behavior)
+  if (distDelta === 0) {
+    return;
+  }
+
+  let idist = 1 / distDelta;
   let fraction1, fraction2;
 
   if (startDist < endDist) {

@@ -17,6 +17,7 @@ const include = isIntegration
 export default defineConfig({
   resolve: {
     alias: {
+      '@quake2ts/test-utils/shared/bsp': path.resolve(__dirname, '../test-utils/src/shared/bsp.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
       '@quake2ts/shared': path.resolve(__dirname, './src/index.ts'),
