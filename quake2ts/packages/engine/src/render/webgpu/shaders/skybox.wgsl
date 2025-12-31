@@ -71,11 +71,20 @@ fn fragmentMain(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   cubemapDir.y = worldDir.z;   // Quake +Z (up) → GL +Y (up)
   cubemapDir.z = -worldDir.x;  // Quake +X (forward) → GL -Z (forward)
 
-  // Apply texture scroll offset to cubemap sampling direction
-  // This scrolls the texture on each face rather than shifting the view direction
-  // Scale scroll values to create visible movement
-  cubemapDir.x += uniforms.scroll.y * 0.1;  // Y scroll affects cubemap X (horizontal on faces)
-  cubemapDir.z += uniforms.scroll.x * 0.1;  // X scroll affects cubemap Z (vertical on front/back faces)
+  // Apply skybox scroll by rotating the cubemap around the vertical (Y) axis
+  // This rotates the entire skybox, scrolling textures while maintaining face relationships
+  // Rotation around Y axis: newX = X*cos(θ) - Z*sin(θ), newZ = X*sin(θ) + Z*cos(θ)
+  // For 2 checkerboard squares (90° rotation): need ~1.57 radians at scroll=2.0
+  let scrollAngle = uniforms.scroll.x * 0.8; // Scale to radians
+  let cosAngle = cos(scrollAngle);
+  let sinAngle = sin(scrollAngle);
+
+  let rotatedX = cubemapDir.x * cosAngle - cubemapDir.z * sinAngle;
+  let rotatedZ = cubemapDir.x * sinAngle + cubemapDir.z * cosAngle;
+
+  cubemapDir.x = rotatedX;
+  cubemapDir.z = rotatedZ;
+  // cubemapDir.y unchanged - rotation around Y axis
 
   return textureSample(t_skybox, s_skybox, cubemapDir);
 }
