@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/cgame",
-  "version": "0.0.847",
+  "version": "0.0.848",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
