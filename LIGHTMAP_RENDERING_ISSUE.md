@@ -1,5 +1,27 @@
 # WebGL Lightmap Rendering Issue
 
+## Update: Lightmap Colors Now Working! (Commit 69e8e803)
+
+**Status**: ✅ Lightmap colors are now being applied correctly
+**New Issue**: ⚠️ Geometry renders extremely small (tiny dots instead of full-size quads)
+
+### Progress
+After implementing the vertex layout changes and light style defaults:
+- `lightmap-static-red.png`: Now shows a tiny **red** dot (was white square)
+- `lightmap-styles.png`: Now shows a tiny **green** dot (was white square)
+- Other BSP tests (e.g., `bsp-single-quad.png`) render at correct size
+
+### Current Problem
+The lightmap **colors** are correct, but the **geometry scale** is wrong:
+- Test creates 256×256 unit quad (vertices from -128 to +128)
+- Camera at [0, 0, 300] looking at [0, 0, 0]
+- Should fill most of 256×256 viewport
+- **Actually renders as ~2 pixel dot**
+
+This suggests an issue in `createBspSurfaces()` when processing lightmap data, but NOT an issue with the lightmap sampling shader logic (which works correctly).
+
+---
+
 ## Update: Integration Test Fixed
 
 **Status**: Integration test crash fixed (commit fd0edee4)
