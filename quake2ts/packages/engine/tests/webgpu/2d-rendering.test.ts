@@ -1,15 +1,18 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { initHeadlessWebGPU, captureTexture } from '@quake2ts/test-utils';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { initHeadlessWebGPU, createWebGPULifecycle, captureTexture } from '@quake2ts/test-utils';
 import { createWebGPURenderer } from '@quake2ts/engine/render/webgpu/renderer.js';
 import { Camera } from '@quake2ts/engine/render/camera.js';
 import { mat4 } from 'gl-matrix';
 import { Texture2D } from '@quake2ts/engine/render/webgpu/resources.js';
 
 describe('WebGPU 2D Rendering Integration', () => {
+  const lifecycle = createWebGPULifecycle();
+
   beforeAll(async () => {
-    // Setup WebGPU using test-utils helper
     await initHeadlessWebGPU();
   });
+
+  afterAll(lifecycle.cleanup);
 
   it('renders a solid rectangle with drawfillRect', async () => {
     const renderer = await createWebGPURenderer(undefined, {
@@ -17,6 +20,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     const camera = new Camera(mat4.create());
     const frameRenderer = (renderer as any).frameRenderer;
@@ -47,8 +51,6 @@ describe('WebGPU 2D Rendering Integration', () => {
     expect(pixels[centerIdx + 0]).toBeLessThan(50);     // R channel (RGBA format)
     expect(pixels[centerIdx + 1]).toBeLessThan(50);     // G channel
     expect(pixels[centerIdx + 2]).toBeGreaterThan(200); // B channel
-
-    renderer.dispose();
   });
 
   it('renders a textured quad with drawPic', async () => {
@@ -57,6 +59,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     // Create a simple test texture (8x8 red square)
     const testTexture = new Texture2D(renderer.device, {
@@ -106,7 +109,6 @@ describe('WebGPU 2D Rendering Integration', () => {
     expect(pixels[testIdx + 2]).toBeLessThan(50);     // B channel
 
     testTexture.destroy();
-    renderer.dispose();
   });
 
   it('renders with color tinting', async () => {
@@ -115,6 +117,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     const camera = new Camera(mat4.create());
     const frameRenderer = (renderer as any).frameRenderer;
@@ -145,8 +148,6 @@ describe('WebGPU 2D Rendering Integration', () => {
     expect(pixels[testIdx + 0]).toBeLessThan(50);     // R channel
     expect(pixels[testIdx + 1]).toBeGreaterThan(200); // G channel
     expect(pixels[testIdx + 2]).toBeLessThan(50);     // B channel
-
-    renderer.dispose();
   });
 
   it('renders multiple 2D elements in correct order', async () => {
@@ -155,6 +156,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     const camera = new Camera(mat4.create());
     const frameRenderer = (renderer as any).frameRenderer;
@@ -187,8 +189,6 @@ describe('WebGPU 2D Rendering Integration', () => {
     expect(pixels[overlapIdx + 0]).toBeLessThan(50);     // R channel
     expect(pixels[overlapIdx + 1]).toBeGreaterThan(200); // G channel (should be green, not red)
     expect(pixels[overlapIdx + 2]).toBeLessThan(50);     // B channel
-
-    renderer.dispose();
   });
 
   it('clears the frame buffer with clearColor', async () => {
@@ -197,6 +197,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     const camera = new Camera(mat4.create());
     const frameRenderer = (renderer as any).frameRenderer;
@@ -220,8 +221,6 @@ describe('WebGPU 2D Rendering Integration', () => {
     expect(pixels[centerIdx + 0]).toBeCloseTo(128, -10); // R ~0.5*255
     expect(pixels[centerIdx + 1]).toBeCloseTo(76, -10);  // G ~0.3*255
     expect(pixels[centerIdx + 2]).toBeCloseTo(25, -10);  // B ~0.1*255
-
-    renderer.dispose();
   });
 
   it('respects begin2D/end2D boundaries', async () => {
@@ -230,6 +229,7 @@ describe('WebGPU 2D Rendering Integration', () => {
       height: 240,
       headless: true
     });
+    lifecycle.trackRenderer(renderer);
 
     const camera = new Camera(mat4.create());
 
@@ -243,7 +243,5 @@ describe('WebGPU 2D Rendering Integration', () => {
         }
       });
     }).toThrow('drawfillRect called outside begin2D/end2D');
-
-    renderer.dispose();
   });
 });

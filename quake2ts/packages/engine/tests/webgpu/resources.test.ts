@@ -11,27 +11,24 @@ import {
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
 
 // Import shared test utilities for WebGPU setup
-import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
+import { initHeadlessWebGPU, createWebGPULifecycle } from '@quake2ts/test-utils';
 
 /**
  * Integration tests for WebGPU resources using real @webgpu/dawn.
  * Verifies that our resource wrappers work correctly with a real GPU driver.
  */
 describe('WebGPU Resources Integration (Real)', () => {
-  let gpuSetup: HeadlessWebGPUSetup;
+  const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-    gpuSetup = await initHeadlessWebGPU();
+    await initHeadlessWebGPU();
   });
 
-  afterAll(async () => {
-    await gpuSetup.cleanup();
-  });
+  afterAll(lifecycle.cleanup);
 
   it('should create and write to a vertex buffer', async () => {
-
     const context = await createWebGPUContext();
-    // No need to track devices manually as createWebGPUContext uses the global navigator.gpu which we shimmed
+    lifecycle.track(context.device);
 
     const data = new Float32Array([1.0, 2.0, 3.0, 4.0]);
     const buffer = new VertexBuffer(context.device, {
@@ -52,6 +49,7 @@ describe('WebGPU Resources Integration (Real)', () => {
 
   it('should create and upload a texture', async () => {
     const context = await createWebGPUContext();
+    lifecycle.track(context.device);
 
     const width = 64;
     const height = 64;
@@ -82,6 +80,7 @@ describe('WebGPU Resources Integration (Real)', () => {
 
   it('should compile a shader module', async () => {
     const context = await createWebGPUContext();
+    lifecycle.track(context.device);
 
     const code = `
       @vertex
@@ -106,6 +105,7 @@ describe('WebGPU Resources Integration (Real)', () => {
 
   it('should create a render pipeline and render a triangle', async () => {
     const context = await createWebGPUContext();
+    lifecycle.track(context.device);
 
     const shader = new ShaderModule(context.device, {
       code: `
