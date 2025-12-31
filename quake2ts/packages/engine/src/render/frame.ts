@@ -424,7 +424,7 @@ export const createFrameRenderer = (
                   diffuse: resolvedTextures.diffuse,
                   lightmap: effectiveLightmap,
                   surfaceFlags: geometry.surfaceFlags,
-                  styleKey: geometry.styleIndices.join(','),
+                  styleKey: (geometry.styleIndices || [255, 255, 255, 255]).join(','),
                 };
 
                 const isSameBatch =
@@ -448,8 +448,8 @@ export const createFrameRenderer = (
 
                   cachedState = bspPipeline.bind({
                     modelViewProjection: viewProjection,
-                    styleIndices: geometry.styleIndices,
-                    styleLayers: geometry.styleLayers,
+                    styleIndices: geometry.styleIndices || [0, 255, 255, 255],
+                    styleLayers: geometry.styleLayers || [0, -1, -1, -1],
                     styleValues: effectiveLightStyles,
                     surfaceFlags: geometry.surfaceFlags,
                     timeSeconds,

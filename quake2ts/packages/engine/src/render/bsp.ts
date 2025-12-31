@@ -41,8 +41,8 @@ export interface BspSurfaceGeometry {
   readonly texture: string;
   readonly surfaceFlags: SurfaceFlag;
   readonly lightmap?: LightmapPlacement;
-  readonly styleIndices: readonly number[];
-  readonly styleLayers: readonly number[];
+  readonly styleIndices?: readonly number[];
+  readonly styleLayers?: readonly number[];
   // CPU copies retained for deterministic tests and debugging.
   readonly vertexData: Float32Array;
   readonly indexData: Uint16Array;
