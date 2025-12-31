@@ -42,29 +42,23 @@ function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, ind
 }
 
 describe('BspSurfacePipeline Visual (Headless)', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  let gpuSetup: HeadlessWebGPUSetup;
   const snapshotDir = path.join(__dirname, '__snapshots__');
   const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
   beforeAll(async () => {
-    try {
-      gpuSetup = await initHeadlessWebGPU();
-      if (!fs.existsSync(snapshotDir)) {
-          fs.mkdirSync(snapshotDir, { recursive: true });
-      }
-    } catch (error) {
-      console.warn('Skipping WebGPU visual tests: ' + error);
+    gpuSetup = await initHeadlessWebGPU();
+    if (!fs.existsSync(snapshotDir)) {
+      fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
   afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
-    }
+    await gpuSetup.cleanup();
   });
 
   it('renders a textured quad', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -174,7 +168,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
   });
 
   it('renders with lightmap', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
@@ -275,7 +269,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders with scrolling texture', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
@@ -399,7 +393,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders alpha tested surface', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
@@ -501,7 +495,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders with dynamic light', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;

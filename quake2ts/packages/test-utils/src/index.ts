@@ -30,6 +30,7 @@ export * from './server/helpers/bandwidth.js';
 export * from './setup/browser.js';
 export * from './setup/canvas.js';
 export * from './setup/webgpu.js';
+export * from './setup/webgpu-lifecycle.js';
 // Safe to export now as gl is lazy loaded
 export * from './setup/headless-webgl.js';
 export * from './engine/mocks/webgpu.js';
@@ -72,6 +73,7 @@ export * from './client/helpers/prediction.js';
 // Visual Testing
 export * from './visual/snapshots.js';
 export * from './visual/animation-snapshots.js';
+export { test } from './engine/builders/visual-testing.js';
 
 // E2E
 export * from './e2e/playwright.js';
