@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 import { mat4 } from 'gl-matrix';
-import { buildMatrices, MatrixBuilder } from '../../../src/render/matrix/builders.js';
-import { CameraState } from '../../../src/render/types/camera.js';
-import { CoordinateSystem } from '../../../src/render/types/coordinates.js';
+import { buildMatrices, MatrixBuilder } from '../../../../src/render/matrix/builders.js';
+import { CameraState } from '../../../../src/render/types/camera.js';
+import { CoordinateSystem } from '../../../../src/render/types/coordinates.js';
 
 describe('buildMatrices', () => {
   const mockCameraState: CameraState = {

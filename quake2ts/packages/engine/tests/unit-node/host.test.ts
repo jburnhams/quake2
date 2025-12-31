@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EngineHost, type GameFrameResult } from '../src/host.js';
+import { EngineHost, type GameFrameResult } from '../../src/host.js';
 
 interface StubState {
   readonly id: string;

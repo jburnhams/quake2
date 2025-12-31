@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { WebGPUMatrixBuilder } from '../../../src/render/matrix/webgpu.js';
+import { WebGPUMatrixBuilder } from '../../../../src/render/matrix/webgpu.js';
 import { vec3, mat4 } from 'gl-matrix';
 
 describe('WebGPUMatrixBuilder', () => {

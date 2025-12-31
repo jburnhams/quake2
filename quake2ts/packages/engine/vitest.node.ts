@@ -1,8 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
-const setupFiles = ['./vitest.setup.ts'];
-
 export default defineConfig({
   resolve: {
     alias: {
@@ -23,11 +21,11 @@ export default defineConfig({
     include: ['tests/unit-node/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     environment: 'node',
-    setupFiles,
     globals: true,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-node.xml',
     },
+    setupFiles: ['./vitest.setup.ts'],
   },
 });

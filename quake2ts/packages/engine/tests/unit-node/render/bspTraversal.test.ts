@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { boxIntersectsFrustum, extractFrustumPlanes } from '../src/render/culling.js';
-import { findLeafForPoint, gatherVisibleFaces } from '../src/render/bspTraversal.js';
-import type { BspMap } from '../src/assets/bsp.js';
+import { boxIntersectsFrustum, extractFrustumPlanes } from '../../../src/render/culling.js';
+import { findLeafForPoint, gatherVisibleFaces } from '../../../src/render/bspTraversal.js';
+import type { BspMap } from '../../../src/assets/bsp.js';
 
 function makeTestMap(): BspMap {
   const planes = [

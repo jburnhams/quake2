@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getMinLight, calculateEntityLight, findLeaf } from '../../src/render/light.js';
-import { BspMap, BspLeaf, BspNode } from '../../src/assets/bsp.js';
+import { getMinLight, calculateEntityLight, findLeaf } from '../../../src/render/light.js';
+import { BspMap, BspLeaf, BspNode } from '../../../src/assets/bsp.js';
 
 describe('light', () => {
   const mockLeaf: BspLeaf = {

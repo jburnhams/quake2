@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformAabb } from '../../src/render/culling.js';
+import { transformAabb } from '../../../src/render/culling.js';
 import { Mat4 } from '@quake2ts/shared';
 
 describe('culling', () => {

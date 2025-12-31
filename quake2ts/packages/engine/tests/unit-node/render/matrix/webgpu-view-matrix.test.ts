@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { WebGPUMatrixBuilder } from '../../../src/render/matrix/webgpu.js';
-import type { CameraState } from '../../../src/render/types/camera.js';
+import { WebGPUMatrixBuilder } from '../../../../src/render/matrix/webgpu.js';
+import type { CameraState } from '../../../../src/render/types/camera.js';
 import { vec4, mat4 } from 'gl-matrix';
 
 describe('WebGPUMatrixBuilder View Matrix', () => {
