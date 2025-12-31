@@ -5,12 +5,12 @@ import { Md3Model } from '../../../src/assets/md3';
 import { Texture2D } from '../../../src/render/webgpu/resources';
 import { createMat4Identity, mat4Translate, mat4Perspective } from '@quake2ts/shared';
 
-// Helper to create a simple mock MD3 model
+// Create a simple mock MD3 model with a single triangle surface
 function createMockMd3Model(): Md3Model {
   return {
     version: 15,
     name: 'test.md3',
-    header: {} as any,
+    header: {} as any, // Only minimal mock
     frames: [],
     tags: [],
     surfaces: [
