@@ -55,6 +55,8 @@ export function createMockRenderer(overrides?: Partial<Renderer>): Renderer {
     renderFrame: vi.fn(),
     registerPic: vi.fn().mockResolvedValue({} as any),
     registerTexture: vi.fn().mockReturnValue({} as any),
+    getTexture: vi.fn().mockReturnValue(undefined),
+    getTextures: vi.fn().mockReturnValue(new Map()),
     begin2D: vi.fn(),
     end2D: vi.fn(),
     drawPic: vi.fn(),

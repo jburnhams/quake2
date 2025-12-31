@@ -394,7 +394,6 @@ export const createFrameRenderer = (
                 if (!geometry) continue;
                 if ((geometry.surfaceFlags & SURF_SKY) !== 0) continue;
 
-                const faceStyles = world.map.faces[faceIndex]?.styles;
                 const material = world.materials?.getMaterial(geometry.texture);
                 const resolvedTextures = resolveSurfaceTextures(geometry, world, currentRefractionTexture);
 
@@ -414,7 +413,7 @@ export const createFrameRenderer = (
                   diffuse: resolvedTextures.diffuse,
                   lightmap: effectiveLightmap,
                   surfaceFlags: geometry.surfaceFlags,
-                  styleKey: faceStyles?.join(',') ?? '',
+                  styleKey: geometry.styleIndices.join(','),
                 };
 
                 const isSameBatch =
@@ -438,7 +437,8 @@ export const createFrameRenderer = (
 
                   cachedState = bspPipeline.bind({
                     modelViewProjection: viewProjection,
-                    styleIndices: faceStyles,
+                    styleIndices: geometry.styleIndices,
+                    styleLayers: geometry.styleLayers,
                     styleValues: effectiveLightStyles,
                     surfaceFlags: geometry.surfaceFlags,
                     timeSeconds,

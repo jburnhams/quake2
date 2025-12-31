@@ -23,6 +23,7 @@ export interface BspSurfaceInput {
   readonly surfaceFlags?: SurfaceFlag;
   readonly lightmap?: BspLightmapData;
   readonly faceIndex: number;
+  readonly styles?: readonly number[];
 }
 
 export interface LightmapPlacement {
@@ -40,6 +41,8 @@ export interface BspSurfaceGeometry {
   readonly texture: string;
   readonly surfaceFlags: SurfaceFlag;
   readonly lightmap?: LightmapPlacement;
+  readonly styleIndices: readonly number[];
+  readonly styleLayers: readonly number[];
   // CPU copies retained for deterministic tests and debugging.
   readonly vertexData: Float32Array;
   readonly indexData: Uint16Array;
@@ -358,6 +361,7 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       surfaceFlags: texInfo.flags,
       lightmap: lightmapData,
       faceIndex,
+      styles: face.styles || [255, 255, 255, 255],
     });
   }
 
@@ -444,6 +448,17 @@ export function buildBspGeometry(
     const vao = new VertexArray(gl);
     vao.configureAttributes(BSP_VERTEX_LAYOUT, vertexBuffer);
 
+    // Calculate styleLayers from styles
+    const styles = surface.styles || [255, 255, 255, 255];
+    const styleLayers = [-1, -1, -1, -1];
+    let layerCounter = 0;
+    for (let i = 0; i < 4; i++) {
+      if (styles[i] !== 255) {
+        styleLayers[i] = layerCounter;
+        layerCounter++;
+      }
+    }
+
     return {
       vao,
       vertexBuffer,
@@ -453,6 +468,8 @@ export function buildBspGeometry(
       texture: surface.texture,
       surfaceFlags: surface.surfaceFlags ?? SURF_NONE,
       lightmap: placement,
+      styleIndices: styles,
+      styleLayers,
       vertexData,
       indexData,
     };
