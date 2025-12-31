@@ -58,6 +58,7 @@ export * from './engine/builders/pakBuilder.js';
 export * from './engine/builders/pcxBuilder.js';
 export * from './engine/builders/walBuilder.js';
 export * from './engine/builders/wavBuilder.js';
+export { test } from './engine/builders/visual-testing.js';
 
 // Client Mocks
 export * from './client/mocks/input.js';
