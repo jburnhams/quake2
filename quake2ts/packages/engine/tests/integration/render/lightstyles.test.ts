@@ -142,7 +142,9 @@ describe('Lightmap Styles Integration', () => {
       indexCount: 6,
       vao: geometry.vao,
       indexBuffer: geometry.ibo,
-      lightmap: { atlasIndex: 0, texture: undefined } // Needs a lightmap to trigger lightmap code path
+      lightmap: { atlasIndex: 0, texture: undefined }, // Needs a lightmap to trigger lightmap code path
+      styleIndices: [0, 1, 255, 255], // Matches face.styles from BSP
+      styleLayers: [0, 1, -1, -1] // Layer 0 for style 0, layer 1 for style 1
     };
 
     const camera = new Camera();
@@ -173,11 +175,13 @@ describe('Lightmap Styles Integration', () => {
 
     renderer.renderFrame(options, []);
 
-    // Check uniform4fv call for 'u_lightStyleFactors'
+    // Check uniform4fv calls for light style uniforms
     // Expected factors: [1.0, 0.5, 0, 0]
     // styles indices are [0, 1, 255, 255]. 255 -> 0.
     const expectedStyles = new Float32Array([1.0, 0.5, 0, 0]);
+    const expectedLayers = [0, 1, -1, -1];
 
     expect(gl.uniform4fv).toHaveBeenCalledWith('u_lightStyleFactors', expectedStyles);
+    expect(gl.uniform4fv).toHaveBeenCalledWith('u_styleLayerMapping', expectedLayers);
   });
 });
