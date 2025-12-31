@@ -31,7 +31,7 @@ struct SurfaceUniforms {
     warp: u32,
     lightmapOnly: u32,
     renderMode: u32, // 0: Texture, 1: Solid, 2: Faceted
-    padding: vec3<f32>,
+    origin: vec3<f32>,
 }
 
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
@@ -61,7 +61,8 @@ struct VertexOutput {
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
-    var pos = input.position;
+    // Restore absolute world position
+    var pos = input.position + surface.origin;
     var tex = input.texCoord;
     var lm = input.lightmapCoord;
 

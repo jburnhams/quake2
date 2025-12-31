@@ -16,6 +16,7 @@ export interface BspLightmapData {
 
 export interface BspSurfaceInput {
   readonly vertices: ReadonlyArray<number> | Float32Array;
+  readonly origin?: ReadonlyArray<number>;
   readonly textureCoords: ReadonlyArray<number> | Float32Array;
   readonly lightmapCoords?: ReadonlyArray<number> | Float32Array;
   readonly indices?: ReadonlyArray<number> | Uint16Array | Uint32Array;
@@ -40,6 +41,7 @@ export interface BspSurfaceGeometry {
   readonly texture: string;
   readonly surfaceFlags: SurfaceFlag;
   readonly lightmap?: LightmapPlacement;
+  readonly origin?: ReadonlyArray<number>;
   // CPU copies retained for deterministic tests and debugging.
   readonly vertexData: Float32Array;
   readonly indexData: Uint16Array;
@@ -277,6 +279,11 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
 
     // Retrieve vertices for this face by walking its edges.
     // BSP faces are stored as references to a global edge list.
+    const rawVertices: number[] = [];
+    let minX = Infinity;
+    let minY = Infinity;
+    let minZ = Infinity;
+
     for (let i = 0; i < face.numEdges; i++) {
       const edgeIndex = map.surfEdges[face.firstEdge + i];
       const edge = map.edges[Math.abs(edgeIndex)];
@@ -285,13 +292,27 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       const vIndex = edgeIndex >= 0 ? edge.vertices[0] : edge.vertices[1];
       const vertex = map.vertices[vIndex];
 
-      vertices.push(vertex[0], vertex[1], vertex[2]);
+      rawVertices.push(vertex[0], vertex[1], vertex[2]);
+      minX = Math.min(minX, vertex[0]);
+      minY = Math.min(minY, vertex[1]);
+      minZ = Math.min(minZ, vertex[2]);
+    }
+
+    // Normalize vertices relative to min bounds to improve precision
+    // and match the expected behavior for lighting calculations.
+    for (let i = 0; i < rawVertices.length; i += 3) {
+      const x = rawVertices[i];
+      const y = rawVertices[i + 1];
+      const z = rawVertices[i + 2];
+
+      vertices.push(x - minX, y - minY, z - minZ);
 
       // Calculate standard texture coordinates (s, t) using the texture axes.
+      // Note: Texture coordinates are calculated using absolute position (raw vertices)
       // s = dot(v, s_vector) + s_offset
       // t = dot(v, t_vector) + t_offset
-      const s = vertex[0] * texInfo.s[0] + vertex[1] * texInfo.s[1] + vertex[2] * texInfo.s[2] + texInfo.sOffset;
-      const t = vertex[0] * texInfo.t[0] + vertex[1] * texInfo.t[1] + vertex[2] * texInfo.t[2] + texInfo.tOffset;
+      const s = x * texInfo.s[0] + y * texInfo.s[1] + z * texInfo.s[2] + texInfo.sOffset;
+      const t = x * texInfo.t[0] + y * texInfo.t[1] + z * texInfo.t[2] + texInfo.tOffset;
 
       textureCoords.push(s, t);
 
@@ -351,6 +372,7 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
 
     results.push({
       vertices: new Float32Array(vertices),
+      origin: [minX, minY, minZ],
       textureCoords: new Float32Array(textureCoords),
       lightmapCoords: new Float32Array(lightmapCoords),
       indices: new Uint16Array(indices),
@@ -453,6 +475,7 @@ export function buildBspGeometry(
       texture: surface.texture,
       surfaceFlags: surface.surfaceFlags ?? SURF_NONE,
       lightmap: placement,
+      origin: surface.origin,
       vertexData,
       indexData,
     };

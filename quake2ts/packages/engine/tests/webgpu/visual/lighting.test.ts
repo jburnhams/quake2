@@ -21,41 +21,43 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
     let vertices: Float32Array;
 
     // We need 8 floats per vertex: x, y, z, u, v, lm_u, lm_v, lm_step
+    // Note: We normalize vertices relative to min, matching createBspSurfaces logic
 
     if (dx < 0.001) {
         // Flat in X (YZ plane) - e.g. Wall
         // Normal is +X or -X. Let's assume facing -X (visible from X < wall)
+        // Vertices are Relative to Min: [x-minX, y-minY, z-minZ]
         vertices = new Float32Array([
             // Triangle 1
-            min[0], min[1], min[2], 0, 1, 0, 0, 0, // Bottom-Left
-            max[0], min[1], max[2], 0, 0, 0, 0, 0, // Top-Left
-            min[0], max[1], min[2], 1, 1, 0, 0, 0, // Bottom-Right
+            min[0]-min[0], min[1]-min[1], min[2]-min[2], 0, 1, 0, 0, 0, // Bottom-Left (0,0,0)
+            max[0]-min[0], min[1]-min[1], max[2]-min[2], 0, 0, 0, 0, 0, // Top-Left (0,0,H)
+            min[0]-min[0], max[1]-min[1], min[2]-min[2], 1, 1, 0, 0, 0, // Bottom-Right (0,W,0)
             // Triangle 2
-            max[0], min[1], max[2], 0, 0, 0, 0, 0, // Top-Left
-            max[0], max[1], max[2], 1, 0, 0, 0, 0, // Top-Right
-            min[0], max[1], min[2], 1, 1, 0, 0, 0, // Bottom-Right
+            max[0]-min[0], min[1]-min[1], max[2]-min[2], 0, 0, 0, 0, 0, // Top-Left
+            max[0]-min[0], max[1]-min[1], max[2]-min[2], 1, 0, 0, 0, 0, // Top-Right (0,W,H)
+            min[0]-min[0], max[1]-min[1], min[2]-min[2], 1, 1, 0, 0, 0, // Bottom-Right
         ]);
     } else if (dy < 0.001) {
         // Flat in Y (XZ plane)
         vertices = new Float32Array([
-            min[0], min[1], min[2], 0, 1, 0, 0, 0,
-            min[0], max[1], max[2], 0, 0, 0, 0, 0,
-            max[0], min[1], min[2], 1, 1, 0, 0, 0,
+            min[0]-min[0], min[1]-min[1], min[2]-min[2], 0, 1, 0, 0, 0,
+            min[0]-min[0], max[1]-min[1], max[2]-min[2], 0, 0, 0, 0, 0,
+            max[0]-min[0], min[1]-min[1], min[2]-min[2], 1, 1, 0, 0, 0,
 
-            min[0], max[1], max[2], 0, 0, 0, 0, 0,
-            max[0], max[1], max[2], 1, 0, 0, 0, 0,
-            max[0], min[1], min[2], 1, 1, 0, 0, 0,
+            min[0]-min[0], max[1]-min[1], max[2]-min[2], 0, 0, 0, 0, 0,
+            max[0]-min[0], max[1]-min[1], max[2]-min[2], 1, 0, 0, 0, 0,
+            max[0]-min[0], min[1]-min[1], min[2]-min[2], 1, 1, 0, 0, 0,
         ]);
     } else {
         // Flat in Z (XY plane) - e.g. Floor
         vertices = new Float32Array([
-            min[0], min[1], min[2], 0, 0, 0, 0, 0,
-            max[0], min[1], min[2], 1, 0, 0, 0, 0,
-            min[0], max[1], max[2], 0, 1, 0, 0, 0,
+            min[0]-min[0], min[1]-min[1], min[2]-min[2], 0, 0, 0, 0, 0,
+            max[0]-min[0], min[1]-min[1], min[2]-min[2], 1, 0, 0, 0, 0,
+            min[0]-min[0], max[1]-min[1], max[2]-min[2], 0, 1, 0, 0, 0,
 
-            max[0], min[1], min[2], 1, 0, 0, 0, 0,
-            max[0], max[1], max[2], 1, 1, 0, 0, 0,
-            min[0], max[1], max[2], 0, 1, 0, 0, 0,
+            max[0]-min[0], min[1]-min[1], min[2]-min[2], 1, 0, 0, 0, 0,
+            max[0]-min[0], max[1]-min[1], max[2]-min[2], 1, 1, 0, 0, 0,
+            min[0]-min[0], max[1]-min[1], max[2]-min[2], 0, 1, 0, 0, 0,
         ]);
     }
 
@@ -71,6 +73,7 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
         surfaceFlags: 0,
         mins: { x: options.min[0], y: options.min[1], z: options.min[2] },
         maxs: { x: options.max[0], y: options.max[1], z: options.max[2] },
+        origin: options.min, // Store origin for pipeline
         texInfo: {
             texture: options.texture,
             flags: 0,
@@ -188,15 +191,10 @@ describe('WebGPU Lighting', () => {
         const map = createMinimalMap(1);
 
         // Red light near the wall
-        // TESTING: Try offsetting light position to make it appear centered
         // Expected center: (200, 0, 100)
-        // If light needs to be at (200, 200, -100) to appear at bottom-right
-        // Then to appear at center, we need the inverse offset:
-        // Y: 0 - 200 = -200
-        // Z: 100 - (-100) = 200
-        // But that would be (180, -200, 200) - let's test this
+        // Light at (180, 0, 100) should be 20 units in front of center
         const dlights: DLight[] = [{
-            origin: { x: 180, y: -200, z: 200 },
+            origin: { x: 180, y: 0, z: 100 },
             color: { x: 1, y: 0, z: 0 },
             intensity: 150,
             die: 0
@@ -241,19 +239,18 @@ describe('WebGPU Lighting', () => {
 
         const map = createMinimalMap(1);
 
-        // Apply the same offset pattern: subtract min bounds
         // Wall min: [200, -200, -100]
-        // Red light: (180, -50, 100) → (180, -50 - (-200), 100 - (-100)) = (180, 150, 200)
-        // Blue light: (180, 50, 100) → (180, 50 - (-200), 100 - (-100)) = (180, 250, 200)
+        // Red light: (180, -50, 100)
+        // Blue light: (180, 50, 100)
         const dlights: DLight[] = [
             {
-                origin: { x: 180, y: 150, z: 200 },
+                origin: { x: 180, y: -50, z: 100 },
                 color: { x: 1, y: 0, z: 0 },
                 intensity: 100,
                 die: 0
             },
             {
-                origin: { x: 180, y: 250, z: 200 },
+                origin: { x: 180, y: 50, z: 100 },
                 color: { x: 0, y: 0, z: 1 },
                 intensity: 100,
                 die: 0
@@ -303,11 +300,10 @@ describe('WebGPU Lighting', () => {
         cam.setPosition(0, 0, 200);
         cam.setRotation(90, 0, 0);
 
-        // Apply the same offset pattern: subtract min bounds
         // Floor min: [-200, -200, 0]
-        // Light: (0, 0, 50) → (0 - (-200), 0 - (-200), 50 - 0) = (200, 200, 50)
+        // Light: (0, 0, 50)
         const dlights: DLight[] = [{
-            origin: { x: 200, y: 200, z: 50 },
+            origin: { x: 0, y: 0, z: 50 },
             color: { x: 0, y: 1, z: 0 },
             intensity: 150,
             die: 0
