@@ -63,10 +63,6 @@ fn fragmentMain(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   // Manually unroll: worldDir = col0 * viewDir.x + col1 * viewDir.y + col2 * viewDir.z
   var worldDir = col0 * viewDir.x + col1 * viewDir.y + col2 * viewDir.z;
 
-  // Apply small scroll offset in Quake horizontal plane
-  worldDir.x += uniforms.scroll.x * 0.01;
-  worldDir.y += uniforms.scroll.y * 0.01;
-
   // Transform from Quake coordinates to GL/WebGPU cubemap coordinates
   // Quake: +X forward, +Y left, +Z up
   // GL cubemap: +X right, +Y up, -Z forward
@@ -74,6 +70,12 @@ fn fragmentMain(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f3
   cubemapDir.x = -worldDir.y;  // Quake +Y (left) → GL -X (left)
   cubemapDir.y = worldDir.z;   // Quake +Z (up) → GL +Y (up)
   cubemapDir.z = -worldDir.x;  // Quake +X (forward) → GL -Z (forward)
+
+  // Apply texture scroll offset to cubemap sampling direction
+  // This scrolls the texture on each face rather than shifting the view direction
+  // Scale scroll values to create visible movement
+  cubemapDir.x += uniforms.scroll.y * 0.1;  // Y scroll affects cubemap X (horizontal on faces)
+  cubemapDir.z += uniforms.scroll.x * 0.1;  // X scroll affects cubemap Z (vertical on front/back faces)
 
   return textureSample(t_skybox, s_skybox, cubemapDir);
 }
