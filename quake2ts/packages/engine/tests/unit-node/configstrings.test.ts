@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigStringIndex, MAX_CLIENTS } from '@quake2ts/shared';
-import { ConfigStringRegistry } from '../../src/configstrings.js';
+import { ConfigStringRegistry } from '@quake2ts/engine/configstrings.js';
 
 describe('ConfigStringRegistry', () => {
   it('assigns deterministic indices for each range and reuses existing entries', () => {

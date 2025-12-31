@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClientConnection, ConnectionState } from '../../src/network/clientConnection.js';
+import { ClientConnection, ConnectionState } from '@quake2ts/engine/network/clientConnection.js';
 import { NetChan, ServerCommand, BinaryWriter } from '@quake2ts/shared';
 
 describe('ClientConnection', () => {

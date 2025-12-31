@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AsyncDemoParser } from '../../src/demo/asyncParser.js';
-import { NetworkMessageHandler } from '../../src/demo/parser.js';
+import { AsyncDemoParser } from '@quake2ts/engine/demo/asyncParser.js';
+import { NetworkMessageHandler } from '@quake2ts/engine/demo/parser.js';
 
 // Mock Worker
 class MockWorker {

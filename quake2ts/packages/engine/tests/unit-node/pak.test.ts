@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PakArchive, PakParseError, calculatePakChecksum } from '../../src/assets/pak.js';
+import { PakArchive, PakParseError, calculatePakChecksum } from '@quake2ts/engine/assets/pak.js';
 import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('PakArchive', () => {

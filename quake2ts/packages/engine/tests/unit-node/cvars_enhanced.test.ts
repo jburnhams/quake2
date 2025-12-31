@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Cvar, CvarRegistry } from '../../src/cvars.js';
+import { Cvar, CvarRegistry } from '@quake2ts/engine/cvars.js';
 import { CvarFlags } from '@quake2ts/shared';
 
 describe('Cvar System Enhancement', () => {

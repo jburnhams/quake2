@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AsyncDemoParser } from '../../src/demo/asyncParser';
-import { NetworkMessageHandler } from '../../src/demo/parser';
-import type { DemoWorkerResponse, DemoWorkerRequest } from '../../src/demo/demo.worker';
+import { AsyncDemoParser } from '@quake2ts/engine/demo/asyncParser';
+import { NetworkMessageHandler } from '@quake2ts/engine/demo/parser';
+import type { DemoWorkerResponse, DemoWorkerRequest } from '@quake2ts/engine/demo/demo.worker';
 
 // Mock Worker
 class MockWorker {

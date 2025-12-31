@@ -6,9 +6,9 @@ import {
   groupMd2Animations,
   parseMd2,
   type Md2Frame,
-} from '../../src/assets/md2.js';
-import { PakArchive } from '../../src/assets/pak.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
+} from '@quake2ts/engine/assets/md2.js';
+import { PakArchive } from '@quake2ts/engine/assets/pak.js';
+import { VirtualFileSystem } from '@quake2ts/engine/assets/vfs.js';
 import { buildMd2 } from '@quake2ts/test-utils'; // md2Builder.js';
 import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PakArchive } from '../../src/assets/pak.js';
-import { PakValidator, PakValidationError } from '../../src/assets/pakValidation.js';
+import { PakArchive } from '@quake2ts/engine/assets/pak.js';
+import { PakValidator, PakValidationError } from '@quake2ts/engine/assets/pakValidation.js';
 import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('PakValidator', () => {

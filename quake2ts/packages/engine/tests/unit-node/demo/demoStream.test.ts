@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DemoStream } from '../../src/demo/demoStream.js';
-import { StreamingBuffer } from '../../src/stream/streamingBuffer.js';
+import { DemoStream } from '@quake2ts/engine/demo/demoStream.js';
+import { StreamingBuffer } from '@quake2ts/engine/stream/streamingBuffer.js';
 
 // Helper to create a synthetic demo buffer
 // Block format: length (4 bytes little endian) + data

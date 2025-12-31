@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CommandRegistry } from '../../src/commands';
+import { CommandRegistry } from '@quake2ts/engine/commands';
 
 describe('CommandRegistry', () => {
   let registry: CommandRegistry;

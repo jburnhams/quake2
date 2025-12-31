@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { StreamingBuffer } from '../../src/stream/streamingBuffer.js';
+import { StreamingBuffer } from '@quake2ts/engine/stream/streamingBuffer.js';
 
 describe('StreamingBuffer', () => {
     let buffer: StreamingBuffer;

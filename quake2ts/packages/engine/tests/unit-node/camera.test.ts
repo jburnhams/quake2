@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { vec3, mat4 } from 'gl-matrix';
-import { Camera } from '../src/render/camera';
+import { Camera } from '@quake2ts/engine/render/camera';
 
 // Helper to compare matrices with a tolerance
 const expectMat4CloseTo = (actual: mat4, expected: mat4, epsilon = 1e-6) => {

@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { WorldStateOptimizer } from '../../src/demo/worldStateOptimizer';
-import { WorldState } from '../../src/demo/clipper';
-import { Message, FrameMessage, SoundMessage, ConfigStringMessage } from '../../src/demo/message';
+import { WorldStateOptimizer } from '@quake2ts/engine/demo/worldStateOptimizer';
+import { WorldState } from '@quake2ts/engine/demo/clipper';
+import { Message, FrameMessage, SoundMessage, ConfigStringMessage } from '@quake2ts/engine/demo/message';
 import { ConfigStringIndex, MAX_MODELS, ServerCommand } from '@quake2ts/shared';
-import { createEmptyEntityState, createEmptyProtocolPlayerState, EntityState, U_MODEL, U_SOUND } from '../../src/demo/parser';
+import { createEmptyEntityState, createEmptyProtocolPlayerState, EntityState, U_MODEL, U_SOUND } from '@quake2ts/engine/demo/parser';
 
 describe('WorldStateOptimizer', () => {
     const optimizer = new WorldStateOptimizer();

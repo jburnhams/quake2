@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { collectMessages, Message, PrintMessage } from '../../src/demo/message';
+import { collectMessages, Message, PrintMessage } from '@quake2ts/engine/demo/message';
 import { ServerCommand } from '@quake2ts/shared';
 
 describe('MessageCollector', () => {
