@@ -1,10 +1,10 @@
 import { test as base } from 'vitest';
+import { expectSnapshot } from '../../visual/snapshots.js';
 import {
-    expectSnapshot,
     createRenderTestSetup,
     RenderTestSetup,
     captureTexture
-} from '@quake2ts/test-utils';
+} from '../helpers/webgpu-rendering.js';
 import path from 'path';
 
 interface VisualTestContext {
