@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { registerFuncSpawns, DoorState } from '../../src/entities/funcs.js';
 import { Entity } from '../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { lengthVec3 } from '@quake2ts/shared';
 import { createEntityFactory } from '@quake2ts/test-utils';

@@ -6,7 +6,7 @@ import { Entity, Solid } from '../../../src/entities/entity';
 import { EntitySystem } from '../../../src/entities/system';
 import { GameExports } from '../../../src/index';
 import { KeyId } from '../../../src/inventory/playerInventory';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('CTF Capture Logic', () => {
   let context: EntitySystem;

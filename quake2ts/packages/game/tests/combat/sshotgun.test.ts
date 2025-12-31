@@ -7,7 +7,7 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Super Shotgun', () => {
     it('should consume 2 shells and fire 20 pellets', () => {

@@ -4,7 +4,8 @@ import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import { CONTENTS_SOLID } from '@quake2ts/shared';
-import { createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 describe('M_CheckBottom', () => {
   let entity: Entity;

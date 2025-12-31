@@ -3,7 +3,7 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { TempEntity } from '@quake2ts/shared';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Performance: Spawn Time', () => {
   it('should spawn 1000 entities in under 100ms', () => {

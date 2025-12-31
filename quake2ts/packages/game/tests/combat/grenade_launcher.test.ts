@@ -9,7 +9,9 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Grenade Launcher', () => {
     it('should consume 1 grenade and spawn a projectile', () => {

@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { EntitySystem } from '../../src/entities/system';
 import { Entity, MoveType, Solid, DeadFlag } from '../../src/entities/entity';
 import { throwGibs, GIB_METALLIC, GIB_ORGANIC } from '../../src/entities/gibs';

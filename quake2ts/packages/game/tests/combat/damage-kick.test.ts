@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { player_pain, P_PlayerThink } from '../../src/entities/player.js';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Player Damage Kick', () => {
     let context: ReturnType<typeof createTestContext>;

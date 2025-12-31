@@ -3,7 +3,8 @@ import { SP_monster_berserk } from '../../../src/entities/monsters/berserk.js';
 import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('monster_berserk', () => {
   let context: any;

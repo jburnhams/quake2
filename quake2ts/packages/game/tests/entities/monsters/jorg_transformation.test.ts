@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_jorg } from '../../../src/entities/monsters/jorg.js';
 import { SP_monster_makron } from '../../../src/entities/monsters/makron.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
-import { createTestContext, createEntity } from '@quake2ts/test-utils';
+import { createTestContext, createEntity } from '@quake2ts/test-utils/game/helpers';
 
 // Mock makron import if needed, but we want to test integration
 // We need to access the private/internal 'makron_toss' or simulate the death frame sequence

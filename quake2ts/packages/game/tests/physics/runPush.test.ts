@@ -4,7 +4,7 @@ import { runPush } from '../../src/physics/movement.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('runPush', () => {
   let system: EntitySystem;

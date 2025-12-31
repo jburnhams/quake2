@@ -3,7 +3,9 @@ import { P_ProjectSource, getProjectileOrigin } from '../../../src/combat/weapon
 import { Entity } from '../../../src/entities/entity.js';
 import { GameExports } from '../../../src/index.js';
 import { Vec3, angleVectors, addVec3, scaleVec3 } from '@quake2ts/shared';
-import { createEntityFactory, createMockGameExports, createTraceMock } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 describe('P_ProjectSource', () => {
     let mockGame: GameExports;

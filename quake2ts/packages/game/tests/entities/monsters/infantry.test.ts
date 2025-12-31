@@ -4,7 +4,8 @@ import { MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', async () => {

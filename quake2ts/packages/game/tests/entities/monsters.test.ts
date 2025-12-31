@@ -3,7 +3,7 @@ import { createGame } from '../../src/index.js';
 import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Solid } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Monster Spawning', () => {
   const { imports, engine } = createGameImportsAndEngine();

@@ -3,7 +3,8 @@ import { Entity, GameExports } from '@quake2ts/game';
 import { registerWeapon, WeaponDefinition } from '../src/combat/weapons/registry.js';
 import { fire } from '../src/combat/weapons/firing.js';
 import { WeaponId } from '../src/inventory/playerInventory.js';
-import { createMockGameExports, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Custom Weapon Registration', () => {
   let game: GameExports;

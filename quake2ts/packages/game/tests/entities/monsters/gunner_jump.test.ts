@@ -5,7 +5,7 @@ import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameEngine } from '../../../src/index.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_gunner jump', () => {
   let sys: EntitySystem;

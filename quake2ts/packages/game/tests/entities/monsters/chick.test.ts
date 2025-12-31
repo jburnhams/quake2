@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SP_monster_chick } from '../../../src/entities/monsters/chick.js';
 import { MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('monster_chick', () => {
   let context: any;

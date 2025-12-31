@@ -7,7 +7,7 @@ import { fire, firingRandom } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Rocket Launcher', () => {
     it('should consume 1 rocket and spawn a projectile', () => {

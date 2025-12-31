@@ -13,7 +13,8 @@ import {
     FRAME_RAILGUN_IDLE_LAST,
     FRAME_RAILGUN_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import { Entity } from '../../../src/entities/entity.js';
 
 // Railgun frames:

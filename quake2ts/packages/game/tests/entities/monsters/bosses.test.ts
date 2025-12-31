@@ -5,7 +5,7 @@ import { SP_monster_floater } from '../../../src/entities/monsters/floater.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { createRandomGenerator } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Boss/Monster Spawns', () => {
   let entity: Entity;

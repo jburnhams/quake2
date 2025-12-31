@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_tank_commander } from '../../../src/entities/monsters/tankCommander.js';
 import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_tank_commander', () => {
   let system: EntitySystem;

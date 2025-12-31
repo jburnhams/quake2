@@ -10,7 +10,7 @@ import { GameImports } from '../../src/imports.js';
 import { vi } from 'vitest';
 import { CollisionEntityIndex, CollisionModel } from '@quake2ts/shared';
 import { Solid } from '../../src/entities/entity.js';
-import { makeBrushFromMinsMaxs } from '@quake2ts/test-utils';
+import { makeBrushFromMinsMaxs } from '@quake2ts/test-utils/shared/bsp';
 
 const createMockGameImports = (): GameImports => ({
     trace: vi.fn(),

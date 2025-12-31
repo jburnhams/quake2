@@ -12,7 +12,9 @@ import { Entity } from '../../src/entities/entity.js';
 import { chaingunThink } from '../../src/combat/weapons/chaingun.js';
 import { getWeaponState } from '../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../src/combat/weapons/state.js';
-import { createPlayerEntityFactory, createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Chaingun', () => {
     let game: GameExports;

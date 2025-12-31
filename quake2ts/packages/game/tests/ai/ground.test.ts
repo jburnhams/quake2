@@ -5,7 +5,8 @@ import {
 } from '../../src/index.js';
 import { MoveType } from '../../src/entities/entity.js';
 import { CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA, TraceResult } from '@quake2ts/shared';
-import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 // Constants expected to be exported or defined
 export const BOTTOM_EMPTY = 0;

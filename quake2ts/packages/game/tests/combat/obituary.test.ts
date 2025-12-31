@@ -5,7 +5,8 @@ import { EntitySystem } from '../../src/entities/system.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../src/imports.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 // Mock getGender since it's hardcoded to "male" but we want to test female paths if possible.
 // We can use vi.mock to mock the module, but since we are testing the module itself, that's tricky.

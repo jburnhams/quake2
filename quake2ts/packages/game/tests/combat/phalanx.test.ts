@@ -11,7 +11,9 @@ import * as projectiles from '../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
 import { MulticastType } from '../../src/imports.js';
 import { ServerCommand, TempEntity, MZ_PHALANX, MZ_PHALANX2 } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Phalanx', () => {
     it('should fire standard shot (Frame != 8) with radius 120 and MZ_PHALANX', () => {

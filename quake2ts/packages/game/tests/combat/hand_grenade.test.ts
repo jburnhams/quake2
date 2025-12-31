@@ -12,7 +12,9 @@ import {
     FRAME_GRENADE_THROW_FIRST
 } from '../../src/combat/weapons/frames.js';
 import { fireHandGrenade } from '../../src/combat/weapons/firing.js';
-import { createMockGameExports, createPlayerEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createPlayerStateFactory } from '@quake2ts/test-utils';
 
 describe('Hand Grenade Combat Logic', () => {
     let sys: EntitySystem;

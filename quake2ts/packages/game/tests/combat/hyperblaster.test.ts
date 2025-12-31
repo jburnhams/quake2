@@ -8,7 +8,7 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('HyperBlaster', () => {
     it('should consume 1 cell and spawn a blaster bolt', () => {

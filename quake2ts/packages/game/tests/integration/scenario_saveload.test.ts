@@ -18,7 +18,7 @@ import {
   CollisionModel,
   CONTENTS_SOLID
 } from '@quake2ts/shared';
-import { makeBrushFromMinsMaxs, makeLeafModel } from '@quake2ts/test-utils';
+import { makeBrushFromMinsMaxs, makeLeafModel } from '@quake2ts/test-utils/shared/bsp';
 
 describe('Scenario 4: Save/Load Mid-Level', () => {
   let game: GameExports;

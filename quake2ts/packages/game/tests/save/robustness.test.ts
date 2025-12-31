@@ -12,7 +12,7 @@ import { CvarRegistry } from '@quake2ts/engine';
 import { createPlayerInventory, type PlayerInventory, WeaponId, PowerupId } from '../../src/inventory/playerInventory.js';
 import { DeadFlag } from '../../src/entities/entity.js';
 import { AmmoType } from '../../src/inventory/items.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Save/Load Robustness', () => {
   let entitySystem: EntitySystem;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createGame } from '../src/index';
 import { WeaponId } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Player State Exports', () => {
   it('should expose correct player state fields in snapshot', () => {

@@ -27,11 +27,11 @@ export * from './server/helpers/snapshot.js';
 export * from './server/helpers/bandwidth.js';
 
 // Setup
-export * from './setup/browser.js';
-export * from './setup/canvas.js';
-export * from './setup/webgpu.js';
+// export * from './setup/browser.js';
+// export * from './setup/canvas.js';
+// export * from './setup/webgpu.js';
 // Safe to export now as gl is lazy loaded
-export * from './setup/headless-webgl.js';
+// export * from './setup/headless-webgl.js';
 export * from './engine/mocks/webgpu.js';
 export * from './setup/timing.js';
 export * from './setup/node.js';
@@ -46,8 +46,8 @@ export * from './engine/rendering.js';
 export * from './setup/storage.js';
 export * from './setup/audio.js';
 export * from './engine/helpers/webgpu-rendering.js';
-export * from './engine/helpers/webgl-rendering.js';
-export * from './engine/helpers/webgl-playwright.js';
+// export * from './engine/helpers/webgl-rendering.js';
+// export * from './engine/helpers/webgl-playwright.js';
 export * from './engine/helpers/pipeline-test-template.js';
 export * from './engine/helpers/textures.js';
 export * from './engine/renderers.js';
@@ -67,9 +67,9 @@ export * from './visual/snapshots.js';
 export * from './visual/animation-snapshots.js';
 
 // E2E
-export * from './e2e/playwright.js';
-export * from './e2e/network.js';
-export * from './e2e/visual.js';
+// export * from './e2e/playwright.js';
+// export * from './e2e/network.js';
+// export * from './e2e/visual.js';
 
 // Export types
 export type { BrowserSetupOptions } from './setup/browser.js';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { spawnGib, spawnHead, GIB_ORGANIC } from '../../src/entities/gibs';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { MulticastType } from '../../src/imports';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
 

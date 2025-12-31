@@ -3,7 +3,9 @@ import { createAmmoPickupEntity } from '../../../src/entities/items/ammo.js';
 import { AmmoItemId, AmmoType } from '../../../src/inventory/ammo.js';
 import { Solid } from '../../../src/entities/entity.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createPlayerEntityFactory, createMockGameExports, createMockInventory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createMockInventory } from '@quake2ts/test-utils';
 
 describe('Ammo Pickup Entities', () => {
     const mockGame = createMockGameExports({

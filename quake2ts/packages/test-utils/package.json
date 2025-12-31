@@ -16,6 +16,41 @@
       "import": "./src/shared/bsp.ts",
       "require": "./src/shared/bsp.ts"
     },
+    "./shared/collision": {
+      "types": "./src/shared/collision.ts",
+      "import": "./src/shared/collision.ts",
+      "require": "./src/shared/collision.ts"
+    },
+    "./game/helpers": {
+      "types": "./src/game/helpers.ts",
+      "import": "./src/game/helpers.ts",
+      "require": "./src/game/helpers.ts"
+    },
+    "./game/factories": {
+      "types": "./src/game/factories.ts",
+      "import": "./src/game/factories.ts",
+      "require": "./src/game/factories.ts"
+    },
+    "./game/mocks/ai": {
+      "types": "./src/game/mocks/ai.ts",
+      "import": "./src/game/mocks/ai.ts",
+      "require": "./src/game/mocks/ai.ts"
+    },
+    "./game/mocks/combat": {
+      "types": "./src/game/mocks/combat.ts",
+      "import": "./src/game/mocks/combat.ts",
+      "require": "./src/game/mocks/combat.ts"
+    },
+    "./game/mocks/items": {
+      "types": "./src/game/mocks/items.ts",
+      "import": "./src/game/mocks/items.ts",
+      "require": "./src/game/mocks/items.ts"
+    },
+    "./engine/mocks/assets": {
+      "types": "./src/engine/mocks/assets.ts",
+      "import": "./src/engine/mocks/assets.ts",
+      "require": "./src/engine/mocks/assets.ts"
+    },
     "./src/engine/mocks/webgpu": {
       "types": "./src/engine/mocks/webgpu.ts",
       "import": "./src/engine/mocks/webgpu.ts",

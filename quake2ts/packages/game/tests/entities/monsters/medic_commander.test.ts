@@ -4,7 +4,7 @@ import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_medic_commander reinforcement', () => {
   let context: any;

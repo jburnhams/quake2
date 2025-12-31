@@ -14,7 +14,7 @@ import {
     DEFAULT_SHOTGUN_HSPREAD,
     DEFAULT_SHOTGUN_VSPREAD
 } from '../../src/combat/weapons/firing.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Super Shotgun', () => {
     let game: GameExports;

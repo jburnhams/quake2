@@ -10,7 +10,8 @@ import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3, createRandomGenerator } from '@quake2ts/shared';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Railgun', () => {
     // Setup helper to create a game context

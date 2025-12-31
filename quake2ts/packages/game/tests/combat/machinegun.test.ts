@@ -7,7 +7,9 @@ import { fire } from '../../src/combat/weapons/firing.js';
 import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Machinegun', () => {
     it('should consume 1 bullet and deal damage', () => {

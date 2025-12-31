@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SP_worldspawn } from '../../src/entities/worldspawn';
 import { Entity } from '../../src/entities/entity';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { ConfigStringIndex } from '@quake2ts/shared';
 
 describe('worldspawn', () => {

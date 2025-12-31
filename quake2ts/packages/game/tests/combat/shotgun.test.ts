@@ -8,7 +8,8 @@ import { createGame } from '../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/index.js';
 import * as damage from '../../src/combat/damage.js';
 import { angleVectors } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Shotgun', () => {
     it('should consume 1 shell and fire 12 pellets', () => {

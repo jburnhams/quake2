@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createTraceMock, ZERO_VEC3 } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
+import { ZERO_VEC3 } from '@quake2ts/test-utils';
 
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity } from '../../src/entities/entity.js';
 import { cmd_say } from '../../src/dm/chat.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
 
 describe('Chat System', () => {

@@ -3,7 +3,8 @@ import { ai_checkattack } from '../../src/ai/targeting.js';
 import { Entity } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('ai_checkattack', () => {
   let context: EntitySystem;

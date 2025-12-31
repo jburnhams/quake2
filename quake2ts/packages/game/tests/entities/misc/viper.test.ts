@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerMiscViper, registerMiscViperBomb } from '../../../src/entities/misc/flyers.js';
 import { Entity, MoveType, Solid, ServerFlags } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('misc_viper', () => {

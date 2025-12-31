@@ -2,7 +2,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import { runStep } from '../../src/physics/movement.js';
-import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Monster Fall Damage', () => {
   it('should apply damage when a monster falls', () => {

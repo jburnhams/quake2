@@ -6,7 +6,8 @@ import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Environment Suit Powerup', () => {
     let player: Entity;

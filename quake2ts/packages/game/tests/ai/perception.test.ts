@@ -9,7 +9,8 @@ import {
 } from '../../src/index.js';
 import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../src/ai/constants.js';
 import type { TraceFunction } from '../../src/ai/perception.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
 // Helper to create a full Entity instance from factory data

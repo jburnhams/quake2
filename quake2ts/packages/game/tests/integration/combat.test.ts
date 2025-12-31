@@ -5,7 +5,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { Entity, GameExports, createGame, WeaponId, PowerupId, addPowerup } from '@quake2ts/game';
 import { fire } from '../../src/combat/weapons/firing.js';
-import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 describe('Combat and Items', () => {
   let game: GameExports;

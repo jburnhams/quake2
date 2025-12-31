@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment, createGameImportsAndEngine, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { setupBrowserEnvironment } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import { EntitySystem, T_Damage, DamageMod } from '@quake2ts/game';
 
 describe('Combat System Unit Tests', () => {

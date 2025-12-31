@@ -3,7 +3,8 @@ import { SP_monster_tank } from '../../../src/entities/monsters/tank.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import * as attack from '../../../src/entities/monsters/attack.js';
-import { createTestContext, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('monster_tank', () => {
   let system: EntitySystem;

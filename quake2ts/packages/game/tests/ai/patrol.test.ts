@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, EntityFlags } from '../../src/entities/entity.js';
 import { ai_walk } from '../../src/ai/movement.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('AI Patrol (path_corner)', () => {
   let system: EntitySystem;

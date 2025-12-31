@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_gunner } from '../../../src/entities/monsters/gunner.js';
 import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_gunner', () => {
   let context: any;

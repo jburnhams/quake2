@@ -3,7 +3,8 @@ import { ai_stand, ai_walk, ai_run, ai_charge } from '../../src/ai/movement.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AIFlags } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import * as targeting from '../../src/ai/targeting.js';
 import * as perception from '../../src/ai/perception.js';
 

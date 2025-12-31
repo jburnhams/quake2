@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage } from '../../../src/combat/index.js';
-import { createEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { Entity } from '../../../src/entities/entity.js';
 import { AmmoType } from '../../../src/inventory/ammo.js';
 

@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
 import { registerTargetSpawns } from '../../src/entities/targets';
 import { Entity } from '../../src/entities/entity';

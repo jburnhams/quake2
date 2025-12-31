@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../../src/index.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import type { GameImports } from '../../src/index.js';
 
 describe('Spectator Mode', () => {

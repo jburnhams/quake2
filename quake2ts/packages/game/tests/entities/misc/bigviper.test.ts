@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { registerMiscBigViper } from '../../../src/entities/misc/flyers.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('misc_bigviper', () => {
     let registry: SpawnRegistry;

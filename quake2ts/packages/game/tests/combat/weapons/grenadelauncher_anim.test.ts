@@ -13,7 +13,7 @@ import {
     FRAME_GRENADELAUNCHER_IDLE_LAST,
     FRAME_GRENADELAUNCHER_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 // Grenade Launcher frames:
 // FRAME_ACTIVATE_LAST = 5

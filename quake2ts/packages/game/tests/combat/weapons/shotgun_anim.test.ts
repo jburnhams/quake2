@@ -12,7 +12,8 @@ import {
 } from '../../../src/combat/weapons/frames.js';
 import { WeaponId } from '../../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../../src/inventory/ammo.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
 
 describe('Shotgun Animation Logic', () => {

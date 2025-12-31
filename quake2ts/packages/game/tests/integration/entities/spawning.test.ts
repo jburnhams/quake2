@@ -3,7 +3,7 @@ import { createGame } from '../../src/index.js';
 import type { GameExports } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 // Game options
 const gameOptions = {

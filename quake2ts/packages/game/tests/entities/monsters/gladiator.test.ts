@@ -3,7 +3,8 @@ import { SP_monster_gladiator } from '../../../src/entities/monsters/gladiator.j
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
-import { createTestContext, createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('monster_gladiator', () => {
   let system: EntitySystem;

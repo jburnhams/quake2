@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerIcarusSpawns } from '../../../src/entities/monsters/icarus.js';
 import { MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('monster_icarus', () => {
   let context: any;

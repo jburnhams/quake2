@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_supertank } from '../../../src/entities/monsters/supertank.js';
-import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity } from '../../../src/entities/entity.js';
 import * as attack from '../../../src/entities/monsters/attack.js';

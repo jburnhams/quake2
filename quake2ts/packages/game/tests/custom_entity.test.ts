@@ -1,6 +1,6 @@
 import { EntitySystem, SpawnFunction, createDefaultSpawnRegistry } from '@quake2ts/game';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('Custom Entity Registration', () => {
   let context: EntitySystem;

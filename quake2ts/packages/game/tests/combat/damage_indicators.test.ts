@@ -5,7 +5,8 @@ import { DamageMod } from '../../src/combat/damageMods.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { Vec3 } from '@quake2ts/shared';
 import { PlayerClient } from '../../src/inventory/playerInventory.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('T_Damage Indicator Logic', () => {
     let attacker: Entity;

@@ -2,7 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTrap, trapThink } from '../../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext, createMockGameExports, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
 import { GameExports } from '../../../src/index.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 

@@ -4,7 +4,7 @@ import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_flipper', () => {
   let system: EntitySystem;

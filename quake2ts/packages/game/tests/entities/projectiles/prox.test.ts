@@ -8,7 +8,7 @@ import { createGame } from '../../../src/index.js';
 import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
 import * as damage from '../../../src/combat/damage.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Prox Mine', () => {
     let trace: any;

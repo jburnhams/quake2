@@ -10,7 +10,9 @@ import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import * as damage from '../../src/combat/damage.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Plasma Beam (Heatbeam)', () => {
     it('should fire a beam, consume ammo, and deal damage', () => {

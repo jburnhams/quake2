@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SV_NewChaseDir } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import { MoveType } from '../../src/entities/entity.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('SV_NewChaseDir', () => {
   let entity: Entity;

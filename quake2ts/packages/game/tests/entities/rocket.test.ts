@@ -7,7 +7,8 @@ import { createRocket } from '../../src/entities/projectiles.js';
 import { createGame } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
-import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Rocket Projectile', () => {
     it('should have correct initial properties and explode on touch', () => {

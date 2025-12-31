@@ -5,7 +5,7 @@ import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { createGame } from '../../../src/index.js';
 import { T_Damage } from '../../../src/combat/damage.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
 describe('ScriptHookRegistry', () => {

@@ -4,7 +4,9 @@ import { runGravity, runBouncing, runProjectileMovement } from '../../src/physic
 import { GameImports, GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 import { EntitySystem } from '../../src/entities/system.js';
-import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 const mockTraceFn = (result: GameTraceResult) => {
   return (

@@ -3,7 +3,7 @@ import { SV_StepDirection } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType } from '../../src/entities/entity.js';
-import { createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;

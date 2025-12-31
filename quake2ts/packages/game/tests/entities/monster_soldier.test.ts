@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { DeadFlag, Entity, Solid } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { registerMonsterSpawns } from '../../src/entities/monsters/soldier.js';

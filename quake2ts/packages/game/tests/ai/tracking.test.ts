@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import { huntTarget, TargetAwarenessState } from '../../src/ai/targeting.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createTestContext, spawnEntity } from '@quake2ts/test-utils/game/helpers';
 
 describe('AI Tracking (Lost Sight)', () => {
   let system: EntitySystem;

@@ -10,7 +10,7 @@ import {
     FRAME_BLASTER_IDLE_LAST
 } from '../../../src/combat/weapons/frames.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Blaster Alt-Fire (Melee)', () => {
     let game: any;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createGame, GameExports } from '../../src/index.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import type { GameImports } from '../../src/index.js';
 import { ModAPI } from '../../src/mod.js';
 

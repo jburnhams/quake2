@@ -9,7 +9,8 @@ import { createGame } from '../../src/index.js';
 import { MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
-import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('BFG Ball Projectile', () => {
     it('should have correct initial properties', () => {

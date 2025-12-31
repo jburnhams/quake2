@@ -9,7 +9,9 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import * as projectiles from '../../src/entities/projectiles.js';
 import { MoveType } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Ion Ripper', () => {
     it('should fire a projectile, consume ammo, and set up bounce logic', () => {

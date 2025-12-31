@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../src/entities/system.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createRandomGenerator } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createSpawnTestContext, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory, createRandomGenerator } from '@quake2ts/test-utils';
 import { RandomGenerator } from '@quake2ts/shared';
 
 describe('Deathmatch Spawn', () => {

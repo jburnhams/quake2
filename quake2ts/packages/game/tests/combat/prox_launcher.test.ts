@@ -9,7 +9,7 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../src/inventory/i
 import * as projectiles from '../../src/entities/projectiles.js';
 import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
 import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('Prox Launcher', () => {
     it('should fire a prox mine and consume ammo', () => {

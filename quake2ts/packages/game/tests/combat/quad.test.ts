@@ -6,7 +6,9 @@ import { T_Damage } from '../../src/combat/damage.js';
 import { DamageFlags } from '../../src/combat/damageFlags.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { createMockGameExports, createPlayerEntityFactory, createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 
 describe('Quad Damage', () => {
     let attacker: Entity;

@@ -3,7 +3,8 @@ import { SP_monster_tank } from '../../../src/entities/monsters/tank.js';
 import { Entity } from '../../../src/entities/entity.js';
 import { AIFlags, AttackState } from '../../../src/ai/constants.js';
 import { MASK_SHOT } from '@quake2ts/shared';
-import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('monster_tank blindfire', () => {
   let tank: Entity;

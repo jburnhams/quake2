@@ -13,7 +13,7 @@ import {
     FRAME_BLASTER_IDLE_LAST,
     FRAME_BLASTER_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 // Blaster frames (from blaster.ts):
 // FRAME_ACTIVATE_LAST = 4

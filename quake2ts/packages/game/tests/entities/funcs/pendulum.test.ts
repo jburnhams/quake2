@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerFuncSpawns } from '../../../src/entities/funcs.js';
 import { Entity, Solid, MoveType, ServerFlags } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('func_pendulum', () => {

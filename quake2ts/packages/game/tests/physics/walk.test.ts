@@ -4,7 +4,9 @@ import { runStep } from '../../src/physics/movement.js';
 import { GameImports } from '../../src/imports.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createMockGameExports, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 describe('Physics: runStep', () => {
   let ent: Entity;

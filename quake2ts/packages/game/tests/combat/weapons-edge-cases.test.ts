@@ -10,7 +10,9 @@ import { WeaponId } from '../../src/inventory/playerInventory.js';
 import * as damage from '../../src/combat/damage.js';
 import { AmmoType } from '../../src/inventory/ammo.js';
 import { DeepPartial } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 import { createGame } from '../../src/index.js';
 
 describe('Weapon Firing - Edge Cases', () => {

@@ -8,7 +8,9 @@ import {
   monster_jump_finished,
   BlockedJumpResult
 } from '../../src/ai/rogue.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createEntityFactory } from '@quake2ts/test-utils';
 import { Entity, EntityFlags, ServerFlags, Solid } from '../../src/entities/entity.js';
 import { Vec3, ZERO_VEC3, copyVec3 } from '@quake2ts/shared';
 

@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { createGame } from '../../src/index.js';
-import { createNullRenderer, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createNullRenderer } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 import { Camera } from '@quake2ts/engine';
 
 describe('Headless Rendering Integration', () => {

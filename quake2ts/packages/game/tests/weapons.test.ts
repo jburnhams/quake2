@@ -7,7 +7,9 @@ import { DamageMod } from '../src/combat/damageMods';
 import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../src/combat/weapons/firing';
 import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles';
 import { T_Damage } from '../src/combat/damage';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock, createMockGameExports } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createMockGameExports } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
 
 // Mock projectiles
 vi.mock('../src/entities/projectiles', () => ({

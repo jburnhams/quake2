@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { Entity } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { createBlasterBolt } from '../../src/entities/projectiles.js';

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '../src/index.js';
 import { handleItemPickup } from '../src/entities/items/common.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createItemEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createItemEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Item Respawn', () => {
     let game: any;

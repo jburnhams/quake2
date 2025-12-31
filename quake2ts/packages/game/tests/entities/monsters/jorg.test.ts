@@ -3,7 +3,7 @@ import { SP_monster_jorg, registerJorgSpawns } from '../../../src/entities/monst
 import { Entity, MoveType, Solid, DeadFlag } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import * as attack from '../../../src/entities/monsters/attack.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('monster_jorg', () => {

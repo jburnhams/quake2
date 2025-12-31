@@ -8,7 +8,7 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventor
 import { hyperBlasterThink } from '../../../src/combat/weapons/hyperblaster.js';
 import { getWeaponState } from '../../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('HyperBlaster Alt-Fire', () => {
     let game: any;

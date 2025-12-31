@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../src/index.js';
 import { Entity, EntityFlags, MoveType } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 import { T_Damage, DamageFlags, DamageMod } from '../src/combat/index.js';
 import { giveItem } from '../src/inventory/index.js';
 

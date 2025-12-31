@@ -14,7 +14,7 @@ import {
     FRAME_HYPERBLASTER_IDLE_LAST,
     FRAME_HYPERBLASTER_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 // HyperBlaster frames:
 // FRAME_ACTIVATE_LAST = 5

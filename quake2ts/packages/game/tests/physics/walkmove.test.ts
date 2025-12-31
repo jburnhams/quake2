@@ -4,7 +4,9 @@ import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
 import { AIFlags } from '../../src/ai/constants.js';
-import { createEntityFactory, createTraceMock, createTestContext } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTraceMock } from '@quake2ts/test-utils/shared/collision';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 
 describe('M_walkmove', () => {
   let entity: Entity;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createPlayerEntityFactory, createMonsterEntityFactory, createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createMonsterEntityFactory } from '@quake2ts/test-utils/game/factories';
+import { createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils/game/helpers';
 import { player_die } from '../../src/entities/player.js';
 import { DeadFlag, Solid, MoveType, Entity } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';

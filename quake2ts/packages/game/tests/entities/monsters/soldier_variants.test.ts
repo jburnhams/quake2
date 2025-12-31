@@ -7,7 +7,8 @@ import {
     SP_monster_soldier_hypergun,
     SP_monster_soldier_lasergun
 } from '../../../src/entities/monsters/soldier.js';
-import { createTestContext, createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
+import { createMonsterEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('soldier_variants', () => {
   let context: any;

@@ -3,7 +3,7 @@ import { createGame, GameExports, GameCreateOptions, createPlayerInventory } fro
 import { Entity } from '../src/entities/entity.js';
 import { WeaponId } from '../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 const options: GameCreateOptions = {
     gravity: { x: 0, y: 0, z: -800 },

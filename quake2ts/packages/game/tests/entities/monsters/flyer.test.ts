@@ -4,7 +4,7 @@ import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/enti
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createGame } from '../../../src/index.js';
 import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils/game/helpers';
 
 describe('monster_flyer', () => {
   let system: EntitySystem;

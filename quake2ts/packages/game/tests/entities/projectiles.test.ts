@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGrenade } from '../../src/entities/projectiles.js';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('createGrenade', () => {
   let sys: any;

@@ -3,7 +3,8 @@ import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils/game/helpers';
+import { createPlayerEntityFactory } from '@quake2ts/test-utils/game/factories';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {

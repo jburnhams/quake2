@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext } from '@quake2ts/test-utils/game/helpers';
 import { Entity } from '../src/entities/entity.js';
 
 describe('Determinism', () => {
