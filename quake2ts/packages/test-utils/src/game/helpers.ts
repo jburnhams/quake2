@@ -22,7 +22,7 @@ export interface TestContext extends SpawnContext {
   entities: EntitySystem;
 }
 
-export const createMockGame = (seed = 12345) => {
+export const createMockGame = (seed = 12345): { game: Partial<GameExports>, spawnRegistry: SpawnRegistry } => {
   const spawnRegistry = new SpawnRegistry();
   const hooks = new ScriptHookRegistry();
 
@@ -43,16 +43,56 @@ export const createMockGame = (seed = 12345) => {
     }),
     clientBegin: vi.fn((client) => {
       hooks.onPlayerSpawn({} as any);
+      return new Entity(0);
     }),
     damage: vi.fn((amount: number) => {
       hooks.onDamage({} as any, null, null, amount, 0, 0);
     }),
     entities: {
       spawnRegistry
-    }
+    },
+    random: createRandomGenerator({ seed }), // Added random generator
+    // Add other missing GameExports methods/properties as needed for mocks
+    sound: vi.fn(),
+    soundIndex: vi.fn(),
+    centerprintf: vi.fn(),
+    trace: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    configstring: vi.fn(),
+    serverCommand: vi.fn(),
+    setLagCompensation: vi.fn(),
+    createSave: vi.fn(),
+    loadSave: vi.fn(),
+    serialize: vi.fn(),
+    loadState: vi.fn(),
+    clientConnect: vi.fn(() => true),
+    clientDisconnect: vi.fn(),
+    clientThink: vi.fn(),
+    respawn: vi.fn(),
+    setGodMode: vi.fn(),
+    setNoclip: vi.fn(),
+    setNotarget: vi.fn(),
+    giveItem: vi.fn(),
+    teleport: vi.fn(),
+    setSpectator: vi.fn(),
+    time: 0,
+    deathmatch: false,
+    skill: 1,
+    rogue: false,
+    xatrix: false,
+    coop: false,
+    friendlyFire: false,
+    init: vi.fn(),
+    shutdown: vi.fn(),
+    frame: vi.fn(),
+    onModInit: undefined,
+    onModShutdown: undefined
   };
 
-  return { game, spawnRegistry };
+  // We cast to any to bypass strict type checking for the mock,
+  // knowing that consumers of createMockGame will use it appropriately in context
+  return { game: game as unknown as Partial<GameExports>, spawnRegistry };
 };
 
 export function createTestContext(options?: { seed?: number, initialEntities?: Entity[] }): TestContext {
@@ -70,7 +110,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
 
   // Create hooks helper that interacts with the entity list
-  const hooks = game.hooks;
+  const hooks = game.hooks!;
 
   // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
   let currentSpawnRegistry: SpawnRegistry | undefined = spawnRegistry;
@@ -148,7 +188,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         return matches[0];
     }),
     killBox: vi.fn(),
-    rng: createRandomGenerator({ seed }),
+    rng: game.random, // Use same RNG instance
     imports: {
       configstring: vi.fn(),
       trace: traceFn,
