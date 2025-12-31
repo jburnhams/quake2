@@ -67,7 +67,7 @@ export interface BspGeometryBuildResult {
 }
 
 const FLOAT_BYTES = 4;
-const STRIDE = 7 * FLOAT_BYTES;
+const STRIDE = 8 * FLOAT_BYTES; // Position(3) + TexCoord(2) + LightmapCoord(2) + LightmapStep(1)
 
 export const BSP_VERTEX_LAYOUT: readonly VertexAttributeLayout[] = [
   // Position
@@ -76,6 +76,8 @@ export const BSP_VERTEX_LAYOUT: readonly VertexAttributeLayout[] = [
   { index: 1, size: 2, type: 0x1406, stride: STRIDE, offset: 3 * FLOAT_BYTES },
   // Lightmap UV
   { index: 2, size: 2, type: 0x1406, stride: STRIDE, offset: 5 * FLOAT_BYTES },
+  // Lightmap step (for multi-style lightmap layers)
+  { index: 3, size: 1, type: 0x1406, stride: STRIDE, offset: 7 * FLOAT_BYTES },
 ];
 
 interface LightmapPlacementInfo {
@@ -227,6 +229,17 @@ function buildVertexData(
     ? remapLightmapCoords(ensureFloat32(surface.lightmapCoords ?? surface.textureCoords), placement)
     : ensureFloat32(surface.lightmapCoords ?? new Float32Array(texCoords.length));
 
+  // Calculate lightmap step (height of one style layer in atlas texture coordinates)
+  // If surface has multiple styles, they're packed vertically, so step = total_height / num_styles
+  let lightmapStep = 0.0;
+  if (placement) {
+    const styles = surface.styles || [255, 255, 255, 255];
+    const numValidStyles = styles.filter(s => s !== 255).length;
+    if (numValidStyles > 0) {
+      lightmapStep = placement.scale[1] / numValidStyles;
+    }
+  }
+
   const vertexCount = vertices.length / 3;
   if (texCoords.length / 2 !== vertexCount) {
     throw new Error('Texture coordinates count mismatch');
@@ -235,11 +248,11 @@ function buildVertexData(
     throw new Error('Lightmap coordinates count mismatch');
   }
 
-  const interleaved = new Float32Array(vertexCount * 7);
+  const interleaved = new Float32Array(vertexCount * 8); // Now 8 floats per vertex
   for (let i = 0; i < vertexCount; i++) {
     const v = i * 3;
     const t = i * 2;
-    const o = i * 7;
+    const o = i * 8; // Changed from 7 to 8
     interleaved[o] = vertices[v];
     interleaved[o + 1] = vertices[v + 1];
     interleaved[o + 2] = vertices[v + 2];
@@ -247,6 +260,7 @@ function buildVertexData(
     interleaved[o + 4] = texCoords[t + 1];
     interleaved[o + 5] = lightmapCoords[t];
     interleaved[o + 6] = lightmapCoords[t + 1];
+    interleaved[o + 7] = lightmapStep; // Add lightmap step
   }
   return interleaved;
 }
@@ -337,17 +351,45 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       // Extract the raw lightmap samples from the BSP lump.
       const samples = createFaceLightmap(face, map.lightMaps, lightmapInfo);
 
-      if (samples) {
-          // Sanity check: the extracted sample count must match the calculated dimensions.
-          if (samples.length === lmWidth * lmHeight * 3) {
-               lightmapData = { width: lmWidth, height: lmHeight, samples };
+      if (samples && samples.length > 0) {
+          // Count valid light styles for this face
+          const faceStyles = face.styles || [255, 255, 255, 255];
+          const numStyles = Math.max(1, faceStyles.filter(s => s !== 255).length);
 
-               // Recalculate lightmap UVs based on the 1/16th scale and min offset.
-               // We add 0.5 to center the sample.
-               for (let k = 0; k < lightmapCoords.length; k+=2) {
-                   lightmapCoords[k] = (textureCoords[k] / 16) - floorMinS + 0.5;
-                   lightmapCoords[k+1] = (textureCoords[k+1] / 16) - floorMinT + 0.5;
-               }
+          // Calculate expected dimensions
+          // Multi-style lightmaps have data packed vertically (multiple RGB layers).
+          const expectedSize = lmWidth * lmHeight * 3 * numStyles;
+
+          // Try to infer dimensions from sample size if they don't match calculated dimensions
+          let actualWidth = lmWidth;
+          let actualHeight = lmHeight;
+
+          if (samples.length === expectedSize) {
+              // Perfect match - use calculated dimensions with styles
+              actualHeight = lmHeight * numStyles;
+          } else if (samples.length % 3 === 0) {
+              // Try to infer from actual data size
+              const pixelCount = samples.length / 3;
+              const layerPixelCount = pixelCount / numStyles;
+              const layerSide = Math.sqrt(layerPixelCount);
+
+              if (Math.abs(layerSide - Math.floor(layerSide)) < 0.001) {
+                  // Square lightmap
+                  actualWidth = Math.floor(layerSide);
+                  actualHeight = Math.floor(layerSide) * numStyles;
+              } else {
+                  // Use calculated dimensions anyway
+                  actualHeight = lmHeight * numStyles;
+              }
+          }
+
+          lightmapData = { width: actualWidth, height: actualHeight, samples };
+
+          // Recalculate lightmap UVs based on the 1/16th scale and min offset.
+          // We add 0.5 to center the sample.
+          for (let k = 0; k < lightmapCoords.length; k+=2) {
+              lightmapCoords[k] = (textureCoords[k] / 16) - floorMinS + 0.5;
+              lightmapCoords[k+1] = (textureCoords[k+1] / 16) - floorMinT + 0.5;
           }
       }
     }
@@ -437,7 +479,7 @@ export function buildBspGeometry(
   const results: BspSurfaceGeometry[] = filteredSurfaces.map((surface, index) => {
     const placement = placements.get(index);
     const vertexData = buildVertexData(surface, placement);
-    const indexData = ensureIndexArray(surface.indices, vertexData.length / 7);
+    const indexData = ensureIndexArray(surface.indices, vertexData.length / 8);
 
     const vertexBuffer = new VertexBuffer(gl, gl.STATIC_DRAW, gl.ARRAY_BUFFER);
     vertexBuffer.upload(vertexData as unknown as BufferSource);
@@ -464,7 +506,7 @@ export function buildBspGeometry(
       vertexBuffer,
       indexBuffer,
       indexCount: indexData.length,
-      vertexCount: vertexData.length / 7,
+      vertexCount: vertexData.length / 8,
       texture: surface.texture,
       surfaceFlags: surface.surfaceFlags ?? SURF_NONE,
       lightmap: placement,

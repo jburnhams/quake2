@@ -371,12 +371,23 @@ export const createFrameRenderer = (
       const sortedOpaque = sortVisibleFacesFrontToBack(opaqueFaces);
 
       // Prepare effective light styles
+      // Default all styles to 1.0 (full brightness) if not provided
+      // Quake 2 defaults: style 0 is always on (full brightness)
       let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
-      if (lightStyleOverrides && lightStyleOverrides.size > 0) {
+
+      // Ensure we have at least 64 light styles with default values
+      if (effectiveLightStyles.length === 0 || lightStyleOverrides && lightStyleOverrides.size > 0) {
           const styles = [...(world.lightStyles || [])];
-          for (const [index, pattern] of lightStyleOverrides) {
-             while (styles.length <= index) styles.push(1.0);
-             styles[index] = evaluateLightStyle(pattern, timeSeconds);
+          // Ensure minimum size with defaults
+          while (styles.length < 64) {
+              styles.push(1.0); // Default to full brightness
+          }
+          // Apply overrides
+          if (lightStyleOverrides) {
+              for (const [index, pattern] of lightStyleOverrides) {
+                  while (styles.length <= index) styles.push(1.0);
+                  styles[index] = evaluateLightStyle(pattern, timeSeconds);
+              }
           }
           effectiveLightStyles = styles;
       }
