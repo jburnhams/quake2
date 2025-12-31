@@ -1,6 +1,11 @@
-import { test } from '@quake2ts/test-utils'; // visual-testing';
+import { test, setupHeadlessWebGPUEnv } from '@quake2ts/test-utils'; // visual-testing';
+import { beforeAll } from 'vitest';
 import { SpriteRenderer } from '../../../src/render/webgpu/pipelines/sprite';
 import { Texture2D } from '../../../src/render/webgpu/resources';
+
+beforeAll(async () => {
+    await setupHeadlessWebGPUEnv();
+});
 
 test('sprite: solid red rectangle', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(

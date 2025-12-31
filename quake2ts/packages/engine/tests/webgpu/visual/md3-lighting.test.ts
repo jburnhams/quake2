@@ -1,5 +1,5 @@
-import { describe } from 'vitest';
-import { test } from '@quake2ts/test-utils'; // visual-testing';
+import { describe, beforeAll } from 'vitest';
+import { test, setupHeadlessWebGPUEnv } from '@quake2ts/test-utils'; // visual-testing';
 import { Md3ModelMeshGPU, Md3PipelineGPU } from '../../../src/render/webgpu/pipelines/md3';
 import { Md3Model } from '../../../src/assets/md3';
 import { Texture2D } from '../../../src/render/webgpu/resources';
@@ -45,6 +45,10 @@ function createColoredModel(): Md3Model {
 }
 
 describe('MD3 Pipeline Lighting', () => {
+    beforeAll(async () => {
+        await setupHeadlessWebGPUEnv();
+    });
+
     test('renders with dynamic lighting', async ({ renderAndExpectSnapshot }) => {
         const model = createColoredModel();
 

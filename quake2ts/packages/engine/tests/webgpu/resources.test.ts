@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPUContext } from '../../src/render/webgpu/context';
 import {
   VertexBuffer,
-  IndexBuffer,
   Texture2D,
   ShaderModule,
   RenderPipeline,
@@ -11,7 +10,7 @@ import {
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
 
 // Import shared test utilities for WebGPU setup
-import { initHeadlessWebGPU, createWebGPULifecycle } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 
 /**
  * Integration tests for WebGPU resources using real @webgpu/dawn.
@@ -21,7 +20,7 @@ describe('WebGPU Resources Integration (Real)', () => {
   const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-    await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
   });
 
   afterAll(lifecycle.cleanup);

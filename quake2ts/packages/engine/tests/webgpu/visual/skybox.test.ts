@@ -1,23 +1,25 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer, WebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { TextureCubeMap } from '../../../src/render/webgpu/resources.js';
 import { Camera } from '../../../src/render/camera.js';
-import { initHeadlessWebGPU, captureTexture, expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Skybox Pipeline', () => {
+  const lifecycle = createWebGPULifecycle();
   let renderer: WebGPURenderer;
   let cubemap: TextureCubeMap;
 
   beforeAll(async () => {
-    await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
     renderer = await createWebGPURenderer(undefined, {
        width: 256,
        height: 256
     }) as WebGPURenderer;
+    lifecycle.trackRenderer(renderer);
 
     // Create a simple colored cubemap
     // We map Quake directions to Cubemap faces so that:
@@ -69,6 +71,8 @@ describe('Skybox Pipeline', () => {
     // Face 5 (-Z in GL): Quake +X (forward) -> Red
     cubemap.uploadFace(5, createColorData(255, 0, 0));
   });
+
+  afterAll(lifecycle.cleanup);
 
   it('renders skybox front face', async () => {
     const camera = new Camera();

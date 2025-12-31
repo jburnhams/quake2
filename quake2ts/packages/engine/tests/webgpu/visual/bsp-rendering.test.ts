@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPUContext } from '../../../src/render/webgpu/context';
 import { BspSurfacePipeline } from '../../../src/render/webgpu/pipelines/bspPipeline';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
-import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 import { expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import { Texture2D, VertexBuffer, IndexBuffer } from '../../../src/render/webgpu/resources';
 import { mat4, vec3 } from 'gl-matrix';
@@ -42,20 +42,18 @@ function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, ind
 }
 
 describe('BspSurfacePipeline Visual (Headless)', () => {
-  let gpuSetup: HeadlessWebGPUSetup;
+  const lifecycle = createWebGPULifecycle();
   const snapshotDir = path.join(__dirname, '__snapshots__');
   const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
   beforeAll(async () => {
-    gpuSetup = await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
     if (!fs.existsSync(snapshotDir)) {
       fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
-  afterAll(async () => {
-    await gpuSetup.cleanup();
-  });
+  afterAll(lifecycle.cleanup);
 
   it('renders a textured quad', async () => {
 
@@ -63,6 +61,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     const width = 256;
     const height = 256;
     const context = await createWebGPUContext(undefined, { width, height });
+    lifecycle.track(context.device);
     const device = context.device;
 
     const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -173,6 +172,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -274,6 +274,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -398,6 +399,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -500,6 +502,7 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');

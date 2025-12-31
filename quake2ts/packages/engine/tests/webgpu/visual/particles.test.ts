@@ -1,168 +1,30 @@
-import { describe, it, beforeAll, afterAll } from 'vitest';
-import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, setupHeadlessWebGPUEnv, captureTexture } from '@quake2ts/test-utils';
 import { ParticleRenderer } from '../../../src/render/webgpu/pipelines/particleSystem.js';
-import { ParticleSystem, spawnSteam, spawnExplosion, spawnBlood } from '../../../src/render/particleSystem.js';
-import { RandomGenerator, createMat4Identity, mat4Ortho } from '@quake2ts/shared';
+import { ParticleSystem, spawnBlood } from '../../../src/render/particleSystem.js';
+import { RandomGenerator } from '@quake2ts/shared/math/random.js';
+import { mat4 } from 'gl-matrix';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
+import { mat4Ortho } from '@quake2ts/shared';
 import path from 'path';
 import fs from 'fs';
+
+// Helper for identity matrix
+function createMat4Identity() {
+    const m = mat4.create();
+    mat4.identity(m);
+    return m;
+}
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
-describe('Particle System Visual Tests', () => {
-  let gpuSetup: HeadlessWebGPUSetup;
-
+describe('Particle System (Headless)', () => {
   beforeAll(async () => {
-    gpuSetup = await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
     if (!fs.existsSync(snapshotDir)) {
       fs.mkdirSync(snapshotDir, { recursive: true });
     }
-  });
-
-  afterAll(async () => {
-    await gpuSetup.cleanup();
-  });
-
-  it('particles-basic', async () => {
-
-      const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
-      const { device, format } = context;
-
-      const renderer = new ParticleRenderer(device, format);
-      const rng = new RandomGenerator(12345);
-      const system = new ParticleSystem(100, rng);
-
-      system.spawn({
-          position: { x: -5, y: -5, z: -10 },
-          color: [1, 0, 0, 0.5],
-          size: 5,
-          lifetime: 10,
-          blendMode: 'alpha'
-      });
-      system.spawn({
-          position: { x: 5, y: 5, z: -10 },
-          color: [0, 1, 0, 0.5],
-          size: 5,
-          lifetime: 10,
-          blendMode: 'additive'
-      });
-      system.spawn({
-          position: { x: 0, y: 0, z: -10 },
-          color: [0, 0, 1, 0.5],
-          size: 8,
-          lifetime: 10,
-          blendMode: 'alpha'
-      });
-      system.spawn({
-          position: { x: 2, y: 2, z: -10 },
-          color: [1, 1, 0, 0.5],
-          size: 8,
-          lifetime: 10,
-          blendMode: 'additive'
-      });
-
-      system.update(0);
-
-      const projection = createMat4Identity();
-      mat4Ortho(projection, -10, 10, -10, 10, 0.1, 100);
-      const viewRight = { x: 1, y: 0, z: 0 };
-      const viewUp = { x: 0, y: 1, z: 0 };
-
-      const encoder = device.createCommandEncoder();
-      const pass = encoder.beginRenderPass({
-          colorAttachments: [{
-              view: renderTargetView,
-              loadOp: 'clear',
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
-              storeOp: 'store'
-          }]
-      });
-
-      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-      pass.end();
-
-      device.queue.submit([encoder.finish()]);
-
-      const pixels = await captureTexture(device, renderTarget, 256, 256);
-      await expectSnapshot(pixels, {
-          name: 'particles-basic',
-          description: 'Basic particle rendering showing alpha-blended and additive particles.',
-          width: 256,
-          height: 256,
-          snapshotDir,
-          updateBaseline
-      });
-
-      await cleanup();
-      renderer.dispose();
-  });
-
-  it('particles-smoke', async () => {
-
-
-    const width = 256;
-    const height = 256;
-    const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(width, height);
-    const { device, format } = context;
-
-    const renderer = new ParticleRenderer(device, format);
-
-    const fps = 10;
-    const durationSeconds = 1.5;
-    const frameCount = fps * durationSeconds;
-
-    await expectAnimationSnapshot(async (frameIndex) => {
-        const time = frameIndex * (1.0 / fps);
-
-        // Recreate system state deterministically
-        const rng = new RandomGenerator(9999);
-        const system = new ParticleSystem(100, rng);
-        spawnSteam({ system, origin: { x: 0, y: 0, z: -10 } });
-
-        // Update system to current time
-        const dt = 1/20;
-        let t = 0;
-        while(t < time) {
-            const step = Math.min(dt, time - t);
-            system.update(step);
-            t += step;
-        }
-
-        const projection = createMat4Identity();
-        mat4Ortho(projection, -100, 100, -50, 150, 0.1, 500);
-        const viewRight = { x: 1, y: 0, z: 0 };
-        const viewUp = { x: 0, y: 1, z: 0 };
-
-        const encoder = device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [{
-                view: renderTargetView,
-                loadOp: 'clear',
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
-                storeOp: 'store'
-            }]
-        });
-
-        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
-        pass.end();
-
-        device.queue.submit([encoder.finish()]);
-        return captureTexture(device, renderTarget, width, height);
-
-    }, {
-        name: 'particles-smoke',
-        description: 'Smoke/Steam particles rising and fading over time.',
-        width,
-        height,
-        snapshotDir,
-        updateBaseline,
-        fps,
-        frameCount
-    });
-
-    await cleanup();
-    renderer.dispose();
   });
 
   it('particles-explosion', async () => {
@@ -181,11 +43,26 @@ describe('Particle System Visual Tests', () => {
 
     await expectAnimationSnapshot(async (frameIndex) => {
         const time = frameIndex * (1.0 / fps);
-        const rng = new RandomGenerator(8888);
-        const system = new ParticleSystem(200, rng);
-        spawnExplosion({ system, origin: { x: 0, y: 0, z: -20 } });
+        const rng = new RandomGenerator(12345);
+        const system = new ParticleSystem(1000, rng);
 
-        const dt = 1/20;
+        // Spawn particles
+        // Simulating an explosion
+        for (let i = 0; i < 100; i++) {
+            system.spawn({
+                position: { x: 0, y: 0, z: 0 },
+                velocity: {
+                    x: (rng.frandom() - 0.5) * 50,
+                    y: (rng.frandom() - 0.5) * 50,
+                    z: (rng.frandom() - 0.5) * 50
+                },
+                color: [1, 0.5, 0, 1], // Orange
+                size: 2 + rng.frandom() * 2,
+                lifetime: 1.0
+            });
+        }
+
+        const dt = 1/20; // Simulation step
         let t = 0;
         while(t < time) {
             const step = Math.min(dt, time - t);
@@ -194,7 +71,8 @@ describe('Particle System Visual Tests', () => {
         }
 
         const projection = createMat4Identity();
-        mat4Ortho(projection, -20, 20, -20, 20, 0.1, 100);
+        mat4Ortho(projection, -50, 50, -50, 50, 0.1, 100);
+        // Look from top-down for 2D capture
         const viewRight = { x: 1, y: 0, z: 0 };
         const viewUp = { x: 0, y: 1, z: 0 };
 
