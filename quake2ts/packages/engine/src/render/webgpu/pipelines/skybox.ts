@@ -115,7 +115,8 @@ export class SkyboxPipeline {
         entries: [
             {
                 binding: 0,
-                visibility: GPUShaderStage.VERTEX,
+                // Updated visibility to include FRAGMENT because we read uniforms.useNative in fragment shader
+                visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                 buffer: { type: 'uniform' }
             },
             {

@@ -1,6 +1,7 @@
 struct Uniforms {
   viewProjection: mat4x4<f32>,
   scroll: vec2<f32>,
+  useNative: f32, // Feature flag: 1.0 = native (new), 0.0 = legacy (old)
 }
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -33,13 +34,17 @@ fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
 
 @fragment
 fn fragmentMain(@location(0) direction: vec3<f32>) -> @location(0) vec4<f32> {
-  // Transform from Quake coordinates to GL/WebGPU cubemap coordinates
-  // Quake: +X forward, +Y left, +Z up
-  // GL cubemap: +X right, +Y up, -Z forward
-  var cubemapDir: vec3<f32>;
-  cubemapDir.x = -direction.y;  // Quake +Y (left) → GL -X (left)
-  cubemapDir.y = direction.z;   // Quake +Z (up) → GL +Y (up)
-  cubemapDir.z = -direction.x;  // Quake +X (forward) → GL -Z (forward)
+  var cubemapDir = direction;
+
+  // If using legacy path, apply the fixup transform.
+  // The native path builds matrices that handle coordinate system changes correctly,
+  // so no manual swizzling is required in the shader.
+  if (uniforms.useNative == 0.0) {
+      // Legacy transform from Quake coordinates to GL/WebGPU cubemap coordinates
+      // Quake: +X forward, +Y left, +Z up
+      // GL cubemap: +X right, +Y up, -Z forward
+      cubemapDir = vec3<f32>(-direction.y, direction.z, -direction.x);
+  }
 
   return textureSample(t_skybox, s_skybox, cubemapDir);
 }
