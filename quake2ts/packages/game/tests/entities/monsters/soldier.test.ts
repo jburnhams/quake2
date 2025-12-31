@@ -3,7 +3,6 @@ import * as soldierModule from '../../../src/entities/monsters/soldier.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { GameEngine } from '../../../src/index.js';
 import {
     monster_fire_bullet,
     monster_fire_blaster,
@@ -14,15 +13,11 @@ import {
 } from '../../../src/entities/monsters/attack.js';
 import { createTestContext, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
-// Mock dependencies
-vi.mock('../../../src/entities/monsters/attack.js', () => ({
-  monster_fire_bullet: vi.fn(),
-  monster_fire_blaster: vi.fn(),
-  monster_fire_shotgun: vi.fn(),
-  monster_fire_ionripper: vi.fn(),
-  monster_fire_blueblaster: vi.fn(),
-  monster_fire_dabeam: vi.fn(),
-}));
+// Mock dependencies using shared test-utils
+vi.mock('../../../src/entities/monsters/attack.js', async () => {
+  const { mockMonsterAttackFunctions } = await import('@quake2ts/test-utils');
+  return mockMonsterAttackFunctions;
+});
 
 describe('monster_soldier', () => {
   let sys: EntitySystem;

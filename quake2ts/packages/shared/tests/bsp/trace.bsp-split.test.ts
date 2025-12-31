@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { traceBox } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils/shared/bsp';
 import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
 
 describe('traceBox BSP traversal splits', () => {

@@ -11,6 +11,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./shared/bsp": {
+      "types": "./src/shared/bsp.ts",
+      "import": "./src/shared/bsp.ts",
+      "require": "./src/shared/bsp.ts"
+    },
     "./src/engine/mocks/webgpu": {
       "types": "./src/engine/mocks/webgpu.ts",
       "import": "./src/engine/mocks/webgpu.ts",

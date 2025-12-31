@@ -1,58 +1,36 @@
 import { vi, type Mock } from 'vitest';
-import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
-import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
+import { type GameEngine, type GameExports, Entity, EntitySystem, SpawnRegistry, ScriptHookRegistry, MulticastType } from '@quake2ts/game';
+import { type GameImports } from '@quake2ts/game';
+import { type SpawnContext } from '@quake2ts/game';
 import { type BspModel } from '@quake2ts/engine';
+import { type Vec3 } from '@quake2ts/shared';
+import { createRandomGenerator } from '@quake2ts/shared';
 import { createTraceMock } from '../shared/collision.js';
-import { LegacyMock } from '../vitest-compat.js';
-
-// Re-export collision helpers from shared collision utility
-export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock } from '../shared/collision.js';
-
-// -- Types --
-
-export interface MockEngine {
-  sound: LegacyMock<[Entity, number, string, number, number, number], void>;
-  soundIndex: LegacyMock<[string], number>;
-  modelIndex: LegacyMock<[string], number>;
-  centerprintf: LegacyMock<[Entity, string], void>;
-}
-
-export interface MockGame {
-  random: ReturnType<typeof createRandomGenerator>;
-  registerEntitySpawn: LegacyMock<[string, (entity: Entity) => void], void>;
-  unregisterEntitySpawn: LegacyMock<[string], void>;
-  getCustomEntities: LegacyMock<[], string[]>;
-  hooks: ScriptHookRegistry;
-  registerHooks: LegacyMock<[any], any>;
-  spawnWorld: LegacyMock<[], void>;
-  clientBegin: LegacyMock<[any], void>;
-  damage: LegacyMock<[number], void>;
-  entities: any;
-}
+import { createMockEngine } from '../engine/mocks/assets.js';
 
 export interface TestContext extends SpawnContext {
+  game: GameExports;
+  spawnRegistry: SpawnRegistry;
+  engine: GameEngine;
+  keyValues: Record<string, string>;
+  health_multiplier: number;
+  warn: Mock;
+  free: Mock;
+  precacheModel?: Mock;
+  precacheSound?: Mock;
+  precacheImage?: Mock;
   entities: EntitySystem;
-  game: MockGame;
-  engine: MockEngine;
 }
 
-// -- Factories --
-
-export const createMockEngine = (): MockEngine => ({
-  sound: vi.fn(),
-  soundIndex: vi.fn((sound: string) => 0),
-  modelIndex: vi.fn((model: string) => 0),
-  centerprintf: vi.fn(),
-});
-
-export const createMockGame = (seed: number = 12345): { game: MockGame, spawnRegistry: SpawnRegistry } => {
+export const createMockGame = (seed = 12345): { game: Partial<GameExports>, spawnRegistry: SpawnRegistry } => {
   const spawnRegistry = new SpawnRegistry();
   const hooks = new ScriptHookRegistry();
 
-  const game: MockGame = {
-    random: createRandomGenerator({ seed }),
-    registerEntitySpawn: vi.fn((classname: string, spawnFunc: (entity: Entity) => void) => {
-      spawnRegistry.register(classname, (entity) => spawnFunc(entity));
+  const game = {
+    registerEntitySpawn: vi.fn((classname: string, factory: any) => {
+      spawnRegistry.register(classname, (entity: Entity) => {
+        factory(entity);
+      });
     }),
     unregisterEntitySpawn: vi.fn((classname: string) => {
       spawnRegistry.unregister(classname);
@@ -65,16 +43,56 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
     }),
     clientBegin: vi.fn((client) => {
       hooks.onPlayerSpawn({} as any);
+      return new Entity(0);
     }),
     damage: vi.fn((amount: number) => {
       hooks.onDamage({} as any, null, null, amount, 0, 0);
     }),
     entities: {
       spawnRegistry
-    }
+    },
+    random: createRandomGenerator({ seed }), // Added random generator
+    // Add other missing GameExports methods/properties as needed for mocks
+    sound: vi.fn(),
+    soundIndex: vi.fn(),
+    centerprintf: vi.fn(),
+    trace: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    configstring: vi.fn(),
+    serverCommand: vi.fn(),
+    setLagCompensation: vi.fn(),
+    createSave: vi.fn(),
+    loadSave: vi.fn(),
+    serialize: vi.fn(),
+    loadState: vi.fn(),
+    clientConnect: vi.fn(() => true),
+    clientDisconnect: vi.fn(),
+    clientThink: vi.fn(),
+    respawn: vi.fn(),
+    setGodMode: vi.fn(),
+    setNoclip: vi.fn(),
+    setNotarget: vi.fn(),
+    giveItem: vi.fn(),
+    teleport: vi.fn(),
+    setSpectator: vi.fn(),
+    time: 0,
+    deathmatch: false,
+    skill: 1,
+    rogue: false,
+    xatrix: false,
+    coop: false,
+    friendlyFire: false,
+    init: vi.fn(),
+    shutdown: vi.fn(),
+    frame: vi.fn(),
+    onModInit: undefined,
+    onModShutdown: undefined
   };
 
-  return { game, spawnRegistry };
+  // We cast to any to bypass strict type checking for the mock,
+  // knowing that consumers of createMockGame will use it appropriately in context
+  return { game: game as unknown as Partial<GameExports>, spawnRegistry };
 };
 
 export function createTestContext(options?: { seed?: number, initialEntities?: Entity[] }): TestContext {
@@ -92,7 +110,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
 
   // Create hooks helper that interacts with the entity list
-  const hooks = game.hooks;
+  const hooks = game.hooks!;
 
   // We need to store the registry reference to implement registerEntityClass/getSpawnFunction
   let currentSpawnRegistry: SpawnRegistry | undefined = spawnRegistry;
@@ -170,7 +188,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         return matches[0];
     }),
     killBox: vi.fn(),
-    rng: createRandomGenerator({ seed }),
+    rng: game.random, // Use same RNG instance
     imports: {
       configstring: vi.fn(),
       trace: traceFn,
@@ -210,15 +228,18 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     coop: false,
     activeCount: entityList.length,
     world: entityList.find(e => e.classname === 'worldspawn') || new Entity(0),
-  } as unknown as EntitySystem;
+    // Explicitly add private property to satisfy TS type check for mock object
+    // @ts-ignore - Intentionally accessing private property for mock structure compatibility
+    spawnRegistry: undefined as unknown as SpawnRegistry
+  };
 
-  // Fix circular reference
-  game.entities = entities;
+  // Fix circular reference and type mismatch by casting game to any
+  (game as any).entities = entities as unknown as EntitySystem;
 
   return {
     keyValues: {},
-    entities,
-    game,
+    entities: entities as unknown as EntitySystem,
+    game: game as unknown as GameExports,
     engine,
     health_multiplier: 1,
     warn: vi.fn(),

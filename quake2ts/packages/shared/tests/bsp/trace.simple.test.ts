@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { traceBox } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils/shared/bsp';
 
 describe('traceBox simple cases', () => {
   it('should not collide with anything if the path is clear', () => {

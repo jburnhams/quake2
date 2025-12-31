@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { traceBox } from '../../src/bsp/collision.js';
-import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
+import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils/shared/bsp';
 
 describe('traceBox BSP traversal', () => {
   it('should not collide if the trace stays on the front side of the splitting plane', () => {

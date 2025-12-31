@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
-} from '@quake2ts/test-utils';
+} from '@quake2ts/test-utils/shared/bsp';
 import {
   traceBox, TraceResult,
   applyPmoveAirMove,

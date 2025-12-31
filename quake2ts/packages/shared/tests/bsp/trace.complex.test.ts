@@ -8,7 +8,7 @@ import {
   makeLeaf,
   makeNode,
   makePlane,
-} from '@quake2ts/test-utils';
+} from '@quake2ts/test-utils/shared/bsp';
 
 describe('traceBox complex geometry cases', () => {
   it('should collide with an internal corner', () => {

@@ -139,3 +139,19 @@ export function createMockBspMap(overrides?: Partial<BspMap>): BspMap {
         ...overrides
     } as unknown as BspMap;
 }
+
+// Added this to fix the missing export error in game/helpers.ts
+export function createMockEngine(overrides: any = {}): any {
+  return {
+    trace: vi.fn(),
+    pointcontents: vi.fn(),
+    linkentity: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    sound: vi.fn(),
+    centerprintf: vi.fn(),
+    modelIndex: vi.fn().mockReturnValue(1),
+    soundIndex: vi.fn().mockReturnValue(1),
+    ...overrides
+  };
+}
