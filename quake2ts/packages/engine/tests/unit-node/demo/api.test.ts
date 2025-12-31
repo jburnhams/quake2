@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoOptimizerApi, ClipCriteria } from '../../src/demo/api.js';
-import { PakArchive } from '../../src/assets/pak.js';
+import { DemoOptimizerApi, ClipCriteria } from '../../../src/demo/api.js';
+import { PakArchive } from '../../../src/assets/pak.js';
 
 // Mocks
-vi.mock('../../src/assets/pak.js');
-vi.mock('../../src/demo/packager.js', () => {
+vi.mock('../../../src/assets/pak.js', async () => {
+    return {
+        PakArchive: {
+            fromArrayBuffer: vi.fn()
+        }
+    };
+});
+
+vi.mock('../../../src/demo/packager.js', () => {
     return {
         DemoPackager: class {
             constructor() {
@@ -19,7 +26,7 @@ vi.mock('../../src/demo/packager.js', () => {
         }
     };
 });
-vi.mock('../../src/demo/clipper.js', () => {
+vi.mock('../../../src/demo/clipper.js', () => {
     return {
         DemoClipper: class {
             constructor() {
@@ -30,7 +37,7 @@ vi.mock('../../src/demo/clipper.js', () => {
         }
     };
 });
-vi.mock('../../src/demo/optimalClipFinder.js', () => {
+vi.mock('../../../src/demo/optimalClipFinder.js', () => {
     return {
         OptimalClipFinder: class {
             constructor() {
@@ -46,7 +53,7 @@ vi.mock('../../src/demo/optimalClipFinder.js', () => {
     };
 });
 
-vi.mock('../../src/demo/analyzer.js', () => {
+vi.mock('../../../src/demo/analyzer.js', () => {
     return {
         DemoAnalyzer: class {
             constructor() {
@@ -62,7 +69,7 @@ vi.mock('../../src/demo/analyzer.js', () => {
     };
 });
 
-vi.mock('../../src/assets/visibilityAnalyzer.js', () => {
+vi.mock('../../../src/assets/visibilityAnalyzer.js', () => {
     return {
         ResourceVisibilityAnalyzer: class {
             constructor() {
