@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ScoreboardManager, ScoreboardEntry } from './scoreboard.js';
-import { ClientConfigStrings } from './configStrings.js';
+import { ScoreboardManager, ScoreboardEntry } from '@quake2ts/client/scoreboard.js';
+import { ClientConfigStrings } from '@quake2ts/client/configStrings.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
 
 describe('ScoreboardManager', () => {

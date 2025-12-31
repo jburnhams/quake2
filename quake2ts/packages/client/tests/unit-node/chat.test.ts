@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ChatManager } from './chat.js';
+import { ChatManager } from '@quake2ts/client/chat.js';
 
 describe('ChatManager', () => {
     it('should parse standard chat messages', () => {
