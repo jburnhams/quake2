@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser, createEmptyEntityState, NetworkMessageHandler, ServerCommand, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser.js';
+import { NetworkMessageParser, createEmptyEntityState, NetworkMessageHandler, ServerCommand, PROTOCOL_VERSION_RERELEASE } from '../../../src/demo/parser.js';
 import { BinaryStream } from '@quake2ts/shared';
 import pako from 'pako';
 
