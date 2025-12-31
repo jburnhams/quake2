@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, hashGameState, type GameStateSnapshot } from '@quake2ts/game';
 import type { Vec3 } from '@quake2ts/shared';
-import { createEngine, type GameFrameResult } from '../src/index.js';
-import { createEngineRuntime } from '../src/runtime.js';
+import { createEngine, type GameFrameResult } from '../../src/index.js';
+import { createEngineRuntime } from '../../src/runtime.js';
 
 type ClientState = GameStateSnapshot;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseWav, WavParseError } from '../src/assets/wav.js';
+import { parseWav, WavParseError } from '../../src/assets/wav.js';
 import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
 
 describe('WAV loader', () => {

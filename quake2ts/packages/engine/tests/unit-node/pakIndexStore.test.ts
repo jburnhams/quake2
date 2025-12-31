@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PakArchive, calculatePakChecksum } from '../src/assets/pak.js';
-import { PakIndexStore } from '../src/assets/pakIndexStore.js';
+import { PakArchive, calculatePakChecksum } from '../../src/assets/pak.js';
+import { PakIndexStore } from '../../src/assets/pakIndexStore.js';
 import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 describe('PakIndexStore', () => {

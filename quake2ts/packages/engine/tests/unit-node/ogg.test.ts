@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeOgg, OggDecodeError } from '../src/assets/ogg.js';
+import { decodeOgg, OggDecodeError } from '../../src/assets/ogg.js';
 import type { OggVorbisDecoder } from '@wasm-audio-decoders/ogg-vorbis';
 
 class StubDecoder implements Partial<OggVorbisDecoder> {
