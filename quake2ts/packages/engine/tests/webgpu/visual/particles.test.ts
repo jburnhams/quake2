@@ -1,5 +1,5 @@
 import { describe, it, beforeAll, afterAll } from 'vitest';
-import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture } from '@quake2ts/test-utils';
 import { ParticleRenderer } from '../../../src/render/webgpu/pipelines/particleSystem.js';
 import { ParticleSystem, spawnSteam, spawnExplosion, spawnBlood } from '../../../src/render/particleSystem.js';
 import { RandomGenerator, createMat4Identity, mat4Ortho } from '@quake2ts/shared';
@@ -11,18 +11,16 @@ const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Particle System Visual Tests', () => {
-  let gpuSetup: HeadlessWebGPUSetup;
+  const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-    gpuSetup = await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
     if (!fs.existsSync(snapshotDir)) {
       fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
-  afterAll(async () => {
-    await gpuSetup.cleanup();
-  });
+  afterAll(lifecycle.cleanup);
 
   it('particles-basic', async () => {
 

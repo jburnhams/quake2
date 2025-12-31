@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { initHeadlessWebGPU, createWebGPULifecycle, captureTexture } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture } from '@quake2ts/test-utils';
 import { createWebGPURenderer } from '@quake2ts/engine/render/webgpu/renderer.js';
 import { Camera } from '@quake2ts/engine/render/camera.js';
 import { mat4 } from 'gl-matrix';
@@ -9,7 +9,7 @@ describe('WebGPU 2D Rendering Integration', () => {
   const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-    await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
   });
 
   afterAll(lifecycle.cleanup);

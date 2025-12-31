@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { initHeadlessWebGPU, createWebGPULifecycle } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 import { createWebGPUContext } from '../../src/render/webgpu/context';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
 
@@ -17,7 +17,7 @@ describe('WebGPU Integration (Real)', () => {
   const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-    await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
   });
 
   afterAll(lifecycle.cleanup);

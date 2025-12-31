@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { Camera } from '../../../src/render/camera.js';
 import { DLight } from '../../../src/render/dlight.js';
 import { mat4 } from 'gl-matrix';
 import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
-import { initHeadlessWebGPU, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
 import crypto from 'crypto';
@@ -86,21 +86,25 @@ const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('WebGPU Lighting', () => {
+    const lifecycle = createWebGPULifecycle();
     let renderer: Awaited<ReturnType<typeof createWebGPURenderer>>;
     let camera: Camera;
     let hashes: string[] = [];
 
     beforeAll(async () => {
-        await initHeadlessWebGPU();
+        await setupHeadlessWebGPUEnv();
         renderer = await createWebGPURenderer(undefined, {
             width: 256,
             height: 256,
             headless: true
         });
+        lifecycle.trackRenderer(renderer);
         camera = new Camera(256, 256);
         camera.setPosition(0, 0, 100);
         camera.setRotation(0, 0, 0);
     });
+
+    afterAll(lifecycle.cleanup);
 
     // Helper to create a minimal valid BSP map structure
     const createMinimalMap = (facesCount: number = 1): BspMap => {

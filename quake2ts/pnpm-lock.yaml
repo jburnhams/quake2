@@ -199,6 +199,9 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.68
         version: 0.1.68
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5

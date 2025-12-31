@@ -3,7 +3,7 @@ import { Md2Pipeline, Md2MeshBuffers } from '../../../src/render/webgpu/pipeline
 import { Md2Model } from '../../../src/assets/md2.js';
 import { mat4, vec3 } from 'gl-matrix';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
-import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, setupHeadlessWebGPUEnv, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
 import path from 'path';
 import fs from 'fs';
 
@@ -14,42 +14,52 @@ const updateBaseline = process.env.UPDATE_VISUAL === '1';
 function createMockModel(): Md2Model {
   const v1 = {
       position: { x: -10, y: -10, z: 0 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
   const v2 = {
       position: { x: 10, y: -10, z: 0 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
   const v3 = {
       position: { x: 0, y: 10, z: 0 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
 
   const v1_next = {
       position: { x: -10, y: -10, z: 10 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
   const v2_next = {
       position: { x: 10, y: -10, z: 10 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
   const v3_next = {
       position: { x: 0, y: 10, z: 10 },
-      normal: { x: 0, y: 0, z: 1 }
+      normal: { x: 0, y: 0, z: 1 },
+      normalIndex: 0
   };
 
   const frame0 = {
       scale: { x: 1, y: 1, z: 1 },
       translate: { x: 0, y: 0, z: 0 },
       name: 'frame0',
-      vertices: [v1, v2, v3]
+      vertices: [v1, v2, v3],
+      minBounds: { x: -10, y: -10, z: 0 },
+      maxBounds: { x: 10, y: 10, z: 0 }
   };
 
   const frame1 = {
       scale: { x: 1, y: 1, z: 1 },
       translate: { x: 0, y: 0, z: 0 },
       name: 'frame1',
-      vertices: [v1_next, v2_next, v3_next]
+      vertices: [v1_next, v2_next, v3_next],
+      minBounds: { x: -10, y: -10, z: 10 },
+      maxBounds: { x: 10, y: 10, z: 10 }
   };
 
   return {
@@ -58,7 +68,8 @@ function createMockModel(): Md2Model {
           frameSize: 0, numSkins: 0, numVertices: 3, numTexCoords: 3,
           numTriangles: 1, numGlCommands: 0, numFrames: 2,
           offsetSkins: 0, offsetTexCoords: 0, offsetTriangles: 0,
-          offsetFrames: 0, offsetGlCommands: 0, offsetEnd: 0
+          offsetFrames: 0, offsetGlCommands: 0, offsetEnd: 0,
+          ident: 0
       },
       skins: [],
       texCoords: [
@@ -70,7 +81,8 @@ function createMockModel(): Md2Model {
           { vertexIndices: [0, 2, 1], texCoordIndices: [0, 2, 1] }
       ],
       frames: [frame0, frame1],
-      glCommands: [] // Use triangles fallback
+      glCommands: [], // Use triangles fallback
+      lods: []
   };
 }
 
@@ -95,17 +107,11 @@ function createDepthTexture(device: GPUDevice, width: number, height: number): G
 }
 
 describe('MD2 Visual Tests', () => {
-    let gpuSetup: HeadlessWebGPUSetup;
-
     beforeAll(async () => {
-        gpuSetup = await initHeadlessWebGPU();
+        await setupHeadlessWebGPUEnv();
         if (!fs.existsSync(snapshotDir)) {
             fs.mkdirSync(snapshotDir, { recursive: true });
         }
-    });
-
-    afterAll(async () => {
-        await gpuSetup.cleanup();
     });
 
     it('md2: static render', async () => {
@@ -150,7 +156,7 @@ describe('MD2 Visual Tests', () => {
         pipeline.bind(pass, {
             modelViewProjection: mvp,
             ambientLight: 1.0, // Fully lit
-        }, texture, 0.0);
+        } as any, texture, 0.0);
 
         pipeline.draw(pass, mesh);
         pass.end();
@@ -226,7 +232,7 @@ describe('MD2 Visual Tests', () => {
                 modelViewProjection: mvp,
                 ambientLight: 1.0,
                 tint: [0, 1, 0, 1]
-            }, texture, lerp);
+            } as any, texture, lerp);
 
             pipeline.draw(pass, mesh);
             pass.end();
@@ -299,7 +305,7 @@ describe('MD2 Visual Tests', () => {
             ambientLight: 0.1,
             lightDirection: [0, 1, 0],
             dlights: dlights
-        }, texture, 0.0);
+        } as any, texture, 0.0);
 
         pipeline.draw(pass, mesh);
         pass.end();
