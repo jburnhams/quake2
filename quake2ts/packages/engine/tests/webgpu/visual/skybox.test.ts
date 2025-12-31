@@ -56,6 +56,21 @@ describe('Skybox Pipeline', () => {
         return data;
     };
 
+    const createCheckerboardData = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, squareSize: number = 8) => {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const i = y * size + x;
+                const isEvenSquare = (Math.floor(x / squareSize) + Math.floor(y / squareSize)) % 2 === 0;
+                data[i * 4] = isEvenSquare ? r1 : r2;
+                data[i * 4 + 1] = isEvenSquare ? g1 : g2;
+                data[i * 4 + 2] = isEvenSquare ? b1 : b2;
+                data[i * 4 + 3] = 255;
+            }
+        }
+        return data;
+    };
+
     // Cubemap faces mapped via Quake→GL transform in shader:
     // cubemapDir.x=-dir.y, cubemapDir.y=dir.z, cubemapDir.z=-dir.x
     // Face 0 (+X in GL): Quake -Y (right) -> Magenta
@@ -68,8 +83,8 @@ describe('Skybox Pipeline', () => {
     cubemap.uploadFace(3, createColorData(255, 255, 0));
     // Face 4 (+Z in GL): Quake -X (back) -> Cyan
     cubemap.uploadFace(4, createColorData(0, 255, 255));
-    // Face 5 (-Z in GL): Quake +X (forward) -> Red
-    cubemap.uploadFace(5, createColorData(255, 0, 0));
+    // Face 5 (-Z in GL): Quake +X (forward) -> Red/Dark-Red Checkerboard (for scrolling visibility)
+    cubemap.uploadFace(5, createCheckerboardData(255, 0, 0, 128, 0, 0, 8));
   });
 
   afterAll(lifecycle.cleanup);
@@ -338,7 +353,8 @@ describe('Skybox Pipeline', () => {
       camera.setFov(90);
       camera.setAspectRatio(1.0);
       camera.setPosition(0, 0, 0);
-      camera.setRotation(0, 0, 0);
+      // Look forward-up (+X +Z) to see both the red checkerboard (front) and blue (top) faces
+      camera.lookAt([10, 0, 10]);
 
       // Animation parameters
       const fps = 10;
@@ -366,7 +382,7 @@ describe('Skybox Pipeline', () => {
           );
       }, {
           name: 'skybox_scrolling',
-          description: 'Skybox with scrolling texture offset applied over time.',
+          description: 'Skybox with scrolling red/dark-red checkerboard (front) and blue (top) faces visible. Texture scrolls over time.',
           width: 256,
           height: 256,
           updateBaseline,

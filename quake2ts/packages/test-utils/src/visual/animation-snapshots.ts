@@ -122,14 +122,35 @@ export async function expectAnimationSnapshot(
         }
     }
 
-    // 3. Save Baseline if needed
+    // 3. Verify animation actually changes (sanity check)
+    if (actualFrames.length > 1) {
+        const firstFrame = actualFrames[0];
+        const lastFrame = actualFrames[actualFrames.length - 1];
+        let differentPixels = 0;
+        for (let i = 0; i < firstFrame.length; i += 4) {
+            if (firstFrame[i] !== lastFrame[i] ||
+                firstFrame[i+1] !== lastFrame[i+1] ||
+                firstFrame[i+2] !== lastFrame[i+2]) {
+                differentPixels++;
+            }
+        }
+        const percentDiff = (differentPixels / (width * height)) * 100;
+        if (percentDiff < 0.1) {
+            console.warn(`WARNING: Animation '${name}' has minimal changes (${percentDiff.toFixed(2)}% pixels different). ` +
+                         `First and last frames are nearly identical - animation may not be working!`);
+        } else {
+            console.log(`Animation '${name}': ${percentDiff.toFixed(2)}% of pixels changed from first to last frame`);
+        }
+    }
+
+    // 4. Save Baseline if needed
     if (shouldUpdateBaseline) {
         console.log(`Creating/Updating baseline for ${name} at ${baselinePath}`);
         await saveAPNG(baselinePath, actualFrames, width, height, delayMs);
         return;
     }
 
-    // 4. Compare
+    // 5. Compare
     if (!baselineFrames) {
         throw new Error("Baseline frames missing despite checks.");
     }
@@ -165,7 +186,7 @@ export async function expectAnimationSnapshot(
         frameStats
     };
 
-    // 5. Save Stats
+    // 6. Save Stats
     const statsPath = path.join(snapshotDir, 'stats', `${name}.json`);
     await fs.mkdir(path.dirname(statsPath), { recursive: true });
     await fs.writeFile(statsPath, JSON.stringify({
@@ -178,7 +199,7 @@ export async function expectAnimationSnapshot(
         frameCount: frameCount
     }, null, 2));
 
-    // 6. Save Actual and Diff if failed or always save
+    // 7. Save Actual and Diff if failed or always save
     if (!passed || alwaysSave) {
         await saveAPNG(actualPath, actualFrames, width, height, delayMs);
         await saveAPNG(diffPath, diffFrames, width, height, delayMs);
