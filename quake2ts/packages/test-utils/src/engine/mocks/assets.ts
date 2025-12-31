@@ -5,7 +5,7 @@ import {
   Md3Model,
   BspMap,
   PreparedTexture
-} from '@quake2ts/engine/src/assets/manager.js';
+} from '@quake2ts/engine';
 
 export function createMockAssetManager(overrides?: Partial<AssetManager>): AssetManager {
   return {

@@ -1,13 +1,10 @@
 import { vi, type Mock } from 'vitest';
-import { type GameEngine, type GameExports } from '@quake2ts/game/src/index.js';
-import { type GameImports } from '@quake2ts/game/src/imports.js';
-import { Entity } from '@quake2ts/game/src/entities/entity.js';
-import { EntitySystem } from '@quake2ts/game/src/entities/system.js';
-import { SpawnRegistry, type SpawnContext } from '@quake2ts/game/src/entities/spawn.js';
-import { ScriptHookRegistry } from '@quake2ts/game/src/scripting/hooks.js';
-import { type BspModel } from '@quake2ts/engine/src/assets/bsp.js';
-import { type Vec3 } from '@quake2ts/shared/src/math/vec3.js';
-import { createRandomGenerator } from '@quake2ts/shared/src/math/random.js';
+import { type GameEngine, type GameExports, Entity, EntitySystem, SpawnRegistry, ScriptHookRegistry, MulticastType } from '@quake2ts/game';
+import { type GameImports } from '@quake2ts/game';
+import { type SpawnContext } from '@quake2ts/game';
+import { type BspModel } from '@quake2ts/engine';
+import { type Vec3 } from '@quake2ts/shared';
+import { createRandomGenerator } from '@quake2ts/shared';
 import { createTraceMock } from '../shared/collision.js';
 import { createMockEngine } from '../engine/mocks/assets.js';
 
@@ -22,6 +19,7 @@ export interface TestContext extends SpawnContext {
   precacheModel?: Mock;
   precacheSound?: Mock;
   precacheImage?: Mock;
+  entities: EntitySystem;
 }
 
 export const createMockGame = (seed = 12345) => {
@@ -195,13 +193,13 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     spawnRegistry: undefined as unknown as SpawnRegistry
   };
 
-  // Fix circular reference
-  game.entities = entities as unknown as EntitySystem;
+  // Fix circular reference and type mismatch by casting game to any
+  (game as any).entities = entities as unknown as EntitySystem;
 
   return {
     keyValues: {},
     entities: entities as unknown as EntitySystem,
-    game,
+    game: game as unknown as GameExports,
     engine,
     health_multiplier: 1,
     warn: vi.fn(),

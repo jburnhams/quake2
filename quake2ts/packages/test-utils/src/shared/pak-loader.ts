@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { PakArchive } from '@quake2ts/engine/src/assets/pak.js';
+import { PakArchive } from '@quake2ts/engine';
 
 export function findPakFile(): string | null {
   const possiblePaths = [
