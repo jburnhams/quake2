@@ -1,127 +1,78 @@
-import { describe, test, expect, vi } from 'vitest';
-import { Camera } from '../../../../src/render/camera.js';
-import { initHeadlessWebGPU } from '@quake2ts/test-utils/src/setup/webgpu';
-import { captureTexture, expectSnapshot } from '@quake2ts/test-utils';
-import { SkyboxPipeline } from '../../../../src/render/webgpu/pipelines/skybox.js';
+import { describe, it, beforeAll } from 'vitest';
+import { createWebGPURenderer, WebGPURenderer } from '../../../../src/render/webgpu/renderer.js';
 import { TextureCubeMap } from '../../../../src/render/webgpu/resources.js';
+import { Camera } from '../../../../src/render/camera.js';
+import { initHeadlessWebGPU, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import path from 'path';
 
+const snapshotDir = path.join(__dirname, 'baselines');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Skybox Diagonal Views (Visual)', () => {
-  // Logic check first (always runs)
-  test('Camera.toState produces correct angles for diagonal view', () => {
-    const camera = new Camera(800, 600);
-    camera.setPosition(0, 0, 50);
-    camera.setRotation(45, 45, 0);
+  let renderer: WebGPURenderer;
+  let cubemap: TextureCubeMap;
 
-    const state = camera.toState();
-    expect(state.angles[0]).toBe(45); // Pitch
-    expect(state.angles[1]).toBe(45); // Yaw
-    expect(state.angles[2]).toBe(0);  // Roll
-  });
-
-  // Visual check
-  test('renders correctly at 45/45 angle', async () => {
-    const { device, context } = await initHeadlessWebGPU();
-    const width = 256;
-    const height = 256;
-    const format = 'bgra8unorm';
-
-    // Create pipeline
-    const pipeline = new SkyboxPipeline(device, format);
-
-    // Create Camera
-    const camera = new Camera(width, height);
-    camera.setPosition(0, 0, 0);
-    camera.setRotation(45, 45, 0);
+  beforeAll(async () => {
+    await initHeadlessWebGPU();
+    renderer = await createWebGPURenderer(undefined, {
+       width: 256,
+       height: 256
+    }) as WebGPURenderer;
 
     // Create colored cubemap
-    const cubemap = new TextureCubeMap(device, {
-        size: 1,
+    const size = 64;
+    cubemap = new TextureCubeMap(renderer.device, {
+        size,
         format: 'rgba8unorm',
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
     });
 
-    // Cubemap faces mapped via Quake→GL transform in shader:
-    // cubemapDir.x=-dir.y, cubemapDir.y=dir.z, cubemapDir.z=-dir.x
-    const colors = [
-        [255, 0, 255, 255],   // Face 0 (+X in GL): Quake -Y (right) -> Magenta
-        [0, 255, 0, 255],     // Face 1 (-X in GL): Quake +Y (left) -> Green
-        [0, 0, 255, 255],     // Face 2 (+Y in GL): Quake +Z (up) -> Blue
-        [255, 255, 0, 255],   // Face 3 (-Y in GL): Quake -Z (down) -> Yellow
-        [0, 255, 255, 255],   // Face 4 (+Z in GL): Quake -X (back) -> Cyan
-        [255, 0, 0, 255]      // Face 5 (-Z in GL): Quake +X (forward) -> Red
-    ];
-
-    for(let i=0; i<6; i++) {
-        cubemap.uploadFace(i, new Uint8Array(colors[i]));
-    }
-
-    // Render
-    const texture = device.createTexture({
-        size: [width, height],
-        format: format,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
-    });
-    const view = texture.createView();
-
-    // Create Depth Texture (Required by SkyboxPipeline)
-    const depthTexture = device.createTexture({
-      size: [width, height],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT
-    });
-    const depthView = depthTexture.createView();
-
-    const commandEncoder = device.createCommandEncoder();
-    const passEncoder = commandEncoder.beginRenderPass({
-        colorAttachments: [{
-            view: view,
-            loadOp: 'clear',
-            storeOp: 'store',
-            clearValue: { r: 0, g: 0, b: 0, a: 1 }
-        }],
-        depthStencilAttachment: {
-          view: depthView,
-          depthClearValue: 1.0,
-          depthLoadOp: 'clear',
-          depthStoreOp: 'store'
+    const createColorData = (r: number, g: number, b: number) => {
+        const data = new Uint8Array(size * size * 4);
+        for (let i = 0; i < size * size; i++) {
+            data[i * 4] = r;
+            data[i * 4 + 1] = g;
+            data[i * 4 + 2] = b;
+            data[i * 4 + 3] = 255;
         }
-    });
+        return data;
+    };
 
-    pipeline.draw(passEncoder, {
+    // Upload distinct colors
+    cubemap.uploadFace(0, createColorData(255, 0, 0));   // Face 0
+    cubemap.uploadFace(1, createColorData(0, 255, 0));   // Face 1
+    cubemap.uploadFace(2, createColorData(0, 0, 255));   // Face 2
+    cubemap.uploadFace(3, createColorData(255, 255, 0)); // Face 3
+    cubemap.uploadFace(4, createColorData(0, 255, 255)); // Face 4
+    cubemap.uploadFace(5, createColorData(255, 0, 255)); // Face 5
+  });
+
+  it('renders correctly at 45/45 angle', async () => {
+    const camera = new Camera(256, 256);
+    camera.setPosition(0, 0, 50);
+    camera.setRotation(45, 45, 0);
+
+    renderer.renderFrame({
+        camera,
         cameraState: camera.toState(),
-        scroll: [0, 0],
-        cubemap: cubemap
+        sky: { cubemap }
     });
 
-    passEncoder.end();
-    device.queue.submit([commandEncoder.finish()]);
+    const frameRenderer = (renderer as any).frameRenderer;
+    const pixels = await captureTexture(
+        renderer.device,
+        frameRenderer.headlessTarget,
+        256,
+        256
+    );
 
-    // Capture and verify
-    const result = await captureTexture(device, texture, width, height);
-
-    // Check if we should update based on Vitest flag
-    // Vitest doesn't expose `updateSnapshot` flag directly to code easily,
-    // but the test runner we invoke sets env vars or we can assume ALWAYS_SAVE_SNAPSHOTS=1 logic
-    // from previous findings in snapshots.ts.
-
-    // We pass explicit object options to match signature:
-    // expectSnapshot(pixels, options: SnapshotTestOptions)
-
-    await expectSnapshot(result, {
+    await expectSnapshot(pixels, {
         name: 'skybox-diagonal-45-45',
-        width,
-        height,
+        description: 'Skybox at 45/45 degrees',
+        width: 256,
+        height: 256,
         updateBaseline,
-        snapshotDir: __dirname // Use local dir
+        snapshotDir
     });
-
-    // Cleanup
-    pipeline.destroy();
-    cubemap.destroy();
-    texture.destroy();
-    depthTexture.destroy();
-    device.destroy();
   });
 });
