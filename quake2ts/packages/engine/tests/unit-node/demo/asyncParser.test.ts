@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AsyncDemoParser } from '../../src/demo/asyncParser';
-import { NetworkMessageHandler } from '../../src/demo/parser';
-import type { DemoWorkerResponse, DemoWorkerRequest } from '../../src/demo/demo.worker';
+import { AsyncDemoParser } from '../../../src/demo/asyncParser';
+import { NetworkMessageHandler } from '../../../src/demo/parser';
+import type { DemoWorkerResponse, DemoWorkerRequest } from '../../../src/demo/demo.worker';
 
 // Mock Worker
 class MockWorker {

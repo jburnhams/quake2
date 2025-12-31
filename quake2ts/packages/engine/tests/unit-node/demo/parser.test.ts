@@ -1,8 +1,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser, NetworkMessageHandler, createEmptyProtocolPlayerState, createEmptyEntityState, FrameData } from '../../src/demo/parser.js';
+import { NetworkMessageParser, NetworkMessageHandler, createEmptyProtocolPlayerState, createEmptyEntityState, FrameData } from '../../../src/demo/parser.js';
 import { BinaryStream, ServerCommand, TempEntity } from '@quake2ts/shared';
-import { MessageWriter } from '../../src/demo/writer.js';
+import { MessageWriter } from '../../../src/demo/writer.js';
 
 // Helper to create a binary stream from writer data
 const createStreamFromWriter = (writer: MessageWriter): BinaryStream => {

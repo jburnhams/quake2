@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MessageWriter } from '../../src/demo/writer.js';
-import { createEmptyEntityState, createEmptyProtocolPlayerState, FrameData } from '../../src/demo/parser.js';
+import { MessageWriter } from '../../../src/demo/writer.js';
+import { createEmptyEntityState, createEmptyProtocolPlayerState, FrameData } from '../../../src/demo/parser.js';
 import { BinaryStream, ServerCommand, U_MOREBITS1, U_ORIGIN1, U_ANGLE1, U_MODEL } from '@quake2ts/shared';
 
 // Legacy Protocol 34 Constants for testing

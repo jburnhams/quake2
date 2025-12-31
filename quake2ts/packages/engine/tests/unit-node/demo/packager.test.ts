@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoPackager, PackageOptions } from '../../src/demo/packager.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { PakWriter } from '../../src/assets/pakWriter.js';
-import { Offset } from '../../src/demo/types.js';
+import { DemoPackager, PackageOptions } from '../../../src/demo/packager.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { PakWriter } from '../../../src/assets/pakWriter.js';
+import { Offset } from '../../../src/demo/types.js';
 
 // Mocks
-vi.mock('../../src/assets/vfs.js');
-vi.mock('../../src/demo/clipper.js', () => {
+vi.mock('../../../src/assets/vfs.js');
+vi.mock('../../../src/demo/clipper.js', () => {
     return {
         DemoClipper: class {
             constructor() {
@@ -17,7 +17,7 @@ vi.mock('../../src/demo/clipper.js', () => {
         }
     };
 });
-vi.mock('../../src/demo/optimalClipFinder.js', () => {
+vi.mock('../../../src/demo/optimalClipFinder.js', () => {
     return {
         OptimalClipFinder: class {
             constructor() {
@@ -30,7 +30,7 @@ vi.mock('../../src/demo/optimalClipFinder.js', () => {
 });
 
 // Mock visibility analyzer to return different sets for visible vs loaded
-vi.mock('../../src/assets/visibilityAnalyzer.js', () => {
+vi.mock('../../../src/assets/visibilityAnalyzer.js', () => {
     return {
         ResourceVisibilityAnalyzer: class {
             constructor() {

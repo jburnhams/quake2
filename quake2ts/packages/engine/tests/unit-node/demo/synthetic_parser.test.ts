@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NetworkMessageParser, U_ORIGIN1, U_ORIGIN2, U_ORIGIN3, U_ALPHA, U_SCALE, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser';
+import { NetworkMessageParser, U_ORIGIN1, U_ORIGIN2, U_ORIGIN3, U_ALPHA, U_SCALE, PROTOCOL_VERSION_RERELEASE } from '../../../src/demo/parser';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
 
 // Helper to create a byte array for testing

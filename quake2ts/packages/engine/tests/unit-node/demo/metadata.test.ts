@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoReader } from '../../src/demo/demoReader.js';
-import { DemoAnalyzer } from '../../src/demo/analyzer.js';
-import { DemoHeader, ServerInfo } from '../../src/demo/analysis.js';
+import { DemoReader } from '../../../src/demo/demoReader.js';
+import { DemoAnalyzer } from '../../../src/demo/analyzer.js';
+import { DemoHeader, ServerInfo } from '../../../src/demo/analysis.js';
 
 // Mock dependencies
-vi.mock('../../src/demo/demoReader.js');
-vi.mock('../../src/demo/demoReader');
+vi.mock('../../../src/demo/demoReader.js');
+vi.mock('../../../src/demo/demoReader');
 
 // Use a getter or similar to ensure the mock returns the current mockAnalyzer instance
 let mockAnalyzer: any;
@@ -16,8 +16,8 @@ const analyzerMockClass = class {
   }
 };
 
-vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
-vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('../../../src/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('../../../src/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
 
 describe('DemoPlaybackController Metadata', () => {
   let controller: any;
@@ -53,7 +53,7 @@ describe('DemoPlaybackController Metadata', () => {
     // However, resetModules re-evaluates the module under test, which imports the mocked module.
 
     // Dynamic import to pick up new mocks
-    const { DemoPlaybackController } = await import('../../src/demo/playback.js');
+    const { DemoPlaybackController } = await import('../../../src/demo/playback.js');
     controller = new DemoPlaybackController();
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advanceAnimation, computeFrameBlend, createAnimationState, interpolateVec3 } from '../src/assets/animation.js';
+import { advanceAnimation, computeFrameBlend, createAnimationState, interpolateVec3 } from '../../../src/assets/animation.js';
 
 describe('Model animation helpers', () => {
   it('advances looping animations and clamps non-looping sequences', () => {

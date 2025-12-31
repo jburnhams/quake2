@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
-import { NetworkMessageHandler, createEmptyProtocolPlayerState, createEmptyEntityState } from '../../src/demo/parser.js';
+import { DemoPlaybackController } from '../../../src/demo/playback.js';
+import { NetworkMessageHandler, createEmptyProtocolPlayerState, createEmptyEntityState } from '../../../src/demo/parser.js';
 
 describe('DemoPlaybackController Analysis', () => {
   let controller: DemoPlaybackController;
