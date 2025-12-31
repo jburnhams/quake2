@@ -6,7 +6,7 @@ import {
   PmType,
   WaterLevel
 } from '@quake2ts/shared';
-import { ClientPrediction, defaultPredictionState, PredictionState } from '../../src/prediction/index.js';
+import { ClientPrediction, defaultPredictionState, PredictionState } from '../../../src/prediction/index.js';
 import { PmoveTraceResult } from '@quake2ts/shared';
 
 const ZERO_VEC = { x: 0, y: 0, z: 0 } as const;

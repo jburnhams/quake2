@@ -34,7 +34,10 @@
     "build:bundles": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --config vitest.node.ts",
+    "test:unit:node": "vitest run --config vitest.node.ts",
+    "test:unit:jsdom": "vitest run --config vitest.jsdom.ts",
+    "test:integration": "vitest run --config vitest.integration.ts",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -49,6 +52,7 @@
     "@quake2ts/shared": "workspace:*",
     "@types/node": "^25.0.3",
     "gl-matrix": "^3.4.4",
+    "jsdom": "25.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"

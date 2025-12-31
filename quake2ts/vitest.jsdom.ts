@@ -24,6 +24,7 @@ export default defineConfig({
     include: [
       'packages/engine/tests/**/*.test.ts',
       'packages/client/tests/unit-jsdom/**/*.test.ts',
+      'packages/cgame/tests/unit-jsdom/**/*.test.ts',
       // Include src tests if any
       'packages/engine/src/**/*.test.ts',
       'packages/client/src/**/*.test.ts',

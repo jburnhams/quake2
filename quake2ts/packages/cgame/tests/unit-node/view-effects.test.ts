@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ViewEffects, type ViewKick } from '../src/view/effects.js';
-import { defaultPredictionState } from '../src/prediction/index.js';
+import { ViewEffects, type ViewKick } from '../../src/view/effects.js';
+import { defaultPredictionState } from '../../src/prediction/index.js';
 import { PmFlag, type Vec3 } from '@quake2ts/shared';
 
 describe('ViewEffects', () => {

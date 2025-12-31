@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Draw_Damage, Init_Damage } from '../../src/hud/damage';
-import { CGameImport } from '../../src/types';
+import { Draw_Damage, Init_Damage } from '../../../src/hud/damage';
+import { CGameImport } from '../../../src/types';
 import { PlayerState, Vec3 } from '@quake2ts/shared';
 
 describe('HUD Damage Indicators', () => {

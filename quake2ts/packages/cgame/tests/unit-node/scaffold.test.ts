@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { GetCGameAPI } from '../src/index.js';
-import { CGameImport } from '../src/types.js';
+import { GetCGameAPI } from '../../src/index.js';
+import { CGameImport } from '../../src/types.js';
 
 describe('CGame Entry Point', () => {
   const mockImport: CGameImport = {

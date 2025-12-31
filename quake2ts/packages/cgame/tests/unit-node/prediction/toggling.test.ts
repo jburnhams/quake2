@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClientPrediction, PredictionSettings, PredictionState, defaultPredictionState } from '../../src/index';
+import { ClientPrediction, PredictionSettings, PredictionState, defaultPredictionState } from '../../../src/index';
 import { PmoveTraceFn, UserCommand, PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
 
 describe('ClientPrediction Toggling', () => {

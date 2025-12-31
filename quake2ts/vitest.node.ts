@@ -26,7 +26,7 @@ export default defineConfig({
       'packages/server/tests/**/*.test.ts',
       'packages/shared/tests/**/*.test.ts',
       'packages/test-utils/tests/**/*.test.ts',
-      'packages/cgame/tests/**/*.test.ts',
+      'packages/cgame/tests/unit-node/**/*.test.ts',
       // Asset processing tests that require Node environment (Buffer/DataView compatibility)
       'packages/engine/tests/assets/preview.test.ts',
       'packages/engine/tests/assets/preview_bounds.test.ts',

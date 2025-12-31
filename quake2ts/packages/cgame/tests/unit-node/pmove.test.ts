@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetCGameAPI, CGameImport, PmoveInfo } from '../src/index.js';
+import { GetCGameAPI, CGameImport, PmoveInfo } from '../../src/index.js';
 import { PlayerState, UserCommand } from '@quake2ts/shared';
 import * as shared from '@quake2ts/shared';
 

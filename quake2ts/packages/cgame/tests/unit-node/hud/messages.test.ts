@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MessageSystem } from '../../src/hud/messages.js';
-import type { CGameImport } from '../../src/types.js';
+import { MessageSystem } from '../../../src/hud/messages.js';
+import type { CGameImport } from '../../../src/types.js';
 
 describe('MessageSystem', () => {
   let messageSystem: MessageSystem;
