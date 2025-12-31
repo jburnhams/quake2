@@ -492,3 +492,104 @@ test('bsp: transparency - z-fighting test', { timeout: 30000 }, async () => {
     snapshotDir
   });
 });
+
+test('bsp: transparency - fully transparent surface', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(`
+    ${HELPER_SCRIPTS}
+
+    // Two quads: Opaque Blue behind (at Z=-10), "Invisible" surface in front (at Z=0)
+    // The front surface uses SURF_TRANS33 but the texture has 0 alpha.
+    // It should be invisible if blending is correct.
+    const surfaces = [
+      // Background Opaque Quad (Blue)
+      {
+        vertices: [[-10, -10, -10], [10, -10, -10], [10, 10, -10], [-10, 10, -10]],
+        texInfo: { texture: 'opaque_blue', s: [0.1, 0, 0], t: [0, 0.1, 0], flags: 0 }
+      },
+      // Foreground Invisible Quad (Alpha 0) - SURF_TRANS33 (16) to enable blending
+      {
+        vertices: [[-5, -5, 0], [5, -5, 0], [5, 5, 0], [-5, 5, 0]],
+        texInfo: { texture: 'invisible', s: [0.1, 0, 0], t: [0, 0.1, 0], flags: 16 }
+      }
+    ];
+
+    const bspMap = createTestBspMap({ surfaces });
+    const geometry = renderer.uploadBspGeometry(bspMap);
+
+    renderer.registerTexture('opaque_blue', createRawTexture(1, 1, new Uint8Array([0, 0, 255, 255])));
+    renderer.registerTexture('invisible', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 0])));
+
+    const camera = createLookAtCamera([0, 0, 30]);
+
+    renderer.renderFrame({
+      camera,
+      world: {
+        map: bspMap,
+        surfaces: geometry.surfaces,
+        lightmaps: geometry.lightmaps,
+        textures: renderer.getTextures ? renderer.getTextures() : undefined
+      },
+      clearColor: [0, 0, 0, 1]
+    }, []);
+  `, {
+    name: 'bsp-trans-fully',
+    description: 'Fully transparent surface (alpha 0) should be invisible',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
+
+test('bsp: transparency - transparent + warp', { timeout: 30000 }, async () => {
+  await testWebGLRenderer(`
+    ${HELPER_SCRIPTS}
+
+    // A surface with both SURF_TRANS33 (16) and SURF_WARP (64)
+    // Should appear transparent and distorted (if warping is active)
+    const surfaces = [
+      // Background Checker
+      {
+        vertices: [[-10, -10, -10], [10, -10, -10], [10, 10, -10], [-10, 10, -10]],
+        texInfo: { texture: 'checker', s: [0.1, 0, 0], t: [0, 0.1, 0], flags: 0 }
+      },
+      // Transparent Warp Surface
+      {
+        vertices: [[-5, -5, 0], [5, -5, 0], [5, 5, 0], [-5, 5, 0]],
+        texInfo: { texture: 'water', s: [0.1, 0, 0], t: [0, 0.1, 0], flags: 16 | 64 }
+      }
+    ];
+
+    const bspMap = createTestBspMap({ surfaces });
+    const geometry = renderer.uploadBspGeometry(bspMap);
+
+    const checkTex = new Uint8Array([
+      255, 255, 255, 255,  0, 0, 0, 255,
+      0, 0, 0, 255,        255, 255, 255, 255
+    ]);
+    renderer.registerTexture('checker', createRawTexture(2, 2, checkTex));
+    renderer.registerTexture('water', createRawTexture(1, 1, new Uint8Array([0, 0, 255, 255])));
+
+    const camera = createLookAtCamera([0, 0, 30]);
+
+    // Pass timeSeconds to enable warping animation
+    renderer.renderFrame({
+      camera,
+      timeSeconds: 1.0,
+      world: {
+        map: bspMap,
+        surfaces: geometry.surfaces,
+        lightmaps: geometry.lightmaps,
+        textures: renderer.getTextures ? renderer.getTextures() : undefined
+      },
+      clearColor: [0, 0, 0, 1]
+    }, []);
+  `, {
+    name: 'bsp-trans-warp',
+    description: 'Surface with both transparent and warp flags',
+    width: 256,
+    height: 256,
+    updateBaseline: process.env.UPDATE_VISUAL === '1',
+    snapshotDir
+  });
+});
