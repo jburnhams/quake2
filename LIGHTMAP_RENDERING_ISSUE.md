@@ -1,5 +1,26 @@
 # WebGL Lightmap Rendering Issue
 
+## Update: Integration Test Fixed
+
+**Status**: Integration test crash fixed (commit fd0edee4)
+
+The `lightstyles.test.ts` integration test was crashing with:
+```
+TypeError: Cannot read properties of undefined (reading 'join')
+```
+
+**Root Cause**: New fields `styleIndices` and `styleLayers` were added to `BspSurfaceGeometry` as required fields, but old code/tests didn't set them.
+
+**Fixes Applied**:
+1. Made `styleIndices` and `styleLayers` optional in `BspSurfaceGeometry` interface
+2. Added default values `[0, 255, 255, 255]` and `[0, -1, -1, -1]` in rendering code when undefined
+3. Updated integration test mock geometry to include these fields
+4. Updated test expectations to check both `u_lightStyleFactors` and `u_styleLayerMapping` uniforms
+
+**Result**: Integration tests now pass (48 tests passing).
+
+---
+
 ## Issue Description
 
 WebGL visual tests for lightmaps are passing but producing incorrect output:
