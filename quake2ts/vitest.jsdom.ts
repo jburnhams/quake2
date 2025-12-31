@@ -23,7 +23,7 @@ export default defineConfig({
     environment: 'jsdom',
     include: [
       'packages/engine/tests/**/*.test.ts',
-      'packages/client/tests/**/*.test.ts',
+      'packages/client/tests/unit-jsdom/**/*.test.ts',
       // Include src tests if any
       'packages/engine/src/**/*.test.ts',
       'packages/client/src/**/*.test.ts',

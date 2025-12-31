@@ -54,6 +54,7 @@ vi.mock('@quake2ts/client/demo/handler.js', () => ({
              fov: 90
         });
         latestServerFrame = 100;
+        entities = new Map();
     }
 }));
 
@@ -84,6 +85,7 @@ vi.mock('@quake2ts/cgame', async () => {
         setAuthoritative = vi.fn();
         enqueueCommand = vi.fn();
         getPredictedState = vi.fn();
+        decayError = vi.fn();
     },
     interpolatePredictionState: vi.fn(),
     ViewEffects: class {
