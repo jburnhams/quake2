@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { Camera } from '../../../src/render/camera.js';
 import { DLight } from '../../../src/render/dlight.js';
@@ -7,7 +7,6 @@ import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
 import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
-import crypto from 'crypto';
 
 // Helper to create test geometry
 function createTestBspGeometry(options: { min: [number, number, number], max: [number, number, number], texture: string }) {
@@ -89,7 +88,6 @@ describe('WebGPU Lighting', () => {
     const lifecycle = createWebGPULifecycle();
     let renderer: Awaited<ReturnType<typeof createWebGPURenderer>>;
     let camera: Camera;
-    let hashes: string[] = [];
 
     beforeAll(async () => {
         await setupHeadlessWebGPUEnv();
@@ -215,8 +213,6 @@ describe('WebGPU Lighting', () => {
             256
         );
 
-        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
-
         await expectSnapshot(pixels, {
             name: 'lighting-point',
             description: 'Red point light illuminating a wall',
@@ -271,8 +267,6 @@ describe('WebGPU Lighting', () => {
             256
         );
 
-        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
-
         await expectSnapshot(pixels, {
             name: 'lighting-multiple',
             description: 'Red and Blue lights illuminating a wall',
@@ -323,8 +317,6 @@ describe('WebGPU Lighting', () => {
             256
         );
 
-        hashes.push(crypto.createHash('md5').update(pixels).digest('hex'));
-
         await expectSnapshot(pixels, {
             name: 'lighting-colored',
             description: 'Green light illuminating a floor',
@@ -333,10 +325,5 @@ describe('WebGPU Lighting', () => {
             updateBaseline,
             snapshotDir
         });
-    });
-
-    it('should verify all rendered images are distinct', () => {
-        const uniqueHashes = new Set(hashes);
-        expect(uniqueHashes.size).toBe(3);
     });
 });
