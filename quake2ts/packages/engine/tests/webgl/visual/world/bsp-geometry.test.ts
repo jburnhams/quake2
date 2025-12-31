@@ -256,34 +256,46 @@ test('bsp: textured cube - 6 faces', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Define 6 faces of a cube size 10 centered at origin
+    // Using Quake coordinate system: X=forward, Y=left, Z=up
     const s = 10;
     const surfaces = [
-      // Front (Z+)
-      { vertices: [[-s, -s, s], [s, -s, s], [s, s, s], [-s, s, s]], texInfo: { texture: 'front', s: [0.05, 0, 0], t: [0, 0.05, 0] } },
-      // Back (Z-)
-      { vertices: [[s, -s, -s], [-s, -s, -s], [-s, s, -s], [s, s, -s]], texInfo: { texture: 'back', s: [0.05, 0, 0], t: [0, 0.05, 0] } },
-      // Right (X+)
-      { vertices: [[s, -s, s], [s, -s, -s], [s, s, -s], [s, s, s]], texInfo: { texture: 'right', s: [0, 0.05, 0], t: [0, 0, 0.05] } },
-      // Left (X-)
-      { vertices: [[-s, -s, -s], [-s, -s, s], [-s, s, s], [-s, s, -s]], texInfo: { texture: 'left', s: [0, 0.05, 0], t: [0, 0, 0.05] } },
-      // Top (Y+)
-      { vertices: [[-s, s, s], [s, s, s], [s, s, -s], [-s, s, -s]], texInfo: { texture: 'top', s: [0.05, 0, 0], t: [0, 0, 0.05] } },
-      // Bottom (Y-)
-      { vertices: [[-s, -s, -s], [s, -s, -s], [s, -s, s], [-s, -s, s]], texInfo: { texture: 'bottom', s: [0.05, 0, 0], t: [0, 0, 0.05] } },
+      // Front (X+) - visible from +X (forward)
+      { vertices: [[s, -s, -s], [s, s, -s], [s, s, s], [s, -s, s]], texInfo: { texture: 'front', s: [0, 0.05, 0], t: [0, 0, 0.05] } },
+      // Back (X-) - visible from -X (backward)
+      { vertices: [[-s, s, -s], [-s, -s, -s], [-s, -s, s], [-s, s, s]], texInfo: { texture: 'back', s: [0, 0.05, 0], t: [0, 0, 0.05] } },
+      // Left (Y+) - visible from +Y (left side)
+      { vertices: [[-s, s, -s], [-s, s, s], [s, s, s], [s, s, -s]], texInfo: { texture: 'left', s: [0.05, 0, 0], t: [0, 0, 0.05] } },
+      // Right (Y-) - visible from -Y (right side)
+      { vertices: [[s, -s, -s], [s, -s, s], [-s, -s, s], [-s, -s, -s]], texInfo: { texture: 'right', s: [0.05, 0, 0], t: [0, 0, 0.05] } },
+      // Top (Z+) - visible from +Z (above)
+      { vertices: [[-s, -s, s], [s, -s, s], [s, s, s], [-s, s, s]], texInfo: { texture: 'top', s: [0.05, 0, 0], t: [0, 0.05, 0] } },
+      // Bottom (Z-) - visible from -Z (below)
+      { vertices: [[-s, s, -s], [s, s, -s], [s, -s, -s], [-s, -s, -s]], texInfo: { texture: 'bottom', s: [0.05, 0, 0], t: [0, 0.05, 0] } },
     ];
 
     const bspMap = createTestBspMap({ surfaces });
     const geometry = renderer.uploadBspGeometry(bspMap);
 
-    renderer.registerTexture('front', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
-    renderer.registerTexture('back', createRawTexture(1, 1, new Uint8Array([0, 255, 255, 255]))); // Cyan
-    renderer.registerTexture('right', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
-    renderer.registerTexture('left', createRawTexture(1, 1, new Uint8Array([255, 0, 255, 255]))); // Magenta
-    renderer.registerTexture('top', createRawTexture(1, 1, new Uint8Array([0, 0, 255, 255])));
-    renderer.registerTexture('bottom', createRawTexture(1, 1, new Uint8Array([255, 255, 0, 255]))); // Yellow
+    // Front=Red (X+), Back=Cyan (X-), Left=Magenta (Y+), Right=Green (Y-), Top=Blue (Z+), Bottom=Yellow (Z-)
+    const texFront = renderer.registerTexture('front', createRawTexture(1, 1, new Uint8Array([255, 0, 0, 255])));
+    const texBack = renderer.registerTexture('back', createRawTexture(1, 1, new Uint8Array([0, 255, 255, 255]))); // Cyan
+    const texLeft = renderer.registerTexture('left', createRawTexture(1, 1, new Uint8Array([255, 0, 255, 255]))); // Magenta
+    const texRight = renderer.registerTexture('right', createRawTexture(1, 1, new Uint8Array([0, 255, 0, 255])));
+    const texTop = renderer.registerTexture('top', createRawTexture(1, 1, new Uint8Array([0, 0, 255, 255])));
+    const texBottom = renderer.registerTexture('bottom', createRawTexture(1, 1, new Uint8Array([255, 255, 0, 255]))); // Yellow
 
-    // View from a corner to see 3 faces (Front, Right, Top)
-    const camera = createLookAtCamera([40, 40, 40]);
+    const textureMap = new Map([
+      ['front', texFront],
+      ['back', texBack],
+      ['left', texLeft],
+      ['right', texRight],
+      ['top', texTop],
+      ['bottom', texBottom]
+    ]);
+
+    // View from a corner showing back (cyan), right (green), and top (blue) faces
+    // Camera at [-30, -15, 30] (behind, to the right, above)
+    const camera = createLookAtCamera([-30, -15, 30]);
 
     renderer.renderFrame({
       camera,
@@ -291,7 +303,7 @@ test('bsp: textured cube - 6 faces', { timeout: 30000 }, async () => {
         map: bspMap,
         surfaces: geometry.surfaces,
         lightmaps: geometry.lightmaps,
-        textures: renderer.getTextures ? renderer.getTextures() : undefined
+        textures: textureMap
       },
       clearColor: [0.1, 0.1, 0.1, 1]
     }, []);
