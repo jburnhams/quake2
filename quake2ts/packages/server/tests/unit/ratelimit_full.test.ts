@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated';
 import { ClientState } from '../../src/client';
 import { NetworkTransport } from '../../src/transport';
@@ -28,6 +28,12 @@ describe('Full Stack Rate Limiting', () => {
         clientNetChan = new NetChan();
         // Setup client netchan (qport 0 for simplicity)
         clientNetChan.setup(0);
+    });
+
+    afterEach(() => {
+        if (server) {
+            server.stopServer();
+        }
     });
 
     it('should process packets through netchan and kick client on flood', async () => {

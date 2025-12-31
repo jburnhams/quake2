@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated.js';
+import { DedicatedServer } from '../../src/dedicated.js';
 import * as gameModule from '@quake2ts/game';
 import { CollisionEntityIndex, traceBox } from '@quake2ts/shared';
 import { createMockCollisionEntityIndex } from '@quake2ts/test-utils';
