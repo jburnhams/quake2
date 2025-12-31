@@ -309,17 +309,17 @@ export class FrameRenderer {
                 cubemap: options.sky.cubemap
             });
         } else {
-            const viewNoTranslation = removeViewTranslation(options.camera.viewMatrix);
-            const skyViewProjection = mat4.create();
-            mat4.multiply(skyViewProjection, options.camera.projectionMatrix, viewNoTranslation);
-
-            const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
-
-            this.pipelines.skybox.draw(opaquePass, {
-                viewProjection: skyViewProjection as Float32Array,
-                scroll,
-                cubemap: options.sky.cubemap
-            });
+             // Legacy path removed or unsupported in this refactor
+             // The SkyboxPipeline signature has changed to require CameraState.
+             // If we needed to support both, SkyboxPipeline would need to support both inputs.
+             // For now, we enforce the new path.
+             const cameraState = options.cameraState ?? options.camera.toState();
+             const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
+             this.pipelines.skybox.draw(opaquePass, {
+                 cameraState,
+                 scroll,
+                 cubemap: options.sky.cubemap
+             });
         }
         stats.skyDrawn = true;
     }

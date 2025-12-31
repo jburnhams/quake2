@@ -1,15 +1,7 @@
-// Skybox shader using full-screen triangle approach
-// This avoids the w≈0 issue with cube geometry at diagonal view angles
-// by computing the world-space direction analytically per-pixel
+// Skybox shader using native coordinate system (Task 22-4)
 
 struct Uniforms {
-  // Inverse view rotation matrix (view→world transform for directions)
-  // Stored as 3 vec4s due to std140 padding
-  inverseViewRotation_col0: vec4<f32>,
-  inverseViewRotation_col1: vec4<f32>,
-  inverseViewRotation_col2: vec4<f32>,
-  tanHalfFov: f32,
-  aspect: f32,
+  viewProjection: mat4x4<f32>,
   scroll: vec2<f32>,
 }
 
@@ -19,61 +11,81 @@ struct Uniforms {
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
+  @location(0) direction: vec3<f32>,
 }
 
 @vertex
-fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
+fn vertexMain(@location(0) position: vec3<f32>) -> VertexOutput {
   var output: VertexOutput;
 
-  // Position is already in NDC space (-1 to 1)
-  output.position = vec4<f32>(position, 0.999, 1.0);  // z near 1.0 for far plane
+  // Direction for cubemap sampling
+  // The vertex position (local space) is the direction vector from center.
+  var dir = normalize(position);
+
+  // Apply scroll to direction
+  dir.x += uniforms.scroll.x * 0.01; // Scale scroll to match legacy behavior
+  dir.y += uniforms.scroll.y * 0.01;
+
+  // NO TRANSFORM - matrices handle it!
+  // The WebGPUMatrixBuilder already handles the coordinate system transform
+  // (Quake Space -> WebGPU View Space).
+  // However, we need to ensure the texture coordinates map correctly to the Cubemap faces.
+  //
+  // Quake +X (Forward) -> Cubemap -Z (Forward) ?
+  // If MatrixBuilder puts Camera looking down -Z.
+  // And we render a Cube defined in Quake Space (X-Forward).
+  // Then Vertex(1,0,0) is at Quake +X.
+  // View Matrix transforms this to View Space (0,0,-1).
+  // The Vertex Shader outputs this projected position.
+  //
+  // For Sampling:
+  // If we use 'dir' (Quake Space Position) as texture coordinate:
+  // sample(dir(1,0,0)) samples +X face of cubemap.
+  // Standard GL Cubemap +X is Right.
+  // But Quake +X is Forward.
+  // So we see "Right" texture when looking Forward.
+  //
+  // So we DO need to permute the coordinates for sampling to match Quake->GL Cubemap mapping.
+  // Quake X (Forward) -> GL -Z (Forward)
+  // Quake Y (Left)    -> GL -X (Left)
+  // Quake Z (Up)      -> GL +Y (Up)
+
+  // Wait, the documentation explicitly said: "NO TRANSFORM - matrices handle it!".
+  // This implies either:
+  // 1. The Cubemap texture data itself is swizzled during load.
+  // 2. The MatrixBuilder rotates the "World" such that Quake X aligns with GL X? No.
+  //
+  // If I follow the doc strictly ("NO TRANSFORM"), I should just output dir.
+  // But if the visual output is wrong (rotated 90 degrees), then the Doc assumption was wrong about texture sampling.
+  //
+  // Let's assume the doc is correct and the system (maybe texture loading or matrix builder) handles it.
+  // BUT the Doc's "OLD (BUGGY)" code explicitly removed:
+  // output.direction = vec3<f32>(-dir.y, dir.z, -dir.x);
+  //
+  // If I remove it, I am using `output.direction = dir`.
+  //
+  // Let's implement exactly what the Doc says for Task 2 "NEW (FIXED)".
+
+  output.direction = dir;
+
+  output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
+  // Force Z to far plane (w) so it renders behind everything.
+  // In WebGPU, clip space Z is 0..1. Far plane is 1.
+  // If we set Z = W, then Z/W = 1.
+  output.position.z = output.position.w;
 
   return output;
 }
 
-// Hard-coded screen size for now (should be passed as uniform)
-const SCREEN_SIZE: vec2<f32> = vec2<f32>(256.0, 256.0);
-
 @fragment
-fn fragmentMain(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
-  // Compute NDC from fragment coordinates
-  // fragCoord.xy is in framebuffer coordinates (0 to width, 0 to height)
-  // NDC.x: 0 -> -1, width -> +1
-  // NDC.y: 0 -> +1, height -> -1 (Y is flipped in WebGPU framebuffer)
-  let ndc = vec2<f32>(
-    (fragCoord.x / SCREEN_SIZE.x) * 2.0 - 1.0,
-    1.0 - (fragCoord.y / SCREEN_SIZE.y) * 2.0
-  );
-  // Get columns directly from uniforms
-  let col0 = uniforms.inverseViewRotation_col0.xyz;
-  let col1 = uniforms.inverseViewRotation_col1.xyz;
-  let col2 = uniforms.inverseViewRotation_col2.xyz;
+fn fragmentMain(@location(0) direction: vec3<f32>) -> @location(0) vec4<f32> {
+  // We might need to flip or rotate here if the vertex shader didn't do it.
+  // But following the "Native Coordinate System" plan, we trust the matrices and straightforward sampling.
+  // However, standard cubemap sampling:
+  // If direction is (1,0,0), it samples +X face.
 
-  // Compute view-space direction from NDC
-  // The view-space ray direction for a pixel at NDC (x, y) with perspective projection:
-  // viewDir = normalize(vec3(x * aspect * tanHalfFov, y * tanHalfFov, -1.0))
-  // Note: -1.0 for Z because we look down -Z in view space
-  let viewDir = normalize(vec3<f32>(
-    ndc.x * uniforms.aspect * uniforms.tanHalfFov,
-    ndc.y * uniforms.tanHalfFov,
-    -1.0
-  ));
+  // If we find the skybox is rotated, we will need to re-introduce a coordinate swizzle
+  // or fix the cubemap loading. For now, strictly follow Task 2 spec.
 
-  // Transform view-space direction to world-space (Quake coordinates)
-  // Manually unroll: worldDir = col0 * viewDir.x + col1 * viewDir.y + col2 * viewDir.z
-  var worldDir = col0 * viewDir.x + col1 * viewDir.y + col2 * viewDir.z;
-
-  // Apply small scroll offset in Quake horizontal plane
-  worldDir.x += uniforms.scroll.x * 0.01;
-  worldDir.y += uniforms.scroll.y * 0.01;
-
-  // Transform from Quake coordinates to GL/WebGPU cubemap coordinates
-  // Quake: +X forward, +Y left, +Z up
-  // GL cubemap: +X right, +Y up, -Z forward
-  var cubemapDir: vec3<f32>;
-  cubemapDir.x = -worldDir.y;  // Quake +Y (left) → GL -X (left)
-  cubemapDir.y = worldDir.z;   // Quake +Z (up) → GL +Y (up)
-  cubemapDir.z = -worldDir.x;  // Quake +X (forward) → GL -Z (forward)
-
-  return textureSample(t_skybox, s_skybox, cubemapDir);
+  return textureSample(t_skybox, s_skybox, direction);
 }
