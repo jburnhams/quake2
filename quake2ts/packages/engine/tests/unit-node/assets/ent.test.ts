@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseEntLump, serializeEntLump, validateEntity, EntEntity } from '../../src/assets/ent.js';
+import { parseEntLump, serializeEntLump, validateEntity, EntEntity } from '../../../src/assets/ent.js';
 
 describe('ENT Parser', () => {
   it('parses a simple entity', () => {

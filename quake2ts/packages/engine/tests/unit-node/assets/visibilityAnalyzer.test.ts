@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ResourceVisibilityAnalyzer } from '../../src/assets/visibilityAnalyzer.js';
-import { MessageWriter } from '../../src/demo/writer.js';
+import { ResourceVisibilityAnalyzer } from '../../../src/assets/visibilityAnalyzer.js';
+import { MessageWriter } from '../../../src/demo/writer.js';
 import { BinaryStream, ServerCommand, TempEntity } from '@quake2ts/shared';
-import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
+import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../../src/demo/parser.js';
 
 // Helper to create synthetic demo
 const createTestDemo = (): Uint8Array => {

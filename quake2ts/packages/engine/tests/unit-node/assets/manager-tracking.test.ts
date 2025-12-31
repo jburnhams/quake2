@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AssetManager } from '../../src/assets/manager.js';
-import { ResourceLoadTracker, ResourceType } from '../../src/assets/resourceTracker.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { AssetManager } from '../../../src/assets/manager.js';
+import { ResourceLoadTracker, ResourceType } from '../../../src/assets/resourceTracker.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 describe('AssetManager Tracking', () => {
   let vfs: VirtualFileSystem;

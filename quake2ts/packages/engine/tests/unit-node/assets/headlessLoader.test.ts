@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HeadlessMapLoader } from '../../src/assets/headlessLoader';
-import { BspLoader, BspMap } from '../../src/assets/bsp';
-import { RenderMode } from '../../src/render/types';
+import { HeadlessMapLoader } from '../../../src/assets/headlessLoader';
+import { BspLoader, BspMap } from '../../../src/assets/bsp';
+import { RenderMode } from '../../../src/render/types';
 
 describe('HeadlessMapLoader', () => {
   let loader: BspLoader;

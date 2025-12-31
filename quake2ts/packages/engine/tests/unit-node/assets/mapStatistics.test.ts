@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MapAnalyzer } from '../../src/assets/mapStatistics';
-import { BspLoader, BspMap } from '../../src/assets/bsp';
+import { MapAnalyzer } from '../../../src/assets/mapStatistics';
+import { BspLoader, BspMap } from '../../../src/assets/bsp';
 
 describe('MapAnalyzer', () => {
   let loader: BspLoader;

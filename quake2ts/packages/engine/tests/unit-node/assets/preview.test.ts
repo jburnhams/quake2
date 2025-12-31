@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AssetPreviewGenerator } from '../../src/assets/preview.js';
-import { AssetManager } from '../../src/assets/manager.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { Md2Model } from '../../src/assets/md2.js';
-import { Md3Model } from '../../src/assets/md3.js';
+import { AssetPreviewGenerator } from '../../../src/assets/preview.js';
+import { AssetManager } from '../../../src/assets/manager.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { Md2Model } from '../../../src/assets/md2.js';
+import { Md3Model } from '../../../src/assets/md3.js';
 import { Vec3 } from '@quake2ts/shared';
 import { createMockMd2Model, createMockMd3Model } from '@quake2ts/test-utils';
 import { ImageData } from '@napi-rs/canvas';

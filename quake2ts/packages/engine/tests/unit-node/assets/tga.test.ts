@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTga, TgaParseError } from '../../src/assets/tga';
+import { parseTga, TgaParseError } from '../../../src/assets/tga';
 
 describe('TGA Loader', () => {
   it('should throw on empty buffer', () => {

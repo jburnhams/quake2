@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ResourceVisibilityAnalyzer } from '../../src/assets/visibilityAnalyzer.js';
-import { MessageWriter } from '../../src/demo/writer.js';
+import { ResourceVisibilityAnalyzer } from '../../../src/assets/visibilityAnalyzer.js';
+import { MessageWriter } from '../../../src/demo/writer.js';
 import { ConfigStringIndex, Vec3 } from '@quake2ts/shared';
-import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
-import { BspMap, BspLeaf, BspNode, BspPlane, BspModel } from '../../src/assets/bsp.js';
+import { createEmptyEntityState, createEmptyProtocolPlayerState } from '../../../src/demo/parser.js';
+import { BspMap, BspLeaf, BspNode, BspPlane, BspModel } from '../../../src/assets/bsp.js';
 
 // Helper to create synthetic demo data with Writer
 const createSyntheticDemo = (
