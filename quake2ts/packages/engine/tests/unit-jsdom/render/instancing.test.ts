@@ -1,9 +1,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '../../src/render/renderer.js';
-import { InstanceData } from '../../src/render/instancing.js';
-import { Md2Model } from '../../src/assets/md2.js';
-import { Md3Model } from '../../src/assets/md3.js';
+import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
+import { InstanceData } from '@quake2ts/engine/render/instancing.js';
+import { Md2Model } from '@quake2ts/engine/assets/md2.js';
+import { Md3Model } from '@quake2ts/engine/assets/md3.js';
 
 // Mock shared
 vi.mock('@quake2ts/shared', async () => {

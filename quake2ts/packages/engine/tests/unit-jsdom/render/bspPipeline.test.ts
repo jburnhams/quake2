@@ -6,7 +6,7 @@ import {
   resolveLightStyles,
   BSP_SURFACE_VERTEX_SOURCE,
   BSP_SURFACE_FRAGMENT_SOURCE
-} from '../../src/render/bspPipeline.js';
+} from '@quake2ts/engine/render/bspPipeline.js';
 import {
   SURF_FLOWING,
   SURF_SKY,
@@ -37,7 +37,7 @@ const mockLocations = {
   'u_dlights[0].intensity': { id: 17 },
 };
 
-vi.mock('../../src/render/shaderProgram', () => {
+vi.mock('@quake2ts/engine/render/shaderProgram', () => {
   // Hardcode locations in the mock to avoid hoisting issues accessing outer variables
   const locations: any = {
     u_modelViewProjection: { id: 1 },

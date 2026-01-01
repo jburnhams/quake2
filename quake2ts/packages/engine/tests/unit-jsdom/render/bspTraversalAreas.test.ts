@@ -3,8 +3,8 @@ import {
   calculateReachableAreas,
   gatherVisibleFaces,
   isClusterVisible,
-} from '../../src/render/bspTraversal';
-import type { BspMap, BspArea, BspAreaPortal } from '../../src/assets/bsp';
+} from '@quake2ts/engine/render/bspTraversal';
+import type { BspMap, BspArea, BspAreaPortal } from '@quake2ts/engine/assets/bsp';
 import { Vec3 } from '@quake2ts/shared';
 
 describe('bspTraversal area portals', () => {

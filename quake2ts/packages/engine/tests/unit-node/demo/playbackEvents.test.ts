@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
-import { DemoAnalyzer } from '../../src/demo/analyzer.js';
-import { DemoEventType } from '../../src/demo/analysis.js';
+import { DemoPlaybackController } from '@quake2ts/engine/demo/playback.js';
+import { DemoAnalyzer } from '@quake2ts/engine/demo/analyzer.js';
+import { DemoEventType } from '@quake2ts/engine/demo/analysis.js';
 
 // Mock DemoReader and DemoAnalyzer
 const readerMock = class {
@@ -15,8 +15,8 @@ const readerMock = class {
     }
 };
 
-vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: readerMock }));
-vi.mock('../../src/demo/demoReader', () => ({ DemoReader: readerMock }));
+vi.mock('@quake2ts/engine/demo/demoReader.js', () => ({ DemoReader: readerMock }));
+vi.mock('@quake2ts/engine/demo/demoReader', () => ({ DemoReader: readerMock }));
 
 // We need to mock DemoAnalyzer because DemoPlaybackController instantiates it.
 // If we just spy on the prototype, we assume the real class is being used.
@@ -30,8 +30,8 @@ const analyzerMockClass = class {
     }
 };
 
-vi.mock('../../src/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
-vi.mock('../../src/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('@quake2ts/engine/demo/analyzer.js', () => ({ DemoAnalyzer: analyzerMockClass }));
+vi.mock('@quake2ts/engine/demo/analyzer', () => ({ DemoAnalyzer: analyzerMockClass }));
 
 describe('DemoPlaybackController', () => {
     let controller: DemoPlaybackController;
@@ -78,7 +78,7 @@ describe('DemoPlaybackController', () => {
         };
 
         // Re-import to pick up mocks
-        const { DemoPlaybackController: Controller } = await import('../../src/demo/playback.js');
+        const { DemoPlaybackController: Controller } = await import('@quake2ts/engine/demo/playback.js');
         controller = new Controller();
     });
 

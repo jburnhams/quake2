@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DemoRecorder } from '../../src/demo/recorder.js';
-import { DemoReader } from '../../src/demo/demoReader.js';
+import { DemoRecorder } from '@quake2ts/engine/demo/recorder.js';
+import { DemoReader } from '@quake2ts/engine/demo/demoReader.js';
 
 describe('DemoRecorder', () => {
   let recorder: DemoRecorder;

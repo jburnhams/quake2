@@ -2,11 +2,11 @@
 import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
-import { PakArchive } from '../../src/assets/pak';
+import { PakArchive } from '@quake2ts/engine/assets/pak';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
-import { NetworkMessageParser, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser';
-import { DemoReader } from '../../src/demo/demoReader';
-import { DemoStream } from '../../src/demo/demoStream';
+import { NetworkMessageParser, PROTOCOL_VERSION_RERELEASE } from '@quake2ts/engine/demo/parser';
+import { DemoReader } from '@quake2ts/engine/demo/demoReader';
+import { DemoStream } from '@quake2ts/engine/demo/demoStream';
 
 // Mock Handler to capture events
 const createMockHandler = () => ({
@@ -41,7 +41,7 @@ describe('Real Demo Parsing (demo1.dm2)', () => {
 
     beforeAll(() => {
         // Load pak.pak
-        const pakPath = resolve(__dirname, '../../../../pak.pak');
+        const pakPath = resolve(__dirname, '../../../../../pak.pak');
         const buffer = readFileSync(pakPath);
         const pak = PakArchive.fromArrayBuffer('pak.pak', buffer.buffer);
 

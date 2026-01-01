@@ -1,11 +1,11 @@
-import { createRenderer } from '../../src/render/renderer.js';
-import { renderFrame } from '../../src/render/frame.js'; // Import the singleton spy
-import { DebugMode } from '../../src/render/debugMode.js';
+import { createRenderer } from '@quake2ts/engine/render/renderer.js';
+import { renderFrame } from '@quake2ts/engine/render/frame.js'; // Import the singleton spy
+import { DebugMode } from '@quake2ts/engine/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../src/render/bspPipeline', () => {
+vi.mock('@quake2ts/engine/render/bspPipeline', () => {
     return {
         BspSurfacePipeline: class {
             constructor() {
@@ -20,7 +20,7 @@ vi.mock('../../src/render/bspPipeline', () => {
     };
 });
 
-vi.mock('../../src/render/skybox', () => {
+vi.mock('@quake2ts/engine/render/skybox', () => {
     return {
         SkyboxPipeline: class {
             constructor() {
@@ -33,7 +33,7 @@ vi.mock('../../src/render/skybox', () => {
     };
 });
 
-vi.mock('../../src/render/md2Pipeline', () => {
+vi.mock('@quake2ts/engine/render/md2Pipeline', () => {
     return {
         Md2Pipeline: class {
             constructor() {
@@ -47,7 +47,7 @@ vi.mock('../../src/render/md2Pipeline', () => {
     };
 });
 
-vi.mock('../../src/render/sprite', () => {
+vi.mock('@quake2ts/engine/render/sprite', () => {
     return {
         SpriteRenderer: class {
             constructor() {
@@ -60,7 +60,7 @@ vi.mock('../../src/render/sprite', () => {
     };
 });
 
-vi.mock('../../src/render/collisionVis', () => {
+vi.mock('@quake2ts/engine/render/collisionVis', () => {
     return {
         CollisionVisRenderer: class {
             constructor() {
@@ -75,7 +75,7 @@ vi.mock('../../src/render/collisionVis', () => {
 });
 
 // Properly mock Md3Pipeline and Md3ModelMesh
-vi.mock('../../src/render/md3Pipeline', async (importOriginal) => {
+vi.mock('@quake2ts/engine/render/md3Pipeline', async (importOriginal) => {
     return {
         Md3Pipeline: class {
             constructor() {
@@ -98,7 +98,7 @@ vi.mock('../../src/render/md3Pipeline', async (importOriginal) => {
 });
 
 // Use manual mock for frame.js
-vi.mock('../../src/render/frame');
+vi.mock('@quake2ts/engine/render/frame');
 
 // Mock DebugRenderer
 const mockDebugRenderer = {
@@ -110,7 +110,7 @@ const mockDebugRenderer = {
     drawLine: vi.fn(), // Needed for PVS/Normals
 };
 
-vi.mock('../../src/render/debug', () => ({
+vi.mock('@quake2ts/engine/render/debug', () => ({
     DebugRenderer: class {
         constructor() {
             return mockDebugRenderer;
@@ -119,19 +119,19 @@ vi.mock('../../src/render/debug', () => ({
 }));
 
 // Mock culling and traversal
-vi.mock('../../src/render/culling', () => ({
+vi.mock('@quake2ts/engine/render/culling', () => ({
     boxIntersectsFrustum: vi.fn().mockReturnValue(true),
     extractFrustumPlanes: vi.fn().mockReturnValue([]),
     transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
 }));
 
-vi.mock('../../src/render/bspTraversal', () => ({
+vi.mock('@quake2ts/engine/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0),
     isClusterVisible: vi.fn().mockReturnValue(true),
     gatherVisibleFaces: vi.fn().mockReturnValue([]),
 }));
 
-vi.mock('../../src/render/light', () => ({
+vi.mock('@quake2ts/engine/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
 
@@ -143,7 +143,7 @@ describe('DebugMode Integration', () => {
         vi.resetModules();
         vi.clearAllMocks();
         mockGl = createMockWebGL2Context();
-        const { createRenderer: create } = await import('../../src/render/renderer.js');
+        const { createRenderer: create } = await import('@quake2ts/engine/render/renderer.js');
         renderer = create(mockGl as any);
 
         // Ensure renderFrame returns valid stats to avoid issues
