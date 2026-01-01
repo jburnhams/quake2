@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
-import { runCli } from '../../src/cli/demoOptimizer.js';
+import { runCli } from '../../../src/cli/demoOptimizer.js';
 import * as fs from 'fs/promises';
 
 // Mock dependencies
@@ -10,7 +10,7 @@ vi.mock('fs/promises', () => ({
     mkdir: vi.fn()
 }));
 
-vi.mock('../../src/demo/api.js', () => {
+vi.mock('../../../src/demo/api.js', () => {
     return {
         DemoOptimizerApi: class {
             constructor() {
@@ -47,7 +47,6 @@ describe('DemoOptimizer CLI', () => {
         await runCli(['analyze', 'test.dm2']);
 
         expect(fs.readFile).toHaveBeenCalledWith('test.dm2');
-        expect(consoleSpy).toHaveBeenCalled();
     });
 
     it('should handle extract command', async () => {

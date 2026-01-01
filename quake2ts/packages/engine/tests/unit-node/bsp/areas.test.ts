@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBspData, BspLump } from '../../src/assets/bsp';
+import { parseBspData, BspLump } from '../../../src/assets/bsp';
 
 describe('BSP Area Parsing', () => {
   it('should parse areas correctly', () => {
