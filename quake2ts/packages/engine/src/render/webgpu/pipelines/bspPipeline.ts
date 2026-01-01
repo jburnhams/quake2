@@ -367,6 +367,8 @@ export class BspSurfacePipeline {
           modeInt = 1; // Solid
       } else if (renderMode.mode === 'solid-faceted') {
           modeInt = 2; // Faceted
+      } else if (renderMode.mode === 'worldpos-debug') {
+          modeInt = 3; // Debug: output worldPos as color
       }
 
       if (renderMode.color) {

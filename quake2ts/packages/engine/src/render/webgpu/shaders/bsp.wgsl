@@ -148,6 +148,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
         finalColor = vec4<f32>(base.rgb, base.a * surface.alpha);
 
+    } else if (surface.renderMode == 3u) {
+        // DEBUG: Output worldPos as color (scaled to 0-1 range)
+        // Map worldPos components: divide by 256 and take fract to visualize
+        // Values 0-255 map to 0-1, values 256-511 wrap back to 0-1, etc.
+        let posScaled = abs(input.worldPos) / 256.0;
+        finalColor = vec4<f32>(fract(posScaled.x), fract(posScaled.y), fract(posScaled.z), 1.0);
     } else {
         // SOLID / WIREFRAME / FACETED
         var color = surface.solidColor.rgb;

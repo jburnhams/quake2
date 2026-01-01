@@ -29,7 +29,7 @@ export interface FrameRenderStats {
   vertexCount: number;
 }
 
-export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted';
+export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted' | 'worldpos-debug';
 
 export interface RenderModeConfig {
   readonly mode: RenderMode;
