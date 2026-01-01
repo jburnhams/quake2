@@ -30,8 +30,11 @@ struct SurfaceUniforms {
     applyLightmap: u32,
     warp: u32,
     lightmapOnly: u32,
-    renderMode: u32, // 0: Texture, 1: Solid, 2: Faceted
-    padding: vec3<f32>,
+    renderMode: u32, // 0: Texture, 1: Solid, 2: Faceted, 3: WorldPos Debug, 4: Distance Debug
+    pad0: vec3<f32>,
+    // Workaround for worldPos offset bug: surface mins for correction
+    surfaceMins: vec3<f32>,
+    pad1: f32,
 }
 
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
@@ -123,12 +126,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
             }
 
             // Apply Dynamic Lights
+            // Workaround: worldPos appears offset by surface.mins, so we add it back
+            let correctedWorldPos = input.worldPos + surface.surfaceMins;
             for (var i = 0u; i < 32u; i++) {
                 if (i >= frame.numDlights) {
                     break;
                 }
                 let dlight = frame.dlights[i];
-                let dist = distance(input.worldPos, dlight.position);
+                let dist = distance(correctedWorldPos, dlight.position);
 
                 if (dist < dlight.intensity) {
                     let contribution = (dlight.intensity - dist) * (1.0 / 255.0);
@@ -149,17 +154,21 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         finalColor = vec4<f32>(base.rgb, base.a * surface.alpha);
 
     } else if (surface.renderMode == 3u) {
-        // DEBUG: Output worldPos as color (scaled to 0-1 range)
+        // DEBUG: Output corrected worldPos as color (scaled to 0-1 range)
         // Map worldPos components: divide by 256 and take fract to visualize
         // Values 0-255 map to 0-1, values 256-511 wrap back to 0-1, etc.
-        let posScaled = abs(input.worldPos) / 256.0;
+        // Use correctedWorldPos (input.worldPos + surface.surfaceMins) for accurate debug output
+        let debugWorldPos = input.worldPos + surface.surfaceMins;
+        let posScaled = abs(debugWorldPos) / 256.0;
         finalColor = vec4<f32>(fract(posScaled.x), fract(posScaled.y), fract(posScaled.z), 1.0);
     } else if (surface.renderMode == 4u) {
         // DEBUG: Output distance to first dlight as grayscale
         // Brighter = closer to light. Scale: 0-500 units maps to 1.0-0.0
+        // Use correctedWorldPos (input.worldPos + surface.surfaceMins) for accurate distance calculation
+        let debugWorldPos = input.worldPos + surface.surfaceMins;
         var dist = 500.0;
         if (frame.numDlights > 0u) {
-            dist = distance(input.worldPos, frame.dlights[0].position);
+            dist = distance(debugWorldPos, frame.dlights[0].position);
         }
         let brightness = clamp(1.0 - dist / 500.0, 0.0, 1.0);
         finalColor = vec4<f32>(brightness, brightness, brightness, 1.0);

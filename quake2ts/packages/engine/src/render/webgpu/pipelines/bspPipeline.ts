@@ -46,6 +46,8 @@ export interface BspSurfaceBindOptions {
   readonly fullbright?: boolean;
   readonly ambient?: number;
   readonly cameraPosition?: Float32List;
+  // Workaround for worldPos offset bug: surface mins for correction in shader
+  readonly surfaceMins?: { readonly x: number; readonly y: number; readonly z: number };
 }
 
 export interface SurfaceRenderState {
@@ -301,6 +303,7 @@ export class BspSurfacePipeline {
       fullbright = false,
       ambient = 0.0,
       cameraPosition = [0,0,0],
+      surfaceMins = { x: 0, y: 0, z: 0 },
     } = options;
 
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
@@ -389,6 +392,14 @@ export class BspSurfacePipeline {
     surfaceUint[18] = finalWarp ? 1 : 0;
     surfaceUint[19] = lightmapOnly ? 1 : 0;
     surfaceUint[20] = modeInt;
+    // WGSL struct alignment: vec3<f32> has 16-byte alignment
+    // After renderMode at byte 80 (index 20):
+    // - pad0 (vec3): byte 96 (index 24) - aligned to 16
+    // - surfaceMins (vec3): byte 112 (index 28) - aligned to 16
+    // - pad1 (f32): byte 124 (index 31)
+    surfaceData[28] = surfaceMins.x;
+    surfaceData[29] = surfaceMins.y;
+    surfaceData[30] = surfaceMins.z;
 
     this.device.queue.writeBuffer(this.surfaceUniformBuffer, 0, surfaceData);
 

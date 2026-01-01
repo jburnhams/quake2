@@ -396,7 +396,9 @@ export class FrameRenderer {
                       gamma,
                       fullbright,
                       ambient,
-                      cameraPosition: options.camera.position as Float32Array
+                      cameraPosition: options.camera.position as Float32Array,
+                      // Workaround for worldPos offset bug: pass surface mins for shader correction
+                      surfaceMins: geometry.mins
                   });
 
                   this.pipelines.bsp.draw(pass, geometry, renderMode);
