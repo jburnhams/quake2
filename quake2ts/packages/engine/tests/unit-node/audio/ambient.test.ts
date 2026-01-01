@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AmbientSoundSystem } from '../../src/audio/ambient.js';
-import { AudioSystem } from '../../src/audio/system.js';
-import { ATTN_NORM } from '../../src/audio/constants.js';
+import { AmbientSoundSystem } from '../../../src/audio/ambient.js';
+import { AudioSystem } from '../../../src/audio/system.js';
+import { ATTN_NORM } from '../../../src/audio/constants.js';
 
 describe('AmbientSoundSystem', () => {
   let audioSystem: AudioSystem;

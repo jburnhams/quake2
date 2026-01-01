@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AudioRegistry } from '../../src/assets/audio.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { AudioRegistry } from '../../../src/assets/audio.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 describe('AudioRegistry Worker', () => {
     let vfs: VirtualFileSystem;

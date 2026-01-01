@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { SoundPrecache } from '../../src/audio/precache.js';
-import { SoundRegistry } from '../../src/audio/registry.js';
-import { AudioContextController } from '../../src/audio/context.js';
+import { SoundPrecache } from '../../../src/audio/precache.js';
+import { SoundRegistry } from '../../../src/audio/registry.js';
+import { AudioContextController } from '../../../src/audio/context.js';
 import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 class FakeVfs {

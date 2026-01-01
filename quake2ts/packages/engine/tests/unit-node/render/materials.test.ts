@@ -1,6 +1,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MaterialManager, BlendMode } from '../../src/render/materials.js';
+import { MaterialManager, BlendMode } from '../../../src/render/materials.js';
 
 describe('MaterialManager', () => {
   let manager: MaterialManager;

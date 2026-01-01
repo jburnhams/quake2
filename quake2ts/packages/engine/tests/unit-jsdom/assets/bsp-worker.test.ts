@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BspLoader } from '../../src/assets/bsp.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { BspLoader } from '../../../src/assets/bsp.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 describe('BspLoader with Worker', () => {
   let vfs: VirtualFileSystem;
