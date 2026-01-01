@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { Md3ModelMesh, Md3Pipeline } from '../../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../../src/render/resources.js';
 import path from 'path';
+import * as culling from '../../../src/render/culling';
 
 // Mock the pipeline dependencies to prevent WebGL calls
 vi.mock('../../../src/render/bspPipeline', () => {
@@ -133,6 +134,11 @@ describe('Renderer Highlighting', () => {
     beforeEach(async () => {
         vi.resetModules();
         vi.clearAllMocks();
+
+        // Restore mocks that are reset by mockReset: true
+        vi.mocked(culling.transformAabb).mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} });
+        vi.mocked(culling.boxIntersectsFrustum).mockReturnValue(true);
+        vi.mocked(culling.extractFrustumPlanes).mockReturnValue([]);
 
         const framePath = path.resolve(__dirname, '../../../src/render/frame.js');
         vi.doMock(framePath, () => ({
