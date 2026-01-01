@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AssetManager } from '../../src/assets/manager.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
+import { AssetManager } from '../../../src/assets/manager.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 describe('AssetManager Memory Budget', () => {
     let vfs: VirtualFileSystem;
