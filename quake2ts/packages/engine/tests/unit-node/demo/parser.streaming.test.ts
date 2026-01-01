@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NetworkMessageParser } from '../../src/demo/parser.js';
-import { StreamingBuffer } from '../../src/stream/streamingBuffer.js';
+import { NetworkMessageParser } from '../../../src/demo/parser.js';
+import { StreamingBuffer } from '../../../src/stream/streamingBuffer.js';
 
 // Mock helpers
 const createMockHandler = () => ({

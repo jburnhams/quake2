@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DemoEventType } from '../../src/demo/analysis.js';
+import { DemoEventType } from '../../../src/demo/analysis.js';
 
 // Mock dependencies
 const mockDemoReader = {
@@ -19,8 +19,8 @@ const demoReaderMockClass = class {
   }
 };
 
-vi.mock('../../src/demo/demoReader.js', () => ({ DemoReader: demoReaderMockClass }));
-vi.mock('../../src/demo/demoReader', () => ({ DemoReader: demoReaderMockClass }));
+vi.mock('../../../src/demo/demoReader.js', () => ({ DemoReader: demoReaderMockClass }));
+vi.mock('../../../src/demo/demoReader', () => ({ DemoReader: demoReaderMockClass }));
 
 const parserMockImpl = class {
     constructor(data, handler) {
@@ -29,12 +29,12 @@ const parserMockImpl = class {
     }
 };
 
-vi.mock('../../src/demo/parser.js', () => ({
+vi.mock('../../../src/demo/parser.js', () => ({
   NetworkMessageParser: parserMockImpl,
   createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
   createEmptyProtocolPlayerState: () => ({}),
 }));
-vi.mock('../../src/demo/parser', () => ({
+vi.mock('../../../src/demo/parser', () => ({
   NetworkMessageParser: parserMockImpl,
   createEmptyEntityState: () => ({ number: 0, origin: { x:0, y:0, z:0 } }),
   createEmptyProtocolPlayerState: () => ({}),
@@ -48,7 +48,7 @@ describe('DemoAnalyzer', () => {
     vi.resetModules();
     buffer = new ArrayBuffer(0);
     // Dynamic import to respect resetModules
-    const { DemoAnalyzer } = await import('../../src/demo/analyzer.js');
+    const { DemoAnalyzer } = await import('../../../src/demo/analyzer.js');
     analyzer = new DemoAnalyzer(buffer);
     vi.clearAllMocks();
   });

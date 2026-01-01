@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser } from '../../src/demo/parser.js';
+import { NetworkMessageParser } from '../../../src/demo/parser.js';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
 
 describe('NetworkMessageParser', () => {
