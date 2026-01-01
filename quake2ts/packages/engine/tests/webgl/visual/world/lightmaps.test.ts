@@ -153,10 +153,11 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     ${HELPER_SCRIPTS}
 
     // Quad with a red lightmap
-    // Texture coords range from -128 to 128, so lightmap is ceil(128/16) - floor(-128/16) + 1 = 8 - (-8) + 1 = 17
-    const lm = createTestLightmap(17, 17, 255, 0, 0); // Red
+    // Using smaller quad size (10x10) to match working tests
+    // Texture coords range from -8 to 8, so lightmap is ceil(8/16) - floor(-8/16) + 1 = 1 - (-1) + 1 = 3
+    const lm = createTestLightmap(3, 3, 255, 0, 0); // Red
     const surface = {
-      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      vertices: [[-8, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0]],
       texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255] // Style 0 only
@@ -168,7 +169,7 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     // White base texture so lightmap color shows clearly
     renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 300]);
+    const camera = createLookAtCamera([0, 0, 25]);
 
     renderer.setFullbright(false);
 
@@ -198,9 +199,9 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
 
     // Quad with white base texture + green lightmap
     // Should result in green surface
-    const lm = createTestLightmap(17, 17, 0, 255, 0); // Green
+    const lm = createTestLightmap(3, 3, 0, 255, 0); // Green
     const surface = {
-      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      vertices: [[-8, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0]],
       texInfo: { texture: 'checker', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255]
@@ -216,7 +217,7 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
     ]);
     renderer.registerTexture('checker', createRawTexture(2, 2, checker, 'checker'));
 
-    const camera = createLookAtCamera([0, 0, 300]);
+    const camera = createLookAtCamera([0, 0, 25]);
 
     renderer.setFullbright(false);
 
@@ -245,9 +246,9 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Quad with dark lightmap (blue), but rendered in fullbright
-    const lm = createTestLightmap(17, 17, 0, 0, 50); // Dark Blue
+    const lm = createTestLightmap(3, 3, 0, 0, 50); // Dark Blue
     const surface = {
-      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      vertices: [[-8, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0]],
       texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: lm,
       styles: [0, 255, 255, 255]
@@ -258,7 +259,7 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
 
     renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 300]);
+    const camera = createLookAtCamera([0, 0, 25]);
 
     // Enable fullbright
     renderer.setFullbright(true);
@@ -288,8 +289,8 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Quad with multiple light styles
-    const width = 17;
-    const height = 17;
+    const width = 3;
+    const height = 3;
     const data = new Uint8Array(width * height * 3 * 3);
 
     // Style 0 (Red)
@@ -313,7 +314,7 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     }
 
     const surface = {
-      vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
+      vertices: [[-8, -8, 0], [8, -8, 0], [8, 8, 0], [-8, 8, 0]],
       texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
       lightmap: data,
       styles: [0, 1, 2, 255] // Uses styles 0, 1, and 2
@@ -324,7 +325,7 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
 
     renderer.registerTexture('base', createRawTexture(1, 1, new Uint8Array([255, 255, 255, 255]), 'base'));
 
-    const camera = createLookAtCamera([0, 0, 300]);
+    const camera = createLookAtCamera([0, 0, 25]);
 
     renderer.setFullbright(false);
 

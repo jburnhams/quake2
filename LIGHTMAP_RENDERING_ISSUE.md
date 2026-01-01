@@ -1,12 +1,22 @@
 # WebGL Lightmap Rendering Issue
 
-## Update: Lightmap Dimension Fix Applied
+## Update: ROOT CAUSE IDENTIFIED
 
-**Status**: ⚠️ Geometry still renders extremely small (tiny dots instead of full-size quads)
-**Recent Changes**:
-- Fixed lightmap dimensions in tests (changed from 16×16 to 17×17 to match expected size)
-- Lightmap colors are still correct (red/green visible)
-- Issue persists despite dimension fix
+**Status**: 🔴 CRITICAL BUG - Any geometry with lightmaps renders as tiny dots
+**Root Cause Found**: The presence of lightmaps causes ALL geometry to render incorrectly, regardless of size
+
+### Critical Finding
+Adding a lightmap to the working `bsp-single-quad` test (which renders correctly without lightmaps) causes it to also render as a tiny dot. This proves:
+- ❌ NOT a problem with test geometry dimensions
+- ❌ NOT a problem with camera positioning
+- ❌ NOT a problem with lightmap dimensions (17×17 vs 16×16)
+- ✅ **IS a problem with how lightmaps affect the rendering pipeline**
+
+### Recent Changes
+- Scaled down lightmap test quads from 256×256 to 16×16 (matching working BSP tests)
+- Changed camera from z=300 to z=25
+- Fixed lightmap dimensions (3×3 for 16×16 quad)
+- **Result**: Issue persists - lightmaps still render as tiny dots
 
 ### Progress
 After implementing the vertex layout changes and light style defaults:
