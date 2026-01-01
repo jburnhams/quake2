@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseMd3 } from '../src/assets/md3.js';
+import { parseMd3 } from '../../../src/assets/md3.js';
 import {
   MD3_FRAGMENT_SHADER,
   MD3_VERTEX_SHADER,
@@ -9,7 +9,7 @@ import {
   buildMd3SurfaceGeometry,
   buildMd3VertexData,
   interpolateMd3Tag,
-} from '../src/render/md3Pipeline.js';
+} from '../../../src/render/md3Pipeline.js';
 import { buildMd3 } from '@quake2ts/test-utils'; // md3Builder.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { mat4FromBasis } from '@quake2ts/shared';

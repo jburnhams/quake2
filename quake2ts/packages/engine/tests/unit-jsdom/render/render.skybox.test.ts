@@ -5,7 +5,7 @@ import {
   SkyboxPipeline,
   computeSkyScroll,
   removeViewTranslation,
-} from '../src/render/skybox.js';
+} from '../../../src/render/skybox.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('Skybox helpers', () => {

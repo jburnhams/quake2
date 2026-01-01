@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BspInspector } from '../../src/editor/bsp-inspector';
-import { BspMap } from '../../src/assets/bsp'; // Fixed import path
+import { BspInspector } from '../../../src/editor/bsp-inspector';
+import { BspMap } from '../../../src/assets/bsp'; // Fixed import path
 import { vec3 } from 'gl-matrix';
-import { TextureCache, PreparedTexture } from '../../src/assets/texture';
+import { TextureCache, PreparedTexture } from '../../../src/assets/texture';
 
 describe('BspInspector', () => {
   let mockBsp: BspMap;

@@ -5,7 +5,7 @@ import {
   BspSurfacePipeline,
   deriveSurfaceRenderState,
   resolveLightStyles,
-} from '../src/render/bspPipeline.js';
+} from '../../../src/render/bspPipeline.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('resolveLightStyles', () => {

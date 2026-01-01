@@ -10,7 +10,7 @@ import {
   spawnMuzzleFlash,
   spawnTeleportFlash,
   spawnTrail,
-} from '../src/render/particleSystem.js';
+} from '../../../src/render/particleSystem.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { RandomGenerator } from '@quake2ts/shared';
 
