@@ -68,7 +68,7 @@ vi.mock('../../../src/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
 
-vi.mock('../../../src/render/culling.js', () => ({
+vi.mock('../../../src/render/culling', () => ({
     boxIntersectsFrustum: vi.fn().mockReturnValue(true),
     extractFrustumPlanes: vi.fn().mockReturnValue([]),
     transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
