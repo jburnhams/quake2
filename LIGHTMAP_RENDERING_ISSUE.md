@@ -1,9 +1,12 @@
 # WebGL Lightmap Rendering Issue
 
-## Update: Lightmap Colors Now Working! (Commit 69e8e803)
+## Update: Lightmap Dimension Fix Applied
 
-**Status**: ✅ Lightmap colors are now being applied correctly
-**New Issue**: ⚠️ Geometry renders extremely small (tiny dots instead of full-size quads)
+**Status**: ⚠️ Geometry still renders extremely small (tiny dots instead of full-size quads)
+**Recent Changes**:
+- Fixed lightmap dimensions in tests (changed from 16×16 to 17×17 to match expected size)
+- Lightmap colors are still correct (red/green visible)
+- Issue persists despite dimension fix
 
 ### Progress
 After implementing the vertex layout changes and light style defaults:
@@ -18,7 +21,15 @@ The lightmap **colors** are correct, but the **geometry scale** is wrong:
 - Should fill most of 256×256 viewport
 - **Actually renders as ~2 pixel dot**
 
-This suggests an issue in `createBspSurfaces()` when processing lightmap data, but NOT an issue with the lightmap sampling shader logic (which works correctly).
+**Lightmap Dimension Analysis**:
+- Texture coords range: -128 to 128
+- floorMinS/T = floor(-128/16) = -8
+- Expected lightmap size: ceil(128/16) - (-8) + 1 = 17×17
+- Tests originally created: 16×16 (WRONG)
+- Tests now create: 17×17 (CORRECT)
+- **Issue persists even with correct dimensions**
+
+This suggests the problem is NOT in lightmap dimension calculation, but somewhere else in the vertex processing pipeline.
 
 ---
 

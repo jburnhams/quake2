@@ -153,7 +153,8 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     ${HELPER_SCRIPTS}
 
     // Quad with a red lightmap
-    const lm = createTestLightmap(16, 16, 255, 0, 0); // Red
+    // Texture coords range from -128 to 128, so lightmap is ceil(128/16) - floor(-128/16) + 1 = 8 - (-8) + 1 = 17
+    const lm = createTestLightmap(17, 17, 255, 0, 0); // Red
     const surface = {
       vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
       texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
@@ -197,7 +198,7 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
 
     // Quad with white base texture + green lightmap
     // Should result in green surface
-    const lm = createTestLightmap(16, 16, 0, 255, 0); // Green
+    const lm = createTestLightmap(17, 17, 0, 255, 0); // Green
     const surface = {
       vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
       texInfo: { texture: 'checker', s: [1, 0, 0], t: [0, 1, 0] },
@@ -244,7 +245,7 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Quad with dark lightmap (blue), but rendered in fullbright
-    const lm = createTestLightmap(16, 16, 0, 0, 50); // Dark Blue
+    const lm = createTestLightmap(17, 17, 0, 0, 50); // Dark Blue
     const surface = {
       vertices: [[-128, -128, 0], [128, -128, 0], [128, 128, 0], [-128, 128, 0]],
       texInfo: { texture: 'base', s: [1, 0, 0], t: [0, 1, 0] },
@@ -287,8 +288,8 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     ${HELPER_SCRIPTS}
 
     // Quad with multiple light styles
-    const width = 16;
-    const height = 16;
+    const width = 17;
+    const height = 17;
     const data = new Uint8Array(width * height * 3 * 3);
 
     // Style 0 (Red)

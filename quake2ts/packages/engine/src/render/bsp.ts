@@ -262,6 +262,7 @@ function buildVertexData(
     interleaved[o + 6] = lightmapCoords[t + 1];
     interleaved[o + 7] = lightmapStep; // Add lightmap step
   }
+
   return interleaved;
 }
 
