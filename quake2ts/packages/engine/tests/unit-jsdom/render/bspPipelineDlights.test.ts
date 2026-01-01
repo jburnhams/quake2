@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BspSurfacePipeline, BspSurfaceBindOptions } from '../../src/render/bspPipeline.js';
-import { DLight } from '../../src/render/dlight.js';
+import { BspSurfacePipeline, BspSurfaceBindOptions } from '../../../src/render/bspPipeline.js';
+import { DLight } from '../../../src/render/dlight.js';
 
 // Mock WebGL context
 const gl = {

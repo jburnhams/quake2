@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer } from '../../src/render/renderer.js';
-import { DebugRenderer } from '../../src/render/debug.js';
+import { createRenderer } from '../../../src/render/renderer.js';
+import { DebugRenderer } from '../../../src/render/debug.js';
 
 // Mock WebGL2RenderingContext
 const gl = {
@@ -79,48 +79,48 @@ const gl = {
 } as unknown as WebGL2RenderingContext;
 
 // Mock dependencies
-vi.mock('../../src/render/bspPipeline.js', () => ({
+vi.mock('../../../src/render/bspPipeline.js', () => ({
     BspSurfacePipeline: class { bind = vi.fn(); draw = vi.fn(); dispose = vi.fn(); },
     applySurfaceState: vi.fn(),
 }));
 
-vi.mock('../../src/render/skybox.js', () => ({
+vi.mock('../../../src/render/skybox.js', () => ({
     SkyboxPipeline: class { bind = vi.fn(); draw = vi.fn(); gl = gl; },
     computeSkyScroll: vi.fn(() => [0, 0]),
     removeViewTranslation: vi.fn((m) => m),
 }));
 
-vi.mock('../../src/render/md2Pipeline.js', () => ({
+vi.mock('../../../src/render/md2Pipeline.js', () => ({
     Md2Pipeline: class { bind = vi.fn(); draw = vi.fn(); dispose = vi.fn(); },
     Md2MeshBuffers: class { update = vi.fn(); geometry = { vertices: [], indices: [] }; vertexArray = { bind: vi.fn() }; indexBuffer = { bind: vi.fn() }; }
 }));
 
-vi.mock('../../src/render/md3Pipeline.js', () => ({
+vi.mock('../../../src/render/md3Pipeline.js', () => ({
     Md3Pipeline: class { bind = vi.fn(); drawSurface = vi.fn(); dispose = vi.fn(); },
     Md3ModelMesh: class { surfaces = new Map(); update = vi.fn(); }
 }));
 
-vi.mock('../../src/render/sprite.js', () => ({
+vi.mock('../../../src/render/sprite.js', () => ({
     SpriteRenderer: class { begin = vi.fn(); draw = vi.fn(); drawRect = vi.fn(); end = vi.fn(); }
 }));
 
-vi.mock('../../src/render/collisionVis.js', () => ({
+vi.mock('../../../src/render/collisionVis.js', () => ({
     CollisionVisRenderer: class { render = vi.fn(); clear = vi.fn(); }
 }));
 
-vi.mock('../../src/render/bspTraversal.js', () => ({
+vi.mock('../../../src/render/bspTraversal.js', () => ({
     findLeafForPoint: vi.fn(() => -1),
     isClusterVisible: vi.fn(() => true),
     gatherVisibleFaces: vi.fn(() => []),
 }));
 
-vi.mock('../../src/render/culling.js', () => ({
+vi.mock('../../../src/render/culling.js', () => ({
     extractFrustumPlanes: vi.fn(() => []),
     boxIntersectsFrustum: vi.fn(() => true),
     transformAabb: vi.fn(() => ({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })),
 }));
 
-vi.mock('../../src/render/light.js', () => ({
+vi.mock('../../../src/render/light.js', () => ({
     calculateEntityLight: vi.fn(() => 1.0),
 }));
 

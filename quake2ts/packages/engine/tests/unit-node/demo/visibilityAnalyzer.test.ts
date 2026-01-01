@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ResourceVisibilityAnalyzer, VisibilityTimeline } from '../../src/assets/visibilityAnalyzer.js';
-import { DemoWriter } from '../../src/demo/demoWriter.js';
-import { MessageWriter } from '../../src/demo/writer.js';
-import { FrameData, createEmptyProtocolPlayerState } from '../../src/demo/parser.js';
+import { ResourceVisibilityAnalyzer, VisibilityTimeline } from '../../../src/assets/visibilityAnalyzer.js';
+import { DemoWriter } from '../../../src/demo/demoWriter.js';
+import { MessageWriter } from '../../../src/demo/writer.js';
+import { FrameData, createEmptyProtocolPlayerState } from '../../../src/demo/parser.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
 
 describe('ResourceVisibilityAnalyzer', () => {

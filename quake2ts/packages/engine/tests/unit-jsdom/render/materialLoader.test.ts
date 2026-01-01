@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMaterialsFromMap } from '../../src/render/materialLoader.js';
-import { MaterialManager, BlendMode } from '../../src/render/materials.js';
-import { Texture2D } from '../../src/render/resources.js';
-import { BspMap, BspTexInfo } from '../../src/assets/bsp.js';
+import { createMaterialsFromMap } from '../../../src/render/materialLoader.js';
+import { MaterialManager, BlendMode } from '../../../src/render/materials.js';
+import { Texture2D } from '../../../src/render/resources.js';
+import { BspMap, BspTexInfo } from '../../../src/assets/bsp.js';
 import { SURF_FLOWING, SURF_WARP, SURF_TRANS33, SURF_NONE } from '@quake2ts/shared';
 
 // Mock WebGL2RenderingContext

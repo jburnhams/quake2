@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LightStyleManager } from '../../src/render/lightStyles.js';
+import { LightStyleManager } from '../../../src/render/lightStyles.js';
 
 describe('LightStyleManager', () => {
   it('should initialize with defaults', () => {

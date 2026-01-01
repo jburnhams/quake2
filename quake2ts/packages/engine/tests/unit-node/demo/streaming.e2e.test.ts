@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { StreamingBuffer } from '../../src/stream/streamingBuffer.js';
-import { NetworkMessageParser, NetworkMessageHandler } from '../../src/demo/parser.js';
-import { DemoStream } from '../../src/demo/demoStream.js';
+import { StreamingBuffer } from '../../../src/stream/streamingBuffer.js';
+import { NetworkMessageParser, NetworkMessageHandler } from '../../../src/demo/parser.js';
+import { DemoStream } from '../../../src/demo/demoStream.js';
 import { ServerCommand } from '@quake2ts/shared';
 
 // Helper to create synthetic demo blocks
