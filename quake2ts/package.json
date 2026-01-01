@@ -3,7 +3,10 @@
   "version": "0.0.870",
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
-  "packageManager": "pnpm@8.15.7",
+  "engines": {
+    "node": ">=25"
+  },
+  "packageManager": "pnpm@9.0.0",
   "keywords": [
     "quake",
     "quake2",
