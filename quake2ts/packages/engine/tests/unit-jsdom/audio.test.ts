@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AudioRegistry, AudioRegistryError } from '../src/assets/audio.js';
+import { AudioRegistry, AudioRegistryError } from '../../src/assets/audio.js';
 import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
-import { PakArchive } from '../src/assets/pak.js';
-import { VirtualFileSystem } from '../src/assets/vfs.js';
+import { PakArchive } from '../../src/assets/pak.js';
+import { VirtualFileSystem } from '../../src/assets/vfs.js';
 import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
-import type { OggAudio } from '../src/assets/ogg.js';
+import type { OggAudio } from '../../src/assets/ogg.js';
 
 const mockOgg: OggAudio = {
   sampleRate: 22050,
@@ -16,7 +16,7 @@ const mockOgg: OggAudio = {
   ],
 };
 
-vi.mock('../src/assets/ogg.js', () => ({
+vi.mock('../../src/assets/ogg.js', () => ({
   decodeOgg: vi.fn(async () => mockOgg),
 }));
 

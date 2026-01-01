@@ -1,12 +1,12 @@
-import { FrameRenderer, RenderModeConfig } from '../../src/render/frame.js';
+import { FrameRenderer, RenderModeConfig } from '../../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
-import { Md3ModelMesh, Md3Pipeline } from '../../src/render/md3Pipeline.js';
-import { Texture2D } from '../../src/render/resources.js';
+import { Md3ModelMesh, Md3Pipeline } from '../../../src/render/md3Pipeline.js';
+import { Texture2D } from '../../../src/render/resources.js';
 import path from 'path';
 
 // Mock the pipeline dependencies to prevent WebGL calls
-vi.mock('../../src/render/bspPipeline', () => {
+vi.mock('../../../src/render/bspPipeline', () => {
     return {
         BspSurfacePipeline: class {
             constructor() {
@@ -16,7 +16,7 @@ vi.mock('../../src/render/bspPipeline', () => {
     };
 });
 
-vi.mock('../../src/render/skybox', () => {
+vi.mock('../../../src/render/skybox', () => {
     return {
         SkyboxPipeline: class {
             constructor() {
@@ -28,7 +28,7 @@ vi.mock('../../src/render/skybox', () => {
     };
 });
 
-vi.mock('../../src/render/md2Pipeline', () => {
+vi.mock('../../../src/render/md2Pipeline', () => {
     return {
         Md2Pipeline: class {
             constructor() {
@@ -38,7 +38,7 @@ vi.mock('../../src/render/md2Pipeline', () => {
     };
 });
 
-vi.mock('../../src/render/sprite', () => {
+vi.mock('../../../src/render/sprite', () => {
     return {
         SpriteRenderer: class {
             constructor() {
@@ -49,18 +49,18 @@ vi.mock('../../src/render/sprite', () => {
 });
 
 // Mock PVS/BSP traversal to avoid complex map data setup
-vi.mock('../../src/render/bspTraversal', () => ({
+vi.mock('../../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0), // Return a valid leaf index
     isClusterVisible: vi.fn().mockReturnValue(true),
     gatherVisibleFaces: vi.fn().mockReturnValue([]),
 }));
 // Mock light calculation to avoid map entity access
-vi.mock('../../src/render/light', () => ({
+vi.mock('../../../src/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
 
 // Mock CollisionVisRenderer as it is also instantiated in createRenderer
-vi.mock('../../src/render/collisionVis', () => {
+vi.mock('../../../src/render/collisionVis', () => {
     return {
         CollisionVisRenderer: class {
             constructor() {
@@ -81,7 +81,7 @@ const mockMd3Pipeline = {
 };
 
 // Properly mocked Md3ModelMesh with geometry.vertices for stats tracking
-vi.mock('../../src/render/md3Pipeline', async () => {
+vi.mock('../../../src/render/md3Pipeline', async () => {
     return {
         Md3Pipeline: class {
             constructor() {
@@ -135,12 +135,12 @@ describe('Renderer', () => {
         vi.clearAllMocks();
 
         // Use absolute path for mocking to avoid resolution issues
-        const framePath = path.resolve(__dirname, '../../src/render/frame.js');
+        const framePath = path.resolve(__dirname, '../../../src/render/frame.js');
         vi.doMock(framePath, () => ({
             createFrameRenderer: vi.fn(() => mockFrameRenderer),
         }));
 
-        const mod = await import('../../src/render/renderer.js');
+        const mod = await import('../../../src/render/renderer.js');
         createRenderer = mod.createRenderer;
 
         mockGl = createMockWebGL2Context({
@@ -267,7 +267,6 @@ describe('Renderer', () => {
             type: 'md3',
             id: 12345,
             model: {
-                surfaces: [{ name: 'test', triangles: [], vertices: [[]] }],
                 surfaces: [{ name: 'test', triangles: [], vertices: [[]] }],
                 frames: [{ minBounds: {x: -10, y: -10, z: -10}, maxBounds: {x: 10, y: 10, z: 10} }]
             },

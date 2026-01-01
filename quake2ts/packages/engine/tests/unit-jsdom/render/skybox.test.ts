@@ -3,7 +3,7 @@ import {
   removeViewTranslation,
   computeSkyScroll,
   SkyboxPipeline,
-} from '../../src/render/skybox.js';
+} from '../../../src/render/skybox.js';
 import { mat4 } from 'gl-matrix';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
@@ -17,7 +17,7 @@ const { mockLocations } = vi.hoisted(() => {
   };
 });
 
-vi.mock('../../src/render/shaderProgram.js', () => {
+vi.mock('../../../src/render/shaderProgram.js', () => {
   const getUniformLocation = vi.fn(
     (name: keyof typeof mockLocations) => mockLocations[name]
   );
@@ -41,7 +41,7 @@ vi.mock('../../src/render/shaderProgram.js', () => {
   return { ShaderProgram };
 });
 
-vi.mock('../../src/render/resources.js', () => {
+vi.mock('../../../src/render/resources.js', () => {
   const VertexArray = class {
     configureAttributes = vi.fn();
     bind = vi.fn();

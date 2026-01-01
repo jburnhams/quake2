@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PostProcessPipeline } from '../../src/render/postprocessing/pipeline.js';
+import { PostProcessPipeline } from '../../../src/render/postprocessing/pipeline.js';
 
 // Mock WebGL2RenderingContext
 const gl = {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AssetManager } from '../../src/assets/manager';
-import { VirtualFileSystem } from '../../src/assets/vfs';
-import { PreparedTexture } from '../../src/assets/texture';
+import { AssetManager } from '../../../src/assets/manager';
+import { VirtualFileSystem } from '../../../src/assets/vfs';
+import { PreparedTexture } from '../../../src/assets/texture';
 
 describe('AssetManager TGA Integration', () => {
   let vfs: VirtualFileSystem;

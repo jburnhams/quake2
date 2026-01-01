@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SoundChannel } from '../../src/audio/constants.js';
-import { createInitialChannels, pickChannel } from '../../src/audio/channels.js';
+import { SoundChannel } from '../../../src/audio/constants.js';
+import { createInitialChannels, pickChannel } from '../../../src/audio/channels.js';
 
 describe('pickChannel', () => {
   it('overrides an existing non-auto channel for the same entity and entchannel', () => {
