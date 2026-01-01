@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ReverbSystem, type ReverbPreset } from '../../src/audio/reverb.js';
-import { type ReverbNode, type GainNodeLike, type ConvolverNodeLike, type AudioParamLike, type AudioBufferLike } from '../../src/audio/context.js';
+import { ReverbSystem, type ReverbPreset } from '../../../src/audio/reverb.js';
+import { type ReverbNode, type GainNodeLike, type ConvolverNodeLike, type AudioParamLike, type AudioBufferLike } from '../../../src/audio/context.js';
 
 // Mocks
 const createMockGain = (): GainNodeLike => ({

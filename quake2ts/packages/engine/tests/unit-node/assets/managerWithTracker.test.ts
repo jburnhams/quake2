@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AssetManager } from '../../src/assets/manager';
-import { ResourceLoadTracker, ResourceType } from '../../src/assets/resourceTracker';
-import { VirtualFileSystem } from '../../src/assets/vfs';
+import { AssetManager } from '../../../src/assets/manager';
+import { ResourceLoadTracker, ResourceType } from '../../../src/assets/resourceTracker';
+import { VirtualFileSystem } from '../../../src/assets/vfs';
 
 // Mock everything else to avoid complex setups
-vi.mock('../../src/assets/md2', () => ({ Md2Loader: class { load = vi.fn(); get = vi.fn(); } }));
-vi.mock('../../src/assets/md3', () => ({ Md3Loader: class { load = vi.fn(); get = vi.fn(); } }));
-vi.mock('../../src/assets/sprite', () => ({ SpriteLoader: class { load = vi.fn(); } }));
-vi.mock('../../src/assets/bsp', () => ({ BspLoader: class { load = vi.fn(); } }));
-vi.mock('../../src/assets/texture', () => ({ TextureCache: class { get = vi.fn(); set = vi.fn(); clear = vi.fn(); } }));
-vi.mock('../../src/assets/audio', () => ({ AudioRegistry: class { load = vi.fn(); clearAll = vi.fn(); } }));
+vi.mock('../../../src/assets/md2', () => ({ Md2Loader: class { load = vi.fn(); get = vi.fn(); } }));
+vi.mock('../../../src/assets/md3', () => ({ Md3Loader: class { load = vi.fn(); get = vi.fn(); } }));
+vi.mock('../../../src/assets/sprite', () => ({ SpriteLoader: class { load = vi.fn(); } }));
+vi.mock('../../../src/assets/bsp', () => ({ BspLoader: class { load = vi.fn(); } }));
+vi.mock('../../../src/assets/texture', () => ({ TextureCache: class { get = vi.fn(); set = vi.fn(); clear = vi.fn(); } }));
+vi.mock('../../../src/assets/audio', () => ({ AudioRegistry: class { load = vi.fn(); clearAll = vi.fn(); } }));
 
 describe('AssetManager with ResourceLoadTracker', () => {
   let vfs: VirtualFileSystem;

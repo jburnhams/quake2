@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createOcclusionResolver } from '../../src/audio/occlusion.js';
-import type { ListenerState } from '../../src/audio/spatialization.js';
+import { createOcclusionResolver } from '../../../src/audio/occlusion.js';
+import type { ListenerState } from '../../../src/audio/spatialization.js';
 import type { Vec3 } from '@quake2ts/shared';
-import { ATTN_NORM } from '../../src/audio/constants.js';
+import { ATTN_NORM } from '../../../src/audio/constants.js';
 
 describe('AudioOcclusion', () => {
     const listener: ListenerState = { origin: { x: 0, y: 0, z: 0 }, right: { x: 1, y: 0, z: 0 } };

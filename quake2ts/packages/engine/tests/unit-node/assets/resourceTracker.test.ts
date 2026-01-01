@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ResourceLoadTracker, ResourceType } from '../../src/assets/resourceTracker';
+import { ResourceLoadTracker, ResourceType } from '../../../src/assets/resourceTracker';
 
 describe('ResourceLoadTracker', () => {
   let tracker: ResourceLoadTracker;

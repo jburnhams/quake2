@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SoundRegistry } from '../../src/audio/registry.js';
+import { SoundRegistry } from '../../../src/audio/registry.js';
 import { createMockAudioBuffer } from '@quake2ts/test-utils';
 
 describe('SoundRegistry', () => {

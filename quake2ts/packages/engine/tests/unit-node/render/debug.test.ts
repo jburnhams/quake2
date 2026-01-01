@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DebugRenderer } from '../../src/render/debug.js';
+import { DebugRenderer } from '../../../src/render/debug.js';
 import { Vec3 } from '@quake2ts/shared';
 
 describe('DebugRenderer', () => {

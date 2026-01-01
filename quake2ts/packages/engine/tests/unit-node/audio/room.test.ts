@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { estimateRoomSize, findLeafForPoint, getReverbPresetForVolume } from '../../src/audio/room.js';
-import type { BspMap, BspLeaf, BspNode, BspPlane, Vec3 } from '../../src/assets/bsp.js';
+import { estimateRoomSize, findLeafForPoint, getReverbPresetForVolume } from '../../../src/audio/room.js';
+import type { BspMap, BspLeaf, BspNode, BspPlane, Vec3 } from '../../../src/assets/bsp.js';
 
 // Mock BspMap
 const mockMap: BspMap = {
