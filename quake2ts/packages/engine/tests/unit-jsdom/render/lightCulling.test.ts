@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { cullLights } from '@quake2ts/engine/render/lightCulling.js';
-import { DLight } from '@quake2ts/engine/render/dlight.js';
-import { FrustumPlane } from '@quake2ts/engine/render/culling.js';
+import { cullLights } from '../../../src/render/lightCulling.js';
+import { DLight } from '../../../src/render/dlight.js';
+import { FrustumPlane } from '../../../src/render/culling.js';
 
 describe('cullLights', () => {
     // Define a simple frustum:

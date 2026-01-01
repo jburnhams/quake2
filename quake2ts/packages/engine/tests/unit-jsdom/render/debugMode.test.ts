@@ -1,11 +1,11 @@
-import { createRenderer } from '@quake2ts/engine/render/renderer.js';
-import { renderFrame } from '@quake2ts/engine/render/frame.js'; // Import the singleton spy
-import { DebugMode } from '@quake2ts/engine/render/debugMode.js';
+import { createRenderer } from '../../../src/render/renderer.js';
+import { renderFrame } from '../../../src/render/frame.js'; // Import the singleton spy
+import { DebugMode } from '../../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('@quake2ts/engine/render/bspPipeline', () => {
+vi.mock('../../../src/render/bspPipeline', () => {
     return {
         BspSurfacePipeline: class {
             constructor() {
@@ -20,7 +20,7 @@ vi.mock('@quake2ts/engine/render/bspPipeline', () => {
     };
 });
 
-vi.mock('@quake2ts/engine/render/skybox', () => {
+vi.mock('../../../src/render/skybox', () => {
     return {
         SkyboxPipeline: class {
             constructor() {
@@ -33,7 +33,7 @@ vi.mock('@quake2ts/engine/render/skybox', () => {
     };
 });
 
-vi.mock('@quake2ts/engine/render/md2Pipeline', () => {
+vi.mock('../../../src/render/md2Pipeline', () => {
     return {
         Md2Pipeline: class {
             constructor() {
@@ -47,7 +47,7 @@ vi.mock('@quake2ts/engine/render/md2Pipeline', () => {
     };
 });
 
-vi.mock('@quake2ts/engine/render/sprite', () => {
+vi.mock('../../../src/render/sprite', () => {
     return {
         SpriteRenderer: class {
             constructor() {
@@ -60,7 +60,7 @@ vi.mock('@quake2ts/engine/render/sprite', () => {
     };
 });
 
-vi.mock('@quake2ts/engine/render/collisionVis', () => {
+vi.mock('../../../src/render/collisionVis', () => {
     return {
         CollisionVisRenderer: class {
             constructor() {
@@ -75,7 +75,7 @@ vi.mock('@quake2ts/engine/render/collisionVis', () => {
 });
 
 // Properly mock Md3Pipeline and Md3ModelMesh
-vi.mock('@quake2ts/engine/render/md3Pipeline', async (importOriginal) => {
+vi.mock('../../../src/render/md3Pipeline', async (importOriginal) => {
     return {
         Md3Pipeline: class {
             constructor() {
@@ -98,7 +98,7 @@ vi.mock('@quake2ts/engine/render/md3Pipeline', async (importOriginal) => {
 });
 
 // Use manual mock for frame.js
-vi.mock('@quake2ts/engine/render/frame');
+vi.mock('../../../src/render/frame');
 
 // Mock DebugRenderer
 const mockDebugRenderer = {
@@ -110,7 +110,7 @@ const mockDebugRenderer = {
     drawLine: vi.fn(), // Needed for PVS/Normals
 };
 
-vi.mock('@quake2ts/engine/render/debug', () => ({
+vi.mock('../../../src/render/debug', () => ({
     DebugRenderer: class {
         constructor() {
             return mockDebugRenderer;
@@ -119,19 +119,19 @@ vi.mock('@quake2ts/engine/render/debug', () => ({
 }));
 
 // Mock culling and traversal
-vi.mock('@quake2ts/engine/render/culling', () => ({
+vi.mock('../../../src/render/culling', () => ({
     boxIntersectsFrustum: vi.fn().mockReturnValue(true),
     extractFrustumPlanes: vi.fn().mockReturnValue([]),
     transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
 }));
 
-vi.mock('@quake2ts/engine/render/bspTraversal', () => ({
+vi.mock('../../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn().mockReturnValue(0),
     isClusterVisible: vi.fn().mockReturnValue(true),
     gatherVisibleFaces: vi.fn().mockReturnValue([]),
 }));
 
-vi.mock('@quake2ts/engine/render/light', () => ({
+vi.mock('../../../src/render/light', () => ({
     calculateEntityLight: vi.fn().mockReturnValue(1.0),
 }));
 
@@ -143,7 +143,7 @@ describe('DebugMode Integration', () => {
         vi.resetModules();
         vi.clearAllMocks();
         mockGl = createMockWebGL2Context();
-        const { createRenderer: create } = await import('@quake2ts/engine/render/renderer.js');
+        const { createRenderer: create } = await import('../../../src/render/renderer.js');
         renderer = create(mockGl as any);
 
         // Ensure renderFrame returns valid stats to avoid issues

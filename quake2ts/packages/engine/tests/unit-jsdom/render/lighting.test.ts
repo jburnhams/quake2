@@ -1,6 +1,6 @@
-import { createRenderer } from '@quake2ts/engine/render/renderer.js';
+import { createRenderer } from '../../../src/render/renderer.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DebugMode } from '@quake2ts/engine/render/debugMode.js';
+import { DebugMode } from '../../../src/render/debugMode.js';
 
 describe('Renderer Lighting Control', () => {
     let mockGl: WebGL2RenderingContext;

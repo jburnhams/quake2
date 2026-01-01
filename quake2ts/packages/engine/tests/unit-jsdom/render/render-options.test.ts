@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer } from '@quake2ts/engine/render/renderer.js';
-import { DebugRenderer } from '@quake2ts/engine/render/debug.js';
-import { FrameRenderOptions } from '@quake2ts/engine/render/frame.js';
+import { createRenderer } from '../../../src/render/renderer.js';
+import { DebugRenderer } from '../../../src/render/debug.js';
+import { FrameRenderOptions } from '../../../src/render/frame.js';
 
 // Mock WebGL2RenderingContext
 const gl = {
@@ -85,7 +85,7 @@ const skyDrawMock = vi.fn();
 const spriteBeginMock = vi.fn();
 
 // Mock dependencies (without .js extension)
-vi.mock('@quake2ts/engine/render/bspPipeline', () => ({
+vi.mock('../../../src/render/bspPipeline', () => ({
     BspSurfacePipeline: class {
         bind = bspBindMock;
         draw = vi.fn();
@@ -94,7 +94,7 @@ vi.mock('@quake2ts/engine/render/bspPipeline', () => ({
     applySurfaceState: vi.fn(),
 }));
 
-vi.mock('@quake2ts/engine/render/skybox', () => ({
+vi.mock('../../../src/render/skybox', () => ({
     SkyboxPipeline: class {
         bind = vi.fn();
         draw = skyDrawMock;
@@ -104,7 +104,7 @@ vi.mock('@quake2ts/engine/render/skybox', () => ({
     removeViewTranslation: vi.fn((m) => m),
 }));
 
-vi.mock('@quake2ts/engine/render/md2Pipeline', () => ({
+vi.mock('../../../src/render/md2Pipeline', () => ({
     Md2Pipeline: class {
         bind = vi.fn();
         draw = vi.fn();
@@ -118,7 +118,7 @@ vi.mock('@quake2ts/engine/render/md2Pipeline', () => ({
     }
 }));
 
-vi.mock('@quake2ts/engine/render/md3Pipeline', () => ({
+vi.mock('../../../src/render/md3Pipeline', () => ({
     Md3Pipeline: class {
         bind = vi.fn();
         drawSurface = vi.fn();
@@ -130,7 +130,7 @@ vi.mock('@quake2ts/engine/render/md3Pipeline', () => ({
     }
 }));
 
-vi.mock('@quake2ts/engine/render/sprite', () => ({
+vi.mock('../../../src/render/sprite', () => ({
     SpriteRenderer: class {
         begin = spriteBeginMock;
         draw = vi.fn();
@@ -139,26 +139,26 @@ vi.mock('@quake2ts/engine/render/sprite', () => ({
     }
 }));
 
-vi.mock('@quake2ts/engine/render/collisionVis', () => ({
+vi.mock('../../../src/render/collisionVis', () => ({
     CollisionVisRenderer: class {
         render = vi.fn();
         clear = vi.fn();
     }
 }));
 
-vi.mock('@quake2ts/engine/render/bspTraversal', () => ({
+vi.mock('../../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn(() => -1),
     isClusterVisible: vi.fn(() => true),
     gatherVisibleFaces: vi.fn(() => []),
 }));
 
-vi.mock('@quake2ts/engine/render/culling', () => ({
+vi.mock('../../../src/render/culling', () => ({
     extractFrustumPlanes: vi.fn(() => []),
     boxIntersectsFrustum: vi.fn(() => true),
     transformAabb: vi.fn(() => ({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })),
 }));
 
-vi.mock('@quake2ts/engine/render/light', () => ({
+vi.mock('../../../src/render/light', () => ({
     calculateEntityLight: vi.fn(() => 1.0),
 }));
 
@@ -168,7 +168,7 @@ describe('Renderer Options & Debug', () => {
     beforeEach(async () => {
         vi.resetModules();
         vi.clearAllMocks();
-        const { createRenderer: create } = await import('@quake2ts/engine/render/renderer.js');
+        const { createRenderer: create } = await import('../../../src/render/renderer.js');
         renderer = create(gl);
     });
 
@@ -197,7 +197,7 @@ describe('Renderer Options & Debug', () => {
              textures: new Map(),
         };
 
-        const { gatherVisibleFaces } = await import('@quake2ts/engine/render/bspTraversal.js');
+        const { gatherVisibleFaces } = await import('../../../src/render/bspTraversal.js');
         (gatherVisibleFaces as any).mockReturnValue([{ faceIndex: 0, sortKey: 0 }]);
 
         renderer.renderFrame({ ...options, world: dummyWorld }, [], { wireframe: true });

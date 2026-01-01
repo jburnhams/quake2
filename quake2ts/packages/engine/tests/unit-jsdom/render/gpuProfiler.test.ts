@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GpuProfiler } from '@quake2ts/engine/render/gpuProfiler.js';
+import { GpuProfiler } from '../../../src/render/gpuProfiler.js';
 
 describe('GpuProfiler', () => {
   let gl: WebGL2RenderingContext;

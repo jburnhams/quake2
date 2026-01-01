@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { DemoPlaybackController, PlaybackState } from '@quake2ts/engine/demo/playback.js';
-import { DemoReader } from '@quake2ts/engine/demo/demoReader.js';
-import { NetworkMessageParser } from '@quake2ts/engine/demo/parser.js';
+import { DemoPlaybackController, PlaybackState } from '../../../src/demo/playback.js';
+import { DemoReader } from '../../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../../src/demo/parser.js';
 
 describe('DemoPlaybackController with Tracking', () => {
     let controller: DemoPlaybackController;
