@@ -369,6 +369,8 @@ export class BspSurfacePipeline {
           modeInt = 2; // Faceted
       } else if (renderMode.mode === 'worldpos-debug') {
           modeInt = 3; // Debug: output worldPos as color
+      } else if (renderMode.mode === 'distance-debug') {
+          modeInt = 4; // Debug: output distance to first dlight as grayscale
       }
 
       if (renderMode.color) {

@@ -154,6 +154,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         // Values 0-255 map to 0-1, values 256-511 wrap back to 0-1, etc.
         let posScaled = abs(input.worldPos) / 256.0;
         finalColor = vec4<f32>(fract(posScaled.x), fract(posScaled.y), fract(posScaled.z), 1.0);
+    } else if (surface.renderMode == 4u) {
+        // DEBUG: Output distance to first dlight as grayscale
+        // Brighter = closer to light. Scale: 0-500 units maps to 1.0-0.0
+        var dist = 500.0;
+        if (frame.numDlights > 0u) {
+            dist = distance(input.worldPos, frame.dlights[0].position);
+        }
+        let brightness = clamp(1.0 - dist / 500.0, 0.0, 1.0);
+        finalColor = vec4<f32>(brightness, brightness, brightness, 1.0);
     } else {
         // SOLID / WIREFRAME / FACETED
         var color = surface.solidColor.rgb;

@@ -171,6 +171,62 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
         });
     });
 
+    it('distance-debug-centered-light.png', async () => {
+        // Test: Visualize distance to light at center of wall
+        // Light at (180, 0, 100) - 20 units from wall center (200, 0, 100)
+        // CORRECT: Brightest at center, dimmer towards edges
+        // BUGGY: Brightest at bottom-right (mins corner)
+        const wall = createTestBspGeometry({
+            min: [200, -200, -100],
+            max: [200, 200, 300],
+            texture: 'wall'
+        });
+        renderer.uploadBspGeometry([wall]);
+        const map = createMinimalMap(1);
+
+        camera.setPosition(0, 0, 100);
+        camera.setRotation(0, 0, 0);
+
+        renderer.renderFrame({
+            camera,
+            world: { map, surfaces: [wall] },
+            dlights: [{
+                origin: { x: 180, y: 0, z: 100 },
+                intensity: 300,
+                color: { x: 1, y: 1, z: 1 }
+            }],
+            disableLightmaps: true,
+            fullbright: false,
+            ambient: 0,
+            timeSeconds: 0,
+            renderMode: { mode: 'distance-debug', applyToAll: true }
+        });
+
+        const frameRenderer = (renderer as any).frameRenderer;
+        const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+        // Check brightness at different positions
+        const getPixel = (x: number, y: number) => {
+            const idx = (y * 256 + x) * 4;
+            return [pixels[idx], pixels[idx+1], pixels[idx+2], pixels[idx+3]];
+        };
+
+        // Distance visualization: brighter = closer to light
+        // Expected (correct worldPos): center brightest
+        // Actual (buggy): bottom-right brightest
+        console.log('Distance debug - center pixel:', getPixel(128, 128));
+        console.log('Distance debug - bottom-right:', getPixel(240, 240));
+        console.log('Distance debug - top-left:', getPixel(16, 16));
+
+        await expectSnapshot(pixels, {
+            name: 'distance-debug-centered-light',
+            description: 'Distance to light as grayscale. CORRECT=center bright. BUGGY=bottom-right bright.',
+            width: 256, height: 256,
+            updateBaseline: true,
+            snapshotDir
+        });
+    });
+
     it('worldpos-color-simple-geometry.png', async () => {
         // Simpler geometry with mins at origin to make colors easier to interpret
         const wall = createTestBspGeometry({
