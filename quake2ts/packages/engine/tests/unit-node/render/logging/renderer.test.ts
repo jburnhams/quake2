@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
-import { createLoggingRenderer } from '../../../../test-utils/src/engine/renderers.js';
-import { CoordinateSystem } from '../../../src/render/types/coordinates.js';
-import { Camera } from '../../../src/render/camera.js';
+import { createLoggingRenderer } from '../../../../../test-utils/src/engine/renderers.js';
+import { CoordinateSystem } from '../../../../src/render/types/coordinates.js';
+import { Camera } from '../../../../src/render/camera.js';
 import { mat4, vec3 } from 'gl-matrix';
 
 describe('LoggingRenderer', () => {

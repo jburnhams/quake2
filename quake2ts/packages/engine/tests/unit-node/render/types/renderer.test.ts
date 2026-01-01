@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import type { RendererCapabilities, RenderCommand, RenderCommandLog } from '../../../src/render/types/renderer.js';
+import type { RendererCapabilities, RenderCommand, RenderCommandLog } from '../../../../src/render/types/renderer.js';
 
 describe('Shared Renderer Types', () => {
   test('RendererCapabilities interface usage', () => {

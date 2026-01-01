@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FrameRenderer, WebGPUContextState } from '../../../src/render/webgpu/frame.js';
-import { SpriteRenderer } from '../../../src/render/webgpu/pipelines/sprite.js';
-import { Camera } from '../../../src/render/camera.js';
+import { FrameRenderer, WebGPUContextState } from '../../../../src/render/webgpu/frame.js';
+import { SpriteRenderer } from '../../../../src/render/webgpu/pipelines/sprite.js';
+import { Camera } from '../../../../src/render/camera.js';
 import { mat4 } from 'gl-matrix';
 
 // Mock WebGPU globals if not present

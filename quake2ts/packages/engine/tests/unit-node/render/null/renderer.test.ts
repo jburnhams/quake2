@@ -1,9 +1,9 @@
 import { describe, test, expect, vi } from 'vitest';
-import { createNullRenderer } from '../../../../test-utils/src/engine/renderers.js';
-import { Camera } from '../../../src/render/camera.js';
-import { DebugMode } from '../../../src/render/debugMode.js';
-import type { Md2Model } from '../../../src/assets/md2.js';
-import type { InstanceData } from '../../../src/render/instancing.js';
+import { createNullRenderer } from '../../../../../test-utils/src/engine/renderers.js';
+import { Camera } from '../../../../src/render/camera.js';
+import { DebugMode } from '../../../../src/render/debugMode.js';
+import type { Md2Model } from '../../../../src/assets/md2.js';
+import type { InstanceData } from '../../../../src/render/instancing.js';
 
 describe('NullRenderer', () => {
   test('logs renderFrame calls', () => {

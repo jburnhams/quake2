@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { Camera } from '../../../src/render/camera.js';
+import { Camera } from '../../../../src/render/camera.js';
 
 describe('CameraState', () => {
   test('toState() creates immutable snapshot', () => {

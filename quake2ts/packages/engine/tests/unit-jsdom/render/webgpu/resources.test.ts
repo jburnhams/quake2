@@ -17,7 +17,7 @@ import {
   BindGroupBuilder,
   createRenderPassDescriptor,
   GPUResourceTracker
-} from '../../../src/render/webgpu/resources';
+} from '../../../../src/render/webgpu/resources';
 import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
 describe('WebGPU Buffer Resources', () => {

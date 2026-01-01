@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildBspGeometry, BspSurfaceInput } from '../../../src/render/bsp.js';
-import { BspMap } from '../../../src/assets/bsp.js';
+import { buildBspGeometry, BspSurfaceInput } from '../../../../src/render/bsp.js';
+import { BspMap } from '../../../../src/assets/bsp.js';
 
 // Mock WebGL context
 const gl = {

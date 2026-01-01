@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createBspSurfaces } from '../../../src/render/bsp/surface.js';
-import { BspMap, BspHeader, BspEntities, BspPlane, BspLeaf, BspNode, BspTexInfo, BspFace, BspModel, BspBrush, BspBrushSide, BspLeafLists } from '../../../src/assets/bsp.js';
+import { createBspSurfaces } from '../../../../src/render/bsp/surface.js';
+import { BspMap, BspHeader, BspEntities, BspPlane, BspLeaf, BspNode, BspTexInfo, BspFace, BspModel, BspBrush, BspBrushSide, BspLeafLists } from '../../../../src/assets/bsp.js';
 
 describe('createBspSurfaces', () => {
   it('should process faces correctly', () => {

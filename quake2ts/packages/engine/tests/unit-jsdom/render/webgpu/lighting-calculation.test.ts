@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DLight } from '../../../src/render/dlight.js';
+import { DLight } from '../../../../src/render/dlight.js';
 
 /**
  * Unit tests for lighting calculation logic

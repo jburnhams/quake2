@@ -5,7 +5,7 @@ import {
   queryCapabilities,
   setupDeviceLossHandling,
   WebGPUContextOptions
-} from '../../../src/render/webgpu/context';
+} from '../../../../src/render/webgpu/context';
 import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
 describe('WebGPU Context', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SpriteRenderer } from '../../../src/render/webgpu/pipelines/sprite';
+import { SpriteRenderer } from '../../../../src/render/webgpu/pipelines/sprite';
 import { setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
-import { Texture2D } from '../../../src/render/webgpu/resources';
+import { Texture2D } from '../../../../src/render/webgpu/resources';
 
 describe('SpriteRenderer', () => {
   let mockDevice: GPUDevice;
