@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { DemoPlaybackController } from '../../src/demo/playback.js';
-import { DemoReader } from '../../src/demo/demoReader.js';
-import { NetworkMessageParser } from '../../src/demo/parser.js';
+import { DemoPlaybackController } from '../../../src/demo/playback.js';
+import { DemoReader } from '../../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../../src/demo/parser.js';
 
 describe('DemoPlaybackController Offset Parameters', () => {
     let controller: DemoPlaybackController;

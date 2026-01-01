@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AudioApi } from '../../src/audio/api.js';
-import { AudioContextController } from '../../src/audio/context.js';
-import { SoundRegistry } from '../../src/audio/registry.js';
-import { AudioSystem } from '../../src/audio/system.js';
-import { MusicSystem } from '../../src/audio/music.js';
-import { SoundChannel } from '../../src/audio/constants.js';
+import { AudioApi } from '../../../src/audio/api.js';
+import { AudioContextController } from '../../../src/audio/context.js';
+import { SoundRegistry } from '../../../src/audio/registry.js';
+import { AudioSystem } from '../../../src/audio/system.js';
+import { MusicSystem } from '../../../src/audio/music.js';
+import { SoundChannel } from '../../../src/audio/constants.js';
 import { FakeAudioContext, createMockAudioBuffer } from '@quake2ts/test-utils';
 
 const createSystem = () => {

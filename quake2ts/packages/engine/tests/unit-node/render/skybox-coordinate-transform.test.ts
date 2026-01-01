@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
-import { WebGPUMatrixBuilder } from '../../src/render/matrix/webgpu.js';
-import { Camera } from '../../src/render/camera.js';
-import type { CameraState } from '../../src/render/types/camera.js';
+import { WebGPUMatrixBuilder } from '../../../src/render/matrix/webgpu.js';
+import { Camera } from '../../../src/render/camera.js';
+import type { CameraState } from '../../../src/render/types/camera.js';
 import { vec4, mat4, vec3 } from 'gl-matrix';
 import { RAD2DEG } from '@quake2ts/shared';
 
