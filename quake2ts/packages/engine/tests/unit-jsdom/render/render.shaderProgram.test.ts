@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createProgramFromSources, ShaderProgram } from '../src/render/shaderProgram.js';
+import { createProgramFromSources, ShaderProgram } from '../../../src/render/shaderProgram.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 const basicVertex = `#version 300 es

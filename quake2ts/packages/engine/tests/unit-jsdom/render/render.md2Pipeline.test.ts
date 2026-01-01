@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseMd2 } from '../src/assets/md2.js';
+import { parseMd2 } from '../../../src/assets/md2.js';
 import {
   MD2_FRAGMENT_SHADER,
   MD2_VERTEX_SHADER,
@@ -7,7 +7,7 @@ import {
   Md2Pipeline,
   buildMd2Geometry,
   buildMd2VertexData,
-} from '../src/render/md2Pipeline.js';
+} from '../../../src/render/md2Pipeline.js';
 import { buildMd2 } from '@quake2ts/test-utils'; // md2Builder.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 

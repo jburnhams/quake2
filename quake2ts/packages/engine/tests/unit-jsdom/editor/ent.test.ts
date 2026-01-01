@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { serializeBspEntities, parseEntLump } from '../../src/editor/ent.js';
-import { BspEntity } from '../../src/assets/bsp.js';
+import { serializeBspEntities, parseEntLump } from '../../../src/editor/ent.js';
+import { BspEntity } from '../../../src/assets/bsp.js';
 
 describe('Entity Serialization', () => {
     it('should serialize a single entity', () => {

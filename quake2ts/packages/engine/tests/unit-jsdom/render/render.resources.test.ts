@@ -6,7 +6,7 @@ import {
   TextureCubeMap,
   VertexArray,
   VertexBuffer,
-} from '../src/render/resources.js';
+} from '../../../src/render/resources.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('VertexBuffer and IndexBuffer', () => {
