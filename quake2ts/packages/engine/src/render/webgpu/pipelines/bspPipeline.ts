@@ -10,7 +10,7 @@ import {
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import { MAX_DLIGHTS, DLight } from '../../dlight.js';
 import { BspSurfaceGeometry } from '../../bsp.js';
-import { RenderModeConfig } from '../../frame.js';
+import { RenderModeConfig } from '../frame.js';
 import bspShader from '../shaders/bsp.wgsl?raw';
 import { Texture2D, createLinearSampler, Sampler } from '../resources.js';
 

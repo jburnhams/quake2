@@ -43,6 +43,9 @@ export interface BspSurfaceGeometry {
   // CPU copies retained for deterministic tests and debugging.
   readonly vertexData: Float32Array;
   readonly indexData: Uint16Array;
+  // Surface bounds for WebGPU worldPos correction
+  readonly mins?: { readonly x: number; readonly y: number; readonly z: number };
+  readonly maxs?: { readonly x: number; readonly y: number; readonly z: number };
 }
 
 export interface LightmapAtlas {
