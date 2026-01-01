@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/test-utils-webgl",
-  "version": "0.0.869",
+  "version": "0.0.870",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
