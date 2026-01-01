@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { CoordinateSystem, type CoordinateConvention } from '../../../src/render/types/coordinates.js';
+import { CoordinateSystem, type CoordinateConvention } from '../../../../src/render/types/coordinates.js';
 
 describe('Coordinate Systems', () => {
   test('CoordinateSystem enum values are correct', () => {

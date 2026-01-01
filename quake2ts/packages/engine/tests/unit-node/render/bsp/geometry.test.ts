@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildBspGeometry } from '../../../src/render/bsp/geometry.js';
-import { BspSurfaceInput } from '../../../src/render/bsp/geometry.js';
+import { buildBspGeometry } from '../../../../src/render/bsp/geometry.js';
+import { BspSurfaceInput } from '../../../../src/render/bsp/geometry.js';
 
 describe('buildBspGeometry', () => {
   it('should calculate styleLayers and pack lightmaps correctly', () => {

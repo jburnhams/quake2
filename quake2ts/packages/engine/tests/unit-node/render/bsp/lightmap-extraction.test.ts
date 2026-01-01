@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createBspSurfaces } from '../../../src/render/bsp/surface.js';
-import { BspMap, BspTexInfo, BspFace } from '../../../src/assets/bsp.js';
+import { createBspSurfaces } from '../../../../src/render/bsp/surface.js';
+import { BspMap, BspTexInfo, BspFace } from '../../../../src/assets/bsp.js';
 
 describe('createBspSurfaces', () => {
   it('should extract lightmap data strictly for active styles', () => {

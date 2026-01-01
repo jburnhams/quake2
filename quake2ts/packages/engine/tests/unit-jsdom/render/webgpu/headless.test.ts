@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupWebGPUMocks, createMockGPUDevice } from '@quake2ts/test-utils';
-import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
+import { createHeadlessRenderTarget, captureRenderTarget } from '../../../../src/render/webgpu/headless';
 
 describe('WebGPU Headless', () => {
   let device: ReturnType<typeof createMockGPUDevice>;

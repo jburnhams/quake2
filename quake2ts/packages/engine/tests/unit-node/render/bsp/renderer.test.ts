@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BspRenderer } from '../../../src/render/bsp/renderer.js';
-import { BspGeometry, BspBatch } from '../../../src/render/bsp/geometry.js';
-import { VertexArray, Texture2D } from '../../../src/render/resources.js';
+import { BspRenderer } from '../../../../src/render/bsp/renderer.js';
+import { BspGeometry, BspBatch } from '../../../../src/render/bsp/geometry.js';
+import { VertexArray, Texture2D } from '../../../../src/render/resources.js';
 
 // Mock WebGL classes
 const mockGL = {

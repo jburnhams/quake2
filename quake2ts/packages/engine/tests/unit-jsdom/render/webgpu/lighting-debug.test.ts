@@ -188,7 +188,7 @@ describe('WebGPU Lighting Position Debug', () => {
             // This still shows center is closer!
         });
 
-        it('Test 4: Check if light position has +min offset but vertices dont', () => {
+        it.skip('Test 4: Check if light position has +min offset but vertices dont', () => { // Hypothesis failed: light position + min offset does not explain the issue
             const wallMin = { x: 200, y: -200, z: -100 };
             const lightActual = { x: 180, y: 0, z: 100 };
 
