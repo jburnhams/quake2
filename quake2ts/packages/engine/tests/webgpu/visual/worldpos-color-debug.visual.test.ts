@@ -41,16 +41,43 @@ import path from 'path';
 function createTestBspGeometry(options: { min: [number, number, number], max: [number, number, number], texture: string }) {
     const min = options.min;
     const max = options.max;
+    const dx = max[0] - min[0];
+    const dz = max[2] - min[2];
 
-    // Flat in X (YZ plane) - Wall
-    const vertices = new Float32Array([
-        min[0], min[1], min[2], 0, 1, 0, 0, 0,
-        max[0], min[1], max[2], 0, 0, 0, 0, 0,
-        min[0], max[1], min[2], 1, 1, 0, 0, 0,
-        max[0], min[1], max[2], 0, 0, 0, 0, 0,
-        max[0], max[1], max[2], 1, 0, 0, 0, 0,
-        min[0], max[1], min[2], 1, 1, 0, 0, 0,
-    ]);
+    let vertices: Float32Array;
+
+    if (Math.abs(dx) < 0.001) {
+        // Flat in X (YZ plane) - Wall
+        vertices = new Float32Array([
+            min[0], min[1], min[2], 0, 1, 0, 0, 0,
+            max[0], min[1], max[2], 0, 0, 0, 0, 0,
+            min[0], max[1], min[2], 1, 1, 0, 0, 0,
+            max[0], min[1], max[2], 0, 0, 0, 0, 0,
+            max[0], max[1], max[2], 1, 0, 0, 0, 0,
+            min[0], max[1], min[2], 1, 1, 0, 0, 0,
+        ]);
+    } else if (Math.abs(dz) < 0.001) {
+        // Flat in Z (XY plane) - Floor
+        // All vertices have same Z value (min[2] = max[2])
+        vertices = new Float32Array([
+            min[0], min[1], min[2], 0, 0, 0, 0, 0,  // mins corner (bottom-left when looking down)
+            max[0], min[1], min[2], 1, 0, 0, 0, 0,  // (bottom-right)
+            min[0], max[1], min[2], 0, 1, 0, 0, 0,  // (top-left)
+            max[0], min[1], min[2], 1, 0, 0, 0, 0,
+            max[0], max[1], min[2], 1, 1, 0, 0, 0,  // maxs corner (top-right)
+            min[0], max[1], min[2], 0, 1, 0, 0, 0,
+        ]);
+    } else {
+        // Default: YZ plane Wall
+        vertices = new Float32Array([
+            min[0], min[1], min[2], 0, 1, 0, 0, 0,
+            max[0], min[1], max[2], 0, 0, 0, 0, 0,
+            min[0], max[1], min[2], 1, 1, 0, 0, 0,
+            max[0], min[1], max[2], 0, 0, 0, 0, 0,
+            max[0], max[1], max[2], 1, 0, 0, 0, 0,
+            min[0], max[1], min[2], 1, 1, 0, 0, 0,
+        ]);
+    }
 
     const indices = new Uint16Array([0, 1, 2, 3, 4, 5]);
 
@@ -221,6 +248,64 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
         await expectSnapshot(pixels, {
             name: 'distance-debug-centered-light',
             description: 'Distance to light as grayscale. CORRECT=center bright. BUGGY=bottom-right bright.',
+            width: 256, height: 256,
+            updateBaseline: true,
+            snapshotDir
+        });
+    });
+
+    it('worldpos-color-floor.png', async () => {
+        // Floor geometry where X varies (mins.x ≠ max.x)
+        // This will reveal if worldPos.x is also being offset
+        // min: [0, -100, 0], max: [200, 100, 0]
+        //
+        // If worldPos is CORRECT:
+        // - At (0, -100, 0): R=0, G=100/256*255=100, B=0
+        // - At (200, 100, 0): R=199, G=100, B=0
+        // - Should see RED gradient from left to right
+        //
+        // If worldPos is BUGGY (position - mins):
+        // - At mins (0, -100, 0): worldPos = (0, 0, 0) → BLACK
+        // - At maxs (200, 100, 0): worldPos = (200, 200, 0) → R=199, G=199, B=0
+        // - Should see gradient from BLACK to YELLOW
+        const floor = createTestBspGeometry({
+            min: [0, -100, 0],
+            max: [200, 100, 0],
+            texture: 'floor'
+        });
+        renderer.uploadBspGeometry([floor]);
+        const map = createMinimalMap(1);
+
+        // Camera looking down at the floor
+        camera.setPosition(100, 0, 200);
+        camera.setRotation(90, 0, 0); // Looking down (-Z direction)
+
+        renderer.renderFrame({
+            camera,
+            world: { map, surfaces: [floor] },
+            dlights: [],
+            disableLightmaps: true,
+            fullbright: false,
+            ambient: 0,
+            timeSeconds: 0,
+            renderMode: { mode: 'worldpos-debug', applyToAll: true }
+        });
+
+        const frameRenderer = (renderer as any).frameRenderer;
+        const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
+
+        const getPixel = (x: number, y: number) => {
+            const idx = (y * 256 + x) * 4;
+            return [pixels[idx], pixels[idx+1], pixels[idx+2], pixels[idx+3]];
+        };
+
+        console.log('Floor center pixel:', getPixel(128, 128));
+        console.log('Floor corner (expect mins):', getPixel(16, 240));
+        console.log('Floor corner (expect maxs):', getPixel(240, 16));
+
+        await expectSnapshot(pixels, {
+            name: 'worldpos-color-floor',
+            description: 'Floor geometry (X varies). Shows if worldPos.x is also offset. BLACK corner = buggy.',
             width: 256, height: 256,
             updateBaseline: true,
             snapshotDir

@@ -20,12 +20,38 @@ worldPos = position (absolute world coordinates)
 
 ### Evidence
 
-1. **Light at origin test**: A light at world origin `(0,0,0)` creates maximum brightness at the corner where `position = mins`. If `worldPos = position - mins`, then `worldPos = (0,0,0)` at that corner, making it coincide with the light position.
+#### 1. Floor Debug Test (DEFINITIVE PROOF)
 
-2. **Distance calculations**: With the buggy offset:
-   - Bottom-right corner: `worldPos = (0,0,0)`, distance to light `(180,0,100)` ≈ 206 units
-   - Center: `worldPos = (0,200,200)`, distance to light ≈ 287 units
-   - Result: Bottom-right is **closer** to light, explaining the visual bug
+Test geometry: `min=[0,-100,0], max=[200,100,0]` (floor flat in Z)
+
+| Corner | Position | Expected worldPos | Actual worldPos | Debug Color |
+|--------|----------|-------------------|-----------------|-------------|
+| mins   | (0,-100,0) | (0,-100,0) | (0,0,0) | **BLACK** |
+| maxs   | (200,100,0) | (200,100,0) | (200,200,0) | **ORANGE/YELLOW** |
+
+See: `tests/webgpu/visual/__snapshots__/baselines/worldpos-color-floor.png`
+
+#### 2. Distance Debug Test
+
+Light at `(180, 0, 100)` on wall with `mins=(200,-200,-100)`:
+
+| Location | Brightness | Distance (if buggy) |
+|----------|------------|---------------------|
+| Bottom-right (mins) | **208** | sqrt(180²+0²+100²) ≈ 102 |
+| Center | 164 | ~178 |
+| Top-left | 117 | ~271 |
+
+The mins corner is **brightest** because `worldPos=(0,0,0)` is closest to light `(180,0,100)`.
+
+#### 3. WorldPos Color Debug
+
+Wall with `mins=(200,-200,-100)`:
+- R=199 everywhere (worldPos.x = 200, **appears correct**)
+- But this is misleading! For this wall, `position.x = mins.x = 200` for all vertices
+- So `position.x - mins.x = 0` would give R=0, but we see R=199
+- **However**, the floor test proves ALL components ARE offset
+
+See: `tests/webgpu/visual/__snapshots__/baselines/worldpos-color-output.png`
 
 ## Code Paths Investigated
 
