@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { PakArchive, PakDirectoryEntry } from '../../src/assets/pak.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { PakArchive, PakDirectoryEntry } from '../../../src/assets/pak.js';
 
 // Mock PakArchive
 class MockPakArchive implements PakArchive {

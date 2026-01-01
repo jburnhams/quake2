@@ -1,11 +1,11 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { AssetCrossReference } from '../../src/assets/crossReference.js';
-import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { AssetManager } from '../../src/assets/manager.js';
+import { AssetCrossReference } from '../../../src/assets/crossReference.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { AssetManager } from '../../../src/assets/manager.js';
 
 // We will mock the parser functions from crossReference.ts imports
-vi.mock('../../src/assets/bsp.js', () => ({
+vi.mock('../../../src/assets/bsp.js', () => ({
   parseBsp: vi.fn((buffer: ArrayBuffer) => {
     const text = new TextDecoder().decode(buffer);
     const data = JSON.parse(text);
@@ -20,7 +20,7 @@ vi.mock('../../src/assets/bsp.js', () => ({
 }));
 
 // Mock MD2 module completely, including parsing and Loader
-vi.mock('../../src/assets/md2.js', () => ({
+vi.mock('../../../src/assets/md2.js', () => ({
   parseMd2: vi.fn((buffer: ArrayBuffer) => {
       // Dummy mock that returns a fixed structure or assumes buffer is something we control
       // In the test we pass a dummy buffer.
@@ -35,7 +35,7 @@ vi.mock('../../src/assets/md2.js', () => ({
   }
 }));
 
-vi.mock('../../src/assets/md3.js', () => ({
+vi.mock('../../../src/assets/md3.js', () => ({
     parseMd3: vi.fn((buffer: ArrayBuffer) => {
         return {
             surfaces: [{
@@ -50,7 +50,7 @@ vi.mock('../../src/assets/md3.js', () => ({
     }
 }));
 
-vi.mock('../../src/assets/sprite.js', () => ({
+vi.mock('../../../src/assets/sprite.js', () => ({
     parseSprite: vi.fn(),
     SpriteLoader: class {
         constructor(vfs: any) {}
