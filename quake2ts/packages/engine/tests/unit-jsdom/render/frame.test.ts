@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createFrameRenderer, type FrameRenderOptions } from '../../src/render/frame.js';
-import type { BspSurfacePipeline } from '../../src/render/bspPipeline.js';
-import { removeViewTranslation, type SkyboxPipeline } from '../../src/render/skybox.js';
-import type { BspSurfaceGeometry } from '../../src/render/bsp.js';
-import { Camera } from '../../src/render/camera.js';
+import { createFrameRenderer, type FrameRenderOptions } from '../../../src/render/frame.js';
+import type { BspSurfacePipeline } from '../../../src/render/bspPipeline.js';
+import { removeViewTranslation, type SkyboxPipeline } from '../../../src/render/skybox.js';
+import type { BspSurfaceGeometry } from '../../../src/render/bsp.js';
+import { Camera } from '../../../src/render/camera.js';
 import { mat4, vec3 } from 'gl-matrix';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 

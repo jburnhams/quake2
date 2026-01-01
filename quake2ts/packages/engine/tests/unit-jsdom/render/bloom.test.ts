@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { BloomPipeline } from '../src/render/bloom.js';
-import { Texture2D } from '../src/render/resources.js';
+import { BloomPipeline } from '../../../src/render/bloom.js';
+import { Texture2D } from '../../../src/render/resources.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('BloomPipeline', () => {

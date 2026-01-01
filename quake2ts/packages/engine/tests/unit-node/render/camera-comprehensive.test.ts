@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Camera } from '../../src/render/camera.js';
+import { Camera } from '../../../src/render/camera.js';
 import { vec3, mat4 } from 'gl-matrix';
 import { DEG2RAD } from '@quake2ts/shared';
 

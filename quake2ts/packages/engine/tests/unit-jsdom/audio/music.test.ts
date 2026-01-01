@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { MusicSystem } from '../../src/audio/music.js';
-import type { AudioElementLike } from '../../src/audio/music.js';
+import { MusicSystem } from '../../../src/audio/music.js';
+import type { AudioElementLike } from '../../../src/audio/music.js';
 
 class FakeAudioElement implements AudioElementLike {
   src = '';

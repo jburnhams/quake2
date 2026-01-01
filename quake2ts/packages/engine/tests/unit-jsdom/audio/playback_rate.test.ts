@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AudioSystem, AudioSystemOptions } from '../../src/audio/system.js';
-import { SoundRegistry } from '../../src/audio/registry.js';
-import { AudioContextController } from '../../src/audio/context.js';
-import { SoundChannel } from '../../src/audio/constants.js';
+import { AudioSystem, AudioSystemOptions } from '../../../src/audio/system.js';
+import { SoundRegistry } from '../../../src/audio/registry.js';
+import { AudioContextController } from '../../../src/audio/context.js';
+import { SoundChannel } from '../../../src/audio/constants.js';
 import { createMockAudioContext, MockAudioBufferSourceNode } from '@quake2ts/test-utils';
 
 describe('AudioSystem Playback Rate', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildBspGeometry, type BspSurfaceInput } from '../src/render/bsp.js';
+import { buildBspGeometry, type BspSurfaceInput } from '../../../src/render/bsp.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 function makeLightmap(width: number, height: number, start = 0): Uint8Array {

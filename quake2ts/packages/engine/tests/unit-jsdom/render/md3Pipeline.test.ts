@@ -1,5 +1,5 @@
-import { buildMd3SurfaceGeometry, buildMd3VertexData } from '../../src/render/md3Pipeline.js';
-import { Md3Surface } from '../../src/assets/md3.js';
+import { buildMd3SurfaceGeometry, buildMd3VertexData } from '../../../src/render/md3Pipeline.js';
+import { Md3Surface } from '../../../src/assets/md3.js';
 import { describe, it, expect } from 'vitest';
 
 describe('MD3 Pipeline', () => {

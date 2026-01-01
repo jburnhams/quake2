@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FreeCameraController, CameraInput } from '../../src/render/cameraController';
-import { Camera } from '../../src/render/camera';
+import { FreeCameraController, CameraInput } from '../../../src/render/cameraController';
+import { Camera } from '../../../src/render/camera';
 import { vec3 } from 'gl-matrix';
 
 describe('FreeCameraController', () => {

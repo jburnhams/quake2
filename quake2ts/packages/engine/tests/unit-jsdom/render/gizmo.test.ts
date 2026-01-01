@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Gizmo, GizmoPart, Ray } from '../../src/render/gizmo.js';
-import { DebugRenderer } from '../../src/render/debug.js';
+import { Gizmo, GizmoPart, Ray } from '../../../src/render/gizmo.js';
+import { DebugRenderer } from '../../../src/render/debug.js';
 
 describe('Gizmo', () => {
     let gizmo: Gizmo;

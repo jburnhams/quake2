@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DynamicLightManager, DLight } from '../../src/render/dlight.js';
+import { DynamicLightManager, DLight } from '../../../src/render/dlight.js';
 
 describe('DynamicLightManager', () => {
     let manager: DynamicLightManager;
