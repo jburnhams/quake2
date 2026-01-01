@@ -48,7 +48,6 @@ const gl = {
     uniform4f: vi.fn(),
     uniform3fv: vi.fn(),
     uniform4fv: vi.fn(),
-    getExtension: vi.fn(),
     createQuery: vi.fn(() => ({})),
     beginQuery: vi.fn(),
     endQuery: vi.fn(),

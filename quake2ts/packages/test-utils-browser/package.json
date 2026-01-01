@@ -23,14 +23,14 @@
   "dependencies": {
     "@quake2ts/test-utils": "workspace:*",
     "pixelmatch": "^7.1.0",
-    "playwright": "^1.53.2",
+    "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
-    "vitest": "^2.1.8"
+    "vitest": "^4.0.16"
   },
   "devDependencies": {
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }
