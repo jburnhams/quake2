@@ -1,0 +1,36 @@
+{
+  "name": "@quake2ts/test-utils-browser",
+  "version": "0.0.869",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@quake2ts/test-utils": "workspace:*",
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.57.0",
+    "pngjs": "^7.0.0",
+    "vitest": "^4.0.16"
+  },
+  "devDependencies": {
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

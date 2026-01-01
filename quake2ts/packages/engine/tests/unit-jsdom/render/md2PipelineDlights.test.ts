@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
-import { Md2Pipeline, Md2BindOptions } from '../../src/render/md2Pipeline.js';
-import { DLight } from '../../src/render/dlight.js';
+import { Md2Pipeline, Md2BindOptions } from '../../../src/render/md2Pipeline.js';
+import { DLight } from '../../../src/render/dlight.js';
 
 // Mock WebGL context
 const gl = createMockWebGL2Context({
