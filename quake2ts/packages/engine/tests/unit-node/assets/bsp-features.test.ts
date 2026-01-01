@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBsp, BspMap, BspEntity } from '../../src/assets/bsp.js';
+import { parseBsp, BspMap, BspEntity } from '../../../src/assets/bsp.js';
 
 // Helper to create a minimal BspMap for testing
 function createTestMap(
@@ -43,7 +43,7 @@ function createTestMap(
 
 import {
   BspLump,
-} from '../../src/assets/bsp.js';
+} from '../../../src/assets/bsp.js';
 
 function createMinimalBspBuffer(entityString: string, models: any[] = []): ArrayBuffer {
   // We need enough buffer for header + lumps

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OptimalClipFinder } from '../../src/demo/optimalClipFinder.js';
-import { VisibilityTimeline, FrameResources } from '../../src/assets/visibilityAnalyzer.js';
-import { DemoEventType } from '../../src/demo/analysis.js';
+import { OptimalClipFinder } from '../../../src/demo/optimalClipFinder.js';
+import { VisibilityTimeline, FrameResources } from '../../../src/assets/visibilityAnalyzer.js';
+import { DemoEventType } from '../../../src/demo/analysis.js';
 
 describe('OptimalClipFinder', () => {
     let finder: OptimalClipFinder;

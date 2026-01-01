@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { PakWriter } from '../../src/assets/pakWriter';
-import { PakArchive } from '../../src/assets/pak';
+import { PakWriter } from '../../../src/assets/pakWriter';
+import { PakArchive } from '../../../src/assets/pak';
 
 describe('PakWriter', () => {
   it('should create an empty PAK file', () => {

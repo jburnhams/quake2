@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { NetworkMessageParser, NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../src/demo/parser.js';
+import { NetworkMessageParser, NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../../src/demo/parser.js';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
 
 // Helper to create a binary stream from bytes
