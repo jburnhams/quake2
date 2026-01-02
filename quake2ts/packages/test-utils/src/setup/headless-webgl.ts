@@ -1,7 +1,6 @@
 // Remove top-level import to avoid runtime crash when gl is missing
 // import createGL from 'gl';
 import type { WebGLContextState } from '@quake2ts/engine';
-import { createRequire } from 'module';
 
 export interface HeadlessWebGLOptions {
   width?: number;
@@ -29,10 +28,10 @@ export function createHeadlessWebGL(
 
   let createGL;
   try {
-    const require = createRequire(import.meta.url);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     createGL = require('gl');
   } catch (e) {
-    throw new Error('gl package not found or failed to load. Install it to run WebGL tests. Error: ' + e);
+    throw new Error('gl package not found or failed to load. Install it to run WebGL tests.');
   }
 
   // Create WebGL context using 'gl' package

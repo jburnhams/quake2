@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { VirtualFileSystem } from '../src/assets/vfs.js';
-import { ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '../src/assets/browserIngestion.js';
+import { VirtualFileSystem, ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '@quake2ts/engine';
 import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 const decoder = new TextDecoder();
