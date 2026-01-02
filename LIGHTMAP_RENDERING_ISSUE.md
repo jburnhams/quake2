@@ -1,5 +1,58 @@
 # WebGL Lightmap Rendering Issue
 
+## Investigation Progress
+
+### What We Know For Sure
+1. ✅ Vertex positions are NOT transformed when lightmaps are present
+   - Verified: `buildVertexData()` copies vertices[v/v+1/v+2] directly to interleaved array
+   - Verified: `createBspSurfaces()` extracts vertices from map.vertices unchanged
+2. ✅ Vertex shader applies MVP matrix correctly
+   - `gl_Position = u_modelViewProjection * vec4(pos, 1.0)` is standard
+3. ✅ Lightmap colors are correct (red/green show in tiny dots)
+   - Fragment shader sampling works correctly
+4. ✅ Geometry WITHOUT lightmaps renders at correct size
+   - Same test geometry, same camera, just no lightmap property
+
+### What's Still Unknown
+The mystery: Adding lightmap data to a surface causes it to render extremely small (tiny dots) even though:
+- Vertex positions reach shader correctly (dot is in right place)
+- MVP matrix should be identical (same camera/projection)
+- Colors are correct (shader sampling works)
+
+### Current Hypothesis
+Since vertex data and shaders are confirmed correct, the issue must be in:
+1. Test setup - maybe camera/viewport differs when lightmaps present?
+2. Render state - different GL state when lightmaps bound?
+3. Something subtle in how test creates BSP map with lightmaps?
+
+Added debug logging to bsp.ts to capture actual values when we can run tests with proper console output.
+
+---
+
+## Investigation: Atlas Placement System
+
+**Hypothesis**: The lightmap atlas placement calculations may be incorrectly affecting vertex positions or scale.
+
+### Key Code Paths to Examine
+1. `buildBspGeometry()` - Creates `LightmapPlacement` with offset/scale
+2. `buildVertexData()` - Uses placement to remap lightmap coords
+3. `remapLightmapCoords()` - Applies placement.offset and placement.scale
+
+### Atlas Placement Structure
+```typescript
+interface LightmapPlacement {
+  readonly atlasIndex: number;
+  readonly offset: [number, number];  // Position in atlas (normalized 0-1)
+  readonly scale: [number, number];   // Size in atlas (normalized 0-1)
+}
+```
+
+The placement values are in normalized texture coordinates (0-1 range). For a 3×3 lightmap in a 1024×1024 atlas:
+- scale would be ~[3/1024, 3/1024] = [0.0029, 0.0029]
+- These tiny values could be the source of the scaling issue!
+
+---
+
 ## Update: ROOT CAUSE IDENTIFIED
 
 **Status**: 🔴 CRITICAL BUG - Any geometry with lightmaps renders as tiny dots

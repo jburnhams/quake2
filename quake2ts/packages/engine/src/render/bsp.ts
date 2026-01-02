@@ -409,6 +409,15 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       faceIndex,
       styles: face.styles || [255, 255, 255, 255],
     });
+
+    // Debug logging for first surface with lightmap
+    if (faceIndex === 0 && lightmapData) {
+      console.error('[createBspSurfaces] First surface with lightmap:');
+      console.error('  Vertices:', vertices.slice(0, 12));
+      console.error('  TextureCoords:', textureCoords.slice(0, 8));
+      console.error('  LightmapCoords:', lightmapCoords.slice(0, 8));
+      console.error('  Lightmap dims:', lightmapData.width, 'x', lightmapData.height);
+    }
   }
 
   return results;
@@ -482,7 +491,22 @@ export function buildBspGeometry(
 
   const results: BspSurfaceGeometry[] = filteredSurfaces.map((surface, index) => {
     const placement = placements.get(index);
+
+    // Debug logging for first lightmapped surface
+    if (index === 0 && placement) {
+      console.error('[buildBspGeometry] First surface placement:');
+      console.error('  Atlas index:', placement.atlasIndex);
+      console.error('  Offset:', placement.offset);
+      console.error('  Scale:', placement.scale);
+    }
+
     const vertexData = buildVertexData(surface, placement);
+
+    // More debug logging
+    if (index === 0 && placement) {
+      console.error('[buildBspGeometry] Generated vertex data (first 32 floats):', Array.from(vertexData.slice(0, 32)));
+    }
+
     const indexData = ensureIndexArray(surface.indices, vertexData.length / 8);
 
     const vertexBuffer = new VertexBuffer(gl, gl.STATIC_DRAW, gl.ARRAY_BUFFER);
