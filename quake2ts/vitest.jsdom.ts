@@ -10,6 +10,7 @@ export default defineConfig({
       '@quake2ts/cgame': path.resolve(__dirname, 'packages/cgame/src/index.ts'),
       '@quake2ts/server': path.resolve(__dirname, 'packages/server/src/index.ts'),
       '@quake2ts/client': path.resolve(__dirname, 'packages/client/src/index.ts'),
+      '@quake2ts/test-utils/shared/bsp': path.resolve(__dirname, 'packages/test-utils/src/shared/bsp.ts'),
       '@quake2ts/test-utils': path.resolve(__dirname, 'packages/test-utils/src/index.ts'),
       '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(__dirname, 'packages/test-utils/src/engine/mocks/webgpu.ts'),
       '@quake2ts/test-utils/src/setup/webgpu': path.resolve(__dirname, 'packages/test-utils/src/setup/webgpu.ts'),
