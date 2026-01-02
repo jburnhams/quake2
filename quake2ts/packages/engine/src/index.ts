@@ -112,7 +112,13 @@ export {
   type Md2Animation,
   type Md2Frame,
   type Md2GlCommand,
+  type Md2GlCommandVertex,
+  type Md2Header,
   type Md2Model,
+  type Md2Skin,
+  type Md2TexCoord,
+  type Md2Triangle,
+  type Md2Vertex,
 } from './assets/md2.js';
 export {
   Md3Loader,
