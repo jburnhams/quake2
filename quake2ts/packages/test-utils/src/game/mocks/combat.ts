@@ -1,5 +1,7 @@
 import { vi, type Mock } from 'vitest';
-import { DamageMod, Entity, ArmorType, type RegularArmorState, type PowerArmorState } from '@quake2ts/game';
+// Import from game index where possible
+import { DamageMod, Entity, ArmorType } from '@quake2ts/game';
+import type { RegularArmorState, PowerArmorState } from '@quake2ts/game';
 
 export interface MockDamageInfo {
   damage: number;
@@ -76,6 +78,44 @@ export const mockMonsterAttacks: {
   fireShotgun: vi.fn(),
   fireRailgun: vi.fn(),
   fireBFG: vi.fn(),
+};
+
+export interface MockMonsterAttackFunctions {
+  monster_fire_bullet: Mock;
+  monster_fire_bullet_v2: Mock;
+  monster_fire_shotgun: Mock;
+  monster_fire_blaster: Mock;
+  monster_fire_blueblaster: Mock;
+  monster_fire_ionripper: Mock;
+  monster_fire_grenade: Mock;
+  monster_fire_rocket: Mock;
+  monster_fire_bfg: Mock;
+  monster_fire_railgun: Mock;
+  monster_fire_hit: Mock;
+  monster_fire_heat: Mock;
+  monster_fire_dabeam: Mock;
+  monster_fire_flechette: Mock;
+}
+
+/**
+ * Mocks that match the exports of src/entities/monsters/attack.ts
+ * Use this in vi.mock calls.
+ */
+export const mockMonsterAttackFunctions: MockMonsterAttackFunctions = {
+  monster_fire_bullet: vi.fn(),
+  monster_fire_bullet_v2: vi.fn(),
+  monster_fire_shotgun: vi.fn(),
+  monster_fire_blaster: vi.fn(),
+  monster_fire_blueblaster: vi.fn(),
+  monster_fire_ionripper: vi.fn(),
+  monster_fire_grenade: vi.fn(),
+  monster_fire_rocket: vi.fn(),
+  monster_fire_bfg: vi.fn(),
+  monster_fire_railgun: vi.fn(),
+  monster_fire_hit: vi.fn(),
+  monster_fire_heat: vi.fn(),
+  monster_fire_dabeam: vi.fn(),
+  monster_fire_flechette: vi.fn(),
 };
 
 const FORWARD_ANGLES = { x: 0, y: 0, z: 0 } as const;

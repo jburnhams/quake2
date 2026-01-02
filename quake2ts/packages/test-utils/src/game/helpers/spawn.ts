@@ -45,7 +45,8 @@ export function spawnTestEntity(
   context: TestContext,
   options: SpawnTestEntityOptions
 ): Entity | null {
-  const registry = options.registry || context.game?.entities?.spawnRegistry;
+  // Accessing private spawnRegistry via cast to any for test util purposes
+  const registry = options.registry || (context.game?.entities as any)?.spawnRegistry;
 
   if (!registry) {
     throw new Error('No spawn registry provided and none found on context.game.entities');

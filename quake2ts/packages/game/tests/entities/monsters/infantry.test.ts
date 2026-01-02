@@ -7,9 +7,10 @@ import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
 import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('../../../src/entities/monsters/attack.js', () => ({
-  monster_fire_bullet: vi.fn(),
-}));
+vi.mock('../../../src/entities/monsters/attack.js', async () => {
+  const { mockMonsterAttackFunctions } = await import('@quake2ts/test-utils');
+  return mockMonsterAttackFunctions;
+});
 
 describe('monster_infantry', () => {
   let sys: EntitySystem;
