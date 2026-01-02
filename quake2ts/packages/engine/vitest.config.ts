@@ -1,30 +1,40 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
-const isWebGPU = process.env.TEST_TYPE === 'webgpu';
-const isWebGL = process.env.TEST_TYPE === 'webgl';
-const isIntegration = process.env.TEST_TYPE === 'integration';
-const isUnit = process.env.TEST_TYPE === 'unit';
+const testType = process.env.TEST_TYPE;
+const isWebGPU = testType === 'webgpu';
+const isWebGL = testType === 'webgl';
+const isIntegration = testType === 'integration';
+const isUnitNode = testType === 'unit-node';
+const isUnitJsdom = testType === 'unit-jsdom';
+const isUnit = testType === 'unit';
 
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  'tests/unit-node/**', // Exclude node-specific unit tests as they run with vitest.node.config.ts
-  // Exclude webgpu specific tests from standard runs
-  ...((!isWebGPU) ? ['tests/webgpu/**/*.test.ts'] : []),
-  // Exclude webgl visual tests from standard runs
-  ...((!isWebGL) ? ['tests/webgl/**'] : []),
-  // Exclude integration tests from unit tests
-  ...(isUnit ? ['tests/integration/**'] : [])
 ];
 
-const include = isWebGPU
-  ? ['tests/webgpu/**/*.test.ts']
-  : isWebGL
-    ? ['tests/webgl/**/*.test.ts']
-    : isIntegration
-      ? ['tests/integration/**/*.test.ts']
-      : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
+let include = ['tests/**/*.test.ts'];
+
+if (isWebGPU) {
+  include = ['tests/webgpu/**/*.test.ts'];
+} else if (isWebGL) {
+  include = ['tests/webgl/**/*.test.ts'];
+} else if (isIntegration) {
+  include = ['tests/integration/**/*.test.ts'];
+} else if (isUnitNode) {
+  include = ['tests/unit-node/**/*.test.ts'];
+} else if (isUnitJsdom) {
+  include = ['tests/unit-jsdom/**/*.test.ts'];
+} else if (isUnit) {
+  include = ['tests/unit-node/**/*.test.ts', 'tests/unit-jsdom/**/*.test.ts'];
+} else {
+  // Default run (e.g. IDE or plain vitest) - run everything EXCEPT webgpu/webgl unless specified
+  exclude.push('tests/webgpu/**');
+  exclude.push('tests/webgl/**');
+  // Also exclude tests/render/webgpu if it exists (legacy location)
+  exclude.push('tests/render/webgpu/**');
+}
 
 const setupFiles = ['./vitest.setup.ts'];
 
@@ -47,10 +57,9 @@ export default defineConfig({
   test: {
     include,
     exclude,
-    environment: 'jsdom',
+    environment: isUnitNode ? 'node' : 'jsdom',
     setupFiles,
     globals: true,
-    // Force sequential execution for integration, webgpu, and webgl tests
     ...((isIntegration || isWebGPU || isWebGL) ? {
       pool: 'forks',
       poolOptions: {
