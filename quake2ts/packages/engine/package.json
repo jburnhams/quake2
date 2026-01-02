@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/engine",
-  "version": "0.0.832",
+  "version": "0.0.873",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -11,6 +11,16 @@
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.cjs",
       "default": "./dist/esm/index.js"
+    },
+    "./assets/pak.js": {
+      "types": "./dist/types/assets/pak.d.ts",
+      "import": "./dist/esm/assets/pak.js",
+      "require": "./dist/cjs/assets/pak.cjs"
+    },
+    "./assets/bsp.js": {
+      "types": "./dist/types/assets/bsp.d.ts",
+      "import": "./dist/esm/assets/bsp.js",
+      "require": "./dist/cjs/assets/bsp.cjs"
     },
     "./browser": {
       "types": "./dist/types/index.d.ts",
@@ -32,14 +42,16 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "pnpm run test:unit",
-    "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run --passWithNoTests",
-    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run --passWithNoTests",
-    "test:webgl": "cross-env TEST_TYPE=webgl vitest run --passWithNoTests",
-    "test:webgl:watch": "cross-env TEST_TYPE=webgl vitest watch",
-    "test:webgl:update": "cross-env UPDATE_VISUAL=1 TEST_TYPE=webgl vitest run",
-    "test:webgl:ui": "cross-env TEST_TYPE=webgl vitest --ui",
+    "test": "vitest run",
+    "test:unit": "pnpm run test:unit:node && pnpm run test:unit:jsdom",
+    "test:unit:node": "cross-env TEST_TYPE=unit-node vitest run --config vitest.node.ts --passWithNoTests",
+    "test:unit:jsdom": "cross-env TEST_TYPE=unit-jsdom vitest run --config vitest.jsdom.ts --passWithNoTests",
+    "test:integration": "cross-env TEST_TYPE=integration vitest run --config vitest.integration.ts --passWithNoTests",
+    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run --config vitest.webgpu.ts --passWithNoTests",
+    "test:webgl": "cross-env TEST_TYPE=webgl vitest run --config vitest.webgl.ts --passWithNoTests",
+    "test:webgl:watch": "cross-env TEST_TYPE=webgl vitest watch --config vitest.webgl.ts",
+    "test:webgl:update": "cross-env UPDATE_VISUAL=1 TEST_TYPE=webgl vitest run --config vitest.webgl.ts",
+    "test:webgl:ui": "cross-env TEST_TYPE=webgl vitest --ui --config vitest.webgl.ts",
     "test:visual": "vitest run tests/integration/visual",
     "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
     "test:visual:watch": "vitest tests/integration/visual"
@@ -53,12 +65,13 @@
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.86",
+    "@napi-rs/canvas": "^0.1.88",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
     "@types/node": "^25.0.3",
     "@webgpu/types": "^0.1.68",
+    "cross-env": "^10.1.0",
     "fake-indexeddb": "^6.2.5",
     "gl-matrix": "^3.4.4",
     "pixelmatch": "^7.1.0",

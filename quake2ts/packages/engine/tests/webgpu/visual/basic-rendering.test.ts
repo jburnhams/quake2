@@ -1,4 +1,9 @@
-import { test } from '../../helpers/visual-testing';
+import { test, setupHeadlessWebGPUEnv } from '@quake2ts/test-utils';
+import { beforeAll } from 'vitest';
+
+beforeAll(async () => {
+    await setupHeadlessWebGPUEnv();
+});
 
 test('renders clear color', async ({ renderAndExpectSnapshot }) => {
   await renderAndExpectSnapshot(

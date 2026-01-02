@@ -1,23 +1,25 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPURenderer, WebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { TextureCubeMap } from '../../../src/render/webgpu/resources.js';
 import { Camera } from '../../../src/render/camera.js';
-import { initHeadlessWebGPU, captureTexture, expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Skybox Pipeline', () => {
+  const lifecycle = createWebGPULifecycle();
   let renderer: WebGPURenderer;
   let cubemap: TextureCubeMap;
 
   beforeAll(async () => {
-    await initHeadlessWebGPU();
+    await setupHeadlessWebGPUEnv();
     renderer = await createWebGPURenderer(undefined, {
        width: 256,
        height: 256
     }) as WebGPURenderer;
+    lifecycle.trackRenderer(renderer);
 
     // Create a simple colored cubemap
     // We map Quake directions to Cubemap faces so that:
@@ -54,19 +56,38 @@ describe('Skybox Pipeline', () => {
         return data;
     };
 
-    // Face 0: GL Right (+X) -> Quake Right (-Y) -> Magenta
+    const createCheckerboardData = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number, squareSize: number = 8) => {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const i = y * size + x;
+                const isEvenSquare = (Math.floor(x / squareSize) + Math.floor(y / squareSize)) % 2 === 0;
+                data[i * 4] = isEvenSquare ? r1 : r2;
+                data[i * 4 + 1] = isEvenSquare ? g1 : g2;
+                data[i * 4 + 2] = isEvenSquare ? b1 : b2;
+                data[i * 4 + 3] = 255;
+            }
+        }
+        return data;
+    };
+
+    // Cubemap faces mapped via Quake→GL transform in shader:
+    // cubemapDir.x=-dir.y, cubemapDir.y=dir.z, cubemapDir.z=-dir.x
+    // Face 0 (+X in GL): Quake -Y (right) -> Magenta
     cubemap.uploadFace(0, createColorData(255, 0, 255));
-    // Face 1: GL Left (-X) -> Quake Left (+Y) -> Green
+    // Face 1 (-X in GL): Quake +Y (left) -> Green
     cubemap.uploadFace(1, createColorData(0, 255, 0));
-    // Face 2: GL Top (+Y) -> Quake Up (+Z) -> Blue
+    // Face 2 (+Y in GL): Quake +Z (up) -> Blue
     cubemap.uploadFace(2, createColorData(0, 0, 255));
-    // Face 3: GL Bottom (-Y) -> Quake Down (-Z) -> Yellow
+    // Face 3 (-Y in GL): Quake -Z (down) -> Yellow
     cubemap.uploadFace(3, createColorData(255, 255, 0));
-    // Face 4: GL Front (+Z) -> Quake Back (-X) -> Cyan
+    // Face 4 (+Z in GL): Quake -X (back) -> Cyan
     cubemap.uploadFace(4, createColorData(0, 255, 255));
-    // Face 5: GL Back (-Z) -> Quake Front (+X) -> Red
-    cubemap.uploadFace(5, createColorData(255, 0, 0));
+    // Face 5 (-Z in GL): Quake +X (forward) -> Red/Dark-Red Checkerboard (for scrolling visibility)
+    cubemap.uploadFace(5, createCheckerboardData(255, 0, 0, 128, 0, 0, 8));
   });
+
+  afterAll(lifecycle.cleanup);
 
   it('renders skybox front face', async () => {
     const camera = new Camera();
@@ -332,7 +353,8 @@ describe('Skybox Pipeline', () => {
       camera.setFov(90);
       camera.setAspectRatio(1.0);
       camera.setPosition(0, 0, 0);
-      camera.setRotation(0, 0, 0);
+      // Look forward-up (+X +Z) to see both the red checkerboard (front) and blue (top) faces
+      camera.lookAt([10, 0, 10]);
 
       // Animation parameters
       const fps = 10;
@@ -346,7 +368,7 @@ describe('Skybox Pipeline', () => {
               camera,
               sky: {
                   cubemap,
-                  scrollSpeeds: [0.1, 0.1]
+                  scrollSpeeds: [1.0, 1.0]
               },
               timeSeconds: time
           });
@@ -360,7 +382,7 @@ describe('Skybox Pipeline', () => {
           );
       }, {
           name: 'skybox_scrolling',
-          description: 'Skybox with scrolling texture offset applied over time.',
+          description: 'Skybox with scrolling red/dark-red checkerboard (front) and blue (top) faces visible. Texture scrolls over time.',
           width: 256,
           height: 256,
           updateBaseline,

@@ -28,13 +28,19 @@ const mockEngineImports: EngineImports = {
       getMap: vi.fn(),
       listFiles: vi.fn().mockReturnValue([]),
   } as any,
+  audio: {
+      play_track: vi.fn(),
+      play_music: vi.fn(),
+      stop_music: vi.fn(),
+      set_music_volume: vi.fn()
+  } as any
 } as any;
 
 const mockEngineHost: EngineHost = {
     cvars: {
         get: vi.fn(),
         setValue: vi.fn(),
-        list: vi.fn().mockReturnValue([]),
+        list: vi.fn().mockReturnValue([]), // Ensure this returns an array
         register: vi.fn(),
     },
     commands: {

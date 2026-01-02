@@ -58,23 +58,28 @@ uniform vec2 u_scroll;
 out vec3 v_direction;
 
 void main() {
-  // Transform Quake-space position/direction to GL-space direction for cubemap sampling.
-  // Quake Basis: X(Fwd), Y(Left), Z(Up)
-  // GL Basis (Cubemap): -Z(Front), -X(Left), +Y(Top)
-  // Mapping:
-  // Quake X (1,0,0) -> GL -Z (0,0,-1)
-  // Quake Y (0,1,0) -> GL -X (-1,0,0)
-  // Quake Z (0,0,1) -> GL Y  (0,1,0)
-  vec3 dir = vec3(-a_position.y, a_position.z, -a_position.x);
+  // The cube vertices (a_position) are in GL space (-1 to 1, standard OpenGL cube).
+  // The viewProjection matrix expects Quake-space input (it contains Quake-to-GL transform).
+  // So we must transform GL -> Quake before applying the view matrix.
+  //
+  // GL-to-Quake mapping (inverse of Quake-to-GL):
+  // GL -Z -> Quake +X (forward)
+  // GL -X -> Quake +Y (left)
+  // GL +Y -> Quake +Z (up)
+  // So: (gl.x, gl.y, gl.z) -> (-gl.z, -gl.x, gl.y)
+  vec3 quakePos = vec3(-a_position.z, -a_position.x, a_position.y);
+  vec4 pos = u_viewProjectionNoTranslation * vec4(quakePos, 1.0);
+  // Force z = w to render at far plane, avoiding clipping issues
+  // for triangles that intersect the camera plane
+  gl_Position = pos.xyww;
 
-  // Normalize just in case, though a_position is on a cube surface.
-  // Actually, for a cubemap lookup, normalization isn't strictly required by the hardware
-  // (it grabs the vector direction), but good practice if we modify it.
-  dir = normalize(dir);
+  // For cubemap sampling, use the original GL-space position since
+  // WebGL cubemap targets (POSITIVE_X, etc.) are in GL conventions.
+  vec3 dir = a_position;
 
+  // Apply scroll offset for animated skies
   dir.xy += u_scroll;
   v_direction = dir;
-  gl_Position = u_viewProjectionNoTranslation * vec4(a_position, 1.0);
 }`;
 
 export const SKYBOX_FRAGMENT_SHADER = `#version 300 es
@@ -141,7 +146,12 @@ export class SkyboxPipeline {
   bind(options: SkyboxBindOptions): void {
     const { viewProjection, scroll, textureUnit = 0 } = options;
     this.program.use();
+    // Enable depth testing with LEQUAL - skybox renders at z=1.0 (far plane)
+    this.gl.enable(this.gl.DEPTH_TEST);
+    this.gl.depthFunc(this.gl.LEQUAL);
     this.gl.depthMask(false);
+    // Disable face culling - we're inside the cube looking out
+    this.gl.disable(this.gl.CULL_FACE);
     this.gl.uniformMatrix4fv(this.uniformViewProj, false, viewProjection);
     this.gl.uniform2f(this.uniformScroll, scroll[0], scroll[1]);
     this.gl.uniform1i(this.uniformSampler, textureUnit);

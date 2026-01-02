@@ -21,6 +21,7 @@ export class WebGPUMatrixBuilder implements MatrixBuilder {
     projection[10] = camera.far * rangeInv;          // Z mapping to [0,1]
     projection[11] = -1;
     projection[14] = camera.near * camera.far * rangeInv;
+    projection[15] = 0;  // CRITICAL: Must be 0 for perspective projection (not 1 from identity)
 
     return projection;
   }

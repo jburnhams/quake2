@@ -14,17 +14,13 @@ export interface WebGPUContextState {
 }
 
 /**
- * Initialize WebGPU in a headless Node.js environment using @webgpu/dawn (via webgpu package)
+ * Setup the Headless WebGPU environment (globals, navigator.gpu) without creating a device.
+ * Use this when tests create their own devices.
  */
-export async function initHeadlessWebGPU(
-  options?: {
-    powerPreference?: 'low-power' | 'high-performance';
-    requiredFeatures?: GPUFeatureName[];
-  }
-): Promise<HeadlessWebGPUSetup> {
+export async function setupHeadlessWebGPUEnv(): Promise<void> {
   // Check if we are in Node.js environment
   if (typeof process === 'undefined' || process.release?.name !== 'node') {
-    throw new Error('initHeadlessWebGPU should only be called in a Node.js environment');
+    throw new Error('setupHeadlessWebGPUEnv should only be called in a Node.js environment');
   }
 
   // Dynamic import to avoid hard dependency
@@ -68,6 +64,18 @@ export async function initHeadlessWebGPU(
       // Also inject other globals like GPUAdapter, GPUDevice etc.
       Object.assign(globalThis, globals);
   }
+}
+
+/**
+ * Initialize WebGPU in a headless Node.js environment using @webgpu/dawn (via webgpu package)
+ */
+export async function initHeadlessWebGPU(
+  options?: {
+    powerPreference?: 'low-power' | 'high-performance';
+    requiredFeatures?: GPUFeatureName[];
+  }
+): Promise<HeadlessWebGPUSetup> {
+  await setupHeadlessWebGPUEnv();
 
   // Request Adapter
   const adapter = await navigator.gpu.requestAdapter({

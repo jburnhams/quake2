@@ -5,27 +5,23 @@ import { mat4 } from 'gl-matrix';
 import { PNG } from 'pngjs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { initHeadlessWebGPU } from '@quake2ts/test-utils/src/setup/webgpu';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 
 describe('WebGPURenderer Integration (Headless with Dawn)', () => {
-  let cleanup: () => Promise<void>;
+  const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
     // Initialize headless WebGPU environment using shared helper
     // This handles globals injection and navigator.gpu polyfilling
-    const setup = await initHeadlessWebGPU();
-    cleanup = setup.cleanup;
+    await setupHeadlessWebGPUEnv();
   });
 
-  afterAll(async () => {
-    if (cleanup) {
-        await cleanup();
-    }
-  });
+  afterAll(lifecycle.cleanup);
 
   it('renders a solid sprite to a texture', async () => {
     // 1. Create Renderer
     const renderer = await createWebGPURenderer();
+    lifecycle.trackRenderer(renderer);
 
     // 2. Setup Scene
     const camera = new Camera(mat4.create());
@@ -130,6 +126,8 @@ describe('WebGPURenderer Integration (Headless with Dawn)', () => {
   it('defensively closes 2D pass if end2D() is forgotten', async () => {
     // Test defensive cleanup to prevent GPU resource leaks
     const renderer = await createWebGPURenderer();
+    lifecycle.trackRenderer(renderer);
+
     const camera = new Camera(mat4.create());
 
     // Spy on console.warn to verify warning is logged

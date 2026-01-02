@@ -1,0 +1,35 @@
+{
+  "name": "@quake2ts/test-utils-dom",
+  "version": "0.0.873",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.88",
+    "@quake2ts/test-utils": "workspace:*",
+    "@types/jsdom": "^27.0.0",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^27.4.0",
+    "vitest": "^4.0.16"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

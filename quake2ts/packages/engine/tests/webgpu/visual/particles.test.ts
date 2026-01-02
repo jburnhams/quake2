@@ -1,5 +1,5 @@
 import { describe, it, beforeAll, afterAll } from 'vitest';
-import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, initHeadlessWebGPU, HeadlessWebGPUSetup, captureTexture } from '@quake2ts/test-utils';
+import { createRenderTestSetup, expectAnimationSnapshot, expectSnapshot, setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture } from '@quake2ts/test-utils';
 import { ParticleRenderer } from '../../../src/render/webgpu/pipelines/particleSystem.js';
 import { ParticleSystem, spawnSteam, spawnExplosion, spawnBlood } from '../../../src/render/particleSystem.js';
 import { RandomGenerator, createMat4Identity, mat4Ortho } from '@quake2ts/shared';
@@ -11,27 +11,18 @@ const snapshotDir = path.join(__dirname, '__snapshots__');
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Particle System Visual Tests', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
-      try {
-        gpuSetup = await initHeadlessWebGPU();
-        if (!fs.existsSync(snapshotDir)) {
-            fs.mkdirSync(snapshotDir, { recursive: true });
-        }
-      } catch (error) {
-        console.warn('Skipping WebGPU visual tests: ' + error);
-      }
-  });
-
-  afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
+    await setupHeadlessWebGPUEnv();
+    if (!fs.existsSync(snapshotDir)) {
+      fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
+  afterAll(lifecycle.cleanup);
+
   it('particles-basic', async () => {
-      if (!gpuSetup) return;
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;
@@ -106,7 +97,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-smoke', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -173,7 +164,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-explosion', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -236,7 +227,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-blood', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
@@ -300,7 +291,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-many-performance', async () => {
-      if (!gpuSetup) return;
+
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;
@@ -360,7 +351,7 @@ describe('Particle System Visual Tests', () => {
   });
 
   it('particles-textured', async () => {
-      if (!gpuSetup) return;
+
 
       const { context, renderTarget, renderTargetView, cleanup } = await createRenderTestSetup(256, 256);
       const { device, format } = context;

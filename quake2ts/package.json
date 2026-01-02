@@ -1,9 +1,12 @@
 {
   "name": "quake2ts",
-  "version": "0.0.832",
+  "version": "0.0.873",
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
-  "packageManager": "pnpm@8.15.7",
+  "engines": {
+    "node": ">=25"
+  },
+  "packageManager": "pnpm@9.0.0",
   "keywords": [
     "quake",
     "quake2",
@@ -55,7 +58,7 @@
     "pako": "^2.1.0"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.86",
+    "@napi-rs/canvas": "^0.1.88",
     "@playwright/test": "^1.57.0",
     "@quake2ts/test-utils": "workspace:^",
     "@types/node": "^25.0.3",

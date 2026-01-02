@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPUContext } from '../../../src/render/webgpu/context';
 import { BspSurfacePipeline } from '../../../src/render/webgpu/pipelines/bspPipeline';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../../src/render/webgpu/headless';
-import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 import { expectSnapshot, expectAnimationSnapshot } from '@quake2ts/test-utils';
 import { Texture2D, VertexBuffer, IndexBuffer } from '../../../src/render/webgpu/resources';
 import { mat4, vec3 } from 'gl-matrix';
@@ -42,33 +42,26 @@ function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, ind
 }
 
 describe('BspSurfacePipeline Visual (Headless)', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  const lifecycle = createWebGPULifecycle();
   const snapshotDir = path.join(__dirname, '__snapshots__');
   const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
   beforeAll(async () => {
-    try {
-      gpuSetup = await initHeadlessWebGPU();
-      if (!fs.existsSync(snapshotDir)) {
-          fs.mkdirSync(snapshotDir, { recursive: true });
-      }
-    } catch (error) {
-      console.warn('Skipping WebGPU visual tests: ' + error);
+    await setupHeadlessWebGPUEnv();
+    if (!fs.existsSync(snapshotDir)) {
+      fs.mkdirSync(snapshotDir, { recursive: true });
     }
   });
 
-  afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
-    }
-  });
+  afterAll(lifecycle.cleanup);
 
   it('renders a textured quad', async () => {
-    if (!gpuSetup) return;
+
 
     const width = 256;
     const height = 256;
     const context = await createWebGPUContext(undefined, { width, height });
+    lifecycle.track(context.device);
     const device = context.device;
 
     const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -174,11 +167,12 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
   });
 
   it('renders with lightmap', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -275,11 +269,12 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders with scrolling texture', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -399,11 +394,12 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders alpha tested surface', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');
@@ -501,11 +497,12 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
     });
 
     it('renders with dynamic light', async () => {
-      if (!gpuSetup) return;
+
 
       const width = 256;
       const height = 256;
       const context = await createWebGPUContext(undefined, { width, height });
+      lifecycle.track(context.device);
       const device = context.device;
 
       const { texture, view } = createHeadlessRenderTarget(device, width, height, 'rgba8unorm');

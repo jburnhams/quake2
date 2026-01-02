@@ -19,8 +19,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: [
-      'packages/engine/tests/**/*.test.ts',
-      'packages/client/tests/**/*.test.ts',
+      'packages/engine/tests/unit-jsdom/**/*.test.ts',
+      'packages/client/tests/unit-jsdom/**/*.test.ts',
+      'packages/cgame/tests/unit-jsdom/**/*.test.ts',
       // Include src tests if any
       'packages/engine/src/**/*.test.ts',
       'packages/client/src/**/*.test.ts',
@@ -34,9 +35,9 @@ export default defineConfig({
       '**/*integration*',
       '**/webgpu/**',
       '**/webgl/**',
-      // Exclude asset preview tests that require Node environment
-      'packages/engine/tests/assets/preview.test.ts',
-      'packages/engine/tests/assets/preview_bounds.test.ts',
+      // Exclude engine unit-node tests
+      'packages/engine/tests/unit-node/**/*.test.ts',
+      'packages/client/tests/unit-node/**/*.test.ts',
     ],
     pool: 'threads',
     reporters: ['default', 'junit'],

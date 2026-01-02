@@ -2,27 +2,25 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createWebGPUContext } from '../../src/render/webgpu/context';
 import { SpriteRenderer } from '../../src/render/webgpu/pipelines/sprite';
 import { createHeadlessRenderTarget, captureRenderTarget } from '../../src/render/webgpu/headless';
-import { initHeadlessWebGPU, HeadlessWebGPUSetup } from '@quake2ts/test-utils/src/setup/webgpu';
+import { setupHeadlessWebGPUEnv, createWebGPULifecycle } from '@quake2ts/test-utils';
 
 describe('SpriteRenderer Integration (Headless)', () => {
-  let gpuSetup: HeadlessWebGPUSetup | null = null;
+  const lifecycle = createWebGPULifecycle();
 
   beforeAll(async () => {
     try {
-      gpuSetup = await initHeadlessWebGPU();
+      await setupHeadlessWebGPUEnv();
     } catch (error) {
       throw new Error(`Failed to initialize WebGPU: ${error}`);
     }
   });
 
-  afterAll(async () => {
-    if (gpuSetup) {
-      await gpuSetup.cleanup();
-    }
-  });
+  afterAll(lifecycle.cleanup);
 
   it('renders a solid red rectangle', async () => {
     const context = await createWebGPUContext();
+    lifecycle.track(context.device);
+
     const width = 256;
     const height = 256;
 

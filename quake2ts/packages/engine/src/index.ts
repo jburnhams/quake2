@@ -85,7 +85,6 @@ export {
   type BspHeader,
   type BspEntities,
   type BspEntity,
-  type BspLump,
   type BspLumpInfo,
   type BspFace,
   type BspLeaf,
@@ -103,6 +102,7 @@ export {
   type BspBrushSide,
   type BspArea,
   type BspAreaPortal,
+  BspLump,
 } from './assets/bsp.js';
 export {
   Md2Loader,
@@ -310,6 +310,7 @@ export {
   type BlasterImpactContext,
 } from './render/particleSystem.js';
 export { Pic, Renderer, createRenderer } from './render/renderer.js';
+export { createWebGPURenderer } from './render/webgpu/renderer.js';
 export { FrameRenderStats, FrameRenderOptions, WorldRenderState, type FrameRenderer, type RenderModeConfig } from './render/frame.js'; // Export FrameRenderer and RenderModeConfig
 export { SpriteRenderer } from './render/sprite.js'; // Export SpriteRenderer
 export { RenderOptions } from './render/options.js'; // Export RenderOptions
