@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/test-utils-browser",
-  "version": "0.0.874",
+  "version": "0.0.875",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
