@@ -22,10 +22,23 @@ The mystery: Adding lightmap data to a surface causes it to render extremely sma
 ### Current Hypothesis
 Since vertex data and shaders are confirmed correct, the issue must be in:
 1. Test setup - maybe camera/viewport differs when lightmaps present?
+   - ✅ Checked: Camera setup identical (z=25, lookAt origin, FOV 90, aspect 1.0)
+   - ❓ Need to verify viewport/scissor settings
 2. Render state - different GL state when lightmaps bound?
+   - ❓ Need to check if texture binding or blending state differs
 3. Something subtle in how test creates BSP map with lightmaps?
+   - ✅ Checked: Vertex array structure is correct (array of arrays)
+   - ✅ Checked: Edge/surfEdge indexing looks correct
+   - ❓ Could there be an issue with texInfo coordinates when lightmaps present?
 
-Added debug logging to bsp.ts to capture actual values when we can run tests with proper console output.
+Added debug logging to bsp.ts to capture actual values, but browser console.error
+output isn't captured in test logs. Need alternative debugging approach.
+
+### Next Steps
+1. Create minimal reproduction test that renders BOTH with and without lightmaps
+2. Use WebGL debugging tools or add shader debug output to visualize vertex positions
+3. Check if issue is specific to Playwright/headless Chrome vs real browser
+4. Consider if the issue might be in test's BSP map helper code rather than engine
 
 ---
 
