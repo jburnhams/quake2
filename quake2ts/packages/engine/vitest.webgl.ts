@@ -12,7 +12,8 @@ export default mergeConfig(baseConfig, defineConfig({
         minForks: 1
       }
     },
-    isolate: true,
+    // Disable isolation to allow sharing the Playwright browser instance across test files
+    isolate: false,
     fileParallelism: false
   },
 }));

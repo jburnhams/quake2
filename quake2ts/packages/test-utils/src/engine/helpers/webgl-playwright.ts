@@ -28,6 +28,15 @@ export interface WebGLPlaywrightOptions {
   headless?: boolean;
 }
 
+// Singleton state for reusing the browser/server across tests
+let sharedSetup: {
+  browser: Browser;
+  context: BrowserContext;
+  page: Page;
+  server: any;
+  serverUrl: string;
+} | undefined;
+
 function findWorkspaceRoot(startDir: string): string {
   let currentDir = startDir;
   while (currentDir !== path.parse(currentDir).root) {
@@ -50,6 +59,34 @@ export async function createWebGLPlaywrightSetup(
   const width = options.width ?? 256;
   const height = options.height ?? 256;
   const headless = options.headless ?? true;
+
+  // Re-use existing setup if available
+  if (sharedSetup) {
+    const { page, browser, context, server } = sharedSetup;
+
+    // Ensure the page is still valid (not crashed)
+    if (!page.isClosed()) {
+      // Resize viewport to match current test requirements
+      await page.setViewportSize({ width, height });
+
+      return {
+        browser,
+        context,
+        page,
+        width,
+        height,
+        server,
+        // No-op cleanup for shared instance to keep it alive for next test
+        cleanup: async () => {
+          // We intentionally do not close the browser/server here.
+          // It will be closed when the Node process exits.
+        }
+      };
+    } else {
+      // If page is closed/crashed, discard shared setup and recreate
+      sharedSetup = undefined;
+    }
+  }
 
   // Dynamic imports for optional dependencies
   let chromium;
@@ -122,7 +159,7 @@ export async function createWebGLPlaywrightSetup(
   // Log browser console for debugging
   page.on('console', msg => {
     if (msg.type() === 'error') console.error(`[Browser Error] ${msg.text()}`);
-    else console.log(`[Browser] ${msg.text()}`);
+    // else console.log(`[Browser] ${msg.text()}`); // Reduce noise
   });
 
   page.on('pageerror', err => {
@@ -138,9 +175,19 @@ export async function createWebGLPlaywrightSetup(
   // Wait for renderer to be ready
   await page.waitForFunction(() => (window as any).testRenderer !== undefined, { timeout: 5000 });
 
+  // Store as shared setup
+  sharedSetup = {
+    browser,
+    context,
+    page,
+    server: staticServer,
+    serverUrl
+  };
+
   const cleanup = async () => {
-    await browser.close();
-    staticServer.close();
+    // For the initial creator, we effectively "hand off" ownership to the global sharedSetup.
+    // So we don't close it here either, unless we want to implement ref-counting.
+    // For simplicity, we keep it open until process exit.
   };
 
   return {
@@ -184,9 +231,12 @@ export async function renderAndCaptureWebGLPlaywright(
 
       // Resize canvas if needed
       if (width !== undefined && height !== undefined) {
-        canvas.width = width;
-        canvas.height = height;
-        gl.viewport(0, 0, width, height);
+        // Only resize if actually changed to avoid flicker/overhead
+        if (canvas.width !== width || canvas.height !== height) {
+           canvas.width = width;
+           canvas.height = height;
+           gl.viewport(0, 0, width, height);
+        }
       }
 
       try {
