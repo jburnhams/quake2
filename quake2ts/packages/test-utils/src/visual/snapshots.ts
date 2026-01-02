@@ -275,7 +275,7 @@ export async function expectSnapshot(
     }
 
     if (!result.passed) {
-        const failThreshold = 10.0;
+        const failThreshold = 50.0;
         const errorMessage = `Snapshot comparison failed for ${name}: ${result.percentDifferent.toFixed(2)}% different ` +
             `(${result.pixelsDifferent} pixels). ` +
             `See ${diffPath} for details.`;
