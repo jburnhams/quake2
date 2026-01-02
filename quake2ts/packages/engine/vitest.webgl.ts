@@ -31,11 +31,19 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    isolate: true,
     fileParallelism: false,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/webgl.xml',
     },
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 1,
+        minForks: 1
+      }
+    },
+    // Disable isolation to allow sharing the Playwright browser instance across test files
+    isolate: false
   },
 });
