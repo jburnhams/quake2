@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { SkyboxPipeline } from '../../../src/render/webgpu/pipelines/skybox.js';
-import { CameraState } from '../../../src/render/types/camera.js';
-import { WebGPUMatrixBuilder } from '../../../src/render/matrix/webgpu.js';
+import { SkyboxPipeline } from '@quake2ts/engine/render/webgpu/pipelines/skybox.js';
+import { CameraState } from '@quake2ts/engine/render/types/camera.js';
+import { WebGPUMatrixBuilder } from '@quake2ts/engine/render/matrix/webgpu.js';
 
 // Mock WebGPU globals
 if (typeof global !== 'undefined') {
