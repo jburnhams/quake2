@@ -76,18 +76,18 @@ export * from './visual/snapshots.js';
 export * from './visual/animation-snapshots.js';
 export { test } from './engine/builders/visual-testing.js';
 
-// E2E
-export * from './e2e/playwright.js';
-export * from './e2e/network.js';
-export * from './e2e/visual.js';
+// E2E - MOVED TO @quake2ts/test-utils-browser
+// export * from './e2e/playwright.js';
+// export * from './e2e/network.js';
+// export * from './e2e/visual.js';
 
 // Export types
 export type { BrowserSetupOptions } from './setup/browser.js';
 export type { NodeSetupOptions } from './setup/node.js';
 export type { MockRAF } from './setup/timing.js';
 export type { StorageScenario } from './setup/storage.js';
-export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
-export type { VisualScenario, VisualDiff } from './e2e/visual.js';
+// MOVED export type { NetworkSimulator, NetworkCondition } from './e2e/network.js';
+// MOVED export type { VisualScenario, VisualDiff } from './e2e/visual.js';
 export type { HeadlessWebGPUSetup, WebGPUContextState } from './setup/webgpu.js';
 export type { HeadlessWebGLContext, HeadlessWebGLOptions } from './setup/headless-webgl.js';
 export type { RenderTestSetup, ComputeTestSetup } from './engine/helpers/webgpu-rendering.js';
