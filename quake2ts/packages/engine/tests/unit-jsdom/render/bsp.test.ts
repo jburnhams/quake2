@@ -76,9 +76,9 @@ describe('buildBspGeometry', () => {
 
     const built = surfaces[0];
     expect(Array.from(built.indexData)).toEqual([0, 1, 2]);
-    expect(built.vertexData.length).toBe(21);
+    expect(built.vertexData.length).toBe(24); // 8 floats per vertex * 3 vertices
     expect(gl.bindBuffer).toHaveBeenCalled();
-    expect(gl.vertexAttribPointer).toHaveBeenCalledWith(0, 3, gl.FLOAT, false, 28, 0);
+    expect(gl.vertexAttribPointer).toHaveBeenCalledWith(0, 3, gl.FLOAT, false, 32, 0); // Stride is 8 * 4 bytes
     expect(gl.texImage2D).toHaveBeenCalled();
   });
 });

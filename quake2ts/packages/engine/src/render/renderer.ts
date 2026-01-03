@@ -40,6 +40,7 @@ type MutableRenderableEntity = MutableRenderableMd2 | MutableRenderableMd3;
 export interface Renderer extends IRenderer {
     setAreaPortalState(portalNum: number, open: boolean): void;
     uploadBspGeometry(map: BspMap): BspGeometryBuildResult;
+    getTextures(): ReadonlyMap<string, Pic>;
 }
 
 // Helper to generate a stable pseudo-random color from a number
@@ -769,6 +770,10 @@ export const createRenderer = (
         return picCache.get(name);
     };
 
+    const getTextures = (): ReadonlyMap<string, Pic> => {
+        return picCache;
+    };
+
     begin2D = () => {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -983,6 +988,7 @@ export const createRenderer = (
         registerPic,
         registerTexture,
         getTexture,
+        getTextures,
         begin2D,
         end2D,
         drawPic,

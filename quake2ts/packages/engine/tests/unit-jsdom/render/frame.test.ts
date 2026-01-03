@@ -9,7 +9,7 @@ import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 let callOrder: string[] = [];
 
-function createStubGeometry(label: string, surfaceFlags = 0): BspSurfaceGeometry {
+function createStubGeometry(label: string, surfaceFlags = 0, styleIndices?: number[]): BspSurfaceGeometry {
   return {
     vao: { bind: vi.fn(() => callOrder.push(`${label}-vao`)) } as any,
     vertexBuffer: {} as any,
@@ -18,6 +18,7 @@ function createStubGeometry(label: string, surfaceFlags = 0): BspSurfaceGeometry
     texture: label,
     surfaceFlags,
     lightmap: { atlasIndex: 0, offset: [0, 0], scale: [1, 1] },
+    styleIndices,
     vertexData: new Float32Array(),
     indexData: new Uint16Array(),
   };
@@ -108,7 +109,10 @@ describe('FrameRenderer', () => {
           { styles: [0, 2, 3, 255] },
         ],
       },
-      surfaces: [createStubGeometry('first'), createStubGeometry('second')],
+      surfaces: [
+        createStubGeometry('first', 0, [1, 255, 255, 255]),
+        createStubGeometry('second', 0, [0, 2, 3, 255])
+      ],
       lightmaps: [{ texture: lightmapTexture }],
       textures: new Map([
         ['first', diffuse],
