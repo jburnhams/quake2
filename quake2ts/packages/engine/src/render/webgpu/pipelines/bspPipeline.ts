@@ -10,7 +10,7 @@ import {
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import { MAX_DLIGHTS, DLight } from '../../dlight.js';
 import { BspSurfaceGeometry } from '../../bsp.js';
-import { RenderModeConfig } from '../../frame.js';
+import { RenderModeConfig } from '../frame.js';
 import bspShader from '../shaders/bsp.wgsl?raw';
 import { Texture2D, createLinearSampler, Sampler } from '../resources.js';
 import { CameraState } from '../../types/camera.js';
@@ -49,6 +49,8 @@ export interface BspSurfaceBindOptions {
   readonly fullbright?: boolean;
   readonly ambient?: number;
   readonly cameraPosition?: Float32List;
+  // Workaround for worldPos offset bug: surface mins for correction in shader
+  readonly surfaceMins?: { readonly x: number; readonly y: number; readonly z: number };
 }
 
 export interface SurfaceRenderState {
@@ -305,7 +307,8 @@ export class BspSurfacePipeline {
       gamma = 1.0,
       fullbright = false,
       ambient = 0.0,
-      cameraPosition,
+      cameraPosition = [0,0,0],
+      surfaceMins = { x: 0, y: 0, z: 0 },
     } = options;
 
     const matrices = buildMatrices(this.matrixBuilder, cameraState);
@@ -380,6 +383,10 @@ export class BspSurfacePipeline {
           modeInt = 1; // Solid
       } else if (renderMode.mode === 'solid-faceted') {
           modeInt = 2; // Faceted
+      } else if (renderMode.mode === 'worldpos-debug') {
+          modeInt = 3; // Debug: output worldPos as color
+      } else if (renderMode.mode === 'distance-debug') {
+          modeInt = 4; // Debug: output distance to first dlight as grayscale
       }
 
       if (renderMode.color) {
@@ -398,6 +405,14 @@ export class BspSurfacePipeline {
     surfaceUint[18] = finalWarp ? 1 : 0;
     surfaceUint[19] = lightmapOnly ? 1 : 0;
     surfaceUint[20] = modeInt;
+    // WGSL struct alignment: vec3<f32> has 16-byte alignment
+    // After renderMode at byte 80 (index 20):
+    // - pad0 (vec3): byte 96 (index 24) - aligned to 16
+    // - surfaceMins (vec3): byte 112 (index 28) - aligned to 16
+    // - pad1 (f32): byte 124 (index 31)
+    surfaceData[28] = surfaceMins.x;
+    surfaceData[29] = surfaceMins.y;
+    surfaceData[30] = surfaceMins.z;
 
     this.device.queue.writeBuffer(this.surfaceUniformBuffer, 0, surfaceData);
 

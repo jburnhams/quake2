@@ -1,6 +1,6 @@
 {
   "name": "@quake2ts/engine",
-  "version": "0.0.856",
+  "version": "0.0.878",
   "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -42,11 +42,11 @@
     "build": "pnpm run build:types && pnpm run build:bundles",
     "build:types": "tsc -b",
     "build:bundles": "tsup",
-    "test": "pnpm run test:unit",
+    "test": "vitest run",
     "test:unit": "pnpm run test:unit:node && pnpm run test:unit:jsdom",
-    "test:unit:node": "TEST_TYPE=unit vitest run --config vitest.node.ts --passWithNoTests",
-    "test:unit:jsdom": "TEST_TYPE=unit vitest run --config vitest.jsdom.ts --passWithNoTests",
-    "test:integration": "TEST_TYPE=integration vitest run --config vitest.integration.ts --passWithNoTests",
+    "test:unit:node": "cross-env TEST_TYPE=unit-node vitest run --config vitest.node.ts --passWithNoTests",
+    "test:unit:jsdom": "cross-env TEST_TYPE=unit-jsdom vitest run --config vitest.jsdom.ts --passWithNoTests",
+    "test:integration": "cross-env TEST_TYPE=integration vitest run --config vitest.integration.ts --passWithNoTests",
     "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run --config vitest.webgpu.ts --passWithNoTests",
     "test:webgl": "cross-env TEST_TYPE=webgl vitest run --config vitest.webgl.ts --passWithNoTests",
     "test:webgl:watch": "cross-env TEST_TYPE=webgl vitest watch --config vitest.webgl.ts",
@@ -65,7 +65,7 @@
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.86",
+    "@napi-rs/canvas": "^0.1.88",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",

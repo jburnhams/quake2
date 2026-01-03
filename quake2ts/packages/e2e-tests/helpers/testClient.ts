@@ -3,7 +3,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import handler from 'serve-handler';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { PlaywrightTestClient } from '@quake2ts/test-utils';
+import { PlaywrightTestClient } from '@quake2ts/test-utils-browser';
 
 // Fix for ESM __dirname
 const __filename = fileURLToPath(import.meta.url);
