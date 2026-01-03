@@ -10,6 +10,8 @@ import {
   createLinearSampler,
   Sampler
 } from '../resources.js';
+import { mat4 } from 'gl-matrix';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
 import { Md2Model } from '../../../assets/md2.js';
 import { MAX_DLIGHTS } from '../../dlight.js';
 import { RenderModeConfig } from '../../frame.js';
@@ -127,6 +129,8 @@ export class Md2Pipeline {
   private frameBindGroupLayout: import('../resources.js').BindGroupLayout;
 
   private defaultSampler: Sampler;
+  private matrixBuilder = new WebGPUMatrixBuilder();
+  private meshCache = new WeakMap<Md2Model, Md2MeshBuffers>();
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
       // Shader
@@ -217,8 +221,18 @@ export class Md2Pipeline {
       this.frameBindGroupLayout = bindGroupLayout;
   }
 
+  getMesh(model: Md2Model): Md2MeshBuffers {
+    let mesh = this.meshCache.get(model);
+    if (!mesh) {
+      mesh = new Md2MeshBuffers(this.device, model);
+      this.meshCache.set(model, mesh);
+    }
+    return mesh;
+  }
+
   bind(passEncoder: GPURenderPassEncoder, options: Md2BindOptions, texture: Texture2D, blend: number): void {
       const {
+        cameraState,
         modelViewProjection,
         modelMatrix,
         lightDirection = [0, 0, 1],
@@ -239,12 +253,25 @@ export class Md2Pipeline {
 
       let offset = 0; // bytes
 
+      // Calculate MVP
+      let finalMvp: Float32List = modelViewProjection;
+      const mm = modelMatrix || [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+
+      if (cameraState) {
+        // Native WebGPU coordinate system path
+        const view = this.matrixBuilder.buildViewMatrix(cameraState);
+        const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
+        const mvp = mat4.create();
+        mat4.multiply(mvp, proj, view);
+        mat4.multiply(mvp, mvp, mm as mat4); // Model * View * Proj
+        finalMvp = mvp as Float32List;
+      }
+
       // MVP
-      for(let i=0; i<16; i++) f32View[offset/4 + i] = modelViewProjection[i];
+      for(let i=0; i<16; i++) f32View[offset/4 + i] = finalMvp[i];
       offset += 64;
 
       // ModelMatrix
-      const mm = modelMatrix || [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
       for(let i=0; i<16; i++) f32View[offset/4 + i] = mm[i];
       offset += 64;
 
@@ -332,5 +359,12 @@ export class Md2Pipeline {
       passEncoder.setVertexBuffer(0, mesh.vertexBuffer.buffer);
       passEncoder.setIndexBuffer(mesh.indexBuffer.buffer, 'uint16');
       passEncoder.drawIndexed(mesh.indexCount);
+  }
+
+  dispose(): void {
+    // Should be implemented to release resources.
+    // However, buffers are managed by mesh cache.
+    // Pipelines are managed by device.
+    // This is mostly for cleanup if needed.
   }
 }

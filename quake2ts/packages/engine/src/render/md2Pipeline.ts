@@ -5,6 +5,7 @@ import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
 import { generateWireframeIndices } from './geometry.js';
 import { RenderModeConfig } from './frame.js';
+import { CameraState } from './types/camera.js';
 
 export interface Md2DrawVertex {
   readonly vertexIndex: number;
@@ -23,6 +24,7 @@ export interface Md2FrameBlend {
 }
 
 export interface Md2BindOptions {
+  readonly cameraState?: CameraState; // For native coordinate system rendering
   readonly modelViewProjection: Float32List;
   readonly lightDirection?: readonly [number, number, number];
   readonly ambientLight?: number;

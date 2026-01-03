@@ -2,10 +2,12 @@ import { Texture2D, TextureCubeMap } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
+import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
+import { RenderableEntity } from '../scene.js';
 import { WebGPUContextState } from './context.js';
-import { mat4 } from 'gl-matrix';
+import { mat4, quat } from 'gl-matrix';
 import { DLight } from '../dlight.js';
 import { BspSurfaceGeometry } from '../bsp.js';
 import { BspMap } from '../../assets/bsp.js';
@@ -15,6 +17,7 @@ import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/share
 import { MaterialManager } from '../materials.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { CameraState } from '../types/camera.js';
+import { DEG2RAD } from '@quake2ts/shared';
 
 const USE_NATIVE_COORDINATE_SYSTEM = true;  // Feature flag
 
@@ -124,7 +127,7 @@ export class FrameRenderer {
       sprite: SpriteRenderer;
       skybox: SkyboxPipeline;
       bsp: BspSurfacePipeline;
-      // Future pipelines: md2, etc.
+      md2: Md2Pipeline;
     }
   ) {}
 
@@ -240,7 +243,7 @@ export class FrameRenderer {
     this.pipelines.sprite.end();
   }
 
-  renderFrame(options: FrameRenderOptions): FrameRenderStats {
+  renderFrame(options: FrameRenderOptions, entities: readonly RenderableEntity[] = []): FrameRenderStats {
     const now = performance.now();
     const fps = this.lastFrameTime > 0 ? 1000 / (now - this.lastFrameTime) : 0;
     this.lastFrameTime = now;
@@ -425,8 +428,70 @@ export class FrameRenderer {
         // Draw opaque
         drawSurfaceBatch(sortedOpaque, opaquePass, effectiveLightStyles);
 
-        // Placeholder: Render MD2/MD3
-        // this.pipelines.md2.draw(opaquePass, ...);
+        // Render Entities (MD2)
+        // Note: In WebGPU renderer, we are using RenderableEntity which matches the engine structure.
+        for (const entity of entities) {
+            // Handle MD2
+            if (entity.type === 'md2') {
+                const model = entity.model;
+                // Calculate Model Matrix from transform
+                // RenderableMd2 has a `transform` property which is a Mat4 (array of 16 numbers)
+                // We can use it directly as the model matrix.
+                const modelMatrix = entity.transform as Float32List;
+
+                // Setup Bind Options
+                // If using Native Coordinate System, we pass CameraState.
+                const cameraState = USE_NATIVE_COORDINATE_SYSTEM
+                    ? (options.cameraState ?? options.camera.toState())
+                    : undefined;
+
+                // Frame Blend
+                // RenderableMd2 has `blend` property of type Md2FrameBlend { frame0, frame1, lerp }
+                const blend = entity.blend;
+
+                // Get texture
+                // RenderableMd2 has `skin` property which is a string (texture name).
+                // We need to resolve this to a Texture2D from the world texture cache.
+                // Wait, options.world.textures is ReadonlyMap<string, Texture2D>.
+                let texture: Texture2D | undefined;
+                if (entity.skin && options.world?.textures) {
+                    texture = options.world.textures.get(entity.skin);
+                }
+
+                // Fallback to model skin if available?
+                if (!texture && model.skins.length > 0 && options.world?.textures) {
+                    texture = options.world.textures.get(model.skins[0].name);
+                }
+
+                if (!texture) continue;
+
+                const mesh = this.pipelines.md2.getMesh(model);
+                mesh.update(model, blend);
+
+                // Convert RenderModeConfig from WebGPU to Engine (shared) type if needed
+                // Currently they are compatible types but TS might complain if strict
+                // We use 'as any' or compatible cast if needed.
+                const pipelineRenderMode = renderMode as any;
+
+                this.pipelines.md2.bind(opaquePass, {
+                    cameraState,
+                    modelViewProjection: viewProjection, // Fallback if cameraState not used
+                    modelMatrix: modelMatrix,
+                    lightDirection: [0.577, 0.577, 0.577], // TODO: From world/lightstyle
+                    ambientLight: entity.ambientLight ?? options.ambient,
+                    dlights: options.dlights,
+                    renderMode: pipelineRenderMode,
+                    brightness: options.brightness,
+                    gamma: options.gamma,
+                    fullbright: options.fullbright,
+                    ambient: options.ambient,
+                    tint: entity.tint
+                }, texture, blend.lerp);
+
+                this.pipelines.md2.draw(opaquePass, mesh);
+                stats.drawCalls++;
+            }
+        }
 
         opaquePass.end();
 

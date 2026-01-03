@@ -2,6 +2,7 @@ import { FrameRenderer, FrameRenderOptions as WebGPUFrameRenderOptions, FrameRen
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
+import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IRenderer, Pic } from '../interface.js';
@@ -37,6 +38,7 @@ export interface WebGPURenderer extends IRenderer {
     readonly sprite: SpriteRenderer;
     readonly skybox: SkyboxPipeline;
     readonly bsp: BspSurfacePipeline;
+    readonly md2: Md2Pipeline;
   };
 
   // Helper methods to upload geometry
@@ -66,6 +68,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
         sprite: SpriteRenderer;
         skybox: SkyboxPipeline;
         bsp: BspSurfacePipeline;
+        md2: Md2Pipeline;
     }
   ) {
     // Create 1x1 white texture for solid color rendering
@@ -131,7 +134,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
     // For now, pass options to frame renderer.
     // In the future, we will collect draw calls here and execute passes.
-    this.frameRenderer.renderFrame(augmentedOptions);
+    this.frameRenderer.renderFrame(augmentedOptions, entities);
   }
 
   // =========================================================================
@@ -435,6 +438,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.pipelines.sprite.destroy();
     this.pipelines.skybox.destroy();
     this.pipelines.bsp.destroy();
+    this.pipelines.md2.dispose();
 
     for (const texture of this.picCache.values()) {
       (texture as Texture2D).destroy();
@@ -467,11 +471,14 @@ export async function createWebGPURenderer(
       context.depthFormat || 'depth24plus'
   );
 
+  const md2Pipeline = new Md2Pipeline(context.device, context.format);
+
   // Registry of pipelines
   const pipelines = {
     sprite: spriteRenderer,
     skybox: skyboxPipeline,
-    bsp: bspPipeline
+    bsp: bspPipeline,
+    md2: md2Pipeline,
   };
 
   if (canvas) {

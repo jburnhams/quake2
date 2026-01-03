@@ -138,7 +138,7 @@ Complete WebGPU feature parity by migrating remaining pipelines to use `CameraSt
 ## Validation
 
 ### Pre-Merge Checklist
-- [ ] All 6 pipelines use CameraState
+- [x] All 6 pipelines use CameraState (MD2 Complete)
 - [ ] No manual coordinate transforms in shaders
 - [ ] Feature flags for each pipeline
 - [ ] Unit tests for each pipeline
