@@ -26,9 +26,6 @@ import { extractFrustumPlanes } from '../culling.js';
 import { FrameRenderOptions } from '../frame.js'; // Shared interface
 
 // WebGPU-specific renderer interface
-// We define it as extending IRenderer but we need to override the renderFrame signature to match implementation?
-// No, implementation must match interface.
-// The interface uses SharedFrameRenderOptions.
 export interface WebGPURenderer extends IRenderer {
   readonly type: 'webgpu';
   readonly device: GPUDevice;
@@ -39,6 +36,8 @@ export interface WebGPURenderer extends IRenderer {
     readonly skybox: SkyboxPipeline;
     readonly bsp: BspSurfacePipeline;
     readonly md2: Md2Pipeline;
+    // TODO: Add md3: Md3PipelineGPU
+    // TODO: Add particles: ParticleRenderer
   };
 
   // Helper methods to upload geometry
@@ -133,7 +132,6 @@ export class WebGPURendererImpl implements WebGPURenderer {
     };
 
     // For now, pass options to frame renderer.
-    // In the future, we will collect draw calls here and execute passes.
     this.frameRenderer.renderFrame(augmentedOptions, entities);
   }
 
@@ -439,6 +437,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.pipelines.skybox.destroy();
     this.pipelines.bsp.destroy();
     this.pipelines.md2.dispose();
+    // TODO: Dispose md3 and particle pipelines once added
 
     for (const texture of this.picCache.values()) {
       (texture as Texture2D).destroy();
@@ -479,6 +478,7 @@ export async function createWebGPURenderer(
     skybox: skyboxPipeline,
     bsp: bspPipeline,
     md2: md2Pipeline,
+    // TODO: Add MD3 and Particles
   };
 
   if (canvas) {
