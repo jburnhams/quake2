@@ -378,9 +378,7 @@ export class FrameRenderer {
                   // Resolve Textures (Simplified for WebGPU POC)
                   // const diffuse = world.textures?.get(geometry.texture);
 
-                  // Bind Pipeline
-                  this.pipelines.bsp.bind(pass, {
-                      modelViewProjection: viewProjection,
+                  const baseBindOptions = {
                       styleIndices: faceStyles,
                       styleValues: lightStyles,
                       surfaceFlags: geometry.surfaceFlags,
@@ -399,7 +397,23 @@ export class FrameRenderer {
                       cameraPosition: options.camera.position as Float32Array,
                       // Workaround for worldPos offset bug: pass surface mins for shader correction
                       surfaceMins: geometry.mins
-                  });
+                  };
+
+                  let bindOptions: BspSurfaceBindOptions;
+                  if (USE_NATIVE_COORDINATE_SYSTEM) {
+                      bindOptions = {
+                          ...baseBindOptions,
+                          cameraState: options.cameraState ?? options.camera.toState(),
+                      };
+                  } else {
+                      bindOptions = {
+                          ...baseBindOptions,
+                          modelViewProjection: viewProjection,
+                      };
+                  }
+
+                  // Bind Pipeline
+                  this.pipelines.bsp.bind(pass, bindOptions);
 
                   this.pipelines.bsp.draw(pass, geometry, renderMode);
                   stats.facesDrawn++;
