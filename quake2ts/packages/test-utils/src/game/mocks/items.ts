@@ -25,11 +25,13 @@ import {
   getAmmoItemDefinition,
   AmmoItemId
 } from '@quake2ts/game';
-// import { getAmmoItemDefinition, AmmoItemId } from '@quake2ts/game/src/inventory/ammo.js';
 
 /**
  * Creates a mock player inventory with default values suitable for testing.
  * Can be customized with overrides.
+ *
+ * @param overrides - Partial PlayerInventory properties.
+ * @returns A complete PlayerInventory object.
  */
 export function createMockInventory(overrides: Partial<PlayerInventory> = {}): PlayerInventory {
   const defaultInventory = createPlayerInventory();
@@ -50,6 +52,10 @@ export function createMockInventory(overrides: Partial<PlayerInventory> = {}): P
 /**
  * Generic factory for any item type.
  * Attempts to find a predefined item by ID first, then applies overrides.
+ *
+ * @param id - The item ID (e.g. 'weapon_railgun', 'item_health').
+ * @param overrides - Partial BaseItem properties.
+ * @returns A BaseItem object.
  */
 export function createMockItem(id: string, overrides: Partial<BaseItem> = {}): BaseItem {
   let base: BaseItem | undefined;
@@ -78,7 +84,11 @@ export function createMockItem(id: string, overrides: Partial<BaseItem> = {}): B
 }
 
 /**
- * Creates a mock WeaponItem
+ * Creates a mock WeaponItem based on a WeaponId.
+ *
+ * @param weaponId - The WeaponId (e.g. WeaponId.Railgun).
+ * @param overrides - Partial WeaponItem properties.
+ * @returns A WeaponItem object.
  */
 export function createMockWeaponItem(weaponId: WeaponId, overrides: Partial<WeaponItem> = {}): WeaponItem {
     // Find the item definition for this weaponId
@@ -99,7 +109,11 @@ export function createMockWeaponItem(weaponId: WeaponId, overrides: Partial<Weap
 }
 
 /**
- * Creates a mock HealthItem
+ * Creates a mock HealthItem with a specific amount.
+ *
+ * @param amount - The health amount.
+ * @param overrides - Partial HealthItem properties.
+ * @returns A HealthItem object.
  */
 export function createMockHealthItem(amount: number, overrides: Partial<HealthItem> = {}): HealthItem {
     return {
@@ -113,7 +127,11 @@ export function createMockHealthItem(amount: number, overrides: Partial<HealthIt
 }
 
 /**
- * Creates a mock ArmorItem
+ * Creates a mock ArmorItem with a specific amount.
+ *
+ * @param amount - The armor amount.
+ * @param overrides - Partial ArmorItem properties.
+ * @returns An ArmorItem object.
  */
 export function createMockArmorItem(amount: number, overrides: Partial<ArmorItem> = {}): ArmorItem {
     return {
@@ -126,7 +144,12 @@ export function createMockArmorItem(amount: number, overrides: Partial<ArmorItem
 }
 
 /**
- * Creates a mock AmmoItem
+ * Creates a mock AmmoItem based on an AmmoItemId.
+ *
+ * @param ammoItemId - The AmmoItemId.
+ * @param overrides - Partial BaseItem properties.
+ * @returns A BaseItem representing ammo.
+ * @throws Error if ammoItemId is unknown.
  */
 export function createMockAmmoItem(ammoItemId: AmmoItemId, overrides: Partial<BaseItem> = {}): BaseItem {
     const def = getAmmoItemDefinition(ammoItemId);
@@ -147,7 +170,12 @@ export function createMockAmmoItem(ammoItemId: AmmoItemId, overrides: Partial<Ba
 
 
 /**
- * Creates a mock PowerupItem
+ * Creates a mock PowerupItem.
+ *
+ * @param id - The item ID (e.g. 'item_quad').
+ * @param duration - The duration of the powerup.
+ * @param overrides - Partial PowerupItem properties.
+ * @returns A PowerupItem object.
  */
 export function createMockPowerupItem(id: string, duration: number, overrides: Partial<PowerupItem> = {}): PowerupItem {
     const found = POWERUP_ITEMS[id];

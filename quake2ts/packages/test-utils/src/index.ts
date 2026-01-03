@@ -115,3 +115,11 @@ export type {
     AnimationSnapshotResult
 } from './visual/animation-snapshots.js';
 export type { MockCollisionEntityIndex } from './server/mocks/physics.js';
+
+// Game Types
+export type { MockAI, MockMonsterAI } from './game/mocks/ai.js';
+export type { MockDamageInfo, MockWeapon } from './game/mocks/combat.js';
+export type { PhysicsScenario } from './game/helpers/physics.js';
+export type { MockSaveGame, SaveGameDiff } from './game/helpers/save.js';
+export type { MockEngine, MockGame, TestContext, MockImportsAndEngine } from './game/helpers.js';
+export type { SpawnTestEntityOptions } from './game/helpers/spawn.js';

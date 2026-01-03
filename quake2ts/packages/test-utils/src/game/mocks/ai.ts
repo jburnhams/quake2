@@ -1,6 +1,9 @@
 import { vi, type Mock } from 'vitest';
 import { Entity, EntitySystem, MonsterMove, MonsterAction, AIAction } from '@quake2ts/game';
 
+/**
+ * Interface representing generic AI capabilities for testing.
+ */
 export interface MockAI {
   checkAttack: Mock;
   findTarget: Mock;
@@ -8,6 +11,9 @@ export interface MockAI {
   infront: Mock;
 }
 
+/**
+ * Interface representing specific monster AI behavior mocks.
+ */
 export interface MockMonsterAI {
   stand: Mock;
   walk: Mock;
@@ -19,6 +25,12 @@ export interface MockMonsterAI {
   idle: Mock;
 }
 
+/**
+ * Creates a mock AI helper object.
+ *
+ * @param overrides - Optional overrides for AI functions.
+ * @returns A MockAI object.
+ */
 export function createMockAI(overrides: Partial<MockAI> = {}): MockAI {
   return {
     checkAttack: vi.fn(() => false),
@@ -29,6 +41,12 @@ export function createMockAI(overrides: Partial<MockAI> = {}): MockAI {
   };
 }
 
+/**
+ * Creates a mock Monster AI behavior object.
+ *
+ * @param overrides - Optional overrides for monster AI actions.
+ * @returns A MockMonsterAI object.
+ */
 export function createMockMonsterAI(overrides: Partial<MockMonsterAI> = {}): MockMonsterAI {
   return {
     stand: vi.fn(),
@@ -43,6 +61,15 @@ export function createMockMonsterAI(overrides: Partial<MockMonsterAI> = {}): Moc
   };
 }
 
+/**
+ * Creates a generic MonsterMove object for testing animations and state transitions.
+ *
+ * @param first - The first frame number.
+ * @param last - The last frame number.
+ * @param think - The think function to call each frame.
+ * @param action - The AI action to execute each frame (e.g. ai_run).
+ * @returns A configured MonsterMove object.
+ */
 export function createMockMonsterMove(
   first: number,
   last: number,
