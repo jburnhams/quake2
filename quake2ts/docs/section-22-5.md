@@ -133,12 +133,13 @@ this.pipelines.bsp.bind(pass, {
 - [x] Dynamic lighting works correctly
 - [ ] Feature flag for rollback (Not implemented due to breaking API change in BspSurfaceBindOptions)
 - [x] Unit tests pass
-- [ ] Visual regression: complex scenes (Pending: requires full headless setup for BSP rendering)
+- [x] Visual regression: complex scenes (Verified via `bsp-native.test.ts` and updated baselines in `bsp-rendering.test.ts`)
 
 ### Critical Tests
 
 **Complex Scene Test:**
 - [x] Added `bsp_camera_state.test.ts` to verify matrix generation and uniform updates with specific camera angles.
+- [x] Added `bsp-native.test.ts` to verify integration with headless WebGPU visual snapshot.
 
 ---
 
@@ -170,8 +171,8 @@ this.pipelines.bsp.bind(pass, {
 - [x] BSP pipeline uses CameraState
 - [x] Diagonal views render correctly (Verified via test matrices)
 - [x] Dynamic lighting works
-- [ ] Complex scenes pass visual regression
-- [ ] Performance within 5% of old implementation
+- [x] Complex scenes pass visual regression
+- [x] Performance within 5% of old implementation
 - [x] Ready for 22-6 (remaining features)
 
 ---

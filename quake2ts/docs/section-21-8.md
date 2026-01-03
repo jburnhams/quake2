@@ -21,19 +21,19 @@ Validate transparent surface rendering using SURF_TRANS33 and SURF_TRANS66 flags
 ## Visual Tests
 
 ### Transparency Levels (~3 tests)
-- [x] 33% transparent surfaces (SURF_TRANS33)
-- [x] 66% transparent surfaces (SURF_TRANS66)
-- [x] Mixed transparency levels
+1. 33% transparent surfaces (SURF_TRANS33)
+2. 66% transparent surfaces (SURF_TRANS66)
+3. Mixed transparency levels
 
 ### Blending & Sorting (~4 tests)
-- [x] Back-to-front sorting validation
-- [x] Overlapping transparent surfaces
-- [x] Transparent over opaque geometry
-- [x] Z-fighting prevention
+1. Back-to-front sorting validation
+2. Overlapping transparent surfaces
+3. Transparent over opaque geometry
+4. Z-fighting prevention
 
 ### Edge Cases (~2 tests)
-- [x] Fully transparent surfaces
-- [x] Transparent + warp surfaces
+1. Fully transparent surfaces
+2. Transparent + warp surfaces
 
 ---
 

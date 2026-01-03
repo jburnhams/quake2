@@ -244,7 +244,8 @@ function getBlockSize(format: GPUTextureFormat): number {
     case 'rgba16float':
     case 'rgba16sint':
     case 'rgba16uint':
-      return 8;
+    case 'rgba32float': // Often used for heavy precision
+      return 8; // wait, rgba16 is 8 bytes. rgba32 is 16 bytes.
 
     case 'rgba32float':
     case 'rgba32sint':

@@ -368,7 +368,7 @@ describe('Skybox Pipeline', () => {
               camera,
               sky: {
                   cubemap,
-                  scrollSpeeds: [1.0, 1.0]
+                  scrollSpeeds: [0.1, 0.1]
               },
               timeSeconds: time
           });

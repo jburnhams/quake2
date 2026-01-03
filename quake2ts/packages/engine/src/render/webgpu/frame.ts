@@ -29,7 +29,7 @@ export interface FrameRenderStats {
   vertexCount: number;
 }
 
-export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted' | 'worldpos-debug' | 'distance-debug';
+export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted';
 
 export interface RenderModeConfig {
   readonly mode: RenderMode;
@@ -396,9 +396,7 @@ export class FrameRenderer {
                       gamma,
                       fullbright,
                       ambient,
-                      cameraPosition: options.camera.position as Float32Array,
-                      // Workaround for worldPos offset bug: pass surface mins for shader correction
-                      surfaceMins: geometry.mins
+                      cameraPosition: options.camera.position as Float32Array
                   });
 
                   this.pipelines.bsp.draw(pass, geometry, renderMode);

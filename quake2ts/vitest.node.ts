@@ -27,6 +27,9 @@ export default defineConfig({
       'packages/shared/tests/**/*.test.ts',
       'packages/test-utils/tests/**/*.test.ts',
       'packages/cgame/tests/unit-node/**/*.test.ts',
+      // Asset processing tests that require Node environment (Buffer/DataView compatibility)
+      'packages/engine/tests/assets/preview.test.ts',
+      'packages/engine/tests/assets/preview_bounds.test.ts',
       // Engine unit-node tests
       'packages/engine/tests/unit-node/**/*.test.ts',
       // Include src tests if any
@@ -43,8 +46,7 @@ export default defineConfig({
       '**/performance/**',
       '**/integration/**',
       '**/*integration*',
-      'packages/engine/tests/webgpu/**', // Only exclude the specific webgpu test folder, not unit mocks
-      'packages/test-utils/tests/webgpu/**', // Exclude test-utils webgpu tests which crash in this env
+      '**/webgpu/**',
       '**/webgl/**',
     ],
     pool: 'threads',

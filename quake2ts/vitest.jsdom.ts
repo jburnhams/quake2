@@ -22,7 +22,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: [
-      'packages/engine/tests/unit-jsdom/**/*.test.ts',
+      'packages/engine/tests/**/*.test.ts',
       'packages/client/tests/unit-jsdom/**/*.test.ts',
       'packages/cgame/tests/unit-jsdom/**/*.test.ts',
       // Include src tests if any
@@ -36,9 +36,11 @@ export default defineConfig({
       '**/performance/**',
       '**/integration/**',
       '**/*integration*',
-      // '**/webgpu/**', // Commented out to allow running webgpu tests
+      '**/webgpu/**', // Re-enabled exclusion for standard jsdom runner (webgpu tests run in node/special runner)
       '**/webgl/**',
-      // Exclude engine unit-node tests
+      // Exclude asset preview tests that require Node environment
+      'packages/engine/tests/assets/preview.test.ts',
+      'packages/engine/tests/assets/preview_bounds.test.ts',
       'packages/engine/tests/unit-node/**/*.test.ts',
       'packages/client/tests/unit-node/**/*.test.ts',
     ],
