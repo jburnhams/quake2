@@ -41,6 +41,7 @@ export interface IRenderer {
   registerPic(name: string, data: ArrayBuffer): Promise<Pic>;
   registerTexture(name: string, texture: PreparedTexture): Pic;
   getTexture?(name: string): Pic | undefined;
+  getTextures?(): ReadonlyMap<string, Pic>;
 
   begin2D(): void;
   end2D(): void;
