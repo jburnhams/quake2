@@ -1,9 +1,9 @@
 import { describe, test, expect, vi } from 'vitest';
-import { Camera } from '../../../../src/render/camera.js';
+import { Camera } from '../../../src/render/camera.js';
 import { initHeadlessWebGPU } from '@quake2ts/test-utils/src/setup/webgpu';
 import { captureTexture, expectSnapshot } from '@quake2ts/test-utils';
-import { SkyboxPipeline } from '../../../../src/render/webgpu/pipelines/skybox.js';
-import { TextureCubeMap } from '../../../../src/render/webgpu/resources.js';
+import { SkyboxPipeline } from '../../../src/render/webgpu/pipelines/skybox.js';
+import { TextureCubeMap } from '../../../src/render/webgpu/resources.js';
 
 const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
