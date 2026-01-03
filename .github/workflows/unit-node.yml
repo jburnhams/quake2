@@ -1,0 +1,33 @@
+name: Unit Tests (Node)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-tests-node:
+    name: Unit Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [25]
+      fail-fast: false
+    defaults:
+      run:
+        working-directory: quake2ts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run Node unit tests
+        run: pnpm test:unit:node
