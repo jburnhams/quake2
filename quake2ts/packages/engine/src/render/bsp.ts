@@ -24,6 +24,9 @@ export interface BspSurfaceInput {
   readonly lightmap?: BspLightmapData;
   readonly faceIndex: number;
   readonly styles?: readonly number[];
+  // Optional bounds for WebGPU workaround
+  readonly mins?: { readonly x: number; readonly y: number; readonly z: number };
+  readonly maxs?: { readonly x: number; readonly y: number; readonly z: number };
 }
 
 export interface LightmapPlacement {
@@ -398,6 +401,19 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       }
     }
 
+    // Determine bounds for workaround
+    const mins = { x: Infinity, y: Infinity, z: Infinity };
+    const maxs = { x: -Infinity, y: -Infinity, z: -Infinity };
+    for (let k = 0; k < vertices.length; k+=3) {
+        if (vertices[k] < mins.x) mins.x = vertices[k];
+        if (vertices[k+1] < mins.y) mins.y = vertices[k+1];
+        if (vertices[k+2] < mins.z) mins.z = vertices[k+2];
+
+        if (vertices[k] > maxs.x) maxs.x = vertices[k];
+        if (vertices[k+1] > maxs.y) maxs.y = vertices[k+1];
+        if (vertices[k+2] > maxs.z) maxs.z = vertices[k+2];
+    }
+
     results.push({
       vertices: new Float32Array(vertices),
       textureCoords: new Float32Array(textureCoords),
@@ -408,6 +424,8 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       lightmap: lightmapData,
       faceIndex,
       styles: face.styles || [255, 255, 255, 255],
+      mins,
+      maxs
     });
 
     // Debug logging for first surface with lightmap
@@ -542,6 +560,8 @@ export function buildBspGeometry(
       styleLayers,
       vertexData,
       indexData,
+      mins: surface.mins,
+      maxs: surface.maxs
     };
   });
 

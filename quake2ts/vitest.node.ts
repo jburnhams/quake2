@@ -43,7 +43,8 @@ export default defineConfig({
       '**/performance/**',
       '**/integration/**',
       '**/*integration*',
-      '**/webgpu/**',
+      'packages/engine/tests/webgpu/**', // Only exclude the specific webgpu test folder, not unit mocks
+      'packages/test-utils/tests/webgpu/**', // Exclude test-utils webgpu tests which crash in this env
       '**/webgl/**',
     ],
     pool: 'threads',

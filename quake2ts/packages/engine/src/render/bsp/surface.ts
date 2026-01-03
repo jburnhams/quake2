@@ -125,6 +125,9 @@ export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
     }
 
     for (const polyVerts of polygons) {
+        // Compute bounds for WebGPU worldPos workaround
+        const bounds = getBounds(polyVerts);
+
         // 2. Compute Texture Coordinates
         const texCoords: [number, number][] = polyVerts.map(v => [
           dot(v, texInfo.s) + texInfo.sOffset,
@@ -217,7 +220,9 @@ export function createBspSurfaces(bsp: BspMap): BspSurfaceInput[] {
           vertices: vertexData,
           vertexCount: polyVerts.length,
           styles: face.styles,
-          lightmap
+          lightmap,
+          mins: { x: bounds.mins[0], y: bounds.mins[1], z: bounds.mins[2] },
+          maxs: { x: bounds.maxs[0], y: bounds.maxs[1], z: bounds.maxs[2] }
         });
     }
   }

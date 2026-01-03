@@ -16,6 +16,8 @@ export interface BspSurfaceInput {
   vertexCount: number;
   styles: [number, number, number, number];
   lightmap?: BspSurfaceLightmap;
+  mins?: { x: number, y: number, z: number };
+  maxs?: { x: number, y: number, z: number };
 }
 
 export interface BspBatch {
