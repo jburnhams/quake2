@@ -5,20 +5,25 @@ import {
   AmmoItemId,
   AmmoType,
   addAmmo,
-  createAmmoInventory,
   getAmmoItemDefinition,
   pickupAmmo,
 } from '../../src/inventory/ammo.js';
+import { createMockInventory, createMockAmmoItem } from '@quake2ts/test-utils';
 
 function makeInventory(starting?: Partial<Record<AmmoType, number>>) {
-  const inventory = createAmmoInventory();
+  // Use createMockInventory to create a complete inventory, but extract/manipulate the ammo part as needed by tests.
+  // However, createMockInventory returns PlayerInventory which contains ammo property.
+  // The tests here use `createAmmoInventory` which returns just the AmmoInventory part.
+  // We can use createMockInventory and access .ammo
+
+  const inventory = createMockInventory();
   if (starting) {
     for (const [key, value] of Object.entries(starting)) {
       const ammo = Number(key) as AmmoType;
-      inventory.counts[ammo] = value!;
+      inventory.ammo.counts[ammo] = value!;
     }
   }
-  return inventory;
+  return inventory.ammo;
 }
 
 describe('ammo item definitions', () => {
@@ -104,7 +109,7 @@ describe('ammo pickups', () => {
   });
 
   it('respects individual caps for every ammo type', () => {
-    const inventory = createAmmoInventory();
+    const inventory = makeInventory({}); // defaults
 
     // prime inventory with near-cap values for every slot
     for (let i = 0; i < AMMO_TYPE_COUNT; i++) {
