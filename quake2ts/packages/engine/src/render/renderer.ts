@@ -279,7 +279,7 @@ export const createRenderer = (
         let viewArea = -1;
         let reachableAreas: Set<number> | null = null;
 
-        if (options.world && renderOptions?.cullingEnabled !== false) {
+        if (options.world && options.world.map && renderOptions?.cullingEnabled !== false) {
             const cameraPosition = {
                 x: options.camera.position[0],
                 y: options.camera.position[1],
@@ -371,6 +371,8 @@ export const createRenderer = (
 
             // LOD Selection
             const { model: activeModel, type: activeType } = selectLod(entity, cameraPos);
+
+            if (!activeModel) continue;
 
             let minBounds: Vec3 | undefined;
             let maxBounds: Vec3 | undefined;

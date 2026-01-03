@@ -156,6 +156,14 @@ export class Camera {
     this.aspect = aspect;
   }
 
+  setPerspective(fov: number, aspect: number, near: number, far: number): void {
+    this._fov = fov;
+    this._aspect = aspect;
+    this._near = near;
+    this._far = far;
+    this._dirty = true;
+  }
+
   lookAt(target: vec3): void {
     // Calculate vector from camera to target
     const direction = vec3.create();

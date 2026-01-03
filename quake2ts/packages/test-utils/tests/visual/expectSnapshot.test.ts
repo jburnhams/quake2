@@ -45,7 +45,7 @@ describe('expectSnapshot', () => {
         const width = 2;
         const height = 1;
         const pixels1 = new Uint8ClampedArray([255, 0, 0, 255, 0, 255, 0, 255]);
-        const pixels2 = new Uint8ClampedArray([0, 0, 255, 255, 0, 255, 0, 255]); // First pixel different
+        const pixels2 = new Uint8ClampedArray([0, 0, 255, 255, 0, 0, 0, 255]); // Both pixels different
         const name = 'failing-test';
 
         // Create baseline

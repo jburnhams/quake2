@@ -347,7 +347,8 @@ export const createFrameRenderer = (
         y: camera.position[1] ?? 0,
         z: camera.position[2] ?? 0,
       };
-      const visibleFaces = deps.gatherVisibleFaces(world.map, cameraPosition, frustum, portalState);
+
+      const visibleFaces = world.map ? deps.gatherVisibleFaces(world.map, cameraPosition, frustum, portalState) : [];
 
       // Split faces into Opaque and Transparent/Warping
       const opaqueFaces: VisibleFace[] = [];
