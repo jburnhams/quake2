@@ -10,14 +10,11 @@ import {
 import { EntitySystem } from '../../src/entities/index.js';
 import { LevelClock } from '../../src/level.js';
 import { createSaveFile, SAVE_FORMAT_VERSION } from '../../src/save/save.js';
-import type { GameEngine } from '../../src/index.js';
-
-const mockEngine: GameEngine = {
-  trace: () => ({}),
-};
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 function createBasicSnapshot() {
-  const system = new EntitySystem(mockEngine);
+  const { imports, engine } = createGameImportsAndEngine();
+  const system = new EntitySystem(engine, imports);
   system.beginFrame(2.5);
   const crate = system.spawn();
   crate.classname = 'misc_crate';

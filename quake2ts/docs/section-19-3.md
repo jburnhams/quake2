@@ -65,7 +65,7 @@ This section covers migration and expansion of game-specific test utilities incl
     - [x] Refactored `infantry.test.ts`, `berserk.test.ts`, `gladiator.test.ts`, `medic.test.ts`, `mutant.test.ts`, `parasite.test.ts`
     - [x] Refactored `boss2.test.ts`, `brain.test.ts`, `chick.test.ts`, `flipper.test.ts`, `flyer.test.ts`, `gekk.test.ts`, `guardian.test.ts`, `gunner.test.ts`, `icarus.test.ts`, `insane.test.ts`, `soldier.test.ts`
     - [x] Refactored `tank-blindfire.test.ts`, `supertank-heat-seeking.test.ts`, `turret.test.ts`, `tankCommander.test.ts`
-    - [ ] Replace inline attack function mocks
+    - [x] Replace inline attack function mocks
     - Estimated files: ~26 (Refactored 22)
 
 ---
@@ -111,7 +111,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **6.3** Add `createSaveGameSnapshot()` helper
 - [x] **6.4** Add `restoreSaveGameSnapshot()` helper
 - [x] **6.5** Add `compareSaveGames()` helper
-- [ ] **6.6** Cleanup save/load tests in `game/src/save/tests/` directory
+- [x] **6.6** Cleanup save/load tests in `game/src/save/tests/` directory
 
 ---
 
