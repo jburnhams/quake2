@@ -22,7 +22,6 @@ describe('Save/Load Robustness', () => {
   let playerInventory: PlayerInventory;
   let targets: SaveApplyTargets;
 
-  // Use createGameImportsAndEngine for mocking
   let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
   let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
@@ -32,6 +31,7 @@ describe('Save/Load Robustness', () => {
     mockImports = result.imports;
     mockEngine = result.engine;
 
+    // Use standard EntitySystem with mock engine/imports
     entitySystem = new EntitySystem(mockEngine, mockImports, undefined, 800);
     levelClock = new LevelClock();
     rng = new RandomGenerator(12345);
@@ -57,6 +57,9 @@ describe('Save/Load Robustness', () => {
     player.origin = { x: 100, y: 200, z: 30 };
 
     // 2. Create Save
+    // We can use createSaveGameSnapshot for simpler setup if appropriate,
+    // but createSaveFile provides full integration test of the serialization pipeline.
+    // Keeping createSaveFile for robustness test.
     const save = createSaveFile({
       map: 'test_map',
       difficulty: 1,
@@ -133,7 +136,6 @@ describe('Save/Load Robustness', () => {
     // Tamper with data
     const raw = JSON.parse(JSON.stringify(save));
     raw.map = 'hacked_map';
-    // Checksum remains for 'corruption_test', so this should fail
 
     expect(() => parseSaveFile(raw)).toThrow(/checksum mismatch/);
   });
