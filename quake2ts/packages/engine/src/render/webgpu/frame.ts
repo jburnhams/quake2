@@ -128,6 +128,7 @@ export class FrameRenderer {
       skybox: SkyboxPipeline;
       bsp: BspSurfacePipeline;
       md2: Md2Pipeline;
+      // TODO: Add MD3 and Particles pipelines
     }
   ) {}
 
@@ -491,6 +492,7 @@ export class FrameRenderer {
                 this.pipelines.md2.draw(opaquePass, mesh);
                 stats.drawCalls++;
             }
+            // TODO: Handle MD3 and Particles rendering
         }
 
         opaquePass.end();
