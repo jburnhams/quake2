@@ -276,6 +276,7 @@ export class FrameRenderer {
     } = options;
 
     const viewProjection = new Float32Array(options.camera.viewProjectionMatrix);
+    const cameraState = options.cameraState ?? options.camera.toState();
 
     // --- Pass 1: Opaque & Skybox ---
     // Clears the screen and draws solid geometry
@@ -301,7 +302,6 @@ export class FrameRenderer {
     if (options.sky && options.sky.cubemap) {
         if (USE_NATIVE_COORDINATE_SYSTEM) {
              // New path (22-4)
-            const cameraState = options.cameraState ?? options.camera.toState();
             const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
             this.pipelines.skybox.draw(opaquePass, {
                 cameraState,  // NEW: let pipeline build matrices
@@ -380,7 +380,7 @@ export class FrameRenderer {
 
                   // Bind Pipeline
                   this.pipelines.bsp.bind(pass, {
-                      modelViewProjection: viewProjection,
+                      cameraState,
                       styleIndices: faceStyles,
                       styleValues: lightStyles,
                       surfaceFlags: geometry.surfaceFlags,
