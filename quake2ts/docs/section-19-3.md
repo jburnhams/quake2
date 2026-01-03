@@ -72,7 +72,7 @@ This section covers migration and expansion of game-specific test utilities incl
 
 ### 4. Create Inventory/Item Mock Factories (MEDIUM PRIORITY)
 
-**Status:** Partially completed
+**Status:** Completed
 **Dependencies:** Task 1 (entity factories)
 
 - [x] **4.1** Create `test-utils/src/game/mocks/items.ts` file
@@ -80,10 +80,10 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **4.3** Add `createMockItem()` factory
 - [x] **4.4** Add item-specific factories
 - [x] **4.5** Add `createMockPowerup()` factory
-- [ ] **4.6** Cleanup item mocks in `game/tests/items/` directory
+- [x] **4.6** Cleanup item mocks in `game/tests/inventory/` directory
     - [x] Refactored `ammo.test.ts` and `weapons.test.ts`
     - [x] Refactored `health.test.ts`
-    - Estimated files: ~10
+    - [x] Refactored `items.test.ts`, `powerups.test.ts`, `keys.test.ts`, `ammoItems.test.ts`, `armor_logic.test.ts`, `dm-items.test.ts`
 
 ---
 
