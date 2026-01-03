@@ -34,6 +34,7 @@ export interface TestContext extends SpawnContext {
   entities: EntitySystem;
   game: MockGame;
   engine: MockEngine;
+  imports: any; // Added imports to TestContext
 }
 
 // -- Factories --
@@ -77,17 +78,40 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
   return { game, spawnRegistry };
 };
 
-export function createTestContext(options?: { seed?: number, initialEntities?: Entity[] }): TestContext {
+export function createTestContext(options?: {
+    seed?: number,
+    initialEntities?: Entity[],
+    imports?: Partial<{
+        trace: any,
+        pointcontents: any,
+        linkentity: any,
+        multicast: any,
+        unicast: any,
+        configstring: any,
+    }>
+}): TestContext {
   const engine = createMockEngine();
   const seed = options?.seed ?? 12345;
   const { game, spawnRegistry } = createMockGame(seed);
 
-  const traceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
+  const defaultTraceFn = vi.fn((start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) =>
     createTraceMock({
       endpos: end,
       plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
     })
   );
+
+  const traceFn = options?.imports?.trace || defaultTraceFn;
+
+  const imports = {
+    configstring: vi.fn(),
+    trace: traceFn,
+    pointcontents: vi.fn(() => 0),
+    linkentity: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    ...options?.imports
+  };
 
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
 
@@ -144,9 +168,9 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     }),
     linkentity: vi.fn(),
     trace: traceFn,
-    pointcontents: vi.fn(() => 0),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
+    pointcontents: imports.pointcontents,
+    multicast: imports.multicast,
+    unicast: imports.unicast,
     engine,
     scriptHooks: hooks,
     game,
@@ -163,6 +187,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
         }
     }),
     findByTargetName: vi.fn(findByTargetName),
+    findInBox: vi.fn(() => []), // Added findInBox mock
     pickTarget: vi.fn((targetname: string | undefined) => {
         if (!targetname) return null;
         const matches = findByTargetName(targetname);
@@ -171,11 +196,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     }),
     killBox: vi.fn(),
     rng: createRandomGenerator({ seed }),
-    imports: {
-      configstring: vi.fn(),
-      trace: traceFn,
-      pointcontents: vi.fn(() => 0),
-    },
+    imports, // Include the full imports object on system for convenience
     level: {
       intermission_angle: { x: 0, y: 0, z: 0 },
       intermission_origin: { x: 0, y: 0, z: 0 },
@@ -220,6 +241,7 @@ export function createTestContext(options?: { seed?: number, initialEntities?: E
     entities,
     game,
     engine,
+    imports,
     health_multiplier: 1,
     warn: vi.fn(),
     free: vi.fn(),
