@@ -18,6 +18,80 @@ setupBrowserEnvironment({
 });
 ```
 
+### Game Logic Testing
+
+The `game` module provides a comprehensive suite of utilities for testing game logic, entities, AI, and combat.
+
+#### Entity Factories
+
+Create entities with predefined defaults and easy overrides:
+
+```typescript
+import {
+  createPlayerEntityFactory,
+  createMonsterEntityFactory,
+  createItemEntityFactory,
+  createProjectileEntityFactory
+} from '@quake2ts/test-utils';
+
+const player = createPlayerEntityFactory({ health: 50 });
+const monster = createMonsterEntityFactory('monster_soldier', { origin: { x: 100, y: 0, z: 0 } });
+const item = createItemEntityFactory('item_health');
+```
+
+#### Test Context & Game Mocks
+
+Set up a complete mocked game environment for unit tests:
+
+```typescript
+import { createTestContext, spawnTestEntity } from '@quake2ts/test-utils';
+
+const context = createTestContext();
+const player = spawnTestEntity(context, { classname: 'player' });
+
+// Access mocked systems
+context.game.spawnWorld();
+context.entities.trace(start, mins, maxs, end, player, MASK_SOLID);
+```
+
+#### AI & Combat Mocks
+
+Mock AI behavior and combat events:
+
+```typescript
+import { createMockAI, createMockMonsterAI, createMockDamageInfo } from '@quake2ts/test-utils';
+
+const ai = createMockAI({
+  visible: vi.fn(() => true),
+  infront: vi.fn(() => false)
+});
+
+const damage = createMockDamageInfo({ damage: 50, mod: DamageMod.ROCKET });
+```
+
+#### Physics Helpers
+
+Simulate physics interactions without a full physics engine:
+
+```typescript
+import { createPhysicsTestScenario, simulateMovement } from '@quake2ts/test-utils';
+
+const scenario = createPhysicsTestScenario('stairs', context);
+const result = simulateMovement(player, targetPos, context);
+```
+
+#### Save/Load Testing
+
+Utilities for testing save game serialization:
+
+```typescript
+import { createSaveGameSnapshot, compareSaveGames } from '@quake2ts/test-utils';
+
+const snapshot = createSaveGameSnapshot(context);
+// ... modify state ...
+const diff = compareSaveGames(snapshot, newSnapshot);
+```
+
 ### Engine & Rendering Testing
 
 #### WebGL & Buffer Mocks

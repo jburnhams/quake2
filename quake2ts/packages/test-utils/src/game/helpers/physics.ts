@@ -14,6 +14,14 @@ export interface PhysicsScenario {
   setup: (context: TestContext) => void;
 }
 
+/**
+ * Configures the test context with a specific physics scenario (e.g. stairs, ladder).
+ * Spawns necessary static entities (walls, floors) to simulate the environment.
+ *
+ * @param scenarioType - The type of scenario to set up ('stairs', 'ladder', etc.).
+ * @param context - The TestContext to spawn entities into.
+ * @returns A PhysicsScenario object containing references to created entities.
+ */
 export function createPhysicsTestScenario(
   scenarioType: 'stairs' | 'ladder' | 'platform' | 'slope' | 'room',
   context: TestContext
@@ -88,6 +96,11 @@ export function createPhysicsTestScenario(
  * Simulates a single physics step for an entity.
  * Uses the game's runPmove logic or manually invokes similar steps.
  * This is useful for testing specific movement mechanics in isolation.
+ *
+ * @param entity - The entity to move.
+ * @param destination - The target location.
+ * @param context - The TestContext providing the trace function.
+ * @returns The TraceResult of the movement attempt.
  */
 export function simulateMovement(entity: Entity, destination: Vec3, context: TestContext): TraceResult {
     // Calculate velocity needed to reach destination in one frame (assuming 0.1s tick)
@@ -129,6 +142,11 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
 
 /**
  * Simulates gravity application on an entity.
+ * Updates velocity and ground status based on gravity trace.
+ *
+ * @param entity - The entity to apply gravity to.
+ * @param deltaTime - The time step to advance.
+ * @param context - The TestContext.
  */
 export function simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void {
     const gravity = (context.game as any).cvars?.gravity?.value ?? 800; // MockGame might not have cvars yet
@@ -162,6 +180,10 @@ export function simulateGravity(entity: Entity, deltaTime: number, context: Test
 
 /**
  * Simulates a jump action.
+ * Checks for ground contact and applies upward velocity.
+ *
+ * @param entity - The entity attempting to jump.
+ * @param context - The TestContext.
  */
 export function simulateJump(entity: Entity, context: TestContext): void {
     if (!entity.groundentity) return;

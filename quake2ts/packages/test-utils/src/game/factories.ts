@@ -11,6 +11,13 @@ import type { GameStateSnapshot } from '@quake2ts/game';
 
 // -- Shared / Game State Factories --
 
+/**
+ * Creates a default PlayerState object with optional overrides.
+ * Useful for mocking player state in tests.
+ *
+ * @param overrides - Partial PlayerState to override defaults.
+ * @returns A complete PlayerState object.
+ */
 export const createPlayerStateFactory = (overrides?: Partial<PlayerState>): PlayerState => ({
   pm_type: 0,
   pm_time: 0,
@@ -39,6 +46,13 @@ export const createPlayerStateFactory = (overrides?: Partial<PlayerState>): Play
   ...overrides,
 });
 
+/**
+ * Creates a default EntityState object with optional overrides.
+ * Represents the network state of an entity.
+ *
+ * @param overrides - Partial EntityState to override defaults.
+ * @returns A complete EntityState object.
+ */
 export const createEntityStateFactory = (overrides?: Partial<EntityState>): EntityState => ({
   number: 0,
   origin: { x: 0, y: 0, z: 0 },
@@ -58,6 +72,13 @@ export const createEntityStateFactory = (overrides?: Partial<EntityState>): Enti
   ...overrides,
 });
 
+/**
+ * Creates a default GameStateSnapshot object with optional overrides.
+ * Represents a snapshot of the entire game state.
+ *
+ * @param overrides - Partial GameStateSnapshot to override defaults.
+ * @returns A complete GameStateSnapshot object.
+ */
 export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnapshot>): GameStateSnapshot => ({
   gravity: { x: 0, y: 0, z: -800 },
   origin: { x: 0, y: 0, z: 0 },
@@ -130,6 +151,12 @@ function sanitizeEntity(ent: Entity): Partial<Entity> {
   return ent;
 }
 
+/**
+ * Creates a generic entity with reasonable defaults.
+ *
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object suitable for Object.assign or direct use.
+ */
 export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
   const ent = new Entity(1);
   Object.assign(ent, {
@@ -147,6 +174,13 @@ export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<En
   return sanitizeEntity(ent);
 }
 
+/**
+ * Creates a player entity with typical player defaults.
+ * Includes a mocked client object with inventory and weapon states.
+ *
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object representing a player.
+ */
 export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname: 'player',
@@ -179,6 +213,13 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
   });
 }
 
+/**
+ * Creates a monster entity with the specified classname and defaults.
+ *
+ * @param classname - The classname of the monster (e.g. 'monster_soldier').
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object representing a monster.
+ */
 export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
@@ -193,6 +234,13 @@ export function createMonsterEntityFactory(classname: string, overrides: Partial
   });
 }
 
+/**
+ * Creates an item entity (pickup) with the specified classname and defaults.
+ *
+ * @param classname - The classname of the item (e.g. 'item_health').
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object representing an item.
+ */
 export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
@@ -202,6 +250,13 @@ export function createItemEntityFactory(classname: string, overrides: Partial<En
   });
 }
 
+/**
+ * Creates a projectile entity with the specified classname and defaults.
+ *
+ * @param classname - The classname of the projectile (e.g. 'grenade').
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object representing a projectile.
+ */
 export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,
@@ -212,6 +267,13 @@ export function createProjectileEntityFactory(classname: string, overrides: Part
   });
 }
 
+/**
+ * Creates a trigger entity with the specified classname and defaults.
+ *
+ * @param classname - The classname of the trigger (e.g. 'trigger_multiple').
+ * @param overrides - Partial Entity properties to override.
+ * @returns A partial Entity object representing a trigger.
+ */
 export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
   return createEntityFactory({
     classname,

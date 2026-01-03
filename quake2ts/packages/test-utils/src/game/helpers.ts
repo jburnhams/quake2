@@ -10,6 +10,9 @@ export { intersects, stairTrace, ladderTrace, createTraceMock, createSurfaceMock
 
 // -- Types --
 
+/**
+ * Interface representing the mocked engine capabilities required by GameContext.
+ */
 export interface MockEngine {
   sound: LegacyMock<[Entity, number, string, number, number, number], void>;
   soundIndex: LegacyMock<[string], number>;
@@ -17,6 +20,9 @@ export interface MockEngine {
   centerprintf: LegacyMock<[Entity, string], void>;
 }
 
+/**
+ * Interface representing the mocked game instance capabilities.
+ */
 export interface MockGame {
   random: ReturnType<typeof createRandomGenerator>;
   registerEntitySpawn: LegacyMock<[string, (entity: Entity) => void], void>;
@@ -30,6 +36,10 @@ export interface MockGame {
   entities: any;
 }
 
+/**
+ * Extended test context that includes mocks for game, engine, and entity system.
+ * Useful for comprehensive game logic testing.
+ */
 export interface TestContext extends SpawnContext {
   entities: EntitySystem;
   game: MockGame;
@@ -39,6 +49,11 @@ export interface TestContext extends SpawnContext {
 
 // -- Factories --
 
+/**
+ * Creates a mock engine implementation.
+ *
+ * @returns A MockEngine instance with vitest spies.
+ */
 export const createMockEngine = (): MockEngine => ({
   sound: vi.fn(),
   soundIndex: vi.fn((sound: string) => 0),
@@ -46,6 +61,12 @@ export const createMockEngine = (): MockEngine => ({
   centerprintf: vi.fn(),
 });
 
+/**
+ * Creates a mock game implementation with spawn registry and script hooks.
+ *
+ * @param seed - Optional seed for the random number generator.
+ * @returns An object containing the mock game and its spawn registry.
+ */
 export const createMockGame = (seed: number = 12345): { game: MockGame, spawnRegistry: SpawnRegistry } => {
   const spawnRegistry = new SpawnRegistry();
   const hooks = new ScriptHookRegistry();
@@ -78,6 +99,16 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
   return { game, spawnRegistry };
 };
 
+/**
+ * Creates a comprehensive test context for game logic testing.
+ * Sets up mocks for engine, game, entities, and imports.
+ *
+ * @param options - Configuration options for the test context.
+ * @param options.seed - Seed for random number generator.
+ * @param options.initialEntities - Initial list of entities to populate the system.
+ * @param options.imports - Overrides for game imports (trace, pointcontents, etc.).
+ * @returns A TestContext object ready for testing.
+ */
 export function createTestContext(options?: {
     seed?: number,
     initialEntities?: Entity[],
@@ -251,6 +282,13 @@ export function createTestContext(options?: {
   } as unknown as TestContext;
 }
 
+/**
+ * Creates a test context specialized for spawn testing.
+ * Automatically spawns the world entity if a map name is provided.
+ *
+ * @param mapName - Optional map name to trigger world spawn.
+ * @returns A TestContext ready for spawn tests.
+ */
 export function createSpawnTestContext(mapName?: string): TestContext {
   const ctx = createTestContext();
   if (mapName) {
@@ -259,10 +297,22 @@ export function createSpawnTestContext(mapName?: string): TestContext {
   return ctx;
 }
 
+/**
+ * Creates a test context specialized for combat testing.
+ * Alias for createTestContext for now, but allows future specialization.
+ *
+ * @returns A TestContext ready for combat tests.
+ */
 export function createCombatTestContext(): TestContext {
   return createTestContext();
 }
 
+/**
+ * Creates a test context specialized for physics testing.
+ *
+ * @param bspModel - Optional BSP model to enhance trace mocks.
+ * @returns A TestContext ready for physics tests.
+ */
 export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
   const context = createTestContext();
   if (bspModel) {
@@ -276,6 +326,10 @@ export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
   return context;
 }
 
+/**
+ * Creates a generic Entity.
+ * @returns A new Entity instance.
+ */
 export function createEntity(): Entity {
   return new Entity(1);
 }

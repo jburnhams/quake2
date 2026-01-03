@@ -12,6 +12,9 @@ import type { TestContext } from '../helpers.js';
 /**
  * Creates a configured SpawnRegistry for testing.
  * Uses the default spawn registry but handles the game dependency if not provided.
+ *
+ * @param game - Optional game instance mock for registry initialization.
+ * @returns A new SpawnRegistry instance.
  */
 export function createSpawnRegistry(game?: any): SpawnRegistry {
   // If game is not provided, we can pass a mock or empty object
@@ -22,6 +25,10 @@ export function createSpawnRegistry(game?: any): SpawnRegistry {
 
 /**
  * Registers a custom spawn function for testing.
+ *
+ * @param registry - The registry to add the spawn function to.
+ * @param classname - The classname to associate with the function.
+ * @param spawnFunc - The spawn function implementation.
  */
 export function registerTestSpawn(
   registry: SpawnRegistry,
@@ -31,6 +38,9 @@ export function registerTestSpawn(
   registry.register(classname, spawnFunc);
 }
 
+/**
+ * Options for spawning a test entity.
+ */
 export interface SpawnTestEntityOptions {
   classname: string;
   keyValues?: Record<string, string>;
@@ -40,6 +50,11 @@ export interface SpawnTestEntityOptions {
 
 /**
  * Convenience function to spawn an entity using the spawn system.
+ * Handles looking up the registry and constructing the spawn options.
+ *
+ * @param context - The test context to spawn into.
+ * @param options - Configuration for the entity spawn.
+ * @returns The spawned entity, or null if spawning failed.
  */
 export function spawnTestEntity(
   context: TestContext,

@@ -1,6 +1,9 @@
 import { vi, type Mock } from 'vitest';
 import { DamageMod, Entity, ArmorType, type RegularArmorState, type PowerArmorState } from '@quake2ts/game';
 
+/**
+ * Interface representing the details of a damage event.
+ */
 export interface MockDamageInfo {
   damage: number;
   mod: DamageMod;
@@ -11,6 +14,12 @@ export interface MockDamageInfo {
   point: { x: number, y: number, z: number } | null;
 }
 
+/**
+ * Creates a default MockDamageInfo object with optional overrides.
+ *
+ * @param overrides - Partial MockDamageInfo properties.
+ * @returns A complete MockDamageInfo object.
+ */
 export function createMockDamageInfo(overrides: Partial<MockDamageInfo> = {}): MockDamageInfo {
   return {
     damage: 10,
@@ -37,6 +46,9 @@ const WEAPON_NAMES: Record<string, string> = {
   'weapon_bfg': 'BFG10K',
 };
 
+/**
+ * Interface representing a mocked weapon.
+ */
 export interface MockWeapon {
   name: string;
   ammoType: string;
@@ -46,6 +58,12 @@ export interface MockWeapon {
   command: Mock;
 }
 
+/**
+ * Creates a mock weapon with spy functions for lifecycle methods.
+ *
+ * @param name - The internal name of the weapon (e.g. 'weapon_railgun').
+ * @returns A MockWeapon object.
+ */
 export function createMockWeapon(name: string = 'Mock Weapon'): MockWeapon {
   const displayName = WEAPON_NAMES[name] || name;
   return {
@@ -58,6 +76,10 @@ export function createMockWeapon(name: string = 'Mock Weapon'): MockWeapon {
   };
 }
 
+/**
+ * A collection of mocked monster attack functions.
+ * Useful for verifying that monsters attempt to use specific attacks.
+ */
 export const mockMonsterAttacks: {
   fireBlaster: Mock;
   fireRocket: Mock;
@@ -81,10 +103,23 @@ export const mockMonsterAttacks: {
 const FORWARD_ANGLES = { x: 0, y: 0, z: 0 } as const;
 const ORIGIN = { x: 0, y: 0, z: 0 } as const;
 
+/**
+ * Creates a state object for regular armor (jacket, combat, body).
+ *
+ * @param armorType - The type of armor equipped.
+ * @param armorCount - The amount of armor points.
+ * @returns A RegularArmorState object.
+ */
 export function createRegularArmorState(armorType: ArmorType | null, armorCount: number): RegularArmorState {
   return { armorType, armorCount };
 }
 
+/**
+ * Creates a state object for power armor (screen, shield).
+ *
+ * @param partial - Partial PowerArmorState to override defaults.
+ * @returns A PowerArmorState object.
+ */
 export function createPowerArmorState(partial: Partial<PowerArmorState> = {}): PowerArmorState {
   return {
     type: null,
