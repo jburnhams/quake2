@@ -97,7 +97,7 @@ This section covers migration and expansion of game-specific test utilities incl
 - [x] **5.3** Add `simulateGravity()` helper
 - [x] **5.4** Add `simulateJump()` helper
 - [x] **5.5** Add `createPhysicsTestScenario()` helper
-- [ ] **5.6** Cleanup physics tests in `game/tests/physics/` directory
+- [x] **5.6** Cleanup physics tests in `game/tests/physics/` directory
 
 ---
 

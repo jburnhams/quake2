@@ -1,38 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Entity, MoveType } from '../../src/entities/entity.js';
 import { runGravity, runBouncing, runProjectileMovement } from '../../src/physics/movement.js';
-import { GameImports, GameTraceResult } from '../../src/imports.js';
+import { GameTraceResult } from '../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
-import { EntitySystem } from '../../src/entities/system.js';
-import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
-
-const mockTraceFn = (result: GameTraceResult) => {
-  return (
-    start: Vec3,
-    mins: Vec3 | null,
-    maxs: Vec3 | null,
-    end: Vec3,
-    passent: Entity | null,
-    contentmask: number
-  ) => result;
-};
-
-// We will keep this local mock helper but implement it using default structures from test-utils where possible if needed.
-// However, here it wraps trace result dynamically.
-const mockImports = (result: GameTraceResult): GameImports => ({
-  trace: mockTraceFn(result),
-  pointcontents: () => 0,
-  linkentity: vi.fn(),
-  multicast: vi.fn(),
-  unicast: vi.fn(),
-} as any);
-
-const createMockSystem = (): EntitySystem => {
-    return {
-        world: new Entity(0),
-    } as unknown as EntitySystem;
-};
-
+import { createEntityFactory, createTraceMock, createTestContext } from '@quake2ts/test-utils';
 
 describe('runGravity', () => {
   it('should apply gravity to an entity with MOVETYPE_TOSS', () => {
@@ -72,7 +43,13 @@ describe('runProjectileMovement', () => {
 
     const frametime = 0.1;
 
-    runProjectileMovement(ent, mockImports(mockTrace), frametime);
+    const { imports } = createTestContext({
+      imports: {
+        trace: () => mockTrace
+      }
+    });
+
+    runProjectileMovement(ent, imports, frametime);
 
     expect(ent.origin.x).toBe(100); // 1000 * 0.1
     expect(ent.origin.y).toBe(0);
@@ -108,7 +85,9 @@ describe('runProjectileMovement', () => {
     };
 
     const frametime = 0.1;
-    const { imports } = createGameImportsAndEngine({ imports: { trace: trace as any } });
+    const { imports } = createTestContext({
+        imports: { trace: trace as any }
+    });
 
     runProjectileMovement(ent, imports, frametime);
 
@@ -138,8 +117,24 @@ describe('runBouncing', () => {
       endpos: { x: 50, y: 0, z: 5 },
     });
 
-    const system = createMockSystem();
-    runBouncing(ent, system, mockImports(mockTrace), 0.1);
+    const mockTraceFn = (result: GameTraceResult) => {
+        return (
+          start: Vec3,
+          mins: Vec3 | null,
+          maxs: Vec3 | null,
+          end: Vec3,
+          passent: Entity | null,
+          contentmask: number
+        ) => result;
+      };
+
+    const { entities, imports } = createTestContext({
+        imports: {
+            trace: mockTraceFn(mockTrace)
+        }
+    });
+
+    runBouncing(ent, entities, imports, 0.1);
 
     // Q2 Logic: ClipVelocity with backoff 1.6
     // v = (100, 0, -100)
@@ -182,8 +177,24 @@ describe('runBouncing', () => {
       endpos: { x: 50, y: 0, z: 5 },
     });
 
-    const system = createMockSystem();
-    runBouncing(ent, system, mockImports(mockTrace), 0.1);
+    const mockTraceFn = (result: GameTraceResult) => {
+        return (
+          start: Vec3,
+          mins: Vec3 | null,
+          maxs: Vec3 | null,
+          end: Vec3,
+          passent: Entity | null,
+          contentmask: number
+        ) => result;
+      };
+
+    const { entities, imports } = createTestContext({
+        imports: {
+            trace: mockTraceFn(mockTrace)
+        }
+    });
+
+    runBouncing(ent, entities, imports, 0.1);
 
     // Q2 Logic: ClipVelocity with backoff 2.0 (Elastic)
     // v_new = (100, 0, -100) - 2.0 * (-100) * (0, 0, 1)
