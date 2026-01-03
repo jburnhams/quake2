@@ -13,6 +13,9 @@ import { BspSurfaceGeometry } from '../../bsp.js';
 import { RenderModeConfig } from '../frame.js';
 import bspShader from '../shaders/bsp.wgsl?raw';
 import { Texture2D, createLinearSampler, Sampler } from '../resources.js';
+import { CameraState } from '../../types/camera.js';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
+import { buildMatrices } from '../../matrix/builders.js';
 
 // Declare extensions locally for this file
 declare module '../../bsp.js' {
@@ -25,7 +28,7 @@ declare module '../../bsp.js' {
 }
 
 export interface BspSurfaceBindOptions {
-  readonly modelViewProjection: Float32List;
+  readonly cameraState: CameraState;
   readonly styleIndices?: readonly number[];
   readonly styleValues?: ReadonlyArray<number>;
   readonly styleLayers?: readonly number[];
@@ -120,6 +123,7 @@ export class BspSurfacePipeline {
   private frameBindGroupLayout: GPUBindGroupLayout;
   private surfaceBindGroupLayout: GPUBindGroupLayout;
   private textureBindGroupLayout: GPUBindGroupLayout;
+  private matrixBuilder: WebGPUMatrixBuilder;
 
   // Default resources
   private defaultWhiteTexture: Texture2D;
@@ -131,6 +135,7 @@ export class BspSurfacePipeline {
 
   constructor(device: GPUDevice, format: GPUTextureFormat, depthFormat: GPUTextureFormat) {
     this.device = device;
+    this.matrixBuilder = new WebGPUMatrixBuilder();
 
     // Buffer sizes
     // Frame: MVP(64) + CamPos(16) + Time/Params(32) + Lights(32 * 32 = 1024) -> ~1136 bytes -> Round to 1280 or similar multiple of 256
@@ -282,7 +287,7 @@ export class BspSurfacePipeline {
 
   bind(passEncoder: GPURenderPassEncoder, options: BspSurfaceBindOptions): SurfaceRenderState {
     const {
-      modelViewProjection,
+      cameraState,
       styleIndices = DEFAULT_STYLE_INDICES,
       styleLayers = DEFAULT_STYLE_LAYERS,
       styleValues = [],
@@ -306,6 +311,8 @@ export class BspSurfacePipeline {
       surfaceMins = { x: 0, y: 0, z: 0 },
     } = options;
 
+    const matrices = buildMatrices(this.matrixBuilder, cameraState);
+
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
     const styles = resolveLightStyles(styleIndices, styleValues);
 
@@ -314,11 +321,17 @@ export class BspSurfacePipeline {
     const finalAlpha = alpha !== undefined ? alpha : state.alpha;
     const finalWarp = warp !== undefined ? warp : state.warp;
 
+    // Use passed cameraPosition or fallback to cameraState.position
+    // Note: cameraState.position is readonly, so we might need to cast or copy
+    const camPos = cameraPosition
+      ? cameraPosition
+      : [cameraState.position[0], cameraState.position[1], cameraState.position[2]];
+
     // Update Frame Uniforms (Ideally done once per frame, but here we do it per bind for API compat)
     // Optimization: Check if frame uniforms changed before writing
     const frameData = new Float32Array(512); // Enough for header + lights
-    frameData.set(modelViewProjection as Float32Array, 0); // 0-15
-    frameData.set(cameraPosition as Float32Array, 16); // 16-18
+    frameData.set(matrices.viewProjection as Float32Array, 0); // 0-15
+    frameData.set(camPos as Float32Array, 16); // 16-18
     frameData[19] = 0; // Padding
     frameData[20] = timeSeconds;
     frameData[21] = brightness;

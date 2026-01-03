@@ -36,7 +36,7 @@ export default defineConfig({
       '**/performance/**',
       '**/integration/**',
       '**/*integration*',
-      '**/webgpu/**',
+      // '**/webgpu/**', // Commented out to allow running webgpu tests
       '**/webgl/**',
       // Exclude engine unit-node tests
       'packages/engine/tests/unit-node/**/*.test.ts',
