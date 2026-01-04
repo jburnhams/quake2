@@ -180,6 +180,14 @@ describe('Renderer Options & Debug', () => {
                 projectionMatrix: new Float32Array(16),
                 position: [0, 0, 0] as any,
                 getViewmodelProjectionMatrix: vi.fn(),
+                toState: vi.fn(() => ({
+                    position: [0, 0, 0],
+                    angles: [0, 0, 0],
+                    fov: 90,
+                    aspect: 1,
+                    near: 0.1,
+                    far: 1000
+                }))
             } as any
         };
 
@@ -216,6 +224,14 @@ describe('Renderer Options & Debug', () => {
                 projectionMatrix: new Float32Array(16),
                 position: [0, 0, 0] as any,
                 getViewmodelProjectionMatrix: vi.fn(),
+                toState: vi.fn(() => ({
+                    position: [0, 0, 0],
+                    angles: [0, 0, 0],
+                    fov: 90,
+                    aspect: 1,
+                    near: 0.1,
+                    far: 1000
+                }))
             } as any,
             sky: {} as any // Enable sky
         };
@@ -239,6 +255,14 @@ describe('Renderer Options & Debug', () => {
                 projectionMatrix: new Float32Array(16),
                 position: [0, 0, 0] as any,
                 getViewmodelProjectionMatrix: vi.fn(),
+                toState: vi.fn(() => ({
+                    position: [0, 0, 0],
+                    angles: [0, 0, 0],
+                    fov: 90,
+                    aspect: 1,
+                    near: 0.1,
+                    far: 1000
+                }))
             } as any
         };
 

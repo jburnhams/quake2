@@ -13,6 +13,9 @@ import { RenderModeConfig } from './frame.js';
 import { BspSurfaceGeometry } from './bsp.js';
 import { IndexBuffer } from './resources.js';
 import { generateWireframeIndices } from './geometry.js';
+import { CameraState } from './types/camera.js';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
 
 export interface SurfaceRenderState {
   readonly alpha: number;
@@ -24,7 +27,8 @@ export interface SurfaceRenderState {
 }
 
 export interface BspSurfaceBindOptions {
-  readonly modelViewProjection: Float32List;
+  readonly cameraState: CameraState;
+  readonly modelViewProjection?: Float32List; // Optional Override, prefer CameraState
   readonly styleIndices?: readonly number[];
   readonly styleValues?: ReadonlyArray<number>;
   readonly styleLayers?: readonly number[];
@@ -312,6 +316,7 @@ declare module './bsp.js' {
 export class BspSurfacePipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
+  private matrixBuilder = new WebGLMatrixBuilder();
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformTexScroll: WebGLUniformLocation | null;
@@ -387,7 +392,8 @@ export class BspSurfacePipeline {
 
   bind(options: BspSurfaceBindOptions): SurfaceRenderState {
     const {
-      modelViewProjection,
+      cameraState,
+      modelViewProjection: overrideMvp,
       styleIndices = DEFAULT_STYLE_INDICES,
       styleLayers = DEFAULT_STYLE_LAYERS,
       styleValues = [],
@@ -408,6 +414,14 @@ export class BspSurfacePipeline {
       ambient = 0.0
     } = options;
 
+    let mvp: Float32List;
+    if (overrideMvp) {
+      mvp = overrideMvp;
+    } else {
+      const matrices = buildMatrices(this.matrixBuilder, cameraState);
+      mvp = matrices.viewProjection as Float32Array; // Explicit cast to satisfy TS Float32List requirements
+    }
+
     const state = deriveSurfaceRenderState(surfaceFlags, timeSeconds);
     const styles = resolveLightStyles(styleIndices, styleValues);
 
@@ -417,7 +431,7 @@ export class BspSurfacePipeline {
     const finalWarp = warp !== undefined ? warp : state.warp;
 
     this.program.use();
-    this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
+    this.gl.uniformMatrix4fv(this.uniformMvp, false, mvp);
     this.gl.uniform2f(this.uniformTexScroll, finalScrollX, finalScrollY);
     this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]);
     this.gl.uniform4fv(this.uniformLightStyles, styles);

@@ -117,11 +117,23 @@ export class Camera {
   /**
    * Export camera state in Quake-space coordinates.
    * For use with new renderer architecture.
+   *
+   * Includes all visual modifiers (bob, kick, roll) to match the final
+   * render view previously calculated in updateMatrices().
    */
   toState(): RendererCameraState {
+    const effectivePosition = vec3.create();
+    vec3.add(effectivePosition, this._position, this._bobOffset);
+
+    const effectiveAngles = vec3.create();
+    vec3.add(effectiveAngles, this._angles, this._bobAngles);
+    vec3.add(effectiveAngles, effectiveAngles, this._kickAngles);
+    // Add roll (index 2)
+    effectiveAngles[2] += this._rollAngle;
+
     return {
-      position: vec3.clone(this._position),
-      angles: vec3.clone(this._angles),
+      position: effectivePosition,
+      angles: effectiveAngles,
       fov: this._fov,
       aspect: this._aspect,
       near: this._near,

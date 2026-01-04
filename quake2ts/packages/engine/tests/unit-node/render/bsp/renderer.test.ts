@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { BspRenderer } from '../../../../src/render/bsp/renderer.js';
 import { BspGeometry, BspBatch } from '../../../../src/render/bsp/geometry.js';
 import { VertexArray, Texture2D } from '../../../../src/render/resources.js';
+import { mat4, vec3 } from 'gl-matrix';
+import type { CameraState } from '../../../../src/render/types/camera.js';
 
 // Mock WebGL classes
 const mockGL = {
@@ -103,8 +105,16 @@ describe('BspRenderer', () => {
     };
 
     const mvp = new Float32Array(16);
+    const cameraState: CameraState = {
+        position: vec3.create(),
+        angles: vec3.create(),
+        fov: 90,
+        aspect: 1,
+        near: 0.1,
+        far: 1000
+    };
 
-    renderer.render(geometry, mvp, 1.0);
+    renderer.render(geometry, cameraState, 1.0);
 
     expect(mockVao.bind).toHaveBeenCalled();
     expect(mockAtlas.bind).toHaveBeenCalledWith(1);

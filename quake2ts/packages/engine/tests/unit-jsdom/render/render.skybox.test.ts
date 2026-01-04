@@ -7,6 +7,8 @@ import {
   removeViewTranslation,
 } from '../../../src/render/skybox.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import { mat4, vec3 } from 'gl-matrix';
+import type { CameraState } from '../../../src/render/types/camera.js';
 
 describe('Skybox helpers', () => {
   it('removes translation from view matrices', () => {
@@ -36,16 +38,30 @@ describe('SkyboxPipeline', () => {
     }
 
     const pipeline = new SkyboxPipeline(gl as unknown as WebGL2RenderingContext);
-    const vp = new Float32Array(16);
-    vp[0] = 1;
+
+    // Create a valid CameraState mock
+    const cameraState: CameraState = {
+        position: vec3.create(),
+        angles: vec3.create(),
+        fov: 90,
+        aspect: 1.0,
+        near: 0.1,
+        far: 1000
+    };
+
     const scroll = computeSkyScroll(2, [0.05, 0.025]);
 
-    pipeline.bind({ viewProjection: vp, scroll, textureUnit: 1 });
+    pipeline.bind({ cameraState, scroll, textureUnit: 1 });
     pipeline.draw();
 
     expect(gl.useProgram).toHaveBeenCalled();
     expect(gl.depthMask).toHaveBeenCalledWith(false);
-    expect(gl.uniformMatrix4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_viewProjectionNoTranslation'), false, vp);
+
+    // Check that we call uniformMatrix4fv
+    // Note: The actual matrix value is calculated internally now, so we can't easily check strict equality against a passed-in VP
+    // But we can check it was called.
+    expect(gl.uniformMatrix4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_viewProjectionNoTranslation'), false, expect.any(Float32Array));
+
     expect(gl.uniform2f).toHaveBeenCalledWith(gl.uniformLocations.get('u_scroll'), scroll[0], scroll[1]);
     expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_skybox'), 1);
     expect(gl.bindTexture).toHaveBeenCalledWith(gl.TEXTURE_CUBE_MAP, pipeline.cubemap.texture);

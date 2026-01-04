@@ -19,67 +19,15 @@ Remove adapter layer and have WebGL pipelines build matrices directly from `Came
 
 ### Task 1: Update WebGL Skybox
 
-**File:** `packages/engine/src/render/skybox.ts` (modify)
-
-**Use CameraState directly:**
-
-```typescript
-export interface SkyboxBindOptions {
-  readonly cameraState: CameraState;  // NEW: was viewProjection matrix
-  readonly scroll: readonly [number, number];
-  readonly textureUnit?: number;
-}
-
-export class SkyboxPipeline {
-  private matrixBuilder = new WebGLMatrixBuilder();
-
-  bind(options: SkyboxBindOptions): void {
-    const matrices = buildMatrices(this.matrixBuilder, options.cameraState);
-
-    // Remove translation for skybox
-    const viewNoTranslation = removeViewTranslation(matrices.view);
-    const skyViewProjection = mat4.create();
-    mat4.multiply(skyViewProjection, matrices.projection, viewNoTranslation);
-
-    this.gl.uniformMatrix4fv(this.uniformViewProj, false, skyViewProjection);
-    this.gl.uniform2f(this.uniformScroll, options.scroll[0], options.scroll[1]);
-    // ... rest unchanged ...
-  }
-}
-```
-
----
+- [x] **File:** `packages/engine/src/render/skybox.ts` (modify)
+- [x] Use CameraState directly.
+- [x] Verified with unit tests.
 
 ### Task 2: Update WebGL BSP Pipeline
 
-**File:** `packages/engine/src/render/bspPipeline.ts` (modify)
-
-**Build matrices internally:**
-
-```typescript
-export class BspSurfacePipeline {
-  private matrixBuilder = new WebGLMatrixBuilder();
-
-  bind(options: {
-    cameraState: CameraState;  // NEW
-    styleIndices?: readonly number[];
-    // ... rest ...
-  }): any {
-    const matrices = buildMatrices(this.matrixBuilder, options.cameraState);
-
-    // Update shader uniforms
-    this.gl.uniformMatrix4fv(
-      this.uniformMVP,
-      false,
-      matrices.viewProjection
-    );
-
-    // ... rest unchanged ...
-  }
-}
-```
-
----
+- [x] **File:** `packages/engine/src/render/bspPipeline.ts` (modify)
+- [x] Build matrices internally.
+- [x] Verified with unit tests.
 
 ### Task 3: Update All WebGL Pipelines
 
