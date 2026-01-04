@@ -1,6 +1,6 @@
 import { vi, type Mock } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
-import { createRandomGenerator, type Vec3 } from '@quake2ts/shared';
+import { createRandomGenerator, type Vec3, type RandomGenerator } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
 import { LegacyMock } from '../vitest-compat.js';
@@ -48,6 +48,31 @@ export interface TestContext extends SpawnContext {
 }
 
 // -- Factories --
+
+/**
+ * Creates a mock RandomGenerator with spied methods.
+ * Useful for deterministic testing where RNG outcomes need to be controlled.
+ *
+ * @returns A mocked RandomGenerator.
+ */
+export function createMockRandomGenerator(): RandomGenerator {
+    return {
+        frandom: vi.fn(() => 0.5),
+        frandomRange: vi.fn(() => 0.5),
+        frandomMax: vi.fn(() => 0.5),
+        crandom: vi.fn(() => 0),
+        crandomOpen: vi.fn(() => 0),
+        irandomUint32: vi.fn(() => 0),
+        irandomRange: vi.fn(() => 0),
+        irandom: vi.fn(() => 0),
+        randomTimeRange: vi.fn(() => 0),
+        randomTime: vi.fn(() => 0),
+        randomIndex: vi.fn(() => 0),
+        seed: vi.fn(),
+        getState: vi.fn(() => ({ mt: { index: 0, state: [] } })),
+        setState: vi.fn(),
+    } as unknown as RandomGenerator;
+}
 
 /**
  * Creates a mock engine implementation.

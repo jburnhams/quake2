@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../src/entities/system.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createRandomGenerator } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createMockRandomGenerator } from '@quake2ts/test-utils';
 import { RandomGenerator } from '@quake2ts/shared';
 
 describe('Deathmatch Spawn', () => {
@@ -13,24 +13,8 @@ describe('Deathmatch Spawn', () => {
         // We use createSpawnTestContext to get a standard context/engine/imports
         const context = createSpawnTestContext();
 
-        // Create a mock RNG using helper if possible, or manual mock for control
-        // Since we need to mock return values specifically for the test logic:
-        mockRng = {
-            frandom: vi.fn(() => 0.5),
-            crandom: vi.fn(() => 0),
-            frandomRange: vi.fn(() => 0),
-            frandomMax: vi.fn(() => 0),
-            crandomOpen: vi.fn(() => 0),
-            irandomUint32: vi.fn(() => 0),
-            irandomRange: vi.fn(() => 0),
-            irandom: vi.fn(() => 0),
-            randomTimeRange: vi.fn(() => 0),
-            randomTime: vi.fn(() => 0),
-            randomIndex: vi.fn((container: { length: number }) => 1),
-            seed: vi.fn(),
-            getState: vi.fn(),
-            setState: vi.fn(),
-        } as unknown as RandomGenerator;
+        // Create a mock RNG using helper
+        mockRng = createMockRandomGenerator();
 
         // Construct EntitySystem with the mock RNG to control selection
         entities = new EntitySystem(
