@@ -11,6 +11,7 @@ import { expectAnimationSnapshot, AnimationSnapshotOptions } from '../../visual/
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import path from 'path';
 import fs from 'fs';
+import { PNG } from 'pngjs';
 
 export interface WebGLPlaywrightSetup {
   browser: Browser;
@@ -220,7 +221,8 @@ export async function renderAndCaptureWebGLPlaywright(
   frameIndex: number = 0
 ): Promise<Uint8ClampedArray> {
   try {
-    const pixelData = await page.evaluate(({ code, width, height, frameIndex }) => {
+    // 1. Render content
+    await page.evaluate(({ code, width, height, frameIndex }) => {
       const renderer = (window as any).testRenderer;
       const gl = (window as any).testGl;
       const canvas = (window as any).testCanvas;
@@ -250,12 +252,18 @@ export async function renderAndCaptureWebGLPlaywright(
 
       // Ensure rendering is complete
       gl.finish();
-
-      // Capture pixels
-      return (window as any).captureCanvas();
     }, { code: renderFn, width, height, frameIndex });
 
-    return new Uint8ClampedArray(pixelData);
+    // 2. Capture pixels using page.screenshot (fastest method)
+    // We assume canvas covers viewport because we set viewport size to match canvas in setup
+    const buffer = await page.screenshot({
+        omitBackground: true,
+        type: 'png'
+    });
+
+    // 3. Decode PNG to raw pixels
+    const png = PNG.sync.read(buffer);
+    return new Uint8ClampedArray(png.data);
   } catch (err: any) {
     // Re-throw with clear message
     throw new Error(`Browser Test Error: ${err.message}`);
