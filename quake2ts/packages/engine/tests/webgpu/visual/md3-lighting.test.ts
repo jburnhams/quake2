@@ -85,6 +85,7 @@ describe('MD3 Pipeline Lighting', () => {
                     pass,
                     mesh.surfaces.get('surface1')!,
                     material,
+                    null,
                     projection as Float32Array,
                     modelMatrix as Float32Array
                 );

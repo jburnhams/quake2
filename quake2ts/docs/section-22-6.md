@@ -38,6 +38,7 @@ Complete WebGPU feature parity by migrating remaining pipelines to use `CameraSt
 - Frame interpolation smooth
 - Visual regression baseline
 
+**Status:** Completed
 **Reference:** Section 20-9 (incomplete)
 
 ---
@@ -56,6 +57,8 @@ Complete WebGPU feature parity by migrating remaining pipelines to use `CameraSt
 - Tag attachments positioned correctly
 - Visual regression baseline
 
+**Status:** Completed. Updated `Md3PipelineGPU.draw` to accept `CameraState` and use `WebGPUMatrixBuilder` to calculate view-projection matrices natively in WebGPU coordinate system. Shader modified (if needed) to expect correct transforms.
+
 **Reference:** Section 20-10 (incomplete)
 
 ---
@@ -73,6 +76,8 @@ Complete WebGPU feature parity by migrating remaining pipelines to use `CameraSt
 - Particles render at all camera angles
 - Billboard always faces camera
 - Performance acceptable (many particles)
+
+**Status:** Completed. Updated `ParticleRenderer.render` to accept `CameraState`. Used `WebGPUMatrixBuilder` for view-projection. Calculated billboard vectors (Right/Up) directly from camera angles using `angleVectors` to ensure particles in Quake space are billboarded correctly against the camera view.
 
 **Reference:** Section 20-11 (incomplete)
 
@@ -139,6 +144,8 @@ Complete WebGPU feature parity by migrating remaining pipelines to use `CameraSt
 
 ### Pre-Merge Checklist
 - [x] All 6 pipelines use CameraState (MD2 Complete)
+- [x] MD3 Pipeline uses CameraState
+- [x] Particle System uses CameraState
 - [ ] No manual coordinate transforms in shaders
 - [ ] Feature flags for each pipeline
 - [ ] Unit tests for each pipeline
