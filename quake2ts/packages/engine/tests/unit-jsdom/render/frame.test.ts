@@ -86,11 +86,20 @@ describe('FrameRenderer', () => {
 
     expect(gl.clearColor).toHaveBeenCalledWith(0.2, 0.3, 0.4, 1);
     expect(gl.clear).toHaveBeenCalledWith(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    expect(deps.removeViewTranslation).toHaveBeenCalledWith(camera.viewMatrix);
+
+    // removeViewTranslation is now handled inside SkyboxPipeline, not by FrameRenderer for skybox
+    // expect(deps.removeViewTranslation).toHaveBeenCalledWith(camera.viewMatrix);
+
     expect(deps.computeSkyScroll).toHaveBeenCalledWith(0, [0.05, 0.1]);
     expect(skyboxPipeline.bind).toHaveBeenCalled();
-    expect((skyboxPipeline.bind as any).mock.calls[0][0].scroll).toEqual([0.1, 0.2]);
-    expect((skyboxPipeline.bind as any).mock.calls[0][0].textureUnit).toBe(2);
+
+    // Updated expectation: SkyboxPipeline.bind is called with cameraState
+    const bindArgs = (skyboxPipeline.bind as any).mock.calls[0][0];
+    expect(bindArgs.cameraState).toBeDefined();
+    // Use deep equality check for CameraState if needed, but existence is enough for now as we mock toState
+
+    expect(bindArgs.scroll).toEqual([0.1, 0.2]);
+    expect(bindArgs.textureUnit).toBe(2);
     expect((skyboxPipeline.gl.depthMask as any)).toHaveBeenCalledWith(true);
     expect(callOrder).toContain('sky-draw');
     expect(stats.skyDrawn).toBe(true);

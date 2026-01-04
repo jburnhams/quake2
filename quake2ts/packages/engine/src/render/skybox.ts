@@ -1,6 +1,10 @@
+import { mat4 } from 'gl-matrix';
 import { ShaderProgram } from './shaderProgram.js';
 import { TextureCubeMap, VertexArray, VertexBuffer, type VertexAttributeLayout } from './resources.js';
 import type { ReadonlyMat4 } from 'gl-matrix';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
+import type { CameraState } from './types/camera.js';
 
 const SKYBOX_POSITIONS = new Float32Array([
   // Front
@@ -95,7 +99,7 @@ void main() {
 }`;
 
 export interface SkyboxBindOptions {
-  readonly viewProjection: Float32List;
+  readonly cameraState: CameraState;
   readonly scroll: readonly [number, number];
   readonly textureUnit?: number;
 }
@@ -110,6 +114,7 @@ export class SkyboxPipeline {
   private readonly uniformViewProj: WebGLUniformLocation | null;
   private readonly uniformScroll: WebGLUniformLocation | null;
   private readonly uniformSampler: WebGLUniformLocation | null;
+  private matrixBuilder = new WebGLMatrixBuilder();
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -144,7 +149,15 @@ export class SkyboxPipeline {
   }
 
   bind(options: SkyboxBindOptions): void {
-    const { viewProjection, scroll, textureUnit = 0 } = options;
+    const { cameraState, scroll, textureUnit = 0 } = options;
+
+    const matrices = buildMatrices(this.matrixBuilder, cameraState);
+
+    // Remove translation for skybox
+    const viewNoTranslation = removeViewTranslation(matrices.view);
+    const skyViewProjection = mat4.create();
+    mat4.multiply(skyViewProjection, matrices.projection, viewNoTranslation);
+
     this.program.use();
     // Enable depth testing with LEQUAL - skybox renders at z=1.0 (far plane)
     this.gl.enable(this.gl.DEPTH_TEST);
@@ -152,7 +165,12 @@ export class SkyboxPipeline {
     this.gl.depthMask(false);
     // Disable face culling - we're inside the cube looking out
     this.gl.disable(this.gl.CULL_FACE);
-    this.gl.uniformMatrix4fv(this.uniformViewProj, false, viewProjection);
+
+    // Explicitly cast to Float32Array to satisfy WebGL typings if needed,
+    // although gl-matrix mat4 is usually compatible.
+    // If mat4 is typed as IndexedCollection, we force cast to Float32List (Float32Array | Array<number>)
+    this.gl.uniformMatrix4fv(this.uniformViewProj, false, skyViewProjection as Float32Array);
+
     this.gl.uniform2f(this.uniformScroll, scroll[0], scroll[1]);
     this.gl.uniform1i(this.uniformSampler, textureUnit);
     this.cubemap.bind(textureUnit);
@@ -172,7 +190,8 @@ export class SkyboxPipeline {
 }
 
 export function removeViewTranslation(viewMatrix: ReadonlyMat4 | Float32Array): Float32Array {
-  const noTranslation = new Float32Array(viewMatrix);
+  // We need to support both gl-matrix types and Float32Array
+  const noTranslation = new Float32Array(viewMatrix as Float32Array);
   noTranslation[12] = 0;
   noTranslation[13] = 0;
   noTranslation[14] = 0;

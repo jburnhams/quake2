@@ -1,6 +1,7 @@
 import { BspGeometry } from './geometry.js';
 import { BspSurfacePipeline } from '../bspPipeline.js';
 import { LightStyleManager } from '../lightStyles.js';
+import type { CameraState } from '../types/camera.js';
 
 export class BspRenderer {
   readonly gl: WebGL2RenderingContext;
@@ -13,7 +14,7 @@ export class BspRenderer {
     this.lightStyles = new LightStyleManager();
   }
 
-  render(geometry: BspGeometry, modelViewProjection: Float32List, timeSeconds: number, diffuseTextureUnit = 0): void {
+  render(geometry: BspGeometry, cameraState: CameraState, timeSeconds: number, diffuseTextureUnit = 0): void {
     const { gl, pipeline, lightStyles } = this;
     lightStyles.update(timeSeconds);
 
@@ -25,7 +26,7 @@ export class BspRenderer {
 
     // Bind shader pipeline (Global Bind)
     pipeline.bind({
-      modelViewProjection,
+      cameraState,
       lightmapSampler: geometry.lightmapAtlas ? 1 : undefined,
       diffuseSampler: diffuseTextureUnit,
       timeSeconds,
@@ -35,7 +36,7 @@ export class BspRenderer {
     // Draw batches
     for (const batch of geometry.batches) {
       pipeline.bind({
-        modelViewProjection,
+        cameraState,
         lightmapSampler: geometry.lightmapAtlas ? 1 : undefined,
         diffuseSampler: diffuseTextureUnit,
         timeSeconds,

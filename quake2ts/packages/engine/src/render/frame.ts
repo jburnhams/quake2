@@ -106,54 +106,23 @@ const DEFAULT_DEPS: FrameRendererDependencies = {
 
 function renderSky(
   skyboxPipeline: SkyboxPipeline,
-  camera: Camera,
+  cameraState: CameraState,
   timeSeconds: number,
   options: SkyRenderState | undefined,
-  deps: FrameRendererDependencies,
-  viewProjection?: mat4
+  deps: FrameRendererDependencies
 ): void {
   if (!options) {
     return;
   }
 
-  // Use injected matrices if available, otherwise existing logic
-  // Note: skybox typically needs special matrix (no translation)
-
-  let skyViewProjection: mat4;
-
-  if (viewProjection) {
-      // If we have an injected view projection, we still need to remove translation for skybox
-      // But we probably only have the combined VP.
-      // Ideally we should use the injected VIEW matrix if available.
-      // But for now, let's stick to existing logic which takes camera matrices
-      // Wait, if we are moving to adapter, we should pass matrices.
-      // However, the function signature takes camera.
-      // Let's modify this function to take optional matrices?
-      // Or just fallback to camera for now until full migration.
-      // The task says "Update Frame Renderer (Internal): Accept matrices instead of extracting from Camera"
-
-      // Let's rely on camera for now as skybox rendering needs special handling (removing translation)
-      // and we might need to update removeViewTranslation to work with plain matrices if it doesn't already.
-      // deps.removeViewTranslation takes mat4.
-
-      const view = camera.viewMatrix; // Fallback
-      const projection = camera.projectionMatrix; // Fallback
-
-      const viewNoTranslation = deps.removeViewTranslation(view);
-      skyViewProjection = mat4.create();
-      mat4.multiply(skyViewProjection, projection, viewNoTranslation);
-  } else {
-      const viewNoTranslation = deps.removeViewTranslation(camera.viewMatrix);
-      skyViewProjection = mat4.create();
-      mat4.multiply(skyViewProjection, camera.projectionMatrix, viewNoTranslation);
-  }
-
   const scroll = deps.computeSkyScroll(timeSeconds, options.scrollSpeeds ?? [0.01, 0.02]);
+
   skyboxPipeline.bind({
-    viewProjection: skyViewProjection as Float32Array,
+    cameraState,
     scroll,
     textureUnit: options.textureUnit ?? 0,
   } satisfies SkyboxBindOptions);
+
   skyboxPipeline.draw();
 
   // Ensure subsequent passes can write depth.
@@ -388,6 +357,8 @@ export const createFrameRenderer = (
         _viewProjectionMatrix
     } = options;
 
+    const cameraState = options.cameraState ?? camera.toState();
+
     // Use injected matrix if available, otherwise fallback to camera
     const viewProjection = _viewProjectionMatrix
         ? new Float32Array(_viewProjectionMatrix)
@@ -396,32 +367,7 @@ export const createFrameRenderer = (
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Skybox rendering
-    // For now we pass original Camera because skybox logic is coupled to it inside renderSky (via deps.removeViewTranslation on camera.viewMatrix)
-    // Ideally we update renderSky to use _viewMatrix if available
-
-    // Updated renderSky call:
-    // If _viewMatrix is available, we construct skyViewProjection manually inside renderSky or pass components
-    // renderSky currently accepts camera.
-
-    // For now, let's keep renderSky using Camera as the matrices are identical (guaranteed by adapter tests)
-    // But we should use _viewMatrix if we want to fully decouple later.
-    // For this task, "Update Frame Renderer (Internal): Accept matrices instead of extracting from Camera"
-
-    if (_viewMatrix && _projectionMatrix) {
-        // We can do custom sky rendering here or update renderSky.
-        // Let's stick to using `camera` for skybox for this step as renderSky needs update.
-        // Wait, I see I passed `_viewProjectionMatrix` to `renderSky` in my previous thought but `renderSky` signature was not updated in my thought.
-
-        // I will use a slight hack: I already modify renderSky above but I didn't update it fully.
-        // Let's update `renderSky` implementation above to use `_viewMatrix` if passed in options (not currently passed to renderSky).
-
-        // Actually, let's just use camera for Skybox for now as it is safer and verified.
-        // The main goal is `viewProjection` for the world.
-        renderSky(skyboxPipeline, camera, timeSeconds, sky, deps, _viewProjectionMatrix);
-    } else {
-        renderSky(skyboxPipeline, camera, timeSeconds, sky, deps);
-    }
+    renderSky(skyboxPipeline, cameraState, timeSeconds, sky, deps);
     stats.skyDrawn = Boolean(sky);
 
     if (world) {
@@ -535,7 +481,8 @@ export const createFrameRenderer = (
                   const warp = material ? material.warp : undefined;
 
                   cachedState = bspPipeline.bind({
-                    modelViewProjection: viewProjection,
+                    cameraState,
+                    modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
                     styleIndices: geometry.styleIndices || [0, 255, 255, 255],
                     styleLayers: geometry.styleLayers || [0, -1, -1, -1],
                     styleValues: effectiveLightStyles,
