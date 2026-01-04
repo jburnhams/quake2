@@ -103,17 +103,8 @@ function createSkyboxTestScript(pitch: number, yaw: number) {
       gl.clearColor(0.5, 0.5, 0.5, 1); // Gray background
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // Simulate renderSky logic which removes translation
-      const viewNoTranslation = new Float32Array(camera.viewMatrix);
-      viewNoTranslation[12] = 0;
-      viewNoTranslation[13] = 0;
-      viewNoTranslation[14] = 0;
-
-      const skyViewProjection = mat4.create();
-      mat4.multiply(skyViewProjection, camera.projectionMatrix, viewNoTranslation);
-
       pipeline.bind({
-        viewProjection: skyViewProjection,
+        cameraState: camera.toState(),
         scroll: [0, 0],
         textureUnit: 0
       });
@@ -164,17 +155,8 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
       gl.clearColor(0.5, 0.5, 0.5, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // Simulate renderSky logic which removes translation
-      const viewNoTranslation = new Float32Array(camera.viewMatrix);
-      viewNoTranslation[12] = 0;
-      viewNoTranslation[13] = 0;
-      viewNoTranslation[14] = 0;
-
-      const skyViewProjection = mat4.create();
-      mat4.multiply(skyViewProjection, camera.projectionMatrix, viewNoTranslation);
-
       pipeline.bind({
-        viewProjection: skyViewProjection,
+        cameraState: camera.toState(),
         scroll: [0, 0],
         textureUnit: 0
       });

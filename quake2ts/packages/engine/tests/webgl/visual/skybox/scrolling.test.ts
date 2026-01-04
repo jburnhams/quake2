@@ -94,20 +94,12 @@ test('Skybox: Scrolling Animation', { timeout: 120000 }, async () => {
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      const viewNoTranslation = new Float32Array(camera.viewMatrix);
-      viewNoTranslation[12] = 0;
-      viewNoTranslation[13] = 0;
-      viewNoTranslation[14] = 0;
-
-      const skyViewProjection = mat4.create();
-      mat4.multiply(skyViewProjection, camera.projectionMatrix, viewNoTranslation);
-
       // Scroll speed: 0.1 per frame
       const scrollX = frameIndex * 0.1;
       const scrollY = frameIndex * 0.05;
 
       pipeline.bind({
-        viewProjection: skyViewProjection,
+        cameraState: camera.toState(),
         scroll: [scrollX, scrollY],
         textureUnit: 0
       });
