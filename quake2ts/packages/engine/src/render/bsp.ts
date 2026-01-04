@@ -430,11 +430,11 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
 
     // Debug logging for first surface with lightmap
     if (faceIndex === 0 && lightmapData) {
-      console.error('[createBspSurfaces] First surface with lightmap:');
-      console.error('  Vertices:', vertices.slice(0, 12));
-      console.error('  TextureCoords:', textureCoords.slice(0, 8));
-      console.error('  LightmapCoords:', lightmapCoords.slice(0, 8));
-      console.error('  Lightmap dims:', lightmapData.width, 'x', lightmapData.height);
+      console.log('[createBspSurfaces] First surface with lightmap:');
+      console.log('  Vertices:', vertices.slice(0, 12));
+      console.log('  TextureCoords:', textureCoords.slice(0, 8));
+      console.log('  LightmapCoords:', lightmapCoords.slice(0, 8));
+      console.log('  Lightmap dims:', lightmapData.width, 'x', lightmapData.height);
     }
   }
 
@@ -512,17 +512,17 @@ export function buildBspGeometry(
 
     // Debug logging for first lightmapped surface
     if (index === 0 && placement) {
-      console.error('[buildBspGeometry] First surface placement:');
-      console.error('  Atlas index:', placement.atlasIndex);
-      console.error('  Offset:', placement.offset);
-      console.error('  Scale:', placement.scale);
+      console.log('[buildBspGeometry] First surface placement:');
+      console.log('  Atlas index:', placement.atlasIndex);
+      console.log('  Offset:', placement.offset);
+      console.log('  Scale:', placement.scale);
     }
 
     const vertexData = buildVertexData(surface, placement);
 
     // More debug logging
     if (index === 0 && placement) {
-      console.error('[buildBspGeometry] Generated vertex data (first 32 floats):', Array.from(vertexData.slice(0, 32)));
+      console.log('[buildBspGeometry] Generated vertex data (first 32 floats):', Array.from(vertexData.slice(0, 32)));
     }
 
     const indexData = ensureIndexArray(surface.indices, vertexData.length / 8);
