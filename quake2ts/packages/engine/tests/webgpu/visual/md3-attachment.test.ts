@@ -102,6 +102,7 @@ describe('MD3 Pipeline Attachments', () => {
                         pass,
                         attachedMesh.surfaces.get('surface1')!,
                         material,
+                        null,
                         projection as Float32Array,
                         attachedMatrix as Float32Array
                     );

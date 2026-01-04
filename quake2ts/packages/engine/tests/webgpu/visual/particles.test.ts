@@ -77,7 +77,9 @@ describe('Particle System Visual Tests', () => {
           }]
       });
 
-      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+      // Updated to match new signature: render(pass, cameraState, viewProjection, viewRight, viewUp, system, textures)
+      // Since we don't have cameraState here (ortho test), pass null.
+      renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system);
       pass.end();
 
       device.queue.submit([encoder.finish()]);
@@ -142,7 +144,7 @@ describe('Particle System Visual Tests', () => {
             }]
         });
 
-        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system);
         pass.end();
 
         device.queue.submit([encoder.finish()]);
@@ -206,7 +208,7 @@ describe('Particle System Visual Tests', () => {
             }]
         });
 
-        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system);
         pass.end();
 
         device.queue.submit([encoder.finish()]);
@@ -270,7 +272,7 @@ describe('Particle System Visual Tests', () => {
             }]
         });
 
-        renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+        renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system);
         pass.end();
 
         device.queue.submit([encoder.finish()]);
@@ -331,7 +333,7 @@ describe('Particle System Visual Tests', () => {
           }]
       });
 
-      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system);
+      renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system);
       pass.end();
 
       device.queue.submit([encoder.finish()]);
@@ -416,7 +418,7 @@ describe('Particle System Visual Tests', () => {
           }]
       });
 
-      renderer.render(pass, projection as Float32Array, viewRight, viewUp, system, textures);
+      renderer.render(pass, null, projection as Float32Array, viewRight, viewUp, system, textures);
       pass.end();
 
       device.queue.submit([encoder.finish()]);

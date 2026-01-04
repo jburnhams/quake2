@@ -1,9 +1,12 @@
 import { Mat4, Vec3, mat4FromBasis, normalizeVec3, transformPointMat4, createMat4Identity, multiplyMat4, mat4Identity } from '@quake2ts/shared';
+import { mat4 } from 'gl-matrix';
 import { Md3Model, Md3Surface } from '../../../assets/md3.js';
 import { Md3LightingOptions, Md3FrameBlend, Md3SurfaceGeometry, buildMd3SurfaceGeometry, buildMd3VertexData, Md3TagTransform, interpolateMd3Tag } from '../../md3Pipeline.js';
 import { Texture2D } from '../resources.js';
 import { WebGPUContextState } from '../context.js';
 import md3Shader from '../shaders/md3.wgsl?raw';
+import { CameraState } from '../../types/camera.js';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
 
 // Re-export common types from WebGL pipeline
 export { Md3FrameBlend, Md3LightingOptions, Md3DynamicLight, Md3TagTransform } from '../../md3Pipeline.js';
@@ -113,6 +116,7 @@ export class Md3PipelineGPU {
   private bindGroupLayout: GPUBindGroupLayout;
   private uniformBuffer: GPUBuffer;
   private sampler: GPUSampler;
+  private matrixBuilder = new WebGPUMatrixBuilder();
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
     const module = device.createShaderModule({
@@ -207,6 +211,7 @@ export class Md3PipelineGPU {
   draw(passEncoder: GPURenderPassEncoder,
        mesh: Md3SurfaceMeshGPU,
        material: Md3MaterialGPU,
+       cameraState: CameraState | null,
        viewProjection: Float32Array,
        modelMatrix: Float32Array,
        tint: Float32Array = new Float32Array([1, 1, 1, 1])
@@ -223,7 +228,17 @@ export class Md3PipelineGPU {
       //   tint: vec4<f32>,             (128-143)
       // };
 
-      uniformData.set(viewProjection, 0);
+      let finalViewProjection = viewProjection;
+
+      if (cameraState) {
+        const view = this.matrixBuilder.buildViewMatrix(cameraState);
+        const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
+        const vp = mat4.create();
+        mat4.multiply(vp, proj, view);
+        finalViewProjection = vp as Float32Array;
+      }
+
+      uniformData.set(finalViewProjection, 0);
       uniformData.set(modelMatrix, 16);
       uniformData.set(tint, 32);
 

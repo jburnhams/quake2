@@ -34,7 +34,7 @@ export class WebGPUMatrixBuilder implements MatrixBuilder {
     // Quake: +X Forward, +Y Left, +Z Up
     // Target: -Z Forward, +X Right, +Y Up
 
-    const [pitch, yaw, roll] = camera.angles;
+    const [pitch, yaw, roll] = camera.angles as [number, number, number];
 
     // Convert Quake angles to WebGPU view direction
     // Yaw:

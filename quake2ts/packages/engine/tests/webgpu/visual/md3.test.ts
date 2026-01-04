@@ -81,6 +81,7 @@ describe('MD3 Pipeline', () => {
                     pass,
                     mesh.surfaces.get('surface1')!,
                     material,
+                    null, // No cameraState for this low-level test
                     projection as Float32Array,
                     modelMatrix as Float32Array
                 );
