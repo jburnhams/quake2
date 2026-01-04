@@ -4,8 +4,9 @@ import {
   computeSkyScroll,
   SkyboxPipeline,
 } from '../../../src/render/skybox.js';
-import { mat4 } from 'gl-matrix';
+import { mat4, vec3 } from 'gl-matrix';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import type { CameraState } from '../../../src/render/types/camera.js';
 
 const { mockLocations } = vi.hoisted(() => {
   return {
@@ -101,29 +102,29 @@ describe('skybox', () => {
       const gl = mockGl as unknown as WebGL2RenderingContext;
       const pipeline = new SkyboxPipeline(gl);
 
-      const viewProjection = mat4.create();
+      const cameraState: CameraState = {
+        position: vec3.create(),
+        angles: vec3.create(),
+        fov: 90,
+        aspect: 1,
+        near: 0.1,
+        far: 1000,
+      };
+
       const scroll: [number, number] = [0.1, 0.2];
 
       pipeline.bind({
-        viewProjection,
+        cameraState,
         scroll,
       });
 
       expect(gl.depthMask).toHaveBeenCalledWith(false);
-
-      // Check for uniform calls using the tracking in the shared mock or the spy directly
-      // Since we didn't mock the methods on the shared mock instance but used the default implementations which track calls,
-      // we can inspect the calls array OR we can rely on the fact that the shared mock uses vi.fn() for methods.
-      // Let's verify using the spy methods on the mock instance.
 
       expect(mockGl.uniformMatrix4fv).toHaveBeenCalledWith(
         mockLocations.u_viewProjectionNoTranslation,
         false,
         expect.anything() // The matrix
       );
-
-      // We might need to be more specific with the matrix matching if the test was strict
-      // The original test used 'viewProjection' variable directly.
 
       expect(mockGl.uniform2f).toHaveBeenCalledWith(
         mockLocations.u_scroll,
