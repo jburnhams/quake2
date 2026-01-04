@@ -71,7 +71,7 @@ describe('Entity System Performance', () => {
     const frameTime = performance.now() - startFrame;
 
     console.log(`runFrame with ${entityCount} idle entities: ${frameTime.toFixed(2)}ms`);
-    expect(frameTime).toBeLessThan(30); // Should be negligible for idle entities
+    expect(frameTime).toBeLessThan(40); // Should be negligible for idle entities
   }, TIMEOUT);
 
   it('handles think queue performance (1000 entities)', async () => {

@@ -2,8 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import {
   M_CheckBottom,
   M_CheckBottomEx,
-} from '../../src/index.js';
-import { MoveType } from '../../src/entities/entity.js';
+} from '../../../src/index.js';
+import { MoveType } from '../../../src/entities/entity.js';
 import { CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA, TraceResult } from '@quake2ts/shared';
 import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
 
