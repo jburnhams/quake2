@@ -6,9 +6,9 @@ import {
   infront,
   rangeTo,
   visible,
-} from '../../src/index.js';
-import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../src/ai/constants.js';
-import type { TraceFunction } from '../../src/ai/perception.js';
+} from '../../../src/index.js';
+import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../../src/ai/constants.js';
+import type { TraceFunction } from '../../../src/ai/perception.js';
 import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 

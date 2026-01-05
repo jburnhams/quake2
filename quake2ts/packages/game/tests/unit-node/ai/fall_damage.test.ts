@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { MoveType, Solid } from '../../src/entities/entity.js';
-import { runStep } from '../../src/physics/movement.js';
+import { MoveType, Solid } from '../../../src/entities/entity.js';
+import { runStep } from '../../../src/physics/movement.js';
 import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Monster Fall Damage', () => {

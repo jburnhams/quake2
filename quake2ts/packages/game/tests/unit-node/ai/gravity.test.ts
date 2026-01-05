@@ -1,8 +1,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity';
-import { M_CheckBottom, M_CheckBottomEx } from '../../src/ai/movement';
-import { BOTTOM_SOLID, BOTTOM_EMPTY } from '../../src/ai/constants';
+import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity';
+import { M_CheckBottom, M_CheckBottomEx } from '../../../src/ai/movement';
+import { BOTTOM_SOLID, BOTTOM_EMPTY } from '../../../src/ai/constants';
 import { MASK_MONSTERSOLID, CONTENTS_SOLID } from '@quake2ts/shared';
 
 // Create a mock EntitySystem with necessary methods

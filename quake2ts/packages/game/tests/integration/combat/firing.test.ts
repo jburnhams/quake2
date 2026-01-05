@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createGame, type GameExports } from '../../src/index.js';
-import { Entity } from '../../src/entities/entity.js';
-import { fire } from '../../src/combat/weapons/firing.js';
-import { WeaponId } from '../../src/inventory/playerInventory.js';
-import { AmmoType } from '../../src/inventory/ammo.js';
-import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
-import { createPlayerWeaponStates } from '../../src/combat/weapons/state.js';
-import { GameImports } from '../../src/imports.js';
+import { createGame, type GameExports } from '../../../src/index.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { fire } from '../../../src/combat/weapons/firing.js';
+import { WeaponId } from '../../../src/inventory/playerInventory.js';
+import { AmmoType } from '../../../src/inventory/ammo.js';
+import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
+import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
+import { GameImports } from '../../../src/imports.js';
 import { vi } from 'vitest';
 import { CollisionEntityIndex, CollisionModel } from '@quake2ts/shared';
-import { Solid } from '../../src/entities/entity.js';
+import { Solid } from '../../../src/entities/entity.js';
 import { makeBrushFromMinsMaxs } from '@quake2ts/test-utils';
 
 const createMockGameImports = (): GameImports => ({
