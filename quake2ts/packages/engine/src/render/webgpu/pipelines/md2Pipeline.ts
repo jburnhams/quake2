@@ -254,7 +254,7 @@ export class Md2Pipeline {
       let offset = 0; // bytes
 
       // Calculate MVP
-      let finalMvp: Float32List = modelViewProjection;
+      let finalMvp: Float32List = modelViewProjection!;
       const mm = modelMatrix || [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
       if (cameraState) {
@@ -264,7 +264,9 @@ export class Md2Pipeline {
         const mvp = mat4.create();
         mat4.multiply(mvp, proj, view);
         mat4.multiply(mvp, mvp, mm as mat4); // Model * View * Proj
-        finalMvp = mvp as Float32List;
+        finalMvp = mvp as unknown as Float32List;
+      } else if (!finalMvp) {
+          throw new Error('Md2Pipeline (WebGPU): Either modelViewProjection or cameraState must be provided');
       }
 
       // MVP
