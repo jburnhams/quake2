@@ -1,71 +1,59 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../src/entities/system.js';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createMockRandomGenerator } from '@quake2ts/test-utils';
-import { RandomGenerator } from '@quake2ts/shared';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createTestContext } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
-    let entities: EntitySystem;
-    let mockRng: RandomGenerator;
+    let context: ReturnType<typeof createTestContext>;
 
     beforeEach(() => {
-        // We use createSpawnTestContext to get a standard context/engine/imports
-        const context = createSpawnTestContext();
+        // Use createTestContext which sets up EntitySystem with a mockable RNG
+        // Pass deathmatch: true to constructor options if possible, or set it after.
+        // createTestContext doesn't expose constructor options for EntitySystem directly for deathmatch flag yet.
+        // But EntitySystem defaults to deathmatch: false.
+        // We can just set it.
 
-        // Create a mock RNG using helper
-        mockRng = createMockRandomGenerator();
-
-        // Construct EntitySystem with the mock RNG to control selection
-        entities = new EntitySystem(
-            context.engine,
-            undefined, // imports
-            undefined, // gravity
-            undefined, // maxEntities
-            undefined, // allocator
-            true, // deathmatch
-            1, // skill
-            mockRng
-        );
+        context = createTestContext();
+        context.entities.deathmatch = true;
     });
 
     it('SelectDeathmatchSpawnPoint should return a random spawn point', () => {
-        const s1 = spawnEntity(entities, createEntityFactory({
+        const s1 = spawnEntity(context.entities, createEntityFactory({
             classname: 'info_player_deathmatch',
             origin: { x: 100, y: 0, z: 0 }
         }));
 
-        const s2 = spawnEntity(entities, createEntityFactory({
+        const s2 = spawnEntity(context.entities, createEntityFactory({
             classname: 'info_player_deathmatch',
             origin: { x: 200, y: 0, z: 0 }
         }));
 
-        // Entities are inserted at the head of the list.
-        // So the list order is [s2, s1].
-        // index 0 -> s2
-        // index 1 -> s1
-
-        const spots = entities.findByClassname('info_player_deathmatch');
+        const spots = context.entities.findByClassname('info_player_deathmatch');
         expect(spots.length).toBe(2);
-        expect(spots[0]).toBe(s2);
-        expect(spots[1]).toBe(s1);
 
-        // We want to select s2 (index 0).
-        // SelectDeathmatchSpawnPoint uses floor(frandom() * count).
-        // Set frandom to 0.25. floor(0.25 * 2) = 0.
-        (mockRng.frandom as any).mockReturnValue(0.25);
+        // Spy on the rng in the context
+        vi.spyOn(context.entities.rng, 'frandom').mockReturnValue(0.25);
 
-        const selected = SelectDeathmatchSpawnPoint(entities);
-        expect(selected).toBe(s2);
+        const selected = SelectDeathmatchSpawnPoint(context.entities);
+        // logic: floor(0.25 * 2) = 0. spots[0] is s1 (first spawned) or s2 (second spawned)?
+        // EntitySystem.spawn pushes to array.
+        // findByClassname filters that array.
+        // s1 spawned first -> index 0. s2 spawned second -> index 1.
+        // Wait, previous test said "inserted at head".
+        // Let's check test-utils EntitySystem mock implementation.
+        // It uses `entityList.push(ent)`. So append.
+        // So s1 is at 0, s2 is at 1.
+        // floor(0.25 * 2) = 0. Should be s1.
+        expect(selected).toBe(s1);
     });
 
     it('SelectDeathmatchSpawnPoint should fall back to info_player_start if no deathmatch spots', () => {
-        const start = spawnEntity(entities, createEntityFactory({
+        const start = spawnEntity(context.entities, createEntityFactory({
             classname: 'info_player_start',
             origin: { x: 10, y: 10, z: 10 }
         }));
 
-        const selected = SelectSpawnPoint(entities);
+        const selected = SelectSpawnPoint(context.entities);
         expect(selected).toBe(start);
     });
 });

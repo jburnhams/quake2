@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../src/entities/spawn.js';
+import { createDefaultSpawnRegistry, spawnEntityFromDictionary, SpawnRegistry } from '../../src/entities/spawn.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, MockEngine } from '@quake2ts/test-utils';
 
 describe('target_speaker', () => {
   let entities: EntitySystem;
-  let registry: any;
-  let mockEngine: any;
+  let registry: SpawnRegistry;
+  let mockEngine: MockEngine;
   let context: ReturnType<typeof createTestContext>;
 
   beforeEach(async () => {
     // Use createTestContext to get a standardized mocked environment
-    context = await createTestContext();
+    context = createTestContext();
     entities = context.entities;
     // createDefaultSpawnRegistry calls registerTargetSpawns internally
     registry = createDefaultSpawnRegistry(context.game);

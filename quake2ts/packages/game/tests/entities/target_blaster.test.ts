@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerTargetSpawns } from '../../src/entities/targets.js';
 import { Entity, ServerFlags } from '../../src/entities/entity.js';
 import { EntityEffects } from '../../src/entities/enums.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, createEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 import { createBlasterBolt } from '../../src/entities/projectiles.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 
 // Mock projectile creation
 vi.mock('../../src/entities/projectiles.js', () => ({
-    createBlasterBolt: vi.fn(() => new Entity(2)),
+    createBlasterBolt: vi.fn(() => createEntity()),
 }));
 
 describe('target_blaster', () => {
@@ -22,9 +22,12 @@ describe('target_blaster', () => {
     registry = new SpawnRegistry();
     registerTargetSpawns(registry);
 
-    entity = new Entity(1);
-    entity.classname = 'target_blaster';
-    entity.angles = { x: 0, y: 0, z: 0 };
+    entity = createEntity();
+    Object.assign(entity, createEntityFactory({
+      classname: 'target_blaster',
+      angles: { x: 0, y: 0, z: 0 }
+    }));
+
     vi.clearAllMocks();
   });
 
@@ -45,7 +48,7 @@ describe('target_blaster', () => {
     const spawnFn = registry.get('target_blaster');
     spawnFn?.(entity, context);
 
-    entity.use?.(entity, null, null);
+    entity.use?.(entity, null, null, context.entities);
 
     expect(createBlasterBolt).toHaveBeenCalledWith(
         context.entities,
@@ -65,7 +68,7 @@ describe('target_blaster', () => {
     const spawnFn = registry.get('target_blaster');
     spawnFn?.(entity, context);
 
-    entity.use?.(entity, null, null);
+    entity.use?.(entity, null, null, context.entities);
 
     // Check effect setting
     // We mocked createBlasterBolt to return an entity.

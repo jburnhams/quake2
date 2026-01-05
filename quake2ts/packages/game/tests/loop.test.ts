@@ -113,13 +113,13 @@ describe('GameFrameLoop', () => {
 
 describe('GameFrameLoop Physics Integration', () => {
   it('should call the correct physics function for an entity with MOVETYPE_TOSS', () => {
-    const { imports } = createGameImportsAndEngine({
+    const { imports, engine } = createGameImportsAndEngine({
       imports: {
         trace: () => createTraceMock({ fraction: 1.0 })
       }
     });
 
-    const entitySystem = new EntitySystem({} as any, imports, { x: 0, y: 0, z: -800 });
+    const entitySystem = new EntitySystem(engine, imports, { x: 0, y: 0, z: -800 });
     const ent = entitySystem.spawn();
     ent.movetype = MoveType.Toss;
     ent.velocity = { x: 0, y: 0, z: 100 };
@@ -141,7 +141,8 @@ describe('GameFrameLoop Physics Integration', () => {
   });
 
   it('should initialize the timestamp of a newly spawned entity', () => {
-    const entitySystem = new EntitySystem({} as any, {} as any, { x: 0, y: 0, z: 0 });
+    const { imports, engine } = createGameImportsAndEngine();
+    const entitySystem = new EntitySystem(engine, imports, { x: 0, y: 0, z: 0 });
     entitySystem.beginFrame(123.45);
     const ent = entitySystem.spawn();
     expect(ent.timestamp).toBe(123.45);
