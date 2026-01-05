@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LevelClock } from '../src/level.js';
 import type { GameFrameContext } from '../src/loop.js';
 
+// Use a local helper for GameFrameContext as createTestContext introduces unnecessary overhead for these simple unit tests.
 const mockContext = (overrides: Partial<GameFrameContext>): GameFrameContext => ({
   frame: 0,
   deltaMs: 0,
