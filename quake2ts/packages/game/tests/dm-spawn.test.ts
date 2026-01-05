@@ -8,11 +8,6 @@ describe('Deathmatch Spawn', () => {
 
     beforeEach(() => {
         // Use createTestContext which sets up EntitySystem with a mockable RNG
-        // Pass deathmatch: true to constructor options if possible, or set it after.
-        // createTestContext doesn't expose constructor options for EntitySystem directly for deathmatch flag yet.
-        // But EntitySystem defaults to deathmatch: false.
-        // We can just set it.
-
         context = createTestContext();
         context.entities.deathmatch = true;
     });
@@ -39,11 +34,6 @@ describe('Deathmatch Spawn', () => {
         // EntitySystem.spawn pushes to array.
         // findByClassname filters that array.
         // s1 spawned first -> index 0. s2 spawned second -> index 1.
-        // Wait, previous test said "inserted at head".
-        // Let's check test-utils EntitySystem mock implementation.
-        // It uses `entityList.push(ent)`. So append.
-        // So s1 is at 0, s2 is at 1.
-        // floor(0.25 * 2) = 0. Should be s1.
         expect(selected).toBe(s1);
     });
 
