@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createWebGPURenderer } from '../../../src/render/webgpu/renderer';
 import { Camera } from '../../../src/render/camera';
-import { BspMap, parseBsp } from '../../../src/assets/bsp';
-import { buildBspGeometry } from '../../../src/render/bsp';
-import { createTextureManager, TextureManager } from '../../../src/render/texture';
-import { MaterialManager } from '../../../src/render/materials';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { BspMap } from '../../../src/assets/bsp';
+import * as bspTraversal from '../../../src/render/bspTraversal';
+import * as culling from '../../../src/render/culling';
 import { createMockGPUDevice, setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
 
 // Setup WebGPU globals
@@ -30,22 +27,18 @@ vi.mock('../../../src/render/webgpu/context', () => ({
   createWebGPUContext: () => Promise.resolve(mockContext)
 }));
 
-// Mock gathering visible faces to avoid complex BSP logic deps and ensure we hit the loop
-vi.mock('../../../src/render/bspTraversal', () => ({
-    gatherVisibleFaces: () => [{ faceIndex: 0, sortKey: 0 }]
-}));
-
-// Mock extractFrustumPlanes
-vi.mock('../../../src/render/culling', () => ({
-    extractFrustumPlanes: () => []
-}));
-
 describe('BSP Native Coordinate System Integration', () => {
   let renderer: any;
   let camera: Camera;
   let map: BspMap;
 
   beforeEach(async () => {
+    // Mock gathering visible faces to avoid complex BSP logic deps and ensure we hit the loop
+    vi.spyOn(bspTraversal, 'gatherVisibleFaces').mockReturnValue([{ faceIndex: 0, sortKey: 0 } as any]);
+
+    // Mock extractFrustumPlanes
+    vi.spyOn(culling, 'extractFrustumPlanes').mockReturnValue([]);
+
     renderer = await createWebGPURenderer(mockContext.device.canvas, {
         width: 800,
         height: 600
@@ -121,10 +114,6 @@ describe('BSP Native Coordinate System Integration', () => {
     expect(callArgs.cameraState.position[2]).toBe(50);
     expect(callArgs.cameraState.angles[0]).toBe(30);
     expect(callArgs.cameraState.angles[1]).toBe(135);
-
-    // Verify matrix building logic works inside bind (by checking if it didn't throw and likely updated buffer)
-    // We can't easily check the buffer content in mock, but we can verify execution flow.
-    // The previous tests verified matrix math correctness.
 
     expect(drawSpy).toHaveBeenCalled();
   });
