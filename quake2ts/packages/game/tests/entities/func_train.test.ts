@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { registerFuncSpawns } from '../../src/entities/funcs.js';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
+import { MoveType, Solid } from '../../src/entities/entity.js';
+import { createTestContext, createEntityFactory, createTriggerEntityFactory } from '@quake2ts/test-utils';
 
 describe('func_train', () => {
   it('should register func_train', () => {
@@ -14,34 +14,28 @@ describe('func_train', () => {
   it('should initialize func_train', () => {
     const registry = new SpawnRegistry();
     registerFuncSpawns(registry);
+    const context = createTestContext();
 
-    const entity = {
+    const entity = createEntityFactory({
       classname: 'func_train',
       target: 'p1',
       angles: { x: 0, y: 0, z: 0 },
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -10, y: -10, z: -10 },
       maxs: { x: 10, y: 10, z: 10 },
-    } as Entity;
+    });
 
-    const p1 = {
+    const p1 = createTriggerEntityFactory('path_corner', {
       targetname: 'p1',
       origin: { x: 100, y: 0, z: 0 },
       target: 'p2',
-    } as Entity;
+    });
 
-    const system = {
-        pickTarget: vi.fn().mockReturnValue(p1),
-        scheduleThink: vi.fn(),
-        timeSeconds: 0,
-    } as unknown as EntitySystem;
-
-    const context = {
-        entities: system,
-        warn: vi.fn(),
-    } as any;
+    // Mock pickTarget to return p1
+    (context.entities.pickTarget as any).mockReturnValue(p1);
 
     const spawn = registry.get('func_train');
+    // @ts-ignore
     spawn?.(entity, context);
 
     expect(entity.solid).toBe(Solid.Bsp);
@@ -49,6 +43,6 @@ describe('func_train', () => {
     expect(entity.blocked).toBeDefined();
 
     // It should schedule a think to find the target
-    expect(system.scheduleThink).toHaveBeenCalled();
+    expect(context.entities.scheduleThink).toHaveBeenCalled();
   });
 });

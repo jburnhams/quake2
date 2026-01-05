@@ -7,7 +7,7 @@ import { createGrenade } from '../../src/entities/projectiles.js';
 import { createGame } from '../../src/index.js';
 import { MoveType, Solid } from '../../src/entities/entity.js';
 import * as damage from '../../src/combat/damage.js';
-import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Grenade Projectile', () => {
     it('should have correct initial properties and explode on think', () => {
@@ -24,10 +24,6 @@ describe('Grenade Projectile', () => {
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
-        // If we were creating the player manually for testing createGrenade directly,
-        // we would use createEntityFactory. But here we rely on game.spawnWorld() to behave normally.
-        // However, let's verify we can find the player.
-
         const player = game.entities.find(e => e.classname === 'player')!;
 
         createGrenade(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
@@ -39,7 +35,7 @@ describe('Grenade Projectile', () => {
         expect(grenade.solid).toBe(Solid.BoundingBox);
         expect(grenade.touch).toBeDefined();
 
-        game.frame({ time: 2500, delta: 2.5 });
+        game.frame({ frame: 1, deltaMs: 2500, nowMs: 2500 });
 
         expect(T_RadiusDamage).toHaveBeenCalled();
         expect(grenade.inUse).toBe(false);
