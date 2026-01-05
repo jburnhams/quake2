@@ -568,7 +568,11 @@ export const createRenderer = (
                         }
 
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        md3Pipeline.bind(modelViewProjection);
+                        // Cast or use explicit object to satisfy signature
+                        md3Pipeline.bind({
+                            cameraState: cameraState || undefined,
+                            modelViewProjection: cameraState ? undefined : modelViewProjection as unknown as Float32List,
+                        });
 
                         for (const surface of md3Model.surfaces) {
                             const surfaceMesh = mesh.surfaces.get(surface.name);
@@ -644,7 +648,7 @@ export const createRenderer = (
             const viewRight = { x: vm[0], y: vm[4], z: vm[8] };
             const viewUp = { x: vm[1], y: vm[5], z: vm[9] };
             particleRenderer.render({
-                viewProjection: viewProjection as Float32Array,
+                viewProjection: viewProjection as unknown as Float32List,
                 viewRight,
                 viewUp
             });

@@ -1,3 +1,4 @@
+import { mat4 } from 'gl-matrix';
 import { Vec3 } from '@quake2ts/shared';
 import { Md2Model } from '../assets/md2.js';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
@@ -6,6 +7,8 @@ import { DLight, MAX_DLIGHTS } from './dlight.js';
 import { generateWireframeIndices } from './geometry.js';
 import { RenderModeConfig } from './frame.js';
 import { CameraState } from './types/camera.js';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
 
 export interface Md2DrawVertex {
   readonly vertexIndex: number;
@@ -25,7 +28,7 @@ export interface Md2FrameBlend {
 
 export interface Md2BindOptions {
   readonly cameraState?: CameraState; // For native coordinate system rendering
-  readonly modelViewProjection: Float32List;
+  readonly modelViewProjection?: Float32List;
   readonly lightDirection?: readonly [number, number, number];
   readonly ambientLight?: number;
   readonly tint?: readonly [number, number, number, number];
@@ -325,6 +328,7 @@ export class Md2MeshBuffers {
 export class Md2Pipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
+  private matrixBuilder = new WebGLMatrixBuilder();
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformModelMatrix: WebGLUniformLocation | null;
@@ -384,27 +388,54 @@ export class Md2Pipeline {
 
   bind(options: Md2BindOptions): void {
     const {
-        modelViewProjection,
-        modelMatrix,
-        lightDirection = [0, 0, 1],
-        ambientLight = 0.2,
-        tint = [1, 1, 1, 1],
-        diffuseSampler = 0,
-        dlights = [],
-        renderMode,
-        brightness = 1.0,
-        gamma = 1.0,
-        fullbright = false,
-        ambient = 0.0
+      cameraState,
+      modelViewProjection: overrideMvp,
+      modelMatrix,
+      lightDirection = [0, 0, 1],
+      ambientLight = 0.2,
+      tint = [1, 1, 1, 1],
+      diffuseSampler = 0,
+      dlights = [],
+      renderMode,
+      brightness = 1.0,
+      gamma = 1.0,
+      fullbright = false,
+      ambient = 0.0
     } = options;
+
+    let mvp: Float32List;
+
+    if (overrideMvp) {
+      mvp = overrideMvp;
+    } else if (cameraState) {
+      const matrices = buildMatrices(this.matrixBuilder, cameraState);
+      const viewProjection = matrices.viewProjection;
+
+      if (modelMatrix) {
+        // Compute MVP = VP * Model
+        const result = mat4.create();
+        // Note: gl-matrix multiply(out, a, b) means a * b.
+        // We want P * V * M.
+        // viewProjection is already P * V.
+        // So we want viewProjection * modelMatrix.
+        mat4.multiply(result, viewProjection, modelMatrix as mat4);
+        mvp = result as unknown as Float32List;
+      } else {
+        mvp = viewProjection as unknown as Float32List;
+      }
+    } else {
+      throw new Error('Md2Pipeline: Either modelViewProjection or cameraState must be provided');
+    }
+
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
-    this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
+
+    this.gl.uniformMatrix4fv(this.uniformMvp, false, mvp!);
     if (modelMatrix) {
-        this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, modelMatrix);
+      this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, modelMatrix);
     } else {
-        this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]));
+      this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]));
     }
 
     this.gl.uniform3fv(this.uniformLightDir, lightVec);
@@ -416,14 +447,14 @@ export class Md2Pipeline {
     let modeInt = 0;
     let color = [1, 1, 1, 1];
     if (renderMode) {
-        if (renderMode.mode === 'solid' || renderMode.mode === 'wireframe') modeInt = 1;
-        else if (renderMode.mode === 'solid-faceted') modeInt = 2;
+      if (renderMode.mode === 'solid' || renderMode.mode === 'wireframe') modeInt = 1;
+      else if (renderMode.mode === 'solid-faceted') modeInt = 2;
 
-        if (renderMode.color) {
-            color = [...renderMode.color];
-        } else if (renderMode.generateRandomColor) {
-            // Will be handled by caller passing specific color, or white here
-        }
+      if (renderMode.color) {
+        color = [...renderMode.color];
+      } else if (renderMode.generateRandomColor) {
+        // Will be handled by caller passing specific color, or white here
+      }
     }
     this.gl.uniform1i(this.uniformRenderMode, modeInt);
     this.gl.uniform4f(this.uniformSolidColor, color[0], color[1], color[2], color[3]);
@@ -433,10 +464,10 @@ export class Md2Pipeline {
     const numDlights = Math.min(dlights.length, MAX_DLIGHTS);
     this.gl.uniform1i(this.uniformNumDlights, numDlights);
     for (let i = 0; i < numDlights; i++) {
-        const light = dlights[i];
-        this.gl.uniform3f(this.uniformDlights[i].pos, light.origin.x, light.origin.y, light.origin.z);
-        this.gl.uniform3f(this.uniformDlights[i].color, light.color.x, light.color.y, light.color.z);
-        this.gl.uniform1f(this.uniformDlights[i].intensity, light.intensity);
+      const light = dlights[i];
+      this.gl.uniform3f(this.uniformDlights[i].pos, light.origin.x, light.origin.y, light.origin.z);
+      this.gl.uniform3f(this.uniformDlights[i].color, light.color.x, light.color.y, light.color.z);
+      this.gl.uniform1f(this.uniformDlights[i].intensity, light.intensity);
     }
 
     // Lighting controls
