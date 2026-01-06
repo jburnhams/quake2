@@ -4,25 +4,21 @@ import { describe, expect, it } from 'vitest';
 import { Entity, EntitySystem } from '../../src/entities/index.js';
 import { LevelClock } from '../../src/level.js';
 import { applySaveFile, createSaveFile, parseSaveFile, SAVE_FORMAT_VERSION } from '../../src/save/save.js';
-import type { GameEngine } from '../../src/index.js';
-
-const mockEngine: GameEngine = {
-  trace: () => ({}),
-};
-
-function findEntity(system: EntitySystem, index: number): Entity | null {
-  let match: Entity | null = null;
-  system.forEachEntity((entity) => {
-    if (entity.index === index) {
-      match = entity;
-    }
-  });
-  return match;
-}
+import { createMockEngine } from '@quake2ts/test-utils';
 
 describe('save/load determinism', () => {
   it('restores entity wiring, timing, and RNG deterministically', () => {
-    const entitySystem = new EntitySystem(mockEngine);
+    const mockEngine = createMockEngine();
+    // EntitySystem expects trace in engine for some operations, but we can patch it if needed or assume it's not called during basic spawn/link unless collision is active.
+    // However, the original test had trace: () => ({})
+    // createMockEngine returns { sound, soundIndex, modelIndex, centerprintf }
+    // We should add trace stub.
+    const engineWithTrace = {
+        ...mockEngine,
+        trace: () => ({}) as any
+    };
+
+    const entitySystem = new EntitySystem(engineWithTrace);
     entitySystem.beginFrame(10);
 
     const alpha = entitySystem.spawn();
@@ -72,7 +68,7 @@ describe('save/load determinism', () => {
 
     const parsed = parseSaveFile({ ...save, extraTopLevel: 'ignored' });
 
-    const restoredSystem = new EntitySystem(mockEngine);
+    const restoredSystem = new EntitySystem(engineWithTrace);
     const restoredClock = new LevelClock();
     const restoredRng = new RandomGenerator({ seed: 7 });
 
@@ -88,6 +84,13 @@ describe('save/load determinism', () => {
     expect(restoredClock.current).toEqual(levelState);
     expect(restoredRng.irandomUint32()).toBe(expectedNext);
 
+    // Helper to find entity by index
+    const findEntity = (sys: EntitySystem, idx: number) => {
+        let match: Entity | null = null;
+        sys.forEachEntity((e) => { if (e.index === idx) match = e; });
+        return match;
+    };
+
     const restoredAlpha = findEntity(restoredSystem, alpha.index)!;
     const restoredBeta = findEntity(restoredSystem, beta.index)!;
 
@@ -101,7 +104,9 @@ describe('save/load determinism', () => {
   });
 
   it('captures RNG state immutably when creating saves', () => {
-    const entitySystem = new EntitySystem(mockEngine);
+    const mockEngine = createMockEngine();
+    const engineWithTrace = { ...mockEngine, trace: () => ({}) as any };
+    const entitySystem = new EntitySystem(engineWithTrace);
     const rng = new RandomGenerator({ seed: 5 });
     rng.irandomUint32();
     const rngState = rng.getState();
@@ -123,7 +128,9 @@ describe('save/load determinism', () => {
   });
 
   it('parses older or future saves while filling defaults', () => {
-    const baseSystem = new EntitySystem(mockEngine);
+    const mockEngine = createMockEngine();
+    const engineWithTrace = { ...mockEngine, trace: () => ({}) as any };
+    const baseSystem = new EntitySystem(engineWithTrace);
     const baseRng = new RandomGenerator({ seed: 99 }).getState();
     const baseSave = {
       version: SAVE_FORMAT_VERSION,
