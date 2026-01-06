@@ -392,11 +392,25 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
 
           lightmapData = { width: actualWidth, height: actualHeight, samples };
 
-          // Recalculate lightmap UVs based on the 1/16th scale and min offset.
-          // We add 0.5 to center the sample.
+          // Recalculate lightmap UVs as normalized [0, 1] coordinates.
+          // The UV should map the surface's texture coord range to the full lightmap,
+          // with 0.5 texel offset to sample texel centers.
+          //
+          // For texture coords from minS to maxS:
+          //   - minS → UV = 0.5/lmWidth (center of first texel, normalized)
+          //   - maxS → UV = (lmWidth - 0.5)/lmWidth (center of last texel, normalized)
+          //
+          // This ensures remapLightmapCoords (which applies offset + coords * scale)
+          // correctly maps to the lightmap's position in the atlas.
+          const texRangeS = maxS - minS;
+          const texRangeT = maxT - minT;
           for (let k = 0; k < lightmapCoords.length; k+=2) {
-              lightmapCoords[k] = (textureCoords[k] / 16) - floorMinS + 0.5;
-              lightmapCoords[k+1] = (textureCoords[k+1] / 16) - floorMinT + 0.5;
+              // Normalize texture coord to [0, 1] within the surface's range
+              const sNorm = texRangeS > 0 ? (textureCoords[k] - minS) / texRangeS : 0;
+              const tNorm = texRangeT > 0 ? (textureCoords[k+1] - minT) / texRangeT : 0;
+              // Map to texel centers, then normalize to [0, 1]
+              lightmapCoords[k] = (0.5 + sNorm * (lmWidth - 1)) / lmWidth;
+              lightmapCoords[k+1] = (0.5 + tNorm * (lmHeight - 1)) / lmHeight;
           }
       }
     }
