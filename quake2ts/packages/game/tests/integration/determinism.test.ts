@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createTestContext } from '@quake2ts/test-utils';
-import { Entity } from '../src/entities/entity.js';
+import { Entity } from '../../src/entities/entity.js';
 
 describe('Determinism', () => {
   it('should produce identical state for identical seeds', async () => {
