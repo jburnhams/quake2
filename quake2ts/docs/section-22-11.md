@@ -1,3 +1,16 @@
+**NOT STARTED**
+
+Verified 2026-01-07:
+- No renderer benchmark framework (`benchmark.ts`)
+- No baseline performance tests (`baselines.test.ts`)
+- No comparative benchmarks (`comparison.test.ts`)
+- No matrix builder performance tests (`matrix-builders.test.ts`)
+- Existing performance tests are unrelated (parser, memory)
+
+**Blocked by:** Section 22-10 (tests established)
+
+---
+
 # Section 22-11: Performance Validation
 
 **Phase:** 4 (Consolidation)

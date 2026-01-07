@@ -1,3 +1,18 @@
+**NOT STARTED**
+
+Verified 2026-01-07:
+- No `tests/render/visual/camera-angles.test.ts`
+- No `tests/render/visual/features.test.ts`
+- No `tests/render/visual/cross-renderer.test.ts`
+- No `tests/render/visual/diagonal-regression.test.ts`
+- No comprehensive camera angle test suite
+
+**Note:** Some existing visual tests exist but not the specific ones called for in this section.
+
+**Blocked by:** Section 22-6 (WebGPU complete) and 22-8 (WebGL complete)
+
+---
+
 # Section 22-10: Visual Regression & Integration Tests
 
 **Phase:** 4 (Consolidation)

@@ -15,7 +15,12 @@
 | 22-5 | ✅ COMPLETED | BSP pipeline uses CameraState |
 | 22-6 | ⚠️ PARTIAL | MD2 complete; MD3 & Particles not migrated |
 | 22-7 | ✅ COMPLETED | WebGLCameraAdapter integrated |
-| 22-8+ | ❌ NOT STARTED | Future phases |
+| 22-8 | ⚠️ PARTIAL | Skybox/BSP done; MD2/MD3/Particles not migrated |
+| 22-9 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
+| 22-10 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
+| 22-11 | ❌ NOT STARTED | Blocked by 22-10 |
+| 22-12 | ❌ NOT STARTED | Blocked by 22-8, 22-11 |
+| 22-13 | ➖ N/A | Stretch goals / guidance only |
 
 ---
 
