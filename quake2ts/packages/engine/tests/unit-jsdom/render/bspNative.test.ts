@@ -35,7 +35,8 @@ vi.mock('../../../src/render/webgpu/context', () => ({
 
 // Mock extractFrustumPlanes
 vi.mock('../../../src/render/culling', () => ({
-    extractFrustumPlanes: () => []
+    extractFrustumPlanes: () => [],
+    boxIntersectsFrustum: () => true
 }));
 
 describe('BSP Native Coordinate System Integration', () => {
