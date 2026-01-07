@@ -1,18 +1,24 @@
-**PARTIAL - Skybox and BSP migrated; other WebGL pipelines not yet migrated**
+**COMPLETED - All WebGL pipelines migrated to native CameraState usage**
 
-Verified 2026-01-07:
+Completed 2026-01-07:
 - Task 1 (WebGL Skybox): ✅ Uses CameraState and WebGLMatrixBuilder
 - Task 2 (WebGL BSP Pipeline): ✅ Uses CameraState and WebGLMatrixBuilder
-- Task 3 (Other pipelines): ❌ NOT migrated
-  - md2Pipeline.ts: Has optional cameraState but doesn't build matrices internally
-  - md3Pipeline.ts: No CameraState support
-  - particleSystem.ts: No CameraState support
+- Task 3 (Other pipelines): ✅ ALL migrated
+  - md2Pipeline.ts: ✅ NOW builds matrices from CameraState internally
+  - md3Pipeline.ts: ✅ NOW builds matrices from CameraState internally
+  - particleSystem.ts: ✅ NOW builds matrices from CameraState internally
 - Task 4 (Frame Renderer): ✅ Passes cameraState to pipelines
-- Task 5 (Remove Adapter): ❌ Adapter still exists at `adapters/webglCamera.ts`
+- Task 5 (Remove Adapter): ✅ WebGLCameraAdapter deleted, adapters/ directory removed
 
-**Remaining Work:**
-- Migrate WebGL MD2, MD3, particle pipelines to use CameraState
-- Remove WebGLCameraAdapter after all pipelines migrated
+**Summary of Work Done:**
+- Migrated `Md2Pipeline` to use `WebGLMatrixBuilder` and build matrices from `CameraState`
+- Migrated `Md3Pipeline` to use `WebGLMatrixBuilder` and build matrices from `CameraState`
+- Migrated `ParticleRenderer` to use `WebGLMatrixBuilder`, build matrices, and extract view vectors
+- All migrations follow the same pattern as Skybox/BSP (required `cameraState`, optional `modelViewProjection` override)
+- Removed `WebGLCameraAdapter` import and usage from `renderer.ts`
+- Deleted `adapters/webglCamera.ts` file
+- Deleted empty `adapters/` directory
+- All WebGL pipelines now build their own matrices natively from CameraState
 
 ---
 

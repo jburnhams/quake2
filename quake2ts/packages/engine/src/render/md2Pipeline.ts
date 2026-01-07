@@ -6,6 +6,9 @@ import { DLight, MAX_DLIGHTS } from './dlight.js';
 import { generateWireframeIndices } from './geometry.js';
 import { RenderModeConfig } from './frame.js';
 import { CameraState } from './types/camera.js';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
+import { mat4 } from 'gl-matrix';
 
 export interface Md2DrawVertex {
   readonly vertexIndex: number;
@@ -24,8 +27,8 @@ export interface Md2FrameBlend {
 }
 
 export interface Md2BindOptions {
-  readonly cameraState?: CameraState; // For native coordinate system rendering
-  readonly modelViewProjection: Float32List;
+  readonly cameraState: CameraState; // Required for native coordinate system rendering
+  readonly modelViewProjection?: Float32List; // Optional override, prefer CameraState
   readonly lightDirection?: readonly [number, number, number];
   readonly ambientLight?: number;
   readonly tint?: readonly [number, number, number, number];
@@ -325,6 +328,7 @@ export class Md2MeshBuffers {
 export class Md2Pipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
+  private matrixBuilder = new WebGLMatrixBuilder();
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformModelMatrix: WebGLUniformLocation | null;
@@ -384,7 +388,8 @@ export class Md2Pipeline {
 
   bind(options: Md2BindOptions): void {
     const {
-        modelViewProjection,
+        cameraState,
+        modelViewProjection: overrideMvp,
         modelMatrix,
         lightDirection = [0, 0, 1],
         ambientLight = 0.2,
@@ -397,10 +402,27 @@ export class Md2Pipeline {
         fullbright = false,
         ambient = 0.0
     } = options;
+
+    // Build matrices from CameraState unless override provided
+    let mvp: Float32List;
+    if (overrideMvp) {
+      mvp = overrideMvp;
+    } else {
+      const matrices = buildMatrices(this.matrixBuilder, cameraState);
+      // If modelMatrix is provided, combine it: MVP = P * V * M
+      if (modelMatrix) {
+        const result = mat4.create();
+        mat4.multiply(result, matrices.viewProjection as mat4, modelMatrix as mat4);
+        mvp = result as Float32Array;
+      } else {
+        mvp = matrices.viewProjection as Float32Array;
+      }
+    }
+
     const lightVec = new Float32Array(lightDirection);
     const tintVec = new Float32Array(tint);
     this.program.use();
-    this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
+    this.gl.uniformMatrix4fv(this.uniformMvp, false, mvp);
     if (modelMatrix) {
         this.gl.uniformMatrix4fv(this.uniformModelMatrix, false, modelMatrix);
     } else {

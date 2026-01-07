@@ -15,7 +15,7 @@
 | 22-5 | ✅ COMPLETED | BSP pipeline uses CameraState |
 | 22-6 | ✅ COMPLETED | All pipelines migrated to CameraState |
 | 22-7 | ✅ COMPLETED | WebGLCameraAdapter integrated |
-| 22-8 | ⚠️ PARTIAL | Skybox/BSP done; MD2/MD3/Particles not migrated |
+| 22-8 | ✅ COMPLETED | All WebGL pipelines use native CameraState |
 | 22-9 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
 | 22-10 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
 | 22-11 | ❌ NOT STARTED | Blocked by 22-10 |

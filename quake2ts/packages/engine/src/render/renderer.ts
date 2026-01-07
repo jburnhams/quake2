@@ -29,7 +29,6 @@ import { RenderableMd2, RenderableMd3 } from './scene.js';
 import { IRenderer, Pic } from './interface.js';
 import { BspMap } from '../assets/bsp.js';
 import { BspGeometryBuildResult, buildBspGeometry, createBspSurfaces } from './bsp.js';
-import { WebGLCameraAdapter } from './adapters/webglCamera.js';
 
 // Re-export Pic for backward compatibility
 export type { Pic };
@@ -70,9 +69,6 @@ export const createRenderer = (
     const collisionVis = new CollisionVisRenderer(gl);
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
-
-    // Adapter for new CameraState refactoring (Section 22-7)
-    const cameraAdapter = new WebGLCameraAdapter();
 
     // Create Particle System
     const particleRng = new RandomGenerator({ seed: Date.now() });
@@ -248,22 +244,17 @@ export const createRenderer = (
         // In that case, we can't use the adapter easily without mocking toState.
         // Or we should fallback to reading matrices from camera directly if toState is missing (legacy/test path).
 
+        // Get cameraState from options or build from camera
         let cameraState = options.cameraState;
         if (!cameraState && options.camera && typeof options.camera.toState === 'function') {
             cameraState = options.camera.toState();
         }
 
-        // If we still don't have cameraState (e.g. mocked camera without toState), we can't use adapter.
-        // In that case, we fallback to passing options.camera as is, and NOT passing injected matrices.
-        // This maintains backward compatibility for existing tests that mock Camera incompletely.
-
-        let matrices = undefined;
-        if (cameraState) {
-            matrices = cameraAdapter.buildMatrices(cameraState);
-        }
-
-        // Pass injected matrices to frame renderer (Internal use during migration)
-        const viewProjection = matrices ? matrices.viewProjection : new Float32Array(options.camera.viewProjectionMatrix);
+        // For frustum culling, we still need viewProjection matrix
+        // If cameraState is not available (legacy/test path), fall back to camera.viewProjectionMatrix
+        const viewProjection = cameraState
+            ? new Float32Array(options.camera.viewProjectionMatrix) // Use camera's pre-built matrix for culling
+            : new Float32Array(options.camera.viewProjectionMatrix);
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
         const culledLights = options.dlights
@@ -291,11 +282,7 @@ export const createRenderer = (
             underwaterWarp,
             bloom,
             bloomIntensity,
-            portalState, // Pass it here.
-            // Injected matrices for internal use
-            _viewMatrix: matrices?.view,
-            _projectionMatrix: matrices?.projection,
-            _viewProjectionMatrix: matrices?.viewProjection
+            portalState
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
