@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { EntitySystem } from '../../src/entities/index.js';
-import type { GameImports } from '../../src/imports.js';
+import { EntitySystem } from '../../../src/entities/index.js';
+import type { GameImports } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 
 // Mock GameImports

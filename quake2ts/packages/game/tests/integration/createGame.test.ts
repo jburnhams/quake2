@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGame } from '../src/index.js';
+import { createGame } from '@quake2ts/game';
 import { createGameImportsAndEngine, createTraceMock, ZERO_VEC3 } from '@quake2ts/test-utils';
 
 describe('createGame', () => {
