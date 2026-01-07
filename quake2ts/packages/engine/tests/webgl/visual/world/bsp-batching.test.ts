@@ -178,7 +178,6 @@ test('bsp: batching - multiple surfaces same texture', { timeout: 30000 }, async
     description: 'Multiple surfaces with same texture should batch',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -220,7 +219,6 @@ test('bsp: batching - multiple textures', { timeout: 30000 }, async () => {
     description: 'Multiple textures should batch by texture',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -264,7 +262,6 @@ test('bsp: sorting - opaque front-to-back', { timeout: 30000 }, async () => {
     description: 'Opaque surfaces sorting (correct occlusion)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -310,7 +307,6 @@ test('bsp: sorting - transparent back-to-front', { timeout: 30000 }, async () =>
     description: 'Transparent surfaces sorting (back-to-front)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

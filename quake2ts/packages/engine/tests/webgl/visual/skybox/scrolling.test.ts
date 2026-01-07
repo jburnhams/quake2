@@ -113,7 +113,6 @@ test('Skybox: Scrolling Animation', { timeout: 120000 }, async () => {
     height: 600,
     frameCount: 3,
     fps: 5,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

@@ -188,7 +188,6 @@ test('md2: single model static pose', { timeout: 30000 }, async () => {
     description: 'MD2 character model in static pose (frame 0)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -253,7 +252,6 @@ test('md2: single model frame 10', { timeout: 30000 }, async () => {
       description: 'MD2 character model in static pose (frame 10)',
       width: 256,
       height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
       snapshotDir
     });
   });
@@ -327,7 +325,6 @@ test('md2: frame interpolation', { timeout: 30000 }, async () => {
       description: 'MD2 frame interpolation at lerp 0.0, 0.5, 1.0',
       width: 768,
       height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
       snapshotDir
     });
   });
@@ -403,7 +400,6 @@ test('md2: tinting', { timeout: 30000 }, async () => {
       description: 'MD2 tinting: Red, Green, Blue',
       width: 768,
       height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
       snapshotDir
     });
   });

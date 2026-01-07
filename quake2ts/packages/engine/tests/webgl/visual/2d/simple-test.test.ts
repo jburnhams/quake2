@@ -16,7 +16,6 @@ test('simple: red background', { timeout: 30000 }, async () => {
     description: 'Simple red background',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

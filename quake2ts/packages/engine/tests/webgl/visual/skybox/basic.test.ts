@@ -127,7 +127,6 @@ test('Skybox: Basic Cubemap', { timeout: 30000 }, async () => {
     description: 'Verifies basic skybox rendering (Front Face - Orange)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -170,7 +169,6 @@ test('Skybox: No Translation', { timeout: 30000 }, async () => {
     description: 'Verifies skybox appears same despite camera position (infinite distance)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -185,7 +183,6 @@ test('Skybox: Face Forward (+X)', { timeout: 30000 }, async () => {
     description: 'Expects Orange face (Forward)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -196,7 +193,6 @@ test('Skybox: Face Backward (-X)', { timeout: 30000 }, async () => {
     description: 'Expects Purple face (Backward)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -208,7 +204,6 @@ test('Skybox: Face Left (+Y)', { timeout: 30000 }, async () => {
     description: 'Expects Green face (Left)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -220,7 +215,6 @@ test('Skybox: Face Right (-Y)', { timeout: 30000 }, async () => {
     description: 'Expects Red face (Right)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -232,7 +226,6 @@ test('Skybox: Face Up (+Z)', { timeout: 30000 }, async () => {
     description: 'Expects Blue face (Top)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -244,7 +237,6 @@ test('Skybox: Face Down (-Z)', { timeout: 30000 }, async () => {
     description: 'Expects Yellow face (Bottom)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -266,7 +258,6 @@ test('Skybox: Edge View (Left-Front)', { timeout: 30000 }, async () => {
     description: 'Expects split between Orange (Front) and Green (Left)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -280,7 +271,6 @@ test('Skybox: Corner View (Left-Top-Front)', { timeout: 30000 }, async () => {
     description: 'Expects corner of Orange (Front), Green (Left), and Blue (Top)',
     width: 800,
     height: 600,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

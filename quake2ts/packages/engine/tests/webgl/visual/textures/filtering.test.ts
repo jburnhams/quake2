@@ -52,7 +52,6 @@ test('Texture Filtering: Nearest vs Linear', { timeout: 30000 }, async () => {
     description: 'Compares NEAREST vs LINEAR magnification filtering on a 2x2 texture',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -124,7 +123,6 @@ test('Texture Filtering: Mipmapping', { timeout: 30000 }, async () => {
     description: 'Verifies mipmap selection by rendering a texture with distinct colors per mip level at different scales',
     width: 256,
     height: 128,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
