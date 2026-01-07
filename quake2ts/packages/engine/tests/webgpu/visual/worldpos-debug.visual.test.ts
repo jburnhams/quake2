@@ -211,7 +211,7 @@ describe('WorldPos Debug Visualization', () => {
             dlights: [{
                 origin: { x: 0, y: 0, z: 0 },  // Light at world origin
                 color: { x: 0, y: 1, z: 0 },  // Green
-                intensity: 300,
+                intensity: 500,  // Higher intensity to reach distant wall
                 die: 0
             }],
             disableLightmaps: true,

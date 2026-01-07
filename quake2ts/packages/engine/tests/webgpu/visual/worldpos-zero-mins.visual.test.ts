@@ -119,7 +119,7 @@ describe('WorldPos Zero Mins Test', () => {
             dlights: [{
                 origin: { x: 180, y: 100, z: 100 },  // Should be at center
                 color: { x: 1, y: 0, z: 0 },
-                intensity: 150,
+                intensity: 400,  // Higher intensity for clear visibility
                 die: 0
             }],
             disableLightmaps: true,
@@ -166,14 +166,14 @@ describe('WorldPos Zero Mins Test', () => {
         camera.setPosition(0, 100, 100);
         camera.setRotation(0, 0, 0);
 
-        // Light at origin (0, 0, 0)
+        // Light at origin (0, 0, 0) - wall is 200+ units away
         renderer.renderFrame({
             camera,
             world: { map, surfaces: [wall] },
             dlights: [{
                 origin: { x: 0, y: 0, z: 0 },
                 color: { x: 0, y: 1, z: 0 },  // Green
-                intensity: 300,
+                intensity: 500,  // Higher intensity to reach distant wall
                 die: 0
             }],
             disableLightmaps: true,
