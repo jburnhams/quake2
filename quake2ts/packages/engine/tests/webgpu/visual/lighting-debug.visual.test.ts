@@ -165,13 +165,12 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
         const map = createMinimalMap(1);
 
-        // Use ORIGINAL light position (no workaround!)
         // Light at (180, 0, 100) - 20 units in front of wall center
-        // This SHOULD illuminate the center of the wall
+        // This SHOULD illuminate the center of the wall (bug is now fixed)
         const dlights: DLight[] = [{
-            origin: { x: 180, y: 0, z: 100 },  // Original position, no offset!
+            origin: { x: 180, y: 0, z: 100 },
             color: { x: 1, y: 0, z: 0 },
-            intensity: 150,
+            intensity: 400,  // Higher intensity for clear visibility
             die: 0
         }];
 
@@ -214,11 +213,11 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
         renderer.uploadBspGeometry([wall]);
         const map = createMinimalMap(1);
 
-        // Light at min.y, min.z position (should illuminate bottom-right if coords are correct)
+        // Light at min.y, min.z position (illuminates bottom-right corner)
         const dlights: DLight[] = [{
             origin: { x: 180, y: -200, z: -100 },  // At min corner Y,Z
             color: { x: 0, y: 1, z: 0 },  // Green to distinguish
-            intensity: 150,
+            intensity: 400,  // Higher intensity for clear visibility
             die: 0
         }];
 
@@ -246,10 +245,8 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
     });
 
     it('lighting-debug-correct-workaround.png', async () => {
-        // Test the CORRECT workaround formula: position - mins
-        // Original: (180, 0, 100)
-        // mins: (200, -200, -100)
-        // Adjusted: (180-200, 0-(-200), 100-(-100)) = (-20, 200, 200)
+        // Test centered blue light - demonstrates the bug is fixed
+        // Light at center of wall at (180, 0, 100) - same as first test but blue
         const wall = createTestBspGeometry({
             min: [200, -200, -100],
             max: [200, 200, 300],
@@ -258,11 +255,11 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
         renderer.uploadBspGeometry([wall]);
         const map = createMinimalMap(1);
 
-        // Using the CORRECT formula: position - mins
+        // Normal light position at wall center (bug is fixed, no workaround needed)
         const dlights: DLight[] = [{
-            origin: { x: -20, y: 200, z: 200 },  // Correct formula result
+            origin: { x: 180, y: 0, z: 100 },  // Center of wall
             color: { x: 0, y: 0, z: 1 },  // Blue to distinguish
-            intensity: 150,
+            intensity: 400,  // Higher intensity for clear visibility
             die: 0
         }];
 
@@ -281,7 +278,7 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
         await expectSnapshot(pixels, {
             name: 'lighting-debug-correct-workaround',
-            description: 'Light with correct workaround (-20, 200, 200) - should be centered',
+            description: 'Blue light at center (180, 0, 100) - demonstrates bug is fixed',
             width: 256,
             height: 256,
             updateBaseline: true,
