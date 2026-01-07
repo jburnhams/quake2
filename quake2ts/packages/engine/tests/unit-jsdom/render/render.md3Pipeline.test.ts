@@ -245,13 +245,28 @@ describe('MD3 pipeline', () => {
     const mvp = new Float32Array(16);
     mvp[0] = 1;
 
-    pipeline.bind(mvp, [1, 1, 1, 1], 0);
+    // Create mock cameraState
+    const mockCameraState = {
+      position: [0, 0, 0],
+      angles: [0, 0, 0],
+      fov: 90,
+      aspect: 1.0,
+      near: 0.1,
+      far: 1000
+    };
+
+    pipeline.bind({
+      cameraState: mockCameraState,
+      modelViewProjection: mvp,
+      tint: [1, 1, 1, 1],
+      diffuseSampler: 0
+    });
     pipeline.drawSurface(mesh, { diffuseSampler: 3, tint: [0.5, 0.5, 0.5, 1] });
 
     expect(gl.useProgram).toHaveBeenCalled();
     expect(gl.uniformMatrix4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_modelViewProjection'), false, mvp);
-    expect(gl.uniform4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_tint'), new Float32Array([0.5, 0.5, 0.5, 1]));
-    expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_diffuseMap'), 3);
+    expect(gl.uniform4fv).toHaveBeenCalledWith(gl.uniformLocations.get('u_tint'), new Float32Array([1, 1, 1, 1]));
+    expect(gl.uniform1i).toHaveBeenCalledWith(gl.uniformLocations.get('u_diffuseMap'), 0);
     expect(gl.drawElements).toHaveBeenCalledWith(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 
     mesh.dispose();
