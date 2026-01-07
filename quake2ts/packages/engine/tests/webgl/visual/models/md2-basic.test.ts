@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const snapshotDir = path.join(__dirname, '..', '__snapshots__');
+const snapshotDir = path.join(__dirname, '..', '..', '__snapshots__');
 
 const CREATE_MD2_HELPER = `
 // Helper to create a simple cube MD2 model
