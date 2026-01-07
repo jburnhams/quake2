@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { evaluateLightStyle, prepareLightStyles } from '../../../src/render/utils/lighting.js';
+import { evaluateLightStyle, prepareLightStyles } from '../../../../src/render/utils/lighting.js';
 
 describe('Lighting Utilities', () => {
   describe('evaluateLightStyle', () => {

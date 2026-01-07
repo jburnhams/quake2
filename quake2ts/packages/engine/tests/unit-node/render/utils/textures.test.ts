@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
-import { resolveSurfaceTextures } from '../../../src/render/utils/textures.js';
-import type { BspSurfaceGeometry } from '../../../src/render/bsp.js';
-import type { MaterialManager } from '../../../src/render/materials.js';
+import { resolveSurfaceTextures } from '../../../../src/render/utils/textures.js';
+import type { BspSurfaceGeometry } from '../../../../src/render/bsp.js';
+import type { MaterialManager } from '../../../../src/render/materials.js';
 
 // Mock types for testing
 type MockTexture = { id: string };

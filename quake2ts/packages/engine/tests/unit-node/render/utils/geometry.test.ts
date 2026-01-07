@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { sortFrontToBack, sortBackToFront } from '../../../src/render/utils/geometry.js';
-import type { VisibleFace } from '../../../src/render/bspTraversal.js';
+import { sortFrontToBack, sortBackToFront } from '../../../../src/render/utils/geometry.js';
+import type { VisibleFace } from '../../../../src/render/bspTraversal.js';
 
 describe('Geometry Utilities', () => {
   describe('sortFrontToBack', () => {
