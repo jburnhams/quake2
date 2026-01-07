@@ -222,22 +222,74 @@ export class InputInjector {
  * Useful for tests that want to verify interaction with real/mocked DOM events.
  */
 export class BrowserInputSource {
+  private listeners: Map<string, Map<Function, EventListener>> = new Map();
+
   constructor(private target: EventTarget = document) {}
 
   on(event: string, handler: Function): void {
+    // Create wrapper function based on event type
+    let wrapper: EventListener;
+
     if (event === 'keydown' || event === 'keyup') {
-      this.target.addEventListener(event, (e: any) => {
+      wrapper = (e: any) => {
         handler(e.code);
-      });
+      };
     } else if (event === 'mousedown' || event === 'mouseup') {
-      this.target.addEventListener(event, (e: any) => {
+      wrapper = (e: any) => {
         handler(e.button);
-      });
+      };
     } else if (event === 'mousemove') {
-      this.target.addEventListener(event, (e: any) => {
+      wrapper = (e: any) => {
         handler(e.movementX, e.movementY);
-      });
+      };
+    } else {
+      return; // Unsupported event type
     }
+
+    // Track the wrapper so we can remove it later
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Map());
+    }
+    this.listeners.get(event)!.set(handler, wrapper);
+
+    // Add the event listener
+    this.target.addEventListener(event, wrapper);
+  }
+
+  /**
+   * Removes an event listener.
+   * @param event The event name to remove the listener from
+   * @param handler The handler function that was passed to on()
+   */
+  off(event: string, handler: Function): void {
+    const eventListeners = this.listeners.get(event);
+    if (!eventListeners) {
+      return; // No listeners for this event
+    }
+
+    const wrapper = eventListeners.get(handler);
+    if (wrapper) {
+      this.target.removeEventListener(event, wrapper);
+      eventListeners.delete(handler);
+
+      // Clean up the event map if it's empty
+      if (eventListeners.size === 0) {
+        this.listeners.delete(event);
+      }
+    }
+  }
+
+  /**
+   * Removes all event listeners.
+   * Should be called in cleanup hooks to prevent memory leaks.
+   */
+  removeAllListeners(): void {
+    for (const [event, handlers] of this.listeners.entries()) {
+      for (const wrapper of handlers.values()) {
+        this.target.removeEventListener(event, wrapper);
+      }
+    }
+    this.listeners.clear();
   }
 }
 
