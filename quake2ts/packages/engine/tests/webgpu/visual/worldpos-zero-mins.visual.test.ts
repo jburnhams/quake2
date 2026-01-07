@@ -96,30 +96,28 @@ describe('WorldPos Zero Mins Test', () => {
     afterAll(lifecycle.cleanup);
 
     it('zero-mins-centered-light.png', async () => {
-        // Wall at X=200, but with mins at (200, 0, 0) not (200, -200, -100)
-        // Center of wall: (200, 100, 100)
-        // If mins = (200, 0, 0), then buggy center worldPos = (0, 100, 100)
-        // This is different from when mins = (200, -200, -100)
+        // Wall at X=200, with Z starting at 0 (testing zero Z-min)
+        // Using Y centered on 0 for proper camera framing
         const wall = createZeroMinsGeometry({
-            min: [200, 0, 0],      // mins at Y=0, Z=0
-            max: [200, 200, 200],  // wall from (200,0,0) to (200,200,200)
+            min: [200, -200, 0],    // Z starts at 0
+            max: [200, 200, 400],   // Wall spans Y: -200 to 200, Z: 0 to 400
             texture: 'wall'
         });
         renderer.uploadBspGeometry([wall]);
         const map = createMinimalMap(1);
 
-        // Position camera to see the wall
-        camera.setPosition(0, 100, 100);  // Camera at center height
-        camera.setRotation(0, 0, 0);       // Looking +X
+        // Position camera centered on wall (Y=0, Z=200)
+        camera.setPosition(0, 0, 200);
+        camera.setRotation(0, 0, 0);  // Looking +X
 
-        // Light at center: (180, 100, 100) - 20 units in front of wall center
+        // Light at center: (180, 0, 200) - 20 units in front of wall center
         renderer.renderFrame({
             camera,
             world: { map, surfaces: [wall] },
             dlights: [{
-                origin: { x: 180, y: 100, z: 100 },  // Should be at center
+                origin: { x: 180, y: 0, z: 200 },  // At wall center
                 color: { x: 1, y: 0, z: 0 },
-                intensity: 400,  // Higher intensity for clear visibility
+                intensity: 400,
                 die: 0
             }],
             disableLightmaps: true,
@@ -131,22 +129,9 @@ describe('WorldPos Zero Mins Test', () => {
         const frameRenderer = (renderer as any).frameRenderer;
         const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
 
-        // If worldPos = position - mins:
-        // - Center (200, 100, 100): buggy = (0, 100, 100)
-        // - Corner (200, 0, 0): buggy = (0, 0, 0)
-        // - Light at (180, 100, 100)
-        // - Distance to buggy center = sqrt(180² + 0 + 0) = 180 > 150, outside range!
-        // - Distance to buggy corner = sqrt(180² + 100² + 100²) = 224 > 150, also outside
-        // So we might see NO light at all with the bug!
-
-        // If worldPos = position (correct):
-        // - Center (200, 100, 100)
-        // - Light at (180, 100, 100)
-        // - Distance = 20 < 150, should illuminate center!
-
         await expectSnapshot(pixels, {
             name: 'zero-mins-centered-light',
-            description: 'Wall with Y/Z starting at 0. If bug exists, light should be off-center or dim.',
+            description: 'Wall with Z starting at 0. Light should be centered on wall.',
             width: 256, height: 256,
             updateBaseline: true,
             snapshotDir
@@ -154,26 +139,28 @@ describe('WorldPos Zero Mins Test', () => {
     });
 
     it('zero-mins-light-at-origin.png', async () => {
-        // Same wall, but put light at origin
+        // Same wall geometry, but with light at origin to test distance calculation
         const wall = createZeroMinsGeometry({
-            min: [200, 0, 0],
-            max: [200, 200, 200],
+            min: [200, -200, 0],    // Z starts at 0
+            max: [200, 200, 400],   // Wall spans Y: -200 to 200, Z: 0 to 400
             texture: 'wall'
         });
         renderer.uploadBspGeometry([wall]);
         const map = createMinimalMap(1);
 
-        camera.setPosition(0, 100, 100);
+        // Position camera centered on wall
+        camera.setPosition(0, 0, 200);
         camera.setRotation(0, 0, 0);
 
         // Light at origin (0, 0, 0) - wall is 200+ units away
+        // The Z=0 edge of wall is closest to this light
         renderer.renderFrame({
             camera,
             world: { map, surfaces: [wall] },
             dlights: [{
                 origin: { x: 0, y: 0, z: 0 },
                 color: { x: 0, y: 1, z: 0 },  // Green
-                intensity: 500,  // Higher intensity to reach distant wall
+                intensity: 500,
                 die: 0
             }],
             disableLightmaps: true,
@@ -185,17 +172,10 @@ describe('WorldPos Zero Mins Test', () => {
         const frameRenderer = (renderer as any).frameRenderer;
         const pixels = await captureTexture(renderer.device, frameRenderer.headlessTarget, 256, 256);
 
-        // If worldPos = position - mins with mins = (200, 0, 0):
-        // - Corner (200, 0, 0): buggy = (0, 0, 0) = at the light! Very bright!
-        // - Should see bright green at that corner
-
-        // If worldPos = position (correct):
-        // - All points are 200+ units away (X=200 minimum)
-        // - Wall should be mostly dark with slight illumination
-
+        // Light at origin should illuminate the Z=0 edge (bottom) more than the top
         await expectSnapshot(pixels, {
             name: 'zero-mins-light-at-origin',
-            description: 'Light at origin with wall starting at Y=0,Z=0. Bottom-left corner = mins.',
+            description: 'Light at origin - bottom edge (Z=0) should be brighter than top.',
             width: 256, height: 256,
             updateBaseline: true,
             snapshotDir
