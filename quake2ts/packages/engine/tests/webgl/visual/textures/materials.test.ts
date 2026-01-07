@@ -41,7 +41,6 @@ test('Material: Tinting', { timeout: 30000 }, async () => {
     description: 'Verifies material tinting/modulation using drawPic with color argument',
     width: 128,
     height: 64,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

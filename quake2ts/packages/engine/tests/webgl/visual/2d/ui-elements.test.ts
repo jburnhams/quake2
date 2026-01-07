@@ -75,7 +75,6 @@ test('ui: filled rectangle - solid color', async () => {
     description: 'Solid blue rectangle on black',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -166,7 +165,6 @@ test('ui: multiple rectangles - overlapping', { timeout: 30000 }, async () => {
     description: 'Three overlapping rectangles (Red, Green, Blue)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -267,7 +265,6 @@ test('ui: rectangle with transparency', { timeout: 30000 }, async () => {
     description: 'Semi-transparent red rect over checkerboard background',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -337,7 +334,6 @@ test('ui: gradient approximation', { timeout: 30000 }, async () => {
     description: 'Horizontal gradient stripes black to white',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

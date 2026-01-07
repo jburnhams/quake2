@@ -8,7 +8,6 @@ import path from 'path';
 import fs from 'fs';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Particle System Visual Tests', () => {
   const lifecycle = createWebGPULifecycle();
@@ -89,7 +88,6 @@ describe('Particle System Visual Tests', () => {
           width: 256,
           height: 256,
           snapshotDir,
-          updateBaseline
       });
 
       await cleanup();
@@ -154,7 +152,6 @@ describe('Particle System Visual Tests', () => {
         width,
         height,
         snapshotDir,
-        updateBaseline,
         fps,
         frameCount
     });
@@ -217,7 +214,6 @@ describe('Particle System Visual Tests', () => {
         width,
         height,
         snapshotDir,
-        updateBaseline,
         fps,
         frameCount
     });
@@ -281,7 +277,6 @@ describe('Particle System Visual Tests', () => {
         width,
         height,
         snapshotDir,
-        updateBaseline,
         fps,
         frameCount
     });
@@ -343,7 +338,6 @@ describe('Particle System Visual Tests', () => {
           width: 256,
           height: 256,
           snapshotDir,
-          updateBaseline
       });
 
       await cleanup();
@@ -428,7 +422,6 @@ describe('Particle System Visual Tests', () => {
           width: 256,
           height: 256,
           snapshotDir,
-          updateBaseline
       });
 
       await cleanup();

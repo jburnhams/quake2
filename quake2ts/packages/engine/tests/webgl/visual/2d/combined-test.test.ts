@@ -16,7 +16,6 @@ test('combined: red background in single evaluate', { timeout: 30000 }, async ()
     description: 'Red background from combined evaluate',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

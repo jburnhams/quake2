@@ -95,7 +95,6 @@ test('Texture Wrapping: Repeat', { timeout: 30000 }, async () => {
     description: 'Verifies GL_REPEAT texture wrapping by drawing a quad with UVs 0..2',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -174,7 +173,6 @@ test('Texture Wrapping: Clamp', { timeout: 30000 }, async () => {
     description: 'Verifies GL_CLAMP_TO_EDGE texture wrapping by drawing a quad with UVs outside 0..1',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -219,7 +217,6 @@ test('Texture Wrapping: NPOT', { timeout: 30000 }, async () => {
     description: 'Verifies support for Non-Power-Of-Two textures (WebGL 2 feature)',
     width: 128,
     height: 128,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

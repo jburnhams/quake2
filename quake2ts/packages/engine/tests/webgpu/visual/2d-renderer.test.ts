@@ -12,7 +12,6 @@ import path from 'path';
 // See CLAUDE.md for detailed setup instructions
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('2d-renderer integration', () => {
   const lifecycle = createWebGPULifecycle();
@@ -61,7 +60,6 @@ describe('2d-renderer integration', () => {
       description: 'A blue centered rectangle on a black background.',
       width: 256,
       height: 256,
-      updateBaseline,
       snapshotDir
     });
   });
@@ -125,7 +123,6 @@ describe('2d-renderer integration', () => {
       description: 'A 128x128 red and black checkerboard texture (4x4 grid of 32px squares) centered.',
       width: 256,
       height: 256,
-      updateBaseline,
       snapshotDir
     });
   });
@@ -181,7 +178,6 @@ describe('2d-renderer integration', () => {
       description: 'A white texture drawn with a green color tint (0, 1, 0, 1).',
       width: 256,
       height: 256,
-      updateBaseline,
       snapshotDir
     });
   });
@@ -226,7 +222,6 @@ describe('2d-renderer integration', () => {
       description: 'A solid blue square partially covered by a semi-transparent red square, demonstrating alpha blending.',
       width: 256,
       height: 256,
-      updateBaseline,
       snapshotDir
     });
   });
@@ -277,7 +272,6 @@ describe('2d-renderer integration', () => {
       description: 'Four colored squares (Red, Green, Blue, White) in the corners of a dark gray background.',
       width: 256,
       height: 256,
-      updateBaseline,
       snapshotDir
     });
   });

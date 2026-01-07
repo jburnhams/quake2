@@ -188,7 +188,6 @@ test('lightmap: single surface with static lightmap', { timeout: 30000 }, async 
     description: 'Surface with static red lightmap. Should be RED.',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -236,7 +235,6 @@ test('lightmap: surface with base texture + lightmap', { timeout: 30000 }, async
     description: 'Base texture (Checker) blended with lightmap (Green). Should be GREEN CHECKERBOARD.',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -279,7 +277,6 @@ test('lightmap: fullbright mode', { timeout: 30000 }, async () => {
     description: 'Lightmaps ignored in fullbright mode. Should be WHITE (base texture only).',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -350,7 +347,6 @@ test('lightmap: light styles', { timeout: 30000 }, async () => {
     description: 'Multi-style lightmap blending. Red + Blue = MAGENTA.',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

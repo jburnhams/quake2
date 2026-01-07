@@ -149,7 +149,6 @@ test('text: simple string', { timeout: 30000 }, async () => {
     description: 'Text "HELLO WORLD" with debug font',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -293,7 +292,6 @@ test('text: multi-line', { timeout: 30000 }, async () => {
     description: 'Three lines of text',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -440,7 +438,6 @@ test('text: colored', { timeout: 30000 }, async () => {
     description: 'Text rendered with different tint colors',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

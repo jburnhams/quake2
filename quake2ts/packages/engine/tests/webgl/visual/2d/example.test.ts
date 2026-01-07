@@ -21,7 +21,6 @@ test('example: blue rectangle using actual renderer', { timeout: 30000 }, async 
     description: 'Blue rectangle rendered with quake2ts renderer',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

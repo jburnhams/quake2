@@ -108,7 +108,6 @@ test('sprite: textured quad - checkerboard', { timeout: 30000 }, async () => {
     description: 'Red/black checkerboard sprite centered on black background',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -210,7 +209,6 @@ test('sprite: simple rendering', { timeout: 30000 }, async () => {
     description: 'Simple 32x32 green/blue checkerboard sprite',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -311,7 +309,6 @@ test('sprite: alpha blending', { timeout: 30000 }, async () => {
     description: 'Semi-transparent blue sprite over red background',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -443,7 +440,6 @@ test('sprite: batch rendering', { timeout: 30000 }, async () => {
     description: 'Overlapping sprites (Red then Green)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

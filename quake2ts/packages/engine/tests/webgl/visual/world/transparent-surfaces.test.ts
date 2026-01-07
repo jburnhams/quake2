@@ -195,7 +195,6 @@ test('bsp: transparency - 33% transparent surface', { timeout: 30000 }, async ()
     description: '33% transparent red surface over opaque blue',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -241,7 +240,6 @@ test('bsp: transparency - 66% transparent surface', { timeout: 30000 }, async ()
     description: '66% transparent red surface over opaque blue',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -293,7 +291,6 @@ test('bsp: transparency - mixed levels', { timeout: 30000 }, async () => {
     description: 'Mixed transparency levels (33% and 66%) overlapping opaque',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -346,7 +343,6 @@ test('bsp: transparency - back-to-front sorting', { timeout: 30000 }, async () =
     description: 'Back-to-front sorting of transparent surfaces',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -392,7 +388,6 @@ test('bsp: transparency - overlapping surfaces', { timeout: 30000 }, async () =>
     description: 'Intersecting transparent surfaces',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -442,7 +437,6 @@ test('bsp: transparency - transparent over opaque', { timeout: 30000 }, async ()
     description: 'Transparent surface over textured opaque surface',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -488,7 +482,6 @@ test('bsp: transparency - z-fighting test', { timeout: 30000 }, async () => {
     description: 'Co-planar surfaces test (opaque vs transparent)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -536,7 +529,6 @@ test('bsp: transparency - fully transparent surface', { timeout: 30000 }, async 
     description: 'Fully transparent surface (alpha 0) should be invisible',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -589,7 +581,6 @@ test('bsp: transparency - transparent + warp', { timeout: 30000 }, async () => {
     description: 'Surface with both transparent and warp flags',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

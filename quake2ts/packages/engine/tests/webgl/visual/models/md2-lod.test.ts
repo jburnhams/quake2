@@ -203,7 +203,6 @@ test('md2: lod system', { timeout: 30000 }, async () => {
       description: 'MD2 LOD switching at distances 100, 600, 1200',
       width: 768,
       height: 256,
-      updateBaseline: process.env.UPDATE_VISUAL === '1',
       snapshotDir
     });
   });

@@ -27,7 +27,6 @@ import { captureTexture, initHeadlessWebGPU, expectSnapshot } from '@quake2ts/te
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 beforeAll(async () => {
   await initHeadlessWebGPU();
@@ -65,7 +64,6 @@ test('feature: description', async () => {
     name: 'feature-description',
     width: 256,
     height: 256,
-    updateBaseline,
     snapshotDir
   });
 

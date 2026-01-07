@@ -197,7 +197,6 @@ test('bsp: single textured quad', { timeout: 30000 }, async () => {
     description: 'Single textured quad from BSP geometry',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -246,7 +245,6 @@ test('bsp: multiple surfaces - different textures', { timeout: 30000 }, async ()
     description: 'Multiple surfaces with different textures',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -312,7 +310,6 @@ test('bsp: textured cube - 6 faces', { timeout: 30000 }, async () => {
     description: 'Textured cube viewed from corner',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
@@ -376,7 +373,6 @@ test('bsp: surface with scrolling texture', { timeout: 30000 }, async () => {
     description: 'Scrolling textured surface (SURF_FLOWING)',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });

@@ -82,7 +82,6 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
 }
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('WebGPU Lighting', () => {
     const lifecycle = createWebGPULifecycle();
@@ -221,7 +220,6 @@ describe('WebGPU Lighting', () => {
             description: 'Red point light illuminating a wall',
             width: 256,
             height: 256,
-            updateBaseline,
             snapshotDir
         });
     });
@@ -279,7 +277,6 @@ describe('WebGPU Lighting', () => {
             description: 'Red and Blue lights illuminating a wall',
             width: 256,
             height: 256,
-            updateBaseline,
             snapshotDir
         });
     });
@@ -332,7 +329,6 @@ describe('WebGPU Lighting', () => {
             description: 'Green light illuminating a floor',
             width: 256,
             height: 256,
-            updateBaseline,
             snapshotDir
         });
     });

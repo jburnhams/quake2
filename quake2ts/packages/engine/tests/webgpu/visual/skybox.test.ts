@@ -6,7 +6,6 @@ import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSn
 import path from 'path';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Skybox Pipeline', () => {
   const lifecycle = createWebGPULifecycle();
@@ -118,7 +117,6 @@ describe('Skybox Pipeline', () => {
         description: 'Red skybox face (+X) visible when looking forward.',
         width: 256,
         height: 256,
-        updateBaseline,
         snapshotDir
     });
   });
@@ -153,7 +151,6 @@ describe('Skybox Pipeline', () => {
           description: 'Blue skybox face (+Z) visible when looking up.',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -175,7 +172,6 @@ describe('Skybox Pipeline', () => {
           description: 'Forward (+X). Expected: Red (Front)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -196,7 +192,6 @@ describe('Skybox Pipeline', () => {
           description: 'Back (-X). Expected: Cyan (Back)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -217,7 +212,6 @@ describe('Skybox Pipeline', () => {
           description: 'Left (+Y). Expected: Green (Left)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -238,7 +232,6 @@ describe('Skybox Pipeline', () => {
           description: 'Right (-Y). Expected: Magenta (Right)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -259,7 +252,6 @@ describe('Skybox Pipeline', () => {
           description: 'Up (+Z). Expected: Blue (Top)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -280,7 +272,6 @@ describe('Skybox Pipeline', () => {
           description: 'Down (-Z). Expected: Yellow (Bottom)',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -301,7 +292,6 @@ describe('Skybox Pipeline', () => {
           description: 'Forward-Left (+X +Y). Expected: Red/Green Vertical Split',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -322,7 +312,6 @@ describe('Skybox Pipeline', () => {
           description: 'Forward-Up (+X +Z). Expected: Red/Blue Horizontal Split',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -343,7 +332,6 @@ describe('Skybox Pipeline', () => {
           description: 'Corner (+X +Y +Z). Expected: Red/Green/Blue Intersection',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir
       });
   });
@@ -385,7 +373,6 @@ describe('Skybox Pipeline', () => {
           description: 'Skybox with scrolling red/dark-red checkerboard (front) and blue (top) faces visible. Texture scrolls over time.',
           width: 256,
           height: 256,
-          updateBaseline,
           snapshotDir,
           frameCount,
           fps
