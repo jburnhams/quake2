@@ -483,6 +483,7 @@ export const createRenderer = (
                         }
 
                         md2Pipeline.bind({
+                            cameraState: cameraState!,
                             modelViewProjection,
                             modelMatrix: entity.transform,
                             ambientLight: light,
@@ -505,6 +506,7 @@ export const createRenderer = (
                                  color: highlightColor
                              };
                             md2Pipeline.bind({
+                                cameraState: cameraState!,
                                 modelViewProjection,
                                 modelMatrix: entity.transform,
                                 ambientLight: 1.0,
@@ -549,7 +551,11 @@ export const createRenderer = (
                         }
 
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        md3Pipeline.bind(modelViewProjection);
+                        md3Pipeline.bind({
+                            cameraState: cameraState!,
+                            modelViewProjection,
+                            modelMatrix: entity.transform
+                        });
 
                         for (const surface of md3Model.surfaces) {
                             const surfaceMesh = mesh.surfaces.get(surface.name);
@@ -622,8 +628,8 @@ export const createRenderer = (
                     angles: [0, 0, 0],
                     fov: options.camera.fov,
                     aspect: options.camera.aspect,
-                    near: options.camera.near,
-                    far: options.camera.far
+                    near: 0.1,
+                    far: 1000
                 },
                 viewProjection: viewProjection as Float32Array,
                 viewRight,

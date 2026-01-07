@@ -441,10 +441,8 @@ export class FrameRenderer {
                 const modelMatrix = entity.transform as Float32List;
 
                 // Setup Bind Options
-                // If using Native Coordinate System, we pass CameraState.
-                const cameraState = USE_NATIVE_COORDINATE_SYSTEM
-                    ? (options.cameraState ?? options.camera.toState())
-                    : undefined;
+                // Always provide CameraState for native coordinate system
+                const cameraState = options.cameraState ?? options.camera.toState();
 
                 // Frame Blend
                 // RenderableMd2 has `blend` property of type Md2FrameBlend { frame0, frame1, lerp }
