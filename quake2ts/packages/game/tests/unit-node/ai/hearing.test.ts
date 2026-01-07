@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameEngine, GameExports } from '@quake2ts/game';
 import { PlayerNoise, PNOISE_WEAPON } from '../../../src/ai/noise.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
-import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
+import { createDefaultSpawnRegistry } from '../../../src/entities/spawn.js';
+import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
 
 describe('AI Hearing Integration', () => {
   let game: GameExports;

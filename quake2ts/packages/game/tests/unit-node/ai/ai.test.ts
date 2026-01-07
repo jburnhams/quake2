@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { EntitySystem } from '../../../src/entities/index.js';
 import type { GameImports } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
@@ -36,7 +35,6 @@ describe('AI Integration', () => {
   let imports: GameImports;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     imports = createMockGameImports();
     entitySystem = new EntitySystem(
       { /* engine mocks */ } as any,
