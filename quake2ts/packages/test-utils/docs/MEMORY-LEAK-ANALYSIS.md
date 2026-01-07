@@ -13,6 +13,7 @@ The following high-priority cleanup issues have been resolved:
 3. ✅ **WebGPU Mock Cleanup** - Added `teardownWebGPUMocks()` function in `engine/mocks/webgpu.ts:277-291`
 4. ✅ **Pointer Lock Cleanup** - Added `MockPointerLock.teardown()` method in `client/mocks/input.ts:139-151`
 5. ✅ **Event Listener Cleanup** - Added `off()` and `removeAllListeners()` methods to `BrowserInputSource` in `client/mocks/input.ts:264-293`
+6. ✅ **Engine Package Test Splitting** - `packages/engine` tests have been split into `unit-node` and `unit-jsdom`, with `package.json` scripts updated. Fixed failing `bspNative.test.ts`.
 
 ## Next Priority Tasks
 
@@ -21,16 +22,17 @@ The following high-priority cleanup issues have been resolved:
 **Goal**: Reduce memory footprint by only loading JSDOM for tests that need DOM APIs.
 
 **Current State**:
-- `vitest.node.ts` and `vitest.jsdom.ts` configs exist in engine package
-- Test directories `tests/unit-node/` and `tests/unit-jsdom/` are empty
-- All tests currently run with JSDOM environment
+- `packages/engine`: ✅ Complete.
+- `packages/game`: Needs audit.
+- `packages/server`: Needs audit.
+- `packages/client`: Needs audit.
 
 **Action Items**:
-1. Audit existing tests to identify which require DOM APIs
-2. Move pure logic tests to `tests/unit-node/` directories
-3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
-4. Update test scripts in `package.json` to run both test suites
-5. Configure node tests with `environment: 'node'` in vitest config
+1. Audit existing tests to identify which require DOM APIs in remaining packages.
+2. Move pure logic tests to `tests/unit-node/` directories.
+3. Move DOM-dependent tests to `tests/unit-jsdom/` directories.
+4. Update test scripts in `package.json` to run both test suites.
+5. Configure node tests with `environment: 'node'` in vitest config.
 
 **Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
 

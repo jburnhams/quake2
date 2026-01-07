@@ -30,10 +30,8 @@ vi.mock('../../../src/render/webgpu/context', () => ({
   createWebGPUContext: () => Promise.resolve(mockContext)
 }));
 
-// Mock gathering visible faces to avoid complex BSP logic deps and ensure we hit the loop
-vi.mock('../../../src/render/bspTraversal', () => ({
-    gatherVisibleFaces: () => [{ faceIndex: 0, sortKey: 0 }]
-}));
+// Remove mock for bspTraversal to avoid path resolution issues
+// We will construct a minimal valid BSP map instead
 
 // Mock extractFrustumPlanes
 vi.mock('../../../src/render/culling', () => ({
@@ -52,7 +50,8 @@ describe('BSP Native Coordinate System Integration', () => {
     });
     camera = new Camera(800, 600);
 
-    // Create a minimal mock map
+    // Create a minimal mock map with valid single leaf
+    // so gatherVisibleFaces returns the single face
     map = {
        version: 38,
        entities: '',
@@ -66,12 +65,25 @@ describe('BSP Native Coordinate System Integration', () => {
        leafbrushes: [],
        edges: [],
        surfedges: [],
-       models: [],
+       // Single model pointing to leaf 0 (index -1)
+       models: [{ headNode: -1 } as any],
+       // Leaf 0 containing face 0
+       leafs: [{
+           cluster: 0,
+           area: 0,
+           numLeafFaces: 1,
+           firstLeafFace: 0,
+           mins: [-1000, -1000, -1000],
+           maxs: [1000, 1000, 1000]
+       } as any],
+       leafLists: { leafFaces: [[0]] } as any,
        brushes: [],
        brushsides: [],
        lightmaps: [],
-       vis: new Uint8Array(0)
-    };
+       vis: undefined, // Always visible
+       areas: [],
+       areaPortals: []
+    } as any;
   });
 
   it('BSP geometry renders correctly at diagonal angle (Integration Mock)', async () => {
