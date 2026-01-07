@@ -274,12 +274,39 @@ teardown() {
 
 ## Priority Order
 
-1. **HIGH**: Add `afterAll(teardownBrowserEnvironment)` to all vitest.setup.ts files
-2. **HIGH**: Complete `teardownBrowserEnvironment()` to clean all globals
-3. **MEDIUM**: Add `teardownWebGPUMocks()` and call it in cleanup
-4. **MEDIUM**: Add `MockPointerLock.teardown()` method
-5. **LOW**: Add `off()` method to `BrowserInputSource`
+1. ✅ **HIGH**: Add `afterAll(teardownBrowserEnvironment)` to all vitest.setup.ts files
+   - **Status**: COMPLETE
+   - **Implemented in**: `engine/vitest.setup.ts`, `client/vitest.setup.ts`
+   - Both setup files now call `teardownBrowserEnvironment()` in `afterAll()` hooks
+
+2. ✅ **HIGH**: Complete `teardownBrowserEnvironment()` to clean all globals
+   - **Status**: COMPLETE
+   - **Location**: `setup/browser.ts:211-278`
+   - Now cleans: window, document, navigator, localStorage, location, all HTML/DOM constructors, Event constructors, btoa/atob, requestAnimationFrame/cancelAnimationFrame, and MockPointerLock patches
+
+3. ✅ **MEDIUM**: Add `teardownWebGPUMocks()` and call it in cleanup
+   - **Status**: COMPLETE
+   - **Location**: `engine/mocks/webgpu.ts:277-291`
+   - Function exported and available for tests that use `setupWebGPUMocks()`
+   - Note: Not called in vitest.setup.ts because setupWebGPUMocks is only used in specific tests
+
+4. ✅ **MEDIUM**: Add `MockPointerLock.teardown()` method
+   - **Status**: COMPLETE
+   - **Location**: `client/mocks/input.ts:139-151`
+   - Properly restores original `requestPointerLock` and cleans up installation flags
+   - Also called by `teardownBrowserEnvironment()` automatically
+
+5. ✅ **LOW**: Add `off()` method to `BrowserInputSource`
+   - **Status**: COMPLETE
+   - **Location**: `client/mocks/input.ts:264-293`
+   - Added `off()` method to remove individual listeners
+   - Added `removeAllListeners()` method for bulk cleanup
+   - Refactored to track event listeners for proper removal
+
 6. **FUTURE**: Complete jsdom/node test splitting
+   - **Status**: NOT STARTED
+   - Migrate tests that don't need DOM to `unit-node` directories
+   - Run node tests with `environment: 'node'` to avoid JSDOM overhead
 
 ## Testing the Fix
 
