@@ -2,311 +2,81 @@
 
 ## Summary
 
-Tests are consuming multiple gigabytes of memory when run together. Running all tests should take no more memory than the maximum usage of any single test file, but currently memory accumulates across test runs, suggesting resources are not being properly cleaned up between tests.
+Tests are consuming multiple gigabytes of memory when run together. This analysis tracks progress on implementing proper resource cleanup between tests to prevent memory accumulation.
 
-## Observed Symptoms
+## Completed Work
 
-1. **High Import Time**: Game unit tests show 1426s import time for 257 test files running in ~110s wall clock
-2. **Environment Setup Overhead**: Engine integration tests show 80s+ for environment setup
-3. **Memory Accumulation**: Memory grows throughout test suite rather than staying constant
+The following high-priority cleanup issues have been resolved:
 
-## Root Causes Identified
+1. ✅ **JSDOM Instance Cleanup** - Added `afterAll(teardownBrowserEnvironment)` hooks to all vitest.setup.ts files
+2. ✅ **Complete Global Teardown** - Enhanced `teardownBrowserEnvironment()` to clean all globals (window, document, navigator, constructors, etc.)
+3. ✅ **WebGPU Mock Cleanup** - Added `teardownWebGPUMocks()` function in `engine/mocks/webgpu.ts:277-291`
+4. ✅ **Pointer Lock Cleanup** - Added `MockPointerLock.teardown()` method in `client/mocks/input.ts:139-151`
+5. ✅ **Event Listener Cleanup** - Added `off()` and `removeAllListeners()` methods to `BrowserInputSource` in `client/mocks/input.ts:264-293`
 
-### 1. JSDOM Instance Not Destroyed (`setup/browser.ts`)
+## Next Priority Tasks
 
-**Severity: HIGH**
+### 1. JSDOM/Node Test Splitting (HIGHEST PRIORITY)
 
-The `setupBrowserEnvironment()` function at line 19-205:
-- Creates a new JSDOM instance that gets assigned to globals
-- The `dom` variable goes out of scope but JSDOM's window/document persist via global references
-- `teardownBrowserEnvironment()` exists (lines 210-249) but is **never called** from vitest setup
-- Multiple JSDOM instances can accumulate if tests run in the same process without cleanup
+**Goal**: Reduce memory footprint by only loading JSDOM for tests that need DOM APIs.
 
-**Key globals set but not fully cleaned:**
-- `global.window`, `global.document`, `global.navigator`
-- Event constructors: `Event`, `CustomEvent`, `MouseEvent`, `KeyboardEvent`, etc.
-- DOM constructors: `Document`, `Element`, `Node`, `HTMLElement`, `HTMLCanvasElement`
-- Storage: `localStorage`, `createImageBitmap`, `btoa`, `atob`
-- Animation: `requestAnimationFrame`, `cancelAnimationFrame`
+**Current State**:
+- `vitest.node.ts` and `vitest.jsdom.ts` configs exist in engine package
+- Test directories `tests/unit-node/` and `tests/unit-jsdom/` are empty
+- All tests currently run with JSDOM environment
 
-### 2. Canvas Prototype Patches Without Restoration (`setup/browser.ts`)
+**Action Items**:
+1. Audit existing tests to identify which require DOM APIs
+2. Move pure logic tests to `tests/unit-node/` directories
+3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
+4. Update test scripts in `package.json` to run both test suites
+5. Configure node tests with `environment: 'node'` in vitest config
 
-**Severity: MEDIUM**
+**Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
 
-Lines 138-150 patch `HTMLCanvasElement.prototype.getContext` but save `originalProtoGetContext` locally without restoring it in teardown.
+### 2. Test Isolation Configuration Audit (HIGH PRIORITY)
 
-### 3. WebGPU Mock Globals Not Cleaned (`engine/mocks/webgpu.ts`)
+**Goal**: Standardize isolation settings across packages to prevent global state leakage.
 
-**Severity: MEDIUM**
-
-`setupWebGPUMocks()` at lines 24-68:
-- Injects GPU constants via `Object.assign(globalThis, globals)`
-- Modifies `navigator.gpu` via `Object.defineProperty`
-- **No cleanup function exported** to restore original state
-
-### 4. MockPointerLock Prototype Patching (`client/mocks/input.ts`)
-
-**Severity: MEDIUM**
-
-`MockPointerLock` class at lines 72-134:
-- Patches `HTMLElement.prototype.requestPointerLock` globally (line 107)
-- Sets `__mockPointerLockInstalled` flag to prevent re-patching but never cleans up
-- Original stored at `__originalRequestPointerLock` but never restored
-
-### 5. BrowserInputSource Event Listeners (`client/mocks/input.ts`)
-
-**Severity: LOW**
-
-Lines 209-224 - `BrowserInputSource.on()` adds event listeners via anonymous closures:
-```typescript
-this.target.addEventListener(event, (e: any) => {
-  handler(e.code);  // Anonymous - can't be removed
-});
-```
-No `off()` method or cleanup mechanism provided.
-
-### 6. No Global afterAll Cleanup in Vitest Setup Files
-
-**Severity: HIGH**
-
-Current setup files (e.g., `engine/vitest.setup.ts`, `client/vitest.setup.ts`):
-- Call `setupBrowserEnvironment()` at module level
-- **Never call** `teardownBrowserEnvironment()` or any cleanup
-- No `afterAll` hooks registered for cleanup
-
-### 7. Test Context (`createTestContext`) Creates New Registries Per Test
-
-**Severity: LOW** (by design, but worth noting)
-
-`game/helpers.ts` lines 137-311:
-- Creates new `SpawnRegistry` and `ScriptHookRegistry` per context
-- This is correct behavior but means tests must let these be garbage collected
-- Entity lists maintained as closures may retain references if tests don't clean up
-
-### 8. Headless WebGPU Environment Persistence (`setup/webgpu.ts`)
-
-**Severity: LOW**
-
-`setupHeadlessWebGPUEnv()` modifies globals once and caches:
-- Lines 39-66 check if navigator.gpu exists before creating
-- Good pattern but `initHeadlessWebGPU()` returns cleanup function that must be called
-
-### 9. Test Isolation Configuration Varies
-
-**Severity: HIGH**
-
-Different packages have different isolation settings:
-- Game package: `isolate: true` but with `pool: 'threads'` - globals may leak
+**Current Issues**:
+- Game package: `isolate: true` but with `pool: 'threads'` - globals may leak between tests
 - Engine package: `isolate: true` only for integration/webgpu tests
-- Unit tests often run with `isolate: false` for speed - sharing globals!
+- Unit tests often run with `isolate: false` for speed - sharing globals across tests
 
-## File References
+**Action Items**:
+1. Review isolation settings in all vitest config files
+2. Document trade-offs between isolation and performance
+3. Standardize settings or document intentional differences
+4. Consider `pool: 'forks'` for tests that must have complete isolation
 
-| File | Issue | Line Numbers |
-|------|-------|--------------|
-| `setup/browser.ts` | JSDOM not destroyed, prototype patches | 19-249 |
-| `engine/mocks/webgpu.ts` | No cleanup for globals | 24-68 |
-| `client/mocks/input.ts` | Prototype patches, event listeners | 72-134, 209-224 |
-| `setup/webgpu.ts` | Cleanup function exists but optional | 72-108 |
-| `setup/webgpu-lifecycle.ts` | Good pattern but must be used | All |
+### 3. WebGPU Environment Cleanup (MEDIUM PRIORITY)
 
-## Recommended Solutions
+**Goal**: Ensure WebGPU headless environment properly cleans up between tests.
 
-### Option A: Global Vitest Setup/Teardown (Recommended First Step)
+**Current State**:
+- `setup/webgpu.ts` has cleanup function but usage is optional
+- `initHeadlessWebGPU()` returns cleanup function that should be called
+- Tests may not be consistently cleaning up GPU resources
 
-Create or modify `vitest.setup.ts` files to include cleanup:
+**Action Items**:
+1. Audit WebGPU integration tests for proper cleanup
+2. Ensure all tests using `setupHeadlessWebGPUEnv()` call cleanup
+3. Consider adding automatic cleanup in test lifecycle hooks
+4. Verify `device.destroy()` is called for all created devices
 
-```typescript
-// vitest.setup.ts
-import { setupBrowserEnvironment, teardownBrowserEnvironment } from '@quake2ts/test-utils';
-import { afterAll } from 'vitest';
+### 4. Test Context Memory Profiling (LOW PRIORITY)
 
-setupBrowserEnvironment({ enableWebGL2: true });
+**Goal**: Verify game test contexts (`createTestContext`) don't retain references.
 
-afterAll(() => {
-  teardownBrowserEnvironment();
-});
-```
+**Current Behavior**:
+- `game/helpers.ts:137-311` creates new registries per context
+- Entity lists maintained as closures may retain references
+- This is intended behavior but requires proper garbage collection
 
-**Pros**: Simple, addresses highest impact issue
-**Cons**: afterAll runs per file, not per test - may not be granular enough
-
-### Option B: Per-Test Cleanup Pattern
-
-Use `beforeEach`/`afterEach` for heavier cleanup:
-
-```typescript
-import { vi } from 'vitest';
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  // Additional cleanup if needed
-});
-```
-
-**Pros**: More thorough
-**Cons**: Performance overhead
-
-### Option C: Fix teardownBrowserEnvironment() Completeness
-
-Current `teardownBrowserEnvironment()` is incomplete. Add:
-
-```typescript
-export function teardownBrowserEnvironment() {
-  // Existing deletes...
-
-  // Add missing cleanups:
-  // @ts-ignore
-  delete global.btoa;
-  // @ts-ignore
-  delete global.atob;
-  // @ts-ignore
-  delete global.requestAnimationFrame;
-  // @ts-ignore
-  delete global.cancelAnimationFrame;
-
-  // Restore prototype patches
-  if ((global.HTMLElement?.prototype as any)?.__originalRequestPointerLock) {
-    (global.HTMLElement.prototype as any).requestPointerLock =
-      (global.HTMLElement.prototype as any).__originalRequestPointerLock;
-  }
-}
-```
-
-### Option D: Add WebGPU Mock Cleanup Function
-
-```typescript
-// engine/mocks/webgpu.ts
-export function teardownWebGPUMocks(): void {
-  // Remove navigator.gpu
-  try {
-    delete (globalThis.navigator as any).gpu;
-  } catch (e) {
-    (globalThis.navigator as any).gpu = undefined;
-  }
-
-  // Note: GPU* globals are harder to clean up as they're spread across globalThis
-  // Consider storing original values in setup and restoring
-}
-```
-
-### Option E: Wrapper Pattern for Auto-Cleanup (Larger Refactor)
-
-Create a test context that auto-cleans:
-
-```typescript
-export function withTestContext<T>(
-  setup: () => T,
-  cleanup: (ctx: T) => void
-) {
-  return (testFn: (ctx: T) => void | Promise<void>) => {
-    return async () => {
-      const ctx = setup();
-      try {
-        await testFn(ctx);
-      } finally {
-        cleanup(ctx);
-      }
-    };
-  };
-}
-```
-
-### Option F: Process Isolation for Heavy Tests
-
-Already partially implemented in vitest configs:
-- Use `pool: 'forks'` for tests that need complete isolation
-- Set `maxForks: 1` for sequential execution with fresh process each file
-
-## JSDOM Test Splitting (In Progress)
-
-The codebase has started splitting tests into `unit-node` and `unit-jsdom`:
-- `vitest.node.ts` and `vitest.jsdom.ts` exist in engine package
-- Directories `tests/unit-node/` and `tests/unit-jsdom/` are empty
-
-**Recommendation**: Complete this migration:
-1. Move tests that don't need DOM to `unit-node`
-2. Only load JSDOM for tests that actually need it
-3. Run node tests with `environment: 'node'` - no global pollution
-
-## Quick Wins (Small Code Changes)
-
-### 1. Add afterAll to setup files
-
-Modify `engine/vitest.setup.ts`:
-```typescript
-import { setupBrowserEnvironment, teardownBrowserEnvironment } from '@quake2ts/test-utils';
-import { afterAll } from 'vitest';
-
-setupBrowserEnvironment({ enableWebGL2: true });
-
-afterAll(teardownBrowserEnvironment);
-```
-
-### 2. Export WebGPU cleanup
-
-Add to `engine/mocks/webgpu.ts`:
-```typescript
-export function teardownWebGPUMocks(): void {
-  if (globalThis.navigator?.gpu) {
-    delete (globalThis.navigator as any).gpu;
-  }
-}
-```
-
-### 3. Add MockPointerLock cleanup method
-
-Add to `MockPointerLock` class:
-```typescript
-teardown() {
-  if ((global.HTMLElement?.prototype as any)?.__originalRequestPointerLock) {
-    (global.HTMLElement.prototype as any).requestPointerLock =
-      (global.HTMLElement.prototype as any).__originalRequestPointerLock;
-    delete (global.HTMLElement.prototype as any).__originalRequestPointerLock;
-  }
-  delete (this._doc as any).__mockPointerLockInstalled;
-}
-```
-
-## Priority Order
-
-1. ✅ **HIGH**: Add `afterAll(teardownBrowserEnvironment)` to all vitest.setup.ts files
-   - **Status**: COMPLETE
-   - **Implemented in**: `engine/vitest.setup.ts`, `client/vitest.setup.ts`
-   - Both setup files now call `teardownBrowserEnvironment()` in `afterAll()` hooks
-
-2. ✅ **HIGH**: Complete `teardownBrowserEnvironment()` to clean all globals
-   - **Status**: COMPLETE
-   - **Location**: `setup/browser.ts:211-278`
-   - Now cleans: window, document, navigator, localStorage, location, all HTML/DOM constructors, Event constructors, btoa/atob, requestAnimationFrame/cancelAnimationFrame, and MockPointerLock patches
-
-3. ✅ **MEDIUM**: Add `teardownWebGPUMocks()` and call it in cleanup
-   - **Status**: COMPLETE
-   - **Location**: `engine/mocks/webgpu.ts:277-291`
-   - Function exported and available for tests that use `setupWebGPUMocks()`
-   - Note: Not called in vitest.setup.ts because setupWebGPUMocks is only used in specific tests
-
-4. ✅ **MEDIUM**: Add `MockPointerLock.teardown()` method
-   - **Status**: COMPLETE
-   - **Location**: `client/mocks/input.ts:139-151`
-   - Properly restores original `requestPointerLock` and cleans up installation flags
-   - Also called by `teardownBrowserEnvironment()` automatically
-
-5. ✅ **LOW**: Add `off()` method to `BrowserInputSource`
-   - **Status**: COMPLETE
-   - **Location**: `client/mocks/input.ts:264-293`
-   - Added `off()` method to remove individual listeners
-   - Added `removeAllListeners()` method for bulk cleanup
-   - Refactored to track event listeners for proper removal
-
-6. **FUTURE**: Complete jsdom/node test splitting
-   - **Status**: NOT STARTED
-   - Migrate tests that don't need DOM to `unit-node` directories
-   - Run node tests with `environment: 'node'` to avoid JSDOM overhead
+**Action Items**:
+1. Run memory profiler on game unit tests
+2. Verify contexts are garbage collected after tests complete
+3. Add explicit cleanup to test helpers if needed
 
 ## Testing the Fix
 
