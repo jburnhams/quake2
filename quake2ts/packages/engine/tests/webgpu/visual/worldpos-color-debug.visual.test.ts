@@ -193,7 +193,6 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
             name: 'worldpos-color-output',
             description: 'WorldPos as color. CORRECT=pinkish at corners. BUGGY=black at bottom-right.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -249,7 +248,6 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
             name: 'distance-debug-centered-light',
             description: 'Distance to light as grayscale. CORRECT=center bright. BUGGY=bottom-right bright.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -307,7 +305,6 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
             name: 'worldpos-color-floor',
             description: 'Floor geometry (X varies). Shows if worldPos.x is also offset. BLACK corner = buggy.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -357,7 +354,6 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
             name: 'worldpos-color-simple-geometry',
             description: 'Simple geometry with Y/Z starting at 0. Should show red component if correct.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });

@@ -133,7 +133,6 @@ describe('WorldPos Zero Mins Test', () => {
             name: 'zero-mins-centered-light',
             description: 'Wall with Z starting at 0. Light should be centered on wall.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -177,7 +176,6 @@ describe('WorldPos Zero Mins Test', () => {
             name: 'zero-mins-light-at-origin',
             description: 'Light at origin - bottom edge (Z=0) should be brighter than top.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
