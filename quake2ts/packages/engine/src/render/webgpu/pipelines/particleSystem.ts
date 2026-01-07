@@ -2,6 +2,9 @@ import { ParticleSystem, ParticleMesh } from '../../particleSystem.js';
 import { Vec3 } from '@quake2ts/shared';
 import particlesShader from '../shaders/particles.wgsl?raw';
 import { Texture2D, Sampler, createLinearSampler } from '../resources.js';
+import { mat4 } from 'gl-matrix';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
+import { CameraState } from '../../types/camera.js';
 
 interface ParticleBatch {
   textureIndex: number;
@@ -18,6 +21,10 @@ export class ParticleRenderer {
   private readonly bindGroupLayout0: GPUBindGroupLayout;
   private readonly bindGroupLayout1: GPUBindGroupLayout; // Texture group
   private readonly bindGroup0: GPUBindGroup;
+  private readonly matrixBuilder: WebGPUMatrixBuilder;
+  private readonly tempVpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
+  private readonly tempViewRight = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
+  private readonly tempViewUp = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
 
   // Default resources
   private readonly defaultTexture: Texture2D;
@@ -36,6 +43,7 @@ export class ParticleRenderer {
 
   constructor(device: GPUDevice, format: GPUTextureFormat, depthStencilFormat?: GPUTextureFormat) {
     this.device = device;
+    this.matrixBuilder = new WebGPUMatrixBuilder();
 
     const module = device.createShaderModule({
       code: particlesShader,
@@ -349,17 +357,42 @@ export class ParticleRenderer {
     return { batches, positions, colors, sizes, sys };
   }
 
-  render(passEncoder: GPURenderPassEncoder, viewProjection: Float32Array, viewRight: Vec3, viewUp: Vec3, system: ParticleSystem, textures: Map<number, Texture2D> = new Map()) {
+  render(passEncoder: GPURenderPassEncoder, viewProjection: Float32Array, viewRight: Vec3, viewUp: Vec3, system: ParticleSystem, textures: Map<number, Texture2D> = new Map(), cameraState?: CameraState) {
       const data = this.prepare(system);
       if (!data) return;
 
       const { batches, positions, colors, sizes } = data;
 
+      // Use CameraState if provided (native WebGPU coordinate system)
+      let finalViewProj: Float32Array = viewProjection;
+      let finalViewRight = viewRight;
+      let finalViewUp = viewUp;
+
+      if (cameraState) {
+        const view = this.matrixBuilder.buildViewMatrix(cameraState);
+        const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
+        mat4.multiply(this.tempVpMatrix, proj, view);
+        finalViewProj = this.tempVpMatrix as Float32Array;
+
+        // Extract right and up vectors from view matrix (reuse pre-allocated vectors)
+        // View matrix columns contain the basis vectors
+        // Column 0 (indices 0,1,2) = right vector
+        // Column 1 (indices 4,5,6) = up vector
+        this.tempViewRight.x = view[0];
+        this.tempViewRight.y = view[1];
+        this.tempViewRight.z = view[2];
+        this.tempViewUp.x = view[4];
+        this.tempViewUp.y = view[5];
+        this.tempViewUp.z = view[6];
+        finalViewRight = this.tempViewRight;
+        finalViewUp = this.tempViewUp;
+      }
+
       // Update Uniforms
       const uniformData = new Float32Array(32);
-      uniformData.set(viewProjection, 0);
-      uniformData.set([viewRight.x, viewRight.y, viewRight.z, 0], 16);
-      uniformData.set([viewUp.x, viewUp.y, viewUp.z, 0], 20);
+      uniformData.set(finalViewProj, 0);
+      uniformData.set([finalViewRight.x, finalViewRight.y, finalViewRight.z, 0], 16);
+      uniformData.set([finalViewUp.x, finalViewUp.y, finalViewUp.z, 0], 20);
 
       this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData as unknown as BufferSource);
 

@@ -4,6 +4,10 @@ import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
 import { RenderModeConfig } from './frame.js';
 import { generateWireframeIndices } from './geometry.js';
+import { CameraState } from './types/camera.js';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
+import { mat4 } from 'gl-matrix';
 
 export interface Md3DrawVertex {
   readonly vertexIndex: number;
@@ -42,6 +46,14 @@ export interface Md3SurfaceMaterial {
   readonly gamma?: number;
   readonly fullbright?: boolean;
   readonly globalAmbient?: number;
+}
+
+export interface Md3BindOptions {
+  readonly cameraState: CameraState; // Required for native coordinate system rendering
+  readonly modelViewProjection?: Float32List; // Optional override, prefer CameraState
+  readonly modelMatrix?: Float32List; // For transforming the model
+  readonly tint?: readonly [number, number, number, number];
+  readonly diffuseSampler?: number;
 }
 
 export interface Md3TagTransform {
@@ -384,6 +396,8 @@ export class Md3ModelMesh {
 export class Md3Pipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
+  private matrixBuilder = new WebGLMatrixBuilder();
+  private tempMvpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformTint: WebGLUniformLocation | null;
@@ -423,11 +437,34 @@ export class Md3Pipeline {
     return this.program.sourceSize;
   }
 
-  bind(modelViewProjection: Float32List, tint: readonly [number, number, number, number] = [1, 1, 1, 1], sampler = 0): void {
+  bind(options: Md3BindOptions): void {
+    const {
+      cameraState,
+      modelViewProjection: overrideMvp,
+      modelMatrix,
+      tint = [1, 1, 1, 1],
+      diffuseSampler = 0
+    } = options;
+
+    // Build matrices from CameraState unless override provided
+    let mvp: Float32List;
+    if (overrideMvp) {
+      mvp = overrideMvp;
+    } else {
+      const matrices = buildMatrices(this.matrixBuilder, cameraState);
+      // If modelMatrix is provided, combine it: MVP = P * V * M
+      if (modelMatrix) {
+        mat4.multiply(this.tempMvpMatrix, matrices.viewProjection as mat4, modelMatrix as mat4);
+        mvp = this.tempMvpMatrix as Float32Array;
+      } else {
+        mvp = matrices.viewProjection as Float32Array;
+      }
+    }
+
     this.program.use();
-    this.gl.uniformMatrix4fv(this.uniformMvp, false, modelViewProjection);
+    this.gl.uniformMatrix4fv(this.uniformMvp, false, mvp);
     this.gl.uniform4fv(this.uniformTint, new Float32Array(tint));
-    this.gl.uniform1i(this.uniformDiffuse, sampler);
+    this.gl.uniform1i(this.uniformDiffuse, diffuseSampler);
 
     // Default mode for simple bind
     this.gl.uniform1i(this.uniformRenderMode, 0);

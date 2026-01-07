@@ -29,7 +29,6 @@ import { RenderableMd2, RenderableMd3 } from './scene.js';
 import { IRenderer, Pic } from './interface.js';
 import { BspMap } from '../assets/bsp.js';
 import { BspGeometryBuildResult, buildBspGeometry, createBspSurfaces } from './bsp.js';
-import { WebGLCameraAdapter } from './adapters/webglCamera.js';
 
 // Re-export Pic for backward compatibility
 export type { Pic };
@@ -70,9 +69,6 @@ export const createRenderer = (
     const collisionVis = new CollisionVisRenderer(gl);
     const debugRenderer = new DebugRenderer(gl);
     const gpuProfiler = new GpuProfiler(gl);
-
-    // Adapter for new CameraState refactoring (Section 22-7)
-    const cameraAdapter = new WebGLCameraAdapter();
 
     // Create Particle System
     const particleRng = new RandomGenerator({ seed: Date.now() });
@@ -241,29 +237,18 @@ export const createRenderer = (
             effectiveSky = undefined;
         }
 
-        // Use camera adapter to build matrices if cameraState is provided, fallback to camera.toState()
-        // This is part of the migration to use CameraState everywhere (Section 22-7)
-        // Ensure options.camera.toState() is called ONLY if options.camera has it (real camera)
-        // During tests with mocks, options.camera might be a mock without toState.
-        // In that case, we can't use the adapter easily without mocking toState.
-        // Or we should fallback to reading matrices from camera directly if toState is missing (legacy/test path).
-
+        // Get cameraState from options or build from camera
+        // Pipelines now build their own matrices natively from CameraState (Section 22-8)
         let cameraState = options.cameraState;
         if (!cameraState && options.camera && typeof options.camera.toState === 'function') {
             cameraState = options.camera.toState();
         }
 
-        // If we still don't have cameraState (e.g. mocked camera without toState), we can't use adapter.
-        // In that case, we fallback to passing options.camera as is, and NOT passing injected matrices.
-        // This maintains backward compatibility for existing tests that mock Camera incompletely.
-
-        let matrices = undefined;
-        if (cameraState) {
-            matrices = cameraAdapter.buildMatrices(cameraState);
-        }
-
-        // Pass injected matrices to frame renderer (Internal use during migration)
-        const viewProjection = matrices ? matrices.viewProjection : new Float32Array(options.camera.viewProjectionMatrix);
+        // For frustum culling, we still need viewProjection matrix
+        // If cameraState is not available (legacy/test path), fall back to camera.viewProjectionMatrix
+        const viewProjection = cameraState
+            ? new Float32Array(options.camera.viewProjectionMatrix) // Use camera's pre-built matrix for culling
+            : new Float32Array(options.camera.viewProjectionMatrix);
         const frustumPlanes = extractFrustumPlanes(viewProjection);
 
         const culledLights = options.dlights
@@ -291,11 +276,7 @@ export const createRenderer = (
             underwaterWarp,
             bloom,
             bloomIntensity,
-            portalState, // Pass it here.
-            // Injected matrices for internal use
-            _viewMatrix: matrices?.view,
-            _projectionMatrix: matrices?.projection,
-            _viewProjectionMatrix: matrices?.viewProjection
+            portalState
         };
 
         const stats = frameRenderer.renderFrame(augmentedOptions);
@@ -502,6 +483,7 @@ export const createRenderer = (
                         }
 
                         md2Pipeline.bind({
+                            cameraState: cameraState!,
                             modelViewProjection,
                             modelMatrix: entity.transform,
                             ambientLight: light,
@@ -524,6 +506,7 @@ export const createRenderer = (
                                  color: highlightColor
                              };
                             md2Pipeline.bind({
+                                cameraState: cameraState!,
                                 modelViewProjection,
                                 modelMatrix: entity.transform,
                                 ambientLight: 1.0,
@@ -568,7 +551,11 @@ export const createRenderer = (
                         }
 
                         const modelViewProjection = multiplyMat4(viewProjection as Float32Array, entity.transform);
-                        md3Pipeline.bind(modelViewProjection);
+                        md3Pipeline.bind({
+                            cameraState: cameraState!,
+                            modelViewProjection,
+                            modelMatrix: entity.transform
+                        });
 
                         for (const surface of md3Model.surfaces) {
                             const surfaceMesh = mesh.surfaces.get(surface.name);
@@ -626,24 +613,24 @@ export const createRenderer = (
             }
         }
 
-        // Use the injected viewMatrix (from adapter) instead of options.camera.viewMatrix
-        // to ensure we are using the consistent adapted matrix
-        const viewMatrix = matrices?.view;
-        if (viewMatrix) {
-            const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
-            const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
-
-            particleRenderer.render({
-                viewProjection: viewProjection as Float32Array,
-                viewRight,
-                viewUp
-            });
+        // Use CameraState for particle rendering
+        // ParticleRenderer now builds matrices internally from cameraState
+        if (cameraState) {
+            particleRenderer.render({ cameraState });
         } else {
-            // Fallback to camera
+            // Fallback to camera for legacy/test paths
             const vm = options.camera.viewMatrix;
             const viewRight = { x: vm[0], y: vm[4], z: vm[8] };
             const viewUp = { x: vm[1], y: vm[5], z: vm[9] };
             particleRenderer.render({
+                cameraState: options.camera.toState?.() || {
+                    position: options.camera.position,
+                    angles: [0, 0, 0],
+                    fov: options.camera.fov,
+                    aspect: options.camera.aspect,
+                    near: 0.1,
+                    far: 1000
+                },
                 viewProjection: viewProjection as Float32Array,
                 viewRight,
                 viewUp

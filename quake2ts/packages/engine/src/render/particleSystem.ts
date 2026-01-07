@@ -2,6 +2,9 @@ import { Vec3 } from '@quake2ts/shared';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
 import { RandomGenerator } from '@quake2ts/shared';
+import { CameraState } from './types/camera.js';
+import { WebGLMatrixBuilder } from './matrix/webgl.js';
+import { buildMatrices } from './matrix/builders.js';
 
 export type ParticleBlendMode = 'alpha' | 'additive';
 
@@ -324,9 +327,10 @@ void main() {
 }`;
 
 export interface ParticleRenderOptions {
-  readonly viewProjection: Float32List;
-  readonly viewRight: Vec3;
-  readonly viewUp: Vec3;
+  readonly cameraState: CameraState; // Required for native coordinate system rendering
+  readonly viewProjection?: Float32List; // Optional override, prefer CameraState
+  readonly viewRight?: Vec3; // Optional override, extracted from view matrix if not provided
+  readonly viewUp?: Vec3; // Optional override, extracted from view matrix if not provided
 }
 
 export class ParticleRenderer {
@@ -336,6 +340,9 @@ export class ParticleRenderer {
   readonly vertexBuffer: VertexBuffer;
   readonly indexBuffer: IndexBuffer;
   readonly vertexArray: VertexArray;
+  private matrixBuilder = new WebGLMatrixBuilder();
+  private tempViewRight = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
+  private tempViewUp = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
 
   private vertexCapacity = 0;
   private indexCapacity = 0;
@@ -362,7 +369,46 @@ export class ParticleRenderer {
   }
 
   render(options: ParticleRenderOptions): void {
-    const mesh = this.system.buildMesh(options.viewRight, options.viewUp);
+    const {
+      cameraState,
+      viewProjection: overrideVp,
+      viewRight: overrideRight,
+      viewUp: overrideUp
+    } = options;
+
+    // Build matrices and extract vectors from CameraState unless override provided
+    let vp: Float32List;
+    let viewRight: Vec3;
+    let viewUp: Vec3;
+
+    if (overrideVp) {
+      vp = overrideVp;
+      // If overrides provided, must provide all of them
+      if (!overrideRight || !overrideUp) {
+        throw new Error('If viewProjection is overridden, viewRight and viewUp must also be provided');
+      }
+      viewRight = overrideRight;
+      viewUp = overrideUp;
+    } else {
+      const matrices = buildMatrices(this.matrixBuilder, cameraState);
+      vp = matrices.viewProjection as Float32Array;
+
+      // Extract right and up vectors from view matrix (reuse pre-allocated vectors)
+      // View matrix columns contain the basis vectors
+      // Column 0 (indices 0,1,2) = right vector
+      // Column 1 (indices 4,5,6) = up vector
+      const view = matrices.view;
+      this.tempViewRight.x = view[0];
+      this.tempViewRight.y = view[1];
+      this.tempViewRight.z = view[2];
+      this.tempViewUp.x = view[4];
+      this.tempViewUp.y = view[5];
+      this.tempViewUp.z = view[6];
+      viewRight = this.tempViewRight;
+      viewUp = this.tempViewUp;
+    }
+
+    const mesh = this.system.buildMesh(viewRight, viewUp);
     if (mesh.indices.length === 0) {
       return;
     }
@@ -385,8 +431,8 @@ export class ParticleRenderer {
 
     this.gl.depthMask(false);
     this.program.use();
-    const vp = this.program.getUniformLocation('u_viewProjection');
-    this.gl.uniformMatrix4fv(vp, false, options.viewProjection);
+    const vpLoc = this.program.getUniformLocation('u_viewProjection');
+    this.gl.uniformMatrix4fv(vpLoc, false, vp);
     this.vertexArray.bind();
 
     for (const batch of mesh.batches) {

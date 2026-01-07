@@ -4,6 +4,9 @@ import { Md3LightingOptions, Md3FrameBlend, Md3SurfaceGeometry, buildMd3SurfaceG
 import { Texture2D } from '../resources.js';
 import { WebGPUContextState } from '../context.js';
 import md3Shader from '../shaders/md3.wgsl?raw';
+import { mat4 } from 'gl-matrix';
+import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
+import { CameraState } from '../../types/camera.js';
 
 // Re-export common types from WebGL pipeline
 export { Md3FrameBlend, Md3LightingOptions, Md3DynamicLight, Md3TagTransform } from '../../md3Pipeline.js';
@@ -113,8 +116,11 @@ export class Md3PipelineGPU {
   private bindGroupLayout: GPUBindGroupLayout;
   private uniformBuffer: GPUBuffer;
   private sampler: GPUSampler;
+  private matrixBuilder: WebGPUMatrixBuilder;
+  private tempVpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
+    this.matrixBuilder = new WebGPUMatrixBuilder();
     const module = device.createShaderModule({
       label: 'md3-shader',
       code: md3Shader
@@ -209,7 +215,8 @@ export class Md3PipelineGPU {
        material: Md3MaterialGPU,
        viewProjection: Float32Array,
        modelMatrix: Float32Array,
-       tint: Float32Array = new Float32Array([1, 1, 1, 1])
+       tint: Float32Array = new Float32Array([1, 1, 1, 1]),
+       cameraState?: CameraState
   ): void {
       const uniformData = new Float32Array(40);
       // viewProjection (16 floats) = 64 bytes
@@ -223,7 +230,16 @@ export class Md3PipelineGPU {
       //   tint: vec4<f32>,             (128-143)
       // };
 
-      uniformData.set(viewProjection, 0);
+      // Use CameraState if provided (native WebGPU coordinate system)
+      let finalViewProj: Float32Array = viewProjection;
+      if (cameraState) {
+        const view = this.matrixBuilder.buildViewMatrix(cameraState);
+        const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
+        mat4.multiply(this.tempVpMatrix, proj, view);
+        finalViewProj = this.tempVpMatrix as Float32Array;
+      }
+
+      uniformData.set(finalViewProj, 0);
       uniformData.set(modelMatrix, 16);
       uniformData.set(tint, 32);
 

@@ -254,8 +254,8 @@ export class Md2Pipeline {
       let offset = 0; // bytes
 
       // Calculate MVP
-      let finalMvp: Float32List = modelViewProjection;
       const mm = modelMatrix || [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+      let finalMvp: Float32List;
 
       if (cameraState) {
         // Native WebGPU coordinate system path
@@ -265,6 +265,12 @@ export class Md2Pipeline {
         mat4.multiply(mvp, proj, view);
         mat4.multiply(mvp, mvp, mm as mat4); // Model * View * Proj
         finalMvp = mvp as Float32List;
+      } else if (modelViewProjection) {
+        // Fallback to pre-built matrix
+        finalMvp = modelViewProjection;
+      } else {
+        // Neither provided - use identity
+        finalMvp = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] as Float32List;
       }
 
       // MVP
