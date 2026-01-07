@@ -3,7 +3,6 @@ import * as soldierModule from '../../../src/entities/monsters/soldier.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { GameEngine } from '../../../src/index.js';
 import {
     monster_fire_bullet,
     monster_fire_blaster,
@@ -41,10 +40,12 @@ describe('monster_soldier', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const testContext = createTestContext();
-    sys = testContext.entities as unknown as EntitySystem;
+    // TestContext.entities is already typed as EntitySystem, so no double cast needed
+    sys = testContext.entities;
     context = testContext;
 
-    soldier = new Entity(1);
+    // Use sys.spawn() to create the entity so it's registered in the mock system
+    soldier = sys.spawn();
   });
 
   it('SP_monster_soldier sets default properties (Blaster)', () => {

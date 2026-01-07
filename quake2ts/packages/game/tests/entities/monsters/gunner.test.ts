@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMonsterEntityFactory, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { registerGunnerSpawns } from '../../../src/entities/monsters/gunner.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { SpawnContext, SpawnRegistry } from '../../../src/entities/spawn.js';
@@ -7,7 +6,7 @@ import { EntitySystem } from '../../../src/entities/system.js';
 import { monster_fire_bullet } from '../../../src/entities/monsters/attack.js';
 import { createGrenade } from '../../../src/entities/projectiles.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('../../../src/entities/monsters/attack.js', () => ({
@@ -30,12 +29,10 @@ describe('monster_gunner', () => {
     context = testCtx;
     sys = testCtx.entities;
 
-    // Override some mocks if specific behavior needed
-    sys.engine.sound = vi.fn();
-    sys.sound = vi.fn();
+    // Use sys.spawn() to create a proper Entity instance
+    gunner = sys.spawn();
 
-    gunner = createMonsterEntityFactory('monster_gunner', { number: 1 });
-
+    // Use a fresh mock registry for checking registration calls
     spawnRegistry = {
         register: vi.fn(),
     } as unknown as SpawnRegistry;
@@ -88,10 +85,11 @@ describe('monster_gunner', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
 
-    gunner.enemy = createPlayerEntityFactory({
+    gunner.enemy = sys.spawn();
+    Object.assign(gunner.enemy, createPlayerEntityFactory({
         number: 2,
         origin: { x: 100, y: 0, z: 0 }
-    });
+    }));
     gunner.origin = { x: 0, y: 0, z: 0 };
 
     // Transition to fire chain move
@@ -128,10 +126,11 @@ describe('monster_gunner', () => {
     const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
     spawnFn(gunner, context);
 
-    gunner.enemy = createPlayerEntityFactory({
+    gunner.enemy = sys.spawn();
+    Object.assign(gunner.enemy, createPlayerEntityFactory({
         number: 2,
         origin: { x: 100, y: 0, z: 0 }
-    });
+    }));
     gunner.origin = { x: 0, y: 0, z: 0 };
 
     vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.4); // Grenade
@@ -203,7 +202,11 @@ describe('monster_gunner', () => {
       // Should invoke duck if random allows (mock it)
       // Actually dodge uses random > 0.25 return, so <= 0.25 to proceed
       vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.1);
-      gunner.monsterinfo.dodge!(gunner, createEntityFactory({ number: 2 }), 0);
+
+      const attacker = sys.spawn();
+      Object.assign(attacker, createEntityFactory({ number: 2 }));
+
+      gunner.monsterinfo.dodge!(gunner, attacker, 0);
 
       expect(gunner.monsterinfo.current_move?.firstframe).toBe(201); // Duck start
 
