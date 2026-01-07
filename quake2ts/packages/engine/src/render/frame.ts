@@ -18,6 +18,13 @@ import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/share
 import { DLight } from './dlight.js';
 import { PostProcessPipeline } from './postprocessing/pipeline.js';
 import { BloomPipeline } from './bloom.js';
+import {
+  sortFrontToBack,
+  sortBackToFront,
+  evaluateLightStyle,
+  prepareLightStyles,
+  resolveSurfaceTextures as resolveSurfaceTexturesGeneric
+} from './utils/index.js';
 
 export { FrameRenderStats, FrameRenderOptions };
 
@@ -129,15 +136,7 @@ function renderSky(
   skyboxPipeline.gl.depthMask(true);
 }
 
-// Front-to-back sorting for opaque surfaces
-function sortVisibleFacesFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
-  return [...faces].sort((a, b) => b.sortKey - a.sortKey);
-}
-
-// Back-to-front sorting for transparent surfaces
-function sortVisibleFacesBackToFront(faces: readonly VisibleFace[]): VisibleFace[] {
-  return [...faces].sort((a, b) => a.sortKey - b.sortKey);
-}
+// Sorting functions moved to utils/geometry.ts for shared use
 
 interface TextureBindingCache {
   diffuse?: Texture2D;
@@ -158,32 +157,19 @@ interface BatchKey {
   styleKey: string;
 }
 
+// Wrapper for the generic resolveSurfaceTextures utility
 function resolveSurfaceTextures(
     geometry: BspSurfaceGeometry,
     world: WorldRenderState | undefined,
     refractionTexture?: Texture2D
 ): ResolvedSurfaceTextures {
-  // Try to resolve the texture from the material system first (handling animations)
-  const material = world?.materials?.getMaterial(geometry.texture);
-  let diffuse: Texture2D | undefined;
-
-  if (material) {
-    const matTex = material.texture;
-    if (matTex) {
-      // Cast is safe because we updated Material to hold Texture2D objects
-      diffuse = matTex as unknown as Texture2D;
-    }
-  }
-
-  // Fallback to static texture lookup if material didn't provide one
-  if (!diffuse) {
-    diffuse = world?.textures?.get(geometry.texture);
-  }
-
-  const lightmapIndex = geometry.lightmap?.atlasIndex;
-  const lightmap = lightmapIndex !== undefined ? world?.lightmaps?.[lightmapIndex]?.texture : undefined;
-
-  return { diffuse, lightmap, refraction: refractionTexture };
+  return resolveSurfaceTexturesGeneric(
+    geometry,
+    world?.materials,
+    world?.textures,
+    world?.lightmaps,
+    refractionTexture
+  );
 }
 
 function bindSurfaceTextures(
@@ -276,13 +262,7 @@ function renderViewModel(
   return true;
 }
 
-// Helper to evaluate light style pattern at a given time
-function evaluateLightStyle(pattern: string, time: number): number {
-    if (!pattern) return 1.0;
-    const frame = Math.floor(time * 10) % pattern.length;
-    const charCode = pattern.charCodeAt(frame);
-    return (charCode - 97) / 12.0;
-}
+// Light style evaluation moved to utils/lighting.ts for shared use
 
 
 export const createFrameRenderer = (
@@ -402,29 +382,25 @@ export const createFrameRenderer = (
       }
 
       // 1. Render Opaque Faces
-      const sortedOpaque = sortVisibleFacesFrontToBack(opaqueFaces);
+      const sortedOpaque = sortFrontToBack(opaqueFaces);
 
       // Prepare effective light styles
-      // Default all styles to 1.0 (full brightness) if not provided
-      // Quake 2 defaults: style 0 is always on (full brightness)
-      let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
-
       // Ensure we have at least 64 light styles with default values
-      if (effectiveLightStyles.length === 0 || lightStyleOverrides && lightStyleOverrides.size > 0) {
-          const styles = [...(world.lightStyles || [])];
-          // Ensure minimum size with defaults
+      let baseLightStyles = world.lightStyles || [];
+      if (baseLightStyles.length < 64) {
+          const styles = [...baseLightStyles];
           while (styles.length < 64) {
               styles.push(1.0); // Default to full brightness
           }
-          // Apply overrides
-          if (lightStyleOverrides) {
-              for (const [index, pattern] of lightStyleOverrides) {
-                  while (styles.length <= index) styles.push(1.0);
-                  styles[index] = evaluateLightStyle(pattern, timeSeconds);
-              }
-          }
-          effectiveLightStyles = styles;
+          baseLightStyles = styles;
       }
+
+      // Apply overrides using shared utility
+      const effectiveLightStyles = prepareLightStyles(
+          baseLightStyles,
+          lightStyleOverrides,
+          timeSeconds
+      );
 
       const drawSurfaceBatch = (faces: VisibleFace[], useRefraction: boolean) => {
            let lastBatchKey: BatchKey | undefined;
@@ -534,7 +510,7 @@ export const createFrameRenderer = (
       }
 
       // 3. Render Transparent/Warping Faces
-      const sortedTransparent = sortVisibleFacesBackToFront(transparentFaces);
+      const sortedTransparent = sortBackToFront(transparentFaces);
       drawSurfaceBatch(sortedTransparent, true);
     }
 

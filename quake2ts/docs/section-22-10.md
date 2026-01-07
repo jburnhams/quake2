@@ -1,15 +1,13 @@
-**NOT STARTED**
+**🔄 IN PROGRESS - Foundation Complete**
 
-Verified 2026-01-07:
-- No `tests/render/visual/camera-angles.test.ts`
-- No `tests/render/visual/features.test.ts`
-- No `tests/render/visual/cross-renderer.test.ts`
-- No `tests/render/visual/diagonal-regression.test.ts`
-- No comprehensive camera angle test suite
+Status (2026-01-07):
+- ✅ WebGPU camera angles test created (`tests/webgpu/visual/camera-angles.test.ts`) - 13 angle combinations
+- ✅ Existing visual test infrastructure validated (17 WebGPU tests, 18 WebGL tests)
+- ✅ Visual snapshot utilities working (`test-utils/src/visual/snapshots.ts`)
+- ✅ GitHub Actions configured for both WebGPU and WebGL visual tests
+- ⚠️ Additional test files need creation (see Remaining Work below)
 
-**Note:** Some existing visual tests exist but not the specific ones called for in this section.
-
-**Blocked by:** Section 22-6 (WebGPU complete) and 22-8 (WebGL complete)
+**Note:** The infrastructure and patterns are established. Remaining work involves creating additional test files following the established patterns.
 
 ---
 
@@ -310,6 +308,116 @@ describe('Full Renderer Integration', () => {
 - [ ] All tests run in <5 minutes (headless)
 - [ ] Baselines committed and documented
 - [ ] CI configured to run visual tests
+
+---
+
+---
+
+## Remaining Work
+
+### Immediate Next Steps
+
+1. **Create WebGL camera angles test** - Mirror the WebGPU test at `tests/webgl/visual/camera-angles.test.ts`
+   - Use `testWebGLRenderer` helper from `@quake2ts/test-utils`
+   - Follow pattern from existing WebGL visual tests
+   - Use same camera positions array for consistency
+
+2. **Create feature combination tests** - Both renderers need `features.test.ts`
+   - Start with basic combinations (skybox-only, bsp-only, combined)
+   - Add lighting combinations (dlights, lightmaps)
+   - Add entity rendering combinations (MD2, MD3, particles)
+
+3. **Create cross-renderer comparison** - `tests/render/visual/cross-renderer.test.ts`
+   - Requires creating test scenes that work with both renderers
+   - Use same camera and scene setup for both
+   - Compare outputs with relaxed thresholds (allow minor FP differences)
+
+4. **Extend diagonal regression tests** - Build on existing `skybox-diagonal.test.ts`
+   - Add more diagonal angle combinations
+   - Test with BSP geometry, not just skybox
+   - Verify no double-transform artifacts
+
+### Implementation Patterns Established
+
+**WebGPU Visual Test Pattern:**
+```typescript
+import { initHeadlessWebGPU, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { Camera } from '../../../src/render/camera.js';
+
+// 1. Initialize headless WebGPU
+const { device } = await initHeadlessWebGPU();
+
+// 2. Create pipeline(s)
+const pipeline = new SomeRenderer(device, format);
+
+// 3. Setup camera
+const camera = new Camera(width, height);
+camera.setPosition(x, y, z);
+camera.setRotation(pitch, yaw, roll);
+
+// 4. Render using cameraState
+pipeline.draw(passEncoder, {
+  cameraState: camera.toState(), // ← Key: uses CameraState interface
+  // ... other options
+});
+
+// 5. Capture and verify
+const result = await captureTexture(device, texture, width, height);
+await expectSnapshot(result, { name, width, height, snapshotDir });
+
+// 6. Cleanup
+pipeline.destroy();
+device.destroy();
+```
+
+**WebGL Visual Test Pattern:**
+```typescript
+import { testWebGLRenderer } from '@quake2ts/test-utils';
+
+await testWebGLRenderer(`
+  // Code runs in browser context
+  const camera = new Camera(256, 256);
+  camera.setPosition(0, 0, 50);
+  camera.setRotation(45, 45, 0);
+
+  renderer.renderFrame({
+    camera,
+    cameraState: camera.toState(), // ← Key: uses CameraState interface
+    sky: testSky,
+    world: testWorld
+  }, []);
+`, {
+  name: 'test-name',
+  width: 256,
+  height: 256,
+  snapshotDir
+});
+```
+
+### Baseline Generation
+
+When ready to generate baselines:
+```bash
+# WebGPU baselines
+UPDATE_VISUAL=1 pnpm test:webgpu tests/webgpu/visual/
+
+# WebGL baselines
+UPDATE_VISUAL=1 pnpm test:webgl tests/webgl/visual/
+
+# Or use the specific GitHub Actions env var
+ALWAYS_SAVE_SNAPSHOTS=1 pnpm test:webgpu
+ALWAYS_SAVE_SNAPSHOTS=1 pnpm test:webgl
+```
+
+### Test Coverage Targets
+
+- **Camera angles:** 13+ orientations per renderer (✅ Done for WebGPU)
+- **Features:** 10+ feature combinations per renderer
+- **Cross-renderer:** 5+ shared test scenes
+- **Diagonal regression:** 6+ diagonal angles (complement existing test)
+- **Integration:** 3+ complex multi-feature scenes
+
+**Total:** 50+ visual regression baselines (currently ~35 exist, need ~20 more)
 
 ---
 
