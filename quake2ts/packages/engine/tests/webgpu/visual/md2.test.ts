@@ -8,7 +8,6 @@ import path from 'path';
 import fs from 'fs';
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 // Create a mock MD2 model with a simple triangle
 function createMockModel(): Md2Model {
@@ -170,7 +169,6 @@ describe('MD2 Visual Tests', () => {
             width: 256,
             height: 256,
             snapshotDir,
-            updateBaseline
         });
 
         await cleanup();
@@ -247,7 +245,6 @@ describe('MD2 Visual Tests', () => {
             width,
             height,
             snapshotDir,
-            updateBaseline,
             fps,
             frameCount
         });
@@ -319,7 +316,6 @@ describe('MD2 Visual Tests', () => {
             width: 256,
             height: 256,
             snapshotDir,
-            updateBaseline
         });
 
         await cleanup();

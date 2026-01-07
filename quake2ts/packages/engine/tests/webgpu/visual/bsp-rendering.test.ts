@@ -44,7 +44,6 @@ function createQuad(device: GPUDevice, z = 0): { vertexBuffer: VertexBuffer, ind
 describe('BspSurfacePipeline Visual (Headless)', () => {
   const lifecycle = createWebGPULifecycle();
   const snapshotDir = path.join(__dirname, '__snapshots__');
-  const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
   beforeAll(async () => {
     await setupHeadlessWebGPUEnv();
@@ -154,7 +153,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
         width,
         height,
         snapshotDir,
-        updateBaseline
     });
 
     // Cleanup
@@ -257,7 +255,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
           width,
           height,
           snapshotDir,
-          updateBaseline
       });
 
       vertexBuffer.destroy();
@@ -381,7 +378,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
           width,
           height,
           snapshotDir,
-          updateBaseline,
           fps,
           frameCount
       });
@@ -485,7 +481,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
           width,
           height,
           snapshotDir,
-          updateBaseline
       });
 
       vertexBuffer.destroy();
@@ -587,7 +582,6 @@ describe('BspSurfacePipeline Visual (Headless)', () => {
           width,
           height,
           snapshotDir,
-          updateBaseline
       });
 
       vertexBuffer.destroy();

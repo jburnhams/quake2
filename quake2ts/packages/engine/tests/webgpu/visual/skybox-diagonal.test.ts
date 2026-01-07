@@ -5,7 +5,6 @@ import { captureTexture, expectSnapshot } from '@quake2ts/test-utils';
 import { SkyboxPipeline } from '../../../src/render/webgpu/pipelines/skybox.js';
 import { TextureCubeMap } from '../../../src/render/webgpu/resources.js';
 
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('Skybox Diagonal Views (Visual)', () => {
   // Logic check first (always runs)
@@ -113,7 +112,6 @@ describe('Skybox Diagonal Views (Visual)', () => {
         name: 'skybox-diagonal-45-45',
         width,
         height,
-        updateBaseline,
         snapshotDir: __dirname // Use local dir
     });
 
