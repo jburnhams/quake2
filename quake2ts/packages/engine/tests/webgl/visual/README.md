@@ -52,7 +52,6 @@ test('my feature: renders correctly', { timeout: 30000 }, async () => {
     description: 'Description of what is being tested',
     width: 256,
     height: 256,
-    updateBaseline: process.env.UPDATE_VISUAL === '1',
     snapshotDir
   });
 });
