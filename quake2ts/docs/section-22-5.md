@@ -1,3 +1,9 @@
+**COMPLETED**
+
+Verified 2026-01-07: BspSurfacePipeline uses CameraState and WebGPUMatrixBuilder. bind() method builds matrices from cameraState when provided. Dynamic lighting works in world space (no transforms needed). All features functional.
+
+---
+
 # Section 22-5: WebGPU BSP Pipeline (Native)
 
 **Phase:** 2 (WebGPU Migration)
