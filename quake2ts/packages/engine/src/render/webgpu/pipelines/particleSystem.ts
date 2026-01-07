@@ -22,6 +22,9 @@ export class ParticleRenderer {
   private readonly bindGroupLayout1: GPUBindGroupLayout; // Texture group
   private readonly bindGroup0: GPUBindGroup;
   private readonly matrixBuilder: WebGPUMatrixBuilder;
+  private readonly tempVpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
+  private readonly tempViewRight: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
+  private readonly tempViewUp: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
 
   // Default resources
   private readonly defaultTexture: Texture2D;
@@ -368,16 +371,21 @@ export class ParticleRenderer {
       if (cameraState) {
         const view = this.matrixBuilder.buildViewMatrix(cameraState);
         const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
-        const vp = mat4.create();
-        mat4.multiply(vp, proj, view);
-        finalViewProj = vp as Float32Array;
+        mat4.multiply(this.tempVpMatrix, proj, view);
+        finalViewProj = this.tempVpMatrix as Float32Array;
 
-        // Extract right and up vectors from view matrix
+        // Extract right and up vectors from view matrix (reuse pre-allocated vectors)
         // View matrix columns contain the basis vectors
         // Column 0 (indices 0,1,2) = right vector
         // Column 1 (indices 4,5,6) = up vector
-        finalViewRight = { x: view[0], y: view[1], z: view[2] };
-        finalViewUp = { x: view[4], y: view[5], z: view[6] };
+        this.tempViewRight.x = view[0];
+        this.tempViewRight.y = view[1];
+        this.tempViewRight.z = view[2];
+        this.tempViewUp.x = view[4];
+        this.tempViewUp.y = view[5];
+        this.tempViewUp.z = view[6];
+        finalViewRight = this.tempViewRight;
+        finalViewUp = this.tempViewUp;
       }
 
       // Update Uniforms

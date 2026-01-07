@@ -329,6 +329,7 @@ export class Md2Pipeline {
   readonly gl: WebGL2RenderingContext;
   readonly program: ShaderProgram;
   private matrixBuilder = new WebGLMatrixBuilder();
+  private tempMvpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
 
   private readonly uniformMvp: WebGLUniformLocation | null;
   private readonly uniformModelMatrix: WebGLUniformLocation | null;
@@ -411,9 +412,8 @@ export class Md2Pipeline {
       const matrices = buildMatrices(this.matrixBuilder, cameraState);
       // If modelMatrix is provided, combine it: MVP = P * V * M
       if (modelMatrix) {
-        const result = mat4.create();
-        mat4.multiply(result, matrices.viewProjection as mat4, modelMatrix as mat4);
-        mvp = result as Float32Array;
+        mat4.multiply(this.tempMvpMatrix, matrices.viewProjection as mat4, modelMatrix as mat4);
+        mvp = this.tempMvpMatrix as Float32Array;
       } else {
         mvp = matrices.viewProjection as Float32Array;
       }

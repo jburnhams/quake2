@@ -341,6 +341,8 @@ export class ParticleRenderer {
   readonly indexBuffer: IndexBuffer;
   readonly vertexArray: VertexArray;
   private matrixBuilder = new WebGLMatrixBuilder();
+  private tempViewRight: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
+  private tempViewUp: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
 
   private vertexCapacity = 0;
   private indexCapacity = 0;
@@ -391,13 +393,19 @@ export class ParticleRenderer {
       const matrices = buildMatrices(this.matrixBuilder, cameraState);
       vp = matrices.viewProjection as Float32Array;
 
-      // Extract right and up vectors from view matrix
+      // Extract right and up vectors from view matrix (reuse pre-allocated vectors)
       // View matrix columns contain the basis vectors
       // Column 0 (indices 0,1,2) = right vector
       // Column 1 (indices 4,5,6) = up vector
       const view = matrices.view;
-      viewRight = { x: view[0], y: view[1], z: view[2] };
-      viewUp = { x: view[4], y: view[5], z: view[6] };
+      this.tempViewRight.x = view[0];
+      this.tempViewRight.y = view[1];
+      this.tempViewRight.z = view[2];
+      this.tempViewUp.x = view[4];
+      this.tempViewUp.y = view[5];
+      this.tempViewUp.z = view[6];
+      viewRight = this.tempViewRight;
+      viewUp = this.tempViewUp;
     }
 
     const mesh = this.system.buildMesh(viewRight, viewUp);

@@ -117,6 +117,7 @@ export class Md3PipelineGPU {
   private uniformBuffer: GPUBuffer;
   private sampler: GPUSampler;
   private matrixBuilder: WebGPUMatrixBuilder;
+  private tempVpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
     this.matrixBuilder = new WebGPUMatrixBuilder();
@@ -234,9 +235,8 @@ export class Md3PipelineGPU {
       if (cameraState) {
         const view = this.matrixBuilder.buildViewMatrix(cameraState);
         const proj = this.matrixBuilder.buildProjectionMatrix(cameraState);
-        const vp = mat4.create();
-        mat4.multiply(vp, proj, view);
-        finalViewProj = vp as Float32Array;
+        mat4.multiply(this.tempVpMatrix, proj, view);
+        finalViewProj = this.tempVpMatrix as Float32Array;
       }
 
       uniformData.set(finalViewProj, 0);
