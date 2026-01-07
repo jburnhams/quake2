@@ -341,8 +341,8 @@ export class ParticleRenderer {
   readonly indexBuffer: IndexBuffer;
   readonly vertexArray: VertexArray;
   private matrixBuilder = new WebGLMatrixBuilder();
-  private tempViewRight: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
-  private tempViewUp: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
+  private tempViewRight = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
+  private tempViewUp = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
 
   private vertexCapacity = 0;
   private indexCapacity = 0;

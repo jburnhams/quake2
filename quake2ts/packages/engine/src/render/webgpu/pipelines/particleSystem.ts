@@ -23,8 +23,8 @@ export class ParticleRenderer {
   private readonly bindGroup0: GPUBindGroup;
   private readonly matrixBuilder: WebGPUMatrixBuilder;
   private readonly tempVpMatrix: mat4 = mat4.create(); // Reused to avoid GC pressure
-  private readonly tempViewRight: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
-  private readonly tempViewUp: Vec3 = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure
+  private readonly tempViewRight = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
+  private readonly tempViewUp = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
 
   // Default resources
   private readonly defaultTexture: Texture2D;
