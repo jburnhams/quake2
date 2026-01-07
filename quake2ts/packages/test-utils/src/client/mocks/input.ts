@@ -131,6 +131,24 @@ export class MockPointerLock {
   isLocked(): boolean {
     return this.locked;
   }
+
+  /**
+   * Cleans up the MockPointerLock patches.
+   * Should be called in afterAll hooks to prevent memory leaks.
+   */
+  teardown(): void {
+    // Restore original requestPointerLock if it was patched
+    if ((global.HTMLElement?.prototype as any)?.__originalRequestPointerLock) {
+      (global.HTMLElement.prototype as any).requestPointerLock =
+        (global.HTMLElement.prototype as any).__originalRequestPointerLock;
+      delete (global.HTMLElement.prototype as any).__originalRequestPointerLock;
+    }
+
+    // Remove the installation flag
+    if ((this._doc as any).__mockPointerLockInstalled) {
+      delete (this._doc as any).__mockPointerLockInstalled;
+    }
+  }
 }
 
 /**
