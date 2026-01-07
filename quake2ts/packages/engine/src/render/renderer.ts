@@ -237,14 +237,8 @@ export const createRenderer = (
             effectiveSky = undefined;
         }
 
-        // Use camera adapter to build matrices if cameraState is provided, fallback to camera.toState()
-        // This is part of the migration to use CameraState everywhere (Section 22-7)
-        // Ensure options.camera.toState() is called ONLY if options.camera has it (real camera)
-        // During tests with mocks, options.camera might be a mock without toState.
-        // In that case, we can't use the adapter easily without mocking toState.
-        // Or we should fallback to reading matrices from camera directly if toState is missing (legacy/test path).
-
         // Get cameraState from options or build from camera
+        // Pipelines now build their own matrices natively from CameraState (Section 22-8)
         let cameraState = options.cameraState;
         if (!cameraState && options.camera && typeof options.camera.toState === 'function') {
             cameraState = options.camera.toState();
@@ -613,24 +607,24 @@ export const createRenderer = (
             }
         }
 
-        // Use the injected viewMatrix (from adapter) instead of options.camera.viewMatrix
-        // to ensure we are using the consistent adapted matrix
-        const viewMatrix = matrices?.view;
-        if (viewMatrix) {
-            const viewRight = { x: viewMatrix[0], y: viewMatrix[4], z: viewMatrix[8] };
-            const viewUp = { x: viewMatrix[1], y: viewMatrix[5], z: viewMatrix[9] };
-
-            particleRenderer.render({
-                viewProjection: viewProjection as Float32Array,
-                viewRight,
-                viewUp
-            });
+        // Use CameraState for particle rendering
+        // ParticleRenderer now builds matrices internally from cameraState
+        if (cameraState) {
+            particleRenderer.render({ cameraState });
         } else {
-            // Fallback to camera
+            // Fallback to camera for legacy/test paths
             const vm = options.camera.viewMatrix;
             const viewRight = { x: vm[0], y: vm[4], z: vm[8] };
             const viewUp = { x: vm[1], y: vm[5], z: vm[9] };
             particleRenderer.render({
+                cameraState: options.camera.toState?.() || {
+                    position: options.camera.position,
+                    angles: [0, 0, 0],
+                    fov: options.camera.fov,
+                    aspect: options.camera.aspect,
+                    near: options.camera.near,
+                    far: options.camera.far
+                },
                 viewProjection: viewProjection as Float32Array,
                 viewRight,
                 viewUp
