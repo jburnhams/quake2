@@ -12,7 +12,7 @@ describe('monster_tank', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const testContext = createTestContext();
-    system = testContext.entities as unknown as EntitySystem;
+    system = testContext.entities;
     context = testContext;
   });
 

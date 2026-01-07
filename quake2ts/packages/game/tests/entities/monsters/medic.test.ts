@@ -4,27 +4,26 @@ import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createTestContext, createMonsterEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createEntityFactory, TestContext } from '@quake2ts/test-utils';
 
 describe('monster_medic', () => {
-  let context: any;
+  let context: EntitySystem;
+  let testCtx: TestContext;
   let medic: Entity;
   let deadMonster: Entity;
   let spawnFunction: any;
 
   beforeEach(() => {
     spawnFunction = vi.fn();
-    const testCtx = createTestContext();
-    // createTestContext returns a SpawnContext { entities, keyValues, etc }
-    // We want the EntitySystem mock which is testCtx.entities
+    testCtx = createTestContext();
     context = testCtx.entities;
 
     // Add specific mocks to the EntitySystem
     context.getSpawnFunction = vi.fn().mockReturnValue(spawnFunction);
 
     // Setup entities
-    medic = createMonsterEntityFactory('monster_medic', {
-        index: 1,
+    medic = context.spawn();
+    Object.assign(medic, createMonsterEntityFactory('monster_medic', {
         origin: { x: 0, y: 0, z: 0 },
         health: 300,
         max_health: 300,
@@ -32,10 +31,10 @@ describe('monster_medic', () => {
         spawnflags: 0,
         velocity: { x: 0, y: 0, z: 0 },
         enemy: null,
-    });
+    }));
 
-    deadMonster = createEntityFactory({
-      index: 2,
+    deadMonster = context.spawn();
+    Object.assign(deadMonster, createEntityFactory({
       origin: { x: 50, y: 0, z: 0 },
       classname: 'monster_infantry',
       deadflag: DeadFlag.Dead,
@@ -47,35 +46,28 @@ describe('monster_medic', () => {
       } as any,
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
-    });
+    }));
   });
 
   it('should start cable attack sequence when close to dead monster', () => {
-    // Setup medic with SP_monster_medic to get methods
-    const spawnContext = { entities: context } as any;
-    SP_monster_medic(medic, spawnContext);
+    SP_monster_medic(medic, testCtx);
 
-    // Assign enemy
     medic.enemy = deadMonster;
 
     // Trigger attack logic
     if (medic.monsterinfo?.attack) {
-        medic.monsterinfo.attack(medic);
+        medic.monsterinfo.attack(medic, context);
     }
 
-    // Verify current_move is correct
-    // attack_cable_move firstframe is 106
     expect(medic.monsterinfo?.current_move?.firstframe).toBe(106);
   });
 
   it('should emit MEDIC_CABLE_ATTACK temp entity during cable attack frames', () => {
-    // Setup medic
-    const spawnContext = { entities: context } as any;
-    SP_monster_medic(medic, spawnContext);
+    SP_monster_medic(medic, testCtx);
     medic.enemy = deadMonster;
 
     if (medic.monsterinfo?.attack) {
-        medic.monsterinfo.attack(medic);
+        medic.monsterinfo.attack(medic, context);
     }
     const move = medic.monsterinfo?.current_move;
     expect(move).toBeDefined();
@@ -84,10 +76,8 @@ describe('monster_medic', () => {
     const frame = move?.frames[1];
     expect(frame?.think).toBeDefined();
 
-    // Call the think function
     frame?.think?.(medic, context);
 
-    // The medic_cable_attack function calls multicast.
     expect(context.multicast).toHaveBeenCalledWith(
         medic.origin,
         MulticastType.Pvs,
@@ -95,18 +85,17 @@ describe('monster_medic', () => {
         TempEntity.MEDIC_CABLE_ATTACK,
         medic.index,
         deadMonster.index,
-        24, 0, 6, // Start coordinates (calculated from offset and 0 angles)
+        24, 0, 6, // Start coordinates
         50, 0, 0  // End coordinates
     );
   });
 
   it('should resurrect the monster using 9-frame cable animation', () => {
-      const spawnContext = { entities: context } as any;
-      SP_monster_medic(medic, spawnContext);
+      SP_monster_medic(medic, testCtx);
 
       medic.enemy = deadMonster;
       if (medic.monsterinfo?.attack) {
-          medic.monsterinfo.attack(medic);
+          medic.monsterinfo.attack(medic, context);
       }
 
       const move = medic.monsterinfo?.current_move;
@@ -127,12 +116,11 @@ describe('monster_medic', () => {
   });
 
   it('should respawn the monster at the end of the sequence', () => {
-    const spawnContext = { entities: context } as any;
-    SP_monster_medic(medic, spawnContext);
+    SP_monster_medic(medic, testCtx);
     medic.enemy = deadMonster;
 
     if (medic.monsterinfo?.attack) {
-        medic.monsterinfo.attack(medic);
+        medic.monsterinfo.attack(medic, context);
     }
     const move = medic.monsterinfo?.current_move;
 
@@ -149,14 +137,13 @@ describe('monster_medic', () => {
   });
 
   it('should stop healing if distance is too great', () => {
-    const spawnContext = { entities: context } as any;
-    SP_monster_medic(medic, spawnContext);
+    SP_monster_medic(medic, testCtx);
     medic.enemy = deadMonster;
 
     deadMonster.origin.x = 1000;
 
     if (medic.monsterinfo?.attack) {
-        medic.monsterinfo.attack(medic);
+        medic.monsterinfo.attack(medic, context);
     }
     const move = medic.monsterinfo?.current_move;
     const frame = move?.frames[1];

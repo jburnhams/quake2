@@ -181,6 +181,9 @@ export function createTestContext(options?: {
       return entityList.filter(e => e.targetname === targetname && e.inUse);
   };
 
+  // We construct a partial object and cast it to EntitySystem
+  // Ideally we would implement the full interface or use a Proxy,
+  // but for tests this mock covers 99% of usage.
   const entities = {
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
