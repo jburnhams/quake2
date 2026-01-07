@@ -269,3 +269,23 @@ export function createMockWebGPUContext(): MockWebGPUContext {
     queue: device.queue,
   };
 }
+
+/**
+ * Cleans up WebGPU mocks from globalThis.
+ * Should be called in afterAll hooks to prevent memory leaks.
+ */
+export function teardownWebGPUMocks(): void {
+  // Remove navigator.gpu if it was set by setupWebGPUMocks
+  if (globalThis.navigator?.gpu) {
+    try {
+      delete (globalThis.navigator as any).gpu;
+    } catch (e) {
+      // If delete fails (read-only), try setting to undefined
+      (globalThis.navigator as any).gpu = undefined;
+    }
+  }
+
+  // Note: GPU* globals (GPUBufferUsage, etc.) injected via Object.assign(globalThis, globals)
+  // are harder to clean up as we don't track which ones were added.
+  // For now, we leave them as they're mostly constants and unlikely to cause significant leaks.
+}

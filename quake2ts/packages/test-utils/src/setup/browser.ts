@@ -206,8 +206,21 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
 
 /**
  * Cleans up the browser environment.
+ * Should be called in afterAll hooks to prevent memory leaks.
  */
 export function teardownBrowserEnvironment() {
+  // Restore HTMLElement prototype if it was patched by MockPointerLock
+  if ((global.HTMLElement?.prototype as any)?.__originalRequestPointerLock) {
+    (global.HTMLElement.prototype as any).requestPointerLock =
+      (global.HTMLElement.prototype as any).__originalRequestPointerLock;
+    delete (global.HTMLElement.prototype as any).__originalRequestPointerLock;
+  }
+
+  // Clean up __mockPointerLockInstalled flag from document
+  if (global.document && (global.document as any).__mockPointerLockInstalled) {
+    delete (global.document as any).__mockPointerLockInstalled;
+  }
+
   // @ts-ignore
   delete global.window;
   // @ts-ignore
@@ -246,4 +259,20 @@ export function teardownBrowserEnvironment() {
   delete global.InputEvent;
   // @ts-ignore
   delete global.UIEvent;
+
+  // Clean up additional globals that may have been set
+  // @ts-ignore
+  delete global.Document;
+  // @ts-ignore
+  delete global.Element;
+  // @ts-ignore
+  delete global.Node;
+  // @ts-ignore
+  delete global.btoa;
+  // @ts-ignore
+  delete global.atob;
+  // @ts-ignore
+  delete global.requestAnimationFrame;
+  // @ts-ignore
+  delete global.cancelAnimationFrame;
 }
