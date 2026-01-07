@@ -13,7 +13,7 @@
 | 22-3 | ✅ COMPLETED | NullRenderer, LoggingRenderer with tests |
 | 22-4 | ✅ COMPLETED | Skybox refactored (full-screen quad approach) |
 | 22-5 | ✅ COMPLETED | BSP pipeline uses CameraState |
-| 22-6 | ⚠️ PARTIAL | MD2 complete; MD3 & Particles not migrated |
+| 22-6 | ✅ COMPLETED | All pipelines migrated to CameraState |
 | 22-7 | ✅ COMPLETED | WebGLCameraAdapter integrated |
 | 22-8 | ⚠️ PARTIAL | Skybox/BSP done; MD2/MD3/Particles not migrated |
 | 22-9 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |

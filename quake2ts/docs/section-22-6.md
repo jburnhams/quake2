@@ -1,15 +1,18 @@
-**PARTIAL - MD2 complete, MD3 and Particles not yet migrated**
+**COMPLETED - All pipelines migrated to use CameraState**
 
-Verified 2026-01-07:
+Completed 2026-01-07:
 - MD2 Pipeline: ✅ Uses CameraState and WebGPUMatrixBuilder (bind method at lines 260-267)
-- MD3 Pipeline: ❌ NOT yet using CameraState (still uses pre-built matrices)
-- Particle System: ❌ NOT yet using CameraState (still uses pre-built matrices)
+- MD3 Pipeline: ✅ NOW uses CameraState (draw method accepts optional cameraState parameter)
+- Particle System: ✅ NOW uses CameraState (render method accepts optional cameraState parameter)
 - Post-Processing: N/A (screen-space, coordinate-independent)
-- Debug Rendering: Not verified
+- Debug Rendering: N/A (not yet implemented in WebGPU)
 
-**Remaining Work:**
-- Migrate MD3 pipeline to use CameraState (similar pattern to MD2)
-- Migrate ParticleRenderer to use CameraState
+**Summary of Work Done:**
+- Migrated `Md3PipelineGPU` to use CameraState following the MD2 pattern
+- Migrated `ParticleRenderer` to use CameraState, including extraction of right/up vectors from view matrix
+- Both migrations are backward compatible (cameraState parameter is optional)
+- Existing visual tests continue to work with pre-built matrices
+- When renderer is updated to pass cameraState, native WebGPU coordinate system will be used
 
 ---
 
