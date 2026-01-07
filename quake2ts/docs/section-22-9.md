@@ -1,3 +1,15 @@
+**NOT STARTED**
+
+Verified 2026-01-07:
+- No `render/utils/` directory exists
+- No shared geometry utilities extracted
+- No shared lighting utilities extracted
+- No shared texture resolution utilities extracted
+
+**Blocked by:** Section 22-6 (WebGPU complete) and 22-8 (WebGL complete)
+
+---
+
 # Section 22-9: Pipeline Utilities & Shared Code
 
 **Phase:** 4 (Consolidation)

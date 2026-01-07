@@ -1,3 +1,18 @@
+**PARTIAL - MD2 complete, MD3 and Particles not yet migrated**
+
+Verified 2026-01-07:
+- MD2 Pipeline: ✅ Uses CameraState and WebGPUMatrixBuilder (bind method at lines 260-267)
+- MD3 Pipeline: ❌ NOT yet using CameraState (still uses pre-built matrices)
+- Particle System: ❌ NOT yet using CameraState (still uses pre-built matrices)
+- Post-Processing: N/A (screen-space, coordinate-independent)
+- Debug Rendering: Not verified
+
+**Remaining Work:**
+- Migrate MD3 pipeline to use CameraState (similar pattern to MD2)
+- Migrate ParticleRenderer to use CameraState
+
+---
+
 # Section 22-6: WebGPU Complete Feature Set
 
 **Phase:** 2 (WebGPU Migration)

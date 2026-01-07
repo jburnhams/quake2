@@ -1,8 +1,26 @@
 # Section 22-0: Renderer Architecture Refactoring - Overview
 
 **Project:** Quake2TS Renderer Abstraction Layer
-**Status:** Planning
-**Last Updated:** 2025-12-27
+**Status:** Phase 1 & 2 Mostly Complete, Phase 3 Started
+**Last Updated:** 2026-01-07
+
+## Implementation Status Summary
+
+| Section | Status | Notes |
+|---------|--------|-------|
+| 22-1 | ✅ COMPLETED | Core interfaces, CameraState, Camera.toState() |
+| 22-2 | ✅ COMPLETED | All matrix builders (WebGL, WebGPU, Identity) |
+| 22-3 | ✅ COMPLETED | NullRenderer, LoggingRenderer with tests |
+| 22-4 | ✅ COMPLETED | Skybox refactored (full-screen quad approach) |
+| 22-5 | ✅ COMPLETED | BSP pipeline uses CameraState |
+| 22-6 | ⚠️ PARTIAL | MD2 complete; MD3 & Particles not migrated |
+| 22-7 | ✅ COMPLETED | WebGLCameraAdapter integrated |
+| 22-8 | ⚠️ PARTIAL | Skybox/BSP done; MD2/MD3/Particles not migrated |
+| 22-9 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
+| 22-10 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
+| 22-11 | ❌ NOT STARTED | Blocked by 22-10 |
+| 22-12 | ❌ NOT STARTED | Blocked by 22-8, 22-11 |
+| 22-13 | ➖ N/A | Stretch goals / guidance only |
 
 ---
 

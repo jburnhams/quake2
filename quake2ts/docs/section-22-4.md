@@ -1,3 +1,9 @@
+**COMPLETED**
+
+Verified 2026-01-07: SkyboxPipeline completely refactored. Now uses CameraState and WebGPUMatrixBuilder. Approach changed from cube geometry to full-screen quad (fixes w≈0 issue at diagonal angles). Shader computes world-space directions analytically per-pixel with proper Quake→GL cubemap coordinate transform.
+
+---
+
 # Section 22-4: WebGPU Skybox Pipeline (Native)
 
 **Phase:** 2 (WebGPU Migration)

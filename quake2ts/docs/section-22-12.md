@@ -1,3 +1,18 @@
+**NOT STARTED**
+
+Verified 2026-01-07:
+- Task 1: WebGL adapter NOT removed (still at `adapters/webglCamera.ts`)
+- Task 2: Camera matrix getters NOT marked @deprecated
+- Task 3: Feature flags not cleaned up (N/A - none exist)
+- Task 4: FrameRenderOptions not updated
+- Task 5: No temporary code cleanup done
+- Task 6: Documentation not updated
+- Task 7: CHANGELOG not updated for Section 22
+
+**Blocked by:** Section 22-8 (WebGL native complete) and 22-11 (validation complete)
+
+---
+
 # Section 22-12: Cleanup & Deprecation
 
 **Phase:** 5 (Cleanup)
