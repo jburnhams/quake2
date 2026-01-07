@@ -64,7 +64,6 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
 }
 
 const snapshotDir = path.join(__dirname, '__snapshots__');
-const updateBaseline = process.env.UPDATE_VISUAL === '1';
 
 describe('WebGPU Lighting Debug - Original Coordinates', () => {
     const lifecycle = createWebGPULifecycle();
@@ -198,7 +197,6 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
             description: 'Light at ORIGINAL position (180, 0, 100) - should be centered but may not be',
             width: 256,
             height: 256,
-            updateBaseline: true,  // Always update so we can see what happens
             snapshotDir
         });
     });
@@ -239,7 +237,6 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
             description: 'Light at min corner (180, -200, -100) - where does it illuminate?',
             width: 256,
             height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -281,7 +278,6 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
             description: 'Blue light at center (180, 0, 100) - demonstrates bug is fixed',
             width: 256,
             height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });

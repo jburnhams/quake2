@@ -149,7 +149,6 @@ describe('WorldPos Debug Visualization', () => {
             name: 'worldpos-debug-faceted-mode',
             description: 'Wall in faceted mode - verifies geometry is rendered correctly',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -188,7 +187,6 @@ describe('WorldPos Debug Visualization', () => {
             name: 'worldpos-debug-with-large-light',
             description: 'Light at center with intensity 500 - brightest area indicates closest worldPos to light',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
@@ -229,7 +227,6 @@ describe('WorldPos Debug Visualization', () => {
             name: 'worldpos-debug-light-at-origin',
             description: 'Green light at origin (0,0,0). If buggy, bottom-right will be VERY bright.',
             width: 256, height: 256,
-            updateBaseline: true,
             snapshotDir
         });
     });
