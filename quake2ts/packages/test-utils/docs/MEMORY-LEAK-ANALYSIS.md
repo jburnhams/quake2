@@ -32,6 +32,11 @@ The following high-priority cleanup issues have been resolved:
 4. Update test scripts in `package.json` to run both test suites
 5. Configure node tests with `environment: 'node'` in vitest config
 
+**Progress**:
+- [x] **Shared Package**: Moved all tests to `tests/unit-node/` as they are pure logic. Updated `vitest.config.ts` and `package.json`.
+- [x] **Server Package**: Moved all tests to `tests/unit-node/` as they are pure logic. Updated `vitest.config.ts` and `package.json`.
+- [ ] **Game Package**: Attempted migration, but reverted due to file limit constraints and complexity of import updates for hundreds of files. Future work should tackle this in smaller batches (e.g., folder by folder) or use a script to automate import rewriting.
+
 **Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
 
 ### 2. Test Isolation Configuration Audit (HIGH PRIORITY)

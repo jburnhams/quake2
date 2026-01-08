@@ -39,6 +39,8 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "TEST_TYPE=unit vitest run",
+    "test:unit-node": "TEST_TYPE=unit-node vitest run",
+    "test:unit-jsdom": "TEST_TYPE=unit-jsdom vitest run",
     "test:integration": "TEST_TYPE=integration vitest run"
   },
   "devDependencies": {
