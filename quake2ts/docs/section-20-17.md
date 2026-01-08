@@ -1,5 +1,26 @@
 # Section 20-17: Performance Profiling Infrastructure
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 5 (Integration)
+
+**Prerequisites:**
+- Section 20-15 (Extended Renderer Interface) ⏳ NOT STARTED
+- Complete WebGPU renderer operational
+
+**Scope Notes:**
+- This section will implement performance profiling stubbed in Section 20-6
+- GPU timestamp queries for measuring render passes
+- Resource tracking extension (memory, buffer/texture counts)
+- Frame statistics (draw calls, triangles, state changes)
+- Benchmarking suite for regression detection
+
+**Section 22 Context:**
+- GPUResourceTracker exists and can be extended
+- Existing infrastructure can be leveraged for memory tracking
+
+---
+
 **Phase:** 5 (Integration)
 **Priority:** LOW
 **Dependencies:** 20-15 (Complete renderer)

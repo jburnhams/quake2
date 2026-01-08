@@ -1,5 +1,20 @@
 # Section 20-13: Post-Processing & Effects
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 4 (Advanced Features)
+
+**Prerequisites:**
+- Section 20-6 (Frame Orchestration) ✅ COMPLETED
+- All core rendering pipelines operational
+
+**Scope Notes:**
+- This section will implement render settings that are currently stubbed in Section 20-6
+- The WebGL reference implementation exists at `packages/engine/src/render/postProcess.ts`
+- Will require render-to-texture infrastructure for intermediate framebuffers
+
+---
+
 **Phase:** 4 (Advanced Features)
 **Priority:** MEDIUM
 **Dependencies:** 20-6 (Frame Orchestration)

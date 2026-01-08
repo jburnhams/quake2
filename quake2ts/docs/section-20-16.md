@@ -1,5 +1,25 @@
 # Section 20-16: Integration & Visual Regression Testing
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 5 (Integration)
+
+**Prerequisites:**
+- Section 20-15 (Extended Renderer Interface) ⏳ NOT STARTED
+- All rendering pipelines complete
+
+**Scope Notes:**
+- Comprehensive integration test suite for WebGPU renderer
+- Establishes 30+ visual regression baseline snapshots
+- Side-by-side WebGL vs WebGPU comparison tests
+- Performance baseline establishment
+
+**Existing Infrastructure:**
+- Section 20-3 and 20-4 provide headless testing and PNG snapshot foundations
+- Can build upon existing test patterns from unit tests
+
+---
+
 **Phase:** 5 (Integration)
 **Priority:** MEDIUM
 **Dependencies:** 20-15 (Complete renderer)

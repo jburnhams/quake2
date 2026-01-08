@@ -1,5 +1,27 @@
 # Section 20-19: Compute Shaders - Dynamic Lighting
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 6 (WebGPU Enhancements)
+
+**Prerequisites:**
+- Section 20-12 (Dynamic Lighting) ✅ COMPLETED (32 lights supported)
+- Section 20-15 (Extended Interface) ⏳ NOT STARTED
+- No `compute/` directory exists yet - will need to be created
+
+**Scope Notes:**
+- Enhances dynamic lighting with clustered forward rendering
+- Current implementation supports 32 lights but uses traditional approach
+- This section enables 100+ lights via GPU light culling
+- Divides screen into tiles and culls lights per-tile
+
+**WebGPU Compute Benefits:**
+- Scale from 32 to 100+ dynamic lights
+- GPU-based tile light culling
+- Better performance for complex lighting scenes
+
+---
+
 **Phase:** 6 (WebGPU Enhancements)
 **Priority:** LOW
 **Dependencies:** 20-12 (Dynamic Lighting), 20-15 (Extended Interface)

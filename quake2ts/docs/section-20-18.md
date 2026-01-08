@@ -1,5 +1,27 @@
 # Section 20-18: Compute Shaders - Particle Systems
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 6 (WebGPU Enhancements)
+
+**Prerequisites:**
+- Section 20-11 (Particle System) ✅ COMPLETED
+- Section 20-15 (Extended Interface) ⏳ NOT STARTED
+- No `compute/` directory exists yet - will need to be created
+
+**Scope Notes:**
+- Moves particle physics from CPU to GPU compute shaders
+- Currently particle system runs on CPU (Section 20-11)
+- This enhancement will enable 10,000+ particles at 60 FPS
+- Requires compute shader infrastructure from Section 20-15
+
+**WebGPU Compute Benefits:**
+- Massive parallelization of particle updates
+- Avoid CPU→GPU transfer bottleneck
+- Demonstrates WebGPU advantages over WebGL
+
+---
+
 **Phase:** 6 (WebGPU Enhancements)
 **Priority:** LOW
 **Dependencies:** 20-11 (Particle System), 20-15 (Extended Interface)

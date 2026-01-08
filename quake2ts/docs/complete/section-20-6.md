@@ -178,11 +178,12 @@ Integrate sprite renderer into main renderer:
 - White texture created for solid color rendering (1x1 RGBA texture)
 - WebGPU headless rendering working with mesa-vulkan-drivers (lavapipe)
 
-**Known Limitations:**
-- Entity rendering not yet implemented (TODO for later sections)
-- Performance profiling returns placeholder values
-- Memory tracking returns placeholder values
-- Various render settings (brightness, gamma, etc.) are stubs
+**Known Limitations (stub implementations remain for later sections):**
+- **Entity rendering** - ✅ Now implemented via 20-9 (MD2), 20-10 (MD3), 20-11 (Particles) - all COMPLETED and integrated with FrameRenderer
+- **Performance profiling** - Covered by **20-17: Performance Profiling Infrastructure** (GPU timestamp queries, frame timing)
+- **Memory tracking** - Covered by **20-17** (GPU memory tracking)
+- **Render settings (brightness, gamma)** - Covered by **20-13: Post-Processing & Effects** (gamma correction, underwater distortion)
+- **Debug rendering (collision vis, wireframe)** - Covered by **20-14: Debug Rendering** (wireframe, bounding boxes, normals, PVS)
 - Font rendering (drawString) not yet visually tested (no font texture in tests)
 
 **Next Section:** [20-7: Skybox Pipeline](section-20-7.md)
