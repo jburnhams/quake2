@@ -1,5 +1,20 @@
 # Section 20-8: BSP Surface Pipeline
 
+## COMPLETED ✅ (Architecture Enhanced by Section 22-5)
+
+**Summary:** BSP world geometry pipeline fully implemented with lightmaps, dynamic lights (up to 32), texture animation, alpha testing, and multi-style lightmap blending. **Section 22-5 enhanced** the architecture:
+- Now uses **CameraState** and **WebGPUMatrixBuilder** for correct coordinate handling
+- Dynamic lighting calculations work in world space (no additional transforms needed)
+- Supports both legacy `modelViewProjection` path and new `cameraState` path (feature flag)
+- All features from original spec implemented and working
+
+**Key Implementation Details:**
+- Uses GPU buffer extensions on `BspSurfaceGeometry` for efficient geometry management
+- Lightmap blending via shader uniforms with 4 style layers
+- Dynamic lights passed in world space, attenuated per-pixel
+
+---
+
 **Phase:** 3 (Core Pipelines)
 **Priority:** HIGH (Most Complex)
 **Dependencies:** 20-2 (Resources), 20-6 (Frame Orchestration)

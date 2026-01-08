@@ -1,5 +1,18 @@
 # Section 20-7: Skybox Pipeline
 
+## COMPLETED ✅ (Architecture Refactored by Section 22-4)
+
+**Summary:** Skybox pipeline implemented with WGSL shader, cubemap sampling, scrolling animation, and depth handling. **Section 22-4 completely refactored** the architecture:
+- Changed from cube geometry to **full-screen quad** approach (fixes w≈0 issue at diagonal view angles)
+- Now uses **CameraState** and **WebGPUMatrixBuilder** for correct coordinate handling
+- Shader computes world-space directions analytically per-pixel with proper Quake→GL cubemap coordinate transform
+- Removed double-transform bug present in original implementation
+
+**Original Implementation:** Cube geometry with viewProjection matrix
+**Current Implementation:** Full-screen quad with inverse view rotation and analytical direction computation
+
+---
+
 **Phase:** 3 (Core Pipelines)
 **Priority:** HIGH
 **Dependencies:** 20-2 (Resources), 20-6 (Frame Orchestration)
