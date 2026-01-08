@@ -216,16 +216,28 @@ export class Camera {
     }
   }
 
+  /**
+   * @deprecated Use toState() and renderer-specific matrix builders instead.
+   * This method will be removed in a future version.
+   */
   get viewMatrix(): mat4 {
     this.updateMatrices();
     return this._viewMatrix;
   }
 
+  /**
+   * @deprecated Use toState() and renderer-specific matrix builders instead.
+   * This method will be removed in a future version.
+   */
   get projectionMatrix(): mat4 {
     this.updateMatrices();
     return this._projectionMatrix;
   }
 
+  /**
+   * @deprecated Use toState() and renderer-specific matrix builders instead.
+   * This method will be removed in a future version.
+   */
   get viewProjectionMatrix(): mat4 {
     this.updateMatrices();
     return this._viewProjectionMatrix;
@@ -300,6 +312,10 @@ export class Camera {
     };
   }
 
+  /**
+   * @deprecated Internal method. Use toState() instead.
+   * This method will be removed in a future version after all consumers migrated.
+   */
   private updateMatrices(): void {
     if (!this._dirty) {
       return;
