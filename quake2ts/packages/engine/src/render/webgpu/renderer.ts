@@ -105,7 +105,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     options: FrameRenderOptions, // From shared interface
     entities: readonly RenderableEntity[] = [],
     renderOptions?: RenderOptions
-  ): void {
+  ): FrameRenderStats {
 
     // Cast options to WebGPU options (runtime objects are compatible enough for this usage,
     // mainly mismatch on Texture2D class type which we ignore by casting)
@@ -132,7 +132,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     };
 
     // For now, pass options to frame renderer.
-    this.frameRenderer.renderFrame(augmentedOptions, entities);
+    return this.frameRenderer.renderFrame(augmentedOptions, entities);
   }
 
   // =========================================================================
