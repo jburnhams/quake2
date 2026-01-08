@@ -7,7 +7,13 @@ import { DamageMod } from '../src/combat/damageMods';
 import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../src/combat/weapons/firing';
 import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles';
 import { T_Damage } from '../src/combat/damage';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTraceMock, createMockGameExports } from '@quake2ts/test-utils';
+import {
+    createGameImportsAndEngine,
+    createPlayerEntityFactory,
+    createTraceMock,
+    createMockGameExports,
+    createPlayerClientFactory
+} from '@quake2ts/test-utils';
 
 // Mock projectiles
 vi.mock('../src/entities/projectiles', () => ({
@@ -61,8 +67,10 @@ describe('Weapon Tests', () => {
         });
 
         player = new Entity(1);
+
+        // Use createPlayerEntityFactory along with createPlayerClientFactory
         Object.assign(player, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: {
                     ammo: {
                         counts: {
@@ -73,7 +81,7 @@ describe('Weapon Tests', () => {
                             [AmmoType.Slugs]: 100,
                             [AmmoType.Grenades]: 100
                         } as any,
-                         caps: []
+                        caps: []
                     },
                     ownedWeapons: new Set([
                         WeaponId.Blaster, WeaponId.Shotgun, WeaponId.SuperShotgun,
@@ -97,7 +105,7 @@ describe('Weapon Tests', () => {
                 kick_origin: { x: 0, y: 0, z: 0 },
                 pm_flags: 0,
                 gun_frame: 0
-            } as any
+            }) as any
         }));
     });
 
