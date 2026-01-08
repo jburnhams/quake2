@@ -296,9 +296,15 @@ export class NetworkMessageParser {
   }
 
   private parseConfigString(): void {
-    const index = this.stream.readShort();
-    const str = this.stream.readString();
-    if (this.handler) this.handler.onConfigString(index, str);
+    const startPos = this.stream.getReadPosition();
+    try {
+        const index = this.stream.readShort();
+        const str = this.stream.readString();
+        if (this.handler) this.handler.onConfigString(index, str);
+    } catch (e) {
+        console.error(`parseConfigString failed at offset ${startPos}. Stream available: ${this.stream.available()}`);
+        throw e;
+    }
   }
 
   private parseSplitClient(): void {

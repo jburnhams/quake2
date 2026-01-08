@@ -5,10 +5,14 @@ import { DedicatedServer } from '@quake2ts/server';
 
 const GAME_SERVER_PORT_MULTI = 27916;
 
-// SKIPPED: These tests are currently failing due to an issue where the second client connecting
-// causes the first client to disconnect (Client 0 disconnected). This is likely an issue with
-// qport collision or resource contention in the test environment (same browser instance/context interactions).
-// The core multiplayer logic (prediction, reconciliation) is verified in prediction.test.ts.
+// SKIPPED: These tests are failing due to a NetChan/Packet truncation issue.
+// When Client 2 connects, Client 0 receives a configstring update (likely for the new player)
+// which triggers an "Offset is outside the bounds of the DataView" error in NetworkMessageParser.
+// This implies the packet containing the configstring is shorter than expected (truncated).
+// Fixes applied:
+// 1. BinaryStream in ClientConnection now uses the correct view of the buffer (fixed garbage reading).
+// 2. NetworkMessageParser now correctly initializes protocol version (fixed "Unknown command" error).
+// However, the truncation issue persists and requires deeper investigation into NetChan fragmentation/server logic.
 describe.skip('E2E Multi-Client Test', () => {
   let server: DedicatedServer;
   let client1: TestClient;

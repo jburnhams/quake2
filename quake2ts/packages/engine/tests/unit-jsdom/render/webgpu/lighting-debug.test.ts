@@ -188,7 +188,7 @@ describe('WebGPU Lighting Position Debug', () => {
             // This still shows center is closer!
         });
 
-        it.skip('Test 4: Check if light position has +min offset but vertices dont', () => { // Hypothesis failed: light position + min offset does not explain the issue
+        it('Test 4: Check if light position has +min offset but vertices dont', () => { // Hypothesis failed: light position + min offset does not explain the issue
             const wallMin = { x: 200, y: -200, z: -100 };
             const lightActual = { x: 180, y: 0, z: 100 };
 
@@ -219,9 +219,10 @@ describe('WebGPU Lighting Position Debug', () => {
             console.log('Dist to center:', distToCenter);
             console.log('Dist to bottom-right:', distToBottomRight);
 
-            // Distance to bottom-right is much closer!
-            // This could be it!
-            expect(distToBottomRight).toBeLessThan(distToCenter);
+            // Hypothesis: If this was the cause, distToBottomRight would be less than distToCenter.
+            // Result: 449.8 vs 287.0.
+            // Conclusion: This hypothesis is incorrect.
+            expect(distToBottomRight).not.toBeLessThan(distToCenter);
         });
     });
 });
