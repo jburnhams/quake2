@@ -25,8 +25,6 @@ import {
   prepareLightStyles
 } from '../utils/index.js';
 
-const USE_NATIVE_COORDINATE_SYSTEM = true;  // Feature flag
-
 // Types ported from WebGL implementation but adapted for WebGPU
 export interface FrameRenderStats {
   batches: number;
@@ -293,28 +291,13 @@ export class FrameRenderer {
 
     // Render Skybox
     if (options.sky && options.sky.cubemap) {
-        if (USE_NATIVE_COORDINATE_SYSTEM) {
-             // New path (22-4)
-            const cameraState = options.cameraState ?? options.camera.toState();
-            const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
-            this.pipelines.skybox.draw(opaquePass, {
-                cameraState,  // NEW: let pipeline build matrices
-                scroll,
-                cubemap: options.sky.cubemap
-            });
-        } else {
-            const viewNoTranslation = removeViewTranslation(options.camera.viewMatrix);
-            const skyViewProjection = mat4.create();
-            mat4.multiply(skyViewProjection, options.camera.projectionMatrix, viewNoTranslation);
-
-            const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
-
-            this.pipelines.skybox.draw(opaquePass, {
-                viewProjection: skyViewProjection as Float32Array,
-                scroll,
-                cubemap: options.sky.cubemap
-            });
-        }
+        const cameraState = options.cameraState ?? options.camera.toState();
+        const scroll = computeSkyScroll(options.timeSeconds ?? 0, options.sky.scrollSpeeds ?? [0.01, 0.02]);
+        this.pipelines.skybox.draw(opaquePass, {
+            cameraState,
+            scroll,
+            cubemap: options.sky.cubemap
+        });
         stats.skyDrawn = true;
     }
 
@@ -389,18 +372,10 @@ export class FrameRenderer {
                       surfaceMins: geometry.mins
                   };
 
-                  let bindOptions: BspSurfaceBindOptions;
-                  if (USE_NATIVE_COORDINATE_SYSTEM) {
-                      bindOptions = {
-                          ...baseBindOptions,
-                          cameraState: options.cameraState ?? options.camera.toState(),
-                      };
-                  } else {
-                      bindOptions = {
-                          ...baseBindOptions,
-                          modelViewProjection: viewProjection,
-                      };
-                  }
+                  const bindOptions: BspSurfaceBindOptions = {
+                      ...baseBindOptions,
+                      cameraState: options.cameraState ?? options.camera.toState(),
+                  };
 
                   // Bind Pipeline
                   this.pipelines.bsp.bind(pass, bindOptions);
