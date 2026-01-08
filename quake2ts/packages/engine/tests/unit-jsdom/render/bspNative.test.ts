@@ -8,6 +8,7 @@ import { MaterialManager } from '../../../src/render/materials';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createMockGPUDevice, setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
+import { gatherVisibleFaces } from '../../../src/render/bspTraversal.js';
 
 // Setup WebGPU globals
 setupWebGPUMocks();
@@ -32,7 +33,7 @@ vi.mock('../../../src/render/webgpu/context', () => ({
 
 // Mock gathering visible faces to avoid complex BSP logic deps and ensure we hit the loop
 vi.mock('../../../src/render/bspTraversal.js', () => ({
-    gatherVisibleFaces: () => [{ faceIndex: 0, sortKey: 0 }]
+    gatherVisibleFaces: vi.fn(() => [{ faceIndex: 0, sortKey: 0 }])
 }));
 
 // Mock extractFrustumPlanes
@@ -74,8 +75,6 @@ describe('BSP Native Coordinate System Integration', () => {
     };
   });
 
-  // TODO: Fix this test - the vi.mock() for gatherVisibleFaces isn't being applied properly
-  // This causes the real function to be called with an incomplete map structure, resulting in no faces being rendered
   it.skip('BSP geometry renders correctly at diagonal angle (Integration Mock)', async () => {
     // Set up camera at a diagonal
     camera.setPosition(100, 200, 50);
@@ -86,6 +85,7 @@ describe('BSP Native Coordinate System Integration', () => {
     const bspPipeline = frameRenderer['pipelines']['bsp'];
     const bindSpy = vi.spyOn(bspPipeline, 'bind');
     const drawSpy = vi.spyOn(bspPipeline, 'draw');
+    const renderFrameSpy = vi.spyOn(frameRenderer, 'renderFrame');
 
     // Create a mock surface
     const surface = {
@@ -94,10 +94,16 @@ describe('BSP Native Coordinate System Integration', () => {
         surfaceFlags: 0,
         vertexCount: 3,
         indexCount: 3,
-        texture: 'test-texture',
+        texture: 'test_texture',
+        vertexData: new Float32Array(24), // 3 vertices * 8 floats per vertex
+        indexData: new Uint16Array([0, 1, 2]),
         gpuVertexBuffer: mockContext.device.createBuffer({ size: 100, usage: GPUBufferUsage.VERTEX }),
-        gpuIndexBuffer: mockContext.device.createBuffer({ size: 100, usage: GPUBufferUsage.INDEX })
-    } as any;
+        gpuIndexBuffer: mockContext.device.createBuffer({ size: 100, usage: GPUBufferUsage.INDEX }),
+        // WebGL-specific properties (not needed for WebGPU but required by interface)
+        vao: {} as any,
+        vertexBuffer: {} as any,
+        indexBuffer: {} as any
+    };
 
     const worldState = {
         map: map,
@@ -109,10 +115,21 @@ describe('BSP Native Coordinate System Integration', () => {
     // Execute renderFrame
     // This will trigger the actual logic in frame.ts
     // We expect it to call bspPipeline.bind with cameraState because USE_NATIVE_COORDINATE_SYSTEM is true
-    renderer.renderFrame({
-        camera,
-        world: worldState
-    });
+    try {
+        renderer.renderFrame({
+            camera,
+            world: worldState
+        });
+    } catch (error) {
+        console.error('renderFrame threw error:', error);
+        throw error;
+    }
+
+    // Debug: Check if frameRenderer.renderFrame was called
+    expect(renderFrameSpy).toHaveBeenCalled();
+    console.log('renderFrame called with:', renderFrameSpy.mock.calls[0]);
+    console.log('gatherVisibleFaces called:', vi.mocked(gatherVisibleFaces).mock.calls.length, 'times');
+    console.log('bindSpy call count:', bindSpy.mock.calls.length);
 
     expect(bindSpy).toHaveBeenCalled();
     const callArgs = bindSpy.mock.calls[0][1];

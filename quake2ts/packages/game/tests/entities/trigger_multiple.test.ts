@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
 import { Entity, Solid } from '../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createTriggerEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../src/entities/spawn.js';
 
 describe('trigger_multiple', () => {
@@ -14,8 +14,9 @@ describe('trigger_multiple', () => {
     registry = new SpawnRegistry();
     registerTriggerSpawns(registry);
 
+    // Use createTriggerEntityFactory but manually create Entity first as registry expects instance
     entity = new Entity(1);
-    entity.classname = 'trigger_multiple';
+    Object.assign(entity, createTriggerEntityFactory('trigger_multiple'));
   });
 
   it('should initialize correctly', () => {
@@ -34,10 +35,9 @@ describe('trigger_multiple', () => {
       spawnFn?.(entity, context);
 
       // Trigger it
-      const activator = new Entity(2);
-      activator.classname = 'player';
-      activator.svflags = 0;
-      activator.client = {} as any;
+      const activator = spawnEntity(context.entities, createPlayerEntityFactory({
+          number: 2
+      }));
 
       // For use(), we don't check canActivate.
       entity.use?.(entity, activator, activator);
@@ -52,8 +52,9 @@ describe('trigger_multiple', () => {
       const spawnFn = registry.get('trigger_multiple');
       spawnFn?.(entity, context);
 
-      const activator = new Entity(2);
-      activator.client = {} as any;
+      const activator = spawnEntity(context.entities, createPlayerEntityFactory({
+           number: 2
+      }));
 
       entity.use?.(entity, activator, activator);
 

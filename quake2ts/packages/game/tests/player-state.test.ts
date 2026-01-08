@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports, GameCreateOptions, createPlayerInventory } from '../src/index.js';
+import { createGame, GameExports, GameCreateOptions } from '../src/index.js';
 import { Entity } from '../src/entities/entity.js';
 import { WeaponId } from '../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 const options: GameCreateOptions = {
     gravity: { x: 0, y: 0, z: -800 },
@@ -22,27 +22,9 @@ describe('Player State Snapshot', () => {
         game.init(0);
         game.spawnWorld();
 
-        const mockClient = {
-            pers: {
-                connected: true,
-                inventory: [],
-                health: 100,
-                max_health: 100,
-                savedFlags: 0,
-                selected_item: 0
-            },
-            inventory: createPlayerInventory(),
-            weaponStates: { states: new Map() },
-            buttons: 0,
-            pm_type: 0,
-            pm_time: 0,
-            pm_flags: 0,
-            gun_frame: 0,
-            rdflags: 0,
-            fov: 90
-        };
+        const mockClient = createPlayerClientFactory();
 
-        game.clientBegin(mockClient as any);
+        game.clientBegin(mockClient);
         player = game.entities.find(e => e.classname === 'player')!;
     });
 
