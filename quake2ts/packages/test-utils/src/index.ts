@@ -123,3 +123,4 @@ export type { PhysicsScenario } from './game/helpers/physics.js';
 export type { MockSaveGame, SaveGameDiff } from './game/helpers/save.js';
 export type { MockEngine, MockGame, TestContext, MockImportsAndEngine } from './game/helpers.js';
 export type { SpawnTestEntityOptions } from './game/helpers/spawn.js';
+export * from './game/client.js';

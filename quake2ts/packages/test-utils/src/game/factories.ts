@@ -282,3 +282,4 @@ export function createTriggerEntityFactory(classname: string, overrides: Partial
     ...overrides
   });
 }
+export * from './client.js';
