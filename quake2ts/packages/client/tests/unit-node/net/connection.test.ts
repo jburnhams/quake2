@@ -118,7 +118,8 @@ describe('MultiplayerConnection', () => {
 
         // --- 3. Server sends precache ---
         const writer3 = new BinaryWriter();
-        writer3.writeByte(ServerCommand.stufftext);
+        // Protocol 34 uses 12 for stufftext (ServerCommand.stufftext is 11)
+        writer3.writeByte(12);
         writer3.writeString('precache\n');
         const precachePacket = serverNetChan.transmit(writer3.getData());
 

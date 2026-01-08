@@ -244,8 +244,11 @@ export class MultiplayerConnection implements NetworkMessageHandler {
         // Calculate CRC for potential frame update
         this.currentPacketCRC = crc8(processedData);
 
-        const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
+        const stream = new BinaryStream(processedData);
         this.parser = new NetworkMessageParser(stream, this);
+        if (this.serverProtocol > 0) {
+            this.parser.setProtocolVersion(this.serverProtocol);
+        }
         this.parser.parseMessage();
 
         // Update ping on receiving frame or valid response
