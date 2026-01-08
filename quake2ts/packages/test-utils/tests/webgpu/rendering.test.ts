@@ -6,7 +6,7 @@ describe('WebGPU Rendering Utilities', () => {
     beforeAll(async () => {
         // Setup WebGPU - will throw if not available
         await initHeadlessWebGPU();
-    });
+    }, 30000); // Increase timeout to 30s for GPU initialization
 
     it('initializes render setup', async () => {
         const setup = await createRenderTestSetup(64, 64);
