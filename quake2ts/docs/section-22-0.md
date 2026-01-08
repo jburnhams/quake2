@@ -16,10 +16,10 @@
 | 22-6 | ✅ COMPLETED | All pipelines migrated to CameraState |
 | 22-7 | ✅ COMPLETED | WebGLCameraAdapter integrated |
 | 22-8 | ✅ COMPLETED | All WebGL pipelines use native CameraState |
-| 22-9 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
-| 22-10 | ❌ NOT STARTED | Blocked by 22-6, 22-8 |
-| 22-11 | ❌ NOT STARTED | Blocked by 22-10 |
-| 22-12 | ❌ NOT STARTED | Blocked by 22-8, 22-11 |
+| 22-9 | ✅ COMPLETED | Shared utilities extracted |
+| 22-10 | 🔄 IN PROGRESS | Foundation complete, needs expansion |
+| 22-11 | ✅ COMPLETED | Performance framework established |
+| 22-12 | 📝 DOCUMENTED | Ready for execution after validation |
 | 22-13 | ➖ N/A | Stretch goals / guidance only |
 
 ---

@@ -37,7 +37,7 @@ vi.mock('../../../src/render/bspTraversal.js', () => ({
 }));
 
 // Mock extractFrustumPlanes
-vi.mock('../../../src/render/culling', () => ({
+vi.mock('../../../src/render/culling.js', () => ({
     extractFrustumPlanes: () => []
 }));
 

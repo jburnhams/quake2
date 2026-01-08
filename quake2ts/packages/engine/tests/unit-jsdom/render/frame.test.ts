@@ -152,7 +152,9 @@ describe('FrameRenderer', () => {
 
     const bindCalls = (bspPipeline.bind as any).mock.calls;
     expect(bindCalls[0][0].styleIndices).toEqual([1, 255, 255, 255]);
-    expect(bindCalls[0][0].styleValues).toBe(world.lightStyles);
+    // styleValues is now padded to 64 elements, check first 3 match original
+    expect(bindCalls[0][0].styleValues.slice(0, 3)).toEqual([0, 0.5, 0.75]);
+    expect(bindCalls[0][0].styleValues.length).toBeGreaterThanOrEqual(3);
     expect(bindCalls[1][0].styleIndices).toEqual([0, 2, 3, 255]);
 
     expect(diffuse.bind).toHaveBeenCalledTimes(2);

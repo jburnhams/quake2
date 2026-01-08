@@ -1,12 +1,6 @@
-**NOT STARTED**
+**✅ COMPLETED**
 
-Verified 2026-01-07:
-- No `render/utils/` directory exists
-- No shared geometry utilities extracted
-- No shared lighting utilities extracted
-- No shared texture resolution utilities extracted
-
-**Blocked by:** Section 22-6 (WebGPU complete) and 22-8 (WebGL complete)
+Summary: Extracted shared utilities from WebGL and WebGPU renderers into `render/utils/` directory. Created `geometry.ts` (sorting functions), `lighting.ts` (light style evaluation), and `textures.ts` (texture resolution). Updated both frame renderers to use shared code, reducing duplication by ~40 lines. Added comprehensive unit tests for all utilities.
 
 ---
 

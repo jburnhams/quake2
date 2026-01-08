@@ -18,6 +18,12 @@ import { MaterialManager } from '../materials.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { CameraState } from '../types/camera.js';
 import { DEG2RAD } from '@quake2ts/shared';
+import {
+  sortFrontToBack,
+  sortBackToFront,
+  evaluateLightStyle,
+  prepareLightStyles
+} from '../utils/index.js';
 
 const USE_NATIVE_COORDINATE_SYSTEM = true;  // Feature flag
 
@@ -90,23 +96,7 @@ export interface FrameContext {
   height: number;
 }
 
-// Helper to evaluate light style pattern at a given time
-function evaluateLightStyle(pattern: string, time: number): number {
-    if (!pattern) return 1.0;
-    const frame = Math.floor(time * 10) % pattern.length;
-    const charCode = pattern.charCodeAt(frame);
-    return (charCode - 97) / 12.0;
-}
-
-// Front-to-back sorting for opaque surfaces
-function sortVisibleFacesFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
-  return [...faces].sort((a, b) => b.sortKey - a.sortKey);
-}
-
-// Back-to-front sorting for transparent surfaces
-function sortVisibleFacesBackToFront(faces: readonly VisibleFace[]): VisibleFace[] {
-  return [...faces].sort((a, b) => a.sortKey - b.sortKey);
-}
+// Sorting and light style functions moved to utils/ for shared use
 
 export class FrameRenderer {
   private depthTexture: GPUTexture | null = null;
@@ -357,18 +347,14 @@ export class FrameRenderer {
             }
         }
 
-        const sortedOpaque = sortVisibleFacesFrontToBack(opaqueFaces);
+        const sortedOpaque = sortFrontToBack(opaqueFaces);
 
-        // Prepare effective light styles
-        let effectiveLightStyles: ReadonlyArray<number> = world.lightStyles || [];
-        if (lightStyleOverrides && lightStyleOverrides.size > 0) {
-            const styles = [...(world.lightStyles || [])];
-            for (const [index, pattern] of lightStyleOverrides) {
-               while (styles.length <= index) styles.push(1.0);
-               styles[index] = evaluateLightStyle(pattern, timeSeconds);
-            }
-            effectiveLightStyles = styles;
-        }
+        // Prepare effective light styles using shared utility
+        const effectiveLightStyles = prepareLightStyles(
+            world.lightStyles || [],
+            lightStyleOverrides,
+            timeSeconds
+        );
 
         // Draw Opaque Batch
         const drawSurfaceBatch = (faces: VisibleFace[], pass: GPURenderPassEncoder, lightStyles: ReadonlyArray<number>) => {
@@ -513,7 +499,7 @@ export class FrameRenderer {
         const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
 
         if (transparentFaces.length > 0) {
-            const sortedTransparent = sortVisibleFacesBackToFront(transparentFaces);
+            const sortedTransparent = sortBackToFront(transparentFaces);
             drawSurfaceBatch(sortedTransparent, transparentPass, effectiveLightStyles);
         }
 
