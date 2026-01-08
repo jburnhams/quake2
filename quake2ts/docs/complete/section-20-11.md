@@ -1,5 +1,11 @@
 # Section 20-11: Particle System
 
+## COMPLETED ✅ (Superseded by Section 22)
+
+**Summary:** Particle system implemented with WGSL shader, billboarding, instanced rendering, additive blending, and depth handling. **Architecture updated by Section 22** to use CameraState and WebGPUMatrixBuilder for correct coordinate handling.
+
+---
+
 **Phase:** 3 (Core Pipelines)
 **Priority:** HIGH
 **Dependencies:** 20-2 (Resources), 20-6 (Frame Orchestration)

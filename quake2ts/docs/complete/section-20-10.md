@@ -1,5 +1,11 @@
 # Section 20-10: MD3 Model Pipeline
 
+## COMPLETED ✅ (Superseded by Section 22)
+
+**Summary:** MD3 pipeline implemented with per-surface materials, tag-based attachments, and dynamic lighting. **Architecture updated by Section 22** to use CameraState for correct coordinate handling.
+
+---
+
 **Phase:** 3 (Core Pipelines)
 **Priority:** HIGH
 **Dependencies:** 20-2 (Resources), 20-6 (Frame Orchestration)
