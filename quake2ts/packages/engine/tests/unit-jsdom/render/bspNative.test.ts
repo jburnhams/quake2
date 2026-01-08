@@ -1,14 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createWebGPURenderer } from '../../../src/render/webgpu/renderer';
 import { Camera } from '../../../src/render/camera';
-import { BspMap, parseBsp } from '../../../src/assets/bsp';
-import { buildBspGeometry } from '../../../src/render/bsp';
-import { createTextureManager, TextureManager } from '../../../src/render/texture';
-import { MaterialManager } from '../../../src/render/materials';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { BspMap } from '../../../src/assets/bsp';
 import { createMockGPUDevice, setupWebGPUMocks } from '@quake2ts/test-utils/src/engine/mocks/webgpu';
-import { gatherVisibleFaces } from '../../../src/render/bspTraversal.js';
 
 // Setup WebGPU globals
 setupWebGPUMocks();
@@ -32,9 +25,11 @@ vi.mock('../../../src/render/webgpu/context', () => ({
 }));
 
 // Mock gathering visible faces to avoid complex BSP logic deps and ensure we hit the loop
-vi.mock('../../../src/render/bspTraversal.js', () => ({
-    gatherVisibleFaces: vi.fn(() => [{ faceIndex: 0, sortKey: 0 }])
-}));
+vi.mock('../../../src/render/bspTraversal.js', () => {
+    return {
+        gatherVisibleFaces: vi.fn(() => [{ faceIndex: 0, sortKey: 0 }])
+    };
+});
 
 // Mock extractFrustumPlanes
 vi.mock('../../../src/render/culling.js', () => ({
@@ -45,8 +40,20 @@ describe('BSP Native Coordinate System Integration', () => {
   let renderer: any;
   let camera: Camera;
   let map: BspMap;
+  let createWebGPURenderer: any;
+  let gatherVisibleFaces: any;
 
   beforeEach(async () => {
+    // Reset modules to ensure mocks are applied correctly before loading the renderer
+    vi.resetModules();
+
+    // Import the function and mock after module reset
+    const rendererModule = await import('../../../src/render/webgpu/renderer');
+    createWebGPURenderer = rendererModule.createWebGPURenderer;
+
+    const bspTraversalModule = await import('../../../src/render/bspTraversal.js');
+    gatherVisibleFaces = bspTraversalModule.gatherVisibleFaces;
+
     renderer = await createWebGPURenderer(mockContext.device.canvas, {
         width: 800,
         height: 600
@@ -75,7 +82,7 @@ describe('BSP Native Coordinate System Integration', () => {
     };
   });
 
-  it.skip('BSP geometry renders correctly at diagonal angle (Integration Mock)', async () => {
+  it('BSP geometry renders correctly at diagonal angle (Integration Mock)', async () => {
     // Set up camera at a diagonal
     camera.setPosition(100, 200, 50);
     // Yaw 135 (Diagonal), Pitch 30 (Looking down)
@@ -127,9 +134,6 @@ describe('BSP Native Coordinate System Integration', () => {
 
     // Debug: Check if frameRenderer.renderFrame was called
     expect(renderFrameSpy).toHaveBeenCalled();
-    console.log('renderFrame called with:', renderFrameSpy.mock.calls[0]);
-    console.log('gatherVisibleFaces called:', vi.mocked(gatherVisibleFaces).mock.calls.length, 'times');
-    console.log('bindSpy call count:', bindSpy.mock.calls.length);
 
     expect(bindSpy).toHaveBeenCalled();
     const callArgs = bindSpy.mock.calls[0][1];
