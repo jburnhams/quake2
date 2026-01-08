@@ -1,5 +1,11 @@
 # Section 20-9: MD2 Model Pipeline
 
+## COMPLETED ✅ (Superseded by Section 22)
+
+**Summary:** MD2 pipeline implemented with WGSL shader, frame interpolation, dynamic lighting, texture mapping, and backface culling. **Architecture updated by Section 22** to use CameraState and WebGPUMatrixBuilder for correct coordinate handling.
+
+---
+
 **Phase:** 3 (Core Pipelines)
 **Priority:** HIGH
 **Dependencies:** 20-2 (Resources), 20-6 (Frame Orchestration)
