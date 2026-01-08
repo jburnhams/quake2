@@ -1,5 +1,32 @@
 # Section 20-21: Compute Shaders - Advanced Features
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 6 (WebGPU Enhancements) - Final Section
+
+**Prerequisites:**
+- Section 20-15 (Extended Interface) ⏳ NOT STARTED
+- Sections 20-18 to 20-20 (Other compute shaders) ⏳ NOT STARTED
+- No `compute/` directory exists yet - will need to be created
+
+**Scope Notes:**
+- Advanced compute features showcasing WebGPU capabilities
+- GPU frustum/PVS culling for 10,000+ entities
+- Occlusion culling with Hi-Z pyramid
+- GPU skinning for animated characters
+- Procedural geometry generation
+- Optional: GPU-based pathfinding
+
+**WebGPU Compute Benefits:**
+- Scale to massive entity counts
+- Offload CPU-intensive operations
+- Enable effects not possible in WebGL
+
+**Project Completion:**
+This is the final section of the WebGPU renderer implementation plan.
+
+---
+
 **Phase:** 6 (WebGPU Enhancements)
 **Priority:** LOW
 **Dependencies:** 20-15 (Extended Interface), 20-18 to 20-20 (Other compute)

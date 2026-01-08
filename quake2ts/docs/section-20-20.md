@@ -1,5 +1,27 @@
 # Section 20-20: Compute Shaders - Post-Processing
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 6 (WebGPU Enhancements)
+
+**Prerequisites:**
+- Section 20-13 (Post-Processing) ⏳ NOT STARTED
+- Section 20-15 (Extended Interface) ⏳ NOT STARTED
+- No `compute/` directory exists yet - will need to be created
+
+**Scope Notes:**
+- Implements post-processing effects using compute shaders
+- Requires Section 20-13 (fragment-based post-processing) first
+- Provides compute-based alternatives: blur, bloom, tone mapping
+- Uses shared memory for performance optimization
+
+**WebGPU Compute Benefits:**
+- Better performance for complex effects like bloom
+- Access to shared memory for separable filters
+- More flexible image processing capabilities
+
+---
+
 **Phase:** 6 (WebGPU Enhancements)
 **Priority:** LOW
 **Dependencies:** 20-13 (Post-Processing), 20-15 (Extended Interface)

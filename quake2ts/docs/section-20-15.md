@@ -1,5 +1,26 @@
 # Section 20-15: Extended Renderer Interface
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 5 (Integration)
+
+**Prerequisites:**
+- Sections 20-7 to 20-12 ✅ COMPLETED (Core pipelines)
+- Section 20-13 (Post-Processing) ⏳ NOT STARTED
+- Section 20-14 (Debug Rendering) ⏳ NOT STARTED
+
+**Scope Notes:**
+- This section finalizes the IWebGPURenderer interface with WebGPU-specific extensions
+- Adds compute shader dispatch method (for Phase 6)
+- Adds capability queries and performance timestamp queries
+- Requires Sections 20-13 and 20-14 to be completed first
+
+**Section 22 Context:**
+- The CameraState architecture from Section 22 provides the foundation
+- `createWebGPURenderer()` factory exists but may need extension for additional pipelines
+
+---
+
 **Phase:** 5 (Integration)
 **Priority:** MEDIUM
 **Dependencies:** 20-7 to 20-14 (All pipelines complete)

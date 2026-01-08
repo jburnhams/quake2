@@ -1,5 +1,20 @@
 # Section 20-14: Debug Rendering
 
+## ⏳ NOT STARTED
+
+**Status:** Future work - Phase 4 (Advanced Features)
+
+**Prerequisites:**
+- Section 20-6 (Frame Orchestration) ✅ COMPLETED
+- All core rendering pipelines operational
+
+**Scope Notes:**
+- This section will implement debug rendering that is currently stubbed in Section 20-6
+- The WebGL reference implementation exists at `packages/engine/src/render/debug.ts` (469 lines)
+- Will provide wireframe, bounding box, normals, and PVS visualization
+
+---
+
 **Phase:** 4 (Advanced Features)
 **Priority:** MEDIUM
 **Dependencies:** 20-6 (Frame Orchestration)
