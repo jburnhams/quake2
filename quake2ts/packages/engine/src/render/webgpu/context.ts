@@ -21,6 +21,9 @@ export interface WebGPUContextState {
   height: number;
 }
 
+// Alias WebGPUContextState as WebGPUContext to match other files
+export type WebGPUContext = WebGPUContextState;
+
 export interface WebGPUCapabilities {
   hasTimestampQuery: boolean;
   hasDepthClipControl: boolean;

@@ -4,6 +4,7 @@ import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
+import { DebugPipeline } from './pipelines/debug.js'; // Import DebugPipeline
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { RenderableEntity } from '../scene.js';
@@ -120,6 +121,7 @@ export class FrameRenderer {
       bsp: BspSurfacePipeline;
       md2: Md2Pipeline;
       postProcess: PostProcessPipeline;
+      debug: DebugPipeline;
       // TODO: Add MD3 and Particles pipelines
     }
   ) {
@@ -491,6 +493,10 @@ export class FrameRenderer {
             // TODO: Handle MD3 and Particles rendering
         }
 
+        // --- Debug Pass (Opaque part) ---
+        // Render solid debug geometry that should be depth tested
+        this.pipelines.debug.render(opaquePass, viewProjection);
+
         opaquePass.end();
 
         // --- Pass 2: Transparent ---
@@ -556,6 +562,9 @@ export class FrameRenderer {
         console.warn('2D render pass was not properly closed - auto-closing to prevent resource leak');
         this.end2DPass();
     }
+
+    // Clear Debug Pipeline after frame
+    this.pipelines.debug.clear();
 
     // Finalize
     this.context.device.queue.submit([commandEncoder.finish()]);
