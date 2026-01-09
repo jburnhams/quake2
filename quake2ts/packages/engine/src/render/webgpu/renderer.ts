@@ -95,6 +95,9 @@ export interface WebGPURenderer extends IRenderer {
     // TODO: Add particles: ParticleRenderer
   };
 
+  // DebugRenderer is part of IRenderer, here we expose the interface
+  readonly debug: DebugRendererInterface;
+
   // Helper methods to upload geometry
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void;
 }
@@ -112,7 +115,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // Stub implementations for required properties
   readonly collisionVis: CollisionVisRenderer;
-  readonly debug: DebugRenderer;
+  readonly debug: DebugRendererInterface;
   readonly particleSystem: ParticleSystem;
 
   constructor(
@@ -140,7 +143,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.collisionVis = null as any;
 
     // Initialize Debug Renderer Adapter
-    this.debug = new DebugRendererAdapter(pipelines.debug, this) as unknown as DebugRenderer;
+    this.debug = new DebugRendererAdapter(pipelines.debug, this);
 
     this.particleSystem = null as any;
   }
@@ -557,7 +560,7 @@ export async function createWebGPURenderer(
   if (canvas) {
       context.width = canvas.width;
       context.height = canvas.height;
-  } else {
+  } else if (!context.width || !context.height) {
       context.width = 800;
       context.height = 600;
   }
