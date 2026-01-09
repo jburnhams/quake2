@@ -107,3 +107,62 @@ export interface IRenderer {
 
   dispose(): void;
 }
+
+// WebGPU capability information
+export interface WebGPUCapabilities {
+  readonly maxTextureDimension2D: number;
+  readonly maxTextureDimension3D: number;
+  readonly maxTextureArrayLayers: number;
+  readonly maxBindGroups: number;
+  readonly maxDynamicUniformBuffersPerPipelineLayout: number;
+  readonly maxDynamicStorageBuffersPerPipelineLayout: number;
+  readonly maxSampledTexturesPerShaderStage: number;
+  readonly maxSamplersPerShaderStage: number;
+  readonly maxStorageBuffersPerShaderStage: number;
+  readonly maxStorageTexturesPerShaderStage: number;
+  readonly maxUniformBuffersPerShaderStage: number;
+  readonly maxUniformBufferBindingSize: number;
+  readonly maxStorageBufferBindingSize: number;
+  readonly maxComputeWorkgroupSizeX: number;
+  readonly maxComputeWorkgroupSizeY: number;
+  readonly maxComputeWorkgroupSizeZ: number;
+  readonly maxComputeInvocationsPerWorkgroup: number;
+  readonly maxComputeWorkgroupsPerDimension: number;
+
+  // Optional features
+  readonly timestampQuery: boolean;
+  readonly pipelineStatisticsQuery: boolean;
+  readonly textureCompressionBC: boolean;
+  readonly textureCompressionETC2: boolean;
+  readonly textureCompressionASTC: boolean;
+  readonly depthClipControl: boolean;
+  readonly depth32floatStencil8: boolean;
+}
+
+// Compute pipeline for Phase 6
+export interface ComputePipeline {
+  readonly pipeline: GPUComputePipeline;
+  readonly bindGroupLayout: GPUBindGroupLayout;
+}
+
+// Extended interface for WebGPU-specific features
+export interface IWebGPURenderer extends IRenderer {
+  readonly type: 'webgpu';
+  readonly device: GPUDevice;
+
+  // Compute shader dispatch (for Phase 6)
+  dispatchCompute(
+    pipeline: ComputePipeline,
+    bindGroup: GPUBindGroup,
+    workgroups: [number, number, number]
+  ): void;
+
+  // Query capabilities
+  getCapabilities(): WebGPUCapabilities;
+
+  // Performance timestamp queries (if supported)
+  getTimestampResults?(): Promise<number[]>;
+
+  // Debug utilities
+  captureFrame?(): Promise<GPUCommandBuffer>;
+}
