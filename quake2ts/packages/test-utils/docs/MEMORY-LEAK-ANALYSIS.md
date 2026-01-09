@@ -27,7 +27,7 @@ The following high-priority cleanup issues have been resolved:
 
 **Action Items**:
 1. Audit existing tests to identify which require DOM APIs
-2. Move pure logic tests to `tests/unit-node/` directories
+2. ✅ Move pure logic tests in shared package to `tests/unit-node/` directories (vec3, mat4, angles, contents, color, constants)
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
 5. Configure node tests with `environment: 'node'` in vitest config

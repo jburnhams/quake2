@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addBlendColor, type Color4 } from '../src/math/color.js';
+import { addBlendColor, type Color4 } from '../../src/math/color.js';
 
 describe('color blend helpers (G_AddBlend)', () => {
   it('returns the existing blend when alpha is non-positive', () => {

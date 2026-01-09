@@ -30,8 +30,8 @@ import {
   slideClipVelocityVec3,
   subtractVec3,
   vec3Equals,
-} from '../src/index.js';
-import type { Mat3, Vec3 } from '../src/index.js';
+} from '../../src/index.js';
+import type { Mat3, Vec3 } from '../../src/index.js';
 
 describe('vec3 helpers', () => {
   it('performs basic arithmetic: copy, add, subtract, equals', () => {

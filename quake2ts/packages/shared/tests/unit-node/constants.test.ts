@@ -36,8 +36,8 @@ import {
   SURF_FLOWING,
   SURF_NODRAW,
   SURF_ALPHATEST,
-} from '../src/bsp/contents.js';
-import { ServerCommand, ClientCommand } from '../src/protocol/ops.js';
+} from '../../src/bsp/contents.js';
+import { ServerCommand, ClientCommand } from '../../src/protocol/ops.js';
 
 describe('Shared Constants Verification', () => {
   describe('BSP Contents Flags', () => {

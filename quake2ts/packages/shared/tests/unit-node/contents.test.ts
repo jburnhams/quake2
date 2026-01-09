@@ -61,7 +61,7 @@ import {
   SURF_TRANS33,
   SURF_TRANS66,
   SURF_WARP,
-} from '../src/bsp/contents.js';
+} from '../../src/bsp/contents.js';
 
 describe('contents flags mirror rerelease game.h bit positions', () => {
   const expectations: Array<[string, number, number]> = [
