@@ -51,12 +51,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-axes',
       description: 'Three colored axes (red X, green Y, blue Z) from origin',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -92,12 +91,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-bounds',
       description: 'Three colored bounding boxes (red center, green left, blue right)',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -120,12 +118,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-points',
       description: 'Colored point markers at different positions',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -157,12 +154,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-cones',
       description: 'Solid cones with lighting',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -187,12 +183,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-torus',
       description: 'Purple torus with lighting',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -241,12 +236,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-combined',
       description: 'Complex scene with multiple debug primitives',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
@@ -294,12 +288,11 @@ describe('WebGPU Debug Rendering', () => {
     const texture = (renderer as any).frameRenderer.headlessTarget;
     const pixels = await captureTexture(lifecycle.device!, texture, 512, 512);
 
-    await expectSnapshot({
-      pixels,
-      width: 512,
-      height: 512,
+    await expectSnapshot(pixels, {
       name: 'debug-normals',
       description: 'Cube with normal vectors visualized as yellow lines',
+      width: 512,
+      height: 512,
       snapshotDir
     });
   });
