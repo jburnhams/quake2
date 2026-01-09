@@ -1,86 +1,7 @@
+import { WebGPUContext } from '../context.js';
 import { Mat4, Vec3 } from '@quake2ts/shared';
-
-// Define Interface here or import if extracted
-export interface DebugRendererInterface {
-    shaderSize: number;
-    drawLine(start: Vec3, end: Vec3, color: {r: number, g: number, b: number}): void;
-    drawBoundingBox(mins: Vec3, maxs: Vec3, color: {r: number, g: number, b: number}): void;
-    drawPoint(position: Vec3, size: number, color: {r: number, g: number, b: number}): void;
-    drawAxes(position: Vec3, size: number): void;
-    drawText3D(text: string, position: Vec3): void;
-    addCone(apex: Vec3, baseCenter: Vec3, baseRadius: number, color: {r: number, g: number, b: number}): void;
-    addTorus(center: Vec3, radius: number, tubeRadius: number, color: {r: number, g: number, b: number}, axis?: Vec3): void;
-    render(viewProjection: Float32Array, alwaysOnTop?: boolean): void;
-    clear(): void;
-    getLabels?(viewProjection: Float32Array, width: number, height: number): { text: string, x: number, y: number }[];
-}
-
-// ... original WebGL implementation imports ...
-import { VertexArray, VertexBuffer } from './resources.js';
-import { ShaderProgram } from './shaderProgram.js';
-import { vec4, vec3, mat4 } from 'gl-matrix';
-
-// ... Shaders ...
-const VS_SOURCE = `
-attribute vec3 a_position;
-attribute vec3 a_color;
-uniform mat4 u_viewProjection;
-varying vec3 v_color;
-
-void main() {
-  gl_Position = u_viewProjection * vec4(a_position, 1.0);
-  v_color = a_color;
-}
-`;
-
-const FS_SOURCE = `
-precision mediump float;
-varying vec3 v_color;
-
-void main() {
-  gl_FragColor = vec4(v_color, 1.0);
-}
-`;
-
-// Shader for solid geometry with optional lighting
-const VS_SOLID = `
-attribute vec3 a_position;
-attribute vec3 a_color;
-attribute vec3 a_normal;
-
-uniform mat4 u_viewProjection;
-uniform bool u_lightingEnabled;
-
-varying vec3 v_color;
-varying vec3 v_normal;
-
-void main() {
-  gl_Position = u_viewProjection * vec4(a_position, 1.0);
-  v_color = a_color;
-  v_normal = a_normal;
-}
-`;
-
-const FS_SOLID = `
-precision mediump float;
-varying vec3 v_color;
-varying vec3 v_normal;
-
-uniform bool u_lightingEnabled;
-
-void main() {
-  vec3 color = v_color;
-
-  if (u_lightingEnabled) {
-      // Simple directional light from top-left
-      vec3 lightDir = normalize(vec3(0.5, 0.7, 1.0));
-      float diff = max(dot(v_normal, lightDir), 0.3); // 0.3 ambient
-      color = color * diff;
-  }
-
-  gl_FragColor = vec4(color, 1.0);
-}
-`;
+import shaderSource from '../shaders/debug.wgsl?raw';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 
 export interface Color {
     r: number;
@@ -101,52 +22,161 @@ function fromGlVec3(v: vec3): Vec3 {
     return { x: v[0], y: v[1], z: v[2] };
 }
 
-export class DebugRenderer implements DebugRendererInterface {
-    private gl: WebGL2RenderingContext;
-    private shader: ShaderProgram;
-    private vao: VertexArray;
-    private vbo: VertexBuffer;
+export class DebugPipeline {
+    private linePipeline: GPURenderPipeline;
+    private solidPipeline: GPURenderPipeline;
+    private bindGroupLayout: GPUBindGroupLayout;
+    private uniformBuffer: GPUBuffer;
+    private bindGroup: GPUBindGroup;
 
-    private shaderSolid: ShaderProgram;
-    private vaoSolid: VertexArray;
-    private vboSolid: VertexBuffer;
-
-    private vertices: number[] = [];
+    private lineVertices: number[] = [];
     private solidVertices: number[] = [];
     private labels: TextLabel[] = [];
 
-    constructor(gl: WebGL2RenderingContext) {
-        this.gl = gl;
+    private lineVertexBuffer: GPUBuffer | null = null;
+    private solidVertexBuffer: GPUBuffer | null = null;
 
-        // Lines setup
-        this.shader = ShaderProgram.create(gl, { vertex: VS_SOURCE, fragment: FS_SOURCE });
-        this.vao = new VertexArray(gl);
-        this.vbo = new VertexBuffer(gl, gl.DYNAMIC_DRAW);
+    // Limits
+    private static MAX_LINE_VERTICES = 100000;
+    private static MAX_SOLID_VERTICES = 100000;
 
-        this.vao.configureAttributes([
-            { index: 0, size: 3, type: gl.FLOAT, stride: 24, offset: 0 }, // position
-            { index: 1, size: 3, type: gl.FLOAT, stride: 24, offset: 12 } // color
-        ], this.vbo);
+    constructor(private context: WebGPUContext) {
+        // Uniform Buffer
+        this.uniformBuffer = context.device.createBuffer({
+            size: 64, // mat4
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
 
-        // Solid setup
-        this.shaderSolid = ShaderProgram.create(gl, { vertex: VS_SOLID, fragment: FS_SOLID });
-        this.vaoSolid = new VertexArray(gl);
-        this.vboSolid = new VertexBuffer(gl, gl.DYNAMIC_DRAW);
+        // Bind Group Layout
+        this.bindGroupLayout = context.device.createBindGroupLayout({
+            entries: [{
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: { type: 'uniform' },
+            }],
+        });
 
-        // Solid attributes: position (3), color (3), normal (3) -> stride 9*4 = 36
-        this.vaoSolid.configureAttributes([
-            { index: 0, size: 3, type: gl.FLOAT, stride: 36, offset: 0 }, // position
-            { index: 1, size: 3, type: gl.FLOAT, stride: 36, offset: 12 }, // color
-            { index: 2, size: 3, type: gl.FLOAT, stride: 36, offset: 24 }  // normal
-        ], this.vboSolid);
-    }
+        // Bind Group
+        this.bindGroup = context.device.createBindGroup({
+            layout: this.bindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: { buffer: this.uniformBuffer },
+            }],
+        });
 
-    get shaderSize(): number {
-        return this.shader.sourceSize + this.shaderSolid.sourceSize;
+        // Shaders
+        const module = context.device.createShaderModule({
+            code: shaderSource,
+        });
+
+        // Line Pipeline
+        this.linePipeline = context.device.createRenderPipeline({
+            layout: context.device.createPipelineLayout({
+                bindGroupLayouts: [this.bindGroupLayout],
+            }),
+            vertex: {
+                module,
+                entryPoint: 'lineVertexMain',
+                buffers: [{
+                    arrayStride: 24, // 3*4 pos + 3*4 color
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+                        { shaderLocation: 1, offset: 12, format: 'float32x3' }, // color
+                    ],
+                }],
+            },
+            fragment: {
+                module,
+                entryPoint: 'lineFragmentMain',
+                targets: [{
+                    format: context.format,
+                    blend: {
+                        color: {
+                            srcFactor: 'src-alpha',
+                            dstFactor: 'one-minus-src-alpha',
+                            operation: 'add',
+                        },
+                        alpha: {
+                            srcFactor: 'one',
+                            dstFactor: 'one',
+                            operation: 'add',
+                        }
+                    },
+                }],
+            },
+            primitive: {
+                topology: 'line-list',
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus',
+            },
+        });
+
+        // Solid Pipeline
+        this.solidPipeline = context.device.createRenderPipeline({
+            layout: context.device.createPipelineLayout({
+                bindGroupLayouts: [this.bindGroupLayout],
+            }),
+            vertex: {
+                module,
+                entryPoint: 'solidVertexMain',
+                buffers: [{
+                    arrayStride: 36, // 3*4 pos + 3*4 color + 3*4 normal
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+                        { shaderLocation: 1, offset: 12, format: 'float32x3' }, // color
+                        { shaderLocation: 2, offset: 24, format: 'float32x3' }, // normal
+                    ],
+                }],
+            },
+            fragment: {
+                module,
+                entryPoint: 'solidFragmentMain',
+                targets: [{
+                    format: context.format,
+                    blend: {
+                         color: {
+                            srcFactor: 'src-alpha',
+                            dstFactor: 'one-minus-src-alpha',
+                            operation: 'add',
+                        },
+                        alpha: {
+                            srcFactor: 'one',
+                            dstFactor: 'one',
+                            operation: 'add',
+                        }
+                    },
+                }],
+            },
+            primitive: {
+                topology: 'triangle-list',
+                cullMode: 'back',
+            },
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus',
+            },
+        });
+
+        // Initial buffers
+        this.lineVertexBuffer = context.device.createBuffer({
+            size: DebugPipeline.MAX_LINE_VERTICES * 24,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+
+        this.solidVertexBuffer = context.device.createBuffer({
+            size: DebugPipeline.MAX_SOLID_VERTICES * 36,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
     }
 
     drawLine(start: Vec3, end: Vec3, color: Color) {
-        this.vertices.push(
+        if (this.lineVertices.length / 6 >= DebugPipeline.MAX_LINE_VERTICES) return;
+        this.lineVertices.push(
             start.x, start.y, start.z, color.r, color.g, color.b,
             end.x, end.y, end.z, color.r, color.g, color.b
         );
@@ -195,6 +225,7 @@ export class DebugRenderer implements DebugRendererInterface {
     }
 
     private addTriangle(v1: Vec3, v2: Vec3, v3: Vec3, normal: Vec3, color: Color) {
+         if (this.solidVertices.length / 9 >= DebugPipeline.MAX_SOLID_VERTICES) return;
         // v1
         this.solidVertices.push(v1.x, v1.y, v1.z);
         this.solidVertices.push(color.r, color.g, color.b);
@@ -318,7 +349,7 @@ export class DebugRenderer implements DebugRendererInterface {
         }
 
         const vertices: vec3[][] = [];
-        const normals: vec3[][] = [];
+        // const normals: vec3[][] = []; // Not used?
 
         for (let i = 0; i <= segments; i++) {
             const u = (i / segments) * Math.PI * 2;
@@ -356,7 +387,7 @@ export class DebugRenderer implements DebugRendererInterface {
                 ringNorms.push(n);
             }
             vertices.push(ringVerts);
-            normals.push(ringNorms);
+            // normals.push(ringNorms);
         }
 
         for (let i = 0; i < segments; i++) {
@@ -391,52 +422,45 @@ export class DebugRenderer implements DebugRendererInterface {
         }
     }
 
-    // Updated render method
-    render(viewProjection: Float32Array, alwaysOnTop: boolean = false) {
-        if (alwaysOnTop) {
-            this.gl.disable(this.gl.DEPTH_TEST);
+    render(passEncoder: GPURenderPassEncoder, viewProjection: Float32Array) {
+        // Update Uniforms
+        this.context.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            viewProjection.buffer,
+            viewProjection.byteOffset,
+            viewProjection.byteLength
+        );
+
+        // Upload and Draw Lines
+        if (this.lineVertices.length > 0 && this.lineVertexBuffer) {
+            this.context.device.queue.writeBuffer(
+                this.lineVertexBuffer,
+                0,
+                new Float32Array(this.lineVertices)
+            );
+
+            passEncoder.setPipeline(this.linePipeline);
+            passEncoder.setBindGroup(0, this.bindGroup);
+            passEncoder.setVertexBuffer(0, this.lineVertexBuffer);
+            passEncoder.draw(this.lineVertices.length / 6, 1, 0, 0);
         }
 
-        // 1. Draw Lines
-        if (this.vertices.length > 0) {
-            this.shader.use();
-            const loc = this.shader.getUniformLocation('u_viewProjection');
-            if (loc) {
-                this.gl.uniformMatrix4fv(loc, false, viewProjection);
-            }
+        // Upload and Draw Solids
+        if (this.solidVertices.length > 0 && this.solidVertexBuffer) {
+            this.context.device.queue.writeBuffer(
+                this.solidVertexBuffer,
+                0,
+                new Float32Array(this.solidVertices)
+            );
 
-            this.vbo.upload(new Float32Array(this.vertices));
-            this.vao.bind();
-
-            this.gl.drawArrays(this.gl.LINES, 0, this.vertices.length / 6);
-        }
-
-        // 2. Draw Solids
-        if (this.solidVertices.length > 0) {
-            this.shaderSolid.use();
-            const loc = this.shaderSolid.getUniformLocation('u_viewProjection');
-            if (loc) {
-                this.gl.uniformMatrix4fv(loc, false, viewProjection);
-            }
-
-            const locLight = this.shaderSolid.getUniformLocation('u_lightingEnabled');
-            if (locLight) {
-                this.gl.uniform1i(locLight, 1); // Enable lighting
-            }
-
-            this.vboSolid.upload(new Float32Array(this.solidVertices));
-            this.vaoSolid.bind();
-
-            this.gl.drawArrays(this.gl.TRIANGLES, 0, this.solidVertices.length / 9);
-        }
-
-        if (alwaysOnTop) {
-            this.gl.enable(this.gl.DEPTH_TEST);
+            passEncoder.setPipeline(this.solidPipeline);
+            passEncoder.setBindGroup(0, this.bindGroup);
+            passEncoder.setVertexBuffer(0, this.solidVertexBuffer);
+            passEncoder.draw(this.solidVertices.length / 9, 1, 0, 0);
         }
     }
 
-    // New method to retrieve 2D projected labels for external rendering (e.g. by Renderer using drawString)
-    // Returns list of { text, x, y } where x,y are canvas coords
     getLabels(viewProjection: Float32Array, width: number, height: number): { text: string, x: number, y: number }[] {
          const results: { text: string, x: number, y: number }[] = [];
 
@@ -479,7 +503,7 @@ export class DebugRenderer implements DebugRendererInterface {
     }
 
     clear() {
-        this.vertices = [];
+        this.lineVertices = [];
         this.solidVertices = [];
         this.labels = [];
     }

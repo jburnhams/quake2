@@ -11,7 +11,8 @@ import { Texture2D, VertexBuffer, IndexBuffer } from './resources.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { RenderableEntity } from '../scene.js';
 import { CollisionVisRenderer } from '../collisionVis.js';
-import { DebugRenderer } from '../debug.js';
+import { DebugRenderer, DebugRendererInterface } from '../debug.js';
+import { DebugPipeline } from './pipelines/debug.js'; // Import DebugPipeline
 import { ParticleSystem } from '../particleSystem.js';
 import { MemoryUsage } from '../types.js';
 import { RenderOptions } from '../options.js';
@@ -25,6 +26,57 @@ import { BspSurfaceGeometry } from '../bsp.js';
 import { cullLights } from '../lightCulling.js';
 import { extractFrustumPlanes } from '../culling.js';
 import { FrameRenderOptions } from '../frame.js'; // Shared interface
+import { Mat4, Vec3 } from '@quake2ts/shared';
+
+// Adapter to make DebugPipeline look like DebugRenderer
+class DebugRendererAdapter implements DebugRendererInterface {
+    constructor(private pipeline: DebugPipeline, private renderer: WebGPURendererImpl) {}
+
+    get shaderSize(): number { return 0; } // Stub
+
+    drawLine(start: Vec3, end: Vec3, color: { r: number; g: number; b: number }) {
+        this.pipeline.drawLine(start, end, color);
+    }
+
+    drawBoundingBox(mins: Vec3, maxs: Vec3, color: { r: number; g: number; b: number }) {
+        this.pipeline.drawBoundingBox(mins, maxs, color);
+    }
+
+    drawPoint(position: Vec3, size: number, color: { r: number; g: number; b: number }) {
+        this.pipeline.drawPoint(position, size, color);
+    }
+
+    drawAxes(position: Vec3, size: number) {
+        this.pipeline.drawAxes(position, size);
+    }
+
+    drawText3D(text: string, position: Vec3) {
+        this.pipeline.drawText3D(text, position);
+    }
+
+    addCone(apex: Vec3, baseCenter: Vec3, baseRadius: number, color: { r: number; g: number; b: number }) {
+        this.pipeline.addCone(apex, baseCenter, baseRadius, color);
+    }
+
+    addTorus(center: Vec3, radius: number, tubeRadius: number, color: { r: number; g: number; b: number }, axis?: Vec3) {
+        this.pipeline.addTorus(center, radius, tubeRadius, color, axis);
+    }
+
+    render(viewProjection: Float32Array, alwaysOnTop?: boolean) {
+        // This is called by the game loop, but in WebGPU we render via FrameRenderer.
+        // The FrameRenderer will call our internal render method.
+        // So this can be a no-op or throw warning if called unexpectedly.
+    }
+
+    clear() {
+        this.pipeline.clear();
+    }
+
+    getLabels(viewProjection: Float32Array, width: number, height: number): { text: string, x: number, y: number }[] {
+         return this.pipeline.getLabels(viewProjection, width, height);
+    }
+}
+
 
 // WebGPU-specific renderer interface
 export interface WebGPURenderer extends IRenderer {
@@ -38,6 +90,7 @@ export interface WebGPURenderer extends IRenderer {
     readonly bsp: BspSurfacePipeline;
     readonly md2: Md2Pipeline;
     readonly postProcess: PostProcessPipeline;
+    readonly debug: DebugPipeline; // Expose DebugPipeline
     // TODO: Add md3: Md3PipelineGPU
     // TODO: Add particles: ParticleRenderer
   };
@@ -71,6 +124,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
         bsp: BspSurfacePipeline;
         md2: Md2Pipeline;
         postProcess: PostProcessPipeline;
+        debug: DebugPipeline;
     }
   ) {
     // Create 1x1 white texture for solid color rendering
@@ -84,7 +138,10 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
     // Create stub instances
     this.collisionVis = null as any;
-    this.debug = null as any;
+
+    // Initialize Debug Renderer Adapter
+    this.debug = new DebugRendererAdapter(pipelines.debug, this) as unknown as DebugRenderer;
+
     this.particleSystem = null as any;
   }
 
@@ -135,6 +192,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     };
 
     // For now, pass options to frame renderer.
+    // The frame renderer handles calling the debug pipeline render.
     return this.frameRenderer.renderFrame(augmentedOptions, entities);
   }
 
@@ -225,6 +283,13 @@ export class WebGPURendererImpl implements WebGPURenderer {
   }
 
   end2D(): void {
+    // Before ending 2D pass, let's draw debug labels if any
+    // We need viewProjection for this, but begin2D doesn't take it.
+    // However, the debug pipeline accumulates labels, so we need to project them.
+    // Ideally frameRenderer should handle this, or we expose a method on frameRenderer.
+    // For now, standard debug labels are drawn as 2D text by the client after querying getLabels.
+    // The renderer implementation might need to support drawing them directly if required.
+
     this.frameRenderer.end2DPass();
     this.is2DActive = false;
   }
@@ -476,6 +541,7 @@ export async function createWebGPURenderer(
 
   const md2Pipeline = new Md2Pipeline(context.device, context.format);
   const postProcessPipeline = new PostProcessPipeline(context.device, context.format);
+  const debugPipeline = new DebugPipeline(context);
 
   // Registry of pipelines
   const pipelines = {
@@ -484,6 +550,7 @@ export async function createWebGPURenderer(
     bsp: bspPipeline,
     md2: md2Pipeline,
     postProcess: postProcessPipeline,
+    debug: debugPipeline,
     // TODO: Add MD3 and Particles
   };
 
