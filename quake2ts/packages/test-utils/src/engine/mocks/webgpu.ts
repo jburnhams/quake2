@@ -102,7 +102,7 @@ export function createMockGPUAdapter(options: Partial<GPUAdapter> = {}): GPUAdap
     maxComputeWorkgroupSizeY: 256,
     maxComputeWorkgroupSizeZ: 64,
     maxComputeWorkgroupsPerDimension: 65535,
-  } as GPUSupportedLimits;
+  } as unknown as GPUSupportedLimits;
 
   return {
     features: new Set(),
@@ -152,7 +152,7 @@ export function createMockGPUDevice(features: Set<GPUFeatureName> = new Set()): 
     maxComputeWorkgroupSizeY: 256,
     maxComputeWorkgroupSizeZ: 64,
     maxComputeWorkgroupsPerDimension: 65535,
-  } as GPUSupportedLimits;
+  } as unknown as GPUSupportedLimits;
 
   return {
     features,
