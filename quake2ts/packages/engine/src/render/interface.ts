@@ -12,6 +12,7 @@ import { Md3Model } from '../assets/md3.js';
 import { InstanceData } from './instancing.js';
 import { RenderOptions } from './options.js';
 import { RenderStatistics } from './gpuProfiler.js';
+import { Vec3 } from '@quake2ts/shared';
 
 // Pic can be either WebGL or WebGPU texture
 export type Pic = WebGLTexture2D | {
@@ -22,11 +23,24 @@ export type Pic = WebGLTexture2D | {
   destroy?: () => void;
 };
 
+// Common debug renderer interface that works for both WebGL and WebGPU
+export interface IDebugRenderer {
+  readonly shaderSize: number;
+  drawLine(start: Vec3, end: Vec3, color: { r: number; g: number; b: number }): void;
+  drawBoundingBox(mins: Vec3, maxs: Vec3, color: { r: number; g: number; b: number }): void;
+  drawPoint(position: Vec3, size: number, color: { r: number; g: number; b: number }): void;
+  drawAxes(position: Vec3, size: number): void;
+  drawText3D(text: string, position: Vec3): void;
+  addCone(apex: Vec3, baseCenter: Vec3, baseRadius: number, color: { r: number; g: number; b: number }): void;
+  addTorus(center: Vec3, radius: number, tubeRadius: number, color: { r: number; g: number; b: number }, axis?: Vec3): void;
+  clear(): void;
+}
+
 export interface IRenderer {
   width: number;
   height: number;
   collisionVis: CollisionVisRenderer;
-  debug: DebugRenderer;
+  debug: DebugRenderer | IDebugRenderer;
   particleSystem: ParticleSystem;
 
   getPerformanceReport(): RenderStatistics;
