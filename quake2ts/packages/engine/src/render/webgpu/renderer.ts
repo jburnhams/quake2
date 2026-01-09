@@ -11,7 +11,7 @@ import { Texture2D, VertexBuffer, IndexBuffer } from './resources.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { RenderableEntity } from '../scene.js';
 import { CollisionVisRenderer } from '../collisionVis.js';
-import { DebugRenderer } from '../debug.js';
+import { WebGPUDebugRenderer } from './debugRenderer.js';
 import { ParticleSystem } from '../particleSystem.js';
 import { MemoryUsage } from '../types.js';
 import { RenderOptions } from '../options.js';
@@ -59,7 +59,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // Stub implementations for required properties
   readonly collisionVis: CollisionVisRenderer;
-  readonly debug: DebugRenderer;
+  readonly debug: WebGPUDebugRenderer;
   readonly particleSystem: ParticleSystem;
 
   constructor(
@@ -71,7 +71,8 @@ export class WebGPURendererImpl implements WebGPURenderer {
         bsp: BspSurfacePipeline;
         md2: Md2Pipeline;
         postProcess: PostProcessPipeline;
-    }
+    },
+    debugRenderer: WebGPUDebugRenderer
   ) {
     // Create 1x1 white texture for solid color rendering
     this.whiteTexture = new Texture2D(context.device, {
@@ -82,9 +83,11 @@ export class WebGPURendererImpl implements WebGPURenderer {
     });
     this.whiteTexture.upload(new Uint8Array([255, 255, 255, 255]));
 
-    // Create stub instances
+    // Initialize debug renderer
+    this.debug = debugRenderer;
+
+    // Create stub instances for other properties
     this.collisionVis = null as any;
-    this.debug = null as any;
     this.particleSystem = null as any;
   }
 
@@ -441,6 +444,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.pipelines.bsp.destroy();
     this.pipelines.md2.dispose();
     this.pipelines.postProcess.destroy();
+    this.debug.destroy();
     // TODO: Dispose md3 and particle pipelines once added
 
     for (const texture of this.picCache.values()) {
@@ -468,14 +472,18 @@ export async function createWebGPURenderer(
 
   // Use context.depthFormat for the BSP pipeline
   // Ensure we are passing correct formats
+  const depthFormat = context.depthFormat || 'depth24plus';
   const bspPipeline = new BspSurfacePipeline(
       context.device,
       context.format,
-      context.depthFormat || 'depth24plus'
+      depthFormat
   );
 
   const md2Pipeline = new Md2Pipeline(context.device, context.format);
   const postProcessPipeline = new PostProcessPipeline(context.device, context.format);
+
+  // Initialize Debug Renderer
+  const debugRenderer = new WebGPUDebugRenderer(context.device, context.format, depthFormat);
 
   // Registry of pipelines
   const pipelines = {
@@ -497,5 +505,5 @@ export async function createWebGPURenderer(
 
   const frameRenderer = new FrameRenderer(context, pipelines);
 
-  return new WebGPURendererImpl(context, frameRenderer, pipelines);
+  return new WebGPURendererImpl(context, frameRenderer, pipelines, debugRenderer);
 }
