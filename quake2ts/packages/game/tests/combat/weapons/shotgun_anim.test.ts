@@ -1,18 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { shotgunThink } from '../../../src/combat/weapons/shotgun.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { GameExports } from '../../../src/index.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
 import {
     FRAME_SHOTGUN_ACTIVATE_LAST,
-    FRAME_SHOTGUN_FIRE_LAST,
     FRAME_SHOTGUN_IDLE_LAST,
-    FRAME_SHOTGUN_DEACTIVATE_LAST
 } from '../../../src/combat/weapons/frames.js';
 import { WeaponId } from '../../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../../src/inventory/ammo.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
 import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
 
 describe('Shotgun Animation Logic', () => {

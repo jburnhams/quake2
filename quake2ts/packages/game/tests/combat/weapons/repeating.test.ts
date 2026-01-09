@@ -4,41 +4,57 @@ import { Weapon_Repeating } from '../../../src/combat/weapons/animation.js';
 import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
-import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
-import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
+import { createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
 import { WeaponId } from '../../../src/inventory/playerInventory.js';
-import { GameExports } from '../../../src/index.js';
+import { AmmoType } from '../../../src/inventory/ammo.js';
 
 describe('Weapon_Repeating', () => {
   let entity: Entity;
   let sys: EntitySystem;
   let fireMock: any;
-  let gameMock: Partial<GameExports>;
 
   beforeEach(() => {
-    gameMock = {
-      trace: vi.fn(),
-      time: 100,
-    };
+    // 1. Use createTestContext to get a robust entity system and game mock
+    const ctx = createTestContext();
+    sys = ctx.entities;
 
-    // Create a partial EntitySystem mock
-    sys = {
-      timeSeconds: 100,
-      sound: vi.fn(),
-    } as unknown as EntitySystem;
+    // We can also access game/engine mocks if needed, e.g.:
+    // (ctx.game as any).time = 100;
+    // But sys.timeSeconds is what's usually used by logic.
+    (sys as any).timeSeconds = 100;
 
     fireMock = vi.fn();
 
-    entity = {
+    // 2. Use createPlayerEntityFactory to create a well-formed player entity
+    //    instead of manually stitching together a partial object.
+    const playerFactory = createPlayerEntityFactory({
       client: {
-        weaponStates: createPlayerWeaponStates(),
-        inventory: createPlayerInventory(),
         weaponstate: WeaponStateEnum.WEAPON_FIRING,
         gun_frame: 10,
         buttons: 0,
         weapon_think_time: 0,
-      },
-    } as unknown as Entity;
+        // Ensure inventory structures are present (factory does this, but being explicit about overrides)
+        inventory: {
+            ammo: { counts: [], caps: [] },
+            ownedWeapons: new Set(),
+            powerups: new Map(),
+            keys: new Set(),
+            items: new Set()
+        },
+        weaponStates: {
+            currentWeapon: null,
+            lastFireTime: 0,
+            weaponFrame: 0,
+            weaponIdleTime: 0,
+            states: new Map(),
+            activeWeaponId: null
+        }
+      } as any // Cast because factory typings might be slightly loose or strict on client
+    });
+
+    // Spawn the entity into the system so it's managed (optional for this specific test but good practice)
+    entity = sys.spawn();
+    Object.assign(entity, playerFactory);
   });
 
   it('should continue firing if button is held', () => {
