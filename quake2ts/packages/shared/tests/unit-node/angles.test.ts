@@ -8,7 +8,7 @@ import {
   radToDeg,
   vectorToAngles,
   vectorToYaw,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 function expectVec3(result: AngleVectorsResult['forward'], expected: AngleVectorsResult['forward']) {
   expect(result.x).toBeCloseTo(expected.x);

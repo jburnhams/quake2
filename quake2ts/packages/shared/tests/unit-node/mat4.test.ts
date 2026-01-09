@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMat4Identity, mat4FromBasis, multiplyMat4, transformPointMat4 } from '../src/math/mat4.js';
+import { createMat4Identity, mat4FromBasis, multiplyMat4, transformPointMat4 } from '../../src/math/mat4.js';
 
 describe('mat4 helpers', () => {
   it('builds an identity matrix', () => {
