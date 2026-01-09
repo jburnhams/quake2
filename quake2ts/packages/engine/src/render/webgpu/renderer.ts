@@ -3,6 +3,7 @@ import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
+import { PostProcessPipeline } from './pipelines/postProcess.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IRenderer, Pic } from '../interface.js';
@@ -36,6 +37,7 @@ export interface WebGPURenderer extends IRenderer {
     readonly skybox: SkyboxPipeline;
     readonly bsp: BspSurfacePipeline;
     readonly md2: Md2Pipeline;
+    readonly postProcess: PostProcessPipeline;
     // TODO: Add md3: Md3PipelineGPU
     // TODO: Add particles: ParticleRenderer
   };
@@ -68,6 +70,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
         skybox: SkyboxPipeline;
         bsp: BspSurfacePipeline;
         md2: Md2Pipeline;
+        postProcess: PostProcessPipeline;
     }
   ) {
     // Create 1x1 white texture for solid color rendering
@@ -437,6 +440,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.pipelines.skybox.destroy();
     this.pipelines.bsp.destroy();
     this.pipelines.md2.dispose();
+    this.pipelines.postProcess.destroy();
     // TODO: Dispose md3 and particle pipelines once added
 
     for (const texture of this.picCache.values()) {
@@ -471,6 +475,7 @@ export async function createWebGPURenderer(
   );
 
   const md2Pipeline = new Md2Pipeline(context.device, context.format);
+  const postProcessPipeline = new PostProcessPipeline(context.device, context.format);
 
   // Registry of pipelines
   const pipelines = {
@@ -478,6 +483,7 @@ export async function createWebGPURenderer(
     skybox: skyboxPipeline,
     bsp: bspPipeline,
     md2: md2Pipeline,
+    postProcess: postProcessPipeline,
     // TODO: Add MD3 and Particles
   };
 

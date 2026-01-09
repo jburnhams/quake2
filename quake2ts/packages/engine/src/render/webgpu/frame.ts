@@ -1,8 +1,9 @@
-import { Texture2D, TextureCubeMap } from './resources.js';
+import { Texture2D, TextureCubeMap, createLinearSampler } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
+import { PostProcessPipeline } from './pipelines/postProcess.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { RenderableEntity } from '../scene.js';
@@ -99,8 +100,10 @@ export interface FrameContext {
 export class FrameRenderer {
   private depthTexture: GPUTexture | null = null;
   private copyTexture: GPUTexture | null = null;
+  private intermediateTexture: GPUTexture | null = null;
   // Separate texture for headless output if no context exists
   public headlessTarget: GPUTexture | null = null;
+  private sampler: GPUSampler;
 
   private lastWidth = 0;
   private lastHeight = 0;
@@ -116,9 +119,31 @@ export class FrameRenderer {
       skybox: SkyboxPipeline;
       bsp: BspSurfacePipeline;
       md2: Md2Pipeline;
+      postProcess: PostProcessPipeline;
       // TODO: Add MD3 and Particles pipelines
     }
-  ) {}
+  ) {
+      this.sampler = createLinearSampler(this.context.device).sampler;
+  }
+
+  private ensureIntermediateTexture(width: number, height: number): GPUTextureView {
+      if (this.intermediateTexture && this.lastWidth === width && this.lastHeight === height) {
+          return this.intermediateTexture.createView();
+      }
+
+      if (this.intermediateTexture) {
+          this.intermediateTexture.destroy();
+      }
+
+      this.intermediateTexture = this.context.device.createTexture({
+          size: [width, height],
+          format: this.context.format,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+          label: 'intermediate-texture'
+      });
+
+      return this.intermediateTexture.createView();
+  }
 
   private ensureDepthTexture(width: number, height: number): GPUTextureView {
     if (this.depthTexture && this.lastWidth === width && this.lastHeight === height) {
@@ -264,8 +289,20 @@ export class FrameRenderer {
         fullbright,
         ambient,
         lightStyleOverrides,
-        portalState
+        portalState,
+        underwaterWarp
     } = options;
+
+    // Determine if post processing is needed
+    const usePostProcess = underwaterWarp || (gamma !== undefined && gamma !== 1.0) || (brightness !== undefined && brightness !== 1.0);
+
+    let renderPassTarget = renderTarget;
+    let intermediateView: GPUTextureView | null = null;
+
+    if (usePostProcess) {
+        intermediateView = this.ensureIntermediateTexture(frameCtx.width, frameCtx.height);
+        renderPassTarget = intermediateView;
+    }
 
     const viewProjection = new Float32Array(options.camera.viewProjectionMatrix);
 
@@ -273,7 +310,7 @@ export class FrameRenderer {
     // Clears the screen and draws solid geometry
     const opaquePassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [{
-        view: renderTarget,
+        view: renderPassTarget,
         clearValue: clearColor,
         loadOp: 'clear',
         storeOp: 'store'
@@ -459,7 +496,7 @@ export class FrameRenderer {
         // --- Pass 2: Transparent ---
         const transparentPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
-              view: renderTarget,
+              view: renderPassTarget,
               loadOp: 'load',
               storeOp: 'store'
             }],
@@ -484,8 +521,29 @@ export class FrameRenderer {
     }
 
     // --- Pass 3: Post Processing (Bloom, Warp) ---
-    if (options.underwaterWarp || options.bloom) {
-         // Placeholder
+    if (usePostProcess && intermediateView) {
+        const ppPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: renderTarget,
+                loadOp: 'clear',
+                storeOp: 'store',
+                clearValue: [0, 0, 0, 1]
+            }],
+            label: 'post-process-pass'
+        });
+
+        this.pipelines.postProcess.render(
+            ppPass,
+            intermediateView,
+            this.sampler,
+            {
+                time: timeSeconds || 0,
+                strength: underwaterWarp ? 1.0 : 0.0,
+                gamma: gamma ?? 1.0,
+                brightness: brightness ?? 1.0
+            }
+        );
+        ppPass.end();
     }
 
     // --- Pass 4: 2D / HUD ---
