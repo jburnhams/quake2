@@ -6,7 +6,7 @@ import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
-import { IRenderer, Pic } from '../interface.js';
+import { IWebGPURenderer, Pic, WebGPUCapabilities, ComputePipeline } from '../interface.js';
 import { Texture2D, VertexBuffer, IndexBuffer } from './resources.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { RenderableEntity } from '../scene.js';
@@ -27,10 +27,7 @@ import { extractFrustumPlanes } from '../culling.js';
 import { FrameRenderOptions } from '../frame.js'; // Shared interface
 
 // WebGPU-specific renderer interface
-export interface WebGPURenderer extends IRenderer {
-  readonly type: 'webgpu';
-  readonly device: GPUDevice;
-
+export interface WebGPURenderer extends IWebGPURenderer {
   // Pipeline access (for testing/debug)
   readonly pipelines: {
     readonly sprite: SpriteRenderer;
@@ -56,6 +53,23 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   // 2D rendering state
   private is2DActive = false;
+
+  // Render state
+  private renderState = {
+    brightness: 1.0,
+    gamma: 1.0,
+    fullbright: false,
+    ambient: 0.0,
+    underwaterWarp: false,
+    bloom: false,
+    bloomIntensity: 0.5,
+    lodBias: 1.0,
+    debugMode: DebugMode.None,
+  };
+
+  private lightStyleOverrides = new Map<number, string>();
+  private highlightedEntities = new Map<number, [number, number, number, number]>();
+  private highlightedSurfaces = new Map<number, [number, number, number, number]>();
 
   // Stub implementations for required properties
   readonly collisionVis: CollisionVisRenderer;
@@ -132,9 +146,18 @@ export class WebGPURendererImpl implements WebGPURenderer {
         );
     }
 
+    // Apply render state to options
     const augmentedOptions: WebGPUFrameRenderOptions = {
         ...localOptions,
-        dlights: culledLights
+        dlights: culledLights,
+        brightness: this.renderState.brightness,
+        gamma: this.renderState.gamma,
+        fullbright: this.renderState.fullbright,
+        ambient: this.renderState.ambient,
+        underwaterWarp: this.renderState.underwaterWarp,
+        bloom: this.renderState.bloom,
+        bloomIntensity: this.renderState.bloomIntensity,
+        lightStyleOverrides: this.lightStyleOverrides,
     };
 
     // For now, pass options to frame renderer.
@@ -317,75 +340,81 @@ export class WebGPURendererImpl implements WebGPURenderer {
   }
 
   // =========================================================================
-  // Entity Highlighting (Stubs)
+  // Entity Highlighting
   // =========================================================================
 
   setEntityHighlight(entityId: number, color: [number, number, number, number]): void {
-    // TODO: Implement entity highlighting
+    this.highlightedEntities.set(entityId, color);
   }
 
   clearEntityHighlight(entityId: number): void {
-    // TODO: Implement entity highlight clearing
+    this.highlightedEntities.delete(entityId);
   }
 
   highlightSurface(faceIndex: number, color: [number, number, number, number]): void {
-    // TODO: Implement surface highlighting
+    this.highlightedSurfaces.set(faceIndex, color);
   }
 
   removeSurfaceHighlight(faceIndex: number): void {
-    // TODO: Implement surface highlight removal
+    this.highlightedSurfaces.delete(faceIndex);
   }
 
   // =========================================================================
-  // Render Settings (Stubs)
+  // Render Settings
   // =========================================================================
 
   setDebugMode(mode: DebugMode): void {
-    // TODO: Implement debug mode
+    this.renderState.debugMode = mode;
   }
 
   setBrightness(value: number): void {
-    // TODO: Implement brightness
+    this.renderState.brightness = Math.max(0.0, Math.min(2.0, value));
   }
 
   setGamma(value: number): void {
-    // TODO: Implement gamma
+    this.renderState.gamma = Math.max(0.5, Math.min(3.0, value));
   }
 
   setFullbright(enabled: boolean): void {
-    // TODO: Implement fullbright
+    this.renderState.fullbright = enabled;
   }
 
   setAmbient(value: number): void {
-    // TODO: Implement ambient lighting
+    this.renderState.ambient = Math.max(0.0, Math.min(1.0, value));
   }
 
   setLightStyle(index: number, pattern: string | null): void {
-    // TODO: Implement light styles
+    if (pattern === null) {
+      this.lightStyleOverrides.delete(index);
+    } else {
+      this.lightStyleOverrides.set(index, pattern);
+    }
   }
 
   setUnderwaterWarp(enabled: boolean): void {
-    // TODO: Implement underwater warp
+    this.renderState.underwaterWarp = enabled;
   }
 
   setBloom(enabled: boolean): void {
-    // TODO: Implement bloom
+    this.renderState.bloom = enabled;
   }
 
   setBloomIntensity(value: number): void {
-    // TODO: Implement bloom intensity
+    this.renderState.bloomIntensity = Math.max(0.0, Math.min(1.0, value));
   }
 
   setLodBias(bias: number): void {
-    // TODO: Implement LOD bias
+    this.renderState.lodBias = Math.max(0.0, Math.min(2.0, bias));
   }
 
   // =========================================================================
-  // Instanced Rendering (Stub)
+  // Instanced Rendering
   // =========================================================================
 
   renderInstanced(model: Md2Model | Md3Model, instances: InstanceData[]): void {
-    // TODO: Implement instanced rendering
+    // TODO: Implement instanced rendering for WebGPU
+    // This will require adding instancing support to the pipelines
+    console.warn('Instanced rendering not yet implemented for WebGPU');
   }
 
   // =========================================================================
@@ -422,6 +451,92 @@ export class WebGPURendererImpl implements WebGPURenderer {
       buffersBytes: 0,
       totalBytes: 0
     };
+  }
+
+  // =========================================================================
+  // WebGPU-Specific Extensions
+  // =========================================================================
+
+  /**
+   * Get WebGPU device capabilities and limits
+   */
+  getCapabilities(): WebGPUCapabilities {
+    const limits = this.device.limits;
+    const features = this.device.features;
+
+    return {
+      maxTextureDimension2D: limits.maxTextureDimension2D,
+      maxTextureDimension3D: limits.maxTextureDimension3D,
+      maxTextureArrayLayers: limits.maxTextureArrayLayers,
+      maxBindGroups: limits.maxBindGroups,
+      maxDynamicUniformBuffersPerPipelineLayout: limits.maxDynamicUniformBuffersPerPipelineLayout,
+      maxDynamicStorageBuffersPerPipelineLayout: limits.maxDynamicStorageBuffersPerPipelineLayout,
+      maxSampledTexturesPerShaderStage: limits.maxSampledTexturesPerShaderStage,
+      maxSamplersPerShaderStage: limits.maxSamplersPerShaderStage,
+      maxStorageBuffersPerShaderStage: limits.maxStorageBuffersPerShaderStage,
+      maxStorageTexturesPerShaderStage: limits.maxStorageTexturesPerShaderStage,
+      maxUniformBuffersPerShaderStage: limits.maxUniformBuffersPerShaderStage,
+      maxUniformBufferBindingSize: limits.maxUniformBufferBindingSize,
+      maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
+      maxComputeWorkgroupSizeX: limits.maxComputeWorkgroupSizeX,
+      maxComputeWorkgroupSizeY: limits.maxComputeWorkgroupSizeY,
+      maxComputeWorkgroupSizeZ: limits.maxComputeWorkgroupSizeZ,
+      maxComputeInvocationsPerWorkgroup: limits.maxComputeInvocationsPerWorkgroup,
+      maxComputeWorkgroupsPerDimension: limits.maxComputeWorkgroupsPerDimension,
+
+      // Optional features
+      timestampQuery: features.has('timestamp-query'),
+      pipelineStatisticsQuery: features.has('pipeline-statistics-query'),
+      textureCompressionBC: features.has('texture-compression-bc'),
+      textureCompressionETC2: features.has('texture-compression-etc2'),
+      textureCompressionASTC: features.has('texture-compression-astc'),
+      depthClipControl: features.has('depth-clip-control'),
+      depth32floatStencil8: features.has('depth32float-stencil8'),
+    };
+  }
+
+  /**
+   * Dispatch a compute shader (for Phase 6 compute pipelines)
+   */
+  dispatchCompute(
+    pipeline: ComputePipeline,
+    bindGroup: GPUBindGroup,
+    workgroups: [number, number, number]
+  ): void {
+    const commandEncoder = this.device.createCommandEncoder({ label: 'compute-command-encoder' });
+    const computePass = commandEncoder.beginComputePass({ label: 'compute-pass' });
+
+    computePass.setPipeline(pipeline.pipeline);
+    computePass.setBindGroup(0, bindGroup);
+    computePass.dispatchWorkgroups(workgroups[0], workgroups[1], workgroups[2]);
+    computePass.end();
+
+    this.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  /**
+   * Get timestamp query results (if supported)
+   * This is a placeholder for Phase 6 performance profiling
+   */
+  getTimestampResults(): Promise<number[]> {
+    // Timestamp queries require 'timestamp-query' feature
+    if (!this.device.features.has('timestamp-query')) {
+      return Promise.resolve([]);
+    }
+
+    // TODO: Implement timestamp query infrastructure
+    // This will require creating query sets and reading back results
+    return Promise.resolve([]);
+  }
+
+  /**
+   * Capture the current frame's command buffer for debugging
+   * This is a placeholder for advanced debugging tools
+   */
+  captureFrame(): Promise<GPUCommandBuffer> {
+    // TODO: Implement frame capture infrastructure
+    // This would require intercepting the command encoder
+    return Promise.reject(new Error('Frame capture not yet implemented'));
   }
 
   // =========================================================================
