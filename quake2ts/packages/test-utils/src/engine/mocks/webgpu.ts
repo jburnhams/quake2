@@ -68,9 +68,45 @@ export function setupWebGPUMocks(): WebGPUMocks {
 }
 
 export function createMockGPUAdapter(options: Partial<GPUAdapter> = {}): GPUAdapter {
+  // Mock GPU limits with reasonable default values (same as device)
+  const limits = {
+    maxTextureDimension1D: 8192,
+    maxTextureDimension2D: 8192,
+    maxTextureDimension3D: 2048,
+    maxTextureArrayLayers: 256,
+    maxBindGroups: 4,
+    maxBindGroupsPlusVertexBuffers: 24,
+    maxBindingsPerBindGroup: 1000,
+    maxDynamicUniformBuffersPerPipelineLayout: 8,
+    maxDynamicStorageBuffersPerPipelineLayout: 4,
+    maxSampledTexturesPerShaderStage: 16,
+    maxSamplersPerShaderStage: 16,
+    maxStorageBuffersPerShaderStage: 8,
+    maxStorageTexturesPerShaderStage: 4,
+    maxUniformBuffersPerShaderStage: 12,
+    maxUniformBufferBindingSize: 65536,
+    maxStorageBufferBindingSize: 134217728,
+    minUniformBufferOffsetAlignment: 256,
+    minStorageBufferOffsetAlignment: 256,
+    maxVertexBuffers: 8,
+    maxBufferSize: 268435456,
+    maxVertexAttributes: 16,
+    maxVertexBufferArrayStride: 2048,
+    maxInterStageShaderComponents: 60,
+    maxInterStageShaderVariables: 16,
+    maxColorAttachments: 8,
+    maxColorAttachmentBytesPerSample: 32,
+    maxComputeWorkgroupStorageSize: 16384,
+    maxComputeInvocationsPerWorkgroup: 256,
+    maxComputeWorkgroupSizeX: 256,
+    maxComputeWorkgroupSizeY: 256,
+    maxComputeWorkgroupSizeZ: 64,
+    maxComputeWorkgroupsPerDimension: 65535,
+  } as GPUSupportedLimits;
+
   return {
     features: new Set(),
-    limits: {},
+    limits,
     isFallbackAdapter: false,
     requestDevice: vi.fn().mockResolvedValue(createMockGPUDevice()),
     requestAdapterInfo: vi.fn().mockResolvedValue({}),
@@ -81,9 +117,46 @@ export function createMockGPUAdapter(options: Partial<GPUAdapter> = {}): GPUAdap
 export function createMockGPUDevice(features: Set<GPUFeatureName> = new Set()): GPUDevice {
   const queue = createMockQueue();
 
+  // Mock GPU limits with reasonable default values
+  // Based on WebGPU spec default limits
+  const limits = {
+    maxTextureDimension1D: 8192,
+    maxTextureDimension2D: 8192,
+    maxTextureDimension3D: 2048,
+    maxTextureArrayLayers: 256,
+    maxBindGroups: 4,
+    maxBindGroupsPlusVertexBuffers: 24,
+    maxBindingsPerBindGroup: 1000,
+    maxDynamicUniformBuffersPerPipelineLayout: 8,
+    maxDynamicStorageBuffersPerPipelineLayout: 4,
+    maxSampledTexturesPerShaderStage: 16,
+    maxSamplersPerShaderStage: 16,
+    maxStorageBuffersPerShaderStage: 8,
+    maxStorageTexturesPerShaderStage: 4,
+    maxUniformBuffersPerShaderStage: 12,
+    maxUniformBufferBindingSize: 65536,
+    maxStorageBufferBindingSize: 134217728,
+    minUniformBufferOffsetAlignment: 256,
+    minStorageBufferOffsetAlignment: 256,
+    maxVertexBuffers: 8,
+    maxBufferSize: 268435456,
+    maxVertexAttributes: 16,
+    maxVertexBufferArrayStride: 2048,
+    maxInterStageShaderComponents: 60,
+    maxInterStageShaderVariables: 16,
+    maxColorAttachments: 8,
+    maxColorAttachmentBytesPerSample: 32,
+    maxComputeWorkgroupStorageSize: 16384,
+    maxComputeInvocationsPerWorkgroup: 256,
+    maxComputeWorkgroupSizeX: 256,
+    maxComputeWorkgroupSizeY: 256,
+    maxComputeWorkgroupSizeZ: 64,
+    maxComputeWorkgroupsPerDimension: 65535,
+  } as GPUSupportedLimits;
+
   return {
     features,
-    limits: {},
+    limits,
     queue,
     destroy: vi.fn(),
     createBuffer: vi.fn((descriptor: GPUBufferDescriptor) => createMockGPUBuffer(descriptor)),
