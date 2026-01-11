@@ -21,7 +21,7 @@
   - `getMemoryUsage()` returns GPU memory usage
   - `getTimestampResults()` returns GPU timing results
 - Created `exportProfilingData()` utility for debug UI integration
-- Created unit tests (`tests/unit-node/webgpu/profiling.test.ts`)
+- Created unit tests (`tests/webgpu/profiling.test.ts`)
 - Created benchmarking suite (`tests/benchmarks/webgpu-performance.test.ts`)
 
 ---
