@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SV_NewChaseDir } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import { MoveType } from '../../src/entities/entity.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createEntity } from '@quake2ts/test-utils';
 
 describe('SV_NewChaseDir', () => {
   let entity: Entity;
@@ -17,13 +17,13 @@ describe('SV_NewChaseDir', () => {
     context = testCtx.entities;
 
     // Create entity using factory
-    const entData = createMonsterEntityFactory('monster_test', {
+    entity = spawnEntity(context, createMonsterEntityFactory('monster_test', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       movetype: MoveType.Step,
       flags: 0,
-      groundentity: { index: 1 } as Entity,
+      groundentity: createEntity({ index: 1 }),
       waterlevel: 0,
       monsterinfo: {
           aiflags: 0
@@ -31,23 +31,18 @@ describe('SV_NewChaseDir', () => {
       ideal_yaw: 0,
       angles: { x: 0, y: 0, z: 0 },
       enemy: null
-    });
-    entity = context.spawn();
-    Object.assign(entity, entData);
+    }));
 
-    const enemyData = createPlayerEntityFactory({
+    enemy = spawnEntity(context, createPlayerEntityFactory({
         origin: { x: 100, y: 0, z: 0 },
         mins: { x: -16, y: -16, z: -24 },
         maxs: { x: 16, y: 16, z: 32 },
-    });
-    enemy = context.spawn();
-    Object.assign(enemy, enemyData);
+    }));
 
     traceMock = context.trace;
     pointContentsMock = context.pointcontents;
 
     // Setup mocks
-    // context.entities.rng is what we want to mock
     if (!context.rng) {
       context.rng = { value: () => 0.5 };
     } else {

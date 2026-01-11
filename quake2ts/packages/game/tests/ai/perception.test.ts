@@ -9,28 +9,33 @@ import {
 } from '../../src/index.js';
 import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../src/ai/constants.js';
 import type { TraceFunction } from '../../src/ai/perception.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory, createPlayerEntityFactory, createEntity } from '@quake2ts/test-utils';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
-// Helper to create a full Entity instance from factory data
+// Helper to create a full Entity instance from factory data using test-utils
 function createTestEntity(id: number = 1, overrides: Partial<Entity> = {}): Entity {
-    const ent = new Entity(id);
     const data = createEntityFactory(overrides);
-    Object.assign(ent, data);
-
     // Ensure minimal required fields for perception if factory skipped them
-    if (!ent.origin) ent.origin = { ...ZERO_VEC3 };
-    if (!ent.mins) ent.mins = { x: -16, y: -16, z: -24 };
-    if (!ent.maxs) ent.maxs = { x: 16, y: 16, z: 32 };
+    if (!data.origin) data.origin = { ...ZERO_VEC3 };
+    if (!data.mins) data.mins = { x: -16, y: -16, z: -24 };
+    if (!data.maxs) data.maxs = { x: 16, y: 16, z: 32 };
+
+    const ent = createEntity({
+        ...data,
+        ...overrides // Apply overrides again to ensure they persist if needed, though createEntityFactory already does this mostly
+    });
+    // Manually set ID if needed, though default is 1
+    (ent as any).index = id;
 
     return ent;
 }
 
 function createPlayerTestEntity(id: number = 1, overrides: Partial<Entity> = {}): Entity {
-  const ent = new Entity(id);
   const data = createPlayerEntityFactory(overrides);
-  Object.assign(ent, data);
-  if (!ent.origin) ent.origin = { ...ZERO_VEC3 };
+  if (!data.origin) data.origin = { ...ZERO_VEC3 };
+
+  const ent = createEntity({ ...data, ...overrides });
+  (ent as any).index = id;
   return ent;
 }
 
