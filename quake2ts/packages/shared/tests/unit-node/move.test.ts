@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { PmFlag, PmType, PlayerButton, WaterLevel } from '../src/index.js';
-import type { Vec3 } from '../src/index.js';
-import type { PmoveTraceResult, PmoveTraceFn } from '../src/pmove/types.js';
-import { applyPmoveAirMove, applyPmoveWaterMove } from '../src/pmove/move.js';
-import { stairTrace, ladderTrace } from './test-helpers.js';
+import { PmFlag, PmType, PlayerButton, WaterLevel } from '../../src/index.js';
+import type { Vec3 } from '../../src/index.js';
+import type { PmoveTraceResult, PmoveTraceFn } from '../../src/pmove/types.js';
+import { applyPmoveAirMove, applyPmoveWaterMove } from '../../src/pmove/move.js';
+import { stairTrace, ladderTrace } from '../test-helpers.js';
 
 const mins: Vec3 = { x: -16, y: -16, z: -24 };
 const maxs: Vec3 = { x: 16, y: 16, z: 32 };

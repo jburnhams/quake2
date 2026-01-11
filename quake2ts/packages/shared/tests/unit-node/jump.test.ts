@@ -6,7 +6,7 @@ import {
   checkJump,
   PmType,
   addPmFlag,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 const BASE_STATE = {
   pmFlags: PmFlag.OnGround as number,

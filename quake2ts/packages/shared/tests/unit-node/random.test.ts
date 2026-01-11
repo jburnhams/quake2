@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MersenneTwister19937, RandomGenerator } from '../src/math/random.js';
+import { MersenneTwister19937, RandomGenerator } from '../../src/math/random.js';
 
 const TWO_POW_32 = 0x100000000;
 
