@@ -232,7 +232,10 @@ export class WebGPUProfiler {
     if (!this.timestampSupported || !this.currentQuerySet) return;
     if (this.currentQueryIndex >= this.config.maxQueries) return;
 
-    commandEncoder.writeTimestamp(this.currentQuerySet, this.currentQueryIndex);
+    // writeTimestamp is available when 'timestamp-query' feature is enabled
+    // but may not be in the TypeScript types
+    (commandEncoder as unknown as { writeTimestamp(querySet: GPUQuerySet, queryIndex: number): void })
+      .writeTimestamp(this.currentQuerySet, this.currentQueryIndex);
     this.currentLabels.push(label);
     this.currentQueryIndex++;
   }
@@ -393,21 +396,29 @@ export class WebGPUProfiler {
    * Extract pass timings from query results
    */
   private extractPassTimings(queryResults: Map<string, number>): PassTimings {
-    const timings: PassTimings = {};
+    let opaque = 0;
+    let transparent = 0;
+    let postProcess = 0;
+    let ui = 0;
 
     for (const [label, time] of queryResults) {
       if (label.includes('opaque')) {
-        timings.opaque = (timings.opaque || 0) + time;
+        opaque += time;
       } else if (label.includes('transparent')) {
-        timings.transparent = (timings.transparent || 0) + time;
+        transparent += time;
       } else if (label.includes('post') || label.includes('postprocess')) {
-        timings.postProcess = (timings.postProcess || 0) + time;
+        postProcess += time;
       } else if (label.includes('ui') || label.includes('2d') || label.includes('hud')) {
-        timings.ui = (timings.ui || 0) + time;
+        ui += time;
       }
     }
 
-    return timings;
+    return {
+      opaque: opaque || undefined,
+      transparent: transparent || undefined,
+      postProcess: postProcess || undefined,
+      ui: ui || undefined,
+    };
   }
 
   /**
