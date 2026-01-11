@@ -7,7 +7,7 @@ import { PostProcessPipeline } from './pipelines/postProcess.js';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IWebGPURenderer, Pic, WebGPUCapabilities, ComputePipeline } from '../interface.js';
-import { Texture2D, VertexBuffer, IndexBuffer } from './resources.js';
+import { Texture2D, VertexBuffer, IndexBuffer, setResourceTracker } from './resources.js';
 import { PreparedTexture } from '../../assets/texture.js';
 import { RenderableEntity } from '../scene.js';
 import { CollisionVisRenderer } from '../collisionVis.js';
@@ -25,6 +25,7 @@ import { BspSurfaceGeometry } from '../bsp.js';
 import { cullLights } from '../lightCulling.js';
 import { extractFrustumPlanes } from '../culling.js';
 import { FrameRenderOptions } from '../frame.js'; // Shared interface
+import { WebGPUProfiler, ProfilingResourceTracker } from './profiling.js';
 
 // WebGPU-specific renderer interface
 export interface WebGPURenderer extends IWebGPURenderer {
@@ -71,6 +72,9 @@ export class WebGPURendererImpl implements WebGPURenderer {
   private highlightedEntities = new Map<number, [number, number, number, number]>();
   private highlightedSurfaces = new Map<number, [number, number, number, number]>();
 
+  // Performance profiler
+  private profiler: WebGPUProfiler;
+
   // Stub implementations for required properties
   readonly collisionVis: CollisionVisRenderer;
   readonly debug: WebGPUDebugRenderer;
@@ -86,8 +90,11 @@ export class WebGPURendererImpl implements WebGPURenderer {
         md2: Md2Pipeline;
         postProcess: PostProcessPipeline;
     },
-    debugRenderer: WebGPUDebugRenderer
+    debugRenderer: WebGPUDebugRenderer,
+    profiler?: WebGPUProfiler
   ) {
+    // Initialize profiler
+    this.profiler = profiler || new WebGPUProfiler(context.device);
     // Create 1x1 white texture for solid color rendering
     this.whiteTexture = new Texture2D(context.device, {
       width: 1,
@@ -422,35 +429,18 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
 
   getPerformanceReport(): RenderStatistics {
-    return {
-      frameTimeMs: 0,
-      gpuTimeMs: 0,
-      cpuFrameTimeMs: 0,
-      drawCalls: 0,
-      triangles: 0,
-      vertices: 0,
-      textureBinds: 0,
-      shaderSwitches: 0,
-      visibleSurfaces: 0,
-      culledSurfaces: 0,
-      visibleEntities: 0,
-      culledEntities: 0,
-      memoryUsageMB: {
-        textures: 0,
-        geometry: 0,
-        total: 0
-      }
-    };
+    return this.profiler.getPerformanceReport();
   }
 
   getMemoryUsage(): MemoryUsage {
-    return {
-      texturesBytes: 0,
-      geometryBytes: 0,
-      shadersBytes: 0,
-      buffersBytes: 0,
-      totalBytes: 0
-    };
+    return this.profiler.getMemoryUsage();
+  }
+
+  /**
+   * Get the profiler instance for advanced profiling operations
+   */
+  getProfiler(): WebGPUProfiler {
+    return this.profiler;
   }
 
   // =========================================================================
@@ -516,17 +506,13 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
   /**
    * Get timestamp query results (if supported)
-   * This is a placeholder for Phase 6 performance profiling
+   * Returns array of timing measurements in milliseconds
    */
   getTimestampResults(): Promise<number[]> {
-    // Timestamp queries require 'timestamp-query' feature
-    if (!this.device.features.has('timestamp-query')) {
-      return Promise.resolve([]);
-    }
-
-    // TODO: Implement timestamp query infrastructure
-    // This will require creating query sets and reading back results
-    return Promise.resolve([]);
+    // Poll for any pending results
+    return this.profiler.pollResults().then(() => {
+      return this.profiler.getTimestampResults();
+    });
   }
 
   /**
@@ -554,6 +540,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
   }
 
   dispose(): void {
+    this.profiler.dispose();
     this.pipelines.sprite.destroy();
     this.pipelines.skybox.destroy();
     this.pipelines.bsp.destroy();
@@ -580,6 +567,13 @@ export async function createWebGPURenderer(
   options?: WebGPUContextOptions
 ): Promise<WebGPURenderer> {
   const context = await createWebGPUContext(canvas, options);
+
+  // Initialize resource tracker for memory profiling
+  const resourceTracker = new ProfilingResourceTracker();
+  setResourceTracker(resourceTracker);
+
+  // Initialize profiler
+  const profiler = new WebGPUProfiler(context.device);
 
   // Initialize Pipelines
   const spriteRenderer = new SpriteRenderer(context.device, context.format);
@@ -620,5 +614,5 @@ export async function createWebGPURenderer(
 
   const frameRenderer = new FrameRenderer(context, pipelines);
 
-  return new WebGPURendererImpl(context, frameRenderer, pipelines, debugRenderer);
+  return new WebGPURendererImpl(context, frameRenderer, pipelines, debugRenderer, profiler);
 }
