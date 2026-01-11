@@ -21,9 +21,9 @@ import {
   type CollisionLeaf,
   type CollisionModel,
   type CollisionPlane,
-} from '../src/bsp/collision.js';
-import { CONTENTS_SOLID, CONTENTS_WATER } from '../src/bsp/contents.js';
-import type { Vec3 } from '../src/math/vec3.js';
+} from '../../src/bsp/collision.js';
+import { CONTENTS_SOLID, CONTENTS_WATER } from '../../src/bsp/contents.js';
+import type { Vec3 } from '../../src/math/vec3.js';
 
 function makePlane(normal: Vec3, dist: number): CollisionPlane {
   return {

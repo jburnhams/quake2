@@ -7,7 +7,7 @@ import {
   lengthVec3,
   normalizeVec3,
   scaleVec3,
-} from '../src/index.js';
+} from '../../src/index.js';
 import {
   applyPmoveAccelerate,
   applyPmoveAirAccelerate,
@@ -15,7 +15,7 @@ import {
   buildAirGroundWish,
   buildWaterWish,
   pmoveCmdScale,
-} from '../src/pmove/pmove.js';
+} from '../../src/pmove/pmove.js';
 
 describe('pmove helpers (friction/accelerate)', () => {
   it('applies ground friction matching PM_Friction semantics', () => {
