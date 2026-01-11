@@ -356,10 +356,13 @@ export function createPhysicsTestContext(bspModel?: BspModel): TestContext {
 
 /**
  * Creates a generic Entity.
+ * @param overrides - Optional overrides for entity properties.
  * @returns A new Entity instance.
  */
-export function createEntity(): Entity {
-  return new Entity(1);
+export function createEntity(overrides: Partial<Entity> = {}): Entity {
+  const ent = new Entity(1);
+  Object.assign(ent, overrides);
+  return ent;
 }
 
 /**

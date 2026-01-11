@@ -1,17 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ArmorType, DamageFlags, DamageMod, EntityDamageFlags, T_Damage, T_RadiusDamage } from '../../../src/combat/index.js';
-import { createEntityFactory, createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 import { Entity } from '../../../src/entities/entity.js';
 import { AmmoType } from '../../../src/inventory/ammo.js';
 
 const MOD_UNKNOWN = DamageMod.UNKNOWN;
-
-// Helper to create full Entity from factory
-function spawnEntity(context: any, factoryData: Partial<Entity>) {
-    const ent = context.spawn();
-    Object.assign(ent, factoryData);
-    return ent;
-}
 
 describe('T_Damage', () => {
   let context: any;

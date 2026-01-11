@@ -1,24 +1,16 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment, createGameImportsAndEngine, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { setupBrowserEnvironment, createTestContext, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { EntitySystem, T_Damage, DamageMod } from '@quake2ts/game';
 
 describe('Combat System Unit Tests', () => {
   let entitySystem: EntitySystem;
-  let imports: ReturnType<typeof createGameImportsAndEngine>['imports'];
-  let engine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+  let imports: any;
 
   beforeEach(() => {
     setupBrowserEnvironment();
-    const result = createGameImportsAndEngine();
-    imports = result.imports;
-    engine = result.engine;
-
-    entitySystem = new EntitySystem(
-      engine,
-      imports,
-      { x: 0, y: 0, z: -800 }, // Gravity
-      1024 // Max entities
-    );
+    const ctx = createTestContext();
+    entitySystem = ctx.entities;
+    imports = ctx.imports;
   });
 
   afterEach(() => {

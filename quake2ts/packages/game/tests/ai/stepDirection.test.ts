@@ -3,7 +3,7 @@ import { SV_StepDirection } from '../../src/ai/movement.js';
 import type { Entity } from '../../src/entities/entity.js';
 import type { EntitySystem } from '../../src/entities/system.js';
 import { MoveType } from '../../src/entities/entity.js';
-import { createMonsterEntityFactory } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createEntity } from '@quake2ts/test-utils';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;
@@ -24,7 +24,7 @@ describe('SV_StepDirection', () => {
       maxs: { x: 16, y: 16, z: 32 },
       movetype: MoveType.Step,
       flags: 0,
-      groundentity: { index: 1 } as Entity,
+      groundentity: createEntity({ index: 1 }),
       waterlevel: 0,
       monsterinfo: {
           aiflags: 0
@@ -32,7 +32,8 @@ describe('SV_StepDirection', () => {
       angles: { x: 0, y: 0, z: 0 }
     });
 
-    entity = entData as any; // Cast because factory returns Partial<Entity>
+    // Create a real entity and assign data, so prototype methods (if any) are present, though logic mainly uses properties.
+    entity = createEntity(entData);
 
     traceMock = vi.fn();
     pointContentsMock = vi.fn();
