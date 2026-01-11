@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { runGravity } from '../../src/physics/movement.js';
 import { MoveType } from '../../src/entities/entity.js';
 import { type Vec3 } from '@quake2ts/shared';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createEntity } from '@quake2ts/test-utils';
 
 describe('physics movement', () => {
   const gravity: Vec3 = { x: 0, y: 0, z: -800 };
   const frametime = 0.1;
 
   it('should apply full gravity when not in water', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity({
       movetype: MoveType.Toss,
       velocity: { x: 0, y: 0, z: 0 },
       origin: { x: 0, y: 0, z: 100 },
@@ -25,7 +25,7 @@ describe('physics movement', () => {
   });
 
   it('should apply reduced gravity and friction when in water', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity({
       movetype: MoveType.Toss,
       velocity: { x: 0, y: 0, z: -100 },
       origin: { x: 0, y: 0, z: 100 },
