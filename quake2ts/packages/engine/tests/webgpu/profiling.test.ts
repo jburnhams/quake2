@@ -9,47 +9,25 @@ import {
   WebGPUProfiler,
   ProfilingResourceTracker,
   exportProfilingData,
-} from '../../../src/render/webgpu/profiling.js';
-import { GPUResourceTracker, setResourceTracker } from '../../../src/render/webgpu/resources.js';
-
-// Check if WebGPU is available
-let webgpuAvailable = true;
-let webgpuError: string | null = null;
+} from '../../src/render/webgpu/profiling.js';
+import { GPUResourceTracker, setResourceTracker } from '../../src/render/webgpu/resources.js';
 
 describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
-  let testContext: Awaited<ReturnType<typeof initHeadlessWebGPU>> | null = null;
+  let testContext: Awaited<ReturnType<typeof initHeadlessWebGPU>>;
 
   beforeAll(async () => {
-    try {
-      await setupHeadlessWebGPUEnv();
-      testContext = await initHeadlessWebGPU();
-    } catch (e) {
-      webgpuAvailable = false;
-      webgpuError = e instanceof Error ? e.message : String(e);
-      console.warn(`WebGPU not available, skipping GPU tests: ${webgpuError}`);
-    }
+    await setupHeadlessWebGPUEnv();
+    testContext = await initHeadlessWebGPU();
   });
 
   afterAll(async () => {
-    if (testContext) {
-      await testContext.cleanup();
-    }
+    await testContext.cleanup();
   });
-
-  // Helper to skip tests when WebGPU is not available
-  const skipIfNoWebGPU = () => {
-    if (!webgpuAvailable || !testContext) {
-      console.log('Skipping test: WebGPU not available');
-      return true;
-    }
-    return false;
-  };
 
   describe('WebGPUProfiler', () => {
     describe('initialization', () => {
       it('should create profiler with device', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         expect(profiler).toBeDefined();
@@ -59,8 +37,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should accept custom configuration', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device, {
           maxQueries: 64,
           frameBufferDepth: 4,
@@ -71,8 +48,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should report timestamp support correctly', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const hasTimestampFeature = device.features.has('timestamp-query');
         const profiler = new WebGPUProfiler(device);
 
@@ -84,8 +60,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('CPU timing', () => {
       it('should measure CPU frame time', async () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -105,8 +80,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should track smoothed frame time', async () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         for (let i = 0; i < 5; i++) {
@@ -126,8 +100,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('frame statistics', () => {
       it('should record draw calls', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -143,8 +116,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should record batches', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -158,8 +130,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should record shader switches', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -174,8 +145,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should record culling statistics', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -192,8 +162,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should reset stats on new frame', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -211,8 +180,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('performance report', () => {
       it('should generate performance report', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -243,8 +211,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should accept external frame stats', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -275,8 +242,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('memory tracking', () => {
       it('should report memory usage when tracker is set', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const tracker = new GPUResourceTracker();
         setResourceTracker(tracker);
 
@@ -295,8 +261,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('timestamp results interface', () => {
       it('should return empty array when timestamps not supported', async () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         if (!profiler.isTimestampSupported) {
@@ -310,8 +275,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
     describe('reset and dispose', () => {
       it('should reset all statistics', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -329,8 +293,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
       });
 
       it('should dispose resources cleanly', () => {
-        if (skipIfNoWebGPU()) return;
-        const { device } = testContext!;
+        const { device } = testContext;
         const profiler = new WebGPUProfiler(device);
 
         profiler.startFrame();
@@ -419,8 +382,7 @@ describe('WebGPU Profiling Infrastructure (Section 20-17)', () => {
 
   describe('exportProfilingData', () => {
     it('should export profiling data', () => {
-      if (skipIfNoWebGPU()) return;
-      const { device } = testContext!;
+      const { device } = testContext;
       const profiler = new WebGPUProfiler(device);
 
       profiler.startFrame();
