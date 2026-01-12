@@ -1,8 +1,7 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
 import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
-import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, spawnEntity, createMonsterMoveFactory } from '@quake2ts/test-utils';
 import { monster_think } from '../../src/ai/monster.js';
 import { RenderFx } from '@quake2ts/shared';
 import { Entity } from '../../src/entities/entity.js';
@@ -94,12 +93,12 @@ describe('monster_think (Freeze Logic)', () => {
 
     const monsterData = createMonsterEntityFactory('monster_soldier', {
       monsterinfo: {
-        current_move: {
+        current_move: createMonsterMoveFactory({
           firstframe: 0,
           lastframe: 10,
           frames: Array(11).fill({}),
           endfunc: null
-        },
+        }),
         aiflags: 0,
         nextframe: 0,
         scale: 1,

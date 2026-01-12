@@ -3,7 +3,7 @@ import { ai_checkattack } from '../../src/ai/targeting.js';
 import { Entity } from '../../src/entities/entity.js';
 import { EntitySystem } from '../../src/entities/system.js';
 import { AttackState } from '../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity, createMonsterInfoFactory } from '@quake2ts/test-utils';
 
 describe('ai_checkattack', () => {
   let context: EntitySystem;
@@ -14,17 +14,14 @@ describe('ai_checkattack', () => {
     const testCtx = createTestContext();
     context = testCtx.entities;
 
-    // Use factory to create monster
+    // Use factory to create monster with simplified monsterinfo override
     self = spawnEntity(context, createMonsterEntityFactory('monster_test', {
-        origin: { x: 0, y: 0, z: 0 }
+        origin: { x: 0, y: 0, z: 0 },
+        monsterinfo: createMonsterInfoFactory({
+            checkattack: vi.fn(() => true),
+            attack_state: AttackState.Straight
+        })
     }));
-
-    // Override monsterinfo to provide checkattack mock which is required for this test.
-    self.monsterinfo = {
-        ...self.monsterinfo,
-        checkattack: vi.fn(() => true),
-        attack_state: AttackState.Straight
-    } as any;
 
     // Use factory to create player enemy
     enemy = spawnEntity(context, createPlayerEntityFactory({
