@@ -6,7 +6,7 @@ import {
   WaterLevel,
   getWaterLevel,
   type Vec3,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 const ORIGIN = { x: 0, y: 0, z: 64 } as const;
 const STANDING_MINS = { x: -16, y: -16, z: -24 } as const;

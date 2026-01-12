@@ -7,7 +7,7 @@ import {
   DEFAULT_YAW_SPEED,
   addViewAngles,
   mouseDeltaToViewDelta,
-} from '../src/protocol/usercmd.js';
+} from '../../src/protocol/usercmd.js';
 
 describe('usercmd defaults mirror rerelease movement tuning', () => {
   it('matches the canonical speed constants from the C++ client', () => {

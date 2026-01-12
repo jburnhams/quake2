@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { applyPmove } from '../src/pmove/apply.js';
-import type { PlayerState } from '../src/protocol/player-state.js';
-import type { PmoveCmd, PmoveTraceResult } from '../src/pmove/types.js';
-import type { Vec3 } from '../src/math/vec3.js';
-import { lengthVec3, normalizeVec3 } from '../src/math/vec3.js';
-import { CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '../src/bsp/contents.js';
+import { applyPmove } from '../../src/pmove/apply.js';
+import type { PlayerState } from '../../src/protocol/player-state.js';
+import type { PmoveCmd, PmoveTraceResult } from '../../src/pmove/types.js';
+import type { Vec3 } from '../../src/math/vec3.js';
+import { lengthVec3, normalizeVec3 } from '../../src/math/vec3.js';
+import { CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '../../src/bsp/contents.js';
 
 describe('Water Physics', () => {
     // Helper to create a basic player state for water tests

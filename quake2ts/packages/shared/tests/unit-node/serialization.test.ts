@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryStream, BinaryWriter } from '../src/io';
+import { BinaryStream, BinaryWriter } from '../../src/io';
 
 describe('Serialization', () => {
   describe('BinaryWriter/BinaryStream Complex Types', () => {

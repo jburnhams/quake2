@@ -3,7 +3,7 @@ import {
   fixStuckObjectGeneric,
   type FixStuckTraceFn,
   type Vec3,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 interface SolidBox {
   readonly mins: Vec3;

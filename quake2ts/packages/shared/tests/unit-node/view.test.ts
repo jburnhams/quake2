@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { clampViewAngles } from '../src/pmove/view.js';
-import { PmFlag } from '../src/pmove/constants.js';
-import { angleVectors } from '../src/math/angles.js';
+import { clampViewAngles } from '../../src/pmove/view.js';
+import { PmFlag } from '../../src/pmove/constants.js';
+import { angleVectors } from '../../src/math/angles.js';
 
 const ZERO_ANGLES = { x: 0, y: 0, z: 0 } as const;
 

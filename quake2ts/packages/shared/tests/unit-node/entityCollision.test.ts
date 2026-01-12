@@ -6,9 +6,9 @@ import {
   type CollisionBrush,
   type CollisionModel,
   type CollisionPlane,
-} from '../src/bsp/collision.js';
-import { CONTENTS_MONSTER, CONTENTS_SOLID, CONTENTS_TRIGGER } from '../src/bsp/contents.js';
-import type { Vec3 } from '../src/math/vec3.js';
+} from '../../src/bsp/collision.js';
+import { CONTENTS_MONSTER, CONTENTS_SOLID, CONTENTS_TRIGGER } from '../../src/bsp/contents.js';
+import type { Vec3 } from '../../src/math/vec3.js';
 
 function makePlane(normal: Vec3, dist: number, type: number): CollisionPlane {
   return { normal, dist, type, signbits: computePlaneSignBits(normal) };

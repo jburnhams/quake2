@@ -25,7 +25,7 @@ import {
   CS_ITEMS,
   CS_PLAYERS,
   CS_GENERAL
-} from '../src/protocol/configstrings.js';
+} from '../../src/protocol/configstrings.js';
 
 describe('ConfigStrings', () => {
   describe('Offsets', () => {
