@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PlayerButton } from '../src/pmove/constants.js';
-import { applyPmoveFlyMove, type FlyMoveParams } from '../src/pmove/fly.js';
-import type { PmoveTraceFn } from '../src/pmove/slide.js';
-import type { Vec3 } from '../src/math/vec3.js';
+import { PlayerButton } from '../../src/pmove/constants.js';
+import { applyPmoveFlyMove, type FlyMoveParams } from '../../src/pmove/fly.js';
+import type { PmoveTraceFn } from '../../src/pmove/slide.js';
+import type { Vec3 } from '../../src/math/vec3.js';
 
 const BASE_PARAMS: FlyMoveParams = {
   origin: { x: 0, y: 0, z: 0 },

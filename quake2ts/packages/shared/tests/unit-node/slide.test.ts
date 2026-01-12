@@ -10,7 +10,7 @@ import {
   SLIDEMOVE_BLOCKED_WALL,
   type PmoveTraceFn,
   type PmoveTraceResult,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 const OVERBOUNCE = 1.01;
 

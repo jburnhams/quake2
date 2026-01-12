@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getAmmoCount, getIconPath } from '../src/inventory-helpers.js';
-import { PlayerState } from '../src/protocol/player-state.js';
-import { AmmoItemId, WeaponId, AmmoType } from '../src/items/index.js';
-import { ConfigStringIndex } from '../src/protocol/configstrings.js';
-import { PlayerStat, G_SetAmmoStat } from '../src/protocol/stats.js';
+import { getAmmoCount, getIconPath } from '../../src/inventory-helpers.js';
+import { PlayerState } from '../../src/protocol/player-state.js';
+import { AmmoItemId, WeaponId, AmmoType } from '../../src/items/index.js';
+import { ConfigStringIndex } from '../../src/protocol/configstrings.js';
+import { PlayerStat, G_SetAmmoStat } from '../../src/protocol/stats.js';
 
 // Mock PlayerState factory
 const createPlayerState = (overrides: Partial<PlayerState> = {}): PlayerState => ({

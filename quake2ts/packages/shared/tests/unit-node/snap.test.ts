@@ -5,9 +5,9 @@ import {
   initialSnapPosition,
   snapPosition,
   type Vec3,
-} from '../src/index.js';
-import type { PmoveTraceFn } from '../src/pmove/types.js';
-import * as stuckModule from '../src/pmove/stuck.js';
+} from '../../src/index.js';
+import type { PmoveTraceFn } from '../../src/pmove/types.js';
+import * as stuckModule from '../../src/pmove/stuck.js';
 
 function key(vec: Vec3): string {
   return `${vec.x},${vec.y},${vec.z}`;

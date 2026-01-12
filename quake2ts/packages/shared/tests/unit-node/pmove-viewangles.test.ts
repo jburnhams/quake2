@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { angleVectors } from '../src/math/angles.js';
-import { normalizeVec3, lengthVec3, dotVec3 } from '../src/math/vec3.js';
-import type { Vec3 } from '../src/math/vec3.js';
+import { angleVectors } from '../../src/math/angles.js';
+import { normalizeVec3, lengthVec3, dotVec3 } from '../../src/math/vec3.js';
+import type { Vec3 } from '../../src/math/vec3.js';
 import {
   buildAirGroundWish,
   buildWaterWish,
-} from '../src/pmove/pmove.js';
-import type { PmoveCmd } from '../src/pmove/types.js';
+} from '../../src/pmove/pmove.js';
+import type { PmoveCmd } from '../../src/pmove/types.js';
 
 /**
  * These tests verify that pmove correctly uses view angles to calculate

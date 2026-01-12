@@ -9,9 +9,9 @@ import {
   checkDuckState,
   computePlayerDimensions,
   type DuckTraceFn,
-} from '../src/index.js';
-import type { Vec3 } from '../src/math/vec3.js';
-import type { PmoveTraceResult } from '../src/pmove/types.js';
+} from '../../src/index.js';
+import type { Vec3 } from '../../src/math/vec3.js';
+import type { PmoveTraceResult } from '../../src/pmove/types.js';
 
 const ORIGIN: Vec3 = { x: 0, y: 0, z: 32 };
 const MINS: Vec3 = { x: -16, y: -16, z: -24 };

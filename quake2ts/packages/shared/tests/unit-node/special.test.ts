@@ -13,8 +13,8 @@ import {
   hasPmFlag,
   scaleVec3,
   type Vec3,
-} from '../src/index.js';
-import type { PmoveTraceResult } from '../src/pmove/types.js';
+} from '../../src/index.js';
+import type { PmoveTraceResult } from '../../src/pmove/types.js';
 
 const mins: Vec3 = { x: -16, y: -16, z: -24 };
 const maxs: Vec3 = { x: 16, y: 16, z: 32 };

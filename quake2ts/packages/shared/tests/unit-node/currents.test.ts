@@ -7,17 +7,17 @@ import {
   CONTENTS_CURRENT_DOWN,
   CONTENTS_CURRENT_UP,
   CONTENTS_LADDER,
-} from '../src/bsp/contents.js';
-import { ZERO_VEC3 } from '../src/math/vec3.js';
+} from '../../src/bsp/contents.js';
+import { ZERO_VEC3 } from '../../src/math/vec3.js';
 import {
   applyPmoveAddCurrents,
   groundCurrentVelocity,
   currentVectorFromContents,
   waterCurrentVelocity,
-} from '../src/pmove/currents.js';
-import { PlayerButton, WaterLevel, isAtLeastWaistDeep, isUnderwater } from '../src/pmove/constants.js';
-import type { AddCurrentsParams } from '../src/pmove/currents.js';
-import type { PmoveCmd, PmoveTraceResult } from '../src/pmove/types.js';
+} from '../../src/pmove/currents.js';
+import { PlayerButton, WaterLevel, isAtLeastWaistDeep, isUnderwater } from '../../src/pmove/constants.js';
+import type { AddCurrentsParams } from '../../src/pmove/currents.js';
+import type { PmoveCmd, PmoveTraceResult } from '../../src/pmove/types.js';
 
 describe('currents helpers', () => {
   it('keeps water level semantics aligned with the rerelease enum ordering', () => {

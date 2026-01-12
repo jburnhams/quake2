@@ -10,7 +10,7 @@ import {
   type PmoveTraceFn,
   type PmoveTraceResult,
   type Vec3,
-} from '../src/index.js';
+} from '../../src/index.js';
 
 const ORIGIN: Vec3 = { x: 0, y: 0, z: 32 };
 const MINS: Vec3 = { x: -16, y: -16, z: -24 };

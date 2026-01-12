@@ -6,7 +6,7 @@ import {
   GAME_EXPORT_KEYS,
   GAME_IMPORT_KEYS,
   validateContract,
-} from '../src/protocol/contracts.js';
+} from '../../src/protocol/contracts.js';
 
 function stubFunctions(keys: readonly string[]): Record<string, unknown> {
   return Object.fromEntries(keys.map((key) => [key, () => {}]));
