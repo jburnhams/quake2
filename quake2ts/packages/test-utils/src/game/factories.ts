@@ -4,7 +4,9 @@ import {
   Solid,
   ServerFlags,
   DeadFlag,
-  EntityFlags
+  EntityFlags,
+  MonsterMove,
+  MonsterInfo
 } from '@quake2ts/game';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot } from '@quake2ts/game';
@@ -282,4 +284,57 @@ export function createTriggerEntityFactory(classname: string, overrides: Partial
     ...overrides
   });
 }
+
+/**
+ * Creates a default MonsterMove object with optional overrides.
+ * Useful for mocking monster animations.
+ *
+ * @param overrides - Partial MonsterMove to override defaults.
+ * @returns A complete MonsterMove object.
+ */
+export function createMonsterMoveFactory(overrides: Partial<MonsterMove> = {}): MonsterMove {
+  return {
+    firstframe: 0,
+    lastframe: 0,
+    frames: [],
+    endfunc: null,
+    ...overrides
+  };
+}
+
+/**
+ * Creates a default MonsterInfo object with optional overrides.
+ * Useful for mocking monster AI state.
+ *
+ * @param overrides - Partial MonsterInfo to override defaults.
+ * @returns A complete MonsterInfo object (cast as any to avoid exhaustive property requirement in tests).
+ */
+export function createMonsterInfoFactory(overrides: Partial<MonsterInfo> = {}): MonsterInfo {
+    return {
+        current_move: null,
+        aiflags: 0,
+        nextframe: 0,
+        scale: 1,
+        stand: null,
+        walk: null,
+        run: null,
+        dodge: null,
+        attack: null,
+        melee: null,
+        sight: null,
+        idle: null,
+        checkattack: null,
+        search: null,
+        pausetime: 0, // Corrected from pause_time to pausetime
+        attack_finished: 0,
+        saved_goal: null,
+        last_sighting: { x: 0, y: 0, z: 0 },
+        trail_time: 0,
+        viewheight: 0,
+        allow_spawn: null,
+        freeze_time: 0,
+        ...overrides
+    } as MonsterInfo;
+}
+
 export * from './client.js';

@@ -45,21 +45,19 @@ describe('Weapon Firing Logic', () => {
              } as any;
         }
 
-        const targetData = createEntityFactory({
-             takedamage: true,
-             health: 100,
-             origin: { x: 100, y: 0, z: 0 },
-        });
-        target1 = new Entity(1);
-        Object.assign(target1, targetData);
+        // Use helper to create simple target entities
+        const createTarget = (id: number, x: number) => {
+            const t = new Entity(id);
+            Object.assign(t, createEntityFactory({
+                takedamage: true,
+                health: 100,
+                origin: { x, y: 0, z: 0 },
+            }));
+            return t;
+        };
 
-        const target2Data = createEntityFactory({
-            takedamage: true,
-            health: 100,
-            origin: { x: 200, y: 0, z: 0 },
-        });
-        target2 = new Entity(2);
-        Object.assign(target2, target2Data);
+        target1 = createTarget(1, 100);
+        target2 = createTarget(2, 200);
 
         // Use createMockGameExports from test-utils
         mockGame = createMockGameExports({
