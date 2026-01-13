@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
 import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, createSpawnTestContext, spawnEntity, createTestContext } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let context: ReturnType<typeof createTestContext>;
