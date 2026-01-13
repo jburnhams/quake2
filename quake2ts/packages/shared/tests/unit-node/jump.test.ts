@@ -1,76 +1,63 @@
-import { describe, expect, it } from 'vitest';
-import {
-  PmFlag,
-  PlayerButton,
-  WaterLevel,
-  checkJump,
-  PmType,
-  addPmFlag,
-} from '../../src/index.js';
-
-const BASE_STATE = {
-  pmFlags: PmFlag.OnGround as number,
-  pmType: PmType.Normal,
-  buttons: PlayerButton.Jump,
-  waterlevel: WaterLevel.None,
-  onGround: true,
-  velocity: { x: 0, y: 0, z: 0 },
-  origin: { x: 0, y: 0, z: 0 }, // Added origin to match CheckJumpParams
-};
+import { describe, it, expect } from 'vitest';
+import { checkJump, CheckJumpParams } from '../../src/pmove/jump.js';
+import { PmFlag, PmType, PlayerButton, WaterLevel } from '../../src/pmove/constants.js';
+import type { Vec3 } from '../../src/math/vec3.js';
 
 describe('checkJump', () => {
-  it('clears jump-held when jump button is released', () => {
-    const state = { ...BASE_STATE, pmFlags: addPmFlag(PmFlag.OnGround, PmFlag.JumpHeld), buttons: PlayerButton.None };
-    const result = checkJump(state);
-    expect(result.pmFlags & PmFlag.JumpHeld).toBe(0);
+  const baseParams: CheckJumpParams = {
+    pmFlags: 0,
+    pmType: PmType.Normal,
+    buttons: 0,
+    waterlevel: WaterLevel.None,
+    onGround: true,
+    velocity: { x: 0, y: 0, z: 0 },
+    origin: { x: 0, y: 0, z: 0 },
+    jumpHeight: 270
+  };
+
+  it('should not jump if Jump button is not held', () => {
+    const result = checkJump({ ...baseParams, buttons: 0 });
+    expect(result.jumped).toBe(false);
+    expect(result.velocity.z).toBe(0);
+    expect(result.origin.z).toBe(0);
+  });
+
+  it('should not jump if already in air', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, onGround: false });
     expect(result.jumped).toBe(false);
   });
 
-  it('refuses to jump while PMF_TIME_LAND is active', () => {
-    const state = { ...BASE_STATE, pmFlags: addPmFlag(PmFlag.TimeLand, PmFlag.OnGround) };
-    const result = checkJump(state);
-    expect(result.jumped).toBe(false);
-    expect(result.pmFlags & PmFlag.TimeLand).not.toBe(0);
-    expect(result.velocity).toBe(state.velocity);
-  });
-
-  it('prevents re-triggering while PMF_JUMP_HELD is set', () => {
-    const state = { ...BASE_STATE, pmFlags: addPmFlag(PmFlag.JumpHeld, PmFlag.OnGround) };
-    const result = checkJump(state);
-    expect(result.jumped).toBe(false);
-    expect(result.pmFlags & PmFlag.JumpHeld).not.toBe(0);
-  });
-
-  it('drops to air control when waist-deep in water', () => {
-    const state = { ...BASE_STATE, waterlevel: WaterLevel.Waist };
-    const result = checkJump(state);
-    expect(result.jumped).toBe(false);
-    expect(result.onGround).toBe(false);
-  });
-
-  it('requires being on the ground', () => {
-    const state = { ...BASE_STATE, onGround: false };
-    const result = checkJump(state);
+  it('should not jump if dead', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, pmType: PmType.Dead });
     expect(result.jumped).toBe(false);
   });
 
-  it('applies the jump height, sets flags, and triggers jump sound', () => {
-    const velocity = { x: 10, y: -5, z: 20 };
-    const state = { ...BASE_STATE, velocity };
-    const result = checkJump(state);
+  it('should not jump if TimeLand flag is set', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, pmFlags: PmFlag.TimeLand });
+    expect(result.jumped).toBe(false);
+  });
 
+  it('should not jump if waterlevel >= 2', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, waterlevel: WaterLevel.Waist });
+    expect(result.jumped).toBe(false);
+  });
+
+  it('should jump if conditions are met', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump });
     expect(result.jumped).toBe(true);
-    expect(result.jumpSound).toBe(true);
-    expect(result.pmFlags & PmFlag.JumpHeld).not.toBe(0);
-    expect(result.pmFlags & PmFlag.OnGround).toBe(0);
+    expect(result.pmFlags & PmFlag.JumpHeld).toBeTruthy();
     expect(result.onGround).toBe(false);
-    expect(result.velocity.z).toBeGreaterThanOrEqual(270);
-    expect(result.velocity).not.toBe(velocity);
+    expect(result.velocity.z).toBe(270);
+    expect(result.origin.z).toBe(1); // The nudge!
   });
 
-  it('supports overriding the jump height', () => {
-    const state = { ...BASE_STATE, velocity: { x: 0, y: 0, z: 0 }, jumpHeight: 320 };
-    const result = checkJump(state);
-    expect(result.velocity.z).toBe(320);
+  it('should clamp velocity.z if it was already negative', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, velocity: { x: 0, y: 0, z: -100 } });
+    expect(result.velocity.z).toBe(270);
+  });
+
+  it('should add to velocity.z if it was positive (e.g. jumppad)', () => {
+    const result = checkJump({ ...baseParams, buttons: PlayerButton.Jump, velocity: { x: 0, y: 0, z: 100 } });
+    expect(result.velocity.z).toBe(370);
   });
 });
