@@ -29,6 +29,12 @@ The following high-priority cleanup issues have been resolved:
 1. Audit existing tests to identify which require DOM APIs
 2. ✅ Move pure logic tests in shared package to `tests/unit-node/` directories (vec3, mat4, angles, contents, color, constants)
    - Moved: `categorize`, `duck`, `water-physics`, `water`, `configstrings`, `contracts`, `currents`, `entityCollision`, `flymove`, `inventory-helpers`, `pmove-viewangles`, `serialization`, `slide`, `snap`, `special`, `stuck`, `usercmd`, `view`.
+   - Moved: `pmove/*` (jump, apply)
+   - Moved: `net/*` (netchan, fragments, reliable, timeout, process, transmit)
+   - Moved: `protocol/*` (bitpack, cvar, entityState, ops, stats)
+   - Moved: `audio/*` (constants)
+   - Moved: `io/*` (binaryStream, binaryWriter, messageBuilder)
+   - Moved: `items/*` (ammo, powerups, weaponInfo, weapons)
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
 5. Configure node tests with `environment: 'node'` in vitest config
