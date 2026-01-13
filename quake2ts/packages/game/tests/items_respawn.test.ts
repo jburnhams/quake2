@@ -14,6 +14,7 @@ describe('Item Respawn Logic', () => {
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
 
         const weaponItem = WEAPON_ITEMS['weapon_shotgun'];
+        // Spawn the weapon pickup using standard game logic helpers
         const pickup = spawnEntity(game.entities, createWeaponPickupEntity(game, weaponItem));
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory());
@@ -25,7 +26,7 @@ describe('Item Respawn Logic', () => {
 
         // Correct SP behavior: Respawns should NOT be scheduled.
         expect(scheduleThinkSpy).not.toHaveBeenCalled();
-        // In SP, item is freed. Since free is deferred, we check freePending/inUse.
+        // In SP, item is freed.
         expect(pickup.freePending).toBe(true);
     });
 

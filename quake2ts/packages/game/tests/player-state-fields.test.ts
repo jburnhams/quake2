@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../src/index';
+import { describe, it, expect } from 'vitest';
+import { createGame } from '../src/index.js';
 import { WeaponId } from '@quake2ts/shared';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
@@ -32,7 +32,7 @@ describe('Player State Exports', () => {
     player.angles = { x: 10, y: 20, z: 30 };
 
     // Get snapshot
-    const frame = game.frame({ deltaSeconds: 0.1, time: 100, frame: 1 });
+    const frame = game.frame({ deltaSeconds: 0.1, nowMs: 100, frame: 1 });
     const state = frame.state;
 
     // Verify fields
