@@ -5,7 +5,8 @@ import type {
 } from '@quake2ts/engine';
 import type { Vec3 } from '@quake2ts/shared';
 import { EntitySystem } from './entities/index.js';
-import { GameFrameLoop } from './loop.js';
+import { GameFrameLoop, type GameFrameContext } from './loop.js';
+export { type GameFrameContext };
 import { LevelClock, type LevelFrameState } from './level.js';
 import { createSaveFile, applySaveFile, GameSaveFile } from './save/index.js';
 import { RandomGenerator } from '@quake2ts/shared';
