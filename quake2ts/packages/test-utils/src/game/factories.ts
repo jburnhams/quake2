@@ -9,9 +9,26 @@ import {
   MonsterInfo
 } from '@quake2ts/game';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
-import type { GameStateSnapshot } from '@quake2ts/game';
+import type { GameStateSnapshot, GameFrameContext } from '@quake2ts/game';
 
 // -- Shared / Game State Factories --
+
+/**
+ * Creates a default GameFrameContext object with optional overrides.
+ * Useful for testing level clocks or frame loops.
+ *
+ * @param overrides - Partial GameFrameContext to override defaults.
+ * @returns A complete GameFrameContext object.
+ */
+export const createGameFrameContext = (overrides?: Partial<GameFrameContext>): GameFrameContext => ({
+  frame: 0,
+  deltaMs: 0,
+  nowMs: 0,
+  timeMs: 0,
+  previousTimeMs: 0,
+  deltaSeconds: 0,
+  ...overrides,
+});
 
 /**
  * Creates a default PlayerState object with optional overrides.

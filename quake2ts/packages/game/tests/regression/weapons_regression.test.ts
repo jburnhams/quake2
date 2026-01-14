@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMockGameExports } from '@quake2ts/test-utils';
 import { Entity } from '../../src/entities/entity.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { createBlasterBolt } from '../../src/entities/projectiles.js';
@@ -71,25 +71,24 @@ describe('Weapon Regression Tests', () => {
         context = createTestContext();
 
         // Mock game exports properly
-        game = {
+        game = createMockGameExports({
+            entities: context.entities,
             deathmatch: false,
-            // Add trace needed by firing functions
-            trace: vi.fn().mockReturnValue({
-                fraction: 1.0,
-                ent: null,
-                endpos: { x: 100, y: 0, z: 0 },
-                plane: { normal: {x:0, y:0, z:1} }
-            }),
-            // Add other game methods used by firing
-            multicast: vi.fn(),
             time: 10,
-            sound: vi.fn(),
             random: {
                 crandom: () => 0.5,
                 irandom: () => 1
-            },
-            entities: context.entities // Link entities back
-        };
+            }
+        });
+
+        // Add trace needed by firing functions (override default mock)
+        game.trace.mockReturnValue({
+            fraction: 1.0,
+            ent: null,
+            endpos: { x: 100, y: 0, z: 0 },
+            plane: { normal: { x: 0, y: 0, z: 1 } }
+        });
+
         (context.entities as any).game = game;
         // Ensure context.entities has world property
         context.entities.world = new Entity(0);
