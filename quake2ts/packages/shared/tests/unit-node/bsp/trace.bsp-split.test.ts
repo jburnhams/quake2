@@ -3,9 +3,9 @@
  * Validates CM_RecursiveHullCheck behavior from full/qcommon/cmodel.c
  */
 import { describe, expect, it } from 'vitest';
-import { traceBox } from '../../src/bsp/collision.js';
+import { traceBox } from '../../../src/bsp/collision.js';
 import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
-import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
+import { CONTENTS_SOLID } from '../../../src/bsp/contents.js';
 
 describe('traceBox BSP traversal splits', () => {
   describe('trace crossing single split plane', () => {

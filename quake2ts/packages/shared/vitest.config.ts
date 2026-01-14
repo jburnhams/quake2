@@ -1,19 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
-const isIntegration = process.env.TEST_TYPE === 'integration';
-const isUnit = process.env.TEST_TYPE === 'unit';
-
-const exclude = [
-  '**/node_modules/**',
-  '**/dist/**',
-  ...(isUnit ? ['**/integration/**'] : [])
-];
-
-const include = isIntegration
-  ? ['tests/integration/**/*.test.ts']
-  : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
-
 export default defineConfig({
   resolve: {
     alias: {
@@ -27,13 +14,12 @@ export default defineConfig({
     },
   },
   test: {
-    include,
-    exclude,
+    include: ['tests/unit-node/**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     // Optimize unit test performance - shared package has stateless utility functions
-    ...(isUnit ? {
-      pool: 'threads',
-      isolate: false, // Safe for stateless utilities
-    } : {}),
+    pool: 'threads',
+    isolate: false,
+    environment: 'node',
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit.xml',

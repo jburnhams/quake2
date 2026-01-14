@@ -6,8 +6,8 @@ import {
     type CollisionBrush,
     type CollisionPlane,
     type TraceResult
-} from '../../src/bsp/collision.js';
-import { type Vec3 } from '../../src/math/vec3.js';
+} from '../../../src/bsp/collision.js';
+import { type Vec3 } from '../../../src/math/vec3.js';
 
 describe('Trace System Verification', () => {
 

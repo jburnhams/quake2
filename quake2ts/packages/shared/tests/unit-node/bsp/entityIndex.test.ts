@@ -3,9 +3,9 @@ import {
   CollisionEntityIndex,
   type CollisionEntityLink,
   type CollisionModel,
-} from '../../src/bsp/collision.js';
-import { CONTENTS_SOLID, CONTENTS_TRIGGER } from '../../src/bsp/contents.js';
-import type { Vec3 } from '../../src/math/vec3.js';
+} from '../../../src/bsp/collision.js';
+import { CONTENTS_SOLID, CONTENTS_TRIGGER } from '../../../src/bsp/contents.js';
+import type { Vec3 } from '../../../src/math/vec3.js';
 
 describe('CollisionEntityIndex', () => {
   it('should ignore entity specified by passId during trace', () => {

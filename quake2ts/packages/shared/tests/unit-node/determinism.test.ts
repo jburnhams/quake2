@@ -10,7 +10,7 @@ import {
   normalizeVec3,
   lengthVec3,
   ZERO_VEC3
-} from '../src/index.js';
+} from '../../src/index.js';
 
 describe('Floating Point Determinism', () => {
   it('handles basic arithmetic consistently', () => {
