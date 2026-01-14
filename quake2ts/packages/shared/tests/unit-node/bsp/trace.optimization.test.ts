@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { traceBox, computePlaneSignBits } from '../../src/bsp/collision.js';
+import { traceBox, computePlaneSignBits } from '../../../src/bsp/collision.js';
 import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
-import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
+import { CONTENTS_SOLID } from '../../../src/bsp/contents.js';
 
 describe('Trace Optimization', () => {
   it('should early-out when trace is blocked (hit first wall, ignore second)', () => {

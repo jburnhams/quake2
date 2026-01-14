@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { traceBox, CollisionModel } from '../../src/bsp/collision.js';
+import { traceBox, CollisionModel } from '../../../src/bsp/collision.js';
 import { makeBrushFromMinsMaxs, makeLeaf, makePlane, makeNode, makeBspModel, makeAxisBrush, makeLeafModel } from '@quake2ts/test-utils';
-import { CONTENTS_SOLID, MASK_SOLID } from '../../src/bsp/contents.js';
+import { CONTENTS_SOLID, MASK_SOLID } from '../../../src/bsp/contents.js';
 
 describe('Trace Performance', () => {
   it('should run 10,000 traces in under 1s', () => {

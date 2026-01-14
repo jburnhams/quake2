@@ -1,8 +1,8 @@
 
 import { describe, it, expect } from 'vitest';
-import { CollisionEntityIndex, CollisionEntityLink } from '../../src/bsp/collision.js';
-import { CONTENTS_SOLID, MASK_SOLID } from '../../src/bsp/contents.js';
-import { Vec3 } from '../../src/math/vec3.js';
+import { CollisionEntityIndex, CollisionEntityLink } from '../../../src/bsp/collision.js';
+import { CONTENTS_SOLID, MASK_SOLID } from '../../../src/bsp/contents.js';
+import { Vec3 } from '../../../src/math/vec3.js';
 
 describe('Entity Collision Scaling', () => {
   const makeEntity = (id: number, x: number, y: number, z: number, size = 16): CollisionEntityLink => ({

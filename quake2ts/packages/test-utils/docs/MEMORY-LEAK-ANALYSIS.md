@@ -35,6 +35,10 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `audio/*` (constants)
    - Moved: `io/*` (binaryStream, binaryWriter, messageBuilder)
    - Moved: `items/*` (ammo, powerups, weaponInfo, weapons)
+   - Moved: `bsp/*` (trace, collision, etc.)
+   - Moved: `integration/pmove.test.ts` (renamed to `pmove-integration.test.ts`)
+   - Moved: `determinism.test.ts`
+   - Moved: `test/random.test.ts` (renamed to `random-parity.test.ts`)
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
 5. Configure node tests with `environment: 'node'` in vitest config

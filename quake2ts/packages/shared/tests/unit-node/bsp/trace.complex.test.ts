@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { traceBox } from '../../src/bsp/collision.js';
+import { traceBox } from '../../../src/bsp/collision.js';
 import {
   makeLeafModel,
   makeBrushFromMinsMaxs,

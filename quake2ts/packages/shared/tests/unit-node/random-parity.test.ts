@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MersenneTwister19937, RandomGenerator } from '../src/index.js';
+import { MersenneTwister19937, RandomGenerator } from '../../src/index.js';
 
 const FIRST_FIVE_MT_VALUES = [
   3499211612,

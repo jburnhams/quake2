@@ -7,8 +7,8 @@ import {
   traceDebugInfo,
   type CollisionLumpData,
   type CollisionModel,
-} from '../../src/bsp/collision.js';
-import { CONTENTS_SOLID } from '../../src/bsp/contents.js';
+} from '../../../src/bsp/collision.js';
+import { CONTENTS_SOLID } from '../../../src/bsp/contents.js';
 
 describe('traceBox optimization', () => {
   let model: CollisionModel;

@@ -7,8 +7,8 @@ import {
   createDefaultTrace,
   TraceResult,
   computePlaneSignBits
-} from '../../src/bsp/collision.js';
-import { Vec3 } from '../../src/math/vec3.js';
+} from '../../../src/bsp/collision.js';
+import { Vec3 } from '../../../src/math/vec3.js';
 
 describe('Trace System Verification', () => {
   const ZERO: Vec3 = { x: 0, y: 0, z: 0 };
