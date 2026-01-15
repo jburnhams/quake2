@@ -1,16 +1,4 @@
-import { EntityState, PmoveTraceResult, Vec3 } from '@quake2ts/shared';
-
-// Mock ConfigStringIndex to match shared
-enum ConfigStringIndex {
-  Models = 32,
-  Sounds = 288,
-  Images = 544,
-  Players = 544 + 256, // Base for players, usually logic handles offset
-}
-
-const MAX_MODELS = 256;
-const MAX_SOUNDS = 256;
-const MAX_IMAGES = 256;
+import { EntityState, PmoveTraceResult, Vec3, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES } from '@quake2ts/shared';
 
 // Minimal ClientConfigStrings implementation for testing
 export class MockClientConfigStrings {

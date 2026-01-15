@@ -1,17 +1,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildRenderableEntities } from '@quake2ts/client/entities.js';
-import { EntityState } from '@quake2ts/shared';
-import { ClientConfigStrings } from '@quake2ts/client/configStrings.js';
+import { EntityState, ConfigStringIndex } from '@quake2ts/shared';
 import { ClientImports } from '@quake2ts/client/index.js';
-import { createMockAssetManager, createMockMd2Model } from '@quake2ts/test-utils';
+import { createMockAssetManager, createMockMd2Model, MockClientConfigStrings, createMockRenderer } from '@quake2ts/test-utils';
 
 describe('buildRenderableEntities', () => {
-    // Mock ConfigStrings
-    const mockConfigStrings = {
-        getModelName: vi.fn(),
-        getImageName: vi.fn()
-    } as unknown as ClientConfigStrings;
+    // Mock ConfigStrings using test-utils helper
+    const mockConfigStrings = new MockClientConfigStrings();
 
     // Mock AssetManager using centralized factory from test-utils
     const mockAssets = createMockAssetManager();
@@ -20,7 +16,7 @@ describe('buildRenderableEntities', () => {
     const mockImports = {
         engine: {
             assets: mockAssets,
-            renderer: {}
+            renderer: createMockRenderer()
         }
     } as unknown as ClientImports;
 
@@ -32,7 +28,7 @@ describe('buildRenderableEntities', () => {
 
     it('should interpolate scale correctly', () => {
         // Setup mocks
-        (mockConfigStrings.getModelName as any).mockReturnValue('models/test.md2');
+        mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
         (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
         const stateA: EntityState = {
@@ -72,7 +68,7 @@ describe('buildRenderableEntities', () => {
 
     it('should interpolate alpha correctly', () => {
         // Setup mocks
-        (mockConfigStrings.getModelName as any).mockReturnValue('models/test.md2');
+        mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
         (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
         const stateA: EntityState = {
@@ -105,7 +101,7 @@ describe('buildRenderableEntities', () => {
 
     it('should handle default alpha (0 or undefined) as 255', () => {
          // Setup mocks
-         (mockConfigStrings.getModelName as any).mockReturnValue('models/test.md2');
+         mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
          (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
          const stateA: EntityState = {

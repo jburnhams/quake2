@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCGameImport } from '@quake2ts/client/cgameBridge';
 import { CvarRegistry } from '@quake2ts/engine';
+import { createMockClientState, createMockRenderer } from '@quake2ts/test-utils';
 
 describe('CGameImport cvar', () => {
     let mockCvars: CvarRegistry;
@@ -16,19 +17,20 @@ describe('CGameImport cvar', () => {
         mockImports = {
             host: mockHost,
             engine: {
-                renderer: {}
+                renderer: createMockRenderer()
             }
         };
-        mockState = {
+        mockState = createMockClientState({
              tickRate: 10,
              frameTimeMs: 100,
              serverFrame: 1,
              serverProtocol: 34,
-             configStrings: { get: () => '' },
-             getClientName: () => 'TestPlayer',
-             getKeyBinding: () => '',
-             inAutoDemo: false
-        };
+             // configStrings, getClientName, etc are provided by default, but we can override if needed
+             // defaults are sufficient for these tests
+        });
+
+        // Ensure defaults match what the test expects if specific values were relied upon
+        mockState.getClientName = () => 'TestPlayer';
     });
 
     it('should return existing cvar if it exists', () => {
