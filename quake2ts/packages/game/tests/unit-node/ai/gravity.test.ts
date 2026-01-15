@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType } from '../../src/entities/entity';
-import { M_CheckBottom } from '../../src/ai/movement';
+import { Entity, MoveType } from '../../../src/entities/entity';
+import { M_CheckBottom } from '../../../src/ai/movement';
 import { createTestContext } from '@quake2ts/test-utils';
 
 describe('Gravity Vector Support', () => {

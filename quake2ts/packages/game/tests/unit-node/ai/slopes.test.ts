@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
-import { M_MoveStep } from '../../src/ai/movement.js';
+import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
+import { M_MoveStep } from '../../../src/ai/movement.js';
 import { MASK_MONSTERSOLID } from '@quake2ts/shared';
 import { createMonsterEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 

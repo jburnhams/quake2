@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, EntityFlags } from '../../src/entities/entity.js';
-import { findCover } from '../../src/ai/targeting.js';
+import { Entity, EntityFlags } from '../../../src/entities/entity.js';
+import { findCover } from '../../../src/ai/targeting.js';
 import { createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory, createTestContext } from '@quake2ts/test-utils';
-import { EntitySystem } from '../../src/entities/system.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 
 describe('AI Cover Seeking', () => {
   let monster: Entity;

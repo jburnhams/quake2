@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { AiFlags as EntityAiFlags } from '../../src/entities/entity.js';
-import { AIFlags as AiConstantsFlags } from '../../src/ai/constants.js';
+import { AiFlags as EntityAiFlags } from '../../../src/entities/entity.js';
+import { AIFlags as AiConstantsFlags } from '../../../src/ai/constants.js';
 
 describe('AI Flags Consistency', () => {
   it('should have consistent ManualSteering / ManualTarget flags', () => {

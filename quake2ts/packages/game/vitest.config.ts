@@ -1,24 +1,29 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
-const isIntegration = process.env.TEST_TYPE === 'integration';
-const isUnit = process.env.TEST_TYPE === 'unit';
+const testType = process.env.TEST_TYPE;
+const isIntegration = testType === 'integration';
+const isUnitNode = testType === 'unit-node';
+const isUnitJsdom = testType === 'unit-jsdom';
+const isUnit = testType === 'unit';
 
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  // If unit tests, exclude integration folder
-  ...(isUnit ? ['tests/integration/**', '**/*integration*'] : []),
-  // If integration tests, exclude unit tests.
-  // We exclude everything that is NOT in tests/integration
-  // But include only allows specific files.
-  // The 'exclude' list is applied after 'include'.
-  // If include is ['tests/integration/**'], we don't strictly need exclude for others, but good for safety.
 ];
 
-const include = isIntegration
-  ? ['tests/integration/**/*.test.ts']
-  : ['tests/**/*.test.ts', 'src/save/tests/**/*.test.ts'];
+let include = ['tests/**/*.test.ts', 'src/save/tests/**/*.test.ts'];
+
+if (isIntegration) {
+  include = ['tests/integration/**/*.test.ts'];
+} else if (isUnitNode) {
+  include = ['tests/unit-node/**/*.test.ts'];
+} else if (isUnitJsdom) {
+  include = ['tests/unit-jsdom/**/*.test.ts'];
+} else if (isUnit) {
+  exclude.push('tests/integration/**');
+  exclude.push('**/*integration*');
+}
 
 export default defineConfig({
   resolve: {
@@ -35,6 +40,7 @@ export default defineConfig({
   test: {
     include,
     exclude,
+    environment: isUnitNode ? 'node' : 'jsdom',
     pool: isIntegration ? 'forks' : 'threads',
     poolOptions: {
       forks: {

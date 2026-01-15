@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity } from '../../src/entities/entity.js';
-import { findTarget } from '../../src/ai/targeting.js';
-import { AIFlags } from '../../src/ai/constants.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { findTarget } from '../../../src/ai/targeting.js';
+import { AIFlags } from '../../../src/ai/constants.js';
 import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 
 describe('AI Third Eye Detection', () => {
