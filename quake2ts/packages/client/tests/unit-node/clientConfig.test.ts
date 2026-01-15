@@ -2,19 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
 import { Renderer, EngineImports } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager, createMockTexture } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager, createMockTexture, createTraceMock } from '@quake2ts/test-utils';
 
 // Mock dependencies
 const mockAssets = createMockAssetManager();
 
 const mockRenderer = createMockRenderer();
 
-const mockTrace = vi.fn().mockReturnValue({
+const mockTrace = vi.fn().mockReturnValue(createTraceMock({
   fraction: 1,
   endpos: { x: 0, y: 0, z: 0 },
-  plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-  ent: -1
-});
+  ent: -1 as any // Client trace often returns number index
+}));
 
 const mockEngine: EngineImports & { renderer: Renderer } = {
   assets: mockAssets,
