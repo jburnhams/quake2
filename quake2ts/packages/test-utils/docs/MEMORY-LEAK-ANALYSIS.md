@@ -39,9 +39,12 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `integration/pmove.test.ts` (renamed to `pmove-integration.test.ts`)
    - Moved: `determinism.test.ts`
    - Moved: `test/random.test.ts` (renamed to `random-parity.test.ts`)
+   - Moved: `game/tests/ai` tests to `game/tests/unit-node/ai`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
+   - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
 5. Configure node tests with `environment: 'node'` in vitest config
+   - Updated `packages/game/vitest.config.ts` to support split environments
 
 **Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
 

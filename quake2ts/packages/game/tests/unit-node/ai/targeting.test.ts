@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ai_checkattack } from '../../src/ai/targeting.js';
-import { Entity } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { AttackState } from '../../src/ai/constants.js';
+import { ai_checkattack } from '../../../src/ai/targeting.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { AttackState } from '../../../src/ai/constants.js';
 import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity, createMonsterInfoFactory } from '@quake2ts/test-utils';
 
 describe('ai_checkattack', () => {

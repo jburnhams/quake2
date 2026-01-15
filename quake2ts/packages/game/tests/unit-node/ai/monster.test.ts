@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
-import { createDefaultSpawnRegistry } from '../../src/entities/spawn.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { createDefaultSpawnRegistry } from '../../../src/entities/spawn.js';
 import { createTestContext, createMonsterEntityFactory, spawnEntity, createMonsterMoveFactory } from '@quake2ts/test-utils';
-import { monster_think } from '../../src/ai/monster.js';
+import { monster_think } from '../../../src/ai/monster.js';
 import { RenderFx } from '@quake2ts/shared';
-import { Entity } from '../../src/entities/entity.js';
+import { Entity } from '../../../src/entities/entity.js';
 
 describe('Monster AI - Soldier', () => {
   let system: EntitySystem;
