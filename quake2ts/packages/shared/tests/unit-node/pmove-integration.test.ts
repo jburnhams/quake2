@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
+  createTraceRunner
 } from '@quake2ts/test-utils';
 import {
-  traceBox, TraceResult,
   applyPmoveAirMove,
   categorizePosition,
   runPmove,
@@ -12,17 +12,6 @@ import {
   ZERO_VEC3,
   PmType, PmFlag, PlayerButton
 } from '@quake2ts/shared';
-
-// Mock TraceFunction
-function createTrace(model: any): (start: any, end: any, mins: any, maxs: any) => TraceResult {
-  return (start, end, mins, maxs) => {
-    // Note: traceBox usually expects a headnode (an index into nodes array)
-    // But our test helpers for leaf model might not set up nodes correctly for recursiveHullCheck
-    // For makeLeafModel, it puts everything in one leaf (index 0).
-    // traceBox should take -1 as headnode to indicate "start at leaf 0" directly.
-    return traceBox({ model, start, end, mins, maxs, headnode: -1 });
-  };
-}
 
 // Integration test for Player Movement with actual BSP tracing
 describe('Player Movement Integration', () => {
@@ -37,7 +26,7 @@ describe('Player Movement Integration', () => {
 
   // makeLeafModel puts all brushes in one leaf.
   const model = makeLeafModel([floorBrush, wallBrush, stepBrush]);
-  const trace = createTrace(model);
+  const trace = createTraceRunner(model);
   const pointContents = (p: any) => 0; // Mock empty space contents
 
   const mins = { x: -16, y: -16, z: -24 };

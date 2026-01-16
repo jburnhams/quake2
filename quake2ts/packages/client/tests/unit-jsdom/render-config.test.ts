@@ -1,67 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer } from '@quake2ts/engine';
-import { EngineHost, Cvar, CvarFlags } from '@quake2ts/engine';
+import { createMockRenderer, createMockEngineHost } from '@quake2ts/test-utils';
 import { CONTENTS_WATER } from '@quake2ts/shared';
 
 describe('Client Renderer Configuration', () => {
   let mockRenderer: Renderer;
   let mockEngine: EngineImports;
-  let mockCvars: Map<string, Cvar>;
-  let mockHost: EngineHost;
+  let mockHost: any; // Using any to access mock internals if needed, though EngineHost interface is mostly sufficient
   let clientImports: ClientImports;
 
   beforeEach(() => {
-    mockRenderer = {
+    mockRenderer = createMockRenderer({
+      width: 800,
+      height: 600,
+      getPerformanceReport: vi.fn(() => ({})),
       setGamma: vi.fn(),
       setBrightness: vi.fn(),
       setUnderwaterWarp: vi.fn(),
       setBloom: vi.fn(),
       setBloomIntensity: vi.fn(),
-      renderFrame: vi.fn(() => ({})), // Mock renderFrame returning empty stats
-      width: 800,
-      height: 600,
-      getPerformanceReport: vi.fn(() => ({})),
-      begin2D: vi.fn(),
-      end2D: vi.fn(),
-      drawPic: vi.fn(),
-      drawString: vi.fn(),
-      drawCenterString: vi.fn(),
-      drawfillRect: vi.fn(),
-      // ... minimal mocks for other methods if needed
-    } as unknown as Renderer;
+    });
 
     mockEngine = {
       renderer: mockRenderer,
       trace: vi.fn().mockReturnValue({ contents: 0, fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
-      // ... minimal engine imports
+      assets: {
+          loadTexture: vi.fn().mockResolvedValue({}),
+          loadMd2Model: vi.fn().mockResolvedValue({}),
+          loadMd3Model: vi.fn().mockResolvedValue({}),
+          loadSprite: vi.fn().mockResolvedValue({}),
+          loadSound: vi.fn().mockResolvedValue({}),
+      } as any
     } as unknown as EngineImports;
 
-    mockCvars = new Map();
-    mockHost = {
-      cvars: {
-        register: vi.fn((config) => {
-          mockCvars.set(config.name, {
-            name: config.name,
-            string: config.defaultValue || '',
-            number: parseFloat(config.defaultValue || '0'),
-            flags: config.flags || 0,
-            modified: false,
-            description: config.description
-          } as Cvar);
-          // Store the onChange callback to trigger it manually in tests
-          if (config.onChange) {
-            (mockCvars.get(config.name) as any).onChange = config.onChange;
-          }
-        }),
-        get: vi.fn((name) => mockCvars.get(name)),
-        list: vi.fn(() => Array.from(mockCvars.values())),
-        setValue: vi.fn(),
-      },
-      commands: {
-        register: vi.fn(),
-      }
-    } as unknown as EngineHost;
+    mockHost = createMockEngineHost();
 
     clientImports = {
       engine: mockEngine,
@@ -86,39 +59,29 @@ describe('Client Renderer Configuration', () => {
 
       it('should update renderer gamma when vid_gamma changes', () => {
         createClient(clientImports);
-        const gammaCvar = mockCvars.get('vid_gamma') as any;
-        expect(gammaCvar).toBeDefined();
 
-        // Simulate Cvar change
-        gammaCvar.number = 1.5;
-        gammaCvar.onChange(gammaCvar);
+        // Simulate Cvar change via host
+        mockHost.cvars.setValue('vid_gamma', '1.5');
 
         expect(mockRenderer.setGamma).toHaveBeenCalledWith(1.5);
       });
 
       it('should update renderer brightness when r_brightness changes', () => {
         createClient(clientImports);
-        const brightnessCvar = mockCvars.get('r_brightness') as any;
-        expect(brightnessCvar).toBeDefined();
 
         // Simulate Cvar change
-        brightnessCvar.number = 0.8;
-        brightnessCvar.onChange(brightnessCvar);
+        mockHost.cvars.setValue('r_brightness', '0.8');
 
         expect(mockRenderer.setBrightness).toHaveBeenCalledWith(0.8);
       });
 
       it('should apply initial gamma and brightness in Init', () => {
-        // Pre-set values in the mock cvar system before Init is called
-        // createClient registers them, but let's assume they have values from storage
+        // createClient registers cvars
         const client = createClient(clientImports);
 
-        // Simulate that cvars have non-default values
-        const gammaCvar = mockCvars.get('vid_gamma')!;
-        gammaCvar.number = 2.2;
-
-        const brightnessCvar = mockCvars.get('r_brightness')!;
-        brightnessCvar.number = 1.2;
+        // Simulate that cvars have non-default values (e.g. loaded from config)
+        mockHost.cvars.setValue('vid_gamma', '2.2');
+        mockHost.cvars.setValue('r_brightness', '1.2');
 
         client.Init();
 
@@ -128,23 +91,18 @@ describe('Client Renderer Configuration', () => {
 
       it('should update renderer bloom when r_bloom changes', () => {
           createClient(clientImports);
-          const bloomCvar = mockCvars.get('r_bloom') as any;
 
-          bloomCvar.number = 1;
-          bloomCvar.onChange(bloomCvar);
+          mockHost.cvars.setValue('r_bloom', '1');
           expect(mockRenderer.setBloom).toHaveBeenCalledWith(true);
 
-          bloomCvar.number = 0;
-          bloomCvar.onChange(bloomCvar);
+          mockHost.cvars.setValue('r_bloom', '0');
           expect(mockRenderer.setBloom).toHaveBeenCalledWith(false);
       });
 
       it('should update renderer bloom intensity when r_bloom_intensity changes', () => {
           createClient(clientImports);
-          const intensityCvar = mockCvars.get('r_bloom_intensity') as any;
 
-          intensityCvar.number = 0.8;
-          intensityCvar.onChange(intensityCvar);
+          mockHost.cvars.setValue('r_bloom_intensity', '0.8');
           expect(mockRenderer.setBloomIntensity).toHaveBeenCalledWith(0.8);
       });
   });
@@ -155,14 +113,12 @@ describe('Client Renderer Configuration', () => {
           client.Init();
 
           // Mock trace to return water contents
-          // trace is used by pointContents adapter in createClient
           mockEngine.trace = vi.fn().mockReturnValue({
               contents: CONTENTS_WATER,
               fraction: 1.0,
               endpos: { x: 0, y: 0, z: 0 }
           });
 
-          // Mock a prediction state to allow render to proceed
           const sample = {
               nowMs: 1000,
               latest: {
@@ -174,15 +130,12 @@ describe('Client Renderer Configuration', () => {
                       pmFlags: 0,
                       waterLevel: 0,
                       watertype: 0,
-                      client: {} // Needed to trigger HUD/World render
+                      client: {}
                   }
               },
               previous: null,
               alpha: 0
           };
-
-          // We also need to ensure lastRendered is set, which happens via predict or Init
-          // Calling render with sample will set it.
 
           client.render(sample as any);
 
