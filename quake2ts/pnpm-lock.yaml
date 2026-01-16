@@ -288,6 +288,9 @@ importers:
 
   packages/shared:
     devDependencies:
+      '@quake2ts/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
       gl-matrix:
         specifier: ^3.4.4
         version: 3.4.4
