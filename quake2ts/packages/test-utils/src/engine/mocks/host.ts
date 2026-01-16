@@ -8,28 +8,30 @@ export function createMockEngineHost(overrides?: Partial<EngineHost>): EngineHos
   return {
     cvars: {
       register: vi.fn((config) => {
+        // Create a mock object that mimics Cvar structure but is mutable
         const cvar = {
           name: config.name,
           string: config.defaultValue || '',
           number: parseFloat(config.defaultValue || '0'),
           flags: config.flags || 0,
-          modified: false,
+          modifiedCount: 0,
           description: config.description,
           onChange: config.onChange
-        } as unknown as Cvar;
-        cvars.set(config.name, cvar);
-        return cvar;
+        };
+        cvars.set(config.name, cvar as unknown as Cvar);
+        return cvar as unknown as Cvar;
       }),
       get: vi.fn((name) => cvars.get(name)),
       list: vi.fn(() => Array.from(cvars.values())),
       setValue: vi.fn((name, value, flags) => {
-        const cvar = cvars.get(name);
+        const cvar = cvars.get(name) as any;
         if (cvar) {
+          const previousValue = cvar.string;
           cvar.string = value;
           cvar.number = parseFloat(value);
-          cvar.modified = true;
+          cvar.modifiedCount = (cvar.modifiedCount || 0) + 1;
           if (cvar.onChange) {
-            cvar.onChange(cvar);
+            cvar.onChange(cvar, previousValue);
           }
         }
       }),
