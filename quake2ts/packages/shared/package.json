@@ -42,7 +42,6 @@
     "test:integration": "echo 'Integration tests moved to unit-node' && exit 0"
   },
   "devDependencies": {
-    "@quake2ts/test-utils": "workspace:^",
     "gl-matrix": "^3.4.4",
     "tsup": "^8.5.1"
   }
