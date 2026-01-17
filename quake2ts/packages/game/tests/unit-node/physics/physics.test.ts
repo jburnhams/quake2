@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Entity, MoveType } from '../../src/entities/entity.js';
-import { runGravity, runBouncing, runProjectileMovement } from '../../src/physics/movement.js';
-import { GameTraceResult } from '../../src/imports.js';
+import { Entity, MoveType } from '../../../src/entities/entity.js';
+import { runGravity, runBouncing, runProjectileMovement } from '../../../src/physics/movement.js';
+import { GameTraceResult } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 import { createEntityFactory, createTraceMock, createTestContext } from '@quake2ts/test-utils';
 

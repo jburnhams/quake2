@@ -3,8 +3,8 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { canPickupHealth } from '../../src/inventory/index.js';
-import { HEALTH_ITEMS } from '../../src/inventory/items.js';
+import { canPickupHealth } from '../../../src/inventory/index.js';
+import { HEALTH_ITEMS } from '../../../src/inventory/items.js';
 import { createMockInventory } from '@quake2ts/test-utils';
 
 describe('Health Pickups', () => {

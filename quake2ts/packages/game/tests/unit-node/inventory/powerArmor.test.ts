@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   createPlayerInventory,
   pickupPowerArmor,
-} from '../../src/inventory/index.js';
-import { POWER_ARMOR_ITEMS } from '../../src/inventory/items.js';
+} from '../../../src/inventory/index.js';
+import { POWER_ARMOR_ITEMS } from '../../../src/inventory/items.js';
 
 describe('power armor', () => {
     it('picks up power screen', () => {

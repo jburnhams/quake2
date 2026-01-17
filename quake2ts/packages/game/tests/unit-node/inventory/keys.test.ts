@@ -3,9 +3,9 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { createPlayerInventory, pickupKey } from '../../src/inventory/index.js';
-import { KEY_ITEMS } from '../../src/inventory/items.js';
-import { KeyId } from '../../src/inventory/playerInventory.js';
+import { createPlayerInventory, pickupKey } from '../../../src/inventory/index.js';
+import { KEY_ITEMS } from '../../../src/inventory/items.js';
+import { KeyId } from '../../../src/inventory/playerInventory.js';
 
 describe('Key Pickups', () => {
     it('should add the blue key to the player', () => {

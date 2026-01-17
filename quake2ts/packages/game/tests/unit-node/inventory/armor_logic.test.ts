@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ArmorType } from '../../src/combat/armor.js';
-import { ARMOR_ITEMS } from '../../src/inventory/items.js';
-import { createPlayerInventory, pickupArmor } from '../../src/inventory/playerInventory.js';
+import { ArmorType } from '../../../src/combat/armor.js';
+import { ARMOR_ITEMS } from '../../../src/inventory/items.js';
+import { createPlayerInventory, pickupArmor } from '../../../src/inventory/playerInventory.js';
 
 describe('Armor Pickup Logic', () => {
     it('grants Jacket Armor (2) when picking up a shard with no armor', () => {

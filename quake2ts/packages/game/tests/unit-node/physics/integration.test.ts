@@ -14,10 +14,10 @@ import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
 } from '@quake2ts/test-utils';
-import { runProjectileMovement, runPush, runGravity } from '../../src/physics/movement.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { GameImports, GameTraceResult } from '../../src/imports.js';
-import { EntitySystem } from '../../src/entities/system.js';
+import { runProjectileMovement, runPush, runGravity } from '../../../src/physics/movement.js';
+import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { GameImports, GameTraceResult } from '../../../src/imports.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 
 // Helper to create a functional trace mock that uses traceBox with a provided model
 function createTraceDelegate(model: any) {

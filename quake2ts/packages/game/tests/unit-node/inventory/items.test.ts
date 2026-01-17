@@ -3,9 +3,9 @@
 // =================================================================
 
 import { describe, expect, it } from 'vitest';
-import { pickupWeapon } from '../../src/inventory/index.js';
-import { WeaponId } from '../../src/inventory/playerInventory.js';
-import { AmmoType } from '../../src/inventory/ammo.js';
+import { pickupWeapon } from '../../../src/inventory/index.js';
+import { WeaponId } from '../../../src/inventory/playerInventory.js';
+import { AmmoType } from '../../../src/inventory/ammo.js';
 import { createMockInventory, createMockWeaponItem } from '@quake2ts/test-utils';
 
 describe('Item Pickup', () => {

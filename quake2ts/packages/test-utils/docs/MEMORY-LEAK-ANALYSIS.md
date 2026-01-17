@@ -40,6 +40,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `determinism.test.ts`
    - Moved: `test/random.test.ts` (renamed to `random-parity.test.ts`)
    - Moved: `game/tests/ai` tests to `game/tests/unit-node/ai`
+   - Moved: `game/tests/inventory` tests to `game/tests/unit-node/inventory`
+   - Moved: `game/tests/physics` tests to `game/tests/unit-node/physics`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`

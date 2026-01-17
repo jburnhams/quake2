@@ -7,7 +7,7 @@ import {
   addAmmo,
   getAmmoItemDefinition,
   pickupAmmo,
-} from '../../src/inventory/ammo.js';
+} from '../../../src/inventory/ammo.js';
 import { createMockInventory, createMockAmmoItem } from '@quake2ts/test-utils';
 
 function makeInventory(starting?: Partial<Record<AmmoType, number>>) {

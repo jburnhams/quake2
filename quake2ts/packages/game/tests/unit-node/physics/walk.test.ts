@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType, Solid, EntityFlags } from '../../src/entities/entity.js';
-import { runStep } from '../../src/physics/movement.js';
-import { GameImports } from '../../src/imports.js';
-import { EntitySystem } from '../../src/entities/system.js';
+import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
+import { runStep } from '../../../src/physics/movement.js';
+import { GameImports } from '../../../src/imports.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 import { Vec3 } from '@quake2ts/shared';
 import { createMockGameExports, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
