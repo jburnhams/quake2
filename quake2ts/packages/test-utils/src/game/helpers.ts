@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest';
-import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem, createGame, type Game, type GameConfig } from '@quake2ts/game';
+import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem, createGame, type GameExports, type GameCreateOptions } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3, type RandomGenerator } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
@@ -515,15 +515,15 @@ export function createMockGameExports(overrides: Partial<any> = {}): any {
 export function createTestGame(options?: {
     imports?: Partial<MockImportsAndEngine['imports']>;
     engine?: Partial<MockImportsAndEngine['engine']>;
-    config?: Partial<GameConfig>;
+    config?: Partial<GameCreateOptions>;
     seed?: number;
-}): { game: Game; imports: MockImportsAndEngine['imports']; engine: MockImportsAndEngine['engine'] } {
+}): { game: GameExports; imports: MockImportsAndEngine['imports']; engine: MockImportsAndEngine['engine'] } {
     const { imports, engine } = createGameImportsAndEngine({
         imports: options?.imports,
         engine: options?.engine
     });
 
-    const config: GameConfig = {
+    const config: GameCreateOptions = {
         gravity: { x: 0, y: 0, z: -800 },
         ...options?.config
     };
