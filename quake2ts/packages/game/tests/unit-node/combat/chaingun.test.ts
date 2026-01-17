@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
-import { createGame, GameExports } from '../../../src/index.js';
+import { GameExports } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as damage from '../../../src/combat/damage.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
@@ -12,7 +12,7 @@ import { Entity } from '../../../src/entities/entity.js';
 import { chaingunThink } from '../../../src/combat/weapons/chaingun.js';
 import { getWeaponState } from '../../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
-import { createPlayerEntityFactory, createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -23,55 +23,50 @@ describe('Chaingun', () => {
     let engine: any;
 
     beforeEach(() => {
-        const { imports, engine: mockEngine } = createGameImportsAndEngine();
+        const { game: testGame, imports, engine: mockEngine } = createTestGame({
+            config: { deathmatch: false }
+        });
+
+        game = testGame;
         trace = imports.trace;
         engine = mockEngine;
 
         // Spy on T_Damage to verify damage application
         T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
-
         // Ensure circular reference for tests using sys.game using defineProperty to bypass readonly
         Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
 
-        game.spawnWorld();
-
-        // Use factory for player configuration - explicitly set classname even if factory default is 'player', for clarity
+        // Use factory for player configuration
         const playerTemplate = createPlayerEntityFactory({
-            classname: 'player',
             angles: { x: 0, y: 0, z: 0 },
             origin: { x: 0, y: 0, z: 0 }
         });
 
-        player = game.entities.spawn();
-        Object.assign(player, playerTemplate);
+        player = spawnEntity(game.entities, playerTemplate);
 
         // Manually set complex client objects that might not be in factory default yet or need specific test setup
-        player.client = {
-            inventory: createPlayerInventory({
-                weapons: [WeaponId.Chaingun],
-                ammo: { [AmmoType.Bullets]: 50 },
-            }),
-            weaponStates: { states: new Map() },
-            buttons: 0,
-            gun_frame: 0,
-            weaponstate: WeaponStateEnum.WEAPON_READY,
-            kick_angles: {x: 0, y: 0, z: 0},
-            kick_origin: {x: 0, y: 0, z: 0},
-        } as any;
-
-        game.entities.finalizeSpawn(player);
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.Chaingun],
+            ammo: { [AmmoType.Bullets]: 50 },
+        });
+        player.client!.weaponStates = {
+            states: new Map(),
+            activeWeaponId: WeaponId.Chaingun,
+            currentWeapon: null,
+            lastFireTime: 0,
+            weaponFrame: 0,
+            weaponIdleTime: 0
+        };
+        player.client!.buttons = 0;
+        player.client!.gun_frame = 0;
+        player.client!.weaponstate = WeaponStateEnum.WEAPON_READY;
 
         // Use factory for target
-        const targetTemplate = createEntityFactory({
+        target = spawnEntity(game.entities, createEntityFactory({
             health: 100,
             takedamage: true
-        });
-        target = game.entities.spawn();
-        Object.assign(target, targetTemplate);
-
-        game.entities.finalizeSpawn(target);
+        }));
 
         trace.mockReturnValue({
             ent: target,
@@ -136,11 +131,9 @@ describe('Chaingun', () => {
 
     describe('Spin-up Mechanic', () => {
         it('should increase shots fired during continuous fire', () => {
-            const { imports, engine: mockEngine } = createGameImportsAndEngine();
+            const { game, imports, engine: mockEngine } = createTestGame();
             const trace = imports.trace;
             vi.spyOn(damage, 'T_Damage');
-
-            const game = createGame(imports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
 
             Object.defineProperty(game.entities, 'game', { value: game, configurable: true });
 
@@ -150,37 +143,31 @@ describe('Chaingun', () => {
                 currentTime += ms;
             };
 
-            game.spawnWorld();
+            const player = spawnEntity(game.entities, createPlayerEntityFactory({
+                origin: { x: 0, y: 0, z: 0 },
+                angles: { x: 0, y: 0, z: 0 }
+            }));
 
-            const playerTemplate = createPlayerEntityFactory({
-                classname: 'player',
-                angles: { x: 0, y: 0, z: 0 },
-                origin: { x: 0, y: 0, z: 0 }
+            player.client!.inventory = createPlayerInventory({
+                weapons: [WeaponId.Chaingun],
+                ammo: { [AmmoType.Bullets]: 200 },
             });
-            const player = game.entities.spawn();
-            Object.assign(player, playerTemplate);
+            player.client!.weaponStates = {
+                states: new Map(),
+                activeWeaponId: WeaponId.Chaingun,
+                currentWeapon: null,
+                lastFireTime: 0,
+                weaponFrame: 0,
+                weaponIdleTime: 0
+            };
+            player.client!.buttons = 1; // Attack
+            player.client!.gun_frame = 0;
+            player.client!.weaponstate = WeaponStateEnum.WEAPON_READY;
 
-            player.client = {
-                inventory: createPlayerInventory({
-                    weapons: [WeaponId.Chaingun],
-                    ammo: { [AmmoType.Bullets]: 200 },
-                }),
-                weaponStates: { states: new Map() },
-                kick_angles: {x: 0, y: 0, z: 0},
-                kick_origin: {x: 0, y: 0, z: 0},
-                buttons: 1, // Attack
-                gun_frame: 0,
-                weaponstate: WeaponStateEnum.WEAPON_READY
-            } as any;
-            game.entities.finalizeSpawn(player);
-
-            const targetTemplate = createEntityFactory({
+            const target = spawnEntity(game.entities, createEntityFactory({
                 health: 1000,
                 takedamage: true
-            });
-            const target = game.entities.spawn();
-            Object.assign(target, targetTemplate);
-            game.entities.finalizeSpawn(target);
+            }));
 
             trace.mockReturnValue({
                 ent: target,

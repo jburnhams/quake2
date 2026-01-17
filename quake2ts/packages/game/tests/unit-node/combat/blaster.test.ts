@@ -4,19 +4,16 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
-import { createGame } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createGameImportsAndEngine, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-		game.init(0);
+        const { game } = createTestGame();
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
             angles: { x: 0, y: 90, z: 0 }
@@ -33,7 +30,7 @@ describe('Blaster', () => {
     });
 
     it('should travel at the correct speed', () => {
-        const { imports, engine } = createGameImportsAndEngine();
+        const { game, imports } = createTestGame();
         // Custom trace mock for empty world
         // Trace signature: (start, mins, maxs, end, ...)
         imports.trace.mockImplementation((start, mins, maxs, end) => {
@@ -48,8 +45,6 @@ describe('Blaster', () => {
                 plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
             };
         });
-
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
              angles: { x: 0, y: 0, z: 0 } // Fire along X-axis
