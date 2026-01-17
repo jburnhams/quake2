@@ -35,7 +35,7 @@ export {
   makeLeaf,
   makeLeafModel,
   makeBrushFromMinsMaxs
-} from '@quake2ts/shared/testing';
+} from '@quake2ts/shared';
 
 // --- Visual Test Helpers ---
 
