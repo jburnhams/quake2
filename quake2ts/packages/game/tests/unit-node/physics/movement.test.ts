@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { runGravity } from '../../src/physics/movement.js';
-import { MoveType } from '../../src/entities/entity.js';
+import { runGravity } from '../../../src/physics/movement.js';
+import { MoveType } from '../../../src/entities/entity.js';
 import { type Vec3 } from '@quake2ts/shared';
 import { createEntityFactory, createEntity } from '@quake2ts/test-utils';
 

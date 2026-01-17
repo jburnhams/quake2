@@ -3,8 +3,8 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { pickupPowerup, PlayerClient } from '../../src/inventory/index.js';
-import { PowerupId } from '../../src/inventory/playerInventory.js';
+import { pickupPowerup, PlayerClient } from '../../../src/inventory/index.js';
+import { PowerupId } from '../../../src/inventory/playerInventory.js';
 import { createMockInventory, createMockPowerupItem } from '@quake2ts/test-utils';
 
 describe('Powerup Pickups', () => {

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { M_CheckBottom } from '../../src/ai/movement.js';
-import type { Entity } from '../../src/entities/entity.js';
-import type { EntitySystem } from '../../src/entities/system.js';
-import { MoveType, Solid } from '../../src/entities/entity.js';
+import { M_CheckBottom } from '../../../src/ai/movement.js';
+import type { Entity } from '../../../src/entities/entity.js';
+import type { EntitySystem } from '../../../src/entities/system.js';
+import { MoveType, Solid } from '../../../src/entities/entity.js';
 import { CONTENTS_SOLID } from '@quake2ts/shared';
 import { createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 

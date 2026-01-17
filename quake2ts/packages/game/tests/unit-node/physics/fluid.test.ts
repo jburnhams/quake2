@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { checkWater } from '../../src/physics/fluid.js';
-import { Entity, EntityFlags } from '../../src/entities/entity.js';
+import { checkWater } from '../../../src/physics/fluid.js';
+import { Entity, EntityFlags } from '../../../src/entities/entity.js';
 import { CONTENTS_WATER, CONTENTS_LAVA } from '@quake2ts/shared';
-import { EntitySystem } from '../../src/entities/system.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('fluid physics', () => {

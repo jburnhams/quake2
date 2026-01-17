@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runPush } from '../../src/physics/movement';
-import { Entity, MoveType, Solid } from '../../src/entities/entity';
-import { EntitySystem } from '../../src/entities/system';
-import { GameImports, GameTraceResult } from '../../src/imports';
+import { runPush } from '../../../src/physics/movement.js';
+import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { GameImports, GameTraceResult } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 
 // Mock Vec3 helpers since we don't have the real ones loaded in test context perfectly sometimes

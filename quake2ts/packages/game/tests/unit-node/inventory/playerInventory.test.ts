@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { ArmorType } from '../../src/combat/armor.js';
-import { AMMO_TYPE_COUNT } from '../../src/inventory/ammo.js';
+import { ArmorType } from '../../../src/combat/armor.js';
+import { AMMO_TYPE_COUNT } from '../../../src/inventory/ammo.js';
 import {
   AmmoItemId,
   AmmoType,
@@ -20,7 +20,7 @@ import {
   selectWeapon,
   addKey,
   addPowerup,
-} from '../../src/inventory/index.js';
+} from '../../../src/inventory/index.js';
 
 describe('player inventory creation', () => {
   it('seeds base ammo caps and empty counts', () => {

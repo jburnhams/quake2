@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolveImpact, checkTriggers } from '../../src/physics/collision.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { GameTraceResult } from '../../src/imports.js';
-import { GameEngine } from '../../src/index.js';
+import { resolveImpact, checkTriggers } from '../../../src/physics/collision.js';
+import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { GameTraceResult } from '../../../src/imports.js';
+import { GameEngine } from '../../../src/index.js';
 import { createTestContext } from '@quake2ts/test-utils';
 
 describe('Collision Physics', () => {
