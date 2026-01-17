@@ -1,6 +1,7 @@
 import type { PmoveTraceFn, PmoveTraceResult } from './pmove/types.js';
-import type { Vec3 } from './math/vec3.js';
-import { CONTENTS_LADDER } from './bsp/contents.js';
+import { type Vec3 } from './math/vec3.js';
+import { CONTENTS_LADDER, CONTENTS_SOLID } from './bsp/contents.js';
+import { type CollisionBrush, type CollisionModel, type CollisionPlane, type CollisionNode, type CollisionLeaf, traceBox, computePlaneSignBits } from './bsp/collision.js';
 
 export const intersects = (end: Vec3, maxs: Vec3, mins: Vec3, boxMins: Vec3, boxMaxs: Vec3): boolean => {
   return (
@@ -198,3 +199,115 @@ export const ladderTrace: PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, m
     contents: 0,
   };
 };
+
+/**
+ * Creates a collision plane with the specified normal and distance.
+ * Automatically calculates the plane type and signbits.
+ */
+export function makePlane(normal: Vec3, dist: number): CollisionPlane {
+  return {
+    normal,
+    dist,
+    type: Math.abs(normal.x) === 1 ? 0 : Math.abs(normal.y) === 1 ? 1 : Math.abs(normal.z) === 1 ? 2 : 3,
+    signbits: computePlaneSignBits(normal),
+  };
+}
+
+/**
+ * Creates a simple axis-aligned cubic brush for testing.
+ */
+export function makeAxisBrush(size: number, contents = CONTENTS_SOLID): CollisionBrush {
+  const half = size / 2;
+  const planes = [
+    makePlane({ x: 1, y: 0, z: 0 }, half),
+    makePlane({ x: -1, y: 0, z: 0 }, half),
+    makePlane({ x: 0, y: 1, z: 0 }, half),
+    makePlane({ x: 0, y: -1, z: 0 }, half),
+    makePlane({ x: 0, y: 0, z: 1 }, half),
+    makePlane({ x: 0, y: 0, z: -1 }, half),
+  ];
+
+  return {
+    contents,
+    sides: planes.map((plane) => ({ plane, surfaceFlags: 0 })),
+  };
+}
+
+/**
+ * Creates a BSP node.
+ */
+export function makeNode(plane: CollisionPlane, children: [number, number]): CollisionNode {
+  return { plane, children };
+}
+
+/**
+ * Constructs a full CollisionModel from components.
+ */
+export function makeBspModel(
+  planes: CollisionPlane[],
+  nodes: CollisionNode[],
+  leaves: CollisionLeaf[],
+  brushes: CollisionBrush[],
+  leafBrushes: number[]
+): CollisionModel {
+  return {
+    planes,
+    nodes,
+    leaves,
+    brushes,
+    leafBrushes,
+    bmodels: [],
+  };
+}
+
+/**
+ * Creates a BSP leaf.
+ */
+export function makeLeaf(contents: number, firstLeafBrush: number, numLeafBrushes: number): CollisionLeaf {
+  return { contents, cluster: 0, area: 0, firstLeafBrush, numLeafBrushes };
+}
+
+/**
+ * Creates a simplified CollisionModel consisting of a single leaf containing the provided brushes.
+ */
+export function makeLeafModel(brushes: CollisionBrush[]): CollisionModel {
+  const planes = brushes.flatMap((brush) => brush.sides.map((side) => side.plane));
+
+  return {
+    planes,
+    nodes: [],
+    leaves: [makeLeaf(0, 0, brushes.length)],
+    brushes,
+    leafBrushes: brushes.map((_, i) => i),
+    bmodels: [],
+  };
+}
+
+/**
+ * Creates a brush defined by min and max bounds.
+ */
+export function makeBrushFromMinsMaxs(mins: Vec3, maxs: Vec3, contents = CONTENTS_SOLID): CollisionBrush {
+  const planes = [
+    makePlane({ x: 1, y: 0, z: 0 }, maxs.x),
+    makePlane({ x: -1, y: 0, z: 0 }, -mins.x),
+    makePlane({ x: 0, y: 1, z: 0 }, maxs.y),
+    makePlane({ x: 0, y: -1, z: 0 }, -mins.y),
+    makePlane({ x: 0, y: 0, z: 1 }, maxs.z),
+    makePlane({ x: 0, y: 0, z: -1 }, -mins.z),
+  ];
+
+  return {
+    contents,
+    sides: planes.map((plane) => ({ plane, surfaceFlags: 0 })),
+  };
+}
+
+/**
+ * Creates a trace function that runs against a given collision model.
+ * Useful for integration tests using simple brush models.
+ */
+export function createTraceRunner(model: CollisionModel, headnode: number = -1) {
+    return (start: Vec3, end: Vec3, mins: Vec3, maxs: Vec3) => {
+        return traceBox({ model, start, end, mins, maxs, headnode });
+    };
+}
