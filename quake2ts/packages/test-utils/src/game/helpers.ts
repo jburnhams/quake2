@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest';
-import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem } from '@quake2ts/game';
+import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem, createGame, type Game, type GameConfig } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3, type RandomGenerator } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
 import { createTraceMock } from '../shared/collision.js';
@@ -500,4 +500,43 @@ export function createMockGameExports(overrides: Partial<any> = {}): any {
       random: createRandomGenerator({ seed: 12345 }),
       ...overrides
   };
+}
+
+/**
+ * Creates a fully initialized Game instance with mocked engine and imports.
+ * This helper encapsulates the common pattern of:
+ * 1. Creating mock imports/engine
+ * 2. Instantiating the game
+ * 3. Initializing the game
+ *
+ * @param options Configuration options
+ * @returns An object containing the game instance and the mocks used to create it
+ */
+export function createTestGame(options?: {
+    imports?: Partial<MockImportsAndEngine['imports']>;
+    engine?: Partial<MockImportsAndEngine['engine']>;
+    config?: Partial<GameConfig>;
+    seed?: number;
+}): { game: Game; imports: MockImportsAndEngine['imports']; engine: MockImportsAndEngine['engine'] } {
+    const { imports, engine } = createGameImportsAndEngine({
+        imports: options?.imports,
+        engine: options?.engine
+    });
+
+    const config: GameConfig = {
+        gravity: { x: 0, y: 0, z: -800 },
+        ...options?.config
+    };
+
+    // If seed is provided and random is not overridden in config, create a seeded generator
+    if (options?.seed !== undefined && !config.random) {
+        config.random = createRandomGenerator({ seed: options.seed });
+    }
+
+    const game = createGame(imports, engine, config);
+
+    // Initialize the game with a default time
+    game.init(0);
+
+    return { game, imports, engine };
 }

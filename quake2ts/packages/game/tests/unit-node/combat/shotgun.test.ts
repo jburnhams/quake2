@@ -4,43 +4,33 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
-import { createGame } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as damage from '../../../src/combat/damage.js';
-import { angleVectors } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Shotgun', () => {
     it('should consume 1 shell and fire 12 pellets', () => {
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+        const { game, imports } = createTestGame();
 
         // Use factory for playerStart
-        const playerStartTemplate = createEntityFactory({
-            classname: 'info_player_start',
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 90, z: 0 }
-        });
-        const playerStart = game.entities.spawn();
-        Object.assign(playerStart, playerStartTemplate);
-        game.entities.finalizeSpawn(playerStart);
-        game.spawnWorld();
+        // In this test, we skip spawning info_player_start and spawnWorld
+        // because we are testing the weapon fire logic directly on a spawned player.
 
-        const player = game.entities.find(e => e.classname === 'player')!;
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
+            angles: { x: 0, y: 90, z: 0 }
+        }));
         player.client!.inventory = createPlayerInventory({
             weapons: [WeaponId.Shotgun],
             ammo: { [AmmoType.Shells]: 10 },
         });
 
         // Use factory for target
-        const targetTemplate = createEntityFactory({
+        const target = spawnEntity(game.entities, createEntityFactory({
             health: 100,
             takedamage: true
-        });
-        const target = game.entities.spawn();
-        Object.assign(target, targetTemplate);
+        }));
 
         // Mock hit at close range (10 units)
         imports.trace.mockReturnValue({
