@@ -1,23 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame } from '../src/index.js';
 import { handleItemPickup } from '../src/entities/items/common.js';
-import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createItemEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { Solid, Entity, GameExports } from '../src/index.js';
+import { createTestGame, createItemEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Item Respawn', () => {
-    let game: any;
-    let item: any;
-    let player: any;
+    let game: GameExports;
+    let item: Entity;
+    let player: Entity;
 
     beforeEach(() => {
-        const { imports, engine } = createGameImportsAndEngine();
-
-        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const result = createTestGame({
+            config: {
+                deathmatch: true
+            }
+        });
+        game = result.game;
 
         item = spawnEntity(game.entities, createItemEntityFactory('item_health', {
             model: 'models/items/healing/medium/tris.md2',
             modelindex: 1,
-            think: (self: any) => {
+            think: (self: Entity) => {
                 self.solid = Solid.Trigger;
                 self.modelindex = 1;
                 self.svflags &= ~1;
@@ -57,8 +59,9 @@ describe('Item Respawn', () => {
     });
 
     it('handleItemPickup should remove item in single player', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const spGame = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
+        const { game: spGame } = createTestGame({
+            config: { deathmatch: false }
+        });
         const spItem = spawnEntity(spGame.entities, createItemEntityFactory('item_health'));
 
         spGame.entities.free = vi.fn();

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
-import { createGame } from '../src/index.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext, createTestGame } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -50,8 +49,9 @@ describe('Deathmatch Spawn', () => {
 
 describe('GameExports Respawn', () => {
     it('respawn should reset player state', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const { game } = createTestGame({
+            config: { deathmatch: true }
+        });
 
         // Force RNG to return 0 to pick the first spot deterministically
         vi.spyOn(game.random, 'frandom').mockReturnValue(0);
