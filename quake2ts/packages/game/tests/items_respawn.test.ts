@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../src/index.js';
 import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
 import { WEAPON_ITEMS } from '../src/inventory/items.js';
 import { Solid } from '../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
     it('should NOT schedule respawn in Single Player mode', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false });
+        const { game } = createTestGame({
+            config: { deathmatch: false }
+        });
 
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
@@ -31,8 +31,9 @@ describe('Item Respawn Logic', () => {
     });
 
     it('should schedule respawn in Deathmatch mode', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, deathmatch: true });
+        const { game } = createTestGame({
+            config: { deathmatch: true }
+        });
 
         // Mock scheduleThink
         const scheduleThinkSpy = vi.spyOn(game.entities, 'scheduleThink');
