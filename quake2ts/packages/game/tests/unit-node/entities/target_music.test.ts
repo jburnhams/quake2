@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerTargetSpawns } from '../../src/entities/targets.js';
-import { Entity } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
+import { registerTargetSpawns } from '../../../src/entities/targets.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
-import { createDefaultSpawnRegistry, SpawnFunction } from '../../src/entities/spawn.js';
+import { createDefaultSpawnRegistry, SpawnFunction } from '../../../src/entities/spawn.js';
 
 describe('target_music', () => {
   let context: EntitySystem;

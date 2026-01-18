@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerTargetSpawns } from '../../src/entities/targets.js';
-import { Entity, MoveType, ServerFlags, Solid } from '../../src/entities/entity.js';
+import { registerTargetSpawns } from '../../../src/entities/targets.js';
+import { Entity, MoveType, ServerFlags, Solid } from '../../../src/entities/entity.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { T_Damage } from '../../src/combat/damage.js';
-import { DamageFlags } from '../../src/combat/damageFlags.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
+import { T_Damage } from '../../../src/combat/damage.js';
+import { DamageFlags } from '../../../src/combat/damageFlags.js';
+import { DamageMod } from '../../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand, RenderFx } from '@quake2ts/shared';
 import { createEntityFactory } from '@quake2ts/test-utils';
 
 // Mock T_Damage
-vi.mock('../../src/combat/damage.js', () => ({
+vi.mock('../../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
 }));
 

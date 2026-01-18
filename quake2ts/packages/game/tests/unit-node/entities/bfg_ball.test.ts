@@ -4,11 +4,11 @@
 // =================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { createBfgBall } from '../../src/entities/projectiles.js';
-import { createGame } from '../../src/index.js';
-import { MoveType, Solid, ServerFlags } from '../../src/entities/entity.js';
-import * as damage from '../../src/combat/damage.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
+import { createBfgBall } from '../../../src/entities/projectiles.js';
+import { createGame } from '../../../src/index.js';
+import { MoveType, Solid, ServerFlags } from '../../../src/entities/entity.js';
+import * as damage from '../../../src/combat/damage.js';
+import { DamageMod } from '../../../src/combat/damageMods.js';
 import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('BFG Ball Projectile', () => {

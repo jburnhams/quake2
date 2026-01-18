@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createEntityFactory } from '@quake2ts/test-utils';
-import { ENTITY_FIELD_METADATA } from '../../src/index.js';
+import { ENTITY_FIELD_METADATA } from '../../../src/index.js';
 
 describe('AI entity fields', () => {
   it('initializes and resets timing/yaw search fields to zero', () => {
