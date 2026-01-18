@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerTargetSpawns } from '../../src/entities/targets.js';
-import { Entity, ServerFlags } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { createDefaultSpawnRegistry, SpawnFunction } from '../../src/entities/spawn.js';
+import { registerTargetSpawns } from '../../../src/entities/targets.js';
+import { Entity, ServerFlags } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { createDefaultSpawnRegistry, SpawnFunction } from '../../../src/entities/spawn.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
 import { createEntityFactory } from '@quake2ts/test-utils';
 

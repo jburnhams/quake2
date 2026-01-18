@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame } from '../../src/index.js';
-import type { GameExports } from '../../src/index.js';
-import { MoveType, Solid } from '../../src/entities/entity.js';
-import { registerSpawnFunction } from '../../src/entities/spawn.js';
+import { createGame } from '../../../src/index.js';
+import type { GameExports } from '../../../src/index.js';
+import { MoveType, Solid } from '../../../src/entities/entity.js';
+import { registerSpawnFunction } from '../../../src/entities/spawn.js';
 
 describe('Entity System Edge Cases', () => {
   let game: GameExports;

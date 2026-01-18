@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, Solid } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
-import { registerTriggerSpawns } from '../../src/entities/triggers/index.js';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { Entity, Solid } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { registerTriggerSpawns } from '../../../src/entities/triggers/index.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { createTestContext } from '@quake2ts/test-utils';
 
 describe('Trigger Conditions', () => {

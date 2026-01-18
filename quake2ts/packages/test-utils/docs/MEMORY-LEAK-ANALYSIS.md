@@ -42,6 +42,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `game/tests/ai` tests to `game/tests/unit-node/ai`
    - Moved: `game/tests/inventory` tests to `game/tests/unit-node/inventory`
    - Moved: `game/tests/physics` tests to `game/tests/unit-node/physics`
+   - Moved: `game/tests/entities/target_autosave`, `target_healthbar`, `target_music`, `target_blaster`, `target_crosslevel`, `target_laser`, `target_spawner`, `target_speaker`, `trigger_conditions`, `trigger_multiple`, `triggers`, `ai-fields`, `bfg_ball`, `edge_cases`, `entity-bounds` to `game/tests/unit-node/entities/`
+   - Moved: `game/tests/integration/determinism.test.ts`, `createGame.test.ts` to `game/tests/unit-node/integration/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`

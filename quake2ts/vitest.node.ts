@@ -41,8 +41,14 @@ export default defineConfig({
       '**/dist/**',
       'packages/e2e-tests/**',
       '**/performance/**',
-      '**/integration/**',
-      '**/*integration*',
+
+      // Exclude JSDOM/Browser integration tests, but allow Node.js integration tests in unit-node
+      'packages/game/tests/integration/**',
+      'packages/server/tests/integration/**',
+      'packages/engine/tests/integration/**',
+      'packages/client/tests/integration/**',
+      'packages/engine/tests/render/integration/**',
+
       'packages/engine/tests/webgpu/**', // Only exclude the specific webgpu test folder, not unit mocks
       'packages/test-utils/tests/webgpu/**', // Exclude test-utils webgpu tests which crash in this env
       '**/webgl/**',
