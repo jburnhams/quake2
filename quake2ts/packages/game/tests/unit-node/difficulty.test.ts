@@ -1,8 +1,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../src/entities/system.js';
+import { EntitySystem } from '../../src/entities/system.js';
 import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
-import { foundTarget } from '../src/ai/targeting.js';
+import { foundTarget } from '../../src/ai/targeting.js';
 
 describe('Difficulty Scaling - Reaction Time', () => {
     let context: EntitySystem;

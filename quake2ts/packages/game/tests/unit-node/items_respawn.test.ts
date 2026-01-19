@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createWeaponPickupEntity } from '../src/entities/items/weapons.js';
-import { WEAPON_ITEMS } from '../src/inventory/items.js';
-import { Solid } from '../src/entities/entity.js';
+import { createWeaponPickupEntity } from '../../src/entities/items/weapons.js';
+import { WEAPON_ITEMS } from '../../src/inventory/items.js';
+import { Solid } from '../../src/entities/entity.js';
 import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Item Respawn Logic', () => {
