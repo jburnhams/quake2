@@ -1,203 +1,222 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
 import { registerTriggerSpawns } from '../../../src/entities/triggers/index.js';
-import { registerTargetSpawns } from '../../../src/entities/targets';
-import { Entity } from '../../../src/entities/entity';
-import { Solid } from '../../../src/entities/entity';
-import { SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { registerTargetSpawns } from '../../../src/entities/targets.js';
+import type { EntitySystem } from '../../../src/entities/system.js';
+import type { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('Triggers', () => {
-  let context: ReturnType<typeof createTestContext>;
-  let entities: any;
+  let sys: EntitySystem;
   let registry: SpawnRegistry;
-  let spawnedEntities: Entity[];
+  let engine: any;
 
   beforeEach(() => {
-    context = createTestContext();
-    entities = context.entities;
-    registry = new SpawnRegistry();
-    spawnedEntities = [];
+    const { game, engine: mockEngine } = createTestGame();
+    sys = game.entities;
+    engine = mockEngine;
+    registry = (sys as any).spawnRegistry;
 
-    // Mock spawn to track entities
-    const originalSpawn = entities.spawn;
-    entities.spawn = () => {
-        const e = createEntityFactory({ number: 1 });
-        spawnedEntities.push(e);
-        return e;
-    };
-
-    // Mock findByTargetName
-    entities.findByTargetName = (name: string) => {
-        return spawnedEntities.filter(e => e.targetname === name);
-    };
-
-    // Mock useTargets to simulate delay and activation
-    entities.useTargets = vi.fn((entity: Entity, activator: Entity | null) => {
-        if (entity.delay > 0) {
-            entity.nextthink = entities.timeSeconds + entity.delay;
-            entity.think = () => {
-                if (entity.target) {
-                    const targets = entities.findByTargetName(entity.target);
-                    targets.forEach((t: Entity) => t.use?.(t, entity, activator));
-                }
-            };
-            return;
-        }
-        if (entity.target) {
-            const targets = entities.findByTargetName(entity.target);
-            targets.forEach((t: Entity) => t.use?.(t, entity, activator));
-        }
-    });
-
-    registerTriggerSpawns(registry);
-    registerTargetSpawns(registry);
+    // Ensure all triggers/targets are registered (createTestGame does it via createGame -> default registry)
+    // But to be safe or explicit:
+    // createGame calls registerDefaultSpawns which calls registerTriggerSpawns and registerTargetSpawns.
+    // So they should be there.
   });
 
   describe('trigger_counter', () => {
     it('should fire targets after counting down', () => {
-      const trigger = entities.spawn();
+      const spawnFn = registry.get('trigger_counter')!;
+
+      const trigger = sys.spawn();
       trigger.classname = 'trigger_counter';
       trigger.count = 2;
       trigger.target = 'my_target';
 
-      const target = entities.spawn();
+      const context = {
+          entities: sys,
+          keyValues: { count: '2' },
+          warn: vi.fn(),
+          free: vi.fn(),
+          health_multiplier: 1
+      };
+
+      spawnFn(trigger, context);
+
+      const target = sys.spawn();
       target.classname = 'target_relay';
       target.targetname = 'my_target';
       target.use = vi.fn();
+      // We must register the target in the name index manually if we don't use spawn logic that does it.
+      // sys.spawn() creates raw entity.
+      // finalizeSpawn handles registration.
+      // But spawnFn usually handles initialization.
+      // For `target`, we just set properties.
+      // We must call finalizeSpawn or registerTarget manually.
+      // EntitySystem has private registerTarget called by finalizeSpawn.
+      sys.finalizeSpawn(target);
+      sys.finalizeSpawn(trigger);
 
-      const registryGet = registry.get('trigger_counter');
-      expect(registryGet).toBeDefined();
-      registryGet!(trigger, { ...context, keyValues: { count: '2' } });
-
-      const activator = entities.spawn();
-      activator.client = {};
+      const activator = sys.spawn();
+      activator.client = {} as any;
 
       // First use
-      trigger.use!(trigger, activator, activator);
+      if (trigger.use) trigger.use(trigger, activator, activator);
       expect(trigger.count).toBe(1);
       expect(target.use).not.toHaveBeenCalled();
 
       // Second use
-      trigger.use!(trigger, activator, activator);
+      if (trigger.use) trigger.use(trigger, activator, activator);
       expect(trigger.count).toBe(0);
 
-      // trigger_counter uses multiTrigger which uses a think delay (FRAME_TIME or wait)
-      // So useTargets is called in the think function, not immediately if wait/think is involved.
-      // But multiTrigger logic:
-      // if wait > 0, think = multiWait
-      // else think = free
-      // AND it calls useTargets BEFORE that.
-      // So useTargets IS called immediately in multiTrigger.
-
+      // trigger_counter fires immediately (multiTrigger with wait=-1)
       expect(target.use).toHaveBeenCalled();
     });
 
     it('should display messages by default', () => {
-        const trigger = entities.spawn();
+        const spawnFn = registry.get('trigger_counter')!;
+
+        const trigger = sys.spawn();
         trigger.classname = 'trigger_counter';
         trigger.count = 2;
 
-        const registryGet = registry.get('trigger_counter');
-        registryGet!(trigger, { ...context, keyValues: { count: '2' } });
+        const context = {
+            entities: sys,
+            keyValues: { count: '2' },
+            warn: vi.fn(),
+            free: vi.fn(),
+            health_multiplier: 1
+        };
 
-        const activator = entities.spawn();
-        activator.client = {};
+        spawnFn(trigger, context);
+        sys.finalizeSpawn(trigger);
 
-        const centerprintf = vi.fn();
-        entities.engine.centerprintf = centerprintf;
-        entities.sound = vi.fn();
+        const activator = sys.spawn();
+        activator.client = {} as any;
+
+        // Reset mocks
+        (engine.centerprintf as any).mockClear();
+        (engine.sound as any).mockClear();
 
         // First use
-        trigger.use!(trigger, activator, activator);
-        expect(centerprintf).toHaveBeenCalledWith(activator, '1 more to go...');
-        expect(entities.sound).toHaveBeenCalledWith(activator, expect.anything(), 'misc/talk1.wav', expect.anything(), expect.anything(), expect.anything());
+        if (trigger.use) trigger.use(trigger, activator, activator);
+        expect(engine.centerprintf).toHaveBeenCalledWith(activator, '1 more to go...');
+        expect(engine.sound).toHaveBeenCalledWith(activator, expect.anything(), 'misc/talk1.wav', expect.anything(), expect.anything(), expect.anything());
 
-        centerprintf.mockClear();
-        entities.sound.mockClear();
+        (engine.centerprintf as any).mockClear();
+        (engine.sound as any).mockClear();
 
         // Second use
-        trigger.use!(trigger, activator, activator);
-        expect(centerprintf).toHaveBeenCalledWith(activator, 'Sequence completed!');
-        expect(entities.sound).toHaveBeenCalledWith(activator, expect.anything(), 'misc/talk1.wav', expect.anything(), expect.anything(), expect.anything());
+        if (trigger.use) trigger.use(trigger, activator, activator);
+        expect(engine.centerprintf).toHaveBeenCalledWith(activator, 'Sequence completed!');
+        expect(engine.sound).toHaveBeenCalledWith(activator, expect.anything(), 'misc/talk1.wav', expect.anything(), expect.anything(), expect.anything());
       });
 
       it('should suppress messages with spawnflag 1', () => {
-        const trigger = entities.spawn();
+        const spawnFn = registry.get('trigger_counter')!;
+
+        const trigger = sys.spawn();
         trigger.classname = 'trigger_counter';
         trigger.count = 2;
         trigger.spawnflags = 1; // NOMESSAGE
 
-        const registryGet = registry.get('trigger_counter');
-        registryGet!(trigger, { ...context, keyValues: { count: '2', spawnflags: '1' } });
+        const context = {
+            entities: sys,
+            keyValues: { count: '2', spawnflags: '1' },
+            warn: vi.fn(),
+            free: vi.fn(),
+            health_multiplier: 1
+        };
 
-        const activator = entities.spawn();
-        activator.client = {};
+        spawnFn(trigger, context);
+        sys.finalizeSpawn(trigger);
 
-        const centerprintf = vi.fn();
-        entities.engine.centerprintf = centerprintf;
-        entities.sound = vi.fn();
+        const activator = sys.spawn();
+        activator.client = {} as any;
+
+        (engine.centerprintf as any).mockClear();
+        (engine.sound as any).mockClear();
 
         // First use
-        trigger.use!(trigger, activator, activator);
-        expect(centerprintf).not.toHaveBeenCalled();
-        expect(entities.sound).not.toHaveBeenCalled();
+        if (trigger.use) trigger.use(trigger, activator, activator);
+        expect(engine.centerprintf).not.toHaveBeenCalled();
+        expect(engine.sound).not.toHaveBeenCalled();
 
         // Second use
-        trigger.use!(trigger, activator, activator);
-        expect(centerprintf).not.toHaveBeenCalled();
-        expect(entities.sound).not.toHaveBeenCalled();
+        if (trigger.use) trigger.use(trigger, activator, activator);
+        expect(engine.centerprintf).not.toHaveBeenCalled();
+        expect(engine.sound).not.toHaveBeenCalled();
       });
   });
 
   describe('trigger_always', () => {
     it('should fire immediately if delay is small', () => {
-      const trigger = entities.spawn();
+      const spawnFn = registry.get('trigger_always')!;
+
+      const trigger = sys.spawn();
       trigger.classname = 'trigger_always';
       trigger.target = 'always_target';
       trigger.delay = 0; // Should default to 0.2
 
-      const target = entities.spawn();
+      const context = {
+          entities: sys,
+          keyValues: {},
+          warn: vi.fn(),
+          free: vi.fn(),
+          health_multiplier: 1
+      };
+
+      const target = sys.spawn();
       target.targetname = 'always_target';
       target.use = vi.fn();
+      sys.finalizeSpawn(target);
 
-      const registryGet = registry.get('trigger_always');
-      registryGet!(trigger, { ...context, keyValues: {} });
+      // Before spawnFn, time is 0.
+      sys.beginFrame(0);
+
+      spawnFn(trigger, context);
+      sys.finalizeSpawn(trigger);
 
       // trigger_always calls useTargets in spawn.
-      // useTargets (mocked) should see default delay 0.2 and schedule think on TRIGGER.
+      // useTargets schedules think on DelayedUse entity (not trigger itself) because default delay 0.2.
 
       expect(trigger.delay).toBe(0.2);
 
-      expect(trigger.nextthink).toBeGreaterThan(0);
       expect(target.use).not.toHaveBeenCalled();
 
-      // Advance time and run think
-      // Simulate think execution
-      if (trigger.think) {
-          trigger.think(trigger);
-      }
+      // Advance time by 0.3s
+      sys.beginFrame(0.3);
+      sys.runFrame(); // Process thinks
+
       expect(target.use).toHaveBeenCalled();
     });
   });
 
   describe('trigger_relay', () => {
     it('should pass through to targets', () => {
-      const trigger = entities.spawn();
+      const spawnFn = registry.get('trigger_relay')!;
+
+      const trigger = sys.spawn();
       trigger.classname = 'trigger_relay';
       trigger.target = 'relay_target';
       trigger.spawnflags = 1; // NoSound
 
-      const target = entities.spawn();
+      const context = {
+          entities: sys,
+          keyValues: { spawnflags: '1' },
+          warn: vi.fn(),
+          free: vi.fn(),
+          health_multiplier: 1
+      };
+
+      spawnFn(trigger, context);
+      sys.finalizeSpawn(trigger);
+
+      const target = sys.spawn();
       target.targetname = 'relay_target';
       target.use = vi.fn();
+      sys.finalizeSpawn(target);
 
-      const registryGet = registry.get('trigger_relay');
-      registryGet!(trigger, { ...context, keyValues: { spawnflags: '1' } });
-
-      const activator = entities.spawn();
-      trigger.use!(trigger, activator, activator);
+      const activator = sys.spawn();
+      if (trigger.use) trigger.use(trigger, activator, activator);
 
       expect(target.use).toHaveBeenCalled();
     });

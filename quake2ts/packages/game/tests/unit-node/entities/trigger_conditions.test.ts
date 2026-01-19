@@ -1,161 +1,135 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, Solid } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { registerTriggerSpawns } from '../../../src/entities/triggers/index.js';
-import { SpawnRegistry } from '../../../src/entities/spawn.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestGame, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import type { EntitySystem } from '../../../src/entities/system.js';
+import type { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('Trigger Conditions', () => {
-  let entities: EntitySystem;
+  let sys: EntitySystem;
   let registry: SpawnRegistry;
+  let engine: any;
   let warnSpy: any;
-  let findByTargetNameSpy: any;
 
   beforeEach(() => {
-    const context = createTestContext();
-    entities = context.entities;
-    // Mock the entities property to return our mocked system
-    (entities as any).entities = entities;
-
+    const { game, engine: mockEngine } = createTestGame();
+    sys = game.entities;
+    engine = mockEngine;
+    registry = (sys as any).spawnRegistry;
     warnSpy = vi.fn();
-    registry = new SpawnRegistry();
-    registerTriggerSpawns(registry);
-
-    findByTargetNameSpy = vi.fn().mockReturnValue([]);
-    entities.findByTargetName = findByTargetNameSpy;
-
-    // Enhance useTargets mock to actually call use on found targets
-    entities.useTargets = vi.fn((entity: Entity, activator: Entity | null) => {
-      if (entity.target) {
-        const targets = entities.findByTargetName(entity.target);
-        targets.forEach(t => t.use?.(t, entity, activator));
-      }
-    });
   });
 
   describe('trigger_counter', () => {
     it('should fire targets only after count reaches zero', () => {
-      // Setup the counter
-      const counter = entities.spawn();
+      const spawnFn = registry.get('trigger_counter')!;
+
+      const counter = sys.spawn();
       counter.classname = 'trigger_counter';
       counter.count = 2; // Needs 2 activations
       counter.target = 'my_target';
       counter.wait = -1; // Default
 
-      const spawnFunc = registry.get('trigger_counter');
-      expect(spawnFunc).toBeDefined();
-      spawnFunc!(counter, {
-        entities,
-        keyValues: {},
-        warn: warnSpy,
-        free: vi.fn()
-      });
+      const context = {
+          entities: sys,
+          keyValues: {},
+          warn: warnSpy,
+          free: vi.fn(),
+          health_multiplier: 1
+      };
+
+      spawnFn(counter, context);
+      sys.finalizeSpawn(counter);
 
       // Setup the target
-      const target = entities.spawn();
+      const target = sys.spawn();
       target.classname = 'info_notnull';
       target.targetname = 'my_target';
       target.use = vi.fn();
-
-      // Setup mock lookup
-      findByTargetNameSpy.mockImplementation((name: string) => {
-        if (name === 'my_target') return [target];
-        return [];
-      });
+      sys.finalizeSpawn(target);
 
       // Mock activator
-      const activator = entities.spawn();
+      const activator = sys.spawn();
       activator.classname = 'player';
+      activator.client = {} as any;
 
       // First activation
-      counter.use!(counter, activator, activator);
+      if (counter.use) counter.use(counter, activator, activator);
       expect(counter.count).toBe(1);
       expect(target.use).not.toHaveBeenCalled();
 
       // Second activation
-      counter.use!(counter, activator, activator);
+      if (counter.use) counter.use(counter, activator, activator);
       expect(counter.count).toBe(0);
 
-      // It uses a think function to fire multiTrigger
-      expect(counter.nextthink).toBeGreaterThan(0);
-
-      // Advance time to process think
-      // We simulate the scheduler calling the think function
-      if (counter.think) {
-        counter.think(counter);
-      }
-
       expect(target.use).toHaveBeenCalled();
+      expect(counter.nextthink).toBeGreaterThan(0);
     });
 
     it('should default count to 2 if not set', () => {
-      const counter = entities.spawn();
+      const spawnFn = registry.get('trigger_counter')!;
+      const counter = sys.spawn();
       counter.classname = 'trigger_counter';
       counter.count = 0; // Not set
 
-      const spawnFunc = registry.get('trigger_counter');
-      spawnFunc!(counter, {
-        entities,
-        keyValues: {},
-        warn: warnSpy,
-        free: vi.fn()
-      });
+      const context = {
+          entities: sys,
+          keyValues: {},
+          warn: warnSpy,
+          free: vi.fn(),
+          health_multiplier: 1
+      };
 
+      spawnFn(counter, context);
       expect(counter.count).toBe(2);
     });
   });
 
   describe('trigger_key', () => {
     it('should require a key item to activate', () => {
-      // Setup the trigger
-      const trigger = entities.spawn();
+      const spawnFn = registry.get('trigger_key')!;
+
+      const trigger = sys.spawn();
       trigger.classname = 'trigger_key';
       trigger.target = 'door';
 
-      const spawnFunc = registry.get('trigger_key');
-      spawnFunc!(trigger, {
-        entities,
-        keyValues: { item: 'key_pass' },
-        warn: warnSpy,
-        free: vi.fn()
-      });
+      const context = {
+          entities: sys,
+          keyValues: { item: 'key_pass' },
+          warn: warnSpy,
+          free: vi.fn(),
+          health_multiplier: 1
+      };
+
+      spawnFn(trigger, context);
+      sys.finalizeSpawn(trigger);
 
       expect(trigger.item).toBe('key_pass');
 
       // Setup target
-      const target = entities.spawn();
+      const target = sys.spawn();
       target.targetname = 'door';
       target.use = vi.fn();
+      sys.finalizeSpawn(target);
 
-      // Setup mock lookup
-      findByTargetNameSpy.mockImplementation((name: string) => {
-        if (name === 'door') return [target];
-        return [];
-      });
-
-      // Setup player without key
-      const player = entities.spawn();
-      player.classname = 'player';
+      // Setup player using factory
+      const player = sys.spawn();
+      Object.assign(player, createPlayerEntityFactory());
       player.inventory = {};
-      player.client = {} as any;
 
-      // Mock centerprintf
-      entities.engine.centerprintf = vi.fn();
-      entities.sound = vi.fn();
+      // Reset mocks
+      (engine.centerprintf as any).mockClear();
 
       // Attempt to use
-      trigger.use!(trigger, player, player);
+      if (trigger.use) trigger.use(trigger, player, player);
 
       // Should not activate
       expect(target.use).not.toHaveBeenCalled();
-      expect(entities.engine.centerprintf).toHaveBeenCalledWith(player, 'You need the key_pass');
+      expect(engine.centerprintf).toHaveBeenCalledWith(player, 'You need the key_pass');
 
       // Give key
       player.inventory['key_pass'] = 1;
 
       // Attempt to use again
-      (entities.engine.centerprintf as any).mockClear();
-      trigger.use!(trigger, player, player);
+      (engine.centerprintf as any).mockClear();
+      if (trigger.use) trigger.use(trigger, player, player);
 
       // Should activate
       expect(target.use).toHaveBeenCalled();
@@ -165,16 +139,19 @@ describe('Trigger Conditions', () => {
     });
 
     it('should warn if spawned without item key', () => {
-      const trigger = entities.spawn();
+      const spawnFn = registry.get('trigger_key')!;
+      const trigger = sys.spawn();
       const freeSpy = vi.fn();
 
-      const spawnFunc = registry.get('trigger_key');
-      spawnFunc!(trigger, {
-        entities,
-        keyValues: {},
-        warn: warnSpy,
-        free: freeSpy
-      });
+      const context = {
+          entities: sys,
+          keyValues: {},
+          warn: warnSpy,
+          free: freeSpy,
+          health_multiplier: 1
+      };
+
+      spawnFn(trigger, context);
 
       expect(warnSpy).toHaveBeenCalledWith('trigger_key requires an item');
       expect(freeSpy).toHaveBeenCalledWith(trigger);
