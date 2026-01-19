@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../src/entities/spawn.js';
+import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../../src/entities/spawn.js';
 import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext, createTestGame } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {

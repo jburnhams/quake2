@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../src/index.js';
-import { Entity } from '../src/entities/entity.js';
+import { createGame } from '../../src/index.js';
+import { Entity } from '../../src/entities/entity.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Custom Entity Registration', () => {

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, GameExports } from '@quake2ts/game';
-import { registerWeapon, WeaponDefinition } from '../src/combat/weapons/registry.js';
-import { fire } from '../src/combat/weapons/firing.js';
-import { WeaponId } from '../src/inventory/playerInventory.js';
+import { registerWeapon, WeaponDefinition } from '../../src/combat/weapons/registry.js';
+import { fire } from '../../src/combat/weapons/firing.js';
+import { WeaponId } from '../../src/inventory/playerInventory.js';
 import { createMockGameExports, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Custom Weapon Registration', () => {
