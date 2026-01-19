@@ -1,36 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity } from '../../../src/entities/entity.js';
-import { registerTargetSpawns } from '../../../src/entities/targets.js';
-import { createDefaultSpawnRegistry } from '../../../src/entities/spawn.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
+import type { EntitySystem } from '../../../src/entities/system.js';
+import type { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('target_crosslevel', () => {
   let sys: EntitySystem;
-  let registry: ReturnType<typeof createDefaultSpawnRegistry>;
+  let registry: SpawnRegistry;
 
   beforeEach(() => {
-    sys = new EntitySystem({} as any, {
-        trace: vi.fn(() => ({})),
-        pointcontents: vi.fn(),
-        linkentity: vi.fn(),
-    } as any);
-
-    // Override spawn to use factory
-    sys.spawn = vi.fn(() => createEntityFactory({ number: 1 }));
-
-    // Mock GameExports to satisfy SpawnRegistry requirements
-    const gameMock = {
-      entities: sys,
-      deathmatch: false,
-      rogue: false,
-      xatrix: false,
-    } as any;
-
-    registry = createDefaultSpawnRegistry(gameMock);
-    registerTargetSpawns(registry);
-    sys.setSpawnRegistry(registry);
-    sys.beginFrame(0);
+    const { game } = createTestGame();
+    sys = game.entities;
+    // createTestGame sets up the registry on the entities system
+    registry = (sys as any).spawnRegistry;
   });
 
   describe('target_crosslevel_trigger', () => {
@@ -42,7 +23,10 @@ describe('target_crosslevel', () => {
       const context = {
         entities: sys,
         free: vi.fn(),
-      } as any;
+        keyValues: {},
+        health_multiplier: 1,
+        warn: vi.fn(),
+      };
 
       spawnFn(ent, context);
 
@@ -71,7 +55,10 @@ describe('target_crosslevel', () => {
       const context = {
         entities: sys,
         free: vi.fn(),
-      } as any;
+        keyValues: {},
+        health_multiplier: 1,
+        warn: vi.fn(),
+      };
 
       spawnFn(ent, context);
 
@@ -85,7 +72,7 @@ describe('target_crosslevel', () => {
       // Fast forward time to trigger think
       sys.beginFrame(ent.nextthink + 0.1);
       if (ent.think) {
-          ent.think(ent);
+        ent.think(ent);
       }
 
       expect(useTargetsSpy).toHaveBeenCalledWith(ent, ent);
@@ -105,7 +92,10 @@ describe('target_crosslevel', () => {
       const context = {
         entities: sys,
         free: vi.fn(),
-      } as any;
+        keyValues: {},
+        health_multiplier: 1,
+        warn: vi.fn(),
+      };
 
       spawnFn(ent, context);
 
@@ -113,7 +103,7 @@ describe('target_crosslevel', () => {
 
       // Execute think
       if (ent.think) {
-          ent.think(ent);
+        ent.think(ent);
       }
 
       expect(useTargetsSpy).not.toHaveBeenCalled();
@@ -122,22 +112,19 @@ describe('target_crosslevel', () => {
   });
 
   describe('persistence', () => {
-      it('should save and restore crossLevelFlags', () => {
-          sys.crossLevelFlags = 12345;
-          sys.crossUnitFlags = 67890;
+    it('should save and restore crossLevelFlags', () => {
+      sys.crossLevelFlags = 12345;
+      sys.crossUnitFlags = 67890;
 
-          const snapshot = sys.createSnapshot();
+      const snapshot = sys.createSnapshot();
 
-          const newSys = new EntitySystem({} as any, {
-            trace: vi.fn(() => ({})),
-            pointcontents: vi.fn(),
-            linkentity: vi.fn(),
-          } as any);
+      const { game: newGame } = createTestGame();
+      const newSys = newGame.entities;
 
-          newSys.restore(snapshot);
+      newSys.restore(snapshot);
 
-          expect(newSys.crossLevelFlags).toBe(12345);
-          expect(newSys.crossUnitFlags).toBe(67890);
-      });
+      expect(newSys.crossLevelFlags).toBe(12345);
+      expect(newSys.crossUnitFlags).toBe(67890);
+    });
   });
 });
