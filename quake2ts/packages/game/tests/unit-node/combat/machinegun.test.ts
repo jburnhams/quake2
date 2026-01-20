@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as damage from '../../../src/combat/damage.js';
-import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Machinegun', () => {
     it('should consume 1 bullet and deal damage', () => {
@@ -29,11 +29,11 @@ describe('Machinegun', () => {
             takedamage: 1
         }));
 
-        imports.trace.mockReturnValue({
+        imports.trace.mockReturnValue(createTraceMock({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
-        });
+            plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
+        }));
 
         fire(game, player, WeaponId.Machinegun);
 

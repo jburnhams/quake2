@@ -12,59 +12,39 @@ import {
     FRAME_GRENADE_THROW_FIRST
 } from '../../../src/combat/weapons/frames.js';
 import { fireHandGrenade } from '../../../src/combat/weapons/firing.js';
-import { createMockGameExports, createPlayerEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
+import { createTestGame, createPlayerEntityFactory, createPlayerStateFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Hand Grenade Combat Logic', () => {
     let sys: EntitySystem;
     let game: GameExports;
+    let engine: any;
     let player: Entity;
 
     beforeEach(() => {
-        // Create Mock GameExports
-        game = createMockGameExports({
-            time: 10.0,
-            trace: vi.fn().mockReturnValue({
-                fraction: 1.0,
-                endpos: { x: 0, y: 0, z: 0 },
-                ent: null
-            }),
-            entities: {
-                spawn: vi.fn(() => new Entity(2)),
-                sound: vi.fn(),
-                timeSeconds: 10.0,
-                modelIndex: vi.fn(() => 1),
-                linkentity: vi.fn(),
-                scheduleThink: vi.fn(),
-                finalizeSpawn: vi.fn(),
-                // Add required properties for internal logic if needed,
-                // but for this test these mocks seem sufficient based on original code.
-            } as unknown as EntitySystem
-        });
+        // Create Test Game
+        const result = createTestGame();
+        game = result.game;
+        engine = result.engine;
 
         // Helper sys alias
         sys = game.entities as unknown as EntitySystem;
 
         // Mock Player
-        // We use createPlayerEntityFactory and then merge/assign specific properties.
         const playerBase = createPlayerEntityFactory({
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 }
         });
 
-        // We need to cast playerBase back to Entity or use it as base.
-        // Since createPlayerEntityFactory returns Partial<Entity>, we cast it or use Object.assign on a new Entity if strictness matters.
-        // But here we can just treat it as Entity for the test context.
-        player = playerBase as Entity;
-        player.index = 1;
+        // Spawn and populate player
+        // Note: createTestGame sets up real EntitySystem, so we use spawnEntity helper or game.entities.spawn
+        player = spawnEntity(sys, playerBase);
 
-        // Populate client state
+        // Ensure client state is fully populated (spawnEntity merges props, but deep merge might need care)
+        // Re-assigning client state to ensure it has all factory defaults + our overrides
         player.client = {
             ...createPlayerStateFactory({
                 weaponstate: WeaponStateEnum.WEAPON_READY,
                 gun_frame: 0,
-                // weapon_think_time: 0, // Not in PlayerState interface? Check if it is on PlayerClient.
-                // buttons: 0,
-                // pm_flags: 0,
             }),
             weapon_think_time: 0,
             buttons: 0,
@@ -81,7 +61,7 @@ describe('Hand Grenade Combat Logic', () => {
             },
             grenade_time: 0,
             grenade_blew_up: false
-        } as any; // Cast to any or PlayerClient if imports allow
+        } as any;
     });
 
     it('should start throw sequence on fire button', () => {
@@ -112,7 +92,9 @@ describe('Hand Grenade Combat Logic', () => {
         );
 
         expect(player.client!.gun_frame).toBe(FRAME_GRENADE_PRIME_SOUND);
-        expect(sys.sound).toHaveBeenCalledWith(player, 0, 'weapons/hgrena1b.wav', 1, 1, 0);
+
+        // sys.sound calls engine.sound in the real implementation
+        expect(engine.sound).toHaveBeenCalledWith(player, 0, 'weapons/hgrena1b.wav', 1, 1, 0);
     });
 
     it('should hold at FRAME_THROW_HOLD while button pressed', () => {

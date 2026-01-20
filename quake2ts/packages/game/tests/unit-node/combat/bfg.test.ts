@@ -2,7 +2,7 @@
 // Quake II - BFG10K Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
@@ -13,11 +13,15 @@ import {
     spawnEntity,
     createPlayerEntityFactory,
     createMonsterEntityFactory,
-    createEntityFactory
+    createTraceMock
 } from '@quake2ts/test-utils';
 import { ServerFlags } from '../../../src/entities/entity.js';
 
 describe('BFG10K', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should consume 50 cells and spawn a projectile', () => {
         const createBfgBall = vi.spyOn(projectiles, 'createBfgBall');
 
@@ -55,9 +59,6 @@ describe('BFG10K', () => {
             health: 100
         }));
 
-        // Spy on spawn to capture bfgBall
-        const spawnSpy = vi.spyOn(game.entities, 'spawn');
-
         projectiles.createBfgBall(game.entities, player, { x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }, 200, 400, 200);
 
         // Find the bfg ball (it should be the last spawned entity, or find by classname)
@@ -65,7 +66,7 @@ describe('BFG10K', () => {
         expect(bfgBall).toBeDefined();
 
         // Mock trace for visibility check (from player to target)
-        imports.trace.mockReturnValue({
+        imports.trace.mockReturnValue(createTraceMock({
              ent: target,
              fraction: 1.0,
              endpos: target.origin,
@@ -74,7 +75,7 @@ describe('BFG10K', () => {
              surface: null,
              startsolid: false,
              allsolid: false
-        });
+        }));
 
         // Trigger touch
         if (bfgBall && bfgBall.touch) {
@@ -152,24 +153,15 @@ describe('BFG10K', () => {
         // Initial think scheduled?
         expect(bfgBall!.think).toBeDefined();
 
-        // Use real findByRadius, so we need to ensure target is findable.
-        // spawnEntity adds to entity list.
-        // findByRadius uses internal physics/grid usually.
-        // BUT createTestGame uses real EntitySystem, which has findByRadius.
-        // The default findByRadius implementation checks distance.
-        // So we don't need to spy on it if the logic is correct.
-        // However, the test relied on spy. Let's see if we can rely on real implementation.
-        // If not, we can spy on game.entities.findByRadius.
-
-        // Let's spy to be safe and match original test logic which forced return.
+        // Mock findByRadius to return the target
         const findByRadiusSpy = vi.spyOn(game.entities, 'findByRadius');
         findByRadiusSpy.mockReturnValue([target]);
 
         trace
-            .mockReturnValueOnce({ fraction: 1.0, plane: null, surface: null, ent: null }) // LOS Check: Clear
-            .mockReturnValueOnce({ fraction: 0.1, ent: target, endpos: target.origin, plane: null, surface: null }) // Laser Trace: Hit Target
-            .mockReturnValueOnce({ fraction: 1.0, plane: null, surface: null, ent: null }) // Laser Trace Next: Miss (stop piercing)
-            .mockReturnValueOnce({ fraction: 1.0, endpos: { x: 200, y: 0, z: 0 }, plane: null, surface: null, ent: null }); // Effect Trace
+            .mockReturnValueOnce(createTraceMock({ fraction: 1.0, plane: null, surface: null, ent: null })) // LOS Check: Clear
+            .mockReturnValueOnce(createTraceMock({ fraction: 0.1, ent: target, endpos: target.origin, plane: null, surface: null })) // Laser Trace: Hit Target
+            .mockReturnValueOnce(createTraceMock({ fraction: 1.0, plane: null, surface: null, ent: null })) // Laser Trace Next: Miss (stop piercing)
+            .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 200, y: 0, z: 0 }, plane: null, surface: null, ent: null })); // Effect Trace
 
         // Execute think
         const thinkFn = bfgBall!.think!;
