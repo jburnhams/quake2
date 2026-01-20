@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports, GameCreateOptions } from '../src/index.js';
-import { Entity } from '../src/entities/entity.js';
-import { WeaponId } from '../src/inventory/index.js';
-import { AmmoItemId, pickupAmmo } from '../src/inventory/ammo.js';
+import { createGame, GameExports, GameCreateOptions } from '../../src/index.js';
+import { Entity } from '../../src/entities/entity.js';
+import { WeaponId } from '../../src/inventory/index.js';
+import { AmmoItemId, pickupAmmo } from '../../src/inventory/ammo.js';
 import { createGameImportsAndEngine, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 const options: GameCreateOptions = {

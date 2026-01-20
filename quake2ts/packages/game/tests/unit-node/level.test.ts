@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LevelClock } from '../src/level.js';
+import { LevelClock } from '../../src/level.js';
 import { createGameFrameContext } from '@quake2ts/test-utils';
 
 describe('LevelClock', () => {

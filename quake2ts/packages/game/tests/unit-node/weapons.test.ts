@@ -1,12 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { GameExports } from '../src/index.js';
-import { Entity } from '../src/entities/entity.js';
-import { WeaponId } from '../src/inventory/playerInventory.js';
-import { AmmoType } from '../src/inventory/ammo.js';
-import { DamageMod } from '../src/combat/damageMods.js';
-import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../src/combat/weapons/firing.js';
-import { createBlasterBolt, createRocket, createBfgBall } from '../src/entities/projectiles.js';
-import { T_Damage } from '../src/combat/damage.js';
+import { GameExports } from '../../src/index.js';
+import { Entity } from '../../src/entities/entity.js';
+import { WeaponId } from '../../src/inventory/playerInventory.js';
+import { AmmoType } from '../../src/inventory/ammo.js';
+import { DamageMod } from '../../src/combat/damageMods.js';
+import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../../src/combat/weapons/firing.js';
+import { createBlasterBolt, createRocket, createBfgBall } from '../../src/entities/projectiles.js';
+import { T_Damage } from '../../src/combat/damage.js';
 import {
     createGameImportsAndEngine,
     createPlayerEntityFactory,
@@ -16,7 +16,7 @@ import {
 } from '@quake2ts/test-utils';
 
 // Mock projectiles
-vi.mock('../src/entities/projectiles.js', () => ({
+vi.mock('../../src/entities/projectiles.js', () => ({
     createBlasterBolt: vi.fn(),
     createRocket: vi.fn(),
     createGrenade: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../src/entities/projectiles.js', () => ({
 }));
 
 // Mock T_Damage
-vi.mock('../src/combat/damage.js', () => ({
+vi.mock('../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
     T_RadiusDamage: vi.fn()
 }));

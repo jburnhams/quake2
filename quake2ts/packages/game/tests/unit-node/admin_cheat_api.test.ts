@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports } from '../src/index.js';
-import { Entity, EntityFlags, MoveType } from '../src/entities/entity.js';
+import { createGame, GameExports } from '../../src/index.js';
+import { Entity, EntityFlags, MoveType } from '../../src/entities/entity.js';
 import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
-import { T_Damage, DamageFlags, DamageMod } from '../src/combat/index.js';
-import { giveItem } from '../src/inventory/index.js';
+import { T_Damage, DamageFlags, DamageMod } from '../../src/combat/index.js';
+import { giveItem } from '../../src/inventory/index.js';
 
 // Mock T_Damage
-vi.mock('../src/combat/index.js', async () => {
-    const actual = await vi.importActual('../src/combat/index.js');
+vi.mock('../../src/combat/index.js', async () => {
+    const actual = await vi.importActual('../../src/combat/index.js');
     return {
         ...actual,
         T_Damage: vi.fn(),
@@ -15,8 +15,8 @@ vi.mock('../src/combat/index.js', async () => {
 });
 
 // Mock giveItem
-vi.mock('../src/inventory/index.js', async () => {
-    const actual = await vi.importActual('../src/inventory/index.js');
+vi.mock('../../src/inventory/index.js', async () => {
+    const actual = await vi.importActual('../../src/inventory/index.js');
     return {
         ...actual,
         giveItem: vi.fn(),
