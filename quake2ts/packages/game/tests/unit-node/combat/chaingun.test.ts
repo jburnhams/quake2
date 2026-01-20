@@ -12,7 +12,7 @@ import { Entity } from '../../../src/entities/entity.js';
 import { chaingunThink } from '../../../src/combat/weapons/chaingun.js';
 import { getWeaponState } from '../../../src/combat/weapons/state.js';
 import { WeaponStateEnum } from '../../../src/combat/weapons/state.js';
-import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Chaingun', () => {
     let game: GameExports;
@@ -24,7 +24,11 @@ describe('Chaingun', () => {
 
     beforeEach(() => {
         const { game: testGame, imports, engine: mockEngine } = createTestGame({
-            config: { deathmatch: false }
+            config: { deathmatch: false },
+            imports: {
+                // Mock trace to hit the target
+                trace: vi.fn()
+            }
         });
 
         game = testGame;
@@ -68,16 +72,17 @@ describe('Chaingun', () => {
             takedamage: true
         }));
 
-        trace.mockReturnValue({
+        // Set up default trace return (can be overridden in individual tests)
+        trace.mockReturnValue(createTraceMock({
             ent: target,
             endpos: { x: 10, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
+            plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
             fraction: 0.1,
             surface: null,
             contents: 0,
             startsolid: false,
             allsolid: false
-        });
+        }));
     });
 
     it('should consume 1 bullet and deal 7 damage in SP', () => {
@@ -131,7 +136,9 @@ describe('Chaingun', () => {
 
     describe('Spin-up Mechanic', () => {
         it('should increase shots fired during continuous fire', () => {
-            const { game, imports, engine: mockEngine } = createTestGame();
+            const { game, imports, engine: mockEngine } = createTestGame({
+                imports: { trace: vi.fn() }
+            });
             const trace = imports.trace;
             vi.spyOn(damage, 'T_Damage');
 
@@ -169,16 +176,16 @@ describe('Chaingun', () => {
                 takedamage: true
             }));
 
-            trace.mockReturnValue({
+            trace.mockReturnValue(createTraceMock({
                 ent: target,
                 endpos: { x: 10, y: 0, z: 0 },
-                plane: { normal: { x: -1, y: 0, z: 0 } },
+                plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
                 fraction: 0.1,
                 surface: null,
                 contents: 0,
                 startsolid: false,
                 allsolid: false
-            });
+            }));
 
             let totalTraceCalls = 0;
             let ammoConsumed = 0;

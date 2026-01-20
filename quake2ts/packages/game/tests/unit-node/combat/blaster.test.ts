@@ -7,7 +7,7 @@ import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
     it('should not consume ammo and should spawn a blaster bolt', () => {
@@ -32,9 +32,8 @@ describe('Blaster', () => {
     it('should travel at the correct speed', () => {
         const { game, imports } = createTestGame();
         // Custom trace mock for empty world
-        // Trace signature: (start, mins, maxs, end, ...)
         imports.trace.mockImplementation((start, mins, maxs, end) => {
-            return {
+            return createTraceMock({
                 fraction: 1.0,
                 endpos: end,
                 allsolid: false,
@@ -43,7 +42,7 @@ describe('Blaster', () => {
                 surface: null,
                 contents: 0,
                 plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
-            };
+            });
         });
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({

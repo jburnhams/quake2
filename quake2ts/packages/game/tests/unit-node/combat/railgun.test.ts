@@ -9,7 +9,7 @@ import * as damage from '../../../src/combat/damage.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
-import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Railgun', () => {
     // Setup helper to create a game context
@@ -21,13 +21,13 @@ describe('Railgun', () => {
                      // Simulate hitting an entity at some distance
                      const dist = 100;
                      const dir = { x: 1, y: 0, z: 0 };
-                     return {
+                     return createTraceMock({
                          fraction: 0.5,
                          endpos: { x: start.x + dir.x * dist, y: start.y, z: start.z },
                          allsolid: false,
                          startsolid: false,
-                         ent: { takedamage: true, origin: {x: 100, y: 0, z: 0} } // Mock entity
-                     };
+                         ent: { takedamage: true, origin: {x: 100, y: 0, z: 0} } as any // Mock entity
+                     });
                 }),
             }
         });

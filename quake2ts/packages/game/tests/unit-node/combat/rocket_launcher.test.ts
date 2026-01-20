@@ -28,12 +28,14 @@ describe('Rocket Launcher', () => {
             ammo: { [AmmoType.Rockets]: 10 },
         });
 
+        // Set the damage mod random result
         vi.spyOn(firingRandom, 'irandomRange').mockReturnValue(17);
 
         fire(game, player, WeaponId.RocketLauncher);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Rockets]).toBe(9);
 
+        // Rocket base damage 100 + 17 = 117
         const expectedDamage = 117;
 
         expect(createRocket).toHaveBeenCalledWith(
@@ -43,7 +45,7 @@ describe('Rocket Launcher', () => {
             expect.anything(),
             expectedDamage,
             120, // radiusDamage
-            650
+            650  // speed
         );
     });
 });
