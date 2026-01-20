@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { GameFrameLoop } from '../src/loop.js';
-import { MoveType } from '../src/entities/entity.js';
-import { EntitySystem } from '../src/entities/system.js';
+import { GameFrameLoop } from '../../src/loop.js';
+import { MoveType } from '../../src/entities/entity.js';
+import { EntitySystem } from '../../src/entities/system.js';
 import { createGameImportsAndEngine, createTraceMock } from '@quake2ts/test-utils';
 
 const noopStep = { frame: 1, deltaMs: 25, nowMs: 25 };

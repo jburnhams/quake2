@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createGame } from '../src/index.js';
+import { createGame } from '../../src/index.js';
 import { WeaponId } from '@quake2ts/shared';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
