@@ -10,9 +10,10 @@ import { T_Damage } from '../../src/combat/damage.js';
 import {
     createGameImportsAndEngine,
     createPlayerEntityFactory,
+    createPlayerClientFactory,
     createTraceMock,
     createMockGameExports,
-    createPlayerClientFactory
+    spawnEntity
 } from '@quake2ts/test-utils';
 
 // Mock projectiles
@@ -55,20 +56,19 @@ describe('Weapon Tests', () => {
             }
         });
 
-        // Use helper to create mock game
+        // Use createMockGameExports for unit testing firing logic
         mockGame = createMockGameExports({
             ...engine,
             ...imports,
             time: 100,
             deathmatch: false,
             entities: {
-                world: { index: 0 }
+                world: { index: 0 },
+                spawn: vi.fn(),
             }
         });
 
         player = new Entity(1);
-
-        // Use createPlayerEntityFactory along with createPlayerClientFactory
         Object.assign(player, createPlayerEntityFactory({
             client: createPlayerClientFactory({
                 inventory: {
@@ -113,7 +113,7 @@ describe('Weapon Tests', () => {
         it('should fire with speed 1500', () => {
              fireBlaster(mockGame, player);
              expect(createBlasterBolt).toHaveBeenCalledWith(
-                 expect.anything(),
+                 expect.anything(), // game object
                  player,
                  expect.anything(),
                  expect.anything(),
@@ -309,7 +309,7 @@ describe('Weapon Tests', () => {
             fireRocket(mockGame, player);
 
             expect(createRocket).toHaveBeenCalledWith(
-                expect.anything(),
+                expect.anything(), // game
                 player,
                 expect.anything(),
                 expect.anything(),
