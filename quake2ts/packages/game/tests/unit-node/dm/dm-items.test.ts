@@ -3,9 +3,9 @@
 // =================================================================
 
 import { describe, it, expect } from 'vitest';
-import { pickupWeapon, pickupAmmo, pickupPowerup, pickupArmor } from '../../src/inventory/index.js';
-import { WEAPON_ITEMS, POWERUP_ITEMS, ARMOR_ITEMS } from '../../src/inventory/items.js';
-import { AMMO_TYPE_COUNT, getAmmoItemDefinition, AmmoItemId } from '../../src/inventory/ammo.js';
+import { pickupWeapon, pickupAmmo, pickupPowerup, pickupArmor } from '../../../src/inventory/index.js';
+import { WEAPON_ITEMS, POWERUP_ITEMS, ARMOR_ITEMS } from '../../../src/inventory/items.js';
+import { AMMO_TYPE_COUNT, getAmmoItemDefinition, AmmoItemId } from '../../../src/inventory/ammo.js';
 import { createMockInventory } from '@quake2ts/test-utils';
 
 describe('DM Item Pickups', () => {

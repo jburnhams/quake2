@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { SP_func_rotating } from '../../src/entities/funcs.js';
-import { MoveType, Solid } from '../../src/entities/entity.js';
+import { SP_func_rotating } from '../../../src/entities/funcs.js';
+import { MoveType, Solid } from '../../../src/entities/entity.js';
 import { createEntityFactory } from '@quake2ts/test-utils';
-import * as damageModule from '../../src/combat/damage.js';
+import * as damageModule from '../../../src/combat/damage.js';
 
 // Mock T_Damage
-vi.mock('../../src/combat/damage.js', () => ({
+vi.mock('../../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
 }));
 

@@ -1,8 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { createGame, type GameExports } from '../../src/index.js';
-import { createSaveFile, parseSaveFile } from '../../src/save/index.js';
-import type { GameImports } from '../../src/imports.js';
+import { createGame, type GameExports } from '../../../src/index.js';
+import { createSaveFile, parseSaveFile } from '../../../src/save/index.js';
+import type { GameImports } from '../../../src/imports.js';
 import { RandomGenerator } from '@quake2ts/shared';
 
 // Mock GameImports
@@ -37,7 +36,6 @@ describe('Save/Load Integration', () => {
   let imports: GameImports;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     imports = createMockGameImports();
     const mockEngine = {
         trace: vi.fn(),

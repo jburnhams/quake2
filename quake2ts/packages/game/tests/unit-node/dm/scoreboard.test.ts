@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
-import { Entity } from '../../src/entities/entity.js';
-import { getScoreboard } from '../../src/dm/scoreboard.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { getScoreboard } from '../../../src/dm/scoreboard.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { createPlayerInventory } from '../../src/inventory/playerInventory.js';
+import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
 
 describe('Scoreboard API', () => {
     let sys: EntitySystem;
