@@ -3,21 +3,23 @@ import { Entity, GameExports } from '@quake2ts/game';
 import { registerWeapon, WeaponDefinition } from '../../src/combat/weapons/registry.js';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { WeaponId } from '../../src/inventory/playerInventory.js';
-import { createMockGameExports, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Custom Weapon Registration', () => {
   let game: GameExports;
   let player: Entity;
 
   beforeEach(() => {
-    // Use createMockGameExports for a more complete game mock
-    game = createMockGameExports({
-        time: 10
+    // Use createTestGame to get a functional game instance with entity system
+    const result = createTestGame({
+        config: {
+            time: 10
+        }
     });
+    game = result.game;
 
-    // Use createPlayerEntityFactory for consistent player setup
-    player = new Entity(1);
-    Object.assign(player, createPlayerEntityFactory({
+    // Use spawnEntity to properly insert the player into the entity system
+    player = spawnEntity(game.entities, createPlayerEntityFactory({
          client: {
             inventory: {
                 ammo: { counts: [] },

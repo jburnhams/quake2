@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports, GameCreateOptions } from '../../src/index.js';
+import { GameExports } from '../../src/index.js';
 import { Entity } from '../../src/entities/entity.js';
 import { WeaponId } from '../../src/inventory/index.js';
 import { AmmoItemId, pickupAmmo } from '../../src/inventory/ammo.js';
-import { createGameImportsAndEngine, createPlayerClientFactory } from '@quake2ts/test-utils';
-
-const options: GameCreateOptions = {
-    gravity: { x: 0, y: 0, z: -800 },
-    deathmatch: false
-};
+import { createPlayerClientFactory, createTestGame } from '@quake2ts/test-utils';
 
 describe('Player State Snapshot', () => {
     let game: GameExports;
@@ -17,12 +12,13 @@ describe('Player State Snapshot', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Use helper to mock engine imports
-        const { imports, engine } = createGameImportsAndEngine();
-
-        game = createGame(imports, engine, options);
-        game.init(0);
-        game.spawnWorld();
+        // Use createTestGame for cleaner setup
+        const result = createTestGame({
+            config: {
+                deathmatch: false
+            }
+        });
+        game = result.game;
 
         const mockClient = createPlayerClientFactory();
 

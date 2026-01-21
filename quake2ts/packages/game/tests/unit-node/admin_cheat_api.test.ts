@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../../src/index.js';
 import { Entity, EntityFlags, MoveType } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { T_Damage, DamageFlags, DamageMod } from '../../src/combat/index.js';
 import { giveItem } from '../../src/inventory/index.js';
 
@@ -33,21 +33,21 @@ describe('Admin/Cheat APIs', () => {
 
         game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
 
-        // Mock the entity system find method to return a player
-        // Use createPlayerEntityFactory to ensure a consistent player mock
-        player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
+        entities = game.entities;
+
+        // Use spawnEntity to properly insert the player into the entity system
+        // This avoids needing to manually mock 'find' or handle entity linking
+        player = spawnEntity(entities, createPlayerEntityFactory({
              flags: 0,
              movetype: MoveType.Walk,
              origin: { x: 10, y: 20, z: 30 },
-             velocity: { x: 0, y: 0, z: 0 }
+             velocity: { x: 0, y: 0, z: 0 },
+             client: {
+                 // Ensure client property exists for 'find' to locate it as a player if necessary
+                 // (though find usually just iterates)
+                 ...createPlayerEntityFactory().client
+             } as any
         }));
-
-        // Inject player into the internal entity system
-        entities = game.entities;
-
-        // Spy on find directly since it is exposed.
-        vi.spyOn(entities, 'find').mockReturnValue(player);
 
         // Also mock unlink/link for teleport
         vi.spyOn(entities, 'unlink');
@@ -115,7 +115,8 @@ describe('Admin/Cheat APIs', () => {
     });
 
     it('API methods should gracefully handle missing player', () => {
-         vi.spyOn(entities, 'find').mockReturnValue(undefined);
+         // Free the player to simulate missing player
+         entities.free(player);
 
          expect(() => game.setGodMode(true)).not.toThrow();
          expect(() => game.setNoclip(true)).not.toThrow();

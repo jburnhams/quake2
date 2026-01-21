@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SelectSpawnPoint, SelectDeathmatchSpawnPoint } from '../../src/entities/spawn.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext, createTestGame } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createEntityFactory, spawnEntity, createTestContext, createTestGame } from '@quake2ts/test-utils';
 
 describe('Deathmatch Spawn', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -17,7 +17,7 @@ describe('Deathmatch Spawn', () => {
             origin: { x: 100, y: 0, z: 0 }
         }));
 
-        const s2 = spawnEntity(context.entities, createEntityFactory({
+        spawnEntity(context.entities, createEntityFactory({
             classname: 'info_player_deathmatch',
             origin: { x: 200, y: 0, z: 0 }
         }));
@@ -54,9 +54,10 @@ describe('GameExports Respawn', () => {
         });
 
         // Force RNG to return 0 to pick the first spot deterministically
+        // The game.random object is created by createTestGame, we spy on its method
         vi.spyOn(game.random, 'frandom').mockReturnValue(0);
 
-        const spawn = spawnEntity(game.entities, createEntityFactory({
+        spawnEntity(game.entities, createEntityFactory({
             classname: 'info_player_deathmatch',
             origin: { x: 500, y: 500, z: 500 },
             angles: { x: 0, y: 90, z: 0 }
