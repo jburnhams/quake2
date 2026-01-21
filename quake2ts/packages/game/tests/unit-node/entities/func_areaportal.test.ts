@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registerFuncSpawns } from '../../src/entities/funcs.js';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
-import { Entity, MoveType, Solid } from '../../src/entities/entity.js';
-import { EntitySystem } from '../../src/entities/system.js';
+import { registerFuncSpawns } from '../../../src/entities/funcs.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
+import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 
 describe('func_areaportal', () => {
   it('should register func_areaportal', () => {

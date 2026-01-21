@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerFuncSpawns, DoorState } from '../../src/entities/funcs.js';
-import { MoveType, Solid, Entity } from '../../src/entities/entity.js';
+import { registerFuncSpawns, DoorState } from '../../../src/entities/funcs.js';
+import { MoveType, Solid, Entity } from '../../../src/entities/entity.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { SpawnRegistry } from '../../src/entities/spawn.js';
+import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { createEntityFactory } from '@quake2ts/test-utils';
 
 describe('func_door', () => {

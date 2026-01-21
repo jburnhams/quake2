@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGame } from '../../src/index.js';
+import { createGame } from '../../../src/index.js';
 // We import the specific hashing function that handles the EntitySystem instance
 // but we need to verify if it is exported. It was just added to checksum.ts
 // but index.ts exports `hashEntitySystem` from checksum.ts.
 // I modified checksum.ts to export `hashEntitySystemInstance` as well? No, I added it at bottom.
 // I should update index.ts to export it, or update test to use createSnapshot().
-import { EntitySystem } from '../../src/entitySystem.js';
-import { hashEntitySystem } from '../../src/checksum.js';
-import type { GameExports, GameImports } from '../../src/index.js';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
+import { EntitySystem } from '../../../src/entitySystem.js';
+import { hashEntitySystem } from '../../../src/checksum.js';
+import type { GameExports, GameImports } from '../../../src/index.js';
 
 // Define createMockGameImports locally since it's not exported from shared test helpers
 const createMockGameImports = (): GameImports => ({
@@ -45,7 +44,6 @@ const createMockGameImports = (): GameImports => ({
 } as unknown as GameImports);
 
 describe('Physics Determinism Stress Tests', () => {
-  setupBrowserEnvironment();
 
   // Helper to run a simulation for N frames and return the final state hash
   const runSimulation = (frameCount: number): { hash: number; game: GameExports } => {
