@@ -7,7 +7,7 @@ const Game: React.FC = () => {
   const [rendererType, setRendererType] = useState<RendererType>('webgl');
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState({ fps: 0, position: { x: 0, y: 0, z: 0 } });
+  const [stats, setStats] = useState({ fps: 0, position: { x: 0, y: 0, z: 0 }, angles: { pitch: 0, yaw: 0 } });
 
   const { start, stop, getStats } = useGameEngine({
     canvasRef,
@@ -104,7 +104,8 @@ const Game: React.FC = () => {
         {isRunning && (
           <div className="text-center text-xs text-gray-400 font-mono">
             FPS: {stats.fps.toFixed(0)} |
-            Position: ({stats.position.x.toFixed(0)}, {stats.position.y.toFixed(0)}, {stats.position.z.toFixed(0)})
+            Pos: ({stats.position.x.toFixed(0)}, {stats.position.y.toFixed(0)}, {stats.position.z.toFixed(0)}) |
+            Pitch: {stats.angles.pitch.toFixed(1)} | Yaw: {stats.angles.yaw.toFixed(1)}
           </div>
         )}
 
