@@ -288,11 +288,34 @@ export class GameEngine {
       this.lastFrameTime = now;
     }
 
-    // Set camera position and angles
-    // Eye height offset
+    // Set camera position with eye height offset
     const eyeHeight = 56; // Quake 2 standing eye height
-    this.camera.setPosition(this.position[0], this.position[1], this.position[2] + eyeHeight);
-    this.camera.setRotation(this.pitch, this.yaw, 0);
+    const eyePos = vec3.fromValues(
+      this.position[0],
+      this.position[1],
+      this.position[2] + eyeHeight
+    );
+    this.camera.setPosition(eyePos[0], eyePos[1], eyePos[2]);
+
+    // Use lookAt to avoid Euler angle rotation order issues
+    // This ensures yaw and pitch are applied correctly for FPS controls
+    const yawRad = (this.yaw * Math.PI) / 180;
+    const pitchRad = (this.pitch * Math.PI) / 180;
+
+    // Compute forward direction from pitch and yaw
+    // In Quake coords: X forward, Y left, Z up
+    // Positive pitch = looking down (Quake convention)
+    const cosPitch = Math.cos(pitchRad);
+    const forward = vec3.fromValues(
+      cosPitch * Math.cos(yawRad),
+      cosPitch * Math.sin(yawRad),
+      -Math.sin(pitchRad) // negative because positive pitch = looking down
+    );
+
+    // Target = eye position + forward * distance
+    const target = vec3.create();
+    vec3.scaleAndAdd(target, eyePos, forward, 100);
+    this.camera.lookAt(target);
 
     // Clear and render based on renderer type
     if (this.gl) {
