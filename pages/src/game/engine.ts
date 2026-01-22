@@ -11,7 +11,8 @@ import {
   type IRenderer,
 } from '@quake2ts/engine';
 import { vec3, mat4 } from 'gl-matrix';
-import type { Vec3 } from '@quake2ts/shared';
+import type { Vec3, CollisionModel, PmoveTraceFn } from '@quake2ts/shared';
+import { makeBrushFromMinsMaxs, makeLeafModel, createTraceRunner } from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
 interface WebGLDebugRenderer {
@@ -29,6 +30,7 @@ export interface GameStats {
   fps: number;
   position: { x: number; y: number; z: number };
   angles: { pitch: number; yaw: number };
+  onGround: boolean;
 }
 
 export class GameEngine {
@@ -47,11 +49,16 @@ export class GameEngine {
   private gpuFormat: GPUTextureFormat = 'bgra8unorm';
   private gpuDepthTexture: GPUTexture | null = null;
 
+  // Collision system (using quake2ts collision)
+  private collisionModel: CollisionModel | null = null;
+  private trace: PmoveTraceFn | null = null;
+
   // Player state
   private position = vec3.fromValues(0, 0, 64); // Start at center, 64 units up
   private velocity = vec3.fromValues(0, 0, 0);
   private yaw = 0; // degrees
   private pitch = 0; // degrees
+  private onGround = false;
 
   // Physics constants (matching Quake 2)
   private readonly MOVE_SPEED = 320;
@@ -108,6 +115,63 @@ export class GameEngine {
     this.loop = new FixedTimestepLoop(callbacks, {
       fixedDeltaMs: 1000 / 60, // 60 Hz physics
     });
+
+    // Build collision model from room
+    this.buildCollision();
+  }
+
+  private buildCollision(): void {
+    if (!this.room) return;
+
+    const brushes = [];
+    const halfWidth = this.room.width / 2;
+    const halfDepth = this.room.depth / 2;
+    const wallThickness = 16;
+
+    // Floor
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: -wallThickness },
+      { x: halfWidth, y: halfDepth, z: 0 }
+    ));
+
+    // Ceiling
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: this.room.height },
+      { x: halfWidth, y: halfDepth, z: this.room.height + wallThickness }
+    ));
+
+    // Walls
+    // North (+Y)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: halfDepth - wallThickness, z: 0 },
+      { x: halfWidth, y: halfDepth, z: this.room.height }
+    ));
+    // South (-Y)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: 0 },
+      { x: halfWidth, y: -halfDepth + wallThickness, z: this.room.height }
+    ));
+    // East (+X)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: halfWidth - wallThickness, y: -halfDepth, z: 0 },
+      { x: halfWidth, y: halfDepth, z: this.room.height }
+    ));
+    // West (-X)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: 0 },
+      { x: -halfWidth + wallThickness, y: halfDepth, z: this.room.height }
+    ));
+
+    // Pillars
+    for (const pillar of this.room.pillars) {
+      brushes.push(makeBrushFromMinsMaxs(
+        { x: pillar.x - pillar.halfSize, y: pillar.y - pillar.halfSize, z: 0 },
+        { x: pillar.x + pillar.halfSize, y: pillar.y + pillar.halfSize, z: pillar.height }
+      ));
+    }
+
+    this.collisionModel = makeLeafModel(brushes);
+    this.trace = createTraceRunner(this.collisionModel, -1);
   }
 
   private async initWebGL(): Promise<void> {
@@ -190,6 +254,7 @@ export class GameEngine {
         pitch: this.pitch,
         yaw: this.yaw,
       },
+      onGround: this.onGround,
     };
   }
 
@@ -307,20 +372,30 @@ export class GameEngine {
   }
 
   private updateMovement(input: InputState, dt: number): void {
-    // Check if on ground
-    const onGround = this.position[2] <= this.FLOOR_HEIGHT + 0.1;
+    if (!this.trace) return;
+
+    const playerMins: Vec3 = { x: -16, y: -16, z: 0 };
+    const playerMaxs: Vec3 = { x: 16, y: 16, z: 56 };
+
+    // Check if on ground by tracing down slightly
+    const groundStart: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] };
+    const groundEnd: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] - 1 };
+    const groundTrace = this.trace(groundStart, groundEnd, playerMins, playerMaxs);
+    this.onGround = groundTrace.fraction < 1.0;
 
     // Apply gravity if not on ground
-    if (!onGround) {
+    if (!this.onGround) {
       this.velocity[2] -= this.GRAVITY * dt;
     } else {
-      this.velocity[2] = 0;
-      this.position[2] = this.FLOOR_HEIGHT;
+      if (this.velocity[2] < 0) {
+        this.velocity[2] = 0;
+      }
     }
 
     // Jump
-    if (input.jump && onGround) {
+    if (input.jump && this.onGround) {
       this.velocity[2] = this.JUMP_VELOCITY;
+      this.onGround = false;
     }
 
     // Calculate forward and right vectors based on yaw (in Quake coordinates: X forward, Y left, Z up)
@@ -342,9 +417,9 @@ export class GameEngine {
     }
 
     // Apply movement
-    if (onGround) {
+    if (this.onGround) {
       // Ground movement with friction
-      const speed = vec3.length([this.velocity[0], this.velocity[1], 0]);
+      const speed = Math.sqrt(this.velocity[0] ** 2 + this.velocity[1] ** 2);
       if (speed > 0) {
         const drop = speed * this.FRICTION * dt;
         const newSpeed = Math.max(0, speed - drop);
@@ -367,18 +442,44 @@ export class GameEngine {
       }
     }
 
-    // Update position
-    this.position[0] += this.velocity[0] * dt;
-    this.position[1] += this.velocity[1] * dt;
-    this.position[2] += this.velocity[2] * dt;
+    // Move with collision detection using trace
+    this.moveWithCollision(dt, playerMins, playerMaxs);
+  }
 
-    // Simple collision with room bounds
-    if (this.room) {
-      const halfWidth = this.room.width / 2 - 32;
-      const halfDepth = this.room.depth / 2 - 32;
-      this.position[0] = Math.max(-halfWidth, Math.min(halfWidth, this.position[0]));
-      this.position[1] = Math.max(-halfDepth, Math.min(halfDepth, this.position[1]));
-      this.position[2] = Math.max(this.FLOOR_HEIGHT, Math.min(this.room.height - 32, this.position[2]));
+  private moveWithCollision(dt: number, mins: Vec3, maxs: Vec3): void {
+    if (!this.trace) return;
+
+    const start: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] };
+    const end: Vec3 = {
+      x: this.position[0] + this.velocity[0] * dt,
+      y: this.position[1] + this.velocity[1] * dt,
+      z: this.position[2] + this.velocity[2] * dt,
+    };
+
+    const trace = this.trace(start, end, mins, maxs);
+
+    if (trace.fraction >= 1.0) {
+      // No collision
+      this.position[0] = end.x;
+      this.position[1] = end.y;
+      this.position[2] = end.z;
+    } else {
+      // Hit something - move to contact point
+      this.position[0] = trace.endpos.x;
+      this.position[1] = trace.endpos.y;
+      this.position[2] = trace.endpos.z;
+
+      // Clip velocity along collision plane (slide)
+      if (trace.planeNormal) {
+        const backoff =
+          this.velocity[0] * trace.planeNormal.x +
+          this.velocity[1] * trace.planeNormal.y +
+          this.velocity[2] * trace.planeNormal.z;
+
+        this.velocity[0] -= trace.planeNormal.x * backoff;
+        this.velocity[1] -= trace.planeNormal.y * backoff;
+        this.velocity[2] -= trace.planeNormal.z * backoff;
+      }
     }
   }
 
