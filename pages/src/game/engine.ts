@@ -10,7 +10,7 @@ import {
   type Renderer,
   type IRenderer,
 } from '@quake2ts/engine';
-import { vec3 } from 'gl-matrix';
+import { vec3, mat4 } from 'gl-matrix';
 import type { Vec3 } from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
@@ -64,6 +64,11 @@ export class GameEngine {
   private lastFrameTime = 0;
   private frameCount = 0;
   private fps = 0;
+
+  // Pre-allocated matrices to avoid allocations in render loop
+  private viewMatrix = mat4.create();
+  private projectionMatrix = mat4.create();
+  private viewProjectionMatrix = mat4.create();
 
   constructor(canvas: HTMLCanvasElement, rendererType: RendererType = 'webgl') {
     this.canvas = canvas;
@@ -225,6 +230,82 @@ export class GameEngine {
     if (this.yaw >= 360) this.yaw -= 360;
   }
 
+  /**
+   * Build view-projection matrix with correct rotation order for FPS controls.
+   *
+   * The Camera class applies rotations as: Rz(yaw) * Ry(pitch)
+   * This means pitch is applied in world space, causing the horizon to tilt.
+   *
+   * For proper FPS controls, we need: Ry(pitch) * Rz(yaw)
+   * This applies yaw first (in world space), then pitch (in yaw-rotated space),
+   * keeping the horizon level regardless of yaw angle.
+   */
+  private buildViewProjectionMatrix(eyePos: vec3, pitch: number, yaw: number): Float32Array {
+    const DEG2RAD = Math.PI / 180;
+    const pitchRad = pitch * DEG2RAD;
+    const yawRad = yaw * DEG2RAD;
+
+    // Build projection matrix
+    const fov = 90 * DEG2RAD;
+    const aspect = this.canvas.width / this.canvas.height;
+    const near = 1;
+    const far = 4096;
+    mat4.perspective(this.projectionMatrix, fov, aspect, near, far);
+
+    // Build view matrix with correct rotation order for FPS controls
+    // Quake coordinate system: X forward, Y left, Z up
+    // GL coordinate system: X right, Y up, -Z forward
+
+    // Quake to GL coordinate transformation matrix (column-major):
+    // Quake X (forward) -> GL -Z
+    // Quake Y (left) -> GL -X
+    // Quake Z (up) -> GL +Y
+    const quakeToGl = mat4.fromValues(
+       0,  0, -1, 0,  // column 0: Quake X -> GL -Z
+      -1,  0,  0, 0,  // column 1: Quake Y -> GL -X
+       0,  1,  0, 0,  // column 2: Quake Z -> GL +Y
+       0,  0,  0, 1   // column 3: translation (none)
+    );
+
+    // Build rotation matrix with CORRECT order for FPS controls:
+    // First yaw (around Z), then pitch (around local Y after yaw)
+    // For view matrix (inverse of camera transform), we negate angles
+    // and reverse the multiplication order
+    const rotationQuake = mat4.create();
+    mat4.identity(rotationQuake);
+
+    // CORRECT ORDER: pitch first in matrix build, then yaw
+    // This makes the view matrix apply yaw first, then pitch when transforming points
+    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+    mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
+
+    // Combine rotation with coordinate transformation
+    const rotationGl = mat4.create();
+    mat4.multiply(rotationGl, quakeToGl, rotationQuake);
+
+    // Apply rotation to negated position
+    const negPos = vec3.negate(vec3.create(), eyePos);
+    const rotatedPosQuake = vec3.transformMat4(vec3.create(), negPos, rotationQuake);
+
+    // Transform position from Quake to GL coordinates
+    const translationGl = vec3.fromValues(
+      -rotatedPosQuake[1],  // Quake Y -> GL -X
+       rotatedPosQuake[2],  // Quake Z -> GL +Y
+      -rotatedPosQuake[0]   // Quake X -> GL -Z
+    );
+
+    // Assemble view matrix
+    mat4.copy(this.viewMatrix, rotationGl);
+    this.viewMatrix[12] = translationGl[0];
+    this.viewMatrix[13] = translationGl[1];
+    this.viewMatrix[14] = translationGl[2];
+
+    // Combine into view-projection matrix
+    mat4.multiply(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
+
+    return new Float32Array(this.viewProjectionMatrix);
+  }
+
   private updateMovement(input: InputState, dt: number): void {
     // Check if on ground
     const onGround = this.position[2] <= this.FLOOR_HEIGHT + 0.1;
@@ -302,7 +383,7 @@ export class GameEngine {
   }
 
   private render(_ctx: RenderContext): void {
-    if (!this.renderer || !this.camera || !this.room) return;
+    if (!this.renderer || !this.room) return;
 
     // Update FPS counter
     const now = performance.now();
@@ -313,34 +394,17 @@ export class GameEngine {
       this.lastFrameTime = now;
     }
 
-    // Set camera position with eye height offset
+    // Calculate eye position with height offset
     const eyeHeight = 56; // Quake 2 standing eye height
     const eyePos = vec3.fromValues(
       this.position[0],
       this.position[1],
       this.position[2] + eyeHeight
     );
-    this.camera.setPosition(eyePos[0], eyePos[1], eyePos[2]);
 
-    // Use lookAt to avoid Euler angle rotation order issues
-    // This ensures yaw and pitch are applied correctly for FPS controls
-    const yawRad = (this.yaw * Math.PI) / 180;
-    const pitchRad = (this.pitch * Math.PI) / 180;
-
-    // Compute forward direction from pitch and yaw
-    // In Quake coords: X forward, Y left, Z up
-    // Positive pitch = looking down (Quake convention)
-    const cosPitch = Math.cos(pitchRad);
-    const forward = vec3.fromValues(
-      cosPitch * Math.cos(yawRad),
-      cosPitch * Math.sin(yawRad),
-      -Math.sin(pitchRad) // negative because positive pitch = looking down
-    );
-
-    // Target = eye position + forward * distance
-    const target = vec3.create();
-    vec3.scaleAndAdd(target, eyePos, forward, 100);
-    this.camera.lookAt(target);
+    // Build view-projection matrix with correct rotation order for FPS controls
+    // This fixes the horizon tilt issue when combining pitch and yaw
+    const viewProjection = this.buildViewProjectionMatrix(eyePos, this.pitch, this.yaw);
 
     // Clear and render based on renderer type
     if (this.gl) {
@@ -349,15 +413,15 @@ export class GameEngine {
       this.gl.enable(this.gl.DEPTH_TEST);
 
       // Render procedural room using WebGL debug renderer
-      this.renderProceduralRoomWebGL();
+      this.renderProceduralRoomWebGL(viewProjection);
     } else if (this.gpuDevice && this.gpuContext) {
       // WebGPU path - create render pass and render debug geometry
-      this.renderProceduralRoomWebGPU();
+      this.renderProceduralRoomWebGPU(viewProjection);
     }
   }
 
-  private renderProceduralRoomWebGPU(): void {
-    if (!this.renderer || !this.camera || !this.room || !this.gpuDevice || !this.gpuContext) return;
+  private renderProceduralRoomWebGPU(viewProjection: Float32Array): void {
+    if (!this.renderer || !this.room || !this.gpuDevice || !this.gpuContext) return;
 
     // Get current texture from swap chain
     const currentTexture = this.gpuContext.getCurrentTexture();
@@ -429,9 +493,8 @@ export class GameEngine {
       },
     });
 
-    // Render the debug geometry
-    const viewProjection = this.camera.viewProjectionMatrix;
-    debug.render(renderPass, new Float32Array(viewProjection), false);
+    // Render the debug geometry with correct view-projection matrix
+    debug.render(renderPass, viewProjection, false);
 
     // End render pass
     renderPass.end();
@@ -443,8 +506,8 @@ export class GameEngine {
     debug.clear();
   }
 
-  private renderProceduralRoomWebGL(): void {
-    if (!this.renderer || !this.camera || !this.room) return;
+  private renderProceduralRoomWebGL(viewProjection: Float32Array): void {
+    if (!this.renderer || !this.room) return;
 
     // Cast to WebGL debug renderer type which has render method
     const debug = this.renderer.debug as WebGLDebugRenderer;
@@ -479,9 +542,8 @@ export class GameEngine {
     // Draw coordinate axes at origin for reference
     debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
 
-    // Render the debug geometry
-    const viewProjection = this.camera.viewProjectionMatrix;
-    debug.render(new Float32Array(viewProjection));
+    // Render the debug geometry with correct view-projection matrix
+    debug.render(viewProjection);
     debug.clear();
   }
 }
