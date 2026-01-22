@@ -24,6 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <nav className="mt-4 flex justify-center gap-6">
            <Link to="/" className={getLinkClass('/')}>Home</Link>
+           <Link to="/play" className={getLinkClass('/play')}>Play</Link>
            <Link to="/visual-tests" className={getLinkClass('/visual-tests')}>WebGPU Tests</Link>
            <Link to="/webgl-visual-tests" className={getLinkClass('/webgl-visual-tests')}>WebGL Tests</Link>
         </nav>
