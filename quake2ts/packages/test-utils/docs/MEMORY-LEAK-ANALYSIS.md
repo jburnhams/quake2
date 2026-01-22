@@ -48,6 +48,7 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `admin_cheat_api.test.ts`, `level.test.ts`, `loop.test.ts`, `player-state-fields.test.ts`, `player-state.test.ts`, `weapons.test.ts` to `game/tests/unit-node/`
    - Moved: `game/tests/dm` tests (`chat`, `killbox`, `scoreboard`, `game`, `dm-items`) to `game/tests/unit-node/dm/`
    - Moved: `game/tests/entities` tests (`func_areaportal`, `func_door_new`, `func_rotating`) to `game/tests/unit-node/entities/`
+   - Moved: `game/tests/entities` (remaining tests) to `game/tests/unit-node/entities/`
    - Moved: `game/tests/integration` tests (`combat`, `physicsStress`, `saveLoad`) to `game/tests/unit-node/integration/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites

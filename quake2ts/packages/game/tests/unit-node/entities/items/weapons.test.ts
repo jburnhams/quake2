@@ -1,0 +1,96 @@
+// =================================================================
+// Quake II - Weapon Pickup Entity Tests
+// =================================================================
+
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { createWeaponPickupEntity } from '../../../../src/entities/items';
+import { WEAPON_ITEMS } from '../../../../src/inventory';
+import { Entity } from '../../../../src/entities';
+import { WeaponId } from '../../../../src/inventory/playerInventory';
+import { AmmoType } from '../../../../src/inventory/ammo';
+import { GameExports } from '../../../../src';
+import { Solid } from '../../../../src/entities/entity';
+import {
+    createPlayerEntityFactory,
+    createEntityFactory,
+    createMockGameExports,
+    createMockInventory,
+    // If createPlayerStateFactory exists, use it, otherwise omit or use generic
+} from '@quake2ts/test-utils';
+
+describe('Weapon Pickup Entities', () => {
+    let mockGame: GameExports;
+
+    beforeEach(() => {
+        mockGame = createMockGameExports({
+            sound: vi.fn(),
+            multicast: vi.fn(),
+            centerprintf: vi.fn(),
+            time: 100,
+            deathmatch: true,
+            entities: {
+                scheduleThink: vi.fn(),
+                modelIndex: vi.fn().mockReturnValue(1),
+            } as any,
+            hooks: {
+                onPickup: vi.fn(),
+                onMapLoad: vi.fn(),
+                onMapUnload: vi.fn(),
+                onPlayerSpawn: vi.fn(),
+                onPlayerDeath: vi.fn(),
+                register: vi.fn(),
+            } as any
+        });
+    });
+
+    it('should create a weapon pickup entity with a touch function', () => {
+        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const entity = createWeaponPickupEntity(mockGame, shotgunItem);
+
+        expect(entity.classname).toBe('weapon_shotgun');
+        expect(entity.touch).toBeDefined();
+        expect(entity.solid).toBe(Solid.Trigger);
+    });
+
+    it('should become non-solid and set a respawn timer when touched by a player', () => {
+        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
+
+        const player = createPlayerEntityFactory({
+            client: {
+                inventory: createMockInventory(),
+            } as any
+        }) as Entity;
+
+        entity.touch!(entity, player);
+
+        expect(player.client!.inventory.ownedWeapons.has(WeaponId.Shotgun)).toBe(true);
+        expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(10);
+        expect(mockGame.sound).toHaveBeenCalledWith(player, 0, 'items/pkup.wav', 1, 1, 0);
+        expect(mockGame.centerprintf).toHaveBeenCalledWith(player, 'You got the Shotgun');
+        expect(entity.solid).toBe(Solid.Not);
+        expect(entity.nextthink).toBe(130);
+        expect(mockGame.entities.scheduleThink).toHaveBeenCalledWith(entity, 130);
+    });
+
+    it('should respawn when the think function is called', () => {
+        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
+
+        entity.solid = Solid.Not;
+        entity.think!(entity, mockGame.entities);
+
+        expect(entity.solid).toBe(Solid.Trigger);
+    });
+
+    it('should not do anything when touched by a non-player', () => {
+        const shotgunItem = WEAPON_ITEMS['weapon_shotgun'];
+        const entity = createWeaponPickupEntity(mockGame, shotgunItem) as Entity;
+
+        const nonPlayer = createEntityFactory() as Entity;
+
+        entity.touch!(entity, nonPlayer);
+
+        expect(mockGame.sound).not.toHaveBeenCalled();
+    });
+});
