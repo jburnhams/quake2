@@ -1,47 +1,17 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createGame, type GameExports } from '../../../src/index.js';
+import { type GameExports } from '../../../src/index.js';
 import { createSaveFile, parseSaveFile } from '../../../src/save/index.js';
-import type { GameImports } from '../../../src/imports.js';
 import { RandomGenerator } from '@quake2ts/shared';
-
-// Mock GameImports
-const createMockGameImports = (): GameImports => ({
-  trace: vi.fn(() => ({ fraction: 1.0, allsolid: false, startsolid: false, endpos: { x: 0, y: 0, z: 0 }, plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 } })),
-  pointcontents: vi.fn(() => 0),
-  setmodel: vi.fn(),
-  configstring: vi.fn(),
-  modelindex: vi.fn(() => 1),
-  soundindex: vi.fn(() => 1),
-  imageindex: vi.fn(() => 1),
-  linkentity: vi.fn(),
-  unlinkentity: vi.fn(),
-  multicast: vi.fn(),
-  unicast: vi.fn(),
-  sound: vi.fn(),
-  centerprintf: vi.fn(),
-  bprint: vi.fn(),
-  dprint: vi.fn(),
-  error: vi.fn(),
-  cvar_get: vi.fn(),
-  cvar_set: vi.fn(),
-  cvar_forceset: vi.fn(),
-  argc: vi.fn(() => 0),
-  argv: vi.fn(() => ''),
-  args: vi.fn(() => ''),
-  positiondms: vi.fn()
-} as unknown as GameImports);
+import { createTestGame } from '@quake2ts/test-utils';
 
 describe('Save/Load Integration', () => {
   let game: GameExports;
-  let imports: GameImports;
 
   beforeEach(() => {
-    imports = createMockGameImports();
-    const mockEngine = {
-        trace: vi.fn(),
-    };
-
-    game = createGame(imports, mockEngine as any, { gravity: { x: 0, y: 0, z: -800 } });
+    const context = createTestGame({
+        config: { gravity: { x: 0, y: 0, z: -800 } }
+    });
+    game = context.game;
     game.init(0);
   });
 
@@ -78,17 +48,20 @@ describe('Save/Load Integration', () => {
         player: undefined
     });
 
-    // Debug assertions
+    // Basic assertions for save file validity.
     expect(saveFile).toBeDefined();
     expect(saveFile.timestamp).toBe(12345);
     expect(typeof saveFile.timestamp).toBe('number');
 
     const json = JSON.stringify(saveFile);
 
-    // Verify JSON content
+    // Verify JSON content presence.
     expect(json).toContain('"timestamp":12345');
 
+    // Reset game state to simulate loading into a fresh session.
     game.init(0);
+
+    // Modify the original entity to ensure we are not just checking the same object reference.
     ent.origin.x = 999;
 
     const loadedFile = parseSaveFile(json);

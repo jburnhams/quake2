@@ -3,24 +3,30 @@
 // =================================================================
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Entity, GameExports, createGame, WeaponId, PowerupId, addPowerup } from '@quake2ts/game';
+import { Entity, GameExports, WeaponId, PowerupId, addPowerup } from '@quake2ts/game';
 import { fire } from '../../../src/combat/weapons/firing.js';
-import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createTestGame, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Combat and Items', () => {
   let game: GameExports;
   let player: Entity;
 
-  let mockImports: ReturnType<typeof createGameImportsAndEngine>['imports'];
-  let mockEngine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+  let mockImports: ReturnType<typeof createTestGame>['imports'];
+  let mockEngine: ReturnType<typeof createTestGame>['engine'];
 
   beforeEach(() => {
     vi.clearAllMocks();
-    const result = createGameImportsAndEngine();
+
+    // Default mocks are fine, we just need to override trace in specific tests
+    const result = createTestGame({
+      config: { gravity: { x: 0, y: 0, z: -800 } }
+    });
+
+    game = result.game;
     mockImports = result.imports;
     mockEngine = result.engine;
 
-    game = createGame(mockImports, mockEngine, { gravity: { x: 0, y: 0, z: -800 } });
+    game.init(0);
     game.spawnWorld();
     player = game.entities.find(e => e.classname === 'player')!;
   });

@@ -1,16 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGame } from '@quake2ts/game';
-import { createGameImportsAndEngine, createTraceMock, ZERO_VEC3 } from '@quake2ts/test-utils';
+import { createTestGame, createTraceMock, ZERO_VEC3 } from '@quake2ts/test-utils';
 
 describe('createGame', () => {
   it('initializes a snapshot using the supplied gravity vector', () => {
-    const { imports, engine } = createGameImportsAndEngine();
+    const { game } = createTestGame({
+      config: { gravity: { x: 0, y: 0, z: -800 } }
+    });
 
-    const game = createGame(
-      imports,
-      engine,
-      { gravity: { x: 0, y: 0, z: -800 } }
-    );
+    // Explicitly initialize the game to get a fresh snapshot
     const snapshot = game.init(1000);
 
     expect(snapshot?.frame).toBe(0);
@@ -25,20 +22,16 @@ describe('createGame', () => {
   it('integrates velocity and origin over successive frames', () => {
     // We need the trace to return the end position as if it was a clear path,
     // to match the original test's assumption that movement succeeds fully.
-    const { imports, engine } = createGameImportsAndEngine({
+    const { game } = createTestGame({
       engine: {
         trace: vi.fn((start, end) => createTraceMock({
           fraction: 1,
           endpos: end
         }))
-      }
+      },
+      config: { gravity: { x: 0, y: 0, z: -800 } }
     });
 
-    const game = createGame(
-      imports,
-      engine,
-      { gravity: { x: 0, y: 0, z: -800 } }
-    );
     game.init(0);
     game.spawnWorld();
 

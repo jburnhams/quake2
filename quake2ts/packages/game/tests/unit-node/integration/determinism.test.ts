@@ -11,22 +11,20 @@ describe('Determinism', () => {
       const context = createTestContext({ seed });
       const { entities } = context;
 
-      const monster = new Entity(1);
+      // Use entities.spawn() to get an entity properly initialized in the system.
+      const monster = entities.spawn();
       monster.classname = 'monster_test';
       monster.origin = { x: 0, y: 0, z: 0 };
 
-      // We must explicitly ensure 'think' is called by the test loop,
-      // or that the monster is in a list that would be iterated if we were using a real runFrame.
-      // Since we are running a manual loop, we check nextthink.
-
+      // Manual think implementation for testing RNG stability.
       monster.think = (self: Entity) => {
-          // Use the RNG attached to the game object
+          // Use the RNG attached to the game object.
           const r = entities.game.random.frandom();
           self.origin.x += r * 10;
           self.nextthink = entities.timeSeconds + 0.1;
           return true;
       };
-      monster.nextthink = 0.1; // Set initial nextthink
+      monster.nextthink = 0.1;
 
       const positionsX: number[] = [];
       let currentTime = 0;
@@ -36,9 +34,8 @@ describe('Determinism', () => {
         currentTime = Number((currentTime + 0.1).toFixed(1));
         entities.timeSeconds = currentTime;
 
-        if (monster.nextthink > 0 && monster.nextthink <= currentTime + 0.001) { // Epsilon for float comparison
-            // Clear nextthink before calling, standard engine behavior
-            // But here we just call it.
+        // Manual think loop simulation.
+        if (monster.nextthink > 0 && monster.nextthink <= currentTime + 0.001) {
             if (monster.think) {
               monster.think(monster);
             }
@@ -54,7 +51,6 @@ describe('Determinism', () => {
     const run3 = runSimulation(seed + 1);
 
     const sum = run1.reduce((a, b) => a + b, 0);
-    // If sum is 0, it means monster never moved, so RNG was never called or produced 0s (unlikely).
     expect(sum).toBeGreaterThan(0);
 
     expect(run1).toEqual(run2);

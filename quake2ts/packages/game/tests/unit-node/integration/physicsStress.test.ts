@@ -1,62 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createGame } from '../../../src/index.js';
-// We import the specific hashing function that handles the EntitySystem instance
-// but we need to verify if it is exported. It was just added to checksum.ts
-// but index.ts exports `hashEntitySystem` from checksum.ts.
-// I modified checksum.ts to export `hashEntitySystemInstance` as well? No, I added it at bottom.
-// I should update index.ts to export it, or update test to use createSnapshot().
-import { EntitySystem } from '../../../src/entitySystem.js';
+import { describe, expect, it } from 'vitest';
+import { createTestGame } from '@quake2ts/test-utils';
 import { hashEntitySystem } from '../../../src/checksum.js';
-import type { GameExports, GameImports } from '../../../src/index.js';
-
-// Define createMockGameImports locally since it's not exported from shared test helpers
-const createMockGameImports = (): GameImports => ({
-  trace: vi.fn((start, end, mins, maxs) => ({
-    fraction: 1.0,
-    allsolid: false,
-    startsolid: false,
-    endpos: { ...end }, // Return end as endpos for fraction 1
-    plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-    ent: null
-  })),
-  pointcontents: vi.fn(() => 0),
-  setmodel: vi.fn(),
-  configstring: vi.fn(),
-  modelindex: vi.fn(() => 1),
-  soundindex: vi.fn(() => 1),
-  imageindex: vi.fn(() => 1),
-  linkentity: vi.fn(),
-  unlinkentity: vi.fn(),
-  multicast: vi.fn(),
-  unicast: vi.fn(),
-  sound: vi.fn(),
-  centerprintf: vi.fn(),
-  bprint: vi.fn(),
-  dprint: vi.fn(),
-  error: vi.fn(),
-  cvar: vi.fn(() => ({ string: '', value: 0, flags: 0 })),
-  cvar_set: vi.fn(),
-  cvar_forceset: vi.fn(),
-  argc: vi.fn(() => 0),
-  argv: vi.fn(() => ''),
-  args: vi.fn(() => ''),
-  positiondms: vi.fn()
-} as unknown as GameImports);
+import { EntitySystem } from '../../../src/entitySystem.js';
 
 describe('Physics Determinism Stress Tests', () => {
 
   // Helper to run a simulation for N frames and return the final state hash
-  const runSimulation = (frameCount: number): { hash: number; game: GameExports } => {
-    // Mock imports
-    const imports = createMockGameImports();
-    const mockEngine = {
-        trace: vi.fn(),
-    };
-
-    // Initialize game with a specific seed to ensure RNG is deterministic
-    const game = createGame(imports, mockEngine as any, {
-      gravity: { x: 0, y: 0, z: -800 },
-      deathmatch: false
+  const runSimulation = (frameCount: number): { hash: number } => {
+    // Initialize game with a specific seed to ensure RNG is deterministic.
+    // createTestGame sets up imports and engine mocks automatically.
+    const { game } = createTestGame({
+      config: {
+        gravity: { x: 0, y: 0, z: -800 },
+        deathmatch: false
+      }
     });
 
     game.init(0);
@@ -64,7 +21,6 @@ describe('Physics Determinism Stress Tests', () => {
     // Simulate frames
     const dt = 50; // 50ms (20Hz)
     for (let i = 0; i < frameCount; i++) {
-        // frame takes FixedStepContext
         game.frame({
             deltaMs: dt,
             timeMs: (i + 1) * dt,
@@ -72,18 +28,18 @@ describe('Physics Determinism Stress Tests', () => {
         });
     }
 
-    // Hash the state
-    // We need access to the entity system to hash it.
+    // Hash the state.
+    // Cast to any to access the internal entities property for snapshotting.
+    // In a real integration scenario, we might use save/load, but here we hash internal state.
     const entitySystem = (game as any).entities as EntitySystem;
 
     if (!entitySystem) {
       throw new Error("Could not access EntitySystem from GameExports");
     }
 
-    // Use createSnapshot() to get the hashable data structure
     const hash = hashEntitySystem(entitySystem.createSnapshot());
 
-    return { hash, game };
+    return { hash };
   };
 
   it('maintains perfect determinism over 1000 frames', () => {
@@ -100,17 +56,16 @@ describe('Physics Determinism Stress Tests', () => {
   it('maintains determinism with complex interactions (simulated)', () => {
 
     const runComplexSim = () => {
-       const imports = createMockGameImports();
-       const mockEngine = {
-           trace: vi.fn(),
-       };
-       const game = createGame(imports, mockEngine as any, {
-           gravity: { x: 0, y: 0, z: -800 },
-           deathmatch: false
+       const { game } = createTestGame({
+          config: {
+            gravity: { x: 0, y: 0, z: -800 },
+            deathmatch: false
+          }
        });
+
        game.init(0);
 
-       // Let's just run a longer simulation.
+       // Run a simulation.
        const dt = 50;
        for(let i=0; i<500; i++) {
          game.frame({
