@@ -28,6 +28,7 @@ export type RendererType = 'webgl' | 'webgpu';
 export interface GameStats {
   fps: number;
   position: { x: number; y: number; z: number };
+  angles: { pitch: number; yaw: number };
 }
 
 export class GameEngine {
@@ -155,6 +156,10 @@ export class GameEngine {
         y: this.position[1],
         z: this.position[2],
       },
+      angles: {
+        pitch: this.pitch,
+        yaw: this.yaw,
+      },
     };
   }
 
@@ -172,13 +177,14 @@ export class GameEngine {
   }
 
   private updateViewAngles(input: InputState, dt: number): void {
-    // Arrow keys for looking
+    // Arrow keys for looking (left/right = yaw, up/down = pitch)
     if (input.lookLeft) {
       this.yaw += this.LOOK_SPEED * dt;
     }
     if (input.lookRight) {
       this.yaw -= this.LOOK_SPEED * dt;
     }
+    // Pitch: negative = looking up, positive = looking down (Quake convention)
     if (input.lookUp) {
       this.pitch -= this.LOOK_SPEED * dt;
     }
@@ -186,11 +192,12 @@ export class GameEngine {
       this.pitch += this.LOOK_SPEED * dt;
     }
 
-    // Clamp pitch to prevent flipping
+    // Clamp pitch to prevent flipping (looking straight up/down)
     this.pitch = Math.max(-89, Math.min(89, this.pitch));
 
-    // Normalize yaw
-    this.yaw = this.yaw % 360;
+    // Normalize yaw to 0-360 range
+    if (this.yaw < 0) this.yaw += 360;
+    if (this.yaw >= 360) this.yaw -= 360;
   }
 
   private updateMovement(input: InputState, dt: number): void {
