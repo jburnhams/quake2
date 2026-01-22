@@ -41,6 +41,12 @@ export class GameEngine {
   private room: ProceduralRoom | null = null;
   private gl: WebGL2RenderingContext | null = null;
 
+  // WebGPU-specific state
+  private gpuDevice: GPUDevice | null = null;
+  private gpuContext: GPUCanvasContext | null = null;
+  private gpuFormat: GPUTextureFormat = 'bgra8unorm';
+  private gpuDepthTexture: GPUTexture | null = null;
+
   // Player state
   private position = vec3.fromValues(0, 0, 64); // Start at center, 64 units up
   private velocity = vec3.fromValues(0, 0, 0);
@@ -117,6 +123,19 @@ export class GameEngine {
       throw new Error('WebGPU not supported or failed to initialize');
     }
     this.renderer = renderer;
+
+    // Store WebGPU state for manual rendering
+    // Access the device from the renderer interface
+    if ('device' in renderer) {
+      this.gpuDevice = renderer.device;
+    }
+
+    // Get the canvas context for rendering
+    const context = this.canvas.getContext('webgpu');
+    if (context) {
+      this.gpuContext = context;
+      this.gpuFormat = navigator.gpu.getPreferredCanvasFormat();
+    }
   }
 
   start(): void {
@@ -138,6 +157,10 @@ export class GameEngine {
     if (this.inputHandler) {
       this.inputHandler.unbind();
     }
+    if (this.gpuDepthTexture) {
+      this.gpuDepthTexture.destroy();
+      this.gpuDepthTexture = null;
+    }
     if (this.renderer && 'dispose' in this.renderer) {
       this.renderer.dispose();
     }
@@ -146,6 +169,8 @@ export class GameEngine {
     this.loop = null;
     this.inputHandler = null;
     this.gl = null;
+    this.gpuDevice = null;
+    this.gpuContext = null;
   }
 
   getStats(): GameStats {
@@ -325,11 +350,97 @@ export class GameEngine {
 
       // Render procedural room using WebGL debug renderer
       this.renderProceduralRoomWebGL();
-    } else {
-      // WebGPU path - use the renderFrame method of the renderer
-      // For now, we just render the debug geometry
-      // TODO: Implement WebGPU debug rendering
+    } else if (this.gpuDevice && this.gpuContext) {
+      // WebGPU path - create render pass and render debug geometry
+      this.renderProceduralRoomWebGPU();
     }
+  }
+
+  private renderProceduralRoomWebGPU(): void {
+    if (!this.renderer || !this.camera || !this.room || !this.gpuDevice || !this.gpuContext) return;
+
+    // Get current texture from swap chain
+    const currentTexture = this.gpuContext.getCurrentTexture();
+    const textureView = currentTexture.createView();
+
+    // Create or recreate depth texture if needed
+    if (!this.gpuDepthTexture ||
+        this.gpuDepthTexture.width !== currentTexture.width ||
+        this.gpuDepthTexture.height !== currentTexture.height) {
+      if (this.gpuDepthTexture) {
+        this.gpuDepthTexture.destroy();
+      }
+      this.gpuDepthTexture = this.gpuDevice.createTexture({
+        size: { width: currentTexture.width, height: currentTexture.height },
+        format: 'depth24plus',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+    }
+
+    // Access the debug renderer - cast to any since we know the structure
+    const debug = (this.renderer as any).debug;
+    if (!debug || !('render' in debug)) return;
+
+    // Add debug geometry for the room
+    for (const surface of this.room.surfaces) {
+      const color = { r: surface.color[0], g: surface.color[1], b: surface.color[2] };
+
+      // Draw surface outline
+      const verts = surface.vertices;
+      for (let i = 0; i < verts.length; i++) {
+        const v0 = verts[i];
+        const v1 = verts[(i + 1) % verts.length];
+        debug.drawLine(
+          { x: v0[0], y: v0[1], z: v0[2] },
+          { x: v1[0], y: v1[1], z: v1[2] },
+          color
+        );
+      }
+
+      // Draw diagonal for visual fill effect
+      if (verts.length === 4) {
+        debug.drawLine(
+          { x: verts[0][0], y: verts[0][1], z: verts[0][2] },
+          { x: verts[2][0], y: verts[2][1], z: verts[2][2] },
+          color
+        );
+      }
+    }
+
+    // Draw coordinate axes at origin for reference
+    debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
+
+    // Create command encoder
+    const commandEncoder = this.gpuDevice.createCommandEncoder({ label: 'game-render' });
+
+    // Begin render pass
+    const renderPass = commandEncoder.beginRenderPass({
+      colorAttachments: [{
+        view: textureView,
+        clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1.0 },
+        loadOp: 'clear',
+        storeOp: 'store',
+      }],
+      depthStencilAttachment: {
+        view: this.gpuDepthTexture.createView(),
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+      },
+    });
+
+    // Render the debug geometry
+    const viewProjection = this.camera.viewProjectionMatrix;
+    debug.render(renderPass, new Float32Array(viewProjection), false);
+
+    // End render pass
+    renderPass.end();
+
+    // Submit command buffer
+    this.gpuDevice.queue.submit([commandEncoder.finish()]);
+
+    // Clear debug geometry for next frame
+    debug.clear();
   }
 
   private renderProceduralRoomWebGL(): void {
