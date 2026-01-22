@@ -22,7 +22,12 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@quake2ts/engine": ["../quake2ts/packages/engine/dist/types"],
+      "@quake2ts/client": ["../quake2ts/packages/client/dist/types"],
+      "@quake2ts/shared": ["../quake2ts/packages/shared/dist/types"],
+      "@quake2ts/cgame": ["../quake2ts/packages/cgame/dist/types"],
+      "@quake2ts/game": ["../quake2ts/packages/game/dist/types"]
     }
   },
   "include": ["src"],
