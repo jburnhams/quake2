@@ -50,6 +50,11 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `game/tests/entities` tests (`func_areaportal`, `func_door_new`, `func_rotating`) to `game/tests/unit-node/entities/`
    - Moved: `game/tests/entities` (remaining tests) to `game/tests/unit-node/entities/`
    - Moved: `game/tests/integration` tests (`combat`, `physicsStress`, `saveLoad`) to `game/tests/unit-node/integration/`
+   - Moved: `game/tests/unit/combat` tests (`damage.test.ts`, `damage_mechanics.test.ts`) to `game/tests/unit-node/combat/`
+   - Moved: `game/tests/unit/scripting` tests (`hooks.test.ts`) to `game/tests/unit-node/scripting/`
+   - Moved: `game/tests/integration/combat/firing.test.ts` to `game/tests/unit-node/integration/combat/`
+   - Moved: `game/tests/integration/scenario_saveload.test.ts` to `game/tests/unit-node/integration/`
+   - Moved: `game/tests/integration/gameplay.test.ts` to `game/tests/unit-node/integration/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
