@@ -10,11 +10,19 @@ export interface ProceduralSurface {
   name: string;
 }
 
+export interface Pillar {
+  x: number;
+  y: number;
+  halfSize: number;
+  height: number;
+}
+
 export interface ProceduralRoom {
   width: number;
   depth: number;
   height: number;
   surfaces: ProceduralSurface[];
+  pillars: Pillar[];
 }
 
 export interface RoomOptions {
@@ -79,6 +87,7 @@ export function generateProceduralRoom(options: RoomOptions): ProceduralRoom {
 
   const rng = new SeededRandom(seed);
   const surfaces: ProceduralSurface[] = [];
+  const pillars: Pillar[] = [];
 
   const halfWidth = width / 2;
   const halfDepth = depth / 2;
@@ -174,6 +183,9 @@ export function generateProceduralRoom(options: RoomOptions): ProceduralRoom {
 
     const halfPillar = pillarSize / 2;
 
+    // Store pillar data for collision
+    pillars.push({ x: px, y: py, halfSize: halfPillar, height: pillarHeight });
+
     // Pillar - 4 sides
     const pillarColor = rng.nextColor();
 
@@ -248,6 +260,7 @@ export function generateProceduralRoom(options: RoomOptions): ProceduralRoom {
     depth,
     height,
     surfaces,
+    pillars,
   };
 }
 

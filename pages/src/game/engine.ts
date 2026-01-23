@@ -9,9 +9,27 @@ import {
   type RenderContext,
   type Renderer,
   type IRenderer,
+  // Particle system
+  ParticleSystem,
+  ParticleRenderer,
+  spawnBulletImpact,
+  spawnMuzzleFlash,
 } from '@quake2ts/engine';
-import { vec3 } from 'gl-matrix';
-import type { Vec3 } from '@quake2ts/shared';
+import { vec3, mat4 } from 'gl-matrix';
+import type { Vec3, CollisionModel, PmoveTraceFn, PmoveState, PmoveImports } from '@quake2ts/shared';
+import {
+  makeBrushFromMinsMaxs,
+  makeLeafModel,
+  createTraceRunner,
+  runPmove,
+  PmType,
+  PmFlag,
+  PlayerButton,
+  WaterLevel,
+  CONTENTS_NONE,
+  angleVectors,
+  RandomGenerator,
+} from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
 interface WebGLDebugRenderer {
@@ -29,6 +47,7 @@ export interface GameStats {
   fps: number;
   position: { x: number; y: number; z: number };
   angles: { pitch: number; yaw: number };
+  onGround: boolean;
 }
 
 export class GameEngine {
@@ -47,23 +66,56 @@ export class GameEngine {
   private gpuFormat: GPUTextureFormat = 'bgra8unorm';
   private gpuDepthTexture: GPUTexture | null = null;
 
-  // Player state
-  private position = vec3.fromValues(0, 0, 64); // Start at center, 64 units up
-  private velocity = vec3.fromValues(0, 0, 0);
-  private yaw = 0; // degrees
-  private pitch = 0; // degrees
+  // Collision system (using quake2ts collision)
+  private collisionModel: CollisionModel | null = null;
+  private trace: PmoveTraceFn | null = null;
+  private pmoveImports: PmoveImports | null = null;
 
-  // Physics constants (matching Quake 2)
-  private readonly MOVE_SPEED = 320;
-  private readonly LOOK_SPEED = 120; // degrees per second
-  private readonly GRAVITY = 800;
-  private readonly JUMP_VELOCITY = 270;
-  private readonly FRICTION = 6;
-  private readonly FLOOR_HEIGHT = 0; // Ground level
+  // Player state (using quake2ts PmoveState)
+  private pmState: PmoveState = {
+    pmType: PmType.Normal,
+    pmFlags: 0,
+    origin: { x: 0, y: 0, z: 64 },
+    velocity: { x: 0, y: 0, z: 0 },
+    angles: { x: 0, y: 0, z: 0 },
+    viewAngles: { x: 0, y: 0, z: 0 },
+    viewHeight: 22,
+    waterlevel: WaterLevel.None,
+    watertype: 0,
+    cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } },
+    delta_angles: { x: 0, y: 0, z: 0 },
+    gravity: 800,
+    mins: { x: -16, y: -16, z: -24 },
+    maxs: { x: 16, y: 16, z: 32 },
+  };
+
+  // View angles (separate from pmove for smoother control)
+  private yaw = 0;
+  private pitch = 0;
+
+  // Weapon state
+  private lastFireTime = 0;
+  private readonly FIRE_RATE = 100; // ms between shots (machinegun rate)
+  private bulletTraces: Array<{ start: Vec3; end: Vec3; time: number }> = [];
+  private muzzleFlash = 0; // frames remaining for muzzle flash
+  private wasAttacking = false; // track attack button state for semi-auto
+
+  // Particle system (quake2ts)
+  private particleSystem: ParticleSystem | null = null;
+  private particleRenderer: ParticleRenderer | null = null;
+  private rng: RandomGenerator = new RandomGenerator({ seed: Date.now() });
+
+  // Physics constants
+  private readonly LOOK_SPEED = 120;
 
   private lastFrameTime = 0;
   private frameCount = 0;
   private fps = 0;
+
+  // Pre-allocated matrices to avoid allocations in render loop
+  private viewMatrix = mat4.create();
+  private projectionMatrix = mat4.create();
+  private viewProjectionMatrix = mat4.create();
 
   constructor(canvas: HTMLCanvasElement, rendererType: RendererType = 'webgl') {
     this.canvas = canvas;
@@ -103,6 +155,69 @@ export class GameEngine {
     this.loop = new FixedTimestepLoop(callbacks, {
       fixedDeltaMs: 1000 / 60, // 60 Hz physics
     });
+
+    // Build collision model from room
+    this.buildCollision();
+  }
+
+  private buildCollision(): void {
+    if (!this.room) return;
+
+    const brushes = [];
+    const halfWidth = this.room.width / 2;
+    const halfDepth = this.room.depth / 2;
+    const wallThickness = 16;
+
+    // Floor
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: -wallThickness },
+      { x: halfWidth, y: halfDepth, z: 0 }
+    ));
+
+    // Ceiling
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: this.room.height },
+      { x: halfWidth, y: halfDepth, z: this.room.height + wallThickness }
+    ));
+
+    // Walls
+    // North (+Y)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: halfDepth - wallThickness, z: 0 },
+      { x: halfWidth, y: halfDepth, z: this.room.height }
+    ));
+    // South (-Y)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: 0 },
+      { x: halfWidth, y: -halfDepth + wallThickness, z: this.room.height }
+    ));
+    // East (+X)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: halfWidth - wallThickness, y: -halfDepth, z: 0 },
+      { x: halfWidth, y: halfDepth, z: this.room.height }
+    ));
+    // West (-X)
+    brushes.push(makeBrushFromMinsMaxs(
+      { x: -halfWidth, y: -halfDepth, z: 0 },
+      { x: -halfWidth + wallThickness, y: halfDepth, z: this.room.height }
+    ));
+
+    // Pillars
+    for (const pillar of this.room.pillars) {
+      brushes.push(makeBrushFromMinsMaxs(
+        { x: pillar.x - pillar.halfSize, y: pillar.y - pillar.halfSize, z: 0 },
+        { x: pillar.x + pillar.halfSize, y: pillar.y + pillar.halfSize, z: pillar.height }
+      ));
+    }
+
+    this.collisionModel = makeLeafModel(brushes);
+    this.trace = createTraceRunner(this.collisionModel, -1);
+
+    // Set up pmove imports with trace and pointcontents
+    this.pmoveImports = {
+      trace: this.trace,
+      pointcontents: (_point: Vec3) => CONTENTS_NONE, // Simple: no water/lava in procedural room
+    };
   }
 
   private async initWebGL(): Promise<void> {
@@ -112,6 +227,10 @@ export class GameEngine {
     }
     this.gl = contextState.gl;
     this.renderer = createRenderer(this.gl);
+
+    // Initialize particle system (max 1024 particles)
+    this.particleSystem = new ParticleSystem(1024, this.rng);
+    this.particleRenderer = new ParticleRenderer(this.gl, this.particleSystem);
   }
 
   private async initWebGPU(): Promise<void> {
@@ -161,6 +280,11 @@ export class GameEngine {
       this.gpuDepthTexture.destroy();
       this.gpuDepthTexture = null;
     }
+    if (this.particleRenderer) {
+      this.particleRenderer.dispose();
+      this.particleRenderer = null;
+    }
+    this.particleSystem = null;
     if (this.renderer && 'dispose' in this.renderer) {
       this.renderer.dispose();
     }
@@ -177,132 +301,233 @@ export class GameEngine {
     return {
       fps: this.fps,
       position: {
-        x: this.position[0],
-        y: this.position[1],
-        z: this.position[2],
+        x: this.pmState.origin.x,
+        y: this.pmState.origin.y,
+        z: this.pmState.origin.z,
       },
       angles: {
         pitch: this.pitch,
         yaw: this.yaw,
       },
+      onGround: (this.pmState.pmFlags & PmFlag.OnGround) !== 0,
     };
   }
 
   private fixedUpdate(deltaMs: number): void {
-    if (!this.inputHandler) return;
+    if (!this.inputHandler || !this.pmoveImports) return;
 
     const input = this.inputHandler.getState();
-    const dt = deltaMs / 1000; // Convert to seconds
+    const dt = deltaMs / 1000;
 
     // Update view angles
     this.updateViewAngles(input, dt);
 
-    // Update movement
-    this.updateMovement(input, dt);
+    // Build pmove command from input
+    let buttons: PlayerButton = 0;
+    if (input.jump) buttons |= PlayerButton.Jump;
+
+    const forwardmove = (input.forward ? 400 : 0) - (input.backward ? 400 : 0);
+    const sidemove = (input.strafeRight ? 400 : 0) - (input.strafeLeft ? 400 : 0);
+
+    // Update pmove state with new command
+    this.pmState = {
+      ...this.pmState,
+      cmd: {
+        forwardmove,
+        sidemove,
+        upmove: 0,
+        buttons,
+        angles: { x: this.pitch, y: this.yaw, z: 0 },
+      },
+      viewAngles: { x: this.pitch, y: this.yaw, z: 0 },
+    };
+
+    // Run quake2ts player movement physics
+    this.pmState = runPmove(this.pmState, this.pmoveImports);
+
+    // Handle weapon firing
+    this.updateWeapon(input);
+
+    // Update particle system
+    if (this.particleSystem) {
+      this.particleSystem.update(dt, { floorZ: 0 });
+    }
+  }
+
+  private updateWeapon(input: InputState): void {
+    if (!this.trace) return;
+
+    const now = performance.now();
+
+    // Fire weapon when attack is pressed (semi-auto: only on press, not hold)
+    if (input.attack && !this.wasAttacking && now - this.lastFireTime >= this.FIRE_RATE) {
+      this.fireWeapon();
+      this.lastFireTime = now;
+    }
+    this.wasAttacking = input.attack;
+
+    // Update muzzle flash
+    if (this.muzzleFlash > 0) {
+      this.muzzleFlash--;
+    }
+
+    // Remove old bullet traces (fade after 200ms)
+    this.bulletTraces = this.bulletTraces.filter(t => now - t.time < 200);
+  }
+
+  private fireWeapon(): void {
+    if (!this.trace || !this.particleSystem) return;
+
+    // Get forward direction from view angles using quake2ts angleVectors
+    const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+    const { forward, right } = angleVectors(angles);
+
+    // Calculate muzzle position (eye position + forward offset + right offset for gun barrel)
+    const eyePos: Vec3 = {
+      x: this.pmState.origin.x,
+      y: this.pmState.origin.y,
+      z: this.pmState.origin.z + this.pmState.viewHeight,
+    };
+
+    // Offset muzzle slightly forward and to the right (gun barrel position)
+    const muzzleOffset = 24; // forward
+    const rightOffset = 8;   // right side
+    const start: Vec3 = {
+      x: eyePos.x + forward.x * muzzleOffset + right.x * rightOffset,
+      y: eyePos.y + forward.y * muzzleOffset + right.y * rightOffset,
+      z: eyePos.z + forward.z * muzzleOffset + right.z * rightOffset,
+    };
+
+    // Trace to 8192 units (standard Quake 2 hitscan range)
+    const range = 8192;
+    const end: Vec3 = {
+      x: start.x + forward.x * range,
+      y: start.y + forward.y * range,
+      z: start.z + forward.z * range,
+    };
+
+    // Perform hitscan trace (point trace, no bbox)
+    const traceResult = this.trace(start, end);
+
+    // Store bullet trace for rendering (debug line)
+    const hitEnd: Vec3 = traceResult.fraction < 1.0 ? traceResult.endpos : end;
+    this.bulletTraces.push({
+      start,
+      end: hitEnd,
+      time: performance.now(),
+    });
+
+    // Spawn muzzle flash particles using quake2ts particle system
+    spawnMuzzleFlash({
+      system: this.particleSystem,
+      origin: start,
+      direction: forward,
+    });
+
+    // Spawn bullet impact particles if we hit something
+    if (traceResult.fraction < 1.0) {
+      // Use the trace plane normal for impact direction
+      const normal = traceResult.plane?.normal ?? { x: 0, y: 0, z: 1 };
+      spawnBulletImpact({
+        system: this.particleSystem,
+        origin: traceResult.endpos,
+        normal,
+      });
+    }
+
+    // Trigger muzzle flash (for debug line rendering fallback)
+    this.muzzleFlash = 3; // Show for 3 frames
   }
 
   private updateViewAngles(input: InputState, dt: number): void {
-    // Arrow keys for looking (left/right = yaw, up/down = pitch)
-    if (input.lookLeft) {
-      this.yaw += this.LOOK_SPEED * dt;
-    }
-    if (input.lookRight) {
-      this.yaw -= this.LOOK_SPEED * dt;
-    }
-    // Pitch: negative = looking up, positive = looking down (Quake convention)
-    if (input.lookUp) {
-      this.pitch -= this.LOOK_SPEED * dt;
-    }
-    if (input.lookDown) {
-      this.pitch += this.LOOK_SPEED * dt;
-    }
+    if (input.lookLeft) this.yaw += this.LOOK_SPEED * dt;
+    if (input.lookRight) this.yaw -= this.LOOK_SPEED * dt;
+    if (input.lookUp) this.pitch -= this.LOOK_SPEED * dt;
+    if (input.lookDown) this.pitch += this.LOOK_SPEED * dt;
 
-    // Clamp pitch to prevent flipping (looking straight up/down)
     this.pitch = Math.max(-89, Math.min(89, this.pitch));
-
-    // Normalize yaw to 0-360 range
     if (this.yaw < 0) this.yaw += 360;
     if (this.yaw >= 360) this.yaw -= 360;
   }
 
-  private updateMovement(input: InputState, dt: number): void {
-    // Check if on ground
-    const onGround = this.position[2] <= this.FLOOR_HEIGHT + 0.1;
+  /**
+   * Build view-projection matrix with correct rotation order for FPS controls.
+   *
+   * The Camera class applies rotations as: Rz(yaw) * Ry(pitch)
+   * This means pitch is applied in world space, causing the horizon to tilt.
+   *
+   * For proper FPS controls, we need: Ry(pitch) * Rz(yaw)
+   * This applies yaw first (in world space), then pitch (in yaw-rotated space),
+   * keeping the horizon level regardless of yaw angle.
+   */
+  private buildViewProjectionMatrix(eyePos: vec3, pitch: number, yaw: number): Float32Array {
+    const DEG2RAD = Math.PI / 180;
+    const pitchRad = pitch * DEG2RAD;
+    const yawRad = yaw * DEG2RAD;
 
-    // Apply gravity if not on ground
-    if (!onGround) {
-      this.velocity[2] -= this.GRAVITY * dt;
-    } else {
-      this.velocity[2] = 0;
-      this.position[2] = this.FLOOR_HEIGHT;
-    }
+    // Build projection matrix
+    const fov = 90 * DEG2RAD;
+    const aspect = this.canvas.width / this.canvas.height;
+    const near = 1;
+    const far = 4096;
+    mat4.perspective(this.projectionMatrix, fov, aspect, near, far);
 
-    // Jump
-    if (input.jump && onGround) {
-      this.velocity[2] = this.JUMP_VELOCITY;
-    }
+    // Build view matrix with correct rotation order for FPS controls
+    // Quake coordinate system: X forward, Y left, Z up
+    // GL coordinate system: X right, Y up, -Z forward
 
-    // Calculate forward and right vectors based on yaw (in Quake coordinates: X forward, Y left, Z up)
-    const yawRad = (this.yaw * Math.PI) / 180;
-    const forward = vec3.fromValues(Math.cos(yawRad), Math.sin(yawRad), 0);
-    const right = vec3.fromValues(-Math.sin(yawRad), Math.cos(yawRad), 0);
+    // Quake to GL coordinate transformation matrix (column-major):
+    // Quake X (forward) -> GL -Z
+    // Quake Y (left) -> GL -X
+    // Quake Z (up) -> GL +Y
+    const quakeToGl = mat4.fromValues(
+       0,  0, -1, 0,  // column 0: Quake X -> GL -Z
+      -1,  0,  0, 0,  // column 1: Quake Y -> GL -X
+       0,  1,  0, 0,  // column 2: Quake Z -> GL +Y
+       0,  0,  0, 1   // column 3: translation (none)
+    );
 
-    // Calculate wish velocity from input
-    const wishDir = vec3.create();
-    if (input.forward) vec3.add(wishDir, wishDir, forward);
-    if (input.backward) vec3.subtract(wishDir, wishDir, forward);
-    if (input.strafeLeft) vec3.add(wishDir, wishDir, right);
-    if (input.strafeRight) vec3.subtract(wishDir, wishDir, right);
+    // Build rotation matrix with CORRECT order for FPS controls:
+    // First yaw (around Z), then pitch (around local Y after yaw)
+    // For view matrix (inverse of camera transform), we negate angles
+    // and reverse the multiplication order
+    const rotationQuake = mat4.create();
+    mat4.identity(rotationQuake);
 
-    // Normalize and scale
-    const wishSpeed = vec3.length(wishDir);
-    if (wishSpeed > 0.001) {
-      vec3.normalize(wishDir, wishDir);
-    }
+    // CORRECT ORDER: pitch first in matrix build, then yaw
+    // This makes the view matrix apply yaw first, then pitch when transforming points
+    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+    mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
 
-    // Apply movement
-    if (onGround) {
-      // Ground movement with friction
-      const speed = vec3.length([this.velocity[0], this.velocity[1], 0]);
-      if (speed > 0) {
-        const drop = speed * this.FRICTION * dt;
-        const newSpeed = Math.max(0, speed - drop);
-        const scale = newSpeed / speed;
-        this.velocity[0] *= scale;
-        this.velocity[1] *= scale;
-      }
+    // Combine rotation with coordinate transformation
+    const rotationGl = mat4.create();
+    mat4.multiply(rotationGl, quakeToGl, rotationQuake);
 
-      // Accelerate
-      if (wishSpeed > 0) {
-        this.velocity[0] = wishDir[0] * this.MOVE_SPEED;
-        this.velocity[1] = wishDir[1] * this.MOVE_SPEED;
-      }
-    } else {
-      // Air movement (reduced control)
-      if (wishSpeed > 0) {
-        const airAccel = 0.1;
-        this.velocity[0] += wishDir[0] * this.MOVE_SPEED * airAccel * dt;
-        this.velocity[1] += wishDir[1] * this.MOVE_SPEED * airAccel * dt;
-      }
-    }
+    // Apply rotation to negated position
+    const negPos = vec3.negate(vec3.create(), eyePos);
+    const rotatedPosQuake = vec3.transformMat4(vec3.create(), negPos, rotationQuake);
 
-    // Update position
-    this.position[0] += this.velocity[0] * dt;
-    this.position[1] += this.velocity[1] * dt;
-    this.position[2] += this.velocity[2] * dt;
+    // Transform position from Quake to GL coordinates
+    const translationGl = vec3.fromValues(
+      -rotatedPosQuake[1],  // Quake Y -> GL -X
+       rotatedPosQuake[2],  // Quake Z -> GL +Y
+      -rotatedPosQuake[0]   // Quake X -> GL -Z
+    );
 
-    // Simple collision with room bounds
-    if (this.room) {
-      const halfWidth = this.room.width / 2 - 32;
-      const halfDepth = this.room.depth / 2 - 32;
-      this.position[0] = Math.max(-halfWidth, Math.min(halfWidth, this.position[0]));
-      this.position[1] = Math.max(-halfDepth, Math.min(halfDepth, this.position[1]));
-      this.position[2] = Math.max(this.FLOOR_HEIGHT, Math.min(this.room.height - 32, this.position[2]));
-    }
+    // Assemble view matrix
+    mat4.copy(this.viewMatrix, rotationGl);
+    this.viewMatrix[12] = translationGl[0];
+    this.viewMatrix[13] = translationGl[1];
+    this.viewMatrix[14] = translationGl[2];
+
+    // Combine into view-projection matrix
+    mat4.multiply(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
+
+    return new Float32Array(this.viewProjectionMatrix);
   }
 
   private render(_ctx: RenderContext): void {
-    if (!this.renderer || !this.camera || !this.room) return;
+    if (!this.renderer || !this.room) return;
 
     // Update FPS counter
     const now = performance.now();
@@ -313,34 +538,17 @@ export class GameEngine {
       this.lastFrameTime = now;
     }
 
-    // Set camera position with eye height offset
-    const eyeHeight = 56; // Quake 2 standing eye height
+    // Calculate eye position with height offset
+    const eyeHeight = this.pmState.viewHeight;
     const eyePos = vec3.fromValues(
-      this.position[0],
-      this.position[1],
-      this.position[2] + eyeHeight
-    );
-    this.camera.setPosition(eyePos[0], eyePos[1], eyePos[2]);
-
-    // Use lookAt to avoid Euler angle rotation order issues
-    // This ensures yaw and pitch are applied correctly for FPS controls
-    const yawRad = (this.yaw * Math.PI) / 180;
-    const pitchRad = (this.pitch * Math.PI) / 180;
-
-    // Compute forward direction from pitch and yaw
-    // In Quake coords: X forward, Y left, Z up
-    // Positive pitch = looking down (Quake convention)
-    const cosPitch = Math.cos(pitchRad);
-    const forward = vec3.fromValues(
-      cosPitch * Math.cos(yawRad),
-      cosPitch * Math.sin(yawRad),
-      -Math.sin(pitchRad) // negative because positive pitch = looking down
+      this.pmState.origin.x,
+      this.pmState.origin.y,
+      this.pmState.origin.z + eyeHeight
     );
 
-    // Target = eye position + forward * distance
-    const target = vec3.create();
-    vec3.scaleAndAdd(target, eyePos, forward, 100);
-    this.camera.lookAt(target);
+    // Build view-projection matrix with correct rotation order for FPS controls
+    // This fixes the horizon tilt issue when combining pitch and yaw
+    const viewProjection = this.buildViewProjectionMatrix(eyePos, this.pitch, this.yaw);
 
     // Clear and render based on renderer type
     if (this.gl) {
@@ -349,15 +557,15 @@ export class GameEngine {
       this.gl.enable(this.gl.DEPTH_TEST);
 
       // Render procedural room using WebGL debug renderer
-      this.renderProceduralRoomWebGL();
+      this.renderProceduralRoomWebGL(viewProjection);
     } else if (this.gpuDevice && this.gpuContext) {
       // WebGPU path - create render pass and render debug geometry
-      this.renderProceduralRoomWebGPU();
+      this.renderProceduralRoomWebGPU(viewProjection);
     }
   }
 
-  private renderProceduralRoomWebGPU(): void {
-    if (!this.renderer || !this.camera || !this.room || !this.gpuDevice || !this.gpuContext) return;
+  private renderProceduralRoomWebGPU(viewProjection: Float32Array): void {
+    if (!this.renderer || !this.room || !this.gpuDevice || !this.gpuContext) return;
 
     // Get current texture from swap chain
     const currentTexture = this.gpuContext.getCurrentTexture();
@@ -410,6 +618,43 @@ export class GameEngine {
     // Draw coordinate axes at origin for reference
     debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
 
+    // Draw bullet traces (yellow fading to red)
+    const now = performance.now();
+    for (const trace of this.bulletTraces) {
+      const age = now - trace.time;
+      const alpha = 1 - age / 200;
+      const color = { r: 1, g: alpha, b: 0 };
+      debug.drawLine(trace.start, trace.end, color);
+    }
+
+    // Draw muzzle flash
+    if (this.muzzleFlash > 0) {
+      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+      const { forward, right, up } = angleVectors(angles);
+      const eyePos: Vec3 = {
+        x: this.pmState.origin.x,
+        y: this.pmState.origin.y,
+        z: this.pmState.origin.z + this.pmState.viewHeight,
+      };
+      const muzzlePos: Vec3 = {
+        x: eyePos.x + forward.x * 24 + right.x * 8,
+        y: eyePos.y + forward.y * 24 + right.y * 8,
+        z: eyePos.z + forward.z * 24 + right.z * 8,
+      };
+      const flashSize = 8;
+      const flashColor = { r: 1, g: 1, b: 0.5 };
+      debug.drawLine(
+        { x: muzzlePos.x - right.x * flashSize, y: muzzlePos.y - right.y * flashSize, z: muzzlePos.z - right.z * flashSize },
+        { x: muzzlePos.x + right.x * flashSize, y: muzzlePos.y + right.y * flashSize, z: muzzlePos.z + right.z * flashSize },
+        flashColor
+      );
+      debug.drawLine(
+        { x: muzzlePos.x - up.x * flashSize, y: muzzlePos.y - up.y * flashSize, z: muzzlePos.z - up.z * flashSize },
+        { x: muzzlePos.x + up.x * flashSize, y: muzzlePos.y + up.y * flashSize, z: muzzlePos.z + up.z * flashSize },
+        flashColor
+      );
+    }
+
     // Create command encoder
     const commandEncoder = this.gpuDevice.createCommandEncoder({ label: 'game-render' });
 
@@ -429,9 +674,8 @@ export class GameEngine {
       },
     });
 
-    // Render the debug geometry
-    const viewProjection = this.camera.viewProjectionMatrix;
-    debug.render(renderPass, new Float32Array(viewProjection), false);
+    // Render the debug geometry with correct view-projection matrix
+    debug.render(renderPass, viewProjection, false);
 
     // End render pass
     renderPass.end();
@@ -443,8 +687,8 @@ export class GameEngine {
     debug.clear();
   }
 
-  private renderProceduralRoomWebGL(): void {
-    if (!this.renderer || !this.camera || !this.room) return;
+  private renderProceduralRoomWebGL(viewProjection: Float32Array): void {
+    if (!this.renderer || !this.room || !this.gl) return;
 
     // Cast to WebGL debug renderer type which has render method
     const debug = this.renderer.debug as WebGLDebugRenderer;
@@ -479,9 +723,49 @@ export class GameEngine {
     // Draw coordinate axes at origin for reference
     debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
 
-    // Render the debug geometry
-    const viewProjection = this.camera.viewProjectionMatrix;
-    debug.render(new Float32Array(viewProjection));
+    // Draw bullet traces (yellow fading to red)
+    const now = performance.now();
+    for (const trace of this.bulletTraces) {
+      const age = now - trace.time;
+      const alpha = 1 - age / 200; // Fade over 200ms
+      const color = { r: 1, g: alpha, b: 0 }; // Yellow -> Red
+      debug.drawLine(trace.start, trace.end, color);
+    }
+
+    // Render the debug geometry with correct view-projection matrix
+    debug.render(viewProjection);
     debug.clear();
+
+    // Render particles using quake2ts particle system
+    if (this.particleRenderer && this.particleSystem) {
+      // Get camera vectors for billboarding using angleVectors
+      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+      const { right, up } = angleVectors(angles);
+
+      // Enable blending for particles
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+      // Build CameraState for particle renderer
+      const eyePos = vec3.fromValues(
+        this.pmState.origin.x,
+        this.pmState.origin.y,
+        this.pmState.origin.z + this.pmState.viewHeight
+      );
+      const cameraAngles = vec3.fromValues(this.pitch, this.yaw, 0);
+
+      this.particleRenderer.render({
+        cameraState: {
+          position: eyePos,
+          angles: cameraAngles,
+          fov: 90,
+          aspect: this.canvas.width / this.canvas.height,
+          near: 1,
+          far: 4096,
+        },
+      });
+
+      this.gl.disable(this.gl.BLEND);
+    }
   }
 }
