@@ -11,8 +11,18 @@ import {
   type IRenderer,
 } from '@quake2ts/engine';
 import { vec3, mat4 } from 'gl-matrix';
-import type { Vec3, CollisionModel, PmoveTraceFn } from '@quake2ts/shared';
-import { makeBrushFromMinsMaxs, makeLeafModel, createTraceRunner } from '@quake2ts/shared';
+import type { Vec3, CollisionModel, PmoveTraceFn, PmoveState, PmoveImports } from '@quake2ts/shared';
+import {
+  makeBrushFromMinsMaxs,
+  makeLeafModel,
+  createTraceRunner,
+  runPmove,
+  PmType,
+  PmFlag,
+  PlayerButton,
+  WaterLevel,
+  CONTENTS_NONE,
+} from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
 interface WebGLDebugRenderer {
@@ -52,21 +62,32 @@ export class GameEngine {
   // Collision system (using quake2ts collision)
   private collisionModel: CollisionModel | null = null;
   private trace: PmoveTraceFn | null = null;
+  private pmoveImports: PmoveImports | null = null;
 
-  // Player state
-  private position = vec3.fromValues(0, 0, 64); // Start at center, 64 units up
-  private velocity = vec3.fromValues(0, 0, 0);
-  private yaw = 0; // degrees
-  private pitch = 0; // degrees
-  private onGround = false;
+  // Player state (using quake2ts PmoveState)
+  private pmState: PmoveState = {
+    pmType: PmType.Normal,
+    pmFlags: 0,
+    origin: { x: 0, y: 0, z: 64 },
+    velocity: { x: 0, y: 0, z: 0 },
+    angles: { x: 0, y: 0, z: 0 },
+    viewAngles: { x: 0, y: 0, z: 0 },
+    viewHeight: 22,
+    waterlevel: WaterLevel.None,
+    watertype: 0,
+    cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } },
+    delta_angles: { x: 0, y: 0, z: 0 },
+    gravity: 800,
+    mins: { x: -16, y: -16, z: -24 },
+    maxs: { x: 16, y: 16, z: 32 },
+  };
 
-  // Physics constants (matching Quake 2)
-  private readonly MOVE_SPEED = 320;
-  private readonly LOOK_SPEED = 120; // degrees per second
-  private readonly GRAVITY = 800;
-  private readonly JUMP_VELOCITY = 270;
-  private readonly FRICTION = 6;
-  private readonly FLOOR_HEIGHT = 0; // Ground level
+  // View angles (separate from pmove for smoother control)
+  private yaw = 0;
+  private pitch = 0;
+
+  // Physics constants
+  private readonly LOOK_SPEED = 120;
 
   private lastFrameTime = 0;
   private frameCount = 0;
@@ -172,6 +193,12 @@ export class GameEngine {
 
     this.collisionModel = makeLeafModel(brushes);
     this.trace = createTraceRunner(this.collisionModel, -1);
+
+    // Set up pmove imports with trace and pointcontents
+    this.pmoveImports = {
+      trace: this.trace,
+      pointcontents: (_point: Vec3) => CONTENTS_NONE, // Simple: no water/lava in procedural room
+    };
   }
 
   private async initWebGL(): Promise<void> {
@@ -246,51 +273,58 @@ export class GameEngine {
     return {
       fps: this.fps,
       position: {
-        x: this.position[0],
-        y: this.position[1],
-        z: this.position[2],
+        x: this.pmState.origin.x,
+        y: this.pmState.origin.y,
+        z: this.pmState.origin.z,
       },
       angles: {
         pitch: this.pitch,
         yaw: this.yaw,
       },
-      onGround: this.onGround,
+      onGround: (this.pmState.pmFlags & PmFlag.OnGround) !== 0,
     };
   }
 
   private fixedUpdate(deltaMs: number): void {
-    if (!this.inputHandler) return;
+    if (!this.inputHandler || !this.pmoveImports) return;
 
     const input = this.inputHandler.getState();
-    const dt = deltaMs / 1000; // Convert to seconds
+    const dt = deltaMs / 1000;
 
     // Update view angles
     this.updateViewAngles(input, dt);
 
-    // Update movement
-    this.updateMovement(input, dt);
+    // Build pmove command from input
+    let buttons: PlayerButton = 0;
+    if (input.jump) buttons |= PlayerButton.Jump;
+
+    const forwardmove = (input.forward ? 400 : 0) - (input.backward ? 400 : 0);
+    const sidemove = (input.strafeRight ? 400 : 0) - (input.strafeLeft ? 400 : 0);
+
+    // Update pmove state with new command
+    this.pmState = {
+      ...this.pmState,
+      cmd: {
+        forwardmove,
+        sidemove,
+        upmove: 0,
+        buttons,
+        angles: { x: this.pitch, y: this.yaw, z: 0 },
+      },
+      viewAngles: { x: this.pitch, y: this.yaw, z: 0 },
+    };
+
+    // Run quake2ts player movement physics
+    this.pmState = runPmove(this.pmState, this.pmoveImports);
   }
 
   private updateViewAngles(input: InputState, dt: number): void {
-    // Arrow keys for looking (left/right = yaw, up/down = pitch)
-    if (input.lookLeft) {
-      this.yaw += this.LOOK_SPEED * dt;
-    }
-    if (input.lookRight) {
-      this.yaw -= this.LOOK_SPEED * dt;
-    }
-    // Pitch: negative = looking up, positive = looking down (Quake convention)
-    if (input.lookUp) {
-      this.pitch -= this.LOOK_SPEED * dt;
-    }
-    if (input.lookDown) {
-      this.pitch += this.LOOK_SPEED * dt;
-    }
+    if (input.lookLeft) this.yaw += this.LOOK_SPEED * dt;
+    if (input.lookRight) this.yaw -= this.LOOK_SPEED * dt;
+    if (input.lookUp) this.pitch -= this.LOOK_SPEED * dt;
+    if (input.lookDown) this.pitch += this.LOOK_SPEED * dt;
 
-    // Clamp pitch to prevent flipping (looking straight up/down)
     this.pitch = Math.max(-89, Math.min(89, this.pitch));
-
-    // Normalize yaw to 0-360 range
     if (this.yaw < 0) this.yaw += 360;
     if (this.yaw >= 360) this.yaw -= 360;
   }
@@ -371,118 +405,6 @@ export class GameEngine {
     return new Float32Array(this.viewProjectionMatrix);
   }
 
-  private updateMovement(input: InputState, dt: number): void {
-    if (!this.trace) return;
-
-    const playerMins: Vec3 = { x: -16, y: -16, z: 0 };
-    const playerMaxs: Vec3 = { x: 16, y: 16, z: 56 };
-
-    // Check if on ground by tracing down slightly
-    const groundStart: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] };
-    const groundEnd: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] - 1 };
-    const groundTrace = this.trace(groundStart, groundEnd, playerMins, playerMaxs);
-    this.onGround = groundTrace.fraction < 1.0;
-
-    // Apply gravity if not on ground
-    if (!this.onGround) {
-      this.velocity[2] -= this.GRAVITY * dt;
-    } else {
-      if (this.velocity[2] < 0) {
-        this.velocity[2] = 0;
-      }
-    }
-
-    // Jump
-    if (input.jump && this.onGround) {
-      this.velocity[2] = this.JUMP_VELOCITY;
-      this.onGround = false;
-    }
-
-    // Calculate forward and right vectors based on yaw (in Quake coordinates: X forward, Y left, Z up)
-    const yawRad = (this.yaw * Math.PI) / 180;
-    const forward = vec3.fromValues(Math.cos(yawRad), Math.sin(yawRad), 0);
-    const right = vec3.fromValues(-Math.sin(yawRad), Math.cos(yawRad), 0);
-
-    // Calculate wish velocity from input
-    const wishDir = vec3.create();
-    if (input.forward) vec3.add(wishDir, wishDir, forward);
-    if (input.backward) vec3.subtract(wishDir, wishDir, forward);
-    if (input.strafeLeft) vec3.add(wishDir, wishDir, right);
-    if (input.strafeRight) vec3.subtract(wishDir, wishDir, right);
-
-    // Normalize and scale
-    const wishSpeed = vec3.length(wishDir);
-    if (wishSpeed > 0.001) {
-      vec3.normalize(wishDir, wishDir);
-    }
-
-    // Apply movement
-    if (this.onGround) {
-      // Ground movement with friction
-      const speed = Math.sqrt(this.velocity[0] ** 2 + this.velocity[1] ** 2);
-      if (speed > 0) {
-        const drop = speed * this.FRICTION * dt;
-        const newSpeed = Math.max(0, speed - drop);
-        const scale = newSpeed / speed;
-        this.velocity[0] *= scale;
-        this.velocity[1] *= scale;
-      }
-
-      // Accelerate
-      if (wishSpeed > 0) {
-        this.velocity[0] = wishDir[0] * this.MOVE_SPEED;
-        this.velocity[1] = wishDir[1] * this.MOVE_SPEED;
-      }
-    } else {
-      // Air movement (reduced control)
-      if (wishSpeed > 0) {
-        const airAccel = 0.1;
-        this.velocity[0] += wishDir[0] * this.MOVE_SPEED * airAccel * dt;
-        this.velocity[1] += wishDir[1] * this.MOVE_SPEED * airAccel * dt;
-      }
-    }
-
-    // Move with collision detection using trace
-    this.moveWithCollision(dt, playerMins, playerMaxs);
-  }
-
-  private moveWithCollision(dt: number, mins: Vec3, maxs: Vec3): void {
-    if (!this.trace) return;
-
-    const start: Vec3 = { x: this.position[0], y: this.position[1], z: this.position[2] };
-    const end: Vec3 = {
-      x: this.position[0] + this.velocity[0] * dt,
-      y: this.position[1] + this.velocity[1] * dt,
-      z: this.position[2] + this.velocity[2] * dt,
-    };
-
-    const trace = this.trace(start, end, mins, maxs);
-
-    if (trace.fraction >= 1.0) {
-      // No collision
-      this.position[0] = end.x;
-      this.position[1] = end.y;
-      this.position[2] = end.z;
-    } else {
-      // Hit something - move to contact point
-      this.position[0] = trace.endpos.x;
-      this.position[1] = trace.endpos.y;
-      this.position[2] = trace.endpos.z;
-
-      // Clip velocity along collision plane (slide)
-      if (trace.planeNormal) {
-        const backoff =
-          this.velocity[0] * trace.planeNormal.x +
-          this.velocity[1] * trace.planeNormal.y +
-          this.velocity[2] * trace.planeNormal.z;
-
-        this.velocity[0] -= trace.planeNormal.x * backoff;
-        this.velocity[1] -= trace.planeNormal.y * backoff;
-        this.velocity[2] -= trace.planeNormal.z * backoff;
-      }
-    }
-  }
-
   private render(_ctx: RenderContext): void {
     if (!this.renderer || !this.room) return;
 
@@ -496,11 +418,11 @@ export class GameEngine {
     }
 
     // Calculate eye position with height offset
-    const eyeHeight = 56; // Quake 2 standing eye height
+    const eyeHeight = this.pmState.viewHeight;
     const eyePos = vec3.fromValues(
-      this.position[0],
-      this.position[1],
-      this.position[2] + eyeHeight
+      this.pmState.origin.x,
+      this.pmState.origin.y,
+      this.pmState.origin.z + eyeHeight
     );
 
     // Build view-projection matrix with correct rotation order for FPS controls
