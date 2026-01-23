@@ -41,6 +41,7 @@ export * from './engine/mocks/webgl.js';
 export * from './engine/mocks/audio.js';
 export * from './engine/mocks/renderer.js';
 export * from './engine/mocks/assets.js';
+export * from './engine/mocks/imports.js';
 export * from './engine/mocks/host.js';
 export * from './engine/mocks/buffers.js';
 export * from './engine/mocks/lighting.js';

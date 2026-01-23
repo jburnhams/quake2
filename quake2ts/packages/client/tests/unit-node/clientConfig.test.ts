@@ -1,31 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
-import { Renderer, EngineImports } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager, createMockTexture, createTraceMock } from '@quake2ts/test-utils';
-
-// Mock dependencies
-const mockAssets = createMockAssetManager();
-
-const mockRenderer = createMockRenderer();
-
-const mockTrace = vi.fn().mockReturnValue(createTraceMock({
-  fraction: 1,
-  endpos: { x: 0, y: 0, z: 0 },
-  ent: -1 as any // Client trace often returns number index
-}));
-
-const mockEngine: EngineImports & { renderer: Renderer } = {
-  assets: mockAssets,
-  renderer: mockRenderer,
-  trace: mockTrace,
-} as any;
+import { EngineImports } from '@quake2ts/engine';
+import { createMockEngineImports, createMockTexture } from '@quake2ts/test-utils';
 
 describe('Client ConfigString Parsing', () => {
   let client: ClientExports;
+  let mockEngine: EngineImports;
+  let mockAssets: any;
+  let mockRenderer: any;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockEngine = createMockEngineImports();
+    mockAssets = mockEngine.assets;
+    mockRenderer = mockEngine.renderer;
+
     // Explicitly reset the mock return value to be a Promise for loadSound
     mockAssets.loadSound = vi.fn().mockResolvedValue({} as any);
     mockAssets.loadMd2Model = vi.fn().mockResolvedValue({} as any);

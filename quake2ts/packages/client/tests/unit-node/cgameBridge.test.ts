@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCGameImport } from '@quake2ts/client/cgameBridge';
 import { CvarRegistry } from '@quake2ts/engine';
-import { createMockClientState, createMockRenderer } from '@quake2ts/test-utils';
+import { createMockClientState, createMockEngineImports } from '@quake2ts/test-utils';
 
 describe('CGameImport cvar', () => {
     let mockCvars: CvarRegistry;
@@ -16,9 +16,7 @@ describe('CGameImport cvar', () => {
         };
         mockImports = {
             host: mockHost,
-            engine: {
-                renderer: createMockRenderer()
-            }
+            engine: createMockEngineImports()
         };
         mockState = createMockClientState({
              tickRate: 10,
