@@ -9,6 +9,11 @@ import {
   type RenderContext,
   type Renderer,
   type IRenderer,
+  // Particle system
+  ParticleSystem,
+  ParticleRenderer,
+  spawnBulletImpact,
+  spawnMuzzleFlash,
 } from '@quake2ts/engine';
 import { vec3, mat4 } from 'gl-matrix';
 import type { Vec3, CollisionModel, PmoveTraceFn, PmoveState, PmoveImports } from '@quake2ts/shared';
@@ -23,6 +28,7 @@ import {
   WaterLevel,
   CONTENTS_NONE,
   angleVectors,
+  RandomGenerator,
 } from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
@@ -93,6 +99,11 @@ export class GameEngine {
   private bulletTraces: Array<{ start: Vec3; end: Vec3; time: number }> = [];
   private muzzleFlash = 0; // frames remaining for muzzle flash
   private wasAttacking = false; // track attack button state for semi-auto
+
+  // Particle system (quake2ts)
+  private particleSystem: ParticleSystem | null = null;
+  private particleRenderer: ParticleRenderer | null = null;
+  private rng: RandomGenerator = new RandomGenerator({ seed: Date.now() });
 
   // Physics constants
   private readonly LOOK_SPEED = 120;
@@ -216,6 +227,10 @@ export class GameEngine {
     }
     this.gl = contextState.gl;
     this.renderer = createRenderer(this.gl);
+
+    // Initialize particle system (max 1024 particles)
+    this.particleSystem = new ParticleSystem(1024, this.rng);
+    this.particleRenderer = new ParticleRenderer(this.gl, this.particleSystem);
   }
 
   private async initWebGPU(): Promise<void> {
@@ -265,6 +280,11 @@ export class GameEngine {
       this.gpuDepthTexture.destroy();
       this.gpuDepthTexture = null;
     }
+    if (this.particleRenderer) {
+      this.particleRenderer.dispose();
+      this.particleRenderer = null;
+    }
+    this.particleSystem = null;
     if (this.renderer && 'dispose' in this.renderer) {
       this.renderer.dispose();
     }
@@ -327,6 +347,11 @@ export class GameEngine {
 
     // Handle weapon firing
     this.updateWeapon(input);
+
+    // Update particle system
+    if (this.particleSystem) {
+      this.particleSystem.update(dt, { floorZ: 0 });
+    }
   }
 
   private updateWeapon(input: InputState): void {
@@ -351,7 +376,7 @@ export class GameEngine {
   }
 
   private fireWeapon(): void {
-    if (!this.trace) return;
+    if (!this.trace || !this.particleSystem) return;
 
     // Get forward direction from view angles using quake2ts angleVectors
     const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
@@ -359,7 +384,7 @@ export class GameEngine {
 
     // Calculate muzzle position (eye position + forward offset + right offset for gun barrel)
     const eyePos: Vec3 = {
-      x: this.pmState.origin.x + this.pmState.viewHeight * 0,
+      x: this.pmState.origin.x,
       y: this.pmState.origin.y,
       z: this.pmState.origin.z + this.pmState.viewHeight,
     };
@@ -384,7 +409,7 @@ export class GameEngine {
     // Perform hitscan trace (point trace, no bbox)
     const traceResult = this.trace(start, end);
 
-    // Store bullet trace for rendering
+    // Store bullet trace for rendering (debug line)
     const hitEnd: Vec3 = traceResult.fraction < 1.0 ? traceResult.endpos : end;
     this.bulletTraces.push({
       start,
@@ -392,7 +417,25 @@ export class GameEngine {
       time: performance.now(),
     });
 
-    // Trigger muzzle flash
+    // Spawn muzzle flash particles using quake2ts particle system
+    spawnMuzzleFlash({
+      system: this.particleSystem,
+      origin: start,
+      direction: forward,
+    });
+
+    // Spawn bullet impact particles if we hit something
+    if (traceResult.fraction < 1.0) {
+      // Use the trace plane normal for impact direction
+      const normal = traceResult.plane?.normal ?? { x: 0, y: 0, z: 1 };
+      spawnBulletImpact({
+        system: this.particleSystem,
+        origin: traceResult.endpos,
+        normal,
+      });
+    }
+
+    // Trigger muzzle flash (for debug line rendering fallback)
     this.muzzleFlash = 3; // Show for 3 frames
   }
 
@@ -645,7 +688,7 @@ export class GameEngine {
   }
 
   private renderProceduralRoomWebGL(viewProjection: Float32Array): void {
-    if (!this.renderer || !this.room) return;
+    if (!this.renderer || !this.room || !this.gl) return;
 
     // Cast to WebGL debug renderer type which has render method
     const debug = this.renderer.debug as WebGLDebugRenderer;
@@ -689,40 +732,40 @@ export class GameEngine {
       debug.drawLine(trace.start, trace.end, color);
     }
 
-    // Draw muzzle flash (bright yellow at gun position)
-    if (this.muzzleFlash > 0) {
-      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
-      const { forward, right, up } = angleVectors(angles);
-      const eyePos: Vec3 = {
-        x: this.pmState.origin.x,
-        y: this.pmState.origin.y,
-        z: this.pmState.origin.z + this.pmState.viewHeight,
-      };
-      const muzzlePos: Vec3 = {
-        x: eyePos.x + forward.x * 24 + right.x * 8,
-        y: eyePos.y + forward.y * 24 + right.y * 8,
-        z: eyePos.z + forward.z * 24 + right.z * 8,
-      };
-      // Draw a small cross for muzzle flash
-      const flashSize = 8;
-      const flashColor = { r: 1, g: 1, b: 0.5 };
-      debug.drawLine(
-        { x: muzzlePos.x - right.x * flashSize, y: muzzlePos.y - right.y * flashSize, z: muzzlePos.z - right.z * flashSize },
-        { x: muzzlePos.x + right.x * flashSize, y: muzzlePos.y + right.y * flashSize, z: muzzlePos.z + right.z * flashSize },
-        flashColor
-      );
-      debug.drawLine(
-        { x: muzzlePos.x - up.x * flashSize, y: muzzlePos.y - up.y * flashSize, z: muzzlePos.z - up.z * flashSize },
-        { x: muzzlePos.x + up.x * flashSize, y: muzzlePos.y + up.y * flashSize, z: muzzlePos.z + up.z * flashSize },
-        flashColor
-      );
-    }
-
-    // Draw crosshair at center (simple cross)
-    // Note: This would need 2D rendering, skip for now since debug renderer is 3D
-
     // Render the debug geometry with correct view-projection matrix
     debug.render(viewProjection);
     debug.clear();
+
+    // Render particles using quake2ts particle system
+    if (this.particleRenderer && this.particleSystem) {
+      // Get camera vectors for billboarding using angleVectors
+      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+      const { right, up } = angleVectors(angles);
+
+      // Enable blending for particles
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+      // Build CameraState for particle renderer
+      const eyePos = vec3.fromValues(
+        this.pmState.origin.x,
+        this.pmState.origin.y,
+        this.pmState.origin.z + this.pmState.viewHeight
+      );
+      const cameraAngles = vec3.fromValues(this.pitch, this.yaw, 0);
+
+      this.particleRenderer.render({
+        cameraState: {
+          position: eyePos,
+          angles: cameraAngles,
+          fov: 90,
+          aspect: this.canvas.width / this.canvas.height,
+          near: 1,
+          far: 4096,
+        },
+      });
+
+      this.gl.disable(this.gl.BLEND);
+    }
   }
 }
