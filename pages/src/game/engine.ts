@@ -16,20 +16,33 @@ import {
   spawnMuzzleFlash,
 } from '@quake2ts/engine';
 import { vec3, mat4 } from 'gl-matrix';
-import type { Vec3, CollisionModel, PmoveTraceFn, PmoveState, PmoveImports } from '@quake2ts/shared';
 import {
+  type Vec3,
+  type CollisionModel,
+  type PmoveTraceFn,
   makeBrushFromMinsMaxs,
   makeLeafModel,
   createTraceRunner,
-  runPmove,
   PmType,
   PmFlag,
   PlayerButton,
-  WaterLevel,
   CONTENTS_NONE,
   angleVectors,
   RandomGenerator,
+  type UserCommand,
+  type ServerCommand
 } from '@quake2ts/shared';
+import {
+  createGame,
+  type GameExports,
+  type GameImports,
+  type GameEngine as IGameEngine,
+  type GameStateSnapshot,
+  MulticastType,
+  createPlayerInventory,
+  WeaponId,
+  createPlayerWeaponStates
+} from '@quake2ts/game';
 
 // Debug renderer interface with render method (WebGL-specific)
 interface WebGLDebugRenderer {
@@ -66,41 +79,23 @@ export class GameEngine {
   private gpuFormat: GPUTextureFormat = 'bgra8unorm';
   private gpuDepthTexture: GPUTexture | null = null;
 
-  // Collision system (using quake2ts collision)
+  // Game Logic
+  private game: GameExports | null = null;
+  private lastSnapshot: GameStateSnapshot | null = null;
+
+  // Collision system
   private collisionModel: CollisionModel | null = null;
   private trace: PmoveTraceFn | null = null;
-  private pmoveImports: PmoveImports | null = null;
 
-  // Player state (using quake2ts PmoveState)
-  private pmState: PmoveState = {
-    pmType: PmType.Normal,
-    pmFlags: 0,
-    origin: { x: 0, y: 0, z: 64 },
-    velocity: { x: 0, y: 0, z: 0 },
-    angles: { x: 0, y: 0, z: 0 },
-    viewAngles: { x: 0, y: 0, z: 0 },
-    viewHeight: 22,
-    waterlevel: WaterLevel.None,
-    watertype: 0,
-    cmd: { forwardmove: 0, sidemove: 0, upmove: 0, buttons: 0, angles: { x: 0, y: 0, z: 0 } },
-    delta_angles: { x: 0, y: 0, z: 0 },
-    gravity: 800,
-    mins: { x: -16, y: -16, z: -24 },
-    maxs: { x: 16, y: 16, z: 32 },
-  };
-
-  // View angles (separate from pmove for smoother control)
+  // Local camera state
   private yaw = 0;
   private pitch = 0;
 
-  // Weapon state
-  private lastFireTime = 0;
-  private readonly FIRE_RATE = 100; // ms between shots (machinegun rate)
+  // Visuals
   private bulletTraces: Array<{ start: Vec3; end: Vec3; time: number }> = [];
-  private muzzleFlash = 0; // frames remaining for muzzle flash
-  private wasAttacking = false; // track attack button state for semi-auto
+  private muzzleFlash = 0;
 
-  // Particle system (quake2ts)
+  // Particle system
   private particleSystem: ParticleSystem | null = null;
   private particleRenderer: ParticleRenderer | null = null;
   private rng: RandomGenerator = new RandomGenerator({ seed: Date.now() });
@@ -112,7 +107,7 @@ export class GameEngine {
   private frameCount = 0;
   private fps = 0;
 
-  // Pre-allocated matrices to avoid allocations in render loop
+  // Matrices
   private viewMatrix = mat4.create();
   private projectionMatrix = mat4.create();
   private viewProjectionMatrix = mat4.create();
@@ -146,23 +141,25 @@ export class GameEngine {
     this.inputHandler = new KeyboardInputHandler(this.canvas);
     this.inputHandler.bind();
 
-    // Create game loop with correct interface
+    // Build collision model
+    this.buildCollision();
+
+    // Initialize Game Logic
+    this.initGame();
+
+    // Create game loop
     const callbacks: LoopCallbacks = {
-      simulate: (ctx: FixedStepContext) => this.fixedUpdate(ctx.deltaMs),
+      simulate: (ctx: FixedStepContext) => this.fixedUpdate(ctx),
       render: (ctx: RenderContext) => this.render(ctx),
     };
 
     this.loop = new FixedTimestepLoop(callbacks, {
-      fixedDeltaMs: 1000 / 60, // 60 Hz physics
+      fixedDeltaMs: 1000 / 60,
     });
-
-    // Build collision model from room
-    this.buildCollision();
   }
 
   private buildCollision(): void {
     if (!this.room) return;
-
     const brushes = [];
     const halfWidth = this.room.width / 2;
     const halfDepth = this.room.depth / 2;
@@ -173,30 +170,24 @@ export class GameEngine {
       { x: -halfWidth, y: -halfDepth, z: -wallThickness },
       { x: halfWidth, y: halfDepth, z: 0 }
     ));
-
     // Ceiling
     brushes.push(makeBrushFromMinsMaxs(
       { x: -halfWidth, y: -halfDepth, z: this.room.height },
       { x: halfWidth, y: halfDepth, z: this.room.height + wallThickness }
     ));
-
     // Walls
-    // North (+Y)
     brushes.push(makeBrushFromMinsMaxs(
       { x: -halfWidth, y: halfDepth - wallThickness, z: 0 },
       { x: halfWidth, y: halfDepth, z: this.room.height }
     ));
-    // South (-Y)
     brushes.push(makeBrushFromMinsMaxs(
       { x: -halfWidth, y: -halfDepth, z: 0 },
       { x: halfWidth, y: -halfDepth + wallThickness, z: this.room.height }
     ));
-    // East (+X)
     brushes.push(makeBrushFromMinsMaxs(
       { x: halfWidth - wallThickness, y: -halfDepth, z: 0 },
       { x: halfWidth, y: halfDepth, z: this.room.height }
     ));
-    // West (-X)
     brushes.push(makeBrushFromMinsMaxs(
       { x: -halfWidth, y: -halfDepth, z: 0 },
       { x: -halfWidth + wallThickness, y: halfDepth, z: this.room.height }
@@ -212,12 +203,78 @@ export class GameEngine {
 
     this.collisionModel = makeLeafModel(brushes);
     this.trace = createTraceRunner(this.collisionModel, -1);
+  }
 
-    // Set up pmove imports with trace and pointcontents
-    this.pmoveImports = {
-      trace: this.trace,
-      pointcontents: (_point: Vec3) => CONTENTS_NONE, // Simple: no water/lava in procedural room
+  private initGame(): void {
+    const engineHost: IGameEngine = {
+        trace: (start: Vec3, end: Vec3) => {
+             return this.trace ? this.trace(start, end) : { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
+        },
+        traceModel: undefined,
+        sound: (_ent, _channel, _sound, _vol, _attn, _timeofs) => {},
+        soundIndex: (_sound) => 0,
+        modelIndex: (_model) => 0,
+        multicast: (_origin, _type, _event, ..._args) => {},
+        unicast: () => {},
+        configstring: () => {},
+        serverCommand: () => {},
+        cvar: (name) => {
+             if (name === 'g_gravity') return { number: 800, string: '800', value: '800' };
+             return undefined;
+        }
     };
+
+    const gameImports: Partial<GameImports> = {
+        trace: (start, _mins, _maxs, end, _passent, _contentmask) => {
+            if (!this.trace) return { allsolid: false, startsolid: false, fraction: 1, endpos: end, plane: null, surfaceFlags: 0, contents: 0, ent: null };
+            // Simple trace against world model (ignoring box size for now)
+            const result = this.trace(start, end);
+            return {
+                ...result,
+                plane: result.plane || null,
+                surfaceFlags: result.surfaceFlags || 0,
+                contents: result.contents || 0,
+                ent: null
+            };
+        },
+        pointcontents: () => 0,
+        multicast: (origin, _type, _event, ..._args) => {
+           // Basic hook for muzzle flashes if needed
+           // For now, we rely on game state or just let it be silent
+        }
+    };
+
+    this.game = createGame(gameImports, engineHost, {
+        gravity: { x: 0, y: 0, z: -800 },
+        deathmatch: true,
+        random: this.rng
+    });
+
+    this.game.spawnWorld();
+
+    this.game.clientBegin({
+        inventory: createPlayerInventory({
+            weapons: [WeaponId.Blaster],
+            currentWeapon: WeaponId.Blaster
+        }),
+        weaponStates: createPlayerWeaponStates(),
+        buttons: 0,
+        pm_type: 0,
+        pm_time: 0,
+        pm_flags: 0,
+        gun_frame: 0,
+        rdflags: 0,
+        fov: 90,
+        pers: {
+            connected: true,
+            inventory: [],
+            health: 100,
+            max_health: 100,
+            savedFlags: 0,
+            selected_item: 0
+        },
+        stats: []
+    } as any);
   }
 
   private async initWebGL(): Promise<void> {
@@ -227,14 +284,11 @@ export class GameEngine {
     }
     this.gl = contextState.gl;
     this.renderer = createRenderer(this.gl);
-
-    // Initialize particle system (max 1024 particles)
     this.particleSystem = new ParticleSystem(1024, this.rng);
     this.particleRenderer = new ParticleRenderer(this.gl, this.particleSystem);
   }
 
   private async initWebGPU(): Promise<void> {
-    // For WebGPU, we pass the canvas directly
     const renderer = await createWebGPURenderer(this.canvas, {
       powerPreference: 'high-performance',
     });
@@ -242,14 +296,9 @@ export class GameEngine {
       throw new Error('WebGPU not supported or failed to initialize');
     }
     this.renderer = renderer;
-
-    // Store WebGPU state for manual rendering
-    // Access the device from the renderer interface
     if ('device' in renderer) {
       this.gpuDevice = renderer.device;
     }
-
-    // Get the canvas context for rendering
     const context = this.canvas.getContext('webgpu');
     if (context) {
       this.gpuContext = context;
@@ -295,148 +344,61 @@ export class GameEngine {
     this.gl = null;
     this.gpuDevice = null;
     this.gpuContext = null;
+    this.game = null;
   }
 
   getStats(): GameStats {
+    if (!this.lastSnapshot) {
+        return { fps: 0, position: {x:0,y:0,z:0}, angles: {pitch:0,yaw:0}, onGround: false };
+    }
     return {
       fps: this.fps,
       position: {
-        x: this.pmState.origin.x,
-        y: this.pmState.origin.y,
-        z: this.pmState.origin.z,
+        x: this.lastSnapshot.origin.x,
+        y: this.lastSnapshot.origin.y,
+        z: this.lastSnapshot.origin.z,
       },
       angles: {
         pitch: this.pitch,
         yaw: this.yaw,
       },
-      onGround: (this.pmState.pmFlags & PmFlag.OnGround) !== 0,
+      onGround: (this.lastSnapshot.pmFlags & PmFlag.OnGround) !== 0,
     };
   }
 
-  private fixedUpdate(deltaMs: number): void {
-    if (!this.inputHandler || !this.pmoveImports) return;
+  private fixedUpdate(ctx: FixedStepContext): void {
+    if (!this.inputHandler || !this.game) return;
 
     const input = this.inputHandler.getState();
-    const dt = deltaMs / 1000;
+    const dt = ctx.deltaMs / 1000;
 
-    // Update view angles
     this.updateViewAngles(input, dt);
 
-    // Build pmove command from input
     let buttons: PlayerButton = 0;
     if (input.jump) buttons |= PlayerButton.Jump;
+    if (input.attack) buttons |= PlayerButton.Attack;
 
     const forwardmove = (input.forward ? 400 : 0) - (input.backward ? 400 : 0);
     const sidemove = (input.strafeRight ? 400 : 0) - (input.strafeLeft ? 400 : 0);
 
-    // Update pmove state with new command
-    this.pmState = {
-      ...this.pmState,
-      cmd: {
+    const cmd: UserCommand = {
+        msec: Math.floor(ctx.deltaMs),
+        buttons,
+        angles: { x: this.pitch, y: this.yaw, z: 0 },
         forwardmove,
         sidemove,
         upmove: 0,
-        buttons,
-        angles: { x: this.pitch, y: this.yaw, z: 0 },
-      },
-      viewAngles: { x: this.pitch, y: this.yaw, z: 0 },
+        impulse: 0,
+        lightlevel: 0
     };
 
-    // Run quake2ts player movement physics
-    this.pmState = runPmove(this.pmState, this.pmoveImports);
+    const result = this.game.frame(ctx, cmd);
+    this.lastSnapshot = result.state;
 
-    // Handle weapon firing
-    this.updateWeapon(input);
-
-    // Update particle system
+    // Update particles
     if (this.particleSystem) {
       this.particleSystem.update(dt, { floorZ: 0 });
     }
-  }
-
-  private updateWeapon(input: InputState): void {
-    if (!this.trace) return;
-
-    const now = performance.now();
-
-    // Fire weapon when attack is pressed (semi-auto: only on press, not hold)
-    if (input.attack && !this.wasAttacking && now - this.lastFireTime >= this.FIRE_RATE) {
-      this.fireWeapon();
-      this.lastFireTime = now;
-    }
-    this.wasAttacking = input.attack;
-
-    // Update muzzle flash
-    if (this.muzzleFlash > 0) {
-      this.muzzleFlash--;
-    }
-
-    // Remove old bullet traces (fade after 200ms)
-    this.bulletTraces = this.bulletTraces.filter(t => now - t.time < 200);
-  }
-
-  private fireWeapon(): void {
-    if (!this.trace || !this.particleSystem) return;
-
-    // Get forward direction from view angles using quake2ts angleVectors
-    const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
-    const { forward, right } = angleVectors(angles);
-
-    // Calculate muzzle position (eye position + forward offset + right offset for gun barrel)
-    const eyePos: Vec3 = {
-      x: this.pmState.origin.x,
-      y: this.pmState.origin.y,
-      z: this.pmState.origin.z + this.pmState.viewHeight,
-    };
-
-    // Offset muzzle slightly forward and to the right (gun barrel position)
-    const muzzleOffset = 24; // forward
-    const rightOffset = 8;   // right side
-    const start: Vec3 = {
-      x: eyePos.x + forward.x * muzzleOffset + right.x * rightOffset,
-      y: eyePos.y + forward.y * muzzleOffset + right.y * rightOffset,
-      z: eyePos.z + forward.z * muzzleOffset + right.z * rightOffset,
-    };
-
-    // Trace to 8192 units (standard Quake 2 hitscan range)
-    const range = 8192;
-    const end: Vec3 = {
-      x: start.x + forward.x * range,
-      y: start.y + forward.y * range,
-      z: start.z + forward.z * range,
-    };
-
-    // Perform hitscan trace (point trace, no bbox)
-    const traceResult = this.trace(start, end);
-
-    // Store bullet trace for rendering (debug line)
-    const hitEnd: Vec3 = traceResult.fraction < 1.0 ? traceResult.endpos : end;
-    this.bulletTraces.push({
-      start,
-      end: hitEnd,
-      time: performance.now(),
-    });
-
-    // Spawn muzzle flash particles using quake2ts particle system
-    spawnMuzzleFlash({
-      system: this.particleSystem,
-      origin: start,
-      direction: forward,
-    });
-
-    // Spawn bullet impact particles if we hit something
-    if (traceResult.fraction < 1.0) {
-      // Use the trace plane normal for impact direction
-      const normal = traceResult.plane?.normal ?? { x: 0, y: 0, z: 1 };
-      spawnBulletImpact({
-        system: this.particleSystem,
-        origin: traceResult.endpos,
-        normal,
-      });
-    }
-
-    // Trigger muzzle flash (for debug line rendering fallback)
-    this.muzzleFlash = 3; // Show for 3 frames
   }
 
   private updateViewAngles(input: InputState, dt: number): void {
@@ -450,86 +412,54 @@ export class GameEngine {
     if (this.yaw >= 360) this.yaw -= 360;
   }
 
-  /**
-   * Build view-projection matrix with correct rotation order for FPS controls.
-   *
-   * The Camera class applies rotations as: Rz(yaw) * Ry(pitch)
-   * This means pitch is applied in world space, causing the horizon to tilt.
-   *
-   * For proper FPS controls, we need: Ry(pitch) * Rz(yaw)
-   * This applies yaw first (in world space), then pitch (in yaw-rotated space),
-   * keeping the horizon level regardless of yaw angle.
-   */
   private buildViewProjectionMatrix(eyePos: vec3, pitch: number, yaw: number): Float32Array {
     const DEG2RAD = Math.PI / 180;
     const pitchRad = pitch * DEG2RAD;
     const yawRad = yaw * DEG2RAD;
 
-    // Build projection matrix
     const fov = 90 * DEG2RAD;
     const aspect = this.canvas.width / this.canvas.height;
     const near = 1;
     const far = 4096;
     mat4.perspective(this.projectionMatrix, fov, aspect, near, far);
 
-    // Build view matrix with correct rotation order for FPS controls
-    // Quake coordinate system: X forward, Y left, Z up
-    // GL coordinate system: X right, Y up, -Z forward
-
-    // Quake to GL coordinate transformation matrix (column-major):
-    // Quake X (forward) -> GL -Z
-    // Quake Y (left) -> GL -X
-    // Quake Z (up) -> GL +Y
     const quakeToGl = mat4.fromValues(
-       0,  0, -1, 0,  // column 0: Quake X -> GL -Z
-      -1,  0,  0, 0,  // column 1: Quake Y -> GL -X
-       0,  1,  0, 0,  // column 2: Quake Z -> GL +Y
-       0,  0,  0, 1   // column 3: translation (none)
+       0,  0, -1, 0,
+      -1,  0,  0, 0,
+       0,  1,  0, 0,
+       0,  0,  0, 1
     );
 
-    // Build rotation matrix with CORRECT order for FPS controls:
-    // First yaw (around Z), then pitch (around local Y after yaw)
-    // For view matrix (inverse of camera transform), we negate angles
-    // and reverse the multiplication order
     const rotationQuake = mat4.create();
     mat4.identity(rotationQuake);
-
-    // CORRECT ORDER: pitch first in matrix build, then yaw
-    // This makes the view matrix apply yaw first, then pitch when transforming points
     mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
     mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
 
-    // Combine rotation with coordinate transformation
     const rotationGl = mat4.create();
     mat4.multiply(rotationGl, quakeToGl, rotationQuake);
 
-    // Apply rotation to negated position
     const negPos = vec3.negate(vec3.create(), eyePos);
     const rotatedPosQuake = vec3.transformMat4(vec3.create(), negPos, rotationQuake);
 
-    // Transform position from Quake to GL coordinates
     const translationGl = vec3.fromValues(
-      -rotatedPosQuake[1],  // Quake Y -> GL -X
-       rotatedPosQuake[2],  // Quake Z -> GL +Y
-      -rotatedPosQuake[0]   // Quake X -> GL -Z
+      -rotatedPosQuake[1],
+       rotatedPosQuake[2],
+      -rotatedPosQuake[0]
     );
 
-    // Assemble view matrix
     mat4.copy(this.viewMatrix, rotationGl);
     this.viewMatrix[12] = translationGl[0];
     this.viewMatrix[13] = translationGl[1];
     this.viewMatrix[14] = translationGl[2];
 
-    // Combine into view-projection matrix
     mat4.multiply(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
 
     return new Float32Array(this.viewProjectionMatrix);
   }
 
   private render(_ctx: RenderContext): void {
-    if (!this.renderer || !this.room) return;
+    if (!this.renderer || !this.room || !this.lastSnapshot) return;
 
-    // Update FPS counter
     const now = performance.now();
     this.frameCount++;
     if (now - this.lastFrameTime >= 1000) {
@@ -538,28 +468,22 @@ export class GameEngine {
       this.lastFrameTime = now;
     }
 
-    // Calculate eye position with height offset
-    const eyeHeight = this.pmState.viewHeight;
+    // Use view height from snapshot or default to 22
+    const eyeHeight = 22; // this.lastSnapshot.viewHeight? (not directly in snapshot.state usually)
     const eyePos = vec3.fromValues(
-      this.pmState.origin.x,
-      this.pmState.origin.y,
-      this.pmState.origin.z + eyeHeight
+      this.lastSnapshot.origin.x,
+      this.lastSnapshot.origin.y,
+      this.lastSnapshot.origin.z + eyeHeight
     );
 
-    // Build view-projection matrix with correct rotation order for FPS controls
-    // This fixes the horizon tilt issue when combining pitch and yaw
     const viewProjection = this.buildViewProjectionMatrix(eyePos, this.pitch, this.yaw);
 
-    // Clear and render based on renderer type
     if (this.gl) {
       this.gl.clearColor(0.1, 0.1, 0.1, 1.0);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
       this.gl.enable(this.gl.DEPTH_TEST);
-
-      // Render procedural room using WebGL debug renderer
       this.renderProceduralRoomWebGL(viewProjection);
     } else if (this.gpuDevice && this.gpuContext) {
-      // WebGPU path - create render pass and render debug geometry
       this.renderProceduralRoomWebGPU(viewProjection);
     }
   }
@@ -567,11 +491,9 @@ export class GameEngine {
   private renderProceduralRoomWebGPU(viewProjection: Float32Array): void {
     if (!this.renderer || !this.room || !this.gpuDevice || !this.gpuContext) return;
 
-    // Get current texture from swap chain
     const currentTexture = this.gpuContext.getCurrentTexture();
     const textureView = currentTexture.createView();
 
-    // Create or recreate depth texture if needed
     if (!this.gpuDepthTexture ||
         this.gpuDepthTexture.width !== currentTexture.width ||
         this.gpuDepthTexture.height !== currentTexture.height) {
@@ -585,80 +507,13 @@ export class GameEngine {
       });
     }
 
-    // Access the debug renderer - cast to any since we know the structure
     const debug = (this.renderer as any).debug;
     if (!debug || !('render' in debug)) return;
 
-    // Add debug geometry for the room
-    for (const surface of this.room.surfaces) {
-      const color = { r: surface.color[0], g: surface.color[1], b: surface.color[2] };
+    this.drawRoomGeometry(debug);
+    this.drawEntities(debug);
 
-      // Draw surface outline
-      const verts = surface.vertices;
-      for (let i = 0; i < verts.length; i++) {
-        const v0 = verts[i];
-        const v1 = verts[(i + 1) % verts.length];
-        debug.drawLine(
-          { x: v0[0], y: v0[1], z: v0[2] },
-          { x: v1[0], y: v1[1], z: v1[2] },
-          color
-        );
-      }
-
-      // Draw diagonal for visual fill effect
-      if (verts.length === 4) {
-        debug.drawLine(
-          { x: verts[0][0], y: verts[0][1], z: verts[0][2] },
-          { x: verts[2][0], y: verts[2][1], z: verts[2][2] },
-          color
-        );
-      }
-    }
-
-    // Draw coordinate axes at origin for reference
-    debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
-
-    // Draw bullet traces (yellow fading to red)
-    const now = performance.now();
-    for (const trace of this.bulletTraces) {
-      const age = now - trace.time;
-      const alpha = 1 - age / 200;
-      const color = { r: 1, g: alpha, b: 0 };
-      debug.drawLine(trace.start, trace.end, color);
-    }
-
-    // Draw muzzle flash
-    if (this.muzzleFlash > 0) {
-      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
-      const { forward, right, up } = angleVectors(angles);
-      const eyePos: Vec3 = {
-        x: this.pmState.origin.x,
-        y: this.pmState.origin.y,
-        z: this.pmState.origin.z + this.pmState.viewHeight,
-      };
-      const muzzlePos: Vec3 = {
-        x: eyePos.x + forward.x * 24 + right.x * 8,
-        y: eyePos.y + forward.y * 24 + right.y * 8,
-        z: eyePos.z + forward.z * 24 + right.z * 8,
-      };
-      const flashSize = 8;
-      const flashColor = { r: 1, g: 1, b: 0.5 };
-      debug.drawLine(
-        { x: muzzlePos.x - right.x * flashSize, y: muzzlePos.y - right.y * flashSize, z: muzzlePos.z - right.z * flashSize },
-        { x: muzzlePos.x + right.x * flashSize, y: muzzlePos.y + right.y * flashSize, z: muzzlePos.z + right.z * flashSize },
-        flashColor
-      );
-      debug.drawLine(
-        { x: muzzlePos.x - up.x * flashSize, y: muzzlePos.y - up.y * flashSize, z: muzzlePos.z - up.z * flashSize },
-        { x: muzzlePos.x + up.x * flashSize, y: muzzlePos.y + up.y * flashSize, z: muzzlePos.z + up.z * flashSize },
-        flashColor
-      );
-    }
-
-    // Create command encoder
     const commandEncoder = this.gpuDevice.createCommandEncoder({ label: 'game-render' });
-
-    // Begin render pass
     const renderPass = commandEncoder.beginRenderPass({
       colorAttachments: [{
         view: textureView,
@@ -674,86 +529,34 @@ export class GameEngine {
       },
     });
 
-    // Render the debug geometry with correct view-projection matrix
     debug.render(renderPass, viewProjection, false);
-
-    // End render pass
     renderPass.end();
-
-    // Submit command buffer
     this.gpuDevice.queue.submit([commandEncoder.finish()]);
-
-    // Clear debug geometry for next frame
     debug.clear();
   }
 
   private renderProceduralRoomWebGL(viewProjection: Float32Array): void {
     if (!this.renderer || !this.room || !this.gl) return;
 
-    // Cast to WebGL debug renderer type which has render method
     const debug = this.renderer.debug as WebGLDebugRenderer;
     if (!debug || !('render' in debug)) return;
 
-    // Draw room surfaces
-    for (const surface of this.room.surfaces) {
-      const color = { r: surface.color[0], g: surface.color[1], b: surface.color[2] };
+    this.drawRoomGeometry(debug);
+    this.drawEntities(debug);
 
-      // Draw surface outline
-      const verts = surface.vertices;
-      for (let i = 0; i < verts.length; i++) {
-        const v0 = verts[i];
-        const v1 = verts[(i + 1) % verts.length];
-        debug.drawLine(
-          { x: v0[0], y: v0[1], z: v0[2] },
-          { x: v1[0], y: v1[1], z: v1[2] },
-          color
-        );
-      }
-
-      // Draw diagonal for visual fill effect
-      if (verts.length === 4) {
-        debug.drawLine(
-          { x: verts[0][0], y: verts[0][1], z: verts[0][2] },
-          { x: verts[2][0], y: verts[2][1], z: verts[2][2] },
-          color
-        );
-      }
-    }
-
-    // Draw coordinate axes at origin for reference
-    debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
-
-    // Draw bullet traces (yellow fading to red)
-    const now = performance.now();
-    for (const trace of this.bulletTraces) {
-      const age = now - trace.time;
-      const alpha = 1 - age / 200; // Fade over 200ms
-      const color = { r: 1, g: alpha, b: 0 }; // Yellow -> Red
-      debug.drawLine(trace.start, trace.end, color);
-    }
-
-    // Render the debug geometry with correct view-projection matrix
     debug.render(viewProjection);
     debug.clear();
 
-    // Render particles using quake2ts particle system
-    if (this.particleRenderer && this.particleSystem) {
-      // Get camera vectors for billboarding using angleVectors
-      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
-      const { right, up } = angleVectors(angles);
-
-      // Enable blending for particles
-      this.gl.enable(this.gl.BLEND);
-      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-
-      // Build CameraState for particle renderer
+    if (this.particleRenderer && this.particleSystem && this.lastSnapshot) {
       const eyePos = vec3.fromValues(
-        this.pmState.origin.x,
-        this.pmState.origin.y,
-        this.pmState.origin.z + this.pmState.viewHeight
+        this.lastSnapshot.origin.x,
+        this.lastSnapshot.origin.y,
+        this.lastSnapshot.origin.z + 22
       );
       const cameraAngles = vec3.fromValues(this.pitch, this.yaw, 0);
 
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
       this.particleRenderer.render({
         cameraState: {
           position: eyePos,
@@ -764,8 +567,67 @@ export class GameEngine {
           far: 4096,
         },
       });
-
       this.gl.disable(this.gl.BLEND);
     }
+  }
+
+  private drawRoomGeometry(debug: any): void {
+      if (!this.room) return;
+      for (const surface of this.room.surfaces) {
+        const color = { r: surface.color[0], g: surface.color[1], b: surface.color[2] };
+        const verts = surface.vertices;
+        for (let i = 0; i < verts.length; i++) {
+          const v0 = verts[i];
+          const v1 = verts[(i + 1) % verts.length];
+          debug.drawLine(
+            { x: v0[0], y: v0[1], z: v0[2] },
+            { x: v1[0], y: v1[1], z: v1[2] },
+            color
+          );
+        }
+        if (verts.length === 4) {
+          debug.drawLine(
+            { x: verts[0][0], y: verts[0][1], z: verts[0][2] },
+            { x: verts[2][0], y: verts[2][1], z: verts[2][2] },
+            color
+          );
+        }
+      }
+      debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
+  }
+
+  private drawEntities(debug: any): void {
+      if (!this.lastSnapshot) return;
+
+      // Draw other entities
+      if (this.lastSnapshot.packetEntities) {
+          for (const ent of this.lastSnapshot.packetEntities) {
+              const color = { r: 0, g: 1, b: 0 }; // Green for entities
+              // Draw simple box for now
+              const size = 16;
+              const x = ent.origin.x;
+              const y = ent.origin.y;
+              const z = ent.origin.z;
+
+              // Bottom rect
+              debug.drawLine({x: x-size, y: y-size, z}, {x: x+size, y: y-size, z}, color);
+              debug.drawLine({x: x+size, y: y-size, z}, {x: x+size, y: y+size, z}, color);
+              debug.drawLine({x: x+size, y: y+size, z}, {x: x-size, y: y+size, z}, color);
+              debug.drawLine({x: x-size, y: y+size, z}, {x: x-size, y: y-size, z}, color);
+
+              // Top rect
+              const z2 = z + 32;
+              debug.drawLine({x: x-size, y: y-size, z: z2}, {x: x+size, y: y-size, z: z2}, color);
+              debug.drawLine({x: x+size, y: y-size, z: z2}, {x: x+size, y: y+size, z: z2}, color);
+              debug.drawLine({x: x+size, y: y+size, z: z2}, {x: x-size, y: y+size, z: z2}, color);
+              debug.drawLine({x: x-size, y: y+size, z: z2}, {x: x-size, y: y-size, z: z2}, color);
+
+              // Verticals
+              debug.drawLine({x: x-size, y: y-size, z}, {x: x-size, y: y-size, z: z2}, color);
+              debug.drawLine({x: x+size, y: y-size, z}, {x: x+size, y: y-size, z: z2}, color);
+              debug.drawLine({x: x+size, y: y+size, z}, {x: x+size, y: y+size, z: z2}, color);
+              debug.drawLine({x: x-size, y: y+size, z}, {x: x-size, y: y+size, z: z2}, color);
+          }
+      }
   }
 }
