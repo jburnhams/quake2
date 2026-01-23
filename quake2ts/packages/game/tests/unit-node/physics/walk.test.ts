@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
+import { Entity, MoveType, EntityFlags } from '../../../src/entities/entity.js';
 import { runStep } from '../../../src/physics/movement.js';
 import { GameImports } from '../../../src/imports.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { Vec3 } from '@quake2ts/shared';
-import { createMockGameExports, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Physics: runStep', () => {
   let ent: Entity;
@@ -13,21 +12,8 @@ describe('Physics: runStep', () => {
   const frametime = 0.1;
 
   beforeEach(() => {
-    // We use createMockGameExports to generate imports and system mock implicitly,
-    // but runStep takes imports directly.
-    // Let's just mock imports since runStep is a low level physics function.
-    // Or we can use createGameImportsAndEngine logic from test-utils.
-
-    imports = {
-      trace: vi.fn().mockReturnValue(createTraceMock({
-        fraction: 1.0,
-        endpos: { x: 0, y: 0, z: 0 },
-      })),
-      pointcontents: vi.fn().mockReturnValue(0),
-      linkentity: vi.fn(),
-      multicast: vi.fn(),
-      unicast: vi.fn(),
-    } as any;
+    const { imports: mockImports } = createGameImportsAndEngine();
+    imports = mockImports as any;
 
     system = {
       // Mocking trace to delegate to imports.trace, which is what EntitySystem does
