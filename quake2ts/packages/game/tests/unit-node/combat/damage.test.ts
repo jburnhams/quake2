@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment, createTestContext, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { EntitySystem, T_Damage, DamageMod } from '@quake2ts/game';
 
 describe('Combat System Unit Tests', () => {
@@ -7,7 +7,6 @@ describe('Combat System Unit Tests', () => {
   let imports: any;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     const ctx = createTestContext();
     entitySystem = ctx.entities;
     imports = ctx.imports;
