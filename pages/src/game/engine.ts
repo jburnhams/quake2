@@ -22,6 +22,7 @@ import {
   PlayerButton,
   WaterLevel,
   CONTENTS_NONE,
+  angleVectors,
 } from '@quake2ts/shared';
 
 // Debug renderer interface with render method (WebGL-specific)
@@ -85,6 +86,13 @@ export class GameEngine {
   // View angles (separate from pmove for smoother control)
   private yaw = 0;
   private pitch = 0;
+
+  // Weapon state
+  private lastFireTime = 0;
+  private readonly FIRE_RATE = 100; // ms between shots (machinegun rate)
+  private bulletTraces: Array<{ start: Vec3; end: Vec3; time: number }> = [];
+  private muzzleFlash = 0; // frames remaining for muzzle flash
+  private wasAttacking = false; // track attack button state for semi-auto
 
   // Physics constants
   private readonly LOOK_SPEED = 120;
@@ -316,6 +324,76 @@ export class GameEngine {
 
     // Run quake2ts player movement physics
     this.pmState = runPmove(this.pmState, this.pmoveImports);
+
+    // Handle weapon firing
+    this.updateWeapon(input);
+  }
+
+  private updateWeapon(input: InputState): void {
+    if (!this.trace) return;
+
+    const now = performance.now();
+
+    // Fire weapon when attack is pressed (semi-auto: only on press, not hold)
+    if (input.attack && !this.wasAttacking && now - this.lastFireTime >= this.FIRE_RATE) {
+      this.fireWeapon();
+      this.lastFireTime = now;
+    }
+    this.wasAttacking = input.attack;
+
+    // Update muzzle flash
+    if (this.muzzleFlash > 0) {
+      this.muzzleFlash--;
+    }
+
+    // Remove old bullet traces (fade after 200ms)
+    this.bulletTraces = this.bulletTraces.filter(t => now - t.time < 200);
+  }
+
+  private fireWeapon(): void {
+    if (!this.trace) return;
+
+    // Get forward direction from view angles using quake2ts angleVectors
+    const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+    const { forward, right } = angleVectors(angles);
+
+    // Calculate muzzle position (eye position + forward offset + right offset for gun barrel)
+    const eyePos: Vec3 = {
+      x: this.pmState.origin.x + this.pmState.viewHeight * 0,
+      y: this.pmState.origin.y,
+      z: this.pmState.origin.z + this.pmState.viewHeight,
+    };
+
+    // Offset muzzle slightly forward and to the right (gun barrel position)
+    const muzzleOffset = 24; // forward
+    const rightOffset = 8;   // right side
+    const start: Vec3 = {
+      x: eyePos.x + forward.x * muzzleOffset + right.x * rightOffset,
+      y: eyePos.y + forward.y * muzzleOffset + right.y * rightOffset,
+      z: eyePos.z + forward.z * muzzleOffset + right.z * rightOffset,
+    };
+
+    // Trace to 8192 units (standard Quake 2 hitscan range)
+    const range = 8192;
+    const end: Vec3 = {
+      x: start.x + forward.x * range,
+      y: start.y + forward.y * range,
+      z: start.z + forward.z * range,
+    };
+
+    // Perform hitscan trace (point trace, no bbox)
+    const traceResult = this.trace(start, end);
+
+    // Store bullet trace for rendering
+    const hitEnd: Vec3 = traceResult.fraction < 1.0 ? traceResult.endpos : end;
+    this.bulletTraces.push({
+      start,
+      end: hitEnd,
+      time: performance.now(),
+    });
+
+    // Trigger muzzle flash
+    this.muzzleFlash = 3; // Show for 3 frames
   }
 
   private updateViewAngles(input: InputState, dt: number): void {
@@ -497,6 +575,43 @@ export class GameEngine {
     // Draw coordinate axes at origin for reference
     debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
 
+    // Draw bullet traces (yellow fading to red)
+    const now = performance.now();
+    for (const trace of this.bulletTraces) {
+      const age = now - trace.time;
+      const alpha = 1 - age / 200;
+      const color = { r: 1, g: alpha, b: 0 };
+      debug.drawLine(trace.start, trace.end, color);
+    }
+
+    // Draw muzzle flash
+    if (this.muzzleFlash > 0) {
+      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+      const { forward, right, up } = angleVectors(angles);
+      const eyePos: Vec3 = {
+        x: this.pmState.origin.x,
+        y: this.pmState.origin.y,
+        z: this.pmState.origin.z + this.pmState.viewHeight,
+      };
+      const muzzlePos: Vec3 = {
+        x: eyePos.x + forward.x * 24 + right.x * 8,
+        y: eyePos.y + forward.y * 24 + right.y * 8,
+        z: eyePos.z + forward.z * 24 + right.z * 8,
+      };
+      const flashSize = 8;
+      const flashColor = { r: 1, g: 1, b: 0.5 };
+      debug.drawLine(
+        { x: muzzlePos.x - right.x * flashSize, y: muzzlePos.y - right.y * flashSize, z: muzzlePos.z - right.z * flashSize },
+        { x: muzzlePos.x + right.x * flashSize, y: muzzlePos.y + right.y * flashSize, z: muzzlePos.z + right.z * flashSize },
+        flashColor
+      );
+      debug.drawLine(
+        { x: muzzlePos.x - up.x * flashSize, y: muzzlePos.y - up.y * flashSize, z: muzzlePos.z - up.z * flashSize },
+        { x: muzzlePos.x + up.x * flashSize, y: muzzlePos.y + up.y * flashSize, z: muzzlePos.z + up.z * flashSize },
+        flashColor
+      );
+    }
+
     // Create command encoder
     const commandEncoder = this.gpuDevice.createCommandEncoder({ label: 'game-render' });
 
@@ -564,6 +679,47 @@ export class GameEngine {
 
     // Draw coordinate axes at origin for reference
     debug.drawAxes({ x: 0, y: 0, z: 0 }, 64);
+
+    // Draw bullet traces (yellow fading to red)
+    const now = performance.now();
+    for (const trace of this.bulletTraces) {
+      const age = now - trace.time;
+      const alpha = 1 - age / 200; // Fade over 200ms
+      const color = { r: 1, g: alpha, b: 0 }; // Yellow -> Red
+      debug.drawLine(trace.start, trace.end, color);
+    }
+
+    // Draw muzzle flash (bright yellow at gun position)
+    if (this.muzzleFlash > 0) {
+      const angles: Vec3 = { x: this.pitch, y: this.yaw, z: 0 };
+      const { forward, right, up } = angleVectors(angles);
+      const eyePos: Vec3 = {
+        x: this.pmState.origin.x,
+        y: this.pmState.origin.y,
+        z: this.pmState.origin.z + this.pmState.viewHeight,
+      };
+      const muzzlePos: Vec3 = {
+        x: eyePos.x + forward.x * 24 + right.x * 8,
+        y: eyePos.y + forward.y * 24 + right.y * 8,
+        z: eyePos.z + forward.z * 24 + right.z * 8,
+      };
+      // Draw a small cross for muzzle flash
+      const flashSize = 8;
+      const flashColor = { r: 1, g: 1, b: 0.5 };
+      debug.drawLine(
+        { x: muzzlePos.x - right.x * flashSize, y: muzzlePos.y - right.y * flashSize, z: muzzlePos.z - right.z * flashSize },
+        { x: muzzlePos.x + right.x * flashSize, y: muzzlePos.y + right.y * flashSize, z: muzzlePos.z + right.z * flashSize },
+        flashColor
+      );
+      debug.drawLine(
+        { x: muzzlePos.x - up.x * flashSize, y: muzzlePos.y - up.y * flashSize, z: muzzlePos.z - up.z * flashSize },
+        { x: muzzlePos.x + up.x * flashSize, y: muzzlePos.y + up.y * flashSize, z: muzzlePos.z + up.z * flashSize },
+        flashColor
+      );
+    }
+
+    // Draw crosshair at center (simple cross)
+    // Note: This would need 2D rendering, skip for now since debug renderer is 3D
 
     // Render the debug geometry with correct view-projection matrix
     debug.render(viewProjection);
