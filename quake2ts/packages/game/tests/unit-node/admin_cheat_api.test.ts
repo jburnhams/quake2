@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, GameExports } from '../../src/index.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { GameExports } from '../../src/index.js';
+import { EntitySystem } from '../../src/entities/system.js';
 import { Entity, EntityFlags, MoveType } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { T_Damage, DamageFlags, DamageMod } from '../../src/combat/index.js';
 import { giveItem } from '../../src/inventory/index.js';
 
@@ -26,13 +27,11 @@ vi.mock('../../src/inventory/index.js', async () => {
 describe('Admin/Cheat APIs', () => {
     let game: GameExports;
     let player: Entity;
-    let entities: any;
+    let entities: EntitySystem;
 
     beforeEach(() => {
-        const { imports, engine } = createGameImportsAndEngine();
-
-        game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-
+        const result = createTestGame();
+        game = result.game;
         entities = game.entities;
 
         // Use spawnEntity to properly insert the player into the entity system
@@ -52,6 +51,10 @@ describe('Admin/Cheat APIs', () => {
         // Also mock unlink/link for teleport
         vi.spyOn(entities, 'unlink');
         vi.spyOn(entities, 'link');
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('setGodMode should toggle GodMode flag on player', () => {
