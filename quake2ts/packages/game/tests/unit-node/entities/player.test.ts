@@ -1,11 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createPlayerEntityFactory, createMonsterEntityFactory, createGameImportsAndEngine, spawnEntity } from '@quake2ts/test-utils';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createPlayerEntityFactory, createMonsterEntityFactory, createTestGame, spawnEntity } from '@quake2ts/test-utils';
 import { player_die } from '../../../src/entities/player.js';
 import { DeadFlag, Solid, MoveType, Entity } from '../../../src/entities/entity.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { EntitySystem } from '../../../src/entities/system.js';
 
 describe('Player Death', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should set dead flags and properties', () => {
         // We need a real entity for methods, factory returns partial
         const player = new Entity(1);
@@ -15,7 +18,10 @@ describe('Player Death', () => {
             origin: { x: 0, y: 0, z: 0 }
         }));
 
-        player_die(player, null, null, 10, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN);
+        const { game } = createTestGame();
+
+        // Pass game.entities as system
+        player_die(player, null, null, 10, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN, game.entities);
 
         expect(player.deadflag).toBe(DeadFlag.Dead);
         expect(player.solid).toBe(Solid.Not);
@@ -24,19 +30,14 @@ describe('Player Death', () => {
     });
 
     it('should throw gibs if health is low enough', () => {
-        const { imports, engine } = createGameImportsAndEngine({
+        const { game } = createTestGame({
             imports: {
                 linkentity: vi.fn(),
             }
         });
-        const system = new EntitySystem(engine, imports as any);
-        const spawnSpy = vi.spyOn(system, 'spawn').mockImplementation(() => new Entity(100));
+        const system = game.entities;
 
-        // Use spawnEntity helper (although here we want to use the spy, spawnEntity calls system.spawn)
-        // However, spawnEntity takes system and data.
-        // It calls system.spawn(), which calls our spy.
-        // Then it Object.assigns.
-        // So we can use it.
+        const spawnSpy = vi.spyOn(system, 'spawn').mockImplementation(() => new Entity(100));
 
         const player = spawnEntity(system, createPlayerEntityFactory({
             number: 1,
@@ -50,8 +51,8 @@ describe('Player Death', () => {
     });
 
     it('should display obituary', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const system = new EntitySystem(engine, imports as any);
+        const { game, imports } = createTestGame();
+        const system = game.entities;
 
         const player = spawnEntity(system, createPlayerEntityFactory({
             number: 1,
