@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 import { EntitySystem, Solid } from '@quake2ts/game';
 
 describe('Entity System Unit Tests', () => {
@@ -8,7 +8,6 @@ describe('Entity System Unit Tests', () => {
   let engine: ReturnType<typeof createGameImportsAndEngine>['engine'];
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     const result = createGameImportsAndEngine();
     imports = result.imports;
     engine = result.engine;

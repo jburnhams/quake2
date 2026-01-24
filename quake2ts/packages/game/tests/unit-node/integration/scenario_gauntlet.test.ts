@@ -1,17 +1,16 @@
 
 import { describe, it, expect, beforeAll, vi, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import {
   createGame,
   type GameExports,
   type GameImports,
   type GameEngine,
-} from '../../src/index.js';
+} from '../../../src/index.js';
 import {
   createDefaultSpawnRegistry,
-} from '../../src/entities/spawn.js';
-import { createPlayerInventory } from '../../src/inventory/index.js';
-import { createPlayerWeaponStates } from '../../src/combat/index.js';
+} from '../../../src/entities/spawn.js';
+import { createPlayerInventory } from '../../../src/inventory/index.js';
+import { createPlayerWeaponStates } from '../../../src/combat/index.js';
 import {
   CollisionEntityIndex,
   pointContents,
@@ -26,8 +25,6 @@ describe('Scenario 2: Combat Gauntlet', () => {
   let collisionIndex: CollisionEntityIndex;
 
   beforeAll(async () => {
-    setupBrowserEnvironment();
-
     // 1. Build Synthetic Collision Model (Arena)
     const floor = makeBrushFromMinsMaxs(
         { x: -1000, y: -1000, z: -10 },

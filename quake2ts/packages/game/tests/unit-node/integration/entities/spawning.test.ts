@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame } from '@quake2ts/game';
 import type { GameExports } from '@quake2ts/game';
-import { MoveType, Solid } from '../../../src/entities/entity.js';
-import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
+import { MoveType, Solid } from '../../../../src/entities/entity.js';
+import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../../src/entities/spawn.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 // Game options
