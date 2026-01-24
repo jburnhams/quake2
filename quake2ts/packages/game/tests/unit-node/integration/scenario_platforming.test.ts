@@ -1,14 +1,13 @@
 
 import { describe, it, expect, beforeAll, vi, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import {
   createGame,
   type GameExports,
   type GameImports,
   type GameEngine,
-} from '../../src/index.js';
-import { createPlayerInventory } from '../../src/inventory/index.js';
-import { createPlayerWeaponStates } from '../../src/combat/index.js';
+} from '../../../src/index.js';
+import { createPlayerInventory } from '../../../src/inventory/index.js';
+import { createPlayerWeaponStates } from '../../../src/combat/index.js';
 import {
   CollisionEntityIndex,
   pointContents,
@@ -23,8 +22,6 @@ describe('Scenario 3: Platforming Challenge', () => {
   let collisionIndex: CollisionEntityIndex;
 
   beforeAll(async () => {
-    setupBrowserEnvironment();
-
     // 1. Build Synthetic Collision Model (Stairs/Platforms)
     // Floor: 0 to 1000 xy, z=0
     // Step 1: 100-200 x, z=16

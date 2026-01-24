@@ -1,7 +1,6 @@
 
 import { describe, it, expect, beforeAll, vi, afterEach } from 'vitest';
 import { AssetManager, VirtualFileSystem, PakArchive, BspLoader, type BspMap, type BspNode, type BspLeaf } from '@quake2ts/engine';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { findPakFile } from '@quake2ts/test-utils';
 import {
   createGame,
@@ -10,11 +9,11 @@ import {
   type GameEngine,
   GameTraceResult,
   MulticastType
-} from '../../src/index.js';
+} from '../../../src/index.js';
 import {
   createDefaultSpawnRegistry,
   spawnEntitiesFromText
-} from '../../src/entities/spawn.js';
+} from '../../../src/entities/spawn.js';
 import {
   buildCollisionModel,
   CollisionLumpData,
@@ -127,8 +126,6 @@ describe('Full Gameplay Scenario Integration (Scenario 1: Base1)', () => {
   const hasPak = !!pakPath;
 
   beforeAll(async () => {
-    setupBrowserEnvironment();
-
     if (!hasPak) {
       console.warn('pak.pak not found, skipping realistic map loading. Test will use minimal mocks.');
       return;
