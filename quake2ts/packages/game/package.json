@@ -36,7 +36,7 @@
     "test:unit": "TEST_TYPE=unit vitest run --passWithNoTests",
     "test:unit:node": "TEST_TYPE=unit-node vitest run --passWithNoTests",
     "test:unit:jsdom": "TEST_TYPE=unit-jsdom vitest run --passWithNoTests",
-    "test:integration": "NODE_OPTIONS='--max-old-space-size=4096' vitest run -c vitest.integration.ts"
+    "test:integration": "NODE_OPTIONS='--max-old-space-size=4096' vitest run -c vitest.integration.ts --passWithNoTests"
   },
   "peerDependencies": {
     "@quake2ts/engine": "workspace:*",
