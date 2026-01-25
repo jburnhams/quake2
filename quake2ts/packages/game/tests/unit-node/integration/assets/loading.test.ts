@@ -1,14 +1,9 @@
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { AssetManager, VirtualFileSystem, PakArchive } from '@quake2ts/engine';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { buildPak, textData } from '../../../../engine/tests/helpers/pakBuilder.js';
+import { buildPak, textData } from '@quake2ts/test-utils';
 
 describe('Asset Loading Integration', () => {
-  beforeAll(() => {
-    setupBrowserEnvironment();
-  });
-
   it('should load assets from a synthetic PAK file', async () => {
     // 1. Create a synthetic PAK
     const pakData = buildPak([
