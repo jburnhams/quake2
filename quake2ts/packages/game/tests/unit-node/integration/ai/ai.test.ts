@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
-import { EntitySystem } from '../../../src/entities/index.js';
-import type { GameImports } from '../../../src/imports.js';
+import { EntitySystem } from '../../../../src/entities/index.js';
+import type { GameImports } from '../../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
 
 // Mock GameImports
@@ -36,7 +35,6 @@ describe('AI Integration', () => {
   let imports: GameImports;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     imports = createMockGameImports();
     entitySystem = new EntitySystem(
       { /* engine mocks */ } as any,
@@ -59,7 +57,7 @@ describe('AI Integration', () => {
     // Mock think function
     monster.think = vi.fn((self) => {
         // Re-schedule
-        entitySystem.scheduleThink(self, self.timestamp + 0.1); // next think 0.1s later
+        entitySystem.scheduleThink(self, entitySystem.timeSeconds + 0.1); // next think 0.1s later
     });
 
     // Start loop: Schedule first think at 0.1s
