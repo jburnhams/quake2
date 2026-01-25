@@ -1,10 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createTestContext } from '@quake2ts/test-utils';
 import { player_pain, P_PlayerThink } from '../../../src/entities/player.js';
-import { Entity, MoveType } from '../../../src/entities/entity.js';
-import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
-import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
-import { Vec3 } from '@quake2ts/shared';
+import { Entity } from '../../../src/entities/entity.js';
 import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Player Damage Kick', () => {
@@ -19,30 +16,6 @@ describe('Player Damage Kick', () => {
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 }
         });
-
-        // Populate client which createPlayerEntityFactory does not fully populate with complex objects yet
-        // TODO: Update createPlayerEntityFactory to include these defaults
-        player.client = {
-            inventory: createPlayerInventory(),
-            weaponStates: createPlayerWeaponStates(),
-            buttons: 0,
-            pm_type: 0,
-            pm_time: 0,
-            pm_flags: 0,
-            gun_frame: 0,
-            rdflags: 0,
-            fov: 90,
-            kick_angles: { x: 0, y: 0, z: 0 },
-            kick_origin: { x: 0, y: 0, z: 0 },
-            pers: {
-                connected: true,
-                inventory: [],
-                health: 100,
-                max_health: 100,
-                savedFlags: 0,
-                selected_item: 0
-            }
-        } as any;
 
         // Attacker is just an entity
         attacker = createEntityFactory({

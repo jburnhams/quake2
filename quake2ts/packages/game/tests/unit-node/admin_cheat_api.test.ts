@@ -37,15 +37,7 @@ describe('Admin/Cheat APIs', () => {
         // Use spawnEntity to properly insert the player into the entity system
         // This avoids needing to manually mock 'find' or handle entity linking
         player = spawnEntity(entities, createPlayerEntityFactory({
-             flags: 0,
-             movetype: MoveType.Walk,
-             origin: { x: 10, y: 20, z: 30 },
-             velocity: { x: 0, y: 0, z: 0 },
-             client: {
-                 // Ensure client property exists for 'find' to locate it as a player if necessary
-                 // (though find usually just iterates)
-                 ...createPlayerEntityFactory().client
-             } as any
+             origin: { x: 10, y: 20, z: 30 }
         }));
 
         // Also mock unlink/link for teleport

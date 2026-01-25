@@ -8,6 +8,7 @@ import {
   MonsterMove,
   MonsterInfo
 } from '@quake2ts/game';
+import { createPlayerClientFactory } from './client.js';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot, GameFrameContext } from '@quake2ts/game';
 
@@ -210,24 +211,7 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
     movetype: MoveType.Walk,
     svflags: ServerFlags.Player,
     viewheight: 22,
-    client: {
-        inventory: {
-            ammo: { counts: [], caps: [] },
-            ownedWeapons: new Set(),
-            powerups: new Map(),
-            keys: new Set(),
-            items: new Set()
-        },
-        weaponStates: {
-            currentWeapon: null,
-            lastFireTime: 0,
-            weaponFrame: 0,
-            weaponIdleTime: 0,
-            states: new Map(), // Initialize states map correctly
-            activeWeaponId: null
-        },
-        gun_frame: 0 // Initialize gun_frame
-    } as any,
+    client: createPlayerClientFactory(),
     ...overrides
   });
 }

@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../src/entities/system.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, spawnEntity, createGameFrameContext } from '@quake2ts/test-utils';
+import {
+    createTestContext,
+    createMonsterEntityFactory,
+    createPlayerEntityFactory,
+    spawnEntity,
+    createGameFrameContext,
+    createMonsterInfoFactory,
+    createEntityStateFactory
+} from '@quake2ts/test-utils';
 import { foundTarget } from '../../src/ai/targeting.js';
 
 describe('Difficulty Scaling - Reaction Time', () => {
@@ -13,30 +21,18 @@ describe('Difficulty Scaling - Reaction Time', () => {
         const spawnContext = createTestContext();
         context = spawnContext.entities;
 
-        // Ensure skill is writable for test (normally readonly)
-        Object.defineProperty(context, 'skill', {
-            value: 1,
-            writable: true
-        });
-
         // Use spawnEntity to properly handle entity properties sanitization and system registration (though using factories directly is also common in unit tests if no system needed)
         // Since foundTarget might access system, spawning is safer.
         monster = spawnEntity(context, createMonsterEntityFactory('monster_test', {
-            monsterinfo: {
-                aiflags: 0,
-                last_sighting: { x: 0, y: 0, z: 0 },
-                saved_goal: { x: 0, y: 0, z: 0 },
+            monsterinfo: createMonsterInfoFactory({
                 run: vi.fn(),
-                attack_finished: 0,
-            } as any,
-            s: { number: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 0, z: 0 } } as any,
+            }),
+            s: createEntityStateFactory({ number: 1 }),
             attack_finished_time: 0,
         }));
 
         enemy = spawnEntity(context, createPlayerEntityFactory({
             origin: { x: 100, y: 0, z: 0 },
-            velocity: { x: 0, y: 0, z: 0 },
-            flags: 0,
             light_level: 128
         }));
 
