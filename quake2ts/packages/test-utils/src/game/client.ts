@@ -22,6 +22,8 @@ export const createPlayerClientFactory = (overrides?: Partial<PlayerClient>): Pl
         gun_frame: 0,
         rdflags: 0,
         fov: 90,
+        kick_angles: { x: 0, y: 0, z: 0 },
+        kick_origin: { x: 0, y: 0, z: 0 },
         pers: {
             connected: true,
             inventory: [],

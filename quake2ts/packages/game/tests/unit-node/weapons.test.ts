@@ -13,7 +13,8 @@ import {
     createPlayerClientFactory,
     createTraceMock,
     createMockGameExports,
-    spawnEntity
+    spawnEntity,
+    createEntity
 } from '@quake2ts/test-utils';
 
 // Mock projectiles
@@ -68,8 +69,7 @@ describe('Weapon Tests', () => {
             }
         });
 
-        player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
+        player = createEntity(createPlayerEntityFactory({
             client: createPlayerClientFactory({
                 inventory: {
                     ammo: {
@@ -92,19 +92,7 @@ describe('Weapon Tests', () => {
                     powerups: new Map(),
                     keys: new Set(),
                     items: new Set()
-                },
-                weaponStates: {
-                    states: new Map(),
-                    currentWeapon: null,
-                    lastFireTime: 0,
-                    weaponFrame: 0,
-                    weaponIdleTime: 0,
-                    activeWeaponId: null
-                },
-                kick_angles: { x: 0, y: 0, z: 0 },
-                kick_origin: { x: 0, y: 0, z: 0 },
-                pm_flags: 0,
-                gun_frame: 0
+                }
             })
         }));
     });
