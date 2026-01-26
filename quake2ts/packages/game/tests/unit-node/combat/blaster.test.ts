@@ -2,7 +2,7 @@
 // Quake II - Blaster Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
@@ -10,6 +10,10 @@ import { DamageMod } from '../../../src/combat/damageMods.js';
 import { createTestGame, spawnEntity, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Blaster', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should not consume ammo and should spawn a blaster bolt', () => {
         const createBlasterBolt = vi.spyOn(projectiles, 'createBlasterBolt');
 

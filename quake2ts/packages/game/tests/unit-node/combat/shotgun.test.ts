@@ -2,13 +2,17 @@
 // Quake II - Shotgun Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as damage from '../../../src/combat/damage.js';
 import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Shotgun', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should consume 1 shell and fire 12 pellets', () => {
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
