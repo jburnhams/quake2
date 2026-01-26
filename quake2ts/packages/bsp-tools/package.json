@@ -1,0 +1,43 @@
+{
+  "name": "@quake2ts/bsp-tools",
+  "version": "0.1.0",
+  "description": "Quake 2 BSP compilation toolchain and map generation tools.",
+  "type": "module",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/bsp-tools"
+  },
+  "scripts": {
+    "build": "pnpm run build:types && pnpm run build:bundles",
+    "build:types": "tsc -b",
+    "build:bundles": "tsup",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@quake2ts/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@quake2ts/test-utils": "workspace:*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
