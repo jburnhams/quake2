@@ -2,7 +2,7 @@
 // Quake II - Chaingun Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { GameExports } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
@@ -21,6 +21,10 @@ describe('Chaingun', () => {
     let trace: any;
     let T_Damage: any;
     let engine: any;
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
     beforeEach(() => {
         const { game: testGame, imports, engine: mockEngine } = createTestGame({

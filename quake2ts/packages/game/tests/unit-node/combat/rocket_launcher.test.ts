@@ -2,13 +2,17 @@
 // Quake II - Rocket Launcher Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire, firingRandom } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
 import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Rocket Launcher', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should consume 1 rocket and spawn a projectile', () => {
         const createRocket = vi.spyOn(projectiles, 'createRocket');
 
