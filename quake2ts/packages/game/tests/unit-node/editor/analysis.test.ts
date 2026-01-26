@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getActivationChain, getTriggerVolumes } from '../../src/editor/analysis';
-import { EntitySystem } from '../../src/entities/system';
-import { Solid } from '../../src/entities/entity';
+import { getActivationChain, getTriggerVolumes } from '../../../src/editor/analysis';
+import { EntitySystem } from '../../../src/entities/system';
+import { Solid } from '../../../src/entities/entity';
 
 describe('Editor Analysis', () => {
   let sys: EntitySystem;

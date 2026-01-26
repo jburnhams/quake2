@@ -4,14 +4,14 @@ import {
   parseSaveFile,
   applySaveFile,
   type SaveApplyTargets,
-} from '../../src/save/save.js';
-import { EntitySystem, type Entity } from '../../src/entities/system.js';
-import { LevelClock } from '../../src/level.js';
+} from '../../../src/save/save.js';
+import { EntitySystem, type Entity } from '../../../src/entities/system.js';
+import { LevelClock } from '../../../src/level.js';
 import { RandomGenerator } from '@quake2ts/shared';
 import { CvarRegistry } from '@quake2ts/engine';
-import { createPlayerInventory, type PlayerInventory, WeaponId, PowerupId } from '../../src/inventory/playerInventory.js';
-import { DeadFlag } from '../../src/entities/entity.js';
-import { AmmoType } from '../../src/inventory/items.js';
+import { createPlayerInventory, type PlayerInventory, WeaponId, PowerupId } from '../../../src/inventory/playerInventory.js';
+import { DeadFlag } from '../../../src/entities/entity.js';
+import { AmmoType } from '../../../src/inventory/items.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Save/Load Robustness', () => {

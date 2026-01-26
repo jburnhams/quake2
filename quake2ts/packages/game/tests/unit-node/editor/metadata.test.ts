@@ -5,8 +5,8 @@ import {
   getEntityConnections,
   getEntityBounds,
   getEntityModel
-} from '../../src/editor/metadata';
-import { Entity } from '../../src/entities/entity';
+} from '../../../src/editor/metadata';
+import { Entity } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
 
 describe('Entity Metadata', () => {

@@ -1,9 +1,9 @@
 import { CvarRegistry } from '@quake2ts/engine';
 import { CvarFlags, RandomGenerator } from '@quake2ts/shared';
 import { describe, expect, it } from 'vitest';
-import { Entity, EntitySystem } from '../../src/entities/index.js';
-import { LevelClock } from '../../src/level.js';
-import { applySaveFile, createSaveFile, parseSaveFile, SAVE_FORMAT_VERSION } from '../../src/save/save.js';
+import { Entity, EntitySystem } from '../../../src/entities/index.js';
+import { LevelClock } from '../../../src/level.js';
+import { applySaveFile, createSaveFile, parseSaveFile, SAVE_FORMAT_VERSION } from '../../../src/save/save.js';
 import { createMockEngine } from '@quake2ts/test-utils';
 
 describe('save/load determinism', () => {

@@ -61,6 +61,9 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `game/tests/integration/ai` tests (`ai.test.ts`, `hearing.test.ts`) to `game/tests/unit-node/integration/ai/`
    - Moved: `game/tests/integration/assets` tests (`loading.test.ts`) to `game/tests/unit-node/integration/assets/`
    - Moved: `game/tests/integration/performance` tests (`entity_scaling.test.ts`, `spawn.test.ts`) to `game/tests/unit-node/integration/performance/`
+   - Moved: `game/tests/mod` tests (`hooks.test.ts`) to `game/tests/unit-node/mod/`
+   - Moved: `game/tests/save` tests (`rerelease-conversion`, `rerelease`, `robustness`, `save`, `storage`) to `game/tests/unit-node/save/`
+   - Moved: `game/tests/editor` tests (`analysis`, `graph`, `metadata`, `search`, `selection`, `selection_obb`) to `game/tests/unit-node/editor/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`

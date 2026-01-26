@@ -6,10 +6,10 @@ import {
   convertRereleaseSaveToGameSave,
   parseRereleaseSave,
   serializeRereleaseSave,
-} from '../../src/save/index.js';
-import { EntitySystem } from '../../src/entities/index.js';
-import { LevelClock } from '../../src/level.js';
-import { createSaveFile, SAVE_FORMAT_VERSION } from '../../src/save/save.js';
+} from '../../../src/save/index.js';
+import { EntitySystem } from '../../../src/entities/index.js';
+import { LevelClock } from '../../../src/level.js';
+import { createSaveFile, SAVE_FORMAT_VERSION } from '../../../src/save/save.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 function createBasicSnapshot() {

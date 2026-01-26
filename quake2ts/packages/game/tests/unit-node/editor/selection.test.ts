@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { rayCastEntities, Ray } from '../../src/editor/selection';
-import { EntitySystem } from '../../src/entities/system';
-import { Entity } from '../../src/entities/entity';
+import { rayCastEntities, Ray } from '../../../src/editor/selection';
+import { EntitySystem } from '../../../src/entities/system';
+import { Entity } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
 
 describe('Entity Selection', () => {

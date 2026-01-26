@@ -1,10 +1,10 @@
 import { indexedDB as fakeIndexedDB } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
-import { EntitySystem } from '../../src/entities/system.js';
-import { LevelClock } from '../../src/level.js';
-import { createSaveFile } from '../../src/save/save.js';
-import { SaveStorage } from '../../src/save/storage.js';
-import type { GameEngine } from '../../src/index.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { LevelClock } from '../../../src/level.js';
+import { createSaveFile } from '../../../src/save/save.js';
+import { SaveStorage } from '../../../src/save/storage.js';
+import type { GameEngine } from '../../../src/index.js';
 
 const mockEngine: GameEngine = {
   trace: () => ({}),
